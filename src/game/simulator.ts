@@ -1,6 +1,7 @@
 import { getShieldPercent, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { workshopState } from "@/game/workshop";
+import { edgeParam, playerCombatEffects, type CombatEffects } from "@/game/effectTargets";
 import { getRepairPercent } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { ALLIANCE_RULES, allianceShieldBonus, allianceSiegeFactor } from "@/game/alliances";
@@ -99,6 +100,8 @@ export function simulateAgainstReport(
   pve = false,
   /** 5.21 : cible prioritaire choisie au lancement. */
   targetPriority?: "defenses" | "ships",
+  /** 5.23 : effets ciblés de l'attaquant (reliques, technos, officiers). */
+  attackerFx?: CombatEffects,
 ): SimOutcome | null {
   const data = report.data;
   if (!data || (report.tier ?? 0) < 2 || (!data.units && !data.defenses)) return null;
@@ -144,6 +147,8 @@ export function simulateAgainstReport(
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     lootMultiplier,
     targetPriority,
+    ...(attackerFx ? { unitBonus: { attacker: attackerFx.units } } : {}),
+    ...(edgeParam(attackerFx) ? { classEdge: { attacker: edgeParam(attackerFx) } } : {}),
   });
   return outcome(combat, notes);
 }
@@ -157,6 +162,7 @@ export function simulatePveFight(player: PlayerState, fleetIn: Record<string, nu
   const fx = formationEffects(formation);
   return resolveCombat({
     ...fx,
+    unitBonus: { attacker: playerCombatEffects(player, "pve").units },
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     attackerUnits: player.units,
     attackerHull: workshopState(player).hull,
@@ -184,7 +190,9 @@ export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety
   const fleetOnly = faction.raid.target === "fleet";
   const defenderUnits: Units = fleetOnly ? Object.fromEntries(Object.entries(player.units ?? {}).filter(([id]) => OFFENSIVE_UNITS.includes(id))) : (player.units ?? {});
   const posture = postureEffects(player.posture?.id, fleetOnly);
+  const pve = playerCombatEffects(player, "pve");
   const combat = resolveCombat({
+    unitBonus: { defender: pve.units },
     defenseFactor: posture.defenseFactor,
     attackerUnits: {},
     attackerTechLevels: {},
@@ -194,7 +202,7 @@ export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: getRepairPercent(player.buildings),
-    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
+    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)) + pve.shield,
     defenderResources: {},
     homeFleetFactor: posture.homeFleetFactor,
   });

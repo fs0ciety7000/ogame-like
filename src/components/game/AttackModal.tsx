@@ -5,6 +5,7 @@ import { FormationPicker, TargetPriorityPicker, type TargetPriorityChoice } from
 import type { FormationId } from "@/game/formations";
 import { useEffect, useMemo, useState } from "react";
 import { simulateAgainstReport } from "@/game/simulator";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { isWarlordUid } from "@/game/warlords";
 import { lootFactor } from "@/game/events";
 import { SPY_TIER_LABELS } from "@/game/espionage";
@@ -86,7 +87,7 @@ export function AttackModal({
   const flightWithout = slow?.speedWithout ? attackTravelSeconds(distance, slow.speedWithout, factor) : null;
   const slowNames = slow ? slow.ids.map((id) => findUnit(id)?.name ?? id).join(", ") : "";
   const estimate = useMemo(
-    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid), priority || undefined) : null),
+    () => (player && hasShips && spy ? simulateAgainstReport(player, selected, spy, lootFactor(Date.now()), formation, playerModifiers(player).attack + capsulePct(assault) / 100, isWarlordUid(target?.uid), priority || undefined, playerCombatEffects(player, isWarlordUid(target?.uid) ? "warlord" : "pvp")) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `selected` dérive de `fleet`
     [player, fleet, spy, formation, assault, target?.uid, priority],
   );

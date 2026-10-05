@@ -325,12 +325,14 @@ export function unitBaseHp(units: Units, techLevels: TechLevels, id: string): nu
  * 5.20 : `hull` = PV manquants par type sur tout le stock du joueur (`owned` = ce stock ; défaut : les unités engagées).
  * Les dégâts se répartissent sur le stock : la part engagée se bat avec moins d'unités « valides ».
  */
-function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, number>, owner: Stack["owner"], engaged = 1, factor = 1, hpFactor = factor, hull?: Record<string, number>): Stack[] {
+function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, number>, owner: Stack["owner"], engaged = 1, factor = 1, hpFactor = factor, hull?: Record<string, number>, bonus?: UnitBonus): Stack[] {
   const out: Stack[] = [];
   const classes = unitClasses();
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
-    const att = unitStat(units, techLevels, id, "attack") * factor;
+    // 5.23 : effets ciblés (reliques, technos, officiers) sur l'attaque et les PV de cette unité.
+    const b = bonus?.[id];
+    const att = unitStat(units, techLevels, id, "attack") * factor * (1 + Math.max(-0.9, b?.att ?? 0));
     const res = unitStat(units, techLevels, id, "defense");
     if (!(att > 0) && !(res > 0)) continue;
     const baseHp = Math.max(1, res) * COMBAT_RULES.hpPerResistance;
@@ -338,10 +340,13 @@ function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, 
     const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, (hull?.[id] ?? 0) / baseHp));
     const n = qty * engaged;
     const cls = classes[id];
-    out.push({ id, owner, count: Math.max(0, n - (damaged * n) / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp, ...(cls && cls !== "support" ? { cls, edge: findUnit(id)?.classEdge } : {}) });
+    out.push({ id, owner, count: Math.max(0, n - (damaged * n) / owned), realCount: qty, att, hp: baseHp * hpFactor * (1 + Math.max(-0.9, b?.hp ?? 0)), owned, damaged, baseHp, ...(cls && cls !== "support" ? { cls, edge: findUnit(id)?.classEdge } : {}) });
   }
   return out;
 }
+
+/** 5.23 : bonus d'attaque et de PV par unité (voir effectTargets.ts : combatEffects). */
+export type UnitBonus = Record<string, { att?: number; hp?: number }>;
 
 /** Unités fictives d'un PNJ : même rapport attaque / points de vie que la flotte d'en face, à la puissance donnée. */
 function virtualStacks(power: number, mirror: Stack[], owner: Stack["owner"], mirrorAttackFactor = 1): Stack[] {
@@ -406,6 +411,8 @@ export function resolveCombat(params: {
   targetPriority?: TargetPriority;
   /** 5.22 : avantage de classe d'un camp relevé (trait Fureur) ou annulé (Lame Écarlate). */
   classEdge?: { attacker?: { bonus?: number; cancel?: boolean }; defender?: { bonus?: number; cancel?: boolean } };
+  /** 5.23 : effets ciblés par unité de chaque camp (les garnisons gardent les leurs, sans bonus). */
+  unitBonus?: { attacker?: UnitBonus; defender?: UnitBonus };
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
@@ -419,15 +426,15 @@ export function resolveCombat(params: {
   const retreatAt = Math.max(0.05, Math.min(1, params.retreatAt ?? R.retreatAt));
 
   // --- Camps ---
-  let attacker = params.attackerPowerOverride === undefined ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull) : [];
+  let attacker = params.attackerPowerOverride === undefined ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull, params.unitBonus?.attacker) : [];
   const home = 1 + R.homeDefenseBonus;
   let defender: Stack[] = [];
   if (params.defenderPowerOverride === undefined) {
     const defenses = Object.fromEntries(DEFENSIVE_UNITS.map((id) => [id, defenderUnits[id]?.count ?? 0]));
     const ships = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, defenderUnits[id]?.count ?? 0]));
     defender = [
-      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * (params.defenseFactor ?? 1) * defFactor, undefined, params.defenderHull),
-      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, undefined, params.defenderHull),
+      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * (params.defenseFactor ?? 1) * defFactor, undefined, params.defenderHull, params.unitBonus?.defender),
+      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, undefined, params.defenderHull, params.unitBonus?.defender),
       ...garrisons.flatMap((g, i) => realStacks(g.units, g.techLevels, g.fleet, i, garrisonFactor, defFactor)),
     ];
   }

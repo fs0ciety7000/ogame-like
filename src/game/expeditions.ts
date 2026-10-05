@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
@@ -206,6 +207,8 @@ function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number, 
   const fx = formationEffects(fleet.expedition.formation);
   const combat = resolveCombat({
     ...fx,
+    // 5.23 : effets ciblés du joueur contre les PNJ.
+    unitBonus: { attacker: playerCombatEffects(player, "pve", now).units },
     attackFactor: fx.attackFactor * (1 + playerModifiers(player).attack),
     // 5.20 : stock = base + flotte d'expédition, pour répartir les dégâts conservés.
     attackerUnits: withFleet(player.units, fleet.units),

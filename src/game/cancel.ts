@@ -5,6 +5,7 @@ import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, 
 import { GameActionError } from "@/game/errors";
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
+import { playerUnitCost } from "@/game/effectTargets";
 import type { PlayerState, QueuesState, ResourceId, UnitQueueEntry } from "@/types/game";
 
 /* =====================================================
@@ -119,7 +120,7 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
       const group = unitGroupAt(queue, target.index);
       const unit = group ? findUnit(queue[group.start].unitId) : undefined;
       if (!group || !unit) throw new GameActionError("Ce lot n'est plus dans la file.");
-      const each: Cost = { scrap: unit.cost.scrap, energy: unit.cost.energy };
+      const each: Cost = playerUnitCost(unit, player, now);
       let refund: Cost = {};
       let fraction = 1;
       for (let i = group.start; i < group.start + group.count; i++) {

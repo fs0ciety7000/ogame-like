@@ -703,8 +703,17 @@ function validateRanks(defs) {
 }
 
 // src/game/effects.ts
+var EFFECT_SCOPE_LABELS = {
+  all: "Partout",
+  home: "Plan\xE8te m\xE8re",
+  colonies: "Colonies",
+  pvp: "Contre les joueurs",
+  pve: "Contre les PNJ",
+  warlord: "Contre les seigneurs"
+};
 var TECH_REDUCTION_CAP = 0.75;
 var EMPIRE_TIME_CAP = 0.5;
+var COMBAT_SCOPES = ["all", "pvp", "pve", "warlord"];
 var EFFECT_STATS = {
   attack: { label: "Attaque", unit: "pct", group: "combat" },
   defense: { label: "D\xE9fense", unit: "pct", group: "combat" },
@@ -712,6 +721,10 @@ var EFFECT_STATS = {
   repair: { label: "Vaisseaux r\xE9par\xE9s", unit: "pct", group: "combat" },
   repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },
   loot: { label: "Butin pill\xE9", unit: "pct", group: "combat" },
+  unitAttack: { label: "Attaque des unit\xE9s cibl\xE9es", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
+  unitHp: { label: "Points de vie des unit\xE9s cibl\xE9es", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
+  classEdge: { label: "Avantage de classe", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
+  shield: { label: "Bouclier plan\xE9taire", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.15, empire: 0.15 }, floor: 0 },
   productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
   storage: { label: "Capacit\xE9 des entrep\xF4ts", unit: "pct", group: "economie" },
@@ -721,6 +734,8 @@ var EFFECT_STATS = {
   buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   unitTime: { label: "Temps de production des unit\xE9s", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  unitBuildTime: { label: "Temps de production des unit\xE9s cibl\xE9es", unit: "pct", reduction: true, group: "durees", unitTarget: true, cap: { tech: 0.5, empire: 0.5 }, floor: 0 },
+  unitCost: { label: "Co\xFBt des unit\xE9s cibl\xE9es", unit: "pct", reduction: true, group: "economie", unitTarget: true, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
   cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
   fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
@@ -733,7 +748,7 @@ var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
 function inScope(g, scope) {
   var _a;
   const s = (_a = g.scope) != null ? _a : "all";
-  return s === "all" || s === scope;
+  return s === "all" || s === scope || s === "pve" && scope === "warlord";
 }
 function rawEffectTotal(grants, layer, stat3, opts = {}) {
   let total2 = 0;
@@ -763,6 +778,138 @@ function formatEffectValue(stat3, value2) {
   if (info.unit === "pct") return `${sign}${dec(abs2 * 100)} %`;
   if (info.unit === "level") return `${sign}${dec(abs2)} niveau${abs2 >= 2 ? "x" : ""}`;
   return `${sign}${Math.floor(abs2)} point${abs2 >= 2 ? "s" : ""}`;
+}
+function effectStatLabel(stat3, target, names = {}) {
+  var _a, _b, _c;
+  if (stat3 === "production" && target) return `Production de ${(_b = (_a = names.resource) == null ? void 0 : _a.call(names, target)) != null ? _b : target}`;
+  if (EFFECT_STATS[stat3].unitTarget && target) return `${EFFECT_STATS[stat3].label.replace(/ des unités ciblées$/, "")} : ${((_c = names.unit) != null ? _c : unitTargetLabeler)(target)}`;
+  if (stat3 === "hangarCapacity" && target) return `Capacit\xE9 des hangars ${target === "defense" ? "de d\xE9fense" : "d'attaque"}`;
+  return EFFECT_STATS[stat3].label;
+}
+var unitTargetLabeler = (s) => s;
+function setUnitTargetLabeler(fn) {
+  unitTargetLabeler = fn;
+}
+var RESOURCE_TARGET_LABELS = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es anciennes" };
+function describeEffect(stat3, value2, target, scope) {
+  const label3 = effectStatLabel(stat3, target, { unit: unitTargetLabeler, resource: (id) => {
+    var _a;
+    return (_a = RESOURCE_TARGET_LABELS[id]) != null ? _a : id;
+  } });
+  const where = scope && scope !== "all" ? ` (${EFFECT_SCOPE_LABELS[scope].toLowerCase()})` : "";
+  return `${formatEffectValue(stat3, value2)} \xB7 ${label3}${where}`;
+}
+var UNIT_GROUP_SELECTORS = ["cat:attack", "cat:defense", "class:light", "class:medium", "class:heavy", "class:support"];
+function isUnitSelector(sel, hasUnit) {
+  if (!sel) return true;
+  if (sel.startsWith("unit:")) return hasUnit(sel.slice(5));
+  return UNIT_GROUP_SELECTORS.includes(sel);
+}
+function validateComposedEffect(c, validTarget) {
+  var _a, _b, _c;
+  if (!c || !c.stat || !(c.stat in EFFECT_STATS)) return [`grandeur \xAB ${(_a = c == null ? void 0 : c.stat) != null ? _a : ""} \xBB inconnue`];
+  const info = EFFECT_STATS[c.stat];
+  const errors = [];
+  if (info.unitTarget && !validTarget(c.target)) errors.push(`cible \xAB ${c.target} \xBB inconnue`);
+  if (c.scope && c.scope !== "all") {
+    const allowed = (_b = info.scopes) != null ? _b : ["all", "home", "colonies"];
+    if (!allowed.includes(c.scope)) errors.push(`port\xE9e \xAB ${(_c = EFFECT_SCOPE_LABELS[c.scope]) != null ? _c : c.scope} \xBB sans effet sur ${info.label.toLowerCase()}`);
+  }
+  if (c.stat === "production" && c.target && !(c.target in RESOURCE_TARGET_LABELS)) errors.push(`ressource \xAB ${c.target} \xBB inconnue`);
+  if (c.stat === "hangarCapacity" && c.target && c.target !== "attack" && c.target !== "defense") errors.push("hangar : attack ou defense");
+  return errors;
+}
+
+// src/game/unitClasses.ts
+var UNIT_CLASS_LABELS = {
+  support: "Soutien",
+  light: "Faible",
+  medium: "Moyen",
+  heavy: "Fort"
+};
+function combatValue(unit, level3 = 1) {
+  const grow = (Math.max(1, level3) - 1) * unitLevelBonus(unit);
+  const att = Math.max(0, unit.stats.attaque + grow);
+  const res = Math.max(1, unit.stats.defense + grow);
+  return Math.sqrt(att * res * COMBAT_RULES.hpPerResistance);
+}
+function unitClasses(all = UNITS) {
+  const out = {};
+  for (const category of ["attack", "defense"]) {
+    all.filter((u) => u.category === category && u.elite && u.combatClass).forEach((u) => out[u.id] = u.combatClass);
+    const fighters = all.filter((u) => u.category === category && u.stats.attaque > 0 && !(u.elite && u.combatClass)).sort((a, b) => combatValue(a) - combatValue(b));
+    all.filter((u) => u.category === category && !(u.stats.attaque > 0)).forEach((u) => out[u.id] = "support");
+    fighters.forEach((u, i) => {
+      var _a;
+      const third = fighters.length > 0 ? i / fighters.length : 0;
+      out[u.id] = (_a = u.combatClass) != null ? _a : third < 1 / 3 ? "light" : third < 2 / 3 ? "medium" : "heavy";
+    });
+  }
+  return out;
+}
+
+// src/game/effectTargets.ts
+var CATEGORY_LABELS = { attack: "Vaisseaux", defense: "D\xE9fenses" };
+function parseUnitSelector(sel) {
+  if (!sel) return { kind: "all", value: "" };
+  const [kind, value2 = ""] = sel.split(":");
+  if ((kind === "unit" || kind === "class" || kind === "cat") && value2) return { kind, value: value2 };
+  return { kind: "all", value: "" };
+}
+function validUnitSelector(sel) {
+  return isUnitSelector(sel, (id) => !!findUnit(id));
+}
+function unitSelectorLabel(sel) {
+  var _a, _b, _c, _d;
+  const p = parseUnitSelector(sel);
+  if (p.kind === "unit") return (_b = (_a = findUnit(p.value)) == null ? void 0 : _a.name) != null ? _b : p.value;
+  if (p.kind === "class") return `Classe ${(_c = UNIT_CLASS_LABELS[p.value]) != null ? _c : p.value}`;
+  if (p.kind === "cat") return (_d = CATEGORY_LABELS[p.value]) != null ? _d : p.value;
+  return "Toutes les unit\xE9s";
+}
+setUnitTargetLabeler(unitSelectorLabel);
+function selectorMatches(sel, unitId, classes = unitClasses()) {
+  var _a;
+  const p = parseUnitSelector(sel);
+  if (p.kind === "all") return true;
+  if (p.kind === "unit") return p.value === unitId;
+  if (p.kind === "class") return classes[unitId] === p.value;
+  return ((_a = findUnit(unitId)) == null ? void 0 : _a.category) === p.value;
+}
+function unitEffect(grants, stat3, unitId, scope, classes = unitClasses()) {
+  const mine = grants.filter((g) => g.stat === stat3 && selectorMatches(g.target, unitId, classes)).map((g) => __spreadProps(__spreadValues({}, g), { target: void 0 }));
+  if (mine.length === 0) return 0;
+  return ["tech", "empire"].reduce((s, layer) => s + effectTotal(mine, layer, stat3, { scope }), 0);
+}
+function combatEffects(grants, scope, all = UNITS) {
+  const units = {};
+  const relevant = grants.filter((g) => g.stat === "unitAttack" || g.stat === "unitHp");
+  if (relevant.length > 0) {
+    const classes = unitClasses();
+    for (const u of all) {
+      const att = unitEffect(relevant, "unitAttack", u.id, scope, classes);
+      const hp = unitEffect(relevant, "unitHp", u.id, scope, classes);
+      if (att || hp) units[u.id] = __spreadValues(__spreadValues({}, att ? { att } : {}), hp ? { hp } : {});
+    }
+  }
+  const both = (stat3) => effectTotal(grants, "tech", stat3, { scope }) + effectTotal(grants, "empire", stat3, { scope });
+  return { units, edge: both("classEdge"), shield: both("shield") };
+}
+function unitCostFor(unit, grants) {
+  const k = Math.max(0, 1 - unitEffect(grants, "unitCost", unit.id));
+  return { scrap: Math.ceil((unit.cost.scrap || 0) * k), energy: Math.ceil((unit.cost.energy || 0) * k) };
+}
+function playerCombatEffects(player, scope, now = Date.now()) {
+  return combatEffects(allEffects(player, now), scope);
+}
+function edgeParam(fx, extra) {
+  var _a, _b;
+  const bonus = ((_a = fx == null ? void 0 : fx.edge) != null ? _a : 0) + ((_b = extra == null ? void 0 : extra.bonus) != null ? _b : 0);
+  if (!(bonus > 0) && !(extra == null ? void 0 : extra.cancel)) return void 0;
+  return __spreadValues(__spreadValues({}, bonus > 0 ? { bonus } : {}), (extra == null ? void 0 : extra.cancel) ? { cancel: true } : {});
+}
+function playerUnitCost(unit, player, now = Date.now()) {
+  return unitCostFor(unit, allEffects(player, now));
 }
 
 // src/game/commanders.ts
@@ -866,7 +1013,7 @@ var BASE_COMMANDERS = [
 var COMMANDERS = BASE_COMMANDERS.map((c) => __spreadProps(__spreadValues({}, c), { role: c.id, bonus: (l) => roleBonusText(c.id, l) }));
 function roleBonusText(role, l) {
   var _a;
-  const parts = ((_a = ROLE_EFFECTS[role]) != null ? _a : []).map((e3) => `${EFFECT_STATS[e3.stat].label}${e3.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e3.stat, e3.perLevel * l)}`);
+  const parts = ((_a = ROLE_EFFECTS[role]) != null ? _a : []).map((e3) => e3.target || e3.scope && e3.scope !== "colonies" ? describeEffect(e3.stat, e3.perLevel * l, e3.target, e3.scope) : `${EFFECT_STATS[e3.stat].label}${e3.scope === "colonies" ? " (colonies)" : ""} ${formatEffectValue(e3.stat, e3.perLevel * l)}`);
   if (role === "spy") parts.push(`${Math.round(l * COMMANDER_RULES.anomalyPerLevel * 100)} % de flairer une anomalie chimique`);
   return parts.join(", ");
 }
@@ -1171,29 +1318,32 @@ function defaultOfficersConfig() {
   return {};
 }
 function setOfficers(cfg) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g;
   for (const role of COMMANDER_ROLES) {
     const o = (_a = cfg == null ? void 0 : cfg.roles) == null ? void 0 : _a[role];
-    ROLE_EFFECTS[role] = DEFAULT_ROLE_EFFECTS[role].map((e3, i) => {
-      var _a2;
-      const v = Number((_a2 = o == null ? void 0 : o.perLevel) == null ? void 0 : _a2[i]);
-      return __spreadProps(__spreadValues({}, e3), { perLevel: Number.isFinite(v) && v >= 0 ? v : e3.perLevel });
-    });
+    ROLE_EFFECTS[role] = [
+      ...DEFAULT_ROLE_EFFECTS[role].map((e3, i) => {
+        var _a2;
+        const v = Number((_a2 = o == null ? void 0 : o.perLevel) == null ? void 0 : _a2[i]);
+        return __spreadProps(__spreadValues({}, e3), { perLevel: Number.isFinite(v) && v >= 0 ? v : e3.perLevel });
+      }),
+      ...((_b = o == null ? void 0 : o.extra) != null ? _b : []).filter((e3) => e3 && e3.stat in EFFECT_STATS && Number.isFinite(e3.perLevel) && e3.perLevel > 0)
+    ];
     const def3 = COMMANDERS.find((c) => c.id === role);
     if (def3) {
-      def3.name = ((_b = o == null ? void 0 : o.name) == null ? void 0 : _b.trim()) || DEFAULT_NAMES[role].name;
-      def3.title = ((_c = o == null ? void 0 : o.title) == null ? void 0 : _c.trim()) || DEFAULT_NAMES[role].title;
+      def3.name = ((_c = o == null ? void 0 : o.name) == null ? void 0 : _c.trim()) || DEFAULT_NAMES[role].name;
+      def3.title = ((_d = o == null ? void 0 : o.title) == null ? void 0 : _d.trim()) || DEFAULT_NAMES[role].title;
     }
   }
   Object.assign(COMMANDER_RULES, DEFAULT_COMMANDER_RULES);
   for (const k of OFFICER_RULE_KEYS) {
-    const v = Number((_d = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _d[k]);
-    if (((_e = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _e[k]) !== void 0 && Number.isFinite(v)) COMMANDER_RULES[k] = v;
+    const v = Number((_e = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _e[k]);
+    if (((_f = cfg == null ? void 0 : cfg.rules) == null ? void 0 : _f[k]) !== void 0 && Number.isFinite(v)) COMMANDER_RULES[k] = v;
   }
-  Object.assign(RARE_OFFICER_RULES, DEFAULT_RARE_OFFICER_RULES, (_f = cfg == null ? void 0 : cfg.rareDrop) != null ? _f : {});
+  Object.assign(RARE_OFFICER_RULES, DEFAULT_RARE_OFFICER_RULES, (_g = cfg == null ? void 0 : cfg.rareDrop) != null ? _g : {});
 }
 function validateOfficers(cfg) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const errors = [];
   if (!cfg) return errors;
   for (const [role, o] of Object.entries((_a = cfg.roles) != null ? _a : {})) {
@@ -1202,8 +1352,12 @@ function validateOfficers(cfg) {
       continue;
     }
     for (const v of (_b = o == null ? void 0 : o.perLevel) != null ? _b : []) if (!(typeof v === "number" && v >= 0 && v <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : valeur par niveau entre 0 et 1 (0,01 = 1 %).`);
+    for (const e3 of (_c = o == null ? void 0 : o.extra) != null ? _c : []) {
+      for (const m of validateComposedEffect(e3, validUnitSelector)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : ${m}.`);
+      if (!(typeof (e3 == null ? void 0 : e3.perLevel) === "number" && e3.perLevel > 0 && e3.perLevel <= 1)) errors.push(`Officiers, ${DEFAULT_NAMES[role].title} : effet ajout\xE9, valeur par niveau entre 0 et 1.`);
+    }
   }
-  const r = (_c = cfg.rules) != null ? _c : {};
+  const r = (_d = cfg.rules) != null ? _d : {};
   const int = (v, min) => v === void 0 || Number.isInteger(v) && v >= min;
   if (!int(r.slots, 1)) errors.push("Officiers : postes \u2265 1.");
   if (!int(r.recruitAmber, 0)) errors.push("Officiers : co\xFBt en Ambre entier \u2265 0.");
@@ -1211,7 +1365,7 @@ function validateOfficers(cfg) {
   if (r.swapCooldownHours !== void 0 && !(r.swapCooldownHours >= 0)) errors.push("Officiers : d\xE9lai de changement de poste \u2265 0.");
   if (!int(r.dossierXp, 1)) errors.push("Officiers : XP d'un dossier enti\xE8re \u2265 1.");
   for (const k of ["participant", "podium"]) {
-    const v = (_d = cfg.rareDrop) == null ? void 0 : _d[k];
+    const v = (_e = cfg.rareDrop) == null ? void 0 : _e[k];
     if (v !== void 0 && !(v >= 0 && v <= 0.2)) errors.push("Officiers rares : chance sur un boss entre 0 et 0,2 (20 %).");
   }
   return errors;
@@ -1256,7 +1410,16 @@ var DEFAULT_RELICS = [
   { id: "coeur_leviathan", name: "C\u0153ur du L\xE9viathan", effect: "boss_damage", lore: "Il bat encore, et sa col\xE8re guide tes salves contre les colosses.", mythicOnly: true },
   { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taill\xE9e dans l'ambre de la premi\xE8re Reine, elle fait fructifier l'empire.", mythicOnly: true },
   { id: "oeil_neant", name: "\u0152il du N\xE9ant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
-  { id: "egide_stellaire", name: "\xC9gide stellaire", effect: "defense", lore: "Un bouclier forg\xE9 au c\u0153ur d'une \xE9toile mourante.", mythicOnly: true }
+  { id: "egide_stellaire", name: "\xC9gide stellaire", effect: "defense", lore: "Un bouclier forg\xE9 au c\u0153ur d'une \xE9toile mourante.", mythicOnly: true },
+  // 5.23 : effets composés (grandeur × cible × portée), bonus de rareté × scale. Images provisoires.
+  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, lore: "Grav\xE9 sur la premi\xE8re Sentinelle \xE0 n'avoir jamais c\xE9d\xE9.", image: "/assets/relics/ecaille_leviathan.webp" },
+  { id: "plaque_bastion", name: "Plaque de rempart", effect: "custom", custom: { stat: "unitHp", target: "cat:defense", scale: 1 }, lore: "Un pan de muraille qui refuse de tomber.", image: "/assets/relics/ecaille_leviathan.webp" },
+  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, lore: "Elle ne sert qu'entre \xE9gaux.", image: "/assets/relics/engrenage_varan.webp" },
+  { id: "trophee_seigneur", name: "Troph\xE9e de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, lore: "Arrach\xE9 \xE0 la cuirasse d'un seigneur tomb\xE9.", image: "/assets/relics/engrenage_varan.webp" },
+  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, lore: "Les chasseurs Kesh la portent pour flairer leurs proies.", image: "/assets/relics/oeil_vesper.webp" },
+  { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi.", image: "/assets/relics/cristal_memoriel.webp" },
+  { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martel\xE9 les quilles des premiers cuirass\xE9s.", image: "/assets/relics/noyau_forge.webp" },
+  { id: "navette_mere", name: "Navette-m\xE8re", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche.", image: "/assets/relics/noyau_forge.webp" }
 ];
 var RELICS = DEFAULT_RELICS.map((t) => __spreadValues({}, t));
 var DEFAULT_RARITY_VALUES = Object.fromEntries(
@@ -1303,7 +1466,7 @@ function mythicFor(seasonId) {
   const pool = mythicTemplates();
   return { template: pool[index2 % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
-var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed"];
+var RELIC_EFFECT_IDS = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed", "custom"];
 var RELIC_EFFECT_LABELS = {
   attack: "Attaque",
   defense: "D\xE9fense",
@@ -1319,10 +1482,11 @@ var RELIC_EFFECT_LABELS = {
   production_all: "Toute la production",
   aegis: "\xC9gide (1re d\xE9faite de la semaine non pill\xE9e)",
   boss_damage: "D\xE9g\xE2ts contre les boss",
-  repair_speed: "Cadence de l'Atelier de r\xE9paration"
+  repair_speed: "Cadence de l'Atelier de r\xE9paration",
+  custom: "Effet compos\xE9 (grandeur, cible, port\xE9e)"
 };
 function validateRelics(defs, settings) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e;
   const errors = [];
   const ids = /* @__PURE__ */ new Set();
   for (const t of defs) {
@@ -1332,6 +1496,11 @@ function validateRelics(defs, settings) {
     ids.add(t.id);
     if (!((_b = t.name) == null ? void 0 : _b.trim())) errors.push(`${label3} : nom manquant.`);
     if (!RELIC_EFFECT_IDS.includes(t.effect)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
+    if (t.effect === "custom") {
+      for (const e3 of validateComposedEffect(t.custom, validUnitSelector)) errors.push(`${label3} : ${e3}.`);
+      const k = (_d = (_c = t.custom) == null ? void 0 : _c.scale) != null ? _d : 1;
+      if (!(Number.isFinite(k) && k > 0 && k <= 20)) errors.push(`${label3} : multiplicateur entre 0 et 20.`);
+    }
     if (t.legendaryOnly && t.mythicOnly) errors.push(`${label3} : r\xE9serv\xE9e aux l\xE9gendaires OU aux mythiques, pas les deux.`);
   }
   if (!defs.some((t) => !t.disabled && !t.legendaryOnly && !t.mythicOnly)) errors.push("Reliques : il faut au moins une relique active ordinaire (tirable \xE0 toutes les raret\xE9s).");
@@ -1343,7 +1512,7 @@ function validateRelics(defs, settings) {
   if (!(settings.expeditionMax >= 0 && settings.expeditionMax <= 1)) errors.push("Reliques : plafond en exp\xE9dition entre 0 et 1.");
   if (!(settings.expeditionPerHour >= 0)) errors.push("Reliques : chance par heure \u2265 0.");
   for (const r of RARITIES) {
-    const v = (_c = settings.rarities) == null ? void 0 : _c[r.id];
+    const v = (_e = settings.rarities) == null ? void 0 : _e[r.id];
     if (!v) continue;
     if (!(v.pct >= 0 && v.pct <= 1)) errors.push(`Reliques, ${r.label} : bonus entre 0 et 1 (0,06 = 6 %).`);
     if (r.id !== "mythic" && !(v.weight >= 0)) errors.push(`Reliques, ${r.label} : poids de tirage \u2265 0.`);
@@ -1417,13 +1586,17 @@ var RELIC_EFFECT_STAT = {
   production_data: { stat: "production", target: "data" }
 };
 function relicEffects(player) {
-  var _a;
+  var _a, _b, _c;
   const out = [];
   for (const item of equippedRelics(player)) {
     const t = findTemplate(item.template);
+    if ((t == null ? void 0 : t.effect) === "custom" && ((_a = t.custom) == null ? void 0 : _a.stat)) {
+      out.push(__spreadProps(__spreadValues(__spreadValues({ stat: t.custom.stat }, t.custom.target ? { target: t.custom.target } : {}), t.custom.scope && t.custom.scope !== "all" ? { scope: t.custom.scope } : {}), { value: relicBonus(item) * ((_b = t.custom.scale) != null ? _b : 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } }));
+      continue;
+    }
     const m = t ? RELIC_EFFECT_STAT[t.effect] : void 0;
     if (!m) continue;
-    out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * ((_a = m.scale) != null ? _a : 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
+    out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * ((_c = m.scale) != null ? _c : 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
   }
   return out;
 }
@@ -2806,7 +2979,8 @@ var TECH_EFFECT_DEFAULTS = {
   fleet_upkeep: 0.05,
   counter_spy: 1,
   hangar_capacity: 0.05,
-  repair_speed: 0.1
+  repair_speed: 0.1,
+  stat: 0.02
 };
 var TECH_EFFECT_LABELS = {
   unlock_recipe: "D\xE9bloque des recettes (niveau = nombre de recettes)",
@@ -2830,7 +3004,8 @@ var TECH_EFFECT_LABELS = {
   fleet_upkeep: "Entretien de la flotte (\u2212% par niveau)",
   counter_spy: "Contre-espionnage (points par niveau)",
   hangar_capacity: "Capacit\xE9 des hangars d'attaque ou de d\xE9fense (% par niveau)",
-  repair_speed: "Cadence de l'Atelier de r\xE9paration (% par niveau)"
+  repair_speed: "Cadence de l'Atelier de r\xE9paration (% par niveau)",
+  stat: "Effet compos\xE9 : grandeur, cible et port\xE9e (valeur par niveau)"
 };
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
 var DEFAULT_TECHNOLOGIES = [
@@ -2908,9 +3083,9 @@ function techEffectGrants(techLevels2) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
     for (const e3 of techEffects(tech)) {
-      const stat3 = TECH_EFFECT_STAT[e3.type];
+      const stat3 = e3.type === "stat" ? e3.stat : TECH_EFFECT_STAT[e3.type];
       if (!stat3) continue;
-      out.push({ stat: stat3, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      out.push(__spreadProps(__spreadValues({ stat: stat3, target: e3.target }, e3.type === "stat" && e3.scope && e3.scope !== "all" ? { scope: e3.scope } : {}), { value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } }));
     }
   }
   return out;
@@ -2990,7 +3165,8 @@ var EFFECT_MAX_PER_LEVEL = {
   fleet_upkeep: 0.5,
   protected_storage: 0.5,
   counter_spy: 10,
-  hangar_capacity: 0.5
+  hangar_capacity: 0.5,
+  stat: 0.5
 };
 function validateTechEffect(label3, e3, refs) {
   var _a, _b;
@@ -3000,6 +3176,7 @@ function validateTechEffect(label3, e3, refs) {
   if (e3.type === "hangar_capacity" && e3.target !== "attack" && e3.target !== "defense") errors.push(`${label3} : hangar vis\xE9 manquant (attaque ou d\xE9fense).`);
   if (e3.type === "unlock_next_level" && e3.target && !refs.unitIds.has(e3.target)) errors.push(`${label3} : unit\xE9 \xAB ${e3.target} \xBB inexistante.`);
   for (const id of (_a = e3.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
+  if (e3.type === "stat") for (const m of validateComposedEffect(e3, (sel) => isUnitSelector(sel, (id) => refs.unitIds.has(id)))) errors.push(`${label3} : ${m}.`);
   if (e3.value !== void 0) {
     const max = (_b = EFFECT_MAX_PER_LEVEL[e3.type]) != null ? _b : 5;
     if (!Number.isFinite(e3.value) || e3.value < 0 || e3.value > max) errors.push(`${label3} : valeur par niveau de \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB entre 0 et ${max}.`);
@@ -5028,7 +5205,8 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   if (colony.defenseJob) throw new GameActionError("Des d\xE9fenses sont d\xE9j\xE0 en construction sur cette colonie.");
   const { used, capacity } = colonyDefenseHangar(colony);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
-  const paid = { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty };
+  const each = playerUnitCost(unit, player, now);
+  const paid = { scrap: each.scrap * qty, energy: each.energy * qty };
   payFrom(colony.resources, paid, "ces d\xE9fenses");
   colony.defenseJob = { unitId, qty, endTime: now + colonyDefenseSeconds(player, unitId, qty, colony) * 1e3, startedAtMs: now, paid };
   return colony.defenseJob;
@@ -6191,7 +6369,9 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
   const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
   const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
   const fx = formationEffects(formation);
+  const pve = playerCombatEffects(player, "pve", now);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    unitBonus: { attacker: pve.units },
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
     attackerUnits: withFleet(player.units, fleet),
@@ -7443,7 +7623,11 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   const fleetOnly = faction.raid.target === "fleet";
   const posture = postureEffects((_a = player.posture) == null ? void 0 : _a.id, fleetOnly);
   const defenderUnits = fleetOnly ? Object.fromEntries(Object.entries((_b = player.units) != null ? _b : {}).filter(([id]) => OFFENSIVE_UNITS.includes(id))) : (_c = player.units) != null ? _c : {};
-  const combat = resolveCombat({
+  const pve = playerCombatEffects(player, "pve", now);
+  const edge = edgeParam(pve);
+  const combat = resolveCombat(__spreadProps(__spreadValues({
+    unitBonus: { defender: pve.units }
+  }, edge ? { classEdge: { defender: edge } } : {}), {
     attackerUnits: {},
     attackerTechLevels: {},
     attackerRepairPct: 0,
@@ -7452,7 +7636,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     defenderUnits,
     defenderTechLevels: (_d = player.techLevels) != null ? _d : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
-    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
+    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)) + pve.shield,
     defenderResources: {},
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
@@ -7462,7 +7646,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     // v5.9 : Traqueurs Kesh à quai, +50 % d'attaque contre les PNJ.
     defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, (_e = player.techLevels) != null ? _e : {}, posture.homeFleetFactor, posture.defenseFactor),
     defenderHull: workshopState(player).hull
-  });
+  }));
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
   }
@@ -7577,7 +7761,9 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
   const player = flushed.player;
   const st = pirateState(player, faction.id);
   const fx = formationEffects(formation);
+  const pve = playerCombatEffects(player, "pve", now);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    unitBonus: { attacker: pve.units },
     // v3.3 : Batterie de siège de l'alliance.
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.
@@ -7685,7 +7871,7 @@ var TIER_REWARDS = {
   // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
   mythique: { xp: 400, hours: 12 }
 };
-var CATEGORY_LABELS = {
+var CATEGORY_LABELS2 = {
   combat: { label: "Combat", emoji: "\u2694\uFE0F" },
   construction: { label: "Construction", emoji: "\u{1F3D7}\uFE0F" },
   recherche: { label: "Recherche", emoji: "\u{1F52C}" },
@@ -8041,7 +8227,7 @@ function validateAchievements(defs) {
     if (!(a.metric in METRICS)) errors.push(`${label3} : mesure inconnue.`);
     if (!(a.threshold > 0)) errors.push(`${label3} : seuil invalide.`);
     if (!(a.tier in TIER_LABELS)) errors.push(`${label3} : palier inconnu.`);
-    if (!(a.category in CATEGORY_LABELS)) errors.push(`${label3} : cat\xE9gorie inconnue.`);
+    if (!(a.category in CATEGORY_LABELS2)) errors.push(`${label3} : cat\xE9gorie inconnue.`);
   }
   return errors;
 }
@@ -9305,30 +9491,9 @@ function findUnit(id) {
 function getUnitBuildTime(unit, techLevels2, player) {
   const total2 = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
   const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total2 / 100));
-  const empire = player ? 1 - playerModifiers(player).unitTime : 1;
+  const targeted = player || techLevels2 ? 1 - unitEffect([...techEffectGrants(techLevels2), ...player ? empireEffects(player) : []], "unitBuildTime", unit.id) : 1;
+  const empire = (player ? 1 - playerModifiers(player).unitTime : 1) * targeted;
   return techLevels2 || empire !== 1 ? Math.max(1, Math.round(base * techReductionFactor(techLevels2, "unit_time") * empire)) : base;
-}
-
-// src/game/unitClasses.ts
-function combatValue(unit, level3 = 1) {
-  const grow = (Math.max(1, level3) - 1) * unitLevelBonus(unit);
-  const att = Math.max(0, unit.stats.attaque + grow);
-  const res = Math.max(1, unit.stats.defense + grow);
-  return Math.sqrt(att * res * COMBAT_RULES.hpPerResistance);
-}
-function unitClasses(all = UNITS) {
-  const out = {};
-  for (const category of ["attack", "defense"]) {
-    all.filter((u) => u.category === category && u.elite && u.combatClass).forEach((u) => out[u.id] = u.combatClass);
-    const fighters = all.filter((u) => u.category === category && u.stats.attaque > 0 && !(u.elite && u.combatClass)).sort((a, b) => combatValue(a) - combatValue(b));
-    all.filter((u) => u.category === category && !(u.stats.attaque > 0)).forEach((u) => out[u.id] = "support");
-    fighters.forEach((u, i) => {
-      var _a;
-      const third = fighters.length > 0 ? i / fighters.length : 0;
-      out[u.id] = (_a = u.combatClass) != null ? _a : third < 1 / 3 ? "light" : third < 2 / 3 ? "medium" : "heavy";
-    });
-  }
-  return out;
 }
 
 // src/game/combat.ts
@@ -9519,21 +9684,22 @@ function applyDamage(targets, dmg) {
 function unitBaseHp(units, techLevels2, id) {
   return Math.max(1, unitStat(units, techLevels2, id, "defense")) * COMBAT_RULES.hpPerResistance;
 }
-function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor, hull) {
-  var _a, _b, _c, _d;
+function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor, hull, bonus) {
+  var _a, _b, _c, _d, _e, _f;
   const out = [];
   const classes = unitClasses();
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
-    const att = unitStat(units, techLevels2, id, "attack") * factor;
+    const b = bonus == null ? void 0 : bonus[id];
+    const att = unitStat(units, techLevels2, id, "attack") * factor * (1 + Math.max(-0.9, (_a = b == null ? void 0 : b.att) != null ? _a : 0));
     const res = unitStat(units, techLevels2, id, "defense");
     if (!(att > 0) && !(res > 0)) continue;
     const baseHp = Math.max(1, res) * COMBAT_RULES.hpPerResistance;
-    const owned = Math.max(qty, (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0);
-    const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, ((_c = hull == null ? void 0 : hull[id]) != null ? _c : 0) / baseHp));
+    const owned = Math.max(qty, (_c = (_b = units[id]) == null ? void 0 : _b.count) != null ? _c : 0);
+    const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, ((_d = hull == null ? void 0 : hull[id]) != null ? _d : 0) / baseHp));
     const n = qty * engaged;
     const cls = classes[id];
-    out.push(__spreadValues({ id, owner, count: Math.max(0, n - damaged * n / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp }, cls && cls !== "support" ? { cls, edge: (_d = findUnit(id)) == null ? void 0 : _d.classEdge } : {}));
+    out.push(__spreadValues({ id, owner, count: Math.max(0, n - damaged * n / owned), realCount: qty, att, hp: baseHp * hpFactor * (1 + Math.max(-0.9, (_e = b == null ? void 0 : b.hp) != null ? _e : 0)), owned, damaged, baseHp }, cls && cls !== "support" ? { cls, edge: (_f = findUnit(id)) == null ? void 0 : _f.classEdge } : {}));
   }
   return out;
 }
@@ -9556,7 +9722,7 @@ function combatLogOf(result) {
   });
 }
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
@@ -9567,7 +9733,7 @@ function resolveCombat(params) {
   const garrisons = (_f = params.garrisons) != null ? _f : [];
   const garrisonFactor = (_g = params.garrisonFactor) != null ? _g : 0.5;
   const retreatAt = Math.max(0.05, Math.min(1, (_h = params.retreatAt) != null ? _h : R.retreatAt));
-  let attacker = params.attackerPowerOverride === void 0 ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull) : [];
+  let attacker = params.attackerPowerOverride === void 0 ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull, (_i = params.unitBonus) == null ? void 0 : _i.attacker) : [];
   const home = 1 + R.homeDefenseBonus;
   let defender = [];
   if (params.defenderPowerOverride === void 0) {
@@ -9580,8 +9746,8 @@ function resolveCombat(params) {
       return [id, (_b2 = (_a2 = defenderUnits[id]) == null ? void 0 : _a2.count) != null ? _b2 : 0];
     }));
     defender = [
-      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * ((_i = params.defenseFactor) != null ? _i : 1) * defFactor, void 0, params.defenderHull),
-      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, void 0, params.defenderHull),
+      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * ((_j = params.defenseFactor) != null ? _j : 1) * defFactor, void 0, params.defenderHull, (_k = params.unitBonus) == null ? void 0 : _k.defender),
+      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, void 0, params.defenderHull, (_l = params.unitBonus) == null ? void 0 : _l.defender),
       ...garrisons.flatMap((g, i) => realStacks(g.units, g.techLevels, g.fleet, i, garrisonFactor, defFactor))
     ];
   }
@@ -9595,8 +9761,8 @@ function resolveCombat(params) {
       t.edge = m.cancel ? 0 : ((_a2 = t.edge) != null ? _a2 : R.classEdge) + ((_b2 = m.bonus) != null ? _b2 : 0);
     }
   };
-  edgeMod(attacker, (_j = params.classEdge) == null ? void 0 : _j.attacker);
-  edgeMod(defender, (_k = params.classEdge) == null ? void 0 : _k.defender, ["defense", "home"]);
+  edgeMod(attacker, (_m = params.classEdge) == null ? void 0 : _m.attacker);
+  edgeMod(defender, (_n = params.classEdge) == null ? void 0 : _n.defender, ["defense", "home"]);
   const attackerStart = attacker.map((t) => t.count);
   const defenderStart = defender.map((t) => t.count);
   const a0 = poolOf(attacker);
@@ -9617,7 +9783,7 @@ function resolveCombat(params) {
       const onAttacker = volley(defender, attacker, 1, void 0, bonusD);
       const dmgByAttacker = applyDamage(defender, onDefender);
       const dmgByDefender = applyDamage(attacker, onAttacker);
-      for (const t of [...attacker, ...defender]) ((_l = t.trace) != null ? _l : t.trace = []).push(Math.round(t.count * 10) / 10);
+      for (const t of [...attacker, ...defender]) ((_o = t.trace) != null ? _o : t.trace = []).push(Math.round(t.count * 10) / 10);
       const aLeft2 = poolOf(attacker) / a0;
       const dLeft2 = poolOf(defender) / d0;
       rounds.push({ attackerHp: aLeft2, defenderHp: dLeft2, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });
@@ -9697,16 +9863,16 @@ function resolveCombat(params) {
     if (isDefense && recovered > 0) defenderRebuilt[t.id] = recovered;
   });
   const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_m = attackerLosses[unitId]) != null ? _m : 0) - ((_n = attackerRecovered[unitId]) != null ? _n : 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_o = params.cargoFactor) != null ? _o : 1));
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_p = attackerLosses[unitId]) != null ? _p : 0) - ((_q = attackerRecovered[unitId]) != null ? _q : 0));
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_r = params.cargoFactor) != null ? _r : 1));
   let loot = null;
   if (outcome === "attacker_win") {
     const wanted = {};
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
-      const pct7 = Math.min(1, base * ((_p = params.lootMultiplier) != null ? _p : 1));
-      const amount3 = Math.floor(Math.max(0, (_q = defenderResources[res]) != null ? _q : 0) * pct7);
+      const pct7 = Math.min(1, base * ((_s = params.lootMultiplier) != null ? _s : 1));
+      const amount3 = Math.floor(Math.max(0, (_t = defenderResources[res]) != null ? _t : 0) * pct7);
       wanted[res] = amount3;
       total2 += amount3;
     }
@@ -9721,8 +9887,8 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_r = loot[res]) != null ? _r : 0) < ((_s = wanted[res]) != null ? _s : 0)) {
-        loot[res] = ((_t = loot[res]) != null ? _t : 0) + 1;
+      if (((_u = loot[res]) != null ? _u : 0) < ((_v = wanted[res]) != null ? _v : 0)) {
+        loot[res] = ((_w = loot[res]) != null ? _w : 0) + 1;
         left--;
       }
     }
@@ -10936,6 +11102,8 @@ function fightFleet(player, fleet, ratio, now) {
   const fleetPower = computeFleetPower(player.units, player.techLevels, fleet.units, ["attack"]);
   const fx = formationEffects(fleet.expedition.formation);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    // 5.23 : effets ciblés du joueur contre les PNJ.
+    unitBonus: { attacker: playerCombatEffects(player, "pve", now).units },
     attackFactor: fx.attackFactor * (1 + playerModifiers(player).attack),
     // 5.20 : stock = base + flotte d'expédition, pour répartir les dégâts conservés.
     attackerUnits: withFleet(player.units, fleet.units),
@@ -13271,6 +13439,11 @@ function performAttack(input) {
   }
   const baseShield = getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch));
   const lordEdge = mods && (mods.edgeBonus || mods.edgeCancelled) ? { bonus: mods.edgeBonus, cancel: mods.edgeCancelled } : void 0;
+  const scope = lord ? "warlord" : "pvp";
+  const atkFx = playerCombatEffects(attacker, scope, now);
+  const defFx = playerCombatEffects(owner, scope, now);
+  const attackerEdge = edgeParam(atkFx, lordSide === "attacker" ? lordEdge : void 0);
+  const defenderEdge = edgeParam(defFx, lordSide === "defender" ? lordEdge : void 0);
   const combat = resolveCombat(__spreadProps(__spreadValues(__spreadValues(__spreadProps(__spreadValues({}, formation), {
     // v5.9 : les Traqueurs Kesh gardent leur +50 % contre les seigneurs de guerre (PNJ).
     attackFactor: formation.attackFactor * (1 + atkMods.attack + assault) * (owner.npc ? pveAttackFactor(attacker.units, attacker.techLevels, fleet) : 1),
@@ -13279,7 +13452,8 @@ function performAttack(input) {
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_n = def3.units) != null ? _n : {}, (_o = def3.techLevels) != null ? _o : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
     defenseFactor: posture.defenseFactor * ((_p = mods == null ? void 0 : mods.defenseFactor) != null ? _p : 1),
     homeFleetFactor: (mods == null ? void 0 : mods.homeFleetFactor) !== void 0 ? ((_q = posture.homeFleetFactor) != null ? _q : COMBAT_RULES.homeFleetDefenseFactor) * mods.homeFleetFactor : posture.homeFleetFactor
-  }), (mods == null ? void 0 : mods.retreatAt) !== void 0 ? { retreatAt: mods.retreatAt } : {}), lordEdge ? { classEdge: lordSide === "attacker" ? { attacker: lordEdge } : { defender: lordEdge } } : {}), {
+  }), (mods == null ? void 0 : mods.retreatAt) !== void 0 ? { retreatAt: mods.retreatAt } : {}), attackerEdge || defenderEdge ? { classEdge: __spreadValues(__spreadValues({}, attackerEdge ? { attacker: attackerEdge } : {}), defenderEdge ? { defender: defenderEdge } : {}) } : {}), {
+    unitBonus: { attacker: atkFx.units, defender: defFx.units },
     targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : void 0,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
     lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
@@ -13293,7 +13467,7 @@ function performAttack(input) {
     defenderUnits: attacker.npc ? (_s = def3.units) != null ? _s : {} : withoutElite((_t = def3.units) != null ? _t : {}),
     defenderTechLevels: (_u = def3.techLevels) != null ? _u : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
-    defenderShieldPct: (mods == null ? void 0 : mods.shieldIgnored) ? 0 : baseShield + ((_v = mods == null ? void 0 : mods.shieldBonus) != null ? _v : 0),
+    defenderShieldPct: (mods == null ? void 0 : mods.shieldIgnored) ? 0 : baseShield + ((_v = mods == null ? void 0 : mods.shieldBonus) != null ? _v : 0) + defFx.shield,
     // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
     attackerHull: workshopState(attacker).hull,
     defenderHull: colony ? void 0 : workshopState(owner).hull,
@@ -13793,7 +13967,7 @@ function quoteCancel(player, queues, target, now) {
       const group = unitGroupAt(queue, target.index);
       const unit = group ? findUnit(queue[group.start].unitId) : void 0;
       if (!group || !unit) throw new GameActionError("Ce lot n'est plus dans la file.");
-      const each = { scrap: unit.cost.scrap, energy: unit.cost.energy };
+      const each = playerUnitCost(unit, player, now);
       let refund = {};
       let fraction = 1;
       for (let i = group.start; i < group.start + group.count; i++) {
@@ -15245,7 +15419,8 @@ function applyAction(s, action) {
       if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
       }
-      pay(player, { scrap: unit.cost.scrap * qty, energy: unit.cost.energy * qty }, now);
+      const each = playerUnitCost(unit, player, now);
+      pay(player, { scrap: each.scrap * qty, energy: each.energy * qty }, now);
       recordContract(player, "build_units", qty, now);
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
@@ -15259,8 +15434,9 @@ function applyAction(s, action) {
       const qty = positiveInt(action.qty, "Quantit\xE9");
       if (((_j = (_i = player.units[unit.id]) == null ? void 0 : _i.count) != null ? _j : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
       player.units[unit.id].count -= qty;
-      player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
-      player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
+      const each = playerUnitCost(unit, player, now);
+      player.resources.scrap += Math.floor(each.scrap * 0.5) * qty;
+      player.resources.energy += Math.floor(each.energy * 0.5) * qty;
       return void 0;
     }
     case "research": {

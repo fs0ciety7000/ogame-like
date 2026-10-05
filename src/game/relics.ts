@@ -1,5 +1,6 @@
 import { GameActionError } from "@/game/errors";
-import type { EffectGrant, EffectStat } from "@/game/effects";
+import { describeEffect, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectStat } from "@/game/effects";
+import { validUnitSelector } from "@/game/effectTargets";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -25,7 +26,9 @@ export type RelicEffect =
   | "production_all"
   | "aegis"
   | "boss_damage"
-  | "repair_speed";
+  | "repair_speed"
+  // 5.23 : effet composé dans l'administration (grandeur × cible × portée).
+  | "custom";
 
 export const RARITIES: { id: RelicRarity; label: string; pct: number; weight: number; recycle: number; color: string }[] = [
   { id: "common", label: "Commune", pct: 0.03, weight: 60, recycle: 5, color: "#cbd5e1" },
@@ -49,6 +52,8 @@ export interface RelicTemplate {
   image?: string;
   /** v5.9 : retirée des tirages et de la rotation des mythiques (les exemplaires déjà trouvés gardent leur effet). */
   disabled?: boolean;
+  /** 5.23 : effet composé (effect = "custom") ; valeur = bonus de rareté × scale. */
+  custom?: ComposedEffect & { scale?: number };
 }
 
 export const DEFAULT_RELICS: RelicTemplate[] = [
@@ -72,6 +77,15 @@ export const DEFAULT_RELICS: RelicTemplate[] = [
   { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taillée dans l'ambre de la première Reine, elle fait fructifier l'empire.", mythicOnly: true },
   { id: "oeil_neant", name: "Œil du Néant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
   { id: "egide_stellaire", name: "Égide stellaire", effect: "defense", lore: "Un bouclier forgé au cœur d'une étoile mourante.", mythicOnly: true },
+  // 5.23 : effets composés (grandeur × cible × portée), bonus de rareté × scale. Images provisoires.
+  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, lore: "Gravé sur la première Sentinelle à n'avoir jamais cédé.", image: "/assets/relics/ecaille_leviathan.webp" },
+  { id: "plaque_bastion", name: "Plaque de rempart", effect: "custom", custom: { stat: "unitHp", target: "cat:defense", scale: 1 }, lore: "Un pan de muraille qui refuse de tomber.", image: "/assets/relics/ecaille_leviathan.webp" },
+  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, lore: "Elle ne sert qu'entre égaux.", image: "/assets/relics/engrenage_varan.webp" },
+  { id: "trophee_seigneur", name: "Trophée de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, lore: "Arraché à la cuirasse d'un seigneur tombé.", image: "/assets/relics/engrenage_varan.webp" },
+  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, lore: "Les chasseurs Kesh la portent pour flairer leurs proies.", image: "/assets/relics/oeil_vesper.webp" },
+  { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi.", image: "/assets/relics/cristal_memoriel.webp" },
+  { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martelé les quilles des premiers cuirassés.", image: "/assets/relics/noyau_forge.webp" },
+  { id: "navette_mere", name: "Navette-mère", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche.", image: "/assets/relics/noyau_forge.webp" },
 ];
 
 /** Registre courant (v5.9 : remplacé par le contenu de l'administration). */
@@ -147,7 +161,7 @@ export function mythicFor(seasonId: string): { template: RelicTemplate; source: 
   return { template: pool[index % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
 
-const RELIC_EFFECT_IDS: RelicEffect[] = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed"];
+const RELIC_EFFECT_IDS: RelicEffect[] = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed", "custom"];
 
 /** Libellés des effets (administration). */
 export const RELIC_EFFECT_LABELS: Record<RelicEffect, string> = {
@@ -166,6 +180,7 @@ export const RELIC_EFFECT_LABELS: Record<RelicEffect, string> = {
   aegis: "Égide (1re défaite de la semaine non pillée)",
   boss_damage: "Dégâts contre les boss",
   repair_speed: "Cadence de l'Atelier de réparation",
+  custom: "Effet composé (grandeur, cible, portée)",
 };
 
 /** Validation des reliques et de leurs réglages (administration). */
@@ -179,6 +194,11 @@ export function validateRelics(defs: RelicTemplate[], settings: RelicSettings): 
     ids.add(t.id);
     if (!t.name?.trim()) errors.push(`${label} : nom manquant.`);
     if (!RELIC_EFFECT_IDS.includes(t.effect)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
+    if (t.effect === "custom") {
+      for (const e of validateComposedEffect(t.custom, validUnitSelector)) errors.push(`${label} : ${e}.`);
+      const k = t.custom?.scale ?? 1;
+      if (!(Number.isFinite(k) && k > 0 && k <= 20)) errors.push(`${label} : multiplicateur entre 0 et 20.`);
+    }
     if (t.legendaryOnly && t.mythicOnly) errors.push(`${label} : réservée aux légendaires OU aux mythiques, pas les deux.`);
   }
   if (!defs.some((t) => !t.disabled && !t.legendaryOnly && !t.mythicOnly)) errors.push("Reliques : il faut au moins une relique active ordinaire (tirable à toutes les raretés).");
@@ -306,6 +326,8 @@ export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): str
       return `+${pct} % de dégâts contre le Léviathan et les boss`;
     case "repair_speed":
       return `+${pct * 3} % de cadence de l'Atelier`;
+    case "custom":
+      return t.custom ? describeEffect(t.custom.stat, relicBonus(item) * (t.custom.scale ?? 1), t.custom.target, t.custom.scope) : "";
     default:
       return "";
   }
@@ -335,6 +357,11 @@ export function relicEffects(player: Pick<PlayerState, "relics" | "ascensions">)
   const out: EffectGrant[] = [];
   for (const item of equippedRelics(player)) {
     const t = findTemplate(item.template);
+    // 5.23 : effet composé dans l'administration.
+    if (t?.effect === "custom" && t.custom?.stat) {
+      out.push({ stat: t.custom.stat, ...(t.custom.target ? { target: t.custom.target } : {}), ...(t.custom.scope && t.custom.scope !== "all" ? { scope: t.custom.scope } : {}), value: relicBonus(item) * (t.custom.scale ?? 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });
+      continue;
+    }
     const m = t ? RELIC_EFFECT_STAT[t.effect] : undefined;
     if (!m) continue;
     out.push({ stat: m.stat, target: m.target, value: relicBonus(item) * (m.scale ?? 1), layer: "empire", source: { kind: "relic", id: item.id, label: relicLabel(item) } });

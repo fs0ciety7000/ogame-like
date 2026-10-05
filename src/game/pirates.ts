@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { edgeParam, playerCombatEffects } from "@/game/effectTargets";
 import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -725,7 +726,12 @@ export function resolvePirateRaid(
   const defenderUnits: Units = fleetOnly
     ? Object.fromEntries(Object.entries(player.units ?? {}).filter(([id]) => OFFENSIVE_UNITS.includes(id)))
     : player.units ?? {};
+  // 5.23 : effets ciblés du joueur contre les PNJ (unités, classe, bouclier).
+  const pve = playerCombatEffects(player, "pve", now);
+  const edge = edgeParam(pve);
   const combat = resolveCombat({
+    unitBonus: { defender: pve.units },
+    ...(edge ? { classEdge: { defender: edge } } : {}),
     attackerUnits: {},
     attackerTechLevels: {},
     attackerRepairPct: 0,
@@ -734,7 +740,7 @@ export function resolvePirateRaid(
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
-    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)),
+    defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)) + pve.shield,
     defenderResources: {},
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
@@ -877,8 +883,10 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
   const player = flushed.player;
   const st = pirateState(player, faction.id);
   const fx = formationEffects(formation);
+  const pve = playerCombatEffects(player, "pve", now);
   const combat = resolveCombat({
     ...fx,
+    unitBonus: { attacker: pve.units },
     // v3.3 : Batterie de siège de l'alliance.
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.

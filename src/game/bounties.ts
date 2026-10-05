@@ -1,4 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { playerCombatEffects } from "@/game/effectTargets";
 import { applyHull, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -335,8 +336,11 @@ export function resolveBountyHunt(
   const tier: BountyTier = contract?.tier ?? 1;
   const fugitive = FUGITIVES[contract?.fugitive ?? 0] ?? FUGITIVES[0];
   const fx = formationEffects(formation);
+  // 5.23 : effets ciblés du joueur contre les PNJ.
+  const pve = playerCombatEffects(player, "pve", now);
   const combat = resolveCombat({
     ...fx,
+    unitBonus: { attacker: pve.units },
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
     attackerUnits: withFleet(player.units, fleet),

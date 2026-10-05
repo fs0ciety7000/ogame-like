@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { playerUnitCost } from "@/game/effectTargets";
 import { EmptyAction } from "@/components/ui/panel";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
@@ -447,17 +448,18 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const hangar = colonyDefenseHangar(colony);
   const free = Math.max(0, hangar.capacity - hangar.used);
   const picked = defense.unitId ? findUnit(defense.unitId) : undefined;
+  const pickedCost = picked ? playerUnitCost(picked, player) : { scrap: 0, energy: 0 };
   const maxQty = picked
     ? Math.max(
         0,
         Math.min(
           Math.floor(free / Math.max(1, picked.hangarSpace)),
-          picked.cost.scrap > 0 ? Math.floor((colony.resources.scrap ?? 0) / picked.cost.scrap) : Infinity,
-          picked.cost.energy > 0 ? Math.floor((colony.resources.energy ?? 0) / picked.cost.energy) : Infinity,
+          pickedCost.scrap > 0 ? Math.floor((colony.resources.scrap ?? 0) / pickedCost.scrap) : Infinity,
+          pickedCost.energy > 0 ? Math.floor((colony.resources.energy ?? 0) / pickedCost.energy) : Infinity,
         ),
       )
     : 0;
-  const batchCost = picked ? { scrap: picked.cost.scrap * defense.qty, energy: picked.cost.energy * defense.qty } : {};
+  const batchCost = picked ? { scrap: pickedCost.scrap * defense.qty, energy: pickedCost.energy * defense.qty } : {};
   const batchSpace = picked ? picked.hangarSpace * defense.qty : 0;
   const batchAffordable = Object.entries(batchCost).every(([r, n]) => (colony.resources[r as ResourceId] ?? 0) >= (n ?? 0));
   const ids = [DEPOSIT_ID, ...colonyBuildingIds()];

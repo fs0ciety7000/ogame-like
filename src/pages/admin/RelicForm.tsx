@@ -10,6 +10,7 @@ import { describeRelic, RARITIES, RELIC_EFFECT_LABELS, validateRelics, type Reli
 import { DEFAULT_LOOT_TOKEN_CAP, defaultLootTables, LOOT_SOURCE_LABELS, LOOT_SOURCES, validateLootTables, type LootSource, type LootTable, type LootTables } from "@/game/loot";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
+import { ComposedEffectFields } from "@/pages/admin/ComposedEffectFields";
 
 /* v5.9 : reliques dans l'administration — modèles (nom, effet, image,
    rareté réservée) et réglages (bonus par rareté, tirage, recyclage,
@@ -43,7 +44,20 @@ export function RelicForm({ value: t, onChange, isNew }: { value: RelicTemplate;
       <Section title="Relique">
         <TextField label="Identifiant" value={t.id} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(id) => set({ id })} />
         <TextField label="Nom" value={t.name} onChange={(name) => set({ name })} />
-        <SelectField label="Effet" value={t.effect} options={EFFECT_OPTIONS} onChange={(effect) => set({ effect })} hint="La force de l'effet dépend de la rareté (réglages en bas de page)." />
+        <SelectField label="Effet" value={t.effect} options={EFFECT_OPTIONS} onChange={(effect) => set({ effect, ...(effect === "custom" && !t.custom ? { custom: { stat: "unitAttack" } } : {}) })} hint="La force de l'effet dépend de la rareté (réglages en bas de page)." />
+        {t.effect === "custom" && (
+          <>
+            <ComposedEffectFields value={t.custom ?? {}} onChange={(c) => set({ custom: { ...c, ...(t.custom?.scale !== undefined ? { scale: t.custom.scale } : {}) } })} onPreset={(p) => set({ custom: { ...p.effect, scale: p.suggest.relic }, ...(t.name === "Nouvelle relique" ? { name: p.name } : {}) })} />
+            <NumberField
+              label="Multiplicateur du bonus de rareté"
+              value={t.custom?.scale ?? 1}
+              min={0.1}
+              step={0.1}
+              onChange={(scale) => set({ custom: { ...(t.custom ?? { stat: "unitAttack" }), scale } })}
+              hint="1 : bonus de rareté tel quel (+6 % en rare). 2 : le double. Pour un niveau d'espionnage, 10 ≈ +0,6 niveau en rare."
+            />
+          </>
+        )}
         <SelectField<Reserved>
           label="Rareté"
           value={reserved}
