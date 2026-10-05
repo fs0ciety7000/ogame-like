@@ -140,6 +140,8 @@ export function CasinoPage() {
   const [last, setLast] = useState<SpinResult | null>(null);
   const [showJackpot, setShowJackpot] = useState(false);
   const pending = useRef<SpinResult | null>(null);
+  // 5.21.1 : l'historique reste figé pendant que les rouleaux tournent (le serveur l'a déjà mis à jour).
+  const [frozenHistory, setFrozenHistory] = useState<NonNullable<ReturnType<typeof playerCasino>>["history"] | null>(null);
   const stops = useRef(0);
   // Jetons renvoyés par le serveur, en attendant la mise à jour du profil.
   const [override, setOverride] = useState<{ tokens: number; base: string } | null>(null);
@@ -152,12 +154,14 @@ export function CasinoPage() {
   const base = JSON.stringify(player?.casino ?? null);
   const tokens = override && override.base === base ? override.tokens : (mine?.tokens ?? 0);
   const canSpin = (open || admin) && tokens > 0 && !busy;
+  const history = frozenHistory ?? mine?.history ?? [];
 
   const pull = async () => {
     if (!canSpin) return;
     setBusy(true);
     setWin("none");
     setLast(null);
+    setFrozenHistory(mine?.history ?? []);
     try {
       playSlotPull();
       const r = await spinSlot();
@@ -174,6 +178,7 @@ export function CasinoPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Tirage impossible.");
       setBusy(false);
+      setFrozenHistory(null);
     }
   };
 
@@ -204,6 +209,7 @@ export function CasinoPage() {
     const r = pending.current;
     pending.current = null;
     setBusy(false);
+    setFrozenHistory(null);
     setLast(r);
     if (r.outcome === "jackpot") {
       setWin("jackpot");
@@ -380,12 +386,12 @@ export function CasinoPage() {
           <WeekRecap player={player} />
 
           {/* 5.15.12 : mes derniers tirages. */}
-          <HudPanel icon={<History />} title="Mes derniers tirages" aside={<span className="font-mono text-[11px] text-slate-500">{(mine?.history ?? []).length} / 20</span>}>
-            {(mine?.history ?? []).length === 0 ? (
+          <HudPanel icon={<History />} title="Mes derniers tirages" aside={<span className="font-mono text-[11px] text-slate-500">{history.length} / 20</span>}>
+            {history.length === 0 ? (
               <EmptyState size="sm" icon="🎰" title="Aucun tirage">Tes 20 derniers tirages s'afficheront ici.</EmptyState>
             ) : (
               <ul className="grid max-h-72 gap-1 overflow-y-auto pr-1 text-xs">
-                {(mine?.history ?? []).map((h, i) => (
+                {history.map((h, i) => (
                   <li key={`${h.atMs}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-white/5 pb-1 last:border-0">
                     <span className="w-12 shrink-0 font-mono text-[10px] text-slate-500">{new Date(h.atMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
                     <span className={cn("min-w-0 flex-1 truncate", h.outcome === "lose" ? "text-slate-500" : h.outcome === "jackpot" ? "text-gold-glow" : "text-slate-200")}>{OUTCOME_LABELS[h.outcome]}</span>

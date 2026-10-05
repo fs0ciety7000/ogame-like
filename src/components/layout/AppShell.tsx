@@ -9,7 +9,7 @@ import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
 import { useReportBadges } from "@/services/reportService";
-import { LogOut, Music, Music as MusicOff, PenSquare, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
+import { LogOut, Maximize, Minimize, Music, Music as MusicOff, PenSquare, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { useIsAdmin } from "@/services/adminService";
 import { useBlogAccess } from "@/services/blogService";
@@ -28,6 +28,7 @@ import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
 import { RaidAlert } from "@/components/game/RaidAlert";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { fullscreenSupported, isFullscreen, toggleFullscreen } from "@/lib/fullscreen";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { BootSequence } from "@/components/layout/BootSequence";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -67,6 +68,22 @@ function HeaderButton({ title, onClick, asLink, danger, children }: { title: str
     <button type="button" title={title} onClick={onClick} className={cls}>
       {children}
     </button>
+  );
+}
+
+/** 5.21.1 : plein écran (bouton de l'en-tête, touche F). */
+function FullscreenToggle() {
+  const [on, setOn] = useState(isFullscreen());
+  useEffect(() => {
+    const sync = () => setOn(isFullscreen());
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  if (!fullscreenSupported()) return null;
+  return (
+    <HeaderButton title={on ? "Quitter le plein écran (F)" : "Plein écran (F)"} onClick={() => void toggleFullscreen()}>
+      {on ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+    </HeaderButton>
   );
 }
 
@@ -207,6 +224,7 @@ export function AppShell() {
               >
                 <Search className="h-4 w-4" />
               </HeaderButton>
+              <FullscreenToggle />
               <span className="hidden sm:contents">
                 <SfxToggle />
                 <MusicToggle />
