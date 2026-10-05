@@ -198,3 +198,8 @@ export { lootTokensThisWeek } from "@/game/loot";
 export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HISTORY_MAX, MAIL_SCHEDULE_KEY, MAIL_SCHEDULE_MAX, normalizeSegment, scheduleState, trackCampaign } from "@/game/mailSegments";
 export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
 export { signTreaty } from "@/game/pirates";
+// 5.17.1 : audit de l'XP et de l'activité des joueurs (administration).
+export { activityProfile, auditFlags, battlePairs, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
+export { MISSIONS } from "@/game/missions";
+export { missionRewardFactor } from "@/game/events";
+export { ONLINE_MS } from "@/game/retention";

@@ -611,7 +611,7 @@ export function applyLegacyBattleReport(
   }
   if (report.outcome === "defender_win") player.victories = (player.victories ?? 0) + 1;
   else if (report.outcome === "attacker_win") player.defeats = (player.defeats ?? 0) + 1;
-  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now);
+  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now, "defense");
   const title: Record<string, string> = { attacker_win: "Tu as perdu ce combat...", defender_win: "Attaque repoussée !", draw: "Match nul." };
   notifications.push({
     kind: "combat-defender",

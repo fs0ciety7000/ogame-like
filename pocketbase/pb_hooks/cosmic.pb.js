@@ -439,6 +439,10 @@ routerAdd("GET", "/api/cosmic/admin/balance", (e) => {
   return e.json(200, db.liveBalance(Date.now(), true).live);
 }, $apis.requireAuth("users", "_superusers"));
 
+/** 5.17.1 : audit de l'XP et de l'activité des joueurs (vue d'ensemble, puis un joueur en détail). */
+routerAdd("GET", "/api/cosmic/admin/activity", (e) => require(`${__hooks}/cosmic_db.js`).adminActivity(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("GET", "/api/cosmic/admin/player-audit", (e) => require(`${__hooks}/cosmic_db.js`).adminPlayerAudit(e), $apis.requireAuth("users", "_superusers"));
+
 /** POST /api/cosmic/admin/balance/snapshot — photo du jour tout de suite (remplace celle du jour). */
 routerAdd("POST", "/api/cosmic/admin/balance/snapshot", (e) => {
   const db = require(`${__hooks}/cosmic_db.js`);

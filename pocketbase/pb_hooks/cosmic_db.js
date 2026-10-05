@@ -627,6 +627,240 @@ function territoriesTick(now) {
   return { sectors: sectors.filter((s) => s.allianceId).length };
 }
 
+/* ---------- 5.17.1 : audit de l'XP et de l'activité des joueurs ---------- */
+
+const AUDIT_HOUR = 3600000;
+
+/** Notifications portant de l'XP depuis `sinceMs` (reconstitution du passé), groupées par joueur. */
+function xpNotificationsSince(game, sinceMs, uid) {
+  const filter = uid ? "player_id = {:u} && createdAtMs >= {:s}" : "createdAtMs >= {:s} && (message ~ 'XP' || data ~ 'xp')";
+  const recs = $app.findRecordsByFilter("notifications", filter, "-createdAtMs", uid ? 6000 : 60000, 0, { s: sinceMs, u: uid || "" });
+  const by = {};
+  recs.forEach((r) => {
+    const n = { kind: r.getString("kind"), title: r.getString("title"), message: r.getString("message"), data: parseJsonField(r, "data", null), createdAtMs: r.getInt("createdAtMs") };
+    n.xp = game.notifXp(n);
+    n.source = game.notifSource(n);
+    const pid = r.getString("player_id");
+    (by[pid] = by[pid] || []).push(n);
+  });
+  return by;
+}
+
+function sumXp(list, sinceMs) {
+  const out = { total: 0, bySource: {} };
+  (list || []).forEach((n) => {
+    if (n.createdAtMs < sinceMs || !n.xp) return;
+    out.total += n.xp;
+    out.bySource[n.source] = (out.bySource[n.source] || 0) + n.xp;
+  });
+  return out;
+}
+
+/** Ce qui tourne chez le joueur en ce moment (files et flottes). */
+function currentActivity(game, queues, fleets, now) {
+  const q = queues || {};
+  const missions = (q.activeMissions || []).map((m) => ({ key: m.key, name: (game.MISSIONS[m.key] || {}).name || m.key, endTime: m.endTime }));
+  const buildings = Object.keys(q.buildingUpgrades || {}).filter((k) => q.buildingUpgrades[k] && q.buildingUpgrades[k].endTime > now).map((k) => ({ id: k, endTime: q.buildingUpgrades[k].endTime, targetLevel: q.buildingUpgrades[k].targetLevel }));
+  const research = (q.activeResearches || []).map((r) => ({ id: r.techId || r.id || r.key, endTime: r.endTime }));
+  const units = ["attack", "defense"].reduce((a, c) => a + ((q.unitQueues || {})[c] || []).length, 0);
+  return {
+    missions,
+    buildings,
+    research,
+    unitQueues: units,
+    fleets: (fleets || []).map((f) => ({ id: f.id, mission: f.getString("mission"), status: f.getString("status"), targetPseudo: f.getString("targetPseudo"), arriveAtMs: f.getInt("arriveAtMs"), returnAtMs: f.getInt("returnAtMs") })),
+  };
+}
+
+/** GET /api/cosmic/admin/activity?window=1h|24h|7d — tous les joueurs : XP gagnée, activité, signaux. */
+function adminActivity(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  applyContent($app, game);
+  const now = Date.now();
+  const win = ["1h", "24h", "7d"].indexOf(String(e.request.url.query().get("window"))) >= 0 ? String(e.request.url.query().get("window")) : "24h";
+  const ms = game.windowMs(win);
+  const notifSince = now - Math.max(ms, 24 * AUDIT_HOUR);
+  const byPlayer = xpNotificationsSince(game, notifSince, "");
+  const players = $app.findRecordsByFilter("players", "npc = ''", "-xp", 0, 0);
+  const queues = {};
+  $app.findAllRecords("queues").forEach((r) => (queues[r.id] = toPlain(r)));
+  const fleetsBy = {};
+  $app.findRecordsByFilter("fleets", "status = 'outbound' || status = 'returning' || status = 'stationed' || status = 'decision'", "", 0, 0).forEach((f) => {
+    const o = f.getString("ownerUid");
+    (fleetsBy[o] = fleetsBy[o] || []).push(f);
+  });
+  const battles = {};
+  $app.findRecordsByFilter("battle_reports", "timestamp >= {:s}", "", 0, 0, { s: now - ms }).forEach((r) => {
+    [r.getString("attackerUid"), r.getString("defenderUid")].forEach((u) => (battles[u] = (battles[u] || 0) + 1));
+  });
+  const eventFactor = Math.max(1, game.missionRewardFactor(now));
+  const rows = players.map((r) => {
+    const uid = r.id;
+    const stats = parseJsonField(r, "stats", {}) || {};
+    const list = byPlayer[uid] || [];
+    const ledger = game.ledgerTotals(stats, now, ms);
+    const rebuilt = sumXp(list, now - ms);
+    const dayLedger = game.ledgerTotals(stats, now, 24 * AUDIT_HOUR);
+    const day = dayLedger.total !== 0 ? dayLedger : sumXp(list, now - 24 * AUDIT_HOUR);
+    const act = game.activityProfile(list.filter((n) => n.createdAtMs >= now - 24 * AUDIT_HOUR).map((n) => n.createdAtMs), now, 24 * AUDIT_HOUR);
+    const cur = currentActivity(game, queues[uid], fleetsBy[uid], now);
+    return {
+      uid,
+      pseudo: r.getString("pseudo"),
+      xp: r.getInt("xp"),
+      seasonXp: r.getInt("seasonXp"),
+      createdAtMs: r.getInt("createdAtMs"),
+      lastActiveMs: r.getInt("lastActiveMs"),
+      online: now - r.getInt("lastActiveMs") < game.ONLINE_MS,
+      testMode: r.getBool("testMode"),
+      allianceId: r.getString("allianceId"),
+      // Registre exact quand il couvre la fenêtre, sinon reconstitution par les notifications.
+      gained: ledger.total !== 0 ? ledger : rebuilt,
+      gainedSource: ledger.total !== 0 ? "ledger" : "notifications",
+      xp24h: day.total,
+      missionXp24h: day.bySource.mission || 0,
+      activeHours24h: act.activeHours,
+      battles: battles[uid] || 0,
+      now: { missions: cur.missions.length, buildings: cur.buildings.length, research: cur.research.length, unitQueues: cur.unitQueues, fleets: cur.fleets.length },
+    };
+  });
+  const active = rows.filter((x) => now - x.lastActiveMs < 7 * 24 * AUDIT_HOUR).map((x) => x.xp24h);
+  const pc = game.percentiles(active);
+  rows.forEach((x) => {
+    x.flags = game.auditFlags({ now, xp: x.xp, createdAtMs: x.createdAtMs, testMode: x.testMode, xp24h: x.xp24h, missionXp24h: x.missionXp24h, median24h: pc.median, p90_24h: pc.p90, activeHours24h: x.activeHours24h, eventFactor });
+  });
+  rows.sort((a, b) => b.gained.total - a.gained.total);
+  return e.json(200, {
+    now,
+    window: win,
+    median24h: pc.median,
+    p90_24h: pc.p90,
+    missionCeiling: game.missionXpCeiling(ms, eventFactor),
+    missionCeiling24h: game.missionXpCeiling(24 * AUDIT_HOUR, eventFactor),
+    online: rows.filter((x) => x.online).length,
+    rows,
+  });
+}
+
+/** GET /api/cosmic/admin/player-audit?q=<pseudo ou identifiant> — audit complet d'un joueur. */
+function adminPlayerAudit(e) {
+  if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  applyContent($app, game);
+  const now = Date.now();
+  const q = String(e.request.url.query().get("q") || "").trim();
+  if (!q) throw new BadRequestError("Pseudo ou identifiant manquant.");
+  let rec = findOrNull($app, "players", q);
+  if (!rec) {
+    const found = $app.findRecordsByFilter("players", "pseudo = {:q}", "", 1, 0, { q });
+    rec = found[0] || $app.findRecordsByFilter("players", "pseudo ~ {:q}", "-xp", 1, 0, { q })[0] || null;
+  }
+  if (!rec) throw new NotFoundError("Joueur introuvable.");
+  const uid = rec.id;
+  const p = toPlain(rec);
+  const stats = p.stats || {};
+  const week = now - 7 * 24 * AUDIT_HOUR;
+  const notifs = (xpNotificationsSince(game, week, uid)[uid] || []);
+  const xpNotifs = notifs.filter((n) => n.xp);
+  const windows = {};
+  ["1h", "24h", "7d"].forEach((w) => {
+    const ms = game.windowMs(w);
+    windows[w] = { ledger: game.ledgerTotals(stats, now, ms), rebuilt: sumXp(xpNotifs, now - ms), missionCeiling: game.missionXpCeiling(ms, Math.max(1, game.missionRewardFactor(now))) };
+  });
+  const day = notifs.filter((n) => n.createdAtMs >= now - 24 * AUDIT_HOUR).map((n) => n.createdAtMs);
+  const act24 = game.activityProfile(day, now, 24 * AUDIT_HOUR);
+  const act7 = game.activityProfile(notifs.map((n) => n.createdAtMs), now, 7 * 24 * AUDIT_HOUR);
+  // XP par heure sur 7 jours (reconstitution), pour la courbe.
+  const xpByHour = new Array(7 * 24).fill(0);
+  const h0 = Math.floor(now / AUDIT_HOUR) - 7 * 24 + 1;
+  xpNotifs.forEach((n) => {
+    const i = Math.floor(n.createdAtMs / AUDIT_HOUR) - h0;
+    if (i >= 0 && i < xpByHour.length) xpByHour[i] += n.xp;
+  });
+  const reports = $app
+    .findRecordsByFilter("battle_reports", "(attackerUid = {:u} || defenderUid = {:u}) && timestamp >= {:s}", "-timestamp", 500, 0, { u: uid, s: week })
+    .map((r) => ({ id: r.id, attackerUid: r.getString("attackerUid"), attackerPseudo: r.getString("attackerPseudo"), defenderUid: r.getString("defenderUid"), defenderPseudo: r.getString("defenderPseudo"), outcome: r.getString("outcome"), timestamp: r.getInt("timestamp"), attackerXpDelta: r.getInt("attackerXpDelta"), defenderXpDelta: r.getInt("defenderXpDelta"), attackerPower: r.getFloat("attackerPower"), defenderPower: r.getFloat("defenderPower") }));
+  const pairs = game.battlePairs(reports, uid);
+  // Seuls les vrais joueurs comptent pour « combats répétés » (pas les factions ni les seigneurs).
+  const humanPairs = pairs.filter((x) => {
+    const r = findOrNull($app, "players", x.uid);
+    return r && !r.getString("npc");
+  });
+  const fleets = $app.findRecordsByFilter("fleets", "ownerUid = {:u} && (status = 'outbound' || status = 'returning' || status = 'stationed' || status = 'decision')", "arriveAtMs", 100, 0, { u: uid });
+  const queuesRec = findOrNull($app, "queues", uid);
+  const current = currentActivity(game, queuesRec ? toPlain(queuesRec) : null, fleets, now);
+  const trades = $app
+    .findRecordsByFilter("market_offers", "(sellerId = {:u} || buyerId = {:u}) && filledAtMs >= {:s}", "-filledAtMs", 200, 0, { u: uid, s: week })
+    .map((r) => ({ id: r.id, sellerPseudo: r.getString("sellerPseudo"), buyerPseudo: r.getString("buyerPseudo"), giveRes: r.getString("giveRes"), giveAmount: r.getFloat("giveAmount"), wantRes: r.getString("wantRes"), wantAmount: r.getFloat("wantAmount"), filledAtMs: r.getInt("filledAtMs") }));
+  const gifts = $app
+    .findRecordsByFilter("resource_gifts", "(fromUid = {:u} || toUid = {:u}) && timestamp >= {:s}", "-timestamp", 200, 0, { u: uid, s: week })
+    .map((r) => ({ id: r.id, fromPseudo: r.getString("fromPseudo"), toPseudo: r.getString("toPseudo"), resources: parseJsonField(r, "resources", {}), timestamp: r.getInt("timestamp") }));
+  const adminLogs = $app
+    .findRecordsByFilter("admin_logs", "recordId = {:u}", "-createdAtMs", 50, 0, { u: uid })
+    .map((r) => ({ id: r.id, actorName: r.getString("actorName"), action: r.getString("action"), recordLabel: r.getString("recordLabel"), reason: r.getString("reason"), changes: parseJsonField(r, "changes", null), createdAtMs: r.getInt("createdAtMs") }));
+  // Comparaison avec les autres joueurs actifs (XP des dernières 24 h, reconstituée).
+  const all = xpNotificationsSince(game, now - 24 * AUDIT_HOUR, "");
+  const actives = $app.findRecordsByFilter("players", "npc = '' && lastActiveMs >= {:s}", "", 0, 0, { s: week }).map((r) => sumXp(all[r.id], now - 24 * AUDIT_HOUR).total);
+  const pc = game.percentiles(actives);
+  const day24 = windows["24h"].ledger.total !== 0 ? windows["24h"].ledger : windows["24h"].rebuilt;
+  const flags = game.auditFlags({
+    now,
+    xp: p.xp || 0,
+    createdAtMs: p.createdAtMs || now,
+    testMode: !!p.testMode,
+    xp24h: day24.total,
+    missionXp24h: day24.bySource.mission || 0,
+    median24h: pc.median,
+    p90_24h: pc.p90,
+    activeHours24h: act24.activeHours,
+    longestStreak7d: act7.longestStreak,
+    pairs: humanPairs,
+    adminActions: adminLogs.length,
+    eventFactor: Math.max(1, game.missionRewardFactor(now)),
+  });
+  const statsOut = Object.assign({}, stats);
+  delete statsOut.xpHours;
+  delete statsOut.weekStart;
+  delete statsOut.lastWeek;
+  return e.json(200, {
+    now,
+    player: {
+      uid,
+      pseudo: p.pseudo,
+      xp: p.xp || 0,
+      seasonXp: p.seasonXp || 0,
+      seasonId: p.seasonId || "",
+      createdAtMs: p.createdAtMs || 0,
+      lastActiveMs: p.lastActiveMs || 0,
+      online: now - (p.lastActiveMs || 0) < game.ONLINE_MS,
+      testMode: !!p.testMode,
+      vacation: p.vacation || null,
+      allianceId: p.allianceId || "",
+      victories: p.victories || 0,
+      defeats: p.defeats || 0,
+      ascensions: p.ascensions || 0,
+      playtimeSeconds: p.playtimeSeconds || 0,
+      achievements: (p.unlockedAchievements || []).length,
+      activeDays: (stats.activeDays || []).length,
+    },
+    stats: statsOut,
+    ledgerSinceMs: game.ledgerSince(stats),
+    windows,
+    activity: { activeHours24h: act24.activeHours, longestStreak7d: act7.longestStreak, byHour24: act24.byHour, xpByHour7d: xpByHour },
+    comparison: { median24h: pc.median, p90_24h: pc.p90, activePlayers: actives.length },
+    flags,
+    current,
+    battles: reports.slice(0, 100),
+    battleCount: reports.length,
+    pairs: pairs.slice(0, 15),
+    trades,
+    gifts,
+    adminLogs,
+    timeline: notifs.slice(0, 200).map((n) => ({ kind: n.kind, title: n.title, message: n.message, createdAtMs: n.createdAtMs, xp: n.xp, source: n.source })),
+  });
+}
+
 /* ---------- 5.17 : guerre de territoire (un week-end sur deux) ---------- */
 
 const TERRITORY_WAR_LINK = "/game/guerre-territoire";
@@ -7696,4 +7930,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -170,7 +170,7 @@ export function chestReward(player: PlayerState): Record<string, number> {
 
 function grant(player: PlayerState, reward: Record<string, number>, now: number) {
   for (const [res, amount] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount, now);
+    if (res === "xp") applyXpDelta(player, amount, now, "contract");
     else player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
   }
 }

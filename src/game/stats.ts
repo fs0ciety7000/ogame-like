@@ -70,6 +70,8 @@ export interface PlayerStats {
   /** v5.10 : instantané du début de semaine et résumé de la semaine écoulée. */
   weekStart?: import("@/game/weeklyRecap").WeeklySnapshot;
   lastWeek?: import("@/game/weeklyRecap").WeeklyRecap;
+  /** 5.17.1 : registre de l'XP gagnée, par heure (index d'heure UTC) et par source, 8 jours glissants. */
+  xpHours?: Record<string, Partial<Record<import("@/game/xpAudit").XpSource, number>>>;
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];

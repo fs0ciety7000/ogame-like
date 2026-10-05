@@ -778,7 +778,7 @@ export function resolvePirateRaid(
     // 5.16 : embargo : la prime grossit.
     if (activeTreaty(st, now)?.kind === "embargo") for (const r of Object.keys(bounty) as ResourceId[]) bounty[r] = Math.floor((bounty[r] ?? 0) * TREATY_RULES.embargoBounty);
     for (const [res, amount] of Object.entries(bounty) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
-    applyXpDelta(player, faction.bounty.xp, now);
+    applyXpDelta(player, faction.bounty.xp, now, "pirate");
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor((destroyed * faction.bounty.debrisPerPower) / 2) };
     st.raidsWon += 1;
@@ -897,7 +897,7 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     const loot = 1 + playerModifiers(player).loot;
     if (loot !== 1) for (const r of Object.keys(reward) as ResourceId[]) reward[r] = Math.floor((reward[r] ?? 0) * loot);
     for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
-    applyXpDelta(player, faction.lair.xp, now);
+    applyXpDelta(player, faction.lair.xp, now, "pirate");
     const title = faction.lair.title;
     if (title && !(player.titles ?? []).some((t) => t.label === title)) {
       player.titles = [...(player.titles ?? []), { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];

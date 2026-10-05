@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Skull,
   Users,
+  Radar,
   Wrench,
   type LucideIcon,
   Megaphone,
@@ -71,6 +72,7 @@ import { ChroniclesPanel } from "@/pages/admin/ChroniclesPanel";
 import { AnnouncementsPanel } from "@/pages/admin/AnnouncementsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
+import { ActivityPanel } from "@/pages/admin/ActivityPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
 import { BannersPanel } from "@/pages/admin/BannersPanel";
 import { EmojisPanel } from "@/pages/admin/EmojisPanel";
@@ -138,6 +140,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Joueurs & communauté",
     items: [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
+      { id: "activity", label: "Activité & audit", icon: Radar, hint: "En temps réel : qui joue, ce qui tourne chez chacun, l'XP gagnée par source sur 1 h, 24 h et 7 jours, et l'audit complet d'un joueur (signaux d'exploit, combats, échanges, actions de l'équipe)." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
       { id: "broadcast", label: "Messages ciblés", icon: Bell, hint: "Notification dans le jeu pour un groupe de joueurs : inactifs, nouveaux, une alliance…" },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
@@ -338,6 +341,9 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="logs">
           <LogsPanel />
+        </TabsContent>
+        <TabsContent value="activity">
+          <ActivityPanel />
         </TabsContent>
         <TabsContent value="stats">
           <StatsPanel />

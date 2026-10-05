@@ -1332,6 +1332,28 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("5.17.1 activity audit: XP ledger by source, overview and player audit, admins only", async () => {
+    // B (connecté) a gagné de l'XP en combat dans les tests précédents : le registre la range par source.
+    const b = await snap(bId);
+    expect(Object.keys(b.stats?.xpHours ?? {}).length).toBeGreaterThan(0);
+    await expect(pb.send("/api/cosmic/admin/activity", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.send(`/api/cosmic/admin/player-audit?q=${B.pseudo}`, { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    const overview = await admin.send("/api/cosmic/admin/activity?window=7d", { method: "GET" });
+    expect(overview.window).toBe("7d");
+    expect(overview.missionCeiling24h).toBe(23_040);
+    const row = overview.rows.find((r: { uid: string }) => r.uid === bId);
+    expect(row).toMatchObject({ pseudo: B.pseudo, gainedSource: "ledger" });
+    expect(row.gained.bySource.attack).toBeGreaterThan(0);
+    const audit = await admin.send(`/api/cosmic/admin/player-audit?q=${encodeURIComponent(B.pseudo)}`, { method: "GET" });
+    expect(audit.player.uid).toBe(bId);
+    expect(audit.windows["7d"].ledger.bySource.attack).toBeGreaterThan(0);
+    expect(audit.battleCount).toBeGreaterThan(0);
+    expect(audit.pairs.some((x: { uid: string }) => x.uid === aId)).toBe(true);
+    expect(Array.isArray(audit.flags)).toBe(true);
+    expect(audit.stats.xpHours).toBeUndefined();
+    await expect(admin.send("/api/cosmic/admin/player-audit?q=personne-de-ce-nom-zz", { method: "GET" })).rejects.toMatchObject({ status: 404 });
+  });
+
   it("v2.1 Syndicat Gravhorn: hunts aggressors, prices the contract on plunder, raids the home fleet", async () => {
     const H = 3600_000;
     const now = Date.now();
