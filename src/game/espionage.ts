@@ -31,14 +31,17 @@ export const SPY_RULES = {
   baseMinutes: 1,
   /** Minutes par unité de distance, divisées par la vitesse des sondes. */
   minutesPerDistance: 0.5,
-  /** Sentinelles à quai pour un point de contre-espionnage. */
+  /** Sentinelles à quai : 1 point à 100, 2 à 300, 3 à 700… (log2), au plus sentinelCounterCap.
+   *  5.22.1 : c'était 1 point par 100 sans plafond, des milliers de sentinelles rendaient
+   *  tout espionnage impossible (2^20 sondes) en fin de partie. */
   sentinelsPerCounterLevel: 100,
+  sentinelCounterCap: 4,
   sentinelUnitId: "sentinelle",
   /** Chance de détection : base + parPoint × (contre-espionnage − Espionnage). */
   detectionBase: 0.1,
   detectionPerPoint: 0.1,
   detectionMin: 0.05,
-  detectionMax: 0.9,
+  detectionMax: 0.75,
   /** Score minimum de chaque palier du rapport. */
   tierResources: 0,
   tierForces: 2,
@@ -59,7 +62,8 @@ export function espionageLevel(player: Pick<PlayerState, "techLevels"> & Partial
 export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
   const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
-  return espionageLevel(target) + Math.floor(sentinels / per) + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy") + playerModifiers(target).counterSpy);
+  const sentinelPoints = Math.min(SPY_RULES.sentinelCounterCap, Math.floor(Math.log2(1 + sentinels / per)));
+  return espionageLevel(target) + sentinelPoints + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy") + playerModifiers(target).counterSpy);
 }
 
 export function spyScore(spyLevel: number, counter: number, probes: number): number {

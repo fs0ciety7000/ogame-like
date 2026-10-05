@@ -61,13 +61,19 @@ export interface WarlordsConfig {
 
 export const WARLORD_RULES = {
   /** Puissance visée : faibles et moyens par rapport à la médiane des actifs, forts par rapport au meilleur. */
-  tierRange: { weak: [0.4, 0.6], medium: [0.8, 1.2], strong: [1.3, 1.8] } as Record<WarlordTier, [number, number]>,
+  // 5.22.1 : abaissées (0,4–0,6 / 0,8–1,2 / 1,3–1,8) : même au rang I, les seigneurs moyens
+  // égalaient le 2e joueur du serveur et les forts dépassaient tout le monde.
+  tierRange: { weak: [0.3, 0.5], medium: [0.6, 0.9], strong: [1.0, 1.3] } as Record<WarlordTier, [number, number]>,
   /** Puissance minimale (serveur presque vide). */
   minPower: 3000,
   /** Croissance maximale par jour, en part de la puissance visée. */
   growthPerDay: 0.08,
   /** v5.5 : jamais plus de ce multiple de la meilleure défense de joueur ; au-delà, l'armée fond (même rythme que la croissance). */
-  maxDefenseRatio: 2.5,
+  maxDefenseRatio: 1.5,
+  /** 5.22.1 : armée au-delà de la puissance visée : part de l'excédent perdue par jour. */
+  shrinkPerDay: 0.25,
+  /** 5.22.1 : un joueur plus de N fois au-dessus du suivant est écarté de la référence (compte admin, de test…). */
+  outlierRatio: 2.5,
   /** Bâtiments : part du niveau moyen des actifs, et un niveau gagné toutes les 12 h au plus. */
   buildingFactor: { weak: 0.8, medium: 1, strong: 1.25 } as Record<WarlordTier, number>,
   buildingLevelEveryHours: 12,
@@ -344,8 +350,16 @@ function median(values: number[]): number {
 }
 
 /** Repères tirés des joueurs actifs (jamais des seigneurs eux-mêmes). */
+/** 5.22.1 : maximum sans valeurs aberrantes (un compte très au-dessus du suivant ne fixe pas la barre). */
+export function robustMax(values: number[], ratio = WARLORD_RULES.outlierRatio): number {
+  const sorted = values.filter((v) => v > 0).sort((a, b) => b - a);
+  while (sorted.length > 1 && sorted[0] > sorted[1] * ratio) sorted.shift();
+  return sorted[0] ?? 0;
+}
+
 export function warlordReference(actives: PlayerState[]): WarlordReference {
-  const humans = actives.filter((p) => !p.npc);
+  // 5.22.1 : les comptes en mode test ne servent pas de référence.
+  const humans = actives.filter((p) => !p.npc && !p.testMode);
   const powers = humans.map(empirePower).filter((n) => n > 0);
   const xps = humans.map((p) => p.xp ?? 0).filter((n) => n > 0);
   const buildings: Record<string, number> = {};
@@ -355,11 +369,11 @@ export function warlordReference(actives: PlayerState[]): WarlordReference {
   }
   return {
     median: median(powers),
-    max: powers.length ? Math.max(...powers) : 0,
+    max: robustMax(powers),
     medianXp: median(xps),
-    maxXp: xps.length ? Math.max(...xps) : 0,
+    maxXp: robustMax(xps),
     medianSeasonXp: median(humans.map((p) => p.seasonXp ?? 0)),
-    maxDefense: humans.length ? Math.max(0, ...humans.map((p) => Math.round(homeDefensePower(p.units ?? {}, p.techLevels ?? {})))) : 0,
+    maxDefense: robustMax(humans.map((p) => Math.round(homeDefensePower(p.units ?? {}, p.techLevels ?? {})))),
     buildings,
   };
 }
@@ -474,10 +488,12 @@ export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReferen
   }
   // v5.5 : armée trop forte (plafond relevé ou joueurs partis) : elle fond d'une part de l'excédent.
   if (rt.seeded && empirePower(npc) > target * 1.1) {
+    // 5.22.1 : fonte plus rapide que la croissance (25 % de l'excédent par jour).
+    const shrink = Math.min(1, WARLORD_RULES.shrinkPerDay * (hours / 24));
     for (const [id, state] of Object.entries(npc.units)) {
       const want = desired[id] ?? 0;
       const count = state?.count ?? 0;
-      if (count > want) npc.units[id] = { ...state, count: Math.max(want, count - Math.ceil((count - want) * step)) };
+      if (count > want) npc.units[id] = { ...state, count: Math.max(want, count - Math.ceil((count - want) * shrink)) };
     }
   }
   // Bâtiments : niveau moyen des actifs × facteur du palier, un niveau par 12 h au plus.

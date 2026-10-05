@@ -76,9 +76,13 @@ function shipGeometry(kind: Kind): THREE.BufferGeometry {
     parts.push(part(new THREE.BoxGeometry(0.4, 0.4, 0.4), -1.45, 0, 0.3));
     parts.push(part(new THREE.BoxGeometry(0.4, 0.4, 0.4), -1.45, 0, -0.3));
   } else {
-    parts.push(part(new THREE.OctahedronGeometry(0.55)));
-    parts.push(part(new THREE.TorusGeometry(0.8, 0.06, 4, 10), 0, 0, 0, 0, 0));
-    parts.push(part(new THREE.CylinderGeometry(0.06, 0.06, 0.9, 4), 0.55, 0, 0, -Math.PI / 2));
+    // 5.22.1 : tourelle de défense (socle hexagonal, dôme, deux canons vers l'ennemi) ; l'ancienne
+    // station (octaèdre et anneau) se déformait en ellipse vue en plongée.
+    parts.push(part(new THREE.CylinderGeometry(0.7, 0.85, 0.22, 6), 0, -0.2, 0));
+    parts.push(part(new THREE.CylinderGeometry(0.45, 0.6, 0.18, 6), 0, -0.02, 0));
+    parts.push(part(new THREE.SphereGeometry(0.38, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2), 0, 0.06, 0));
+    parts.push(part(new THREE.CylinderGeometry(0.06, 0.07, 1.0, 6), 0.55, 0.22, 0.13, -Math.PI / 2));
+    parts.push(part(new THREE.CylinderGeometry(0.06, 0.07, 1.0, 6), 0.55, 0.22, -0.13, -Math.PI / 2));
   }
   const g = mergeGeometries(parts) ?? parts[0];
   g.computeVertexNormals();
@@ -136,7 +140,7 @@ const SCALE: Record<Kind, number> = { light: 0.75, medium: 0.9, heavy: 1, statio
 type ModelId = "quaternius" | "mastjie";
 /** Modèle par silhouette (les stations restent procédurales) et longueur à l'écran. */
 const MODEL_OF: Partial<Record<Kind, { id: ModelId; length: number }>> = {
-  light: { id: "quaternius", length: 1.7 },
+  light: { id: "quaternius", length: 2.2 },
   medium: { id: "mastjie", length: 2.4 },
   heavy: { id: "mastjie", length: 3.6 },
 };
@@ -152,11 +156,11 @@ function loadModels(): Promise<Partial<Record<ModelId, THREE.Object3D>>> {
   modelsPromise ??= (async () => {
     const out: Partial<Record<ModelId, THREE.Object3D>> = {};
     try {
-      const [{ GLTFLoader }, { FBXLoader }] = await Promise.all([import("three/examples/jsm/loaders/GLTFLoader.js"), import("three/examples/jsm/loaders/FBXLoader.js")]);
+      const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
       const within = <T,>(p: Promise<T>) => Promise.race([p, new Promise<null>((r) => setTimeout(() => r(null), 4000))]).catch(() => null);
       const [m, q] = await Promise.all([
         within(new GLTFLoader().loadAsync(assetUrl("/assets/models/ships/mastjie.glb")).then((g) => g.scene)),
-        within(new FBXLoader().loadAsync(assetUrl("/assets/models/ships/quaternius.fbx"))),
+        within(new GLTFLoader().loadAsync(assetUrl("/assets/models/ships/quaternius.glb")).then((g) => g.scene)),
       ]);
       if (m) out.mastjie = normalizeModel(m, MODEL_FORWARD.mastjie);
       if (q) out.quaternius = normalizeModel(q, MODEL_FORWARD.quaternius);
@@ -313,9 +317,16 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
           m,
           [mine, theirs].map((c) => {
             const x = m.clone() as THREE.MeshStandardMaterial;
+            // Peinture de coque (teintes saturées, ex. l'orange de Quaternius) aux couleurs du camp ;
+            // les gris (blindage, verrière) restent tels quels.
+            if (x.color) {
+              const hsl = { h: 0, s: 0, l: 0 };
+              x.color.getHSL(hsl);
+              if (hsl.s > 0.35) x.color.copy(c).lerp(hull, 0.25);
+            }
             if ("emissive" in x && x.emissive) {
               x.emissive = c.clone();
-              x.emissiveIntensity = 0.22;
+              x.emissiveIntensity = 0.15;
             }
             return x;
           }),
@@ -386,8 +397,8 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
     let flashI = 0;
 
     const tl = gsap.timeline();
-    const cam = { angle: -0.35, height: 6, dist: 24 };
-    tl.to(cam, { angle: 0.3, height: 4, dist: 19, duration: 14, ease: "sine.inOut" }, 0);
+    const cam = { angle: -0.3, height: 14, dist: 20 };
+    tl.to(cam, { angle: 0.3, height: 10, dist: 17, duration: 14, ease: "sine.inOut" }, 0);
 
     // Arrivée en distorsion.
     const warp = (fleet: Ship[], at: number) =>

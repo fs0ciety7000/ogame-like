@@ -62,6 +62,9 @@ describe("v4.2 warlords", () => {
 
   it("power follows active players (never other lords) and grows at most 8 % a day", () => {
     const humans = [player("a"), player("b"), player("c")];
+    // 5.22.1 : référence robuste ; des effectifs proches (aucun joueur aberrant).
+    humans[0].units.chasseur.count = 250;
+    humans[1].units.chasseur.count = 300;
     humans[2].units.chasseur.count = 400;
     const npcLike = { ...player("x"), npc: "zharkesh" };
     npcLike.units.chasseur.count = 99999;

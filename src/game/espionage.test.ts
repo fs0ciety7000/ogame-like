@@ -20,7 +20,9 @@ function player(uid: string, patch: Partial<PlayerState> = {}): PlayerState {
 describe("espionage score", () => {
   it("counts the Espionage tech and sentinels at home", () => {
     expect(espionageLevel(player("a", { techLevels: { tech20: 4 } }))).toBe(4);
-    expect(counterEspionage(player("b", { techLevels: { tech20: 2 }, units: { sentinelle: { level: 1, count: 250 } } }))).toBe(4);
+    // 5.22.1 : sentinelles en log2 (250 → 1 point), plafonnées à 4 points.
+    expect(counterEspionage(player("b", { techLevels: { tech20: 2 }, units: { sentinelle: { level: 1, count: 250 } } }))).toBe(3);
+    expect(counterEspionage(player("c", { techLevels: { tech20: 2 }, units: { sentinelle: { level: 1, count: 100000 } } }))).toBe(6);
   });
 
   it("adds log2 of the probe count", () => {
@@ -41,7 +43,7 @@ describe("espionage score", () => {
     expect(detectionChance(5, 5)).toBeCloseTo(0.1);
     expect(detectionChance(5, 7)).toBeCloseTo(0.3);
     expect(detectionChance(9, 0)).toBe(0.05);
-    expect(detectionChance(0, 20)).toBe(0.9);
+    expect(detectionChance(0, 20)).toBe(0.75);
   });
 
   it("flies probes fast", () => {

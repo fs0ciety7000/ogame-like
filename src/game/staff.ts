@@ -17,6 +17,10 @@ export const STAFF_TITLE_SEASON = "staff";
 /** Rôles de départ, appliqués une seule fois aux administrateurs existants. */
 export const DEFAULT_STAFF_BY_PSEUDO: Record<string, StaffRole> = { Nicotine: "developer", Tartiflex: "admin" };
 
+/** 5.22.1 : comptes d'essai de l'équipe (sans rôle affiché) écartés des références d'équilibrage,
+ *  en plus des membres de l'équipe et des comptes en mode test. */
+export const BALANCE_EXCLUDED_PSEUDOS = ["Tartiflex", "Nicotine", "Tomdindon"];
+
 export interface StaffState {
   roles: Record<string, StaffRole>;
 }
