@@ -368,6 +368,8 @@ export function resolveCombat(params: {
   const dLeft = d0 > 0 ? poolOf(defender) / d0 : 0;
   let outcome: CombatOutcome;
   if (!(a0 > 0)) outcome = d0 > 0 ? "defender_win" : "draw";
+  // Une flotte sans attaque ne prend rien : égalité contre une base vide, défaite sinon.
+  else if (!(fireOf(attacker) > 0) && attacker.every((t, i) => t.count === attackerStart[i])) outcome = d0 > 0 ? "defender_win" : "draw";
   else if (!(d0 > 0)) outcome = "attacker_win";
   else if (retreated || aLeft <= 0.001) outcome = "defender_win";
   else if (dLeft < R.attackerWinBelow) outcome = "attacker_win";

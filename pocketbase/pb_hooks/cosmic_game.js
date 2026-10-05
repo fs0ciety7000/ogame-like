@@ -9109,6 +9109,7 @@ function resolveCombat(params) {
   const dLeft = d0 > 0 ? poolOf(defender) / d0 : 0;
   let outcome;
   if (!(a0 > 0)) outcome = d0 > 0 ? "defender_win" : "draw";
+  else if (!(fireOf(attacker) > 0) && attacker.every((t, i) => t.count === attackerStart[i])) outcome = d0 > 0 ? "defender_win" : "draw";
   else if (!(d0 > 0)) outcome = "attacker_win";
   else if (retreated || aLeft <= 1e-3) outcome = "defender_win";
   else if (dLeft < R.attackerWinBelow) outcome = "attacker_win";

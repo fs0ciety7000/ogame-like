@@ -28,6 +28,7 @@ import { resetContentSection, saveContentSection } from "@/services/contentServi
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
+import { XP_TIER_RULES } from "@/game/xpTiers";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
 import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/services/marketService";
@@ -371,7 +372,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(seen?.id).toBe(rep.id);
     const after = (await snap(bId))!;
     expect(after.victories).toBe(before.victories + 1);
-    expect(after.xp).toBe(before.xp + 3);
+    // 5.18 : l'XP de défense passe par le bonus au jeu actif (×1,25).
+    expect(after.xp).toBe(before.xp + Math.round(3 * (XP_TIER_RULES.multipliers.defense ?? 1)));
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
   });
 
@@ -384,14 +386,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(await checkIsAdmin(bId)).toBe(true);
 
     // B (admin) met l'attaque du Chasseur à 0 : une attaque de chasseurs
-    // contre une base sans défense devient une égalité (0 contre 0).
+    // contre une base sans défense devient une égalité (rien à détruire, rien à prendre).
     const units = defaultGameContent().units.map((u) => (u.id === "chasseur" ? { ...u, stats: { ...u.stats, attaque: 0 } } : u));
     await saveContentSection("units", units);
     try {
       await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), units: {} });
       await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
       const { report: res } = await attackAndResolve(aId, { chasseur: 5 });
-      expect(res.attackerPower).toBe(0);
+      // 5.18 : la puissance affichée ne garde que la résistance (10 par chasseur).
+      expect(res.attackerPower).toBe(5 * 10);
       expect(res.outcome).toBe("draw");
     } finally {
       await resetContentSection("units");
