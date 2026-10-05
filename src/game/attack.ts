@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { applyHull, sendToWorkshop, workshopState } from "@/game/workshop";
 import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
@@ -175,6 +176,9 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def.buildings), owner),
     defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
+    // 5.20 : dégâts conservés (planète mère des joueurs ; ni colonies ni PNJ).
+    attackerHull: attacker.npc ? undefined : workshopState(attacker).hull,
+    defenderHull: colony || owner.npc ? undefined : workshopState(owner).hull,
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries(def.resources ?? {}).map(([res, amount]) => [res, Math.max(0, (amount ?? 0) - protectedAmount(def.buildings, res as ResourceId, def.techLevels, def.allianceResearch, def))]),
@@ -189,8 +193,15 @@ export function performAttack(input: AttackInput): AttackOutput {
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
+  // 5.20 : les unités sauvées par l'Atelier partent en réparation (indisponibles jusqu'à la fin) ;
+  // les PNJ et les colonies gardent l'ancien fonctionnement (retour immédiat).
+  const attackerToWorkshop = !attacker.npc;
+  if (attackerToWorkshop) {
+    applyHull(attacker, combat.attackerHull);
+    sendToWorkshop(attacker, combat.attackerRecovered, now, "attack", true);
+  }
   const survivors: Record<string, number> = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - (combat.attackerLosses[unitId] ?? 0));
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - (combat.attackerLosses[unitId] ?? 0) - (attackerToWorkshop ? combat.attackerRecovered[unitId] ?? 0 : 0));
   if (input.inFlight) {
     // Les survivants repartent avec la flotte : ils quittent à nouveau la base.
     for (const [unitId, qty] of Object.entries(survivors)) {
@@ -214,6 +225,12 @@ export function performAttack(input: AttackInput): AttackOutput {
   addSeasonPower(def, destroyedByDefender, now);
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
+  }
+  if (!colony && !owner.npc) {
+    applyHull(owner, combat.defenderHull);
+    // Vaisseaux à quai sauvés : à l'Atelier. Les défenses reconstruites restent en place.
+    const ships = Object.fromEntries(Object.entries(combat.defenderRecovered).map(([id, n]) => [id, n - (combat.defenderRebuilt?.[id] ?? 0)]));
+    sendToWorkshop(owner, ships, now, "defense", true);
   }
 
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def.npc);

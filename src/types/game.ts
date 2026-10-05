@@ -147,6 +147,8 @@ export interface PlayerState {
   streak?: import("@/game/streak").StreakState | null;
   /** v5.12 : Casino orbital (jetons, tours joués, gains). */
   casino?: import("@/game/casino").PlayerCasino | null;
+  /** 5.20 : Atelier de réparation (unités en réparation, coques abîmées). */
+  workshop?: import("@/game/workshop").PlayerWorkshop | null;
   /** v4.1 : passe de saison et parrainage. */
   seasonPass?: import("@/game/seasonPass").PassState;
   referral?: import("@/game/referral").ReferralState;

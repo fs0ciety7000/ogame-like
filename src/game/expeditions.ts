@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -200,13 +201,15 @@ function pickEvent(random: () => number, ambushFactor = 1): ExpeditionEventKind 
 }
 
 /** Combat de la flotte d'expédition contre une puissance fixe. Les pertes sont retirées de la flotte. */
-function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number): { won: boolean; lost: number } {
+function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number, now: number): { won: boolean; lost: number } {
   const fleetPower = computeFleetPower(player.units, player.techLevels, fleet.units, ["attack"]);
   const fx = formationEffects(fleet.expedition.formation);
   const combat = resolveCombat({
     ...fx,
     attackFactor: fx.attackFactor * (1 + playerModifiers(player).attack),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte d'expédition, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet.units),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet: fleet.units,
@@ -222,6 +225,10 @@ function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number):
     units[id] = Math.max(0, (units[id] ?? 0) - n);
     lost += n;
   }
+  // 5.20 : unités sauvées envoyées à l'Atelier (elles quittent la flotte), coques abîmées conservées.
+  for (const [id, n] of Object.entries(combat.attackerRecovered)) units[id] = Math.max(0, (units[id] ?? 0) - n);
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "expedition", false);
   fleet.units = units;
   return { won: combat.outcome === "attacker_win", lost };
 }
@@ -258,7 +265,7 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
     fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => [id, n + (found[id] ?? 0)]));
     text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
-    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet), now);
     if (won) {
       const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
       addLoot(fleet, gain);
@@ -312,7 +319,7 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
     if (st) st.notoriety = Math.max(0, st.notoriety - 1);
     text = `Péage payé à ${name} (${describeGain(paid)}) : la flotte passe, et ta réputation s'améliore.`;
   } else {
-    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet));
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet), now);
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
       const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));

@@ -1,4 +1,5 @@
 import { playerModifiers } from "@/game/modifiers";
+import { workshopUnits } from "@/game/workshop";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
@@ -130,6 +131,13 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
 }
 
 /** Places de hangar occupées : vaisseaux à quai + vaisseaux en mission. */
+/** Unités hors hangar (en vol) augmentées de celles en réparation à l'Atelier. */
+export function withWorkshop(away: Record<string, number>, player: Pick<PlayerState, "workshop">): Record<string, number> {
+  const out = { ...away };
+  for (const [id, n] of Object.entries(workshopUnits(player))) out[id] = (out[id] ?? 0) + n;
+  return out;
+}
+
 export function hangarUsed(units: PlayerState["units"], away: Record<string, number>, category: "attack" | "defense"): number {
   let used = 0;
   for (const [id, u] of Object.entries(units)) {
@@ -217,7 +225,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;
-      const built = hangarUsed(player.units, s.unitsAway, category);
+      // 5.20 : les unités à l'Atelier gardent leur place.
+      const built = hangarUsed(player.units, withWorkshop(s.unitsAway ?? {}, player), category);
       const reserved = queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
       if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
         throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);

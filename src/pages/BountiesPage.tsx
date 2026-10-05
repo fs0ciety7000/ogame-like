@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
@@ -109,7 +110,6 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
   const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = huntPower(player, selected, formation);
-  const wins = target.targetPower === null ? power > 0 : power > target.targetPower;
 
   const send = async () => {
     setBusy(true);
@@ -163,11 +163,8 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
             <p className="tabular-mono text-base text-gold-glow">{formatNumber(target.targetPower ?? power)}</p>
           </div>
         </div>
-        {target.targetPower !== null && Object.keys(selected).length > 0 && (
-          <p className={cn("mt-2 text-xs font-semibold", wins ? "text-mint-glow" : "text-danger-glow")}>
-            {wins ? "Ta flotte l'emporte : capture assurée." : "Pas assez puissante : le fugitif s'échappera. Ajoute des vaisseaux, des Traqueurs Kesh ou passe en formation Assaut."}
-          </p>
-        )}
+        {/* 5.20 : estimation par le combat en tours ; le lancement reste toujours possible. */}
+        {target.targetPower !== null && <PveFightEstimate player={player} fleet={selected} enemyPower={target.targetPower} formation={formation} enemyLabel="le fugitif" />}
         <Button className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer la traque
         </Button>

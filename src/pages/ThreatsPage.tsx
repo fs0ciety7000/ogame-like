@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { TiltPortrait } from "@/components/fx/TiltPortrait";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { askConfirm } from "@/components/ui/confirm-dialog";
@@ -61,7 +62,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
         <DialogTitle>Assaut : {faction.lair.name}</DialogTitle>
         <p className="text-sm text-slate-400">
           Défenses estimées : <strong className="text-ember-glow">{formatCompact(lair)}</strong> (fixées au décollage). Ta flotte sélectionnée :{" "}
-          <strong className={power > lair ? "text-mint-glow" : "text-slate-200"}>{formatCompact(power)}</strong>.
+          <strong className="text-slate-200">{formatCompact(power)}</strong>.
         </p>
         <div className="mt-3 space-y-2">
           {OFFENSIVE_UNITS.filter((id) => (player.units[id]?.count ?? 0) > 0).map((id) => {
@@ -89,6 +90,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
           </p>
         )}
         <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
+        <PveFightEstimate player={player} fleet={selected} enemyPower={lair} formation={formation} enemyLabel="le repaire" />
         <Button variant="danger" className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer l'assaut
         </Button>

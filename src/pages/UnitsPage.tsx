@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Card, HudBrackets } from "@/components/ui/card";
-import { HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
+import { HudChip, HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,13 +17,14 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { getUnitCapacity } from "@/game/buildings";
-import { hangarUsed } from "@/game/actions";
+import { hangarUsed, withWorkshop } from "@/game/actions";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { COMBAT_RULES, unitStat } from "@/game/combat";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
+import { hullPercent, workshopUnits } from "@/game/workshop";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
@@ -46,6 +47,7 @@ export function UnitsPage() {
   const [tab, setTab] = useState<"attack" | "defense">("attack");
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
   const classes = useMemo(() => unitClasses(UNITS), []);
+  const repairDock = player ? workshopUnits(player) : {};
 
   if (!player || !queues) return null;
 
@@ -55,8 +57,9 @@ export function UnitsPage() {
   // Places occupées dans le hangar : unités construites + unités en file
   // (déjà réservées, même calcul que enqueueUnitBuild côté service).
   // v3.9.1 : les vaisseaux en mission comptent aussi (ils reviendront).
-  const built = (category: "attack" | "defense") => hangarUsed(player.units, away, category);
+  const built = (category: "attack" | "defense") => hangarUsed(player.units, withWorkshop(away, player), category);
   const awaySpace = (category: "attack" | "defense") => hangarUsed({}, away, category);
+  const repairSpace = (category: "attack" | "defense") => hangarUsed({}, withWorkshop({}, player), category);
   const reserved = (category: "attack" | "defense") =>
     queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
 
@@ -125,6 +128,7 @@ export function UnitsPage() {
                   {formatNumber(b + r)} / {formatNumber(cap)} places
                   {r > 0 && <span className="text-mint-glow"> (dont {formatNumber(r)} en file)</span>}
                   {awaySpace(cat) > 0 && <span className="text-gold-glow"> (dont {formatNumber(awaySpace(cat))} en vol)</span>}
+                  {repairSpace(cat) > 0 && <span className="text-ember-glow"> (dont {formatNumber(repairSpace(cat))} à l'Atelier)</span>}
                 </p>
               </div>
             </Card>
@@ -215,6 +219,27 @@ export function UnitsPage() {
                       {unit.category === "attack" ? "Attaque" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
                     </HudTag>
                     <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
+                    {/* 5.20 : coque abîmée et unités immobilisées à l'Atelier. */}
+                    {(() => {
+                      const hull = hullPercent(player, unit.id);
+                      const docked = repairDock[unit.id] ?? 0;
+                      return (
+                        <>
+                          {hull < 0.995 && (
+                            <HudChip asChild size="sm" tone={hull >= 0.8 ? "mint" : hull >= 0.4 ? "ember" : "danger"}>
+                              <Link to="/game/batiments?onglet=atelier" title="Points de vie restants : la flotte abîmée tire et encaisse moins.">
+                                Coque {Math.round(hull * 100)} %
+                              </Link>
+                            </HudChip>
+                          )}
+                          {docked > 0 && (
+                            <HudChip asChild size="sm" tone="ember">
+                              <Link to="/game/batiments?onglet=atelier">{formatNumber(docked)} à l'Atelier</Link>
+                            </HudChip>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className="hud-stage relative mt-2 grid h-44 place-items-center">

@@ -1,4 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
@@ -337,7 +338,9 @@ export function resolveBountyHunt(
   const combat = resolveCombat({
     ...fx,
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
@@ -347,8 +350,11 @@ export function resolveBountyHunt(
     defenderResources: {},
     defenderPowerOverride: power,
   });
+  // 5.20 : coques abîmées conservées, unités sauvées envoyées à l'Atelier (elles ne rentrent pas avec la flotte).
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "bounty", false);
   const survivors: Record<string, number> = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0));
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0) - (combat.attackerRecovered[id] ?? 0));
   const notifications: NewNotification[] = [...flushed.notifications];
   const success = combat.outcome === "attacker_win";
   const t = BOUNTY_RULES.tiers[tier];

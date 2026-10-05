@@ -26,7 +26,7 @@ function CombatClash({ myPower, opponentPower }: { myPower: number; opponentPowe
   const oppPct = 100 - myPct;
 
   return (
-    <div className="relative mt-3 h-9 overflow-hidden rounded-lg bg-space-800/80">
+    <div className="hud-cut-sm relative mt-3 h-9 overflow-hidden bg-space-800/80">
       <motion.div
         className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-glow/80 to-cyan-glow/40"
         initial={{ width: "0%" }}
@@ -68,11 +68,11 @@ function CombatRounds({ log, perspective }: { log: CombatLog; perspective: "atta
         {log.rounds.map((r, i) => (
           <li key={i} className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-[11px]">
             <span className="font-mono text-slate-500">T{i + 1}</span>
-            <div className="relative h-3 overflow-hidden rounded bg-space-800/80" title={`Tes forces : ${pct(mine(r))}`}>
+            <div className="relative h-3 overflow-hidden bg-space-800/80" title={`Tes forces : ${pct(mine(r))}`}>
               <motion.div className="absolute inset-y-0 left-0 bg-cyan-glow/70" initial={{ width: 0 }} animate={{ width: pct(mine(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
               <span className="absolute inset-0 flex items-center px-1 font-mono text-slate-100/90">{pct(mine(r))}</span>
             </div>
-            <div className="relative h-3 overflow-hidden rounded bg-space-800/80" title={`Forces adverses : ${pct(theirs(r))}`}>
+            <div className="relative h-3 overflow-hidden bg-space-800/80" title={`Forces adverses : ${pct(theirs(r))}`}>
               <motion.div className="absolute inset-y-0 right-0 bg-danger-glow/70" initial={{ width: 0 }} animate={{ width: pct(theirs(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
               <span className="absolute inset-0 flex items-center justify-end px-1 font-mono text-slate-100/90">{pct(theirs(r))}</span>
             </div>
@@ -107,7 +107,7 @@ function LossList({ losses, recovered }: { losses: Record<string, number>; recov
           <li key={id} className="flex items-center justify-between gap-2 text-slate-300">
             <span>{name}</span>
             <span className="text-danger-glow">
-              -{count + rec} {rec > 0 && <span className="text-slate-500">(dont {rec} réparées)</span>}
+              -{count + rec} {rec > 0 && <span className="text-slate-500">(dont {rec} à l'Atelier)</span>}
             </span>
           </li>
         );

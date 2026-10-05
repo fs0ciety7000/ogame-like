@@ -1,4 +1,5 @@
 import { finishAllTimers } from "@/game/adminTools";
+import { advanceWorkshop } from "@/game/workshop";
 import { advanceColonies } from "@/game/colonies";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { advanceResources, missionRewards } from "@/game/economy";
@@ -105,6 +106,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
 
   // v5.5 : compte test, tout ce qui est en cours se termine maintenant.
   if (player.testMode) finishAllTimers(queues, now);
+  // 5.20 : Atelier de réparation (unités en file, puis coques abîmées).
+  notifications.push(...advanceWorkshop(player, now, !!player.testMode));
 
   // --- Bâtiments en construction ---
   const finishedAt: Record<string, number> = {};

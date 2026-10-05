@@ -3374,6 +3374,115 @@ function grantResources(player, input) {
   return given;
 }
 
+// src/game/workshop.ts
+var ATELIER_ID = "atelier_reparation";
+function workshopState(player) {
+  var _a;
+  const w = player.workshop;
+  return {
+    updatedAtMs: (_a = w == null ? void 0 : w.updatedAtMs) != null ? _a : 0,
+    jobs: Array.isArray(w == null ? void 0 : w.jobs) ? w.jobs.filter((j) => j && j.count > 0) : [],
+    hull: (w == null ? void 0 : w.hull) && typeof w.hull === "object" ? __spreadValues({}, w.hull) : {}
+  };
+}
+function atelierLevel(player) {
+  var _a, _b;
+  const def3 = (_a = BUILDINGS.find((b) => {
+    var _a2;
+    return ((_a2 = b.effect) == null ? void 0 : _a2.type) === "repair";
+  })) != null ? _a : BUILDINGS.find((b) => b.id === ATELIER_ID);
+  return def3 ? effectiveBuildingLevel((_b = player.buildings) != null ? _b : {}, def3.id) : 0;
+}
+function workshopRate(player) {
+  const R = COMBAT_RULES;
+  const level3 = atelierLevel(player);
+  if (level3 <= 0) return R.workshopHpPerSec * R.workshopBaseFactor;
+  return R.workshopHpPerSec * (1 + R.workshopLevelGain * (level3 - 1));
+}
+function workshopUnits(player) {
+  var _a;
+  const out = {};
+  for (const j of workshopState(player).jobs) out[j.unitId] = ((_a = out[j.unitId]) != null ? _a : 0) + j.count;
+  return out;
+}
+function applyHull(player, hull) {
+  if (!hull || player.npc) return;
+  const st = workshopState(player);
+  for (const [id, hp] of Object.entries(hull)) {
+    if (hp > 0) st.hull[id] = Math.round(hp);
+    else delete st.hull[id];
+  }
+  player.workshop = st;
+}
+function sendToWorkshop(player, recovered, now, source, fromBase) {
+  var _a, _b;
+  if (player.npc) return;
+  const st = workshopState(player);
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  for (const [unitId, n] of Object.entries(recovered != null ? recovered : {})) {
+    const count2 = Math.floor(n != null ? n : 0);
+    if (count2 <= 0) continue;
+    if (fromBase && player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - count2);
+    const hp = count2 * unitBaseHp((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, unitId);
+    st.jobs.push({ id: `${now.toString(36)}-${unitId}-${st.jobs.length}`, unitId, count: count2, hpTotal: hp, hpLeft: hp, source, addedAtMs: now });
+  }
+  player.workshop = st;
+}
+function advanceWorkshop(player, now, instant = false) {
+  var _a, _b, _c;
+  const w = player.workshop;
+  if (!w || player.npc) return [];
+  const st = workshopState(player);
+  const since = st.updatedAtMs || now;
+  let budget = instant ? Infinity : Math.max(0, (now - since) / 1e3) * workshopRate(player);
+  st.updatedAtMs = now;
+  const done = {};
+  while (st.jobs.length && budget > 0) {
+    const job = st.jobs[0];
+    const spend2 = Math.min(budget, job.hpLeft);
+    job.hpLeft -= spend2;
+    budget -= spend2;
+    if (job.hpLeft > 0.5) break;
+    st.jobs.shift();
+    const unit = (_a = player.units[job.unitId]) != null ? _a : { level: 1, count: 0 };
+    player.units[job.unitId] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_b = unit.count) != null ? _b : 0) + job.count });
+    done[job.unitId] = ((_c = done[job.unitId]) != null ? _c : 0) + job.count;
+  }
+  const hullIds = Object.keys(st.hull).sort((a, b) => {
+    var _a2, _b2;
+    return ((_a2 = st.hull[b]) != null ? _a2 : 0) - ((_b2 = st.hull[a]) != null ? _b2 : 0);
+  });
+  for (const id of hullIds) {
+    if (!player.units[id]) {
+      delete st.hull[id];
+      continue;
+    }
+    if (budget <= 0) continue;
+    const spend2 = Math.min(budget, st.hull[id]);
+    st.hull[id] -= spend2;
+    budget -= spend2;
+    if (st.hull[id] < 1) delete st.hull[id];
+    else st.hull[id] = Math.round(st.hull[id]);
+  }
+  player.workshop = st;
+  const names = Object.entries(done).map(([id, n]) => {
+    var _a2, _b2;
+    return `${n} \xD7 ${(_b2 = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b2 : id}`;
+  });
+  if (!names.length) return [];
+  return [{ kind: "building", title: "Atelier : r\xE9parations termin\xE9es", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
+}
+function withFleet(units, fleet) {
+  var _a, _b;
+  const out = __spreadValues({}, units);
+  for (const [id, n] of Object.entries(fleet != null ? fleet : {})) {
+    if (!(n > 0)) continue;
+    const u = (_a = out[id]) != null ? _a : { level: 1, count: 0 };
+    out[id] = __spreadProps(__spreadValues({}, u), { count: ((_b = u.count) != null ? _b : 0) + n });
+  }
+  return out;
+}
+
 // src/game/allianceProfile.ts
 var ALLIANCE_PERMS = [
   { id: "treasury", label: "Tr\xE9sor", hint: "Verser des ressources du tr\xE9sor aux membres." },
@@ -5862,7 +5971,7 @@ function startBounty(player, contractId, now) {
   return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
 }
 function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   const st = refreshBounties(bountyState(player), player.uid, now);
@@ -5872,7 +5981,9 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
   const fx = formationEffects(formation);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
@@ -5882,8 +5993,10 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     defenderResources: {},
     defenderPowerOverride: power
   }));
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "bounty", false);
   const survivors = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0));
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0) - ((_e = combat.attackerRecovered[id]) != null ? _e : 0));
   const notifications = [...flushed.notifications];
   const success = combat.outcome === "attacker_win";
   const t = BOUNTY_RULES.tiers[tier];
@@ -5903,7 +6016,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
     addPassPoints(player, "bounty", now);
-    player.victories = ((_e = player.victories) != null ? _e : 0) + 1;
+    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
     notifications.push(note2(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
     const rankAfter = bountyRank(st.reputation);
     if (rankAfter > rankBefore) {
@@ -5911,7 +6024,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     }
   } else {
     st.failed += 1;
-    player.defeats = ((_f = player.defeats) != null ? _f : 0) + 1;
+    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
     if (contract) {
       contract.tries += 1;
       if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
@@ -7140,11 +7253,17 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     defenseFactor: posture.defenseFactor,
     // v4.0 : Stratège et reliques (les capsules ne jouent pas contre les PNJ).
     // v5.9 : Traqueurs Kesh à quai, +50 % d'attaque contre les PNJ.
-    defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, (_e = player.techLevels) != null ? _e : {}, posture.homeFleetFactor, posture.defenseFactor)
+    defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, (_e = player.techLevels) != null ? _e : {}, posture.homeFleetFactor, posture.defenseFactor),
+    defenderHull: workshopState(player).hull
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
   }
+  applyHull(player, combat.defenderHull);
+  sendToWorkshop(player, Object.fromEntries(Object.entries(combat.defenderRecovered).map(([id, n]) => {
+    var _a2, _b2;
+    return [id, n - ((_b2 = (_a2 = combat.defenderRebuilt) == null ? void 0 : _a2[id]) != null ? _b2 : 0)];
+  })), now, "raid", true);
   const loot = {};
   let bounty = {};
   let debris = { scrap: 0, energy: 0 };
@@ -7246,7 +7365,7 @@ function checkLairLaunch(faction, player, fleet) {
   return units;
 }
 function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   const st = pirateState(player, faction.id);
@@ -7256,7 +7375,9 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.
     cargoFactor: fx.cargoFactor * (1 + playerModifiers(player).cargo),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
@@ -7266,19 +7387,21 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     defenderResources: {},
     defenderPowerOverride: power
   }));
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "lair", false);
   const survivors = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_a = combat.attackerLosses[id]) != null ? _a : 0));
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_a = combat.attackerLosses[id]) != null ? _a : 0) - ((_b = combat.attackerRecovered[id]) != null ? _b : 0));
   const notifications = [...flushed.notifications];
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);
-    for (const r of RARE) reward[r] = ((_b = reward[r]) != null ? _b : 0) + faction.lair.rare;
+    for (const r of RARE) reward[r] = ((_c = reward[r]) != null ? _c : 0) + faction.lair.rare;
     const loot = 1 + playerModifiers(player).loot;
-    if (loot !== 1) for (const r of Object.keys(reward)) reward[r] = Math.floor(((_c = reward[r]) != null ? _c : 0) * loot);
-    for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
+    if (loot !== 1) for (const r of Object.keys(reward)) reward[r] = Math.floor(((_d = reward[r]) != null ? _d : 0) * loot);
+    for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_e = player.resources[res]) != null ? _e : 0) + amount3;
     applyXpDelta(player, faction.lair.xp, now, "pirate");
     const title = faction.lair.title;
-    if (title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === title)) {
-      player.titles = [...(_f = player.titles) != null ? _f : [], { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
+    if (title && !((_f = player.titles) != null ? _f : []).some((t) => t.label === title)) {
+      player.titles = [...(_g = player.titles) != null ? _g : [], { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
       if (!player.activeTitle) player.activeTitle = title;
     }
     st.lairOpen = false;
@@ -7289,7 +7412,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     grantCommanderXp(player, "corsair", COMMANDER_XP.lairWin);
     addPassPoints(player, "victory", now);
     const lairLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower)));
-    player.victories = ((_g = player.victories) != null ? _g : 0) + 1;
+    player.victories = ((_h = player.victories) != null ? _h : 0) + 1;
     notifications.push(
       note3(
         "combat-attacker",
@@ -7299,7 +7422,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
       )
     );
   } else {
-    player.defeats = ((_h = player.defeats) != null ? _h : 0) + 1;
+    player.defeats = ((_i = player.defeats) != null ? _i : 0) + 1;
     notifications.push(note3("combat-attacker", "Assaut repouss\xE9", `Les d\xE9fenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
   }
   setState(player, faction.id, st);
@@ -8110,6 +8233,7 @@ function flushState(playerIn, queuesIn, now) {
   ensureSeasonRollover(player, now);
   notifications.push(...advanceColonies(player, now));
   if (player.testMode) finishAllTimers(queues, now);
+  notifications.push(...advanceWorkshop(player, now, !!player.testMode));
   const finishedAt = {};
   for (const buildingId of Object.keys(queues.buildingUpgrades)) {
     const entry = queues.buildingUpgrades[buildingId];
@@ -8927,7 +9051,16 @@ var COMBAT_RULES = {
   /** Au dernier tour, l'attaquant l'emporte s'il garde au moins cette part de points de vie de plus que le défenseur. */
   timeoutWinMargin: 0.3,
   /** Ennemis PNJ (sans unités réelles) : points de vie relatifs à une flotte de même puissance. */
-  pveHpFactor: 0.8
+  pveHpFactor: 0.8,
+  /* 5.20 — points de vie conservés entre les combats. */
+  /** Part des PV perdus qui reste en dégâts sur les survivants (le reste détruit des unités). */
+  hullDamageShare: 0.4,
+  /** Une unité abîmée au-delà de cette part de ses PV est détruite. */
+  hullMaxDamage: 0.9,
+  /** Atelier de réparation : PV réparés par seconde au niveau 1, gain par niveau, et cadence sans Atelier. */
+  workshopHpPerSec: 30,
+  workshopLevelGain: 0.25,
+  workshopBaseFactor: 0.2
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
@@ -9019,14 +9152,22 @@ function hit(stacks, damage) {
     t.count = Math.max(0, t.count - damage * share / t.hp);
   }
 }
-function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor) {
+function unitBaseHp(units, techLevels2, id) {
+  return Math.max(1, unitStat(units, techLevels2, id, "defense")) * COMBAT_RULES.hpPerResistance;
+}
+function realStacks(units, techLevels2, fleet, owner, engaged = 1, factor = 1, hpFactor = factor, hull) {
+  var _a, _b, _c;
   const out = [];
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
     const att = unitStat(units, techLevels2, id, "attack") * factor;
     const res = unitStat(units, techLevels2, id, "defense");
     if (!(att > 0) && !(res > 0)) continue;
-    out.push({ id, owner, count: qty * engaged, realCount: qty, att, hp: Math.max(1, res) * COMBAT_RULES.hpPerResistance * hpFactor });
+    const baseHp = Math.max(1, res) * COMBAT_RULES.hpPerResistance;
+    const owned = Math.max(qty, (_b = (_a = units[id]) == null ? void 0 : _a.count) != null ? _b : 0);
+    const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, ((_c = hull == null ? void 0 : hull[id]) != null ? _c : 0) / baseHp));
+    const n = qty * engaged;
+    out.push({ id, owner, count: Math.max(0, n - damaged * n / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp });
   }
   return out;
 }
@@ -9034,7 +9175,7 @@ function virtualStacks(power, mirror, owner, mirrorAttackFactor = 1) {
   if (!(power > 0)) return [];
   const att = fireOf(mirror) / Math.max(0.01, mirrorAttackFactor);
   const hpPerAtt = att > 0 ? poolOf(mirror) / att : COMBAT_RULES.hpPerResistance / 4;
-  return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor) }];
+  return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor), owned: 0, damaged: 0, baseHp: 1 }];
 }
 function combatLogOf(result) {
   var _a;
@@ -9049,7 +9190,7 @@ function combatLogOf(result) {
   };
 }
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
@@ -9060,7 +9201,7 @@ function resolveCombat(params) {
   const garrisons = (_f = params.garrisons) != null ? _f : [];
   const garrisonFactor = (_g = params.garrisonFactor) != null ? _g : 0.5;
   const retreatAt = Math.max(0.05, Math.min(1, (_h = params.retreatAt) != null ? _h : R.retreatAt));
-  let attacker = params.attackerPowerOverride === void 0 ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1) : [];
+  let attacker = params.attackerPowerOverride === void 0 ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull) : [];
   const home = 1 + R.homeDefenseBonus;
   let defender = [];
   if (params.defenderPowerOverride === void 0) {
@@ -9073,8 +9214,8 @@ function resolveCombat(params) {
       return [id, (_b2 = (_a2 = defenderUnits[id]) == null ? void 0 : _a2.count) != null ? _b2 : 0];
     }));
     defender = [
-      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * ((_i = params.defenseFactor) != null ? _i : 1) * defFactor),
-      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor),
+      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * ((_i = params.defenseFactor) != null ? _i : 1) * defFactor, void 0, params.defenderHull),
+      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, void 0, params.defenderHull),
       ...garrisons.flatMap((g, i) => realStacks(g.units, g.techLevels, g.fleet, i, garrisonFactor, defFactor))
     ];
   }
@@ -9118,16 +9259,34 @@ function resolveCombat(params) {
   else if (aLeft - dLeft >= R.timeoutWinMargin) outcome = "attacker_win";
   else if (aLeft < dLeft) outcome = "defender_win";
   else outcome = "draw";
-  const lostOf = (stack, start) => {
-    const engagedLost = Math.max(0, start - stack.count);
-    return Math.min(stack.realCount, Math.round(engagedLost));
+  const share = Math.max(0, Math.min(1, R.hullDamageShare));
+  const maxDmg = Math.max(0, Math.min(0.99, R.hullMaxDamage));
+  const settle = (t, start, factor = 1) => {
+    const lost = Math.max(0, start - t.count) * factor;
+    const prior = t.owned > 0 ? Math.min(maxDmg, t.damaged / t.owned) : 0;
+    let destroyed = lost * (1 - share) / (1 - prior);
+    let damaged = t.damaged - destroyed * prior + lost * share;
+    const over = damaged - maxDmg * (t.owned - destroyed);
+    if (over > 0) {
+      const k = over / (1 - maxDmg);
+      destroyed += k;
+      damaged -= k;
+    }
+    const whole = Math.max(0, Math.min(t.realCount, Math.round(destroyed)));
+    damaged = Math.max(0, Math.min(maxDmg * Math.max(0, t.owned - whole), damaged + (destroyed - whole)));
+    return { destroyed: whole, hull: Math.round(damaged * t.baseHp) };
   };
+  const attackerHull = {};
+  const defenderHull = {};
+  const lostOf = (stack, start) => settle(stack, start).destroyed;
   const attackerLosses = {};
   const attackerRecovered = {};
   attacker.forEach((t, i) => {
     var _a2;
     if (!t.id) return;
-    const rawLost = Math.min((_a2 = fleet[t.id]) != null ? _a2 : 0, Math.round(lostOf(t, attackerStart[i]) * lossFactor));
+    const settled = settle(t, attackerStart[i], lossFactor);
+    attackerHull[t.id] = settled.hull;
+    const rawLost = Math.min((_a2 = fleet[t.id]) != null ? _a2 : 0, settled.destroyed);
     if (rawLost <= 0) return;
     const recovered = Math.floor(rawLost * attackerRepairPct);
     attackerLosses[t.id] = rawLost - recovered;
@@ -9140,6 +9299,10 @@ function resolveCombat(params) {
   defender.forEach((t, i) => {
     var _a2;
     if (!t.id) return;
+    if (typeof t.owner !== "number") {
+      const settled = settle(t, defenderStart[i]);
+      defenderHull[t.id] = settled.hull;
+    }
     const rawLost = lostOf(t, defenderStart[i]);
     if (rawLost <= 0) return;
     if (typeof t.owner === "number") {
@@ -9153,16 +9316,16 @@ function resolveCombat(params) {
     if (isDefense && recovered > 0) defenderRebuilt[t.id] = recovered;
   });
   const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_k = params.cargoFactor) != null ? _k : 1));
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0) - ((_k = attackerRecovered[unitId]) != null ? _k : 0));
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_l = params.cargoFactor) != null ? _l : 1));
   let loot = null;
   if (outcome === "attacker_win") {
     const wanted = {};
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
-      const pct6 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct6);
+      const pct6 = Math.min(1, base * ((_m = params.lootMultiplier) != null ? _m : 1));
+      const amount3 = Math.floor(Math.max(0, (_n = defenderResources[res]) != null ? _n : 0) * pct6);
       wanted[res] = amount3;
       total2 += amount3;
     }
@@ -9177,8 +9340,8 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_n = loot[res]) != null ? _n : 0) < ((_o = wanted[res]) != null ? _o : 0)) {
-        loot[res] = ((_p = loot[res]) != null ? _p : 0) + 1;
+      if (((_o = loot[res]) != null ? _o : 0) < ((_p = wanted[res]) != null ? _p : 0)) {
+        loot[res] = ((_q = loot[res]) != null ? _q : 0) + 1;
         left--;
       }
     }
@@ -9200,7 +9363,9 @@ function resolveCombat(params) {
     garrisonLosses,
     garrisonPower,
     rounds,
-    retreated
+    retreated,
+    attackerHull,
+    defenderHull
   };
 }
 
@@ -10361,13 +10526,15 @@ function pickEvent(random, ambushFactor = 1) {
   }
   return "nothing";
 }
-function fightFleet(player, fleet, ratio) {
-  var _a;
+function fightFleet(player, fleet, ratio, now) {
+  var _a, _b;
   const fleetPower = computeFleetPower(player.units, player.techLevels, fleet.units, ["attack"]);
   const fx = formationEffects(fleet.expedition.formation);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
     attackFactor: fx.attackFactor * (1 + playerModifiers(player).attack),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte d'expédition, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet.units),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet: fleet.units,
@@ -10383,6 +10550,9 @@ function fightFleet(player, fleet, ratio) {
     units[id] = Math.max(0, ((_a = units[id]) != null ? _a : 0) - n);
     lost += n;
   }
+  for (const [id, n] of Object.entries(combat.attackerRecovered)) units[id] = Math.max(0, ((_b = units[id]) != null ? _b : 0) - n);
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "expedition", false);
   fleet.units = units;
   return { won: combat.outcome === "attacker_win", lost };
 }
@@ -10423,7 +10593,7 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
       return `${n} ${(_b = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b : id}`;
     }).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
-    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet), now);
     if (won) {
       const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
       addLoot(fleet, gain);
@@ -10477,7 +10647,7 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
     if (st) st.notoriety = Math.max(0, st.notoriety - 1);
     text = `P\xE9age pay\xE9 \xE0 ${name} (${describeGain(paid)}) : la flotte passe, et ta r\xE9putation s'am\xE9liore.`;
   } else {
-    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet));
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet), now);
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
       const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));
@@ -12391,7 +12561,7 @@ function warlordPublic(d, npc, rt, state, now) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -12465,6 +12635,9 @@ function performAttack(input) {
     defenderTechLevels: (_q = def3.techLevels) != null ? _q : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
     defenderShieldPct: getShieldPercent(def3.buildings, allianceShieldBonus(def3.allianceResearch)),
+    // 5.20 : dégâts conservés (planète mère des joueurs ; ni colonies ni PNJ).
+    attackerHull: attacker.npc ? void 0 : workshopState(attacker).hull,
+    defenderHull: colony || owner.npc ? void 0 : workshopState(owner).hull,
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
       Object.entries((_r = def3.resources) != null ? _r : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch, def3))])
@@ -12476,19 +12649,24 @@ function performAttack(input) {
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
+  const attackerToWorkshop = !attacker.npc;
+  if (attackerToWorkshop) {
+    applyHull(attacker, combat.attackerHull);
+    sendToWorkshop(attacker, combat.attackerRecovered, now, "attack", true);
+  }
   const survivors = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_t = combat.attackerLosses[unitId]) != null ? _t : 0));
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_t = combat.attackerLosses[unitId]) != null ? _t : 0) - (attackerToWorkshop ? (_u = combat.attackerRecovered[unitId]) != null ? _u : 0 : 0));
   if (input.inFlight) {
     for (const [unitId, qty] of Object.entries(survivors)) {
       if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
     }
   }
-  for (const [res, amt] of Object.entries((_u = combat.loot) != null ? _u : {})) {
+  for (const [res, amt] of Object.entries((_v = combat.loot) != null ? _v : {})) {
     if (!input.inFlight) {
-      attacker.resources[res] = ((_v = attacker.resources[res]) != null ? _v : 0) + (amt != null ? amt : 0);
+      attacker.resources[res] = ((_w = attacker.resources[res]) != null ? _w : 0) + (amt != null ? amt : 0);
       bumpStat(attacker, "loot", amt != null ? amt : 0);
     }
-    def3.resources[res] = Math.max(0, ((_w = def3.resources[res]) != null ? _w : 0) - (amt != null ? amt : 0));
+    def3.resources[res] = Math.max(0, ((_x = def3.resources[res]) != null ? _x : 0) - (amt != null ? amt : 0));
   }
   const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels));
   const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
@@ -12499,17 +12677,25 @@ function performAttack(input) {
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }
+  if (!colony && !owner.npc) {
+    applyHull(owner, combat.defenderHull);
+    const ships = Object.fromEntries(Object.entries(combat.defenderRecovered).map(([id, n]) => {
+      var _a2, _b2;
+      return [id, n - ((_b2 = (_a2 = combat.defenderRebuilt) == null ? void 0 : _a2[id]) != null ? _b2 : 0)];
+    }));
+    sendToWorkshop(owner, ships, now, "defense", true);
+  }
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def3.npc);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
-    attacker.victories = ((_x = attacker.victories) != null ? _x : 0) + 1;
-  } else if (combat.outcome === "defender_win") attacker.defeats = ((_y = attacker.defeats) != null ? _y : 0) + 1;
+    attacker.victories = ((_y = attacker.victories) != null ? _y : 0) + 1;
+  } else if (combat.outcome === "defender_win") attacker.defeats = ((_z = attacker.defeats) != null ? _z : 0) + 1;
   xp.attackerXp = applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") owner.victories = ((_z = owner.victories) != null ? _z : 0) + 1;
+  if (combat.outcome === "defender_win") owner.victories = ((_A = owner.victories) != null ? _A : 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    owner.defeats = ((_A = owner.defeats) != null ? _A : 0) + 1;
+    owner.defeats = ((_B = owner.defeats) != null ? _B : 0) + 1;
     if (colony) colony.lastDefeatAtMs = now;
     else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
@@ -12535,11 +12721,11 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_B = outcomeTitle[combat.outcome]) != null ? _B : "Rapport de combat",
+      title: (_C = outcomeTitle[combat.outcome]) != null ? _C : "Rapport de combat",
       message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}${extraLoot}`,
       createdAtMs: now,
       read: false,
-      data: { resources: (_C = combat.loot) != null ? _C : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
+      data: { resources: (_D = combat.loot) != null ? _D : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
     }
   ];
   const defenderTitle = {
@@ -12551,11 +12737,11 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_D = defenderTitle[combat.outcome]) != null ? _D : "Rapport de combat",
+      title: (_E = defenderTitle[combat.outcome]) != null ? _E : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
       read: false,
-      data: { resources: (_E = combat.loot) != null ? _E : void 0, xp: defenderXpDelta > 0 ? defenderXpDelta : void 0, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo }
+      data: { resources: (_F = combat.loot) != null ? _F : void 0, xp: defenderXpDelta > 0 ? defenderXpDelta : void 0, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo }
     }
   ];
   const report = {
@@ -12579,7 +12765,7 @@ function performAttack(input) {
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
     defenderApplied: true,
-    garrisons: ((_F = input.garrisons) != null ? _F : []).map((g, i) => {
+    garrisons: ((_G = input.garrisons) != null ? _G : []).map((g, i) => {
       var _a2, _b2;
       return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
     }),
@@ -12597,8 +12783,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_G = combat.loot) != null ? _G : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_H = combat.garrisonLosses) != null ? _H : []], (_I = eventDebrisPercent(now)) != null ? _I : DEBRIS_RULES.percent)
+    loot: (_H = combat.loot) != null ? _H : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_I = combat.garrisonLosses) != null ? _I : []], (_J = eventDebrisPercent(now)) != null ? _J : DEBRIS_RULES.percent)
   };
 }
 function lostPower(losses, units, techLevels2) {
@@ -14319,6 +14505,12 @@ function pay(player, cost, now, spending = true) {
   recordContract(player, "spend", total2, now);
   bumpStat(player, "spent", total2);
 }
+function withWorkshop(away, player) {
+  var _a;
+  const out = __spreadValues({}, away);
+  for (const [id, n] of Object.entries(workshopUnits(player))) out[id] = ((_a = out[id]) != null ? _a : 0) + n;
+  return out;
+}
 function hangarUsed(units, away, category) {
   var _a;
   let used = 0;
@@ -14334,7 +14526,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -14387,7 +14579,7 @@ function applyAction(s, action) {
       const qty = Math.min(positiveInt(action.qty, "Quantit\xE9"), MAX_QTY);
       if (((_g = (_f = player.units[unit.id]) == null ? void 0 : _f.level) != null ? _g : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
       const category = unit.category;
-      const built = hangarUsed(player.units, s.unitsAway, category);
+      const built = hangarUsed(player.units, withWorkshop((_h = s.unitsAway) != null ? _h : {}, player), category);
       const reserved = queues.unitQueues[category].reduce((sum3, item) => {
         var _a2, _b2;
         return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
@@ -14407,7 +14599,7 @@ function applyAction(s, action) {
       const unit = findUnit(action.unitId);
       if (!unit) throw new GameActionError("Unit\xE9 invalide.");
       const qty = positiveInt(action.qty, "Quantit\xE9");
-      if (((_i = (_h = player.units[unit.id]) == null ? void 0 : _h.count) != null ? _i : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
+      if (((_j = (_i = player.units[unit.id]) == null ? void 0 : _i.count) != null ? _j : 0) < qty) throw new GameActionError("Tu n'as pas assez d'unit\xE9s \xE0 vendre.");
       player.units[unit.id].count -= qty;
       player.resources.scrap += Math.floor(unit.cost.scrap * 0.5) * qty;
       player.resources.energy += Math.floor(unit.cost.energy * 0.5) * qty;
@@ -14416,7 +14608,7 @@ function applyAction(s, action) {
     case "research": {
       const tech = findTech(action.techId);
       if (!tech) throw new GameActionError("Technologie inconnue.");
-      const nextLevel = ((_j = player.techLevels[tech.id]) != null ? _j : 0) + 1;
+      const nextLevel = ((_k = player.techLevels[tech.id]) != null ? _k : 0) + 1;
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Pr\xE9requis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
@@ -14451,36 +14643,36 @@ function applyAction(s, action) {
       const { sellId, buyId } = action;
       if (!RESOURCE_IDS4.has(sellId) || !RESOURCE_IDS4.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
       const amount3 = positiveInt(action.amount, "Montant");
-      if (((_k = player.resources[sellId]) != null ? _k : 0) < amount3) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
+      if (((_l = player.resources[sellId]) != null ? _l : 0) < amount3) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
       const gained = Math.floor(amount3 * getTradeRate(sellId, buyId));
       player.resources[sellId] -= amount3;
-      player.resources[buyId] = ((_l = player.resources[buyId]) != null ? _l : 0) + gained;
+      player.resources[buyId] = ((_m = player.resources[buyId]) != null ? _m : 0) + gained;
       bumpStat(player, "traded", amount3);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return gained;
     }
     case "claimContract": {
-      const claimed = claimContract(player, String((_m = action.contractId) != null ? _m : ""), now);
+      const claimed = claimContract(player, String((_n = action.contractId) != null ? _n : ""), now);
       bumpStat(player, "contracts");
       addPassPoints(player, "contract", now);
       grantCommanderXp(player, "steward", COMMANDER_XP.contractClaimed);
       return claimed;
     }
     case "rerollContract":
-      return rerollContract(player, String((_n = action.contractId) != null ? _n : ""), now);
+      return rerollContract(player, String((_o = action.contractId) != null ? _o : ""), now);
     case "setTitle":
-      setActiveTitle(player, String((_o = action.title) != null ? _o : ""));
+      setActiveTitle(player, String((_p = action.title) != null ? _p : ""));
       return player.activeTitle;
     case "claimOnboarding":
-      return claimOnboarding(player, String((_p = action.stepId) != null ? _p : ""));
+      return claimOnboarding(player, String((_q = action.stepId) != null ? _q : ""));
     case "claimGuide":
-      return claimGuideStep(player, String((_q = action.stepId) != null ? _q : ""));
+      return claimGuideStep(player, String((_r = action.stepId) != null ? _r : ""));
     case "claimAll": {
       const counts = {};
       for (const sub of pendingClaims(player, now)) {
         try {
           applyAction(s, sub);
-          counts[sub.type] = ((_r = counts[sub.type]) != null ? _r : 0) + 1;
+          counts[sub.type] = ((_s = counts[sub.type]) != null ? _s : 0) + 1;
         } catch (e3) {
         }
       }
@@ -14508,14 +14700,14 @@ function applyAction(s, action) {
     case "colonize":
       return startColonization(player, action.name, now);
     case "colonyUpgrade":
-      return upgradeColonyBuilding(player, String((_s = action.colonyId) != null ? _s : ""), String((_t = action.buildingId) != null ? _t : ""), now);
+      return upgradeColonyBuilding(player, String((_t = action.colonyId) != null ? _t : ""), String((_u = action.buildingId) != null ? _u : ""), now);
     case "colonyDefense":
-      return buildColonyDefense(player, String((_u = action.colonyId) != null ? _u : ""), String((_v = action.unitId) != null ? _v : ""), action.qty, now);
+      return buildColonyDefense(player, String((_v = action.colonyId) != null ? _v : ""), String((_w = action.unitId) != null ? _w : ""), action.qty, now);
     case "colonyRename":
-      renameColony(player, String((_w = action.colonyId) != null ? _w : ""), action.name);
+      renameColony(player, String((_x = action.colonyId) != null ? _x : ""), action.name);
       return void 0;
     case "colonySpec":
-      setColonySpec(player, String((_x = action.colonyId) != null ? _x : ""), String((_y = action.spec) != null ? _y : ""), now);
+      setColonySpec(player, String((_y = action.colonyId) != null ? _y : ""), String((_z = action.spec) != null ? _z : ""), now);
       return void 0;
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";
@@ -15221,7 +15413,8 @@ var GAME_FIELDS = [
   "chronicle",
   "announcementsSeen",
   "talents",
-  "casino"
+  "casino",
+  "workshop"
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
@@ -21743,7 +21936,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.19.0" : "dev";
+var LOGIC_VERSION = true ? "5.20.0" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

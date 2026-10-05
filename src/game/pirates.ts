@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -742,10 +743,14 @@ export function resolvePirateRaid(
     // v4.0 : Stratège et reliques (les capsules ne jouent pas contre les PNJ).
     // v5.9 : Traqueurs Kesh à quai, +50 % d'attaque contre les PNJ.
     defenderPowerFactor: (1 + playerModifiers(player).defense) * pveHomeDefenseFactor(defenderUnits, player.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor),
+    defenderHull: workshopState(player).hull,
   });
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - lost);
   }
+  // 5.20 : coques abîmées conservées ; vaisseaux sauvés à l'Atelier (les défenses reconstruites restent en place).
+  applyHull(player, combat.defenderHull);
+  sendToWorkshop(player, Object.fromEntries(Object.entries(combat.defenderRecovered).map(([id, n]) => [id, n - (combat.defenderRebuilt?.[id] ?? 0)])), now, "raid", true);
 
   const loot: Partial<Record<ResourceId, number>> = {};
   let bounty: Partial<Record<ResourceId, number>> = {};
@@ -878,7 +883,9 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
     // v5.9 : bonus de soute (Soute pliée…) sur le butin du repaire, comme contre un joueur.
     cargoFactor: fx.cargoFactor * (1 + playerModifiers(player).cargo),
-    attackerUnits: player.units,
+    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet),
+    attackerHull: workshopState(player).hull,
     attackerTechLevels: player.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
     fleet,
@@ -888,8 +895,10 @@ export function resolveLairAssault(faction: FactionDef, playerIn: PlayerState, q
     defenderResources: {},
     defenderPowerOverride: power,
   });
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "lair", false);
   const survivors: Record<string, number> = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0));
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - (combat.attackerLosses[id] ?? 0) - (combat.attackerRecovered[id] ?? 0));
   const notifications: NewNotification[] = [...flushed.notifications];
   if (combat.outcome === "attacker_win") {
     const reward = productionHours(player, faction.lair.rewardHours);

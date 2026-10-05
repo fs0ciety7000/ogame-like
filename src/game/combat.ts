@@ -52,6 +52,15 @@ export const COMBAT_RULES = {
   timeoutWinMargin: 0.3,
   /** Ennemis PNJ (sans unités réelles) : points de vie relatifs à une flotte de même puissance. */
   pveHpFactor: 0.8,
+  /* 5.20 — points de vie conservés entre les combats. */
+  /** Part des PV perdus qui reste en dégâts sur les survivants (le reste détruit des unités). */
+  hullDamageShare: 0.4,
+  /** Une unité abîmée au-delà de cette part de ses PV est détruite. */
+  hullMaxDamage: 0.9,
+  /** Atelier de réparation : PV réparés par seconde au niveau 1, gain par niveau, et cadence sans Atelier. */
+  workshopHpPerSec: 30,
+  workshopLevelGain: 0.25,
+  workshopBaseFactor: 0.2,
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */
@@ -181,6 +190,9 @@ export interface CombatResult {
   garrisonLosses?: Record<string, number>[];
   /** Puissance apportée par les garnisons (comprise dans defenderPower). */
   garrisonPower?: number;
+  /** 5.20 : PV manquants par type d'unité après le combat (tout le stock du joueur), à reporter sur l'Atelier. */
+  attackerHull?: Record<string, number>;
+  defenderHull?: Record<string, number>;
   /** 5.18 : déroulé tour par tour, et retraite de l'attaquant. */
   rounds?: CombatRound[];
   retreated?: boolean;
@@ -218,6 +230,10 @@ interface Stack {
   realCount: number;
   att: number;
   hp: number;
+  /** 5.20 : stock total du joueur pour ce type, dégâts déjà subis (en unités) et PV d'une unité (sans bonus). */
+  owned: number;
+  damaged: number;
+  baseHp: number;
 }
 
 export interface CombatRound {
@@ -242,14 +258,27 @@ function hit(stacks: Stack[], damage: number) {
   }
 }
 
-function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, number>, owner: Stack["owner"], engaged = 1, factor = 1, hpFactor = factor): Stack[] {
+/** PV d'une unité, sans bonus de combat (base des dégâts conservés). */
+export function unitBaseHp(units: Units, techLevels: TechLevels, id: string): number {
+  return Math.max(1, unitStat(units, techLevels, id, "defense")) * COMBAT_RULES.hpPerResistance;
+}
+
+/**
+ * 5.20 : `hull` = PV manquants par type sur tout le stock du joueur (`owned` = ce stock ; défaut : les unités engagées).
+ * Les dégâts se répartissent sur le stock : la part engagée se bat avec moins d'unités « valides ».
+ */
+function realStacks(units: Units, techLevels: TechLevels, fleet: Record<string, number>, owner: Stack["owner"], engaged = 1, factor = 1, hpFactor = factor, hull?: Record<string, number>): Stack[] {
   const out: Stack[] = [];
   for (const [id, qty] of Object.entries(fleet)) {
     if (!(qty > 0) || !(engaged > 0)) continue;
     const att = unitStat(units, techLevels, id, "attack") * factor;
     const res = unitStat(units, techLevels, id, "defense");
     if (!(att > 0) && !(res > 0)) continue;
-    out.push({ id, owner, count: qty * engaged, realCount: qty, att, hp: Math.max(1, res) * COMBAT_RULES.hpPerResistance * hpFactor });
+    const baseHp = Math.max(1, res) * COMBAT_RULES.hpPerResistance;
+    const owned = Math.max(qty, units[id]?.count ?? 0);
+    const damaged = Math.min(owned * COMBAT_RULES.hullMaxDamage, Math.max(0, (hull?.[id] ?? 0) / baseHp));
+    const n = qty * engaged;
+    out.push({ id, owner, count: Math.max(0, n - (damaged * n) / owned), realCount: qty, att, hp: baseHp * hpFactor, owned, damaged, baseHp });
   }
   return out;
 }
@@ -260,7 +289,7 @@ function virtualStacks(power: number, mirror: Stack[], owner: Stack["owner"], mi
   // Rapport points de vie / attaque de base (hors bonus d'attaque) de la flotte d'en face.
   const att = fireOf(mirror) / Math.max(0.01, mirrorAttackFactor);
   const hpPerAtt = att > 0 ? poolOf(mirror) / att : COMBAT_RULES.hpPerResistance / 4;
-  return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor) }];
+  return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor), owned: 0, damaged: 0, baseHp: 1 }];
 }
 
 /** Déroulé compact d'un combat, pour le rapport (points de vie au millième, dégâts arrondis). */
@@ -306,6 +335,9 @@ export function resolveCombat(params: {
   retreatAt?: number;
   /** v4.0 : bonus de défense du joueur défenseur (officiers, reliques, carapace). */
   defenderPowerFactor?: number;
+  /** 5.20 : PV manquants par type d'unité (stock entier) avant le combat. */
+  attackerHull?: Record<string, number>;
+  defenderHull?: Record<string, number>;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
@@ -319,15 +351,15 @@ export function resolveCombat(params: {
   const retreatAt = Math.max(0.05, Math.min(1, params.retreatAt ?? R.retreatAt));
 
   // --- Camps ---
-  let attacker = params.attackerPowerOverride === undefined ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1) : [];
+  let attacker = params.attackerPowerOverride === undefined ? realStacks(attackerUnits, attackerTechLevels, fleet, "attacker", 1, attackFactor, 1, params.attackerHull) : [];
   const home = 1 + R.homeDefenseBonus;
   let defender: Stack[] = [];
   if (params.defenderPowerOverride === undefined) {
     const defenses = Object.fromEntries(DEFENSIVE_UNITS.map((id) => [id, defenderUnits[id]?.count ?? 0]));
     const ships = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, defenderUnits[id]?.count ?? 0]));
     defender = [
-      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * (params.defenseFactor ?? 1) * defFactor),
-      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor),
+      ...realStacks(defenderUnits, defenderTechLevels, defenses, "defense", 1, home * (params.defenseFactor ?? 1) * defFactor, undefined, params.defenderHull),
+      ...realStacks(defenderUnits, defenderTechLevels, ships, "home", homeFactor, home * defFactor, undefined, params.defenderHull),
       ...garrisons.flatMap((g, i) => realStacks(g.units, g.techLevels, g.fleet, i, garrisonFactor, defFactor)),
     ];
   }
@@ -379,16 +411,38 @@ export function resolveCombat(params: {
   else outcome = "draw";
 
   // --- Pertes (unités entières, réparations comprises) ---
-  const lostOf = (stack: Stack, start: number) => {
-    const engagedLost = Math.max(0, start - stack.count);
-    return Math.min(stack.realCount, Math.round(engagedLost));
+  // 5.20 : une part des PV perdus reste en dégâts sur les survivants (hullDamageShare) ; une unité
+  // abîmée au-delà de hullMaxDamage est détruite. Les dégâts restants sont rendus par type (attackerHull…).
+  const share = Math.max(0, Math.min(1, R.hullDamageShare));
+  const maxDmg = Math.max(0, Math.min(0.99, R.hullMaxDamage));
+  const settle = (t: Stack, start: number, factor = 1) => {
+    const lost = Math.max(0, start - t.count) * factor;
+    // Les dégâts déjà subis sont répartis sur tout le stock : une unité détruite emporte sa part
+    // (il fallait moins de PV pour l'achever), le reste de l'usure demeure sur les survivantes.
+    const prior = t.owned > 0 ? Math.min(maxDmg, t.damaged / t.owned) : 0;
+    let destroyed = (lost * (1 - share)) / (1 - prior);
+    let damaged = t.damaged - destroyed * prior + lost * share;
+    const over = damaged - maxDmg * (t.owned - destroyed);
+    if (over > 0) {
+      const k = over / (1 - maxDmg);
+      destroyed += k;
+      damaged -= k;
+    }
+    const whole = Math.max(0, Math.min(t.realCount, Math.round(destroyed)));
+    damaged = Math.max(0, Math.min(maxDmg * Math.max(0, t.owned - whole), damaged + (destroyed - whole)));
+    return { destroyed: whole, hull: Math.round(damaged * t.baseHp) };
   };
+  const attackerHull: Record<string, number> = {};
+  const defenderHull: Record<string, number> = {};
+  const lostOf = (stack: Stack, start: number) => settle(stack, start).destroyed;
   const attackerLosses: Record<string, number> = {};
   const attackerRecovered: Record<string, number> = {};
   // Formations : le facteur de pertes s'applique aux pertes de l'attaquant après la bataille.
   attacker.forEach((t, i) => {
     if (!t.id) return;
-    const rawLost = Math.min(fleet[t.id] ?? 0, Math.round(lostOf(t, attackerStart[i]) * lossFactor));
+    const settled = settle(t, attackerStart[i], lossFactor);
+    attackerHull[t.id] = settled.hull;
+    const rawLost = Math.min(fleet[t.id] ?? 0, settled.destroyed);
     if (rawLost <= 0) return;
     const recovered = Math.floor(rawLost * attackerRepairPct);
     attackerLosses[t.id] = rawLost - recovered;
@@ -400,6 +454,10 @@ export function resolveCombat(params: {
   const garrisonLosses: Record<string, number>[] = garrisons.map(() => ({}));
   defender.forEach((t, i) => {
     if (!t.id) return;
+    if (typeof t.owner !== "number") {
+      const settled = settle(t, defenderStart[i]);
+      defenderHull[t.id] = settled.hull;
+    }
     const rawLost = lostOf(t, defenderStart[i]);
     if (rawLost <= 0) return;
     if (typeof t.owner === "number") {
@@ -416,7 +474,8 @@ export function resolveCombat(params: {
   // Butin : une part des ressources du défenseur, dans la limite de ce que
   // la flotte survivante peut transporter (réduit proportionnellement).
   const survivors: Record<string, number> = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0));
+  // 5.20 : les unités sauvées par l'Atelier partent en réparation, elles ne portent pas de butin.
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0) - (attackerRecovered[unitId] ?? 0));
   const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * (params.cargoFactor ?? 1));
   let loot: Partial<Record<ResourceId, number>> | null = null;
   if (outcome === "attacker_win") {
@@ -466,5 +525,7 @@ export function resolveCombat(params: {
     garrisonPower,
     rounds,
     retreated,
+    attackerHull,
+    defenderHull,
   };
 }
