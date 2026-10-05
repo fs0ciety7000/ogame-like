@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, ArrowLeft, Clock, Gift, History, ListChecks, Radar, RefreshCw, Search, ShieldAlert, Store, Swords, Users } from "lucide-react";
+import { toast } from "sonner";
+import { Activity, AlertTriangle, ArrowLeft, Clock, Copy, Gift, History, ListChecks, Radar, RefreshCw, Search, ShieldAlert, Store, Swords, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, HudChip, StatTile, type HudTone } from "@/components/ui/hud";
@@ -283,6 +284,20 @@ function PlayerAuditView({ q, onBack }: { q: string; onBack: () => void }) {
       <Button size="sm" variant="ghost" onClick={() => void load()}>
         <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
       </Button>
+      {a && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            void navigator.clipboard.writeText(JSON.stringify(a, null, 1)).then(
+              () => toast.success("Audit copié", { description: "Colle-le dans un message ou un fichier pour l'analyser." }),
+              () => toast.error("Copie impossible"),
+            )
+          }
+        >
+          <Copy className="mr-1 h-3.5 w-3.5" /> Copier l'audit (JSON)
+        </Button>
+      )}
     </div>
   );
   if (error) {
