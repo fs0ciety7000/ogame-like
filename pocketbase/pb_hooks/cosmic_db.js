@@ -8259,4 +8259,95 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.23 : journal de contenu (versions des sections, retour arrière) ---------- */
+
+const CONTENT_VERSIONS_KEPT = 30;
+
+/** Instantané d'une section de contenu avant sa modification (`existed` : elle était personnalisée). */
+function saveContentVersion(txApp, section, data, existed, action, actorName, note) {
+  try {
+    const rec = new Record(txApp.findCollectionByNameOrId("content_versions"));
+    rec.load({ section, data: existed ? data : null, existed: !!existed, action, actorName: String(actorName || "").slice(0, 100), note: String(note || "").slice(0, 300), createdAtMs: Date.now() });
+    txApp.save(rec);
+    const old = txApp.findRecordsByFilter("content_versions", "section = {:s}", "-createdAtMs", 200, CONTENT_VERSIONS_KEPT, { s: section });
+    old.forEach((r) => txApp.delete(r));
+  } catch (err) {
+    console.log(`[cosmic] journal de contenu : ${err}`);
+  }
+}
+
+function actorLabel(e) {
+  try {
+    return e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser";
+  } catch (_) {
+    return "";
+  }
+}
+
+/** Avant chaque écriture d'une section de contenu (game_config) : on garde l'état précédent. */
+function snapshotContent(e, action) {
+  try {
+    const game = loadGame();
+    const key = e.record.getString("key");
+    if ((game.CONTENT_SECTIONS || []).indexOf(key) < 0) return;
+    if (action === "create") {
+      saveContentVersion($app, key, null, false, action, actorLabel(e), "");
+      return;
+    }
+    const before = toPlain(action === "update" ? e.record.original() : e.record);
+    saveContentVersion($app, key, before.data, true, action, actorLabel(e), "");
+  } catch (err) {
+    console.log(`[cosmic] instantané de contenu : ${err}`);
+  }
+}
+
+/** POST /api/cosmic/admin/content/rollback { versionId } — remet une section dans l'état d'une version. */
+function contentRollback(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const versionId = String(body(e).versionId || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const v = findOrNull(txApp, "content_versions", versionId);
+    if (!v) throw new NotFoundError("Version introuvable.");
+    const section = v.getString("section");
+    if ((game.CONTENT_SECTIONS || []).indexOf(section) < 0) throw new BadRequestError("Section inconnue.");
+    const cur = txApp.findRecordsByFilter("game_config", "key = {:k}", "", 1, 0, { k: section })[0] || null;
+    // L'état actuel est gardé lui aussi : le retour arrière se défait.
+    saveContentVersion(txApp, section, cur ? toPlain(cur).data : null, !!cur, "rollback", actorLabel(e), `avant retour à la version du ${new Date(v.getInt("createdAtMs")).toISOString().slice(0, 16).replace("T", " ")}`);
+    if (v.getBool("existed")) {
+      const rec = cur || new Record(txApp.findCollectionByNameOrId("game_config"));
+      if (!cur) rec.set("key", section);
+      rec.set("data", toPlain(v).data);
+      txApp.save(rec);
+    } else if (cur) {
+      txApp.delete(cur);
+    }
+    out = { section, restored: v.getBool("existed") ? "version" : "valeurs du code" };
+  });
+  return e.json(200, out);
+}
+
+/** 5.23 : données du simulateur « et si » (lecture seule). */
+function adminWhatIfData(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  applyContent($app, game);
+  const now = Date.now();
+  const excluded = balanceExcludedUids($app, game);
+  const pick = (p) => ({ uid: p.uid, pseudo: p.pseudo, npc: p.npc || "", units: p.units || {}, techLevels: p.techLevels || {}, buildings: p.buildings || {}, commanders: p.commanders, relics: p.relics, talents: p.talents, ascensions: p.ascensions || 0, synthesis: p.synthesis });
+  const players = $app
+    .findRecordsByFilter("players", "npc = '' && resourcesUpdatedAtMs >= {:t}", "", 500, 0, { t: now - game.WARLORD_RULES.activeDays * 86400000 })
+    .map(humanPlain)
+    .filter((h) => countsForBalance(h, excluded, game))
+    .map(pick);
+  const state = readWarlordsState($app, game);
+  const rules = game.warlordRankRules();
+  const lords = $app
+    .findRecordsByFilter("players", "npc != ''", "", 50, 0)
+    .map(humanPlain)
+    .map((p) => Object.assign(pick(p), { rank: game.rankOf(state.byId[p.npc] || {}, rules) }));
+  return e.json(200, { empires: players.concat(lords), at: now });
+}
+
+module.exports = { adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

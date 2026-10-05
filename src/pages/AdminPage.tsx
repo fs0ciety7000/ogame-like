@@ -47,6 +47,7 @@ import { useAuthStore } from "@/store/authStore";
 import { checkIsAdmin } from "@/services/adminService";
 import { ContentEditor } from "@/pages/admin/ContentEditor";
 import { BalancePanel } from "@/pages/admin/BalancePanel";
+import { WhatIfPanel } from "@/pages/admin/WhatIfPanel";
 import { ImpactReportPanel } from "@/pages/admin/ImpactReportPanel";
 import { BossesPanel } from "@/pages/admin/BossesPanel";
 import { HealthPanel } from "@/pages/admin/HealthPanel";
@@ -72,6 +73,7 @@ import { ChroniclesPanel } from "@/pages/admin/ChroniclesPanel";
 import { AnnouncementsPanel } from "@/pages/admin/AnnouncementsPanel";
 import { SimulatorPage } from "@/pages/SimulatorPage";
 import { LogsPanel } from "@/pages/admin/LogsPanel";
+import { ContentHistoryPanel } from "@/pages/admin/ContentHistoryPanel";
 import { ActivityPanel } from "@/pages/admin/ActivityPanel";
 import { MaintenancePanel } from "@/pages/admin/MaintenancePanel";
 import { BannersPanel } from "@/pages/admin/BannersPanel";
@@ -339,7 +341,8 @@ export function AdminPage() {
         <TabsContent value="simulator">
           <SimulatorPage />
         </TabsContent>
-        <TabsContent value="logs">
+        <TabsContent value="logs" className="flex flex-col gap-4">
+          <ContentHistoryPanel />
           <LogsPanel />
         </TabsContent>
         <TabsContent value="activity">
@@ -350,6 +353,7 @@ export function AdminPage() {
         </TabsContent>
         <TabsContent value="balance" className="flex flex-col gap-4">
           <BalancePanel />
+          <WhatIfPanel />
           <ImpactReportPanel />
         </TabsContent>
         <TabsContent value="buildings">

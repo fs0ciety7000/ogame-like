@@ -2813,5 +2813,65 @@
       "CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)",
       "CREATE INDEX idx_passkeys_user ON passkeys (user)"
     ]
+  },
+  {
+    "id": "pbc_ce_content_versions",
+    "name": "content_versions",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "section",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000000
+      },
+      {
+        "name": "existed",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "action",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "actorName",
+        "type": "text",
+        "required": false,
+        "max": 100,
+        "presentable": false
+      },
+      {
+        "name": "note",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"
+    ]
   }
 ]
