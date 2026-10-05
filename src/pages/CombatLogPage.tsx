@@ -14,7 +14,7 @@ import { useAllianceTag } from "@/store/directoryStore";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { fetchBattleReport, subscribeBattleLog, subscribeSpyLog } from "@/services/playerService";
+import { fetchBattleReport, fetchSpyReport, subscribeBattleLog, subscribeSpyLog } from "@/services/playerService";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { useAuthStore } from "@/store/authStore";
@@ -103,6 +103,32 @@ export function CombatLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, wanted]);
 
+  // 5.22 : « ?espion=<id> » (notification de rapport d'espionnage) ouvre ce rapport.
+  const wantedSpy = params.get("espion");
+  const [extraSpy, setExtraSpy] = useState<SpyReport | null>(null);
+  useEffect(() => {
+    if (!uid || !wantedSpy) return;
+    let alive = true;
+    void (async () => {
+      const report = spyReports.find((r) => r.id === wantedSpy) ?? (await fetchSpyReport(wantedSpy));
+      if (!alive) return;
+      if (report) {
+        if (!spyReports.some((r) => r.id === report.id)) setExtraSpy(report);
+        setOpenSpy(report.id);
+        requestAnimationFrame(() => document.getElementById(`espion-${report.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+      } else toast.error("Ce rapport d'espionnage n'existe plus.");
+      setParams((p) => {
+        p.delete("espion");
+        return p;
+      }, { replace: true });
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, wantedSpy]);
+  const spyList = extraSpy && !spyReports.some((r) => r.id === extraSpy.id) ? [extraSpy, ...spyReports] : spyReports;
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Archives" title="Journal de combat" description="Historique des attaques lancées et reçues." />
@@ -186,11 +212,11 @@ export function CombatLogPage() {
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
-        {spyReports.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport">Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
-        {spyReports.map((r) => {
+        {spyList.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport">Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
+        {spyList.map((r) => {
           const mine = r.spyUid === uid;
           return (
-            <div key={r.id} className="p-3">
+            <div key={r.id} id={`espion-${r.id}`} className="scroll-mt-24 p-3">
               {mine ? (
                 <button type="button" className="flex w-full items-center gap-3 text-left" onClick={() => setOpenSpy(openSpy === r.id ? null : r.id)}>
                   <Eye className="h-4 w-4 shrink-0 text-cyan-glow" />

@@ -119,7 +119,11 @@ export {
   warlordsState,
   warlordTravelMs,
   warlordUid,
+  warlordRankRules,
+  ascendantRelic,
 } from "@/game/warlords";
+export { addThreat, dropRank, rankOf, RANK_NAMES, RANK_NUMERALS } from "@/game/warlordRanks";
+export { recordVendettaWin, refreshEliteUnlocks } from "@/game/eliteUnits";
 export { endVacation, onVacation, startVacation, VACATION_RULES } from "@/game/vacation";
 export { productionHours } from "@/game/pirates";
 export {
@@ -191,7 +195,7 @@ export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeRe
 export { allianceWeekId } from "@/game/allianceBoss";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
-export { LOGIC_VERSION } from "@/game/logicVersion";
+export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";
@@ -206,3 +210,4 @@ export { ONLINE_MS } from "@/game/retention";
 // 5.18 : solde d'Ambre modifiable par l'administration.
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
+export { findUnit, OFFENSIVE_UNITS } from "@/game/units";

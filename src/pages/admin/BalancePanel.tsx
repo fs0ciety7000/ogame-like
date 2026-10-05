@@ -6,6 +6,7 @@ import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HUD_TONE, HudTag, StatTile } from "@/components/ui/hud";
+import { RANK_NUMERALS } from "@/game/warlordRanks";
 import { COMBAT_KINDS } from "@/game/balance/combatTypes";
 import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
@@ -405,6 +406,17 @@ export function BalancePanel() {
           <p className="text-xs text-slate-500">
             Bande verte : fourchette visée. Le pourcentage est celui du joueur (attaquant pour le JcJ, les primes, les repaires et les attaques de seigneurs ; défenseur pour les raids et les répliques). Affiché à partir de 5 combats ; une proposition de réglage apparaît à partir de 10.
           </p>
+        </Section>
+      )}
+
+      {live?.warlordRanks && live.warlordRanks.some((r) => r.battles > 0) && (
+        <Section title="Seigneurs de guerre : victoires du joueur par rang (30 jours)">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {live.warlordRanks.map((r) => (
+              <StatTile key={r.rank} size="sm" label={`Rang ${RANK_NUMERALS[r.rank - 1]}`} tone={r.rank >= 5 ? "gold" : "accent"} value={r.playerWinPct === null ? "—" : `${r.playerWinPct} %`} sub={<span className="font-mono">{r.battles} combats</span>} />
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">Victoires du joueur (attaquant ou défenseur) contre un seigneur de ce rang. Affiché à partir de 5 combats. Un rang V doit rester difficile sans unité d'élite ni alliance.</p>
         </Section>
       )}
 

@@ -1,3 +1,4 @@
+import { assertEliteMission } from "@/game/eliteUnits";
 import { ALLIANCE_BOSS_RULES } from "@/game/allianceBoss";
 import { recordChronicle } from "@/game/chronicles";
 import { bumpStat } from "@/game/stats";
@@ -403,6 +404,8 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
   if (mission === "attack" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'attaquer toi-même !");
   if (mission === "spy" && req.owner.uid === target!.uid) throw new GameActionError("Tu ne peux pas t'espionner toi-même.");
   if (mission === "garrison" && !target) throw new GameActionError("Ce joueur est introuvable.");
+  // 5.22 : unités d'élite contre les seigneurs de guerre seulement.
+  assertEliteMission(req.fleet, mission === "attack" && !!target?.npc && !req.targetColonyId);
   const flushed = flushState({ ...req.owner, buildings: withMissingBuildings(req.owner.buildings, req.owner.resources) }, req.ownerQueues, now);
   const owner = flushed.player;
   // v3.5 : attaque ou espionnage d'une colonie (ses coordonnées, son bouclier).

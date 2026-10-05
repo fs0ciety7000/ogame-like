@@ -65,6 +65,8 @@ export function SpyReportView({ report }: { report: SpyReport }) {
         {report.anomaly && <span className="font-semibold text-violet-glow">⚗ anomalie chimique : flotte et défenses peut-être faussées</span>}
       </div>
       {tier === 0 && <p className="text-xs text-slate-500">Brouillage trop fort : envoie plus de sondes ou monte ta techno Espionnage.</p>}
+      {/* 5.22 : rapport enregistré sans son contenu (schéma du serveur pas encore à jour). */}
+      {tier > 0 && Object.keys(data).length === 0 && <p className="text-xs text-ember-glow">Contenu du rapport perdu : le serveur n'était pas encore à jour. Les prochains rapports seront complets.</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {data.resources && (
           <Block title="Ressources">

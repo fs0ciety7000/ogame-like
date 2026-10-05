@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/ui/hud";
+import { EmptyState, HudCallout, HudChip } from "@/components/ui/hud";
+import { ELITE_COUNTER, RANK_NUMERALS, TRAIT_NAMES, type EliteTarget } from "@/game/warlordRanks";
+import { ELITE_UNITS, findUnit } from "@/game/units";
+import { eliteStatus } from "@/game/eliteUnits";
 import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { CoalitionCard } from "@/components/game/CoalitionCard";
 import type { Coalition } from "@/game/coalition";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Eye, Loader2, Mail, Skull, Sword, Swords, Timer } from "lucide-react";
+import { Crosshair, Eye, Loader2, Mail, Skull, Sword, Swords, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +17,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { NpcBadge } from "@/components/ui/npc-badge";
 import { SpyModal } from "@/components/game/SpyModal";
 import { AttackModal } from "@/components/game/AttackModal";
-import { PERSONALITY_LABELS, TIER_LABELS, WARLORD_RULES, type Vendetta, type WarlordPublic } from "@/game/warlords";
+import { PERSONALITY_LABELS, TIER_LABELS, WARLORD_RULES, warlordRankRules, type Vendetta, type WarlordPublic } from "@/game/warlords";
 import { productionHours } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { onVacation } from "@/game/vacation";
@@ -155,6 +158,11 @@ export function WarlordsPage() {
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">
                         Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />
                       </span>
+                      {w.rank && (
+                        <HudChip size="sm" tone={w.rank >= 5 ? "gold" : w.rank >= 4 ? "ember" : "neutral"} title={`Menace ${w.threat ?? 0}${w.nextThreshold ? ` / ${w.nextThreshold} pour le rang suivant` : " : rang maximal"}`}>
+                          Rang <span className="font-mono">{RANK_NUMERALS[w.rank - 1]}</span> · {w.rankName}
+                        </HudChip>
+                      )}
                       {(w.hull ?? 1) < 0.95 && (
                         <span className="hud-chip hud-chip-sm hud-tone-ember" title="Ses unités gardent les dégâts de ses derniers combats : il se bat moins bien tant que ses équipages n'ont pas réparé.">
                           Coque <span className="font-mono">{Math.round((w.hull ?? 1) * 100)} %</span> · affaibli
@@ -162,6 +170,25 @@ export function WarlordsPage() {
                       )}
                     </div>
                     <p className="line-clamp-3 text-xs leading-relaxed text-slate-400">{w.bio}</p>
+                    {w.rank && w.nextThreshold ? (
+                      <div className="text-[11px] text-slate-500">
+                        <div className="flex justify-between font-mono">
+                          <span>Menace</span>
+                          <span>
+                            {w.threat ?? 0} / {w.nextThreshold}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 h-1 bg-white/5">
+                          <div className="h-full bg-ember-glow" style={{ width: `${Math.min(100, ((w.threat ?? 0) / Math.max(1, w.nextThreshold)) * 100)}%` }} />
+                        </div>
+                      </div>
+                    ) : null}
+                    {w.trait && w.personality in ELITE_COUNTER && (
+                      <p className="text-xs text-slate-400">
+                        <span className="font-semibold text-ember-glow">{TRAIT_NAMES[w.personality as EliteTarget]}</span> : {w.trait}{" "}
+                        <span className="text-slate-500">Contré par : {findUnit(ELITE_COUNTER[w.personality as EliteTarget])?.name}.</span>
+                      </p>
+                    )}
                     {gone && (
                       <p className="flex items-center gap-1 text-xs text-slate-400">
                         <Skull className="h-3.5 w-3.5" /> En fuite après une vendetta : retour dans {formatDuration((w.absentUntilMs - now) / 1000)}.
@@ -185,7 +212,10 @@ export function WarlordsPage() {
                       <Button size="sm" variant="secondary" disabled={gone || away} onClick={() => setAttack({ uid: w.uid, pseudo: w.name })}>
                         <Sword className="h-3.5 w-3.5" /> Attaquer
                       </Button>
-                      <Button size="sm" disabled={gone || away || !!v || !!mine} onClick={() => setVendetta(w)} title={mine ? "Termine d'abord ta vendetta en cours." : undefined}>
+                      <Button size="sm" disabled={gone || away || !!v || !!mine} onClick={() => {
+                          setVendetta(w);
+                          if ((w.rank ?? 1) >= 5) setScope("alliance");
+                        }} title={mine ? "Termine d'abord ta vendetta en cours." : undefined}>
                         <Swords className="h-3.5 w-3.5" /> Vendetta
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => navigate(`/game/messages?with=${w.uid}&pseudo=${encodeURIComponent(w.name)}`)}>
@@ -199,6 +229,8 @@ export function WarlordsPage() {
           })}
         </div>
       )}
+
+      {player && <EliteUnitsPanel />}
 
       {history.length > 0 && (
         <HudPanel icon={<Swords />} title="Dernières vendettas" tone="danger">
@@ -226,9 +258,14 @@ export function WarlordsPage() {
             <p>
               Pendant <strong>{WARLORD_RULES.vendetta.durationHours} h</strong>, détruis l'équivalent de <strong>{WARLORD_RULES.vendetta.goalFactor}× sa puissance de flotte</strong> (attaques, ou défense quand il t'attaque).
             </p>
+            {(vendetta?.rank ?? 1) >= 5 && (
+              <HudCallout tone="gold" className="text-xs">
+                <strong className="text-gold-glow">Seigneur Ascendant.</strong> Vendetta d'alliance seulement, objectif ×{warlordRankRules().ascendant.goalFactor}. Les vainqueurs reçoivent une relique <strong>mythique</strong> et le titre « Fléau de l'Ascendant … ».
+              </HudCallout>
+            )}
             <ul className="list-disc space-y-1 pl-5 text-xs text-slate-400">
               <li>
-                Gagnée : une relique {vendetta?.tier === "strong" ? "rare" : "commune"} au moins, le titre « Tombeur de … », +{WARLORD_RULES.vendetta.passPoints} points de passe. Le seigneur perd {Math.round(WARLORD_RULES.vendetta.powerLoss * 100)} % de sa puissance et fuit {WARLORD_RULES.vendetta.awayDays} jours.
+                Gagnée : une relique {vendetta?.tier === "strong" ? "rare" : "commune"} au moins, le titre « Tombeur de … », +{WARLORD_RULES.vendetta.passPoints} points de passe. Le seigneur perd {Math.round(WARLORD_RULES.vendetta.powerLoss * 100)} % de sa puissance, chute de {warlordRankRules().vendettaRankLoss} rangs et fuit {WARLORD_RULES.vendetta.awayDays} jours. Elle compte aussi pour débloquer l'unité d'élite contre sa personnalité.
               </li>
               <li>Perdue : il riposte une fois contre toi (jamais pendant une protection).</li>
               <li>En alliance : les dégâts de tous les membres comptent ; récompense pour chacun dès {Math.round(WARLORD_RULES.vendetta.minShare * 100)} % de l'objectif.</li>
@@ -238,7 +275,7 @@ export function WarlordsPage() {
                 <button
                   key={sc}
                   type="button"
-                  disabled={sc === "alliance" && !player?.allianceId}
+                  disabled={(sc === "alliance" && !player?.allianceId) || (sc === "player" && (vendetta?.rank ?? 1) >= 5 && warlordRankRules().ascendant.allianceOnly)}
                   onClick={() => setScope(sc)}
                   className={cn("flex-1 border px-3 py-2 text-left text-xs disabled:opacity-40", scope === sc ? "border-cyan-glow bg-cyan-glow/10 text-slate-100" : "border-white/15 text-slate-400")}
                 >
@@ -268,5 +305,48 @@ export function WarlordsPage() {
       <SpyModal target={spy} onClose={() => setSpy(null)} />
       <AttackModal target={attack} onClose={() => setAttack(null)} />
     </div>
+  );
+}
+
+/** 5.22 : les trois unités d'élite et ce qui manque pour les débloquer. */
+function EliteUnitsPanel() {
+  const player = usePlayerStore((s) => s.player);
+  if (!player) return null;
+  return (
+    <HudPanel icon={<Crosshair />} title="Unités d'élite" tone="ember">
+      <p className="mb-3 text-xs text-slate-400">
+        Une unité par personnalité, qui annule son trait. Déblocage : <strong className="text-slate-200">toutes les technologies du Labo au maximum</strong> et <strong className="text-slate-200">une vendetta gagnée</strong> contre un seigneur de cette personnalité. Elles ne combattent que les seigneurs de guerre.
+      </p>
+      <div className="grid gap-2 md:grid-cols-3">
+        {ELITE_UNITS.map((u) => {
+          const st = eliteStatus(player, u.id);
+          if (!st) return null;
+          return (
+            <div key={u.id} className="hud-cut-sm border border-white/10 bg-space-900/50 p-3">
+              <div className="flex items-center gap-2">
+                <img src={assetUrl(u.image)} alt="" className="h-10 w-10 object-contain" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-100">{u.name}</p>
+                  <p className="text-[11px] text-slate-500">contre les {PERSONALITY_LABELS[st.personality].toLowerCase()}s</p>
+                </div>
+              </div>
+              <ul className="mt-2 space-y-0.5 text-[11px]">
+                <li className={st.lab ? "text-mint-glow" : "text-slate-400"}>
+                  {st.lab ? "✓" : "○"} Labo complet{!st.lab && <span className="font-mono"> ({st.missing.length} techno{st.missing.length > 1 ? "s" : ""} à finir)</span>}
+                </li>
+                <li className={st.vendetta ? "text-mint-glow" : "text-slate-400"}>
+                  {st.vendetta ? "✓" : "○"} Vendetta gagnée contre un {PERSONALITY_LABELS[st.personality].toLowerCase()}
+                </li>
+              </ul>
+              {st.unlocked && (
+                <Link to="/game/unites" className="mt-2 inline-block font-mono text-[11px] uppercase tracking-[0.15em] text-cyan-glow hover:underline">
+                  {st.buildable ? "Construire →" : "Débloquée, Labo à compléter"}
+                </Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </HudPanel>
   );
 }

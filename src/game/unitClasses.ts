@@ -32,7 +32,9 @@ export function combatValue(unit: Pick<UnitDef, "stats" | "levelBonus">, level =
 export function unitClasses(all: UnitDef[] = UNITS): Record<string, UnitClass> {
   const out: Record<string, UnitClass> = {};
   for (const category of ["attack", "defense"] as const) {
-    const fighters = all.filter((u) => u.category === category && u.stats.attaque > 0).sort((a, b) => combatValue(a) - combatValue(b));
+    // 5.22 : les unités d'élite gardent leur classe sans décaler les tiers des autres.
+    all.filter((u) => u.category === category && u.elite && u.combatClass).forEach((u) => (out[u.id] = u.combatClass!));
+    const fighters = all.filter((u) => u.category === category && u.stats.attaque > 0 && !(u.elite && u.combatClass)).sort((a, b) => combatValue(a) - combatValue(b));
     all.filter((u) => u.category === category && !(u.stats.attaque > 0)).forEach((u) => (out[u.id] = "support"));
     fighters.forEach((u, i) => {
       const third = fighters.length > 0 ? i / fighters.length : 0;

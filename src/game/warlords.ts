@@ -11,6 +11,10 @@ import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units"
 import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { overallHull } from "@/game/workshop";
+import { setVendettaTitlesResolver } from "@/game/eliteUnits";
+import { makeRelic, mythicTemplates } from "@/game/relics";
+import type { RelicItem } from "@/game/relics";
+import { addThreat, ELITE_COUNTER, normalizeRankRules, RANK_NAMES, rankOf, rankPowerFactor, traitSummary, validateRankRules, type WarlordRankRules } from "@/game/warlordRanks";
 
 /* =====================================================
    Seigneurs de guerre (v4.2) : dix empires tenus par le jeu, placés sur la
@@ -46,6 +50,8 @@ export interface WarlordSettings {
   attackFrequency: number;
   /** Multiplicateur de puissance visée. */
   powerFactor: number;
+  /** 5.22 : rangs de menace et traits (réglables ; défauts : DEFAULT_RANK_RULES). */
+  ranks?: Partial<WarlordRankRules>;
 }
 
 export interface WarlordsConfig {
@@ -261,6 +267,11 @@ export function warlordsConfig(): WarlordsConfig {
   return config;
 }
 
+/** 5.22 : règles des rangs en vigueur. */
+export function warlordRankRules(settings: WarlordSettings = config.settings): WarlordRankRules {
+  return normalizeRankRules(settings.ranks);
+}
+
 export function defaultWarlordsConfig(): WarlordsConfig {
   return { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS) };
 }
@@ -283,6 +294,7 @@ export function validateWarlords(cfg: Partial<WarlordsConfig> | undefined): stri
   if (s) {
     if (!(s.attackFrequency >= 0 && s.attackFrequency <= 5)) errors.push("Seigneurs : fréquence d'attaque entre 0 et 5.");
     if (!(s.powerFactor > 0 && s.powerFactor <= 5)) errors.push("Seigneurs : facteur de puissance entre 0 et 5.");
+    errors.push(...validateRankRules(s.ranks));
   }
   for (const d of cfg?.defs ?? []) {
     if (!DEFAULT_WARLORDS.some((w) => w.id === d.id)) errors.push(`Seigneurs : « ${d.id} » inconnu.`);
@@ -387,7 +399,9 @@ function unitAttack(id: string): number {
 
 /** Deux types d'unités par catégorie, choisis selon le palier (faibles : les plus modestes). */
 function pickUnits(pool: string[], tier: WarlordTier): string[] {
-  const sorted = pool.filter((id) => unitAttack(id) >= 40).sort((a, b) => unitAttack(a) - unitAttack(b));
+  // 5.22 : jamais d'unités d'élite (réservées aux joueurs).
+  const elite = Object.values(ELITE_COUNTER);
+  const sorted = pool.filter((id) => unitAttack(id) >= 40 && !elite.includes(id)).sort((a, b) => unitAttack(a) - unitAttack(b));
   if (sorted.length <= 2) return sorted;
   const third = Math.max(1, Math.floor(sorted.length / 3));
   const start = tier === "weak" ? 0 : tier === "medium" ? third : sorted.length - Math.max(2, third);
@@ -420,16 +434,23 @@ export interface WarlordRuntime {
   nextMarketAtMs: number;
   absentUntilMs: number;
   lastBuildingAtMs: number;
+  /** 5.22 : menace accumulée, rang (1 à 5) et premier passage au rang V. */
+  threat?: number;
+  rank?: number;
+  ascendedAtMs?: number;
 }
 
 export function emptyRuntime(): WarlordRuntime {
-  return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0 };
+  return { seeded: false, lastTickMs: 0, nextAttackAtMs: 0, nextMarketAtMs: 0, absentUntilMs: 0, lastBuildingAtMs: 0, threat: 0, rank: 1 };
 }
 
 /** Croissance horaire : armée, bâtiments, stock et XP rapprochés de la cible. */
 export function growWarlord(npc: PlayerState, d: WarlordDef, ref: WarlordReference, rt: WarlordRuntime, now: number): WarlordRuntime {
-  const out = { ...rt };
-  const target = warlordTargetPower(d, ref);
+  const rules = warlordRankRules();
+  // 5.22 : la menace monte chaque jour ; le rang relève la puissance visée.
+  const hoursSince = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 3600_000)) : 0;
+  const out = rt.seeded ? addThreat({ ...rt }, (rules.threat.perDay * hoursSince) / 24, rules).rt : { ...rt, threat: rt.threat ?? 0, rank: rankOf(rt, rules) };
+  const target = Math.round(warlordTargetPower(d, ref) * rankPowerFactor(rankOf(out, rules), rules));
   const desired = desiredArmy(d, target);
   const hours = rt.lastTickMs > 0 ? Math.min(48, Math.max(0, (now - rt.lastTickMs) / 3600_000)) : 1;
   const step = rt.seeded ? Math.min(1, WARLORD_RULES.growthPerDay * (hours / 24)) : 1;
@@ -634,6 +655,8 @@ export interface Vendetta {
   contributions: Record<string, number>;
   status: "active" | "won" | "lost";
   finishedAtMs?: number;
+  /** 5.22 : rang du seigneur à l'ouverture (récompenses du rang V). */
+  rank?: number;
 }
 
 export interface WarlordsState {
@@ -685,7 +708,12 @@ export function openVendetta(
   if (activeVendetta(state, d.id, now)) throw new GameActionError(`Une vendetta est déjà ouverte contre ${d.name}.`);
   if (state.vendettas.some((v) => v.status === "active" && now < v.endsAtMs && v.ownerUid === opener.uid)) throw new GameActionError("Tu mènes déjà une vendetta : termine-la d'abord.");
   if (scope === "alliance" && !opener.allianceId) throw new GameActionError("Rejoins une alliance pour ouvrir une vendetta d'alliance.");
-  const goal = Math.max(1000, Math.round(warlordFleetPower(npc) * WARLORD_RULES.vendetta.goalFactor));
+  // 5.22 : Seigneur Ascendant (rang V) : vendetta d'alliance seulement, objectif relevé.
+  const rules = warlordRankRules();
+  const rank = rankOf(rt, rules);
+  const ascendant = rank >= 5;
+  if (ascendant && rules.ascendant.allianceOnly && scope !== "alliance") throw new GameActionError(`${d.name} est un Seigneur Ascendant : seule une vendetta d'alliance peut le défier.`);
+  const goal = Math.max(1000, Math.round(warlordFleetPower(npc) * WARLORD_RULES.vendetta.goalFactor * (ascendant ? rules.ascendant.goalFactor : 1)));
   const v: Vendetta = {
     id: `${d.id}-${now}`,
     warlordId: d.id,
@@ -698,6 +726,7 @@ export function openVendetta(
     dealt: 0,
     contributions: {},
     status: "active",
+    rank,
   };
   state.vendettas.push(v);
   return v;
@@ -729,8 +758,9 @@ export function vendettaWinners(v: Vendetta): string[] {
     .map(([uid]) => uid);
 }
 
-export function vendettaTitle(d: Pick<WarlordDef, "name">): string {
-  return `Tombeur de ${d.name.split(",")[0]}`;
+export function vendettaTitle(d: Pick<WarlordDef, "name">, rank = 1): string {
+  const name = d.name.split(",")[0];
+  return rank >= 5 ? `Fléau de l'Ascendant ${name}` : `Tombeur de ${name}`;
 }
 
 /** Vendettas arrivées à échéance : perdues, riposte programmée. */
@@ -766,6 +796,12 @@ export interface WarlordPublic {
   power: number;
   /** 5.21 : état moyen des coques (1 = intactes). */
   hull?: number;
+  /** 5.22 : rang de menace (1 à 5), son nom, menace et seuil du rang suivant, trait au rang actuel. */
+  rank?: number;
+  rankName?: string;
+  threat?: number;
+  nextThreshold?: number | null;
+  trait?: string | null;
   absentUntilMs: number;
   vendetta: Pick<Vendetta, "id" | "ownerUid" | "ownerPseudo" | "allianceId" | "endsAtMs" | "goal" | "dealt"> | null;
 }
@@ -788,7 +824,33 @@ export function warlordPublic(d: WarlordDef, npc: PlayerState | null, rt: Warlor
     bio: d.bio,
     power: npc ? empirePower(npc) : 0,
     hull: npc ? Math.round(overallHull(npc) * 1000) / 1000 : 1,
+    ...rankFields(d, rt),
     absentUntilMs: rt?.absentUntilMs ?? 0,
     vendetta: v ? { id: v.id, ownerUid: v.ownerUid, ownerPseudo: v.ownerPseudo, allianceId: v.allianceId, endsAtMs: v.endsAtMs, goal: v.goal, dealt: v.dealt } : null,
   };
+}
+
+function rankFields(d: WarlordDef, rt: WarlordRuntime | undefined): Pick<WarlordPublic, "rank" | "rankName" | "threat" | "nextThreshold" | "trait"> {
+  const rules = warlordRankRules();
+  const rank = rankOf(rt, rules);
+  return {
+    rank,
+    rankName: RANK_NAMES[rank - 1],
+    threat: Math.floor(rt?.threat ?? 0),
+    nextThreshold: rules.enabled && rank < 5 ? rules.thresholds[rank - 1] : null,
+    trait: rules.enabled ? traitSummary(d.personality, rank, rules) : null,
+  };
+}
+
+/** 5.22 : titres de vendetta déjà décernés contre une personnalité (déblocage des unités d'élite, rétroactif). */
+export function vendettaTitlesFor(personality: WarlordPersonality): string[] {
+  return config.defs.filter((d) => d.personality === personality).flatMap((d) => [vendettaTitle(d), vendettaTitle(d, 5)]);
+}
+setVendettaTitlesResolver(vendettaTitlesFor);
+
+/** 5.22 : relique mythique d'une vendetta gagnée contre un Seigneur Ascendant. */
+export function ascendantRelic(d: Pick<WarlordDef, "id">, now: number, random: () => number = Math.random): RelicItem {
+  const pool = mythicTemplates();
+  const tpl = pool[Math.floor(random() * pool.length) % pool.length];
+  return makeRelic(tpl.id, "mythic", now, `ascendant:${d.id}`, random);
 }

@@ -47,7 +47,8 @@ export const hooksBuildOptions = {
   // Paquets npm (ex. @noble/curves pour les passkeys) : version ESM.
   mainFields: ["module", "main"],
   alias: { "@": path.join(root, "src") },
-  define: { __COSMIC_LOGIC_VERSION__: JSON.stringify(logicVersion()) },
+  // 5.22 : schéma embarqué, pour ajouter au démarrage les champs et collections manquants (ensureSchema).
+  define: { __COSMIC_LOGIC_VERSION__: JSON.stringify(logicVersion()), __COSMIC_SCHEMA__: JSON.stringify(JSON.stringify(JSON.parse(fs.readFileSync(path.join(root, "pocketbase/pb_schema.json"), "utf8")))) },
   banner: {
     js: `// FICHIER GÉNÉRÉ par \`npm run build:hooks\` depuis src/game — ne pas modifier à la main.\n${polyfills}`,
   },

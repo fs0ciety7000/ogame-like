@@ -11,7 +11,7 @@ export const COMBAT_519_SINCE_MS = Date.UTC(2026, 9, 5, 16, 10);
 
 export type CombatKind = "pvp" | "warlord" | "reprisal" | "bounty" | "lair" | "raid";
 
-type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
+type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp"> & { warlordRank?: number };
 
 export interface CombatKindDef {
   label: string;
@@ -87,4 +87,17 @@ export function combatTypeCounts(reports: Report[], since: number, until: number
   const out: Partial<Record<CombatKind, [number, number]>> = {};
   for (const s of combatTypeStats(reports, since, until)) if (s.battles > 0) out[s.kind] = [s.battles, s.playerWins];
   return out;
+}
+
+/** 5.22 : victoires du joueur contre les seigneurs de guerre, par rang du seigneur (rapports qui l'indiquent). */
+export function warlordRankStats(reports: Report[]): { rank: number; battles: number; playerWins: number; playerWinPct: number | null }[] {
+  const acc = [1, 2, 3, 4, 5].map((rank) => ({ rank, battles: 0, playerWins: 0 }));
+  for (const r of reports) {
+    const kind = combatKind(r);
+    if (!r.warlordRank || (kind !== "warlord" && kind !== "reprisal")) continue;
+    const a = acc[Math.max(1, Math.min(5, Math.round(r.warlordRank))) - 1];
+    a.battles++;
+    if (playerWon(kind, r.outcome)) a.playerWins++;
+  }
+  return acc.map((a) => ({ ...a, playerWinPct: a.battles >= 5 ? Math.round((a.playerWins / a.battles) * 100) : null }));
 }

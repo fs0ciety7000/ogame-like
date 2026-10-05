@@ -4,11 +4,13 @@ import { describeGain } from "@/game/format";
 import { recordChronicle } from "@/game/chronicles";
 import { colonyOf, colonyView } from "@/game/colonies";
 import { onVacation } from "@/game/vacation";
-import { capLoot } from "@/game/warlords";
+import { capLoot, findWarlord, warlordRankRules } from "@/game/warlords";
+import { rankOf, warlordCombatMods, type WarlordCombatMods } from "@/game/warlordRanks";
+import { eliteIn, withoutElite } from "@/game/eliteUnits";
 import { shieldUntil } from "@/game/bounties";
 import { addSeasonPower } from "@/game/seasonWars";
 import { bumpStat, setStat } from "@/game/stats";
-import { combatLogOf, computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { COMBAT_RULES, combatLogOf, computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -64,6 +66,8 @@ export interface AttackInput {
   boosts?: { assault?: number };
   /** v4.2 : butin maximal (total), pour les attaques des seigneurs de guerre. */
   lootCap?: number;
+  /** 5.22 : rang du seigneur de guerre engagé (attaquant ou défenseur). */
+  warlordRank?: number;
 }
 
 export type AttackOutput =
@@ -117,6 +121,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     fleet[unitId] = qty;
   }
   if (Object.keys(fleet).length === 0) return { ok: false, message: "Sélectionne au moins une unité à envoyer." };
+  // 5.22 : unités d'élite contre les seigneurs de guerre seulement.
+  if (!defender.npc && eliteIn(fleet).length > 0) return { ok: false, message: "Les unités d'élite ne combattent que les seigneurs de guerre." };
 
   // Production et files de l'attaquant rattrapées jusqu'à maintenant (avec
   // les bâtiments ajoutés depuis l'administration après sa création).
@@ -157,6 +163,18 @@ export function performAttack(input: AttackInput): AttackOutput {
   const defMods = playerModifiers(owner);
   const assault = Math.max(0, Math.min(50, Number(input.boosts?.assault) || 0)) / 100;
   const armor = consumeArmor(owner, now) / 100;
+  // 5.22 : rang et trait du seigneur engagé, contrés par les unités d'élite du joueur.
+  const lord = owner.npc ? findWarlord(owner.npc) : attacker.npc ? findWarlord(attacker.npc) : undefined;
+  const lordSide: "attacker" | "defender" = owner.npc ? "defender" : "attacker";
+  let mods: WarlordCombatMods | null = null;
+  if (lord && !(owner.npc && attacker.npc)) {
+    const rules = warlordRankRules();
+    const rank = rankOf({ rank: input.warlordRank }, rules);
+    const humanUnits = lordSide === "defender" ? fleet : Object.fromEntries(Object.entries(def.units ?? {}).map(([id, st]) => [id, st?.count ?? 0]));
+    mods = warlordCombatMods(lord.personality, rank, lordSide, humanUnits, rules, COMBAT_RULES.retreatAt);
+  }
+  const baseShield = getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch));
+  const lordEdge = mods && (mods.edgeBonus || mods.edgeCancelled) ? { bonus: mods.edgeBonus, cancel: mods.edgeCancelled } : undefined;
   const combat = resolveCombat({
     ...formation,
     // v5.9 : les Traqueurs Kesh gardent leur +50 % contre les seigneurs de guerre (PNJ).
@@ -164,8 +182,10 @@ export function performAttack(input: AttackInput): AttackOutput {
     cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
     // v5.9 : un seigneur de guerre (PNJ) qui attaque affronte aussi le bonus des Traqueurs à quai.
     defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor(def.units ?? {}, def.techLevels ?? {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
-    defenseFactor: posture.defenseFactor,
-    homeFleetFactor: posture.homeFleetFactor,
+    defenseFactor: posture.defenseFactor * (mods?.defenseFactor ?? 1),
+    homeFleetFactor: mods?.homeFleetFactor !== undefined ? (posture.homeFleetFactor ?? COMBAT_RULES.homeFleetDefenseFactor) * mods.homeFleetFactor : posture.homeFleetFactor,
+    ...(mods?.retreatAt !== undefined ? { retreatAt: mods.retreatAt } : {}),
+    ...(lordEdge ? { classEdge: lordSide === "attacker" ? { attacker: lordEdge } : { defender: lordEdge } } : {}),
     targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : undefined,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
     lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
@@ -175,10 +195,11 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
     fleet,
-    defenderUnits: def.units ?? {},
+    // 5.22 : les unités d'élite à quai ne combattent que les seigneurs de guerre.
+    defenderUnits: attacker.npc ? (def.units ?? {}) : withoutElite(def.units ?? {}),
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def.buildings), owner),
-    defenderShieldPct: getShieldPercent(def.buildings, allianceShieldBonus(def.allianceResearch)),
+    defenderShieldPct: mods?.shieldIgnored ? 0 : baseShield + (mods?.shieldBonus ?? 0),
     // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
     attackerHull: workshopState(attacker).hull,
     defenderHull: colony ? undefined : workshopState(owner).hull,
@@ -191,7 +212,7 @@ export function performAttack(input: AttackInput): AttackOutput {
   // Égide de la Reine : la première défaite de la semaine n'est pas pillée.
   const aegis = combat.outcome === "attacker_win" && Object.values(combat.loot ?? {}).some((n) => (n ?? 0) > 0) && consumeAegis(owner, now);
   if (aegis) combat.loot = {};
-  if (input.lootCap !== undefined && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap);
+  if (input.lootCap !== undefined && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap * (mods?.lootFactor ?? 1));
 
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
@@ -310,7 +331,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
-    combatLog: combatLogOf(combat),
+    combatLog: { ...combatLogOf(combat), ...(mods ? { warlord: { side: lordSide, rank: mods.rank, notes: mods.notes } } : {}) },
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,

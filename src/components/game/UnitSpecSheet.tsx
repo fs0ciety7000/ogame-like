@@ -7,6 +7,8 @@ import { findTech } from "@/game/technologies";
 import { getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus, type UnitDef } from "@/game/units";
 import { SPEC_STATS, specLevels, unitDesignation, unitEfficiency, unitRanks, unitSpecAt, type SpecStat } from "@/game/unitSpec";
 import { assetUrl } from "@/lib/assets";
+import { CLASS_BEATS, COMBAT_RULES } from "@/game/combat";
+import { UNIT_CLASS_LABELS, unitClasses } from "@/game/unitClasses";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
@@ -46,6 +48,11 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
   const eff = unitEfficiency(unit);
   const tech = findTech(UNIT_TO_TECH[unit.id]);
   const levels = specLevels(unit.maxLevel);
+  // 5.21.2 : rôle au combat (Fort > Moyen > Faible > Fort).
+  const cls = unitClasses()[unit.id];
+  const fighting = cls && cls !== "support" ? cls : null;
+  const fears = fighting ? (Object.keys(CLASS_BEATS) as (keyof typeof CLASS_BEATS)[]).find((k) => CLASS_BEATS[k] === fighting) : undefined;
+  const edge = Math.round((unit.classEdge ?? COMBAT_RULES.classEdge) * 100);
 
   return (
     <div className="flex flex-col gap-4">
@@ -56,6 +63,11 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
           <HudChip size="sm" tone={unit.category === "attack" ? "danger" : "accent"}>
             {unit.category === "attack" ? "Attaque" : "Défense"}
           </HudChip>
+          {cls && (
+            <HudChip size="sm" tone={cls === "heavy" ? "gold" : cls === "medium" ? "accent" : cls === "light" ? "mint" : "neutral"}>
+              Classe {UNIT_CLASS_LABELS[cls]}
+            </HudChip>
+          )}
           <HudChip size="sm" tone="neutral">
             {level > 0 ? `Niveau ${level} / ${unit.maxLevel}` : `Niveau max ${unit.maxLevel}`}
           </HudChip>
@@ -99,6 +111,19 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
             <dd className="text-right text-slate-200">{eff.powerPerSlot}</dd>
             <dt className="text-slate-500">Soute / place</dt>
             <dd className="text-right text-slate-200">{eff.cargoPerSlot}</dd>
+            <dt className="text-slate-500">Rôle au combat</dt>
+            <dd className="text-right text-slate-200">
+              {fighting && fears ? (
+                <>
+                  bat {UNIT_CLASS_LABELS[CLASS_BEATS[fighting]]} <span className="font-mono text-mint-glow">+{edge} %</span> · craint {UNIT_CLASS_LABELS[fears]}{" "}
+                  <span className="font-mono text-danger-glow">−{Math.round(COMBAT_RULES.classEdge * 100)} %</span>
+                </>
+              ) : unit.workshopHpPerSec ? (
+                <>soutien · <span className="font-mono">+{unit.workshopHpPerSec}</span> PV/s à l'Atelier</>
+              ) : (
+                "soutien (ne combat pas)"
+              )}
+            </dd>
             <dt className="text-slate-500">Débloquée par</dt>
             <dd className="truncate text-right text-slate-200">{unit.blueprint ? "Plan Kesh'Vaar" : (tech?.nom ?? "—")}</dd>
           </dl>

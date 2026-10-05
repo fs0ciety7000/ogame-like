@@ -482,7 +482,8 @@ function resolveSpyArrival(txApp, game, rec, now) {
   const report = new Record(txApp.findCollectionByNameOrId("spy_reports"));
   report.load(out.report);
   txApp.save(report);
-  notify(txApp, fleet.ownerUid, out.spyNotifications);
+  // 5.22 : la notification mène au rapport (journal de combat, section Espionnage).
+  notify(txApp, fleet.ownerUid, (out.spyNotifications || []).map((n) => (n.link ? n : Object.assign({}, n, { link: `/game/combats?espion=${report.id}` }))));
   notify(txApp, targetUid, out.targetNotifications);
   // v4.0 : sondes abattues, l'Espionne en poste de la cible progresse.
   if (out.detected) {
@@ -1425,6 +1426,9 @@ function resolveAttackArrival(txApp, game, rec, now) {
   });
   // v4.2 : seigneur parti (vendetta perdue) : la flotte rentre sans combattre.
   const absent = defender && defender.player.npc ? warlordAbsence(txApp, game, defenderUid, now) : null;
+  // 5.22 : rang du seigneur engagé (traits, contres d'élite).
+  const lordNpc = defender && defender.player.npc ? defender.player.npc : attacker.player.npc || "";
+  const lordRt = lordNpc ? readWarlordsState(txApp, game).byId[lordNpc] : null;
   const result = defender && !absent
     ? game.performAttack({
         now,
@@ -1445,6 +1449,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         boosts: fleet.boosts || undefined,
         // v4.2 : butin d'un seigneur plafonné à 6 h de production de sa cible.
         lootCap: attacker.player.npc ? game.warlordLootCap(defender.player) : undefined,
+        warlordRank: lordRt ? game.rankOf(lordRt, game.warlordRankRules()) : undefined,
       })
     : { ok: false };
   if (!result.ok) {
@@ -4907,6 +4912,126 @@ function configRecord(txApp, key) {
 }
 
 /** Applique les migrations de contenu pas encore passées. Retourne les changements. */
+/**
+ * 5.22 : schéma à jour sans import manuel. Le schéma du dépôt (pb_schema.json, embarqué dans
+ * cosmic_game.js) est comparé à la base : collections et champs manquants ajoutés, tailles maximales
+ * relevées (JSON, texte). Rien n'est jamais supprimé ni restreint ; règles d'accès et index inchangés.
+ * Sans cela, un champ ajouté au schéma (ex. battle_reports.combatLog en 5.19) était ignoré en silence.
+ */
+function ensureSchema(app) {
+  const game = loadGame();
+  let wanted = [];
+  try {
+    wanted = JSON.parse(game.PB_SCHEMA || "[]");
+  } catch (_) {
+    return [];
+  }
+  const changes = [];
+  const toImport = [];
+  wanted.forEach((w) => {
+    let col = null;
+    try {
+      col = app.findCollectionByNameOrId(w.name);
+    } catch (_) {
+      col = null;
+    }
+    if (!col) {
+      toImport.push(w);
+      changes.push(`+${w.name}`);
+      return;
+    }
+    const cur = JSON.parse(JSON.stringify(col));
+    const fields = cur.fields || [];
+    let dirty = false;
+    (w.fields || []).forEach((f) => {
+      const have = fields.find((x) => x.name === f.name);
+      if (!have) {
+        fields.push(Object.assign({}, f));
+        dirty = true;
+        changes.push(`${w.name}.${f.name}`);
+        return;
+      }
+      if (have.type !== f.type) return;
+      if (f.type === "json" && Number(f.maxSize) > Number(have.maxSize || 0)) {
+        have.maxSize = f.maxSize;
+        dirty = true;
+        changes.push(`${w.name}.${f.name} (taille)`);
+      }
+      if (f.type === "text" && Number(have.max) > 0 && Number(f.max) > Number(have.max)) {
+        have.max = f.max;
+        dirty = true;
+        changes.push(`${w.name}.${f.name} (longueur)`);
+      }
+    });
+    if (dirty) {
+      cur.fields = fields;
+      toImport.push(cur);
+    }
+  });
+  if (toImport.length > 0) app.importCollectionsByMarshaledJSON(JSON.stringify(toImport), false);
+  return changes;
+}
+
+/**
+ * 5.22 : le champ players.workshop manquait en production (schéma non importé) : les unités
+ * sauvées par l'Atelier étaient retirées de la flotte mais leur réparation n'était pas
+ * enregistrée. Appelé une seule fois, quand ensureSchema vient d'ajouter ce champ : rend aux
+ * joueurs les unités sauvées de leurs combats depuis la mise en ligne de la 5.20 (vaisseaux
+ * seulement : les défenses reconstruites n'avaient jamais quitté la base).
+ */
+function restoreWorkshopUnits(app, sinceMs) {
+  const game = loadGame();
+  const back = {};
+  const add = (uid, units, onlyShips) => {
+    if (!uid || String(uid).indexOf("npc") === 0 || !units) return;
+    Object.keys(units).forEach((id) => {
+      const n = Math.floor(Number(units[id]) || 0);
+      if (n <= 0 || (onlyShips && game.OFFENSIVE_UNITS.indexOf(id) < 0)) return;
+      back[uid] = back[uid] || {};
+      back[uid][id] = (back[uid][id] || 0) + n;
+    });
+  };
+  app.findRecordsByFilter("battle_reports", "timestamp >= {:s}", "timestamp", 0, 0, { s: sinceMs }).forEach((r) => {
+    const p = toPlain(r);
+    // Colonies : pas d'Atelier, rien n'y partait.
+    if (p.planetId) {
+      add(p.attackerUid, p.attackerRecovered, false);
+      return;
+    }
+    add(p.attackerUid, p.attackerRecovered, false);
+    add(p.defenderUid, p.defenderRecovered, true);
+  });
+  let players = 0;
+  app.runInTransaction((txApp) => {
+    Object.keys(back).forEach((uid) => {
+      const rec = findOrNull(txApp, "players", uid);
+      if (!rec) return;
+      const units = Object.assign({}, toPlain(rec).units || {});
+      const lines = [];
+      Object.keys(back[uid]).forEach((id) => {
+        const st = units[id] || { level: 1, count: 0 };
+        units[id] = Object.assign({}, st, { count: (st.count || 0) + back[uid][id] });
+        const u = game.findUnit(id);
+        lines.push(`${game.formatInt(back[uid][id])} ${u ? u.name : id}`);
+      });
+      rec.set("units", units);
+      txApp.save(rec);
+      players++;
+      notify(txApp, uid, [
+        {
+          kind: "event",
+          title: "Unités sauvées rendues",
+          message: `L'Atelier n'avait pas enregistré tes unités sauvées depuis la 5.20 : elles rejoignent ta flotte, réparées. ${lines.join(", ")}.`,
+          createdAtMs: Date.now(),
+          read: false,
+          link: "/game/unites",
+        },
+      ]);
+    });
+  });
+  return players;
+}
+
 function runContentMigrations(app) {
   const changes = [];
   app.runInTransaction((txApp) => {
@@ -4976,7 +5101,15 @@ function liveBalance(now, withHistory) {
   const warlords = $app.findRecordsByFilter("players", "npc != ''", "", 0, 0).map(plain);
   const reports = $app
     .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
-    .map((r) => ({ attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") }));
+    .map((r) => {
+      const out = { attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") };
+      // 5.22 : rang du seigneur engagé (suivi d'équilibrage par rang).
+      if (out.attackerUid.indexOf("npc") === 0 || out.defenderUid.indexOf("npc") === 0) {
+        const log = toPlain(r).combatLog;
+        if (log && log.warlord) out.warlordRank = log.warlord.rank;
+      }
+      return out;
+    });
   const live = game.computeLiveBalance(players, warlords, reports, now, 30);
   if (withHistory) live.history = readBalanceHistory($app, game);
   return { game, live, reports };
@@ -6704,9 +6837,11 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     game.shatterWarlord(npc.player);
     savePlayer(txApp, game, npc, npc.player, npc.queues);
   }
-  const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+  // 5.22 : le seigneur chute de deux rangs.
+  const rt = game.dropRank(Object.assign(game.emptyRuntime(), state.byId[d.id] || {}), game.warlordRankRules()).rt;
   rt.absentUntilMs = now + game.WARLORD_RULES.vendetta.awayDays * 86400000;
   state.byId[d.id] = rt;
+  const ascendant = (v.rank || 1) >= 5;
   // Flottes encore en route vers lui : elles rentrent sans combattre.
   txApp.findRecordsByFilter("fleets", 'targetUid = {:u} && status = "outbound"', "", 100, 0, { u: uid }).forEach((f) => {
     f.set("status", "returning");
@@ -6714,12 +6849,15 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
     f.set("outcome", "none");
     txApp.save(f);
   });
-  const title = game.vendettaTitle(d);
+  const title = game.vendettaTitle(d, v.rank || 1);
   game.vendettaWinners(v).forEach((w) => {
     if (!findOrNull(txApp, "players", w)) return;
     const loaded = loadPlayer(txApp, game, w);
     const p = loaded.player;
-    const relic = game.rollRelic(`vendetta:${d.id}`, now, Math.random, d.tier === "strong" ? "rare" : "common");
+    // 5.22 : Seigneur Ascendant : relique mythique ; vendetta comptée pour les unités d'élite.
+    const relic = ascendant ? game.ascendantRelic(d, now, Math.random) : game.rollRelic(`vendetta:${d.id}`, now, Math.random, d.tier === "strong" ? "rare" : "common");
+    game.recordVendettaWin(p, d.personality);
+    const elites = game.refreshEliteUnlocks(p);
     const kept = game.addRelic(p, relic);
     if (!(p.titles || []).some((t) => t.label === title)) p.titles = (p.titles || []).concat([{ label: title, seasonId: "vendetta", rank: 1 }]);
     game.addPassPoints(p, "vendetta", now);
@@ -6730,7 +6868,7 @@ function finishVendettaWon(txApp, game, state, d, v, now) {
       {
         kind: "event",
         title: "Vendetta gagnée !",
-        message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? " et une relique" : " (collection de reliques pleine)"}.${game.describeLoot(loot)}`,
+        message: `${d.name} quitte le secteur pour ${game.WARLORD_RULES.vendetta.awayDays} jours. Titre « ${title} », +${game.WARLORD_RULES.vendetta.passPoints} points de passe${kept ? (ascendant ? " et une relique mythique" : " et une relique") : " (collection de reliques pleine)"}.${game.describeLoot(loot)}${elites.length ? " Unité d'élite débloquée au chantier !" : ""}`,
         createdAtMs: now,
         read: false,
         link: "/game/seigneurs",
@@ -6762,7 +6900,7 @@ function finishCoalitionWon(txApp, game, state, coal, co, now) {
     game.shatterWarlord(npc.player, game.COALITION_RULES.powerLoss);
     savePlayer(txApp, game, npc, npc.player, npc.queues);
   }
-  const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+  const rt = game.dropRank(Object.assign(game.emptyRuntime(), state.byId[d.id] || {}), game.warlordRankRules()).rt;
   rt.absentUntilMs = now + game.COALITION_RULES.awayDays * 86400000;
   state.byId[d.id] = rt;
   txApp.findRecordsByFilter("fleets", 'targetUid = {:u} && status = "outbound"', "", 200, 0, { u: uid }).forEach((f) => {
@@ -6833,6 +6971,31 @@ function coalitionTick(txApp, game, state, humans, now) {
   return opened;
 }
 
+/** 5.22 : ajoute de la menace à un seigneur ; annonce son passage au rang V (Seigneur Ascendant). */
+function warlordThreat(txApp, game, state, d, delta, now) {
+  const rules = game.warlordRankRules();
+  const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+  const out = game.addThreat(rt, delta, rules);
+  state.byId[d.id] = out.rt;
+  announceRank(txApp, game, state, d, out.from, out.to, now);
+  return out;
+}
+
+function announceRank(txApp, game, state, d, from, to, now) {
+  if (to < 5 || from >= 5) return;
+  state.byId[d.id].ascendedAtMs = now;
+  notifyHumans(txApp, [
+    {
+      kind: "event",
+      title: `${d.name} devient Seigneur Ascendant`,
+      message: `Rang V : seule une vendetta d'alliance peut le défier. Les vainqueurs reçoivent une relique mythique et un titre.`,
+      createdAtMs: now,
+      read: false,
+      link: "/game/seigneurs",
+    },
+  ]);
+}
+
 /** Après un combat impliquant un seigneur : vendetta, répliques. */
 function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
   const atkDef = attacker.player.npc ? game.findWarlord(attacker.player.npc) : null;
@@ -6853,6 +7016,10 @@ function warlordAfterCombat(txApp, game, attacker, defender, result, now) {
     won = game.recordVendettaDamage(state, atkDef.id, defender.player.uid, defender.rec.getString("allianceId"), dealt, now);
     warlordSay(txApp, game, state, atkDef, humanPlain(defender.rec), outcome === "attacker_win" ? "won" : "repelled", now, false);
   }
+  // 5.22 : menace du seigneur selon l'issue (le rang peut monter ou descendre).
+  const T = game.warlordRankRules().threat;
+  const delta = defDef ? (outcome === "attacker_win" ? T.raided : outcome === "defender_win" ? T.defenseWon : 0) : outcome === "attacker_win" ? T.attackWon : outcome === "defender_win" ? T.attackLost : 0;
+  if (delta && !won) warlordThreat(txApp, game, state, lord, delta, now);
   if (won) finishVendettaWon(txApp, game, state, lord, won, now);
   // v4.7 : chaque vaisseau détruit chez le seigneur visé compte pour la coalition.
   const human = defDef ? attacker : defender;
@@ -6892,6 +7059,7 @@ function warlordTick(now, opts) {
       const d = game.findWarlord(v.warlordId);
       summary.lost++;
       if (!d || !findOrNull(txApp, "players", v.ownerUid)) return;
+      warlordThreat(txApp, game, state, d, game.warlordRankRules().threat.vendettaSurvived, now);
       notify(txApp, v.ownerUid, [{ kind: "event", title: "Vendetta perdue", message: `${d.name} a tenu 72 h : il prépare sa riposte.`, createdAtMs: now, read: false, link: "/game/seigneurs" }]);
       warlordSay(txApp, game, state, d, humanPlain(txApp.findRecordById("players", v.ownerUid)), "vendettaLost", now, true);
     });
@@ -6917,7 +7085,9 @@ function warlordTick(now, opts) {
           savePlayer(txApp, game, loaded, npc, flushed.queues);
           return;
         }
+        const rankBefore = game.rankOf(rt, game.warlordRankRules());
         state.byId[d.id] = game.growWarlord(npc, d, ref, rt, now);
+        announceRank(txApp, game, state, d, rankBefore, game.rankOf(state.byId[d.id], game.warlordRankRules()), now);
         savePlayer(txApp, game, loaded, npc, flushed.queues);
         summary.grown++;
         active.push(d);
@@ -7066,6 +7236,23 @@ function adminWarlords(e) {
       delete state.byId[d.id];
       writeWarlordsState(txApp, state);
     });
+  }
+  // 5.22 : rang imposé (tests, réglage).
+  if (action === "rank") {
+    $app.runInTransaction((txApp) => {
+      applyContent(txApp, game);
+      const d = game.findWarlord(id);
+      if (!d) throw new NotFoundError("Seigneur introuvable.");
+      const rank = Math.max(1, Math.min(5, Math.round(Number(req.rank) || 1)));
+      const rules = game.warlordRankRules();
+      const state = readWarlordsState(txApp, game);
+      const rt = Object.assign(game.emptyRuntime(), state.byId[d.id] || {});
+      rt.rank = rank;
+      rt.threat = rank <= 1 ? 0 : rules.thresholds[rank - 2];
+      state.byId[d.id] = rt;
+      writeWarlordsState(txApp, state);
+    });
+    return e.json(200, { ok: true });
   }
   if (action === "coalitionStart" || action === "coalitionStop") {
     let out = null;
@@ -8011,4 +8198,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
