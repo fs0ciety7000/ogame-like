@@ -22,6 +22,7 @@ import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { StoryDialog } from "@/components/game/StoryDialog";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
+import { PlanetPhotoMode } from "@/components/game/PlanetPhotoMode";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
@@ -120,6 +121,9 @@ export function DashboardPage() {
           </p>
           <div className="mt-4">
             <HomePlanetLegend buildings={player.buildings} />
+          </div>
+          <div className="-ml-2 mt-2">
+            <PlanetPhotoMode buildings={player.buildings} life={planetLife} look={profileStyle(player).planet} caption={player.pseudo} />
           </div>
         </div>
       </Card>

@@ -1112,6 +1112,28 @@ main {
   color: var(--th-text-100);
 }
 
+/* 5.16 : trame de plan d'ingénieur (fiche technique des unités). */
+.spec-blueprint {
+  background:
+    linear-gradient(color-mix(in srgb, var(--th-accent) 9%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, color-mix(in srgb, var(--th-accent) 9%, transparent) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(color-mix(in srgb, var(--th-accent) 16%, transparent) 1px, transparent 1px) 0 0 / 80px 80px,
+    linear-gradient(90deg, color-mix(in srgb, var(--th-accent) 16%, transparent) 1px, transparent 1px) 0 0 / 80px 80px,
+    radial-gradient(ellipse at center, color-mix(in srgb, var(--th-accent) 10%, transparent), transparent 70%),
+    var(--color-space-900);
+}
+
+/* 5.16 : mode photo de la planète (plein écran, sans interface). */
+.planet-photo {
+  background:
+    radial-gradient(1px 1px at 12% 18%, var(--th-text-100), transparent),
+    radial-gradient(1px 1px at 78% 32%, var(--th-text-200), transparent),
+    radial-gradient(1.5px 1.5px at 34% 74%, var(--th-text-100), transparent),
+    radial-gradient(1px 1px at 88% 82%, var(--th-text-300), transparent),
+    radial-gradient(1px 1px at 56% 12%, var(--th-text-200), transparent),
+    radial-gradient(ellipse at 50% 45%, var(--th-space-700), var(--th-space-950) 70%);
+}
+
 /* ---------- Primitives HUD : pastille, encadré, interrupteur ---------- */
 @layer components {
 .hud-chip {

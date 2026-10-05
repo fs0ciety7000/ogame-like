@@ -68,6 +68,15 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
   - Barre oblique magenta devant les surtitres.
   - Filet vert et magenta sous l'en-tête.
 
+## Fiches techniques et mode photo
+- Chaque carte d'unité a un bouton « Fiche technique ». La fiche est présentée comme un plan d'ingénieur (désignation, silhouette sur trame) et indique :
+  - attaque, défense, vitesse et soute à ton niveau actuel et au maximum, technos comprises ;
+  - le rang de l'unité face aux autres sur chaque caractéristique ;
+  - le coût et le temps de construction ;
+  - le gain par niveau et l'efficacité (attaque et défense pour 1 000 ressources, puissance et soute par place de hangar) ;
+  - un tableau niveau par niveau.
+- Mode photo de la planète (accueil, sous la légende) : plein écran sans interface, cadrage réglable, légende facultative, export en PNG 1200 × 1200 aux couleurs de ton thème.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.
