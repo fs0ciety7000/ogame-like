@@ -17,6 +17,7 @@ const SOURCE_TONE: Record<EffectSourceKind, HudTone> = {
   talent: "mint",
   territory: "ember",
   capsule: "danger",
+  season: "neutral",
 };
 
 const GROUPS: { id: EffectStatInfo["group"]; label: string }[] = [

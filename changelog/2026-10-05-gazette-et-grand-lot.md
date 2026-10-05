@@ -27,6 +27,11 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
   - Embargo : gratuit. Leurs raids sont 25 % plus forts, mais les repousser rapporte 50 % de plus, et la notoriété monte de 1.
 - On ne peut pas signer pendant un ultimatum ou un raid en cours de la faction.
 
+## Mutateur de saison
+- Chaque mois, une règle spéciale s'applique à tout le serveur. Dix sont possibles : +10 % de production, −15 % de construction, −15 % de recherche, −15 % de temps de vol, saison de guerre (+10 % d'attaque, +20 % de butin), saison des remparts, foire des marchands (−50 % de taxe), cadence des arsenaux, grandes soutes, grande chasse aux boss.
+- Elle est tirée automatiquement, jamais deux mois de suite la même, et annoncée sur l'accueil et dans les Chroniques avec l'aperçu du mois suivant. Elle apparaît dans la fiche des effets (source « Mutateur de saison »).
+- Administration (Règles) : imposer un mutateur pour un mois, n'en mettre aucun, ou tout désactiver.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.

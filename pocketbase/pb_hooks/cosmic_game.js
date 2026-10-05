@@ -533,6 +533,69 @@ __export(hooksEntry_exports, {
 });
 module.exports = __toCommonJS(hooksEntry_exports);
 
+// src/game/mutators.ts
+var MUTATORS = [
+  { id: "ruee", name: "Ru\xE9e industrielle", emoji: "\u{1F3ED}", description: "Les forges tournent \xE0 plein : +10 % de production de toutes les ressources.", grants: [{ stat: "productionAll", value: 0.1 }] },
+  { id: "chantiers", name: "Chantiers fi\xE9vreux", emoji: "\u{1F3D7}\uFE0F", description: "Les \xE9quipes se relaient jour et nuit : \u221215 % de temps de construction.", grants: [{ stat: "buildTime", value: 0.15 }] },
+  { id: "savoir", name: "\xC2ge du savoir", emoji: "\u{1F52C}", description: "Les laboratoires s'emballent : \u221215 % de temps de recherche.", grants: [{ stat: "researchTime", value: 0.15 }] },
+  { id: "vents", name: "Vents solaires", emoji: "\u2604\uFE0F", description: "Les courants stellaires portent les flottes : \u221215 % de temps de vol.", grants: [{ stat: "fleetSpeed", value: 0.15 }] },
+  { id: "guerre", name: "Saison de guerre", emoji: "\u2694\uFE0F", description: "Le secteur s'embrase : +10 % d'attaque et +20 % de butin pill\xE9.", grants: [{ stat: "attack", value: 0.1 }, { stat: "loot", value: 0.2 }] },
+  { id: "rempart", name: "Saison des remparts", emoji: "\u{1F6E1}\uFE0F", description: "Les ing\xE9nieurs renforcent les coques : +10 % de d\xE9fense et +10 % de vaisseaux r\xE9par\xE9s.", grants: [{ stat: "defense", value: 0.1 }, { stat: "repair", value: 0.1 }] },
+  { id: "marchands", name: "Foire des marchands", emoji: "\u{1F4B1}", description: "Les comptoirs baissent leurs taxes : \u221250 % de taxe au march\xE9 et sur les cadeaux.", grants: [{ stat: "tradeTax", value: 0.5 }] },
+  { id: "chantiers_navals", name: "Cadence des arsenaux", emoji: "\u{1F680}", description: "Les arsenaux acc\xE9l\xE8rent : \u221220 % de temps de production des unit\xE9s.", grants: [{ stat: "unitTime", value: 0.2 }] },
+  { id: "soutes", name: "Grandes soutes", emoji: "\u{1F4E6}", description: "Des soutes repens\xE9es : +25 % de cargaison pour les flottes.", grants: [{ stat: "cargo", value: 0.25 }] },
+  { id: "chasse", name: "Grande chasse", emoji: "\u{1F40B}", description: "Les g\xE9ants sont vuln\xE9rables : +15 % de d\xE9g\xE2ts contre les boss.", grants: [{ stat: "bossDamage", value: 0.15 }] }
+];
+var MUTATOR_RULES = {
+  enabled: true,
+  /** Mois (AAAA-MM) → identifiant de mutateur, ou « none ». */
+  overrides: {}
+};
+function mutatorMonthId(now) {
+  const d = new Date(now + 2 * 36e5);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function hashIndex(seed, n) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return Math.abs(h) % n;
+}
+function prevMonth(monthId) {
+  const [y, m] = monthId.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+function drawn(monthId) {
+  const i = hashIndex(`mut:${monthId}`, MUTATORS.length);
+  const prev = hashIndex(`mut:${prevMonth(monthId)}`, MUTATORS.length);
+  return MUTATORS[i === prev ? (i + 1) % MUTATORS.length : i];
+}
+function mutatorFor(monthId) {
+  var _a;
+  if (!MUTATOR_RULES.enabled) return null;
+  const forced = MUTATOR_RULES.overrides[monthId];
+  if (forced === "none") return null;
+  if (forced) return (_a = MUTATORS.find((m) => m.id === forced)) != null ? _a : drawn(monthId);
+  return drawn(monthId);
+}
+function activeMutator(now) {
+  return mutatorFor(mutatorMonthId(now));
+}
+function mutatorEffects(now) {
+  const m = activeMutator(now);
+  if (!m) return [];
+  return m.grants.map((g) => ({ stat: g.stat, value: g.value, target: g.target, layer: "empire", source: { kind: "season", id: m.id, label: m.name } }));
+}
+function validateMutatorRules(r) {
+  var _a;
+  if (!r) return [];
+  const errors = [];
+  for (const [month2, id] of Object.entries((_a = r.overrides) != null ? _a : {})) {
+    if (!/^\d{4}-\d{2}$/.test(month2)) errors.push(`Mutateur : mois \xAB ${month2} \xBB invalide (AAAA-MM).`);
+    if (id !== "none" && !MUTATORS.some((m) => m.id === id)) errors.push(`Mutateur : \xAB ${id} \xBB inconnu (${month2}).`);
+  }
+  return errors;
+}
+
 // src/game/errors.ts
 var GameActionError = class extends Error {
 };
@@ -8232,7 +8295,9 @@ function empireEffects(player, now = Date.now()) {
     ...commanderEffects(player),
     ...relicEffects(player),
     ...talentEffects(player),
-    ...territoryEffects(player.territory, now)
+    ...territoryEffects(player.territory, now),
+    // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
+    ...mutatorEffects(now)
   ];
 }
 function modifiersFrom(grants, scope) {
@@ -14635,6 +14700,7 @@ var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
+var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14661,7 +14727,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14669,7 +14735,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14724,6 +14790,7 @@ function applyGameContent(overrides) {
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
       catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
+      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.mutators) != null ? _Z : {}), { overrides: __spreadValues({}, (_aa = (_$ = (__ = overrides.rules) == null ? void 0 : __.mutators) == null ? void 0 : _$.overrides) != null ? _aa : {}) }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14748,7 +14815,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot, (_Z = content.relicSettings) == null ? void 0 : _Z.lootTokenCap);
+  setLootTables((_ba = content.relicSettings) == null ? void 0 : _ba.loot, (_ca = content.relicSettings) == null ? void 0 : _ca.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14770,12 +14837,14 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const __ = content.rules.allianceBoss, { bosses: allianceBosses } = __, allianceBossRules = __objRest(__, ["bosses"]);
+  const _da = content.rules.allianceBoss, { bosses: allianceBosses } = _da, allianceBossRules = __objRest(_da, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   Object.assign(CATCHUP_RULES, content.rules.catchup);
+  MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
+  MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
   current = content;
   return content;
 }
@@ -14798,7 +14867,8 @@ var RULE_GROUP_LABELS = {
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
   streak: "S\xE9rie de connexion",
-  catchup: "Rattrapage"
+  catchup: "Rattrapage",
+  mutators: "Mutateur de saison"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -14835,6 +14905,7 @@ function validateRules(rules) {
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
+  errors.push(...validateMutatorRules(merged.mutators));
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");

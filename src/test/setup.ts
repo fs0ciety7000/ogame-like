@@ -12,3 +12,8 @@ beforeEach(() => {
   EVENT_RULES.scheduled = [];
   setAchievements([]);
 });
+
+// 5.16 : le mutateur de saison change avec le mois réel ; les tests le neutralisent
+// (ceux du mutateur le réactivent explicitement).
+import { MUTATOR_RULES } from "@/game/mutators";
+MUTATOR_RULES.enabled = false;

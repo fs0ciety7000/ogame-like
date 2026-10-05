@@ -4,6 +4,7 @@ import { seasonPayoutSummary } from "@/game/seasons";
 import { streakWeekSummary } from "@/game/streak";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { catchupBonus } from "@/game/catchup";
+import { MUTATOR_RULES, MUTATORS, mutatorFor } from "@/game/mutators";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
 /* 5.15.9 : série de connexion réglable, et aperçu « avant / après » en direct
@@ -156,4 +157,66 @@ export function CatchupSection({ rules, setRules }: { rules: GameRules; setRules
       </div>
     </Section>
   );
+}
+
+/** 5.16 : mutateur de saison, mois par mois (tirage automatique ou choix imposé). */
+export function MutatorSection({ rules, setRules }: { rules: GameRules; setRules: SetRules }) {
+  const m = rules.mutators;
+  const now = new Date();
+  const months = Array.from({ length: 4 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const setOverride = (month: string, id: string) =>
+    setRules((r) => {
+      const overrides = { ...r.mutators.overrides };
+      if (id === "auto") delete overrides[month];
+      else overrides[month] = id;
+      return { ...r, mutators: { ...r.mutators, overrides } };
+    });
+  return (
+    <Section title="Mutateur de saison">
+      <CheckboxField label="Une règle spéciale chaque mois" checked={m.enabled} onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, enabled: v } }))} hint="Effet pour tout le serveur, annoncé sur l'accueil et dans les Chroniques." />
+      <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+        {months.map((month) => {
+          const auto = MUTATORS[0] && autoMutator(month);
+          return (
+            <label key={month} className="flex flex-col gap-1 text-xs text-slate-400">
+              <span className="font-mono">{month}</span>
+              <select value={m.overrides[month] ?? "auto"} onChange={(e) => setOverride(month, e.target.value)} className="h-9 border border-white/10 bg-space-950 px-2 text-sm text-slate-100">
+                <option value="auto">Tirage : {auto ? `${auto.emoji} ${auto.name}` : "—"}</option>
+                {MUTATORS.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.emoji} {x.name}
+                  </option>
+                ))}
+                <option value="none">Aucun mutateur</option>
+              </select>
+            </label>
+          );
+        })}
+      </div>
+      <ul className="grid gap-1 text-[11px] text-slate-500 sm:col-span-2">
+        {MUTATORS.map((x) => (
+          <li key={x.id}>
+            {x.emoji} <b className="text-slate-300">{x.name}</b> : {x.description}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/** Tirage automatique d'un mois, sans tenir compte des choix imposés. */
+function autoMutator(month: string) {
+  const saved = { ...MUTATOR_RULES.overrides };
+  const enabled = MUTATOR_RULES.enabled;
+  MUTATOR_RULES.overrides = {};
+  MUTATOR_RULES.enabled = true;
+  try {
+    return mutatorFor(month);
+  } finally {
+    MUTATOR_RULES.overrides = saved;
+    MUTATOR_RULES.enabled = enabled;
+  }
 }

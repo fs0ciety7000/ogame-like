@@ -1,3 +1,4 @@
+import { MutatorCallout } from "@/components/game/MutatorCallout";
 import { Card } from "@/components/ui/card";
 import { HudPanel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -128,6 +129,8 @@ export function DashboardPage() {
     challenge: (
       <div className="flex flex-col gap-3">
         <WeeklyRecapCard />
+        {/* 5.16 : règle spéciale du mois. */}
+        <MutatorCallout compact />
         {/* 5.15.7 : passe et mois en cours sur l'accueil. */}
         <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           <DailyMissionsCard now={now} />
