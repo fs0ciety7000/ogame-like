@@ -9351,7 +9351,8 @@ function classFactor(s, t) {
 }
 var poolOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.hp, 0);
 var fireOf = (stacks) => stacks.reduce((s, t) => s + t.count * t.att, 0);
-function volley(shooters, targets, factor, weight = () => 1) {
+function volley(shooters, targets, factor, weight = () => 1, bonus) {
+  var _a;
   const w = targets.map((t) => t.count > 0 ? t.count * t.hp * weight(t) : 0);
   const total2 = w.reduce((a, b) => a + b, 0);
   const dmg = targets.map(() => 0);
@@ -9359,7 +9360,14 @@ function volley(shooters, targets, factor, weight = () => 1) {
   for (const s of shooters) {
     const fire = s.count * s.att * factor;
     if (!(fire > 0)) continue;
-    for (let j = 0; j < targets.length; j++) if (w[j] > 0) dmg[j] += fire * (w[j] / total2) * classFactor(s, targets[j]);
+    for (let j = 0; j < targets.length; j++) {
+      if (!(w[j] > 0)) continue;
+      const base = fire * (w[j] / total2);
+      const k = classFactor(s, targets[j]);
+      dmg[j] += base * k;
+      s.dealt = ((_a = s.dealt) != null ? _a : 0) + Math.min(base * k, targets[j].count * targets[j].hp);
+      if (bonus) bonus.v += base * (k - 1);
+    }
   }
   return dmg;
 }
@@ -9400,19 +9408,19 @@ function virtualStacks(power, mirror, owner, mirrorAttackFactor = 1) {
   return [{ id: "", owner, count: 1, realCount: 0, att: power, hp: Math.max(1, power * hpPerAtt * COMBAT_RULES.pveHpFactor), owned: 0, damaged: 0, baseHp: 1 }];
 }
 function combatLogOf(result) {
-  var _a;
-  return {
-    rounds: ((_a = result.rounds) != null ? _a : []).map((r) => ({
+  var _a, _b;
+  return __spreadProps(__spreadValues(__spreadValues(__spreadValues(__spreadValues({}, ((_a = result.units) == null ? void 0 : _a.length) ? { units: result.units } : {}), result.shieldPercent ? { shield: Math.round(result.shieldPercent * 1e3) / 1e3 } : {}), result.targetPriority ? { targetPriority: result.targetPriority } : {}), result.classBonus && (result.classBonus.attacker || result.classBonus.defender) ? { classBonus: result.classBonus } : {}), {
+    rounds: ((_b = result.rounds) != null ? _b : []).map((r) => ({
       attackerHp: Math.round(r.attackerHp * 1e3) / 1e3,
       defenderHp: Math.round(r.defenderHp * 1e3) / 1e3,
       attackerDamage: Math.round(r.attackerDamage),
       defenderDamage: Math.round(r.defenderDamage)
     })),
     retreated: !!result.retreated
-  };
+  });
 }
 function resolveCombat(params) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
   const shield = Math.max(0, Math.min(0.95, (_a = params.defenderShieldPct) != null ? _a : 0));
@@ -9454,13 +9462,16 @@ function resolveCombat(params) {
   const prio = params.targetPriority;
   const priorityWeight = (t) => !prio ? 1 : prio === "defenses" === (t.owner === "defense") ? Math.max(1, R.targetPriorityWeight) : 1;
   const rounds = [];
+  const bonusA = { v: 0 };
+  const bonusD = { v: 0 };
   let retreated = false;
   if (a0 > 0 && d0 > 0) {
     for (let r = 0; r < R.maxRounds; r++) {
-      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight);
-      const onAttacker = volley(defender, attacker, 1);
+      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight, bonusA);
+      const onAttacker = volley(defender, attacker, 1, void 0, bonusD);
       const dmgByAttacker = applyDamage(defender, onDefender);
       const dmgByDefender = applyDamage(attacker, onAttacker);
+      for (const t of [...attacker, ...defender]) ((_j = t.trace) != null ? _j : t.trace = []).push(Math.round(t.count * 10) / 10);
       const aLeft2 = poolOf(attacker) / a0;
       const dLeft2 = poolOf(defender) / d0;
       rounds.push({ attackerHp: aLeft2, defenderHp: dLeft2, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });
@@ -9540,16 +9551,16 @@ function resolveCombat(params) {
     if (isDefense && recovered > 0) defenderRebuilt[t.id] = recovered;
   });
   const survivors = {};
-  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_j = attackerLosses[unitId]) != null ? _j : 0) - ((_k = attackerRecovered[unitId]) != null ? _k : 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_l = params.cargoFactor) != null ? _l : 1));
+  for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_k = attackerLosses[unitId]) != null ? _k : 0) - ((_l = attackerRecovered[unitId]) != null ? _l : 0));
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_m = params.cargoFactor) != null ? _m : 1));
   let loot = null;
   if (outcome === "attacker_win") {
     const wanted = {};
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
-      const pct6 = Math.min(1, base * ((_m = params.lootMultiplier) != null ? _m : 1));
-      const amount3 = Math.floor(Math.max(0, (_n = defenderResources[res]) != null ? _n : 0) * pct6);
+      const pct6 = Math.min(1, base * ((_n = params.lootMultiplier) != null ? _n : 1));
+      const amount3 = Math.floor(Math.max(0, (_o = defenderResources[res]) != null ? _o : 0) * pct6);
       wanted[res] = amount3;
       total2 += amount3;
     }
@@ -9564,13 +9575,39 @@ function resolveCombat(params) {
     const byRemainder = entries.map(([res, amount3]) => ({ res, frac: amount3 * ratio - Math.floor(amount3 * ratio) })).sort((a, b) => b.frac - a.frac);
     for (const { res } of byRemainder) {
       if (left <= 0) break;
-      if (((_o = loot[res]) != null ? _o : 0) < ((_p = wanted[res]) != null ? _p : 0)) {
-        loot[res] = ((_q = loot[res]) != null ? _q : 0) + 1;
+      if (((_p = loot[res]) != null ? _p : 0) < ((_q = wanted[res]) != null ? _q : 0)) {
+        loot[res] = ((_r = loot[res]) != null ? _r : 0) + 1;
         left--;
       }
     }
   }
-  return {
+  const unitLog = [];
+  const logStack = (t, start, side, factor = 1) => {
+    var _a2, _b2, _c2;
+    const group = side === "attacker" ? "fleet" : typeof t.owner === "number" ? "garrison" : t.owner === "defense" ? "defense" : "home";
+    const left = ((_a2 = t.trace) != null ? _a2 : []).map((n) => Math.round(Math.max(0, start - (start - n) * factor) * 10) / 10);
+    const prev = unitLog.find((u) => u.side === side && u.group === group && u.id === t.id);
+    if (prev) {
+      prev.start = Math.round((prev.start + start) * 10) / 10;
+      prev.left = prev.left.map((n, k) => {
+        var _a3;
+        return Math.round((n + ((_a3 = left[k]) != null ? _a3 : 0)) * 10) / 10;
+      });
+      prev.dealt = Math.round(prev.dealt + ((_b2 = t.dealt) != null ? _b2 : 0));
+      return;
+    }
+    const entry = __spreadValues({ id: t.id, side, group, start: Math.round(start * 10) / 10, left, dealt: Math.round((_c2 = t.dealt) != null ? _c2 : 0) }, t.cls ? { cls: t.cls } : {});
+    if (t.id && t.owned > 0 && group !== "garrison") {
+      const settled = settle(t, start, factor);
+      const keep = Math.max(1, t.owned - settled.destroyed);
+      entry.hullBefore = Math.round((1 - Math.min(maxDmg, t.damaged / t.owned)) * 1e3) / 1e3;
+      entry.hullAfter = Math.round(Math.max(0, 1 - settled.hull / (keep * t.baseHp)) * 1e3) / 1e3;
+    }
+    unitLog.push(entry);
+  };
+  attacker.forEach((t, i) => logStack(t, attackerStart[i], "attacker", lossFactor));
+  defender.forEach((t, i) => logStack(t, defenderStart[i], "defender"));
+  return __spreadProps(__spreadValues({
     outcome,
     attackerPower,
     defenderPower,
@@ -9589,8 +9626,11 @@ function resolveCombat(params) {
     rounds,
     retreated,
     attackerHull,
-    defenderHull
-  };
+    defenderHull,
+    units: unitLog
+  }, params.targetPriority ? { targetPriority: params.targetPriority } : {}), {
+    classBonus: { attacker: Math.round(bonusA.v), defender: Math.round(bonusD.v) }
+  });
 }
 
 // src/game/leviathan.ts
@@ -22219,7 +22259,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.21.0" : "dev";
+var LOGIC_VERSION = true ? "5.21.1" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

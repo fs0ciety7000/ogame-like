@@ -9,6 +9,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ParticleBurst } from "@/components/ui/particle-burst";
 import { CombatReplay } from "@/components/game/CombatReplay";
+import { CombatLossTable, CombatReportDetail } from "@/components/game/CombatReportDetail";
 import { closeCombatResult, useCombatModalStore } from "@/store/combatModalStore";
 import { findUnit } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -53,68 +54,11 @@ function CombatClash({ myPower, opponentPower }: { myPower: number; opponentPowe
   );
 }
 
-/** 5.18 : points de vie restants de chaque camp, tour par tour. */
-function CombatRounds({ log, perspective }: { log: CombatLog; perspective: "attacker" | "defender" }) {
-  if (!log.rounds.length) return null;
-  const mine = (r: CombatLog["rounds"][number]) => (perspective === "attacker" ? r.attackerHp : r.defenderHp);
-  const theirs = (r: CombatLog["rounds"][number]) => (perspective === "attacker" ? r.defenderHp : r.attackerHp);
-  const pct = (v: number) => `${Math.round(Math.max(0, Math.min(1, v)) * 100)} %`;
-  return (
-    <div className="mt-4">
-      <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">
-        Déroulé · {log.rounds.length} tour{log.rounds.length > 1 ? "s" : ""}
-      </h4>
-      <ul className="space-y-1">
-        {log.rounds.map((r, i) => (
-          <li key={i} className="grid grid-cols-[2.5rem_1fr_1fr] items-center gap-2 text-[11px]">
-            <span className="font-mono text-slate-500">T{i + 1}</span>
-            <div className="relative h-3 overflow-hidden bg-space-800/80" title={`Tes forces : ${pct(mine(r))}`}>
-              <motion.div className="absolute inset-y-0 left-0 bg-cyan-glow/70" initial={{ width: 0 }} animate={{ width: pct(mine(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
-              <span className="absolute inset-0 flex items-center px-1 font-mono text-slate-100/90">{pct(mine(r))}</span>
-            </div>
-            <div className="relative h-3 overflow-hidden bg-space-800/80" title={`Forces adverses : ${pct(theirs(r))}`}>
-              <motion.div className="absolute inset-y-0 right-0 bg-danger-glow/70" initial={{ width: 0 }} animate={{ width: pct(theirs(r)) }} transition={{ duration: 0.4, delay: i * 0.08 }} />
-              <span className="absolute inset-0 flex items-center justify-end px-1 font-mono text-slate-100/90">{pct(theirs(r))}</span>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {log.retreated && (
-        <p className="mt-1 text-xs text-gold-glow">
-          {perspective === "attacker" ? "Ta flotte a décroché après de lourdes pertes." : "L'assaillant a battu en retraite."}
-        </p>
-      )}
-    </div>
-  );
-}
-
 const OUTCOME_STYLE: Record<CombatOutcome, { attacker: string; defender: string; color: string }> = {
   attacker_win: { attacker: "Victoire !", defender: "Tu as perdu ce combat…", color: "text-mint-glow" },
   defender_win: { attacker: "Défaite…", defender: "Attaque repoussée !", color: "text-danger-glow" },
   draw: { attacker: "Match nul", defender: "Match nul", color: "text-gold-glow" },
 };
-
-function LossList({ losses, recovered }: { losses: Record<string, number>; recovered: Record<string, number> }) {
-  const entries = Object.entries(losses).filter(([, v]) => v > 0);
-  if (entries.length === 0) return <p className="text-sm text-slate-500">Aucune perte</p>;
-
-  return (
-    <ul className="space-y-1 text-sm">
-      {entries.map(([id, count]) => {
-        const rec = recovered[id] ?? 0;
-        const name = findUnit(id)?.name ?? id;
-        return (
-          <li key={id} className="flex items-center justify-between gap-2 text-slate-300">
-            <span>{name}</span>
-            <span className="text-danger-glow">
-              -{count + rec} {rec > 0 && <span className="text-slate-500">(dont {rec} à l'Atelier)</span>}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
 
 /** Blason affiché pour l'adversaire : seigneur, faction pirate, ou insigne générique. */
 function opponentEmblem(pseudo: string): string {
@@ -141,7 +85,7 @@ export function CombatResultModal() {
   return (
     <Dialog open={current !== null} onOpenChange={(open) => !open && closeCombatResult()}>
       {current && (
-        <DialogContent className="relative overflow-visible">
+        <DialogContent className="relative sm:max-w-3xl">
           <CombatIntro
             show={intro}
             left={myEmblem}
@@ -175,17 +119,11 @@ export function CombatResultModal() {
             log={current.combatLog}
           />
           <CombatClash myPower={current.myPower} opponentPower={current.opponentPower} />
-          {current.combatLog && <CombatRounds log={current.combatLog} perspective={current.perspective} />}
+          <CombatReportDetail log={current.combatLog} perspective={current.perspective} opponentName={current.opponentPseudo} />
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Tes pertes</h4>
-              <LossList losses={current.myLosses} recovered={current.myRecovered} />
-            </div>
-            <div>
-              <h4 className="mb-1 text-xs font-semibold font-mono uppercase tracking-wide text-slate-500">Pertes adverses</h4>
-              <LossList losses={current.opponentLosses} recovered={current.opponentRecovered} />
-            </div>
+            <CombatLossTable title="Tes pertes" tone="accent" losses={current.myLosses} recovered={current.myRecovered} units={current.combatLog?.units?.filter((u) => u.side === current.perspective)} />
+            <CombatLossTable title="Pertes adverses" tone="danger" losses={current.opponentLosses} recovered={current.opponentRecovered} units={current.combatLog?.units?.filter((u) => u.side !== current.perspective)} />
           </div>
 
           <div className="mt-4">

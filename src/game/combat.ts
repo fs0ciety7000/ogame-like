@@ -2,7 +2,7 @@ import { DEFENSIVE_UNITS, findUnit, KESH_HUNTER_UNIT, KESH_PVE_BONUS, OFFENSIVE_
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { techBonus } from "@/game/technologies";
 import { unitClasses } from "@/game/unitClasses";
-import type { Buildings, CombatLog, CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
+import type { Buildings, CombatLog, CombatLogUnit, CombatOutcome, ResourceId, TechLevels, Units } from "@/types/game";
 
 /** Règles de combat réglables depuis l'administration. */
 export const COMBAT_RULES = {
@@ -205,6 +205,10 @@ export interface CombatResult {
   /** 5.18 : déroulé tour par tour, et retraite de l'attaquant. */
   rounds?: CombatRound[];
   retreated?: boolean;
+  /** 5.21.1 : détail par type d'unité (rapport de combat). */
+  units?: CombatLogUnit[];
+  targetPriority?: TargetPriority;
+  classBonus?: { attacker: number; defender: number };
 }
 
 /** Garnison alliée stationnée chez le défenseur (v1.9). */
@@ -246,6 +250,9 @@ interface Stack {
   /** 5.21 : classe de combat et avantage propre (unités fictives : aucune classe). */
   cls?: "light" | "medium" | "heavy";
   edge?: number;
+  /** 5.21.1 : dégâts infligés et effectifs à la fin de chaque tour (rapport). */
+  dealt?: number;
+  trace?: number[];
 }
 
 /** 5.21 : Fort bat Moyen, Moyen bat Faible, Faible bat Fort (un essaim submerge un mastodonte). */
@@ -278,7 +285,7 @@ const fireOf = (stacks: Stack[]) => stacks.reduce((s, t) => s + t.count * t.att,
  * (pondérés par la cible prioritaire), avec l'avantage de classe. Rend les dégâts par cible
  * (appliqués ensuite, pour que les deux camps tirent en même temps).
  */
-function volley(shooters: Stack[], targets: Stack[], factor: number, weight: (t: Stack) => number = () => 1): number[] {
+function volley(shooters: Stack[], targets: Stack[], factor: number, weight: (t: Stack) => number = () => 1, bonus?: { v: number }): number[] {
   const w = targets.map((t) => (t.count > 0 ? t.count * t.hp * weight(t) : 0));
   const total = w.reduce((a, b) => a + b, 0);
   const dmg = targets.map(() => 0);
@@ -286,7 +293,15 @@ function volley(shooters: Stack[], targets: Stack[], factor: number, weight: (t:
   for (const s of shooters) {
     const fire = s.count * s.att * factor;
     if (!(fire > 0)) continue;
-    for (let j = 0; j < targets.length; j++) if (w[j] > 0) dmg[j] += fire * (w[j] / total) * classFactor(s, targets[j]);
+    for (let j = 0; j < targets.length; j++) {
+      if (!(w[j] > 0)) continue;
+      const base = fire * (w[j] / total);
+      const k = classFactor(s, targets[j]);
+      dmg[j] += base * k;
+      // Dégâts plafonnés aux PV de la cible : la part au-delà ne compte pas comme infligée.
+      s.dealt = (s.dealt ?? 0) + Math.min(base * k, targets[j].count * targets[j].hp);
+      if (bonus) bonus.v += base * (k - 1);
+    }
   }
   return dmg;
 }
@@ -338,8 +353,12 @@ function virtualStacks(power: number, mirror: Stack[], owner: Stack["owner"], mi
 }
 
 /** Déroulé compact d'un combat, pour le rapport (points de vie au millième, dégâts arrondis). */
-export function combatLogOf(result: Pick<CombatResult, "rounds" | "retreated">): CombatLog {
+export function combatLogOf(result: Pick<CombatResult, "rounds" | "retreated" | "units" | "shieldPercent" | "targetPriority" | "classBonus">): CombatLog {
   return {
+    ...(result.units?.length ? { units: result.units } : {}),
+    ...(result.shieldPercent ? { shield: Math.round(result.shieldPercent * 1000) / 1000 } : {}),
+    ...(result.targetPriority ? { targetPriority: result.targetPriority } : {}),
+    ...(result.classBonus && (result.classBonus.attacker || result.classBonus.defender) ? { classBonus: result.classBonus } : {}),
     rounds: (result.rounds ?? []).map((r) => ({
       attackerHp: Math.round(r.attackerHp * 1000) / 1000,
       defenderHp: Math.round(r.defenderHp * 1000) / 1000,
@@ -427,13 +446,16 @@ export function resolveCombat(params: {
   const prio = params.targetPriority;
   const priorityWeight = (t: Stack) => (!prio ? 1 : (prio === "defenses") === (t.owner === "defense") ? Math.max(1, R.targetPriorityWeight) : 1);
   const rounds: CombatRound[] = [];
+  const bonusA = { v: 0 };
+  const bonusD = { v: 0 };
   let retreated = false;
   if (a0 > 0 && d0 > 0) {
     for (let r = 0; r < R.maxRounds; r++) {
-      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight);
-      const onAttacker = volley(defender, attacker, 1);
+      const onDefender = volley(attacker, defender, 1 - shield, priorityWeight, bonusA);
+      const onAttacker = volley(defender, attacker, 1, undefined, bonusD);
       const dmgByAttacker = applyDamage(defender, onDefender);
       const dmgByDefender = applyDamage(attacker, onAttacker);
+      for (const t of [...attacker, ...defender]) (t.trace ??= []).push(Math.round(t.count * 10) / 10);
       const aLeft = poolOf(attacker) / a0;
       const dLeft = poolOf(defender) / d0;
       rounds.push({ attackerHp: aLeft, defenderHp: dLeft, attackerDamage: dmgByAttacker, defenderDamage: dmgByDefender });
@@ -556,6 +578,30 @@ export function resolveCombat(params: {
     }
   }
 
+  // 5.21.1 : détail par type d'unité pour le rapport (garnisons fusionnées par type).
+  const unitLog: CombatLogUnit[] = [];
+  const logStack = (t: Stack, start: number, side: CombatLogUnit["side"], factor = 1) => {
+    const group: CombatLogUnit["group"] = side === "attacker" ? "fleet" : typeof t.owner === "number" ? "garrison" : t.owner === "defense" ? "defense" : "home";
+    const left = (t.trace ?? []).map((n) => Math.round(Math.max(0, start - (start - n) * factor) * 10) / 10);
+    const prev = unitLog.find((u) => u.side === side && u.group === group && u.id === t.id);
+    if (prev) {
+      prev.start = Math.round((prev.start + start) * 10) / 10;
+      prev.left = prev.left.map((n, k) => Math.round((n + (left[k] ?? 0)) * 10) / 10);
+      prev.dealt = Math.round(prev.dealt + (t.dealt ?? 0));
+      return;
+    }
+    const entry: CombatLogUnit = { id: t.id, side, group, start: Math.round(start * 10) / 10, left, dealt: Math.round(t.dealt ?? 0), ...(t.cls ? { cls: t.cls } : {}) };
+    if (t.id && t.owned > 0 && group !== "garrison") {
+      const settled = settle(t, start, factor);
+      const keep = Math.max(1, t.owned - settled.destroyed);
+      entry.hullBefore = Math.round((1 - Math.min(maxDmg, t.damaged / t.owned)) * 1000) / 1000;
+      entry.hullAfter = Math.round(Math.max(0, 1 - settled.hull / (keep * t.baseHp)) * 1000) / 1000;
+    }
+    unitLog.push(entry);
+  };
+  attacker.forEach((t, i) => logStack(t, attackerStart[i], "attacker", lossFactor));
+  defender.forEach((t, i) => logStack(t, defenderStart[i], "defender"));
+
   return {
     outcome,
     attackerPower,
@@ -576,5 +622,8 @@ export function resolveCombat(params: {
     retreated,
     attackerHull,
     defenderHull,
+    units: unitLog,
+    ...(params.targetPriority ? { targetPriority: params.targetPriority } : {}),
+    classBonus: { attacker: Math.round(bonusA.v), defender: Math.round(bonusD.v) },
   };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { computeRetention, parisDay, recordActiveDay } from "@/game/retention";
-import { normalizeLayout, moveSection, toggleSection, defaultLayout } from "@/lib/dashboardLayout";
+import { normalizeLayout, moveSection, toggleSection, defaultLayout, dropSection, switchColumn } from "@/lib/dashboardLayout";
 import { announcementLive, normalizeAnnouncementSettings, scheduledAnnouncements } from "@/game/announcements";
 import { performPlayerAction } from "@/game/actions";
 import { defaultQueues } from "@/game/defaults";
@@ -58,14 +58,19 @@ describe("v4.5 retention", () => {
 });
 
 describe("v4.5 dashboard layout", () => {
-  it("keeps known sections, appends new ones, moves and hides", () => {
-    const l = normalizeLayout({ order: ["log", "bogus", "log", "next"], hidden: ["power", "nope"] });
-    expect(l.order.slice(0, 2)).toEqual(["log", "next"]);
-    expect(l.order).toHaveLength(defaultLayout().order.length);
-    expect(l.hidden).toEqual(["power"]);
-    expect(moveSection(l, "next", -1).order.slice(0, 2)).toEqual(["next", "log"]);
+  it("converts the old single list, keeps known sections, moves, drops and hides", () => {
+    const l = normalizeLayout({ order: ["log", "bogus", "log", "next", "contracts", "challenge"], hidden: ["power", "nope"] });
+    expect(l.main.slice(0, 3)).toEqual(["log", "next", "progress"]);
+    expect(l.main.length + l.side.length).toBe(defaultLayout().main.length + defaultLayout().side.length);
+    expect(l.hidden).toEqual(["empire"]);
+    expect(moveSection(l, "next", -1).main.slice(0, 2)).toEqual(["next", "log"]);
     expect(moveSection(l, "log", -1)).toBe(l);
-    expect(toggleSection(l, "power").hidden).toEqual([]);
+    expect(toggleSection(l, "empire").hidden).toEqual([]);
+    const d = dropSection(l, "next", "side", "workshop");
+    expect(d.main).not.toContain("next");
+    expect(d.side[d.side.indexOf("workshop") - 1]).toBe("next");
+    expect(switchColumn(d, "next").main.at(-1)).toBe("next");
+    expect(normalizeLayout(d)).toEqual(d);
   });
 });
 
