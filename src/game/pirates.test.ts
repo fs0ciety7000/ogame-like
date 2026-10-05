@@ -257,3 +257,37 @@ describe("Factions hostiles", () => {
     expect(validateFactions(bad)).toHaveLength(2);
   });
 });
+
+describe("traités avec les factions (5.16)", () => {
+  it("pacte : coût prélevé, pas d'ultimatum pendant 7 jours ; conditions de notoriété", async () => {
+    const { signTreaty, activeTreaty, pirateTick, pirateState, setFactionState, FACTIONS, TREATY_RULES } = await import("@/game/pirates");
+    const p = makeTreatyPlayer();
+    const f = FACTIONS.find((x) => x.enabled)!;
+    const scrap = p.resources.scrap;
+    const now = Date.UTC(2026, 9, 5);
+    const out = signTreaty(p, f.id, "pact", now);
+    expect(out.treaty.kind).toBe("pact");
+    expect(p.resources.scrap).toBeLessThan(scrap);
+    expect(activeTreaty(pirateState(p, f.id), now + 6 * 86400_000)).not.toBeNull();
+    expect(activeTreaty(pirateState(p, f.id), now + 8 * 86400_000)).toBeNull();
+    expect(() => signTreaty(p, f.id, "escort", now)).toThrow(/déjà/);
+    const tick = pirateTick(p, now + 86400_000, { force: null });
+    expect(tick.notifications.some((n) => n.title.includes(f.leader))).toBe(false);
+    const q = makeTreatyPlayer();
+    const st = pirateState(q, f.id);
+    st.notoriety = TREATY_RULES.maxNotoriety.escort + 1;
+    setFactionState(q, f.id, st);
+    expect(() => signTreaty(q, f.id, "escort", now)).toThrow(/notoriété/);
+    const emb = signTreaty(q, f.id, "embargo", now);
+    expect(emb.treaty.kind).toBe("embargo");
+    expect(pirateState(q, f.id).notoriety).toBe(TREATY_RULES.maxNotoriety.escort + 1 + TREATY_RULES.embargoNotoriety);
+  });
+});
+
+function makeTreatyPlayer() {
+  const p = { ...defaultPlayerState("t1", "Traité"), createdAt: null, createdAtMs: 0 } as unknown as import("@/types/game").PlayerState;
+  p.uid = "t1";
+  p.buildings = { ...p.buildings, extracteur_ferraille: { level: 10, unlocked: true }, reacteur_instable: { level: 10, unlocked: true } };
+  p.resources = { ...p.resources, scrap: 10_000_000, energy: 10_000_000, nano: 10_000_000, data: 10_000_000 };
+  return p;
+}

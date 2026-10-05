@@ -1,9 +1,11 @@
 import { assetUrl } from "@/lib/assets";
 import { TiltPortrait } from "@/components/fx/TiltPortrait";
-import { EmptyState } from "@/components/ui/hud";
+import { EmptyState, HudChip } from "@/components/ui/hud";
+import { askConfirm } from "@/components/ui/confirm-dialog";
+import { describeGain } from "@/game/format";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Clock, Crosshair, Skull, Trophy } from "lucide-react";
+import { Clock, Crosshair, Handshake, Skull, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -14,7 +16,7 @@ import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { accent, openUltimatum } from "@/components/game/PirateUltimatum";
-import { activeUltimatum, FACTIONS, lairPower, lairUid, pirateState, raidPower, targetPower, type FactionDef } from "@/game/pirates";
+import { activeTreaty, activeUltimatum, FACTIONS, lairPower, lairUid, pirateState, productionHours, raidPower, targetPower, TREATY_LABELS, TREATY_RULES, type FactionDef, type TreatyKind } from "@/game/pirates";
 import { fleetSpeed, LAIR_DISTANCE, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { computeFleetPower } from "@/game/combat";
@@ -22,7 +24,7 @@ import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { GameActionError, sendFleet } from "@/services/playerService";
+import { GameActionError, sendFleet, signFactionTreaty } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatClock, formatCompact, formatDuration } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -209,9 +211,66 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
               {faction.lair.title && <p className="text-[11px] text-slate-500">Titre : « {faction.lair.title} »</p>}
             </div>
           </div>
+          <TreatyRow faction={faction} player={player} busyThreat={!!mine || !!raid} />
         </div>
       </div>
     </Card>
+  );
+}
+
+/** 5.16 : traités avec la faction (pacte de péage, escorte, embargo). */
+function TreatyRow({ faction, player, busyThreat }: { faction: FactionDef; player: PlayerState; busyThreat: boolean }) {
+  const [busy, setBusy] = useState<TreatyKind | null>(null);
+  const now = Date.now();
+  const st = pirateState(player, faction.id);
+  const current = activeTreaty(st, now);
+  const sign = async (kind: TreatyKind) => {
+    const label = TREATY_LABELS[kind];
+    const cost = TREATY_RULES.cost[kind] > 0 ? describeGain(productionHours(player, TREATY_RULES.cost[kind])) : "gratuit";
+    if (!(await askConfirm({ title: `${label.name} avec ${faction.name} ?`, message: `${label.effect} Durée : ${TREATY_RULES.durationDays} jours. Coût : ${cost}.`, confirmLabel: "Signer", tone: kind === "embargo" ? "danger" : "accent" }))) return;
+    setBusy(kind);
+    try {
+      await signFactionTreaty(faction.id, kind);
+      toast.success(`${label.name} signé avec ${faction.name}.`);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Signature impossible.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+        <Handshake className="h-3.5 w-3.5 text-cyan-glow" /> Traités
+        {current && (
+          <HudChip size="sm" tone={current.kind === "embargo" ? "danger" : "mint"} className="ml-auto">
+            {TREATY_LABELS[current.kind].name} · {formatDuration(Math.floor((current.untilMs - now) / 1000))}
+          </HudChip>
+        )}
+      </p>
+      {current ? (
+        <p className="text-[11px] text-slate-400">{TREATY_LABELS[current.kind].effect}</p>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(["pact", "escort", "embargo"] as TreatyKind[]).map((kind) => {
+            const blocked = st.notoriety > TREATY_RULES.maxNotoriety[kind];
+            const cost = TREATY_RULES.cost[kind] > 0 ? `${TREATY_RULES.cost[kind]} h de production` : "gratuit";
+            return (
+              <div key={kind} className="hud-cut-sm flex flex-col gap-1.5 border border-white/10 bg-white/[0.02] p-2.5">
+                <p className="text-xs font-semibold text-slate-100">{TREATY_LABELS[kind].name}</p>
+                <p className="flex-1 text-[11px] leading-snug text-slate-400">{TREATY_LABELS[kind].effect}</p>
+                <p className="font-mono text-[10px] text-slate-500">
+                  {cost} · {TREATY_RULES.durationDays} j{kind !== "embargo" ? ` · notoriété ≤ ${TREATY_RULES.maxNotoriety[kind]}` : ""}
+                </p>
+                <Button size="sm" variant={kind === "embargo" ? "danger" : "secondary"} disabled={busy !== null || busyThreat || blocked} onClick={() => void sign(kind)} title={blocked ? `Notoriété trop haute (${st.notoriety})` : busyThreat ? "Règle d'abord la menace en cours" : undefined}>
+                  {kind === "embargo" ? "Décréter" : "Signer"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

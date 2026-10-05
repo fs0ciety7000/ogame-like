@@ -483,7 +483,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
     await expect(pb.collection("debris_fields").update(aId, { scrap: 1 })).rejects.toBeTruthy();
 
-    // Champ connu pour un ramassage déterministe : 2 drones niv. 1 = 500.
+    // Champ connu pour un ramassage déterministe. 5.16 : capacité = CAP du drone (10 × niv. 1) × 2 drones = 20.
     if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500 });
     else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
     await expect(ps.sendFleet(aId, { chasseur: 1 }, "recycle")).rejects.toThrow(/Drones|assez/);
@@ -491,14 +491,14 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await wait(Math.max(0, sent.arriveAtMs - Date.now()) + 400);
     await ps.syncPlayer("");
     const landed = await pb.collection("fleets").getOne(sent.id);
-    expect(landed.loot).toEqual({ scrap: 333, energy: 167 });
+    expect(landed.loot).toEqual({ scrap: 13, energy: 7 });
     const left = await admin.collection("debris_fields").getOne(aId);
-    expect([left.scrap, left.energy]).toEqual([667, 333]);
+    expect([left.scrap, left.energy]).toEqual([987, 493]);
     const before = (await snap(bId)).resources.scrap;
     await wait(Math.max(0, landed.returnAtMs - Date.now()) + 400);
     await ps.syncPlayer("");
     const back = await snap(bId);
-    expect(back.resources.scrap).toBeGreaterThanOrEqual(before + 333);
+    expect(back.resources.scrap).toBeGreaterThanOrEqual(before + 13);
     expect(back.units.drone_recuperateur.count).toBe(3);
     await admin.collection("debris_fields").delete(aId);
   }, 30_000);
@@ -1008,22 +1008,32 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(ps.sendFleet("", { chasseur: 20 }, "expedition", { hours: 2 })).rejects.toThrow(/déjà/);
       await expect(ps.recallFleet(sent.id)).rejects.toThrow(/rappelée/);
       const xp = (await snap(bId))!.xp ?? 0;
+      // 5.16 : au dernier secteur, on pousse une fois plus loin, puis on rentre.
+      let deeperDone = false;
       const step = async (field: "arriveAtMs" | "returnAtMs") => {
         await admin.collection("fleets").update(sent.id, { [field]: Date.now() - 1000 });
         await ps.syncPlayer("");
         let f = await pb.collection("fleets").getOne(sent.id);
-        if (f.status === "decision") {
-          f = await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: sent.id, choice: "force" } });
+        for (let i = 0; i < 3 && f.status === "decision"; i++) {
+          const deeper = f.expedition?.pending?.kind === "deeper";
+          const choice = deeper ? (deeperDone ? "return" : "deeper") : "force";
+          if (deeper && !deeperDone) deeperDone = true;
+          f = await pb.send("/api/cosmic/expedition/choose", { method: "POST", body: { fleetId: sent.id, choice } });
         }
         return f;
       };
       const mid = await step("arriveAtMs");
       expect(["returning", "done"]).toContain(mid.status);
       expect(mid.expedition.log.length).toBeGreaterThanOrEqual(1);
-      const end = mid.status === "done" ? mid : await step("returnAtMs");
+      let end = mid.status === "done" ? mid : await step("returnAtMs");
+      if (end.status === "returning") {
+        // Étape profonde : partie pour une demi-durée.
+        expect(end.expedition.depth).toBe(1);
+        end = await step("returnAtMs");
+      }
       expect(end.status).toBe("done");
       const after = await snap(bId);
-      expect(after!.xp).toBeGreaterThanOrEqual(xp + 120); // + XP du succès « Grand large »
+      expect(after!.xp).toBeGreaterThanOrEqual(xp + (deeperDone ? 180 : 120)); // 2 h × 60 XP (+ 50 % par profondeur) + succès « Grand large »
       expect(after!.stats.expeditions).toBe(1);
       expect(after!.units.chasseur.count).toBeGreaterThan(30);
     } finally {
@@ -1886,6 +1896,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         await ps.syncPlayer("");
         const state = (await bossRec())!.data;
         expect(state.contributions[bId].damage).toBeGreaterThan(0);
+        // 5.16 : réactions des spectateurs (pas sur son propre assaut).
+        const line = state.feed.find((f: { uid?: string }) => f.uid === bId);
+        await expect(pb.send("/api/cosmic/boss/react", { method: "POST", body: { boss: "season", key: `${line.t}:${bId}`, emoji: "🔥" } })).rejects.toMatchObject({ status: 400 });
+        await expect(pb.send("/api/cosmic/boss/react", { method: "POST", body: { boss: "nope", key: "x", emoji: "🔥" } })).rejects.toMatchObject({ status: 400 });
         await admin.send("/api/cosmic/admin/seasonboss", { method: "POST", body: { action: "stop" } });
         const after = await snap(bId);
         expect(after.seasonPass.points).toBeGreaterThanOrEqual(60);

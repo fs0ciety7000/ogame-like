@@ -193,6 +193,7 @@ __export(hooksEntry_exports, {
   campaignsState: () => campaignsState,
   canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
+  canGoDeeper: () => canGoDeeper,
   canMessage: () => canMessage,
   cancelTradeContract: () => cancelTradeContract,
   casinoOpen: () => casinoOpen,
@@ -253,6 +254,7 @@ __export(hooksEntry_exports, {
   dailyTreasuryBonus: () => dailyTreasuryBonus,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
+  deepLegMs: () => deepLegMs,
   defaultGameContent: () => defaultGameContent,
   defaultQueues: () => defaultQueues,
   depositWarChest: () => depositWarChest,
@@ -278,6 +280,7 @@ __export(hooksEntry_exports, {
   errorQuotaKey: () => errorQuotaKey,
   eveReminderDue: () => eveReminderDue,
   exchangeAmber: () => exchangeAmber,
+  expeditionDepth: () => expeditionDepth,
   expeditionRelicChance: () => expeditionRelicChance,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
@@ -366,6 +369,7 @@ __export(hooksEntry_exports, {
   normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
+  offerDeeper: () => offerDeeper,
   offerReserved: () => offerReserved,
   onVacation: () => onVacation,
   openVendetta: () => openVendetta,
@@ -403,6 +407,7 @@ __export(hooksEntry_exports, {
   publishPassSeason: () => publishPassSeason,
   pushBossHistory: () => pushBossHistory,
   pushSnapshot: () => pushSnapshot,
+  reactToBossFeed: () => reactToBossFeed,
   readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
   readDaily: () => readDaily,
@@ -437,6 +442,7 @@ __export(hooksEntry_exports, {
   resetPlayerState: () => resetPlayerState,
   resizeLeviathan: () => resizeLeviathan,
   resolveBountyHunt: () => resolveBountyHunt,
+  resolveDeeper: () => resolveDeeper,
   resolveEliteAssault: () => resolveEliteAssault,
   resolveExpeditionChoice: () => resolveExpeditionChoice,
   resolveLairAssault: () => resolveLairAssault,
@@ -475,6 +481,7 @@ __export(hooksEntry_exports, {
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
   shortHash: () => shortHash,
+  signTreaty: () => signTreaty,
   slugify: () => slugify,
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
@@ -526,6 +533,69 @@ __export(hooksEntry_exports, {
   writeCoalitions: () => writeCoalitions
 });
 module.exports = __toCommonJS(hooksEntry_exports);
+
+// src/game/mutators.ts
+var MUTATORS = [
+  { id: "ruee", name: "Ru\xE9e industrielle", emoji: "\u{1F3ED}", description: "Les forges tournent \xE0 plein : +10 % de production de toutes les ressources.", grants: [{ stat: "productionAll", value: 0.1 }] },
+  { id: "chantiers", name: "Chantiers fi\xE9vreux", emoji: "\u{1F3D7}\uFE0F", description: "Les \xE9quipes se relaient jour et nuit : \u221215 % de temps de construction.", grants: [{ stat: "buildTime", value: 0.15 }] },
+  { id: "savoir", name: "\xC2ge du savoir", emoji: "\u{1F52C}", description: "Les laboratoires s'emballent : \u221215 % de temps de recherche.", grants: [{ stat: "researchTime", value: 0.15 }] },
+  { id: "vents", name: "Vents solaires", emoji: "\u2604\uFE0F", description: "Les courants stellaires portent les flottes : \u221215 % de temps de vol.", grants: [{ stat: "fleetSpeed", value: 0.15 }] },
+  { id: "guerre", name: "Saison de guerre", emoji: "\u2694\uFE0F", description: "Le secteur s'embrase : +10 % d'attaque et +20 % de butin pill\xE9.", grants: [{ stat: "attack", value: 0.1 }, { stat: "loot", value: 0.2 }] },
+  { id: "rempart", name: "Saison des remparts", emoji: "\u{1F6E1}\uFE0F", description: "Les ing\xE9nieurs renforcent les coques : +10 % de d\xE9fense et +10 % de vaisseaux r\xE9par\xE9s.", grants: [{ stat: "defense", value: 0.1 }, { stat: "repair", value: 0.1 }] },
+  { id: "marchands", name: "Foire des marchands", emoji: "\u{1F4B1}", description: "Les comptoirs baissent leurs taxes : \u221250 % de taxe au march\xE9 et sur les cadeaux.", grants: [{ stat: "tradeTax", value: 0.5 }] },
+  { id: "chantiers_navals", name: "Cadence des arsenaux", emoji: "\u{1F680}", description: "Les arsenaux acc\xE9l\xE8rent : \u221220 % de temps de production des unit\xE9s.", grants: [{ stat: "unitTime", value: 0.2 }] },
+  { id: "soutes", name: "Grandes soutes", emoji: "\u{1F4E6}", description: "Des soutes repens\xE9es : +25 % de cargaison pour les flottes.", grants: [{ stat: "cargo", value: 0.25 }] },
+  { id: "chasse", name: "Grande chasse", emoji: "\u{1F40B}", description: "Les g\xE9ants sont vuln\xE9rables : +15 % de d\xE9g\xE2ts contre les boss.", grants: [{ stat: "bossDamage", value: 0.15 }] }
+];
+var MUTATOR_RULES = {
+  enabled: true,
+  /** Mois (AAAA-MM) → identifiant de mutateur, ou « none ». */
+  overrides: {}
+};
+function mutatorMonthId(now) {
+  const d = new Date(now + 2 * 36e5);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function hashIndex(seed, n) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return Math.abs(h) % n;
+}
+function prevMonth(monthId) {
+  const [y, m] = monthId.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+function drawn(monthId) {
+  const i = hashIndex(`mut:${monthId}`, MUTATORS.length);
+  const prev = hashIndex(`mut:${prevMonth(monthId)}`, MUTATORS.length);
+  return MUTATORS[i === prev ? (i + 1) % MUTATORS.length : i];
+}
+function mutatorFor(monthId) {
+  var _a;
+  if (!MUTATOR_RULES.enabled) return null;
+  const forced = MUTATOR_RULES.overrides[monthId];
+  if (forced === "none") return null;
+  if (forced) return (_a = MUTATORS.find((m) => m.id === forced)) != null ? _a : drawn(monthId);
+  return drawn(monthId);
+}
+function activeMutator(now) {
+  return mutatorFor(mutatorMonthId(now));
+}
+function mutatorEffects(now) {
+  const m = activeMutator(now);
+  if (!m) return [];
+  return m.grants.map((g) => ({ stat: g.stat, value: g.value, target: g.target, layer: "empire", source: { kind: "season", id: m.id, label: m.name } }));
+}
+function validateMutatorRules(r) {
+  var _a;
+  if (!r) return [];
+  const errors = [];
+  for (const [month2, id] of Object.entries((_a = r.overrides) != null ? _a : {})) {
+    if (!/^\d{4}-\d{2}$/.test(month2)) errors.push(`Mutateur : mois \xAB ${month2} \xBB invalide (AAAA-MM).`);
+    if (id !== "none" && !MUTATORS.some((m) => m.id === id)) errors.push(`Mutateur : \xAB ${id} \xBB inconnu (${month2}).`);
+  }
+  return errors;
+}
 
 // src/game/errors.ts
 var GameActionError = class extends Error {
@@ -622,28 +692,28 @@ function inScope(g, scope) {
   const s = (_a = g.scope) != null ? _a : "all";
   return s === "all" || s === scope;
 }
-function rawEffectTotal(grants, layer, stat, opts = {}) {
+function rawEffectTotal(grants, layer, stat2, opts = {}) {
   let total2 = 0;
   for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
+    if (g.layer !== layer || g.stat !== stat2 || !inScope(g, opts.scope)) continue;
     if (opts.target !== void 0 && g.target !== opts.target) continue;
     total2 += g.value;
   }
   return total2;
 }
-function clampEffect(stat, layer, total2) {
+function clampEffect(stat2, layer, total2) {
   var _a;
-  const info = EFFECT_STATS[stat];
+  const info = EFFECT_STATS[stat2];
   let v = total2;
   const cap = (_a = info.cap) == null ? void 0 : _a[layer];
   if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
   return v;
 }
-function effectTotal(grants, layer, stat, opts = {}) {
-  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
+function effectTotal(grants, layer, stat2, opts = {}) {
+  return clampEffect(stat2, layer, rawEffectTotal(grants, layer, stat2, opts));
 }
-function formatEffectValue(stat, value2) {
-  const info = EFFECT_STATS[stat];
+function formatEffectValue(stat2, value2) {
+  const info = EFFECT_STATS[stat2];
   const sign = info.reduction ? "\u2212" : value2 < 0 ? "\u2212" : "+";
   const abs2 = Math.abs(value2);
   const dec = (x) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -1657,9 +1727,9 @@ function techEffectGrants(techLevels2) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
     for (const e3 of techEffects(tech)) {
-      const stat = TECH_EFFECT_STAT[e3.type];
-      if (!stat) continue;
-      out.push({ stat, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      const stat2 = TECH_EFFECT_STAT[e3.type];
+      if (!stat2) continue;
+      out.push({ stat: stat2, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
     }
   }
   return out;
@@ -1667,8 +1737,8 @@ function techEffectGrants(techLevels2) {
 function techBonus(techLevels2, type, target) {
   var _a;
   if (!techLevels2) return 0;
-  const stat = TECH_EFFECT_STAT[type];
-  if (stat) return effectTotal(techEffectGrants(techLevels2), "tech", stat, { target });
+  const stat2 = TECH_EFFECT_STAT[type];
+  if (stat2) return effectTotal(techEffectGrants(techLevels2), "tech", stat2, { target });
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
@@ -5248,9 +5318,9 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficu
   }
   if (random() < Math.min(1, t.capsuleChance * mult)) {
     const st = synthesisState(player);
-    const free = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
-    if (free.length > 0) {
-      const type = free[Math.floor(random() * free.length) % free.length];
+    const free2 = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
+    if (free2.length > 0) {
+      const type = free2[Math.floor(random() * free2.length) % free2.length];
       const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
       const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
       const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
@@ -6447,6 +6517,51 @@ function lairUid(factionId) {
 function factionOfLair(uid) {
   return uid.startsWith("lair_") ? uid.slice(5) : uid === "pirates_lair" ? "varan" : "";
 }
+var TREATY_RULES = {
+  durationDays: 7,
+  /** Coût en heures de production commune (0 = gratuit). */
+  cost: { pact: 2, escort: 4, embargo: 0 },
+  /** Notoriété maximale pour signer (embargo : sans condition). */
+  maxNotoriety: { pact: 3, escort: 1, embargo: 99 },
+  /** Escorte : embuscades d'expédition × ce facteur. */
+  escortAmbush: 0.5,
+  /** Embargo : raids plus forts, primes plus grosses. */
+  embargoRaidPower: 1.25,
+  embargoBounty: 1.5,
+  embargoNotoriety: 1
+};
+function activeTreaty(st, now) {
+  const t = st == null ? void 0 : st.treaty;
+  return t && t.untilMs > now ? t : null;
+}
+function hasTreaty(player, kind, now, factionId) {
+  const states = factionStates(player);
+  return Object.entries(states).some(([id, st]) => {
+    var _a;
+    return (!factionId || id === factionId) && ((_a = activeTreaty(st, now)) == null ? void 0 : _a.kind) === kind;
+  });
+}
+function signTreaty(player, factionId, kindIn, now) {
+  var _a, _b;
+  const kind = kindIn === "pact" || kindIn === "escort" || kindIn === "embargo" ? kindIn : null;
+  if (!kind) throw new GameActionError("Trait\xE9 inconnu.");
+  const faction = findFaction(factionId);
+  if (!faction || !faction.enabled) throw new GameActionError("Faction inconnue.");
+  const st = pirateState(player, faction.id);
+  if (activeTreaty(st, now)) throw new GameActionError("Un trait\xE9 est d\xE9j\xE0 en vigueur avec cette faction.");
+  if (st.ultimatum && st.ultimatum.expiresAtMs > now || st.raidUntilMs > now) throw new GameActionError(`${faction.name} est d\xE9j\xE0 en route ou attend ta r\xE9ponse : r\xE8gle d'abord la menace en cours.`);
+  if (st.notoriety > TREATY_RULES.maxNotoriety[kind]) throw new GameActionError(`${faction.leader} ne traite pas avec toi : notori\xE9t\xE9 ${st.notoriety}, il faut ${TREATY_RULES.maxNotoriety[kind]} au plus.`);
+  const cost = TREATY_RULES.cost[kind] > 0 ? productionHours(player, TREATY_RULES.cost[kind]) : {};
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour signer.`);
+  }
+  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) - n;
+  const treaty = { kind, signedAtMs: now, untilMs: now + TREATY_RULES.durationDays * 864e5 };
+  st.treaty = treaty;
+  if (kind === "embargo") st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + TREATY_RULES.embargoNotoriety);
+  setFactionState(player, faction.id, st);
+  return { treaty, paid: cost };
+}
 function normalize(p, maxNotoriety = 8) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   return {
@@ -6461,7 +6576,8 @@ function normalize(p, maxNotoriety = 8) {
     tributesPaid: (_i = p == null ? void 0 : p.tributesPaid) != null ? _i : 0,
     lairsTaken: (_j = p == null ? void 0 : p.lairsTaken) != null ? _j : 0,
     adapt: Number.isFinite(p == null ? void 0 : p.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p.adapt)) : 1,
-    mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null
+    mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null,
+    treaty: (p == null ? void 0 : p.treaty) && typeof p.treaty === "object" && Number(p.treaty.untilMs) > 0 ? p.treaty : null
   };
 }
 function isLegacy(raw) {
@@ -6578,7 +6694,7 @@ function note3(kind, title, message, now, data) {
   return __spreadValues({ kind, title, message, createdAtMs: now, read: false }, data ? { data } : {});
 }
 function pirateTick(player, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const random = (_a = options.random) != null ? _a : Math.random;
   const out = { changed: false, raid: null, notifications: [] };
   if (!PIRATE_RULES.enabled) return out;
@@ -6602,9 +6718,10 @@ function pirateTick(player, now, options = {}) {
   if (busy) return out;
   for (const faction of FACTIONS) {
     if (!faction.enabled) continue;
+    if (((_b = activeTreaty(states[faction.id], now)) == null ? void 0 : _b.kind) === "pact" && options.force !== faction.id) continue;
     const forced = options.force === faction.id;
     if (options.force && !forced) continue;
-    const st = (_b = states[faction.id]) != null ? _b : normalize(void 0);
+    const st = (_c = states[faction.id]) != null ? _c : normalize(void 0);
     if (!st.nextListAtMs && !forced) {
       st.nextListAtMs = now + (faction.trigger.type === "wealth" ? nextListDelay(faction, random) : hours(12));
       if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
@@ -6612,16 +6729,16 @@ function pirateTick(player, now, options = {}) {
       out.changed = true;
       continue;
     }
-    const active = now - ((_c = player.resourcesUpdatedAtMs) != null ? _c : 0) <= hours(faction.trigger.activeWithinHours);
+    const active = now - ((_d = player.resourcesUpdatedAtMs) != null ? _d : 0) <= hours(faction.trigger.activeWithinHours);
     const window = hours(faction.trigger.windowDays * 24);
-    const threshold = (_d = faction.trigger.threshold) != null ? _d : 0;
+    const threshold = (_e = faction.trigger.threshold) != null ? _e : 0;
     let triggered = false;
     switch (faction.trigger.type) {
       case "aggression":
-        triggered = ((_f = (_e = options.aggression) == null ? void 0 : _e.victories) != null ? _f : 0) >= faction.trigger.minVictories;
+        triggered = ((_g = (_f = options.aggression) == null ? void 0 : _f.victories) != null ? _g : 0) >= faction.trigger.minVictories;
         break;
       case "research":
-        triggered = totalTechLevels(player) >= threshold && now - ((_h = (_g = player.stats) == null ? void 0 : _g.lastResearchAtMs) != null ? _h : 0) <= window;
+        triggered = totalTechLevels(player) >= threshold && now - ((_i = (_h = player.stats) == null ? void 0 : _h.lastResearchAtMs) != null ? _i : 0) <= window;
         break;
       case "hoard":
         triggered = active && storageFillPct(player) >= threshold;
@@ -6644,9 +6761,9 @@ function pirateTick(player, now, options = {}) {
       default:
         triggered = active;
     }
-    const eligible = forced || now >= st.nextListAtMs && now - ((_i = player.createdAtMs) != null ? _i : 0) >= hours(72) && triggered;
+    const eligible = forced || now >= st.nextListAtMs && now - ((_j = player.createdAtMs) != null ? _j : 0) >= hours(72) && triggered;
     if (!eligible) continue;
-    const tribute = tributeFor(faction, player, (_j = options.aggression) != null ? _j : null);
+    const tribute = tributeFor(faction, player, (_k = options.aggression) != null ? _k : null);
     st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(faction.answerHours) };
     if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
     setState(player, faction.id, st);
@@ -6665,7 +6782,8 @@ function pirateTick(player, now, options = {}) {
   return out;
 }
 function launchRaid(player, faction, st, now, random) {
-  const power = raidPower(faction, player, st.notoriety, st.adapt);
+  var _a;
+  const power = Math.round(raidPower(faction, player, st.notoriety, st.adapt) * (((_a = activeTreaty(st, now)) == null ? void 0 : _a.kind) === "embargo" ? TREATY_RULES.embargoRaidPower : 1));
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -6699,7 +6817,7 @@ function answerUltimatum(player, answer, now, random = Math.random) {
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
 function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   if (options.evading) bumpStat(player, "evasions");
@@ -6754,7 +6872,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
-    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_j = player.resources[res]) != null ? _j : 0) + amount3;
+    if (((_j = activeTreaty(st, now)) == null ? void 0 : _j.kind) === "embargo") for (const r of Object.keys(bounty)) bounty[r] = Math.floor(((_k = bounty[r]) != null ? _k : 0) * TREATY_RULES.embargoBounty);
+    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_l = player.resources[res]) != null ? _l : 0) + amount3;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
@@ -6765,7 +6884,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
-    player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
+    player.victories = ((_m = player.victories) != null ? _m : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     const raidLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.attackerPower, combat.defenderPower)));
@@ -8177,12 +8296,14 @@ function empireEffects(player, now = Date.now()) {
     ...commanderEffects(player),
     ...relicEffects(player),
     ...talentEffects(player),
-    ...territoryEffects(player.territory, now)
+    ...territoryEffects(player.territory, now),
+    // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
+    ...mutatorEffects(now)
   ];
 }
 function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
-  const sum3 = (stat) => effectTotal(grants, "empire", stat, { scope });
+  const sum3 = (stat2) => effectTotal(grants, "empire", stat2, { scope });
   m.attack = sum3("attack");
   m.defense = sum3("defense");
   m.buildTime = sum3("buildTime");
@@ -8513,15 +8634,15 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
-function unitStat(units, techLevels2, unitId, stat) {
+function unitStat(units, techLevels2, unitId, stat2) {
   var _a, _b, _c, _d;
   const def3 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
+  const base = (_a = def3 == null ? void 0 : def3[stat2]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
   let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  if (stat2 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat2 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
   return value2;
 }
 function computeFleetPower(units, techLevels2, fleet, stats) {
@@ -8868,6 +8989,31 @@ function bossAssaultEstimate(state, player, fleet, formation) {
   const lossMult = bossTuning(state).lossMult;
   const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
   return { power, lossPct, phase };
+}
+var BOSS_REACTIONS = ["\u{1F525}", "\u{1F4A5}", "\u{1F44F}", "\u{1F631}", "\u{1FAE1}"];
+var REACTORS_MAX = 200;
+function bossFeedKey(f) {
+  var _a, _b;
+  return `${f.t}:${(_b = f.uid) != null ? _b : `p${(_a = f.phase) != null ? _a : 0}`}`;
+}
+function reactToBossFeed(state, key, uid, emoji) {
+  var _a, _b, _c, _d, _e;
+  if (!BOSS_REACTIONS.includes(emoji)) throw new GameActionError("R\xE9action inconnue.");
+  const feed = (_a = state.feed) != null ? _a : [];
+  const i = feed.findIndex((f) => bossFeedKey(f) === key);
+  if (i < 0) throw new GameActionError("Cette ligne du fil a disparu.");
+  const entry = feed[i];
+  if (entry.uid === uid) throw new GameActionError("On ne s'applaudit pas soi-m\xEAme.");
+  const had = (_c = Object.entries((_b = entry.reactions) != null ? _b : {}).find(([, who]) => who.includes(uid))) == null ? void 0 : _c[0];
+  const reactions = {};
+  for (const [e3, who] of Object.entries((_d = entry.reactions) != null ? _d : {})) {
+    const rest = who.filter((u) => u !== uid);
+    if (rest.length) reactions[e3] = rest;
+  }
+  if (had !== emoji) reactions[emoji] = [...(_e = reactions[emoji]) != null ? _e : [], uid].slice(-REACTORS_MAX);
+  const next = [...feed];
+  next[i] = __spreadProps(__spreadValues({}, entry), { reactions });
+  return __spreadProps(__spreadValues({}, state), { feed: next });
 }
 function resolveLeviathanAssault(state, player, fleet, formation, now) {
   var _a, _b;
@@ -9708,8 +9854,45 @@ var EXPEDITION_RULES = {
   forceMinPower: 0.5,
   forceMaxPower: 0.8,
   /** Péage demandé par une faction : heures de production commune. */
-  tollHours: 1
+  tollHours: 1,
+  /** 5.16 : expéditions en chaîne. Au dernier secteur, la flotte peut pousser plus loin
+   *  (jusqu'à `maxDepth` étapes de plus, d'une demi-durée chacune). */
+  maxDepth: 3,
+  /** Butin de chaque étape profonde : × (1 + deepLootBonus × profondeur). */
+  deepLootBonus: 0.25,
+  /** Puissance des embuscades et des passages forcés : × (1 + deepRisk × profondeur). */
+  deepRisk: 0.2,
+  /** Embuscade perdue en profondeur : part de la cale perdue. */
+  deepLootLoss: 0.3
 };
+function expeditionDepth(fleet) {
+  return Math.max(0, Math.floor(Number(fleet.expedition.depth) || 0));
+}
+function deepLegMs(fleet) {
+  return Math.max(1, fleet.expedition.hours) * 18e5;
+}
+function canGoDeeper(fleet) {
+  return expeditionDepth(fleet) < EXPEDITION_RULES.maxDepth && fleetShips(fleet.units) > 0;
+}
+function offerDeeper(fleet, now) {
+  fleet.expedition.pending = { stage: 2, factionId: "", deadlineMs: now + EXPEDITION_RULES.choiceMinutes * 6e4, toll: {}, kind: "deeper" };
+}
+function resolveDeeper(fleet, choiceIn, now) {
+  const pending = fleet.expedition.pending;
+  if (!pending || pending.kind !== "deeper") throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
+  const deeper = choiceIn === "deeper" && canGoDeeper(fleet);
+  fleet.expedition.pending = null;
+  if (!deeper) {
+    const text2 = "La flotte fait demi-tour : la cale est s\xE9curis\xE9e.";
+    fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text: text2, choice: "return", depth: expeditionDepth(fleet) }];
+    return { text: text2, deeper: false };
+  }
+  const depth = expeditionDepth(fleet) + 1;
+  fleet.expedition.depth = depth;
+  const text = `Cap sur des secteurs inconnus (profondeur ${depth}) : butin \xD7${(1 + EXPEDITION_RULES.deepLootBonus * depth).toFixed(2).replace(".", ",")}, mais les embuscades se durcissent.`;
+  fleet.expedition.log = [...fleet.expedition.log, { stage: 2, atMs: now, kind: "nothing", text, choice: "deeper", depth }];
+  return { text, deeper: true };
+}
 var between = (min, max, random) => min + (max - min) * random();
 var sum2 = (r) => Object.values(r).reduce((a, b) => a + (b != null ? b : 0), 0);
 function addLoot(fleet, gain) {
@@ -9718,6 +9901,12 @@ function addLoot(fleet, gain) {
   for (const [res, n] of Object.entries(gain)) if (n > 0) loot[res] = ((_b = loot[res]) != null ? _b : 0) + Math.floor(n);
   fleet.loot = loot;
 }
+function deepen(fleet, gain) {
+  const mult = 1 + EXPEDITION_RULES.deepLootBonus * expeditionDepth(fleet);
+  if (mult === 1) return gain;
+  return Object.fromEntries(Object.entries(gain).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * mult)]));
+}
+var riskOf = (fleet) => 1 + EXPEDITION_RULES.deepRisk * expeditionDepth(fleet);
 function fleetShips(units) {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
 }
@@ -9760,8 +9949,8 @@ function launchExpedition(owner, raw, hoursIn, active, today, now, formation) {
     }
   };
 }
-function pickEvent(random) {
-  const entries = Object.entries(EXPEDITION_RULES.weights);
+function pickEvent(random, ambushFactor = 1) {
+  const entries = Object.entries(EXPEDITION_RULES.weights).map(([k, w]) => [k, k === "ambush" ? w * ambushFactor : w]);
   const total2 = entries.reduce((a, [, w]) => a + Math.max(0, w), 0);
   let roll = random() * total2;
   for (const [k, w] of entries) {
@@ -9796,19 +9985,20 @@ function fightFleet(player, fleet, ratio) {
   return { won: combat.outcome === "attacker_win", lost };
 }
 function rollExpeditionEvent(player, fleet, stage, now, random) {
+  var _a;
   const R = EXPEDITION_RULES;
-  const kind = pickEvent(random);
+  const kind = pickEvent(random, hasTreaty(player, "escort", now) ? TREATY_RULES.escortAmbush : 1);
   let text = "";
   if (kind === "nothing") {
     text = "Calme plat : rien d'int\xE9ressant dans ce secteur.";
   } else if (kind === "deposit") {
-    const gain = productionHours(player, between(R.depositMinHours, R.depositMaxHours, random));
+    const gain = deepen(fleet, productionHours(player, between(R.depositMinHours, R.depositMaxHours, random)));
     addLoot(fleet, gain);
     text = `Gisement rep\xE9r\xE9 et exploit\xE9 : ${describeGain(gain)}.`;
   } else if (kind === "rare") {
     const value2 = sum2(productionHours(player, between(R.rareMinHours, R.rareMaxHours, random)));
     const each = Math.max(1, Math.floor(value2 / Math.max(1, R.rareRate) / 4));
-    const gain = { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each };
+    const gain = deepen(fleet, { reinforcedSteel: each, cyberModule: each, syntheticNanites: each, aiFragment: each });
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
@@ -9823,19 +10013,26 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
       if (first) found[first] = 1;
     }
     fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => {
-      var _a;
-      return [id, n + ((_a = found[id]) != null ? _a : 0)];
+      var _a2;
+      return [id, n + ((_a2 = found[id]) != null ? _a2 : 0)];
     }));
     text = `\xC9pave remise en \xE9tat : ${Object.entries(found).map(([id, n]) => {
-      var _a, _b;
-      return `${n} ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
+      var _a2, _b;
+      return `${n} ${(_b = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b : id}`;
     }).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
-    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
     if (won) {
-      const gain = productionHours(player, R.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, R.victoryLootHours));
       addLoot(fleet, gain);
       text = `Embuscade repouss\xE9e (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}.`;
+    } else if (expeditionDepth(fleet) > 0 && fleet.loot) {
+      const lostLoot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * R.deepLootLoss)]));
+      fleet.loot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => {
+        var _a2;
+        return [r, (n != null ? n : 0) - ((_a2 = lostLoot[r]) != null ? _a2 : 0)];
+      }));
+      text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a d\xFB fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
     }
@@ -9843,21 +10040,23 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     const faction = FACTIONS.length > 0 ? FACTIONS[Math.floor(random() * FACTIONS.length) % FACTIONS.length] : null;
     if (!faction) {
       text = "Des signaux lointains, puis plus rien.";
+    } else if (((_a = activeTreaty(pirateState(player, faction.id), now)) == null ? void 0 : _a.kind) === "pact") {
+      text = `${faction.name} reconna\xEEt ton pavillon (pacte de p\xE9age) et te laisse passer.`;
     } else {
       const toll = productionHours(player, R.tollHours);
-      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll };
+      fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll, kind: "faction" };
       text = `${faction.name} barre la route et exige un p\xE9age de ${describeGain(toll)}.`;
       fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
       return { text, pending: true };
     }
   }
-  fleet.expedition.log = [...fleet.expedition.log, { stage, atMs: now, kind, text }];
+  fleet.expedition.log = [...fleet.expedition.log, __spreadValues({ stage, atMs: now, kind, text }, expeditionDepth(fleet) > 0 ? { depth: expeditionDepth(fleet) } : {})];
   return { text, pending: false };
 }
 function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
   var _a, _b;
   const pending = fleet.expedition.pending;
-  if (!pending) throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
+  if (!pending || pending.kind === "deeper") throw new GameActionError("Aucune d\xE9cision en attente pour cette exp\xE9dition.");
   const choice = choiceIn === "force" ? "force" : "toll";
   const faction = FACTIONS.find((f) => f.id === pending.factionId);
   const name = (_a = faction == null ? void 0 : faction.name) != null ? _a : "La faction";
@@ -9875,10 +10074,10 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
     if (st) st.notoriety = Math.max(0, st.notoriety - 1);
     text = `P\xE9age pay\xE9 \xE0 ${name} (${describeGain(paid)}) : la flotte passe, et ta r\xE9putation s'am\xE9liore.`;
   } else {
-    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random));
+    const { won, lost } = fightFleet(player, fleet, between(EXPEDITION_RULES.forceMinPower, EXPEDITION_RULES.forceMaxPower, random) * riskOf(fleet));
     if (st && faction) st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     if (won) {
-      const gain = productionHours(player, EXPEDITION_RULES.victoryLootHours);
+      const gain = deepen(fleet, productionHours(player, EXPEDITION_RULES.victoryLootHours));
       addLoot(fleet, gain);
       text = `Passage forc\xE9 face \xE0 ${name} (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}). Butin : ${describeGain(gain)}. Ta notori\xE9t\xE9 grimpe.`;
     } else {
@@ -9892,7 +10091,7 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
 }
 function finishExpedition(player, fleet, now, random = Math.random) {
   var _a;
-  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour);
+  const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
   applyXpDelta(player, xp, now);
   bumpStat(player, "expeditions");
   let relic = "";
@@ -9900,11 +10099,11 @@ function finishExpedition(player, fleet, now, random = Math.random) {
     const item = rollRelic("expedition", now, random);
     if (addRelic(player, item)) relic = ` Relique trouv\xE9e : ${relicLabel(item)} !`;
   }
-  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours, 4)));
+  const loot = describeLoot(rollLoot(player, "expedition", now, -1, random, lootDifficulty(fleet.expedition.hours * (1 + 0.5 * expeditionDepth(fleet)), 4)));
   return {
     kind: "fleet",
     title: relic ? "Exp\xE9dition termin\xE9e : relique !" : "Exp\xE9dition termin\xE9e",
-    message: `Ta flotte est rentr\xE9e : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
+    message: `Ta flotte est rentr\xE9e${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false
   };
@@ -13047,9 +13246,9 @@ function generateCumulativeChallenges(rng, focus, d, tiers2) {
   const out = {};
   let prev = [];
   for (let t = 1; t <= tiers2; t++) {
-    const free = pool.filter((k) => !prev.includes(k));
-    const feasible = free.filter((k) => by(k, t) >= 1);
-    const extra = free.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
+    const free2 = pool.filter((k) => !prev.includes(k));
+    const feasible = free2.filter((k) => by(k, t) >= 1);
+    const extra = free2.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
     const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
     const keys = candidates.map((k) => {
       var _a;
@@ -13424,6 +13623,91 @@ function nextMonthId(id) {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 }
 
+// src/game/planetLook.ts
+var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
+var stat = (p, key) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
+};
+var bossesKilled = (p) => {
+  var _a, _b;
+  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
+};
+var free = () => true;
+var OPTIONS = {
+  palette: [
+    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
+    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
+    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
+    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
+    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
+    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
+  ],
+  ring: [
+    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
+    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
+    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
+    } },
+    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
+    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
+  ],
+  atmosphere: [
+    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
+      var _a;
+      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
+    } },
+    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
+    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
+  ],
+  moon: [
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
+    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
+    } },
+    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
+    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
+  ]
+};
+var PLANET_SLOTS = [
+  { slot: "palette", label: "Palette" },
+  { slot: "ring", label: "Anneau" },
+  { slot: "atmosphere", label: "Atmosph\xE8re" },
+  { slot: "moon", label: "Lune" }
+];
+function normalizePlanetLook(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const pick4 = (slot) => {
+    var _a;
+    const id = String((_a = r[slot]) != null ? _a : "");
+    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
+  };
+  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
+}
+function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
+  const req = input && typeof input === "object" ? input : {};
+  const next = __spreadValues({}, current2);
+  for (const { slot } of PLANET_SLOTS) {
+    if (req[slot] === void 0) continue;
+    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
+    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
+    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
+    next[slot] = def3.id;
+  }
+  return next;
+}
+function unlockedPlanetLook(p, look) {
+  var _a;
+  const out = __spreadValues({}, look);
+  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
+  return out;
+}
+
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 var FREE_BANNERS = [
@@ -13524,7 +13808,7 @@ function profileStyle(p) {
   const raw = (_a = p.profileStyle) != null ? _a : {};
   const unlocked = new Set((_b = p.unlockedAchievements) != null ? _b : []);
   const pinned = Array.isArray(raw.pinned) ? raw.pinned.filter((id, i, a) => typeof id === "string" && unlocked.has(id) && a.indexOf(id) === i).slice(0, PROFILE_RULES.pinnedMax) : [];
-  return { banner: String((_c = raw.banner) != null ? _c : "nebula"), emblem: String((_d = raw.emblem) != null ? _d : "rank"), motto: String((_e = raw.motto) != null ? _e : ""), pinned };
+  return { banner: String((_c = raw.banner) != null ? _c : "nebula"), emblem: String((_d = raw.emblem) != null ? _d : "rank"), motto: String((_e = raw.motto) != null ? _e : ""), pinned, planet: normalizePlanetLook(raw.planet) };
 }
 function sanitizeMotto(text) {
   return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
@@ -13555,6 +13839,7 @@ function setProfileStyle(player, input) {
     if (ids.some((id) => !unlocked.has(id))) throw new GameActionError("Seuls les succ\xE8s obtenus peuvent \xEAtre mis en avant.");
     next.pinned = ids;
   }
+  if (req.planet !== void 0) next.planet = checkPlanetLook(player, req.planet, current2.planet);
   player.profileStyle = next;
   return next;
 }
@@ -13573,7 +13858,8 @@ function publicShowcase(p) {
       var _a2, _b2;
       return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
     }),
-    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity }))
+    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity })),
+    planet: unlockedPlanetLook(p, style.planet)
   };
 }
 
@@ -14527,6 +14813,7 @@ var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
+var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14553,7 +14840,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14561,7 +14848,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14616,6 +14903,7 @@ function applyGameContent(overrides) {
       allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
       catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
+      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.mutators) != null ? _Z : {}), { overrides: __spreadValues({}, (_aa = (_$ = (__ = overrides.rules) == null ? void 0 : __.mutators) == null ? void 0 : _$.overrides) != null ? _aa : {}) }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14640,7 +14928,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_Y = content.relicSettings) == null ? void 0 : _Y.loot, (_Z = content.relicSettings) == null ? void 0 : _Z.lootTokenCap);
+  setLootTables((_ba = content.relicSettings) == null ? void 0 : _ba.loot, (_ca = content.relicSettings) == null ? void 0 : _ca.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14662,12 +14950,14 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const __ = content.rules.allianceBoss, { bosses: allianceBosses } = __, allianceBossRules = __objRest(__, ["bosses"]);
+  const _da = content.rules.allianceBoss, { bosses: allianceBosses } = _da, allianceBossRules = __objRest(_da, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   Object.assign(CATCHUP_RULES, content.rules.catchup);
+  MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
+  MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
   current = content;
   return content;
 }
@@ -14690,7 +14980,8 @@ var RULE_GROUP_LABELS = {
   allianceBoss: "Boss d'alliance",
   wars: "Guerres",
   streak: "S\xE9rie de connexion",
-  catchup: "Rattrapage"
+  catchup: "Rattrapage",
+  mutators: "Mutateur de saison"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -14727,6 +15018,7 @@ function validateRules(rules) {
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
+  errors.push(...validateMutatorRules(merged.mutators));
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");

@@ -22,6 +22,7 @@ import { EVENT_RULES, validateBossSchedule } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { STREAK_RULES } from "@/game/streak";
 import { CATCHUP_RULES, validateCatchupRules } from "@/game/catchup";
+import { MUTATOR_RULES, validateMutatorRules } from "@/game/mutators";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -67,6 +68,8 @@ export interface GameRules {
   streak: typeof STREAK_RULES;
   /** 5.16 : rattrapage de production des petits empires. */
   catchup: typeof CATCHUP_RULES;
+  /** 5.16 : mutateur de saison (une règle spéciale par mois). */
+  mutators: typeof MUTATOR_RULES;
 }
 
 export interface GameContent {
@@ -116,6 +119,7 @@ const DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
 const DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 const DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 const DEFAULT_CATCHUP_RULES = { ...CATCHUP_RULES };
+const DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
@@ -144,7 +148,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES },
   });
 }
 
@@ -212,6 +216,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
       catchup: { ...defaults.rules.catchup, ...(overrides.rules?.catchup ?? {}) },
+      mutators: { ...defaults.rules.mutators, ...(overrides.rules?.mutators ?? {}), overrides: { ...(overrides.rules?.mutators?.overrides ?? {}) } },
       streak: (() => {
         const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
         const d = defaults.rules.streak;
@@ -268,6 +273,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(WAR_RULES, content.rules.wars);
   Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
   Object.assign(CATCHUP_RULES, content.rules.catchup);
+  MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
+  MUTATOR_RULES.overrides = { ...content.rules.mutators.overrides };
   current = content;
   return content;
 }
@@ -294,6 +301,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   wars: "Guerres",
   streak: "Série de connexion",
   catchup: "Rattrapage",
+  mutators: "Mutateur de saison",
 };
 
 /**
@@ -337,6 +345,7 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
+  errors.push(...validateMutatorRules(merged.mutators));
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;

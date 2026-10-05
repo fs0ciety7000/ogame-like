@@ -41,9 +41,9 @@ export function HudPanel({
   children?: ReactNode;
 }) {
   return (
-    <Card className={cn("flex flex-col gap-3 p-4", accent && "border-t-2 border-t-gold-glow", className)}>
+    <Card className={cn("hud-panel flex flex-col gap-3 p-4", accent && "border-t-2 border-t-gold-glow", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className={cn("hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
+        <h2 className={cn("hud-panel-title hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
           {icon}
           <span className="min-w-0">{title}</span>
         </h2>

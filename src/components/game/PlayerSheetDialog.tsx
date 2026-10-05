@@ -1,4 +1,6 @@
 import { usePlayerStore } from "@/store/playerStore";
+import { HomePlanet } from "@/components/game/HomePlanet";
+import { normalizePlanetLook } from "@/game/planetLook";
 import { toast } from "sonner";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { relicImage } from "@/game/relics";
@@ -90,13 +92,20 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
         {feats?.showcase && (
           <div
             aria-hidden
-            className="-mx-6 -mt-6 mb-1 h-24 bg-cover bg-center"
+            className="relative -mx-6 -mt-6 mb-1 h-24 bg-cover bg-center"
             style={
               feats.showcase.banner.image
                 ? { backgroundImage: `linear-gradient(180deg, transparent 30%, var(--color-space-900) 100%), url(${assetUrl(feats.showcase.banner.image)})` }
                 : { background: feats.showcase.banner.gradient }
             }
-          />
+          >
+            {/* 5.16 : planète personnalisée du joueur */}
+            {feats.showcase.planet && (
+              <div className="pointer-events-none absolute -bottom-6 right-10">
+                <HomePlanet buildings={{}} size={44} look={normalizePlanetLook(feats.showcase.planet)} />
+              </div>
+            )}
+          </div>
         )}
         <div className="flex items-center gap-3 pr-6">
           {entry && !entry.npc ? (

@@ -924,6 +924,7 @@ routerAdd("POST", "/api/cosmic/alliance/typing", (e) => require(`${__hooks}/cosm
 
 /* ---------- Boss d'alliance (v4.6) ---------- */
 
+routerAdd("POST", "/api/cosmic/boss/react", (e) => require(`${__hooks}/cosmic_db.js`).bossReact(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/allianceboss", (e) => require(`${__hooks}/cosmic_db.js`).allianceBossRequest(e), $apis.requireAuth("users"));
 
 cronAdd("cosmic_allianceboss", "*/5 * * * *", () => {

@@ -93,7 +93,7 @@ export type GameAction =
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
   | { type: "streakClaim" }
-  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] } }
+  | { type: "setProfileStyle"; style: { banner?: string; emblem?: string; motto?: string; pinned?: string[]; planet?: Partial<import("@/game/planetLook").PlanetLook> } }
   | { type: "passClaim"; tier: number }
   | { type: "seenAnnouncements"; ids: string[] }
   | { type: "planBuilding"; buildingId: string }

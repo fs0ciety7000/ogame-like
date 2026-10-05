@@ -4,6 +4,8 @@ import { Check, Lock, Save } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { HomePlanet } from "@/components/game/HomePlanet";
+import { PLANET_SLOTS, planetLookOptions, type PlanetLook } from "@/game/planetLook";
 import { bannerOptions, emblemOptions, PROFILE_RULES, profileStyle, type CosmeticOption } from "@/game/profile";
 import { getRankIcon } from "@/game/ranks";
 import { ACHIEVEMENTS, TIER_LABELS } from "@/game/achievements";
@@ -45,17 +47,18 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
   const [emblem, setEmblem] = useState(current.emblem);
   const [motto, setMotto] = useState(current.motto);
   const [pinned, setPinned] = useState<string[]>(current.pinned);
+  const [planet, setPlanet] = useState<PlanetLook>(current.planet);
   const owned = ACHIEVEMENTS.filter((a) => (player.unlockedAchievements ?? []).includes(a.id));
   const [busy, setBusy] = useState(false);
   const banners = bannerOptions(player);
   const emblems = emblemOptions(player);
-  const changed = banner !== current.banner || emblem !== current.emblem || motto.trim() !== current.motto || pinned.join(",") !== current.pinned.join(",");
+  const changed = banner !== current.banner || emblem !== current.emblem || motto.trim() !== current.motto || pinned.join(",") !== current.pinned.join(",") || JSON.stringify(planet) !== JSON.stringify(current.planet);
   const preview = banners.find((b) => b.id === banner);
 
   const save = async () => {
     setBusy(true);
     try {
-      const saved = await saveProfileStyle({ banner, emblem, motto, pinned });
+      const saved = await saveProfileStyle({ banner, emblem, motto, pinned, planet });
       // v5.9 : le style validé par le serveur s'affiche tout de suite, sans attendre la synchronisation.
       const latest = usePlayerStore.getState().player;
       if (latest && saved) setPlayerData({ ...latest, profileStyle: saved });
@@ -64,6 +67,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
         setEmblem(saved.emblem);
         setMotto(saved.motto);
         setPinned(saved.pinned);
+        if (saved.planet) setPlanet(saved.planet);
       }
       toast.success("Fiche publique mise à jour.");
     } catch (err) {
@@ -108,6 +112,47 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
                 </div>
               </Option>
             ))}
+          </div>
+        </div>
+        {/* 5.16 : planète personnalisée (fiche publique, galaxie, accueil) */}
+        <div>
+          <p className="hud-eyebrow mb-2 text-slate-400">Planète</p>
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+            <div className="grid shrink-0 place-items-center">
+              <HomePlanet buildings={player.buildings} size={56} look={planet} />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+              {PLANET_SLOTS.map(({ slot, label }) => (
+                <div key={slot} className="flex flex-col gap-1">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{label}</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {planetLookOptions(player, slot).map((o) => {
+                      const on = planet[slot] === o.id;
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          disabled={!o.unlocked}
+                          aria-pressed={on}
+                          title={o.unlocked ? o.label : `${o.label} : ${o.hint}`}
+                          onClick={() => setPlanet((p) => ({ ...p, [slot]: o.id }))}
+                          className={cn(
+                            "hud-cut-sm flex items-center gap-1 border px-2 py-1 text-xs transition-colors",
+                            on ? "border-cyan-glow bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-300 hover:border-cyan-glow/40",
+                            !o.unlocked && "cursor-not-allowed opacity-40",
+                          )}
+                        >
+                          {!o.unlocked && <Lock className="h-3 w-3" />}
+                          {on && <Check className="h-3 w-3" />}
+                          {o.label}
+                          {!o.unlocked && <span className="text-[10px] text-slate-500">· {o.hint}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <label className="flex flex-col gap-1 text-xs text-slate-400">

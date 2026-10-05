@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
-import { EXPEDITION_RULES, finishExpedition, launchExpedition, resolveExpeditionChoice, rollExpeditionEvent, type ExpeditionFleet } from "@/game/expeditions";
+import { canGoDeeper, deepLegMs, expeditionDepth, EXPEDITION_RULES, finishExpedition, launchExpedition, offerDeeper, resolveDeeper, resolveExpeditionChoice, rollExpeditionEvent, type ExpeditionFleet } from "@/game/expeditions";
 import { pirateState } from "@/game/pirates";
 import type { PlayerState } from "@/types/game";
 
@@ -89,5 +89,39 @@ describe("expeditions", () => {
     finishExpedition(p, fleet, 4000);
     expect(p.xp).toBe(xp + 4 * EXPEDITION_RULES.xpPerHour);
     expect(p.stats?.expeditions).toBe(1);
+  });
+});
+
+describe("expéditions en chaîne (5.16)", () => {
+  it("pousser plus loin augmente la profondeur et le butin ; rentrer sécurise", () => {
+    const p = player();
+    const f = launched(p);
+    expect(canGoDeeper(f)).toBe(true);
+    offerDeeper(f, 5000);
+    expect(f.expedition.pending?.kind).toBe("deeper");
+    expect(() => resolveExpeditionChoice(p, f, "force", 5001, Math.random)).toThrow();
+    const out = resolveDeeper(f, "deeper", 5001);
+    expect(out.deeper).toBe(true);
+    expect(expeditionDepth(f)).toBe(1);
+    expect(deepLegMs(f)).toBe(2 * 3600_000);
+    // Gisement en profondeur 1 : ×1,25 par rapport à la surface.
+    const surface = launched(player());
+    rollExpeditionEvent(p, surface, 2, 6000, seq(weightsBefore("deposit"), 0.5));
+    rollExpeditionEvent(p, f, 2, 6000, seq(weightsBefore("deposit"), 0.5));
+    expect(f.loot?.scrap ?? 0).toBe(Math.floor((surface.loot?.scrap ?? 0) * 1.25));
+    offerDeeper(f, 7000);
+    expect(resolveDeeper(f, "return", 7001).deeper).toBe(false);
+    expect(f.expedition.pending).toBeNull();
+    f.expedition.depth = EXPEDITION_RULES.maxDepth;
+    expect(canGoDeeper(f)).toBe(false);
+  });
+
+  it("l'XP de fin compte une demi-durée de plus par profondeur", () => {
+    const p = player();
+    const f = launched(p);
+    f.expedition.depth = 2;
+    const xp0 = p.xp ?? 0;
+    finishExpedition(p, f, 9000, () => 0.99);
+    expect((p.xp ?? 0) - xp0).toBeGreaterThanOrEqual(4 * EXPEDITION_RULES.xpPerHour * 2);
   });
 });

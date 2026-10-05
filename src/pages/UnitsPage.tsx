@@ -12,6 +12,7 @@ import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PostureCard } from "@/components/game/PostureCard";
+import { UnitSpecButton } from "@/components/game/UnitSpecSheet";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -204,6 +205,9 @@ export function UnitsPage() {
                   <div>
                     <h3 className="hud-title text-xl text-white">{unit.name}</h3>
                     <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint ? "" : unit.description}</p>
+                    <div className="-ml-2 mt-1">
+                      <UnitSpecButton unit={unit} player={player} />
+                    </div>
                   </div>
 
                   {isLocked ? (

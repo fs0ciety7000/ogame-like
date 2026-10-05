@@ -1,3 +1,5 @@
+import { MutatorCallout } from "@/components/game/MutatorCallout";
+import { profileStyle } from "@/game/profile";
 import { Card } from "@/components/ui/card";
 import { HudPanel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -20,6 +22,7 @@ import { OnboardingChecklist } from "@/components/game/OnboardingChecklist";
 import { StoryDialog } from "@/components/game/StoryDialog";
 import { SystemLogPanel } from "@/components/game/SystemLogPanel";
 import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
+import { PlanetPhotoMode } from "@/components/game/PlanetPhotoMode";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
@@ -108,7 +111,7 @@ export function DashboardPage() {
     planet: (
       <Card className="flex flex-wrap items-center justify-center gap-6 p-4 sm:justify-start sm:p-5">
         <div className="mx-auto sm:mx-0">
-          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} />
+          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} look={profileStyle(player).planet} />
         </div>
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
@@ -119,6 +122,9 @@ export function DashboardPage() {
           <div className="mt-4">
             <HomePlanetLegend buildings={player.buildings} />
           </div>
+          <div className="-ml-2 mt-2">
+            <PlanetPhotoMode buildings={player.buildings} life={planetLife} look={profileStyle(player).planet} caption={player.pseudo} />
+          </div>
         </div>
       </Card>
     ),
@@ -128,6 +134,8 @@ export function DashboardPage() {
     challenge: (
       <div className="flex flex-col gap-3">
         <WeeklyRecapCard />
+        {/* 5.16 : règle spéciale du mois. */}
+        <MutatorCallout compact />
         {/* 5.15.7 : passe et mois en cours sur l'accueil. */}
         <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           <DailyMissionsCard now={now} />

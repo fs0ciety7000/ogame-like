@@ -38,7 +38,7 @@ export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHisto
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
 export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoice, rollExpeditionEvent } from "@/game/expeditions";
-export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, resolveLeviathanAssault, seasonBossFlightMinutes, spawnLeviathan, worldBossForStart, worldBossName, worldBossOf, worldBossTitle } from "@/game/leviathan";
+export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, reactToBossFeed, resolveLeviathanAssault, seasonBossFlightMinutes, spawnLeviathan, worldBossForStart, worldBossName, worldBossOf, worldBossTitle } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
 export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
@@ -195,3 +195,5 @@ export { LOGIC_VERSION } from "@/game/logicVersion";
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";
 export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HISTORY_MAX, MAIL_SCHEDULE_KEY, MAIL_SCHEDULE_MAX, normalizeSegment, scheduleState, trackCampaign } from "@/game/mailSegments";
+export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
+export { signTreaty } from "@/game/pirates";

@@ -218,6 +218,14 @@ const AMBIENCE: Record<ThemeId, { notes: number[]; type: OscillatorType; cutoff:
   aurora: { notes: [73.4, 92.5, 110, 138.6], type: "sine", cutoff: 1100, lfo: 0.09 },
   // Signal : quintes à vide, sèches et graphiques (La, Mi, La).
   signal: { notes: [55, 82.4, 110, 164.8], type: "triangle", cutoff: 650, lfo: 0.04 },
+  // Voyageur : nappe éthérée et lente (Mi, Si, Mi, Sol#).
+  voyageur: { notes: [82.4, 123.5, 164.8, 207.7], type: "sine", cutoff: 1600, lfo: 0.05 },
+  // Omni : synthé analogique chaud et ample (Do, Sol, Do, Mib).
+  omni: { notes: [65.4, 98, 130.8, 155.6], type: "sawtooth", cutoff: 520, lfo: 0.08 },
+  // Spartan : chœur grave et solennel (Ré, La, Ré, Fa).
+  spartan: { notes: [36.7, 55, 73.4, 87.3], type: "triangle", cutoff: 480, lfo: 0.06 },
+  // Constellation : accord ouvert, contemplatif (Sol, Ré, Sol, Si).
+  constellation: { notes: [49, 73.4, 98, 123.5], type: "sine", cutoff: 900, lfo: 0.03 },
 };
 
 function buildAmbience(audio: AudioContext, theme: ThemeId): AmbienceGraph {

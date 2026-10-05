@@ -1,3 +1,4 @@
+import { mutatorEffects } from "@/game/mutators";
 import { commanderEffects } from "@/game/commanders";
 import { relicEffects } from "@/game/relics";
 import { territoryEffects } from "@/game/territories";
@@ -58,6 +59,8 @@ export function empireEffects(player: ModPlayer | null | undefined, now: number 
     ...relicEffects(player as Pick<PlayerState, "relics" | "ascensions">),
     ...talentEffects(player as Pick<PlayerState, "talents">),
     ...territoryEffects(player.territory, now),
+    // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
+    ...mutatorEffects(now),
   ];
 }
 

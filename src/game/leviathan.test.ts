@@ -4,6 +4,8 @@ import { defaultPlayerState } from "@/game/defaults";
 import { EVENT_RULES } from "@/game/events";
 import {
   BOSS_PHASE_RULES,
+  bossFeedKey,
+  reactToBossFeed,
   bossAssaultEstimate,
   SEASON_BOSS_TUNING,
   seasonBossCooldownHours,
@@ -198,5 +200,22 @@ describe("phases de combat et fil (v5.10.5)", () => {
     const res = resolveLeviathanAssault(st, a, { chasseur: 100_000 }, undefined, START + H);
     expect(res.state.feed?.[0]).toMatchObject({ uid: "a", damage: res.damage });
     if (res.state.hp > 0 && bossFightPhase(res.state) > 1) expect(res.state.feed?.[1]).toMatchObject({ phase: bossFightPhase(res.state) });
+  });
+  it("spectators react once per feed line, never to their own assault", () => {
+    const a = player("a", 1000);
+    let st = spawnLeviathan({ id: "x", startMs: START, endMs: START + 72 * H }, [a, player("b")], null);
+    st = resolveLeviathanAssault(st, a, { chasseur: 10 }, undefined, START + H).state;
+    const key = bossFeedKey(st.feed![0]);
+    expect(() => reactToBossFeed(st, key, "a", "🔥")).toThrow(/soi-même/);
+    expect(() => reactToBossFeed(st, key, "b", "🍕")).toThrow(/inconnue/);
+    expect(() => reactToBossFeed(st, "0:zz", "b", "🔥")).toThrow(/disparu/);
+    st = reactToBossFeed(st, key, "b", "🔥");
+    st = reactToBossFeed(st, key, "c", "🔥");
+    expect(st.feed![0].reactions).toEqual({ "🔥": ["b", "c"] });
+    // Autre emoji : remplace ; même emoji : retire.
+    st = reactToBossFeed(st, key, "b", "👏");
+    expect(st.feed![0].reactions).toEqual({ "🔥": ["c"], "👏": ["b"] });
+    st = reactToBossFeed(st, key, "b", "👏");
+    expect(st.feed![0].reactions).toEqual({ "🔥": ["c"] });
   });
 });

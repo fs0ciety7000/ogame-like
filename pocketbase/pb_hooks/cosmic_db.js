@@ -296,6 +296,8 @@ function showcaseOf(player) {
       commanders: parseJsonField(player, "commanders", null),
       relics: parseJsonField(player, "relics", null),
       ascensions: player.getInt("ascensions"),
+      referral: parseJsonField(player, "referral", null),
+      seasonPass: parseJsonField(player, "seasonPass", null),
     });
   } catch (err) {
     console.log(`[cosmic] vitrine du profil : ${err}`);
@@ -963,7 +965,26 @@ function processPirates(game, now, uid, force) {
 /** POST /api/cosmic/pirates { answer: "pay" | "refuse" } */
 function piratesRequest(e) {
   const game = loadGame();
-  const answer = body(e).answer === "pay" ? "pay" : "refuse";
+  const req = body(e);
+  // 5.16 : traité avec une faction (pacte de péage, escorte, embargo).
+  if (req.action === "treaty") {
+    let out = null;
+    $app.runInTransaction((txApp) => {
+      const now = Date.now();
+      applyContent(txApp, game);
+      const loaded = loadPlayer(txApp, game, e.auth.id);
+      const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+      try {
+        out = game.signTreaty(flushed.player, String(req.factionId || ""), req.kind, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+      notify(txApp, e.auth.id, flushed.notifications);
+    });
+    return e.json(200, out);
+  }
+  const answer = req.answer === "pay" ? "pay" : "refuse";
   let response = null;
   $app.runInTransaction((txApp) => {
     const now = Date.now();
@@ -2323,6 +2344,27 @@ function finishExpeditionFleet(txApp, game, rec, fleet, player, owner, queues, n
   saveExpeditionFleet(txApp, rec, fleet);
 }
 
+/** 5.16 : au dernier secteur, propose de pousser plus loin (sinon fin de l'expédition). */
+function expeditionEndOrDeeper(txApp, game, rec, fleet, player, owner, queues, notes, now) {
+  if (!game.canGoDeeper(fleet)) return finishExpeditionFleet(txApp, game, rec, fleet, player, owner, queues, notes, now);
+  game.offerDeeper(fleet, now);
+  const depth = game.expeditionDepth(fleet) + 1;
+  const mult = (1 + game.EXPEDITION_RULES.deepLootBonus * depth).toFixed(2).replace(".", ",");
+  notes.push({
+    kind: "fleet",
+    title: "Expédition : pousser plus loin ?",
+    message: `Rentrer maintenant sécurise la cale. Pousser jusqu'à la profondeur ${depth} : butin ×${mult}, embuscades plus dures, et une défaite coûte ${Math.round(game.EXPEDITION_RULES.deepLootLoss * 100)} % de la cale. Sans réponse dans ${game.EXPEDITION_RULES.choiceMinutes} min, la flotte rentre.`,
+    createdAtMs: now,
+    read: false,
+    link: "/game/missions",
+  });
+  rec.set("status", "decision");
+  rec.set("stationedUntilMs", fleet.expedition.pending.deadlineMs);
+  savePlayer(txApp, game, owner, player, queues);
+  notify(txApp, fleet.ownerUid, notes);
+  saveExpeditionFleet(txApp, rec, fleet);
+}
+
 /** Événement d'expédition : à mi-parcours (1) ou au retour (2). */
 function expeditionStep(txApp, game, rec, now, stage) {
   const fleet = expeditionFleet(rec);
@@ -2354,7 +2396,7 @@ function expeditionStep(txApp, game, rec, now, stage) {
     saveExpeditionFleet(txApp, rec, fleet);
     return;
   }
-  finishExpeditionFleet(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
+  expeditionEndOrDeeper(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
 }
 
 /** Décision face à une faction (joueur, ou péage par défaut à l'échéance). */
@@ -2370,9 +2412,21 @@ function expeditionDecide(txApp, game, rec, now, choice) {
   const flushed = game.flushPlayer(owner.player, owner.queues, now);
   const player = flushed.player;
   const notes = flushed.notifications.slice();
+  rec.set("stationedUntilMs", null);
+  // 5.16 : pousser plus loin (nouvelle étape d'une demi-durée) ou rentrer.
+  if (pending.kind === "deeper") {
+    const res = game.resolveDeeper(fleet, choice, now);
+    notes.push({ kind: "fleet", title: res.deeper ? "Expédition : plus loin" : "Expédition : retour", message: res.text, createdAtMs: now, read: false });
+    if (!res.deeper) return finishExpeditionFleet(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
+    rec.set("status", "returning");
+    rec.set("returnAtMs", now + game.deepLegMs(fleet));
+    savePlayer(txApp, game, owner, player, flushed.queues);
+    notify(txApp, fleet.ownerUid, notes);
+    saveExpeditionFleet(txApp, rec, fleet);
+    return;
+  }
   const text = game.resolveExpeditionChoice(player, fleet, choice, now, Math.random);
   notes.push({ kind: "fleet", title: "Expédition : rencontre", message: text, createdAtMs: now, read: false });
-  rec.set("stationedUntilMs", null);
   if (pending.stage === 1) {
     rec.set("status", "returning");
     rec.set("returnAtMs", Math.max(now, fleet.departAtMs + (fleet.durationMs || 0)));
@@ -2381,7 +2435,7 @@ function expeditionDecide(txApp, game, rec, now, choice) {
     saveExpeditionFleet(txApp, rec, fleet);
     return;
   }
-  finishExpeditionFleet(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
+  expeditionEndOrDeeper(txApp, game, rec, fleet, player, owner, flushed.queues, notes, now);
 }
 
 /** POST /api/cosmic/expedition/choose { fleetId, choice: "toll" | "force" } */
@@ -2396,7 +2450,8 @@ function expeditionChoose(e) {
     if (!rec || rec.getString("ownerUid") !== uid || rec.getString("mission") !== "expedition") throw new NotFoundError("Expédition introuvable.");
     if (rec.getString("status") !== "decision") throw new BadRequestError("Aucune décision en attente.");
     try {
-      expeditionDecide(txApp, game, rec, Date.now(), req.choice === "force" ? "force" : "toll");
+      const choice = ["toll", "force", "deeper", "return"].indexOf(String(req.choice)) >= 0 ? String(req.choice) : "toll";
+      expeditionDecide(txApp, game, rec, Date.now(), choice);
     } catch (err) {
       throw asHttpError(game, err);
     }
@@ -6878,6 +6933,44 @@ function distributeAllianceBoss(txApp, game, allianceRec, state, now) {
 }
 
 /** POST /api/cosmic/allianceboss { action: "call" } */
+/** 5.16 : réaction d'un spectateur sur le fil d'un boss (mondial, de saison ou d'alliance). */
+function bossReact(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const boss = String(req.boss || "");
+  const key = String(req.key || "").slice(0, 80);
+  const emoji = String(req.emoji || "").slice(0, 8);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    try {
+      if (boss === "leviathan") {
+        const state = readLeviathan(txApp, game);
+        if (!state) throw new BadRequestError("Aucun boss en cours.");
+        out = game.reactToBossFeed(state, key, uid, emoji);
+        writeLeviathan(txApp, out);
+      } else if (boss === "season") {
+        const state = readSeasonBoss(txApp, game);
+        if (!state) throw new BadRequestError("Aucun boss en cours.");
+        out = game.reactToBossFeed(state, key, uid, emoji);
+        writeSeasonBoss(txApp, game, out);
+      } else if (boss === "alliance") {
+        const actor = findOrNull(txApp, "players", uid);
+        const allianceId = actor ? actor.getString("allianceId") : "";
+        const allianceRec = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+        const state = allianceRec ? readAllianceBoss(game, allianceRec) : null;
+        if (!state) throw new BadRequestError("Aucun boss d'alliance en cours.");
+        out = game.reactToBossFeed(state, key, uid, emoji);
+        allianceRec.set("boss", out);
+        txApp.save(allianceRec);
+      } else throw new BadRequestError("Boss inconnu.");
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+  });
+  return e.json(200, { ok: true });
+}
+
 function allianceBossRequest(e) {
   const game = loadGame();
   const uid = e.auth.id;
@@ -7437,4 +7530,4 @@ function adminCasino(e) {
   return e.json(200, out);
 }
 
-module.exports = { mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

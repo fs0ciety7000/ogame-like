@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { BookOpen, Flame, ScrollText, Trophy } from "lucide-react";
+import { MutatorCallout } from "@/components/game/MutatorCallout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,7 @@ export function ChroniclesPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader backdrop={month.boss.image} eyebrow={`Chroniques · ${month.theme.label}`} title={month.title} description={month.synopsis ?? "Quatre épisodes ce mois-ci : le 1er, le 8, le 15 et le 22."} />
+      <MutatorCallout />
 
       <HudPanel
         icon={<BookOpen />}

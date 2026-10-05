@@ -47,7 +47,7 @@ export type EffectLayer = "tech" | "empire";
  *  « pvp » seulement entre joueurs (capsules). */
 export type EffectScope = "all" | "home" | "colonies" | "pvp";
 
-export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule";
+export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season";
 
 export interface EffectSourceRef {
   kind: EffectSourceKind;
@@ -118,6 +118,7 @@ export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
   talent: "Talent",
   territory: "Territoire",
   capsule: "Capsule",
+  season: "Mutateur de saison",
 };
 
 export interface SumOptions {
