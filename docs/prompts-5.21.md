@@ -1,6 +1,6 @@
 # 5.21 : prompts Midjourney des nouvelles illustrations
 
-Les trois unités et la relique ajoutées en 5.21 utilisent pour l'instant une **image provisoire** (copie d'une illustration existante). Il suffit de remplacer le fichier : le chemin ne change pas.
+Les trois unités ont leur illustration définitive (512 × 512). Seule la relique Clé de soudure utilise encore une **image provisoire** (copie de la Matrice de réparation) : il suffit de remplacer le fichier, le chemin ne change pas.
 
 Rappels de style (voir `docs/DESIGN.md`) :
 
@@ -10,11 +10,11 @@ Rappels de style (voir `docs/DESIGN.md`) :
 
 ## Unités (`public/assets/units/<id>.webp`)
 
-| Fichier | Provisoire actuel |
+| Fichier | État |
 |:--|:--|
-| `bastion.webp` | copie du Croiseur Nova |
-| `batterie_essaim.webp` | copie de la Batterie anti-aérienne |
-| `vaisseau_atelier.webp` | copie du Cargo |
+| `bastion.webp` | en place |
+| `batterie_essaim.webp` | en place |
+| `vaisseau_atelier.webp` | en place |
 
 ### Bastion (forteresse volante, classe Fort)
 
