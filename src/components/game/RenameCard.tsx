@@ -55,7 +55,7 @@ export function RenameCard({ player }: { player: PlayerState }) {
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <PenLine className="h-4 w-4 text-cyan-glow" />
-        <p className="hud-title text-sm text-white">Changer de pseudo</p>
+        <p className="hud-title text-sm text-slate-100">Changer de pseudo</p>
         <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400">
           <img src={assetUrl(KESH.amberIcon)} alt="Ambre" className="h-4 w-4" /> {RENAME_RULES.amber} Ambre · une seule fois
         </span>

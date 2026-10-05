@@ -110,6 +110,8 @@ __export(hooksEntry_exports, {
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
+  MISSIONS: () => MISSIONS,
+  ONLINE_MS: () => ONLINE_MS,
   PASSKEY_RULES: () => PASSKEY_RULES,
   PASS_POINTS: () => PASS_POINTS,
   PASS_SEASONS_SECTION: () => PASS_SEASONS_SECTION,
@@ -131,17 +133,21 @@ __export(hooksEntry_exports, {
   SERVER_POT_KEY: () => SERVER_POT_KEY,
   STAFF_KEY: () => STAFF_KEY,
   TERRITORY_RULES: () => TERRITORY_RULES,
+  TERRITORY_WAR_KEY: () => TERRITORY_WAR_KEY,
+  TERRITORY_WAR_RULES: () => TERRITORY_WAR_RULES,
   TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
   VACATION_RULES: () => VACATION_RULES,
   WARLORD_RULES: () => WARLORD_RULES,
   WAR_CHEST_RULES: () => WAR_CHEST_RULES,
   WAR_RULES: () => WAR_RULES,
+  XP_SOURCE_LABELS: () => XP_SOURCE_LABELS,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
   activeUltimatum: () => activeUltimatum,
   activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
+  activityProfile: () => activityProfile,
   addCapsule: () => addCapsule,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
@@ -171,10 +177,12 @@ __export(hooksEntry_exports, {
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
   assertReportQuota: () => assertReportQuota,
+  auditFlags: () => auditFlags,
   autoDraftMonths: () => autoDraftMonths,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
   balanceSnapshot: () => balanceSnapshot,
+  battlePairs: () => battlePairs,
   beaconReturn: () => beaconReturn,
   bindingPactBetween: () => bindingPactBetween,
   blogPostFromRecord: () => blogPostFromRecord,
@@ -226,6 +234,7 @@ __export(hooksEntry_exports, {
   clientChallenge: () => clientChallenge,
   closeElite: () => closeElite,
   closeLeviathan: () => closeLeviathan,
+  closeTerritoryWar: () => closeTerritoryWar,
   coalitionRanking: () => coalitionRanking,
   codexEntries: () => codexEntries,
   codexProgress: () => codexProgress,
@@ -332,11 +341,14 @@ __export(hooksEntry_exports, {
   isLeviathanWeek: () => isLeviathanWeek,
   isPublic: () => isPublic,
   isStaffRole: () => isStaffRole,
+  isTerritoryWarActive: () => isTerritoryWarActive,
   isWarlordUid: () => isWarlordUid,
   jackpotAmounts: () => jackpotAmounts,
   leagueInfo: () => leagueInfo,
   leagueTick: () => leagueTick,
   leagueWeekLabel: () => leagueWeekLabel,
+  ledgerSince: () => ledgerSince,
+  ledgerTotals: () => ledgerTotals,
   leviathanRanking: () => leviathanRanking,
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
@@ -346,6 +358,8 @@ __export(hooksEntry_exports, {
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
   makeRelic: () => makeRelic,
   mergeDebris: () => mergeDebris,
+  missionRewardFactor: () => missionRewardFactor,
+  missionXpCeiling: () => missionXpCeiling,
   monthsToGenerate: () => monthsToGenerate,
   mythicFor: () => mythicFor,
   nearestWarlord: () => nearestWarlord,
@@ -369,9 +383,13 @@ __export(hooksEntry_exports, {
   normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
   normalizeStaff: () => normalizeStaff,
+  normalizeTerritoryWar: () => normalizeTerritoryWar,
+  notifSource: () => notifSource,
+  notifXp: () => notifXp,
   offerDeeper: () => offerDeeper,
   offerReserved: () => offerReserved,
   onVacation: () => onVacation,
+  openTerritoryWar: () => openTerritoryWar,
   openVendetta: () => openVendetta,
   pactOpen: () => pactOpen,
   parisDay: () => parisDay,
@@ -382,6 +400,7 @@ __export(hooksEntry_exports, {
   passSeasonAllowed: () => passSeasonAllowed,
   passkeyUtf8: () => utf8Encode,
   patrolTurnaround: () => patrolTurnaround,
+  percentiles: () => percentiles,
   performAllianceAction: () => performAllianceAction,
   performAttack: () => performAttack,
   performFleetReturn: () => performFleetReturn,
@@ -466,7 +485,9 @@ __export(hooksEntry_exports, {
   sanitizePactMessage: () => sanitizePactMessage,
   scheduleState: () => scheduleState,
   scoreBattle: () => scoreBattle,
+  scoreHoldHour: () => scoreHoldHour,
   scoreSpin: () => scoreSpin,
+  scoreTerritoryWar: () => scoreTerritoryWar,
   seasonBossFlightMinutes: () => seasonBossFlightMinutes,
   seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
@@ -476,6 +497,7 @@ __export(hooksEntry_exports, {
   seasonWarPoints: () => seasonWarPoints,
   seasonWarStandings: () => seasonWarStandings,
   seasonXpFor: () => seasonXpFor,
+  sectorLabel: () => sectorLabel,
   sectorOf: () => sectorOf,
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
@@ -493,6 +515,8 @@ __export(hooksEntry_exports, {
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
   takeFromPot: () => takeFromPot,
+  territoryWarRewards: () => territoryWarRewards,
+  territoryWarWindow: () => territoryWarWindow,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
   trackCampaign: () => trackCampaign,
@@ -525,6 +549,7 @@ __export(hooksEntry_exports, {
   warlordsConfig: () => warlordsConfig,
   warlordsState: () => warlordsState,
   weekWindow: () => weekWindow,
+  windowMs: () => windowMs,
   worldBossForStart: () => worldBossForStart,
   worldBossName: () => worldBossName,
   worldBossOf: () => worldBossOf,
@@ -692,28 +717,28 @@ function inScope(g, scope) {
   const s = (_a = g.scope) != null ? _a : "all";
   return s === "all" || s === scope;
 }
-function rawEffectTotal(grants, layer, stat2, opts = {}) {
+function rawEffectTotal(grants, layer, stat3, opts = {}) {
   let total2 = 0;
   for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat2 || !inScope(g, opts.scope)) continue;
+    if (g.layer !== layer || g.stat !== stat3 || !inScope(g, opts.scope)) continue;
     if (opts.target !== void 0 && g.target !== opts.target) continue;
     total2 += g.value;
   }
   return total2;
 }
-function clampEffect(stat2, layer, total2) {
+function clampEffect(stat3, layer, total2) {
   var _a;
-  const info = EFFECT_STATS[stat2];
+  const info = EFFECT_STATS[stat3];
   let v = total2;
   const cap = (_a = info.cap) == null ? void 0 : _a[layer];
   if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
   return v;
 }
-function effectTotal(grants, layer, stat2, opts = {}) {
-  return clampEffect(stat2, layer, rawEffectTotal(grants, layer, stat2, opts));
+function effectTotal(grants, layer, stat3, opts = {}) {
+  return clampEffect(stat3, layer, rawEffectTotal(grants, layer, stat3, opts));
 }
-function formatEffectValue(stat2, value2) {
-  const info = EFFECT_STATS[stat2];
+function formatEffectValue(stat3, value2) {
+  const info = EFFECT_STATS[stat3];
   const sign = info.reduction ? "\u2212" : value2 < 0 ? "\u2212" : "+";
   const abs2 = Math.abs(value2);
   const dec = (x) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -1525,6 +1550,9 @@ function sectorOf(planetId) {
   const row = Math.min(TERRITORY_RULES.rows - 1, Math.floor(c.y * TERRITORY_RULES.rows));
   return row * TERRITORY_RULES.cols + col;
 }
+function sectorLabel(id) {
+  return `${String.fromCharCode(65 + id % TERRITORY_RULES.cols)}${Math.floor(id / TERRITORY_RULES.cols) + 1}`;
+}
 function levelsOf(b) {
   return Object.values(b != null ? b : {}).reduce((a, s) => {
     var _a;
@@ -1565,8 +1593,8 @@ function territoryBonus(t, now) {
 }
 function territoryEffects(t, now) {
   var _a, _b;
-  const pct5 = territoryBonus(t, now);
-  return pct5 > 0 ? [{ stat: "productionAll", value: pct5, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
+  const pct6 = territoryBonus(t, now);
+  return pct6 > 0 ? [{ stat: "productionAll", value: pct6, layer: "empire", source: { kind: "territory", id: "territory", label: `Territoire d'alliance (${(_a = t == null ? void 0 : t.sectors.length) != null ? _a : 0} secteur${((_b = t == null ? void 0 : t.sectors.length) != null ? _b : 0) > 1 ? "s" : ""})` } }] : [];
 }
 
 // src/game/format.ts
@@ -1587,6 +1615,221 @@ function describeGain(gain) {
     return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
   });
   return parts.length ? parts.join(", ") : "rien";
+}
+
+// src/game/missions.ts
+var DEFAULT_MISSIONS = {
+  patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
+  forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35e3, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
+  collecte_energie: { key: "collecte_energie", name: "Collecte d'\xE9nergie", duration: 900, reward: { energy: 4e3, xp: 15 }, prereq: { chasseur: 6, fregate: 2 } },
+  analyse_signal: { key: "analyse_signal", name: "Analyse de signal", duration: 900, reward: { data: 2500, xp: 15 }, prereq: { drone_recuperateur: 6, sentinelle: 2 } },
+  synthese_nano: { key: "synthese_nano", name: "Synth\xE8se de nanocomposants", duration: 1800, reward: { nano: 600, xp: 30 }, prereq: { drone_recuperateur: 10, sentinelle: 4 } },
+  expedition_longue: { key: "expedition_longue", name: "Exp\xE9dition longue dur\xE9e", duration: 3600, reward: { scrap: 6e4, energy: 12e3, xp: 60 }, prereq: { fregate: 5, cargo: 4, chasseur: 6 } },
+  recuperation_acier: { key: "recuperation_acier", name: "R\xE9cup\xE9ration d'acier renforc\xE9", duration: 1200, reward: { reinforcedSteel: 30, xp: 20 }, prereq: { drone_recuperateur: 8, chasseur: 4 } },
+  extraction_module: { key: "extraction_module", name: "Extraction de module cybern\xE9tique", duration: 1800, reward: { cyberModule: 40, xp: 30 }, prereq: { sentinelle: 5, fregate: 3 } },
+  recolte_nanites: { key: "recolte_nanites", name: "R\xE9colte de nanites synth\xE9tiques", duration: 2400, reward: { syntheticNanites: 50, xp: 40 }, prereq: { drone_recuperateur: 15, sentinelle: 6 } },
+  fouille_archives_IA: { key: "fouille_archives_IA", name: "Fouille d'archives d'IA", duration: 3600, reward: { aiFragment: 60, xp: 60 }, prereq: { fregate: 6, sentinelle: 8 } },
+  mission_elite: {
+    key: "mission_elite",
+    name: "Mission d'\xE9lite",
+    duration: 7200,
+    reward: { reinforcedSteel: 800, cyberModule: 600, syntheticNanites: 500, aiFragment: 400, xp: 120 },
+    prereq: { fregate: 10, sentinelle: 10, chasseur: 10, cargo: 15 }
+  },
+  patrouille_perimetrique: {
+    key: "patrouille_perimetrique",
+    name: "Patrouille du p\xE9rim\xE8tre",
+    duration: 600,
+    reward: { scrap: 8e3, xp: 10 },
+    prereq: { roquette: 30 }
+  },
+  verrouillage_radar: { key: "verrouillage_radar", name: "Alerte invasion", duration: 1200, reward: { energy: 6e3, xp: 20 }, prereq: { batterie_aa: 20, intercepteur: 10 } },
+  suppression_blindee: { key: "suppression_blindee", name: "Repli des envahisseurs", duration: 1800, reward: { reinforcedSteel: 200, xp: 30 }, prereq: { canon_impulsion: 25, roquette: 50 } },
+  bombardement_orbital: { key: "bombardement_orbital", name: "Si\xE8ge repouss\xE9", duration: 2700, reward: { scrap: 45e3, cyberModule: 350, xp: 45 }, prereq: { canon_plasma: 50, canon_impulsion: 65 } },
+  interception_prioritaire: {
+    key: "interception_prioritaire",
+    name: "Dernier bastion",
+    duration: 3600,
+    reward: { syntheticNanites: 400, aiFragment: 650, xp: 60 },
+    prereq: { intercepteur: 60, batterie_aa: 70 }
+  }
+};
+var MISSIONS = __spreadValues({}, DEFAULT_MISSIONS);
+function setMissions(defs) {
+  for (const key of Object.keys(MISSIONS)) delete MISSIONS[key];
+  for (const def3 of defs) MISSIONS[def3.key] = def3;
+}
+function hasPrerequisites(mission, units) {
+  return Object.entries(mission.prereq).every(([unitId, req]) => {
+    var _a, _b;
+    return ((_b = (_a = units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) >= req;
+  });
+}
+
+// src/game/xpAudit.ts
+var XP_SOURCE_LABELS = {
+  mission: "Missions",
+  attack: "Attaques",
+  defense: "D\xE9fenses",
+  expedition: "Exp\xE9ditions",
+  bounty: "Primes",
+  pirate: "Factions",
+  achievement: "Succ\xE8s",
+  contract: "Contrats",
+  other: "Autre"
+};
+var HOUR = 36e5;
+var LEDGER_HOURS = 8 * 24;
+var hourIndex = (ms) => Math.floor(ms / HOUR);
+function recordXp(player, source, delta, now) {
+  var _a, _b, _c, _d, _e;
+  if (!delta || !Number.isFinite(delta)) return;
+  const h = hourIndex(now);
+  const ledger = {};
+  for (const [k, v] of Object.entries((_b = (_a = player.stats) == null ? void 0 : _a.xpHours) != null ? _b : {})) if (h - Number(k) < LEDGER_HOURS) ledger[k] = v;
+  const slot = __spreadValues({}, (_c = ledger[String(h)]) != null ? _c : {});
+  slot[source] = ((_d = slot[source]) != null ? _d : 0) + Math.round(delta);
+  ledger[String(h)] = slot;
+  player.stats = __spreadProps(__spreadValues({}, (_e = player.stats) != null ? _e : {}), { xpHours: ledger });
+}
+var AUDIT_WINDOWS = [
+  { id: "1h", label: "Derni\xE8re heure", ms: HOUR },
+  { id: "24h", label: "24 heures", ms: 24 * HOUR },
+  { id: "7d", label: "7 jours", ms: 7 * 24 * HOUR }
+];
+var windowMs = (w) => {
+  var _a, _b;
+  return (_b = (_a = AUDIT_WINDOWS.find((x) => x.id === w)) == null ? void 0 : _a.ms) != null ? _b : 24 * HOUR;
+};
+function ledgerTotals(stats, now, ms) {
+  var _a, _b;
+  const out = { total: 0, bySource: {} };
+  const h = hourIndex(now);
+  const span = Math.max(1, Math.round(ms / HOUR));
+  for (const [k, slot] of Object.entries((_a = stats == null ? void 0 : stats.xpHours) != null ? _a : {})) {
+    if (h - Number(k) >= span) continue;
+    for (const [src, v] of Object.entries(slot != null ? slot : {})) {
+      out.bySource[src] = ((_b = out.bySource[src]) != null ? _b : 0) + v;
+      out.total += v;
+    }
+  }
+  return out;
+}
+function ledgerSince(stats) {
+  var _a;
+  const keys = Object.keys((_a = stats == null ? void 0 : stats.xpHours) != null ? _a : {}).map(Number);
+  return keys.length ? Math.min(...keys) * HOUR : null;
+}
+function missionXpCeiling(ms, eventFactor = 1) {
+  let perHour = 0;
+  for (const m of Object.values(MISSIONS)) {
+    const xp = Number(m.reward.xp) || 0;
+    if (xp > 0 && m.duration > 0) perHour += xp / (m.duration / 3600);
+  }
+  return Math.round(perHour * (ms / HOUR) * eventFactor);
+}
+var RECAP_KINDS = ["system", "season"];
+function notifXp(n) {
+  var _a, _b;
+  if (RECAP_KINDS.includes(String((_a = n.kind) != null ? _a : ""))) return 0;
+  const d = n.data;
+  if (d && typeof d.xp === "number" && Number.isFinite(d.xp)) return d.xp;
+  const m = /([+−-])\s?(\d[\d\s\u202f]*)\s?XP/.exec(String((_b = n.message) != null ? _b : ""));
+  if (!m) return 0;
+  const v = Number(m[2].replace(/[\s\u202f]/g, ""));
+  return m[1] === "+" ? v : -v;
+}
+function notifSource(n) {
+  var _a, _b;
+  const k = String((_a = n.kind) != null ? _a : "");
+  const t = String((_b = n.title) != null ? _b : "").toLowerCase();
+  if (k === "mission" || t.startsWith("mission")) return "mission";
+  if (k === "combat-attacker") return "attack";
+  if (k === "combat-defender") return "defense";
+  if (k === "bounty") return "bounty";
+  if (k === "achievement" || t.includes("succ\xE8s")) return "achievement";
+  if (t.includes("exp\xE9dition")) return "expedition";
+  if (k === "pirate" || k === "threat") return "pirate";
+  if (k === "contract") return "contract";
+  return "other";
+}
+function activityProfile(timestamps, now, ms) {
+  const span = Math.max(1, Math.round(ms / HOUR));
+  const h0 = hourIndex(now) - span + 1;
+  const byHour = new Array(span).fill(0);
+  for (const t of timestamps) {
+    const i = hourIndex(t) - h0;
+    if (i >= 0 && i < span) byHour[i]++;
+  }
+  let longest = 0;
+  let cur = 0;
+  for (const c of byHour) {
+    cur = c > 0 ? cur + 1 : 0;
+    longest = Math.max(longest, cur);
+  }
+  return { activeHours: byHour.filter((c) => c > 0).length, longestStreak: longest, byHour };
+}
+function battlePairs(reports, uid) {
+  var _a, _b;
+  const by = /* @__PURE__ */ new Map();
+  for (const r of reports) {
+    const asAttacker = r.attackerUid === uid;
+    if (!asAttacker && r.defenderUid !== uid) continue;
+    const other = asAttacker ? r.defenderUid : r.attackerUid;
+    const pseudo = (_a = asAttacker ? r.defenderPseudo : r.attackerPseudo) != null ? _a : other;
+    const row = (_b = by.get(other)) != null ? _b : { uid: other, pseudo, attacks: 0, defenses: 0, xp: 0 };
+    if (asAttacker) row.attacks++;
+    else row.defenses++;
+    row.xp += Number(asAttacker ? r.attackerXpDelta : r.defenderXpDelta) || 0;
+    by.set(other, row);
+  }
+  return [...by.values()].sort((a, b) => b.attacks + b.defenses - (a.attacks + a.defenses) || b.xp - a.xp);
+}
+function auditFlags(i) {
+  var _a, _b, _c, _d, _e, _f;
+  const out = [];
+  const fmt2 = (n) => formatInt(Math.round(n));
+  if (i.testMode) {
+    out.push({
+      id: "test-mode",
+      severity: "high",
+      title: "Compte test actif",
+      detail: "Toutes les files (missions comprises) se terminent aussit\xF4t : depuis la 5.17.1, les missions d'un compte test ne rapportent plus d'XP, mais l'XP gagn\xE9e avant reste acquise."
+    });
+  }
+  const cap24 = missionXpCeiling(24 * HOUR, Math.max(1, (_a = i.eventFactor) != null ? _a : 1));
+  if (i.missionXp24h > cap24 * 1.05) {
+    out.push({ id: "mission-cap", severity: "high", title: "XP de missions impossible en jeu normal", detail: `${fmt2(i.missionXp24h)} XP de missions en 24 h, pour un maximum th\xE9orique de ${fmt2(cap24)} (toutes les missions relanc\xE9es sans interruption).` });
+  } else if (i.missionXp24h > cap24 * 0.7) {
+    out.push({ id: "mission-near-cap", severity: "medium", title: "Missions relanc\xE9es presque sans interruption", detail: `${fmt2(i.missionXp24h)} XP de missions en 24 h, soit ${Math.round(i.missionXp24h / cap24 * 100)} % du maximum th\xE9orique (${fmt2(cap24)}). Possible en jouant beaucoup, ou avec un script.` });
+  }
+  if (((_b = i.activeHours24h) != null ? _b : 0) >= 20) {
+    out.push({ id: "always-on", severity: "medium", title: "Actif presque 24 h sur 24", detail: `Activit\xE9 relev\xE9e dans ${i.activeHours24h} heures diff\xE9rentes sur les derni\xE8res 24 h. Signe possible d'automatisation ou de compte partag\xE9.` });
+  }
+  if (((_c = i.longestStreak7d) != null ? _c : 0) >= 30) {
+    out.push({ id: "streak", severity: "medium", title: "Longue s\xE9rie sans pause", detail: `${i.longestStreak7d} heures d'affil\xE9e avec de l'activit\xE9 sur les 7 derniers jours.` });
+  }
+  if (i.p90_24h && i.p90_24h > 0 && i.xp24h > Math.max(3 * i.p90_24h, 500)) {
+    out.push({ id: "outlier", severity: "medium", title: "XP tr\xE8s au-dessus des autres joueurs", detail: `${fmt2(i.xp24h)} XP en 24 h, contre ${fmt2(i.p90_24h)} pour le 90e centile des joueurs actifs (m\xE9diane ${fmt2((_d = i.median24h) != null ? _d : 0)}).` });
+  }
+  for (const p of ((_e = i.pairs) != null ? _e : []).filter((p2) => p2.attacks + p2.defenses >= 6).slice(0, 3)) {
+    out.push({ id: `pair-${p.uid}`, severity: p.xp > 200 ? "medium" : "info", title: `Combats r\xE9p\xE9t\xE9s avec ${p.pseudo}`, detail: `${p.attacks} attaques et ${p.defenses} d\xE9fenses sur la p\xE9riode, pour ${fmt2(p.xp)} XP. \xC0 v\xE9rifier : comptes li\xE9s ou entente.` });
+  }
+  if (((_f = i.adminActions) != null ? _f : 0) > 0) {
+    out.push({ id: "admin", severity: "info", title: "Actions de l'\xE9quipe sur ce compte", detail: `${i.adminActions} action(s) d'administration enregistr\xE9e(s) (ressources, mode test, \xAB tout terminer \xBB\u2026). Voir le d\xE9tail plus bas.` });
+  }
+  const days = Math.max(1, (i.now - i.createdAtMs) / (24 * HOUR));
+  const perDay = i.xp / days;
+  if (perDay > cap24 * 1.05 && !i.testMode) {
+    out.push({ id: "lifetime", severity: "high", title: "XP moyenne par jour hors de port\xE9e", detail: `${fmt2(perDay)} XP par jour en moyenne depuis l'inscription, au-del\xE0 du maximum des missions (${fmt2(cap24)} par jour) : il faut une autre source pour l'expliquer.` });
+  }
+  const order = { high: 0, medium: 1, info: 2 };
+  return out.sort((a, b) => order[a.severity] - order[b.severity]);
+}
+function percentiles(values) {
+  const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+  if (!v.length) return { median: 0, p90: 0 };
+  return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
 }
 
 // src/game/resources.ts
@@ -1727,9 +1970,9 @@ function techEffectGrants(techLevels2) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
     for (const e3 of techEffects(tech)) {
-      const stat2 = TECH_EFFECT_STAT[e3.type];
-      if (!stat2) continue;
-      out.push({ stat: stat2, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      const stat3 = TECH_EFFECT_STAT[e3.type];
+      if (!stat3) continue;
+      out.push({ stat: stat3, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
     }
   }
   return out;
@@ -1737,8 +1980,8 @@ function techEffectGrants(techLevels2) {
 function techBonus(techLevels2, type, target) {
   var _a;
   if (!techLevels2) return 0;
-  const stat2 = TECH_EFFECT_STAT[type];
-  if (stat2) return effectTotal(techEffectGrants(techLevels2), "tech", stat2, { target });
+  const stat3 = TECH_EFFECT_STAT[type];
+  if (stat3) return effectTotal(techEffectGrants(techLevels2), "tech", stat3, { target });
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
@@ -2086,12 +2329,12 @@ function getBuildingUpgradeTime(building, nextLevel) {
 }
 function getRepairPercent(buildings) {
   var _a;
-  let pct5 = 0;
+  let pct6 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
-    pct5 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+    pct6 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
-  return pct5;
+  return pct6;
 }
 function repairPercentAt(effect, level3) {
   var _a;
@@ -3289,8 +3532,8 @@ var EVENT_RULES = {
   ],
   scheduled: []
 };
-var HOUR = 36e5;
-var DAY3 = 24 * HOUR;
+var HOUR2 = 36e5;
+var DAY3 = 24 * HOUR2;
 var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
 function lastSundayAt1Utc(year, month2) {
   const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
@@ -3300,10 +3543,10 @@ function lastSundayAt1Utc(year, month2) {
 function parisOffsetMs(utcMs) {
   const year = new Date(utcMs).getUTCFullYear();
   const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
-  return (summer ? 2 : 1) * HOUR;
+  return (summer ? 2 : 1) * HOUR2;
 }
 function parisLocalToUtc(localMs) {
-  return localMs - parisOffsetMs(localMs - 2 * HOUR);
+  return localMs - parisOffsetMs(localMs - 2 * HOUR2);
 }
 function findEventType(id) {
   return EVENT_RULES.types.find((t) => t.id === id);
@@ -3314,7 +3557,7 @@ function weekendWindow(now, weeksAhead = 0) {
   const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
   const friday = localMidnight - daysSinceFriday * DAY3 + weeksAhead * 7 * DAY3;
   return {
-    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
+    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR2),
     endMs: parisLocalToUtc(friday + 3 * DAY3),
     week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY3)),
     firstOfMonth: new Date(friday).getUTCDate() <= 7,
@@ -3347,8 +3590,8 @@ function bossWindows(now, s, count2 = 1) {
     const w0 = weekOfLocal(now + parisOffsetMs(now));
     for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
       const d = worldBossDay(w, s.weekly.minGapDays);
-      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR);
-      const endMs = startMs + s.durationHours * HOUR;
+      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR2);
+      const endMs = startMs + s.durationHours * HOUR2;
       if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
     }
   }
@@ -3356,12 +3599,12 @@ function bossWindows(now, s, count2 = 1) {
   for (let i = -1; s.enabled && monthly && i < 60 && out.length < count2; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
-    const startMs = w.fridayMs + s.startHour * HOUR;
-    const endMs = startMs + s.durationHours * HOUR;
+    const startMs = w.fridayMs + s.startHour * HOUR2;
+    const endMs = startMs + s.durationHours * HOUR2;
     if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
   }
   for (const d of (_d = s.dates) != null ? _d : []) {
-    const endMs = d.startMs + d.durationHours * HOUR;
+    const endMs = d.startMs + d.durationHours * HOUR2;
     if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
   }
   return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
@@ -3369,8 +3612,8 @@ function bossWindows(now, s, count2 = 1) {
 function weeklyWindow(w, s) {
   var _a;
   const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
-  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR);
-  return { startMs, endMs: startMs + s.durationHours * HOUR };
+  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR2);
+  return { startMs, endMs: startMs + s.durationHours * HOUR2 };
 }
 function alternateWindows(now, s, other, count2) {
   const out = [];
@@ -3378,7 +3621,7 @@ function alternateWindows(now, s, other, count2) {
   for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
     const a = weeklyWindow(w, other);
     const b = weeklyWindow(w + 1, other);
-    const dur = s.durationHours * HOUR;
+    const dur = s.durationHours * HOUR2;
     const startMs = a.endMs + DAY3 + dur <= b.startMs ? a.endMs + DAY3 : a.endMs + dur <= b.startMs ? a.endMs : null;
     if (startMs === null) continue;
     if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
@@ -3418,7 +3661,7 @@ var BOSS_REMINDERS = {
 function eveReminderDue(next, lastAnnounced, now) {
   if (!next) return false;
   const left = next.startMs - now;
-  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
+  return left > HOUR2 && left <= BOSS_REMINDERS.eveHours * HOUR2 && lastAnnounced !== next.startMs;
 }
 function validateBossSchedule(label3, s) {
   var _a;
@@ -3433,7 +3676,7 @@ function validateBossSchedule(label3, s) {
     if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
   });
   const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
-  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR2) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
   return errors;
 }
 function rotationEvent(window) {
@@ -3442,7 +3685,7 @@ function rotationEvent(window) {
   if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
   if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
   if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
-  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
+  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR2 > window.startMs)) return null;
   const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
   return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
 }
@@ -3728,8 +3971,8 @@ function protectedAmount(buildings, res, techLevels2, allianceLevels, player) {
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
   const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
-  const pct5 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
-  return Number.isFinite(capacity) ? Math.floor(capacity * pct5) : 0;
+  const pct6 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  return Number.isFinite(capacity) ? Math.floor(capacity * pct6) : 0;
 }
 function rareRewardScale(player) {
   var _a;
@@ -3834,7 +4077,7 @@ function setColonySpec(player, colonyIdIn, specIn, now) {
   colony.specChangedAtMs = now;
   return colony;
 }
-var HOUR2 = 36e5;
+var HOUR3 = 36e5;
 var DEPOSIT_ID = "gisement";
 var BIOMES = {
   reinforcedSteel: { name: "Monde ferreux", deposit: "Mine d'acier profond", lore: "Un noyau satur\xE9 de m\xE9tal : l'acier renforc\xE9 affleure presque \xE0 la surface.", tone: "#9fb4c8" },
@@ -3939,7 +4182,7 @@ function startColonization(player, nameIn, now) {
     if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError("Ressources insuffisantes pour le vaisseau colonial.");
   }
   for (const [res, n] of Object.entries(cost)) player.resources[res] -= n;
-  player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR2 };
+  player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR3 };
   return player.colonizing;
 }
 function foundColony(uid, job, at, home) {
@@ -4237,7 +4480,7 @@ function chestReward(player) {
 function grant(player, reward, now) {
   var _a;
   for (const [res, amount3] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount3, now);
+    if (res === "xp") applyXpDelta(player, amount3, now, "contract");
     else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
   }
 }
@@ -4277,55 +4520,6 @@ function rerollContract(player, contractId, now) {
   state.items[index2] = next;
   state.rerolled = true;
   return next;
-}
-
-// src/game/missions.ts
-var DEFAULT_MISSIONS = {
-  patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
-  forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35e3, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
-  collecte_energie: { key: "collecte_energie", name: "Collecte d'\xE9nergie", duration: 900, reward: { energy: 4e3, xp: 15 }, prereq: { chasseur: 6, fregate: 2 } },
-  analyse_signal: { key: "analyse_signal", name: "Analyse de signal", duration: 900, reward: { data: 2500, xp: 15 }, prereq: { drone_recuperateur: 6, sentinelle: 2 } },
-  synthese_nano: { key: "synthese_nano", name: "Synth\xE8se de nanocomposants", duration: 1800, reward: { nano: 600, xp: 30 }, prereq: { drone_recuperateur: 10, sentinelle: 4 } },
-  expedition_longue: { key: "expedition_longue", name: "Exp\xE9dition longue dur\xE9e", duration: 3600, reward: { scrap: 6e4, energy: 12e3, xp: 60 }, prereq: { fregate: 5, cargo: 4, chasseur: 6 } },
-  recuperation_acier: { key: "recuperation_acier", name: "R\xE9cup\xE9ration d'acier renforc\xE9", duration: 1200, reward: { reinforcedSteel: 30, xp: 20 }, prereq: { drone_recuperateur: 8, chasseur: 4 } },
-  extraction_module: { key: "extraction_module", name: "Extraction de module cybern\xE9tique", duration: 1800, reward: { cyberModule: 40, xp: 30 }, prereq: { sentinelle: 5, fregate: 3 } },
-  recolte_nanites: { key: "recolte_nanites", name: "R\xE9colte de nanites synth\xE9tiques", duration: 2400, reward: { syntheticNanites: 50, xp: 40 }, prereq: { drone_recuperateur: 15, sentinelle: 6 } },
-  fouille_archives_IA: { key: "fouille_archives_IA", name: "Fouille d'archives d'IA", duration: 3600, reward: { aiFragment: 60, xp: 60 }, prereq: { fregate: 6, sentinelle: 8 } },
-  mission_elite: {
-    key: "mission_elite",
-    name: "Mission d'\xE9lite",
-    duration: 7200,
-    reward: { reinforcedSteel: 800, cyberModule: 600, syntheticNanites: 500, aiFragment: 400, xp: 120 },
-    prereq: { fregate: 10, sentinelle: 10, chasseur: 10, cargo: 15 }
-  },
-  patrouille_perimetrique: {
-    key: "patrouille_perimetrique",
-    name: "Patrouille du p\xE9rim\xE8tre",
-    duration: 600,
-    reward: { scrap: 8e3, xp: 10 },
-    prereq: { roquette: 30 }
-  },
-  verrouillage_radar: { key: "verrouillage_radar", name: "Alerte invasion", duration: 1200, reward: { energy: 6e3, xp: 20 }, prereq: { batterie_aa: 20, intercepteur: 10 } },
-  suppression_blindee: { key: "suppression_blindee", name: "Repli des envahisseurs", duration: 1800, reward: { reinforcedSteel: 200, xp: 30 }, prereq: { canon_impulsion: 25, roquette: 50 } },
-  bombardement_orbital: { key: "bombardement_orbital", name: "Si\xE8ge repouss\xE9", duration: 2700, reward: { scrap: 45e3, cyberModule: 350, xp: 45 }, prereq: { canon_plasma: 50, canon_impulsion: 65 } },
-  interception_prioritaire: {
-    key: "interception_prioritaire",
-    name: "Dernier bastion",
-    duration: 3600,
-    reward: { syntheticNanites: 400, aiFragment: 650, xp: 60 },
-    prereq: { intercepteur: 60, batterie_aa: 70 }
-  }
-};
-var MISSIONS = __spreadValues({}, DEFAULT_MISSIONS);
-function setMissions(defs) {
-  for (const key of Object.keys(MISSIONS)) delete MISSIONS[key];
-  for (const def3 of defs) MISSIONS[def3.key] = def3;
-}
-function hasPrerequisites(mission, units) {
-  return Object.entries(mission.prereq).every(([unitId, req]) => {
-    var _a, _b;
-    return ((_b = (_a = units[unitId]) == null ? void 0 : _a.count) != null ? _b : 0) >= req;
-  });
 }
 
 // src/game/seasonCatalog.ts
@@ -4538,28 +4732,28 @@ function activateCapsule(player, typeIn, levelIn, now) {
   const st = synthesisState(player);
   const current2 = st[type];
   if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct5 = takeCapsule(player, type, levelIn);
+  const pct6 = takeCapsule(player, type, levelIn);
   const after = synthesisState(player);
-  after[type] = { pct: pct5, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  after[type] = { pct: pct6, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
   player.synthesis = after;
-  return pct5;
+  return pct6;
 }
 function consumeArmor(player, now) {
   const st = synthesisState(player);
   if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct5 = st.armor.pct;
+  const pct6 = st.armor.pct;
   st.armor = null;
   player.synthesis = st;
-  return pct5;
+  return pct6;
 }
 function activeVeil(player, now) {
   const v = synthesisState(player).veil;
   return v && v.untilMs > now ? v.pct : 0;
 }
-function decoyUnits(real, pct5, pool, random = Math.random) {
+function decoyUnits(real, pct6, pool, random = Math.random) {
   var _a;
   const out = {};
-  const swing = pct5 / 100;
+  const swing = pct6 / 100;
   for (const [id, qty] of Object.entries(real)) {
     if (!(qty > 0)) continue;
     const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
@@ -4572,9 +4766,9 @@ function decoyUnits(real, pct5, pool, random = Math.random) {
   }
   return out;
 }
-function veilCounts(entries, pct5, random = Math.random) {
+function veilCounts(entries, pct6, random = Math.random) {
   if (!entries) return entries;
-  const swing = pct5 / 100;
+  const swing = pct6 / 100;
   return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
 }
 function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
@@ -5287,15 +5481,15 @@ function validateLootTables(tables) {
     const t = tables == null ? void 0 : tables[src];
     if (!t) continue;
     const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
-    const pct5 = (v) => typeof v === "number" && v >= 0 && v <= 1;
-    if (t.relicChance !== void 0 && !pct5(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
-    if (t.capsuleChance !== void 0 && !pct5(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
+    const pct6 = (v) => typeof v === "number" && v >= 0 && v <= 1;
+    if (t.relicChance !== void 0 && !pct6(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
+    if (t.capsuleChance !== void 0 && !pct6(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
     if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
     const min = (_a = t.capsuleMin) != null ? _a : 1;
     const max = (_b = t.capsuleMax) != null ? _b : 10;
     if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
     if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
-    if (t.tokenChance !== void 0 && !pct5(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
+    if (t.tokenChance !== void 0 && !pct6(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
     const tmin = (_c = t.tokenMin) != null ? _c : 1;
     const tmax = (_d = t.tokenMax) != null ? _d : 1;
     if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
@@ -5528,10 +5722,10 @@ function rankName(rank2) {
 function amberFor(tier, rank2) {
   return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
 }
-var HOUR3 = 36e5;
-var DAY6 = 24 * HOUR3;
+var HOUR4 = 36e5;
+var DAY6 = 24 * HOUR4;
 function boardSlot(now) {
-  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR3));
+  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR4));
 }
 function boardTiers(rank2) {
   if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
@@ -5626,7 +5820,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     st.reputation += t.rep;
     st.completed += 1;
     st.board = st.board.filter((c) => c.id !== contractId);
-    applyXpDelta(player, xp, now);
+    applyXpDelta(player, xp, now, "bounty");
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
@@ -5749,7 +5943,7 @@ function buyShopItem(player, queues, itemId, now, buildingId) {
       break;
     }
     case "boost":
-      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR3;
+      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR4;
       message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
       break;
     case "jammer":
@@ -5761,7 +5955,7 @@ function buyShopItem(player, queues, itemId, now, buildingId) {
       message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
       break;
     case "shield":
-      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR3;
+      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR4;
       st.shieldBoughtAtMs = now;
       message = "Voile de chitine actif pendant 6 h.";
       break;
@@ -5901,7 +6095,7 @@ function eliteActive(state, now) {
 function eliteReadyAt(state, uid) {
   var _a, _b;
   const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
-  return last ? last + ELITE_RULES.cooldownHours * HOUR3 : 0;
+  return last ? last + ELITE_RULES.cooldownHours * HOUR4 : 0;
 }
 function checkEliteLaunch(state, player, now) {
   var _a;
@@ -5965,7 +6159,7 @@ function grantEliteReward(state, player, now, random = Math.random) {
   st.amberEarned += r.amber;
   st.reputation += r.rep;
   player.bounties = st;
-  applyXpDelta(player, r.xp, now);
+  applyXpDelta(player, r.xp, now, "bounty");
   if (state.status === "killed") {
     const item = rollRelic("elite", now, random, "rare");
     if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
@@ -6642,8 +6836,8 @@ function targetPower(faction, player) {
 function raidPower(faction, player, notoriety, adapt = 1) {
   const levels = BUILDINGS.reduce((sum3, b) => sum3 + effectiveBuildingLevel(player.buildings, b.id), 0);
   const floor = faction.raid.floorPower + faction.raid.floorPerBuildingLevel * levels;
-  const pct5 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
-  return Math.round(Math.max(floor, targetPower(faction, player) * pct5 * adapt));
+  const pct6 = faction.raid.basePct + faction.raid.perNotorietyPct * notoriety;
+  return Math.round(Math.max(floor, targetPower(faction, player) * pct6 * adapt));
 }
 function exposedStock(player) {
   var _a, _b, _c;
@@ -6874,7 +7068,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
     if (((_j = activeTreaty(st, now)) == null ? void 0 : _j.kind) === "embargo") for (const r of Object.keys(bounty)) bounty[r] = Math.floor(((_k = bounty[r]) != null ? _k : 0) * TREATY_RULES.embargoBounty);
     for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_l = player.resources[res]) != null ? _l : 0) + amount3;
-    applyXpDelta(player, faction.bounty.xp, now);
+    applyXpDelta(player, faction.bounty.xp, now, "pirate");
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
     st.raidsWon += 1;
@@ -6976,7 +7170,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     const loot = 1 + playerModifiers(player).loot;
     if (loot !== 1) for (const r of Object.keys(reward)) reward[r] = Math.floor(((_c = reward[r]) != null ? _c : 0) * loot);
     for (const [res, amount3] of Object.entries(reward)) player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
-    applyXpDelta(player, faction.lair.xp, now);
+    applyXpDelta(player, faction.lair.xp, now, "pirate");
     const title = faction.lair.title;
     if (title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === title)) {
       player.titles = [...(_f = player.titles) != null ? _f : [], { label: title, seasonId: `faction:${faction.id}`, rank: 1 }];
@@ -7590,7 +7784,7 @@ var VACATION_RULES = {
   minStayHours: 48
 };
 var DAY8 = 864e5;
-var HOUR4 = 36e5;
+var HOUR5 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
   return !!v && !v.endedAtMs && v.startedAtMs <= now && now < v.untilMs;
@@ -7604,13 +7798,13 @@ function startVacation(player, daysIn, ctx, now) {
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
   if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY8) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY8 - now) / HOUR4);
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY8 - now) / HOUR5);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
   if (ctx.hostileIncoming > 0) throw new GameActionError("Une flotte hostile approche : impossible de partir maintenant.");
   if (ctx.ultimatum) throw new GameActionError("R\xE9ponds d'abord \xE0 l'ultimatum en cours.");
-  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR4) {
+  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR5) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
   const v = { startedAtMs: now, untilMs: now + days * DAY8 };
@@ -7621,8 +7815,8 @@ function endVacation(player, queues, at, early = false) {
   var _a, _b;
   const v = player.vacation;
   if (!v || v.endedAtMs) return;
-  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR4) {
-    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR4 - at) / HOUR4);
+  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR5) {
+    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR5 - at) / HOUR5);
     throw new GameActionError(`Retour possible apr\xE8s ${VACATION_RULES.minStayHours} h de vacances : encore ${left} h.`);
   }
   const end = Math.min(at, v.untilMs);
@@ -7894,7 +8088,7 @@ function flushState(playerIn, queuesIn, now) {
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
     for (const [res, amount3] of Object.entries(reward)) {
       if (res === "xp") {
-        applyXpDelta(player, amount3, now);
+        if (!player.testMode) applyXpDelta(player, amount3, now, "mission");
       } else {
         player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + amount3;
       }
@@ -7906,7 +8100,7 @@ function flushState(playerIn, queuesIn, now) {
     notifications.push({
       kind: "mission",
       title: "Mission termin\xE9e",
-      message: `${mission.name} : r\xE9compense obtenue${reward.xp ? ` (+${reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : r\xE9compense obtenue${reward.xp && !player.testMode ? ` (+${reward.xp} XP)` : ""}.`,
       createdAtMs: now,
       read: false
     });
@@ -7937,7 +8131,7 @@ function flushState(playerIn, queuesIn, now) {
         player.resources[res] = ((_d = player.resources[res]) != null ? _d : 0) + amount3;
         allRewards[res] = ((_e = allRewards[res]) != null ? _e : 0) + amount3;
       }
-      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
+      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now, "achievement");
       totalXp += a.rewardXp;
       const tokens = grantTokens(player, (_f = ACHIEVEMENT_TOKENS[a.tier]) != null ? _f : 0);
       if (tokens > 0) tokensOf.set(a.id, tokens);
@@ -8089,11 +8283,12 @@ function ensureSeasonRollover(player, now) {
     player.seasonXp = 0;
   }
 }
-function applyXpDelta(player, delta, now) {
+function applyXpDelta(player, delta, now, source = "other") {
   var _a, _b;
   ensureSeasonRollover(player, now);
   player.xp = Math.max(0, ((_a = player.xp) != null ? _a : 0) + delta);
   player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
+  recordXp(player, source, delta, now);
 }
 var SEASON_RULES = {
   champion: { title: "Champion du mois", tokens: 50, amber: 200, common: 5e8 },
@@ -8303,7 +8498,7 @@ function empireEffects(player, now = Date.now()) {
 }
 function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
-  const sum3 = (stat2) => effectTotal(grants, "empire", stat2, { scope });
+  const sum3 = (stat3) => effectTotal(grants, "empire", stat3, { scope });
   m.attack = sum3("attack");
   m.defense = sum3("defense");
   m.buildTime = sum3("buildTime");
@@ -8634,15 +8829,15 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
-function unitStat(units, techLevels2, unitId, stat2) {
+function unitStat(units, techLevels2, unitId, stat3) {
   var _a, _b, _c, _d;
   const def3 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def3 == null ? void 0 : def3[stat2]) != null ? _a : 0;
+  const base = (_a = def3 == null ? void 0 : def3[stat3]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
   let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat2 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat2 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  if (stat3 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat3 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
   return value2;
 }
 function computeFleetPower(units, techLevels2, fleet, stats) {
@@ -8762,8 +8957,8 @@ function resolveCombat(params) {
     let total2 = 0;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? COMBAT_RULES.lootPercent : COMBAT_RULES.lootPercentCommon;
-      const pct5 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
-      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct5);
+      const pct6 = Math.min(1, base * ((_l = params.lootMultiplier) != null ? _l : 1));
+      const amount3 = Math.floor(Math.max(0, (_m = defenderResources[res]) != null ? _m : 0) * pct6);
       wanted[res] = amount3;
       total2 += amount3;
     }
@@ -8836,7 +9031,7 @@ var LEVIATHAN_RULES = {
   title: "Fl\xE9au du L\xE9viathan",
   titleDays: 7
 };
-var HOUR5 = 36e5;
+var HOUR6 = 36e5;
 function normalizeLeviathan(raw) {
   var _a;
   if (!raw || typeof raw !== "object") return null;
@@ -8920,7 +9115,7 @@ function checkLeviathanLaunch(state, uid, pseudo, now) {
   var _a, _b;
   if (!state || !isActive(state, now)) throw new GameActionError(`${worldBossName(state)} n'est pas l\xE0 en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR5 - now : 0;
+  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR6 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
@@ -8957,8 +9152,8 @@ var BOSS_PHASE_RULES = {
 };
 var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
 function bossFightPhase(state) {
-  const pct5 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
-  return pct5 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct5 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+  const pct6 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct6 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct6 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
 }
 function bossWeakness(state) {
   const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
@@ -9112,7 +9307,7 @@ var TIMELINE_MAX = 120;
 function recordLeviathanTimeline(state, now) {
   if (!isActive(state, now)) return state;
   const last = state.timeline[state.timeline.length - 1];
-  if (last && now - last.t < HOUR5) return state;
+  if (last && now - last.t < HOUR6) return state;
   return __spreadProps(__spreadValues({}, state), { timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) });
 }
 function resizeLeviathan(state, maxHp, now) {
@@ -9126,13 +9321,13 @@ function rescheduleBoss(state, endMs, now) {
   if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
   const end = Math.round(endMs);
   if (!(end > now + 5 * 6e4)) throw new GameActionError("La nouvelle fin doit \xEAtre dans plus de 5 minutes.");
-  if (end - state.startMs > 14 * 24 * HOUR5) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
+  if (end - state.startMs > 14 * 24 * HOUR6) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
   const next = __spreadProps(__spreadValues({}, state), { endMs: end });
-  if (end - now > BOSS_REMINDERS.endingHours * HOUR5) delete next.endingNotified;
+  if (end - now > BOSS_REMINDERS.endingHours * HOUR6) delete next.endingNotified;
   return next;
 }
 function endingReminderDue(state, now) {
-  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR5;
+  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR6;
 }
 
 // src/game/chronicles.ts
@@ -9503,7 +9698,7 @@ function validateChronicles(cfg) {
   }
   return errors;
 }
-var HOUR6 = 36e5;
+var HOUR7 = 36e5;
 function parisDate(now) {
   const local = new Date(now + parisOffsetMs(now));
   return { y: local.getUTCFullYear(), m: local.getUTCMonth() + 1, d: local.getUTCDate() };
@@ -9651,7 +9846,7 @@ function checkSeasonBossLaunch(state, uid, pseudo, now) {
   const name = state ? (_b = (_a = bossMonthOf(state)) == null ? void 0 : _a.boss.name) != null ? _b : "Le boss de saison" : "Le boss de saison";
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError(`${name} n'est pas l\xE0 en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR6 - now : 0;
+  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR7 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_c = c == null ? void 0 : c.damage) != null ? _c : 0, assaults: (_d = c == null ? void 0 : c.assaults) != null ? _d : 0, lastLaunchMs: now } }) });
 }
@@ -9713,7 +9908,7 @@ function setAllianceBosses(defs) {
   ALLIANCE_BOSSES.splice(0, ALLIANCE_BOSSES.length, ...(list.length ? list : DEFAULT_ALLIANCE_BOSSES).map((b) => __spreadValues({}, b)));
 }
 var DAY9 = 24 * 36e5;
-var HOUR7 = 36e5;
+var HOUR8 = 36e5;
 function allianceWeekId(now) {
   const day = parisDay(now);
   const t = Date.parse(`${day}T00:00:00Z`);
@@ -9787,14 +9982,14 @@ function callAllianceBoss(alliance, previous, members, activeMembers, uid, now, 
   alliance.treasury = treasury;
   const boss = allianceBossOfWeek(now);
   const maxHp = allianceBossHp(activeMembers);
-  const endMs = now + ALLIANCE_BOSS_RULES.durationHours * HOUR7;
+  const endMs = now + ALLIANCE_BOSS_RULES.durationHours * HOUR8;
   return { id: `ab-${weekId2}`, startMs: now, endMs, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [{ t: now, hp: maxHp }], weekId: weekId2, bossId: boss.id, launchedBy: uid, cost };
 }
 function checkAllianceBossLaunch(state, uid, pseudo, now) {
   var _a, _b;
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError("Aucun boss d'alliance \xE0 combattre en ce moment.");
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + ALLIANCE_BOSS_RULES.cooldownHours * HOUR7 - now : 0;
+  const wait = c ? c.lastLaunchMs + ALLIANCE_BOSS_RULES.cooldownHours * HOUR8 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
 }
@@ -10002,10 +10197,10 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     addLoot(fleet, gain);
     text = `Tr\xE9sor rare dans une station abandonn\xE9e : ${describeGain(gain)}.`;
   } else if (kind === "wreck") {
-    const pct5 = between(R.wreckMinPct, R.wreckMaxPct, random);
+    const pct6 = between(R.wreckMinPct, R.wreckMaxPct, random);
     const found = {};
     for (const [id, n] of Object.entries(fleet.units)) {
-      const extra = Math.floor(n * pct5);
+      const extra = Math.floor(n * pct6);
       if (extra > 0) found[id] = extra;
     }
     if (Object.keys(found).length === 0) {
@@ -10032,6 +10227,7 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
         var _a2;
         return [r, (n != null ? n : 0) - ((_a2 = lostLoot[r]) != null ? _a2 : 0)];
       }));
+      bumpStat(player, "deepAmbushLost");
       text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a d\xFB fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
@@ -10092,8 +10288,9 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
 function finishExpedition(player, fleet, now, random = Math.random) {
   var _a;
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
-  applyXpDelta(player, xp, now);
+  applyXpDelta(player, xp, now, "expedition");
   bumpStat(player, "expeditions");
+  if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   let relic = "";
   if (random() < expeditionRelicChance(fleet.expedition.hours)) {
     const item = rollRelic("expedition", now, random);
@@ -10229,7 +10426,7 @@ var WAR_RULES = {
   title: "Vainqueurs",
   titleDays: 7
 };
-var HOUR8 = 36e5;
+var HOUR9 = 36e5;
 function warStatusAt(war, now) {
   if (war.status === "ended") return "ended";
   if (now < war.startMs) return "preparing";
@@ -10256,8 +10453,8 @@ function declareWar(input) {
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === own.id || w.defenderId === own.id))) throw new GameActionError("Ton alliance est d\xE9j\xE0 en guerre.");
   if (input.wars.some((w) => isRunning(w, now) && (w.attackerId === target.id || w.defenderId === target.id))) throw new GameActionError(`[${target.tag}] est d\xE9j\xE0 en guerre.`);
   const lastPair = input.wars.filter((w) => w.attackerId === own.id && w.defenderId === target.id || w.attackerId === target.id && w.defenderId === own.id).reduce((a, w) => Math.max(a, w.endedAtMs || w.endMs), 0);
-  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR8 - now;
-  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR8))} jour(s).`);
+  const wait = lastPair + WAR_RULES.pairCooldownDays * 24 * HOUR9 - now;
+  if (lastPair > 0 && wait > 0) throw new GameActionError(`Derni\xE8re guerre contre [${target.tag}] trop r\xE9cente : encore ${Math.ceil(wait / (24 * HOUR9))} jour(s).`);
   const treasury = __spreadValues({}, (_b = own.treasury) != null ? _b : {});
   const chest = input.chest ? { resources: __spreadValues({}, input.chest.resources), cap: __spreadValues({}, input.chest.cap) } : null;
   if (chest) {
@@ -10269,7 +10466,7 @@ function declareWar(input) {
     treasury.scrap = ((_e = treasury.scrap) != null ? _e : 0) - WAR_RULES.costScrap;
     treasury.energy = ((_f = treasury.energy) != null ? _f : 0) - WAR_RULES.costEnergy;
   }
-  const startMs = now + WAR_RULES.prepHours * HOUR8;
+  const startMs = now + WAR_RULES.prepHours * HOUR9;
   return {
     own: __spreadProps(__spreadValues({}, own), { treasury }),
     chest,
@@ -10284,7 +10481,7 @@ function declareWar(input) {
       declaredByPseudo: input.actorPseudo,
       declaredAtMs: now,
       startMs,
-      endMs: startMs + WAR_RULES.durationHours * HOUR8,
+      endMs: startMs + WAR_RULES.durationHours * HOUR9,
       status: "preparing",
       scoreAttacker: 0,
       scoreDefender: 0,
@@ -10717,7 +10914,7 @@ function detectionChance(spyLevel, counter) {
 function spyTravelSeconds(distance, speed, factor = 1) {
   return Math.round(factor * (SPY_RULES.baseMinutes + distance * SPY_RULES.minutesPerDistance / Math.max(1, speed)) * 60);
 }
-function sectorLabel(uid) {
+function sectorLabel2(uid) {
   const c = galaxyCoords(uid);
   return `${Math.round(c.x * 100)}\xB7${Math.round(c.y * 100)}`;
 }
@@ -10821,7 +11018,7 @@ function resolveSpyArrival(input) {
     {
       kind: "spy-detected",
       title: "Espionnage d\xE9tect\xE9 !",
-      message: `${spy.pseudo} (secteur ${sectorLabel(spy.uid)}) t'a envoy\xE9 ${formatInt(probes)} sonde${probes > 1 ? "s" : ""} : abattue${probes > 1 ? "s" : ""}.`,
+      message: `${spy.pseudo} (secteur ${sectorLabel2(spy.uid)}) t'a envoy\xE9 ${formatInt(probes)} sonde${probes > 1 ? "s" : ""} : abattue${probes > 1 ? "s" : ""}.`,
       createdAtMs: now,
       read: false
     }
@@ -12080,7 +12277,7 @@ function performAttack(input) {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
     attacker.victories = ((_x = attacker.victories) != null ? _x : 0) + 1;
   } else if (combat.outcome === "defender_win") attacker.defeats = ((_y = attacker.defeats) != null ? _y : 0) + 1;
-  applyXpDelta(attacker, xp.attackerXp, now);
+  applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
   if (combat.outcome === "defender_win") owner.victories = ((_z = owner.victories) != null ? _z : 0) + 1;
   else if (combat.outcome === "attacker_win") {
@@ -12088,7 +12285,7 @@ function performAttack(input) {
     if (colony) colony.lastDefeatAtMs = now;
     else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
-  applyXpDelta(owner, defenderXpDelta, now);
+  applyXpDelta(owner, defenderXpDelta, now, "defense");
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
   if (combat.outcome === "attacker_win") {
@@ -14254,7 +14451,7 @@ function applyLegacyBattleReport(playerIn, queuesIn, report, now) {
   }
   if (report.outcome === "defender_win") player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
   else if (report.outcome === "attacker_win") player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
-  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now);
+  applyXpDelta(player, Number(report.defenderXpDelta) || 0, now, "defense");
   const title = { attacker_win: "Tu as perdu ce combat...", defender_win: "Attaque repouss\xE9e !", draw: "Match nul." };
   notifications.push({
     kind: "combat-defender",
@@ -14278,8 +14475,8 @@ function applyLegacyGift(playerIn, queuesIn, gift, now) {
 }
 
 // src/game/analytics.ts
-var HOUR9 = 36e5;
-var DAY10 = 24 * HOUR9;
+var HOUR10 = 36e5;
+var DAY10 = 24 * HOUR10;
 function median4(values) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -14799,6 +14996,120 @@ var GAME_FIELDS = [
 ];
 var QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"];
 
+// src/game/territoryWar.ts
+var TERRITORY_WAR_KEY = "territory_war";
+var TERRITORY_WAR_RULES = {
+  enabled: true,
+  /** Un week-end sur N (numéro de semaine modulo N = décalage). */
+  everyWeeks: 2,
+  weekOffset: 0,
+  /** Fin le dimanche, heures avant minuit (2 → 22 h). */
+  endHoursBeforeMidnight: 2,
+  /** Combats comptés au plus entre deux mêmes joueurs (contre l'entente entre alliances). */
+  maxPerPair: 3,
+  points: { pvpWin: 10, warlordWin: 4, defenseWin: 6, holdPerHour: 5 },
+  rewards: { tokensPerSector: 3, maxTokens: 15, winnerTokens: 10, winnerTitle: "Conqu\xE9rant des secteurs" }
+};
+var FEED_MAX2 = 40;
+function territoryWarWindow(now, rules = TERRITORY_WAR_RULES) {
+  if (!rules.enabled) return null;
+  const w = weekendWindow(now);
+  const endMs = w.endMs - rules.endHoursBeforeMidnight * 36e5;
+  if (now < w.startMs || now >= endMs) return null;
+  if ((w.week % rules.everyWeeks + rules.everyWeeks) % rules.everyWeeks !== rules.weekOffset % rules.everyWeeks) return null;
+  return { id: `tw-${w.week}`, startMs: w.startMs, endMs };
+}
+function openTerritoryWar(win, manual = false) {
+  return __spreadValues({ id: win.id, startMs: win.startMs, endMs: win.endMs, status: "active", points: {}, tags: {}, feed: [] }, manual ? { manual: true } : {});
+}
+function isTerritoryWarActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs;
+}
+function scoreTerritoryWar(state, ev, now, rules = TERRITORY_WAR_RULES) {
+  var _a, _b, _c, _d, _e;
+  if (!isTerritoryWarActive(state, now) || !ev.allianceId || !(ev.pts > 0) || ev.sector < 0 || ev.sector >= SECTOR_COUNT) return state;
+  const used = ev.pair ? (_b = (_a = state.pairs) == null ? void 0 : _a[ev.pair]) != null ? _b : 0 : 0;
+  if (ev.pair && used >= rules.maxPerPair) return state;
+  const key = String(ev.sector);
+  const sector = __spreadValues({}, (_c = state.points[key]) != null ? _c : {});
+  sector[ev.allianceId] = ((_d = sector[ev.allianceId]) != null ? _d : 0) + Math.round(ev.pts);
+  return __spreadValues(__spreadProps(__spreadValues({}, state), {
+    points: __spreadProps(__spreadValues({}, state.points), { [key]: sector }),
+    tags: ev.tag ? __spreadProps(__spreadValues({}, state.tags), { [ev.allianceId]: ev.tag }) : state.tags,
+    feed: [...state.feed, { t: now, sector: ev.sector, allianceId: ev.allianceId, tag: ev.tag, pts: Math.round(ev.pts), text: ev.text }].slice(-FEED_MAX2)
+  }), ev.pair ? { pairs: __spreadProps(__spreadValues({}, (_e = state.pairs) != null ? _e : {}), { [ev.pair]: used + 1 }) } : {});
+}
+function scoreHoldHour(state, sectors, now, rules = TERRITORY_WAR_RULES) {
+  var _a, _b;
+  if (!isTerritoryWarActive(state, now) || state.lastHoldMs && now - state.lastHoldMs < 50 * 6e4) return state;
+  let s = state;
+  for (const sec of sectors) {
+    if (!sec.allianceId) continue;
+    s = scoreTerritoryWar(s, { sector: sec.id, allianceId: sec.allianceId, tag: (_a = sec.tag) != null ? _a : "", pts: rules.points.holdPerHour, text: `[${(_b = sec.tag) != null ? _b : "?"}] tient ${sectorLabel(sec.id)}` }, now, rules);
+  }
+  return __spreadProps(__spreadValues({}, s), { lastHoldMs: now });
+}
+function sectorLeaders(state) {
+  return Array.from({ length: SECTOR_COUNT }, (_, sector) => {
+    var _a, _b, _c, _d;
+    const entries = Object.entries((_a = state.points[String(sector)]) != null ? _a : {}).sort((a, b) => b[1] - a[1]);
+    const [first, second] = entries;
+    const tie = !!first && !!second && first[1] === second[1];
+    const allianceId = first && !tie ? first[0] : null;
+    return { sector, allianceId, tag: allianceId ? (_b = state.tags[allianceId]) != null ? _b : "" : "", points: (_c = first == null ? void 0 : first[1]) != null ? _c : 0, runnerUp: (_d = second == null ? void 0 : second[1]) != null ? _d : 0 };
+  });
+}
+function territoryWarStandings(state) {
+  const by = /* @__PURE__ */ new Map();
+  const row = (id) => {
+    var _a;
+    if (!by.has(id)) by.set(id, { allianceId: id, tag: (_a = state.tags[id]) != null ? _a : "", sectors: [], points: 0 });
+    return by.get(id);
+  };
+  for (const sec of Object.values(state.points)) for (const [id, pts] of Object.entries(sec)) row(id).points += pts;
+  for (const l of sectorLeaders(state)) if (l.allianceId) row(l.allianceId).sectors.push(l.sector);
+  return [...by.values()].sort((a, b) => b.sectors.length - a.sectors.length || b.points - a.points);
+}
+function closeTerritoryWar(state, now) {
+  return __spreadProps(__spreadValues({}, state), { status: "closed", closedAtMs: now, results: territoryWarStandings(state) });
+}
+function territoryWarRewards(results, rules = TERRITORY_WAR_RULES) {
+  const out = {};
+  results.forEach((r, i) => {
+    if (r.sectors.length === 0) return;
+    const winner = i === 0;
+    const tokens = Math.min(rules.rewards.maxTokens, r.sectors.length * rules.rewards.tokensPerSector) + (winner ? rules.rewards.winnerTokens : 0);
+    out[r.allianceId] = { tokens, title: winner && rules.rewards.winnerTitle ? rules.rewards.winnerTitle : null, sectors: r.sectors.length, rank: i + 1 };
+  });
+  return out;
+}
+function normalizeTerritoryWar(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.endMs) > 0)) return null;
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues({
+    id: String(r.id),
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs),
+    status: r.status === "closed" ? "closed" : "active",
+    points: r.points && typeof r.points === "object" ? r.points : {},
+    tags: r.tags && typeof r.tags === "object" ? r.tags : {},
+    feed: Array.isArray(r.feed) ? r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX2) : []
+  }, r.pairs && typeof r.pairs === "object" ? { pairs: r.pairs } : {}), r.lastHoldMs ? { lastHoldMs: Number(r.lastHoldMs) } : {}), r.closedAtMs ? { closedAtMs: Number(r.closedAtMs) } : {}), Array.isArray(r.results) ? { results: r.results } : {}), r.rewarded ? { rewarded: true } : {}), r.manual ? { manual: true } : {});
+}
+function validateTerritoryWarRules(r) {
+  var _a, _b;
+  if (!r) return [];
+  const errors = [];
+  if (r.everyWeeks !== void 0 && !(Number.isInteger(r.everyWeeks) && r.everyWeeks >= 1 && r.everyWeeks <= 8)) errors.push("Guerre de territoire : un week-end sur 1 \xE0 8.");
+  if (r.weekOffset !== void 0 && !(Number.isInteger(r.weekOffset) && r.weekOffset >= 0)) errors.push("Guerre de territoire : d\xE9calage entier positif.");
+  if (r.maxPerPair !== void 0 && !(Number.isInteger(r.maxPerPair) && r.maxPerPair >= 1)) errors.push("Guerre de territoire : au moins un combat compt\xE9 par paire de joueurs.");
+  if (r.endHoursBeforeMidnight !== void 0 && !(r.endHoursBeforeMidnight >= 0 && r.endHoursBeforeMidnight <= 12)) errors.push("Guerre de territoire : fin entre 12 h et minuit le dimanche.");
+  for (const [k, v] of Object.entries((_a = r.points) != null ? _a : {})) if (!(Number(v) >= 0)) errors.push(`Guerre de territoire : points \xAB ${k} \xBB positifs.`);
+  for (const [k, v] of Object.entries((_b = r.rewards) != null ? _b : {})) if (k !== "winnerTitle" && !(Number(v) >= 0)) errors.push(`Guerre de territoire : r\xE9compense \xAB ${k} \xBB positive.`);
+  return errors;
+}
+
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 function withFixedUnits(units) {
@@ -14816,6 +15127,7 @@ var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
 var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
+var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -14842,7 +15154,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES }
   });
 }
 var current = defaultGameContent();
@@ -14850,7 +15162,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -14906,6 +15218,10 @@ function applyGameContent(overrides) {
       wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
       catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
       mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.mutators) != null ? _Z : {}), { overrides: __spreadValues({}, (_aa = (_$ = (__ = overrides.rules) == null ? void 0 : __.mutators) == null ? void 0 : _$.overrides) != null ? _aa : {}) }),
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ca = (_ba = overrides.rules) == null ? void 0 : _ba.territoryWar) != null ? _ca : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_fa = (_ea = (_da = overrides.rules) == null ? void 0 : _da.territoryWar) == null ? void 0 : _ea.points) != null ? _fa : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ia = (_ha = (_ga = overrides.rules) == null ? void 0 : _ga.territoryWar) == null ? void 0 : _ha.rewards) != null ? _ia : {})
+      }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -14930,7 +15246,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_ba = content.relicSettings) == null ? void 0 : _ba.loot, (_ca = content.relicSettings) == null ? void 0 : _ca.lootTokenCap);
+  setLootTables((_ja = content.relicSettings) == null ? void 0 : _ja.loot, (_ka = content.relicSettings) == null ? void 0 : _ka.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -14952,7 +15268,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _da = content.rules.allianceBoss, { bosses: allianceBosses } = _da, allianceBossRules = __objRest(_da, ["bosses"]);
+  const _la = content.rules.allianceBoss, { bosses: allianceBosses } = _la, allianceBossRules = __objRest(_la, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -14960,6 +15276,7 @@ function applyGameContent(overrides) {
   Object.assign(CATCHUP_RULES, content.rules.catchup);
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
+  Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   current = content;
   return content;
 }
@@ -14983,7 +15300,8 @@ var RULE_GROUP_LABELS = {
   wars: "Guerres",
   streak: "S\xE9rie de connexion",
   catchup: "Rattrapage",
-  mutators: "Mutateur de saison"
+  mutators: "Mutateur de saison",
+  territoryWar: "Guerre de territoire"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -15021,6 +15339,7 @@ function validateRules(rules) {
   if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
   errors.push(...validateMutatorRules(merged.mutators));
+  errors.push(...validateTerritoryWarRules(merged.territoryWar));
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
@@ -15634,7 +15953,7 @@ var DIPLOMACY_RULES = {
   maxPacts: 3,
   messageMax: 500
 };
-var HOUR10 = 36e5;
+var HOUR11 = 36e5;
 function pactStatusAt(p, now) {
   return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
 }
@@ -15697,7 +16016,7 @@ function breakPact(pact, own, actorUid, now) {
   if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
   if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
   assertLeader(own, actorUid, "rompre un pacte");
-  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR10, brokenByTag: own.tag });
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR11, brokenByTag: own.tag });
 }
 function sanitizePactMessage(raw) {
   const text = String(raw != null ? raw : "").trim();
@@ -15765,7 +16084,7 @@ var ANOMALY_RULES = {
   /** Clé game_config où le serveur note la dernière analyse. */
   scanKey: "anomaly_scan"
 };
-var HOUR11 = 36e5;
+var HOUR12 = 36e5;
 var ALL = RESOURCE_LIST.map((r) => r.id);
 function unitValue(res) {
   if (COMMON_RESOURCES.includes(res)) return 1;
@@ -15798,7 +16117,7 @@ function detectResourceAnomalies(player, sinceMs) {
     const b = points[i];
     if (b.t <= sinceMs) continue;
     const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR11);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR12);
     if (gain <= threshold) continue;
     const deltas = {};
     for (const res of ALL) {
@@ -15888,8 +16207,8 @@ var COALITION_RULES = {
   /** Échec : le seigneur gagne cette part de puissance. */
   failGrowth: 0.1
 };
-var HOUR12 = 36e5;
-var DAY12 = 24 * HOUR12;
+var HOUR13 = 36e5;
+var DAY12 = 24 * HOUR13;
 function coalitionState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -15916,7 +16235,7 @@ function checkCoalitionTrigger(c, lords, topHumanPower, now) {
   }
   if (c.coalition && c.coalition.status === "active") return null;
   if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY12) return null;
-  const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR12).sort((a, b) => b.power - a.power)[0];
+  const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR13).sort((a, b) => b.power - a.power)[0];
   if (!ready) return null;
   const coalition = {
     id: `coal-${ready.id}-${now}`,
@@ -16597,6 +16916,52 @@ function renamePlayer(player, raw, now) {
   return { pseudo, login: pseudoLogin(pseudo) };
 }
 
+// src/game/balance/v516.ts
+var stat2 = (p, k) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[k]) || 0;
+};
+var pct5 = (n, d) => d > 0 ? Math.round(n / d * 1e3) / 10 : 0;
+function computeBalance516(active, now) {
+  var _a;
+  const total2 = active.reduce((a, p) => a + stat2(p, "expeditions"), 0);
+  const deep = active.reduce((a, p) => a + stat2(p, "deepExpeditions"), 0);
+  const treaties = { pact: 0, escort: 0, embargo: 0, players: 0 };
+  for (const p of active) {
+    let any = false;
+    for (const st of Object.values((_a = p.pirates) != null ? _a : {})) {
+      const t = activeTreaty(st, now);
+      if (t) {
+        treaties[t.kind] += 1;
+        any = true;
+      }
+    }
+    if (any) treaties.players += 1;
+  }
+  const bonuses = active.map((p) => catchupFactorAt(p, now) - 1).filter((b) => b > 0);
+  const week = casinoWeekId(now);
+  const tokens = active.map((p) => {
+    var _a2;
+    const lw = (_a2 = p.casino) == null ? void 0 : _a2.lootWeek;
+    return lw && lw.id === week ? Number(lw.tokens) || 0 : 0;
+  });
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  const capped = cap > 0 ? tokens.filter((t) => t >= cap).length : 0;
+  const m = activeMutator(now);
+  return {
+    expeditions: { total: total2, deep, deepPct: pct5(deep, total2), deepAmbushLost: active.reduce((a, p) => a + stat2(p, "deepAmbushLost"), 0) },
+    treaties,
+    catchup: {
+      boosted: bonuses.length,
+      boostedPct: pct5(bonuses.length, active.length),
+      avgBonusPct: bonuses.length ? Math.round(bonuses.reduce((a, b) => a + b, 0) / bonuses.length * 1e3) / 10 : 0,
+      maxBonusPct: bonuses.length ? Math.round(Math.max(...bonuses) * 1e3) / 10 : 0
+    },
+    lootTokens: { cap, capped, cappedPct: pct5(capped, active.length), avgThisWeek: active.length ? Math.round(tokens.reduce((a, b) => a + b, 0) / active.length * 10) / 10 : 0 },
+    mutator: m ? { id: m.id, name: m.name } : null
+  };
+}
+
 // src/game/balance/history.ts
 var BALANCE_HISTORY_KEY = "balance_history";
 var BALANCE_HISTORY_DAYS = 180;
@@ -16694,7 +17059,7 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     var _a, _b;
     return ((_a = r.attackerUid) == null ? void 0 : _a.startsWith("npc")) || ((_b = r.defenderUid) == null ? void 0 : _b.startsWith("npc"));
   });
-  const pct5 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
+  const pct6 = (xs) => xs.length ? Math.round(xs.filter((r) => r.outcome === "attacker_win").length / xs.length * 100) : 0;
   const factions2 = FACTIONS.map((f) => {
     var _a, _b, _c, _d;
     let raidsWon = 0, raidsLost = 0, lairsTaken = 0, lairsOpen = 0;
@@ -16714,15 +17079,16 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     activePlayers: active.length,
     players: rows,
     unitPlaces,
-    pvp: { battles: pvp.length, attackerWinPct: pct5(pvp), windowDays },
-    warlordBattles: { battles: wl.length, attackerWinPct: pct5(wl) },
+    pvp: { battles: pvp.length, attackerWinPct: pct6(pvp), windowDays },
+    warlordBattles: { battles: wl.length, attackerWinPct: pct6(wl) },
     factions: factions2,
     warlords: warlords.map((w) => {
       var _a, _b, _c, _d;
       return { pseudo: w.pseudo, power: Math.round(computeFullPower((_a = w.units) != null ? _a : {}, (_b = w.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower((_c = w.units) != null ? _c : {}, (_d = w.techLevels) != null ? _d : {})) };
     }).sort((a, b) => b.power - a.power),
     bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
-    bestAttack: Math.max(0, ...rows.map((r) => r.attack))
+    bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
+    v516: computeBalance516(active, now)
   };
 }
 
@@ -21133,7 +21499,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.16.1" : "dev";
+var LOGIC_VERSION = true ? "5.17.1" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

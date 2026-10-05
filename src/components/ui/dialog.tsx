@@ -67,7 +67,7 @@ export function DialogContent({
       >
         <SheetHandle onDrag={setDrag} closeRef={closeRef} />
         {children}
-        <DialogPrimitive.Close ref={closeRef} aria-label="Fermer" className="hud-cut-sm absolute right-4 top-4 p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-glow/60">
+        <DialogPrimitive.Close ref={closeRef} aria-label="Fermer" className="hud-cut-sm absolute right-4 top-4 p-1 text-slate-400 transition hover:bg-white/10 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-glow/60">
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
@@ -78,7 +78,7 @@ export function DialogContent({
 export function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("font-display text-lg text-white glow-text tracking-wide", className)}
+      className={cn("font-display text-lg text-slate-100 glow-text tracking-wide", className)}
       {...props}
     />
   );

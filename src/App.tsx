@@ -25,6 +25,7 @@ const LabPage = lazyPage(() => import("@/pages/LabPage"), "LabPage");
 const MissionsPage = lazyPage(() => import("@/pages/MissionsPage"), "MissionsPage");
 const PlayersPage = lazyPage(() => import("@/pages/PlayersPage"), "PlayersPage");
 const AlliancePage = lazyPage(() => import("@/pages/AlliancePage"), "AlliancePage");
+const TerritoryWarPage = lazyPage(() => import("@/pages/TerritoryWarPage"), "TerritoryWarPage");
 const GalaxyPage = lazyPage(() => import("@/pages/GalaxyPage"), "GalaxyPage");
 const CombatLogPage = lazyPage(() => import("@/pages/CombatLogPage"), "CombatLogPage");
 const AchievementsPage = lazyPage(() => import("@/pages/AchievementsPage"), "AchievementsPage");
@@ -124,6 +125,7 @@ export default function App() {
                 <Route path="succes" element={<AchievementsPage />} />
                 <Route path="alliance" element={<AlliancePage />} />
                 <Route path="alliance/fiche/:id" element={<AlliancePublicPage />} />
+                <Route path="guerre-territoire" element={<TerritoryWarPage />} />
                 <Route path="profil" element={<ProfilePage />} />
                 <Route path="reglages" element={<SettingsPage />} />
                 <Route path="admin" element={<AdminPage />} />

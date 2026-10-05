@@ -169,7 +169,7 @@ function ReportDetail({ report, github, onDeleted }: { report: GameReport; githu
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
           {REPORT_CATEGORIES.find((c) => c.id === report.category)?.label} · ouvert {timeAgo(report.createdAtMs)}
         </p>
-        <h3 className="hud-title mt-1 text-lg text-white">{report.title}</h3>
+        <h3 className="hud-title mt-1 text-lg text-slate-100">{report.title}</h3>
         <p className="mt-1 flex items-center gap-2 text-sm text-slate-400">
           par <strong className="text-slate-200">{report.reporterPseudo || report.reporterId}</strong>
           <StaffBadge uid={report.reporterId} compact />

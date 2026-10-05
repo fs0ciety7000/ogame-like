@@ -186,14 +186,14 @@ export function UnitsPage() {
                   <LevelUpBurst level={data.level} colorVar="var(--color-cyan-glow)" />
                   {!isLocked && (
                     <div className="absolute right-4 top-1 z-[2] text-right">
-                      <b className="hud-title block text-3xl leading-none text-white">{formatNumber(data.count)}</b>
+                      <b className="hud-title block text-3xl leading-none text-slate-100">{formatNumber(data.count)}</b>
                       <span className="font-mono text-[9px] tracking-[0.25em] text-slate-500">EN HANGAR</span>
                     </div>
                   )}
                   <img
                     src={assetUrl(unit.image)}
                     alt={unit.name}
-                    className={cn("hud-float relative max-h-40 w-[78%] object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.6)]", isLocked && "opacity-40 grayscale")}
+                    className={cn("hud-float relative max-h-40 w-[78%] object-contain drop-shadow-[0_18px_24px_color-mix(in_srgb,var(--color-space-950)_60%,transparent)]", isLocked && "opacity-40 grayscale")}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.opacity = "0";
                     }}
@@ -203,7 +203,7 @@ export function UnitsPage() {
 
                 <div className="relative flex flex-1 flex-col gap-3 p-4 pt-3">
                   <div>
-                    <h3 className="hud-title text-xl text-white">{unit.name}</h3>
+                    <h3 className="hud-title text-xl text-slate-100">{unit.name}</h3>
                     <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint ? "" : unit.description}</p>
                     <div className="-ml-2 mt-1">
                       <UnitSpecButton unit={unit} player={player} />

@@ -41,7 +41,7 @@ export function AnnouncementsPage() {
                   <div className="relative h-36 w-full overflow-hidden bg-space-950">
                     {art && <img src={assetUrl(art)} alt="" loading="lazy" className="h-full w-full object-cover object-[center_70%] transition-transform duration-500 group-hover:scale-105" />}
                     <div className="absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/40 to-transparent" />
-                    <span className="absolute right-3 top-3 hud-cut-sm grid h-9 w-9 place-items-center border border-white/20 bg-space-950/70 text-white opacity-80 transition-opacity group-hover:opacity-100">
+                    <span className="absolute right-3 top-3 hud-cut-sm grid h-9 w-9 place-items-center border border-white/20 bg-space-950/70 text-slate-100 opacity-80 transition-opacity group-hover:opacity-100">
                       <Play className="h-4 w-4" />
                     </span>
                     {!seen.includes(a.id) && (
@@ -55,7 +55,7 @@ export function AnnouncementsPage() {
                       {a.emblem && <img src={assetUrl(a.emblem)} alt="" className="h-5 w-5" />}
                       {a.eyebrow}
                     </p>
-                    <h2 className="font-display text-lg leading-tight text-white">{a.title}</h2>
+                    <h2 className="font-display text-lg leading-tight text-slate-100">{a.title}</h2>
                     <p className="line-clamp-3 text-sm leading-relaxed text-slate-400">{a.text}</p>
                     {a.features && a.features.length > 0 && (
                       <div className="mt-auto flex flex-wrap gap-1.5 pt-2">

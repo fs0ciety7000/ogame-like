@@ -11,13 +11,13 @@ export function PublicFormulasPage() {
   const player = usePlayerStore((s) => s.player);
   return (
     <div className="min-h-screen bg-space-950 text-slate-200">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(1200px_700px_at_85%_-10%,rgba(167,139,250,0.14),transparent_60%),radial-gradient(900px_600px_at_-10%_20%,rgba(75,232,255,0.10),transparent_60%)]" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(1200px_700px_at_85%_-10%,color-mix(in_srgb,var(--color-violet-glow)_14%,transparent),transparent_60%),radial-gradient(900px_600px_at_-10%_20%,color-mix(in_srgb,var(--color-cyan-glow)_10%,transparent),transparent_60%)]" />
       <div className="relative mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6">
         <header className="flex flex-wrap items-center gap-3">
           <img src="/assets/logo/favicon-32.png?v=2.4" alt="" className="h-8 w-8" />
           <div className="min-w-0 flex-1">
             <p className="hud-eyebrow text-[10px] text-cyan-glow">Cosmic Empires · Manuel du commandant</p>
-            <h1 className="hud-title text-2xl text-white sm:text-3xl">Les formules du jeu</h1>
+            <h1 className="hud-title text-2xl text-slate-100 sm:text-3xl">Les formules du jeu</h1>
           </div>
           <a href="/bible/index.html" className="flex items-center gap-1 border border-white/15 px-2.5 py-1 text-xs text-slate-300 hover:border-white/40">
             <BookOpen className="h-3.5 w-3.5" /> Bible visuelle

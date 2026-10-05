@@ -131,7 +131,7 @@ export function HealthPanel({ onOpen }: { onOpen: (tab: string) => void }) {
   return (
     <div className="flex flex-col gap-5">
       <HudCallout tone={checks === null ? "neutral" : bad ? "danger" : warn ? "ember" : "mint"} alert={bad > 0} className="flex flex-wrap items-center gap-3">
-        <p className="hud-title text-sm text-white">
+        <p className="hud-title text-sm text-slate-100">
           {checks === null ? "Vérification en cours…" : bad ? `${bad} point${bad > 1 ? "s" : ""} en panne` : warn ? `${warn} point${warn > 1 ? "s" : ""} à vérifier` : "Tout est vert"}
         </p>
         {checkedAt > 0 && <span className="font-mono text-[11px] text-slate-500">vérifié {timeAgo(checkedAt)} · client v{CURRENT_VERSION}</span>}
@@ -149,7 +149,7 @@ export function HealthPanel({ onOpen }: { onOpen: (tab: string) => void }) {
 
       <Card className="p-0">
         <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
-          <h3 className="hud-title text-sm text-white">Vérifications</h3>
+          <h3 className="hud-title text-sm text-slate-100">Vérifications</h3>
           <a href={SITE_CHECK_URL} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-glow">
             Vérification GitHub (toutes les 6 h) <ExternalLink className="h-3 w-3" />
           </a>
@@ -181,7 +181,7 @@ export function HealthPanel({ onOpen }: { onOpen: (tab: string) => void }) {
       {autoErrors.length > 0 && (
         <Card className="p-0">
           <div className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
-            <h3 className="hud-title text-sm text-white">Erreurs remontées automatiquement</h3>
+            <h3 className="hud-title text-sm text-slate-100">Erreurs remontées automatiquement</h3>
             <Button size="sm" variant="ghost" className="ml-auto" onClick={() => open("reports")}>
               Tous les signalements
             </Button>

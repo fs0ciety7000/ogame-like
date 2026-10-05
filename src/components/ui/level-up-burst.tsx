@@ -26,7 +26,7 @@ export function LevelUpBurst({ level, colorVar = "var(--color-gold-glow)" }: { l
         <motion.div key={burst.key} className="pointer-events-none absolute inset-0 z-10" exit={{ opacity: 0 }}>
           <ParticleBurst count={34} colorVar={colorVar} />
           <motion.span
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 whitespace-nowrap font-display text-lg text-gold-glow drop-shadow-[0_0_8px_rgba(0,0,0,0.9)]"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 whitespace-nowrap font-display text-lg text-gold-glow drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-space-950)_90%,transparent)]"
             initial={{ y: 0, opacity: 0, scale: 0.6 }}
             animate={{ y: -34, opacity: [0, 1, 1, 0], scale: 1 }}
             transition={{ duration: 1.4, times: [0, 0.15, 0.75, 1], ease: "easeOut" }}

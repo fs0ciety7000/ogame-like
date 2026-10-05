@@ -66,7 +66,7 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
 
       {next && (
         <div className="hud-callout hud-tone-violet p-4">
-          <p className="font-display text-base text-white">{next.step.label}</p>
+          <p className="font-display text-base text-slate-100">{next.step.label}</p>
           <p className="mt-1 text-sm text-slate-300">{next.step.learn}</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-300">

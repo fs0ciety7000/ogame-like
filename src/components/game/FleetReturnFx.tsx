@@ -75,7 +75,7 @@ export function FleetReturnFx() {
               </motion.span>
             )}
             <p className="hud-eyebrow text-mint-glow">Flotte de retour</p>
-            <p className="mt-0.5 truncate text-sm text-white">{a.label}</p>
+            <p className="mt-0.5 truncate text-sm text-slate-100">{a.label}</p>
             {a.loot.length > 0 ? (
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
                 {a.loot.map(([res, n], i) => (

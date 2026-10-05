@@ -223,7 +223,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attacker.victories = (attacker.victories ?? 0) + 1;
   }
   else if (combat.outcome === "defender_win") attacker.defeats = (attacker.defeats ?? 0) + 1;
-  applyXpDelta(attacker, xp.attackerXp, now);
+  applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
 
   if (combat.outcome === "defender_win") owner.victories = (owner.victories ?? 0) + 1;
@@ -232,7 +232,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     if (colony) colony.lastDefeatAtMs = now;
     else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
-  applyXpDelta(owner, defenderXpDelta, now);
+  applyXpDelta(owner, defenderXpDelta, now, "defense");
   if (combat.outcome === "attacker_win") recordContract(attacker, "win_attack", 1, now);
   if (combat.outcome === "defender_win") recordContract(owner, "win_defense", 1, now);
   if (combat.outcome === "attacker_win") {

@@ -59,7 +59,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
             <p className="hud-eyebrow flex items-center gap-1.5 text-[10px]" style={{ color: saga.accent }}>
               <Scroll className="h-3.5 w-3.5" /> Saga d'alliance
             </p>
-            <h2 className="hud-title text-xl text-white">{saga.title}</h2>
+            <h2 className="hud-title text-xl text-slate-100">{saga.title}</h2>
           </div>
         </div>
         <div className="flex flex-col gap-3 p-4">
@@ -71,7 +71,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
               return (
                 <div key={o.type} className="flex flex-col gap-1.5 border border-white/10 p-3">
                   <p className="text-xs text-slate-400">{sagaObjectiveLabel(o.type)}</p>
-                  <p className="font-mono text-sm text-white">
+                  <p className="font-mono text-sm text-slate-100">
                     {formatInt(done)} / {formatInt(o.count)}
                   </p>
                   <div className="h-1.5 bg-white/5">
@@ -89,7 +89,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
       <Card className="flex flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
           <Crown className="h-4 w-4 text-gold-glow" />
-          <h3 className="hud-title text-sm text-white">Classement de la saga</h3>
+          <h3 className="hud-title text-sm text-slate-100">Classement de la saga</h3>
           {state.standing && <span className="ml-auto text-[11px] text-slate-500">classement mis à jour chaque heure · ta progression en direct</span>}
         </div>
         {top.length === 0 ? (

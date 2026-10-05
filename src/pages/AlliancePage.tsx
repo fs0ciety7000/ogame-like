@@ -146,7 +146,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
               {a.tag}
             </span>
             <div className="min-w-0">
-              <p className="hud-title truncate text-[15px] normal-case tracking-[0.03em] text-white">{a.name}</p>
+              <p className="hud-title truncate text-[15px] normal-case tracking-[0.03em] text-slate-100">{a.name}</p>
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex gap-0.5">
                   {Array.from({ length: ALLIANCE_RULES.maxMembers }, (_, i) => (
@@ -319,7 +319,7 @@ function AllianceRoom({
                 role="tab"
                 aria-selected={on}
                 onClick={() => setTab(memory.current[sec.id] ?? sec.tabs[0].id)}
-                className={cn("hud-title inline-flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors", on ? "border-b-2 border-cyan-glow text-white" : "text-slate-400 hover:text-slate-200")}
+                className={cn("hud-title inline-flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors", on ? "border-b-2 border-cyan-glow text-slate-100" : "text-slate-400 hover:text-slate-200")}
               >
                 {sec.label}
                 {badge > 0 && <span className="grid h-4 min-w-4 place-items-center bg-ember-glow px-1 font-mono text-[9px] font-bold text-space-950">{badge}</span>}
@@ -393,7 +393,7 @@ function AllianceRoom({
         <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
           <Card className="flex h-fit flex-col gap-3 p-4">
             <div>
-              <p className="font-display text-lg text-white">
+              <p className="font-display text-lg text-slate-100">
                 [{alliance.tag}] {alliance.name}
               </p>
               <p className="text-xs text-slate-500">

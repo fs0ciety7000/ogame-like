@@ -78,7 +78,7 @@ export function CasinoAdmin() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Dices className="h-4 w-4 text-gold-glow" />
-        <h3 className="hud-title text-sm text-white">Casino orbital</h3>
+        <h3 className="hud-title text-sm text-slate-100">Casino orbital</h3>
         <HudChip size="sm" tone={open ? "mint" : "neutral"} alert={open}>
           {open ? "Ouvert" : "Fermé"}
         </HudChip>

@@ -43,7 +43,7 @@ export function AllianceDailyTab({ alliance, uid, canVote }: { alliance: Allianc
   return (
     <div className="flex flex-col gap-3">
       <Card className="flex flex-col gap-3 p-4">
-        <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <Target className="h-4 w-4 text-gold-glow" /> Objectif du jour
         </h3>
         {!daily ? (
@@ -57,7 +57,7 @@ export function AllianceDailyTab({ alliance, uid, canVote }: { alliance: Allianc
                 const mine = daily.votes[uid] === i;
                 return (
                   <div key={p.kind} className={cn("flex flex-col gap-1.5 border p-3", mine ? "border-gold-glow/60 bg-gold-glow/[0.06]" : "border-white/10 bg-white/[0.02]")}>
-                    <span className="text-sm text-white">{DAILY_LABEL[p.kind]}</span>
+                    <span className="text-sm text-slate-100">{DAILY_LABEL[p.kind]}</span>
                     <span className="font-mono text-lg text-gold-glow">{formatCompact(p.target)}</span>
                     <span className="text-[11px] text-slate-500">{votes} vote{votes > 1 ? "s" : ""}</span>
                     {canVote && (
@@ -78,7 +78,7 @@ export function AllianceDailyTab({ alliance, uid, canVote }: { alliance: Allianc
             return (
               <>
                 <div className="flex flex-wrap items-baseline gap-x-3">
-                  <span className="text-base text-white">{DAILY_LABEL[p.kind]}</span>
+                  <span className="text-base text-slate-100">{DAILY_LABEL[p.kind]}</span>
                   <span className="font-mono text-sm text-slate-300">
                     {formatCompact(daily.progress)} / {formatCompact(p.target)}
                   </span>

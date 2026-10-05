@@ -161,7 +161,8 @@ export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, pr
 export { parisDay } from "@/game/retention";
 export { allianceRole, canDiplomacy, canDiplomacyIn } from "@/game/alliances";
 export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
-export { computeTerritories, SECTOR_COUNT, sectorOf, TERRITORY_RULES } from "@/game/territories";
+export { computeTerritories, SECTOR_COUNT, sectorLabel, sectorOf, TERRITORY_RULES } from "@/game/territories";
+export { closeTerritoryWar, isTerritoryWarActive, normalizeTerritoryWar, openTerritoryWar, scoreHoldHour, scoreTerritoryWar, TERRITORY_WAR_KEY, TERRITORY_WAR_RULES, territoryWarRewards, territoryWarWindow } from "@/game/territoryWar";
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
 export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
@@ -197,3 +198,8 @@ export { lootTokensThisWeek } from "@/game/loot";
 export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HISTORY_MAX, MAIL_SCHEDULE_KEY, MAIL_SCHEDULE_MAX, normalizeSegment, scheduleState, trackCampaign } from "@/game/mailSegments";
 export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
 export { signTreaty } from "@/game/pirates";
+// 5.17.1 : audit de l'XP et de l'activité des joueurs (administration).
+export { activityProfile, auditFlags, battlePairs, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
+export { MISSIONS } from "@/game/missions";
+export { missionRewardFactor } from "@/game/events";
+export { ONLINE_MS } from "@/game/retention";

@@ -480,7 +480,7 @@ export function AnnouncementDialog() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
-              <img src={assetUrl(shown.spotlight.image)} alt={shown.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_rgba(255,180,60,0.35)]" />
+              <img src={assetUrl(shown.spotlight.image)} alt={shown.spotlight.name} className="h-60 w-44 border border-gold-glow/50 object-cover object-top shadow-[0_0_40px_color-mix(in_srgb,var(--color-gold-glow)_35%,transparent)]" />
               <figcaption className="border border-gold-glow/30 bg-space-950/85 p-2 backdrop-blur-sm">
                 <p className="font-display text-sm text-gold-glow">{shown.spotlight.name}</p>
                 <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-slate-400">{shown.spotlight.role}</p>
@@ -497,7 +497,7 @@ export function AnnouncementDialog() {
             transition={{ duration: 0.7, delay: 0.75 }}
           >
             <p className={cn("hud-eyebrow flex items-center gap-2", gold ? "text-gold-glow" : "text-danger-glow")}>
-              {shown.emblem ? <img src={assetUrl(shown.emblem)} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_rgba(255,190,80,0.5)]" /> : <Skull className="h-3.5 w-3.5 animate-pulse" />} {shown.eyebrow}
+              {shown.emblem ? <img src={assetUrl(shown.emblem)} alt="" className="h-7 w-7 drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-gold-glow)_50%,transparent)]" /> : <Skull className="h-3.5 w-3.5 animate-pulse" />} {shown.eyebrow}
             </p>
             <DialogTitle className="text-3xl leading-tight md:text-5xl">{shown.title}</DialogTitle>
             <p className="max-w-2xl text-sm leading-relaxed text-slate-200 md:text-base">{shown.text}</p>
@@ -511,7 +511,7 @@ export function AnnouncementDialog() {
                 <motion.img
                   src={assetUrl(shown.currency.icon)}
                   alt=""
-                  className="h-12 w-12 shrink-0 drop-shadow-[0_0_14px_rgba(255,170,60,0.6)]"
+                  className="h-12 w-12 shrink-0 drop-shadow-[0_0_14px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]"
                   animate={{ y: [0, -4, 0], rotate: [0, 4, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 />

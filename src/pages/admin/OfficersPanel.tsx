@@ -44,7 +44,7 @@ export function OfficersPanel() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Medal className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">Officiers</h2>
+        <h2 className="hud-title text-sm text-slate-100">Officiers</h2>
         <HudChip size="sm" tone={customized ? "ember" : "neutral"}>
           {customized ? "Personnalisé" : "Valeurs du code"}
         </HudChip>

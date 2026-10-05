@@ -33,7 +33,7 @@ function Line({ line }: { line: EffectSheetLine }) {
   return (
     <li className="flex flex-col gap-1.5 border-t border-white/5 py-2 first:border-t-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
-        <p className="text-sm text-white">
+        <p className="text-sm text-slate-100">
           {effectStatLabel(line.stat, line.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}
           <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-slate-500">{line.layer === "tech" ? "technologies" : "empire"}</span>
         </p>
@@ -47,7 +47,7 @@ function Line({ line }: { line: EffectSheetLine }) {
         </div>
       </div>
       <div className="shrink-0 text-left sm:text-right">
-        <p className="font-mono text-base tabular-nums text-white">{formatEffectValue(line.stat, line.total)}</p>
+        <p className="font-mono text-base tabular-nums text-slate-100">{formatEffectValue(line.stat, line.total)}</p>
         {capped && <p className="text-[11px] text-ember-glow">plafond atteint</p>}
       </div>
     </li>
@@ -71,7 +71,7 @@ export function EffectSheet({ player, now }: { player: PlayerState; now: number 
         if (own.length === 0) return null;
         return (
           <Card key={g.id} className="p-4">
-            <h3 className="hud-title mb-2 text-sm text-white">{g.label}</h3>
+            <h3 className="hud-title mb-2 text-sm text-slate-100">{g.label}</h3>
             <ul>
               {own.map((l) => (
                 <Line key={`${l.layer}-${l.stat}-${l.target ?? ""}`} line={l} />

@@ -77,7 +77,7 @@ export function LeaderboardPodium({ top, onOpen, suffix = "" }: { top: PodiumEnt
               </div>
 
               <div className="relative w-full min-w-0">
-                <p className="hud-title truncate text-sm normal-case tracking-[0.03em] text-white group-hover:text-cyan-glow sm:text-lg">
+                <p className="hud-title truncate text-sm normal-case tracking-[0.03em] text-slate-100 group-hover:text-cyan-glow sm:text-lg">
                   <PlayerName uid={p.uid} pseudo={p.pseudo} presence={false} />
                 </p>
                 <AscensionStars count={p.ascensions} className="mt-0.5 justify-center" />

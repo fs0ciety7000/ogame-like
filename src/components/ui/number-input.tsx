@@ -199,7 +199,7 @@ export function NumberInput(props: NumberInputProps) {
         className={cn(
           "group relative flex min-w-0 items-stretch overflow-hidden border bg-space-900/80 transition-[border-color,box-shadow]",
           sm ? "h-8" : "h-10",
-          disabled ? "border-white/10 opacity-50" : "border-cyan-glow/20 hover:border-cyan-glow/40 focus-within:border-cyan-glow/70 focus-within:shadow-[0_0_0_3px_rgba(34,211,238,0.12)]",
+          disabled ? "border-white/10 opacity-50" : "border-cyan-glow/20 hover:border-cyan-glow/40 focus-within:border-cyan-glow/70 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-cyan-glow)_12%,transparent)]",
         )}
       >
         {flash > 0 && <i key={flash} aria-hidden className="number-input-bump pointer-events-none absolute inset-0 z-10" />}

@@ -622,7 +622,7 @@ function ThemeCard() {
                 ))}
               </div>
               <span className="flex items-center justify-between">
-                <span className="hud-title text-sm text-white">{t.name}</span>
+                <span className="hud-title text-sm text-slate-100">{t.name}</span>
                 {theme === t.id && <span className="font-mono text-[10px] tracking-[0.16em] text-cyan-glow">ACTIF</span>}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{t.inspiration}</span>

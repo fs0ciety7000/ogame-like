@@ -22,7 +22,7 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="hud-title text-sm text-white">{title}</h3>
+        <h3 className="hud-title text-sm text-slate-100">{title}</h3>
         <div className="ml-auto flex flex-wrap gap-2">{aside}</div>
       </div>
       {children}
@@ -49,7 +49,7 @@ function ChapterPreview({ m }: { m: ChronicleMonth }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="h-3 w-3 rounded-full" style={{ background: m.theme.accent }} />
-        <p className="text-base text-white">
+        <p className="text-base text-slate-100">
           {seasonLabel(m.id)} · « {m.title} »
         </p>
         <HudTag tone="accent">{m.theme.label}</HudTag>
@@ -62,7 +62,7 @@ function ChapterPreview({ m }: { m: ChronicleMonth }) {
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {m.episodes.map((e, i) => (
           <div key={i} className="flex flex-col gap-1.5 border border-white/10 p-3">
-            <p className="text-sm text-white">
+            <p className="text-sm text-slate-100">
               <span className="mr-1 font-mono text-[10px] text-slate-500">Ép. {i + 1}</span> {e.title}
             </p>
             <p className="text-xs text-slate-400">
@@ -84,7 +84,7 @@ function ChapterPreview({ m }: { m: ChronicleMonth }) {
         <div className="flex flex-wrap items-center gap-3 border border-white/10 p-3 text-xs text-slate-300">
           <span className="h-8 w-24 shrink-0" style={{ background: m.completion.banner }} />
           <span>
-            Chapitre terminé : titre « <span className="text-white">{m.completion.title}</span> », bannière de profil, {m.completion.rewards.map((r) => describePassReward(r)).join(", ")}.
+            Chapitre terminé : titre « <span className="text-slate-100">{m.completion.title}</span> », bannière de profil, {m.completion.rewards.map((r) => describePassReward(r)).join(", ")}.
           </span>
         </div>
       )}
@@ -169,7 +169,7 @@ export function ProceduralPanel() {
       <Card className="flex flex-wrap items-center gap-3 p-4">
         <Sparkles className="h-5 w-5 text-cyan-glow" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-white">
+          <p className="text-sm text-slate-100">
             {settings.enabled ? "Génération automatique active" : "Génération automatique en pause"} · {data.pending.length ? `à écrire : ${data.pending.join(", ")}` : "aucun mois en attente"}
           </p>
           <p className="text-xs text-slate-500">
@@ -257,7 +257,7 @@ export function ProceduralPanel() {
             return (
               <div key={m.id} className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-2 text-sm">
                 <span className="font-mono text-slate-400">{m.id}</span>
-                <span className="text-white">« {m.title} »</span>
+                <span className="text-slate-100">« {m.title} »</span>
                 <span className="text-xs text-slate-500">
                   {m.boss} · ×{m.auto!.difficulty} · {timeAgo(m.auto!.generatedAtMs)}
                 </span>
@@ -287,7 +287,7 @@ export function ProceduralPanel() {
         ) : (
           data.achievements.map((a) => (
             <p key={a.def.id} className="text-sm text-slate-300">
-              {a.def.emoji} <span className="text-white">{a.def.name}</span> ({a.def.tier}) — {a.reason}
+              {a.def.emoji} <span className="text-slate-100">{a.def.name}</span> ({a.def.tier}) — {a.reason}
             </p>
           ))
         )}

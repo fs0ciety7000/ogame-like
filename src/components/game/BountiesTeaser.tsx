@@ -19,7 +19,7 @@ export function BountiesTeaser() {
       <img src={assetUrl(KESH.banner)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity group-hover:opacity-30" />
       <img src={assetUrl(KESH.art)} alt="" className="relative h-16 w-12 border border-gold-glow/40 object-cover object-top" />
       <div className="relative min-w-0 flex-1">
-        <p className="hud-title text-sm text-white">Primes de l'Essaim Kesh'Vaar</p>
+        <p className="hud-title text-sm text-slate-100">Primes de l'Essaim Kesh'Vaar</p>
         <p className="text-xs text-slate-300">
           {left > 0 ? `${left} prime${left > 1 ? "s" : ""} possible${left > 1 ? "s" : ""} aujourd'hui` : "Plus de prime aujourd'hui"} · rang {rankName(bountyRank(st.reputation))} ·{" "}
           <img src={assetUrl(KESH.amberIcon)} alt="Ambre" className="inline-block h-4 w-4 align-[-0.25em]" /> {formatNumber(st.amber)}

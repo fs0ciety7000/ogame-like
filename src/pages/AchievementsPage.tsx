@@ -53,7 +53,7 @@ function AchievementCard({ a, player, rate }: { a: AchievementDef; player: Playe
       <AchievementMedal a={a} unlocked={unlocked} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className={cn("truncate text-sm font-semibold", unlocked ? "text-white" : "text-slate-300")}>{hidden ? "???" : a.name}</p>
+          <p className={cn("truncate text-sm font-semibold", unlocked ? "text-slate-100" : "text-slate-300")}>{hidden ? "???" : a.name}</p>
           <span className={cn("shrink-0 text-[10px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
         </div>
         <p className="text-xs text-slate-400">{hidden ? "Succès secret : à toi de le découvrir." : a.description}</p>
@@ -102,7 +102,7 @@ export function AchievementsPage() {
       <Card className="flex flex-wrap items-center gap-4 p-4">
         <Trophy className="h-8 w-8 text-gold-glow" />
         <div>
-          <p className="font-display text-xl text-white">
+          <p className="font-display text-xl text-slate-100">
             {done.length} / {list.length}
           </p>
           <p className="text-xs text-slate-400">succès obtenus · {formatNumber(xp)} XP gagnés</p>

@@ -30,7 +30,7 @@ export function BuildPlanCard({ player, queues, now }: { player: PlayerState; qu
   return (
     <Card className="flex flex-col gap-2 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h2 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <CalendarClock className="h-4 w-4 text-cyan-glow" /> File planifiée
         </h2>
         <span className="font-mono text-xs text-slate-400">

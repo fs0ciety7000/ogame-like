@@ -81,12 +81,12 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
     <Card className="flex flex-col gap-4 overflow-hidden p-0">
       <div
         className="relative h-28 bg-cover bg-center"
-        style={preview?.image ? { backgroundImage: `linear-gradient(180deg, transparent 35%, rgba(7,10,20,0.95) 100%), url(${assetUrl(preview.image)})` } : { background: preview?.gradient }}
+        style={preview?.image ? { backgroundImage: `linear-gradient(180deg, transparent 35%, color-mix(in srgb,var(--color-space-950) 95%,transparent) 100%), url(${assetUrl(preview.image)})` } : { background: preview?.gradient }}
       >
         <div className="absolute bottom-2 left-4 flex items-end gap-3">
-          <img src={emblem === "rank" ? getRankIcon(player.xp) : assetUrl(emblems.find((e) => e.id === emblem)?.image ?? "")} alt="" className="h-14 w-14 object-contain drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]" />
+          <img src={emblem === "rank" ? getRankIcon(player.xp) : assetUrl(emblems.find((e) => e.id === emblem)?.image ?? "")} alt="" className="h-14 w-14 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-space-950)_80%,transparent)]" />
           <div>
-            <p className="font-display text-lg font-semibold text-white">{player.pseudo}</p>
+            <p className="font-display text-lg font-semibold text-slate-100">{player.pseudo}</p>
             {motto.trim() && <p className="text-xs italic text-slate-300">« {motto.trim()} »</p>}
           </div>
         </div>

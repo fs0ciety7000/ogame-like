@@ -61,7 +61,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
         <UserPlus className="h-4 w-4 text-gold-glow" /> Parrainage
       </h3>
       <p className="text-sm text-slate-400">
@@ -78,14 +78,14 @@ export function ReferralCard({ player }: { player: PlayerState }) {
       <p className="flex flex-wrap gap-x-4 text-xs text-slate-400">
         <span>
           <Gift className="mr-1 inline h-3.5 w-3.5 text-gold-glow" />
-          Filleuls récompensés : <strong className="text-white">{st.recruits ?? 0}</strong>
+          Filleuls récompensés : <strong className="text-slate-100">{st.recruits ?? 0}</strong>
         </span>
         <span>
           Ce mois-ci : {thisMonth} / {REFERRAL_RULES.perMonth}
         </span>
         {st.by && (
           <span>
-            Ton parrain : <strong className="text-white">{st.byPseudo}</strong>
+            Ton parrain : <strong className="text-slate-100">{st.byPseudo}</strong>
             {st.rewarded ? " · récompense reçue" : " · récompense à Bronze I"}
           </span>
         )}
@@ -111,7 +111,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
           <p className="text-slate-400">Tes filleuls :</p>
           {info.recruits.map((r) => (
             <div key={r.pseudo} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 hud-cut-sm border border-white/10 bg-white/[0.02] px-2 py-1.5">
-              <strong className="text-white">{r.pseudo}</strong>
+              <strong className="text-slate-100">{r.pseudo}</strong>
               {r.rewarded ? (
                 <span className="text-mint-glow">Récompense versée</span>
               ) : (

@@ -63,7 +63,7 @@ export function RulesPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Règles de combat</h2>
+        <h2 className="font-display text-base text-slate-100">Règles de combat</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
@@ -722,7 +722,7 @@ export function PlayersPanel() {
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-display text-base text-white">{draft.pseudo}</h2>
+              <h2 className="font-display text-base text-slate-100">{draft.pseudo}</h2>
               <span className="font-mono text-[11px] text-slate-500">{draft.id}</span>
               <div className="ml-auto flex flex-wrap gap-2">
                 <Button
@@ -893,7 +893,7 @@ export function ToolsPanel() {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="hud-title text-sm text-white">Sauvegarde du contenu</h3>
+        <h3 className="hud-title text-sm text-slate-100">Sauvegarde du contenu</h3>
         <p className="text-xs text-slate-400">
           Exporte bâtiments, unités, technos, missions et règles en JSON (à garder avant de gros changements), ou réimporte
           un fichier exporté.
@@ -920,7 +920,7 @@ export function ToolsPanel() {
       </Card>
 
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="hud-title text-sm text-white">Code du serveur</h3>
+        <h3 className="hud-title text-sm text-slate-100">Code du serveur</h3>
         <p className="text-xs text-slate-400">
           Le serveur récupère ses hooks (règles du jeu côté serveur) depuis la branche main du dépôt à chaque démarrage. Ce
           bouton le fait tout de suite, par exemple juste après un déploiement.

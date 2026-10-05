@@ -8,7 +8,7 @@ export function RadialGauge({
   size = 88,
   strokeWidth = 6,
   color = "var(--color-cyan-glow)",
-  trackColor = "rgba(255,255,255,0.08)",
+  trackColor = "color-mix(in srgb,var(--color-slate-100) 8%,transparent)",
   children,
 }: {
   value: number;

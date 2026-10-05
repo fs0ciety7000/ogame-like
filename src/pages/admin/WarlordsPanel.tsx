@@ -79,7 +79,7 @@ export function WarlordsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Seigneurs de guerre</h2>
+        <h2 className="font-display text-base text-slate-100">Seigneurs de guerre</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="ghost" size="sm" disabled={busy} onClick={() => void askConfirm({ title: "Arrêter la coalition en cours ?", message: "Elle compte comme un échec.", confirmLabel: "Arrêter", tone: "danger" }).then((ok) => { if (ok) void run("coalitionStop"); })}>
@@ -122,7 +122,7 @@ export function WarlordsPanel() {
             <button type="button" className="flex w-full items-center gap-3 p-3 text-left" onClick={() => setOpen(isOpen ? null : d.id)}>
               <img src={assetUrl(d.portrait)} alt="" className="h-10 w-10 object-cover object-top" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm text-white">
+                <p className="truncate text-sm text-slate-100">
                   {d.name} {!d.enabled && <span className="text-xs text-slate-500">(désactivé)</span>}
                 </p>
                 <p className="text-xs text-slate-500">

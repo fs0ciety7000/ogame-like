@@ -303,11 +303,11 @@ export function GalaxyPage() {
                         width={w}
                         height={h}
                         fill={hue !== null ? `hsla(${hue}, 80%, 55%, ${mine ? 0.14 : 0.08})` : "transparent"}
-                        stroke={mine ? "var(--color-mint-glow)" : "rgba(148,163,184,0.18)"}
+                        stroke={mine ? "var(--color-mint-glow)" : "color-mix(in srgb,var(--color-slate-400) 18%,transparent)"}
                         strokeWidth={(mine ? 0.45 : 0.2) / k}
                         strokeDasharray={mine ? undefined : `${1.2 / k} ${0.8 / k}`}
                       />
-                      <text x={x + 1.2 / k} y={y + 3 / k} fontSize={2 / k} fill="rgba(148,163,184,0.5)" className="font-mono">
+                      <text x={x + 1.2 / k} y={y + 3 / k} fontSize={2 / k} fill="color-mix(in srgb,var(--color-slate-400) 50%,transparent)" className="font-mono">
                         {sectorLabel(id)}
                       </text>
                       {sector?.allianceId && (
@@ -322,8 +322,8 @@ export function GalaxyPage() {
               {myPos &&
                 [25, 50, 75].map((r) => (
                   <g key={r}>
-                    <circle cx={myPos.x} cy={myPos.y} r={r} fill="none" stroke="rgba(255,209,102,0.12)" strokeWidth={0.25 / k} strokeDasharray={`${1 / k} ${1 / k}`} />
-                    <text x={myPos.x + r} y={myPos.y - 0.6 / k} fontSize={1.6 / k} fill="rgba(255,209,102,0.45)">
+                    <circle cx={myPos.x} cy={myPos.y} r={r} fill="none" stroke="color-mix(in srgb,var(--color-gold-glow) 12%,transparent)" strokeWidth={0.25 / k} strokeDasharray={`${1 / k} ${1 / k}`} />
+                    <text x={myPos.x + r} y={myPos.y - 0.6 / k} fontSize={1.6 / k} fill="color-mix(in srgb,var(--color-gold-glow) 45%,transparent)">
                       {r}
                     </text>
                   </g>
@@ -374,7 +374,7 @@ export function GalaxyPage() {
                       <path d={`M ${1.6 / k} 0 L ${-1 / k} ${-0.9 / k} L ${-0.4 / k} 0 L ${-1 / k} ${0.9 / k} Z`} fill={style.color} />
                     </g>
                     {style.hostile && !returning && (
-                      <text x={px} y={py - 4.2 / k} textAnchor="middle" fontSize={2.2 / k} fontWeight={700} fill={style.color} className="pointer-events-none font-mono" style={{ paintOrder: "stroke", stroke: "rgba(5,8,22,0.85)", strokeWidth: 0.5 / k }}>
+                      <text x={px} y={py - 4.2 / k} textAnchor="middle" fontSize={2.2 / k} fontWeight={700} fill={style.color} className="pointer-events-none font-mono" style={{ paintOrder: "stroke", stroke: "color-mix(in srgb,var(--color-space-950) 85%,transparent)", strokeWidth: 0.5 / k }}>
                         {formatClock(Math.max(0, Math.floor((f.arriveAtMs - now) / 1000)))}
                       </text>
                     )}
@@ -628,14 +628,14 @@ export function GalaxyPage() {
           <FleetsPanel />
           {debrisByDistance.length > 0 && (
             <Card className="flex flex-col gap-2 p-4">
-              <h3 className="flex items-center gap-2 font-display text-sm text-white">
+              <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
                 <Recycle className="h-4 w-4 text-mint-glow" /> Champs de débris
               </h3>
               {debrisByDistance.slice(0, 6).map((d) => (
                 <div key={d.id} className="flex items-center gap-2 text-xs">
                   <button
                     type="button"
-                    className="flex-1 truncate text-left text-slate-300 hover:text-white"
+                    className="flex-1 truncate text-left text-slate-300 hover:text-slate-100"
                     onClick={() => {
                       setSelectedUid(d.id);
                       centerOn(mapPosition(d.id));
@@ -675,7 +675,7 @@ function TerritoryCard() {
   const homeSector = map?.sectors[home];
   return (
     <Card className="flex flex-col gap-2 p-4">
-      <h3 className="flex items-center gap-2 font-display text-sm text-white">
+      <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
         <Grid3x3 className="h-4 w-4 text-mint-glow" /> Territoires
         {bonus > 0 && <span className="ml-auto font-mono text-xs text-mint-glow">+{Math.round(bonus * 100)} % production</span>}
       </h3>

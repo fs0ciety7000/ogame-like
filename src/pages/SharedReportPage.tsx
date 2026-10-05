@@ -28,7 +28,7 @@ function BattleView({ report }: { report: BattleReport }) {
         <strong className="text-cyan-glow">{report.attackerPseudo}</strong> attaque <strong className="text-danger-glow">{report.defenderPseudo}</strong> ·{" "}
         {winner ? (
           <>
-            victoire de <strong className="text-white">{winner}</strong>
+            victoire de <strong className="text-slate-100">{winner}</strong>
           </>
         ) : (
           "égalité"
@@ -45,19 +45,19 @@ function BattleView({ report }: { report: BattleReport }) {
       <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Puissance attaquant</p>
-          <p className="tabular-mono text-sm text-white">{formatNumber(report.attackerPower)}</p>
+          <p className="tabular-mono text-sm text-slate-100">{formatNumber(report.attackerPower)}</p>
         </div>
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Puissance défenseur</p>
-          <p className="tabular-mono text-sm text-white">{formatNumber(report.defenderPower)}</p>
+          <p className="tabular-mono text-sm text-slate-100">{formatNumber(report.defenderPower)}</p>
         </div>
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Pertes attaquant</p>
-          <p className="tabular-mono text-sm text-white">{Math.round(report.attackerLossPercent * 100)} %</p>
+          <p className="tabular-mono text-sm text-slate-100">{Math.round(report.attackerLossPercent * 100)} %</p>
         </div>
         <div className="border border-white/5 p-2">
           <p className="text-slate-500">Pertes défenseur</p>
-          <p className="tabular-mono text-sm text-white">{Math.round(report.defenderLossPercent * 100)} %</p>
+          <p className="tabular-mono text-sm text-slate-100">{Math.round(report.defenderLossPercent * 100)} %</p>
         </div>
       </div>
       {loot.length > 0 && (

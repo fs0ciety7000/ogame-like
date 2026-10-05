@@ -147,7 +147,7 @@ export function ContentEditor<S extends ListSection>({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">{title}</h2>
+        <h2 className="font-display text-base text-slate-100">{title}</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         {dirty && <Badge variant="alert">Modifications non enregistrées</Badge>}
         <div className="ml-auto flex flex-wrap gap-2">

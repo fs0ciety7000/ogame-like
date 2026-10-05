@@ -78,7 +78,7 @@ export function BroadcastPanel() {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
         <Bell className="h-4 w-4 text-cyan-glow" /> Messages ciblés
       </h3>
       <p className="text-xs text-slate-400">Une notification dans le jeu (cloche et accueil), envoyée à un groupe de joueurs. Pour un e-mail, utilise l'onglet E-mails.</p>
@@ -103,7 +103,7 @@ export function BroadcastPanel() {
         <div className="flex items-start gap-3 border border-cyan-glow/20 bg-white/[0.03] p-3">
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-cyan-glow" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">{title || "Titre"}</p>
+            <p className="text-sm font-semibold text-slate-100">{title || "Titre"}</p>
             <p className="text-xs text-slate-300">{message || "Message"}</p>
             {link && <p className="mt-1 text-[11px] text-cyan-glow">→ {LINKS.find((l) => l.value === link)?.label}</p>}
           </div>

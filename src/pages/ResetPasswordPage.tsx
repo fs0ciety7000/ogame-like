@@ -55,7 +55,7 @@ export function ResetPasswordPage() {
 
       <div className="relative z-10 w-full max-w-[420px]">
         <div className="mb-6 text-center">
-          <p className="font-display text-2xl text-white">Cosmic Empires</p>
+          <p className="font-display text-2xl text-slate-100">Cosmic Empires</p>
           <p className="text-sm text-slate-400">Choisis un nouveau mot de passe.</p>
         </div>
 

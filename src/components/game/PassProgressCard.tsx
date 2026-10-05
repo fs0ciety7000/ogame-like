@@ -29,7 +29,7 @@ export function PassProgressCard({ now }: { now: number }) {
     <Card className="flex flex-col gap-3 p-4" style={season ? { borderLeft: `2px solid ${season.theme.accent}` } : undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <Ticket className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">{season ? season.theme.name : `Passe de ${seasonLabel(st.seasonId)}`}</h2>
+        <h2 className="hud-title text-sm text-slate-100">{season ? season.theme.name : `Passe de ${seasonLabel(st.seasonId)}`}</h2>
         <span className="font-mono text-xs tabular-nums text-slate-400">
           palier {tier} / {tiers}
         </span>

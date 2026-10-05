@@ -108,17 +108,17 @@ function LineChart({ s, days }: { s: Series; days: string[] }) {
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[120px] w-full touch-none" onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label={`${s.title} : dernière valeur ${last === null ? "—" : fmt(last, s.unit)}`}>
         {s.band && <rect x={PAD.l} width={W - PAD.l - PAD.r} y={y(s.band[1])} height={Math.max(0, y(s.band[0]) - y(s.band[1]))} fill="color-mix(in srgb, var(--color-mint-glow) 8%, transparent)" />}
-        <line x1={PAD.l} x2={W - PAD.r} y1={H - PAD.b} y2={H - PAD.b} stroke="rgba(255,255,255,0.12)" strokeWidth={1} />
+        <line x1={PAD.l} x2={W - PAD.r} y1={H - PAD.b} y2={H - PAD.b} stroke="color-mix(in srgb,var(--color-slate-100) 12%,transparent)" strokeWidth={1} />
         {s.ref !== undefined && <line x1={PAD.l} x2={W - PAD.r} y1={y(s.ref)} y2={y(s.ref)} stroke="color-mix(in srgb, var(--color-ember-glow) 60%, transparent)" strokeWidth={1} strokeDasharray="3 3" />}
         {segments.map((d, k) => (
           <path key={k} d={d} fill="none" stroke="var(--color-cyan-glow)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         ))}
         {s.points.map((v, i) => (v !== null && (days.length <= 31 || i === s.points.length - 1) ? <circle key={i} cx={x(i)} cy={y(v)} r={hover === i ? 4 : 2.5} fill="var(--color-cyan-glow)" stroke="var(--color-space-950)" strokeWidth={2} /> : null))}
-        {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="rgba(255,255,255,0.35)" strokeWidth={1} />}
-        <text x={PAD.l} y={H - 4} fontSize={9} fill="rgba(148,163,184,0.9)">
+        {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="color-mix(in srgb,var(--color-slate-100) 35%,transparent)" strokeWidth={1} />}
+        <text x={PAD.l} y={H - 4} fontSize={9} fill="color-mix(in srgb,var(--color-slate-400) 90%,transparent)">
           {shortDay(days[0])}
         </text>
-        <text x={W - PAD.r} y={H - 4} fontSize={9} fill="rgba(148,163,184,0.9)" textAnchor="end">
+        <text x={W - PAD.r} y={H - 4} fontSize={9} fill="color-mix(in srgb,var(--color-slate-400) 90%,transparent)" textAnchor="end">
           {shortDay(days[days.length - 1])}
         </text>
       </svg>
@@ -168,7 +168,7 @@ export function BalanceHistory({ history, onSnapshot }: { history: BalanceSnapsh
                 <div key={s.id} className="flex flex-col gap-1 border border-white/10 p-3">
                   <div className="flex items-baseline gap-2">
                     <p className="text-xs text-slate-200">{s.title}</p>
-                    <span className="ml-auto font-mono text-sm text-white">{last === null ? "—" : fmt(last, s.unit)}</span>
+                    <span className="ml-auto font-mono text-sm text-slate-100">{last === null ? "—" : fmt(last, s.unit)}</span>
                   </div>
                   <p className="text-[10px] text-slate-500">{s.hint}</p>
                   <LineChart s={s} days={days} />

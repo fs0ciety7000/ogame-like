@@ -24,7 +24,7 @@ export function PlayerAvatar({ uid, pseudo, file, className }: { uid: string; ps
   if (stage === "initials") {
     const h = hue(uid || pseudo);
     return (
-      <div className={cn(base, "flex items-center justify-center font-display font-bold text-white")} style={{ background: `linear-gradient(135deg, hsl(${h} 70% 35%), hsl(${(h + 60) % 360} 70% 18%))` }} aria-label={pseudo}>
+      <div className={cn(base, "flex items-center justify-center font-display font-bold text-slate-100")} style={{ background: `linear-gradient(135deg, hsl(${h} 70% 35%), hsl(${(h + 60) % 360} 70% 18%))` }} aria-label={pseudo}>
         {pseudo.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 2).toUpperCase() || "?"}
       </div>
     );

@@ -64,7 +64,7 @@ export function AvatarCard({ player }: { player: PlayerState }) {
     <Card className="flex flex-col items-center gap-4 p-4 sm:flex-row">
       <PlayerAvatar uid={player.uid} pseudo={player.pseudo} file={file} className="h-24 w-24" />
       <div className="flex flex-1 flex-col gap-2 text-center sm:text-left">
-        <p className="hud-title text-sm text-white">Avatar</p>
+        <p className="hud-title text-sm text-slate-100">Avatar</p>
         <p className="text-xs text-slate-400">Visible sur ta fiche publique. L'image est recadrée en carré (256 px). Pas de contenu choquant : la modération peut la retirer.</p>
         <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
           <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />

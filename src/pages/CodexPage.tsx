@@ -78,7 +78,7 @@ export function CodexPage() {
         <BookOpen className="hidden h-8 w-8 shrink-0 text-gold-glow sm:block" />
         <div className="flex-1">
           <div className="mb-1.5 flex items-baseline justify-between gap-2">
-            <span className="font-display text-sm text-white">
+            <span className="font-display text-sm text-slate-100">
               {progress.unlocked} / {progress.total} fiches
             </span>
             <span className="font-mono text-lg text-gold-glow">{progress.pct} %</span>
@@ -174,7 +174,7 @@ export function CodexPage() {
               )}
             </div>
             <div className="flex flex-col gap-0.5 p-2.5">
-              <span className={cn("truncate font-display text-sm", e.unlocked ? "text-white" : "text-slate-600")}>{e.unlocked ? e.name : "???"}</span>
+              <span className={cn("truncate font-display text-sm", e.unlocked ? "text-slate-100" : "text-slate-600")}>{e.unlocked ? e.name : "???"}</span>
               <span className="truncate text-[10px] text-slate-500">{e.unlocked ? e.subtitle : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint}</span>
             </div>
           </motion.button>

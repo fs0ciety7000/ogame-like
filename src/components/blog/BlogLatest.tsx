@@ -61,7 +61,7 @@ export function BlogLatest({ limit = 3, className = "" }: { limit?: number; clas
                     {cat.label}
                     <span className="text-slate-600">· {blogDate(Date.parse(p.publishedAt))}</span>
                   </span>
-                  <span className="mt-0.5 block truncate text-sm font-semibold text-white group-hover:text-cyan-glow">{p.title}</span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold text-slate-100 group-hover:text-cyan-glow">{p.title}</span>
                   {p.excerpt && <span className="line-clamp-1 text-xs text-slate-400">{p.excerpt}</span>}
                 </span>
               </a>

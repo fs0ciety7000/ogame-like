@@ -363,7 +363,7 @@ export function resolveBountyHunt(
     st.reputation += t.rep;
     st.completed += 1;
     st.board = st.board.filter((c) => c.id !== contractId);
-    applyXpDelta(player, xp, now);
+    applyXpDelta(player, xp, now, "bounty");
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
@@ -789,7 +789,7 @@ export function grantEliteReward(state: EliteHunt, player: PlayerState, now: num
   st.amberEarned += r.amber;
   st.reputation += r.rep;
   player.bounties = st;
-  applyXpDelta(player, r.xp, now);
+  applyXpDelta(player, r.xp, now, "bounty");
   // v4.0 : proie abattue, une relique rare au moins pour chaque chasseur récompensé.
   if (state.status === "killed") {
     const item = rollRelic("elite", now, random, "rare");

@@ -10,6 +10,7 @@ import { adminCloseSeason } from "@/services/adminService";
 import { CheckboxField, Field, NumberField, Section, SelectField, TextField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { CatchupSection, MutatorSection, SeasonPayoutPreview, StreakSection } from "@/pages/admin/RewardsPreview";
+import { TerritoryWarSection } from "@/pages/admin/TerritoryWarSection";
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
@@ -210,6 +211,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       <StreakSection rules={rules} setRules={setRules} saved={saved} />
       <CatchupSection rules={rules} setRules={setRules} />
       <MutatorSection rules={rules} setRules={setRules} />
+      <TerritoryWarSection rules={rules} setRules={setRules} />
     </>
   );
 }

@@ -69,7 +69,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
       <AnimatePresence>{celebrate > 0 && <ParticleBurst key={celebrate} count={40} colorVar="var(--color-gold-glow)" />}</AnimatePresence>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ScrollText className="h-4 w-4 text-gold-glow" />
-        <h3 className="font-display text-sm text-white">Contrats du jour</h3>
+        <h3 className="font-display text-sm text-slate-100">Contrats du jour</h3>
         <span
           className={`hud-chip hud-chip-sm ${streak > 0 ? "hud-tone-gold" : "hud-tone-neutral"}`}
           title="Jours consécutifs où les 3 contrats ont été terminés"

@@ -18,7 +18,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
       <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <span className="font-display text-lg tabular-nums text-white">{value}</span>
+      <span className="font-display text-lg tabular-nums text-slate-100">{value}</span>
     </div>
   );
 }
@@ -60,7 +60,7 @@ export function WeeklyRecapCard() {
     <>
       {!hidden && (
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="relative flex flex-col gap-3 border border-cyan-glow/25 bg-cyan-glow/[0.04] p-4">
-          <button type="button" onClick={hide} className="absolute right-2 top-2 p-1 text-slate-500 hover:text-white" aria-label="Masquer le résumé">
+          <button type="button" onClick={hide} className="absolute right-2 top-2 p-1 text-slate-500 hover:text-slate-100" aria-label="Masquer le résumé">
             <X className="h-4 w-4" />
           </button>
           <p className="hud-eyebrow flex items-center gap-1.5 text-cyan-glow">

@@ -210,7 +210,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
     for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
-        applyXpDelta(player, amount, now);
+        // 5.17.1 : un compte test termine ses missions aussitôt : elles ne rapportent pas d'XP.
+        if (!player.testMode) applyXpDelta(player, amount, now, "mission");
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
       }
@@ -222,7 +223,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     notifications.push({
       kind: "mission",
       title: "Mission terminée",
-      message: `${mission.name} : récompense obtenue${reward.xp ? ` (+${reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : récompense obtenue${reward.xp && !player.testMode ? ` (+${reward.xp} XP)` : ""}.`,
       createdAtMs: now,
       read: false,
     });
@@ -257,7 +258,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         player.resources[res] = (player.resources[res] ?? 0) + amount;
         allRewards[res] = (allRewards[res] ?? 0) + amount;
       }
-      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now);
+      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now, "achievement");
       totalXp += a.rewardXp;
       // 5.15 : jetons du casino selon le palier du succès.
       const tokens = grantTokens(player, ACHIEVEMENT_TOKENS[a.tier] ?? 0);

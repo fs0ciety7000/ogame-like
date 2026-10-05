@@ -97,5 +97,14 @@ describe("design system", () => {
   it("5.15 : nombres via formatNumber / formatDecimal, pas toLocaleString", () => {
     expect(scan((l) => /\.toLocaleString\(/.test(l) && !/Date\(|dateStyle|timeStyle|weekday|hour:|month:|day:/.test(l))).toEqual([]);
   });
-});
 
+  it("5.16.2 : texte clair via le jeton du thème (text-slate-100), jamais text-white", () => {
+    // Voyageur, Constellation… ont leur propre « blanc » (ivoire, os) : text-white l'ignore.
+    expect(scan((l) => /(?<![\w-])text-white\b/.test(l))).toEqual([]);
+  });
+
+  it("5.16.2 : aucune couleur rgba() écrite dans un composant : color-mix(var(--color-…))", () => {
+    // Scènes dessinées (neige, vue cockpit) et rapport imprimé : couleurs d'illustration.
+    expect(scan((l) => /rgba\(\s*\d/.test(l), /(StatsPrintReport|Snowfall|CockpitViewport)\.tsx$/)).toEqual([]);
+  });
+});

@@ -165,11 +165,11 @@ export function BuildingsPage() {
                       <HudTag tone={productionResource ? "ember" : "accent"} className="max-w-full whitespace-normal">{categoryLabel(building)}</HudTag>
                       {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
                     </span>
-                    <h3 className="hud-title mt-2 text-[17px] text-white [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
+                    <h3 className="hud-title mt-2 text-[17px] text-slate-100 [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="mt-1 flex cursor-help items-baseline gap-1.5">
-                          <b className="hud-title text-3xl leading-none text-white">{level}</b>
+                          <b className="hud-title text-3xl leading-none text-slate-100">{level}</b>
                           <span className="font-mono text-xs text-slate-500">/ {building.maxLevel}</span>
                         </div>
                       </TooltipTrigger>
@@ -319,7 +319,7 @@ function ConstructionOverlay() {
         className="absolute inset-0 opacity-40"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(135deg, rgba(255,216,107,0.12) 0px, rgba(255,216,107,0.12) 10px, transparent 10px, transparent 20px)",
+            "repeating-linear-gradient(135deg, color-mix(in srgb,var(--color-gold-glow) 12%,transparent) 0px, color-mix(in srgb,var(--color-gold-glow) 12%,transparent) 10px, transparent 10px, transparent 20px)",
         }}
       />
       <motion.div

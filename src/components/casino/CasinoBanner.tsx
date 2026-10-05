@@ -23,7 +23,7 @@ export function CasinoBanner({ player }: { player: PlayerState }) {
       <img src={assetUrl("/assets/casino/salle-777.webp")} alt="" aria-hidden className="casino-banner-bg" />
       <TokenIcon size={44} variant="art" className="relative" />
       <div className="relative min-w-0 flex-1">
-        <p className="hud-title text-base text-white">Le Casino orbital est ouvert</p>
+        <p className="hud-title text-base text-slate-100">Le Casino orbital est ouvert</p>
         <p className="text-xs text-slate-300">
           {closes ? `Ferme dans ${formatDuration(Math.max(0, Math.floor((closes - now) / 1000)))}` : "Ouvert jusqu'à nouvel ordre"} · {tokens} jeton{tokens > 1 ? "s" : ""} en réserve
           {rank >= 0 ? ` · ${rank + 1}${rank === 0 ? "er" : "e"} au tournoi` : ""}

@@ -118,7 +118,7 @@ function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: Al
   return (
     <Card className="p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="font-display text-base text-white">
+        <p className="font-display text-base text-slate-100">
           <span className="font-mono text-gold-glow">[{otherTag}]</span> {otherName}
         </p>
         <span className={cn("inline-flex items-center gap-1 border px-2 py-0.5 text-[11px] font-semibold", badge.cls)}>
@@ -200,7 +200,7 @@ export function DiplomacyTab({ alliance, uid, canLead }: { alliance: Alliance; u
     <div className="flex flex-col gap-3">
       <Card className="flex flex-col gap-3 p-4">
         <div>
-          <h3 className="hud-title text-sm text-white">Pactes de non-agression</h3>
+          <h3 className="hud-title text-sm text-slate-100">Pactes de non-agression</h3>
           <p className="mt-1 text-xs text-slate-400">
             Tant qu'un pacte est actif, vos membres ne peuvent ni s'attaquer ni se déclarer la guerre. Rompre un pacte laisse {DIPLOMACY_RULES.breakNoticeHours} h de
             préavis. {DIPLOMACY_RULES.maxPacts} relations au plus par alliance ; chacune a son canal de discussion.

@@ -92,7 +92,7 @@ function NewReportForm({ uid, onSent }: { uid: string; onSent: (r: GameReport) =
 
   return (
     <Card className="flex flex-col gap-4 p-5">
-      <h2 className="hud-title flex items-center gap-2 text-base text-white">
+      <h2 className="hud-title flex items-center gap-2 text-base text-slate-100">
         <Bug className="h-4 w-4 text-cyan-glow" /> Nouveau signalement
       </h2>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">

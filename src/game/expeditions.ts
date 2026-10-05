@@ -267,6 +267,7 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
       // 5.16 : en profondeur, une défaite coûte une partie de la cale.
       const lostLoot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, Math.floor((n ?? 0) * R.deepLootLoss)])) as Partial<Record<ResourceId, number>>;
       fleet.loot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, (n ?? 0) - (lostLoot[r as ResourceId] ?? 0)]));
+      bumpStat(player, "deepAmbushLost");
       text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
       text = `Embuscade ! La flotte a dû fuir (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}).`;
@@ -331,8 +332,9 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
 export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, now: number, random: () => number = Math.random): NewNotification {
   // 5.16 : chaque étape profonde compte une demi-durée d'XP en plus.
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
-  applyXpDelta(player, xp, now);
+  applyXpDelta(player, xp, now, "expedition");
   bumpStat(player, "expeditions");
+  if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   // v4.0 : une relique, parfois (5 % à 2 h, jusqu'à 15 % à 8 h).
   let relic = "";
   if (random() < expeditionRelicChance(fleet.expedition.hours)) {

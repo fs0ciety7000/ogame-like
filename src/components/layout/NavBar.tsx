@@ -10,7 +10,7 @@ import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -121,6 +121,7 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "var(--color-mint-glow)",
     items: [
       { to: "/game/alliance", label: "Alliance", icon: Flag },
+      { to: "/game/guerre-territoire", label: "Guerre de territoire", icon: MapIcon },
       { to: "/game/messages", label: "Messages", icon: Mail },
       { to: "/game/joueurs", label: "Classement", icon: Users },
       { to: "/game/marche", label: "Marché", icon: Store },
@@ -315,7 +316,7 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
           "group relative flex items-center gap-2.5 py-2 pl-3 pr-2.5 font-display text-[12.5px] font-semibold uppercase tracking-[0.09em] transition-all duration-200",
           "before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:bg-[var(--nav-accent)] before:shadow-[0_0_12px_var(--nav-accent)] before:transition-transform before:duration-200",
           isActive
-            ? "bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_24%,transparent)] via-[color-mix(in_srgb,var(--nav-accent)_7%,transparent)] to-transparent text-white shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--nav-accent)_22%,transparent)] before:scale-y-100"
+            ? "bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_24%,transparent)] via-[color-mix(in_srgb,var(--nav-accent)_7%,transparent)] to-transparent text-slate-100 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--nav-accent)_22%,transparent)] before:scale-y-100"
             : "text-slate-400 before:scale-y-0 hover:translate-x-0.5 hover:bg-white/[0.03] hover:text-slate-100",
         )
       }
@@ -430,7 +431,7 @@ function CommanderCard() {
         <img src={getRankIcon(player.xp)} alt="" className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_30%,transparent)] transition-transform group-hover:scale-105" />
         <div className="min-w-0 flex-1">
           {/* 5.15.4 : le pseudo a toute la largeur (retour à la ligne plutôt que « Nico… ») ; badge d'équipe avec le rang. */}
-          <p className="flex flex-wrap items-center gap-x-1.5 font-display text-[15px] font-bold leading-tight tracking-[0.02em] text-white">
+          <p className="flex flex-wrap items-center gap-x-1.5 font-display text-[15px] font-bold leading-tight tracking-[0.02em] text-slate-100">
             <PlayerName presence={false} uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="min-w-0 [overflow-wrap:anywhere]" />
             <AscensionStars count={player.ascensions} />
           </p>
@@ -507,7 +508,7 @@ function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number
     <aside className="relative z-30 hidden h-screen w-[4.25rem] shrink-0 flex-col items-stretch border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
       <Link to="/game" className="mx-auto pb-3 pt-4" title="Cosmic Empires">
-        <img src={assetUrl("/assets/logo/logo.webp")} alt="Cosmic Empires" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(75,232,255,0.35)]" />
+        <img src={assetUrl("/assets/logo/logo.webp")} alt="Cosmic Empires" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
       </Link>
       {player && (
         <Link to="/game/profil" className="mx-auto mb-2" title={`${player.pseudo} · ${getRankLabel(player.xp)}`}>
@@ -583,9 +584,9 @@ function Sidebar() {
     <aside className="relative z-30 hidden h-screen w-64 shrink-0 flex-col border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
       <Link to="/game" className="flex items-center gap-3 px-4 pb-4 pt-5">
-        <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-11 w-11 object-contain drop-shadow-[0_0_10px_rgba(75,232,255,0.35)]" />
+        <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-11 w-11 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
         <div className="leading-none">
-          <p className="font-display text-lg font-bold uppercase tracking-[0.16em] text-white">Cosmic</p>
+          <p className="font-display text-lg font-bold uppercase tracking-[0.16em] text-slate-100">Cosmic</p>
           <p className="font-display text-xs font-semibold uppercase tracking-[0.42em] text-cyan-glow">Empires</p>
         </div>
       </Link>

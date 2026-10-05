@@ -81,7 +81,7 @@ export function SeasonBossPanel() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Crown className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">Boss de saison</h2>
+        <h2 className="hud-title text-sm text-slate-100">Boss de saison</h2>
         {anyDirty && (
           <HudChip size="sm" tone="ember">
             Modifications non enregistrées

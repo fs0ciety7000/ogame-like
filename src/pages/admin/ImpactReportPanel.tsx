@@ -21,7 +21,7 @@ export function ImpactReportPanel() {
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">Rapport d'impact des effets</h2>
+        <h2 className="hud-title text-sm text-slate-100">Rapport d'impact des effets</h2>
         <div className="ml-auto flex flex-wrap gap-1">
           {(["all", "tech", "officer", "relic", "talent", "territory"] as const).map((k) => (
             <HudChip key={k} asChild size="sm" tone={filter === k ? "accent" : "neutral"}>
@@ -39,9 +39,9 @@ export function ImpactReportPanel() {
         {shown.map((r) => (
           <div key={`${r.layer}-${r.stat}-${r.target ?? ""}`} className="hud-cut-sm flex flex-col gap-1.5 border border-white/10 p-3">
             <div className="flex flex-wrap items-baseline gap-2">
-              <p className="text-sm text-white">{effectStatLabel(r.stat, r.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}</p>
+              <p className="text-sm text-slate-100">{effectStatLabel(r.stat, r.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}</p>
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{r.layer === "tech" ? "technologies" : "empire"} · {EFFECT_STATS[r.stat].group}</span>
-              <span className="ml-auto font-mono text-sm tabular-nums text-white">{formatEffectValue(r.stat, r.total)}</span>
+              <span className="ml-auto font-mono text-sm tabular-nums text-slate-100">{formatEffectValue(r.stat, r.total)}</span>
             </div>
             {r.capped && <p className="text-[11px] text-ember-glow">Plafonné : {formatEffectValue(r.stat, r.raw)} cumulables, plafond {formatEffectValue(r.stat, r.total)}.</p>}
             <div className="flex flex-wrap gap-1">

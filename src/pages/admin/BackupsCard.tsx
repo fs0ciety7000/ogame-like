@@ -50,7 +50,7 @@ export function BackupsCard() {
   return (
     <Card className="flex flex-col gap-2 p-4 md:col-span-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="hud-title text-sm text-white">Sauvegardes du serveur</h3>
+        <h3 className="hud-title text-sm text-slate-100">Sauvegardes du serveur</h3>
         <span className="text-[11px] text-slate-500">{list ? `${list.length} sur le serveur` : "…"}</span>
         <Button variant="ghost" size="sm" className="ml-auto" disabled={busy !== null} onClick={() => void load()}>
           <RefreshCw className="h-3.5 w-3.5" />

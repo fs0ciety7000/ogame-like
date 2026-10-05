@@ -65,7 +65,7 @@ export function BossLiveStrip() {
               <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: b.accent }} />
             </span>
             <span className="min-w-0 flex-1 truncate">
-              <strong className="text-white">{b.name}</strong> est là : {pct} % de structure, encore {hours} h.
+              <strong className="text-slate-100">{b.name}</strong> est là : {pct} % de structure, encore {hours} h.
             </span>
             <span className="inline-flex shrink-0 items-center gap-1 font-semibold group-hover:underline" style={{ color: b.accent }}>
               <Swords className="h-3.5 w-3.5" /> Frapper

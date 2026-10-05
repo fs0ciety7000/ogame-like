@@ -42,7 +42,7 @@ export function NextActionsCard({ max = 4 }: { max?: number }) {
             <>
               <span className="flex items-center gap-2">
                 <Icon className="h-4 w-4 shrink-0 text-[var(--c)]" />
-                <span className="font-semibold text-white">{a.title}</span>
+                <span className="font-semibold text-slate-100">{a.title}</span>
                 <ArrowRight className="ml-auto h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
               </span>
               <span className="mt-1 block text-xs text-slate-400">{a.text}</span>

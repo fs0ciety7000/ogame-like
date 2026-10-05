@@ -94,7 +94,7 @@ export function ServerPotPanel() {
       <Card className="flex flex-col gap-3 p-4">
         <div className="flex items-center gap-2">
           <Coins className="h-4 w-4 text-gold-glow" />
-          <h3 className="font-display text-sm text-white">Pot commun « Serveur »</h3>
+          <h3 className="font-display text-sm text-slate-100">Pot commun « Serveur »</h3>
           <span className="text-xs text-slate-500">{pot.updatedAtMs ? `mis à jour ${timeAgo(pot.updatedAtMs)}` : "vide pour l'instant"}</span>
           <Button variant="ghost" size="sm" className="ml-auto" onClick={() => void load()}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
@@ -119,7 +119,7 @@ export function ServerPotPanel() {
       </Card>
 
       <Card className="flex flex-col gap-3 p-4">
-        <h3 className="flex items-center gap-2 font-display text-sm text-white">
+        <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
           <PlusCircle className="h-4 w-4 text-gold-glow" /> Alimenter le pot
         </h3>
         <p className="text-xs text-slate-400">Ressources créées par l'équipe et ajoutées au pot (gros lot du casino, concours). Elles s'ajoutent à l'économie du serveur : le dépôt est inscrit au journal et dans les mouvements.</p>
@@ -143,7 +143,7 @@ export function ServerPotPanel() {
       </Card>
 
       <Card className="flex flex-col gap-3 p-4">
-        <h3 className="flex items-center gap-2 font-display text-sm text-white">
+        <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
           <Send className="h-4 w-4 text-cyan-glow" /> Verser à un joueur
         </h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -172,7 +172,7 @@ export function ServerPotPanel() {
       </Card>
 
       <Card className="flex flex-col gap-2 p-4">
-        <h3 className="font-display text-sm text-white">Derniers mouvements</h3>
+        <h3 className="font-display text-sm text-slate-100">Derniers mouvements</h3>
         {pot.log.length === 0 ? (
           <p className="text-xs text-slate-500">Aucun mouvement.</p>
         ) : (

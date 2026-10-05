@@ -35,7 +35,7 @@ export function SeasonRewardsCard({ seasonId, className }: { seasonId: string; c
   return (
     <div className={cn("glass-panel hud-cut flex flex-col gap-2 p-4", className)}>
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <h3 className="hud-title text-sm text-white">Récompenses de fin de saison</h3>
+        <h3 className="hud-title text-sm text-slate-100">Récompenses de fin de saison</h3>
         <span className="font-mono text-[11px] text-slate-500">
           versées le 1er du mois · fin dans {formatDuration(left)}
         </span>

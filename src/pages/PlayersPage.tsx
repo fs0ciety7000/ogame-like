@@ -355,7 +355,7 @@ export function PlayersPage() {
                   <OnlineDot uid={p.uid} className="absolute -right-0.5 -top-0.5" />
                 </button>
                 <div className="min-w-0">
-                  <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-white">
+                  <p className="hud-title flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[17px] normal-case tracking-[0.03em] text-slate-100">
                     <button type="button" title="Voir la fiche" onClick={() => setSheetTarget({ uid: p.uid, pseudo: p.pseudo })} className="min-w-0 max-w-full truncate text-left hover:text-cyan-glow">
                       <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} presence={false} />
                     </button>

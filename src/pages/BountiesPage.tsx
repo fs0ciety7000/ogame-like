@@ -186,12 +186,12 @@ function KeshHero({ st }: { st: BountyState }) {
       <img src={assetUrl(KESH.banner)} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40" />
       <div className="absolute inset-0 bg-gradient-to-r from-space-950 via-space-950/85 to-space-950/40" />
       <div className="relative grid gap-4 p-4 sm:grid-cols-[9rem_1fr] sm:p-5 lg:grid-cols-[11rem_1fr_16rem]">
-        <img src={assetUrl(KESH.art)} alt={KESH.leader} className="mx-auto h-44 w-32 border border-gold-glow/40 object-cover object-top shadow-[0_0_30px_rgba(255,190,80,0.25)] sm:h-52 sm:w-36 lg:h-56 lg:w-40" />
+        <img src={assetUrl(KESH.art)} alt={KESH.leader} className="mx-auto h-44 w-32 border border-gold-glow/40 object-cover object-top shadow-[0_0_30px_color-mix(in_srgb,var(--color-gold-glow)_25%,transparent)] sm:h-52 sm:w-36 lg:h-56 lg:w-40" />
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex items-center gap-2">
-            <img src={assetUrl(KESH.emblem)} alt="" className="h-10 w-10 drop-shadow-[0_0_10px_rgba(255,190,80,0.45)]" />
+            <img src={assetUrl(KESH.emblem)} alt="" className="h-10 w-10 drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_45%,transparent)]" />
             <div>
-              <p className="hud-title text-xl text-white">Les {KESH.name}</p>
+              <p className="hud-title text-xl text-slate-100">Les {KESH.name}</p>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-gold-glow">{KESH.full} · alliés</p>
             </div>
           </div>
@@ -208,7 +208,7 @@ function KeshHero({ st }: { st: BountyState }) {
           </div>
           <div className="border border-white/10 bg-space-950/70 p-3">
             <p className="hud-eyebrow text-[10px] text-slate-500">Rang dans l'Essaim</p>
-            <p className="flex items-center gap-1.5 font-display text-lg text-white">
+            <p className="flex items-center gap-1.5 font-display text-lg text-slate-100">
               <Crown className="h-4 w-4 text-gold-glow" /> {rankName(rank)} <span className="text-xs text-slate-500">({rank}/5)</span>
             </p>
             {next ? (
@@ -254,7 +254,7 @@ function ContractCard({ contract, player, st, onHunt }: { contract: BountyContra
           <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.25em] text-slate-500">Avis de recherche</span>
         </div>
         <div>
-          <p className="hud-title text-lg leading-tight text-white">{fugitive.name}</p>
+          <p className="hud-title text-lg leading-tight text-slate-100">{fugitive.name}</p>
           <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{faction?.name ?? "Indépendant"}</p>
         </div>
         <p className="text-sm italic text-slate-300">« {fugitive.crime[0].toUpperCase() + fugitive.crime.slice(1)}. »</p>
@@ -365,7 +365,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
             </span>
           </div>
           <div>
-            <p className="hud-title text-2xl text-white">{f.name}</p>
+            <p className="hud-title text-2xl text-slate-100">{f.name}</p>
             <p className="text-sm italic text-slate-300">« {f.crime[0].toUpperCase() + f.crime.slice(1)}. »</p>
             <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{faction?.name}</p>
           </div>
@@ -519,7 +519,7 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-display text-sm text-white">{item.name}</p>
+          <p className="font-display text-sm text-slate-100">{item.name}</p>
           <p className="text-xs text-slate-400">{item.description}</p>
         </div>
       </div>

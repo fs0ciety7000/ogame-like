@@ -127,7 +127,7 @@ export function PassPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Passe par défaut</h2>
+        <h2 className="font-display text-base text-slate-100">Passe par défaut</h2>
         {/* v5.14.2 : ne pas le confondre avec les passes de saison (bloc du dessus). */}
         <span className="w-full text-xs text-slate-400 sm:order-last">Sert seulement les mois sans passe de saison publié (ni chapitre qui apporte le sien) : paliers et points, sans thème ni défis.</span>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
@@ -161,7 +161,7 @@ export function PassPanel() {
         </Section>
       </Card>
       <Card className="flex flex-col gap-1.5 p-4">
-        <h3 className="mb-1 text-sm text-white">Paliers</h3>
+        <h3 className="mb-1 text-sm text-slate-100">Paliers</h3>
         {cfg.tiers.map((list, i) => (
           <div key={i} className="flex flex-wrap items-center gap-1.5 border-b border-white/5 py-1.5">
             <span className="w-16 font-mono text-xs text-slate-500">Palier {i + 1}</span>

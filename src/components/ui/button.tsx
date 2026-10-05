@@ -10,9 +10,9 @@ const buttonVariants = cva(
       variant: {
         primary: "hud-btn-primary hud-sheen bg-gradient-to-b from-[color-mix(in_srgb,var(--th-accent)_70%,white)] to-cyan-glow text-[var(--th-btn-ink)] hover:brightness-110 active:brightness-95",
         secondary: "border border-cyan-glow/30 bg-cyan-glow/10 text-slate-100 hover:border-cyan-glow/60 hover:bg-cyan-glow/15",
-        ghost: "text-slate-300 hover:bg-white/5 hover:text-white",
+        ghost: "text-slate-300 hover:bg-white/5 hover:text-slate-100",
         danger: "hud-sheen bg-gradient-to-b from-[color-mix(in_srgb,var(--th-danger)_70%,white)] to-danger-glow text-space-950 hover:brightness-110",
-        outline: "border border-cyan-glow/25 text-slate-200 hover:border-cyan-glow/60 hover:text-white",
+        outline: "border border-cyan-glow/25 text-slate-200 hover:border-cyan-glow/60 hover:text-slate-100",
         warn: "hud-sheen bg-gradient-to-b from-[color-mix(in_srgb,var(--th-ember)_65%,white)] to-ember-glow text-space-950 hover:brightness-110",
       },
       size: {

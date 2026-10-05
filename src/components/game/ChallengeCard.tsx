@@ -110,7 +110,7 @@ function ChallengeProgress({ hideResult }: { hideResult: boolean }) {
         <p className="hud-eyebrow flex items-center gap-1.5 text-gold-glow">
           <Target className="h-3.5 w-3.5" /> Défi de la semaine
         </p>
-        <p className="font-display text-base text-white">{def.label}</p>
+        <p className="font-display text-base text-slate-100">{def.label}</p>
         <p className="ml-auto font-mono text-[11px] text-slate-500">fin dans {timeLeft(current.endMs - now)}</p>
       </div>
 
@@ -141,7 +141,7 @@ function ChallengeProgress({ hideResult }: { hideResult: boolean }) {
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <p className="text-xs text-slate-400">
-          Ta contribution : <strong className="text-white">{formatCompact(mine)}</strong> {def.unit}.{" "}
+          Ta contribution : <strong className="text-slate-100">{formatCompact(mine)}</strong> {def.unit}.{" "}
           {eligible ? (
             <span className="text-mint-glow">Tu seras récompensé si l'objectif est atteint.</span>
           ) : (

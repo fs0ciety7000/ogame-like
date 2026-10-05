@@ -8,6 +8,8 @@ Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
 Tout passe par les variables `--th-*` de `src/index.css`, redéfinies par `html[data-theme]`
 (Tactique, Holo, Cockpit, Netrunner, Aurora, Signal, Voyageur, Omni, Spartan, Constellation). En Tailwind : `cyan-glow` (accent), `mint-glow`,
 `ember-glow`, `danger-glow`, `gold-glow`, `violet-glow`, `space-*`, `slate-*`, `font-display`, `font-mono`.
+Texte clair : `text-slate-100` (le « blanc » du thème : ivoire en Voyageur, os en Constellation), jamais `text-white`.
+Transparence d'un accent : `color-mix(in srgb, var(--color-cyan-glow) 35%, transparent)`, jamais `rgba(…)` en dur.
 Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait plus la changer
 (un test échoue sur toute couleur hex dans un `.tsx`, scènes dessinées exceptées).
 Médailles : `--th-medal-gold|silver|bronze`. Raretés : `--th-rarity-common|rare|epic|legendary|mythic`.

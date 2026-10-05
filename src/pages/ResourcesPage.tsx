@@ -75,7 +75,7 @@ export function ResourcesPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
-                  <AnimatedNumber value={resources[res.id]} format={formatNumber} className="hud-title block text-xl tabular-nums text-white" />
+                  <AnimatedNumber value={resources[res.id]} format={formatNumber} className="hud-title block text-xl tabular-nums text-slate-100" />
                 </div>
               </div>
               {res.rarity === "common" && Number.isFinite(economy.capacity) && (

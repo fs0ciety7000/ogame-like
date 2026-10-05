@@ -114,7 +114,7 @@ export function PlanetPhotoMode({ buildings, life, look, caption }: { buildings:
             </div>
             {showCaption && (
               <div className="pointer-events-none mt-2 text-center">
-                <p className="hud-title text-2xl text-white">{caption}</p>
+                <p className="hud-title text-2xl text-slate-100">{caption}</p>
                 <p className="font-mono text-[10px] tracking-[0.3em] text-cyan-glow">COSMIC EMPIRES</p>
               </div>
             )}

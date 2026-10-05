@@ -292,7 +292,7 @@ function SeasonWarCard({ allianceId }: { allianceId: string }) {
               <span className="font-mono text-[11px] text-slate-500" title="guerres · puissance · secteurs">
                 {r.warPoints} · {r.powerPoints} · {r.sectors}×{SEASON_WAR_RULES.sectorPoints}
               </span>
-              <span className="w-16 text-right font-mono font-semibold text-white">{formatCompact(r.score)}</span>
+              <span className="w-16 text-right font-mono font-semibold text-slate-100">{formatCompact(r.score)}</span>
             </div>
           ))}
         </div>

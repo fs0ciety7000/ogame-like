@@ -42,7 +42,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
       <div className="flex flex-wrap items-start gap-2">
         <Trophy className="mt-0.5 h-5 w-5 text-gold-glow" />
         <div className="min-w-0 flex-1">
-          <p className="hud-title text-sm text-white">{c.title}</p>
+          <p className="hud-title text-sm text-slate-100">{c.title}</p>
           <p className="text-xs text-slate-400">
             Critère : <span className="text-slate-200">{metric}</span> (progression pendant le concours)
           </p>
@@ -90,7 +90,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
           {phase !== "scheduled" && (
             <div className="flex flex-col gap-1.5">
               <p className="flex items-center gap-1.5 text-xs text-slate-400">
-                <Medal className="h-3.5 w-3.5 text-cyan-glow" /> Ton score : <strong className="font-mono text-white">{formatCompact(myScore)}</strong>
+                <Medal className="h-3.5 w-3.5 text-cyan-glow" /> Ton score : <strong className="font-mono text-slate-100">{formatCompact(myScore)}</strong>
                 {myRank >= 0 ? ` · ${myRank === 0 ? "1er" : `${myRank + 1}e`} au dernier relevé` : ""}
               </p>
               {!compact && (

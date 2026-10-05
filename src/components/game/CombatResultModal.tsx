@@ -45,7 +45,7 @@ function CombatClash({ myPower, opponentPower }: { myPower: number; opponentPowe
         animate={{ opacity: [0, 0.85, 0] }}
         transition={{ delay: 0.6, duration: 0.35, ease: "easeOut" }}
       />
-      <div className="absolute inset-0 flex items-center justify-between px-2.5 text-[11px] font-medium tabular-mono text-white/90">
+      <div className="absolute inset-0 flex items-center justify-between px-2.5 text-[11px] font-medium tabular-mono text-slate-100/90">
         <span>{formatNumber(myPower)}</span>
         <span>{formatNumber(opponentPower)}</span>
       </div>

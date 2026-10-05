@@ -37,6 +37,9 @@ export interface PlayerStats {
   /** v3.1 : Léviathans abattus (participation), expéditions terminées. */
   leviathanKills?: number;
   expeditions?: number;
+  /** 5.17 : expéditions terminées après au moins une étape profonde, et embuscades perdues en profondeur. */
+  deepExpeditions?: number;
+  deepAmbushLost?: number;
   traded?: number;
   /** v5.10 : cadeaux envoyés à d'autres joueurs. */
   giftsSent?: number;
@@ -67,6 +70,8 @@ export interface PlayerStats {
   /** v5.10 : instantané du début de semaine et résumé de la semaine écoulée. */
   weekStart?: import("@/game/weeklyRecap").WeeklySnapshot;
   lastWeek?: import("@/game/weeklyRecap").WeeklyRecap;
+  /** 5.17.1 : registre de l'XP gagnée, par heure (index d'heure UTC) et par source, 8 jours glissants. */
+  xpHours?: Record<string, Partial<Record<import("@/game/xpAudit").XpSource, number>>>;
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];

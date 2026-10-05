@@ -43,7 +43,7 @@ export function PageHeader({
           <span>{signalCode(title)}</span>
         </span>
         <p className="hud-eyebrow text-cyan-glow/80">{eyebrow}</p>
-        <h1 className="hud-title mt-1 text-3xl text-white sm:text-4xl">
+        <h1 className="hud-title mt-1 text-3xl text-slate-100 sm:text-4xl">
           <DecodeText text={title} />
         </h1>
         {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}

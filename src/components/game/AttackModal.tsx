@@ -139,10 +139,10 @@ export function AttackModal({
                     </button>
                   </span>
                 ))}
-                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-white" onClick={() => setFleet(owned)}>
+                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-slate-100" onClick={() => setFleet(owned)}>
                   Tout
                 </button>
-                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-white" onClick={() => setFleet({})}>
+                <button type="button" className="px-2 py-1 text-xs text-slate-400 hover:text-slate-100" onClick={() => setFleet({})}>
                   Vider
                 </button>
               </div>
@@ -273,11 +273,11 @@ export function AttackModal({
                       return (
                         <div key={type} className="flex flex-wrap items-center gap-1.5">
                           <span className="w-36 text-slate-300">{CAPSULES[type].name}</span>
-                          <button type="button" onClick={() => set(0)} className={value === 0 ? "border border-white/30 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-500"}>
+                          <button type="button" onClick={() => set(0)} className={value === 0 ? "border border-white/30 px-2 py-0.5 text-slate-100" : "border border-white/10 px-2 py-0.5 text-slate-500"}>
                             Aucune
                           </button>
                           {levels.map((l) => (
-                            <button key={l} type="button" onClick={() => set(l)} className={value === l ? "border border-violet-glow bg-violet-glow/20 px-2 py-0.5 text-white" : "border border-white/10 px-2 py-0.5 text-slate-400"}>
+                            <button key={l} type="button" onClick={() => set(l)} className={value === l ? "border border-violet-glow bg-violet-glow/20 px-2 py-0.5 text-slate-100" : "border border-white/10 px-2 py-0.5 text-slate-400"}>
                               {capsulePct(l)} %
                             </button>
                           ))}

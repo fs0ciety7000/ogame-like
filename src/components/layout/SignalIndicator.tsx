@@ -12,7 +12,7 @@ function Bars({ level, color }: { level: 0 | 1 | 2 | 3; color: string }) {
           width="4"
           height={h}
           rx="1"
-          fill={i < level ? color : "rgba(255,255,255,0.15)"}
+          fill={i < level ? color : "color-mix(in srgb,var(--color-slate-100) 15%,transparent)"}
         />
       ))}
     </svg>
