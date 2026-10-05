@@ -28,6 +28,7 @@ import { resetContentSection, saveContentSection } from "@/services/contentServi
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
+import { XP_TIER_RULES } from "@/game/xpTiers";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
 import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/services/marketService";
@@ -371,7 +372,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(seen?.id).toBe(rep.id);
     const after = (await snap(bId))!;
     expect(after.victories).toBe(before.victories + 1);
-    expect(after.xp).toBe(before.xp + 3);
+    // 5.18 : l'XP de défense passe par le bonus au jeu actif (×1,25).
+    expect(after.xp).toBe(before.xp + Math.round(3 * (XP_TIER_RULES.multipliers.defense ?? 1)));
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
   });
 
@@ -384,14 +386,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(await checkIsAdmin(bId)).toBe(true);
 
     // B (admin) met l'attaque du Chasseur à 0 : une attaque de chasseurs
-    // contre une base sans défense devient une égalité (0 contre 0).
+    // contre une base sans défense devient une égalité (rien à détruire, rien à prendre).
     const units = defaultGameContent().units.map((u) => (u.id === "chasseur" ? { ...u, stats: { ...u.stats, attaque: 0 } } : u));
     await saveContentSection("units", units);
     try {
       await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), units: {} });
       await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 10 } } });
       const { report: res } = await attackAndResolve(aId, { chasseur: 5 });
-      expect(res.attackerPower).toBe(0);
+      // 5.18 : la puissance affichée ne garde que la résistance (10 par chasseur).
+      expect(res.attackerPower).toBe(5 * 10);
       expect(res.outcome).toBe("draw");
     } finally {
       await resetContentSection("units");
@@ -1494,13 +1497,21 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await loginPlayer(B.email, B.pw);
       expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
       expect((await ds.diplomacy("accept", { pactId: pact.id })).status).toBe("active");
-      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("Pacte de non-agression");
+      // 5.18 : le pacte n'interdit plus l'attaque à titre personnel, seulement la guerre d'alliance.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}"` })) await admin.collection("battle_reports").update(r.id, { timestamp: r.timestamp - 3 * 3600_000 });
+      const xpBefore = { a: (await snap(aId)).xp, b: (await snap(bId)).xp };
+      await admin.collection("players").update(aId, { lastDefeatAtMs: 0, xp: xpBefore.b });
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 5, count: 20 } } });
+      const personal = await ps.sendFleet(aId, { chasseur: 1 });
+      expect(personal.mission).toBe("attack");
+      await admin.collection("fleets").delete(personal.id);
+      await admin.collection("players").update(aId, { xp: xpBefore.a });
+
       await expect(pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: X.id } })).rejects.toMatchObject({ status: 400 });
 
       const ending = await ds.diplomacy("break", { pactId: pact.id });
       expect(ending.status).toBe("ending");
       expect(ending.endsAtMs).toBeGreaterThan(Date.now() + 23 * 3600_000);
-      await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("préavis");
       // Un tiers ne lit pas le canal.
       await expect(new PocketBase(PB_TEST_URL!).collection("pact_messages").getFullList()).resolves.toHaveLength(0);
     } finally {

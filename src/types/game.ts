@@ -224,6 +224,13 @@ export interface BattleReport {
   attackerFleet?: Record<string, number>;
   /** v3.5 : colonie attaquée (vide : planète mère). */
   planetId?: string;
+  /** 5.18 : déroulé du combat en tours (points de vie restants de chaque camp) et retraite. */
+  combatLog?: CombatLog;
+}
+
+export interface CombatLog {
+  rounds: { attackerHp: number; defenderHp: number; attackerDamage: number; defenderDamage: number }[];
+  retreated: boolean;
 }
 
 export interface SpyReport {

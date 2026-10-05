@@ -208,10 +208,12 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     // Bonus d'événement : selon l'heure de fin de la mission.
     const factor = missionRewardFactor(entry.endTime);
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
+    let missionXp = 0;
     for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         // 5.17.1 : un compte test termine ses missions aussitôt : elles ne rapportent pas d'XP.
-        if (!player.testMode) applyXpDelta(player, amount, now, "mission");
+        // 5.18 : XP après paliers journaliers.
+        if (!player.testMode) missionXp = applyXpDelta(player, amount, now, "mission");
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
       }
@@ -223,7 +225,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     notifications.push({
       kind: "mission",
       title: "Mission terminée",
-      message: `${mission.name} : récompense obtenue${reward.xp && !player.testMode ? ` (+${reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : récompense obtenue${missionXp > 0 ? ` (+${missionXp} XP${missionXp < reward.xp ? ", palier du jour" : ""})` : ""}.`,
       createdAtMs: now,
       read: false,
     });

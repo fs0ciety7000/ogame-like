@@ -38,11 +38,13 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   image: "/assets/units/traqueur_kesh.webp",
   maxLevel: 1,
   description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le Léviathan, en attaque comme en défense.",
-  cost: { scrap: 6000, energy: 3000 },
+  // 5.18 : 6 000/3 000 et 25 places → 3 000/1 500 et 3 places (l'audit du combat en tours le
+  // plaçait à 0,3 × la norme par coût et 0,1 × par place, même avec son bonus contre les PNJ).
+  cost: { scrap: 3000, energy: 1500 },
   stats: { attaque: 420, defense: 90, vitesse: 12, cargo: 20 },
   category: "attack",
   unlockTech: "",
-  hangarSpace: 25,
+  hangarSpace: 3,
   blueprint: true,
 };
 
@@ -138,14 +140,14 @@ export const DEFAULT_UNITS: UnitDef[] = [
     maxLevel: 10,
     description: "Arme ultime. Capacité de destruction massive.",
     cost: { scrap: 50000, energy: 30000 },
-    stats: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 },
+    // 5.18 : 500 → 4 000 au niveau 1 (elle valait moins qu'un Croiseur Nova), +900 par niveau
+    // au lieu de +1 700 (12 100 au niveau 10 au lieu de 15 800) : au niveau des meilleures unités par place.
+    stats: { attaque: 4000, defense: 4000, vitesse: 1, cargo: 1000 },
     category: "attack",
     unlockTech: "tech19",
-    // v5.4 : 200 → 80 places : arme ultime par place (≈ 395 ATK/place au niveau 10).
+    // v5.4 : 200 → 80 places.
     hangarSpace: 80,
-    // 200 places et l'entretien de 200 sentinelles : elle gagne beaucoup plus
-    // par niveau que les autres (15 800 ATK/DEF au niveau 10).
-    levelBonus: 1700,
+    levelBonus: 900,
   },
   // v3.6 : unités de fin de partie.
   {
@@ -182,7 +184,8 @@ export const DEFAULT_UNITS: UnitDef[] = [
     maxLevel: 10,
     description: "Arme simple mais efficace pour saturer une zone.",
     cost: { scrap: 200, energy: 100 },
-    stats: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 },
+    // 5.18 : 60/0 → 25/3 : 200 d'attaque par 1 000 ressources, quatre fois les autres défenses.
+    stats: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech14",
     hangarSpace: 1,

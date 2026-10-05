@@ -7,7 +7,7 @@ import { capLoot } from "@/game/warlords";
 import { shieldUntil } from "@/game/bounties";
 import { addSeasonPower } from "@/game/seasonWars";
 import { bumpStat, setStat } from "@/game/stats";
-import { computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
+import { combatLogOf, computeFullPower, getShieldPercent, pveAttackFactor, pveHomeDefenseFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { flushState, type NewNotification } from "@/game/flush";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
@@ -216,14 +216,15 @@ export function performAttack(input: AttackInput): AttackOutput {
     if (def.units[unitId]) def.units[unitId].count = Math.max(0, def.units[unitId].count - lost);
   }
 
-  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
+  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def.npc);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 3600_000) setStat(attacker, "phoenix", 1);
     attacker.victories = (attacker.victories ?? 0) + 1;
   }
   else if (combat.outcome === "defender_win") attacker.defeats = (attacker.defeats ?? 0) + 1;
-  applyXpDelta(attacker, xp.attackerXp, now, "attack");
+  // 5.18 : XP après paliers journaliers (affichée telle quelle dans la notification et le rapport).
+  xp.attackerXp = applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
 
   if (combat.outcome === "defender_win") owner.victories = (owner.victories ?? 0) + 1;
@@ -291,6 +292,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     attackerPower: combat.attackerPower,
     defenderPower: combat.defenderPower,
     attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
     defenderLossPercent: combat.defenderLossPercent,
     attackerLosses: combat.attackerLosses,
     attackerRecovered: combat.attackerRecovered,

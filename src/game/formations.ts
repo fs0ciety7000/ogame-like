@@ -23,7 +23,7 @@ const pct = (v: number) => `${v > 0 ? "+" : "−"}${Math.round(Math.abs(v) * 100
 export const FORMATIONS: FormationDef<FormationId>[] = [
   { id: "balanced", name: "Équilibrée", description: () => "Aucun bonus ni malus." },
   { id: "assault", name: "Assaut", description: () => `Attaque ${pct(COMBAT_RULES.assaultAttack)}, pertes subies ${pct(COMBAT_RULES.assaultLosses)}.` },
-  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct(COMBAT_RULES.cautiousAttack)}, pertes subies ${pct(COMBAT_RULES.cautiousLosses)}.` },
+  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct(COMBAT_RULES.cautiousAttack)}, dégâts subis ${pct(COMBAT_RULES.cautiousLosses)}, retraite dès ${Math.round(COMBAT_RULES.cautiousRetreatAt * 100)} % de pertes.` },
   { id: "raid", name: "Raid", description: () => `Attaque ${pct(COMBAT_RULES.raidAttack)}, cargaison ${pct(COMBAT_RULES.raidCargo)}.` },
 ];
 
@@ -41,16 +41,18 @@ export function isPosture(v: unknown): v is PostureId {
 }
 
 /** Paramètres de resolveCombat pour la formation de l'attaquant. */
-export function formationEffects(id: unknown): { attackFactor: number; attackerLossFactor: number; cargoFactor: number } {
+export function formationEffects(id: unknown): { attackFactor: number; attackerLossFactor: number; cargoFactor: number; retreatAt: number } {
+  const retreatAt = COMBAT_RULES.retreatAt;
   switch (id) {
     case "assault":
-      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1 };
+      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1, retreatAt };
     case "cautious":
-      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1 };
+      // 5.18 : la formation prudente décroche plus tôt.
+      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1, retreatAt: COMBAT_RULES.cautiousRetreatAt };
     case "raid":
-      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo };
+      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo, retreatAt };
     default:
-      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1 };
+      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1, retreatAt };
   }
 }
 

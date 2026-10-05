@@ -400,7 +400,7 @@ export function EmpireStatsPage() {
                     <th className="py-2 pr-3 text-right font-normal">En vol</th>
                     <th className="py-2 pr-3 text-right font-normal">Colonies</th>
                     <th className="py-2 pr-3 text-right font-normal">ATK</th>
-                    <th className="py-2 pr-3 text-right font-normal">DEF</th>
+                    <th className="py-2 pr-3 text-right font-normal">RÉS</th>
                     <th className="w-40 py-2 pr-3 font-normal">Puissance</th>
                     <th className="py-2 text-right font-normal">Places</th>
                   </tr>
@@ -444,7 +444,7 @@ export function EmpireStatsPage() {
               </table>
             </div>
           )}
-          <p className="text-[11px] text-slate-500">Puissance : ATK pour la flotte, ATK + DEF pour les défenses (comme au combat), avant le bonus à domicile et tes bonus de commandement.</p>
+          <p className="text-[11px] text-slate-500">Puissance : ATK pour la flotte, ATK + RÉS pour les défenses (comme au combat), avant le bonus à domicile et tes bonus de commandement.</p>
         </Section>
 
         <div className="grid gap-5 lg:grid-cols-2">

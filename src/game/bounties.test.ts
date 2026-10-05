@@ -1,3 +1,4 @@
+import { XP_TIER_RULES } from "@/game/xpTiers";
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import {
@@ -92,7 +93,8 @@ describe("bounties", () => {
     expect(st.amber).toBe(BOUNTY_RULES.tiers[1].amber);
     expect(st.reputation).toBe(BOUNTY_RULES.tiers[1].rep);
     expect(st.board.some((c) => c.id === contract.id)).toBe(false);
-    expect(hunt.player.xp).toBe(BOUNTY_RULES.tiers[1].xp);
+    // 5.18 : bonus au jeu actif sur les primes (×1,5), sous le premier palier.
+    expect(hunt.player.xp).toBe(BOUNTY_RULES.tiers[1].xp * (XP_TIER_RULES.multipliers.bounty ?? 1));
     expect(hunt.player.stats?.bounties).toBe(1);
     expect(hunt.notifications.some((n) => n.kind === "bounty" && n.link === "/game/primes")).toBe(true);
   });
@@ -231,7 +233,7 @@ describe("bounties", () => {
     expect(r.lost.chasseur).toBe(100);
     expect(eliteRewardees(r.state)).toEqual(["a"]);
     const reward = grantEliteReward(r.state, a, NOW + H);
-    expect(reward).toMatchObject({ xp: ELITE_RULES.killed.xp, amber: ELITE_RULES.killed.amber });
+    expect(reward).toMatchObject({ xp: ELITE_RULES.killed.xp * (XP_TIER_RULES.multipliers.bounty ?? 1), amber: ELITE_RULES.killed.amber });
     expect(grantEliteReward(r.state, b, NOW + H)).toEqual({ xp: 0, amber: 0 });
     expect(closeElite(spawnElite(NOW, [a]), NOW + 8 * 24 * H).status).toBe("failed");
   });

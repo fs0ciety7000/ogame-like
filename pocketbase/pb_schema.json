@@ -634,6 +634,12 @@
         "type": "text",
         "required": false,
         "max": 40
+      },
+      {
+        "name": "combatLog",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
       }
     ],
     "indexes": [

@@ -1679,14 +1679,7 @@ function launchFleetRequest(e) {
       if (!contractRec) throw new NotFoundError("Contrat introuvable.");
       target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
-    // v3.8 : pas d'attaque entre alliances liées par un pacte de non-agression.
-    if (mission === "attack" && target) {
-      const pact = bindingPact(txApp, game, attacker.rec.getString("allianceId"), target.allianceId, now);
-      if (pact) {
-        const tag = pact.allianceA === target.allianceId ? pact.tagA : pact.tagB;
-        throw new BadRequestError(`Pacte de non-agression avec [${tag}] : attaque impossible${pact.status === "ending" ? " jusqu'à la fin du préavis" : ""}.`);
-      }
-    }
+    // 5.18 : un pacte de non-agression n'empêche plus l'attaque à titre personnel (seulement la guerre d'alliance).
     let expeditionsActive = 0;
     let expeditionsToday = 0;
     let leviathan = null;
@@ -4818,6 +4811,40 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 5.18 : combat en tours — Étoile noire et Roquette recalées (si encore aux anciennes valeurs).
+  {
+    id: "combat-units-5.18",
+    key: "units",
+    patches: [
+      { id: "etoile_noire", field: "stats", from: { attaque: 500, defense: 500, vitesse: 1, cargo: 1000 }, to: { attaque: 4000, defense: 4000, vitesse: 1, cargo: 1000 } },
+      { id: "etoile_noire", field: "levelBonus", from: 1700, to: 900 },
+      { id: "roquette", field: "stats", from: { attaque: 60, defense: 0, vitesse: 0, cargo: 0 }, to: { attaque: 25, defense: 3, vitesse: 0, cargo: 0 } },
+      { id: "traqueur_kesh", field: "cost", from: { scrap: 6000, energy: 3000 }, to: { scrap: 3000, energy: 1500 } },
+      { id: "traqueur_kesh", field: "hangarSpace", from: 25, to: 3 },
+    ],
+  },
+  // 5.18 : vaisseaux à quai engagés à 50 % (Riposte 100 %), si les règles enregistrées ont encore les anciennes valeurs.
+  {
+    id: "combat-rules-5.18",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      const c = data && data.combat;
+      if (!c || typeof c !== "object") return false;
+      let touched = false;
+      if (c.homeFleetDefenseFactor === 0.1) {
+        c.homeFleetDefenseFactor = 0.5;
+        touched = true;
+        changes.push("combat : vaisseaux à quai engagés à 50 %");
+      }
+      if (c.riposteHomeFleet === 0.25) {
+        c.riposteHomeFleet = 1;
+        touched = true;
+        changes.push("combat : Riposte à 100 %");
+      }
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {
@@ -5069,9 +5096,9 @@ function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
   }
 }
 
-const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte" };
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte", amber: "Ambre modifiée" };
 /** v5.14 : actions qui donnent quelque chose (motif obligatoire). */
-const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule"];
+const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule", "amber"];
 
 /**
  * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
@@ -5125,6 +5152,11 @@ function adminPlayerAction(e) {
       const label = game.relicLabel(item);
       notes.push({ kind: "event", title: "Une relique t'est offerte", message: `${label} — ${reason}.`, createdAtMs: now, read: false, link: "/game/etat-major" });
       summary = { relique: label };
+    } else if (action === "amber") {
+      // 5.18 : solde d'Ambre fixé par l'équipe (et non ajouté).
+      const r = game.adminSetAmber(player, Number(req.amount));
+      notes.push({ kind: "event", title: "Ambre ajustée par l'équipe", message: `Ton solde d'Ambre passe de ${r.before} à ${r.after} — ${reason}.`, createdAtMs: now, read: false });
+      summary = { ambre: `${r.before} → ${r.after}` };
     } else if (action === "capsule") {
       const type = String(req.capsule || "");
       const level = Math.max(1, Math.min(10, Math.floor(Number(req.level) || 1)));

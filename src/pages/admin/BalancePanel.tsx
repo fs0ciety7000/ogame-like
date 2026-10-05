@@ -10,7 +10,8 @@ import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
 import { commonPerHour, empireProfile, extractorCurve, missionTable, techProfile, unitMetrics, unitTable, type UnitMetrics } from "@/game/balance/analysis";
-import { findUnit } from "@/game/units";
+import { findUnit, UNITS } from "@/game/units";
+import { UNIT_AUDIT_RULES, UNIT_CLASS_LABELS, unitBalanceAudit } from "@/game/unitClasses";
 import { cn, formatCompact, timeAgo } from "@/lib/utils";
 
 /* v5.4 : outil d'équilibrage. Analyse du contenu actuel (code + personnalisation),
@@ -41,6 +42,66 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
       </div>
       {children}
     </Card>
+  );
+}
+
+/** 5.18 : audit des unités d'après le combat en tours (valeur = √(ATK × PV)), par coût et par place. */
+function CombatUnitAudit() {
+  const rows = useMemo(() => unitBalanceAudit(UNITS), []);
+  const ratio = (v: number) => (
+    <span className={cn("font-mono", v >= UNIT_AUDIT_RULES.strongAbove ? "text-gold-glow" : v < UNIT_AUDIT_RULES.weakBelow ? "text-danger-glow" : "text-slate-300")}>×{v.toFixed(2)}</span>
+  );
+  const flagged = rows.filter((r) => r.flag).length;
+  return (
+    <Section
+      title="Unités au combat en tours — valeur √(ATK × PV), niveau max"
+      aside={<span className="text-[11px] text-slate-500">{flagged ? `${flagged} unité${flagged > 1 ? "s" : ""} à revoir` : "aucune unité hors norme"} · ×1 = médiane de la catégorie</span>}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-left text-xs">
+          <thead className="text-[10px] font-mono uppercase tracking-[0.1em] text-slate-500">
+            <tr>
+              <th className="py-1.5 pr-3 font-normal">Unité</th>
+              <th className="py-1.5 pr-3 font-normal">Classe</th>
+              <th className="py-1.5 pr-3 text-right font-normal">Valeur niv. 1</th>
+              <th className="py-1.5 pr-3 text-right font-normal">Niv. max</th>
+              <th className="py-1.5 pr-3 text-right font-normal">/ 1 000 res.</th>
+              <th className="py-1.5 pr-3 text-right font-normal">/ place</th>
+              <th className="py-1.5 font-normal">Diagnostic</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(["attack", "defense"] as const).flatMap((cat) =>
+              rows
+                .filter((r) => r.category === cat)
+                .sort((a, b) => a.valueMax - b.valueMax)
+                .map((r) => (
+                  <tr key={r.id} className="border-t border-white/5">
+                    <td className="py-1.5 pr-3 text-slate-200">
+                      {r.name} <span className="text-slate-500">· {cat === "attack" ? "flotte" : "défense"}</span>
+                    </td>
+                    <td className="py-1.5 pr-3">
+                      <HudTag tone={r.cls === "heavy" ? "gold" : r.cls === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[r.cls]}</HudTag>
+                    </td>
+                    <td className="py-1.5 pr-3 text-right font-mono text-slate-300">{formatCompact(r.value)}</td>
+                    <td className="py-1.5 pr-3 text-right font-mono text-slate-300">{formatCompact(r.valueMax)}</td>
+                    <td className="py-1.5 pr-3 text-right">
+                      <span className="font-mono text-slate-400">{formatCompact(r.perK)}</span> {ratio(r.perKRatio)}
+                    </td>
+                    <td className="py-1.5 pr-3 text-right">
+                      <span className="font-mono text-slate-400">{formatCompact(r.perSlot)}</span> {ratio(r.perSlotRatio)}
+                    </td>
+                    <td className={cn("py-1.5", r.flag === "strong" ? "text-gold-glow" : r.flag === "weak" ? "text-danger-glow" : "text-slate-500")}>{r.note || "Dans la norme."}</td>
+                  </tr>
+                )),
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[11px] text-slate-500">
+        Au combat en tours, deux armées s'usent l'une l'autre : doubler l'attaque ou doubler les points de vie se valent, d'où √(ATK × PV). Signalée « trop forte » au-delà de ×{UNIT_AUDIT_RULES.strongAbove} par coût ET par place (×{UNIT_AUDIT_RULES.endgameStrongAbove} pour les unités lourdes de fin de partie), « piège » en deçà de ×{UNIT_AUDIT_RULES.weakBelow} sur les deux. Le bonus des Traqueurs contre les PNJ n'est pas compté.
+      </p>
+    </Section>
   );
 }
 
@@ -198,6 +259,8 @@ export function BalancePanel() {
           <BalanceHistory history={live.history ?? []} onSnapshot={() => void load()} />
         </Section>
       )}
+
+      <CombatUnitAudit />
 
       <Section title="Unités — niveau max, technologies au maximum" aside={<span className="text-[11px] text-slate-500">Clique une ligne pour l'essayer dans le bac à sable</span>}>
         <div className="overflow-x-auto">

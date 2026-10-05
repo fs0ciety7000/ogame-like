@@ -155,8 +155,8 @@ function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: Al
         {status === "proposed"
           ? `Proposé par ${pact.proposedByPseudo} ${timeAgo(pact.createdAtMs)}.`
           : status === "ending"
-            ? `Rompu par [${pact.brokenByTag}] : attaques toujours interdites jusqu'à la fin du préavis.`
-            : `Signé ${timeAgo(pact.acceptedAtMs)} : aucune attaque ni guerre entre vos deux alliances.`}
+            ? `Rompu par [${pact.brokenByTag}] : guerre d'alliance toujours interdite jusqu'à la fin du préavis.`
+            : `Signé ${timeAgo(pact.acceptedAtMs)} : aucune guerre d'alliance entre vous. Chacun reste libre d'attaquer en son nom.`}
       </p>
       {open && <PactChannel pact={pact} uid={uid} />}
     </Card>
@@ -202,7 +202,7 @@ export function DiplomacyTab({ alliance, uid, canLead }: { alliance: Alliance; u
         <div>
           <h3 className="hud-title text-sm text-slate-100">Pactes de non-agression</h3>
           <p className="mt-1 text-xs text-slate-400">
-            Tant qu'un pacte est actif, vos membres ne peuvent ni s'attaquer ni se déclarer la guerre. Rompre un pacte laisse {DIPLOMACY_RULES.breakNoticeHours} h de
+            Tant qu'un pacte est actif, vos deux alliances ne peuvent pas se déclarer la guerre. Chaque joueur reste libre d'attaquer en son nom. Rompre un pacte laisse {DIPLOMACY_RULES.breakNoticeHours} h de
             préavis. {DIPLOMACY_RULES.maxPacts} relations au plus par alliance ; chacune a son canal de discussion.
           </p>
         </div>

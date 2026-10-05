@@ -22,6 +22,8 @@ export const PVP_RULES = {
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
    *  bloquerait mutuellement en début de partie). */
   xpGapFloor: 500,
+  /** 5.18 : XP minimale d'une victoire contre un PNJ (seigneur de guerre). */
+  npcWinMinXp: 30,
   /** Perte d'XP maximale en défense sur 24 h glissantes. */
   defenseXpLossCapPer24h: 60,
   defenseXpLossWindowMs: 24 * 60 * 60 * 1000,
@@ -45,9 +47,16 @@ export interface CombatXp {
  *  - Défenseur battu : −20 ÷ rapport de force, entre −5 et −20 — perdre de
  *    justesse (défense négligée) coûte plus cher qu'être écrasé.
  *  - Égalité : +5 chacun. */
-export function computeCombatXp(outcome: CombatOutcome, attackerPower: number, defenderPower: number): CombatXp {
+export function computeCombatXp(outcome: CombatOutcome, attackerPower: number, defenderPower: number, defenderIsNpc = false): CombatXp {
   const att = Math.max(attackerPower, 0);
   const def = Math.max(defenderPower, 0);
+  // 5.18 : contre un PNJ, une défaite ne coûte pas d'XP et une victoire en rapporte au moins npcWinMinXp.
+  if (defenderIsNpc) {
+    const base = computeCombatXp(outcome, attackerPower, defenderPower, false);
+    if (outcome === "attacker_win") return { ...base, attackerXp: Math.max(PVP_RULES.npcWinMinXp, base.attackerXp) };
+    if (outcome === "defender_win") return { ...base, attackerXp: 0 };
+    return base;
+  }
 
   if (outcome === "attacker_win") {
     const ratio = att > 0 ? def / att : 0;

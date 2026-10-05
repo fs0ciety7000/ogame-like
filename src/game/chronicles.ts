@@ -558,10 +558,12 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
   if (st.progress[i] < e.objective.count) throw new GameActionError(`Objectif pas encore atteint (${st.progress[i]} / ${e.objective.count}).`);
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
-  addPassPoints(player, "chronicle", now);
+  const overflowAmber = addPassPoints(player, "chronicle", now);
   // 5.15.11 : bonus de l'épisode (jetons, Ambre) avant sa récompense propre.
   const bonus = chronicleBonus();
   const gained = [...bonusRewards(bonus.episode), ...(e.reward ?? [])].map((r) => grantPassReward(player, r, month.id, now, random));
+  // 5.18 : passe déjà terminé : les 40 points deviennent 40 Ambre.
+  if (overflowAmber > 0) gained.unshift(`${overflowAmber} Ambre (passe terminé)`);
   // v5.4 : chapitre terminé : titre, bannière et récompense de fin.
   const chapter = month.episodes.every((_, k) => st.claimed.includes(k));
   if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month.id, now, random)));

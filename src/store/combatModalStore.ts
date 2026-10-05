@@ -1,6 +1,6 @@
 import { playAlert, playDefeat, playVictory } from "@/lib/sfx";
 import { create } from "zustand";
-import type { BattleReport, CombatOutcome, RareResourceId } from "@/types/game";
+import type { BattleReport, CombatLog, CombatOutcome, RareResourceId } from "@/types/game";
 
 export interface CombatDisplay {
   perspective: "attacker" | "defender";
@@ -16,6 +16,8 @@ export interface CombatDisplay {
   opponentLosses: Record<string, number>;
   opponentRecovered: Record<string, number>;
   loot: Partial<Record<RareResourceId, number>> | null;
+  /** 5.18 : déroulé en tours (absent des anciens rapports). */
+  combatLog?: CombatLog;
 }
 
 interface CombatModalState {
@@ -50,6 +52,7 @@ export function combatDisplayFromAttackerResult(
     defenderLosses: Record<string, number>;
     defenderRecovered: Record<string, number>;
     loot: Partial<Record<RareResourceId, number>> | null;
+    combatLog?: CombatLog;
   },
 ): CombatDisplay {
   return {
@@ -65,6 +68,7 @@ export function combatDisplayFromAttackerResult(
     opponentLosses: combat.defenderLosses,
     opponentRecovered: combat.defenderRecovered,
     loot: combat.loot,
+    combatLog: combat.combatLog,
   };
 }
 
@@ -82,6 +86,7 @@ export function combatDisplayFromReport(report: BattleReport): CombatDisplay {
     opponentLosses: report.attackerLosses,
     opponentRecovered: report.attackerRecovered,
     loot: report.loot,
+    combatLog: report.combatLog,
   };
 }
 

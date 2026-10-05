@@ -93,7 +93,7 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
             <dd className="text-right text-slate-200">+{formatNumber(unitLevelBonus(unit))} ATK / DEF</dd>
             <dt className="text-slate-500">ATK / 1 000 res.</dt>
             <dd className="text-right text-slate-200">{eff.attackPerK}</dd>
-            <dt className="text-slate-500">DEF / 1 000 res.</dt>
+            <dt className="text-slate-500">RÉS / 1 000 res.</dt>
             <dd className="text-right text-slate-200">{eff.defensePerK}</dd>
             <dt className="text-slate-500">Puissance / place</dt>
             <dd className="text-right text-slate-200">{eff.powerPerSlot}</dd>

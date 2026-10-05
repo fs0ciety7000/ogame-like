@@ -203,3 +203,5 @@ export { activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, led
 export { MISSIONS } from "@/game/missions";
 export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
+// 5.18 : solde d'Ambre modifiable par l'administration.
+export { adminSetAmber } from "@/game/bounties";

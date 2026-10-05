@@ -99,13 +99,14 @@ function GiftItems({ player, busy, run }: { player: AdminPlayer; busy: boolean; 
   const [rarity, setRarity] = useState<string>("epic");
   const [capsule, setCapsule] = useState<string>(CAPSULE_TYPES[0]);
   const [level, setLevel] = useState(5);
+  const [amber, setAmber] = useState(player.bounties?.amber ?? 0);
   const [reason, setReason] = useState("");
   const ok = reason.trim().length >= 5 && !busy;
   const select = "h-8 border border-white/10 bg-black/30 px-2 text-sm text-slate-100";
   return (
     <details className="text-sm">
       <summary className="cursor-pointer text-slate-300">
-        <Sparkles className="mr-1 inline h-3.5 w-3.5 text-violet-glow" /> Offrir un officier, une relique ou une capsule
+        <Sparkles className="mr-1 inline h-3.5 w-3.5 text-violet-glow" /> Offrir un officier, une relique, une capsule ou modifier l'Ambre
       </summary>
       <div className="mt-2 flex flex-col gap-2">
         <Input value={reason} maxLength={300} placeholder="Motif (obligatoire, consigné au journal et montré au joueur)" className="h-8" onChange={(e) => setReason(e.target.value)} />
@@ -154,6 +155,16 @@ function GiftItems({ player, busy, run }: { player: AdminPlayer; busy: boolean; 
             Offrir la capsule
           </Button>
         </div>
+        {/* 5.18 : solde d'Ambre fixé (le joueur est prévenu, motif au journal). */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-400">
+            Ambre : <span className="font-mono text-slate-200">{formatNumber(player.bounties?.amber ?? 0)}</span> → nouveau solde
+          </span>
+          <NumberInput size="sm" step={10} min={0} value={amber} onChange={(v) => setAmber(Math.max(0, v))} aria-label="Nouveau solde d'Ambre" className="w-28" />
+          <Button size="sm" variant="secondary" disabled={!ok} onClick={() => void run("Ambre modifiée", () => adminPlayerAction(player.id, { action: "amber", amount: amber, reason: reason.trim() }))}>
+            Fixer l'Ambre
+          </Button>
+        </div>
       </div>
     </details>
   );
@@ -166,6 +177,6 @@ function summarize(out: Record<string, unknown>): string {
     return `${r.buildings} bâtiment(s), ${r.researches} recherche(s), ${r.units} unité(s), ${r.missions} mission(s), ${r.officers} délai(s) d'officier`;
   }
   if ("officers" in out) return `${out.officers} officier(s) libéré(s)`;
-  for (const k of ["officier", "relique", "capsule"]) if (k in out) return String(out[k]);
+  for (const k of ["officier", "relique", "capsule", "ambre"]) if (k in out) return String(out[k]);
   return "";
 }

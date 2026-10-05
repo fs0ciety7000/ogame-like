@@ -138,7 +138,13 @@ function ResultPanel({ result, defending }: { result: SimOutcome | null; defendi
           <i className="block bg-ember-glow" style={{ width: `${(combat.attackerPower / total) * 100}%` }} />
           <i className="block flex-1 bg-cyan-glow" />
         </div>
-        {(combat.shieldPercent ?? 0) > 0 && <p className="mt-1 text-[11px] text-slate-500">Bouclier : {Math.round((combat.shieldPercent ?? 0) * 100)} % de l'attaque absorbée.</p>}
+        {(combat.shieldPercent ?? 0) > 0 && <p className="mt-1 text-[11px] text-slate-500">Bouclier : {Math.round((combat.shieldPercent ?? 0) * 100)} % de dégâts en moins pour la défense.</p>}
+        {(combat.rounds?.length ?? 0) > 0 && (
+          <p className="mt-1 text-[11px] text-slate-500">
+            <span className="font-mono">{combat.rounds?.length}</span> tour{(combat.rounds?.length ?? 0) > 1 ? "s" : ""}
+            {combat.retreated ? " · l'attaquant décroche (pertes trop lourdes)" : ""}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
