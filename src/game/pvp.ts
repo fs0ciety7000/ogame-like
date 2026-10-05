@@ -176,7 +176,10 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
     }
   }
 
-  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  // 5.17.2 : l'écart d'XP protège les petits joueurs, pas les seigneurs de guerre (PNJ) :
+  // leur XP suit la médiane des joueurs, un joueur très avancé ne pouvait plus en attaquer aucun.
+  // Une victoire sur un adversaire bien plus faible ne rapporte que peu d'XP (computeCombatXp).
+  if (!ctx.defenderIsWarlord && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",

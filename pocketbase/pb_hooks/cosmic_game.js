@@ -10648,7 +10648,7 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
-  if (ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  if (!ctx.defenderIsWarlord && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",
@@ -21499,7 +21499,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.17.1" : "dev";
+var LOGIC_VERSION = true ? "5.17.2" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [
