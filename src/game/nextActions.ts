@@ -1,4 +1,5 @@
 import { formatInt } from "@/game/format";
+import { atelierLevel, hullPercent } from "@/game/workshop";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { economySnapshot } from "@/game/economy";
 import { MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
@@ -14,7 +15,7 @@ import type { PlayerState, QueuesState } from "@/types/game";
    premières cartes.
 ===================================================== */
 
-export type NextActionKind = "outage" | "contracts" | "storage" | "build" | "research" | "mission" | "units" | "fleet" | "bounty";
+export type NextActionKind = "outage" | "contracts" | "storage" | "build" | "research" | "mission" | "units" | "fleet" | "bounty" | "repair";
 
 export interface NextAction {
   kind: NextActionKind;
@@ -77,6 +78,21 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
     out.push({ kind: "bounty", priority: 6, title: "Primes de l'Essaim", text: `${left} prime${left > 1 ? "s" : ""} possible${left > 1 ? "s" : ""} aujourd'hui : XP et Ambre de Ruche.`, to: "/game/primes" });
   }
   if (ships > 0 && !flying) out.push({ kind: "fleet", priority: 7, title: "Flotte à quai", text: `${formatInt(ships)} vaisseaux attendent des ordres.`, to: "/game/galaxie" });
+
+  // 5.21 : flotte abîmée (dégâts conservés entre les combats).
+  const shipIds = OFFENSIVE_UNITS.filter((id) => (player.units?.[id]?.count ?? 0) > 0);
+  const hullWeight = shipIds.reduce((s, id) => s + (player.units[id]?.count ?? 0), 0);
+  const avgHull = hullWeight > 0 ? shipIds.reduce((s, id) => s + (player.units[id]?.count ?? 0) * hullPercent(player, id), 0) / hullWeight : 1;
+  if (avgHull < 0.8) {
+    const hasAtelier = atelierLevel(player) > 0;
+    out.push({
+      kind: "repair",
+      priority: 5,
+      title: `Flotte abîmée (${Math.round(avgHull * 100)} %)`,
+      text: hasAtelier ? "Elle se bat moins bien : laisse l'Atelier finir avant une grosse opération." : "Sans Atelier, les coques se réparent lentement : débloque-le au Labo.",
+      to: hasAtelier ? "/game/batiments?onglet=atelier" : "/game/labo",
+    });
+  }
 
   return out.sort((a, b) => a.priority - b.priority);
 }

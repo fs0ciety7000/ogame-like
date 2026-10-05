@@ -172,6 +172,7 @@ export function CombatResultModal() {
             opponentLossPercent={current.opponentLossPercent}
             outcome={current.outcome}
             perspective={current.perspective}
+            log={current.combatLog}
           />
           <CombatClash myPower={current.myPower} opponentPower={current.opponentPower} />
           {current.combatLog && <CombatRounds log={current.combatLog} perspective={current.perspective} />}

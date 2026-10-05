@@ -1,4 +1,5 @@
 import { assetUrl } from "@/lib/assets";
+import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { TiltPortrait } from "@/components/fx/TiltPortrait";
 import { EmptyState, HudChip } from "@/components/ui/hud";
@@ -90,6 +91,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
           </p>
         )}
         <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
+        <HullWarning player={player} fleet={selected} />
         <PveFightEstimate player={player} fleet={selected} enemyPower={lair} formation={formation} enemyLabel="le repaire" />
         <Button variant="danger" className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer l'assaut

@@ -15777,6 +15777,11 @@ function validateRules(rules) {
     if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label3} entre 0 et 1.`);
   }
   if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
+  if (!(cb.hullDamageShare >= 0 && cb.hullDamageShare <= 0.9)) errors.push("Combat : part des d\xE9g\xE2ts conserv\xE9s entre 0 et 0,9.");
+  if (!(cb.hullMaxDamage >= 0.1 && cb.hullMaxDamage <= 0.99)) errors.push("Combat : usure maximale entre 0,1 et 0,99.");
+  if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
+  if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
+  if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");

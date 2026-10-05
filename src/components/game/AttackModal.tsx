@@ -1,4 +1,5 @@
 import { allianceFlightFactor } from "@/game/alliances";
+import { HullWarning } from "@/components/game/HullWarning";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
@@ -255,6 +256,7 @@ export function AttackModal({
               )}
 
               <FormationPicker value={formation} onChange={setFormation} className="mt-4" />
+              {player && <HullWarning player={player} fleet={selected} />}
 
               {/* v4.0 : capsules du Labo de synthèse */}
               {(() => {

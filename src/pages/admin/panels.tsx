@@ -157,6 +157,45 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, defenseRebuildPct: v ?? 0 } }))}
           />
         </Section>
+        <Section title="Atelier et points de vie conservés (5.20)">
+          <NumberField
+            label="Part des PV perdus conservée en dégâts (0,4 = 40 %)"
+            value={rules.combat.hullDamageShare}
+            min={0}
+            step={0.05}
+            hint="Le reste détruit des unités. 0 = plus de dégâts conservés."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, hullDamageShare: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Usure maximale d'une unité avant destruction (0,9 = 90 %)"
+            value={rules.combat.hullMaxDamage}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, hullMaxDamage: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Atelier : PV réparés par seconde au niveau 1"
+            value={rules.combat.workshopHpPerSec}
+            min={0}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopHpPerSec: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Atelier : gain de cadence par niveau (0,25 = +25 %)"
+            value={rules.combat.workshopLevelGain}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopLevelGain: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Sans Atelier : part de la cadence de base (0,2 = 20 %)"
+            value={rules.combat.workshopBaseFactor}
+            min={0}
+            step={0.05}
+            hint="Réparation des coques par les équipages."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopBaseFactor: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Combat en tours (5.18)">
           <NumberField
             label="Points de vie par point de résistance"

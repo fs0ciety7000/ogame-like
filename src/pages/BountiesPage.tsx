@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
@@ -164,6 +165,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
           </div>
         </div>
         {/* 5.20 : estimation par le combat en tours ; le lancement reste toujours possible. */}
+        <HullWarning player={player} fleet={selected} />
         {target.targetPower !== null && <PveFightEstimate player={player} fleet={selected} enemyPower={target.targetPower} formation={formation} enemyLabel="le fugitif" />}
         <Button className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer la traque

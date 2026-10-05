@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, Compass, FlaskConical, Globe2, Hammer, Rocket, Send, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Compass, FlaskConical, Globe2, Hammer, Rocket, Send, type LucideIcon, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { timelineHorizon, timelinePosition, upcomingEvents, type TimelineKind } from "@/game/timeline";
@@ -19,6 +19,7 @@ const KIND_STYLE: Record<TimelineKind, { icon: LucideIcon; color: string; dot: s
   fleet: { icon: Send, color: "text-cyan-glow", dot: "bg-cyan-glow", label: "Flotte" },
   hostile: { icon: AlertTriangle, color: "text-danger-glow", dot: "bg-danger-glow", label: "Flotte hostile" },
   colony: { icon: Globe2, color: "text-violet-glow", dot: "bg-violet-glow", label: "Colonie" },
+  repair: { icon: Wrench, color: "text-ember-glow", dot: "bg-ember-glow", label: "Atelier" },
 };
 
 function horizonLabel(ms: number) {

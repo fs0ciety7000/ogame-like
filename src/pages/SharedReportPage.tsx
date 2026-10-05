@@ -1,3 +1,4 @@
+import type { CombatLog } from "@/types/game";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Eye, Loader2, Swords } from "lucide-react";
@@ -41,6 +42,7 @@ function BattleView({ report }: { report: BattleReport }) {
         opponentLossPercent={report.defenderLossPercent}
         outcome={report.outcome}
         perspective="attacker"
+        log={(report as { combatLog?: CombatLog }).combatLog}
       />
       <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <div className="border border-white/5 p-2">

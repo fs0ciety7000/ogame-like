@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { AlertTriangle, ArrowRight, Building2, Crosshair, FlaskConical, Gift, MapPin, Rocket, Warehouse, Zap } from "lucide-react";
+import { AlertTriangle, ArrowRight, Building2, Crosshair, FlaskConical, Gift, MapPin, Rocket, Warehouse, Zap, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { nextActions, type NextActionKind } from "@/game/nextActions";
 import { usePlayerStore } from "@/store/playerStore";
@@ -22,6 +22,7 @@ const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: HudTone }> = {
   units: { icon: Rocket, tone: "accent" },
   fleet: { icon: AlertTriangle, tone: "neutral" },
   bounty: { icon: Crosshair, tone: "gold" },
+  repair: { icon: Wrench, tone: "ember" },
 };
 
 export function NextActionsCard({ max = 4 }: { max?: number }) {
