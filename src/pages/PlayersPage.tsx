@@ -359,6 +359,12 @@ export function PlayersPage() {
                         <ShieldCheck className="h-3.5 w-3.5" />
                       </span>
                     )}
+                    {/* 5.22 : raison visible quand l'attaque est impossible (écart d'XP, délai entre deux attaques). */}
+                    {!isSelf && !(me?.allianceId && p.allianceId === me.allianceId) && (attackCheck?.reason === "too_weak" || attackCheck?.reason === "cooldown") && (
+                      <span title={attackCheck.message} className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                        {attackCheck.reason === "too_weak" ? "hors de portée" : "attaqué récemment"}
+                      </span>
+                    )}
                   </p>
                   {p.activeTitle && (
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -404,14 +410,12 @@ export function PlayersPage() {
                       <ShieldPlus className="h-4 w-4 text-cyan-glow" />
                     </Button>
                   ) : (
+                    // 5.22 : un bouton désactivé n'affiche pas d'infobulle : la raison est portée par l'enveloppe.
+                    <span className="inline-flex" title={attackCheck && !attackCheck.allowed ? attackCheck.message : "Attaquer"}>
                     <Button
                       variant="ghost"
                       size="icon"
-                      title={
-                        attackCheck && !attackCheck.allowed
-                          ? attackCheck.message
-                          : "Attaquer"
-                      }
+                      aria-label={attackCheck && !attackCheck.allowed ? attackCheck.message : "Attaquer"}
                       disabled={
                         isSelf || (attackCheck !== null && !attackCheck.allowed)
                       }
@@ -423,6 +427,7 @@ export function PlayersPage() {
                       <Sword className="h-4 w-4" />
                       <TargetReticle color="var(--color-danger-glow)" />
                     </Button>
+                    </span>
                   )}
                   <Button
                     variant="ghost"
