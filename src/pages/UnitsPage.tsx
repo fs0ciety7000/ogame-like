@@ -22,7 +22,7 @@ import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
-import { COMBAT_RULES, unitStat } from "@/game/combat";
+import { CLASS_BEATS, COMBAT_RULES, unitStat } from "@/game/combat";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
 import { hullPercent, workshopUnits } from "@/game/workshop";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -158,7 +158,9 @@ export function UnitsPage() {
                 {c === "all" ? "Toutes" : UNIT_CLASS_LABELS[c]}
               </Button>
             ))}
-          <span className="text-[11px] text-slate-500">Classe calculée d'après l'attaque et la résistance (points de vie).</span>
+          <span className="text-[11px] text-slate-500">
+            Classe d'après l'attaque et la résistance. Au combat, Fort bat Moyen, Moyen bat Faible, Faible bat Fort (<span className="font-mono">±{Math.round(COMBAT_RULES.classEdge * 100)} %</span> de dégâts) : panache ta flotte.
+          </span>
         </div>
       </div>
 
@@ -218,7 +220,9 @@ export function UnitsPage() {
                     <HudTag tone={unit.category === "attack" ? "danger" : "accent"}>
                       {unit.category === "attack" ? "Attaque" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
                     </HudTag>
-                    <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
+                    <span title={classes[unit.id] && classes[unit.id] !== "support" ? `Bat la classe ${UNIT_CLASS_LABELS[CLASS_BEATS[classes[unit.id] as "light"]]}, craint la classe ${UNIT_CLASS_LABELS[(Object.keys(CLASS_BEATS) as ("light" | "medium" | "heavy")[]).find((k) => CLASS_BEATS[k] === classes[unit.id])!]}.` : "Ne combat pas."}>
+                      <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
+                    </span>
                     {/* 5.20 : coque abîmée et unités immobilisées à l'Atelier. */}
                     {(() => {
                       const hull = hullPercent(player, unit.id);

@@ -830,7 +830,7 @@ export function PlayersPanel() {
             <button
               key={p.id}
               onClick={() => setSelectedId(p.id)}
-              className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
+              className={`flex w-full items-center justify-between px-2 py-1.5 text-left text-sm ${
                 p.id === selectedId ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5"
               }`}
             >

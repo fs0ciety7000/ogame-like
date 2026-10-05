@@ -1,11 +1,11 @@
 import { formatInt } from "@/game/format";
-import { atelierLevel, hullPercent } from "@/game/workshop";
+import { atelierLevel, hullPercent, workshopRushCost, workshopUnits } from "@/game/workshop";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { economySnapshot } from "@/game/economy";
 import { MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
-import { BOUNTY_RULES, viewBounties } from "@/game/bounties";
+import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
 import type { PlayerState, QueuesState } from "@/types/game";
 
@@ -92,6 +92,15 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
       text: hasAtelier ? "Elle se bat moins bien : laisse l'Atelier finir avant une grosse opération." : "Sans Atelier, les coques se réparent lentement : débloque-le au Labo.",
       to: hasAtelier ? "/game/batiments?onglet=atelier" : "/game/labo",
     });
+  }
+
+  // 5.21 : unités immobilisées à l'Atelier qu'on peut faire sortir tout de suite contre de l'Ambre.
+  const stuck = Object.values(workshopUnits(player)).reduce((a, n) => a + n, 0);
+  if (stuck > 0) {
+    const rush = workshopRushCost(player);
+    if (rush.seconds >= 900 && bountyState(player).amber >= rush.amber) {
+      out.push({ kind: "repair", priority: 6, title: `${formatInt(stuck)} unité${stuck > 1 ? "s" : ""} à l'Atelier`, text: `Elles rentrent seules, ou tout de suite pour ${formatInt(rush.amber)} Ambre.`, to: "/game/batiments?onglet=atelier" });
+    }
   }
 
   return out.sort((a, b) => a.priority - b.priority);

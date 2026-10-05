@@ -173,7 +173,7 @@ export function AttackModal({
                 })}
               </div>
 
-              <div className="mt-3 space-y-1.5 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+              <div className="mt-3 space-y-1.5 hud-cut-sm bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 shrink-0 text-cyan-glow" />
                   {flight !== null ? (

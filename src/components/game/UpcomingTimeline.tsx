@@ -95,7 +95,7 @@ export function UpcomingTimeline({ queues, now }: { queues: QueuesState | null; 
                 const remaining = Math.max(0, Math.floor((e.endTime - now) / 1000));
                 return (
                   <li key={e.id}>
-                    <Link to={e.to} className="flex items-center gap-2 rounded-md px-1 py-0.5 text-sm hover:bg-white/5">
+                    <Link to={e.to} className="flex items-center gap-2 px-1 py-0.5 text-sm hover:bg-white/5">
                       <Icon className={cn("h-3.5 w-3.5 shrink-0", style.color)} />
                       <span className="truncate text-slate-300">{e.label}</span>
                       <span className={cn("ml-auto tabular-mono text-xs", remaining < 60 ? "text-mint-glow" : "text-slate-400")}>

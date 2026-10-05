@@ -22219,7 +22219,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.20.1" : "dev";
+var LOGIC_VERSION = true ? "5.21.0" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [
