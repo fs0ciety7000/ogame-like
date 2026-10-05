@@ -1,9 +1,9 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { EmptyAction } from "@/components/ui/panel";
+import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
-import { Anchor, BookOpen, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
+import { Anchor, BookOpen, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
@@ -403,11 +403,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="hud-title text-sm text-white">Emplacements de la base</h3>
-          <p className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? " · un 4e à la première Ascension" : ""}</p>
-        </div>
+      <HudPanel icon={<Gem />} title="Emplacements de la base" tone="gold" aside={<span className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? " · un 4e à la première Ascension" : ""}</span>}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {Array.from({ length: n }).map((_, i) => {
             const item = st.items.find((r) => r.id === st.slots[i]);
@@ -452,11 +448,10 @@ function RelicsTab({ player }: { player: PlayerState }) {
             Vider l'emplacement {slot + 1}
           </Button>
         )}
-      </Card>
+      </HudPanel>
 
       {groups.length > 0 && (
-        <Card className="flex flex-col gap-2 border-gold-glow/30 p-4">
-          <h3 className="hud-title text-sm text-gold-glow">Fusions possibles</h3>
+        <HudPanel icon={<Combine />} title="Fusions possibles" tone="gold" accent className="gap-2">
           {groups.map((g) => {
             const next = RARITIES[RARITIES.findIndex((r) => r.id === g[0].rarity) + 1];
             return (
@@ -471,12 +466,11 @@ function RelicsTab({ player }: { player: PlayerState }) {
               </div>
             );
           })}
-        </Card>
+        </HudPanel>
       )}
 
-      <Card className="flex flex-col gap-2 p-4">
+      <HudPanel icon={<Library />} title="Collection" className="gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="hud-title text-sm text-white">Collection</h3>
           <p className="text-xs text-slate-500">
             {st.items.length} / {RELIC_RULES.maxItems} · expéditions, proie d'élite, Léviathan
           </p>
@@ -519,7 +513,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
             );
           })}
         </div>
-      </Card>
+      </HudPanel>
     </div>
   );
 }
@@ -587,8 +581,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
         <StatTile label="Brouilleur de défense" value={veilLeft ? `±${st.veil!.pct} %` : "Inactif"} sub={veilLeft ? `Encore ${formatDuration(Math.ceil(veilLeft / 1000))}` : "Fausse les rapports d'espionnage"} tone="mint" icon={<Eye className="h-4 w-4" />} />
       </div>
 
-      <Card className="flex flex-col gap-3 p-4">
-        <h3 className="hud-title text-sm text-white">Synthèse</h3>
+      <HudPanel icon={<FlaskConical />} title="Synthèse" tone="accent">
         {st.crafting ? (
           <div className="flex items-center gap-3">
             <CapsuleIcon type={st.crafting.type} className="h-12 w-12" />
@@ -635,10 +628,9 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
             </div>
           </>
         )}
-      </Card>
+      </HudPanel>
 
-      <Card className="flex flex-col gap-2 p-4">
-        <h3 className="hud-title text-sm text-white">Réserve</h3>
+      <HudPanel icon={<Package />} title="Réserve" className="gap-2">
         <div className="grid gap-2 sm:grid-cols-2">
           {CAPSULE_TYPES.map((type) => {
             const stock = [...st.stock[type]].sort((a, b) => b - a);
@@ -665,7 +657,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
         <p className="text-xs text-slate-500">
           Les capsules ne jouent qu'entre joueurs et n'apparaissent pas dans l'espionnage. Une Espionne en poste chez l'adversaire peut toutefois flairer une « anomalie chimique ».
         </p>
-      </Card>
+      </HudPanel>
     </div>
   );
 }

@@ -592,7 +592,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             {hangar.capacity === 0 && <p className="mt-1 text-[11px] text-ember-glow">Construis le hangar de défense de la colonie pour y placer des défenses.</p>}
           </div>
           {placed.length === 0 ? (
-            <p className="mb-3 text-xs text-slate-500">Aucune défense pour l'instant.</p>
+            <EmptyState size="sm" icon="🛡️" title="Aucune défense" className="mb-3">Construis des défenses ci-dessous pour protéger la colonie.</EmptyState>
           ) : (
             <div className="mb-3 flex flex-wrap gap-2">
               {placed.map(([id, st]) => (

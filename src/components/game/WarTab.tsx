@@ -280,7 +280,7 @@ function SeasonWarCard({ allianceId }: { allianceId: string }) {
       {rows === null ? (
         <SkeletonList rows={4} />
       ) : rows.length === 0 ? (
-        <p className="text-sm text-slate-500">Aucune alliance classée pour l'instant cette saison.</p>
+        <EmptyState size="sm" icon="⚔️" title="Aucune alliance classée">Le classement apparaîtra après les premières batailles.</EmptyState>
       ) : (
         <div className="flex flex-col divide-y divide-white/5 text-sm">
           {rows.map((r) => (

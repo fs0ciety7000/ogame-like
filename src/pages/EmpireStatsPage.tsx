@@ -558,7 +558,7 @@ export function EmpireStatsPage() {
             <div className="flex min-w-0 flex-col gap-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Bonus actifs (officiers, reliques, talents, secteurs)</p>
               {bonusRows.length === 0 && st.command.modifiers.spyLevel <= 0 ? (
-                <p className="text-sm text-slate-400">Aucun bonus actif.</p>
+                <EmptyState size="sm" icon="✨" title="Aucun bonus actif" action={<EmptyAction to="/game/labo">Ouvrir le Labo</EmptyAction>} />
               ) : (
                 <>
                   {bonusRows.map((b) => (
@@ -587,7 +587,7 @@ export function EmpireStatsPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           <Section title="Menaces" icon={Skull} tone={DANGER} aside={<SectionLink to="/game/menaces">Menaces</SectionLink>}>
             {st.threats.length === 0 ? (
-              <p className="text-sm text-slate-400">Aucune faction active.</p>
+              <EmptyState size="sm" icon="☮️" title="Aucune faction active">Le secteur est calme pour l'instant.</EmptyState>
             ) : (
               <div className="flex flex-col gap-3">
                 {st.threats.map((t) => {

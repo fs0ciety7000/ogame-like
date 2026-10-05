@@ -1,6 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { HudPanel } from "@/components/ui/panel";
+import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
@@ -117,7 +117,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
         }
       >
         {live.length === 0 ? (
-          <p className="text-sm text-slate-500">Personne n'a encore gagné d'XP ce mois-ci.</p>
+          <EmptyState size="sm" icon="🏁" title="La saison démarre" action={<EmptyAction to="/game/missions">Gagner de l'XP</EmptyAction>}>Personne n'a encore gagné d'XP ce mois-ci.</EmptyState>
         ) : (
           <ol className="space-y-1 text-sm">
             {live.map((p, i) => (

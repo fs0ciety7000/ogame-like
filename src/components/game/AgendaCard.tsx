@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
-import { HudChip } from "@/components/ui/hud";
+import { HudChip, EmptyState } from "@/components/ui/hud";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AGENDA_COLORS, AGENDA_LABELS, upcomingAgenda, type AgendaItem, type AgendaKind } from "@/game/agenda";
 import { contestPhase } from "@/game/contests";
@@ -74,8 +74,9 @@ function MonthGrid({ now, items }: { now: number; items: AgendaItem[] }) {
           const past = day < today;
           const cell = (
             <span
+              style={{ "--d": i } as React.CSSProperties}
               className={cn(
-                "flex h-12 flex-col justify-between border px-1 py-0.5",
+                "cal-cell flex h-12 flex-col justify-between border px-1 py-0.5",
                 day === today ? "border-cyan-glow/70 bg-cyan-glow/[0.08]" : "border-white/5 bg-white/[0.02]",
                 past && "opacity-40",
               )}
@@ -157,7 +158,7 @@ export function AgendaCard({ now }: { now: number }) {
       {view === "mois" ? (
         <MonthGrid now={now} items={items} />
       ) : items.length === 0 ? (
-        <p className="text-xs text-slate-500">Rien de programmé pour l'instant.</p>
+        <EmptyState size="sm" icon="🗓️" title="Rien de programmé">Les boss, événements et Chroniques à venir s'afficheront ici.</EmptyState>
       ) : (
         <>
           <div className="relative hidden sm:block" aria-hidden>

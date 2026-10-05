@@ -1,12 +1,12 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
-import { ShowMoreButton } from "@/components/ui/panel";
+import { HudPanel, ShowMoreButton } from "@/components/ui/panel";
 import { useShowMore } from "@/hooks/useShowMore";
 import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
 import { useSearchParams } from "react-router-dom";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, Clock, Store } from "lucide-react";
+import { ArrowRight, Clock, History, Store } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
@@ -210,11 +210,7 @@ export function MarketPage() {
           )}
         </Card>
 
-        <Card className="flex flex-col gap-3 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="hud-title text-sm">Offres disponibles</h2>
-            <ResourceSelect<string> value={filter} onChange={setFilter} ariaLabel="Filtrer par ressource" allLabel="Toutes les ressources" size="sm" className="ml-auto w-52" />
-          </div>
+        <HudPanel icon={<Store />} title="Offres disponibles" tone="accent" aside={<ResourceSelect<string> value={filter} onChange={setFilter} ariaLabel="Filtrer par ressource" allLabel="Toutes les ressources" size="sm" className="w-52" />}>
           {others.length === 0 ? (
             <EmptyState icon={<Store className="h-5 w-5" />} title="Aucune offre">Publie la première !</EmptyState>
           ) : (
@@ -279,14 +275,13 @@ export function MarketPage() {
             </div>
           )}
           <p className="text-[11px] text-slate-500">{MARKET_RULES.maxBuysPerDay} achats au plus par jour.</p>
-        </Card>
+        </HudPanel>
       </div>
 
       <MarketPriceChart trades={trades} now={now} />
 
       {data.mine.length > 0 && (
-        <Card className="p-4">
-          <h2 className="hud-title mb-2 text-sm">Historique</h2>
+        <HudPanel icon={<History />} title="Historique">
           <div className="flex flex-col divide-y divide-white/5 text-xs">
             {data.mine.map((o) => {
               const sold = o.sellerId === uid;
@@ -318,7 +313,7 @@ export function MarketPage() {
               );
             })}
           </div>
-        </Card>
+        </HudPanel>
       )}
       </>
       )}

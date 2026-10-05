@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { HudPanel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { DEFENSIVE_UNITS, OFFENSIVE_UNITS } from "@/game/units";
@@ -7,7 +8,7 @@ import { economySnapshot } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import { Fragment, useState, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Eye, EyeOff, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, Factory, EyeOff, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { StatTile } from "@/components/ui/hud";
@@ -152,11 +153,8 @@ export function DashboardPage() {
     ),
     economy: (
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Production / seconde</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2">
+        <HudPanel icon={<Factory />} title="Production / seconde" tone="mint">
+          <div className="grid gap-2">
             {RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => {
               const net = economy.net[r.id] ?? 0;
               const full = economy.full.includes(r.id);
@@ -175,8 +173,8 @@ export function DashboardPage() {
               {Number.isFinite(economy.capacity) && <p><GameIcon name="storage" /> Entrepôt : {formatNumber(economy.capacity)} par ressource</p>}
               {economy.outage && <p className="font-semibold text-danger-glow"><GameIcon name="energy" /> Panne d'énergie : production à 50 %</p>}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </HudPanel>
         <div className="lg:col-span-2">
           <UpcomingTimeline queues={queues} now={now} />
         </div>

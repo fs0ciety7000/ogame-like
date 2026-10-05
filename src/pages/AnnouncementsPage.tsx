@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { EmptyState } from "@/components/ui/hud";
 import { Play } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,7 @@ export function AnnouncementsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Annonces" description="Toutes les annonces des mises à jour, de la plus récente à la plus ancienne. Clique pour la revoir en plein écran." />
-      {list.length === 0 && <p className="text-sm text-slate-500">Aucune annonce publiée pour l'instant.</p>}
+      {list.length === 0 && <EmptyState icon="📣" title="Aucune annonce">Les messages de l'équipe s'afficheront ici.</EmptyState>}
       <div className="grid gap-3 md:grid-cols-2">
         {list.map((a, i) => {
           const gold = a.tone === "gold";

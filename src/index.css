@@ -1594,3 +1594,18 @@ body {
     animation: none !important;
   }
 }
+
+/* 5.15.12 : transitions courtes (onglets, jauges, calendrier). Coupées si
+   le joueur a demandé de réduire les animations. */
+.tab-enter[data-state="active"] { animation: tab-enter 0.22s ease-out; }
+@keyframes tab-enter {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: none; }
+}
+.meter-fill { transform-origin: left center; animation: meter-fill 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes meter-fill { from { transform: scaleX(0); } }
+.cal-cell { animation: cal-cell 0.35s ease-out both; animation-delay: calc(var(--d, 0) * 18ms); }
+@keyframes cal-cell { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) {
+  .tab-enter[data-state="active"], .meter-fill, .cal-cell { animation: none; }
+}

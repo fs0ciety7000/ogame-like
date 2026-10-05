@@ -4338,6 +4338,27 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 5.15.12 : le passe d'octobre passe en mode cumulé (totaux du mois), comme les passes
+  // générés depuis novembre. Thème, récompenses, points et paliers réclamés inchangés ;
+  // les actions déjà faites ce mois-ci comptent aussitôt.
+  {
+    id: "pass-octobre-cumulatif-5.15.12",
+    key: "passSeasons",
+    patches: [],
+    run(data, changes, txApp) {
+      if (!data || !Array.isArray(data.seasons)) return false;
+      const game = loadGame();
+      const digest = game.worldDigest(proceduralPlayers(txApp), Date.now());
+      let touched = false;
+      data.seasons = data.seasons.map((s) => {
+        if (!s || s.id !== "2026-10" || s.challengeMode === "cumulative") return s;
+        touched = true;
+        changes.push("passe 2026-10 : défis en totaux du mois (mode cumulé)");
+        return game.regenerateChallenges(Object.assign({}, s, { challengeMode: "cumulative" }), digest);
+      });
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

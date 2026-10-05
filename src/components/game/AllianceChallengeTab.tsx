@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -85,7 +86,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
             <h2 className="hud-title flex items-center gap-2 text-sm">
               <Medal className="h-4 w-4 text-cyan-glow" /> Semaine dernière : {prevChallenge.emoji} {prevChallenge.name}
             </h2>
-            {prev.results.length === 0 && <p className="text-xs text-slate-500">Personne n'a marqué de point.</p>}
+            {prev.results.length === 0 && <EmptyState size="sm" icon="🏳️" title="Aucun point marqué" />}
             {prev.results.map((r) => (
               <div key={r.allianceId} className={cn("flex flex-col text-sm", r.allianceId === allianceId && "text-cyan-glow")}>
                 <span>

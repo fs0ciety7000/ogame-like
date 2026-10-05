@@ -43,7 +43,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
   return (
     <HudPanel icon={<Icon />} title={title} tone="gold">
       {list.length === 0 ? (
-        <p className="text-xs text-slate-500">Personne pour l'instant.</p>
+        <EmptyState size="sm" icon="🏆" title="Personne pour l'instant">Le premier boss abattu ouvrira ce classement.</EmptyState>
       ) : (
         <ol className="flex flex-col gap-1.5">
           {list.map((p, i) => (
@@ -192,7 +192,7 @@ export function BossHallPage() {
               </HudChip>
             ))}
           >
-            {shown.length === 0 ? <p className="text-xs text-slate-500">Rien dans cette catégorie.</p> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />)}</ul>}
+            {shown.length === 0 ? <EmptyState size="sm" icon="🔎" title="Rien dans cette catégorie">Essaie un autre filtre.</EmptyState> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />)}</ul>}
           </HudPanel>
         </>
       )}

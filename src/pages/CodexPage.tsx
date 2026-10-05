@@ -12,6 +12,7 @@ import { claimCodexCategoryReward, claimCodexTitle, fetchNpcOpponents } from "@/
 import { useBossHistory } from "@/services/bossHistoryService";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { AmberAmount } from "@/components/ui/amber";
+import { RewardReveal } from "@/components/game/RewardReveal";
 import { GameActionError } from "@/services/playerService";
 import { useContentStore } from "@/services/contentService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -37,6 +38,7 @@ export function CodexPage() {
     [player, opponents, history],
   );
   const [claiming, setClaiming] = useState<CodexCategory | null>(null);
+  const [revealed, setRevealed] = useState<{ label: string; tokens: number; amber: number } | null>(null);
   if (!player) return null;
   const progress = codexProgress(entries);
   const shown = tab === "all" ? entries : entries.filter((e) => e.category === tab);
@@ -59,7 +61,7 @@ export function CodexPage() {
     setClaiming(c);
     try {
       const out = await claimCodexCategoryReward(c);
-      toast.success(`Catégorie « ${CODEX_CATEGORIES.find((x) => x.id === c)?.label} » complète !`, { description: `+${out.tokens} jetons, +${out.amber} Ambre.` });
+      setRevealed({ label: CODEX_CATEGORIES.find((x) => x.id === c)?.label ?? c, tokens: out.tokens, amber: out.amber });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Impossible pour le moment.");
     } finally {
@@ -176,6 +178,18 @@ export function CodexPage() {
           </motion.button>
         ))}
       </div>
+
+      <RewardReveal
+        open={revealed !== null}
+        onClose={() => setRevealed(null)}
+        icon={<BookOpen />}
+        title={`Catégorie « ${revealed?.label ?? ""} » complète`}
+        description="Toutes les fiches de la catégorie sont dans ton Codex."
+        items={[
+          ...(revealed && revealed.tokens > 0 ? [{ key: "t", node: <span className="inline-flex items-center gap-1.5 font-mono text-sm text-slate-100"><TokenIcon size={16} /> +{revealed.tokens} jetons</span> }] : []),
+          ...(revealed && revealed.amber > 0 ? [{ key: "a", node: <AmberAmount value={revealed.amber} className="font-mono text-sm text-slate-100" /> }] : []),
+        ]}
+      />
 
       {open && (
         <Dialog open onOpenChange={(o) => !o && setOpen(null)}>

@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { motion, useReducedMotion } from "framer-motion";
 import { Flame, PackageOpen } from "lucide-react";
 import { AmberAmount } from "@/components/ui/amber";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { RewardReveal, type RevealItem } from "@/components/game/RewardReveal";
 import { HudChip } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,10 +23,9 @@ function dayLabel(n: number): string {
   return `Jour ${n} : ${parts.join(" + ")}`;
 }
 
-/** 5.15.6 : coffre du 7e jour, ouvert dans une fenêtre (récompenses une à une). */
+/** 5.15.6 : coffre du 7e jour ; 5.15.12 : révélation commune des récompenses. */
 function ChestDialog({ chest, onClose }: { chest: StreakChest | null; onClose: () => void }) {
-  const reduce = useReducedMotion();
-  const items = chest
+  const items: RevealItem[] = chest
     ? [
         { key: "amber", node: <AmberAmount value={chest.amber} className="font-mono text-sm text-slate-100" /> },
         {
@@ -49,43 +46,7 @@ function ChestDialog({ chest, onClose }: { chest: StreakChest | null; onClose: (
         })),
       ]
     : [];
-  return (
-    <Dialog open={chest !== null} onOpenChange={(o) => !o && onClose()}>
-      {chest && (
-        <DialogContent className="max-w-md border-t-2 border-t-gold-glow">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <motion.span
-              className="grid h-16 w-16 place-items-center border border-gold-glow/50 bg-gold-glow/10 text-gold-glow hud-cut"
-              initial={reduce ? false : { scale: 0.7, rotate: 0 }}
-              animate={reduce ? undefined : { scale: [0.7, 1, 1, 1.08, 1], rotate: [0, -10, 10, -6, 0] }}
-              transition={{ duration: 0.7 }}
-              aria-hidden
-            >
-              <PackageOpen className="h-8 w-8" />
-            </motion.span>
-            <DialogTitle className="hud-title text-lg text-white">Coffre de la série</DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">Sept jours d'affilée : voici ce que contenait le coffre.</DialogDescription>
-            <div className="grid w-full grid-cols-2 gap-1.5">
-              {items.map((it, i) => (
-                <motion.div
-                  key={it.key}
-                  className="hud-cut-sm flex items-center justify-center border border-gold-glow/20 bg-gold-glow/[0.04] px-2 py-2"
-                  initial={reduce ? false : { opacity: 0, y: 8, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: reduce ? 0 : 0.5 + i * 0.15 }}
-                >
-                  {it.node}
-                </motion.div>
-              ))}
-            </div>
-            <Button className="mt-1" onClick={onClose}>
-              Récupéré
-            </Button>
-          </div>
-        </DialogContent>
-      )}
-    </Dialog>
-  );
+  return <RewardReveal open={chest !== null} onClose={onClose} icon={<PackageOpen />} title="Coffre de la série" description="Sept jours d'affilée : voici ce que contenait le coffre." items={items} />;
 }
 
 /** v5.3 : pastille de l'en-tête — série de connexion quotidienne. */

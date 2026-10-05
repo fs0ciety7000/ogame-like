@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EmptyState } from "@/components/ui/hud";
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ALLIANCE_RULES, allianceStandings, projectState } from "@/game/alliances";
@@ -58,7 +59,7 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
       <p className="text-[11px] text-slate-500">
         Score de saison : somme des {ALLIANCE_RULES.seasonTopMembers} meilleures XP de saison des membres, plus le bonus des guerres gagnées ce mois-ci.
       </p>
-      {rows.length === 0 && <p className="text-xs text-slate-500">Aucune alliance.</p>}
+      {rows.length === 0 && <EmptyState size="sm" icon="🚩" title="Aucune alliance" />}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
