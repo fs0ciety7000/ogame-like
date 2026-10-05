@@ -3,7 +3,7 @@ import { create } from "zustand";
 /* Thèmes d'interface (v2.4) : jetons définis dans src/index.css sous
    html[data-theme]. Le choix est propre à chaque appareil. */
 
-export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora" | "signal";
+export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora" | "signal" | "voyageur" | "omni" | "spartan" | "constellation";
 
 export const THEMES: { id: ThemeId; name: string; inspiration: string; description: string; swatches: string[] }[] = [
   {
@@ -47,6 +47,34 @@ export const THEMES: { id: ThemeId; name: string; inspiration: string; descripti
     inspiration: "Esprit Marathon (Bungie)",
     description: "Graphisme brut et net : vert acide et magenta sur graphite, aplats francs, trame de grille, gros titres serrés. Aucun halo.",
     swatches: ["#c6ff2e", "#ff2e88", "#2ee6ff", "#16181c"],
+  },
+  {
+    id: "voyageur",
+    name: "Voyageur",
+    inspiration: "Esprit Destiny",
+    description: "Ivoire et gris perle sur ardoise, violet légendaire et or exotique. Titres fins très espacés, traits fins, calme et lumineux.",
+    swatches: ["#e6dfcc", "#a77fdc", "#ceae33", "#181d26"],
+  },
+  {
+    id: "omni",
+    name: "Omni",
+    inspiration: "Esprit Mass Effect",
+    description: "Hologramme orange d'omnitech sur bleu nuit, second accent bleu, titres lumineux et liserés orange.",
+    swatches: ["#ff9a3c", "#4fb3ff", "#66e0c2", "#0e182b"],
+  },
+  {
+    id: "spartan",
+    name: "Spartan",
+    inspiration: "Esprit Halo Infinite",
+    description: "Visière bleu-vert, cyan pâle et vert armure, titres condensés et crochets d'angle sur les panneaux.",
+    swatches: ["#7df3ff", "#a8d13a", "#9be564", "#0b2431"],
+  },
+  {
+    id: "constellation",
+    name: "Constellation",
+    inspiration: "Esprit Starfield",
+    description: "NASA-punk : os et graphite, typographie technique, bandes rouge, orange, jaune et bleu en tête de panneau. Aucun halo.",
+    swatches: ["#ece6d6", "#e0582c", "#f2b33d", "#18191c"],
   },
 ];
 

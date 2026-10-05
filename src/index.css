@@ -288,6 +288,146 @@
   --th-scan: 0;
 }
 
+/* Voyageur — esprit Destiny : ivoire et gris perle sur ardoise profonde, violet
+   légendaire et or exotique, titres légers très espacés, traits fins, presque pas de biseau. */
+:root[data-theme="voyageur"] {
+  --th-font-title: "Saira", sans-serif;
+  --th-font-body: "Inter", sans-serif;
+  --th-title-track: 0.16em;
+  --th-cut: 4px;
+  --th-accent: #e6dfcc;
+  --th-accent2: #a77fdc;
+  --th-ok: #6fd3a8;
+  --th-danger: #e2553f;
+  --th-gold: #ceae33;
+  --th-ember: #e88a3a;
+  --th-space-950: #07090c;
+  --th-space-900: #0b0e13;
+  --th-space-800: #11151c;
+  --th-space-700: #181d26;
+  --th-space-600: #222935;
+  --th-space-500: #313a4a;
+  --th-text-100: #f6f4ee;
+  --th-text-200: #e7e4dc;
+  --th-text-300: #c9c6bd;
+  --th-text-400: #9b9a95;
+  --th-text-500: #6f7076;
+  --th-text-600: #4b4e56;
+  --th-ink: #f3efe2;
+  --th-body-glow: #1d2533;
+  --th-panel: linear-gradient(180deg, rgba(30, 36, 48, 0.82), rgba(11, 14, 19, 0.92));
+  --th-edge: color-mix(in srgb, var(--th-text-100) 14%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-text-100) 55%, transparent);
+  --th-btn-ink: #12100a;
+  --th-scan: 0;
+}
+
+/* Omni — esprit Mass Effect : hologramme orange d'omnitech sur bleu nuit de
+   l'Alliance, second accent bleu, liserés lumineux. */
+:root[data-theme="omni"] {
+  --th-font-title: "Rajdhani", sans-serif;
+  --th-font-body: "Inter", sans-serif;
+  --th-title-track: 0.08em;
+  --th-cut: 10px;
+  --th-accent: #ff9a3c;
+  --th-accent2: #4fb3ff;
+  --th-ok: #66e0c2;
+  --th-danger: #ff4b3e;
+  --th-gold: #ffd26b;
+  --th-ember: #ffb35c;
+  --th-space-950: #03060d;
+  --th-space-900: #050a14;
+  --th-space-800: #09111f;
+  --th-space-700: #0e182b;
+  --th-space-600: #15233d;
+  --th-space-500: #203354;
+  --th-text-100: #f2f6fb;
+  --th-text-200: #dde6f0;
+  --th-text-300: #bfcddd;
+  --th-text-400: #8ea2b8;
+  --th-text-500: #627790;
+  --th-text-600: #44556b;
+  --th-ink: #ffe9d2;
+  --th-body-glow: #0c2346;
+  --th-panel: linear-gradient(160deg, rgba(14, 26, 48, 0.86), rgba(5, 10, 20, 0.94));
+  --th-edge: color-mix(in srgb, var(--th-accent) 28%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 75%, transparent);
+  --th-btn-ink: #1f0e00;
+  --th-scan: 0.014;
+}
+
+/* Spartan — esprit Halo Infinite : bleu-vert de visière, cyan pâle et vert
+   Mjolnir, titres condensés, crochets d'angle sur les panneaux. */
+:root[data-theme="spartan"] {
+  --th-font-title: "Saira Condensed", sans-serif;
+  --th-font-body: "Saira", sans-serif;
+  --th-title-track: 0.06em;
+  --th-cut: 8px;
+  --th-accent: #7df3ff;
+  --th-accent2: #a8d13a;
+  --th-ok: #9be564;
+  --th-danger: #ff4d4d;
+  --th-gold: #f5c542;
+  --th-ember: #ff9b42;
+  --th-space-950: #020a0e;
+  --th-space-900: #041118;
+  --th-space-800: #071a24;
+  --th-space-700: #0b2431;
+  --th-space-600: #113242;
+  --th-space-500: #1a4559;
+  --th-text-100: #f0fbff;
+  --th-text-200: #dcf1f7;
+  --th-text-300: #b8d9e3;
+  --th-text-400: #86aebb;
+  --th-text-500: #5c8391;
+  --th-text-600: #3f5f6b;
+  --th-ink: #e8fdff;
+  --th-body-glow: #0a3444;
+  --th-panel: linear-gradient(170deg, rgba(12, 40, 54, 0.85), rgba(4, 17, 24, 0.94));
+  --th-edge: color-mix(in srgb, var(--th-accent) 22%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 70%, transparent);
+  --th-btn-ink: #01161b;
+  --th-scan: 0.02;
+}
+
+/* Constellation — esprit Starfield (NASA-punk) : os et graphite, typographie
+   technique, bandes de couleur rouge, orange, jaune et bleu en en-tête. */
+:root[data-theme="constellation"] {
+  --th-font-title: "Saira Condensed", sans-serif;
+  --th-font-body: "Space Grotesk", sans-serif;
+  --th-title-track: 0.12em;
+  --th-cut: 0px;
+  --th-accent: #ece6d6;
+  --th-accent2: #e0582c;
+  --th-ok: #7fc4a6;
+  --th-danger: #d9452f;
+  --th-gold: #f2b33d;
+  --th-ember: #e0582c;
+  --th-space-950: #08090a;
+  --th-space-900: #0c0d0f;
+  --th-space-800: #121315;
+  --th-space-700: #18191c;
+  --th-space-600: #222428;
+  --th-space-500: #30333a;
+  --th-text-100: #f4f1e8;
+  --th-text-200: #e6e2d6;
+  --th-text-300: #c8c3b4;
+  --th-text-400: #9a968a;
+  --th-text-500: #6e6b63;
+  --th-text-600: #4b4944;
+  --th-ink: #f4f1e8;
+  --th-body-glow: #1a1c20;
+  --th-panel: linear-gradient(180deg, rgba(26, 27, 30, 0.95), rgba(12, 13, 15, 0.97));
+  --th-edge: color-mix(in srgb, var(--th-text-100) 13%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-text-100) 60%, transparent);
+  --th-btn-ink: #121212;
+  --th-scan: 0;
+  --th-stripe-1: #d9452f;
+  --th-stripe-2: #e0802c;
+  --th-stripe-3: #f2b33d;
+  --th-stripe-4: #3f7fbf;
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -773,6 +913,61 @@ body {
   color: var(--th-text-100);
 }
 
+/* 5.16 : Signal poussé plus loin. Grands numéros de section sur les panneaux,
+   étiquette code-barres sous le titre de page, micro-typographie (barre oblique
+   devant les surtitres, chiffres serrés). Les autres thèmes n'affichent rien de tout ça. */
+.signal-tag {
+  display: none;
+}
+main {
+  counter-reset: sig-section;
+}
+.hud-panel {
+  counter-increment: sig-section;
+}
+:root[data-theme="signal"] .signal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 2px 6px 2px 2px;
+  background: var(--th-accent);
+  color: var(--th-btn-ink);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+:root[data-theme="signal"] .signal-barcode {
+  width: 44px;
+  height: 12px;
+  background: repeating-linear-gradient(90deg, var(--th-btn-ink) 0 1px, transparent 1px 3px, var(--th-btn-ink) 3px 5px, transparent 5px 6px, var(--th-btn-ink) 6px 7px, transparent 7px 10px);
+}
+:root[data-theme="signal"] .hud-panel-title::after {
+  content: counter(sig-section, decimal-leading-zero);
+  position: absolute;
+  top: 4px;
+  right: 12px;
+  font-family: var(--th-font-title);
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: color-mix(in srgb, var(--th-text-100) 7%, transparent);
+  pointer-events: none;
+}
+:root[data-theme="signal"] .hud-eyebrow::before {
+  content: "/ ";
+  color: var(--th-accent2);
+}
+:root[data-theme="signal"] .font-mono {
+  letter-spacing: -0.01em;
+}
+:root[data-theme="signal"] .page-header::after {
+  height: 3px;
+  background: linear-gradient(90deg, var(--th-accent) 0 120px, var(--th-accent2) 120px 150px, color-mix(in srgb, var(--th-text-100) 12%, transparent) 150px);
+}
+
 /* ---------- Aurora (coucher de soleil orbital) ---------- */
 /* Halo rose et ambre à l'horizon, liseré dégradé, boutons et grands titres
    en dégradé rose → ambre. */
@@ -803,6 +998,118 @@ body {
 }
 :root[data-theme="aurora"] ::selection {
   background: color-mix(in srgb, var(--th-accent) 40%, transparent);
+}
+
+/* ---------- Voyageur (esprit Destiny) ---------- */
+/* Lueur du Voyageur au zénith, panneaux sans lueur avec un filet clair en tête,
+   titres fins en capitales très espacées, bouton plein ivoire. */
+:root[data-theme="voyageur"] body {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -12%, color-mix(in srgb, var(--th-text-100) 10%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse 120% 70% at 50% 0%, var(--th-body-glow) 0%, transparent 65%),
+    var(--color-space-950);
+}
+:root[data-theme="voyageur"] .glass-panel {
+  box-shadow: none;
+}
+:root[data-theme="voyageur"] .glass-panel::before {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 60%, transparent), transparent 55%) top left / 100% 1px no-repeat;
+}
+:root[data-theme="voyageur"] .hud-title {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+:root[data-theme="voyageur"] .hud-btn-primary {
+  box-shadow: none;
+}
+:root[data-theme="voyageur"] .hud-btn-primary:hover {
+  background: var(--th-text-100);
+}
+:root[data-theme="voyageur"] ::selection {
+  background: color-mix(in srgb, var(--th-accent2) 50%, transparent);
+}
+
+/* ---------- Omni (esprit Mass Effect) ---------- */
+/* Halo bleu de l'Alliance, trame hexagonale discrète, titres orange lumineux,
+   liseré orange → bleu. */
+:root[data-theme="omni"] body {
+  background:
+    radial-gradient(ellipse 110% 60% at 15% -10%, var(--th-body-glow) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 40% at 100% 110%, color-mix(in srgb, var(--th-accent) 12%, transparent) 0%, transparent 70%),
+    var(--color-space-950);
+}
+:root[data-theme="omni"] .glass-panel::before {
+  background:
+    linear-gradient(90deg, var(--th-accent), color-mix(in srgb, var(--th-accent2) 70%, transparent) 45%, transparent 75%) top left / 100% 1px no-repeat,
+    linear-gradient(to bottom right, transparent calc(50% - 0.75px), var(--th-edge-strong) calc(50% - 0.75px), var(--th-edge-strong) calc(50% + 0.75px), transparent calc(50% + 0.75px)) top left / var(--th-cut) var(--th-cut) no-repeat;
+}
+:root[data-theme="omni"] .hud-title {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--th-accent) 35%, transparent);
+}
+:root[data-theme="omni"] h1.hud-title {
+  color: var(--th-accent);
+}
+:root[data-theme="omni"] ::selection {
+  background: color-mix(in srgb, var(--th-accent) 45%, transparent);
+}
+
+/* ---------- Spartan (esprit Halo Infinite) ---------- */
+/* Visière bleu-vert, crochets d'angle en haut à gauche et en bas à droite,
+   bouton cyan qui vire au blanc au survol. */
+:root[data-theme="spartan"] body {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, var(--th-body-glow) 0%, transparent 60%),
+    linear-gradient(180deg, transparent 60%, color-mix(in srgb, var(--th-accent2) 5%, transparent)),
+    var(--color-space-950);
+}
+:root[data-theme="spartan"] .glass-panel::before {
+  background:
+    linear-gradient(var(--th-accent), var(--th-accent)) top left / 18px 2px no-repeat,
+    linear-gradient(var(--th-accent), var(--th-accent)) top left / 2px 18px no-repeat,
+    linear-gradient(var(--th-edge-strong), var(--th-edge-strong)) bottom right / 18px 2px no-repeat,
+    linear-gradient(var(--th-edge-strong), var(--th-edge-strong)) bottom right / 2px 18px no-repeat;
+}
+:root[data-theme="spartan"] .hud-title {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+:root[data-theme="spartan"] .hud-btn-primary:hover {
+  background: var(--th-text-100);
+}
+:root[data-theme="spartan"] ::selection {
+  background: color-mix(in srgb, var(--th-accent2) 55%, transparent);
+}
+
+/* ---------- Constellation (esprit Starfield) ---------- */
+/* Graphite mat, bandes rouge-orange-jaune-bleu en tête de panneau, titres
+   condensés espacés, bouton os plein. */
+:root[data-theme="constellation"] body {
+  background:
+    radial-gradient(ellipse 100% 55% at 50% -10%, var(--th-body-glow) 0%, transparent 60%),
+    var(--color-space-950);
+}
+:root[data-theme="constellation"] .glass-panel {
+  backdrop-filter: none;
+  box-shadow: none;
+}
+:root[data-theme="constellation"] .glass-panel::before {
+  background:
+    linear-gradient(90deg, var(--th-stripe-1) 0 14px, var(--th-stripe-2) 14px 28px, var(--th-stripe-3) 28px 42px, var(--th-stripe-4) 42px 56px, transparent 56px) top left / 100% 3px no-repeat;
+}
+:root[data-theme="constellation"] .hud-title {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+:root[data-theme="constellation"] .hud-btn-primary {
+  box-shadow: none;
+}
+:root[data-theme="constellation"] .hud-btn-primary:hover {
+  background: var(--th-accent2);
+  color: var(--th-text-100);
+}
+:root[data-theme="constellation"] ::selection {
+  background: var(--th-accent2);
+  color: var(--th-text-100);
 }
 
 /* ---------- Primitives HUD : pastille, encadré, interrupteur ---------- */

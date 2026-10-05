@@ -54,6 +54,20 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
   - Éclat de boss : 3 boss mondiaux différents.
 - Ta planète apparaît sur l'accueil, sur ta fiche publique et dans la galaxie quand on te sélectionne. Elle reprend les couleurs du thème de celui qui la regarde. C'est purement cosmétique : aucun effet sur le jeu.
 
+## Thèmes et transitions
+- Quatre nouveaux thèmes dans Réglages :
+  - Voyageur (esprit Destiny) : ivoire et gris perle, violet légendaire, titres fins très espacés.
+  - Omni (esprit Mass Effect) : hologramme orange sur bleu nuit.
+  - Spartan (esprit Halo Infinite) : visière bleu-vert, crochets d'angle sur les panneaux.
+  - Constellation (esprit Starfield) : os et graphite, bandes rouge-orange-jaune-bleu.
+- Chaque thème a sa propre ambiance sonore.
+- Chaque thème a sa façon de changer de page : hologramme qui se matérialise, saut de signal, découpe nette, interface qui s'ouvre depuis le centre… Si tu as demandé de réduire les animations, c'est un simple fondu.
+- Signal va plus loin :
+  - Grands numéros de section en filigrane sur les panneaux.
+  - Étiquette code-barres sous le titre de chaque page.
+  - Barre oblique magenta devant les surtitres.
+  - Filet vert et magenta sous l'en-tête.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.
