@@ -332,7 +332,7 @@ export function resolveExpeditionChoice(player: PlayerState, fleet: ExpeditionFl
 export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, now: number, random: () => number = Math.random): NewNotification {
   // 5.16 : chaque étape profonde compte une demi-durée d'XP en plus.
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
-  applyXpDelta(player, xp, now, "expedition");
+  const gained = applyXpDelta(player, xp, now, "expedition");
   bumpStat(player, "expeditions");
   if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   // v4.0 : une relique, parfois (5 % à 2 h, jusqu'à 15 % à 8 h).
@@ -348,7 +348,7 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
   return {
     kind: "fleet",
     title: relic ? "Expédition terminée : relique !" : "Expédition terminée",
-    message: `Ta flotte est rentrée${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain(fleet.loot ?? {})} et +${xp} XP.${relic}${loot}`,
+    message: `Ta flotte est rentrée${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain(fleet.loot ?? {})} et +${gained} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false,
   };

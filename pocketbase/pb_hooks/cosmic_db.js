@@ -1425,6 +1425,17 @@ function resolveAttackArrival(txApp, game, rec, now) {
   });
   // v4.2 : seigneur parti (vendetta perdue) : la flotte rentre sans combattre.
   const absent = defender && defender.player.npc ? warlordAbsence(txApp, game, defenderUid, now) : null;
+  // 5.18 : pacte de non-agression signé (ou en préavis) pendant le vol : demi-tour sans combat.
+  const pact = defender && !defender.player.npc ? bindingPact(txApp, game, attacker.rec.getString("allianceId"), defender.rec.getString("allianceId"), now) : null;
+  if (pact) {
+    const tag = pact.allianceA === defender.rec.getString("allianceId") ? pact.tagA : pact.tagB;
+    rec.set("status", "returning");
+    rec.set("returnAtMs", now + tripMs);
+    rec.set("outcome", "none");
+    txApp.save(rec);
+    notify(txApp, fleet.ownerUid, [{ kind: "fleet", title: "Attaque annulée : pacte de non-agression", message: `Un pacte lie ton alliance à [${tag}] : ta flotte fait demi-tour sans combattre contre ${defender.player.pseudo}.`, createdAtMs: now, read: false }]);
+    return;
+  }
   const result = defender && !absent
     ? game.performAttack({
         now,
@@ -5069,9 +5080,9 @@ function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
   }
 }
 
-const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte" };
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte", amber: "Ambre modifiée" };
 /** v5.14 : actions qui donnent quelque chose (motif obligatoire). */
-const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule"];
+const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule", "amber"];
 
 /**
  * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
@@ -5125,6 +5136,11 @@ function adminPlayerAction(e) {
       const label = game.relicLabel(item);
       notes.push({ kind: "event", title: "Une relique t'est offerte", message: `${label} — ${reason}.`, createdAtMs: now, read: false, link: "/game/etat-major" });
       summary = { relique: label };
+    } else if (action === "amber") {
+      // 5.18 : solde d'Ambre fixé par l'équipe (et non ajouté).
+      const r = game.adminSetAmber(player, Number(req.amount));
+      notes.push({ kind: "event", title: "Ambre ajustée par l'équipe", message: `Ton solde d'Ambre passe de ${r.before} à ${r.after} — ${reason}.`, createdAtMs: now, read: false });
+      summary = { ambre: `${r.before} → ${r.after}` };
     } else if (action === "capsule") {
       const type = String(req.capsule || "");
       const level = Math.max(1, Math.min(10, Math.floor(Number(req.level) || 1)));

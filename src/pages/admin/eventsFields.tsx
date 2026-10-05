@@ -11,6 +11,7 @@ import { CheckboxField, Field, NumberField, Section, SelectField, TextField } fr
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { CatchupSection, MutatorSection, SeasonPayoutPreview, StreakSection } from "@/pages/admin/RewardsPreview";
 import { TerritoryWarSection } from "@/pages/admin/TerritoryWarSection";
+import { XpTiersSection } from "@/pages/admin/XpTiersSection";
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
@@ -212,6 +213,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       <CatchupSection rules={rules} setRules={setRules} />
       <MutatorSection rules={rules} setRules={setRules} />
       <TerritoryWarSection rules={rules} setRules={setRules} />
+      <XpTiersSection rules={rules} setRules={setRules} />
     </>
   );
 }

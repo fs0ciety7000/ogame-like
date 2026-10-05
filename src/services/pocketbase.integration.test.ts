@@ -1493,7 +1493,20 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
       await loginPlayer(B.email, B.pw);
       expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
+      // 5.18 : une attaque lancée avant la signature fait demi-tour à l'arrivée, sans combat.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}"` })) await admin.collection("battle_reports").update(r.id, { timestamp: r.timestamp - 3 * 3600_000 });
+      const xpBefore = { a: (await snap(aId)).xp, b: (await snap(bId)).xp };
+      await admin.collection("players").update(aId, { lastDefeatAtMs: 0, xp: xpBefore.b });
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 5, count: 20 } } });
+      const inFlight = await ps.sendFleet(aId, { chasseur: 1 });
       expect((await ds.diplomacy("accept", { pactId: pact.id })).status).toBe("active");
+      await wait(Math.max(0, inFlight.arriveAtMs - Date.now()) + 400);
+      await ps.syncPlayer("");
+      const turned = await pb.collection("fleets").getOne(inFlight.id);
+      expect(turned).toMatchObject({ status: "returning", outcome: "none", reportId: "" });
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Attaque annulée : pacte de non-agression"` })).toHaveLength(1);
+      await admin.collection("fleets").delete(inFlight.id);
+      await admin.collection("players").update(aId, { xp: xpBefore.a });
       await expect(ps.sendFleet(aId, { chasseur: 1 })).rejects.toThrow("Pacte de non-agression");
       await expect(pb.send("/api/cosmic/war", { method: "POST", body: { action: "declare", targetAllianceId: X.id } })).rejects.toMatchObject({ status: 400 });
 

@@ -157,6 +157,7 @@ __export(hooksEntry_exports, {
   addSeasonPower: () => addSeasonPower,
   addToPot: () => addToPot,
   adminGrantOfficer: () => adminGrantOfficer,
+  adminSetAmber: () => adminSetAmber,
   allianceBossDef: () => allianceBossDef,
   allianceBossRefund: () => allianceBossRefund,
   allianceChallengeReward: () => allianceChallengeReward,
@@ -1842,6 +1843,903 @@ function percentiles(values) {
   return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
 }
 
+// src/game/worldBosses.ts
+var DEFAULT_WORLD_BOSSES = [
+  {
+    id: "leviathan",
+    accent: "#4be8ff",
+    name: "Le L\xE9viathan",
+    epithet: "le d\xE9voreur des abysses",
+    story: "N\xE9 dans les profondeurs d'une g\xE9ante gazeuse morte, le L\xE9viathan remonte \xE0 la surface du secteur quand la faim le prend. Sa carapace a aval\xE9 des flottes enti\xE8res ; ses \xE9cailles en gardent les \xE9paves.",
+    image: "/assets/leviathan/leviathan.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal armored space leviathan rising from the clouds of a dead gas giant, wrecked warships embedded in its scales, tiny battle fleets swarming around it, cyan #4be8ff and gold #ffd86b light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1,
+    lossMult: 1,
+    weakness: ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
+    phases: [
+      { name: "Assaut", flavor: "Le colosse encaisse sans broncher." },
+      { name: "Riposte", flavor: "Bless\xE9, il fouette l'espace de sa queue blind\xE9e." },
+      { name: "Carapace fissur\xE9e", flavor: "Il se replie dans sa carapace, mais une faille s'ouvre." }
+    ],
+    title: "Fl\xE9au du L\xE9viathan",
+    rewardMult: 1
+  },
+  {
+    id: "matriarche",
+    accent: "#ffd86b",
+    name: "La Matriarche",
+    epithet: "m\xE8re de l'Essaim",
+    story: "Quand la Reine des Kesh'Vaar a disparu, sa s\u0153ur a pris le tr\xF4ne de chitine. La Matriarche ne combat pas seule : chaque blessure lib\xE8re une nu\xE9e de rejetons qui harc\xE8lent les flottes.",
+    image: "/assets/bosses/matriarche.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic insectoid hive queen floating in space, translucent amber carapace, swarms of smaller bio-ships pouring from her abdomen, hive structures glowing gold #ffd86b, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 0.9,
+    lossMult: 1.15,
+    weakness: ["chasseur", "intercepteur", "fregate"],
+    phases: [
+      { name: "Nu\xE9e", flavor: "Ses rejetons couvrent son approche." },
+      { name: "Fr\xE9n\xE9sie", flavor: "Bless\xE9e, elle l\xE2che toute sa couv\xE9e sur les assaillants." },
+      { name: "Couv\xE9e expos\xE9e", flavor: "Sa poche de ponte est \xE0 nu : frappez-la." }
+    ],
+    title: "Fl\xE9au de la Matriarche",
+    rewardMult: 1
+  },
+  {
+    id: "titan",
+    accent: "#ff8a3d",
+    name: "Le Titan de rouille",
+    epithet: "la forge qui marche",
+    story: "Une station-forge de l'ancien empire, devenue folle apr\xE8s trois si\xE8cles seule. Elle d\xE9vore les \xE9paves pour grandir, et refait ses blindages \xE0 mesure qu'on les arrache.",
+    image: "/assets/bosses/titan.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal rusted war machine made from fused station modules and wrecked hulls, glowing ember #ff8a3d forge furnaces in its chest, mechanical arms tearing a cruiser apart, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.25,
+    lossMult: 0.85,
+    weakness: ["croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
+    phases: [
+      { name: "Blindage", flavor: "Ses plaques de rouille absorbent les salves." },
+      { name: "Refonte", flavor: "Il fond les \xE9paves pour se reconstruire, et frappe en retour." },
+      { name: "Fournaise \xE0 nu", flavor: "Son c\u0153ur de forge est expos\xE9." }
+    ],
+    title: "Briseur du Titan",
+    rewardMult: 1.1
+  },
+  {
+    id: "spectre",
+    accent: "#a78bfa",
+    name: "Le Spectre du Ch\u0153ur",
+    epithet: "la voix dans le silence",
+    story: "Le Ch\u0153ur Silencieux a laiss\xE9 derri\xE8re lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'\xE0 ce que les \xE9quipages perdent la raison.",
+    image: "/assets/bosses/spectre.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, an enormous ghostly entity made of violet #a78bfa light and static, a faceless choir of luminous figures forming its body, warships with flickering shields drifting in confusion, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 0.85,
+    lossMult: 1.1,
+    weakness: ["intercepteur", "fregate", "croiseur_nova"],
+    phases: [
+      { name: "Brouillage", flavor: "Les capteurs ne voient qu'un mirage." },
+      { name: "Chant", flavor: "Son chant retourne les syst\xE8mes des vaisseaux." },
+      { name: "Silence", flavor: "Il se tait, et devient enfin visible." }
+    ],
+    title: "Exorciste du Ch\u0153ur",
+    rewardMult: 1
+  },
+  {
+    id: "cometophage",
+    accent: "#ff5c7a",
+    name: "Le Com\xE9tophage",
+    epithet: "le mangeur d'\xE9toiles filantes",
+    story: "Il suit les com\xE8tes depuis des mill\xE9naires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de tra\xEEn\xE9es de feu : chacune est un fragment qu'il a recrach\xE9.",
+    image: "/assets/bosses/cometophage.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic serpentine space creature wrapped around a blazing scarlet comet, its body shedding burning ice fragments like a meteor shower, hunter fleets diving between the fragments, red #ff5c7a and cyan light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.05,
+    lossMult: 1.05,
+    weakness: ["lance_gravitationnelle", "croiseur_nova", "chasseur"],
+    phases: [
+      { name: "Pluie de feu", flavor: "Il s'entoure d'une pluie de fragments br\xFBlants." },
+      { name: "Constriction", flavor: "Il s'enroule autour de sa com\xE8te et \xE9crase ce qui approche." },
+      { name: "Gorge ouverte", flavor: "Il avale la com\xE8te : sa gueule est \xE0 d\xE9couvert." }
+    ],
+    title: "Chasseur du Com\xE9tophage",
+    rewardMult: 1
+  },
+  {
+    id: "abyssal",
+    accent: "#ff5fd2",
+    name: "L'Abyssal",
+    epithet: "ce qui dort sous le Vide",
+    story: "Personne ne l'a jamais vu en entier. Les \xE9claireurs parlent d'un \u0153il grand comme une lune et d'une ombre qui \xE9teint les \xE9toiles. Quand l'Abyssal se r\xE9veille, m\xEAme les seigneurs de guerre rentrent au port.",
+    image: "/assets/bosses/abyssal.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, an unfathomably huge shadowy creature emerging from a black void, a single glowing magenta #ff5fd2 eye the size of a moon, stars going dark around its silhouette, a tiny fleet in the foreground for scale, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.4,
+    lossMult: 1.2,
+    weakness: ["etoile_noire", "lance_gravitationnelle"],
+    phases: [
+      { name: "\xC9veil", flavor: "L'ombre s'\xE9tire, lentement." },
+      { name: "Mar\xE9e noire", flavor: "Elle engloutit des escadres enti\xE8res." },
+      { name: "L'\u0152il", flavor: "L'\u0153il s'ouvre : visez-le." }
+    ],
+    title: "Veilleur de l'Ab\xEEme",
+    rewardMult: 1.25
+  }
+];
+var WORLD_BOSS_RULES = {
+  /** Écart minimal entre deux apparitions (jours, de début à début). */
+  minGapDays: 4,
+  /** Semaine de référence : lundi 5 janvier 2026 (heure de Paris). */
+  anchorMondayUtc: Date.UTC(2026, 0, 5)
+};
+var DAY = 864e5;
+var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
+function setWorldBosses(defs) {
+  var _a;
+  const byId = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, __spreadValues({}, b)]));
+  for (const d of defs != null ? defs : []) {
+    if (!(d == null ? void 0 : d.id)) continue;
+    const base = (_a = byId.get(d.id)) != null ? _a : DEFAULT_WORLD_BOSSES[0];
+    byId.set(d.id, __spreadProps(__spreadValues(__spreadValues({}, base), d), { id: d.id }));
+  }
+  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
+}
+function activeWorldBosses() {
+  var _a;
+  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
+  return on.length ? on : [(_a = WORLD_BOSSES[0]) != null ? _a : DEFAULT_WORLD_BOSSES[0]];
+}
+function validateWorldBosses(defs) {
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const b of defs != null ? defs : []) {
+    const at = `Boss mondial ${(b == null ? void 0 : b.name) || (b == null ? void 0 : b.id) || "?"}`;
+    if (!(b == null ? void 0 : b.id) || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
+    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
+    if (b == null ? void 0 : b.id) ids.add(b.id);
+    if (b.name !== void 0 && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
+    if (b.title !== void 0 && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
+    for (const k of ["hpMult", "lossMult", "rewardMult"]) {
+      const v = b[k];
+      if (v !== void 0 && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "r\xE9compenses"} entre 0,1 et 5.`);
+    }
+    if (b.phases !== void 0 && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p) => {
+      var _a;
+      return !((_a = p == null ? void 0 : p.name) == null ? void 0 : _a.trim());
+    }))) errors.push(`${at} : trois phases nomm\xE9es.`);
+  }
+  const merged = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
+  for (const b of defs != null ? defs : []) if (b == null ? void 0 : b.id) merged.set(b.id, b.enabled !== false);
+  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
+  return errors;
+}
+function findWorldBoss(id) {
+  var _a, _b;
+  return (_b = (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0]) != null ? _b : DEFAULT_WORLD_BOSSES[0];
+}
+function hash01(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  h = Math.imul(h ^ h >>> 15, 2246822507) >>> 0;
+  h = Math.imul(h ^ h >>> 13, 3266489909) >>> 0;
+  return ((h ^ h >>> 16) >>> 0) / 4294967296;
+}
+function allowedDays(prev, minGap) {
+  const gap = Math.max(1, Math.min(6, Math.floor(minGap)));
+  return [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== prev && 7 + d - prev >= gap);
+}
+var dayCache = /* @__PURE__ */ new Map();
+function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
+  if (week < 0) return Math.floor(hash01(`wb-day:${week}`) * 7);
+  let days = dayCache.get(minGap);
+  if (!days) {
+    days = [Math.floor(hash01("wb-day:0") * 7)];
+    dayCache.set(minGap, days);
+  }
+  while (days.length <= week) {
+    const n = days.length;
+    const allowed = allowedDays(days[n - 1], minGap);
+    days.push(allowed[Math.floor(hash01(`wb-day:${n}`) * allowed.length) % allowed.length]);
+  }
+  return days[week];
+}
+function worldBossOfWeek(week) {
+  const list = activeWorldBosses();
+  return list[(week % list.length + list.length) % list.length];
+}
+function weekOfLocal(localMs) {
+  return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY));
+}
+
+// src/game/events.ts
+function scheduledOccurrences(s) {
+  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
+  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
+  const out = [];
+  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY2, endMs: s.endMs + i * weeks * 7 * DAY2 });
+  return out;
+}
+var EVENT_RULES = {
+  rotationEnabled: true,
+  bossMonthly: true,
+  bossWeekend: "first",
+  bossDates: [],
+  bossSkips: [],
+  rotationSkips: [],
+  bossWeekly: true,
+  startHour: 18,
+  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
+  types: [
+    {
+      id: "tempete_ferraille",
+      name: "Temp\xEAte de ferraille",
+      emoji: "\u{1F32A}\uFE0F",
+      description: "+50 % de production de ferraille et de nanocomposants.",
+      effects: { production: { scrap: 1.5, nano: 1.5 } }
+    },
+    {
+      id: "chantiers_acceleres",
+      name: "Chantiers acc\xE9l\xE9r\xE9s",
+      emoji: "\u{1F3D7}\uFE0F",
+      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
+      effects: { buildTime: 0.75 }
+    },
+    {
+      id: "recherche_eclair",
+      name: "Recherche \xE9clair",
+      emoji: "\u{1F52C}",
+      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { researchTime: 0.75 }
+    },
+    {
+      id: "chasse_tresor",
+      name: "Chasse au tr\xE9sor",
+      emoji: "\u{1F48E}",
+      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { missionRewards: 1.5 }
+    },
+    {
+      id: "guerre_ouverte",
+      name: "Guerre ouverte",
+      emoji: "\u2694\uFE0F",
+      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
+      effects: { loot: 1.5, debrisPercent: 0.5 }
+    }
+  ],
+  scheduled: []
+};
+var HOUR2 = 36e5;
+var DAY2 = 24 * HOUR2;
+var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
+function lastSundayAt1Utc(year, month2) {
+  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+function parisOffsetMs(utcMs) {
+  const year = new Date(utcMs).getUTCFullYear();
+  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
+  return (summer ? 2 : 1) * HOUR2;
+}
+function parisLocalToUtc(localMs) {
+  return localMs - parisOffsetMs(localMs - 2 * HOUR2);
+}
+function findEventType(id) {
+  return EVENT_RULES.types.find((t) => t.id === id);
+}
+function weekendWindow(now, weeksAhead = 0) {
+  const local = now + parisOffsetMs(now);
+  const localMidnight = Math.floor(local / DAY2) * DAY2;
+  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
+  const friday = localMidnight - daysSinceFriday * DAY2 + weeksAhead * 7 * DAY2;
+  return {
+    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR2),
+    endMs: parisLocalToUtc(friday + 3 * DAY2),
+    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY2)),
+    firstOfMonth: new Date(friday).getUTCDate() <= 7,
+    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
+    lastOfMonth: new Date(friday + 7 * DAY2).getUTCMonth() !== new Date(friday).getUTCMonth(),
+    fridayMs: parisLocalToUtc(friday)
+  };
+}
+var BOSS_WEEKENDS = [
+  { id: "first", label: "Premier week-end du mois" },
+  { id: "second", label: "Deuxi\xE8me week-end du mois" },
+  { id: "third", label: "Troisi\xE8me week-end du mois" },
+  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
+  { id: "last", label: "Dernier week-end du mois" }
+];
+var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
+var MAX_BOSS_DATES = 24;
+function onWeekend(w, which) {
+  if (which === "last") return w.lastOfMonth;
+  return w.nth === NTH[which != null ? which : "first"];
+}
+function bossWindows(now, s, count2 = 1) {
+  var _a, _b, _c, _d;
+  const out = [];
+  const skipped = new Set((_a = s.skips) != null ? _a : []);
+  const alternating = !!(((_c = (_b = s.weekly) == null ? void 0 : _b.between) == null ? void 0 : _c.enabled) && s.weekly.between.weekly);
+  if (s.enabled && alternating) {
+    for (const win of alternateWindows(now, s, s.weekly.between, count2 + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
+  } else if (s.enabled && s.weekly && !s.weekly.between) {
+    const w0 = weekOfLocal(now + parisOffsetMs(now));
+    for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
+      const d = worldBossDay(w, s.weekly.minGapDays);
+      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR2);
+      const endMs = startMs + s.durationHours * HOUR2;
+      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
+    }
+  }
+  const monthly = !s.weekly || !!s.weekly.between && !alternating;
+  for (let i = -1; s.enabled && monthly && i < 60 && out.length < count2; i++) {
+    const w = weekendWindow(now, i);
+    if (!onWeekend(w, s.weekend)) continue;
+    const startMs = w.fridayMs + s.startHour * HOUR2;
+    const endMs = startMs + s.durationHours * HOUR2;
+    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
+  }
+  for (const d of (_d = s.dates) != null ? _d : []) {
+    const endMs = d.startMs + d.durationHours * HOUR2;
+    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
+}
+function weeklyWindow(w, s) {
+  var _a;
+  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
+  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR2);
+  return { startMs, endMs: startMs + s.durationHours * HOUR2 };
+}
+function alternateWindows(now, s, other, count2) {
+  const out = [];
+  const w0 = weekOfLocal(now + parisOffsetMs(now));
+  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
+    const a = weeklyWindow(w, other);
+    const b = weeklyWindow(w + 1, other);
+    const dur = s.durationHours * HOUR2;
+    const startMs = a.endMs + DAY2 + dur <= b.startMs ? a.endMs + DAY2 : a.endMs + dur <= b.startMs ? a.endMs : null;
+    if (startMs === null) continue;
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
+}
+var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function hourLabel(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
+}
+function bossEndLabel(s) {
+  const end = s.startHour + s.durationHours;
+  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
+function parisWhenLabel(ms) {
+  const local = new Date(ms + parisOffsetMs(ms));
+  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
+}
+function parisRelativeLabel(ms, now) {
+  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY2);
+  const local = new Date(ms + parisOffsetMs(ms));
+  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
+  const diff = day(ms) - day(now);
+  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
+  if (diff === 1) return `demain \xE0 ${at}`;
+  return parisWhenLabel(ms);
+}
+var BOSS_REMINDERS = {
+  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
+  eveHours: 24,
+  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
+  endingHours: 6
+};
+function eveReminderDue(next, lastAnnounced, now) {
+  if (!next) return false;
+  const left = next.startMs - now;
+  return left > HOUR2 && left <= BOSS_REMINDERS.eveHours * HOUR2 && lastAnnounced !== next.startMs;
+}
+function validateBossSchedule(label3, s) {
+  var _a;
+  const errors = [];
+  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
+  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
+  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
+  const dates = (_a = s.dates) != null ? _a : [];
+  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
+  dates.forEach((d, i) => {
+    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
+    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
+  });
+  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR2) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
+  return errors;
+}
+function rotationEvent(window) {
+  var _a, _b;
+  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
+  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
+  if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
+  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR2 > window.startMs)) return null;
+  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
+  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
+}
+function scheduledEvents() {
+  var _a;
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
+    const type = findEventType(s.type);
+    if (!type || !(s.endMs > s.startMs)) return [];
+    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
+  });
+}
+function eventAt(now) {
+  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
+  if (scheduled) return scheduled;
+  const rotation = rotationEvent(weekendWindow(now));
+  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function weekendEventsBetween(from, to) {
+  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
+  for (let w = -1; w < 60; w++) {
+    const win = weekendWindow(from, w);
+    if (win.startMs >= to) break;
+    const r = rotationEvent(win);
+    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
+}
+function eventBoundaries(from, to) {
+  const points = /* @__PURE__ */ new Set();
+  for (const e3 of scheduledEvents()) {
+    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
+    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
+  }
+  if (EVENT_RULES.rotationEnabled) {
+    for (let w = 0; ; w++) {
+      const win = weekendWindow(from, w);
+      if (win.startMs >= to) break;
+      if (win.startMs > from) points.add(win.startMs);
+      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
+      if (w > 60) break;
+    }
+  }
+  return [...points].sort((a, b) => a - b);
+}
+function productionMultipliers(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
+}
+function buildTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
+}
+function researchTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
+}
+function missionRewardFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
+}
+function lootFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
+}
+function eventDebrisPercent(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
+}
+
+// src/game/story.ts
+var STORY_SPEAKERS = {
+  vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
+  varan: { name: "Capitaine Orsk Varan", role: "Confr\xE9rie du Vide", image: "/assets/story/varan.webp", color: "#ff7a45" },
+  // v4.3 : voix des Chroniques mensuelles.
+  kor: { name: "Madame Vashti Kor", role: "Cartel N\xE9on", image: "/assets/story/cartel.webp", color: "#ff5fd2" },
+  ilyon: { name: "Cantor Ilyon", role: "D\xE9serteur du Ch\u0153ur", image: "/assets/warlords/ilyon.webp", color: "#b18cff" },
+  nerea: { name: "S\u0153ur N\xE9r\xE9a des \xC9chos", role: "Marchande", image: "/assets/warlords/nerea.webp", color: "#d6b4ff" },
+  brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
+  lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
+  vesper: { name: "L'Archonte Vesper", role: "Le Ch\u0153ur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
+  // v4.7 : voix des Chroniques de janvier à mars 2027.
+  kragmor: { name: "Kragmor Corne-Fendue", role: "Mercenaire Gravhorn", image: "/assets/warlords/kragmor.webp", color: "#7fd1ff" },
+  maru: { name: "Le Proph\xE8te Maru", role: "Culte du L\xE9viathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" }
+};
+var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
+var TUTORIAL_TITLE = "Recrue de Vashka";
+
+// src/game/onboarding.ts
+var ONBOARDING_RANK = "fer2";
+var ONBOARDING_TITLE = "Recrue";
+var level = (p, id) => {
+  var _a, _b, _c;
+  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
+};
+var count = (p, id) => {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
+};
+function onboardingRankXp() {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
+}
+var ONBOARDING_STEPS = [
+  {
+    id: "scrap3",
+    label: "Extracteur de ferraille au niveau 3",
+    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
+    to: "/game/batiments",
+    reward: { scrap: 1e3, energy: 500 },
+    done: (p) => level(p, "extracteur_ferraille") >= 3
+  },
+  {
+    id: "reactor3",
+    label: "R\xE9acteur au niveau 3",
+    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
+    to: "/game/batiments",
+    reward: { scrap: 1500, energy: 1e3 },
+    done: (p) => level(p, "reacteur_instable") >= 3
+  },
+  {
+    id: "research",
+    label: "Lancer une premi\xE8re recherche",
+    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
+    to: "/game/labo",
+    reward: { nano: 2e3, data: 2e3 },
+    done: (p) => {
+      var _a;
+      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
+    }
+  },
+  {
+    id: "drones5",
+    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
+    hint: "Les drones ouvrent les premi\xE8res missions.",
+    to: "/game/unites",
+    reward: { scrap: 3e3 },
+    done: (p) => count(p, "drone_recuperateur") >= 5
+  },
+  {
+    id: "mission",
+    label: "Terminer une mission",
+    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
+    to: "/game/missions",
+    reward: { scrap: 5e3, energy: 2e3 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "storage2",
+    label: "Entrep\xF4t au niveau 2",
+    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
+    to: "/game/batiments",
+    reward: { scrap: 5e3, energy: 5e3 },
+    done: (p) => level(p, "entrepot") >= 2
+  },
+  {
+    id: "rockets10",
+    label: "Installer 10 roquettes",
+    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
+    to: "/game/unites",
+    reward: { reinforcedSteel: 20 },
+    done: (p) => count(p, "roquette") >= 10
+  },
+  {
+    id: "spy",
+    label: "Espionner un joueur",
+    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
+    to: "/game/galaxie",
+    reward: { cyberModule: 30 },
+    done: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
+    }
+  },
+  {
+    id: "alliance",
+    label: "Rejoindre ou cr\xE9er une alliance",
+    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
+    to: "/game/alliance",
+    reward: { scrap: 1e4, energy: 1e4 },
+    done: (p) => !!p.allianceId
+  },
+  {
+    id: "rank",
+    label: "Atteindre le rang Fer II",
+    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
+    title: ONBOARDING_TITLE,
+    done: (p) => {
+      var _a;
+      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
+    }
+  }
+];
+function onboardingState(p) {
+  const raw = p.onboarding;
+  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
+  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
+  return __spreadValues(__spreadValues(__spreadValues({
+    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
+    hidden: (raw == null ? void 0 : raw.hidden) === true
+  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
+}
+function onboardingEligible(p) {
+  var _a;
+  const st = onboardingState(p);
+  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
+  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
+}
+function onboardingProgress(p) {
+  const st = onboardingState(p);
+  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
+}
+function claimOnboarding(player, stepId) {
+  var _a, _b, _c, _d, _e, _f;
+  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
+  const st = onboardingState(player);
+  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
+    if (!player.activeTitle) player.activeTitle = step.title;
+  }
+  const claimed = [...st.claimed, step.id];
+  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
+  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
+  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return step.reward;
+}
+function setOnboardingHidden(player, hidden) {
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
+}
+
+// src/game/stats.ts
+function playerStats(player) {
+  var _a;
+  return (_a = player.stats) != null ? _a : {};
+}
+function bumpStat(player, key, n = 1) {
+  var _a, _b, _c;
+  if (!(n > 0)) return;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
+}
+function setStat(player, key, value2) {
+  var _a;
+  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
+}
+function recordThreat(player, factionId) {
+  var _a, _b, _c;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
+  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
+  player.stats = s;
+}
+function recordMission(player, day) {
+  var _a, _b, _c, _d;
+  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
+  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
+  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
+  s.missionDay = day;
+  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
+  player.stats = s;
+}
+function parisHour(now) {
+  const d = new Date(now);
+  const y = d.getUTCFullYear();
+  const lastSunday = (month2) => {
+    const last = new Date(Date.UTC(y, month2 + 1, 0));
+    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
+  };
+  const summer = now >= lastSunday(2) && now < lastSunday(9);
+  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
+}
+
+// src/game/retention.ts
+var DAY3 = 24 * 36e5;
+var ACTIVITY_DAYS_KEPT = 60;
+var PRESENCE_WRITE_MS = 2 * 6e4;
+var ONLINE_MS = 5 * 6e4;
+function lastActivity(p) {
+  var _a, _b;
+  if (p.lastActiveMs) return p.lastActiveMs;
+  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
+  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
+  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
+}
+function parisDay(now) {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
+}
+function dayDiff(a, b) {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY3);
+}
+function recordActiveDay(player, now) {
+  var _a, _b, _c;
+  const day = parisDay(now);
+  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
+  if (days[days.length - 1] === day) return;
+  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
+}
+var pct = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
+function computeRetention(players, now) {
+  var _a, _b, _c;
+  const today = parisDay(now);
+  const lastSeen = (p) => Math.min(now, lastActivity(p));
+  const days = (p) => {
+    var _a2, _b2;
+    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
+  };
+  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
+  const allDays = players.flatMap((p) => {
+    var _a2, _b2;
+    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
+  }).sort();
+  const trackingSince = (_a = allDays[0]) != null ? _a : null;
+  const daily = Array.from({ length: 30 }, (_, i) => {
+    const day = parisDay(now - (29 - i) * DAY3);
+    return {
+      day,
+      active: players.filter((p) => days(p).has(day)).length,
+      signups: players.filter((p) => signupDay(p) === day).length
+    };
+  });
+  const active = {
+    d1: players.filter((p) => now - lastSeen(p) < DAY3).length,
+    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY3).length,
+    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY3).length,
+    total: players.length
+  };
+  const cohorts = Array.from({ length: 8 }, (_, i) => {
+    const end = now - i * 7 * DAY3;
+    const start = end - 7 * DAY3;
+    const members = players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
+    });
+    const tracked = trackingSince ? members.filter((p) => {
+      var _a2;
+      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
+    }) : [];
+    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
+    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
+    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
+    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
+    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
+    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
+    return {
+      week: parisDay(start),
+      signups: members.length,
+      d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
+      d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
+      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
+      activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY3).length, members.length)
+    };
+  }).reverse();
+  const recent = players.filter((p) => {
+    var _a2;
+    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY3;
+  });
+  const funnel = ONBOARDING_STEPS.map((step) => {
+    const reached = recent.filter((p) => {
+      try {
+        return step.done(p);
+      } catch (e3) {
+        return false;
+      }
+    }).length;
+    return { id: step.id, label: step.label, reached, pct: pct(reached, recent.length) };
+  });
+  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY3);
+  const stopAt = /* @__PURE__ */ new Map();
+  for (const p of stalled) {
+    const step = ONBOARDING_STEPS.find((s) => {
+      try {
+        return !s.done(p);
+      } catch (e3) {
+        return true;
+      }
+    });
+    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
+    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
+  }
+  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
+    var _a2, _b2;
+    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
+  }).sort((a, b) => b.count - a.count);
+  const ageDays = (p) => {
+    var _a2;
+    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY3);
+  };
+  const lastDayAfterSignup = (p) => {
+    var _a2;
+    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY3);
+  };
+  const survival = [1, 3, 7, 14, 30].map((day) => {
+    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
+    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
+    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
+  });
+  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY3);
+  const buckets = [
+    ["Le jour m\xEAme", (d) => d < 1],
+    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
+    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
+    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
+    ["Apr\xE8s un mois", (d) => d >= 30]
+  ];
+  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
+  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
+}
+
+// src/game/xpTiers.ts
+var XP_TIER_RULES = {
+  enabled: true,
+  /** Taux entre le premier et le second seuil, puis au-delà. */
+  midRate: 0.5,
+  highRate: 0.25,
+  /** Pendant un week-end à bonus de missions, les seuils des missions suivent le bonus. */
+  eventScaling: true,
+  /** Seuils journaliers (XP avant réduction) : [plein tarif jusqu'à, demi-tarif jusqu'à]. */
+  tiers: {
+    mission: [3e3, 6e3],
+    expedition: [1500, 3e3],
+    bounty: [1200, 2400],
+    attack: [800, 1600],
+    defense: [600, 1200],
+    pirate: [800, 1600],
+    contract: [600, 1200]
+  },
+  /** Bonus au jeu actif (appliqués avant les paliers). */
+  multipliers: { expedition: 1.5, bounty: 1.5 }
+};
+function tierThresholds(source, now, rules = XP_TIER_RULES) {
+  const t = rules.tiers[source];
+  if (!t) return null;
+  const scale = source === "mission" && rules.eventScaling ? Math.max(1, missionRewardFactor(now)) : 1;
+  return [t[0] * scale, Math.max(t[0], t[1]) * scale];
+}
+function tieredAmount(before, gain, thresholds, rules = XP_TIER_RULES) {
+  const [a, b] = thresholds;
+  const seg = (lo, hi) => Math.max(0, Math.min(before + gain, hi) - Math.max(before, lo));
+  return seg(0, a) + seg(a, b) * rules.midRate + seg(b, Infinity) * rules.highRate;
+}
+function xpDayState(player, now) {
+  var _a;
+  const day = parisDay(now);
+  const st = (_a = player.stats) == null ? void 0 : _a.xpDay;
+  return st && st.day === day ? { day, gross: __spreadValues({}, st.gross), applied: __spreadValues({}, st.applied) } : { day, gross: {}, applied: {} };
+}
+function applyXpTiers(player, source, raw, now, rules = XP_TIER_RULES) {
+  var _a, _b, _c, _d;
+  if (!rules.enabled || !(raw > 0)) return raw;
+  const gross = raw * ((_a = rules.multipliers[source]) != null ? _a : 1);
+  const st = xpDayState(player, now);
+  const thresholds = tierThresholds(source, now, rules);
+  const before = (_b = st.gross[source]) != null ? _b : 0;
+  const applied = Math.round(thresholds ? tieredAmount(before, gross, thresholds, rules) : gross);
+  st.gross[source] = before + gross;
+  st.applied[source] = ((_c = st.applied[source]) != null ? _c : 0) + applied;
+  player.stats = __spreadProps(__spreadValues({}, (_d = player.stats) != null ? _d : {}), { xpDay: st });
+  return applied;
+}
+function validateXpTierRules(r) {
+  var _a, _b;
+  if (!r) return [];
+  const errors = [];
+  if (r.midRate !== void 0 && !(r.midRate >= 0 && r.midRate <= 1)) errors.push("Paliers d'XP : taux interm\xE9diaire entre 0 et 1.");
+  if (r.highRate !== void 0 && !(r.highRate >= 0 && r.highRate <= 1)) errors.push("Paliers d'XP : taux au-del\xE0 du second seuil entre 0 et 1.");
+  for (const [k, t] of Object.entries((_a = r.tiers) != null ? _a : {})) {
+    if (!Array.isArray(t) || t.length !== 2 || !t.every((v) => Number.isFinite(v) && v >= 0)) errors.push(`Paliers d'XP : seuils de \xAB ${k} \xBB invalides.`);
+    else if (t[1] < t[0]) errors.push(`Paliers d'XP : le second seuil de \xAB ${k} \xBB doit d\xE9passer le premier.`);
+  }
+  for (const [k, v] of Object.entries((_b = r.multipliers) != null ? _b : {})) if (!(Number(v) >= 0 && Number(v) <= 5)) errors.push(`Paliers d'XP : bonus de \xAB ${k} \xBB entre 0 et 5.`);
+  return errors;
+}
+
 // src/game/resources.ts
 var RESOURCE_LIST = [
   { id: "scrap", name: "Ferraille", emoji: "\u{1F529}", rarity: "common" },
@@ -2589,47 +3487,6 @@ function assertCanJoin(alliance) {
   if (r === "closed") throw new GameActionError("Cette alliance ne recrute pas pour l'instant.");
 }
 
-// src/game/stats.ts
-function playerStats(player) {
-  var _a;
-  return (_a = player.stats) != null ? _a : {};
-}
-function bumpStat(player, key, n = 1) {
-  var _a, _b, _c;
-  if (!(n > 0)) return;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: ((_c = (_b = player.stats) == null ? void 0 : _b[key]) != null ? _c : 0) + n });
-}
-function setStat(player, key, value2) {
-  var _a;
-  player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { [key]: value2 });
-}
-function recordThreat(player, factionId) {
-  var _a, _b, _c;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.ultimatums = ((_b = s.ultimatums) != null ? _b : 0) + 1;
-  s.threatenedBy = [.../* @__PURE__ */ new Set([...(_c = s.threatenedBy) != null ? _c : [], factionId])];
-  player.stats = s;
-}
-function recordMission(player, day) {
-  var _a, _b, _c, _d;
-  const s = __spreadValues({}, (_a = player.stats) != null ? _a : {});
-  s.missions = ((_b = s.missions) != null ? _b : 0) + 1;
-  s.missionDayCount = s.missionDay === day ? ((_c = s.missionDayCount) != null ? _c : 0) + 1 : 1;
-  s.missionDay = day;
-  s.bestMissionDay = Math.max((_d = s.bestMissionDay) != null ? _d : 0, s.missionDayCount);
-  player.stats = s;
-}
-function parisHour(now) {
-  const d = new Date(now);
-  const y = d.getUTCFullYear();
-  const lastSunday = (month2) => {
-    const last = new Date(Date.UTC(y, month2 + 1, 0));
-    return Date.UTC(y, month2, last.getUTCDate() - last.getUTCDay(), 1);
-  };
-  const summer = now >= lastSunday(2) && now < lastSunday(9);
-  return (d.getUTCHours() + (summer ? 2 : 1)) % 24;
-}
-
 // src/game/alliances.ts
 var ALLIANCE_RULES = {
   maxMembers: 6,
@@ -2690,7 +3547,7 @@ function allianceRole(alliance, uid) {
   const r = (_b = alliance.roles) == null ? void 0 : _b[uid];
   return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
 }
-function level(levels, id) {
+function level2(levels, id) {
   var _a;
   const def3 = findAllianceResearch(id);
   return Math.max(0, Math.min((_a = def3 == null ? void 0 : def3.maxLevel) != null ? _a : 0, Math.floor(Number(levels == null ? void 0 : levels[id]) || 0)));
@@ -2698,19 +3555,19 @@ function level(levels, id) {
 function allianceFlightFactor(levels, techLevels2, player) {
   var _a, _b;
   const empire = player ? playerModifiers(player).fleetSpeed : 0;
-  return Math.max(0.1, (1 - level(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed") * (1 - empire));
+  return Math.max(0.1, (1 - level2(levels, "logistique") * ((_b = (_a = findAllianceResearch("logistique")) == null ? void 0 : _a.perLevel) != null ? _b : 0)) * techReductionFactor(techLevels2, "fleet_speed") * (1 - empire));
 }
 function allianceProductionFactor(levels) {
   var _a, _b;
-  return 1 + level(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return 1 + level2(levels, "industrie") * ((_b = (_a = findAllianceResearch("industrie")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 function allianceCounterSpy(levels) {
   var _a, _b;
-  return level(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return level2(levels, "brouillage") * ((_b = (_a = findAllianceResearch("brouillage")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 function allianceShieldBonus(levels) {
   var _a, _b;
-  return level(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
+  return level2(levels, "bouclier") * ((_b = (_a = findAllianceResearch("bouclier")) == null ? void 0 : _a.perLevel) != null ? _b : 0);
 }
 var projectKey = (id) => `projet_${id}`;
 function findAllianceProject(id) {
@@ -2854,7 +3711,7 @@ function startAllianceResearch(alliance, actorUid, researchId, now) {
   const def3 = findAllianceResearch(researchId);
   if (!def3) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est d\xE9j\xE0 en cours.");
-  const next = level(alliance.research, def3.id) + 1;
+  const next = level2(alliance.research, def3.id) + 1;
   if (next > def3.maxLevel) throw new GameActionError("Niveau maximum atteint.");
   const cost = allianceResearchCost(next);
   const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
@@ -3232,7 +4089,7 @@ var ASCENSION_RULES = {
   shieldHours: 72,
   upkeepFreeDays: 7
 };
-var DAY = 24 * 36e5;
+var DAY4 = 24 * 36e5;
 function ascensionCount(player) {
   return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
 }
@@ -3244,7 +4101,7 @@ function ascensionBuildTimeFactor(player) {
 }
 function upkeepFreeUntil(player) {
   const at = Number(player == null ? void 0 : player.ascendedAtMs) || 0;
-  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY : 0;
+  return at > 0 ? at + ASCENSION_RULES.upkeepFreeDays * DAY4 : 0;
 }
 function canAscend(player, queues, now) {
   var _a;
@@ -3262,8 +4119,8 @@ function canAscend(player, queues, now) {
   });
   if (ascensionCount(player) >= ASCENSION_RULES.maxAscensions) return { ok: false, reason: `Tu as atteint le maximum de ${ASCENSION_RULES.maxAscensions} ascensions.`, missing };
   if (missing.length > 0) return { ok: false, reason: "Tous tes b\xE2timents doivent \xEAtre au niveau maximal.", missing };
-  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY - now;
-  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY)} jour(s).`, missing };
+  const wait = (Number(player.ascendedAtMs) || 0) + ASCENSION_RULES.cooldownDays * DAY4 - now;
+  if (player.ascendedAtMs && wait > 0) return { ok: false, reason: `Prochaine ascension possible dans ${Math.ceil(wait / DAY4)} jour(s).`, missing };
   if (queues && Object.keys((_a = queues.buildingUpgrades) != null ? _a : {}).length > 0) return { ok: false, reason: "Termine d'abord tes constructions en cours.", missing };
   return { ok: true, missing };
 }
@@ -3281,488 +4138,6 @@ function ascend(player, queues, now) {
   player.ascensions = ascensionCount(player) + 1;
   player.ascendedAtMs = now;
   bumpStat(player, "ascensions");
-}
-
-// src/game/worldBosses.ts
-var DEFAULT_WORLD_BOSSES = [
-  {
-    id: "leviathan",
-    accent: "#4be8ff",
-    name: "Le L\xE9viathan",
-    epithet: "le d\xE9voreur des abysses",
-    story: "N\xE9 dans les profondeurs d'une g\xE9ante gazeuse morte, le L\xE9viathan remonte \xE0 la surface du secteur quand la faim le prend. Sa carapace a aval\xE9 des flottes enti\xE8res ; ses \xE9cailles en gardent les \xE9paves.",
-    image: "/assets/leviathan/leviathan.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal armored space leviathan rising from the clouds of a dead gas giant, wrecked warships embedded in its scales, tiny battle fleets swarming around it, cyan #4be8ff and gold #ffd86b light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1,
-    lossMult: 1,
-    weakness: ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
-    phases: [
-      { name: "Assaut", flavor: "Le colosse encaisse sans broncher." },
-      { name: "Riposte", flavor: "Bless\xE9, il fouette l'espace de sa queue blind\xE9e." },
-      { name: "Carapace fissur\xE9e", flavor: "Il se replie dans sa carapace, mais une faille s'ouvre." }
-    ],
-    title: "Fl\xE9au du L\xE9viathan",
-    rewardMult: 1
-  },
-  {
-    id: "matriarche",
-    accent: "#ffd86b",
-    name: "La Matriarche",
-    epithet: "m\xE8re de l'Essaim",
-    story: "Quand la Reine des Kesh'Vaar a disparu, sa s\u0153ur a pris le tr\xF4ne de chitine. La Matriarche ne combat pas seule : chaque blessure lib\xE8re une nu\xE9e de rejetons qui harc\xE8lent les flottes.",
-    image: "/assets/bosses/matriarche.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic insectoid hive queen floating in space, translucent amber carapace, swarms of smaller bio-ships pouring from her abdomen, hive structures glowing gold #ffd86b, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 0.9,
-    lossMult: 1.15,
-    weakness: ["chasseur", "intercepteur", "fregate"],
-    phases: [
-      { name: "Nu\xE9e", flavor: "Ses rejetons couvrent son approche." },
-      { name: "Fr\xE9n\xE9sie", flavor: "Bless\xE9e, elle l\xE2che toute sa couv\xE9e sur les assaillants." },
-      { name: "Couv\xE9e expos\xE9e", flavor: "Sa poche de ponte est \xE0 nu : frappez-la." }
-    ],
-    title: "Fl\xE9au de la Matriarche",
-    rewardMult: 1
-  },
-  {
-    id: "titan",
-    accent: "#ff8a3d",
-    name: "Le Titan de rouille",
-    epithet: "la forge qui marche",
-    story: "Une station-forge de l'ancien empire, devenue folle apr\xE8s trois si\xE8cles seule. Elle d\xE9vore les \xE9paves pour grandir, et refait ses blindages \xE0 mesure qu'on les arrache.",
-    image: "/assets/bosses/titan.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal rusted war machine made from fused station modules and wrecked hulls, glowing ember #ff8a3d forge furnaces in its chest, mechanical arms tearing a cruiser apart, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.25,
-    lossMult: 0.85,
-    weakness: ["croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
-    phases: [
-      { name: "Blindage", flavor: "Ses plaques de rouille absorbent les salves." },
-      { name: "Refonte", flavor: "Il fond les \xE9paves pour se reconstruire, et frappe en retour." },
-      { name: "Fournaise \xE0 nu", flavor: "Son c\u0153ur de forge est expos\xE9." }
-    ],
-    title: "Briseur du Titan",
-    rewardMult: 1.1
-  },
-  {
-    id: "spectre",
-    accent: "#a78bfa",
-    name: "Le Spectre du Ch\u0153ur",
-    epithet: "la voix dans le silence",
-    story: "Le Ch\u0153ur Silencieux a laiss\xE9 derri\xE8re lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'\xE0 ce que les \xE9quipages perdent la raison.",
-    image: "/assets/bosses/spectre.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, an enormous ghostly entity made of violet #a78bfa light and static, a faceless choir of luminous figures forming its body, warships with flickering shields drifting in confusion, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 0.85,
-    lossMult: 1.1,
-    weakness: ["intercepteur", "fregate", "croiseur_nova"],
-    phases: [
-      { name: "Brouillage", flavor: "Les capteurs ne voient qu'un mirage." },
-      { name: "Chant", flavor: "Son chant retourne les syst\xE8mes des vaisseaux." },
-      { name: "Silence", flavor: "Il se tait, et devient enfin visible." }
-    ],
-    title: "Exorciste du Ch\u0153ur",
-    rewardMult: 1
-  },
-  {
-    id: "cometophage",
-    accent: "#ff5c7a",
-    name: "Le Com\xE9tophage",
-    epithet: "le mangeur d'\xE9toiles filantes",
-    story: "Il suit les com\xE8tes depuis des mill\xE9naires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de tra\xEEn\xE9es de feu : chacune est un fragment qu'il a recrach\xE9.",
-    image: "/assets/bosses/cometophage.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic serpentine space creature wrapped around a blazing scarlet comet, its body shedding burning ice fragments like a meteor shower, hunter fleets diving between the fragments, red #ff5c7a and cyan light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.05,
-    lossMult: 1.05,
-    weakness: ["lance_gravitationnelle", "croiseur_nova", "chasseur"],
-    phases: [
-      { name: "Pluie de feu", flavor: "Il s'entoure d'une pluie de fragments br\xFBlants." },
-      { name: "Constriction", flavor: "Il s'enroule autour de sa com\xE8te et \xE9crase ce qui approche." },
-      { name: "Gorge ouverte", flavor: "Il avale la com\xE8te : sa gueule est \xE0 d\xE9couvert." }
-    ],
-    title: "Chasseur du Com\xE9tophage",
-    rewardMult: 1
-  },
-  {
-    id: "abyssal",
-    accent: "#ff5fd2",
-    name: "L'Abyssal",
-    epithet: "ce qui dort sous le Vide",
-    story: "Personne ne l'a jamais vu en entier. Les \xE9claireurs parlent d'un \u0153il grand comme une lune et d'une ombre qui \xE9teint les \xE9toiles. Quand l'Abyssal se r\xE9veille, m\xEAme les seigneurs de guerre rentrent au port.",
-    image: "/assets/bosses/abyssal.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, an unfathomably huge shadowy creature emerging from a black void, a single glowing magenta #ff5fd2 eye the size of a moon, stars going dark around its silhouette, a tiny fleet in the foreground for scale, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.4,
-    lossMult: 1.2,
-    weakness: ["etoile_noire", "lance_gravitationnelle"],
-    phases: [
-      { name: "\xC9veil", flavor: "L'ombre s'\xE9tire, lentement." },
-      { name: "Mar\xE9e noire", flavor: "Elle engloutit des escadres enti\xE8res." },
-      { name: "L'\u0152il", flavor: "L'\u0153il s'ouvre : visez-le." }
-    ],
-    title: "Veilleur de l'Ab\xEEme",
-    rewardMult: 1.25
-  }
-];
-var WORLD_BOSS_RULES = {
-  /** Écart minimal entre deux apparitions (jours, de début à début). */
-  minGapDays: 4,
-  /** Semaine de référence : lundi 5 janvier 2026 (heure de Paris). */
-  anchorMondayUtc: Date.UTC(2026, 0, 5)
-};
-var DAY2 = 864e5;
-var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
-function setWorldBosses(defs) {
-  var _a;
-  const byId = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, __spreadValues({}, b)]));
-  for (const d of defs != null ? defs : []) {
-    if (!(d == null ? void 0 : d.id)) continue;
-    const base = (_a = byId.get(d.id)) != null ? _a : DEFAULT_WORLD_BOSSES[0];
-    byId.set(d.id, __spreadProps(__spreadValues(__spreadValues({}, base), d), { id: d.id }));
-  }
-  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
-}
-function activeWorldBosses() {
-  var _a;
-  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
-  return on.length ? on : [(_a = WORLD_BOSSES[0]) != null ? _a : DEFAULT_WORLD_BOSSES[0]];
-}
-function validateWorldBosses(defs) {
-  const errors = [];
-  const ids = /* @__PURE__ */ new Set();
-  for (const b of defs != null ? defs : []) {
-    const at = `Boss mondial ${(b == null ? void 0 : b.name) || (b == null ? void 0 : b.id) || "?"}`;
-    if (!(b == null ? void 0 : b.id) || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
-    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
-    if (b == null ? void 0 : b.id) ids.add(b.id);
-    if (b.name !== void 0 && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
-    if (b.title !== void 0 && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
-    for (const k of ["hpMult", "lossMult", "rewardMult"]) {
-      const v = b[k];
-      if (v !== void 0 && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "r\xE9compenses"} entre 0,1 et 5.`);
-    }
-    if (b.phases !== void 0 && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p) => {
-      var _a;
-      return !((_a = p == null ? void 0 : p.name) == null ? void 0 : _a.trim());
-    }))) errors.push(`${at} : trois phases nomm\xE9es.`);
-  }
-  const merged = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
-  for (const b of defs != null ? defs : []) if (b == null ? void 0 : b.id) merged.set(b.id, b.enabled !== false);
-  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
-  return errors;
-}
-function findWorldBoss(id) {
-  var _a, _b;
-  return (_b = (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0]) != null ? _b : DEFAULT_WORLD_BOSSES[0];
-}
-function hash01(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
-  h = Math.imul(h ^ h >>> 15, 2246822507) >>> 0;
-  h = Math.imul(h ^ h >>> 13, 3266489909) >>> 0;
-  return ((h ^ h >>> 16) >>> 0) / 4294967296;
-}
-function allowedDays(prev, minGap) {
-  const gap = Math.max(1, Math.min(6, Math.floor(minGap)));
-  return [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== prev && 7 + d - prev >= gap);
-}
-var dayCache = /* @__PURE__ */ new Map();
-function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
-  if (week < 0) return Math.floor(hash01(`wb-day:${week}`) * 7);
-  let days = dayCache.get(minGap);
-  if (!days) {
-    days = [Math.floor(hash01("wb-day:0") * 7)];
-    dayCache.set(minGap, days);
-  }
-  while (days.length <= week) {
-    const n = days.length;
-    const allowed = allowedDays(days[n - 1], minGap);
-    days.push(allowed[Math.floor(hash01(`wb-day:${n}`) * allowed.length) % allowed.length]);
-  }
-  return days[week];
-}
-function worldBossOfWeek(week) {
-  const list = activeWorldBosses();
-  return list[(week % list.length + list.length) % list.length];
-}
-function weekOfLocal(localMs) {
-  return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY2));
-}
-
-// src/game/events.ts
-function scheduledOccurrences(s) {
-  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
-  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
-  const out = [];
-  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY3, endMs: s.endMs + i * weeks * 7 * DAY3 });
-  return out;
-}
-var EVENT_RULES = {
-  rotationEnabled: true,
-  bossMonthly: true,
-  bossWeekend: "first",
-  bossDates: [],
-  bossSkips: [],
-  rotationSkips: [],
-  bossWeekly: true,
-  startHour: 18,
-  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
-  types: [
-    {
-      id: "tempete_ferraille",
-      name: "Temp\xEAte de ferraille",
-      emoji: "\u{1F32A}\uFE0F",
-      description: "+50 % de production de ferraille et de nanocomposants.",
-      effects: { production: { scrap: 1.5, nano: 1.5 } }
-    },
-    {
-      id: "chantiers_acceleres",
-      name: "Chantiers acc\xE9l\xE9r\xE9s",
-      emoji: "\u{1F3D7}\uFE0F",
-      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
-      effects: { buildTime: 0.75 }
-    },
-    {
-      id: "recherche_eclair",
-      name: "Recherche \xE9clair",
-      emoji: "\u{1F52C}",
-      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { researchTime: 0.75 }
-    },
-    {
-      id: "chasse_tresor",
-      name: "Chasse au tr\xE9sor",
-      emoji: "\u{1F48E}",
-      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { missionRewards: 1.5 }
-    },
-    {
-      id: "guerre_ouverte",
-      name: "Guerre ouverte",
-      emoji: "\u2694\uFE0F",
-      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
-      effects: { loot: 1.5, debrisPercent: 0.5 }
-    }
-  ],
-  scheduled: []
-};
-var HOUR2 = 36e5;
-var DAY3 = 24 * HOUR2;
-var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
-function lastSundayAt1Utc(year, month2) {
-  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
-  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
-  return d.getTime();
-}
-function parisOffsetMs(utcMs) {
-  const year = new Date(utcMs).getUTCFullYear();
-  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
-  return (summer ? 2 : 1) * HOUR2;
-}
-function parisLocalToUtc(localMs) {
-  return localMs - parisOffsetMs(localMs - 2 * HOUR2);
-}
-function findEventType(id) {
-  return EVENT_RULES.types.find((t) => t.id === id);
-}
-function weekendWindow(now, weeksAhead = 0) {
-  const local = now + parisOffsetMs(now);
-  const localMidnight = Math.floor(local / DAY3) * DAY3;
-  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
-  const friday = localMidnight - daysSinceFriday * DAY3 + weeksAhead * 7 * DAY3;
-  return {
-    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR2),
-    endMs: parisLocalToUtc(friday + 3 * DAY3),
-    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY3)),
-    firstOfMonth: new Date(friday).getUTCDate() <= 7,
-    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
-    lastOfMonth: new Date(friday + 7 * DAY3).getUTCMonth() !== new Date(friday).getUTCMonth(),
-    fridayMs: parisLocalToUtc(friday)
-  };
-}
-var BOSS_WEEKENDS = [
-  { id: "first", label: "Premier week-end du mois" },
-  { id: "second", label: "Deuxi\xE8me week-end du mois" },
-  { id: "third", label: "Troisi\xE8me week-end du mois" },
-  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
-  { id: "last", label: "Dernier week-end du mois" }
-];
-var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
-var MAX_BOSS_DATES = 24;
-function onWeekend(w, which) {
-  if (which === "last") return w.lastOfMonth;
-  return w.nth === NTH[which != null ? which : "first"];
-}
-function bossWindows(now, s, count2 = 1) {
-  var _a, _b, _c, _d;
-  const out = [];
-  const skipped = new Set((_a = s.skips) != null ? _a : []);
-  const alternating = !!(((_c = (_b = s.weekly) == null ? void 0 : _b.between) == null ? void 0 : _c.enabled) && s.weekly.between.weekly);
-  if (s.enabled && alternating) {
-    for (const win of alternateWindows(now, s, s.weekly.between, count2 + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
-  } else if (s.enabled && s.weekly && !s.weekly.between) {
-    const w0 = weekOfLocal(now + parisOffsetMs(now));
-    for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
-      const d = worldBossDay(w, s.weekly.minGapDays);
-      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR2);
-      const endMs = startMs + s.durationHours * HOUR2;
-      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
-    }
-  }
-  const monthly = !s.weekly || !!s.weekly.between && !alternating;
-  for (let i = -1; s.enabled && monthly && i < 60 && out.length < count2; i++) {
-    const w = weekendWindow(now, i);
-    if (!onWeekend(w, s.weekend)) continue;
-    const startMs = w.fridayMs + s.startHour * HOUR2;
-    const endMs = startMs + s.durationHours * HOUR2;
-    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
-  }
-  for (const d of (_d = s.dates) != null ? _d : []) {
-    const endMs = d.startMs + d.durationHours * HOUR2;
-    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
-  }
-  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
-}
-function weeklyWindow(w, s) {
-  var _a;
-  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
-  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY3 + d * DAY3 + s.startHour * HOUR2);
-  return { startMs, endMs: startMs + s.durationHours * HOUR2 };
-}
-function alternateWindows(now, s, other, count2) {
-  const out = [];
-  const w0 = weekOfLocal(now + parisOffsetMs(now));
-  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
-    const a = weeklyWindow(w, other);
-    const b = weeklyWindow(w + 1, other);
-    const dur = s.durationHours * HOUR2;
-    const startMs = a.endMs + DAY3 + dur <= b.startMs ? a.endMs + DAY3 : a.endMs + dur <= b.startMs ? a.endMs : null;
-    if (startMs === null) continue;
-    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
-  }
-  return out;
-}
-var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-function hourLabel(h) {
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
-  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
-}
-function bossEndLabel(s) {
-  const end = s.startHour + s.durationHours;
-  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
-}
-var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
-function parisWhenLabel(ms) {
-  const local = new Date(ms + parisOffsetMs(ms));
-  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
-}
-function parisRelativeLabel(ms, now) {
-  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY3);
-  const local = new Date(ms + parisOffsetMs(ms));
-  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
-  const diff = day(ms) - day(now);
-  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
-  if (diff === 1) return `demain \xE0 ${at}`;
-  return parisWhenLabel(ms);
-}
-var BOSS_REMINDERS = {
-  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
-  eveHours: 24,
-  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
-  endingHours: 6
-};
-function eveReminderDue(next, lastAnnounced, now) {
-  if (!next) return false;
-  const left = next.startMs - now;
-  return left > HOUR2 && left <= BOSS_REMINDERS.eveHours * HOUR2 && lastAnnounced !== next.startMs;
-}
-function validateBossSchedule(label3, s) {
-  var _a;
-  const errors = [];
-  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
-  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
-  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
-  const dates = (_a = s.dates) != null ? _a : [];
-  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
-  dates.forEach((d, i) => {
-    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
-    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
-  });
-  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
-  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR2) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
-  return errors;
-}
-function rotationEvent(window) {
-  var _a, _b;
-  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
-  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
-  if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
-  if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
-  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR2 > window.startMs)) return null;
-  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
-  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
-}
-function scheduledEvents() {
-  var _a;
-  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
-    const type = findEventType(s.type);
-    if (!type || !(s.endMs > s.startMs)) return [];
-    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
-  });
-}
-function eventAt(now) {
-  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
-  if (scheduled) return scheduled;
-  const rotation = rotationEvent(weekendWindow(now));
-  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
-}
-function weekendEventsBetween(from, to) {
-  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
-  for (let w = -1; w < 60; w++) {
-    const win = weekendWindow(from, w);
-    if (win.startMs >= to) break;
-    const r = rotationEvent(win);
-    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
-  }
-  return out.sort((a, b) => a.startMs - b.startMs);
-}
-function eventBoundaries(from, to) {
-  const points = /* @__PURE__ */ new Set();
-  for (const e3 of scheduledEvents()) {
-    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
-    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
-  }
-  if (EVENT_RULES.rotationEnabled) {
-    for (let w = 0; ; w++) {
-      const win = weekendWindow(from, w);
-      if (win.startMs >= to) break;
-      if (win.startMs > from) points.add(win.startMs);
-      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
-      if (w > 60) break;
-    }
-  }
-  return [...points].sort((a, b) => a - b);
-}
-function productionMultipliers(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
-}
-function buildTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
-}
-function researchTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
-}
-function missionRewardFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
-}
-function lootFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
-}
-function eventDebrisPercent(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
 }
 
 // src/game/bonuses.ts
@@ -4806,315 +5181,6 @@ function clearDecoy(player, fleetId) {
   player.synthesis = st;
 }
 
-// src/game/story.ts
-var STORY_SPEAKERS = {
-  vashka: { name: "Vashka", role: "Matriarche-Chasseuse \xB7 Essaim Kesh'Vaar", image: "/assets/bounties/vashka.webp", color: "#ffd86b" },
-  varan: { name: "Capitaine Orsk Varan", role: "Confr\xE9rie du Vide", image: "/assets/story/varan.webp", color: "#ff7a45" },
-  // v4.3 : voix des Chroniques mensuelles.
-  kor: { name: "Madame Vashti Kor", role: "Cartel N\xE9on", image: "/assets/story/cartel.webp", color: "#ff5fd2" },
-  ilyon: { name: "Cantor Ilyon", role: "D\xE9serteur du Ch\u0153ur", image: "/assets/warlords/ilyon.webp", color: "#b18cff" },
-  nerea: { name: "S\u0153ur N\xE9r\xE9a des \xC9chos", role: "Marchande", image: "/assets/warlords/nerea.webp", color: "#d6b4ff" },
-  brannoc: { name: "Brannoc Demi-Barbe", role: "Seigneur de guerre", image: "/assets/warlords/brannoc.webp", color: "#ff9a5c" },
-  lysa: { name: "Lysa Ferro", role: "La Comptable", image: "/assets/warlords/lysa.webp", color: "#ffb347" },
-  vesper: { name: "L'Archonte Vesper", role: "Le Ch\u0153ur Silencieux", image: "/assets/story/choeur.webp", color: "#9fd8ff" },
-  // v4.7 : voix des Chroniques de janvier à mars 2027.
-  kragmor: { name: "Kragmor Corne-Fendue", role: "Mercenaire Gravhorn", image: "/assets/warlords/kragmor.webp", color: "#7fd1ff" },
-  maru: { name: "Le Proph\xE8te Maru", role: "Culte du L\xE9viathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" }
-};
-var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
-var TUTORIAL_TITLE = "Recrue de Vashka";
-
-// src/game/onboarding.ts
-var ONBOARDING_RANK = "fer2";
-var ONBOARDING_TITLE = "Recrue";
-var level2 = (p, id) => {
-  var _a, _b, _c;
-  return ((_b = (_a = p.buildings) == null ? void 0 : _a[id]) == null ? void 0 : _b.unlocked) ? (_c = p.buildings[id].level) != null ? _c : 0 : 0;
-};
-var count = (p, id) => {
-  var _a, _b, _c;
-  return (_c = (_b = (_a = p.units) == null ? void 0 : _a[id]) == null ? void 0 : _b.count) != null ? _c : 0;
-};
-function onboardingRankXp() {
-  var _a, _b;
-  return (_b = (_a = RANKS.find((r) => r.id === ONBOARDING_RANK)) == null ? void 0 : _a.xp) != null ? _b : 250;
-}
-var ONBOARDING_STEPS = [
-  {
-    id: "scrap3",
-    label: "Extracteur de ferraille au niveau 3",
-    hint: "La ferraille paie presque tout : am\xE9liore son extracteur en premier.",
-    to: "/game/batiments",
-    reward: { scrap: 1e3, energy: 500 },
-    done: (p) => level2(p, "extracteur_ferraille") >= 3
-  },
-  {
-    id: "reactor3",
-    label: "R\xE9acteur au niveau 3",
-    hint: "L'\xE9nergie instable accompagne la ferraille dans la plupart des co\xFBts.",
-    to: "/game/batiments",
-    reward: { scrap: 1500, energy: 1e3 },
-    done: (p) => level2(p, "reacteur_instable") >= 3
-  },
-  {
-    id: "research",
-    label: "Lancer une premi\xE8re recherche",
-    hint: "Le Labo d\xE9bloque les unit\xE9s et renforce toute ton \xE9conomie.",
-    to: "/game/labo",
-    reward: { nano: 2e3, data: 2e3 },
-    done: (p) => {
-      var _a;
-      return Object.values((_a = p.techLevels) != null ? _a : {}).some((l) => l > 0);
-    }
-  },
-  {
-    id: "drones5",
-    label: "Poss\xE9der 5 drones r\xE9cup\xE9rateurs",
-    hint: "Les drones ouvrent les premi\xE8res missions.",
-    to: "/game/unites",
-    reward: { scrap: 3e3 },
-    done: (p) => count(p, "drone_recuperateur") >= 5
-  },
-  {
-    id: "mission",
-    label: "Terminer une mission",
-    hint: "Les missions rapportent ressources et XP pendant que tu fais autre chose.",
-    to: "/game/missions",
-    reward: { scrap: 5e3, energy: 2e3 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.missions) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "storage2",
-    label: "Entrep\xF4t au niveau 2",
-    hint: "L'entrep\xF4t augmente ta capacit\xE9 et met une partie du stock \xE0 l'abri des pillards.",
-    to: "/game/batiments",
-    reward: { scrap: 5e3, energy: 5e3 },
-    done: (p) => level2(p, "entrepot") >= 2
-  },
-  {
-    id: "rockets10",
-    label: "Installer 10 roquettes",
-    hint: "Une premi\xE8re d\xE9fense d\xE9courage les attaques opportunistes.",
-    to: "/game/unites",
-    reward: { reinforcedSteel: 20 },
-    done: (p) => count(p, "roquette") >= 10
-  },
-  {
-    id: "spy",
-    label: "Espionner un joueur",
-    hint: "Envoie une sonde depuis la Galaxie ou la liste des joueurs avant d'attaquer.",
-    to: "/game/galaxie",
-    reward: { cyberModule: 30 },
-    done: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.stats) == null ? void 0 : _a.spies) != null ? _b : 0) >= 1;
-    }
-  },
-  {
-    id: "alliance",
-    label: "Rejoindre ou cr\xE9er une alliance",
-    hint: "Tr\xE9sor commun, recherches partag\xE9es et garnisons : on est plus forts \xE0 plusieurs.",
-    to: "/game/alliance",
-    reward: { scrap: 1e4, energy: 1e4 },
-    done: (p) => !!p.allianceId
-  },
-  {
-    id: "rank",
-    label: "Atteindre le rang Fer II",
-    hint: "L'XP vient des combats, des b\xE2timents, des recherches et des missions.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 50, cyberModule: 50, syntheticNanites: 50, aiFragment: 50 },
-    title: ONBOARDING_TITLE,
-    done: (p) => {
-      var _a;
-      return ((_a = p.xp) != null ? _a : 0) >= onboardingRankXp();
-    }
-  }
-];
-function onboardingState(p) {
-  const raw = p.onboarding;
-  const tutorialRaid = (raw == null ? void 0 : raw.tutorialRaid) === "due" || (raw == null ? void 0 : raw.tutorialRaid) === "sent" ? raw.tutorialRaid : void 0;
-  const advanced = Array.isArray(raw == null ? void 0 : raw.advanced) ? raw.advanced.filter((c) => typeof c === "string") : [];
-  return __spreadValues(__spreadValues(__spreadValues({
-    claimed: Array.isArray(raw == null ? void 0 : raw.claimed) ? raw.claimed.filter((c) => typeof c === "string") : [],
-    hidden: (raw == null ? void 0 : raw.hidden) === true
-  }, tutorialRaid ? { tutorialRaid } : {}), advanced.length > 0 ? { advanced } : {}), (raw == null ? void 0 : raw.advancedHidden) === true ? { advancedHidden: true } : {});
-}
-function onboardingEligible(p) {
-  var _a;
-  const st = onboardingState(p);
-  if (st.claimed.length >= ONBOARDING_STEPS.length) return false;
-  return st.claimed.length > 0 || ((_a = p.xp) != null ? _a : 0) < onboardingRankXp();
-}
-function onboardingProgress(p) {
-  const st = onboardingState(p);
-  return ONBOARDING_STEPS.map((step) => ({ step, done: step.done(p), claimed: st.claimed.includes(step.id) }));
-}
-function claimOnboarding(player, stepId) {
-  var _a, _b, _c, _d, _e, _f;
-  const step = ONBOARDING_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  if (!onboardingEligible(player)) throw new GameActionError("La prise en main est termin\xE9e.");
-  const st = onboardingState(player);
-  if (st.claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, amount3] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  if (step.title && !((_b = player.titles) != null ? _b : []).some((t) => t.label === step.title)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: step.title, seasonId: "onboarding", rank: 1 }];
-    if (!player.activeTitle) player.activeTitle = step.title;
-  }
-  const claimed = [...st.claimed, step.id];
-  const tutorialRaid = (_d = st.tutorialRaid) != null ? _d : step.id === TUTORIAL_RAID.trigger ? "due" : void 0;
-  player.onboarding = __spreadValues(__spreadProps(__spreadValues({}, st), { claimed }), tutorialRaid ? { tutorialRaid } : {});
-  if (claimed.length >= ONBOARDING_STEPS.length && !((_e = player.titles) != null ? _e : []).some((t) => t.label === TUTORIAL_TITLE)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: TUTORIAL_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return step.reward;
-}
-function setOnboardingHidden(player, hidden) {
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { hidden });
-}
-
-// src/game/retention.ts
-var DAY4 = 24 * 36e5;
-var ACTIVITY_DAYS_KEPT = 60;
-var PRESENCE_WRITE_MS = 2 * 6e4;
-var ONLINE_MS = 5 * 6e4;
-function lastActivity(p) {
-  var _a, _b;
-  if (p.lastActiveMs) return p.lastActiveMs;
-  const days = (_a = p.stats) == null ? void 0 : _a.activeDays;
-  if (days && days.length > 0) return Date.parse(`${days[days.length - 1]}T23:59:00Z`) - 36e5;
-  return (_b = p.resourcesUpdatedAtMs) != null ? _b : 0;
-}
-function parisDay(now) {
-  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
-  return new Date(now + offsetHours * 36e5).toISOString().slice(0, 10);
-}
-function dayDiff(a, b) {
-  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY4);
-}
-function recordActiveDay(player, now) {
-  var _a, _b, _c;
-  const day = parisDay(now);
-  const days = (_b = (_a = player.stats) == null ? void 0 : _a.activeDays) != null ? _b : [];
-  if (days[days.length - 1] === day) return;
-  player.stats = __spreadProps(__spreadValues({}, (_c = player.stats) != null ? _c : {}), { activeDays: [...days.filter((d) => d !== day), day].slice(-ACTIVITY_DAYS_KEPT) });
-}
-var pct = (n, total2) => total2 > 0 ? Math.round(n / total2 * 1e3) / 10 : 0;
-function computeRetention(players, now) {
-  var _a, _b, _c;
-  const today = parisDay(now);
-  const lastSeen = (p) => Math.min(now, lastActivity(p));
-  const days = (p) => {
-    var _a2, _b2;
-    return new Set((_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : []);
-  };
-  const signupDay = (p) => p.createdAtMs ? parisDay(p.createdAtMs) : null;
-  const allDays = players.flatMap((p) => {
-    var _a2, _b2;
-    return (_b2 = (_a2 = p.stats) == null ? void 0 : _a2.activeDays) != null ? _b2 : [];
-  }).sort();
-  const trackingSince = (_a = allDays[0]) != null ? _a : null;
-  const daily = Array.from({ length: 30 }, (_, i) => {
-    const day = parisDay(now - (29 - i) * DAY4);
-    return {
-      day,
-      active: players.filter((p) => days(p).has(day)).length,
-      signups: players.filter((p) => signupDay(p) === day).length
-    };
-  });
-  const active = {
-    d1: players.filter((p) => now - lastSeen(p) < DAY4).length,
-    d7: players.filter((p) => now - lastSeen(p) < 7 * DAY4).length,
-    d30: players.filter((p) => now - lastSeen(p) < 30 * DAY4).length,
-    total: players.length
-  };
-  const cohorts = Array.from({ length: 8 }, (_, i) => {
-    const end = now - i * 7 * DAY4;
-    const start = end - 7 * DAY4;
-    const members = players.filter((p) => {
-      var _a2, _b2;
-      return ((_a2 = p.createdAtMs) != null ? _a2 : 0) >= start && ((_b2 = p.createdAtMs) != null ? _b2 : 0) < end;
-    });
-    const tracked = trackingSince ? members.filter((p) => {
-      var _a2;
-      return ((_a2 = signupDay(p)) != null ? _a2 : "") >= trackingSince;
-    }) : [];
-    const d1Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 1);
-    const d7Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 7);
-    const d1 = d1Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) === 1)).length;
-    const d7 = d7Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 7)).length;
-    const d30Eligible = tracked.filter((p) => dayDiff(signupDay(p), today) >= 30);
-    const d30 = d30Eligible.filter((p) => [...days(p)].some((d) => dayDiff(signupDay(p), d) >= 30)).length;
-    return {
-      week: parisDay(start),
-      signups: members.length,
-      d1Pct: d1Eligible.length > 0 ? pct(d1, d1Eligible.length) : null,
-      d7Pct: d7Eligible.length > 0 ? pct(d7, d7Eligible.length) : null,
-      d30Pct: d30Eligible.length > 0 ? pct(d30, d30Eligible.length) : null,
-      activeNowPct: pct(members.filter((p) => now - lastSeen(p) < 3 * DAY4).length, members.length)
-    };
-  }).reverse();
-  const recent = players.filter((p) => {
-    var _a2;
-    return now - ((_a2 = p.createdAtMs) != null ? _a2 : 0) < 60 * DAY4;
-  });
-  const funnel = ONBOARDING_STEPS.map((step) => {
-    const reached = recent.filter((p) => {
-      try {
-        return step.done(p);
-      } catch (e3) {
-        return false;
-      }
-    }).length;
-    return { id: step.id, label: step.label, reached, pct: pct(reached, recent.length) };
-  });
-  const stalled = recent.filter((p) => now - lastSeen(p) >= 3 * DAY4);
-  const stopAt = /* @__PURE__ */ new Map();
-  for (const p of stalled) {
-    const step = ONBOARDING_STEPS.find((s) => {
-      try {
-        return !s.done(p);
-      } catch (e3) {
-        return true;
-      }
-    });
-    const key = (_b = step == null ? void 0 : step.id) != null ? _b : "done";
-    stopAt.set(key, ((_c = stopAt.get(key)) != null ? _c : 0) + 1);
-  }
-  const dropoff = [...stopAt.entries()].map(([id, count2]) => {
-    var _a2, _b2;
-    return { id, label: id === "done" ? "Prise en main termin\xE9e" : (_b2 = (_a2 = ONBOARDING_STEPS.find((s) => s.id === id)) == null ? void 0 : _a2.label) != null ? _b2 : id, count: count2 };
-  }).sort((a, b) => b.count - a.count);
-  const ageDays = (p) => {
-    var _a2;
-    return Math.floor((now - ((_a2 = p.createdAtMs) != null ? _a2 : now)) / DAY4);
-  };
-  const lastDayAfterSignup = (p) => {
-    var _a2;
-    return Math.floor((lastSeen(p) - ((_a2 = p.createdAtMs) != null ? _a2 : 0)) / DAY4);
-  };
-  const survival = [1, 3, 7, 14, 30].map((day) => {
-    const eligible = players.filter((p) => p.createdAtMs && ageDays(p) >= day);
-    const kept = eligible.filter((p) => lastDayAfterSignup(p) >= day).length;
-    return { day, eligible: eligible.length, pct: eligible.length ? pct(kept, eligible.length) : null };
-  });
-  const gone = players.filter((p) => p.createdAtMs && now - lastSeen(p) >= 7 * DAY4);
-  const buckets = [
-    ["Le jour m\xEAme", (d) => d < 1],
-    ["Jours 1 \xE0 2", (d) => d >= 1 && d < 3],
-    ["Jours 3 \xE0 6", (d) => d >= 3 && d < 7],
-    ["Semaines 2 \xE0 4", (d) => d >= 7 && d < 30],
-    ["Apr\xE8s un mois", (d) => d >= 30]
-  ];
-  const churn = buckets.map(([label3, test]) => ({ label: label3, count: gone.filter((p) => test(lastDayAfterSignup(p))).length }));
-  return { trackingSince, daily, active, cohorts, funnel, dropoff, recentPlayers: recent.length, survival, churn };
-}
-
 // src/game/casino.ts
 var CASINO_KEY = "casino";
 var DEFAULT_CASINO = {
@@ -5830,7 +5896,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     st.reputation += t.rep;
     st.completed += 1;
     st.board = st.board.filter((c) => c.id !== contractId);
-    applyXpDelta(player, xp, now, "bounty");
+    xp = applyXpDelta(player, xp, now, "bounty");
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
@@ -6169,12 +6235,12 @@ function grantEliteReward(state, player, now, random = Math.random) {
   st.amberEarned += r.amber;
   st.reputation += r.rep;
   player.bounties = st;
-  applyXpDelta(player, r.xp, now, "bounty");
+  const xp = applyXpDelta(player, r.xp, now, "bounty");
   if (state.status === "killed") {
     const item = rollRelic("elite", now, random, "rare");
-    if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
+    if (addRelic(player, item)) return { xp, amber: r.amber, relic: relicLabel(item) };
   }
-  return { xp: r.xp, amber: r.amber };
+  return { xp, amber: r.amber };
 }
 function describeElite(state) {
   return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
@@ -6186,6 +6252,13 @@ function eliteNotice(state, reward, now) {
     reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
     now
   );
+}
+function adminSetAmber(player, amount3) {
+  const st = bountyState(player);
+  const before = st.amber;
+  const after = Math.max(0, Math.min(1e6, Math.floor(Number(amount3) || 0)));
+  player.bounties = __spreadProps(__spreadValues({}, st), { amber: after });
+  return { before, after };
 }
 
 // src/game/seasonPass.ts
@@ -6440,12 +6513,30 @@ var passHook = null;
 function onPassPoints(hook) {
   passHook = hook;
 }
+var PASS_OVERFLOW = {
+  /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
+  minPoints: 40,
+  amberPerPoint: 1
+};
 function addPassPoints(player, source, now, times = 1) {
   passHook == null ? void 0 : passHook(player, source, now, times);
   trackActivity(player, source, now, times);
   const st = passState(player, now);
-  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS[source] * Math.max(0, times));
+  const max = passMax(st.seasonId);
+  const gain = PASS_POINTS[source] * Math.max(0, times);
+  const overflow = Math.max(0, st.points + gain - max);
+  st.points = Math.min(max, st.points + gain);
   player.seasonPass = st;
+  if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
+    const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
+    if (amber > 0) {
+      const b = bountyState(player);
+      b.amber += amber;
+      player.bounties = b;
+      return amber;
+    }
+  }
+  return 0;
 }
 function passDailyLogin(player, now) {
   var _a, _b, _c;
@@ -8096,9 +8187,10 @@ function flushState(playerIn, queuesIn, now) {
     }
     const factor = missionRewardFactor(entry.endTime);
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
+    let missionXp = 0;
     for (const [res, amount3] of Object.entries(reward)) {
       if (res === "xp") {
-        if (!player.testMode) applyXpDelta(player, amount3, now, "mission");
+        if (!player.testMode) missionXp = applyXpDelta(player, amount3, now, "mission");
       } else {
         player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) + amount3;
       }
@@ -8110,7 +8202,7 @@ function flushState(playerIn, queuesIn, now) {
     notifications.push({
       kind: "mission",
       title: "Mission termin\xE9e",
-      message: `${mission.name} : r\xE9compense obtenue${reward.xp && !player.testMode ? ` (+${reward.xp} XP)` : ""}.`,
+      message: `${mission.name} : r\xE9compense obtenue${missionXp > 0 ? ` (+${missionXp} XP${missionXp < reward.xp ? ", palier du jour" : ""})` : ""}.`,
       createdAtMs: now,
       read: false
     });
@@ -8296,9 +8388,11 @@ function ensureSeasonRollover(player, now) {
 function applyXpDelta(player, delta, now, source = "other") {
   var _a, _b;
   ensureSeasonRollover(player, now);
+  delta = applyXpTiers(player, source, delta, now);
   player.xp = Math.max(0, ((_a = player.xp) != null ? _a : 0) + delta);
   player.seasonXp = Math.max(0, ((_b = player.seasonXp) != null ? _b : 0) + delta);
   recordXp(player, source, delta, now);
+  return delta;
 }
 var SEASON_RULES = {
   champion: { title: "Champion du mois", tokens: 50, amber: 200, common: 5e8 },
@@ -9774,9 +9868,10 @@ function claimChronicle(player, episode, now, random = Math.random) {
   if (st.progress[i] < e3.objective.count) throw new GameActionError(`Objectif pas encore atteint (${st.progress[i]} / ${e3.objective.count}).`);
   st.claimed = [...st.claimed, i];
   player.chronicle = st;
-  addPassPoints(player, "chronicle", now);
+  const overflowAmber = addPassPoints(player, "chronicle", now);
   const bonus = chronicleBonus();
   const gained = [...bonusRewards(bonus.episode), ...(_a = e3.reward) != null ? _a : []].map((r) => grantPassReward(player, r, month2.id, now, random));
+  if (overflowAmber > 0) gained.unshift(`${overflowAmber} Ambre (passe termin\xE9)`);
   const chapter = month2.episodes.every((_, k) => st.claimed.includes(k));
   if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month2.id, now, random)));
   if (chapter && month2.completion) {
@@ -10298,7 +10393,7 @@ function resolveExpeditionChoice(player, fleet, choiceIn, now, random) {
 function finishExpedition(player, fleet, now, random = Math.random) {
   var _a;
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
-  applyXpDelta(player, xp, now, "expedition");
+  const gained = applyXpDelta(player, xp, now, "expedition");
   bumpStat(player, "expeditions");
   if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   let relic = "";
@@ -10310,7 +10405,7 @@ function finishExpedition(player, fleet, now, random = Math.random) {
   return {
     kind: "fleet",
     title: relic ? "Exp\xE9dition termin\xE9e : relique !" : "Exp\xE9dition termin\xE9e",
-    message: `Ta flotte est rentr\xE9e${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${xp} XP.${relic}${loot}`,
+    message: `Ta flotte est rentr\xE9e${expeditionDepth(fleet) > 0 ? ` de la profondeur ${expeditionDepth(fleet)}` : ""} : ${describeGain((_a = fleet.loot) != null ? _a : {})} et +${gained} XP.${relic}${loot}`,
     createdAtMs: now,
     read: false
   };
@@ -10568,6 +10663,8 @@ var PVP_RULES = {
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
    *  bloquerait mutuellement en début de partie). */
   xpGapFloor: 500,
+  /** 5.18 : XP minimale d'une victoire contre un PNJ (seigneur de guerre). */
+  npcWinMinXp: 30,
   /** Perte d'XP maximale en défense sur 24 h glissantes. */
   defenseXpLossCapPer24h: 60,
   defenseXpLossWindowMs: 24 * 60 * 60 * 1e3
@@ -10575,9 +10672,15 @@ var PVP_RULES = {
 function clamp2(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
-function computeCombatXp(outcome, attackerPower, defenderPower) {
+function computeCombatXp(outcome, attackerPower, defenderPower, defenderIsNpc = false) {
   const att = Math.max(attackerPower, 0);
   const def3 = Math.max(defenderPower, 0);
+  if (defenderIsNpc) {
+    const base = computeCombatXp(outcome, attackerPower, defenderPower, false);
+    if (outcome === "attacker_win") return __spreadProps(__spreadValues({}, base), { attackerXp: Math.max(PVP_RULES.npcWinMinXp, base.attackerXp) });
+    if (outcome === "defender_win") return __spreadProps(__spreadValues({}, base), { attackerXp: 0 });
+    return base;
+  }
   if (outcome === "attacker_win") {
     const ratio = att > 0 ? def3 / att : 0;
     return {
@@ -12282,13 +12385,13 @@ function performAttack(input) {
   for (const [unitId, lost] of Object.entries(combat.defenderLosses)) {
     if (def3.units[unitId]) def3.units[unitId].count = Math.max(0, def3.units[unitId].count - lost);
   }
-  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower);
+  const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def3.npc);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
     attacker.victories = ((_x = attacker.victories) != null ? _x : 0) + 1;
   } else if (combat.outcome === "defender_win") attacker.defeats = ((_y = attacker.defeats) != null ? _y : 0) + 1;
-  applyXpDelta(attacker, xp.attackerXp, now, "attack");
+  xp.attackerXp = applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
   if (combat.outcome === "defender_win") owner.victories = ((_z = owner.victories) != null ? _z : 0) + 1;
   else if (combat.outcome === "attacker_win") {
@@ -15139,6 +15242,7 @@ var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
 var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
+var DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -15165,7 +15269,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES }
   });
 }
 var current = defaultGameContent();
@@ -15173,7 +15277,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -15233,6 +15337,10 @@ function applyGameContent(overrides) {
         points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_fa = (_ea = (_da = overrides.rules) == null ? void 0 : _da.territoryWar) == null ? void 0 : _ea.points) != null ? _fa : {}),
         rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ia = (_ha = (_ga = overrides.rules) == null ? void 0 : _ga.territoryWar) == null ? void 0 : _ha.rewards) != null ? _ia : {})
       }),
+      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_ka = (_ja = overrides.rules) == null ? void 0 : _ja.xpTiers) != null ? _ka : {}), {
+        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_na = (_ma = (_la = overrides.rules) == null ? void 0 : _la.xpTiers) == null ? void 0 : _ma.tiers) != null ? _na : {}),
+        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_qa = (_pa = (_oa = overrides.rules) == null ? void 0 : _oa.xpTiers) == null ? void 0 : _pa.multipliers) != null ? _qa : {})
+      }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -15257,7 +15365,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_ja = content.relicSettings) == null ? void 0 : _ja.loot, (_ka = content.relicSettings) == null ? void 0 : _ka.lootTokenCap);
+  setLootTables((_ra = content.relicSettings) == null ? void 0 : _ra.loot, (_sa = content.relicSettings) == null ? void 0 : _sa.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -15279,7 +15387,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _la = content.rules.allianceBoss, { bosses: allianceBosses } = _la, allianceBossRules = __objRest(_la, ["bosses"]);
+  const _ta = content.rules.allianceBoss, { bosses: allianceBosses } = _ta, allianceBossRules = __objRest(_ta, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -15288,6 +15396,7 @@ function applyGameContent(overrides) {
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
+  Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   current = content;
   return content;
 }
@@ -15312,7 +15421,8 @@ var RULE_GROUP_LABELS = {
   streak: "S\xE9rie de connexion",
   catchup: "Rattrapage",
   mutators: "Mutateur de saison",
-  territoryWar: "Guerre de territoire"
+  territoryWar: "Guerre de territoire",
+  xpTiers: "Paliers d'XP"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i;
@@ -15351,6 +15461,7 @@ function validateRules(rules) {
   errors.push(...validateCatchupRules(merged.catchup));
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
+  errors.push(...validateXpTierRules(merged.xpTiers));
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
@@ -21510,7 +21621,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.17.2" : "dev";
+var LOGIC_VERSION = true ? "5.18.0" : "dev";
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [

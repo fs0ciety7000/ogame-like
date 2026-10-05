@@ -1,4 +1,5 @@
 import { recordXp, type XpSource } from "@/game/xpAudit";
+import { applyXpTiers } from "@/game/xpTiers";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -46,12 +47,15 @@ export function ensureSeasonRollover(player: PlayerState, now: number): void {
 /** Point d'entrée unique pour tout gain/perte d'XP : garde le total
  *  cumulé (player.xp) et le compteur saisonnier (player.seasonXp) en
  *  synchronisation, y compris au moment d'un changement de saison. */
-export function applyXpDelta(player: PlayerState, delta: number, now: number, source: XpSource = "other"): void {
+export function applyXpDelta(player: PlayerState, delta: number, now: number, source: XpSource = "other"): number {
   ensureSeasonRollover(player, now);
+  // 5.18 : bonus au jeu actif puis paliers journaliers par source (gains seulement).
+  delta = applyXpTiers(player, source, delta, now);
   player.xp = Math.max(0, (player.xp ?? 0) + delta);
   player.seasonXp = Math.max(0, (player.seasonXp ?? 0) + delta);
   // 5.17.1 : registre horaire par source (audit de l'administration).
   recordXp(player, source, delta, now);
+  return delta;
 }
 
 /* =====================================================

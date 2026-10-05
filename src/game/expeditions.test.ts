@@ -1,3 +1,4 @@
+import { XP_TIER_RULES } from "@/game/xpTiers";
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
 import { canGoDeeper, deepLegMs, expeditionDepth, EXPEDITION_RULES, finishExpedition, launchExpedition, offerDeeper, resolveDeeper, resolveExpeditionChoice, rollExpeditionEvent, type ExpeditionFleet } from "@/game/expeditions";
@@ -87,7 +88,7 @@ describe("expeditions", () => {
     expect(pirateState(p, factionId).notoriety).toBe(1);
     const xp = p.xp ?? 0;
     finishExpedition(p, fleet, 4000);
-    expect(p.xp).toBe(xp + 4 * EXPEDITION_RULES.xpPerHour);
+    expect(p.xp).toBe(xp + 4 * EXPEDITION_RULES.xpPerHour * (XP_TIER_RULES.multipliers.expedition ?? 1));
     expect(p.stats?.expeditions).toBe(1);
   });
 });

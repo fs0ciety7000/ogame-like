@@ -374,12 +374,33 @@ export function onPassPoints(hook: typeof passHook): void {
   passHook = hook;
 }
 
-export function addPassPoints(player: PlayerState, source: PassSource, now: number, times = 1): void {
+/** 5.18 : passe terminé : les gros gains de points (épisode des Chroniques, vendetta, boss…) deviennent de l'Ambre. */
+export const PASS_OVERFLOW = {
+  /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
+  minPoints: 40,
+  amberPerPoint: 1,
+};
+
+/** Ajoute des points de passe. Retourne l'Ambre versée si le passe était déjà au maximum (5.18). */
+export function addPassPoints(player: PlayerState, source: PassSource, now: number, times = 1): number {
   passHook?.(player, source, now, times);
   trackActivity(player, source, now, times);
   const st = passState(player, now);
-  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS[source] * Math.max(0, times));
+  const max = passMax(st.seasonId);
+  const gain = PASS_POINTS[source] * Math.max(0, times);
+  const overflow = Math.max(0, st.points + gain - max);
+  st.points = Math.min(max, st.points + gain);
   player.seasonPass = st;
+  if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
+    const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
+    if (amber > 0) {
+      const b = bountyState(player);
+      b.amber += amber;
+      player.bounties = b;
+      return amber;
+    }
+  }
+  return 0;
 }
 
 /** Connexion du jour : +5 une fois par jour UTC. */

@@ -363,7 +363,7 @@ export function resolveBountyHunt(
     st.reputation += t.rep;
     st.completed += 1;
     st.board = st.board.filter((c) => c.id !== contractId);
-    applyXpDelta(player, xp, now, "bounty");
+    xp = applyXpDelta(player, xp, now, "bounty");
     bumpStat(player, "bounties");
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
@@ -789,13 +789,13 @@ export function grantEliteReward(state: EliteHunt, player: PlayerState, now: num
   st.amberEarned += r.amber;
   st.reputation += r.rep;
   player.bounties = st;
-  applyXpDelta(player, r.xp, now, "bounty");
+  const xp = applyXpDelta(player, r.xp, now, "bounty");
   // v4.0 : proie abattue, une relique rare au moins pour chaque chasseur récompensé.
   if (state.status === "killed") {
     const item = rollRelic("elite", now, random, "rare");
-    if (addRelic(player, item)) return { xp: r.xp, amber: r.amber, relic: relicLabel(item) };
+    if (addRelic(player, item)) return { xp, amber: r.amber, relic: relicLabel(item) };
   }
-  return { xp: r.xp, amber: r.amber };
+  return { xp, amber: r.amber };
 }
 
 export function describeElite(state: EliteHunt): Fugitive {
@@ -811,4 +811,13 @@ export function eliteNotice(state: EliteHunt, reward: { xp: number; amber: numbe
       : "Ta part des dégâts était trop faible pour une récompense.",
     now,
   );
+}
+
+/** 5.18 : l'administration fixe le solde d'Ambre d'un joueur (motif consigné au journal). */
+export function adminSetAmber(player: PlayerState, amount: number): { before: number; after: number } {
+  const st = bountyState(player);
+  const before = st.amber;
+  const after = Math.max(0, Math.min(1_000_000, Math.floor(Number(amount) || 0)));
+  player.bounties = { ...st, amber: after };
+  return { before, after };
 }

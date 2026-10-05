@@ -13,6 +13,7 @@ import { findUnit } from "@/game/units";
 import { missionRewards } from "@/game/economy";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { ExpeditionCard } from "@/components/game/ExpeditionCard";
+import { XpTiersCard } from "@/components/game/XpTiersCard";
 import { cn, formatClock, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, startMission } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
@@ -47,6 +48,7 @@ export function MissionsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" description="Envoie ta flotte en exploration ou en patrouille." />
+      <XpTiersCard player={player} />
       <BountiesTeaser />
 
       <ContractsCard />
