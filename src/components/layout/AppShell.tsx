@@ -40,7 +40,8 @@ import { subscribeMyMessages } from "@/services/messageService";
 import { claimPendingSponsor, pendingSponsor } from "@/services/referralService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
-import { CombatResultModal } from "@/components/game/CombatResultModal";
+import { useCombatModalStore } from "@/store/combatModalStore";
+import { lazyPage } from "@/lib/lazyPage";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
 import { RankUpCelebration } from "@/components/game/RankUpCelebration";
 import { FxLayer } from "@/components/game/FxLayer";
@@ -126,6 +127,23 @@ function SfxToggle() {
 
 /** Pages hors navigation principale (barre d'outils). */
 const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", "/game/reglages": "Réglages", "/game/rapport": "Rapport partagé", "/game/redaction": "Rédaction du devblog" };
+
+/* 5.23 : rapport de combat (et fenêtre d'attaque qu'il ouvre) chargés au premier combat affiché. */
+const CombatResultModal = lazyPage(() => import("@/components/game/CombatResultModal"), "CombatResultModal");
+
+function LazyCombatResult() {
+  const shown = useCombatModalStore((s) => s.current !== null);
+  const [wanted, setWanted] = useState(false);
+  useEffect(() => {
+    if (shown) setWanted(true);
+  }, [shown]);
+  if (!wanted && !shown) return null;
+  return (
+    <Suspense fallback={null}>
+      <CombatResultModal />
+    </Suspense>
+  );
+}
 
 export function AppShell() {
   const user = useAuthStore((s) => s.user);
@@ -274,7 +292,7 @@ export function AppShell() {
         </main>
       </div>
 
-      <CombatResultModal />
+      <LazyCombatResult />
       <WarpOverlay />
       <RaidAlert />
       <RankUpCelebration />

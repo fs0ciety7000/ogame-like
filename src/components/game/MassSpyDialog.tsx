@@ -110,7 +110,7 @@ export function MassSpyDialog({ open, onClose, candidates }: { open: boolean; on
           <span className="text-xs text-slate-400">Sondes par cible</span>
           <NumberInput size="sm" min={1} max={Math.max(1, owned)} value={probes} onChange={setProbes} aria-label="Sondes par cible" className="w-32" />
           <Button className="ml-auto" disabled={busy || picked.length === 0 || need > owned} onClick={() => void launch()}>
-            <Radar className="mr-1.5 h-4 w-4" /> Espionner {picked.length || ""} cible{picked.length > 1 ? "s" : ""} ({need} sondes)
+            <Radar className="mr-1.5 h-4 w-4" /> {picked.length === 0 ? "Choisis tes cibles" : `Espionner ${picked.length} cible${picked.length > 1 ? "s" : ""} (${need} sondes)`}
           </Button>
         </div>
         {need > owned && picked.length > 0 && <p className="text-xs text-ember-glow">Pas assez de sondes à quai pour toutes les cibles.</p>}
