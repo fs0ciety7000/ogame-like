@@ -3,7 +3,7 @@ import { create } from "zustand";
 /* Thèmes d'interface (v2.4) : jetons définis dans src/index.css sous
    html[data-theme]. Le choix est propre à chaque appareil. */
 
-export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora";
+export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora" | "signal";
 
 export const THEMES: { id: ThemeId; name: string; inspiration: string; description: string; swatches: string[] }[] = [
   {
@@ -40,6 +40,13 @@ export const THEMES: { id: ThemeId; name: string; inspiration: string; descripti
     inspiration: "Coucher de soleil orbital",
     description: "Violet profond, rose et ambre, titres et boutons en dégradé. Chaleureux, idéal le soir.",
     swatches: ["#ff5e8a", "#ffa64d", "#5cf2c0", "#241642"],
+  },
+  {
+    id: "signal",
+    name: "Signal",
+    inspiration: "Esprit Marathon (Bungie)",
+    description: "Graphisme brut et net : vert acide et magenta sur graphite, aplats francs, trame de grille, gros titres serrés. Aucun halo.",
+    swatches: ["#c6ff2e", "#ff2e88", "#2ee6ff", "#16181c"],
   },
 ];
 

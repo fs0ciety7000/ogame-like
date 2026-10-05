@@ -2,9 +2,14 @@
 version: 5.15.14
 iteration: 100
 date: 2026-10-05
-title: Insignes d'ascension, planificateur et e-mails
+title: Thème Signal, ascension, planificateur et e-mails
 ---
 L'ascension ne s'affiche plus en double, le planificateur déplace enfin tous les boss et les événements du week-end, et les campagnes e-mail s'écrivent en Markdown.
+
+## Nouveau thème : Signal
+- Inspiré de Marathon (Bungie) : graphisme brut et net, vert acide et magenta sur graphite.
+- Fond tramé d'une grille fine, panneaux en aplat avec une barre d'accent à gauche, gros titres serrés en capitales, boutons pleins sans lueur.
+- Une ambiance sonore propre au thème. À choisir dans Réglages → Apparence.
 
 ## Ascension
 - Une seule icône, l'insigne d'ascension : il est répété autant de fois que d'ascensions (deux ascensions, deux insignes, jusqu'à cinq).
