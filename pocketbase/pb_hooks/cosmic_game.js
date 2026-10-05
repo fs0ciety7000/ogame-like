@@ -692,28 +692,28 @@ function inScope(g, scope) {
   const s = (_a = g.scope) != null ? _a : "all";
   return s === "all" || s === scope;
 }
-function rawEffectTotal(grants, layer, stat, opts = {}) {
+function rawEffectTotal(grants, layer, stat2, opts = {}) {
   let total2 = 0;
   for (const g of grants) {
-    if (g.layer !== layer || g.stat !== stat || !inScope(g, opts.scope)) continue;
+    if (g.layer !== layer || g.stat !== stat2 || !inScope(g, opts.scope)) continue;
     if (opts.target !== void 0 && g.target !== opts.target) continue;
     total2 += g.value;
   }
   return total2;
 }
-function clampEffect(stat, layer, total2) {
+function clampEffect(stat2, layer, total2) {
   var _a;
-  const info = EFFECT_STATS[stat];
+  const info = EFFECT_STATS[stat2];
   let v = total2;
   const cap = (_a = info.cap) == null ? void 0 : _a[layer];
   if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
   return v;
 }
-function effectTotal(grants, layer, stat, opts = {}) {
-  return clampEffect(stat, layer, rawEffectTotal(grants, layer, stat, opts));
+function effectTotal(grants, layer, stat2, opts = {}) {
+  return clampEffect(stat2, layer, rawEffectTotal(grants, layer, stat2, opts));
 }
-function formatEffectValue(stat, value2) {
-  const info = EFFECT_STATS[stat];
+function formatEffectValue(stat2, value2) {
+  const info = EFFECT_STATS[stat2];
   const sign = info.reduction ? "\u2212" : value2 < 0 ? "\u2212" : "+";
   const abs2 = Math.abs(value2);
   const dec = (x) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -1727,9 +1727,9 @@ function techEffectGrants(techLevels2) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
     if (level3 <= 0) continue;
     for (const e3 of techEffects(tech)) {
-      const stat = TECH_EFFECT_STAT[e3.type];
-      if (!stat) continue;
-      out.push({ stat, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
+      const stat2 = TECH_EFFECT_STAT[e3.type];
+      if (!stat2) continue;
+      out.push({ stat: stat2, target: e3.target, value: level3 * effectValuePerLevel(e3), layer: "tech", source: { kind: "tech", id: tech.id, label: tech.nom } });
     }
   }
   return out;
@@ -1737,8 +1737,8 @@ function techEffectGrants(techLevels2) {
 function techBonus(techLevels2, type, target) {
   var _a;
   if (!techLevels2) return 0;
-  const stat = TECH_EFFECT_STAT[type];
-  if (stat) return effectTotal(techEffectGrants(techLevels2), "tech", stat, { target });
+  const stat2 = TECH_EFFECT_STAT[type];
+  if (stat2) return effectTotal(techEffectGrants(techLevels2), "tech", stat2, { target });
   let total2 = 0;
   for (const tech of TECHNOLOGIES) {
     const level3 = (_a = techLevels2[tech.id]) != null ? _a : 0;
@@ -5318,9 +5318,9 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficu
   }
   if (random() < Math.min(1, t.capsuleChance * mult)) {
     const st = synthesisState(player);
-    const free = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
-    if (free.length > 0) {
-      const type = free[Math.floor(random() * free.length) % free.length];
+    const free2 = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
+    if (free2.length > 0) {
+      const type = free2[Math.floor(random() * free2.length) % free2.length];
       const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
       const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
       const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
@@ -8303,7 +8303,7 @@ function empireEffects(player, now = Date.now()) {
 }
 function modifiersFrom(grants, scope) {
   const m = emptyModifiers();
-  const sum3 = (stat) => effectTotal(grants, "empire", stat, { scope });
+  const sum3 = (stat2) => effectTotal(grants, "empire", stat2, { scope });
   m.attack = sum3("attack");
   m.defense = sum3("defense");
   m.buildTime = sum3("buildTime");
@@ -8634,15 +8634,15 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
 function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
-function unitStat(units, techLevels2, unitId, stat) {
+function unitStat(units, techLevels2, unitId, stat2) {
   var _a, _b, _c, _d;
   const def3 = UNIT_BASE_STATS[unitId];
-  const base = (_a = def3 == null ? void 0 : def3[stat]) != null ? _a : 0;
+  const base = (_a = def3 == null ? void 0 : def3[stat2]) != null ? _a : 0;
   const level3 = (_c = (_b = units[unitId]) == null ? void 0 : _b.level) != null ? _c : 0;
   if (level3 <= 0) return 0;
   let value2 = base + (level3 - 1) * ((_d = def3 == null ? void 0 : def3.perLevel) != null ? _d : 5);
-  if (stat === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
-  if (stat === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
+  if (stat2 === "attack") value2 *= 1 + techBonus(techLevels2, "unit_attack");
+  if (stat2 === "defense") value2 *= 1 + techBonus(techLevels2, "unit_defense");
   return value2;
 }
 function computeFleetPower(units, techLevels2, fleet, stats) {
@@ -13246,9 +13246,9 @@ function generateCumulativeChallenges(rng, focus, d, tiers2) {
   const out = {};
   let prev = [];
   for (let t = 1; t <= tiers2; t++) {
-    const free = pool.filter((k) => !prev.includes(k));
-    const feasible = free.filter((k) => by(k, t) >= 1);
-    const extra = free.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
+    const free2 = pool.filter((k) => !prev.includes(k));
+    const feasible = free2.filter((k) => by(k, t) >= 1);
+    const extra = free2.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
     const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
     const keys = candidates.map((k) => {
       var _a;
@@ -13623,6 +13623,91 @@ function nextMonthId(id) {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 }
 
+// src/game/planetLook.ts
+var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
+var stat = (p, key) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
+};
+var bossesKilled = (p) => {
+  var _a, _b;
+  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
+};
+var free = () => true;
+var OPTIONS = {
+  palette: [
+    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
+    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
+    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
+    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
+    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
+    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
+  ],
+  ring: [
+    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
+    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
+    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
+    } },
+    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
+    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
+  ],
+  atmosphere: [
+    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
+      var _a;
+      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
+    } },
+    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
+    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
+  ],
+  moon: [
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
+    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
+    } },
+    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
+    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
+  ]
+};
+var PLANET_SLOTS = [
+  { slot: "palette", label: "Palette" },
+  { slot: "ring", label: "Anneau" },
+  { slot: "atmosphere", label: "Atmosph\xE8re" },
+  { slot: "moon", label: "Lune" }
+];
+function normalizePlanetLook(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const pick4 = (slot) => {
+    var _a;
+    const id = String((_a = r[slot]) != null ? _a : "");
+    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
+  };
+  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
+}
+function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
+  const req = input && typeof input === "object" ? input : {};
+  const next = __spreadValues({}, current2);
+  for (const { slot } of PLANET_SLOTS) {
+    if (req[slot] === void 0) continue;
+    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
+    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
+    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
+    next[slot] = def3.id;
+  }
+  return next;
+}
+function unlockedPlanetLook(p, look) {
+  var _a;
+  const out = __spreadValues({}, look);
+  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
+  return out;
+}
+
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 var FREE_BANNERS = [
@@ -13723,7 +13808,7 @@ function profileStyle(p) {
   const raw = (_a = p.profileStyle) != null ? _a : {};
   const unlocked = new Set((_b = p.unlockedAchievements) != null ? _b : []);
   const pinned = Array.isArray(raw.pinned) ? raw.pinned.filter((id, i, a) => typeof id === "string" && unlocked.has(id) && a.indexOf(id) === i).slice(0, PROFILE_RULES.pinnedMax) : [];
-  return { banner: String((_c = raw.banner) != null ? _c : "nebula"), emblem: String((_d = raw.emblem) != null ? _d : "rank"), motto: String((_e = raw.motto) != null ? _e : ""), pinned };
+  return { banner: String((_c = raw.banner) != null ? _c : "nebula"), emblem: String((_d = raw.emblem) != null ? _d : "rank"), motto: String((_e = raw.motto) != null ? _e : ""), pinned, planet: normalizePlanetLook(raw.planet) };
 }
 function sanitizeMotto(text) {
   return String(text != null ? text : "").replace(/[\u0000-\u001f\u007f<>]/g, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_RULES.mottoMax);
@@ -13754,6 +13839,7 @@ function setProfileStyle(player, input) {
     if (ids.some((id) => !unlocked.has(id))) throw new GameActionError("Seuls les succ\xE8s obtenus peuvent \xEAtre mis en avant.");
     next.pinned = ids;
   }
+  if (req.planet !== void 0) next.planet = checkPlanetLook(player, req.planet, current2.planet);
   player.profileStyle = next;
   return next;
 }
@@ -13772,7 +13858,8 @@ function publicShowcase(p) {
       var _a2, _b2;
       return { id, level: commanderLevel((_b2 = (_a2 = st.roster[id]) == null ? void 0 : _a2.xp) != null ? _b2 : 0) };
     }),
-    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity }))
+    relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity })),
+    planet: unlockedPlanetLook(p, style.planet)
   };
 }
 

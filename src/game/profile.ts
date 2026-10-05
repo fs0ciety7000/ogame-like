@@ -8,6 +8,7 @@ import { commanderLevel, commandersState, type OfficerId } from "@/game/commande
 import { FACTIONS, pirateState } from "@/game/pirates";
 import { equippedRelics, type RelicRarity } from "@/game/relics";
 import { seasonLabel } from "@/game/seasons";
+import { checkPlanetLook, normalizePlanetLook, unlockedPlanetLook, type PlanetLook } from "@/game/planetLook";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -23,6 +24,8 @@ export interface ProfileStyle {
   motto: string;
   /** v4.9.3 : succès mis en avant sur la fiche publique (obtenus, 3 au plus). */
   pinned: string[];
+  /** 5.16 : planète personnalisée (palette, anneau, atmosphère, lune). */
+  planet: PlanetLook;
 }
 
 export interface CosmeticOption {
@@ -136,7 +139,7 @@ export function profileStyle(p: StylePlayer): ProfileStyle {
   const raw = (p.profileStyle ?? {}) as Partial<ProfileStyle>;
   const unlocked = new Set(p.unlockedAchievements ?? []);
   const pinned = Array.isArray(raw.pinned) ? raw.pinned.filter((id, i, a) => typeof id === "string" && unlocked.has(id) && a.indexOf(id) === i).slice(0, PROFILE_RULES.pinnedMax) : [];
-  return { banner: String(raw.banner ?? "nebula"), emblem: String(raw.emblem ?? "rank"), motto: String(raw.motto ?? ""), pinned };
+  return { banner: String(raw.banner ?? "nebula"), emblem: String(raw.emblem ?? "rank"), motto: String(raw.motto ?? ""), pinned, planet: normalizePlanetLook(raw.planet) };
 }
 
 export function sanitizeMotto(text: unknown): string {
@@ -174,6 +177,7 @@ export function setProfileStyle(player: PlayerState, input: unknown): ProfileSty
     if (ids.some((id) => !unlocked.has(id))) throw new GameActionError("Seuls les succès obtenus peuvent être mis en avant.");
     next.pinned = ids;
   }
+  if (req.planet !== undefined) next.planet = checkPlanetLook(player, req.planet, current.planet);
   player.profileStyle = next;
   return next;
 }
@@ -186,6 +190,8 @@ export interface PublicShowcase {
   achievements?: string[];
   commanders: { id: OfficerId; level: number }[];
   relics: { template: string; rarity: RelicRarity }[];
+  /** 5.16 : planète personnalisée (options débloquées seulement). */
+  planet?: PlanetLook;
 }
 
 /** Ce qui s'affiche sur la fiche publique (écrit par le serveur dans le profil). */
@@ -201,5 +207,6 @@ export function publicShowcase(p: StylePlayer & Pick<PlayerState, "commanders" |
     achievements: style.pinned,
     commanders: st.active.map((id) => ({ id, level: commanderLevel(st.roster[id]?.xp ?? 0) })),
     relics: equippedRelics(p).map((r) => ({ template: r.template, rarity: r.rarity })),
+    planet: unlockedPlanetLook(p, style.planet),
   };
 }

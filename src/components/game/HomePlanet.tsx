@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { useReducedMotion } from "framer-motion";
 import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/buildings";
+import { DEFAULT_PLANET_LOOK, planetAtmosphere, planetPalette, type PlanetLook } from "@/game/planetLook";
 import type { Buildings } from "@/types/game";
 
 /* =====================================================
@@ -81,14 +82,14 @@ function useBuildingRatios(buildings: Buildings) {
 }
 
 /** Tuile de surface (dessinée deux fois côte à côte pour défiler sans raccord). */
-function Surface({ mines, nano, lights }: { mines: number; nano: number; lights: number }) {
+function Surface({ mines, nano, lights, land }: { mines: number; nano: number; lights: number; land: string }) {
   const minePts = RELIEF.spots.slice(0, mines);
   const nanoPts = RELIEF.spots.slice(10, 10 + nano);
   const lightPts = RELIEF.spots.slice(20, 20 + lights);
   return (
     <g>
       {RELIEF.continents.map((c, i) => (
-        <ellipse key={i} cx={c.x} cy={c.y} rx={c.rx} ry={c.ry} fill="#27405a" opacity={0.9} />
+        <ellipse key={i} cx={c.x} cy={c.y} rx={c.rx} ry={c.ry} style={{ fill: `color-mix(in srgb, ${land} 45%, var(--color-space-700))` }} opacity={0.9} />
       ))}
       {/* Réseau nano : chaque nœud relié à la mine la plus proche. */}
       {nanoPts.map((p, i) => {
@@ -117,6 +118,57 @@ function orbitPath(rx: number, ry: number) {
   return `M ${C - rx} ${C} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0`;
 }
 
+/** 5.16 : anneaux choisis (une moitié à la fois, pour passer derrière puis devant la sphère). */
+function Rings({ kind, opacity, clip }: { kind: string; opacity: number; clip: string }) {
+  if (kind === "none") return null;
+  if (kind === "debris")
+    return (
+      <g clipPath={clip}>
+        <ellipse cx={C} cy={C} rx={98} ry={21} fill="none" stroke="var(--color-slate-400)" strokeOpacity={opacity} strokeWidth={3} strokeDasharray="0.6 3.4" strokeLinecap="round" />
+        <ellipse cx={C} cy={C} rx={106} ry={24} fill="none" stroke="var(--color-slate-500)" strokeOpacity={opacity * 0.8} strokeWidth={2} strokeDasharray="0.5 5" strokeLinecap="round" />
+      </g>
+    );
+  if (kind === "halo")
+    return <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-danger-glow)" strokeOpacity={opacity} strokeWidth={2.4} strokeDasharray="10 3 2 3" clipPath={clip} />;
+  return (
+    <g clipPath={clip}>
+      <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={opacity} strokeWidth={1.5} />
+      {kind === "double" && <ellipse cx={C} cy={C} rx={88} ry={18.5} fill="none" stroke="var(--color-cyan-glow)" strokeOpacity={opacity * 0.8} strokeWidth={1} />}
+    </g>
+  );
+}
+
+/** 5.16 : lune(s) choisie(s), sur une orbite propre (au-delà des colonies). */
+function ChosenMoon({ kind, still, shade }: { kind: string; still: boolean; shade: string }) {
+  if (kind === "none") return null;
+  const rx = R + 46;
+  const ry = rx * 0.5;
+  const bodies = kind === "jumelles" ? [0, 0.5] : [0];
+  return (
+    <g>
+      {bodies.map((phase, i) => (
+        <g key={i} transform={still ? `translate(${C - rx * Math.cos(phase * 6.28 + 0.6)} ${C - ry * Math.sin(phase * 6.28 + 0.6)})` : undefined}>
+          {!still && <animateMotion path={orbitPath(rx, ry)} dur="58s" begin={`${-58 * phase}s`} repeatCount="indefinite" />}
+          {kind === "station" ? (
+            <g>
+              <rect x={-4} y={-1.2} width={8} height={2.4} fill="var(--color-slate-300)" />
+              <rect x={-1.2} y={-4} width={2.4} height={8} fill="var(--color-slate-400)" />
+              <circle r={1} fill="var(--color-mint-glow)">{!still && <animate attributeName="opacity" values="0.2;1;0.2" dur="1.4s" repeatCount="indefinite" />}</circle>
+            </g>
+          ) : kind === "eclat" ? (
+            <polygon points="0,-5 3,-1 1.5,4 -2.5,3 -3,-2" fill="var(--color-danger-glow)" fillOpacity={0.85} stroke="var(--color-ember-glow)" strokeWidth={0.6} />
+          ) : (
+            <g>
+              <circle r={i ? 3.2 : 5} fill="var(--color-slate-400)" />
+              <circle r={i ? 3.2 : 5} fill={shade} />
+            </g>
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
 /** v4.0 : ce qui se passe autour de la planète en ce moment. */
 export interface PlanetLife {
   /** Niveau du Labo de synthèse (0 = absent). */
@@ -138,8 +190,14 @@ export interface PlanetLife {
 
 const MOON_COLORS = ["#9fb4c7", "#c9a36b", "#7fc8a9", "#b49ad6", "#d98c7a"];
 
-export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Buildings; size?: number; life?: PlanetLife }) {
+export function HomePlanet({ buildings, size = 116, life = {}, look = DEFAULT_PLANET_LOOK }: { buildings: Buildings; size?: number; life?: PlanetLife; look?: PlanetLook }) {
+  // Identifiants SVG propres à chaque planète (plusieurs planètes par page).
+  const sid = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const pal = planetPalette(look);
+  const atmo = planetAtmosphere(look);
   const r = useBuildingRatios(buildings);
+  // L'anneau grandit avec l'empire ; un anneau choisi reste toujours visible.
+  const ringOpacity = Math.max(look.ring === "thin" ? 0 : 0.45, 0.15 + r.overall * 0.5);
   const still = useReducedMotion() ?? false;
   // Terminateur : le côté éclairé suit l'heure (midi = face au joueur).
   const sun = life.hour === undefined ? 30 : Math.round(15 + (((life.hour + 18) % 24) / 24) * 70);
@@ -176,61 +234,61 @@ export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Bu
     <svg viewBox={`0 0 ${VIEW} ${VIEW}`} width={wrap} height={wrap} className="shrink-0 overflow-visible" role="img" aria-label={summary}>
       <title>{summary}</title>
       <defs>
-        <radialGradient id="hp-ocean" cx="35%" cy="30%" r="80%">
-          <stop offset="0%" style={{ stopColor: "color-mix(in srgb, var(--color-cyan-glow) 45%, var(--color-space-600))" }} />
+        <radialGradient id={`hp-ocean-${sid}`} cx="35%" cy="30%" r="80%">
+          <stop offset="0%" style={{ stopColor: `color-mix(in srgb, ${pal.ocean} 45%, var(--color-space-600))` }} />
           <stop offset="75%" style={{ stopColor: "var(--color-space-800)" }} />
         </radialGradient>
-        <radialGradient id="hp-shade" cx={`${sun}%`} cy="28%" r="85%">
+        <radialGradient id={`hp-shade-${sid}`} cx={`${sun}%`} cy="28%" r="85%">
           <stop offset="45%" style={{ stopColor: "#000", stopOpacity: 0 }} />
           <stop offset="100%" style={{ stopColor: "#000", stopOpacity: 0.75 }} />
         </radialGradient>
-        <radialGradient id="hp-reactor">
+        <radialGradient id={`hp-reactor-${sid}`}>
           <stop offset="55%" style={{ stopColor: "var(--color-ember-glow)", stopOpacity: 0.9 }} />
           <stop offset="100%" style={{ stopColor: "var(--color-ember-glow)", stopOpacity: 0 }} />
         </radialGradient>
-        <radialGradient id="hp-halo">
-          <stop offset="40%" style={{ stopColor: "var(--color-cyan-glow)", stopOpacity: glow }} />
-          <stop offset="100%" style={{ stopColor: "var(--color-cyan-glow)", stopOpacity: 0 }} />
+        <radialGradient id={`hp-halo-${sid}`}>
+          <stop offset="40%" style={{ stopColor: atmo ?? "transparent", stopOpacity: glow }} />
+          <stop offset="100%" style={{ stopColor: atmo ?? "transparent", stopOpacity: 0 }} />
         </radialGradient>
-        <clipPath id="hp-sphere">
+        <clipPath id={`hp-sphere-${sid}`}>
           <circle cx={C} cy={C} r={R} />
         </clipPath>
-        <clipPath id="hp-back">
+        <clipPath id={`hp-back-${sid}`}>
           <rect x={0} y={0} width={VIEW} height={C} />
         </clipPath>
-        <clipPath id="hp-front">
+        <clipPath id={`hp-front-${sid}`}>
           <rect x={0} y={C} width={VIEW} height={C} />
         </clipPath>
       </defs>
 
       {/* Halo d'atmosphère */}
-      <circle cx={C} cy={C} r={R * 1.55} fill="url(#hp-halo)" />
+      {atmo && <circle cx={C} cy={C} r={R * 1.55} fill={`url(#hp-halo-${sid})`} />}
 
       {/* Réacteur : halo orange qui pulse */}
       {r.reactor > 0 && (
-        <circle cx={C} cy={C} r={R + 10 + r.reactor * 8} fill="url(#hp-reactor)" opacity={0.2 + r.reactor * 0.5}>
+        <circle cx={C} cy={C} r={R + 10 + r.reactor * 8} fill={`url(#hp-reactor-${sid})`} opacity={0.2 + r.reactor * 0.5}>
           {!still && <animate attributeName="opacity" values={`${0.15 + r.reactor * 0.3};${0.3 + r.reactor * 0.6};${0.15 + r.reactor * 0.3}`} dur="3.2s" repeatCount="indefinite" />}
         </circle>
       )}
 
       {/* Anneau, moitié arrière */}
       <g transform={`rotate(-14 ${C} ${C})`}>
-        <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={0.15 + r.overall * 0.5} strokeWidth={1.5} clipPath="url(#hp-back)" />
+        <Rings kind={look.ring} opacity={ringOpacity} clip={`url(#hp-back-${sid})`} />
       </g>
 
       {/* Sphère */}
-      <circle cx={C} cy={C} r={R} fill="url(#hp-ocean)" />
-      <g clipPath="url(#hp-sphere)">
+      <circle cx={C} cy={C} r={R} fill={`url(#hp-ocean-${sid})`} />
+      <g clipPath={`url(#hp-sphere-${sid})`}>
         <g>
           <g transform={`translate(${C - R} 0)`}>
-            <Surface mines={mines} nano={nano} lights={lights} />
+            <Surface mines={mines} nano={nano} lights={lights} land={pal.land} />
             <g transform={`translate(${TILE} 0)`}>
-              <Surface mines={mines} nano={nano} lights={lights} />
+              <Surface mines={mines} nano={nano} lights={lights} land={pal.land} />
             </g>
           </g>
           {!still && <animateTransform attributeName="transform" type="translate" from="0 0" to={`${-TILE} 0`} dur="70s" repeatCount="indefinite" />}
         </g>
-        <circle cx={C} cy={C} r={R} fill="url(#hp-shade)" />
+        <circle cx={C} cy={C} r={R} fill={`url(#hp-shade-${sid})`} />
       </g>
       <circle cx={C} cy={C} r={R} fill="none" stroke="var(--color-cyan-glow)" strokeOpacity={0.2 + r.overall * 0.4} strokeWidth={1.2} />
 
@@ -270,7 +328,7 @@ export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Bu
 
       {/* Anneau, moitié avant */}
       <g transform={`rotate(-14 ${C} ${C})`}>
-        <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={0.15 + r.overall * 0.5} strokeWidth={1.5} clipPath="url(#hp-front)" />
+        <Rings kind={look.ring} opacity={ringOpacity} clip={`url(#hp-front-${sid})`} />
 
         {/* Hangar d'attaque : vaisseaux en orbite */}
         {Array.from({ length: ships }, (_, i) => (
@@ -360,18 +418,21 @@ export function HomePlanet({ buildings, size = 116, life = {} }: { buildings: Bu
             <g transform={still ? `translate(${C + rx * Math.cos(i * 1.7)} ${C + ry * Math.sin(i * 1.7)})` : undefined}>
               {!still && <animateMotion path={orbitPath(rx, ry)} dur={`${dur}s`} begin={`${-dur * (i / 5)}s`} repeatCount="indefinite" />}
               <circle r={4.2 - Math.min(i, 3) * 0.4} fill={color} />
-              <circle r={4.2 - Math.min(i, 3) * 0.4} fill="url(#moonShade)" />
+              <circle r={4.2 - Math.min(i, 3) * 0.4} fill={`url(#moonShade-${sid})`} />
               <title>{name}</title>
             </g>
           </g>
         );
       })}
       <defs>
-        <radialGradient id="moonShade" cx="30%" cy="30%" r="80%">
+        <radialGradient id={`moonShade-${sid}`} cx="30%" cy="30%" r="80%">
           <stop offset="0%" stopColor="#fff" stopOpacity={0.35} />
           <stop offset="70%" stopColor="#000" stopOpacity={0.45} />
         </radialGradient>
       </defs>
+
+      {/* 5.16 : lune choisie par le joueur */}
+      <ChosenMoon kind={look.moon} still={still} shade={`url(#moonShade-${sid})`} />
 
       {/* Atelier de réparation : drone en orbite basse */}
       {r.repair && (

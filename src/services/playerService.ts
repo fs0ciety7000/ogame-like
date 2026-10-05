@@ -734,7 +734,7 @@ export function claimStreak() {
   return act<{ count: number; resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; chest: import("@/game/streak").StreakChest | null }>({ type: "streakClaim" });
 }
 
-export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[] }) {
+export function saveProfileStyle(style: { banner?: string; emblem?: string; motto?: string; pinned?: string[]; planet?: Partial<import("@/game/planetLook").PlanetLook> }) {
   return act<import("@/game/profile").ProfileStyle>({ type: "setProfileStyle", style });
 }
 
@@ -778,4 +778,19 @@ export async function fetchMySeasonResult(uid: string, seasonId: string): Promis
   } catch {
     return null;
   }
+}
+
+/** 5.16 : planète personnalisée d'un joueur (vitrine publique), gardée en cache pour la session. */
+const publicPlanets = new Map<string, Promise<import("@/game/planetLook").PlanetLook | null>>();
+export function fetchPublicPlanet(uid: string): Promise<import("@/game/planetLook").PlanetLook | null> {
+  let p = publicPlanets.get(uid);
+  if (!p) {
+    p = pb
+      .collection("profiles")
+      .getOne<PbRecord>(uid, { fields: "feats" })
+      .then((r) => ((r.feats as PlayerFeats | null)?.showcase as { planet?: import("@/game/planetLook").PlanetLook } | undefined)?.planet ?? null)
+      .catch(() => null);
+    publicPlanets.set(uid, p);
+  }
+  return p;
 }

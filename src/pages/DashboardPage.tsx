@@ -1,4 +1,5 @@
 import { MutatorCallout } from "@/components/game/MutatorCallout";
+import { profileStyle } from "@/game/profile";
 import { Card } from "@/components/ui/card";
 import { HudPanel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -109,7 +110,7 @@ export function DashboardPage() {
     planet: (
       <Card className="flex flex-wrap items-center justify-center gap-6 p-4 sm:justify-start sm:p-5">
         <div className="mx-auto sm:mx-0">
-          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} />
+          <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} look={profileStyle(player).planet} />
         </div>
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>

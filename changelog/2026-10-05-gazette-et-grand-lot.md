@@ -36,6 +36,24 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - Le fil du combat (boss mondial, boss de saison, boss d'alliance) devient un fil de spectateur : réagis aux assauts des autres avec 🔥 💥 👏 😱 🫡. Une seule réaction par ligne : clique à nouveau pour la retirer, ou choisis-en une autre pour la remplacer. On ne réagit pas à son propre assaut.
 - Les assauts de ton alliance sont soulignés d'un trait violet, et le bouton « Mon alliance » ne garde que les assauts de tes alliés.
 
+## Planète personnalisable
+- Dans Profil, choisis la palette de ta planète, son anneau, son atmosphère et une lune. L'aperçu se met à jour en direct.
+- Options offertes : Océan, Dunes, Glacier, anneau fin ou sans anneau, atmosphère claire ou aucune, lune grise.
+- Options à débloquer :
+  - Canopée : 10 expéditions.
+  - Magma : un boss mondial abattu.
+  - Cristal : une Ascension.
+  - Double anneau : un passe de saison terminé.
+  - Ceinture de débris : un recyclage.
+  - Halo pirate : un repaire tombé.
+  - Aurore : 20 succès.
+  - Brume dorée : 25 échanges au marché.
+  - Braise : 1 M de ressources pillées.
+  - Lunes jumelles : un filleul.
+  - Station orbitale : 1 000 unités construites.
+  - Éclat de boss : 3 boss mondiaux différents.
+- Ta planète apparaît sur l'accueil, sur ta fiche publique et dans la galaxie quand on te sélectionne. Elle reprend les couleurs du thème de celui qui la regarde. C'est purement cosmétique : aucun effet sur le jeu.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.

@@ -296,6 +296,8 @@ function showcaseOf(player) {
       commanders: parseJsonField(player, "commanders", null),
       relics: parseJsonField(player, "relics", null),
       ascensions: player.getInt("ascensions"),
+      referral: parseJsonField(player, "referral", null),
+      seasonPass: parseJsonField(player, "seasonPass", null),
     });
   } catch (err) {
     console.log(`[cosmic] vitrine du profil : ${err}`);
