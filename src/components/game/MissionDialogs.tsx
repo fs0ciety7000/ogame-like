@@ -133,10 +133,11 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   const droneId = DEBRIS_RULES.recyclerUnitId;
   const owned = player?.units[droneId]?.count ?? 0;
   const total = field ? field.scrap + field.energy : 0;
-  const perDrone = DEBRIS_RULES.capacityPerLevel * Math.max(1, player?.units[droneId]?.level ?? 1);
-  const needed = Math.min(owned, Math.ceil(total / perDrone));
+  // 5.16 : la capacité d'un drone est sa cargaison (CAP), comme sur sa fiche.
+  const perDrone = player ? recyclerCapacity(player, { [droneId]: 1 }) : 0;
+  const needed = perDrone > 0 ? Math.min(owned, Math.ceil(total / perDrone)) : owned;
   const count = Math.max(0, Math.min(owned, drones || needed));
-  const capacity = player ? recyclerCapacity(player.units, { [droneId]: count }) : 0;
+  const capacity = player ? recyclerCapacity(player, { [droneId]: count }) : 0;
   const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {

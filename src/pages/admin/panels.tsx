@@ -575,13 +575,7 @@ export function RulesPanel() {
             step={1}
             onChange={(v) => setRules((r) => ({ ...r, debris: { ...r.debris, lifetimeHours: v ?? 0 } }))}
           />
-          <NumberField
-            label="Capacité d'un Drone récupérateur par niveau"
-            value={rules.debris.capacityPerLevel}
-            min={0}
-            step={10}
-            onChange={(v) => setRules((r) => ({ ...r, debris: { ...r.debris, capacityPerLevel: v ?? 0 } }))}
-          />
+          <p className="self-end text-[11px] text-slate-500">Capacité de ramassage : la cargaison (CAP) du Drone récupérateur, réglée dans Unités, × son niveau, technos de cale et officiers compris.</p>
           <NumberField
             label="Patrouille : durée minimale (min)"
             value={rules.patrol.minMinutes}

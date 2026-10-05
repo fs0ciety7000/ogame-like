@@ -1,5 +1,5 @@
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-import type { Units } from "@/types/game";
+import { playerCargoCapacity } from "@/game/modifiers";
 
 /* =====================================================
    Champs de débris (v1.7) : une partie du coût des vaisseaux détruits
@@ -13,7 +13,7 @@ export const DEBRIS_RULES = {
   percent: 0.3,
   /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
   lifetimeHours: 48,
-  /** Capacité de ramassage d'un recycleur, par niveau. */
+  /** Ancien réglage (capacité fixe par niveau), remplacé en 5.16 par la cargaison (CAP) du drone. Ignoré. */
   capacityPerLevel: 250,
   recyclerUnitId: "drone_recuperateur",
 };
@@ -63,14 +63,11 @@ export function mergeDebris(field: DebrisField | null, add: DebrisAmount, locati
   };
 }
 
-/** Capacité de ramassage d'une flotte de recycleurs. */
-export function recyclerCapacity(units: Units, fleet: Record<string, number>): number {
-  let capacity = 0;
-  for (const [unitId, qty] of Object.entries(fleet ?? {})) {
-    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
-    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, units[unitId]?.level ?? 1);
-  }
-  return capacity;
+/** Capacité de ramassage d'une flotte de recycleurs. 5.16 : la cargaison (CAP) des drones,
+ *  exactement comme sur leur fiche : CAP × niveau × nombre, technos de cale et officiers compris. */
+export function recyclerCapacity(player: Parameters<typeof playerCargoCapacity>[0], fleet: Record<string, number>): number {
+  const drones = Math.max(0, Math.floor(Number(fleet?.[DEBRIS_RULES.recyclerUnitId]) || 0));
+  return drones > 0 ? playerCargoCapacity(player, { [DEBRIS_RULES.recyclerUnitId]: drones }) : 0;
 }
 
 /** Ramassage : proportionnel aux deux ressources, dans la limite de la capacité. */

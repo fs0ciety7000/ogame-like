@@ -506,8 +506,9 @@ function resolveRecycleArrival(txApp, game, rec, now) {
   const debris = loadDebris(txApp, fleet.targetUid);
   let taken = { scrap: 0, energy: 0 };
   if (owner && debris.field && debris.field.expiresAtMs > now) {
-    const units = toPlain(owner).units || {};
-    const out = game.collectDebris(debris.field, game.recyclerCapacity(units, fleet.units));
+    const ownerPlain = toPlain(owner);
+    ownerPlain.uid = owner.id;
+    const out = game.collectDebris(debris.field, game.recyclerCapacity(ownerPlain, fleet.units));
     taken = out.taken;
     saveDebris(txApp, debris, Object.assign({}, debris.field, out.remaining, { updatedAtMs: now }));
   }

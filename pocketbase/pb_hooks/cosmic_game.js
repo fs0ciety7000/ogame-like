@@ -10618,7 +10618,7 @@ var DEBRIS_RULES = {
   percent: 0.3,
   /** Durée de vie d'un champ, relancée à chaque nouveau combat. */
   lifetimeHours: 48,
-  /** Capacité de ramassage d'un recycleur, par niveau. */
+  /** Ancien réglage (capacité fixe par niveau), remplacé en 5.16 par la cargaison (CAP) du drone. Ignoré. */
   capacityPerLevel: 250,
   recyclerUnitId: "drone_recuperateur"
 };
@@ -10652,14 +10652,9 @@ function mergeDebris(field, add2, location, now) {
     updatedAtMs: now
   };
 }
-function recyclerCapacity(units, fleet) {
-  var _a, _b;
-  let capacity = 0;
-  for (const [unitId, qty] of Object.entries(fleet != null ? fleet : {})) {
-    if (unitId !== DEBRIS_RULES.recyclerUnitId || !(qty > 0)) continue;
-    capacity += qty * DEBRIS_RULES.capacityPerLevel * Math.max(1, (_b = (_a = units[unitId]) == null ? void 0 : _a.level) != null ? _b : 1);
-  }
-  return capacity;
+function recyclerCapacity(player, fleet) {
+  const drones = Math.max(0, Math.floor(Number(fleet == null ? void 0 : fleet[DEBRIS_RULES.recyclerUnitId]) || 0));
+  return drones > 0 ? playerCargoCapacity(player, { [DEBRIS_RULES.recyclerUnitId]: drones }) : 0;
 }
 function collectDebris(field, capacity) {
   var _a, _b, _c, _d, _e, _f, _g;

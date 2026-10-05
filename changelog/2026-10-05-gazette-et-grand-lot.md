@@ -17,3 +17,6 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 ## Équilibre
 - Rattrapage des petits empires : chaque nuit, le serveur compare le développement de chaque joueur actif (niveaux de bâtiments et de technologies cumulés) à la médiane des joueurs actifs. Sous 10 % de la médiane, la production gagne +25 %. Le bonus baisse ensuite en ligne droite et disparaît à 50 %. Il est figé pour la journée et apparaît dans le détail de la production. Tout se règle dans Règles → Rattrapage.
 - Plafond hebdomadaire des jetons de butin : les jetons tirés en combat (boss, seigneurs, menaces, joueurs, expéditions) s'arrêtent à 25 par semaine, réglables dans les réglages des reliques. Le jeton du jour, la série, les défis, le passe et les récompenses fixes des boss n'y comptent pas. La jauge est affichée au casino.
+
+## Correctifs
+- Recyclage : la capacité affichée et appliquée est désormais la cargaison (CAP) du Drone récupérateur, exactement comme sur sa fiche (CAP × niveau, technologies de cale et officiers compris). L'ancien réglage fixe « 250 par niveau », qui donnait 2 500 par drone au niveau 10 quelle que soit la fiche, est retiré.
