@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
-import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
+import { OFFENSIVE_UNITS as ALL_OFFENSIVE, findUnit, isEliteUnit } from "@/game/units";
 import { COMBAT_RULES, computeFleetPower, pveAttackFactor } from "@/game/combat";
 import { formationEffects } from "@/game/formations";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
@@ -66,6 +66,8 @@ export function AttackModal({
     };
   }, [uid, target]);
   const [presetName, setPresetName] = useState("");
+  // 5.22 : unités d'élite proposées contre les seigneurs de guerre seulement.
+  const OFFENSIVE_UNITS = ALL_OFFENSIVE.filter((id) => !isEliteUnit(id) || isWarlordUid(target?.uid));
   const owned = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, player?.units[id]?.count ?? 0]));
 
   const setQty = (id: string, owned: number, value: number) => {

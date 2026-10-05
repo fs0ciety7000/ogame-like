@@ -9,7 +9,7 @@ import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type Season
 import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
-import { DEFAULT_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
+import { DEFAULT_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
@@ -111,7 +111,14 @@ export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "techno
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
 function withFixedUnits(units: UnitDef[]): UnitDef[] {
-  return units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? units : [...units, KESH_HUNTER_UNIT];
+  // 5.22 : les unités d'élite aussi (et leur rôle d'élite, même si la fiche a été modifiée).
+  const out = units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? [...units] : [...units, KESH_HUNTER_UNIT];
+  for (const e of ELITE_UNITS) {
+    const i = out.findIndex((u) => u.id === e.id);
+    if (i < 0) out.push(e);
+    else out[i] = { ...out[i], elite: e.elite, unlockTech: "", maxLevel: 1 };
+  }
+  return out;
 }
 
 const DEFAULT_PVP_RULES = { ...PVP_RULES };
@@ -466,7 +473,7 @@ export function validateGameContent(content: GameContent): string[] {
   checkIds("Unités", content.units.map((u) => u.id));
   for (const u of content.units) {
     const label = `Unité ${u.name || u.id}`;
-    if (!u.blueprint && !techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
+    if (!u.blueprint && !u.elite && !techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
     if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
     if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);

@@ -1,3 +1,4 @@
+import { assertEliteBuildable } from "@/game/eliteUnits";
 import { playerModifiers } from "@/game/modifiers";
 import { rushWorkshop, workshopUnits } from "@/game/workshop";
 import { claimDailyMission } from "@/game/dailyMissions";
@@ -224,6 +225,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const unit = findUnit(action.unitId);
       if (!unit) throw new GameActionError("Unité invalide.");
       const qty = Math.min(positiveInt(action.qty, "Quantité"), MAX_QTY);
+      // 5.22 : unité d'élite : débloquée ET Labo toujours complet.
+      if (unit.elite) assertEliteBuildable(player, unit.id);
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;

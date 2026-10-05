@@ -15,3 +15,7 @@ export function compareVersions(a: string, b: string): number {
   }
   return 0;
 }
+
+declare const __COSMIC_SCHEMA__: string | undefined;
+/** 5.22 : pocketbase/pb_schema.json (texte JSON), embarqué dans les hooks par build-hooks.mjs. */
+export const PB_SCHEMA: string = typeof __COSMIC_SCHEMA__ === "string" ? __COSMIC_SCHEMA__ : "[]";

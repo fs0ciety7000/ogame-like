@@ -1,3 +1,5 @@
+import { eliteStatus } from "@/game/eliteUnits";
+import { PERSONALITY_LABELS } from "@/game/warlords";
 import { Link } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
@@ -6,7 +8,7 @@ import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
 import { Card, HudBrackets } from "@/components/ui/card";
-import { HudChip, HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
+import { HudCallout, HudChip, HudMeter, HudTag, QtyStepper, StatBar } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -268,7 +270,7 @@ export function UnitsPage() {
                 <div className="relative flex flex-1 flex-col gap-3 p-4 pt-3">
                   <div>
                     <h3 className="hud-title text-xl text-slate-100">{unit.name}</h3>
-                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint ? "" : unit.description}</p>
+                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint && !unit.elite ? "" : unit.description}</p>
                     <div className="-ml-2 mt-1">
                       <UnitSpecButton unit={unit} player={player} />
                     </div>
@@ -277,7 +279,14 @@ export function UnitsPage() {
                   {isLocked ? (
                     <p className="text-sm text-slate-500">
                       <GameIcon name="lock" />{" "}
-                      {unit.blueprint ? (
+                      {unit.elite ? (
+                        <>
+                          Unité d'élite : tout le Labo au maximum et une vendetta gagnée contre un seigneur {PERSONALITY_LABELS[unit.elite].toLowerCase()}.{" "}
+                          <Link to="/game/seigneurs" className="font-semibold text-ember-glow hover:underline">
+                            Seigneurs
+                          </Link>
+                        </>
+                      ) : unit.blueprint ? (
                         <>
                           Plan vendu au <Link to="/game/primes" className="font-semibold text-gold-glow hover:underline">Comptoir de la Ruche</Link> (Kesh'Vaar).
                         </>
@@ -289,6 +298,12 @@ export function UnitsPage() {
                     </p>
                   ) : (
                     <>
+                      {unit.elite && !eliteStatus(player, unit.id)?.lab && (
+                        <HudCallout tone="ember" className="text-xs">
+                          Nouvelles technologies au Labo : termine-les pour reprendre la construction ({eliteStatus(player, unit.id)?.missing.map((m) => m.nom).join(", ")}).
+                        </HudCallout>
+                      )}
+                      {unit.elite && <p className="text-[11px] text-ember-glow">Ne combat que les seigneurs de guerre : reste à quai contre les joueurs.</p>}
                       {(() => {
                         const attackTechBonus = Math.round(techBonus(player.techLevels, "unit_attack") * 100);
                         const defenseTechBonus = Math.round(techBonus(player.techLevels, "unit_defense") * 100);

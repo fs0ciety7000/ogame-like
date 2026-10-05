@@ -2,7 +2,7 @@ import { WARLORD_RULES } from "@/game/warlords";
 import { computeBalance516, findings516, type Balance516 } from "@/game/balance/v516";
 import { TECHNOLOGIES, techEffects } from "@/game/technologies";
 import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
-import { COMBAT_519_SINCE_MS, COMBAT_KINDS, combatTypeStats, isPvpReport, type CombatKindStat } from "@/game/balance/combatTypes";
+import { COMBAT_519_SINCE_MS, COMBAT_KINDS, combatTypeStats, isPvpReport, warlordRankStats, type CombatKindStat } from "@/game/balance/combatTypes";
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
 import { economySnapshot, missionRewards } from "@/game/economy";
@@ -183,6 +183,8 @@ export interface LiveBalance {
   v516?: Balance516;
   /** 5.21 : victoires du joueur par type de combat depuis la 5.19 (combat en tours). */
   combatTypes?: { sinceMs: number; kinds: CombatKindStat[] };
+  /** 5.22 : victoires du joueur contre les seigneurs, par rang. */
+  warlordRanks?: ReturnType<typeof warlordRankStats>;
 }
 
 function places(units: PlayerState["units"], ids: string[]): number {
@@ -261,6 +263,7 @@ export function computeLiveBalance(
     bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
     v516: computeBalance516(active, now),
     combatTypes: { sinceMs: COMBAT_519_SINCE_MS, kinds: combatTypeStats(reports, COMBAT_519_SINCE_MS, now) },
+    warlordRanks: warlordRankStats(reports),
   };
 }
 

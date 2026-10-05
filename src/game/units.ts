@@ -34,6 +34,8 @@ export interface UnitDef {
   classEdge?: number;
   /** 5.21 : PV par seconde ajoutés à l'Atelier par unité à quai (vaisseau-atelier). */
   workshopHpPerSec?: number;
+  /** 5.22 : unité d'élite qui contre le trait d'une personnalité de seigneur (voir eliteUnits.ts). */
+  elite?: "opportunist" | "builder" | "aggressive";
 }
 
 /** v3.9 : vaisseau des Kesh'Vaar, plan acheté au Comptoir de la Ruche.
@@ -53,6 +55,59 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   hangarSpace: 3,
   blueprint: true,
 };
+
+/** 5.22 : unités d'élite, contre les seigneurs de guerre seulement. Toujours présentes (comme le Traqueur),
+ *  débloquées par un Labo complet et une vendetta gagnée contre la personnalité visée. */
+export const ELITE_UNITS: UnitDef[] = [
+  {
+    id: "chasse_fantome",
+    name: "Chasse-Fantôme",
+    image: "/assets/units/chasse_fantome.webp",
+    maxLevel: 1,
+    description: "Traqueur furtif à brouilleur de sillage. Contre les seigneurs opportunistes : leur flotte ne peut plus esquiver tes attaques, et ils ne peuvent plus décrocher quand ils t'attaquent. Ne combat que les seigneurs de guerre.",
+    cost: { scrap: 12000, energy: 8000 },
+    stats: { attaque: 1000, defense: 600, vitesse: 14, cargo: 50 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 6,
+    combatClass: "light",
+    elite: "opportunist",
+  },
+  {
+    id: "brise_rempart",
+    name: "Brise-Rempart",
+    image: "/assets/units/brise_rempart.webp",
+    maxLevel: 1,
+    description: "Bélier de siège à lance à antimatière. Contre les seigneurs bâtisseurs : leur bouclier planétaire est ignoré et leurs défenses perdent leur bonus. Ne combat que les seigneurs de guerre.",
+    cost: { scrap: 14000, energy: 9000 },
+    stats: { attaque: 1400, defense: 1800, vitesse: 3, cargo: 100 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 11,
+    combatClass: "heavy",
+    elite: "builder",
+  },
+  {
+    id: "lame_ecarlate",
+    name: "Lame Écarlate",
+    image: "/assets/units/lame_ecarlate.webp",
+    maxLevel: 1,
+    description: "Croiseur duelliste à coque écarlate. Contre les seigneurs agressifs : leurs unités perdent leur avantage de classe, en attaque comme en défense. Ne combat que les seigneurs de guerre.",
+    cost: { scrap: 16000, energy: 10000 },
+    stats: { attaque: 1500, defense: 1000, vitesse: 8, cargo: 80 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 8,
+    combatClass: "medium",
+    elite: "aggressive",
+  },
+];
+
+export const ELITE_UNIT_IDS = ELITE_UNITS.map((u) => u.id);
+
+export function isEliteUnit(id: string): boolean {
+  return ELITE_UNIT_IDS.includes(id);
+}
 
 /** v5.9 : unités dont le joueur possède le plan (prérequis des technos qui les améliorent). */
 export function ownedBlueprints(player: { bounties?: { owned?: string[] } }): string[] {
@@ -290,6 +345,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     workshopHpPerSec: 15,
   },
   KESH_HUNTER_UNIT,
+  ...ELITE_UNITS,
 ];
 
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */

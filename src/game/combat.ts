@@ -404,6 +404,8 @@ export function resolveCombat(params: {
   defenderHull?: Record<string, number>;
   /** 5.21 : cible prioritaire de l'attaquant (défenses ou vaisseaux à quai et garnisons). */
   targetPriority?: TargetPriority;
+  /** 5.22 : avantage de classe d'un camp relevé (trait Fureur) ou annulé (Lame Écarlate). */
+  classEdge?: { attacker?: { bonus?: number; cancel?: boolean }; defender?: { bonus?: number; cancel?: boolean } };
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
@@ -431,6 +433,17 @@ export function resolveCombat(params: {
   }
   if (params.attackerPowerOverride !== undefined) attacker = virtualStacks(params.attackerPowerOverride * attackFactor, defender, "attacker");
   if (params.defenderPowerOverride !== undefined) defender = virtualStacks(params.defenderPowerOverride * defFactor, attacker, "defense", attackFactor);
+
+  // 5.22 : avantage de classe modifié par camp (les garnisons alliées gardent le leur).
+  const edgeMod = (stacks: Stack[], m?: { bonus?: number; cancel?: boolean }, owners?: Stack["owner"][]) => {
+    if (!m || (!m.cancel && !(m.bonus! > 0))) return;
+    for (const t of stacks) {
+      if (!t.cls || (owners && !owners.includes(t.owner))) continue;
+      t.edge = m.cancel ? 0 : (t.edge ?? R.classEdge) + (m.bonus ?? 0);
+    }
+  };
+  edgeMod(attacker, params.classEdge?.attacker);
+  edgeMod(defender, params.classEdge?.defender, ["defense", "home"]);
 
   const attackerStart = attacker.map((t) => t.count);
   const defenderStart = defender.map((t) => t.count);

@@ -240,6 +240,8 @@ export interface CombatLog {
   targetPriority?: "defenses" | "ships";
   /** Dégâts gagnés (ou perdus) par chaque camp grâce aux classes. */
   classBonus?: { attacker: number; defender: number };
+  /** 5.22 : seigneur de guerre engagé : camp, rang, effets de son trait et contres d'élite. */
+  warlord?: { side: "attacker" | "defender"; rank: number; notes: string[] };
 }
 
 export interface CombatLogUnit {

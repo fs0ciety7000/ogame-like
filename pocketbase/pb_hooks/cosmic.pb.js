@@ -995,6 +995,18 @@ routerAdd("POST", "/api/cosmic/admin/alliance-daily", (e) => {
 
 onBootstrap((e) => {
   e.next();
+  // 5.22 : champs et collections du schéma ajoutés s'ils manquent (avant les migrations du contenu).
+  try {
+    const added = require(`${__hooks}/cosmic_db.js`).ensureSchema($app);
+    if (added.length > 0) console.log(`[cosmic] schéma complété : ${added.join(", ")}`);
+    // Champ de l'Atelier absent jusque-là : unités sauvées depuis la 5.20 rendues (une seule fois).
+    if (added.indexOf("players.workshop") >= 0) {
+      const n = require(`${__hooks}/cosmic_db.js`).restoreWorkshopUnits($app, Date.UTC(2026, 9, 5, 16, 34));
+      console.log(`[cosmic] Atelier : unités sauvées rendues à ${n} joueur(s)`);
+    }
+  } catch (err) {
+    console.log(`[cosmic] schéma : ${err}`);
+  }
   try {
     const changes = require(`${__hooks}/cosmic_db.js`).runContentMigrations($app);
     if (changes.length > 0) console.log(`[cosmic] contenu migré : ${changes.join(", ")}`);

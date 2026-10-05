@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Crosshair, Pause, Play, RotateCcw, Shield, Sparkles, Swords, Wrench } from "lucide-react";
+import { Crosshair, Pause, Play, RotateCcw, Shield, Skull, Sparkles, Swords, Wrench } from "lucide-react";
 import { HUD_TONE, HudCallout } from "@/components/ui/hud";
 import { findUnit } from "@/game/units";
+import { RANK_NAMES, RANK_NUMERALS } from "@/game/warlordRanks";
 import { UNIT_CLASS_LABELS } from "@/game/unitClasses";
 import { COMBAT_RULES } from "@/game/combat";
 import { assetUrl } from "@/lib/assets";
@@ -148,6 +149,11 @@ function highlights(log: CombatLog, mine: Side): { icon: typeof Swords; tone: "a
   if (log.shield && log.shield > 0) out.push({ icon: Shield, tone: "accent", text: `Bouclier planétaire : ${pct(log.shield)} des tirs de l'attaquant absorbés.` });
   if (log.targetPriority) out.push({ icon: Crosshair, tone: "accent", text: `Cible prioritaire de l'attaquant : ${log.targetPriority === "defenses" ? "les défenses" : "les vaisseaux"}.` });
   if (log.retreated) out.push({ icon: Swords, tone: "ember", text: mine === "attacker" ? "Ta flotte a décroché après de lourdes pertes." : "L'assaillant a battu en retraite." });
+  // 5.22 : rang du seigneur de guerre et effets de son trait (ou de tes unités d'élite).
+  if (log.warlord) {
+    out.push({ icon: Skull, tone: log.warlord.rank >= 4 ? "danger" : "ember", text: `Seigneur de guerre au rang ${RANK_NUMERALS[log.warlord.rank - 1] ?? log.warlord.rank} (${RANK_NAMES[log.warlord.rank - 1] ?? ""}).` });
+    for (const note of log.warlord.notes) out.push({ icon: Skull, tone: /^(Chasse-Fantôme|Brise-Rempart|Lame Écarlate)/.test(note) ? "mint" : "ember", text: note });
+  }
   const hurt = units.filter((u) => u.side === mine && u.hullAfter !== undefined && u.hullAfter < 0.9);
   if (hurt.length) out.push({ icon: Wrench, tone: "ember", text: `Coques abîmées : ${hurt.map((u) => `${findUnit(u.id)?.name ?? u.id} ${pct(u.hullAfter ?? 1)}`).join(", ")}. Direction l'Atelier.` });
   return out;

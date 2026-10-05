@@ -12,6 +12,7 @@ import { resetContentSection, saveContentSection, useContentStore } from "@/serv
 import { fetchWarlords } from "@/services/warlordService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { formatNumber } from "@/lib/utils";
+import { normalizeRankRules, RANK_NAMES, RANK_NUMERALS, type WarlordRankRules } from "@/game/warlordRanks";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.2 : réglages et fiches des seigneurs de guerre, sans toucher au code. */
@@ -28,8 +29,48 @@ const LINE_LABELS: Record<WarlordLineKey, string> = {
   reply: "Réponse à un message",
 };
 
-async function adminCall(action: string, warlordId = "") {
-  return pb.send<Record<string, number>>("/api/cosmic/admin/warlords", { method: "POST", body: { action, warlordId } });
+async function adminCall(action: string, warlordId = "", extra: Record<string, unknown> = {}) {
+  return pb.send<Record<string, number>>("/api/cosmic/admin/warlords", { method: "POST", body: { action, warlordId, ...extra } });
+}
+
+/** 5.22 : réglages des rangs de menace et des traits. */
+function RankRulesSection({ value, onChange }: { value: WarlordRankRules; onChange: (r: WarlordRankRules) => void }) {
+  const set = (patch: Partial<WarlordRankRules>) => onChange({ ...value, ...patch });
+  const T = value.threat;
+  const O = value.traits.opportunist;
+  const B = value.traits.builder;
+  const pctHint = (per: number) => `Au rang V : ${Math.round(per * 4 * 100)} %.`;
+  return (
+    <Section title="Rangs de menace (I à V) et traits">
+      <CheckboxField label="Rangs actifs" checked={value.enabled} onChange={(v) => set({ enabled: v })} hint="Désactivés : tous les seigneurs restent au rang I, sans trait." />
+      {[0, 1, 2, 3].map((i) => (
+        <NumberField
+          key={i}
+          label={`Menace pour le rang ${RANK_NUMERALS[i + 1]}`}
+          value={value.thresholds[i]}
+          min={1}
+          onChange={(v) => set({ thresholds: value.thresholds.map((t, j) => (j === i ? (v ?? t) : t)) })}
+        />
+      ))}
+      <NumberField label="Puissance visée par rang (+)" hint={`Au rang V : +${Math.round(value.powerPerRank * 4 * 100)} %.`} value={value.powerPerRank} min={0} step={0.01} onChange={(v) => set({ powerPerRank: v ?? 0 })} />
+      <NumberField label="Menace par jour" value={T.perDay} step={0.5} onChange={(v) => set({ threat: { ...T, perDay: v ?? 0 } })} />
+      <NumberField label="Menace : attaque gagnée" value={T.attackWon} step={0.5} onChange={(v) => set({ threat: { ...T, attackWon: v ?? 0 } })} />
+      <NumberField label="Menace : joueur repoussé" value={T.defenseWon} step={0.5} onChange={(v) => set({ threat: { ...T, defenseWon: v ?? 0 } })} />
+      <NumberField label="Menace : son attaque repoussée" hint="Valeur négative : il perd de la menace." value={T.attackLost} step={0.5} onChange={(v) => set({ threat: { ...T, attackLost: v ?? 0 } })} />
+      <NumberField label="Menace : pillé par un joueur" value={T.raided} step={0.5} onChange={(v) => set({ threat: { ...T, raided: v ?? 0 } })} />
+      <NumberField label="Menace : vendetta survécue" value={T.vendettaSurvived} step={0.5} onChange={(v) => set({ threat: { ...T, vendettaSurvived: v ?? 0 } })} />
+      <NumberField label="Rangs perdus (vendetta gagnée)" value={value.vendettaRankLoss} min={0} onChange={(v) => set({ vendettaRankLoss: v ?? 0 })} />
+      <NumberField label="Insaisissable : esquive par rang" hint={pctHint(O.evadePerRank)} value={O.evadePerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, opportunist: { ...O, evadePerRank: v ?? 0 } } })} />
+      <NumberField label="Insaisissable : retraite anticipée par rang" hint={pctHint(O.retreatEarlierPerRank)} value={O.retreatEarlierPerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, opportunist: { ...O, retreatEarlierPerRank: v ?? 0 } } })} />
+      <NumberField label="Insaisissable : butin par rang" hint={pctHint(O.lootPerRank)} value={O.lootPerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, opportunist: { ...O, lootPerRank: v ?? 0 } } })} />
+      <NumberField label="Rempart : bouclier par rang" hint={pctHint(B.shieldPerRank)} value={B.shieldPerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, builder: { ...B, shieldPerRank: v ?? 0 } } })} />
+      <NumberField label="Rempart : défenses par rang" hint={pctHint(B.defensePerRank)} value={B.defensePerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, builder: { ...B, defensePerRank: v ?? 0 } } })} />
+      <NumberField label="Fureur : avantage de classe par rang" hint={pctHint(value.traits.aggressive.edgePerRank)} value={value.traits.aggressive.edgePerRank} min={0} step={0.01} onChange={(v) => set({ traits: { ...value.traits, aggressive: { edgePerRank: v ?? 0 } } })} />
+      <NumberField label="Ascendant : objectif de vendetta (×)" value={value.ascendant.goalFactor} min={1} step={0.1} onChange={(v) => set({ ascendant: { ...value.ascendant, goalFactor: v ?? 1 } })} />
+      <CheckboxField label="Ascendant : vendetta d'alliance seulement" checked={value.ascendant.allianceOnly} onChange={(v) => set({ ascendant: { ...value.ascendant, allianceOnly: v } })} />
+      <NumberField label="Unités d'élite nécessaires pour contrer" value={value.eliteMinCount} min={1} onChange={(v) => set({ eliteMinCount: v ?? 1 })} />
+    </Section>
+  );
 }
 
 export function WarlordsPanel() {
@@ -37,11 +78,11 @@ export function WarlordsPanel() {
   const [cfg, setCfg] = useState<WarlordsConfig>(() => structuredClone(currentGameContent().warlords));
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
-  const [power, setPower] = useState<Record<string, { power: number; absentUntilMs: number }>>({});
+  const [power, setPower] = useState<Record<string, { power: number; absentUntilMs: number; rank?: number; threat?: number }>>({});
 
   const refreshLive = () =>
     fetchWarlords()
-      .then((v) => setPower(Object.fromEntries(v.warlords.map((w) => [w.id, { power: w.power, absentUntilMs: w.absentUntilMs }]))))
+      .then((v) => setPower(Object.fromEntries(v.warlords.map((w) => [w.id, { power: w.power, absentUntilMs: w.absentUntilMs, rank: w.rank, threat: w.threat }]))))
       .catch(() => undefined);
   useEffect(() => {
     void refreshLive();
@@ -61,11 +102,12 @@ export function WarlordsPanel() {
     }
   };
 
-  const run = async (action: string, id = "") => {
+  const run = async (action: string, id = "", extra: Record<string, unknown> = {}) => {
     setBusy(true);
     try {
-      const s = await adminCall(action, id);
-      if (action === "coalitionStart") toast.success("Coalition lancée : tous les joueurs sont prévenus.");
+      const s = await adminCall(action, id, extra);
+      if (action === "rank") toast.success(`Rang imposé : ${RANK_NUMERALS[Number(extra.rank) - 1]}.`);
+      else if (action === "coalitionStart") toast.success("Coalition lancée : tous les joueurs sont prévenus.");
       else if (action === "coalitionStop") toast.success("Coalition arrêtée (comptée comme un échec).");
       else toast.success(`Tâche lancée : ${s.grown ?? 0} seigneur(s) à jour, ${s.attacks ?? 0} attaque(s), ${s.offers ?? 0} offre(s), ${s.contacts ?? 0} contact(s).`);
       await refreshLive();
@@ -112,6 +154,7 @@ export function WarlordsPanel() {
           <NumberField label="Fréquence des attaques (×)" hint="1 = une attaque par 48 h et par seigneur agressif ; 0 = aucune." value={cfg.settings.attackFrequency} min={0} step={0.1} onChange={(v) => setCfg((c) => ({ ...c, settings: { ...c.settings, attackFrequency: v ?? 1 } }))} />
           <NumberField label="Puissance visée (×)" hint="Multiplie la puissance cible de tous les seigneurs." value={cfg.settings.powerFactor} min={0.1} step={0.1} onChange={(v) => setCfg((c) => ({ ...c, settings: { ...c.settings, powerFactor: v ?? 1 } }))} />
         </Section>
+        <RankRulesSection value={normalizeRankRules(cfg.settings.ranks)} onChange={(r) => setCfg((c) => ({ ...c, settings: { ...c.settings, ranks: r } }))} />
       </Card>
 
       {cfg.defs.map((d) => {
@@ -128,6 +171,7 @@ export function WarlordsPanel() {
                 <p className="text-xs text-slate-500">
                   {PERSONALITY_LABELS[d.personality]} · {TIER_LABELS[d.tier]}
                   {live ? ` · puissance ${formatNumber(live.power)}` : ""}
+                  {live?.rank ? ` · rang ${RANK_NUMERALS[live.rank - 1]} (menace ${live.threat ?? 0})` : ""}
                   {live && live.absentUntilMs > Date.now() ? " · en fuite" : ""}
                 </p>
               </div>
@@ -170,6 +214,12 @@ export function WarlordsPanel() {
                   <Button variant="secondary" size="sm" disabled={busy || !d.enabled} onClick={() => void askConfirm({ title: `Lancer une coalition contre ${d.name} ?`, message: "Elle dure 5 jours.", confirmLabel: "Lancer" }).then((ok) => { if (ok) void run("coalitionStart", d.id); })}>
                     <Handshake className="mr-1 h-3.5 w-3.5" /> Lancer une coalition
                   </Button>
+                  <SelectField<string>
+                    label="Imposer un rang (tests, réglage)"
+                    value={String(live?.rank ?? 1)}
+                    options={RANK_NAMES.map((n, i) => ({ value: String(i + 1), label: `${RANK_NUMERALS[i]} · ${n}` }))}
+                    onChange={(v) => void run("rank", d.id, { rank: Number(v) })}
+                  />
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => void askConfirm({ title: `Recréer ${d.name} de zéro ?`, confirmLabel: "Recréer", tone: "danger" }).then((ok) => { if (ok) void run("reset", d.id); })}>
                     <Trash2 className="mr-1 h-3.5 w-3.5" /> Recréer l'empire
                   </Button>

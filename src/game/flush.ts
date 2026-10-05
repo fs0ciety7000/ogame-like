@@ -1,3 +1,4 @@
+import { refreshEliteUnlocks } from "@/game/eliteUnits";
 import { finishAllTimers } from "@/game/adminTools";
 import { advanceWorkshop } from "@/game/workshop";
 import { advanceColonies } from "@/game/colonies";
@@ -332,6 +333,10 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   }
 
   // --- v5.10 : titres du catalogue débloqués par une mesure ---
+  // 5.22 : unités d'élite (Labo complet et vendetta gagnée contre la personnalité visée).
+  for (const id of refreshEliteUnlocks(player)) {
+    notifications.push({ kind: "event", title: "Unité d'élite débloquée", message: `${findUnit(id)?.name ?? id} rejoint ton chantier. Elle ne combat que les seigneurs de guerre.`, createdAtMs: now, read: false, link: "/game/unites" });
+  }
   for (const t of checkNewTitles(player)) {
     if (!grantTitle(player, t.label, `title:${t.id}`)) continue;
     const style = titleStyle(t.label);
