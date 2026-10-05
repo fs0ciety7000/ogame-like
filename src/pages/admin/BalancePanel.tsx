@@ -5,7 +5,8 @@ import { useSearchParams } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HudTag, StatTile } from "@/components/ui/hud";
+import { HUD_TONE, HudTag, StatTile } from "@/components/ui/hud";
+import { COMBAT_KINDS } from "@/game/balance/combatTypes";
 import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
@@ -381,12 +382,38 @@ export function BalancePanel() {
         </Section>
       )}
 
+      {live?.combatTypes && (
+        <Section title="Victoires du joueur par type de combat" aside={<span className="font-mono text-[11px] text-slate-500">depuis la 5.19 · {timeAgo(live.combatTypes.sinceMs)}</span>}>
+          <ul className="flex flex-col gap-2.5">
+            {live.combatTypes.kinds.map((k) => {
+              const def = COMBAT_KINDS[k.kind];
+              const tone = k.status === "ok" ? "mint" : k.status === "none" ? "neutral" : "ember";
+              return (
+                <li key={k.kind} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[16rem_minmax(0,1fr)_7rem]">
+                  <span className="truncate text-sm text-slate-200">{def.label}</span>
+                  <span className="text-right font-mono text-xs sm:order-last" style={{ color: HUD_TONE[tone] }}>
+                    {k.playerWinPct === null ? "—" : `${k.playerWinPct} %`} <span className="text-slate-500">/ {k.battles}</span>
+                  </span>
+                  <div className="relative col-span-2 h-2 bg-white/[0.06] sm:col-span-1" title={`Cible ${def.target[0]}–${def.target[1]} %`}>
+                    <i className="absolute inset-y-0 block bg-mint-glow/20" style={{ left: `${def.target[0]}%`, width: `${def.target[1] - def.target[0]}%` }} />
+                    {k.playerWinPct !== null && <i className="absolute -top-0.5 block h-3 w-0.5" style={{ left: `calc(${k.playerWinPct}% - 1px)`, background: HUD_TONE[tone] }} />}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-slate-500">
+            Bande verte : fourchette visée. Le pourcentage est celui du joueur (attaquant pour le JcJ, les primes, les repaires et les attaques de seigneurs ; défenseur pour les raids et les répliques). Affiché à partir de 5 combats ; une proposition de réglage apparaît à partir de 10.
+          </p>
+        </Section>
+      )}
+
       {live && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Section title="Combats (30 jours)">
             <ul className="flex flex-col gap-1 text-sm text-slate-300">
               <li>
-                Joueur contre joueur : <strong className="text-slate-100">{live.pvp.battles}</strong> combats, l'attaquant gagne <strong className="text-slate-100">{live.pvp.attackerWinPct} %</strong> <span className="text-slate-500">(cible 45–65 %)</span>
+                Joueur contre joueur : <strong className="text-slate-100">{live.pvp.battles}</strong> combats, l'attaquant gagne <strong className="font-mono text-slate-100">{live.pvp.attackerWinPct} %</strong> <span className="text-slate-500">(alerte hors 40–65 %)</span>
               </li>
               <li>
                 Seigneurs de guerre : <strong className="text-slate-100">{live.warlordBattles.battles}</strong> combats, l'attaquant gagne <strong className="text-slate-100">{live.warlordBattles.attackerWinPct} %</strong>
