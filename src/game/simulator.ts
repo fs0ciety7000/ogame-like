@@ -97,6 +97,8 @@ export function simulateAgainstReport(
   attackBonus = 0,
   /** v5.9 : cible PNJ (seigneur de guerre) : bonus des Traqueurs Kesh. */
   pve = false,
+  /** 5.21 : cible prioritaire choisie au lancement. */
+  targetPriority?: "defenses" | "ships",
 ): SimOutcome | null {
   const data = report.data;
   if (!data || (report.tier ?? 0) < 2 || (!data.units && !data.defenses)) return null;
@@ -141,6 +143,7 @@ export function simulateAgainstReport(
     garrisons,
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     lootMultiplier,
+    targetPriority,
   });
   return outcome(combat, notes);
 }

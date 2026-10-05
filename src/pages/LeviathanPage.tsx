@@ -64,7 +64,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
         <p className="text-sm text-slate-400">
-          Les dégâts valent la puissance d'attaque de la flotte. {Math.round(LEVIATHAN_RULES.lossPct * 100)} % des vaisseaux sont détruits (en partie réparés par l'Atelier). Trajet de {LEVIATHAN_RULES.flightMinutes} min, puis retour.
+          Les dégâts valent la puissance d'attaque de la flotte. {Math.round(LEVIATHAN_RULES.lossPct * 100)} % des vaisseaux sont détruits : ceux que l'Atelier sauve y restent le temps de la réparation, et les survivants rentrent abîmés. Trajet de {LEVIATHAN_RULES.flightMinutes} min, puis retour.
         </p>
         <div className="mt-3 flex flex-col gap-1.5">
           {ids.map((id) => {

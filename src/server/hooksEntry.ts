@@ -205,3 +205,4 @@ export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
 // 5.18 : solde d'Ambre modifiable par l'administration.
 export { adminSetAmber } from "@/game/bounties";
+export { applyBossWear } from "@/game/workshop";

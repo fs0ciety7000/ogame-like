@@ -24,7 +24,8 @@ export type RelicEffect =
   | "production_data"
   | "production_all"
   | "aegis"
-  | "boss_damage";
+  | "boss_damage"
+  | "repair_speed";
 
 export const RARITIES: { id: RelicRarity; label: string; pct: number; weight: number; recycle: number; color: string }[] = [
   { id: "common", label: "Commune", pct: 0.03, weight: 60, recycle: 5, color: "#cbd5e1" },
@@ -56,6 +57,8 @@ export const DEFAULT_RELICS: RelicTemplate[] = [
   { id: "noyau_forge", name: "Noyau de forge", effect: "build_time", lore: "Il chauffe sans jamais s'éteindre." },
   { id: "codex_aube", name: "Codex de l'Aube", effect: "research_time", lore: "Des équations interdites, recopiées à la main." },
   { id: "matrice_reparation", name: "Matrice de réparation", effect: "repair", lore: "Des nanites qui referment les coques déchirées." },
+  // 5.21 : cadence de l'Atelier (bonus de rareté × 3 : +9 % en commune, +45 % en légendaire).
+  { id: "cle_soudure", name: "Clé de soudure", effect: "repair_speed", lore: "L'outil fétiche d'un chef d'atelier disparu. Elle chante quand elle travaille." },
   { id: "soute_pliee", name: "Soute pliée", effect: "cargo", lore: "Plus grande dedans que dehors." },
   { id: "oeil_vesper", name: "Œil de Vesper", effect: "spy", lore: "Une lentille du Chœur qui voit à travers les blindages." },
   { id: "racine_ferraille", name: "Racine de ferraille", effect: "production_scrap", lore: "Un organisme qui digère le métal et en recrache le double." },
@@ -144,7 +147,7 @@ export function mythicFor(seasonId: string): { template: RelicTemplate; source: 
   return { template: pool[index % pool.length], source: (Number.isFinite(m) ? m : 1) % 2 === 1 ? "leviathan" : "seasonboss" };
 }
 
-const RELIC_EFFECT_IDS: RelicEffect[] = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage"];
+const RELIC_EFFECT_IDS: RelicEffect[] = ["attack", "defense", "build_time", "research_time", "repair", "cargo", "spy", "production_scrap", "production_energy", "production_nano", "production_data", "production_all", "aegis", "boss_damage", "repair_speed"];
 
 /** Libellés des effets (administration). */
 export const RELIC_EFFECT_LABELS: Record<RelicEffect, string> = {
@@ -162,6 +165,7 @@ export const RELIC_EFFECT_LABELS: Record<RelicEffect, string> = {
   production_all: "Toute la production",
   aegis: "Égide (1re défaite de la semaine non pillée)",
   boss_damage: "Dégâts contre les boss",
+  repair_speed: "Cadence de l'Atelier de réparation",
 };
 
 /** Validation des reliques et de leurs réglages (administration). */
@@ -300,6 +304,8 @@ export function describeRelic(item: Pick<RelicItem, "template" | "rarity">): str
       return "Chaque semaine, ta première défaite n'est pas pillée";
     case "boss_damage":
       return `+${pct} % de dégâts contre le Léviathan et les boss`;
+    case "repair_speed":
+      return `+${pct * 3} % de cadence de l'Atelier`;
     default:
       return "";
   }
@@ -317,6 +323,7 @@ export const RELIC_EFFECT_STAT: Partial<Record<RelicEffect, { stat: EffectStat; 
   spy: { stat: "spyLevel", scale: 10 },
   production_all: { stat: "productionAll" },
   boss_damage: { stat: "bossDamage" },
+  repair_speed: { stat: "repairSpeed", scale: 3 },
   production_scrap: { stat: "production", target: "scrap" },
   production_energy: { stat: "production", target: "energy" },
   production_nano: { stat: "production", target: "nano" },

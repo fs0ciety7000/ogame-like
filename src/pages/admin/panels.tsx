@@ -157,6 +157,79 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, defenseRebuildPct: v ?? 0 } }))}
           />
         </Section>
+        <Section title="Atelier et points de vie conservés (5.20)">
+          <NumberField
+            label="Part des PV perdus conservée en dégâts (0,4 = 40 %)"
+            value={rules.combat.hullDamageShare}
+            min={0}
+            step={0.05}
+            hint="Le reste détruit des unités. 0 = plus de dégâts conservés."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, hullDamageShare: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Usure maximale d'une unité avant destruction (0,9 = 90 %)"
+            value={rules.combat.hullMaxDamage}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, hullMaxDamage: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Atelier : PV réparés par seconde au niveau 1"
+            value={rules.combat.workshopHpPerSec}
+            min={0}
+            step={5}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopHpPerSec: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Atelier : gain de cadence par niveau (0,25 = +25 %)"
+            value={rules.combat.workshopLevelGain}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopLevelGain: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Sans Atelier : part de la cadence de base (0,2 = 20 %)"
+            value={rules.combat.workshopBaseFactor}
+            min={0}
+            step={0.05}
+            hint="Réparation des coques par les équipages."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopBaseFactor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Seigneurs de guerre : part des PV réparée par heure (0,08 = 8 %)"
+            value={rules.combat.warlordHullRepairPerHour}
+            min={0}
+            step={0.01}
+            hint="Ils n'ont pas d'Atelier : à 0,08, une coque très abîmée est réparée en ≈ 12 h."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, warlordHullRepairPerHour: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Ambre pour terminer une réparation : 1 Ambre par tranche de (s)"
+            value={rules.combat.workshopRushSecondsPerAmber}
+            min={1}
+            step={60}
+            hint="600 : 1 Ambre par 10 min de réparation restante (1 au minimum)."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopRushSecondsPerAmber: v ?? 600 } }))}
+          />
+        </Section>
+        <Section title="Rôles par classe et cible prioritaire (5.21)">
+          <NumberField
+            label="Avantage de classe (0,2 = ±20 %)"
+            value={rules.combat.classEdge}
+            min={0}
+            step={0.05}
+            hint="Fort > Moyen > Faible > Fort : +X % de dégâts contre la classe battue, −X % contre celle qui bat."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, classEdge: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Cible prioritaire : poids de la catégorie visée (×)"
+            value={rules.combat.targetPriorityWeight}
+            min={1}
+            step={0.5}
+            hint="3 : la catégorie visée reçoit trois fois plus de tirs, à points de vie égaux."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, targetPriorityWeight: v ?? 1 } }))}
+          />
+        </Section>
         <Section title="Combat en tours (5.18)">
           <NumberField
             label="Points de vie par point de résistance"
@@ -757,7 +830,7 @@ export function PlayersPanel() {
             <button
               key={p.id}
               onClick={() => setSelectedId(p.id)}
-              className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm ${
+              className={`flex w-full items-center justify-between px-2 py-1.5 text-left text-sm ${
                 p.id === selectedId ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5"
               }`}
             >

@@ -54,3 +54,39 @@ export function PosturePicker({ value, onChange, disabled }: { value: PostureId;
     </div>
   );
 }
+
+/** 5.21 : cible prioritaire de l'attaque (où se concentrent les tirs). */
+export type TargetPriorityChoice = "" | "defenses" | "ships";
+const PRIORITIES: { id: TargetPriorityChoice; name: string; desc: string }[] = [
+  { id: "", name: "Répartie", desc: "Les tirs se répartissent sur toutes les cibles, selon leurs points de vie." },
+  { id: "defenses", name: "Défenses", desc: "Les tirs visent d'abord les défenses : utile pour ouvrir une base fortifiée avant un second raid." },
+  { id: "ships", name: "Vaisseaux", desc: "Les tirs visent d'abord les vaisseaux à quai et les garnisons : utile pour briser sa flotte." },
+];
+
+export function TargetPriorityPicker({ value, onChange, className }: { value: TargetPriorityChoice; onChange: (v: TargetPriorityChoice) => void; className?: string }) {
+  const current = PRIORITIES.find((p) => p.id === value) ?? PRIORITIES[0];
+  return (
+    <div className={className}>
+      <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Cible prioritaire</p>
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Cible prioritaire">
+        {PRIORITIES.map((p) => (
+          <button
+            key={p.id || "spread"}
+            type="button"
+            role="radio"
+            aria-checked={value === p.id}
+            title={p.desc}
+            onClick={() => onChange(p.id)}
+            className={cn(
+              "border px-2 py-1.5 font-display text-xs font-semibold uppercase tracking-[0.1em] transition-colors",
+              value === p.id ? "border-cyan-glow/70 bg-cyan-glow/15 text-cyan-glow" : "border-white/10 text-slate-400 hover:border-cyan-glow/40",
+            )}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+      <p className="mt-1 text-[11px] text-slate-500">{current.desc}</p>
+    </div>
+  );
+}

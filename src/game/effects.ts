@@ -16,6 +16,7 @@ export type EffectStat =
   | "defense"
   | "bossDamage"
   | "repair"
+  | "repairSpeed"
   | "loot"
   // Économie
   | "productionAll"
@@ -90,6 +91,7 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   defense: { label: "Défense", unit: "pct", group: "combat" },
   bossDamage: { label: "Dégâts contre les boss", unit: "pct", group: "combat" },
   repair: { label: "Vaisseaux réparés", unit: "pct", group: "combat" },
+  repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },
   loot: { label: "Butin pillé", unit: "pct", group: "combat" },
   productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },

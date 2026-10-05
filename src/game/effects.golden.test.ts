@@ -16,15 +16,19 @@ const FAR = Date.UTC(2100, 0, 1);
 
 // Les cinq officiers d'origine (les rôles rares n'existaient pas lors de l'instantané).
 const BASE = COMMANDERS.filter((c) => !c.rare);
+// 5.21 : relique, technologies et effet ajoutés après l'instantané (hors du tirage).
+const ADDED_521 = new Set(["cle_soudure", "tech27", "tech28", "tech29", "tech30", "repair_speed"]);
+const RELICS = DEFAULT_RELICS.filter((t) => !ADDED_521.has(t.id));
+const TECHS = TECHNOLOGIES.filter((t) => !ADDED_521.has(t.id));
 
 function fixture(i: number): Partial<PlayerState> {
   const r = seededRandom(`golden-${i}`);
   const pick = <T,>(xs: readonly T[]) => xs[Math.floor(r() * xs.length)];
   const active = [...new Set([pick(BASE).id, pick(BASE).id, pick(BASE).id])].slice(0, 1 + Math.floor(r() * 3));
   const roster = Object.fromEntries(BASE.map((c) => [c.id, { xp: xpForLevel(1 + Math.floor(r() * 20)) }]));
-  const items = Array.from({ length: 4 }, (_, k) => ({ id: `r${k}`, template: pick(DEFAULT_RELICS).id, rarity: pick(RARITIES).id, foundAtMs: 0, source: "golden" }));
+  const items = Array.from({ length: 4 }, (_, k) => ({ id: `r${k}`, template: pick(RELICS).id, rarity: pick(RARITIES).id, foundAtMs: 0, source: "golden" }));
   const ranks = Object.fromEntries(TALENTS.filter(() => r() < 0.4).map((t) => [t.id, 1 + Math.floor(r() * 3)]));
-  const techLevels = Object.fromEntries(TECHNOLOGIES.filter(() => r() < 0.6).map((t) => [t.id, 1 + Math.floor(r() * Math.min(10, t.maxLevel))]));
+  const techLevels = Object.fromEntries(TECHS.filter(() => r() < 0.6).map((t) => [t.id, 1 + Math.floor(r() * Math.min(10, t.maxLevel))]));
   return {
     ascensions: Math.floor(r() * 3),
     commanders: { roster, active, movedAtMs: {}, dossiers: 0 } as never,
@@ -41,7 +45,7 @@ const TECH_TARGETS: Partial<Record<TechEffectType, string[]>> = { resource_produ
 
 function snapshotOf(p: Partial<PlayerState>) {
   const tech: Record<string, number> = {};
-  for (const type of Object.keys(TECH_EFFECT_LABELS) as TechEffectType[]) {
+  for (const type of (Object.keys(TECH_EFFECT_LABELS) as TechEffectType[]).filter((t) => !ADDED_521.has(t))) {
     tech[type] = techBonus(p.techLevels, type);
     for (const t of TECH_TARGETS[type] ?? []) tech[`${type}:${t}`] = techBonus(p.techLevels, type, t);
   }

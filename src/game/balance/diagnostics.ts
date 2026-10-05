@@ -2,6 +2,7 @@ import { WARLORD_RULES } from "@/game/warlords";
 import { computeBalance516, findings516, type Balance516 } from "@/game/balance/v516";
 import { TECHNOLOGIES, techEffects } from "@/game/technologies";
 import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
+import { COMBAT_519_SINCE_MS, COMBAT_KINDS, combatTypeStats, isPvpReport, type CombatKindStat } from "@/game/balance/combatTypes";
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
 import { economySnapshot, missionRewards } from "@/game/economy";
@@ -180,6 +181,8 @@ export interface LiveBalance {
   history?: BalanceSnapshot[];
   /** 5.17 : suivi des nouveautés de la 5.16. */
   v516?: Balance516;
+  /** 5.21 : victoires du joueur par type de combat depuis la 5.19 (combat en tours). */
+  combatTypes?: { sinceMs: number; kinds: CombatKindStat[] };
 }
 
 function places(units: PlayerState["units"], ids: string[]): number {
@@ -226,8 +229,8 @@ export function computeLiveBalance(
 
   const since = now - windowDays * 86_400_000;
   const recent = reports.filter((r) => r.timestamp >= since);
-  const isNpc = (uid?: string) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
-  const pvp = recent.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  // 5.21 : les primes (bounty_*) ne comptent plus comme du JcJ.
+  const pvp = recent.filter(isPvpReport);
   const wl = recent.filter((r) => r.attackerUid?.startsWith("npc") || r.defenderUid?.startsWith("npc"));
   const pct = (xs: typeof recent) => (xs.length ? Math.round((xs.filter((r) => r.outcome === "attacker_win").length / xs.length) * 100) : 0);
 
@@ -257,6 +260,7 @@ export function computeLiveBalance(
     bestDefense: Math.max(0, ...rows.map((r) => r.defense)),
     bestAttack: Math.max(0, ...rows.map((r) => r.attack)),
     v516: computeBalance516(active, now),
+    combatTypes: { sinceMs: COMBAT_519_SINCE_MS, kinds: combatTypeStats(reports, COMBAT_519_SINCE_MS, now) },
   };
 }
 
@@ -311,6 +315,29 @@ export function liveFindings(live: LiveBalance): Proposal[] {
   const traps = new Set(staticFindings().filter((p) => p.id.startsWith("trap-")).map((p) => p.id.slice(5)));
   for (const u of live.unitPlaces.slice(0, 8)) {
     if (traps.has(u.id)) out.push({ id: `trap-used-${u.id}`, severity: "critical", area: "Unités", finding: `${u.name} occupe ${fmt(u.places)} places chez ${u.owners} joueurs alors que c'est une unité piège.`, proposal: "Corriger ses places (voir plus haut) : le gain de puissance pour ces joueurs sera immédiat.", where: "Unités" });
+  }
+  // 5.21 : victoires par type de combat depuis la 5.19 (au moins 10 combats).
+  for (const k of live.combatTypes?.kinds ?? []) {
+    if (k.battles < 10 || k.playerWinPct === null || k.status === "ok" || k.status === "none") continue;
+    const def = COMBAT_KINDS[k.kind];
+    const range = `cible ${def.target[0]}–${def.target[1]} %`;
+    const tune: Record<string, [string, string, string]> = {
+      pvp: ["Bonus à domicile +0,05, ou part des vaisseaux à quai engagés (Règles → Combat) +0,1.", "Bonus à domicile −0,05.", "Règles → Combat"],
+      warlord: ["Puissance visée des seigneurs (×) +0,1.", "Puissance visée des seigneurs (×) −0,1.", "Seigneurs"],
+      reprisal: ["Les répliques sont trop faciles à repousser : puissance visée des seigneurs (×) +0,1.", "Les répliques passent trop souvent : puissance visée des seigneurs (×) −0,1.", "Seigneurs"],
+      bounty: ["« Ennemis PNJ : PV relatifs » +0,1.", "« Ennemis PNJ : PV relatifs » −0,1.", "Règles → Combat"],
+      lair: ["Force des repaires (lair.pct) +0,05.", "Force des repaires (lair.pct) −0,05.", "Factions"],
+      raid: ["Puissance de base du raid (basePct) +0,05.", "Puissance de base du raid (basePct) −0,05.", "Factions"],
+    };
+    const [harder, easier, where] = tune[k.kind];
+    out.push({
+      id: `kind-${k.kind}-${k.status}`,
+      severity: "warning",
+      area: k.kind === "raid" || k.kind === "lair" ? "Factions" : k.kind === "warlord" || k.kind === "reprisal" ? "Seigneurs" : "Combats",
+      finding: `${def.label} : le joueur gagne ${k.playerWinPct} % des ${k.battles} combats depuis la 5.19 (${range}).`,
+      proposal: k.status === "high" ? harder : easier,
+      where,
+    });
   }
   // 5.17 : nouveautés de la 5.16 (expéditions profondes, traités, rattrapage, jetons).
   if (live.v516) out.push(...findings516(live.v516, live.activePlayers));

@@ -1,7 +1,10 @@
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { findUnit } from "@/game/units";
+import { effectTotal } from "@/game/effects";
+import { allEffects } from "@/game/modifiers";
 import type { NewNotification } from "@/game/flush";
+import { GameActionError } from "@/game/errors";
 import type { PlayerState, Units } from "@/types/game";
 
 /* =====================================================
@@ -32,7 +35,7 @@ export interface WorkshopJob {
   addedAtMs: number;
 }
 
-export type WorkshopSource = "attack" | "defense" | "bounty" | "lair" | "raid" | "expedition";
+export type WorkshopSource = "attack" | "defense" | "bounty" | "lair" | "raid" | "expedition" | "boss";
 
 export const WORKSHOP_SOURCE_LABELS: Record<WorkshopSource, string> = {
   attack: "Attaque",
@@ -41,6 +44,7 @@ export const WORKSHOP_SOURCE_LABELS: Record<WorkshopSource, string> = {
   lair: "Repaire",
   raid: "Raid repoussé",
   expedition: "Expédition",
+  boss: "Boss",
 };
 
 export interface PlayerWorkshop {
@@ -66,12 +70,30 @@ export function atelierLevel(player: Pick<PlayerState, "buildings">): number {
   return def ? effectiveBuildingLevel(player.buildings ?? {}, def.id) : 0;
 }
 
+type RatePlayer = Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "units" | "techLevels" | "commanders" | "relics" | "ascensions" | "talents" | "territory" | "synthesis">>;
+
+/** 5.21 : bonus de cadence (Nanoréparation, Mécanicien, Clé de soudure), en fraction. */
+export function workshopSpeedBonus(player: RatePlayer): number {
+  const grants = allEffects(player);
+  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed");
+}
+
+/** 5.21 : PV par seconde ajoutés par les vaisseaux-ateliers à quai. */
+export function repairShipRate(player: Partial<Pick<PlayerState, "units">>): number {
+  let out = 0;
+  for (const [id, u] of Object.entries(player.units ?? {})) {
+    const per = findUnit(id)?.workshopHpPerSec ?? 0;
+    if (per > 0 && (u?.count ?? 0) > 0) out += per * u.count;
+  }
+  return out;
+}
+
 /** Cadence de réparation (PV par seconde). */
-export function workshopRate(player: Pick<PlayerState, "buildings">): number {
+export function workshopRate(player: RatePlayer): number {
   const R = COMBAT_RULES;
   const level = atelierLevel(player);
-  if (level <= 0) return R.workshopHpPerSec * R.workshopBaseFactor;
-  return R.workshopHpPerSec * (1 + R.workshopLevelGain * (level - 1));
+  const base = level <= 0 ? R.workshopHpPerSec * R.workshopBaseFactor : R.workshopHpPerSec * (1 + R.workshopLevelGain * (level - 1));
+  return (base + repairShipRate(player)) * (1 + Math.max(0, workshopSpeedBonus(player)));
 }
 
 /** Unités immobilisées à l'Atelier, par type (elles gardent leur place de hangar). */
@@ -95,9 +117,61 @@ export function hullPercent(player: Pick<PlayerState, "units" | "techLevels" | "
   return Math.max(0, 1 - missing / max);
 }
 
+/** 5.21 : état moyen des coques de toutes les unités, pondéré par les PV (1 = intactes). */
+export function overallHull(player: Pick<PlayerState, "units" | "techLevels" | "workshop">): number {
+  let max = 0;
+  let missing = 0;
+  for (const id of Object.keys(player.units ?? {})) {
+    const m = hullMax(player, id);
+    if (!(m > 0)) continue;
+    max += m;
+    missing += Math.min(m * COMBAT_RULES.hullMaxDamage, workshopState(player).hull[id] ?? 0);
+  }
+  return max > 0 ? 1 - missing / max : 1;
+}
+
+/**
+ * 5.21 : pertes d'un assaut de boss (ou de proie d'élite), à `lossPct` de chaque type :
+ * les unités sauvées par l'Atelier partent en réparation, les survivantes gardent une part
+ * des PV perdus en dégâts, comme au combat en tours.
+ */
+export function bossAssaultLosses(player: Pick<PlayerState, "units" | "techLevels">, fleet: Record<string, number>, lossPct: number, repair: number, active: boolean) {
+  const survivors: Record<string, number> = {};
+  const lost: Record<string, number> = {};
+  const recovered: Record<string, number> = {};
+  const hull: Record<string, number> = {};
+  const share = Math.min(0.95, Math.max(0, COMBAT_RULES.hullDamageShare));
+  for (const [id, qty] of Object.entries(fleet)) {
+    const raw = active ? Math.floor(qty * lossPct) : 0;
+    const saved = Math.floor(raw * repair);
+    const gone = raw - saved;
+    if (gone > 0) lost[id] = gone;
+    if (saved > 0) recovered[id] = saved;
+    survivors[id] = qty - raw;
+    const wear = active && survivors[id] > 0 ? Math.round(qty * lossPct * (share / (1 - share)) * unitBaseHp(player.units ?? {}, player.techLevels ?? {}, id)) : 0;
+    if (wear > 0) hull[id] = wear;
+  }
+  return { survivors, lost, recovered, hull };
+}
+
+/** 5.21 : usure d'un assaut de boss : unités sauvées à l'Atelier, dégâts ajoutés aux coques. */
+export function applyBossWear(player: PlayerState, wear: { recovered?: Record<string, number>; hull?: Record<string, number>; survivors?: Record<string, number> }, now: number) {
+  if (player.npc) return;
+  const st = workshopState(player);
+  // Les survivants sont encore en vol : ils comptent dans le stock de PV.
+  const stock = { units: withFleet(player.units ?? {}, wear.survivors ?? {}), techLevels: player.techLevels };
+  for (const [id, hp] of Object.entries(wear.hull ?? {})) {
+    const max = hullMax(stock, id);
+    if (hp > 0 && max > 0) st.hull[id] = Math.round(Math.min(max * COMBAT_RULES.hullMaxDamage, (st.hull[id] ?? 0) + hp));
+  }
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  sendToWorkshop(player, wear.recovered ?? {}, now, "boss", false);
+}
+
 /** Enregistre les dégâts rendus par le moteur de combat (PV manquants par type). */
 export function applyHull(player: PlayerState, hull: Record<string, number> | undefined) {
-  if (!hull || player.npc) return;
+  if (!hull) return;
   const st = workshopState(player);
   for (const [id, hp] of Object.entries(hull)) {
     if (hp > 0) st.hull[id] = Math.round(hp);
@@ -125,10 +199,33 @@ export function sendToWorkshop(player: PlayerState, recovered: Record<string, nu
   player.workshop = st;
 }
 
+/**
+ * 5.21 : un seigneur de guerre garde ses dégâts mais n'a pas d'Atelier : ses équipages
+ * réparent une part fixe de ses PV par heure (sa puissance est sans commune mesure avec
+ * une cadence en PV par seconde). Ses unités sauvées reviennent toujours aussitôt.
+ */
+function advanceWarlordHull(player: PlayerState, now: number, instant: boolean) {
+  const st = workshopState(player);
+  const hours = Math.max(0, (now - (st.updatedAtMs || now)) / 3600_000);
+  st.updatedAtMs = now;
+  for (const id of Object.keys(st.hull)) {
+    const max = hullMax(player, id);
+    const left = instant || !(max > 0) ? 0 : st.hull[id] - max * COMBAT_RULES.warlordHullRepairPerHour * hours;
+    if (left < 1) delete st.hull[id];
+    else st.hull[id] = Math.round(left);
+  }
+  st.jobs = [];
+  player.workshop = st;
+}
+
 /** Fait avancer les réparations jusqu'à `now`. Rend les unités réparées et une notification. */
 export function advanceWorkshop(player: PlayerState, now: number, instant = false): NewNotification[] {
   const w = player.workshop;
-  if (!w || player.npc) return [];
+  if (!w) return [];
+  if (player.npc) {
+    advanceWarlordHull(player, now, instant);
+    return [];
+  }
   const st = workshopState(player);
   const since = st.updatedAtMs || now;
   let budget = instant ? Infinity : Math.max(0, (now - since) / 1000) * workshopRate(player);
@@ -225,4 +322,38 @@ export function workshopView(player: PlayerState, now: number): WorkshopView {
   const jobs = eta.jobs.map(({ job, endsAtMs }) => ({ job, endsAtMs, progress: job.hpTotal > 0 ? 1 - job.hpLeft / job.hpTotal : 1 }));
   const lastJob = jobs.length ? jobs[jobs.length - 1].endsAtMs : null;
   return { rate: eta.rate, level: atelierLevel(player), jobs, hulls, hullDoneAtMs: eta.hullDoneAtMs, doneAtMs: eta.hullDoneAtMs ?? lastJob };
+}
+
+/* ---------- 5.21 : réparation accélérée à l'Ambre ---------- */
+
+/** Ambre pour terminer tout de suite un lot (`jobId`) ou toute la file : 1 Ambre par tranche de secondes restantes. */
+export function workshopRushCost(player: RatePlayer & Pick<PlayerState, "workshop">, jobId?: string): { amber: number; seconds: number; jobs: WorkshopJob[] } {
+  const st = workshopState(player);
+  const jobs = jobId ? st.jobs.filter((j) => j.id === jobId) : st.jobs;
+  const hp = jobs.reduce((a, j) => a + Math.max(0, j.hpLeft), 0);
+  const seconds = Math.ceil(hp / Math.max(0.01, workshopRate(player)));
+  const amber = jobs.length ? Math.max(1, Math.ceil(seconds / Math.max(1, COMBAT_RULES.workshopRushSecondsPerAmber))) : 0;
+  return { amber, seconds, jobs };
+}
+
+/** Termine un lot (ou toute la file) contre de l'Ambre : les unités rentrent au hangar. Rend le coût payé. */
+export function rushWorkshop<W extends { amber: number }>(player: PlayerState, jobId: string | undefined, now: number, walletOf: (p: PlayerState) => W, saveWallet: (p: PlayerState, w: W) => void): { amber: number; units: Record<string, number> } {
+  const { amber, jobs } = workshopRushCost(player, jobId);
+  if (!jobs.length) throw new GameActionError(jobId ? "Ce lot n'est plus à l'Atelier." : "Aucune unité à l'Atelier.");
+  const wallet = walletOf(player);
+  if (wallet.amber < amber) throw new GameActionError(`Il faut ${amber} Ambre de Ruche pour terminer ces réparations.`);
+  wallet.amber -= amber;
+  saveWallet(player, wallet);
+  const st = workshopState(player);
+  const ids = new Set(jobs.map((j) => j.id));
+  const units: Record<string, number> = {};
+  for (const job of jobs) {
+    const unit = player.units[job.unitId] ?? { level: 1, count: 0 };
+    player.units[job.unitId] = { ...unit, level: Math.max(1, unit.level || 1), count: (unit.count ?? 0) + job.count };
+    units[job.unitId] = (units[job.unitId] ?? 0) + job.count;
+  }
+  st.jobs = st.jobs.filter((j) => !ids.has(j.id));
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  return { amber, units };
 }

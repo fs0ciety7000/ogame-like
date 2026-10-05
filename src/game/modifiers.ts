@@ -31,6 +31,8 @@ export interface Modifiers {
   spyLevel: number;
   detection: number;
   repair: number;
+  /** 5.21 : cadence de l'Atelier de réparation (Mécanicien, reliques). */
+  repairSpeed: number;
   cargo: number;
   /** v5.1 : dégâts contre les boss (relique mythique). */
   bossDamage: number;
@@ -47,7 +49,7 @@ type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0 };
 }
 
 /** v5.14 : tous les effets de la couche empire (officiers, reliques, talents,
@@ -89,6 +91,7 @@ export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScop
   m.spyLevel = sum("spyLevel");
   m.detection = sum("detection");
   m.repair = sum("repair");
+  m.repairSpeed = sum("repairSpeed");
   m.cargo = sum("cargo");
   m.bossDamage = sum("bossDamage");
   m.fleetSpeed = sum("fleetSpeed");

@@ -36,7 +36,8 @@ export function unitClasses(all: UnitDef[] = UNITS): Record<string, UnitClass> {
     all.filter((u) => u.category === category && !(u.stats.attaque > 0)).forEach((u) => (out[u.id] = "support"));
     fighters.forEach((u, i) => {
       const third = fighters.length > 0 ? i / fighters.length : 0;
-      out[u.id] = third < 1 / 3 ? "light" : third < 2 / 3 ? "medium" : "heavy";
+      // 5.21 : une classe imposée (Bastion, Batterie anti-essaim) prime sur le tiers.
+      out[u.id] = u.combatClass ?? (third < 1 / 3 ? "light" : third < 2 / 3 ? "medium" : "heavy");
     });
   }
   return out;

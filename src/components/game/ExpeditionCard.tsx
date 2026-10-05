@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HullWarning } from "@/components/game/HullWarning";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
@@ -97,6 +98,7 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
           </div>
         </div>
         <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
+        <HullWarning player={player} fleet={selected} />
         <Button className="mt-4 w-full" disabled={busy || ships < EXPEDITION_RULES.minShips} onClick={() => void send()}>
           <Compass className="mr-1.5 h-4 w-4" /> Partir ({ships} vaisseaux)
         </Button>

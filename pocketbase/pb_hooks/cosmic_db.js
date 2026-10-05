@@ -1441,6 +1441,7 @@ function resolveAttackArrival(txApp, game, rec, now) {
         inFlight: true,
         garrisons,
         formation: rec.getString("formation"),
+        targetPriority: rec.getString("targetPriority") || undefined,
         boosts: fleet.boosts || undefined,
         // v4.2 : butin d'un seigneur plafonné à 6 h de production de sa cible.
         lootCap: attacker.player.npc ? game.warlordLootCap(defender.player) : undefined,
@@ -1761,6 +1762,8 @@ function launchFleetRequest(e) {
     if (colonyOwner && mission === "attack") rec.set("targetOwnerUid", colonyOwner);
     // v3.0 : formation choisie au lancement (attaque et repaire).
     if (["attack", "lair", "expedition", "leviathan", "bounty", "elite", "seasonboss", "allianceboss"].indexOf(mission) >= 0) rec.set("formation", game.isFormation(body.formation) ? body.formation : "balanced");
+    // 5.21 : cible prioritaire (défenses ou vaisseaux), attaques seulement.
+    if (mission === "attack" && (body.targetPriority === "defenses" || body.targetPriority === "ships")) rec.set("targetPriority", body.targetPriority);
     // v4.0 : capsules (champs cachés) ; le leurre montre une fausse composition.
     const caps = out.capsules;
     const boosted = !!caps && Object.keys(caps.boosts).length > 0;
@@ -3093,6 +3096,26 @@ function distributeLeviathan(txApp, game, state, now) {
   });
 }
 
+/**
+ * 5.21 : usure d'un assaut de boss. Les unités sauvées partent à l'Atelier et les
+ * survivantes gardent des dégâts. Le joueur est d'abord mis à jour (Atelier compris)
+ * pour que la file reparte de maintenant ; `owner` pointe ensuite sur l'état à jour.
+ */
+function atWorkshop(res) {
+  const n = Object.keys(res.recovered || {}).reduce((a, k) => a + res.recovered[k], 0);
+  return n > 0 ? `, ${n} à l'Atelier (Bâtiments → Atelier de réparation)` : "";
+}
+
+function bossWear(txApp, game, owner, res, now) {
+  if (!Object.keys(res.recovered || {}).length && !Object.keys(res.hull || {}).length) return;
+  const f = game.flushPlayer(owner.player, owner.queues, now);
+  game.applyBossWear(f.player, res, now);
+  savePlayer(txApp, game, owner, f.player, f.queues);
+  notify(txApp, owner.rec.id, f.notifications);
+  owner.player = f.player;
+  owner.queues = f.queues;
+}
+
 /** Assaut à l'arrivée : dégâts au Léviathan, pertes, demi-tour. */
 function leviathanArrival(txApp, game, rec, now) {
   const fleet = fleetFromRecord(rec);
@@ -3117,6 +3140,7 @@ function leviathanArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  bossWear(txApp, game, owner, res, now);
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
@@ -3131,7 +3155,7 @@ function leviathanArrival(txApp, game, rec, now) {
     {
       kind: "combat-attacker",
       title: res.killed ? `Coup de grâce sur ${game.worldBossName(state)} !` : `Assaut sur ${game.worldBossName(state)}`,
-      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : `${game.worldBossName(state)} n'était plus là : la flotte rentre.`,
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s)${atWorkshop(res)}.` : `${game.worldBossName(state)} n'était plus là : la flotte rentre.`,
       createdAtMs: now,
       read: false,
     },
@@ -4555,6 +4579,7 @@ function eliteArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  bossWear(txApp, game, owner, res, now);
   // v4.0 : l'Amiral en poste progresse à chaque assaut porté.
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
@@ -4570,7 +4595,7 @@ function eliteArrival(txApp, game, rec, now) {
     {
       kind: "bounty",
       title: res.killed ? `Coup de grâce sur ${name} !` : `Assaut sur ${name}`,
-      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "La proie n'était plus là : la flotte rentre.",
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s)${atWorkshop(res)}.` : "La proie n'était plus là : la flotte rentre.",
       createdAtMs: now,
       read: false,
       link: "/game/primes",
@@ -4844,6 +4869,25 @@ const CONTENT_MIGRATIONS = [
       }
       return touched;
     },
+  },
+  // 5.21 : Nanoréparation, Bastion, Batterie anti-essaim et Vaisseau-atelier ajoutés au contenu personnalisé.
+  {
+    id: "atelier-5.21-technologies",
+    key: "technologies",
+    patches: [],
+    appendFromDefaults: ["tech27", "tech28", "tech29", "tech30"],
+  },
+  {
+    id: "atelier-5.21-units",
+    key: "units",
+    patches: [],
+    appendFromDefaults: ["bastion", "batterie_essaim", "vaisseau_atelier"],
+  },
+  {
+    id: "atelier-5.21-relics",
+    key: "relics",
+    patches: [],
+    appendFromDefaults: ["cle_soudure"],
   },
 ];
 
@@ -7171,6 +7215,7 @@ function seasonBossArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  bossWear(txApp, game, owner, res, now);
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
@@ -7185,7 +7230,7 @@ function seasonBossArrival(txApp, game, rec, now) {
     {
       kind: "combat-attacker",
       title: res.killed ? `Coup de grâce sur ${fleet.targetPseudo} !` : `Assaut sur ${fleet.targetPseudo}`,
-      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "Le boss n'était plus là : la flotte rentre.",
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s)${atWorkshop(res)}.` : "Le boss n'était plus là : la flotte rentre.",
       createdAtMs: now,
       read: false,
     },
@@ -7467,6 +7512,7 @@ function allianceBossArrival(txApp, game, rec, now) {
   rec.set("returnAtMs", backAt);
   rec.set("outcome", res.killed ? "attacker_win" : "draw");
   txApp.save(rec);
+  bossWear(txApp, game, owner, res, now);
   if (res.damage > 0) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
@@ -7481,7 +7527,7 @@ function allianceBossArrival(txApp, game, rec, now) {
     {
       kind: "combat-attacker",
       title: res.killed ? `Coup de grâce sur ${fleet.targetPseudo} !` : `Assaut sur ${fleet.targetPseudo}`,
-      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s).` : "Le boss n'était plus là : la flotte rentre.",
+      message: res.damage > 0 ? `${game.formatInt(res.damage)} dégâts infligés, ${lost} vaisseau(x) perdu(s)${atWorkshop(res)}.` : "Le boss n'était plus là : la flotte rentre.",
       createdAtMs: now,
       read: false,
     },

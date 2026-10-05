@@ -1,5 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
-import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { applyHull, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
@@ -732,7 +732,7 @@ export function resolveEliteAssault(
   fleet: Record<string, number>,
   formation: string | undefined,
   now: number,
-): { state: EliteHunt; damage: number; survivors: Record<string, number>; lost: Record<string, number>; killed: boolean } {
+): { state: EliteHunt; damage: number; survivors: Record<string, number>; lost: Record<string, number>; recovered: Record<string, number>; hull: Record<string, number>; killed: boolean } {
   const fx = formationEffects(formation);
   const power = Math.round(
     computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage),
@@ -741,14 +741,8 @@ export function resolveEliteAssault(
   const damage = active ? Math.min(state.hp, power) : 0;
   const repair = withRepairBonus(getRepairPercent(player.buildings), player);
   const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
-  const survivors: Record<string, number> = {};
-  const lost: Record<string, number> = {};
-  for (const [id, qty] of Object.entries(fleet)) {
-    const raw = active ? Math.floor(qty * lossPct) : 0;
-    const gone = raw - Math.floor(raw * repair);
-    if (gone > 0) lost[id] = gone;
-    survivors[id] = qty - gone;
-  }
+  // 5.21 : unités sauvées à l'Atelier, dégâts conservés sur les survivantes.
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
   const c = state.contributions[player.uid] ?? { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
   const hp = state.hp - damage;
   const killed = active && hp <= 0;
@@ -763,6 +757,8 @@ export function resolveEliteAssault(
     damage,
     survivors,
     lost,
+    recovered,
+    hull,
     killed,
   };
 }

@@ -1,5 +1,12 @@
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { AmberAmount } from "@/components/ui/amber";
+import { askConfirm } from "@/components/ui/confirm-dialog";
+import { bountyState } from "@/game/bounties";
+import { GameActionError, rushWorkshop } from "@/services/playerService";
 import { Clock, Gauge, LifeBuoy, ShieldAlert, Wrench } from "lucide-react";
 import { Card, HudBrackets } from "@/components/ui/card";
 import { EmptyState, HUD_TONE, HudCallout, HudChip, HudMeter, HudTag, StatTile, type HudTone } from "@/components/ui/hud";
@@ -7,7 +14,7 @@ import { getRepairPercent } from "@/game/buildings";
 import { COMBAT_RULES } from "@/game/combat";
 import { withRepairBonus } from "@/game/modifiers";
 import { findUnit } from "@/game/units";
-import { WORKSHOP_SOURCE_LABELS, workshopView } from "@/game/workshop";
+import { WORKSHOP_SOURCE_LABELS, workshopRushCost, workshopSpeedBonus, workshopView } from "@/game/workshop";
 import { assetUrl } from "@/lib/assets";
 import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -49,6 +56,37 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
   const saved = withRepairBonus(getRepairPercent(player.buildings), player);
   const inRepair = view.jobs.reduce((s, j) => s + j.job.count, 0);
   const left = (ms: number | null) => (ms ? formatDuration(Math.max(0, Math.ceil((ms - now) / 1000))) : "—");
+  const amber = bountyState(player).amber;
+  const speed = workshopSpeedBonus(player);
+  const [busyRush, setBusyRush] = useState<string | null>(null);
+
+  // 5.21 : terminer un lot (ou toute la file) contre de l'Ambre.
+  async function rush(jobId?: string) {
+    const cost = workshopRushCost(player, jobId);
+    if (!cost.jobs.length) return;
+    const count = cost.jobs.reduce((s, j) => s + j.count, 0);
+    const ok = await askConfirm({
+      title: jobId ? "Terminer cette réparation ?" : "Terminer toute la file ?",
+      message: `${formatNumber(count)} unité${count > 1 ? "s" : ""} rentre${count > 1 ? "nt" : ""} au hangar tout de suite, au lieu de ${formatDuration(cost.seconds)}.`,
+      details: (
+        <span className="flex items-center gap-2 text-sm text-slate-300">
+          Coût : <AmberAmount value={cost.amber} className="font-mono text-slate-100" /> <span className="text-slate-500">(tu en as <span className="font-mono">{formatNumber(amber)}</span>)</span>
+        </span>
+      ),
+      confirmLabel: "Payer et terminer",
+      tone: "gold",
+    });
+    if (!ok) return;
+    setBusyRush(jobId ?? "all");
+    try {
+      await rushWorkshop(jobId);
+      toast.success("Réparations terminées : les unités sont au hangar.");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Impossible de terminer ces réparations pour le moment.");
+    } finally {
+      setBusyRush(null);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -76,7 +114,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
               )}
             </div>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-              <StatTile size="sm" tone="accent" icon={<Gauge className="h-4 w-4" />} label="Cadence" value={<span className="font-mono">{formatNumber(Math.round(view.rate))} PV/s</span>} sub={`+${Math.round(COMBAT_RULES.workshopLevelGain * 100)} % par niveau`} />
+              <StatTile size="sm" tone="accent" icon={<Gauge className="h-4 w-4" />} label="Cadence" value={<span className="font-mono">{formatNumber(Math.round(view.rate))} PV/s</span>} sub={speed > 0 ? `bonus de cadence +${Math.round(speed * 100)} %` : `+${Math.round(COMBAT_RULES.workshopLevelGain * 100)} % par niveau`} />
               <StatTile size="sm" tone="mint" icon={<LifeBuoy className="h-4 w-4" />} label="Unités sauvées" value={<span className="font-mono">{Math.round(saved * 100)} %</span>} sub="des unités détruites" />
               <StatTile size="sm" tone={inRepair > 0 ? "ember" : "neutral"} icon={<Wrench className="h-4 w-4" />} label="Immobilisées" value={<span className="font-mono">{formatNumber(inRepair)}</span>} sub={`${view.jobs.length} lot${view.jobs.length > 1 ? "s" : ""} en file`} />
               <StatTile size="sm" tone="neutral" icon={<Clock className="h-4 w-4" />} label="Tout réparé dans" value={<span className="font-mono">{left(view.doneAtMs)}</span>} />
@@ -88,7 +126,15 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
       <HudCallout tone="accent" className="text-xs text-slate-300">
         Après un combat, tes unités gardent leurs dégâts : une flotte abîmée tire moins et encaisse moins. Les unités détruites que l'Atelier sauve
         restent <strong className="text-slate-100">immobilisées</strong> (elles gardent leur place de hangar) jusqu'à ce que l'Atelier leur ait rendu tous leurs points de vie.
-        Il répare d'abord la file, dans l'ordre, puis les coques abîmées.{" "}
+        Il répare d'abord la file, dans l'ordre, puis les coques abîmées. Pour aller plus vite : la techno{" "}
+        <Link to="/game/labo" className="text-cyan-glow hover:underline">
+          Nanoréparation
+        </Link>
+        , le{" "}
+        <Link to="/game/etat-major" className="text-cyan-glow hover:underline">
+          Mécanicien
+        </Link>{" "}
+        en poste, la relique Clé de soudure, des Vaisseaux-ateliers à quai, ou l'Ambre pour terminer un lot.{" "}
         {view.level <= 0 && (
           <>
             Sans Atelier, tes équipages réparent seulement à {Math.round(COMBAT_RULES.workshopBaseFactor * 100)} % de la cadence de base.{" "}
@@ -100,7 +146,14 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
       </HudCallout>
 
       <section className="flex flex-col gap-2">
-        <h3 className="hud-eyebrow text-[11px] text-slate-400">File de réparation</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="hud-eyebrow text-[11px] text-slate-400">File de réparation</h3>
+          {view.jobs.length > 1 && (
+            <Button size="sm" variant="outline" disabled={!!busyRush || amber < workshopRushCost(player).amber} onClick={() => rush()}>
+              <Wrench className="h-3.5 w-3.5" /> Tout terminer · <AmberAmount value={workshopRushCost(player).amber} className="font-mono" />
+            </Button>
+          )}
+        </div>
         {view.jobs.length === 0 ? (
           <Card>
             <EmptyState icon={<Wrench className="h-5 w-5" />} title="Aucune unité immobilisée">
@@ -151,6 +204,11 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                         </span>
                         <span>prêtes dans {left(endsAtMs)}</span>
                       </p>
+                    </div>
+                    <div className="relative shrink-0">
+                      <Button size="sm" variant="outline" disabled={!!busyRush || amber < workshopRushCost(player, job.id).amber} onClick={() => rush(job.id)} title="Terminer ce lot tout de suite contre de l'Ambre">
+                        Terminer · <AmberAmount value={workshopRushCost(player, job.id).amber} className="font-mono" />
+                      </Button>
                     </div>
                   </motion.li>
                 );

@@ -25,6 +25,7 @@ import { HomePlanet, HomePlanetLegend } from "@/components/game/HomePlanet";
 import { PlanetPhotoMode } from "@/components/game/PlanetPhotoMode";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { ColoniesCard } from "@/components/game/ColoniesCard";
+import { WorkshopHomeCard } from "@/components/game/WorkshopHomeCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
@@ -130,6 +131,7 @@ export function DashboardPage() {
     ),
     colonies: <ColoniesCard />,
     fleets: <FleetsPanel hideWhenEmpty />,
+    workshop: <WorkshopHomeCard />,
     leviathan: <LeviathanBanner />,
     challenge: (
       <div className="flex flex-col gap-3">

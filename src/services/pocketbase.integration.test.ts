@@ -1090,6 +1090,51 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("5.21 Atelier: a boss assault sends saved ships to the workshop, damages hulls, and the workshop returns them", async () => {
+    const before = await snap(bId);
+    await admin.collection("players").update(bId, {
+      units: { chasseur: { level: 1, count: 100 } },
+      buildings: { ...before!.buildings, atelier_reparation: { level: 10, unlocked: true } },
+      workshop: null,
+      testMode: false,
+      resources: RICH,
+    });
+    const fleets: string[] = [];
+    try {
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } });
+      const sent = await ps.sendFleet("", { chasseur: 100 }, "leviathan");
+      fleets.push(sent.id);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await pb.collection("fleets").getOne(sent.id);
+      const survivors = landed.units.chasseur ?? 0;
+      const after = await snap(bId);
+      const jobs = (after.workshop?.jobs ?? []) as { unitId: string; count: number; source: string; hpLeft: number }[];
+      const saved = jobs.filter((j) => j.unitId === "chasseur").reduce((a, j) => a + j.count, 0);
+      // Pertes réparties : rentrent, à l'Atelier, ou détruites ; rien ne rentre deux fois.
+      expect(saved).toBeGreaterThan(0);
+      expect(jobs.every((j) => j.source === "boss")).toBe(true);
+      expect(survivors + saved).toBeLessThan(100);
+      expect(after.workshop.hull.chasseur).toBeGreaterThan(0);
+      // 5.21 : sans Ambre, impossible de terminer tout de suite ; avec, les unités rentrent.
+      await admin.collection("players").update(bId, { bounties: { ...(after.bounties ?? {}), amber: 0 } });
+      await expect(ps.rushWorkshop()).rejects.toThrow(/Ambre/);
+      await admin.collection("players").update(bId, { bounties: { ...(after.bounties ?? {}), amber: 500 } });
+      const rushed = await ps.rushWorkshop();
+      expect(rushed.units.chasseur).toBe(saved);
+      const repaired = await snap(bId);
+      expect(repaired.workshop?.jobs ?? []).toHaveLength(0);
+      expect(repaired.units.chasseur.count).toBe(after.units.chasseur.count + saved);
+      expect(repaired.bounties.amber).toBe(500 - rushed.amber);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      await admin.collection("players").update(bId, { units: before!.units, buildings: before!.buildings, resources: before!.resources, bounties: before!.bounties ?? null, workshop: null, testMode: before!.testMode ?? false });
+    }
+  }, 60_000);
+
   it("v3.4 ascension: resets buildings and resources, keeps the fleet, public stars and shield", async () => {
     const before = await snap(bId);
     // Bâtiments de fin de partie (v3.6) laissés de côté : hors condition, conservés.

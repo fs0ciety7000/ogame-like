@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
@@ -164,6 +165,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
           </div>
         </div>
         {/* 5.20 : estimation par le combat en tours ; le lancement reste toujours possible. */}
+        <HullWarning player={player} fleet={selected} />
         {target.targetPower !== null && <PveFightEstimate player={player} fleet={selected} enemyPower={target.targetPower} formation={formation} enemyLabel="le fugitif" />}
         <Button className="mt-3 w-full" disabled={busy || Object.keys(selected).length === 0} onClick={() => void send()}>
           <Crosshair className="mr-1.5 h-4 w-4" /> Lancer la traque
@@ -343,7 +345,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
   const launch = () =>
     onHunt({
       title: `Proie d'élite : ${f.name}`,
-      intro: `Les dégâts valent la puissance d'attaque de ta flotte. ${Math.round(ELITE_RULES.lossPct * 100)} % des vaisseaux sont perdus (en partie réparés par l'Atelier). Trajet de ${ELITE_RULES.flightMinutes} min, puis retour.`,
+      intro: `Les dégâts valent la puissance d'attaque de ta flotte. ${Math.round(ELITE_RULES.lossPct * 100)} % des vaisseaux sont perdus : ceux que l'Atelier sauve y restent le temps de la réparation, et les survivants rentrent abîmés. Trajet de ${ELITE_RULES.flightMinutes} min, puis retour.`,
       targetPower: null,
       minutes: ELITE_RULES.flightMinutes,
       send: (fleet, formation) => sendEliteAssault(fleet, formation),

@@ -1,6 +1,7 @@
 import { COMBAT_RULES } from "@/game/combat";
 import type { BattleReport } from "@/types/game";
 import type { LiveBalance } from "@/game/balance/diagnostics";
+import { combatTypeCounts, isPvpReport, type CombatKind } from "@/game/balance/combatTypes";
 
 /* =====================================================
    v5.5 : historique d'équilibrage. Une photo par jour (tâche du serveur)
@@ -34,10 +35,11 @@ export interface BalanceSnapshot {
   bestAttack: number;
   topWarlord: number;
   homeDefenseBonus: number;
+  /** 5.21 : combats du jour par type : [combats, victoires du joueur]. */
+  kinds?: Partial<Record<CombatKind, [number, number]>>;
 }
 
 type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
-const isNpc = (uid?: string) => !!uid && (uid.startsWith("npc") || uid === "pirates" || uid.startsWith("lair_"));
 
 function median(xs: number[]): number {
   if (xs.length === 0) return 0;
@@ -49,7 +51,7 @@ function median(xs: number[]): number {
 /** Photo du jour à partir des données réelles et des combats des dernières 24 h. */
 export function balanceSnapshot(live: LiveBalance, reports: Report[], now: number): BalanceSnapshot {
   const day = reports.filter((r) => r.timestamp >= now - 86_400_000 && r.timestamp <= now);
-  const pvp = day.filter((r) => !isNpc(r.attackerUid) && !isNpc(r.defenderUid));
+  const pvp = day.filter(isPvpReport);
   const wl = day.filter((r) => r.attackerUid?.startsWith("npc") || r.defenderUid?.startsWith("npc"));
   const wins = (xs: Report[]) => xs.filter((r) => r.outcome === "attacker_win").length;
   const hangars = live.players.filter((p) => p.attackPlaces > 0).map((p) => p.attackPlacesUsed / p.attackPlaces);
@@ -70,6 +72,7 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
     bestAttack: live.bestAttack,
     topWarlord: live.warlords[0]?.power ?? 0,
     homeDefenseBonus: COMBAT_RULES.homeDefenseBonus,
+    kinds: combatTypeCounts(reports, now - 86_400_000, now),
   };
 }
 

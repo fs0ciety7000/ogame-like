@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BalanceSnapshot } from "@/game/balance/history";
 import { PVP_ATTACK_HIGH, PVP_ATTACK_LOW } from "@/game/balance/diagnostics";
+import { COMBAT_KINDS, type CombatKind } from "@/game/balance/combatTypes";
 import { adminBalanceSnapshot } from "@/services/adminService";
 import { formatCompact } from "@/lib/utils";
 
@@ -54,6 +55,15 @@ export function buildSeries(h: BalanceSnapshot[]): Series[] {
       }),
       band: [55, 80],
     },
+    // 5.21 : victoires du joueur par type de combat (photos depuis la 5.21).
+    ...(["bounty", "lair", "warlord"] as CombatKind[]).map((k) => ({
+      id: `kind-${k}`,
+      title: `${COMBAT_KINDS[k].label} : victoires`,
+      hint: `7 jours glissants, au moins 5 combats ; zone cible ${COMBAT_KINDS[k].target[0]}–${COMBAT_KINDS[k].target[1]} %`,
+      unit: "%" as const,
+      points: h.map((_, i) => rolling(h, i, 7, (s) => s.kinds?.[k]?.[1] ?? 0, (s) => s.kinds?.[k]?.[0] ?? 0, 5)),
+      band: COMBAT_KINDS[k].target,
+    })),
     { id: "lairs", title: "Repaires pris (cumul)", hint: "joueurs actifs", unit: "", points: h.map((s) => s.lairsTaken), floor0: true },
     { id: "hangar", title: "Hangars d'attaque remplis (moyenne)", hint: "100 % = hangars pleins", unit: "%", points: h.map((s) => s.avgHangarAttack * 100), ref: 100, floor0: true },
     { id: "prod", title: "Production médiane par heure", hint: "toutes ressources, joueurs actifs", unit: "", points: h.map((s) => s.medianProduction), floor0: true },

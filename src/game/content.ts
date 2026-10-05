@@ -380,6 +380,16 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
     if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label} entre 0 et 1.`);
   }
   if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
+  // 5.20 : Atelier et dégâts conservés.
+  if (!(cb.hullDamageShare >= 0 && cb.hullDamageShare <= 0.9)) errors.push("Combat : part des dégâts conservés entre 0 et 0,9.");
+  if (!(cb.hullMaxDamage >= 0.1 && cb.hullMaxDamage <= 0.99)) errors.push("Combat : usure maximale entre 0,1 et 0,99.");
+  if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
+  if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
+  if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
+  if (!(cb.classEdge >= 0 && cb.classEdge <= 0.9)) errors.push("Combat : avantage de classe entre 0 et 0,9.");
+  if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
+  if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
+  if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : réparation horaire des seigneurs entre 0 et 1.");
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;

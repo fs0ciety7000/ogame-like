@@ -1,4 +1,5 @@
 import { targetsPlayer } from "@/game/fleets";
+import { workshopView } from "@/game/workshop";
 import { findBuilding } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
@@ -12,7 +13,7 @@ import type { Fleet } from "@/game/fleets";
    date de fin.
 ===================================================== */
 
-export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony";
+export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony" | "repair";
 
 export interface TimelineEvent {
   id: string;
@@ -32,6 +33,13 @@ export function upcomingEvents(
   empire?: Pick<PlayerState, "colonies" | "colonizing"> | null,
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
+  // 5.21 : unités immobilisées à l'Atelier de réparation (retour au hangar).
+  const full = empire as PlayerState | null | undefined;
+  if (full?.workshop?.jobs?.length && full.units) {
+    for (const { job, endsAtMs } of workshopView(full, now).jobs) {
+      events.push({ id: `w:${job.id}`, kind: "repair", label: `Atelier : ${job.count} ${findUnit(job.unitId)?.name ?? job.unitId}`, endTime: endsAtMs, to: "/game/batiments?onglet=atelier" });
+    }
+  }
   for (const c of empire?.colonies ?? []) {
     if (c.building) events.push({ id: `cb:${c.id}`, kind: "colony", label: `${c.name} : ${findBuilding(c.building.id)?.name ?? c.building.id} niv. ${c.building.level}`, endTime: c.building.endTime, to: "/game/colonies" });
     if (c.defenseJob) events.push({ id: `cd:${c.id}`, kind: "colony", label: `${c.name} : ${c.defenseJob.qty} ${findUnit(c.defenseJob.unitId)?.name ?? c.defenseJob.unitId}`, endTime: c.defenseJob.endTime, to: "/game/colonies" });
