@@ -35,7 +35,7 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof Clock; label: s
       <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">
         <Icon className="h-3 w-3" style={{ color: tone }} /> {label}
       </span>
-      <span className="truncate font-display text-base tabular-nums text-white">{value}</span>
+      <span className="truncate font-display text-base tabular-nums text-slate-100">{value}</span>
     </div>
   );
 }
@@ -154,13 +154,13 @@ export function BossRecapBody({ state, uid, name, image, accent = "var(--color-e
             <p className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: tone }}>
               {recap.won ? "Victoire" : "Il s'est retiré"}
             </p>
-            <p className="hud-title truncate text-lg text-white">{recap.won ? `${name} est tombé` : `${name} a survécu`}</p>
+            <p className="hud-title truncate text-lg text-slate-100">{recap.won ? `${name} est tombé` : `${name} a survécu`}</p>
             <p className="text-xs text-slate-400">
               {recap.won ? "Les commandants ont abattu le colosse." : `Structure entamée à ${Math.round(recap.hpDealtPct * 100)} %. Moitié des récompenses.`}
             </p>
             {recap.won && state.killedBy && (
               <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-300">
-                <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-white" />
+                <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-slate-100" />
               </p>
             )}
           </div>
@@ -196,11 +196,11 @@ export function BossRecapBody({ state, uid, name, image, accent = "var(--color-e
         {recap.mine ? (
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-slate-300">
             <span>
-              Rang <strong className="font-display text-lg text-white">#{recap.mine.rank}</strong>
+              Rang <strong className="font-display text-lg text-slate-100">#{recap.mine.rank}</strong>
               <span className="text-slate-500"> / {recap.participants}</span>
             </span>
             <span>
-              <strong className="text-white">{formatCompact(recap.mine.damage)}</strong> dégâts ({Math.round(recap.mine.share * 1000) / 10} %)
+              <strong className="text-slate-100">{formatCompact(recap.mine.damage)}</strong> dégâts ({Math.round(recap.mine.share * 1000) / 10} %)
             </span>
             <span>
               {recap.mine.assaults} assaut{recap.mine.assaults > 1 ? "s" : ""}

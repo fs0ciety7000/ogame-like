@@ -80,7 +80,7 @@ function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: s
   return (
     <p className="flex flex-wrap items-baseline gap-x-2">
       <span className="text-slate-400">{label}</span>
-      <span className="font-mono text-white">{value}</span>
+      <span className="font-mono text-slate-100">{value}</span>
       {hint && <span className="text-xs text-slate-500">{hint}</span>}
     </p>
   );
@@ -89,7 +89,7 @@ function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: s
 function Block({ id, title, icon: Icon, intro, children }: { id: string; title: string; icon: typeof Factory; intro: string; children: ReactNode }) {
   return (
     <section id={`f-${id}`} className="scroll-mt-24 border border-white/10 bg-space-900/40 p-4 sm:p-5">
-      <h2 className="hud-title mb-1 flex items-center gap-2 text-lg text-white">
+      <h2 className="hud-title mb-1 flex items-center gap-2 text-lg text-slate-100">
         <Icon className="h-5 w-5 text-cyan-glow" /> {title}
       </h2>
       <p className="mb-3 text-sm text-slate-300">{intro}</p>
@@ -207,7 +207,7 @@ export function FormulasGuide({ player }: { player: PlayerState | null }) {
     <div className="flex flex-col gap-4">
       <nav className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-white/10 bg-space-950/90 px-1 py-2 backdrop-blur">
         {FORMULA_SECTIONS.map((s) => (
-          <a key={s.id} href={`#f-${s.id}`} className="flex shrink-0 items-center gap-1 border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-cyan-glow/60 hover:text-white">
+          <a key={s.id} href={`#f-${s.id}`} className="flex shrink-0 items-center gap-1 border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-cyan-glow/60 hover:text-slate-100">
             <s.icon className="h-3.5 w-3.5" /> {s.label}
           </a>
         ))}

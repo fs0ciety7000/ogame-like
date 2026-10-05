@@ -50,7 +50,7 @@ export function ChroniclesCard() {
             <p className="hud-eyebrow flex items-center gap-1.5 text-[10px]" style={{ color: month.theme.accent }}>
               <BookOpen className="h-3.5 w-3.5" /> Chroniques · {month.theme.label}
             </p>
-            <h2 className="hud-title text-xl text-white">{month.title}</h2>
+            <h2 className="hud-title text-xl text-slate-100">{month.title}</h2>
           </div>
           {boss && (
             <Link to="/game/boss" className="ml-auto flex items-center gap-1.5 border border-white/15 bg-space-950/80 px-2.5 py-1 text-xs text-slate-200 hover:border-white/40">
@@ -78,12 +78,12 @@ export function ChroniclesCard() {
                 {done && <Check className="h-3.5 w-3.5 text-mint-glow" />}
                 {locked && <Lock className="h-3.5 w-3.5 text-slate-500" />}
                 {!locked && (
-                  <button type="button" title="Revoir la scène" className="ml-auto text-slate-500 hover:text-white" onClick={() => setReplay(i)}>
+                  <button type="button" title="Revoir la scène" className="ml-auto text-slate-500 hover:text-slate-100" onClick={() => setReplay(i)}>
                     <Play className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
-              <p className="text-sm text-white">{e.title}</p>
+              <p className="text-sm text-slate-100">{e.title}</p>
               {locked ? (
                 <p className="text-xs text-slate-500">S'ouvre le {fmtDay(episodeUnlockMs(month.id, i))}.</p>
               ) : (
@@ -116,7 +116,7 @@ export function ChroniclesCard() {
           <Trophy className="h-4 w-4 shrink-0" style={{ color: month.theme.accent }} />
           <span className="min-w-0 flex-1">
             {st.chapters.includes(month.id) ? "Chapitre terminé : " : "Termine les quatre épisodes : "}
-            titre « <span className="text-white">{month.completion.title}</span> », bannière de profil
+            titre « <span className="text-slate-100">{month.completion.title}</span> », bannière de profil
             {month.completion.rewards.length > 0 && <>, {month.completion.rewards.map((r) => describePassReward(r, month.id)).join(", ")}</>}.
           </span>
         </div>

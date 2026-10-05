@@ -42,7 +42,7 @@ export function ChangelogPage() {
                     v{entry.version}
                   </span>
                 )}
-                <h2 className="font-display text-base text-white">{entry.title}</h2>
+                <h2 className="font-display text-base text-slate-100">{entry.title}</h2>
                 {isUnread(entry.id, seenAtOpen) && <Badge variant="success">Nouveau</Badge>}
                 <span className="ml-auto text-xs text-slate-500">
                   {entry.iteration !== null && <>Itération {entry.iteration} · </>}

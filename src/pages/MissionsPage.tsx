@@ -69,11 +69,11 @@ export function MissionsPage() {
                     active ? "bg-gradient-to-b from-mint-glow/40 to-mint-glow/5" : hasReq ? "bg-gradient-to-b from-cyan-glow/40 to-cyan-glow/5" : "bg-white/[0.06] grayscale",
                   )}
                 >
-                  <GameIcon name={missionIcon(mission.key, rewards)} className="h-9 w-9 drop-shadow-[0_2px_4px_rgba(0,0,0,.6)]" />
+                  <GameIcon name={missionIcon(mission.key, rewards)} className="h-9 w-9 drop-shadow-[0_2px_4px_color-mix(in_srgb,var(--color-space-950)_60%,transparent)]" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="hud-title text-[17px] text-white">{mission.name}</h3>
+                    <h3 className="hud-title text-[17px] text-slate-100">{mission.name}</h3>
                     {active ? (
                       <span className="shrink-0 font-mono text-[11px] tracking-[0.1em] text-mint-glow">● {formatClock(Math.max(0, Math.floor((active.endTime - now) / 1000)))}</span>
                     ) : (
@@ -103,7 +103,7 @@ export function MissionsPage() {
                       .filter(([k]) => k !== "xp")
                       .map(([res, amount]) => (
                         <span key={res} className="flex items-baseline gap-1">
-                          <b className="hud-title text-xl text-white">+{formatNumber(amount)}</b>
+                          <b className="hud-title text-xl text-slate-100">+{formatNumber(amount)}</b>
                           <ResourceIcon id={res} className="h-6 w-6 self-center" />
                         </span>
                       ))}

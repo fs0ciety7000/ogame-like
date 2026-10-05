@@ -68,7 +68,7 @@ export function AllianceWeekTab({ alliance, onOpen }: { alliance: Alliance; onOp
         ) : (
           <>
             <p className="text-xs text-slate-400">{def.hint}</p>
-            <p className="font-display text-2xl tabular-nums text-white">{mine ? `${rank + 1}e` : "pas encore classée"}</p>
+            <p className="font-display text-2xl tabular-nums text-slate-100">{mine ? `${rank + 1}e` : "pas encore classée"}</p>
             {mine && (
               <p className="font-mono text-xs text-slate-400">
                 {formatNumber(mine.score)} points · {mine.contributors} membre{mine.contributors > 1 ? "s" : ""} ont progressé

@@ -111,7 +111,7 @@ export function GazettePage() {
                 </HudChip>
               </span>
             </div>
-            <h2 className="hud-title text-2xl leading-tight text-white normal-case sm:text-4xl">{issue.headline}</h2>
+            <h2 className="hud-title text-2xl leading-tight text-slate-100 normal-case sm:text-4xl">{issue.headline}</h2>
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
               {issue.sections.filter((s) => s.kind !== "agenda").length} rubrique{issue.sections.length > 1 ? "s" : ""} · prochain numéro {nextLabel}
             </p>

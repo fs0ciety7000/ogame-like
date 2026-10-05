@@ -265,7 +265,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
           )}
 
           <div className="mt-4 border-t border-white/5 pt-3">
-            <h3 className="mb-2 font-display text-sm text-white">Dernier rapport</h3>
+            <h3 className="mb-2 font-display text-sm text-slate-100">Dernier rapport</h3>
             {loadingReport && !report ? (
               <SkeletonList rows={2} />
             ) : report ? (

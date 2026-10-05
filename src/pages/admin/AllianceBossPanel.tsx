@@ -61,7 +61,7 @@ export function AllianceBossPanel() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Shield className="h-4 w-4 text-mint-glow" />
-        <h2 className="hud-title text-sm text-white">Boss d'alliance</h2>
+        <h2 className="hud-title text-sm text-slate-100">Boss d'alliance</h2>
         {anyDirty && (
           <HudChip size="sm" tone="ember">
             Modifications non enregistrées

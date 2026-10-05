@@ -53,7 +53,7 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="flex items-center gap-2 font-display text-sm text-white">
+      <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
         <Trophy className="h-4 w-4 text-gold-glow" /> Classement des alliances
       </h3>
       <p className="text-[11px] text-slate-500">

@@ -39,7 +39,7 @@ export function ColoniesCard() {
           return (
             <Link key={c.id} to="/game/colonies" className="hud-cut-sm flex flex-col gap-1.5 border border-white/[0.07] bg-white/[0.02] p-3 transition-colors hover:border-violet-glow/40">
               <div className="flex items-baseline gap-2">
-                <span className="truncate font-display text-sm font-semibold text-white">{c.name}</span>
+                <span className="truncate font-display text-sm font-semibold text-slate-100">{c.name}</span>
                 <span className="truncate text-[10px]" style={{ color: BIOMES[colonyBiome(c)].tone }}>{BIOMES[colonyBiome(c)].name}</span>
                 <span className="ml-auto inline-flex items-center gap-1 font-mono text-[11px] text-mint-glow">
                   <TrendingUp className="h-3 w-3" /> +{formatPerSecond(hourly)}

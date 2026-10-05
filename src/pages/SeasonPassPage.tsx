@@ -263,7 +263,7 @@ function FinalReward({ season, def, reached, claimed }: { season: PassSeason; de
         <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
         <div className="min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
-          <h3 className="hud-title mt-1 text-lg text-white">
+          <h3 className="hud-title mt-1 text-lg text-slate-100">
             {def.title} {def.name}
           </h3>
           <p className="mt-1 text-sm text-slate-300">{def.bonus(1)} (au niveau 1, jusqu'au niveau 20).</p>

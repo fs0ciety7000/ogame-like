@@ -187,10 +187,10 @@ function PlanetOrb({ tone = "var(--color-mint-glow)", size = 64, dim = false, sp
       <span aria-hidden className="absolute inset-[-18%] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--orb)_28%,transparent)_0%,transparent_65%)]" />
       <span
         aria-hidden
-        className={cn("absolute inset-0 rounded-full shadow-[inset_-8px_-10px_18px_rgba(0,0,0,0.65),0_0_18px_color-mix(in_srgb,var(--orb)_35%,transparent)]", spin && "motion-safe:animate-[spin_60s_linear_infinite]")}
+        className={cn("absolute inset-0 rounded-full shadow-[inset_-8px_-10px_18px_color-mix(in_srgb,var(--color-space-950)_65%,transparent),0_0_18px_color-mix(in_srgb,var(--orb)_35%,transparent)]", spin && "motion-safe:animate-[spin_60s_linear_infinite]")}
         style={{
           background:
-            "radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--orb) 85%, white) 0%, var(--orb) 22%, color-mix(in srgb, var(--orb) 45%, var(--color-space-950)) 58%, var(--color-space-950) 100%), repeating-linear-gradient(115deg, transparent 0 7px, rgba(255,255,255,0.06) 7px 9px)",
+            "radial-gradient(circle at 32% 30%, color-mix(in srgb, var(--orb) 85%, white) 0%, var(--orb) 22%, color-mix(in srgb, var(--orb) 45%, var(--color-space-950)) 58%, var(--color-space-950) 100%), repeating-linear-gradient(115deg, transparent 0 7px, color-mix(in srgb,var(--color-slate-100) 6%,transparent) 7px 9px)",
           backgroundBlendMode: "screen",
         }}
       />
@@ -487,7 +487,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           </p>
           {rename === null ? (
             <button type="button" className="group/n flex items-center gap-2 text-left" title="Renommer" onClick={() => setRename(colony.name)}>
-              <span className="font-display text-xl font-bold tracking-[0.04em] text-white">{colony.name}</span>
+              <span className="font-display text-xl font-bold tracking-[0.04em] text-slate-100">{colony.name}</span>
               <Pencil className="h-3.5 w-3.5 text-slate-600 transition-colors group-hover/n:text-cyan-glow" />
             </button>
           ) : (
@@ -724,7 +724,7 @@ function FoundColony({ player }: { player: PlayerState }) {
         <PlanetOrb size={64} tone="var(--color-cyan-glow)" dim={!ready || !affordable} />
         <div className="min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px] text-cyan-glow">Expansion · emplacement {next.slot} / {COLONY_RULES.maxColonies}</p>
-          <h2 className="font-display text-xl font-bold tracking-[0.04em] text-white">Fonder la colonie {next.slot}</h2>
+          <h2 className="font-display text-xl font-bold tracking-[0.04em] text-slate-100">Fonder la colonie {next.slot}</h2>
           <p className="mt-1 max-w-2xl text-xs text-slate-400">
             Un vaisseau colonial part de ta planète mère et fonde la colonie en {COLONY_RULES.foundHours} h. Elle démarre avec {formatCompact(COLONY_RULES.startStock)} de chaque ressource commune. Ses
             extracteurs et son entrepôt démarrent à la moitié du niveau de ceux de ta planète mère (niveau {COLONY_RULES.foundationMax} au plus), et ses terres neuves produisent{" "}
@@ -784,7 +784,7 @@ function SlotStrip({ player }: { player: PlayerState }) {
         <PlanetOrb size={44} tone="var(--color-cyan-glow)" />
         <div className="min-w-0">
           <p className="hud-eyebrow text-[9px] text-cyan-glow">Planète mère</p>
-          <p className="truncate font-display text-sm font-semibold text-white">{player.pseudo}</p>
+          <p className="truncate font-display text-sm font-semibold text-slate-100">{player.pseudo}</p>
           <p className="font-mono text-[10px] text-slate-500">{levels} niveaux de bâtiments</p>
         </div>
       </div>
@@ -803,7 +803,7 @@ function SlotStrip({ player }: { player: PlayerState }) {
               <p className="hud-eyebrow text-[9px] text-slate-500">Emplacement {slot}</p>
               {colony ? (
                 <>
-                  <p className="truncate font-display text-sm font-semibold text-white">{colony.name}</p>
+                  <p className="truncate font-display text-sm font-semibold text-slate-100">{colony.name}</p>
                   <p className="font-mono text-[10px] text-mint-glow">opérationnelle</p>
                 </>
               ) : flying ? (

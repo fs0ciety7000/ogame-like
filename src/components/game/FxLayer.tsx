@@ -23,7 +23,7 @@ function Flight({ flight }: { flight: ResourceFlight }) {
   const midY = Math.min(from.y, to.y) - 60;
   return (
     <motion.div
-      className="pointer-events-none fixed left-0 top-0 z-[80] flex items-center gap-1 whitespace-nowrap text-base font-semibold text-mint-glow drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]"
+      className="pointer-events-none fixed left-0 top-0 z-[80] flex items-center gap-1 whitespace-nowrap text-base font-semibold text-mint-glow drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-space-950)_80%,transparent)]"
       initial={{ x: from.x, y: from.y, scale: 0.6, opacity: 0 }}
       animate={{ x: [from.x, midX, to.x], y: [from.y, midY, to.y], scale: [0.6, 1.35, 0.7], opacity: [0, 1, 0.9] }}
       transition={{ duration: 1.25, delay: flight.delay, ease: "easeInOut", times: [0, 0.4, 1] }}

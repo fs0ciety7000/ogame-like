@@ -93,7 +93,7 @@ export function ConfirmHost() {
               <Icon className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <DialogTitle className="hud-title text-base text-white">{view.title}</DialogTitle>
+              <DialogTitle className="hud-title text-base text-slate-100">{view.title}</DialogTitle>
               {view.message ? (
                 <DialogDescription className="mt-2 leading-relaxed text-slate-300">{view.message}</DialogDescription>
               ) : (

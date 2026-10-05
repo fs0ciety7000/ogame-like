@@ -51,7 +51,7 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-2 border-b border-white/10 pb-2">
         <span className="font-mono text-[10px] tracking-[0.2em] text-cyan-glow">{unitDesignation(unit)}</span>
-        <DialogTitle className="hud-title text-xl text-white">{unit.name}</DialogTitle>
+        <DialogTitle className="hud-title text-xl text-slate-100">{unit.name}</DialogTitle>
         <span className="ml-auto flex flex-wrap gap-1.5">
           <HudChip size="sm" tone={unit.category === "attack" ? "danger" : "accent"}>
             {unit.category === "attack" ? "Attaque" : "Défense"}

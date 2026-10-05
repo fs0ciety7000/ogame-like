@@ -40,7 +40,7 @@ export function ChoosePseudoScreen() {
           </span>
           <div>
             <p className="hud-eyebrow text-cyan-glow">Dernière étape</p>
-            <h1 className="font-display text-xl text-white">Choisis ton pseudo</h1>
+            <h1 className="font-display text-xl text-slate-100">Choisis ton pseudo</h1>
           </div>
         </div>
         <p className="text-sm text-slate-400">C'est le nom que les autres commandants verront au classement, dans les alliances et les rapports de combat.</p>

@@ -68,12 +68,12 @@ export function RaidAlert() {
               animate={{ scale: 1, y: 0 }}
               className="hud-cut relative w-full max-w-md border border-danger-glow/60 bg-space-900/95 p-6 text-center shadow-[0_0_60px_-10px_var(--color-danger-glow)]"
             >
-              <button type="button" onClick={close} className="absolute right-3 top-3 text-slate-500 hover:text-white" aria-label="Fermer">
+              <button type="button" onClick={close} className="absolute right-3 top-3 text-slate-500 hover:text-slate-100" aria-label="Fermer">
                 <X className="h-4 w-4" />
               </button>
               <AlertTriangle className="mx-auto h-10 w-10 animate-pulse text-danger-glow" />
               <p className="hud-eyebrow mt-3 text-[11px] text-danger-glow">Attaque imminente</p>
-              <p className="mt-1 font-display text-lg text-white">
+              <p className="mt-1 font-display text-lg text-slate-100">
                 {next.mission === "pirate" ? `Raid : ${next.ownerPseudo}` : `${next.ownerPseudo} attaque`}
                 {next.targetOwnerUid ? ` ta colonie ${next.targetPseudo}` : ""}
               </p>

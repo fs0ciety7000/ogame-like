@@ -18,7 +18,7 @@ export function GoogleMark({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
-const btn = "flex h-10 w-full items-center justify-center gap-2 border border-white/10 bg-white/[0.03] text-sm font-medium text-slate-200 transition hover:border-cyan-glow/50 hover:text-white disabled:opacity-50";
+const btn = "flex h-10 w-full items-center justify-center gap-2 border border-white/10 bg-white/[0.03] text-sm font-medium text-slate-200 transition hover:border-cyan-glow/50 hover:text-slate-100 disabled:opacity-50";
 
 export function AltSignIn({ onNeedsPseudo }: { onNeedsPseudo?: () => void }) {
   const [providers, setProviders] = useState<OAuthProviderId[]>([]);

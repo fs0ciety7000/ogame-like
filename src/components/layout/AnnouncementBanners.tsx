@@ -19,7 +19,7 @@ export function BannerText({ text, className }: { text: string; className?: stri
   return (
     <span className={className}>
       {parseBannerText(text).map((t, i) => {
-        if (t.type === "bold") return <strong key={i} className="font-semibold text-white">{t.text}</strong>;
+        if (t.type === "bold") return <strong key={i} className="font-semibold text-slate-100">{t.text}</strong>;
         if (t.type === "link") {
           const cls = "font-semibold text-[var(--banner-color)] underline decoration-dotted underline-offset-4 hover:decoration-solid";
           return t.internal ? (
@@ -69,7 +69,7 @@ export function BannerStrip({ banner, onDismiss }: { banner: Banner; onDismiss?:
         )}
       </div>
       {onDismiss && banner.dismissible && (
-        <button type="button" onClick={onDismiss} aria-label="Masquer cette annonce" className="shrink-0 px-3 text-slate-400 transition-colors hover:text-white">
+        <button type="button" onClick={onDismiss} aria-label="Masquer cette annonce" className="shrink-0 px-3 text-slate-400 transition-colors hover:text-slate-100">
           <X className="h-4 w-4" />
         </button>
       )}

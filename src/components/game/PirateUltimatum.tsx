@@ -102,7 +102,7 @@ export function UltimatumDialog() {
           </div>
           <div className="flex flex-col gap-3 p-5">
             <p className={cn("hud-eyebrow", a.text)}>{faction.name} · Transmission entrante</p>
-            <DialogTitle className="font-display text-xl text-white">{faction.ultimatum.title}</DialogTitle>
+            <DialogTitle className="font-display text-xl text-slate-100">{faction.ultimatum.title}</DialogTitle>
             <p className="text-sm italic text-slate-300">« {faction.ultimatum.quote.replace(/\{pseudo\}/g, player.pseudo)} »</p>
             <p className="text-right text-xs text-slate-500">— {faction.ultimatum.signature}</p>
             <div className={cn("hud-callout p-3", `hud-tone-${factionTone(faction.color)}`)}>

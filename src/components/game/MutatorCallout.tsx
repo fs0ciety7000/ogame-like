@@ -23,7 +23,7 @@ export function MutatorCallout({ className, compact }: { className?: string; com
       </span>
       <div className="min-w-0 flex-1">
         <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-violet-glow">Mutateur de {MONTHS[mo - 1]}</p>
-        <p className="hud-title text-sm normal-case text-white">{m.name}</p>
+        <p className="hud-title text-sm normal-case text-slate-100">{m.name}</p>
         <p className="text-xs text-slate-300">{m.description}</p>
         {!compact && next && (
           <p className="mt-1 text-[11px] text-slate-500">

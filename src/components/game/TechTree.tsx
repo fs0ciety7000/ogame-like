@@ -121,7 +121,7 @@ const TechNode = memo(function TechNode({ data }: NodeProps<TechFlowNode>) {
       <Handle type="target" position={Position.Left} className="!pointer-events-none !opacity-0" />
       <div className="relative flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="absolute inset-0 -rotate-90">
-          <circle cx={size / 2} cy={size / 2} r={radius} stroke="rgba(255,255,255,0.08)" strokeWidth={3} fill="none" />
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke="color-mix(in srgb,var(--color-slate-100) 8%,transparent)" strokeWidth={3} fill="none" />
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -314,7 +314,7 @@ export function TechTree({
           onNodeMouseLeave={() => setHoveredId(null)}
           style={{ background: "transparent" }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(75,232,255,0.12)" bgColor="transparent" />
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="color-mix(in srgb,var(--color-cyan-glow) 12%,transparent)" bgColor="transparent" />
           <Controls showInteractive={false} position="bottom-left" />
           {onToggleFullscreen && (
             <Panel position="top-left">

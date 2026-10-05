@@ -160,7 +160,7 @@ export function ChroniclesPage() {
             {pastChapters.map((m) => (
               <li key={m.id} className="hud-cut-sm flex items-center gap-3 border border-white/10 p-2.5" style={{ borderLeft: `2px solid ${m.theme.accent}` }}>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-display text-sm text-white">{m.title}</span>
+                  <span className="block truncate font-display text-sm text-slate-100">{m.title}</span>
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">{m.id}</span>
                 </span>
                 {m.completion?.title && <span className="truncate text-xs text-gold-glow">« {m.completion.title} »</span>}

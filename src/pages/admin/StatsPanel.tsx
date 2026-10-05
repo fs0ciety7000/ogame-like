@@ -15,7 +15,7 @@ function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: 
   return (
     <Card className="p-4">
       <p className="hud-eyebrow text-slate-500">{label}</p>
-      <p className="mt-1 font-display text-2xl text-white">{value}</p>
+      <p className="mt-1 font-display text-2xl text-slate-100">{value}</p>
       {hint && <p className="mt-0.5 text-[11px] text-slate-500">{hint}</p>}
     </Card>
   );
@@ -24,7 +24,7 @@ function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: 
 function Panel({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
     <Card className={`flex flex-col gap-3 p-4 ${className ?? ""}`}>
-      <h3 className="hud-title text-sm text-white">{title}</h3>
+      <h3 className="hud-title text-sm text-slate-100">{title}</h3>
       {children}
     </Card>
   );
@@ -85,7 +85,7 @@ export function StatsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Statistiques</h2>
+        <h2 className="font-display text-base text-slate-100">Statistiques</h2>
         <span className="text-[11px] text-slate-500">calculées le {new Date(stats.generatedAt).toLocaleString("fr-FR")}</span>
         <Button variant="outline" size="sm" className="ml-auto" disabled={loading} onClick={() => void load()}>
           <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
@@ -265,7 +265,7 @@ function BalancePanels({ balance }: { balance: GameStats["balance"] }) {
             ["30 j", activity.active30d],
           ].map(([label, n]) => (
             <div key={label} className="border border-white/5 p-2">
-              <p className="font-display text-xl text-white">{n}</p>
+              <p className="font-display text-xl text-slate-100">{n}</p>
               <p className="text-[10px] font-mono uppercase tracking-wide text-slate-500">actifs {label}</p>
             </div>
           ))}
@@ -426,7 +426,7 @@ function RetentionPanels({ retention }: { retention: NonNullable<GameStats["rete
             ["Inscrits", active.total],
           ].map(([label, value]) => (
             <div key={label as string} className="border border-white/5 bg-white/[0.02] p-2">
-              <p className="font-display text-xl text-white">{value}</p>
+              <p className="font-display text-xl text-slate-100">{value}</p>
               <p className="text-[10px] font-mono uppercase tracking-[0.14em] text-slate-500">{label}</p>
             </div>
           ))}

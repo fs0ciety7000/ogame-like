@@ -302,7 +302,7 @@ export function AdminPage() {
           {active && (
             <div className="mb-3 flex items-baseline gap-3 border-b border-white/5 pb-2">
               <active.icon className="h-4 w-4 self-center text-cyan-glow" />
-              <h2 className="hud-title text-lg text-white">{active.label}</h2>
+              <h2 className="hud-title text-lg text-slate-100">{active.label}</h2>
               <p className="truncate text-xs text-slate-500">{active.hint}</p>
             </div>
           )}

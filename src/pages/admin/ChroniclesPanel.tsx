@@ -73,7 +73,7 @@ export function ChroniclesPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Chroniques</h2>
+        <h2 className="font-display text-base text-slate-100">Chroniques</h2>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
@@ -212,7 +212,7 @@ function NextMonthPreview({ cfg, onCreate }: { cfg: ChroniclesConfig; onCreate: 
         {month ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-slate-200">
-              <span className="font-display text-white">{month.title}</span> · boss : {month.boss.name}
+              <span className="font-display text-slate-100">{month.title}</span> · boss : {month.boss.name}
               {month.auto ? " · chapitre généré" : ""}
             </p>
             <ChronicleTimeline month={month} bonus={normalizeChronicleBonus(cfg.bonus)} now={now} open={0} />

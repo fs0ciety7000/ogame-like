@@ -58,7 +58,7 @@ export function MythicRelicsCard() {
             <li key={r.seasonId} className="flex justify-between gap-3 border-b border-white/5 pb-1">
               <span className="font-mono text-slate-400">{r.seasonId}</span>
               <span className="text-slate-300">{findTemplate(mythicFor(r.seasonId).template.id)?.name}</span>
-              <span className="font-semibold text-white">{r.pseudo}</span>
+              <span className="font-semibold text-slate-100">{r.pseudo}</span>
             </li>
           ))}
         </ul>
@@ -105,10 +105,10 @@ export function TerritoriesAdminCard() {
               key={id}
               title={s?.contenders?.length ? (s.contenders as { tag?: string; levels: number }[]).map((c) => `${c.tag || "?"} : ${c.levels} niv.`).join(" · ") : "Aucun prétendant"}
               className="flex flex-col items-center border px-1 py-1.5 text-center"
-              style={hue !== null ? { borderColor: `hsl(${hue} 70% 55% / 0.6)`, background: `hsl(${hue} 70% 45% / 0.15)` } : { borderColor: "rgba(255,255,255,0.08)" }}
+              style={hue !== null ? { borderColor: `hsl(${hue} 70% 55% / 0.6)`, background: `hsl(${hue} 70% 45% / 0.15)` } : { borderColor: "color-mix(in srgb,var(--color-slate-100) 8%,transparent)" }}
             >
               <span className="font-mono text-[9px] text-slate-500">{sectorLabel(id)}</span>
-              <span className="text-[11px] font-semibold text-white">{s?.tag || "—"}</span>
+              <span className="text-[11px] font-semibold text-slate-100">{s?.tag || "—"}</span>
               {s?.levels ? <span className="font-mono text-[9px] text-slate-400">{s.levels} niv.</span> : null}
             </div>
           );

@@ -235,7 +235,7 @@ export function WarlordsPage() {
                   type="button"
                   disabled={sc === "alliance" && !player?.allianceId}
                   onClick={() => setScope(sc)}
-                  className={cn("flex-1 border px-3 py-2 text-left text-xs disabled:opacity-40", scope === sc ? "border-cyan-glow bg-cyan-glow/10 text-white" : "border-white/15 text-slate-400")}
+                  className={cn("flex-1 border px-3 py-2 text-left text-xs disabled:opacity-40", scope === sc ? "border-cyan-glow bg-cyan-glow/10 text-slate-100" : "border-white/15 text-slate-400")}
                 >
                   {sc === "player" ? "Seul" : "Avec mon alliance"}
                 </button>

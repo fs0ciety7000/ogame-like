@@ -86,7 +86,7 @@ export function StreakBadge() {
           <span
             key={n}
             title={dayLabel(n)}
-            className={cn("grid h-5 w-5 place-items-center border font-mono text-[9px]", done ? "border-ember-glow/60 bg-ember-glow/25 text-white" : next ? "border-gold-glow bg-gold-glow/20 text-gold-glow" : "border-white/15 text-slate-500")}
+            className={cn("grid h-5 w-5 place-items-center border font-mono text-[9px]", done ? "border-ember-glow/60 bg-ember-glow/25 text-slate-100" : next ? "border-gold-glow bg-gold-glow/20 text-gold-glow" : "border-white/15 text-slate-500")}
           >
             {n === 7 ? <PackageOpen className="h-3 w-3" /> : n}
           </span>

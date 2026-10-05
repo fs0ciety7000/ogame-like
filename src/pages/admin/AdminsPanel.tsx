@@ -68,7 +68,7 @@ export function AdminsPanel() {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr]">
       <Card className="flex flex-col gap-3 p-5">
-        <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <ShieldCheck className="h-4 w-4 text-cyan-glow" /> Administrateurs ({admins?.length ?? "…"})
         </h3>
         <p className="text-xs text-slate-500">
@@ -119,7 +119,7 @@ export function AdminsPanel() {
       </Card>
 
       <Card className="flex flex-col gap-3 p-5">
-        <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <ShieldPlus className="h-4 w-4 text-cyan-glow" /> Ajouter un administrateur
         </h3>
         <Field label="Joueur">

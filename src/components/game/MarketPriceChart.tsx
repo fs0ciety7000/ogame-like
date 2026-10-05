@@ -67,7 +67,7 @@ export function MarketPriceChart({ trades, now }: { trades: Trade[]; now: number
             <span className="text-slate-400">{def.name}</span>
             {ref ? (
               <span>
-                Prix habituel : <strong className="font-mono text-white">{formatRatio(ref.median)}</strong>
+                Prix habituel : <strong className="font-mono text-slate-100">{formatRatio(ref.median)}</strong>
                 <span className="text-slate-500"> ({ref.trades} échanges)</span>
               </span>
             ) : (

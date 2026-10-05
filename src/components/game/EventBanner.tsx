@@ -64,7 +64,7 @@ export function EventCard() {
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <CalendarClock className="h-4 w-4 text-gold-glow" />
-        <h3 className="font-display text-sm text-white">Événements et saison</h3>
+        <h3 className="font-display text-sm text-slate-100">Événements et saison</h3>
       </div>
       {event ? (
         <div className={active ? "hud-callout hud-tone-gold p-3" : "hud-cut-sm bg-black/20 p-3"}>

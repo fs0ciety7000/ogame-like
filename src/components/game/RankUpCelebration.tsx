@@ -55,7 +55,7 @@ export function RankUpCelebration() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle, rgba(5,7,15,0.55) 0%, transparent 65%)" }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle, color-mix(in srgb,var(--color-space-950) 55%,transparent) 0%, transparent 65%)" }} />
 
           <div className="relative flex items-center justify-center">
             {particles.map((p) => (
@@ -78,7 +78,7 @@ export function RankUpCelebration() {
             >
               {rankIcon && <img src={rankIcon} alt="" className="h-16 w-16 object-contain drop-shadow-[0_0_16px_var(--color-gold-glow)]" />}
               <p className="hud-eyebrow text-slate-400">Nouveau rang</p>
-              <p className="font-display glow-text text-3xl text-white">{rankLabel}</p>
+              <p className="font-display glow-text text-3xl text-slate-100">{rankLabel}</p>
             </motion.div>
           </div>
         </motion.div>

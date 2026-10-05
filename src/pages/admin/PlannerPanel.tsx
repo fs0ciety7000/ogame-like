@@ -185,14 +185,14 @@ export function PlannerPanel() {
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h2 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <CalendarRange className="h-4 w-4 text-cyan-glow" /> Planificateur
         </h2>
         <div className="ml-auto flex items-center gap-1">
           <Button size="sm" variant="ghost" aria-label="Mois précédent" onClick={() => setOffset((o) => o - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="w-36 text-center font-display text-sm capitalize text-white">{month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</span>
+          <span className="w-36 text-center font-display text-sm capitalize text-slate-100">{month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</span>
           <Button size="sm" variant="ghost" aria-label="Mois suivant" onClick={() => setOffset((o) => o + 1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>

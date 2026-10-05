@@ -33,7 +33,7 @@ function Record({ icon: Icon, label, value, sub, color }: { icon: typeof Trophy;
       <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
         <Icon className="h-3.5 w-3.5" style={{ color }} /> {label}
       </span>
-      <span className="font-display text-xl tabular-nums text-white">{value}</span>
+      <span className="font-display text-xl tabular-nums text-slate-100">{value}</span>
       {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </Card>
   );
@@ -85,7 +85,7 @@ function FightRow({ e, index, onOpen, uid }: { e: BossHistoryEntry; index: numbe
             {e.won ? <Trophy className="h-5 w-5" /> : <Flag className="h-5 w-5" />}
           </span>
           <div className="min-w-0">
-            <p className="truncate font-display text-sm text-white">{e.name}</p>
+            <p className="truncate font-display text-sm text-slate-100">{e.name}</p>
             <p className="text-[11px] text-slate-500">
               {BOSS_KIND_LABELS[e.kind]}
               {e.allianceName ? ` · ${e.allianceName}` : ""} · {dateLabel(e.endedAtMs)} · {e.won ? "abattu" : `retiré à ${pct} %`} en {formatDuration((e.endedAtMs - e.startMs) / 1000)}
@@ -94,7 +94,7 @@ function FightRow({ e, index, onOpen, uid }: { e: BossHistoryEntry; index: numbe
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400 sm:justify-end">
           <span>
-            <strong className="text-white">{e.participants}</strong> commandants · <strong className="text-white">{formatCompact(e.totalDamage)}</strong> dégâts
+            <strong className="text-slate-100">{e.participants}</strong> commandants · <strong className="text-slate-100">{formatCompact(e.totalDamage)}</strong> dégâts
           </span>
           {e.top.slice(0, 3).map((t, i) => (
             <span key={t.uid} className="inline-flex items-center gap-1">
@@ -209,7 +209,7 @@ function MyRecords({ stats }: { stats: ReturnType<typeof myBossStats> }) {
         {stats.map((s) => (
           <div key={s.kind} className="flex flex-col gap-0.5 border border-white/[0.06] bg-white/[0.02] p-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{BOSS_KIND_LABELS[s.kind]}</span>
-            <span className="font-display text-xl text-white">
+            <span className="font-display text-xl text-slate-100">
               <span style={{ color: MEDALS[s.bestRank - 1] ?? "var(--color-cyan-glow)" }}>#{s.bestRank}</span>
               <span className="ml-1.5 text-xs text-slate-400">meilleur rang</span>
             </span>

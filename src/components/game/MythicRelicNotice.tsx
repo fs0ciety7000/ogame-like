@@ -9,11 +9,11 @@ export function MythicRelicNotice({ source }: { source: "leviathan" | "seasonbos
   return (
     <div
       className="hud-cut-sm flex items-start gap-3 border px-4 py-3 text-sm"
-      style={{ borderColor: here ? "#ff5df088" : "rgba(148,163,184,0.2)", background: here ? "radial-gradient(circle at left, #ff5df022, transparent 70%)" : undefined }}
+      style={{ borderColor: here ? "#ff5df088" : "color-mix(in srgb,var(--color-slate-400) 20%,transparent)", background: here ? "radial-gradient(circle at left, #ff5df022, transparent 70%)" : undefined }}
     >
       <Gem className="mt-0.5 h-5 w-5 shrink-0" style={{ color: "var(--th-rarity-mythic)" }} />
       <div>
-        <p className="font-semibold text-white">
+        <p className="font-semibold text-slate-100">
           Relique mythique du mois : <span style={{ color: "var(--th-rarity-mythic)" }}>{def.template.name}</span>{" "}
           <span className="text-xs text-slate-400">({describeRelic({ template: def.template.id, rarity: "mythic" })})</span>
         </p>

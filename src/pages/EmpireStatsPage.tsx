@@ -72,7 +72,7 @@ function Section({ title, icon: Icon, tone = CYAN, aside, className, children }:
         <span className="hud-cut grid h-9 w-9 place-items-center border" style={{ color: tone, borderColor: `color-mix(in srgb, ${tone} 40%, transparent)`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
           <Icon className="h-4 w-4" />
         </span>
-        <h2 className="hud-title text-sm text-white">{title}</h2>
+        <h2 className="hud-title text-sm text-slate-100">{title}</h2>
         <div className="ml-auto">{aside}</div>
       </div>
       <span aria-hidden className="relative -mt-1 block h-px w-full" style={{ background: `linear-gradient(90deg, ${tone}, transparent 70%)`, opacity: 0.45 }} />
@@ -121,7 +121,7 @@ function Ring({ label, value, max, tone, size = 84 }: { label: string; value: nu
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
       <RadialGauge value={r * 100} size={size} color={tone}>
-        <span className="font-mono text-sm text-white">{Math.round(r * 100)}%</span>
+        <span className="font-mono text-sm text-slate-100">{Math.round(r * 100)}%</span>
       </RadialGauge>
       <p className="max-w-[9rem] text-[11px] leading-tight text-slate-400">{label}</p>
       <p className="font-mono text-xs text-slate-200">
@@ -262,7 +262,7 @@ export function EmpireStatsPage() {
                       </HudTag>
                     )}
                   </div>
-                  <p className="mt-2 font-mono text-2xl text-white">
+                  <p className="mt-2 font-mono text-2xl text-slate-100">
                     <Num value={total} />
                     <span className="ml-1 text-xs text-slate-500">/ h</span>
                   </p>
@@ -339,7 +339,7 @@ export function EmpireStatsPage() {
                     style={{ background: `radial-gradient(circle at 35% 35%, color-mix(in srgb, ${tone} 55%, white 10%), color-mix(in srgb, ${tone} 20%, transparent) 55%, transparent 70%)`, boxShadow: `0 0 40px color-mix(in srgb, ${tone} 30%, transparent)` }}
                   />
                   <div className="relative flex flex-wrap items-center gap-2">
-                    <span className="hud-title min-w-0 truncate text-sm text-white">{p.name}</span>
+                    <span className="hud-title min-w-0 truncate text-sm text-slate-100">{p.name}</span>
                     {home ? <HudTag tone="gold">Mère</HudTag> : <HudTag tone="accent">Colonie</HudTag>}
                   </div>
                   {!home && p.biome && (
@@ -466,7 +466,7 @@ export function EmpireStatsPage() {
                     <p className="text-xs text-slate-500">flotte(s) en mission</p>
                   </div>
                   <div>
-                    <p className="font-mono text-4xl text-white">
+                    <p className="font-mono text-4xl text-slate-100">
                       <Num value={st.fleets.unitsAway} />
                     </p>
                     <p className="text-xs text-slate-500">vaisseaux hors de la base</p>
@@ -638,7 +638,7 @@ export function EmpireStatsPage() {
           <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {st.career.map((c) => (
               <motion.div key={c.label} variants={rise} whileHover={{ y: -2 }} className="min-w-0 border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-                <p className="font-mono text-xl text-white">
+                <p className="font-mono text-xl text-slate-100">
                   <Num value={c.value} />
                 </p>
                 <p className="mt-0.5 text-[11px] leading-tight text-slate-500">{c.label}</p>

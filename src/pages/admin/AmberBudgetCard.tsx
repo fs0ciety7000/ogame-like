@@ -38,7 +38,7 @@ export function AmberBudgetCard() {
               </tr>
             ))}
             <tr className="border-t border-gold-glow/30">
-              <td className="py-1 pr-3 text-white">Total du mois</td>
+              <td className="py-1 pr-3 text-slate-100">Total du mois</td>
               {rows.map(({ p, m }) => (
                 <td key={p.id} className="py-1 pl-3 text-right font-mono font-bold tabular-nums text-gold-glow">
                   {formatNumber(m.total)}

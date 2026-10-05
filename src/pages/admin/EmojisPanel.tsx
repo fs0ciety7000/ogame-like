@@ -64,7 +64,7 @@ export function EmojisPanel() {
     <div className="flex flex-col gap-3">
       <Card className="flex flex-col gap-3 p-4">
         <div>
-          <h3 className="hud-title text-sm text-white">Nouvel emoji</h3>
+          <h3 className="hud-title text-sm text-slate-100">Nouvel emoji</h3>
           <p className="mt-1 text-xs text-slate-400">
             Image carrée (PNG, WebP ou GIF, 128 px suffisent). Les joueurs l'écrivent <span className="font-mono text-cyan-glow">:code:</span> ou la choisissent dans le
             sélecteur des discussions. {MAX_CUSTOM_EMOJIS} emojis au plus. {GAME_EMOJIS.length} emojis du jeu (factions, ressources, insignes) sont déjà
@@ -90,7 +90,7 @@ export function EmojisPanel() {
 
       <Card className="flex flex-col gap-3 p-4">
         <div className="flex items-center gap-2">
-          <h3 className="hud-title text-sm text-white">
+          <h3 className="hud-title text-sm text-slate-100">
             Emojis du serveur <span className="text-slate-500">({list.length})</span>
           </h3>
           <Button className="ml-auto" size="sm" disabled={busy || !dirty} onClick={() => void save()}>

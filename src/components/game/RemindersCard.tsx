@@ -28,7 +28,7 @@ export function RemindersCard() {
             type="button"
             aria-pressed={pct === t}
             onClick={() => setPct(t)}
-            className={cn("hud-cut-sm border px-2 py-1 font-mono text-xs tabular-nums", pct === t ? "border-gold-glow/60 bg-gold-glow/10 text-gold-glow" : "border-white/10 text-slate-400 hover:text-white")}
+            className={cn("hud-cut-sm border px-2 py-1 font-mono text-xs tabular-nums", pct === t ? "border-gold-glow/60 bg-gold-glow/10 text-gold-glow" : "border-white/10 text-slate-400 hover:text-slate-100")}
           >
             {t} %
           </button>

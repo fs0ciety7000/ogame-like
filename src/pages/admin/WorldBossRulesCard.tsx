@@ -49,7 +49,7 @@ export function WorldBossRulesCard() {
   return (
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="hud-title text-sm text-white">Réglages communs</h2>
+        <h2 className="hud-title text-sm text-slate-100">Réglages communs</h2>
         {dirty && (
           <HudChip size="sm" tone="ember">
             Modifications non enregistrées

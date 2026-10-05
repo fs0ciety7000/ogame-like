@@ -264,7 +264,7 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
           <Card key={r.id} className={cn("flex flex-col gap-2 p-4", running && "border-cyan-glow/50")}>
             <div className="flex items-center gap-2">
               <EmojiIcon emoji={r.emoji} className="h-7 w-7" />
-              <h3 className="flex-1 font-display text-sm text-white">{r.name}</h3>
+              <h3 className="flex-1 font-display text-sm text-slate-100">{r.name}</h3>
               <span className="tabular-mono text-xs text-slate-400">
                 niv. {level} / {r.maxLevel}
               </span>
@@ -348,7 +348,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
               <div className="flex items-center gap-2">
                 <EmojiIcon emoji={p.emoji} className="h-8 w-8" />
                 <div className="flex-1">
-                  <h3 className="font-display text-sm text-white">{p.name}</h3>
+                  <h3 className="font-display text-sm text-slate-100">{p.name}</h3>
                   <p className="text-xs text-slate-400">
                     {p.description} ({p.id === "forge" ? "−" : "+"}
                     {pct} % par palier, {p.id === "forge" ? "−" : "+"}

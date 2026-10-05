@@ -74,7 +74,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
         />
       </picture>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/30 to-transparent" />
-      {phase === "killed" && <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(92,242,176,0.10),transparent_70%)]" />}
+      {phase === "killed" && <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_srgb,var(--color-mint-glow)_10%,transparent),transparent_70%)]" />}
 
       {st.stamp && (
         <div
@@ -86,9 +86,9 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
       )}
 
       <div className="absolute inset-x-4 bottom-3 flex flex-wrap items-end gap-3">
-        {art.emblem && <img src={assetUrl(art.emblem)} alt="" className={cn("h-14 w-14 object-contain drop-shadow-[0_0_14px_rgba(255,60,60,0.45)]", ended && "grayscale")} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
+        {art.emblem && <img src={assetUrl(art.emblem)} alt="" className={cn("h-14 w-14 object-contain drop-shadow-[0_0_14px_color-mix(in_srgb,var(--color-danger-glow)_45%,transparent)]", ended && "grayscale")} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
         <div className="min-w-0 flex-1">
-          <p className="hud-title text-lg text-white">{art.name}</p>
+          <p className="hud-title text-lg text-slate-100">{art.name}</p>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: st.color }}>
             {st.label}
             {phase === "killed" && state && <> · le {new Date(state.endedAtMs || state.endMs).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</>}
@@ -96,7 +96,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
           </p>
           {phase === "killed" && state?.killedBy ? (
             <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-300">
-              <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-white" />
+              <Skull className="h-3.5 w-3.5 text-danger-glow" /> Coup de grâce : <PlayerName uid={state.killedBy.uid} pseudo={state.killedBy.pseudo} className="font-semibold text-slate-100" />
             </p>
           ) : (
             art.lore && (phase === "active" || phase === "dormant") && <p className="mt-0.5 hidden max-w-2xl text-xs text-slate-300 sm:block">{art.lore}</p>
@@ -104,7 +104,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
         </div>
         <div className="text-right">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : nextLabel ?? (next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : "")}</p>
-          <p className="font-display text-xl tabular-nums text-white">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
+          <p className="font-display text-xl tabular-nums text-slate-100">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
         </div>
       </div>
 
@@ -123,7 +123,7 @@ export function BossNextCard({ art, next, now, phase, tip }: { art: BossArt; nex
     <Card className="flex flex-wrap items-center gap-4 p-4">
       {art.emblem && <img src={assetUrl(art.emblem)} alt="" className="h-10 w-10 object-contain opacity-80" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />}
       <div className="min-w-0 flex-1">
-        <p className="font-display text-sm text-white">{phase === "dormant" ? `${art.name} n'est pas encore là` : `${art.name} reviendra`}</p>
+        <p className="font-display text-sm text-slate-100">{phase === "dormant" ? `${art.name} n'est pas encore là` : `${art.name} reviendra`}</p>
         <p className="text-xs text-slate-400">
           {next
             ? `Prochaine apparition : ${new Date(next).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} — dans ${bossCountdown(next - now)}.`
@@ -165,7 +165,7 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
       </div>
       <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono uppercase tracking-[0.14em]">
         {([1, 2, 3] as BossFightPhase[]).map((p) => (
-          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-white" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
+          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-slate-100" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
             {p}. {bossPhaseLabel(state, p).name}
           </span>
         ))}
@@ -229,7 +229,7 @@ export function BossFeed({ state, uid, now, max = 12, boss }: { state: Leviathan
             type="button"
             onClick={() => setAlliesOnly((v) => !v)}
             aria-pressed={alliesOnly}
-            className={cn("hud-cut-sm ml-auto flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors", alliesOnly ? "border-violet-glow/50 bg-violet-glow/10 text-violet-glow" : "border-white/10 text-slate-400 hover:text-white")}
+            className={cn("hud-cut-sm ml-auto flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors", alliesOnly ? "border-violet-glow/50 bg-violet-glow/10 text-violet-glow" : "border-white/10 text-slate-400 hover:text-slate-100")}
           >
             <Users className="h-3 w-3" /> Mon alliance
           </button>
@@ -262,7 +262,7 @@ export function BossFeed({ state, uid, now, max = 12, boss }: { state: Leviathan
                         {f.killed ? <Skull className="h-3.5 w-3.5 shrink-0 text-mint-glow" /> : <Crosshair className="h-3.5 w-3.5 shrink-0 text-ember-glow" />}
                         <span className="min-w-0 flex-1 truncate">
                           {f.uid ? <PlayerName uid={f.uid} pseudo={f.pseudo ?? "?"} className="font-semibold" /> : f.pseudo} {f.killed ? "porte le coup de grâce" : "frappe"} :{" "}
-                          <strong className="font-mono tabular-nums text-white">{formatCompact(f.damage ?? 0)}</strong>
+                          <strong className="font-mono tabular-nums text-slate-100">{formatCompact(f.damage ?? 0)}</strong>
                         </span>
                       </>
                     )}
@@ -327,16 +327,16 @@ export function BossDeathOverlay({ phase, name, killer }: { phase: BossPhase; na
               initial={reduce ? false : { scale: 3, rotate: -18, opacity: 0 }}
               animate={{ scale: 1, rotate: -6, opacity: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.25 }}
-              className="border-[6px] border-mint-glow px-8 py-2 font-display text-5xl font-black uppercase tracking-[0.3em] text-mint-glow shadow-[0_0_60px_rgba(92,242,176,0.5)] sm:text-7xl"
+              className="border-[6px] border-mint-glow px-8 py-2 font-display text-5xl font-black uppercase tracking-[0.3em] text-mint-glow shadow-[0_0_60px_color-mix(in_srgb,var(--color-mint-glow)_50%,transparent)] sm:text-7xl"
             >
               Abattu
             </motion.div>
-            <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="hud-title text-lg text-white">
+            <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="hud-title text-lg text-slate-100">
               {name} est tombé !
             </motion.p>
             {killer && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }} className="flex items-center gap-1.5 text-sm text-slate-300">
-                <Skull className="h-4 w-4 text-danger-glow" /> Coup de grâce : <span className="font-semibold text-white">{killer.pseudo}</span>
+                <Skull className="h-4 w-4 text-danger-glow" /> Coup de grâce : <span className="font-semibold text-slate-100">{killer.pseudo}</span>
               </motion.p>
             )}
           </div>

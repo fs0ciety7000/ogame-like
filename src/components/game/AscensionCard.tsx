@@ -81,7 +81,7 @@ export function AscensionCard() {
 
   return (
     <Card className="relative flex flex-col gap-3 overflow-hidden border-gold-glow/30 p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,200,80,0.12),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--color-gold-glow)_12%,transparent),transparent_60%)]" />
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="h-5 w-5 text-gold-glow" />
         <h2 className="hud-title text-sm">Ascension</h2>

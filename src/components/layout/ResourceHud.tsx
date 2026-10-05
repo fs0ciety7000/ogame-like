@@ -69,7 +69,7 @@ export function ResourceHud() {
                 <ResourceIcon id={res.id} className="h-8 w-8" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
-                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-[15px] font-semibold text-white" />
+                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-[15px] font-semibold text-slate-100" />
                     {full ? (
                       <span className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-ember-glow">plein</span>
                     ) : rate !== 0 ? (

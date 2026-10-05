@@ -238,7 +238,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
           >
             Restaurer
           </Button>
-          <button type="button" className="text-xs text-slate-400 hover:text-white" onClick={() => setRestore(null)}>
+          <button type="button" className="text-xs text-slate-400 hover:text-slate-100" onClick={() => setRestore(null)}>
             Ignorer
           </button>
         </div>
@@ -254,7 +254,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                 set({ title: e.target.value.slice(0, BLOG_RULES.titleMax), ...(slugEdited ? {} : { slug: slugify(e.target.value) }) });
               }}
               placeholder="Titre de l'article"
-              className="w-full border-b border-cyan-glow/20 bg-transparent pb-2 font-display text-2xl font-bold text-white outline-none placeholder:text-slate-600 focus:border-cyan-glow/60 sm:text-3xl"
+              className="w-full border-b border-cyan-glow/20 bg-transparent pb-2 font-display text-2xl font-bold text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-glow/60 sm:text-3xl"
             />
             <label className="flex min-w-0 items-center gap-1 font-mono text-xs text-slate-500">
               <span className="shrink-0">{BLOG_URL.replace(/^https?:\/\//, "")}/p/</span>
@@ -276,7 +276,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                   key={c.id}
                   type="button"
                   onClick={() => set({ category: c.id })}
-                  className={cn("border px-2.5 py-1.5 text-xs transition-colors", d.category === c.id ? "text-white" : "border-white/10 text-slate-400 hover:text-white")}
+                  className={cn("border px-2.5 py-1.5 text-xs transition-colors", d.category === c.id ? "text-slate-100" : "border-white/10 text-slate-400 hover:text-slate-100")}
                   style={d.category === c.id ? { borderColor: c.color, background: `${alpha(c.color, 10)}`, color: c.color } : undefined}
                   title={c.description}
                 >
@@ -363,7 +363,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                   ["now", liveNow ? "En ligne" : "Publier maintenant"],
                   ["schedule", "Programmer"],
                 ] as const).map(([m, label]) => (
-                  <button key={m} type="button" onClick={() => (setMode(m), setDirty(true))} className={cn("border px-3 py-1.5 text-xs", mode === m ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-400 hover:text-white")}>
+                  <button key={m} type="button" onClick={() => (setMode(m), setDirty(true))} className={cn("border px-3 py-1.5 text-xs", mode === m ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-400 hover:text-slate-100")}>
                     {label}
                   </button>
                 ))}
@@ -371,7 +371,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
               {mode === "schedule" && (
                 <label className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
                   Mise en ligne le
-                  <input type="datetime-local" value={scheduleAt} onChange={(e) => (setScheduleAt(e.target.value), setDirty(true))} className="border border-cyan-glow/20 bg-space-900 px-2 py-1 font-mono text-xs text-white [color-scheme:dark]" />
+                  <input type="datetime-local" value={scheduleAt} onChange={(e) => (setScheduleAt(e.target.value), setDirty(true))} className="border border-cyan-glow/20 bg-space-900 px-2 py-1 font-mono text-xs text-slate-100 [color-scheme:dark]" />
                 </label>
               )}
               <p className="text-[11px] text-slate-500">

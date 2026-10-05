@@ -112,7 +112,7 @@ export function RelicSettingsCard() {
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-display text-sm text-white">Réglages des reliques</h3>
+        <h3 className="font-display text-sm text-slate-100">Réglages des reliques</h3>
         <Badge variant={customized ? "warning" : "default"}>{customized ? "Personnalisé" : "Valeurs du code"}</Badge>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
@@ -234,7 +234,7 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
   const rarityOptions = RARITIES.filter((r) => r.id !== "mythic").map((r) => ({ value: r.id, label: r.label }));
   return (
     <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
-      <h4 className="font-display text-sm text-white">Tables de butin des combats</h4>
+      <h4 className="font-display text-sm text-slate-100">Tables de butin des combats</h4>
       <p className="text-[11px] text-slate-500">En plus des récompenses habituelles. Chances en fraction (0,25 = 25 %). Sur un boss, le podium multiplie ses chances par le bonus indiqué. Jetons du casino : chance multipliée par la difficulté du combat (×0,5 à ×2 selon le rapport des forces ; vendetta forte ×1,5 ; expédition selon sa durée).</p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1000px] text-sm">

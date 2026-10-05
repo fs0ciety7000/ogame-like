@@ -82,7 +82,7 @@ export function NotificationBell() {
                 )}
               >
                 {c.label}
-                {count > 0 && <span className="bg-danger-glow px-1 font-bold text-white">{count}</span>}
+                {count > 0 && <span className="bg-danger-glow px-1 font-bold text-slate-100">{count}</span>}
               </button>
             );
           })}

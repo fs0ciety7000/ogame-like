@@ -214,7 +214,7 @@ export function MailPanel() {
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[22rem_1fr]">
       <div className="flex flex-col gap-3">
         <Card className="flex flex-col gap-3 p-4">
-          <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+          <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
             <Mail className="h-4 w-4 text-cyan-glow" /> Campagne
           </h3>
           <div
@@ -242,7 +242,7 @@ export function MailPanel() {
                   "hud-cut-sm flex items-center justify-center gap-1.5 border px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors",
                   mode === m
                     ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow"
-                    : "border-white/10 text-slate-400 hover:text-white",
+                    : "border-white/10 text-slate-400 hover:text-slate-100",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" /> {label}
@@ -343,7 +343,7 @@ export function MailPanel() {
             <Users className="h-3.5 w-3.5" />
             {count ? (
               <>
-                <strong className="text-white">{count.recipients}</strong>{" "}
+                <strong className="text-slate-100">{count.recipients}</strong>{" "}
                 joueur{count.recipients > 1 ? "s" : ""} joignable
                 {count.recipients > 1 ? "s" : ""}
                 {count.optedOut > 0 && (
@@ -363,7 +363,7 @@ export function MailPanel() {
         </Card>
 
         <Card className="flex flex-col gap-2 p-4">
-          <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+          <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
             <TestTube2 className="h-4 w-4 text-mint-glow" /> 1. Envoi de test
           </h3>
           <p className="text-xs text-slate-400">
@@ -389,7 +389,7 @@ export function MailPanel() {
         </Card>
 
         <Card className="flex flex-col gap-2 border-ember-glow/40 p-4">
-          <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+          <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
             <Send className="h-4 w-4 text-ember-glow" /> 2. Envoi à tous
           </h3>
           <p className="text-xs text-slate-400">

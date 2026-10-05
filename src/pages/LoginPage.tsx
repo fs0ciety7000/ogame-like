@@ -123,7 +123,7 @@ export function LoginPage() {
           className="hidden lg:block"
         >
           <StatusDot label="Réseau stellaire actif" />
-          <h1 className="mt-5 font-display text-5xl leading-[1.05] text-white glow-text xl:text-6xl">
+          <h1 className="mt-5 font-display text-5xl leading-[1.05] text-slate-100 glow-text xl:text-6xl">
             BÂTIS.
             <br />
             CONQUIERS.
@@ -141,7 +141,7 @@ export function LoginPage() {
               { value: "24/7", label: "Temps réel" },
             ].map((stat) => (
               <div key={stat.label}>
-                <span className="block font-display text-xl text-white">{stat.value}</span>
+                <span className="block font-display text-xl text-slate-100">{stat.value}</span>
                 <span className="hud-eyebrow text-slate-500">{stat.label}</span>
               </div>
             ))}
@@ -159,7 +159,7 @@ export function LoginPage() {
             <div className="hud-cut flex h-14 w-14 items-center justify-center bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
               <Rocket className="h-7 w-7" />
             </div>
-            <h1 className="font-display text-3xl tracking-wide text-white glow-text">Cosmic Empires</h1>
+            <h1 className="font-display text-3xl tracking-wide text-slate-100 glow-text">Cosmic Empires</h1>
             <p className="text-sm text-slate-400">Bâtis ton empire. Recherche. Combats. En temps réel.</p>
           </div>
 

@@ -67,7 +67,7 @@ export function ContestsAdmin() {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
         <Trophy className="h-4 w-4 text-gold-glow" /> Concours du pot commun
       </h3>
       <p className="text-xs text-slate-400">
@@ -102,7 +102,7 @@ export function ContestsAdmin() {
           return (
             <div key={c.id} className="flex flex-wrap items-center gap-2 border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-sm">
               <span className="min-w-0 flex-1">
-                <span className="text-white">{c.title}</span>{" "}
+                <span className="text-slate-100">{c.title}</span>{" "}
                 <span className="text-xs text-slate-500">
                   · {METRICS[c.metric]?.label} · {Math.round(c.potShare * 100)} % du pot · {new Date(c.startMs).toLocaleDateString("fr-FR")} → {new Date(c.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
                   {c.results ? ` · ${c.results.length} gagnant(s)` : c.standings.length ? ` · ${c.standings.length} classé(s)` : ""}

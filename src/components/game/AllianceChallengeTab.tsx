@@ -42,13 +42,13 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
           <span className="grid h-12 w-12 place-items-center border border-gold-glow/40 bg-gold-glow/10 text-2xl">{challenge.emoji}</span>
           <div className="min-w-0 flex-1">
             <p className="hud-eyebrow text-[10px] text-gold-glow">Défi d'alliance de la semaine</p>
-            <p className="hud-title text-lg text-white">{challenge.name}</p>
+            <p className="hud-title text-lg text-slate-100">{challenge.name}</p>
             <p className="text-xs text-slate-400">{challenge.hint} Le score de l'alliance est la progression cumulée de ses membres depuis lundi.</p>
           </div>
           <span className="font-mono text-xs text-slate-400">Fin dans {bossCountdown(allianceNextWeekMs(now) - now)}</span>
         </div>
         <p className="text-xs text-slate-300">
-          Ton alliance : <strong className="text-white">{mine >= 0 ? `${mine + 1}${mine === 0 ? "re" : "e"} place` : "pas encore classée"}</strong>
+          Ton alliance : <strong className="text-slate-100">{mine >= 0 ? `${mine + 1}${mine === 0 ? "re" : "e"} place` : "pas encore classée"}</strong>
           {mine >= 0 ? ` · ${formatCompact(state.standings[mine].score)} points` : ""}
         </p>
         <ol className="flex flex-col gap-1.5">

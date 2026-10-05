@@ -158,7 +158,7 @@ export function MessagesPage() {
                 )}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <PlayerName uid={c.uid} pseudo={c.pseudo} className={cn("truncate text-sm", c.unread ? "font-semibold text-white" : "text-slate-300")} />
+                  <PlayerName uid={c.uid} pseudo={c.pseudo} className={cn("truncate text-sm", c.unread ? "font-semibold text-slate-100" : "text-slate-300")} />
                   {c.unread > 0 ? (
                     <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{c.unread}</span>
                   ) : (
@@ -187,7 +187,7 @@ export function MessagesPage() {
                 <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setParams({})} aria-label="Retour aux conversations">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <button type="button" className="min-w-0 flex-1 truncate text-left font-semibold text-white hover:text-cyan-glow" onClick={() => setSheet({ uid: withUid, pseudo: withPseudo })}>
+                <button type="button" className="min-w-0 flex-1 truncate text-left font-semibold text-slate-100 hover:text-cyan-glow" onClick={() => setSheet({ uid: withUid, pseudo: withPseudo })}>
                   <PlayerName uid={withUid} pseudo={withPseudo} />
                 </button>
                 <Button variant="ghost" size="sm" onClick={toggleBlock} title={block ? "Recevoir à nouveau ses messages" : "Ne plus recevoir ses messages"}>

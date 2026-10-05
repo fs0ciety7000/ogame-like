@@ -18,7 +18,7 @@ function Stat({ label, value, sub }: { label: string; value: React.ReactNode; su
   return (
     <div className="flex min-w-0 flex-col">
       <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <span className="font-display text-lg tabular-nums text-white">{value}</span>
+      <span className="font-display text-lg tabular-nums text-slate-100">{value}</span>
       {sub && <span className="truncate text-[11px] text-slate-500">{sub}</span>}
     </div>
   );
@@ -37,7 +37,7 @@ export function MonthRecapCard({ now }: { now: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="hud-title flex items-center gap-2 text-sm text-white">
+        <h2 className="hud-title flex items-center gap-2 text-sm text-slate-100">
           <CalendarRange className="h-4 w-4 self-center text-cyan-glow" /> Ton mois · {seasonLabel(season)}
         </h2>
         <span className="font-mono text-[11px] text-slate-500">fin dans {formatDuration(left)}</span>

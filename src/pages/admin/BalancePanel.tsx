@@ -36,7 +36,7 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="hud-title text-sm text-white">{title}</h3>
+        <h3 className="hud-title text-sm text-slate-100">{title}</h3>
         <div className="ml-auto">{aside}</div>
       </div>
       {children}
@@ -104,7 +104,7 @@ function UnitSandbox({ unit, table, live }: { unit: UnitMetrics; table: UnitMetr
   return (
     <div className="flex flex-col gap-2 border border-violet-glow/30 bg-violet-glow/[0.04] p-3">
       <p className="text-xs text-slate-300">
-        Bac à sable — <strong className="text-white">{unit.name}</strong> (niveau {def.maxLevel}, technologies au maximum). Rien n'est enregistré : reporte les valeurs dans l'onglet Unités.
+        Bac à sable — <strong className="text-slate-100">{unit.name}</strong> (niveau {def.maxLevel}, technologies au maximum). Rien n'est enregistré : reporte les valeurs dans l'onglet Unités.
       </p>
       <div className="flex flex-wrap gap-3">
         {num("Places", places, setPlaces)}
@@ -115,14 +115,14 @@ function UnitSandbox({ unit, table, live }: { unit: UnitMetrics; table: UnitMetr
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs">
         <span>
-          Par place : <strong className="text-white">{f(placeValue(tried))}</strong> <span className="text-slate-500">(avant {f(placeValue(unit))}, médiane {f(med)})</span>
+          Par place : <strong className="text-slate-100">{f(placeValue(tried))}</strong> <span className="text-slate-500">(avant {f(placeValue(unit))}, médiane {f(med)})</span>
         </span>
         <span className={ratio < 0.55 ? "text-danger-glow" : ratio > 1.8 ? "text-gold-glow" : "text-mint-glow"}>{ratio < 0.55 ? "piège" : ratio > 1.8 ? "trop forte" : "dans la norme"} ({ratio.toFixed(2)} × médiane)</span>
         <span>
-          Par 1 000 ressources : <strong className="text-white">{tried.powerPer1k.toFixed(0)}</strong>
+          Par 1 000 ressources : <strong className="text-slate-100">{tried.powerPer1k.toFixed(0)}</strong>
         </span>
         <span>
-          Entretien : <strong className="text-white">{f(tried.upkeepPerHour)}</strong>/h
+          Entretien : <strong className="text-slate-100">{f(tried.upkeepPerHour)}</strong>/h
         </span>
         {freed !== 0 && <span className="text-cyan-glow">{freed > 0 ? `${f(freed)} places libérées` : `${f(-freed)} places en plus`} chez les joueurs</span>}
       </div>
@@ -175,7 +175,7 @@ export function BalancePanel() {
       <Card className="flex flex-wrap items-center gap-3 p-4">
         <Scale className="h-5 w-5 text-cyan-glow" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-white">
+          <p className="text-sm text-slate-100">
             {counts.critical} critique{counts.critical > 1 ? "s" : ""} · {counts.warning} à revoir · {counts.info} info{counts.info > 1 ? "s" : ""}
           </p>
           <p className="text-[11px] text-slate-500">
@@ -226,8 +226,8 @@ export function BalancePanel() {
                   </td>
                   <td className="font-mono">{u.places}</td>
                   <td className="font-mono">{f(u.cost)}</td>
-                  <td className={cn("font-mono", u.category === "attack" && "text-white")}>{f(u.attackPerPlace)}</td>
-                  <td className={cn("font-mono", u.category === "defense" && "text-white")}>{f(u.powerPerPlace)}</td>
+                  <td className={cn("font-mono", u.category === "attack" && "text-slate-100")}>{f(u.attackPerPlace)}</td>
+                  <td className={cn("font-mono", u.category === "defense" && "text-slate-100")}>{f(u.powerPerPlace)}</td>
                   <td className="font-mono">{u.powerPer1k.toFixed(0)}</td>
                   <td className="font-mono">{f(u.upkeepPerHour)}</td>
                   <td className="font-mono text-slate-400">{placesOf.get(u.id) ? `${f(placesOf.get(u.id)!.places)} · ${placesOf.get(u.id)!.owners} j.` : "—"}</td>
@@ -260,8 +260,8 @@ export function BalancePanel() {
                 {live.players.map((p) => (
                   <tr key={p.pseudo} className="border-t border-white/5">
                     <td className="py-1.5 text-slate-200">{p.pseudo}</td>
-                    <td className="font-mono text-white">{f(p.attack)}</td>
-                    <td className="font-mono text-white">{f(p.defense)}</td>
+                    <td className="font-mono text-slate-100">{f(p.attack)}</td>
+                    <td className="font-mono text-slate-100">{f(p.defense)}</td>
                     <td className="font-mono">{p.shieldPct} %</td>
                     <td className="font-mono">{p.defenseBonusPct} %</td>
                     <td>
@@ -287,13 +287,13 @@ export function BalancePanel() {
           <Section title="Combats (30 jours)">
             <ul className="flex flex-col gap-1 text-sm text-slate-300">
               <li>
-                Joueur contre joueur : <strong className="text-white">{live.pvp.battles}</strong> combats, l'attaquant gagne <strong className="text-white">{live.pvp.attackerWinPct} %</strong> <span className="text-slate-500">(cible 45–65 %)</span>
+                Joueur contre joueur : <strong className="text-slate-100">{live.pvp.battles}</strong> combats, l'attaquant gagne <strong className="text-slate-100">{live.pvp.attackerWinPct} %</strong> <span className="text-slate-500">(cible 45–65 %)</span>
               </li>
               <li>
-                Seigneurs de guerre : <strong className="text-white">{live.warlordBattles.battles}</strong> combats, l'attaquant gagne <strong className="text-white">{live.warlordBattles.attackerWinPct} %</strong>
+                Seigneurs de guerre : <strong className="text-slate-100">{live.warlordBattles.battles}</strong> combats, l'attaquant gagne <strong className="text-slate-100">{live.warlordBattles.attackerWinPct} %</strong>
               </li>
               <li>
-                Meilleure attaque : <strong className="text-white">{f(live.bestAttack)}</strong> · meilleure défense : <strong className="text-white">{f(live.bestDefense)}</strong>
+                Meilleure attaque : <strong className="text-slate-100">{f(live.bestAttack)}</strong> · meilleure défense : <strong className="text-slate-100">{f(live.bestDefense)}</strong>
               </li>
             </ul>
             <table className="w-full text-left text-xs">

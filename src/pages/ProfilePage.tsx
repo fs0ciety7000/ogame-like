@@ -69,7 +69,7 @@ export function ProfilePage() {
           <img src={getRankIcon(player.xp)} alt="" className="h-16 w-16 object-contain" />
         </RadialGauge>
         <div className="flex-1">
-          <p className="font-display text-xl text-white">{getRankLabel(player.xp)}</p>
+          <p className="font-display text-xl text-slate-100">{getRankLabel(player.xp)}</p>
           <AscensionStars count={player.ascensions} full className="my-1" />
           <p className="text-xs text-slate-500">
             {rankIndex > 0 ? `Rang précédent : ${RANKS[rankIndex - 1]?.name}` : "Aucun rang précédent"}
@@ -187,7 +187,7 @@ function RankLadder({ xp }: { xp: number }) {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2">
-        <h3 className="font-display text-sm text-white">Échelle des rangs</h3>
+        <h3 className="font-display text-sm text-slate-100">Échelle des rangs</h3>
         <span className="text-xs text-slate-500">
           {current + 1} / {RANKS.length}
         </span>

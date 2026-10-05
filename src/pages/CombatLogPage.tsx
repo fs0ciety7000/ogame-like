@@ -170,7 +170,7 @@ export function CombatLogPage() {
                 <button
                   type="button"
                   title="Carte de victoire"
-                  className="flex shrink-0 items-center gap-1 px-2 py-2 text-xs text-gold-glow transition-colors hover:text-white"
+                  className="flex shrink-0 items-center gap-1 px-2 py-2 text-xs text-gold-glow transition-colors hover:text-slate-100"
                   onClick={() => player && setCard({ input: victoryCardFromReport(report, player, allianceTag), target: `/game/rapport/${report.id}` })}
                 >
                   <Trophy className="h-3.5 w-3.5" />
@@ -182,7 +182,7 @@ export function CombatLogPage() {
         })}
       </Card>
 
-      <h2 className="hud-title mt-2 flex items-center gap-2 text-base text-white">
+      <h2 className="hud-title mt-2 flex items-center gap-2 text-base text-slate-100">
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">

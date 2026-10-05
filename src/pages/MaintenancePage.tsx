@@ -32,7 +32,7 @@ function RollingDigits({ value, label }: { value: string; label: string }) {
     <div className="flex flex-col items-center gap-1.5">
       <div className="hud-cut-sm relative flex overflow-hidden border border-cyan-glow/30 bg-space-950/80 px-2 py-1.5 shadow-[0_0_24px_-8px_var(--color-cyan-glow)] sm:px-3">
         {value.split("").map((d, i) => (
-          <span key={i} className="relative inline-block h-[1.15em] w-[0.62em] overflow-hidden font-mono text-4xl font-bold tabular-nums text-white sm:text-6xl">
+          <span key={i} className="relative inline-block h-[1.15em] w-[0.62em] overflow-hidden font-mono text-4xl font-bold tabular-nums text-slate-100 sm:text-6xl">
             <AnimatePresence initial={false} mode="popLayout">
               <motion.span
                 key={d}
@@ -94,9 +94,9 @@ function ProgressRing({ progress }: { progress: number | null }) {
       </svg>
       <div className="relative text-center">
         <motion.div animate={reduce ? undefined : { rotate: [0, 0, 180, 180] }} transition={{ duration: 6, repeat: Infinity, times: [0, 0.4, 0.6, 1] }}>
-          <GameIcon name="repair" className="mx-auto h-10 w-10 drop-shadow-[0_0_8px_rgba(255,122,69,0.6)]" />
+          <GameIcon name="repair" className="mx-auto h-10 w-10 drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-ember-glow)_60%,transparent)]" />
         </motion.div>
-        <p className="mt-1 font-mono text-lg font-bold tabular-nums text-white">{progress === null ? "···" : `${Math.floor(progress * 100)} %`}</p>
+        <p className="mt-1 font-mono text-lg font-bold tabular-nums text-slate-100">{progress === null ? "···" : `${Math.floor(progress * 100)} %`}</p>
       </div>
     </div>
   );
@@ -210,9 +210,9 @@ export function MaintenancePage({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_40%,color-mix(in_srgb,var(--color-violet-glow)_22%,transparent),transparent_55%),radial-gradient(ellipse_at_20%_80%,color-mix(in_srgb,var(--color-cyan-glow)_14%,transparent),transparent_50%)]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-space-950 via-space-950/80 to-space-950/10 max-md:bg-gradient-to-t max-md:from-space-950 max-md:via-space-950/85 max-md:to-space-950/20" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:100%_3px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(color-mix(in_srgb,var(--color-slate-100)_2.5%,transparent)_1px,transparent_1px)] bg-[size:100%_3px]" />
         <div className="mt-beam absolute inset-x-0 top-0 h-40" />
-        <div className="absolute inset-0 shadow-[inset_0_0_180px_rgba(0,0,0,0.85)]" />
+        <div className="absolute inset-0 shadow-[inset_0_0_180px_color-mix(in_srgb,var(--color-space-950)_85%,transparent)]" />
       </div>
       <Sparks />
 
@@ -227,9 +227,9 @@ export function MaintenancePage({
           transition={{ duration: 0.6 }}
           className="flex items-center gap-3"
         >
-          <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_rgba(75,232,255,0.35)]" />
+          <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
           <div className="leading-none">
-            <p className="font-display text-base font-bold uppercase tracking-[0.16em] text-white">Cosmic</p>
+            <p className="font-display text-base font-bold uppercase tracking-[0.16em] text-slate-100">Cosmic</p>
             <p className="font-display text-[10px] font-semibold uppercase tracking-[0.42em] text-cyan-glow">Empires</p>
           </div>
         </motion.header>
@@ -251,7 +251,7 @@ export function MaintenancePage({
           <motion.h1
             variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
             data-text="Systèmes en maintenance"
-            className="mt-glitch hud-title text-4xl leading-[1.05] text-white sm:text-6xl"
+            className="mt-glitch hud-title text-4xl leading-[1.05] text-slate-100 sm:text-6xl"
           >
             Systèmes en maintenance
           </motion.h1>
@@ -331,8 +331,8 @@ export function MaintenanceOver() {
   return (
     <div className="fixed inset-0 z-[200] grid place-items-center bg-space-950/95 backdrop-blur">
       <motion.div initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-3 text-center">
-        <GameIcon name="shield" className="h-16 w-16 drop-shadow-[0_0_14px_rgba(75,232,255,0.6)]" />
-        <p className="hud-title text-2xl text-white">Systèmes rétablis</p>
+        <GameIcon name="shield" className="h-16 w-16 drop-shadow-[0_0_14px_color-mix(in_srgb,var(--color-cyan-glow)_60%,transparent)]" />
+        <p className="hud-title text-2xl text-slate-100">Systèmes rétablis</p>
         <p className="font-mono text-xs uppercase tracking-[0.3em] text-cyan-glow">Reconnexion au poste de commandement…</p>
       </motion.div>
     </div>

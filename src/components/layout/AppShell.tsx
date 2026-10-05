@@ -184,14 +184,14 @@ export function AppShell() {
           <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">
             {/* Mobile : logo ; bureau : titre de la page en cours. */}
             <Link to="/game" className="md:hidden">
-              <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_rgba(75,232,255,0.35)]" />
+              <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
             </Link>
             <div className="min-w-0">
               <p className="hud-eyebrow truncate text-[10px] text-cyan-glow/70">
                 {player?.pseudo ?? "…"} <span className="text-slate-600">//</span> Secteur {sectorCode}
               </p>
-              <p className="hud-title truncate text-lg text-white md:hidden">{currentLabel ?? "Cosmic Empires"}</p>
-              <p className="hud-title hidden truncate text-lg text-white md:block">
+              <p className="hud-title truncate text-lg text-slate-100 md:hidden">{currentLabel ?? "Cosmic Empires"}</p>
+              <p className="hud-title hidden truncate text-lg text-slate-100 md:block">
                 <span className="text-slate-500">Poste de commandement · </span>
                 {currentLabel ?? "Accueil"}
               </p>

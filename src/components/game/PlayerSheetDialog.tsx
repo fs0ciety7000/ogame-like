@@ -112,13 +112,13 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             <div className="relative shrink-0">
               <PlayerAvatar uid={entry.uid} pseudo={entry.pseudo} file={entry.avatar} className="h-16 w-16" />
               <OnlineDot uid={entry.uid} size="md" className="absolute -left-1 -top-1" />
-              <img src={getRankIcon(entry.xp)} alt="" className="absolute -bottom-2 -right-2 h-7 w-7 object-contain drop-shadow-[0_0_6px_rgba(0,0,0,0.8)]" />
+              <img src={getRankIcon(entry.xp)} alt="" className="absolute -bottom-2 -right-2 h-7 w-7 object-contain drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-space-950)_80%,transparent)]" />
             </div>
           ) : (
             <img src={getRankIcon(entry?.xp ?? 0)} alt="" className="h-14 w-14 shrink-0 object-contain" />
           )}
-          {feats?.showcase?.emblem && <img src={assetUrl(feats.showcase.emblem)} alt="" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.25)]" />}
-          {!feats?.showcase?.emblem && feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_rgba(255,190,80,0.4)]" />}
+          {feats?.showcase?.emblem && <img src={assetUrl(feats.showcase.emblem)} alt="" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-slate-100)_25%,transparent)]" />}
+          {!feats?.showcase?.emblem && feats?.kesh?.emblem && <img src={assetUrl(KESH.emblem)} alt="Emblème de l'Essaim" title="Emblème de l'Essaim Kesh'Vaar" className="h-12 w-12 shrink-0 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_40%,transparent)]" />}
           <div className="min-w-0">
             <DialogTitle className="flex flex-wrap items-center gap-1.5">
               <PlayerName uid={target?.uid} pseudo={entry?.pseudo ?? target?.pseudo ?? ""} allianceId={entry?.allianceId ?? null} presence={false} />
@@ -185,7 +185,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                     return (
                       <div key={id} title={a.description} className={cn("hud-cut-sm flex flex-col items-center gap-1 border px-2 py-2.5 text-center", ACH_TIER_STYLE[a.tier])}>
                         <span className="text-2xl leading-none">{a.emoji}</span>
-                        <span className="text-xs font-semibold text-white">{a.name}</span>
+                        <span className="text-xs font-semibold text-slate-100">{a.name}</span>
                         <span className="font-mono text-[9px] uppercase tracking-[0.14em] opacity-80">{ACH_TIER_LABELS[a.tier]}</span>
                       </div>
                     );
@@ -204,7 +204,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                       <span key={c.id} className="flex items-center gap-2 border border-cyan-glow/20 bg-white/[0.02] py-1 pl-1 pr-2.5 text-xs text-slate-300">
                         <img src={assetUrl(def?.portrait ?? "")} alt="" className="h-8 w-7 object-cover" />
                         <span>
-                          <span className="block text-white">{def?.name}</span>
+                          <span className="block text-slate-100">{def?.name}</span>
                           {def?.title} · niv. {c.level}
                         </span>
                       </span>

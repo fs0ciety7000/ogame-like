@@ -107,7 +107,7 @@ export function LabPage() {
             fullscreen && "max-h-[40vh] shrink-0 overflow-auto lg:right-8 lg:top-8 lg:max-h-[calc(100vh-4rem)]",
           )}
         >
-          <h2 className="font-display text-base text-white">{selected.nom}</h2>
+          <h2 className="font-display text-base text-slate-100">{selected.nom}</h2>
           <p className="mt-1 text-sm text-slate-400">{selected.desc}</p>
           <TechEffectsSummary tech={selected} level={currentLevel} />
 
@@ -138,7 +138,7 @@ export function LabPage() {
               <div className="mt-4 space-y-2 text-sm">
                 <p className="flex items-baseline justify-between text-slate-400">
                   <span>
-                    Niveau {currentLevel} → <b className="text-white">{currentLevel + 1}</b>
+                    Niveau {currentLevel} → <b className="text-slate-100">{currentLevel + 1}</b>
                   </span>
                   <span className="font-mono text-[11px] text-slate-500">
                     {currentLevel} / {selected.maxLevel}

@@ -122,7 +122,7 @@ export function PassSeasonsPanel() {
     <Card className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles className="h-4 w-4 text-gold-glow" />
-        <h2 className="hud-title text-sm text-white">Passes de saison</h2>
+        <h2 className="hud-title text-sm text-slate-100">Passes de saison</h2>
         <Button size="sm" variant="outline" className="ml-auto" disabled={busy} onClick={() => void generate(nextToWrite, 0)}>
           <Plus className="h-3.5 w-3.5" /> Écrire le brouillon de {seasonLabel(nextToWrite)}
         </Button>
@@ -134,11 +134,11 @@ export function PassSeasonsPanel() {
         <div className="min-w-0 flex-1">
           <p className="hud-eyebrow text-[10px] text-mint-glow">Passe actif · {seasonLabel(current)}</p>
           {live ? (
-            <p className="text-sm text-white">
+            <p className="text-sm text-slate-100">
               « {live.theme.name} » <span className="text-xs text-slate-400">· passe de saison publié · {hasFullChallenges(live) ? "un défi par palier" : "défis incomplets"}</span>
             </p>
           ) : (
-            <p className="text-sm text-white">
+            <p className="text-sm text-slate-100">
               Passe par défaut <span className="text-xs text-slate-400">· aucun passe de saison publié ce mois-ci : c'est le passe du bloc « Passe par défaut » (plus bas) qui s'applique.</span>
             </p>
           )}
@@ -187,7 +187,7 @@ export function PassSeasonsPanel() {
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
             <span className="h-3 w-3 shrink-0" style={{ background: draft.theme.accent }} />
-            <h3 className="hud-title text-base text-white">
+            <h3 className="hud-title text-base text-slate-100">
               {seasonLabel(draft.id)} · {draft.theme.name}
             </h3>
             <HudChip size="sm" tone={draft.id === live?.id ? "mint" : draft.id < current ? "neutral" : draft.status === "published" ? "accent" : "ember"} alert={draft.status === "draft"}>
@@ -375,7 +375,7 @@ function CatalogOverview({ current }: { current: string }) {
               <p className="font-mono text-[10px] text-slate-500">
                 {i + 1} / 36 · {seasonLabel(m)} · année {e.year}
               </p>
-              <p className="text-sm text-white">{e.name}</p>
+              <p className="text-sm text-slate-100">{e.name}</p>
               <p className="text-xs text-slate-400">
                 {e.commander.name}, {e.commander.title.toLowerCase()} · {role(THEME_PRIMARY[e.theme])} + {role(e.commander.secondary).toLowerCase()}
               </p>

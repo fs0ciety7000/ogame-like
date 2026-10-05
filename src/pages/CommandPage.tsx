@@ -213,7 +213,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
           <p className="hud-eyebrow text-[10px]" style={{ color: tone }}>
             {def.title}
           </p>
-          <h3 className="font-display text-lg font-semibold text-white">{fogged ? "???" : def.name}</h3>
+          <h3 className="font-display text-lg font-semibold text-slate-100">{fogged ? "???" : def.name}</h3>
           {def.season && (
             <HudTag tone="gold" className="mt-1">
               Passe de {def.season.label}
@@ -417,7 +417,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
                 {item ? (
                   <>
                     <RelicBadge item={item} className="h-12 w-12" />
-                    <span className="text-xs font-semibold text-white">{findTemplate(item.template)?.name}</span>
+                    <span className="text-xs font-semibold text-slate-100">{findTemplate(item.template)?.name}</span>
                     <span className="text-[11px]" style={{ color: rarityInfo(item.rarity).color }}>{describeRelic(item)}</span>
                   </>
                 ) : (
@@ -489,7 +489,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
               <div key={item.id} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
                 <RelicBadge item={item} className="h-11 w-11" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">{t?.name}</p>
+                  <p className="truncate text-sm font-semibold text-slate-100">{t?.name}</p>
                   <p className="text-xs" style={{ color: r.color }}>
                     {r.label} · {describeRelic(item)}
                   </p>
@@ -557,7 +557,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
       <Card className="flex flex-col gap-3 p-5 md:flex-row md:items-center">
         <img src={assetUrl(SYNTH_BUILDING.image)} alt="" className="h-32 w-32 shrink-0 object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
         <div className="flex flex-col gap-2">
-          <h3 className="hud-title text-base text-white">{SYNTH_BUILDING.name}</h3>
+          <h3 className="hud-title text-base text-slate-100">{SYNTH_BUILDING.name}</h3>
           <p className="text-sm text-slate-300">{SYNTH_BUILDING.description}</p>
           <p className="text-sm text-slate-400">
             Déblocage : <CostLine cost={SYNTH_BUILDING.unlockCost ?? {}} />
@@ -586,7 +586,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
           <div className="flex items-center gap-3">
             <CapsuleIcon type={st.crafting.type} className="h-12 w-12" />
             <div className="flex-1">
-              <p className="text-sm text-white">
+              <p className="text-sm text-slate-100">
                 {CAPSULES[st.crafting.type].name} · niveau {st.crafting.level} ({capsulePct(st.crafting.level)} %)
               </p>
               <p className="font-mono text-xs text-slate-400">Prête dans {formatDuration(Math.max(0, Math.ceil((st.crafting.endsAtMs - now) / 1000)))}</p>
@@ -602,7 +602,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
                     key={i}
                     type="button"
                     onClick={() => setChosen(i + 1)}
-                    className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-glow bg-violet-glow/20 text-white" : "border-white/10 text-slate-400 hover:border-violet-glow/50")}
+                    className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-glow bg-violet-glow/20 text-slate-100" : "border-white/10 text-slate-400 hover:border-violet-glow/50")}
                   >
                     {i + 1}
                   </button>
@@ -617,7 +617,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
                 <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
                   <CapsuleIcon type={type} className="h-11 w-11" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white">{CAPSULES[type].name}</p>
+                    <p className="text-sm font-semibold text-slate-100">{CAPSULES[type].name}</p>
                     <p className="text-xs text-slate-400">{CAPSULES[type].description(capsulePct(craftLevel))}</p>
                   </div>
                   <Button size="sm" variant="secondary" disabled={busy || st.stock[type].length >= SYNTH_RULES.maxStock} onClick={() => void act(() => craftCapsule(type, craftLevel), `${CAPSULES[type].name} en synthèse.`)}>
@@ -640,7 +640,7 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
               <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
                 <CapsuleIcon type={type} className="h-10 w-10" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-white">{CAPSULES[type].short}</p>
+                  <p className="text-sm text-slate-100">{CAPSULES[type].short}</p>
                   <p className="font-mono text-xs text-slate-400">{stock.length ? stock.map((l) => `N${l}`).join(" · ") : "vide"} ({stock.length}/{SYNTH_RULES.maxStock})</p>
                 </div>
                 {activable ? (

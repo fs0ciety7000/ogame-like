@@ -56,7 +56,7 @@ export function AllianceCalendarTab({ alliance }: { alliance: Alliance }) {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="hud-title flex items-center gap-2 text-sm text-white">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
         <CalendarDays className="h-4 w-4 text-cyan-glow" /> Calendrier de l'alliance
       </h3>
       <ol className="flex flex-col gap-2">
@@ -68,7 +68,7 @@ export function AllianceCalendarTab({ alliance }: { alliance: Alliance }) {
               <Link to={e.to} className={cn("flex items-center gap-3 border p-2.5 transition-colors hover:border-cyan-glow/40", live ? "border-gold-glow/40 bg-gold-glow/[0.05]" : "border-white/10 bg-white/[0.02]")}>
                 <Icon className={cn("h-5 w-5 shrink-0", TONE[e.kind])} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-white">{e.title}</span>
+                  <span className="block truncate text-sm text-slate-100">{e.title}</span>
                   {e.detail && <span className="block text-[11px] text-slate-500">{e.detail}</span>}
                 </span>
                 <span className="shrink-0 text-right font-mono text-[11px] text-slate-400">

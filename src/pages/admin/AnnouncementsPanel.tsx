@@ -77,7 +77,7 @@ export function AnnouncementsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Annonces plein écran</h2>
+        <h2 className="font-display text-base text-slate-100">Annonces plein écran</h2>
         <span className="text-xs text-slate-500">Une fois par joueur et par appareil, la plus récente d'abord.</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
@@ -107,7 +107,7 @@ export function AnnouncementsPanel() {
           <Card key={a.id} className={cn("flex flex-col gap-3 p-3", open && "border-cyan-glow/40")}>
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpenId(open ? null : a.id)}>
-                <p className="truncate text-sm text-white">{a.title || "(sans titre)"}</p>
+                <p className="truncate text-sm text-slate-100">{a.title || "(sans titre)"}</p>
                 <p className="truncate font-mono text-[10px] text-slate-500">
                   {a.id} · {custom ? "créée dans l'admin" : "fournie avec le jeu"} · {a.eyebrow}
                 </p>

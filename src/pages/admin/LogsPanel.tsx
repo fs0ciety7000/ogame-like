@@ -106,7 +106,7 @@ export function LogsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-base text-white">Journal d'administration</h2>
+        <h2 className="font-display text-base text-slate-100">Journal d'administration</h2>
         <div className="flex flex-wrap gap-1">
           {FILTERS.map((f) => (
             <Button

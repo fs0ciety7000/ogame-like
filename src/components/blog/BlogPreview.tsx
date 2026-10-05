@@ -26,7 +26,7 @@ export function BlogPreview({ title, excerpt, body, category, cover, author, pub
           <span className="inline-flex items-center gap-1.5 border px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: cat.color, borderColor: cat.color }}>
             <BlogCategoryIcon category={cat.id} /> {cat.label}
           </span>
-          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-white sm:text-4xl">{title || "Titre de l'article"}</h1>
+          <h1 className="mt-3 font-display text-3xl font-bold leading-tight text-slate-100 sm:text-4xl">{title || "Titre de l'article"}</h1>
           {excerpt && <p className="mt-2 max-w-2xl text-base text-slate-300">{excerpt}</p>}
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-slate-500">
             <span className="text-slate-300">{author}</span>

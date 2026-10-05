@@ -139,11 +139,11 @@ export function BlogEditorPage() {
             ))}
             <label className="ml-auto flex min-w-0 items-center gap-1.5 border border-white/10 px-2">
               <Search className="h-3.5 w-3.5 text-slate-500" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher" className="h-8 w-36 min-w-0 bg-transparent text-sm text-white outline-none" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Chercher" className="h-8 w-36 min-w-0 bg-transparent text-sm text-slate-100 outline-none" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-2 border-y border-white/5 py-2">
-            <button type="button" onClick={toggleAll} disabled={visibleIds.length === 0} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white disabled:opacity-40">
+            <button type="button" onClick={toggleAll} disabled={visibleIds.length === 0} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 disabled:opacity-40">
               {allPicked ? <CheckSquare className="h-4 w-4 text-cyan-glow" /> : <Square className="h-4 w-4" />}
               {selected.size > 0 ? `${selected.size} sélectionné${selected.size > 1 ? "s" : ""}` : "Tout sélectionner"}
             </button>
@@ -183,7 +183,7 @@ export function BlogEditorPage() {
                           </span>
                           {p.pinned && <Pin className="h-3 w-3 text-gold-glow" />}
                         </span>
-                        <span className="mt-1 block truncate font-display text-base text-white">{p.title}</span>
+                        <span className="mt-1 block truncate font-display text-base text-slate-100">{p.title}</span>
                         <span className="block font-mono text-[11px] text-slate-500">
                           {p.authorPseudo} · {st.label === "Brouillon" ? `modifié le ${blogDate(p.updatedAtMs)}` : st.label === "Programmé" ? `sortie ${blogDateTime(p.publishedAtMs)}` : blogDate(p.publishedAtMs)} · {readingMinutes(p.body)} min{p.tags.length ? ` · #${p.tags.join(" #")}` : ""}
                         </span>
@@ -215,7 +215,7 @@ export function BlogEditorPage() {
               <p key={c.id} className="flex gap-2 text-xs">
                 <BlogCategoryIcon category={c.id} />
                 <span>
-                  <b className="text-white">{c.label}</b> : {c.description}
+                  <b className="text-slate-100">{c.label}</b> : {c.description}
                 </span>
               </p>
             ))}
@@ -348,7 +348,7 @@ function AuthorProfileCard({ me, onSaved }: { me: BlogAuthor; onSaved: () => voi
       <div className="flex items-center gap-3">
         <span className="h-12 w-12 shrink-0 border border-white/10 bg-space-900 bg-cover bg-center" style={avatar ? { backgroundImage: `url('${avatar}')` } : undefined} />
         <div className="min-w-0">
-          <p className="font-display text-white">{me.pseudo}</p>
+          <p className="font-display text-slate-100">{me.pseudo}</p>
           <button type="button" disabled={busy} onClick={() => void takeGameAvatar()} className="text-xs text-cyan-glow hover:underline">
             Reprendre mon avatar du jeu
           </button>

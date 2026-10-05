@@ -35,7 +35,7 @@ export function MonthCheckCard() {
     <div className="glass-panel hud-cut flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-glow" />
-        <h3 className="hud-title text-sm text-white">Vérification du mois</h3>
+        <h3 className="hud-title text-sm text-slate-100">Vérification du mois</h3>
         <div className="ml-auto flex gap-1.5">
           {[current, nextMonthId(current)].map((id) => (
             <HudChip key={id} asChild size="sm" tone={id === monthId ? "accent" : "neutral"}>
@@ -98,7 +98,7 @@ export function PassDurationCard({ season }: { season: PassSeason | null }) {
     <div className="glass-panel hud-cut flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <Hourglass className="h-4 w-4 self-center text-cyan-glow" />
-        <h3 className="hud-title text-sm text-white">Simulateur de durée · {seasonLabel(season.id)}</h3>
+        <h3 className="hud-title text-sm text-slate-100">Simulateur de durée · {seasonLabel(season.id)}</h3>
         <span className="font-mono text-[11px] text-slate-500">
           {season.challengeMode === "cumulative" ? "défis cumulés (totaux du mois)" : "défis un palier à la fois"} · {season.pointsPerTier} pts / palier
         </span>

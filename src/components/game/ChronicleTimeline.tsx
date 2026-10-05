@@ -64,7 +64,7 @@ export function ChronicleTimeline({
                 className={cn("grid h-6 w-6 rotate-45 place-items-center border", locked ? "border-white/15 bg-space-950" : done ? "border-transparent" : "bg-space-950")}
                 style={done ? { background: accent } : locked ? undefined : { borderColor: accent }}
               >
-                <span className="-rotate-45 font-mono text-[10px] font-bold text-white">{done ? <Check className="h-3 w-3 text-space-950" /> : i + 1}</span>
+                <span className="-rotate-45 font-mono text-[10px] font-bold text-slate-100">{done ? <Check className="h-3 w-3 text-space-950" /> : i + 1}</span>
               </span>
             </span>
           );
@@ -94,12 +94,12 @@ export function ChronicleTimeline({
                 {done && <Check className="h-3.5 w-3.5 text-mint-glow" />}
                 {locked && <Lock className="h-3.5 w-3.5 text-slate-500" />}
                 {!locked && onReplay && (
-                  <button type="button" title="Revoir la scène" aria-label={`Revoir la scène de l'épisode ${i + 1}`} className="ml-auto text-slate-500 hover:text-white" onClick={() => onReplay(i)}>
+                  <button type="button" title="Revoir la scène" aria-label={`Revoir la scène de l'épisode ${i + 1}`} className="ml-auto text-slate-500 hover:text-slate-100" onClick={() => onReplay(i)}>
                     <Play className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
-              <p className="font-display text-sm text-white">{e.title}</p>
+              <p className="font-display text-sm text-slate-100">{e.title}</p>
               <p className="text-xs text-slate-400">
                 {OBJECTIVE_LABELS[e.objective.type]} :{" "}
                 <span className="font-mono tabular-nums text-slate-200">

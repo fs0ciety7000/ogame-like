@@ -133,7 +133,7 @@ export function FleetsPanel({
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <Rocket className="h-4 w-4 text-cyan-glow" />
-        <h3 className="font-display text-sm text-white">Flottes</h3>
+        <h3 className="font-display text-sm text-slate-100">Flottes</h3>
         <Button
           size="sm"
           variant="ghost"

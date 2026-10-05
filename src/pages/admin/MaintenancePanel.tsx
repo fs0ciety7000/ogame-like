@@ -149,7 +149,7 @@ export function MaintenancePanel() {
 
       {/* Réglages */}
       <Card className="flex flex-col gap-4 p-5">
-        <h3 className="hud-title text-sm text-white">{m.enabled ? "Modifier la maintenance" : "Programmer une maintenance"}</h3>
+        <h3 className="hud-title text-sm text-slate-100">{m.enabled ? "Modifier la maintenance" : "Programmer une maintenance"}</h3>
         <Field label="Message aux joueurs" hint="Vide = message par défaut. Les retours à la ligne sont conservés.">
           <textarea
             value={message}
@@ -249,7 +249,7 @@ function Stat({ label, value, warn }: { label: string; value: string; warn?: boo
   return (
     <div className="border-l-2 border-gold-glow/40 bg-white/[0.03] px-3 py-2">
       <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className={cn("tabular-mono text-base font-semibold", warn ? "text-danger-glow" : "text-white")}>{value}</p>
+      <p className={cn("tabular-mono text-base font-semibold", warn ? "text-danger-glow" : "text-slate-100")}>{value}</p>
     </div>
   );
 }

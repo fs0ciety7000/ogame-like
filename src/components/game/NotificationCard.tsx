@@ -149,7 +149,7 @@ export function NotificationCard({
           {fresh && <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }} aria-label="Nouveau" />}
           <span className="ml-auto shrink-0 font-mono text-[10px] text-slate-500">{time ?? timeAgo(n.createdAtMs)}</span>
         </div>
-        <p className={cn("mt-0.5 font-semibold leading-snug", compact ? "text-[13px]" : "text-sm", fresh ? "text-white" : "text-slate-200")}>{n.title}</p>
+        <p className={cn("mt-0.5 font-semibold leading-snug", compact ? "text-[13px]" : "text-sm", fresh ? "text-slate-100" : "text-slate-200")}>{n.title}</p>
         <p className="mt-0.5 break-words text-xs leading-relaxed text-slate-400">{n.message}</p>
         {n.data?.image && !compact && <img src={assetUrl(n.data.image)} alt="" aria-hidden loading="lazy" className="hud-cut-sm mt-2 aspect-[3/1] w-full border border-white/10 object-cover" />}
         <Details n={n} />

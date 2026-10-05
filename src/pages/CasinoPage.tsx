@@ -306,7 +306,7 @@ export function CasinoPage() {
                     <p className="font-mono text-sm uppercase tracking-[0.16em] text-slate-400">Pas cette fois… le cosmos est capricieux.</p>
                   ) : (
                     <HudCallout tone={last.outcome === "jackpot" ? "gold" : "mint"} className="flex flex-wrap items-center justify-center gap-3 py-2">
-                      <span className="hud-title text-sm text-white">{OUTCOME_LABELS[last.outcome]}</span>
+                      <span className="hud-title text-sm text-slate-100">{OUTCOME_LABELS[last.outcome]}</span>
                       <Gains resources={last.resources} />
                       {last.token && (
                         <HudChip size="sm" tone="mint">

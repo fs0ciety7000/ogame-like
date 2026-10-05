@@ -36,7 +36,7 @@ export function ChronicleHomeCard({ now }: { now: number }) {
     >
       {e ? (
         <>
-          <p className="text-sm text-white">
+          <p className="text-sm text-slate-100">
             Épisode {current + 1} : {e.title}
           </p>
           <div className="flex justify-between font-mono text-[11px] tabular-nums text-slate-400">

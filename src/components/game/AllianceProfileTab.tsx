@@ -50,7 +50,7 @@ function RankEditor({ rank, onDone }: { rank: Partial<AllianceRank> | null; onDo
           <label key={p.id} className="flex items-start gap-2 text-xs text-slate-300" title={p.hint}>
             <input type="checkbox" checked={perms.includes(p.id)} onChange={(e) => setPerms((cur) => (e.target.checked ? [...cur, p.id] : cur.filter((x) => x !== p.id)))} className="mt-0.5" />
             <span>
-              <strong className="text-white">{p.label}</strong> <span className="text-slate-500">— {p.hint}</span>
+              <strong className="text-slate-100">{p.label}</strong> <span className="text-slate-500">— {p.hint}</span>
             </span>
           </label>
         ))}
@@ -144,7 +144,7 @@ export function AllianceProfileTab({ alliance, uid }: { alliance: Alliance; uid:
           ) : (
             profile.applications.map((a) => (
               <div key={a.uid} className="flex flex-col gap-1 border border-white/[0.06] bg-white/[0.02] p-2">
-                <p className="flex items-center gap-2 text-sm text-white">
+                <p className="flex items-center gap-2 text-sm text-slate-100">
                   {a.pseudo} <span className="text-[11px] text-slate-500">{timeAgo(a.atMs)}</span>
                 </p>
                 {a.message && <p className="text-xs italic text-slate-300">« {a.message} »</p>}

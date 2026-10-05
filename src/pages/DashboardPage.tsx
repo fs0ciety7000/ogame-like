@@ -115,7 +115,7 @@ export function DashboardPage() {
         </div>
         <div>
           <p className="hud-eyebrow text-slate-500">Développement de l'empire</p>
-          <p className="font-display text-3xl text-white">{developmentPercent}%</p>
+          <p className="font-display text-3xl text-slate-100">{developmentPercent}%</p>
           <p className="mt-1 text-xs text-slate-500">
             {totalBuildingLevels} / {maxBuildingLevels} niveaux de bâtiments cumulés
           </p>

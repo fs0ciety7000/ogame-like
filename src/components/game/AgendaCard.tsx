@@ -222,7 +222,7 @@ export function AgendaCard({ now }: { now: number }) {
               return (
                 <li key={i.id}>
                   {/* v5.14 : sur téléphone, la date passe sous le titre (il était coupé à 5 lettres). */}
-                  <Link to={i.link} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm hover:text-white sm:flex-nowrap">
+                  <Link to={i.link} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm hover:text-slate-100 sm:flex-nowrap">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: AGENDA_COLORS[i.kind] }} />
                     <span className="min-w-0 flex-1 truncate text-slate-200">
                       {i.emoji} {i.title}

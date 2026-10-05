@@ -68,7 +68,7 @@ export function RewardReveal({
             >
               {icon}
             </motion.span>
-            <DialogTitle className="hud-title relative text-lg text-white">{title}</DialogTitle>
+            <DialogTitle className="hud-title relative text-lg text-slate-100">{title}</DialogTitle>
             {description && <DialogDescription className="relative text-xs text-slate-400">{description}</DialogDescription>}
             {items.length > 0 && (
               <div className="relative grid w-full grid-cols-2 gap-1.5">

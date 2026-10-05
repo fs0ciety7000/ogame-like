@@ -34,7 +34,7 @@ export function WarpOverlay() {
         >
           <motion.div
             className="absolute inset-0"
-            style={{ background: "radial-gradient(circle, rgba(75,232,255,0.35) 0%, transparent 60%)" }}
+            style={{ background: "radial-gradient(circle, color-mix(in srgb,var(--color-cyan-glow) 35%,transparent) 0%, transparent 60%)" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: DURATION_S, ease: "easeOut" }}
