@@ -321,6 +321,72 @@ export interface PirateState {
   adapt: number;
   /** Repère du déclencheur expansion : niveaux de bâtiments à une date. */
   mark?: { atMs: number; value: number } | null;
+  /** 5.16 : traité en cours avec la faction. */
+  treaty?: FactionTreaty | null;
+}
+
+/* ---------- 5.16 : traités avec les factions ---------- */
+
+export type TreatyKind = "pact" | "escort" | "embargo";
+
+export interface FactionTreaty {
+  kind: TreatyKind;
+  signedAtMs: number;
+  untilMs: number;
+}
+
+export const TREATY_RULES = {
+  durationDays: 7,
+  /** Coût en heures de production commune (0 = gratuit). */
+  cost: { pact: 2, escort: 4, embargo: 0 } as Record<TreatyKind, number>,
+  /** Notoriété maximale pour signer (embargo : sans condition). */
+  maxNotoriety: { pact: 3, escort: 1, embargo: 99 } as Record<TreatyKind, number>,
+  /** Escorte : embuscades d'expédition × ce facteur. */
+  escortAmbush: 0.5,
+  /** Embargo : raids plus forts, primes plus grosses. */
+  embargoRaidPower: 1.25,
+  embargoBounty: 1.5,
+  embargoNotoriety: 1,
+};
+
+export const TREATY_LABELS: Record<TreatyKind, { name: string; effect: string }> = {
+  pact: { name: "Pacte de péage", effect: "Pas d'ultimatum ni de raid de leur part ; en expédition, leurs patrouilles te laissent passer sans péage." },
+  escort: { name: "Contrat d'escorte", effect: "Leurs navires escortent tes expéditions : deux fois moins d'embuscades." },
+  embargo: { name: "Embargo", effect: "Tu leur fermes tes marchés : leurs raids sont 25 % plus forts, mais les repousser rapporte 50 % de plus. Notoriété +1." },
+};
+
+/** Traité en vigueur avec une faction (null s'il a expiré). */
+export function activeTreaty(st: Pick<PirateState, "treaty"> | undefined, now: number): FactionTreaty | null {
+  const t = st?.treaty;
+  return t && t.untilMs > now ? t : null;
+}
+
+/** Un traité de ce type est-il en vigueur avec au moins une faction ? */
+export function hasTreaty(player: Pick<PlayerState, "pirates">, kind: TreatyKind, now: number, factionId?: string): boolean {
+  const states = factionStates(player);
+  return Object.entries(states).some(([id, st]) => (!factionId || id === factionId) && activeTreaty(st, now)?.kind === kind);
+}
+
+/** Signe un traité : coût prélevé (production), conditions de notoriété, une menace en cours l'interdit. */
+export function signTreaty(player: PlayerState, factionId: string, kindIn: unknown, now: number): { treaty: FactionTreaty; paid: Partial<Record<ResourceId, number>> } {
+  const kind = kindIn === "pact" || kindIn === "escort" || kindIn === "embargo" ? kindIn : null;
+  if (!kind) throw new GameActionError("Traité inconnu.");
+  const faction = findFaction(factionId);
+  if (!faction || !faction.enabled) throw new GameActionError("Faction inconnue.");
+  const st = pirateState(player, faction.id);
+  if (activeTreaty(st, now)) throw new GameActionError("Un traité est déjà en vigueur avec cette faction.");
+  if ((st.ultimatum && st.ultimatum.expiresAtMs > now) || st.raidUntilMs > now) throw new GameActionError(`${faction.name} est déjà en route ou attend ta réponse : règle d'abord la menace en cours.`);
+  if (st.notoriety > TREATY_RULES.maxNotoriety[kind]) throw new GameActionError(`${faction.leader} ne traite pas avec toi : notoriété ${st.notoriety}, il faut ${TREATY_RULES.maxNotoriety[kind]} au plus.`);
+  const cost = TREATY_RULES.cost[kind] > 0 ? productionHours(player, TREATY_RULES.cost[kind]) : {};
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
+    if ((player.resources[res] ?? 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour signer.`);
+  }
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - n;
+  const treaty: FactionTreaty = { kind, signedAtMs: now, untilMs: now + TREATY_RULES.durationDays * 86400_000 };
+  st.treaty = treaty;
+  if (kind === "embargo") st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + TREATY_RULES.embargoNotoriety);
+  setFactionState(player, faction.id, st);
+  return { treaty, paid: cost };
 }
 
 /** État de toutes les factions d'un joueur (avec migration de l'ancien
@@ -341,6 +407,7 @@ function normalize(p: Partial<PirateState> | undefined, maxNotoriety = 8): Pirat
     lairsTaken: p?.lairsTaken ?? 0,
     adapt: Number.isFinite(p?.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p!.adapt!)) : 1,
     mark: p?.mark ?? null,
+    treaty: p?.treaty && typeof p.treaty === "object" && Number(p.treaty.untilMs) > 0 ? p.treaty : null,
   };
 }
 
@@ -518,6 +585,8 @@ export function pirateTick(
 
   for (const faction of FACTIONS) {
     if (!faction.enabled) continue;
+    // 5.16 : pacte de péage en vigueur : pas d'ultimatum de cette faction.
+    if (activeTreaty(states[faction.id], now)?.kind === "pact" && options.force !== faction.id) continue;
     const forced = options.force === faction.id;
     if (options.force && !forced) continue;
     const st = states[faction.id] ?? normalize(undefined);
@@ -582,7 +651,7 @@ export function pirateTick(
 }
 
 function launchRaid(player: PlayerState, faction: FactionDef, st: PirateState, now: number, random: () => number) {
-  const power = raidPower(faction, player, st.notoriety, st.adapt);
+  const power = Math.round(raidPower(faction, player, st.notoriety, st.adapt) * (activeTreaty(st, now)?.kind === "embargo" ? TREATY_RULES.embargoRaidPower : 1));
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -706,6 +775,8 @@ export function resolvePirateRaid(
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = (bounty[r] ?? 0) + faction.bounty.rare;
+    // 5.16 : embargo : la prime grossit.
+    if (activeTreaty(st, now)?.kind === "embargo") for (const r of Object.keys(bounty) as ResourceId[]) bounty[r] = Math.floor((bounty[r] ?? 0) * TREATY_RULES.embargoBounty);
     for (const [res, amount] of Object.entries(bounty) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + amount;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;

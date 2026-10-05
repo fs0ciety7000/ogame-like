@@ -963,7 +963,26 @@ function processPirates(game, now, uid, force) {
 /** POST /api/cosmic/pirates { answer: "pay" | "refuse" } */
 function piratesRequest(e) {
   const game = loadGame();
-  const answer = body(e).answer === "pay" ? "pay" : "refuse";
+  const req = body(e);
+  // 5.16 : traité avec une faction (pacte de péage, escorte, embargo).
+  if (req.action === "treaty") {
+    let out = null;
+    $app.runInTransaction((txApp) => {
+      const now = Date.now();
+      applyContent(txApp, game);
+      const loaded = loadPlayer(txApp, game, e.auth.id);
+      const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+      try {
+        out = game.signTreaty(flushed.player, String(req.factionId || ""), req.kind, now);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+      notify(txApp, e.auth.id, flushed.notifications);
+    });
+    return e.json(200, out);
+  }
+  const answer = req.answer === "pay" ? "pay" : "refuse";
   let response = null;
   $app.runInTransaction((txApp) => {
     const now = Date.now();

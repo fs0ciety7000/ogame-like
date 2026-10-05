@@ -20,6 +20,13 @@ La Gazette ne répète plus les mêmes nouvelles d'un numéro à l'autre et s'en
 - En contrepartie, les embuscades et les passages forcés sont 20 % plus durs par profondeur, et une embuscade perdue en profondeur fait perdre 30 % de la cale.
 - Sans réponse dans les 30 minutes, la flotte rentre. Le journal de l'expédition indique la profondeur de chaque événement.
 
+## Traités avec les factions
+- Sur la page Menaces, chaque faction propose trois traités de 7 jours, un seul à la fois :
+  - Pacte de péage : 2 h de production, notoriété ≤ 3. Pas d'ultimatum ni de raid de leur part, et passage libre face à leurs patrouilles en expédition.
+  - Contrat d'escorte : 4 h de production, notoriété ≤ 1. Deux fois moins d'embuscades en expédition.
+  - Embargo : gratuit. Leurs raids sont 25 % plus forts, mais les repousser rapporte 50 % de plus, et la notoriété monte de 1.
+- On ne peut pas signer pendant un ultimatum ou un raid en cours de la faction.
+
 ## Confort
 - Présence : une pastille verte qui pulse montre qui est en ligne (actif depuis moins de 5 minutes). Elle apparaît à côté des pseudos partout dans le jeu, sur les avatars du classement et du podium, et dans la fiche du joueur, qui indique aussi « Vu il y a… ». Les membres de l'alliance utilisent la même pastille, et l'écho se coupe si tu as demandé de réduire les animations.
 - Ctrl+K fait aussi des actions : « Tout réclamer », « Réclamer la série du jour », « Améliorer » un bâtiment (avec le niveau visé et l'état des ressources), « Rechercher » une technologie, et « 10 chasseur » pour lancer 10 unités. Le serveur vérifie tout, comme pour un clic.

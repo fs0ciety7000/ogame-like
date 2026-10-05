@@ -480,6 +480,7 @@ __export(hooksEntry_exports, {
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
   shortHash: () => shortHash,
+  signTreaty: () => signTreaty,
   slugify: () => slugify,
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
@@ -6452,6 +6453,51 @@ function lairUid(factionId) {
 function factionOfLair(uid) {
   return uid.startsWith("lair_") ? uid.slice(5) : uid === "pirates_lair" ? "varan" : "";
 }
+var TREATY_RULES = {
+  durationDays: 7,
+  /** Coût en heures de production commune (0 = gratuit). */
+  cost: { pact: 2, escort: 4, embargo: 0 },
+  /** Notoriété maximale pour signer (embargo : sans condition). */
+  maxNotoriety: { pact: 3, escort: 1, embargo: 99 },
+  /** Escorte : embuscades d'expédition × ce facteur. */
+  escortAmbush: 0.5,
+  /** Embargo : raids plus forts, primes plus grosses. */
+  embargoRaidPower: 1.25,
+  embargoBounty: 1.5,
+  embargoNotoriety: 1
+};
+function activeTreaty(st, now) {
+  const t = st == null ? void 0 : st.treaty;
+  return t && t.untilMs > now ? t : null;
+}
+function hasTreaty(player, kind, now, factionId) {
+  const states = factionStates(player);
+  return Object.entries(states).some(([id, st]) => {
+    var _a;
+    return (!factionId || id === factionId) && ((_a = activeTreaty(st, now)) == null ? void 0 : _a.kind) === kind;
+  });
+}
+function signTreaty(player, factionId, kindIn, now) {
+  var _a, _b;
+  const kind = kindIn === "pact" || kindIn === "escort" || kindIn === "embargo" ? kindIn : null;
+  if (!kind) throw new GameActionError("Trait\xE9 inconnu.");
+  const faction = findFaction(factionId);
+  if (!faction || !faction.enabled) throw new GameActionError("Faction inconnue.");
+  const st = pirateState(player, faction.id);
+  if (activeTreaty(st, now)) throw new GameActionError("Un trait\xE9 est d\xE9j\xE0 en vigueur avec cette faction.");
+  if (st.ultimatum && st.ultimatum.expiresAtMs > now || st.raidUntilMs > now) throw new GameActionError(`${faction.name} est d\xE9j\xE0 en route ou attend ta r\xE9ponse : r\xE8gle d'abord la menace en cours.`);
+  if (st.notoriety > TREATY_RULES.maxNotoriety[kind]) throw new GameActionError(`${faction.leader} ne traite pas avec toi : notori\xE9t\xE9 ${st.notoriety}, il faut ${TREATY_RULES.maxNotoriety[kind]} au plus.`);
+  const cost = TREATY_RULES.cost[kind] > 0 ? productionHours(player, TREATY_RULES.cost[kind]) : {};
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour signer.`);
+  }
+  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_b = player.resources[res]) != null ? _b : 0) - n;
+  const treaty = { kind, signedAtMs: now, untilMs: now + TREATY_RULES.durationDays * 864e5 };
+  st.treaty = treaty;
+  if (kind === "embargo") st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + TREATY_RULES.embargoNotoriety);
+  setFactionState(player, faction.id, st);
+  return { treaty, paid: cost };
+}
 function normalize(p, maxNotoriety = 8) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   return {
@@ -6466,7 +6512,8 @@ function normalize(p, maxNotoriety = 8) {
     tributesPaid: (_i = p == null ? void 0 : p.tributesPaid) != null ? _i : 0,
     lairsTaken: (_j = p == null ? void 0 : p.lairsTaken) != null ? _j : 0,
     adapt: Number.isFinite(p == null ? void 0 : p.adapt) ? Math.max(PIRATE_RULES.adaptMin, Math.min(PIRATE_RULES.adaptMax, p.adapt)) : 1,
-    mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null
+    mark: (_k = p == null ? void 0 : p.mark) != null ? _k : null,
+    treaty: (p == null ? void 0 : p.treaty) && typeof p.treaty === "object" && Number(p.treaty.untilMs) > 0 ? p.treaty : null
   };
 }
 function isLegacy(raw) {
@@ -6583,7 +6630,7 @@ function note3(kind, title, message, now, data) {
   return __spreadValues({ kind, title, message, createdAtMs: now, read: false }, data ? { data } : {});
 }
 function pirateTick(player, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const random = (_a = options.random) != null ? _a : Math.random;
   const out = { changed: false, raid: null, notifications: [] };
   if (!PIRATE_RULES.enabled) return out;
@@ -6607,9 +6654,10 @@ function pirateTick(player, now, options = {}) {
   if (busy) return out;
   for (const faction of FACTIONS) {
     if (!faction.enabled) continue;
+    if (((_b = activeTreaty(states[faction.id], now)) == null ? void 0 : _b.kind) === "pact" && options.force !== faction.id) continue;
     const forced = options.force === faction.id;
     if (options.force && !forced) continue;
-    const st = (_b = states[faction.id]) != null ? _b : normalize(void 0);
+    const st = (_c = states[faction.id]) != null ? _c : normalize(void 0);
     if (!st.nextListAtMs && !forced) {
       st.nextListAtMs = now + (faction.trigger.type === "wealth" ? nextListDelay(faction, random) : hours(12));
       if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
@@ -6617,16 +6665,16 @@ function pirateTick(player, now, options = {}) {
       out.changed = true;
       continue;
     }
-    const active = now - ((_c = player.resourcesUpdatedAtMs) != null ? _c : 0) <= hours(faction.trigger.activeWithinHours);
+    const active = now - ((_d = player.resourcesUpdatedAtMs) != null ? _d : 0) <= hours(faction.trigger.activeWithinHours);
     const window = hours(faction.trigger.windowDays * 24);
-    const threshold = (_d = faction.trigger.threshold) != null ? _d : 0;
+    const threshold = (_e = faction.trigger.threshold) != null ? _e : 0;
     let triggered = false;
     switch (faction.trigger.type) {
       case "aggression":
-        triggered = ((_f = (_e = options.aggression) == null ? void 0 : _e.victories) != null ? _f : 0) >= faction.trigger.minVictories;
+        triggered = ((_g = (_f = options.aggression) == null ? void 0 : _f.victories) != null ? _g : 0) >= faction.trigger.minVictories;
         break;
       case "research":
-        triggered = totalTechLevels(player) >= threshold && now - ((_h = (_g = player.stats) == null ? void 0 : _g.lastResearchAtMs) != null ? _h : 0) <= window;
+        triggered = totalTechLevels(player) >= threshold && now - ((_i = (_h = player.stats) == null ? void 0 : _h.lastResearchAtMs) != null ? _i : 0) <= window;
         break;
       case "hoard":
         triggered = active && storageFillPct(player) >= threshold;
@@ -6649,9 +6697,9 @@ function pirateTick(player, now, options = {}) {
       default:
         triggered = active;
     }
-    const eligible = forced || now >= st.nextListAtMs && now - ((_i = player.createdAtMs) != null ? _i : 0) >= hours(72) && triggered;
+    const eligible = forced || now >= st.nextListAtMs && now - ((_j = player.createdAtMs) != null ? _j : 0) >= hours(72) && triggered;
     if (!eligible) continue;
-    const tribute = tributeFor(faction, player, (_j = options.aggression) != null ? _j : null);
+    const tribute = tributeFor(faction, player, (_k = options.aggression) != null ? _k : null);
     st.ultimatum = { tribute, issuedAtMs: now, expiresAtMs: now + hours(faction.answerHours) };
     if (faction.trigger.type === "expansion") st.mark = { atMs: now, value: totalBuildingLevels(player) };
     setState(player, faction.id, st);
@@ -6670,7 +6718,8 @@ function pirateTick(player, now, options = {}) {
   return out;
 }
 function launchRaid(player, faction, st, now, random) {
-  const power = raidPower(faction, player, st.notoriety, st.adapt);
+  var _a;
+  const power = Math.round(raidPower(faction, player, st.notoriety, st.adapt) * (((_a = activeTreaty(st, now)) == null ? void 0 : _a.kind) === "embargo" ? TREATY_RULES.embargoRaidPower : 1));
   const arriveAtMs = now + hours(faction.raidTravelHours);
   st.ultimatum = null;
   st.raidUntilMs = arriveAtMs;
@@ -6704,7 +6753,7 @@ function answerUltimatum(player, answer, now, random = Math.random) {
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
 function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, options = {}) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   if (options.evading) bumpStat(player, "evasions");
@@ -6759,7 +6808,8 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
-    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_j = player.resources[res]) != null ? _j : 0) + amount3;
+    if (((_j = activeTreaty(st, now)) == null ? void 0 : _j.kind) === "embargo") for (const r of Object.keys(bounty)) bounty[r] = Math.floor(((_k = bounty[r]) != null ? _k : 0) * TREATY_RULES.embargoBounty);
+    for (const [res, amount3] of Object.entries(bounty)) player.resources[res] = ((_l = player.resources[res]) != null ? _l : 0) + amount3;
     applyXpDelta(player, faction.bounty.xp, now);
     const destroyed = power * combat.attackerLossPercent;
     debris = { scrap: Math.floor(destroyed * faction.bounty.debrisPerPower), energy: Math.floor(destroyed * faction.bounty.debrisPerPower / 2) };
@@ -6770,7 +6820,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
-    player.victories = ((_k = player.victories) != null ? _k : 0) + 1;
+    player.victories = ((_m = player.victories) != null ? _m : 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;
     if (lairNow) st.lairOpen = true;
     const raidLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.attackerPower, combat.defenderPower)));
@@ -9808,8 +9858,8 @@ function launchExpedition(owner, raw, hoursIn, active, today, now, formation) {
     }
   };
 }
-function pickEvent(random) {
-  const entries = Object.entries(EXPEDITION_RULES.weights);
+function pickEvent(random, ambushFactor = 1) {
+  const entries = Object.entries(EXPEDITION_RULES.weights).map(([k, w]) => [k, k === "ambush" ? w * ambushFactor : w]);
   const total2 = entries.reduce((a, [, w]) => a + Math.max(0, w), 0);
   let roll = random() * total2;
   for (const [k, w] of entries) {
@@ -9844,8 +9894,9 @@ function fightFleet(player, fleet, ratio) {
   return { won: combat.outcome === "attacker_win", lost };
 }
 function rollExpeditionEvent(player, fleet, stage, now, random) {
+  var _a;
   const R = EXPEDITION_RULES;
-  const kind = pickEvent(random);
+  const kind = pickEvent(random, hasTreaty(player, "escort", now) ? TREATY_RULES.escortAmbush : 1);
   let text = "";
   if (kind === "nothing") {
     text = "Calme plat : rien d'int\xE9ressant dans ce secteur.";
@@ -9871,12 +9922,12 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
       if (first) found[first] = 1;
     }
     fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => {
-      var _a;
-      return [id, n + ((_a = found[id]) != null ? _a : 0)];
+      var _a2;
+      return [id, n + ((_a2 = found[id]) != null ? _a2 : 0)];
     }));
     text = `\xC9pave remise en \xE9tat : ${Object.entries(found).map(([id, n]) => {
-      var _a, _b;
-      return `${n} ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
+      var _a2, _b;
+      return `${n} ${(_b = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b : id}`;
     }).join(", ")} rejoignent la flotte.`;
   } else if (kind === "ambush") {
     const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet));
@@ -9887,8 +9938,8 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     } else if (expeditionDepth(fleet) > 0 && fleet.loot) {
       const lostLoot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * R.deepLootLoss)]));
       fleet.loot = Object.fromEntries(Object.entries(fleet.loot).map(([r, n]) => {
-        var _a;
-        return [r, (n != null ? n : 0) - ((_a = lostLoot[r]) != null ? _a : 0)];
+        var _a2;
+        return [r, (n != null ? n : 0) - ((_a2 = lostLoot[r]) != null ? _a2 : 0)];
       }));
       text = `Embuscade en territoire inconnu ! La flotte fuit (${lost} vaisseau${lost > 1 ? "x" : ""} perdu${lost > 1 ? "s" : ""}) et abandonne ${Math.round(R.deepLootLoss * 100)} % de sa cale (${describeGain(lostLoot)}).`;
     } else {
@@ -9898,6 +9949,8 @@ function rollExpeditionEvent(player, fleet, stage, now, random) {
     const faction = FACTIONS.length > 0 ? FACTIONS[Math.floor(random() * FACTIONS.length) % FACTIONS.length] : null;
     if (!faction) {
       text = "Des signaux lointains, puis plus rien.";
+    } else if (((_a = activeTreaty(pirateState(player, faction.id), now)) == null ? void 0 : _a.kind) === "pact") {
+      text = `${faction.name} reconna\xEEt ton pavillon (pacte de p\xE9age) et te laisse passer.`;
     } else {
       const toll = productionHours(player, R.tollHours);
       fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 6e4, toll, kind: "faction" };

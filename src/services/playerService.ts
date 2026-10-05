@@ -435,6 +435,11 @@ export function claimContract(contractId: string) {
 }
 
 /** Réponse à l'ultimatum en cours (toutes factions) : payer le tribut ou refuser (raid). */
+/** 5.16 : traité avec une faction (pacte de péage, escorte, embargo). */
+export function signFactionTreaty(factionId: string, kind: "pact" | "escort" | "embargo") {
+  return callGame<{ treaty: { kind: string; untilMs: number } }>("pirates", { action: "treaty", factionId, kind });
+}
+
 export function answerPirateUltimatum(answer: "pay" | "refuse") {
   return callGame<{ answer: string; raid: { power: number; arriveAtMs: number } | null }>("pirates", { answer });
 }

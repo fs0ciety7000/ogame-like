@@ -7,7 +7,7 @@ import { GameActionError } from "@/game/errors";
 import { describeGain, formatInt } from "@/game/format";
 export { describeGain };
 import { formationEffects } from "@/game/formations";
-import { FACTIONS, pirateState, productionHours, setFactionState } from "@/game/pirates";
+import { activeTreaty, FACTIONS, hasTreaty, pirateState, productionHours, setFactionState, TREATY_RULES } from "@/game/pirates";
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
@@ -188,8 +188,8 @@ export function launchExpedition(owner: PlayerState, raw: Record<string, unknown
   };
 }
 
-function pickEvent(random: () => number): ExpeditionEventKind {
-  const entries = Object.entries(EXPEDITION_RULES.weights) as [ExpeditionEventKind, number][];
+function pickEvent(random: () => number, ambushFactor = 1): ExpeditionEventKind {
+  const entries = (Object.entries(EXPEDITION_RULES.weights) as [ExpeditionEventKind, number][]).map(([k, w]) => [k, k === "ambush" ? w * ambushFactor : w] as [ExpeditionEventKind, number]);
   const total = entries.reduce((a, [, w]) => a + Math.max(0, w), 0);
   let roll = random() * total;
   for (const [k, w] of entries) {
@@ -229,7 +229,8 @@ function fightFleet(player: PlayerState, fleet: ExpeditionFleet, ratio: number):
 /** Tirage et application d'un événement. Renvoie le texte et, pour une rencontre, la décision attendue. */
 export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet, stage: 1 | 2, now: number, random: () => number): { text: string; pending: boolean } {
   const R = EXPEDITION_RULES;
-  const kind = pickEvent(random);
+  // 5.16 : contrat d'escorte avec une faction : deux fois moins d'embuscades.
+  const kind = pickEvent(random, hasTreaty(player, "escort", now) ? TREATY_RULES.escortAmbush : 1);
   let text = "";
   if (kind === "nothing") {
     text = "Calme plat : rien d'intéressant dans ce secteur.";
@@ -274,6 +275,9 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
     const faction = FACTIONS.length > 0 ? FACTIONS[Math.floor(random() * FACTIONS.length) % FACTIONS.length] : null;
     if (!faction) {
       text = "Des signaux lointains, puis plus rien.";
+    } else if (activeTreaty(pirateState(player, faction.id), now)?.kind === "pact") {
+      // 5.16 : pacte de péage : passage libre.
+      text = `${faction.name} reconnaît ton pavillon (pacte de péage) et te laisse passer.`;
     } else {
       const toll = productionHours(player, R.tollHours);
       fleet.expedition.pending = { stage, factionId: faction.id, deadlineMs: now + R.choiceMinutes * 60_000, toll, kind: "faction" };
