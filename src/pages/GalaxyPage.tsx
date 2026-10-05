@@ -99,7 +99,7 @@ export function GalaxyPage() {
   const fleets = useFleetStore((s) => s.fleets);
   const now = useSmoothNow();
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
-  const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string } | null>(null);
+  const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string; xp?: number } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string; allianceId?: string | null; createdAtMs?: number } | null>(null);
   const [debrisFields, setDebrisFields] = useState<DebrisField[]>([]);
   const [recycleField, setRecycleField] = useState<DebrisField | null>(null);
@@ -592,7 +592,7 @@ export function GalaxyPage() {
                   {me?.allianceId && selected.allianceId === me.allianceId ? (
                     <p className="flex-1 text-xs text-slate-500">Colonie d'un allié.</p>
                   ) : (
-                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
+                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})`, xp: selected.xp })}>
                       <Sword className="mr-1 h-4 w-4" /> Attaquer la colonie
                     </Button>
                   )}
@@ -608,7 +608,7 @@ export function GalaxyPage() {
                       <ShieldPlus className="mr-1 h-4 w-4" /> Renforcer
                     </Button>
                   ) : (
-                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                    <Button variant="danger" size="sm" className="flex-1" onClick={() => setAttackTarget({ uid: selected.uid, pseudo: selected.pseudo, xp: selected.xp })}>
                       <Sword className="mr-1 h-4 w-4" /> Attaquer
                     </Button>
                   )}

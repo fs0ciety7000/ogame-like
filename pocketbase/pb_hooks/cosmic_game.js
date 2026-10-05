@@ -9502,6 +9502,8 @@ var COMBAT_RULES = {
   lootPercent: 0.08,
   /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
   lootPercentCommon: 0.1,
+  /** 5.23 : part du butin emportée sur un match nul. */
+  drawLootShare: 0.3,
   /** Bonus de puissance du défenseur, qui se bat chez lui. */
   homeDefenseBonus: 0.15,
   /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
@@ -9866,12 +9868,13 @@ function resolveCombat(params) {
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - ((_p = attackerLosses[unitId]) != null ? _p : 0) - ((_q = attackerRecovered[unitId]) != null ? _q : 0));
   const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * ((_r = params.cargoFactor) != null ? _r : 1));
   let loot = null;
-  if (outcome === "attacker_win") {
+  if (outcome === "attacker_win" || outcome === "draw" && R.drawLootShare > 0) {
     const wanted = {};
     let total2 = 0;
+    const share2 = outcome === "draw" ? R.drawLootShare : 1;
     for (const res of [...COMMON_RESOURCES2, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
-      const pct7 = Math.min(1, base * ((_s = params.lootMultiplier) != null ? _s : 1));
+      const pct7 = Math.min(1, base * share2 * ((_s = params.lootMultiplier) != null ? _s : 1));
       const amount3 = Math.floor(Math.max(0, (_t = defenderResources[res]) != null ? _t : 0) * pct7);
       wanted[res] = amount3;
       total2 += amount3;
@@ -11503,8 +11506,12 @@ var PVP_RULES = {
   newbieProtectionMs: 72 * 60 * 60 * 1e3,
   /** v3.4 : bouclier après une ascension. */
   ascensionShieldMs: 72 * 60 * 60 * 1e3,
-  /** Impossible d'attaquer un joueur N fois moins expérimenté… */
+  /** 5.23 : contre un joueur N fois moins expérimenté, butin et XP dégressifs… */
   maxXpRatio: 3,
+  /** …jusqu'à ce plancher (part gardée du butin et de l'XP)… */
+  weakTargetFloor: 0.25,
+  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes). */
+  hardXpRatio: 12,
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
    *  bloquerait mutuellement en début de partie). */
   xpGapFloor: 500,
@@ -11607,14 +11614,19 @@ function checkAttackAllowed(ctx) {
       };
     }
   }
-  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.maxXpRatio < ctx.attackerXp) {
+  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.hardXpRatio < ctx.attackerXp) {
     return {
       allowed: false,
       reason: "too_weak",
-      message: `Ce joueur est trop faible pour toi (moins d'un tiers de ton XP).`
+      message: `Ce joueur est bien trop faible pour toi (moins d'un ${PVP_RULES.hardXpRatio}e de ton XP).`
     };
   }
   return { allowed: true };
+}
+function weakTargetFactor(attackerXp, defenderXp, defenderIsNpc = false) {
+  if (defenderIsNpc || attackerXp < PVP_RULES.xpGapFloor || !(attackerXp > 0)) return 1;
+  const k = Math.max(0, defenderXp) * PVP_RULES.maxXpRatio / attackerXp;
+  return k >= 1 ? 1 : Math.max(PVP_RULES.weakTargetFloor, Math.round(k * 100) / 100);
 }
 
 // src/game/market.ts
@@ -13370,7 +13382,7 @@ function ascendantRelic(d, now, random = Math.random) {
 
 // src/game/attack.ts
 function performAttack(input) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
   const { now, attackerUid, defenderUid, defender } = input;
   const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
@@ -13388,8 +13400,9 @@ function performAttack(input) {
     lastDefenderDefeatMs: (_e = defender.lastDefeatAtMs) != null ? _e : null
   });
   if (!check.allowed) return { ok: false, message: (_f = check.message) != null ? _f : "Attaque impossible." };
+  const weak = weakTargetFactor((_g = input.attacker.xp) != null ? _g : 0, (_h = defender.xp) != null ? _h : 0, !!defender.npc || !!input.attacker.npc);
   const fleet = {};
-  for (const [unitId, raw] of Object.entries((_g = input.fleet) != null ? _g : {})) {
+  for (const [unitId, raw] of Object.entries((_i = input.fleet) != null ? _i : {})) {
     const qty = Math.floor(Number(raw));
     if (qty <= 0) continue;
     if (!OFFENSIVE_UNITS.includes(unitId)) return { ok: false, message: "Seules les unit\xE9s d'attaque peuvent \xEAtre envoy\xE9es." };
@@ -13405,12 +13418,12 @@ function performAttack(input) {
   const attacker = flushed.player;
   if (input.inFlight) {
     for (const [unitId, qty] of Object.entries(fleet)) {
-      const state = (_h = attacker.units[unitId]) != null ? _h : { level: 1, count: 0 };
+      const state = (_j = attacker.units[unitId]) != null ? _j : { level: 1, count: 0 };
       attacker.units[unitId] = __spreadProps(__spreadValues({}, state), { count: state.count + qty });
     }
   }
   for (const [unitId, qty] of Object.entries(fleet)) {
-    if (((_j = (_i = attacker.units[unitId]) == null ? void 0 : _i.count) != null ? _j : 0) < qty) {
+    if (((_l = (_k = attacker.units[unitId]) == null ? void 0 : _k.count) != null ? _l : 0) < qty) {
       return { ok: false, message: "Tu ne poss\xE8des plus assez d'unit\xE9s pour cette flotte." };
     }
   }
@@ -13419,11 +13432,11 @@ function performAttack(input) {
   const colony = input.colonyId ? colonyOf(owner, input.colonyId) : void 0;
   if (input.colonyId && !colony) return { ok: false, message: "Cette colonie n'existe plus." };
   const def3 = colony ? colonyView(owner, colony) : owner;
-  const posture = postureEffects((_k = def3.posture) == null ? void 0 : _k.id);
+  const posture = postureEffects((_m = def3.posture) == null ? void 0 : _m.id);
   const formation = formationEffects(input.formation);
   const atkMods = playerModifiers(attacker);
   const defMods = playerModifiers(owner);
-  const assault = Math.max(0, Math.min(50, Number((_l = input.boosts) == null ? void 0 : _l.assault) || 0)) / 100;
+  const assault = Math.max(0, Math.min(50, Number((_n = input.boosts) == null ? void 0 : _n.assault) || 0)) / 100;
   const armor = consumeArmor(owner, now) / 100;
   const lord = owner.npc ? findWarlord(owner.npc) : attacker.npc ? findWarlord(attacker.npc) : void 0;
   const lordSide = owner.npc ? "defender" : "attacker";
@@ -13431,7 +13444,7 @@ function performAttack(input) {
   if (lord && !(owner.npc && attacker.npc)) {
     const rules = warlordRankRules();
     const rank2 = rankOf({ rank: input.warlordRank }, rules);
-    const humanUnits = lordSide === "defender" ? fleet : Object.fromEntries(Object.entries((_m = def3.units) != null ? _m : {}).map(([id, st]) => {
+    const humanUnits = lordSide === "defender" ? fleet : Object.fromEntries(Object.entries((_o = def3.units) != null ? _o : {}).map(([id, st]) => {
       var _a2;
       return [id, (_a2 = st == null ? void 0 : st.count) != null ? _a2 : 0];
     }));
@@ -13449,36 +13462,36 @@ function performAttack(input) {
     attackFactor: formation.attackFactor * (1 + atkMods.attack + assault) * (owner.npc ? pveAttackFactor(attacker.units, attacker.techLevels, fleet) : 1),
     cargoFactor: formation.cargoFactor * (1 + atkMods.cargo),
     // v5.9 : un seigneur de guerre (PNJ) qui attaque affronte aussi le bonus des Traqueurs à quai.
-    defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_n = def3.units) != null ? _n : {}, (_o = def3.techLevels) != null ? _o : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
-    defenseFactor: posture.defenseFactor * ((_p = mods == null ? void 0 : mods.defenseFactor) != null ? _p : 1),
-    homeFleetFactor: (mods == null ? void 0 : mods.homeFleetFactor) !== void 0 ? ((_q = posture.homeFleetFactor) != null ? _q : COMBAT_RULES.homeFleetDefenseFactor) * mods.homeFleetFactor : posture.homeFleetFactor
+    defenderPowerFactor: (1 + defMods.defense + armor) * (attacker.npc ? pveHomeDefenseFactor((_p = def3.units) != null ? _p : {}, (_q = def3.techLevels) != null ? _q : {}, posture.homeFleetFactor, posture.defenseFactor) : 1),
+    defenseFactor: posture.defenseFactor * ((_r = mods == null ? void 0 : mods.defenseFactor) != null ? _r : 1),
+    homeFleetFactor: (mods == null ? void 0 : mods.homeFleetFactor) !== void 0 ? ((_s = posture.homeFleetFactor) != null ? _s : COMBAT_RULES.homeFleetDefenseFactor) * mods.homeFleetFactor : posture.homeFleetFactor
   }), (mods == null ? void 0 : mods.retreatAt) !== void 0 ? { retreatAt: mods.retreatAt } : {}), attackerEdge || defenderEdge ? { classEdge: __spreadValues(__spreadValues({}, attackerEdge ? { attacker: attackerEdge } : {}), defenderEdge ? { defender: defenderEdge } : {}) } : {}), {
     unitBonus: { attacker: atkFx.units, defender: defFx.units },
     targetPriority: input.targetPriority === "defenses" || input.targetPriority === "ships" ? input.targetPriority : void 0,
     // v5.14 : le Corsaire en poste de l'attaquant ajoute du butin.
-    lootMultiplier: lootFactor(now) * (1 + atkMods.loot),
-    garrisons: (_r = input.garrisons) != null ? _r : [],
+    lootMultiplier: lootFactor(now) * (1 + atkMods.loot) * weak,
+    garrisons: (_t = input.garrisons) != null ? _t : [],
     garrisonFactor: ALLIANCE_RULES.garrisonPower,
     attackerUnits: attacker.units,
     attackerTechLevels: attacker.techLevels,
     attackerRepairPct: withRepairBonus(getRepairPercent(attacker.buildings), attacker),
     fleet,
     // 5.22 : les unités d'élite à quai ne combattent que les seigneurs de guerre.
-    defenderUnits: attacker.npc ? (_s = def3.units) != null ? _s : {} : withoutElite((_t = def3.units) != null ? _t : {}),
-    defenderTechLevels: (_u = def3.techLevels) != null ? _u : {},
+    defenderUnits: attacker.npc ? (_u = def3.units) != null ? _u : {} : withoutElite((_v = def3.units) != null ? _v : {}),
+    defenderTechLevels: (_w = def3.techLevels) != null ? _w : {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def3.buildings), owner),
-    defenderShieldPct: (mods == null ? void 0 : mods.shieldIgnored) ? 0 : baseShield + ((_v = mods == null ? void 0 : mods.shieldBonus) != null ? _v : 0) + defFx.shield,
+    defenderShieldPct: (mods == null ? void 0 : mods.shieldIgnored) ? 0 : baseShield + ((_x = mods == null ? void 0 : mods.shieldBonus) != null ? _x : 0) + defFx.shield,
     // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
     attackerHull: workshopState(attacker).hull,
     defenderHull: colony ? void 0 : workshopState(owner).hull,
     // Le bunker de l'entrepôt met une partie du stock à l'abri du pillage.
     defenderResources: Object.fromEntries(
-      Object.entries((_w = def3.resources) != null ? _w : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch, def3))])
+      Object.entries((_y = def3.resources) != null ? _y : {}).map(([res, amount3]) => [res, Math.max(0, (amount3 != null ? amount3 : 0) - protectedAmount(def3.buildings, res, def3.techLevels, def3.allianceResearch, def3))])
     )
   }));
-  const aegis = combat.outcome === "attacker_win" && Object.values((_x = combat.loot) != null ? _x : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
+  const aegis = combat.outcome !== "defender_win" && Object.values((_z = combat.loot) != null ? _z : {}).some((n) => (n != null ? n : 0) > 0) && consumeAegis(owner, now);
   if (aegis) combat.loot = {};
-  if (input.lootCap !== void 0 && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap * ((_y = mods == null ? void 0 : mods.lootFactor) != null ? _y : 1));
+  if (input.lootCap !== void 0 && combat.loot) combat.loot = capLoot(combat.loot, input.lootCap * ((_A = mods == null ? void 0 : mods.lootFactor) != null ? _A : 1));
   for (const [unitId, lost] of Object.entries(combat.attackerLosses)) {
     if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - lost);
   }
@@ -13486,18 +13499,18 @@ function performAttack(input) {
   applyHull(attacker, combat.attackerHull);
   if (attackerToWorkshop) sendToWorkshop(attacker, combat.attackerRecovered, now, "attack", true);
   const survivors = {};
-  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_z = combat.attackerLosses[unitId]) != null ? _z : 0) - (attackerToWorkshop ? (_A = combat.attackerRecovered[unitId]) != null ? _A : 0 : 0));
+  for (const [unitId, qty] of Object.entries(fleet)) survivors[unitId] = Math.max(0, qty - ((_B = combat.attackerLosses[unitId]) != null ? _B : 0) - (attackerToWorkshop ? (_C = combat.attackerRecovered[unitId]) != null ? _C : 0 : 0));
   if (input.inFlight) {
     for (const [unitId, qty] of Object.entries(survivors)) {
       if (attacker.units[unitId]) attacker.units[unitId].count = Math.max(0, attacker.units[unitId].count - qty);
     }
   }
-  for (const [res, amt] of Object.entries((_B = combat.loot) != null ? _B : {})) {
+  for (const [res, amt] of Object.entries((_D = combat.loot) != null ? _D : {})) {
     if (!input.inFlight) {
-      attacker.resources[res] = ((_C = attacker.resources[res]) != null ? _C : 0) + (amt != null ? amt : 0);
+      attacker.resources[res] = ((_E = attacker.resources[res]) != null ? _E : 0) + (amt != null ? amt : 0);
       bumpStat(attacker, "loot", amt != null ? amt : 0);
     }
-    def3.resources[res] = Math.max(0, ((_D = def3.resources[res]) != null ? _D : 0) - (amt != null ? amt : 0));
+    def3.resources[res] = Math.max(0, ((_F = def3.resources[res]) != null ? _F : 0) - (amt != null ? amt : 0));
   }
   const destroyedByAttacker = Math.round(lostPower(combat.defenderLosses, def3.units, def3.techLevels));
   const destroyedByDefender = Math.round(lostPower(combat.attackerLosses, attacker.units, attacker.techLevels));
@@ -13517,16 +13530,17 @@ function performAttack(input) {
     sendToWorkshop(owner, ships, now, "defense", true);
   }
   const xp = computeCombatXp(combat.outcome, combat.attackerPower, combat.defenderPower, !!def3.npc);
+  if (xp.attackerXp > 0 && weak < 1) xp.attackerXp = Math.round(xp.attackerXp * weak);
   const defenderXpDelta = capDefenderXpLoss(xp.defenderXp, input.defenderXpLostLast24h);
   if (combat.outcome === "attacker_win") {
     if (attacker.lastDefeatAtMs && now - attacker.lastDefeatAtMs <= 36e5) setStat(attacker, "phoenix", 1);
-    attacker.victories = ((_E = attacker.victories) != null ? _E : 0) + 1;
-  } else if (combat.outcome === "defender_win") attacker.defeats = ((_F = attacker.defeats) != null ? _F : 0) + 1;
+    attacker.victories = ((_G = attacker.victories) != null ? _G : 0) + 1;
+  } else if (combat.outcome === "defender_win") attacker.defeats = ((_H = attacker.defeats) != null ? _H : 0) + 1;
   xp.attackerXp = applyXpDelta(attacker, xp.attackerXp, now, "attack");
   attacker.lastAttackAtMs = now;
-  if (combat.outcome === "defender_win") owner.victories = ((_G = owner.victories) != null ? _G : 0) + 1;
+  if (combat.outcome === "defender_win") owner.victories = ((_I = owner.victories) != null ? _I : 0) + 1;
   else if (combat.outcome === "attacker_win") {
-    owner.defeats = ((_H = owner.defeats) != null ? _H : 0) + 1;
+    owner.defeats = ((_J = owner.defeats) != null ? _J : 0) + 1;
     if (colony) colony.lastDefeatAtMs = now;
     else if (!owner.npc) owner.lastDefeatAtMs = now;
   }
@@ -13552,11 +13566,11 @@ function performAttack(input) {
     ...flushed.notifications,
     {
       kind: "combat-attacker",
-      title: (_I = outcomeTitle[combat.outcome]) != null ? _I : "Rapport de combat",
+      title: (_K = outcomeTitle[combat.outcome]) != null ? _K : "Rapport de combat",
       message: `Attaque contre ${def3.pseudo} (${xp.attackerXp >= 0 ? "+" : ""}${xp.attackerXp} XP).${combat.loot && describeGain(combat.loot) !== "rien" ? ` Butin en route : ${describeGain(combat.loot)}.` : ""}${extraLoot}`,
       createdAtMs: now,
       read: false,
-      data: { resources: (_J = combat.loot) != null ? _J : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
+      data: { resources: (_L = combat.loot) != null ? _L : void 0, xp: xp.attackerXp > 0 ? xp.attackerXp : void 0, toUid: def3.uid, toPseudo: def3.pseudo }
     }
   ];
   const defenderTitle = {
@@ -13568,11 +13582,11 @@ function performAttack(input) {
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
-      title: (_K = defenderTitle[combat.outcome]) != null ? _K : "Rapport de combat",
+      title: (_M = defenderTitle[combat.outcome]) != null ? _M : "Rapport de combat",
       message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pill\xE9 : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'\xC9gide de la Reine a prot\xE9g\xE9 tes r\xE9serves du pillage." : ""}${armor > 0 ? ` Carapace r\xE9active consomm\xE9e (+${Math.round(armor * 100)} % de d\xE9fense).` : ""}`,
       createdAtMs: now,
       read: false,
-      data: { resources: (_L = combat.loot) != null ? _L : void 0, xp: defenderXpDelta > 0 ? defenderXpDelta : void 0, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo }
+      data: { resources: (_N = combat.loot) != null ? _N : void 0, xp: defenderXpDelta > 0 ? defenderXpDelta : void 0, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo }
     }
   ];
   const report = {
@@ -13596,7 +13610,7 @@ function performAttack(input) {
     attackerXpDelta: xp.attackerXp,
     defenderXpDelta,
     defenderApplied: true,
-    garrisons: ((_M = input.garrisons) != null ? _M : []).map((g, i) => {
+    garrisons: ((_O = input.garrisons) != null ? _O : []).map((g, i) => {
       var _a2, _b2;
       return { ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: (_b2 = (_a2 = combat.garrisonLosses) == null ? void 0 : _a2[i]) != null ? _b2 : {} };
     }),
@@ -13614,8 +13628,8 @@ function performAttack(input) {
     report,
     combat,
     survivors,
-    loot: (_N = combat.loot) != null ? _N : {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_O = combat.garrisonLosses) != null ? _O : []], (_P = eventDebrisPercent(now)) != null ? _P : DEBRIS_RULES.percent)
+    loot: (_P = combat.loot) != null ? _P : {},
+    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(_Q = combat.garrisonLosses) != null ? _Q : []], (_R = eventDebrisPercent(now)) != null ? _R : DEBRIS_RULES.percent)
   };
 }
 function lostPower(losses, units, techLevels2) {

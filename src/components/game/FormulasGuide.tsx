@@ -319,7 +319,9 @@ XP : vainqueur +40 × rapport de force (×0,1 à ×2) · attaquant battu −20 �
             ["Bouclier après une défaite en défense", `${PVP_RULES.shieldAfterDefeatMs / 3_600_000} h`],
             ["Protection débutant (levée si tu attaques)", `${PVP_RULES.newbieProtectionMs / 3_600_000} h`],
             ["Bouclier après une ascension", `${PVP_RULES.ascensionShieldMs / 3_600_000} h`],
-            ["Écart d'XP maximal avec la cible", `×${PVP_RULES.maxXpRatio} (dès ${PVP_RULES.xpGapFloor} XP)`],
+            ["Cible moins expérimentée (dès ${PVP_RULES.xpGapFloor} XP)", `butin et XP réduits au-delà de ×${PVP_RULES.maxXpRatio} d'écart (au moins ${Math.round(PVP_RULES.weakTargetFloor * 100)} %)`],
+            ["Écart d'XP maximal avec la cible", `×${PVP_RULES.hardXpRatio}`],
+            ["Match nul", `${Math.round(COMBAT_RULES.drawLootShare * 100)} % du butin d'une victoire`],
             ["XP perdue en défense, au plus", `${PVP_RULES.defenseXpLossCapPer24h} par 24 h`],
           ]}
         />

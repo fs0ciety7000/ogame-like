@@ -10,6 +10,8 @@ export const COMBAT_RULES = {
   lootPercent: 0.08,
   /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
   lootPercentCommon: 0.1,
+  /** 5.23 : part du butin emportée sur un match nul. */
+  drawLootShare: 0.3,
   /** Bonus de puissance du défenseur, qui se bat chez lui. */
   homeDefenseBonus: 0.15,
   /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
@@ -569,12 +571,14 @@ export function resolveCombat(params: {
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0) - (attackerRecovered[unitId] ?? 0));
   const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * (params.cargoFactor ?? 1));
   let loot: Partial<Record<ResourceId, number>> | null = null;
-  if (outcome === "attacker_win") {
+  // 5.23 : un match nul rapporte une part du butin (drawLootShare).
+  if (outcome === "attacker_win" || (outcome === "draw" && R.drawLootShare > 0)) {
     const wanted: Partial<Record<ResourceId, number>> = {};
     let total = 0;
+    const share = outcome === "draw" ? R.drawLootShare : 1;
     for (const res of [...COMMON_RESOURCES, ...RARE_RESOURCES]) {
       const base = RARE_RESOURCES.includes(res) ? R.lootPercent : R.lootPercentCommon;
-      const pct = Math.min(1, base * (params.lootMultiplier ?? 1));
+      const pct = Math.min(1, base * share * (params.lootMultiplier ?? 1));
       const amount = Math.floor(Math.max(0, defenderResources[res] ?? 0) * pct);
       wanted[res] = amount;
       total += amount;

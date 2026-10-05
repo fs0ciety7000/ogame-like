@@ -119,3 +119,22 @@ describe("5.23 sources composées", () => {
     expect(describeEffect("unitAttack", 0.1, "unit:sentinelle", "pve")).toBe("+10 % · Attaque : Sentinelle (contre les pnj)");
   });
 });
+
+describe("5.23 pillage sur match nul", () => {
+  it("un match nul emporte une part du butin (dans la limite de la soute)", async () => {
+    const { COMBAT_RULES } = await import("@/game/combat");
+    const r = resolveCombat({
+      attackerUnits: { fregate: { level: 1, count: 20 }, cargo: { level: 1, count: 20 } },
+      attackerTechLevels: {},
+      attackerRepairPct: 0,
+      fleet: { fregate: 20, cargo: 20 },
+      defenderUnits: { bastion: { level: 1, count: 5 } },
+      defenderTechLevels: {},
+      defenderRepairPct: 0,
+      defenderResources: { scrap: 100_000 },
+    });
+    expect(r.outcome).toBe("draw");
+    expect(r.loot?.scrap ?? 0).toBeGreaterThan(0);
+    expect(r.loot?.scrap ?? 0).toBeLessThanOrEqual(Math.floor(100_000 * COMBAT_RULES.lootPercentCommon * COMBAT_RULES.drawLootShare));
+  });
+});

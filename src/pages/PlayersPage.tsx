@@ -71,6 +71,7 @@ export function PlayersPage() {
   const [attackTarget, setAttackTarget] = useState<{
     uid: string;
     pseudo: string;
+    xp?: number;
   } | null>(null);
   const [sheetTarget, setSheetTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{
@@ -421,7 +422,7 @@ export function PlayersPage() {
                       }
                       className="group relative"
                       onClick={() =>
-                        setAttackTarget({ uid: p.uid, pseudo: p.pseudo })
+                        setAttackTarget({ uid: p.uid, pseudo: p.pseudo, xp: p.xp })
                       }
                     >
                       <Sword className="h-4 w-4" />

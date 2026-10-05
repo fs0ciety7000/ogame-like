@@ -28,6 +28,8 @@ import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestU
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
+import { weakTargetFactor } from "@/game/pvp";
+import { HudCallout } from "@/components/ui/hud";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { GameIcon } from "@/components/ui/game-icon";
@@ -40,7 +42,7 @@ export function AttackModal({
   target,
   onClose,
 }: {
-  target: { uid: string; pseudo: string } | null;
+  target: { uid: string; pseudo: string; xp?: number } | null;
   onClose: () => void;
 }) {
   const player = usePlayerStore((s) => s.player);
@@ -126,6 +128,12 @@ export function AttackModal({
           <p className="text-sm text-slate-400">
             Cible : <strong className="text-slate-200">{target.pseudo}</strong> · distance {Math.round(distance)}
           </p>
+          {/* 5.23 : cible bien moins expérimentée : butin et XP dégressifs. */}
+          {player && target.xp !== undefined && !isWarlordUid(target.uid) && weakTargetFactor(player.xp ?? 0, target.xp) < 1 && (
+            <HudCallout tone="ember" className="mt-2 text-xs">
+              Cible bien moins expérimentée : butin et XP réduits à <span className="font-mono">{Math.round(weakTargetFactor(player.xp ?? 0, target.xp) * 100)} %</span>.
+            </HudCallout>
+          )}
 
           {!player || submitting ? (
             submitting ? <RadarScan label="Décollage de la flotte…" /> : <SkeletonList rows={4} className="py-2" />
