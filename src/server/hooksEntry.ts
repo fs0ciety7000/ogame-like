@@ -143,7 +143,7 @@ export {
   settleCoalition,
   writeCoalitions,
 } from "@/game/coalition";
-export { compileGazette, GAZETTE_KEY, gazetteDue, gazetteState, publishGazette } from "@/game/gazette";
+export { compileGazette, GAZETTE_KEY, gazetteDue, gazettePrevious, gazetteSince, gazetteSnapshots, gazetteState, publishGazette } from "@/game/gazette";
 export {
   bossMonthOf,
   checkSeasonBossLaunch,

@@ -7021,8 +7021,11 @@ function bossSummary(game, state, name) {
 /** Compose et publie le numéro de la semaine (force : publication manuelle). */
 function publishGazetteNow(txApp, game, now) {
   const state = readGazette(txApp, game);
-  const sinceMs = now - 7 * 86400000;
-  const players = txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => ({ uid: r.id, pseudo: r.getString("pseudo"), xp: r.getInt("xp"), seasonXp: r.getInt("seasonXp"), createdAtMs: r.getInt("createdAtMs") }));
+  // 5.15.15 : la période part du numéro précédent (au plus 7 jours), pour ne rien publier deux fois.
+  const sinceMs = game.gazetteSince(state, now);
+  const previous = game.gazettePrevious(state, now);
+  const snaps = game.gazetteSnapshots(state, now);
+  const players = txApp.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => ({ uid: r.id, pseudo: r.getString("pseudo"), xp: r.getInt("xp"), seasonXp: r.getInt("seasonXp"), createdAtMs: r.getInt("createdAtMs"), ascensions: r.getInt("ascensions"), lastActiveMs: r.getInt("lastActiveMs") }));
   const bosses = [];
   const lev = readLeviathan(txApp, game);
   const levSum = bossSummary(game, lev, game.worldBossName(lev));
@@ -7031,7 +7034,8 @@ function publishGazetteNow(txApp, game, now) {
   const sbMonth = sb ? game.bossMonthOf(sb) : null;
   const sbSum = bossSummary(game, sb, sbMonth ? sbMonth.boss.name : "Le boss de saison");
   if (sbSum) bosses.push(sbSum);
-  txApp.findAllRecords("alliances").forEach((a) => {
+  const allianceRecs = txApp.findAllRecords("alliances");
+  allianceRecs.forEach((a) => {
     const st = readAllianceBoss(game, a);
     const sum = st ? bossSummary(game, st, `${game.allianceBossDef(st).name} de [${a.getString("tag")}]`) : null;
     if (sum) bosses.push(sum);
@@ -7046,16 +7050,26 @@ function publishGazetteNow(txApp, game, now) {
     const winner = w.getString("winnerId");
     return { attackerTag: w.getString("attackerTag"), defenderTag: w.getString("defenderTag"), winnerTag: winner ? (winner === w.getString("attackerId") ? w.getString("attackerTag") : w.getString("defenderTag")) : null, endedAtMs: w.getInt("endedAtMs") };
   });
-  const raids = txApp.findRecordsByFilter("battle_reports", "timestamp >= {:t} && outcome = 'attacker_win'", "-timestamp", 2000, 0, { t: sinceMs }).map((r) => {
-    const loot = toPlain(r).loot || {};
-    return { attackerPseudo: r.getString("attackerPseudo"), defenderPseudo: r.getString("defenderPseudo"), loot: Object.keys(loot).reduce((a, k) => a + (Number(loot[k]) || 0), 0), timestamp: r.getInt("timestamp") };
-  });
+  const sumRes = (o) => Object.keys(o || {}).reduce((a, k) => a + (Number(o[k]) || 0), 0);
+  const reports = txApp.findRecordsByFilter("battle_reports", "timestamp >= {:t}", "-timestamp", 3000, 0, { t: sinceMs });
+  const raids = reports
+    .filter((r) => r.getString("outcome") === "attacker_win")
+    .map((r) => ({ attackerPseudo: r.getString("attackerPseudo"), defenderPseudo: r.getString("defenderPseudo"), loot: sumRes(toPlain(r).loot), timestamp: r.getInt("timestamp") }));
+  const defenses = reports
+    .filter((r) => r.getString("outcome") === "defender_win")
+    .map((r) => ({ defenderPseudo: r.getString("defenderPseudo"), attackerPseudo: r.getString("attackerPseudo"), timestamp: r.getInt("timestamp") }));
   const warlords = txApp.findRecordsByFilter("players", "npc != ''", "", 50, 0).map((r) => {
     const p = toPlain(r);
     return { name: r.getString("pseudo"), power: game.empirePower(p) };
   });
-  const issue = game.compileGazette({ now, sinceMs, players, xpSnapshot: state.xpSnapshot, bosses, vendettas, wars, raids, warlords }, (state.issues[0] ? state.issues[0].number : 0) + 1);
-  writeGazette(txApp, game, game.publishGazette(state, issue, players));
+  const trades = txApp.findRecordsByFilter("market_offers", "status = 'filled' && filledAtMs >= {:t}", "", 2000, 0, { t: sinceMs }).map((r) => ({ sellerPseudo: r.getString("sellerPseudo"), buyerPseudo: r.getString("buyerPseudo"), amount: r.getInt("giveAmount"), filledAtMs: r.getInt("filledAtMs") }));
+  const gifts = txApp.findRecordsByFilter("resource_gifts", "timestamp >= {:t}", "", 2000, 0, { t: sinceMs }).map((r) => ({ fromPseudo: r.getString("fromPseudo"), toPseudo: r.getString("toPseudo"), amount: sumRes(toPlain(r).resources), timestamp: r.getInt("timestamp") }));
+  const alliances = allianceRecs.map((a) => ({ name: a.getString("name"), tag: a.getString("tag"), createdAtMs: a.getInt("createdAtMs") }));
+  const issue = game.compileGazette(
+    { now, sinceMs, players, xpSnapshot: snaps.xp, ascSnapshot: snaps.asc, powerSnapshot: snaps.power, bosses, vendettas, wars, raids, defenses, battles: reports.length, warlords, trades, gifts, alliances, previous },
+    (previous ? previous.number : 0) + 1,
+  );
+  writeGazette(txApp, game, game.publishGazette(state, issue, players, warlords));
   players.forEach((p) => {
     try {
       notify(txApp, p.uid, [{ kind: "event", title: `La Gazette n°${issue.number} est parue`, message: issue.headline, createdAtMs: now, read: false, link: "/game/gazette" }]);

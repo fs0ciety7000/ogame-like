@@ -287,6 +287,9 @@ __export(hooksEntry_exports, {
   formatInt: () => formatInt,
   foughtWarlords: () => foughtWarlords,
   gazetteDue: () => gazetteDue,
+  gazettePrevious: () => gazettePrevious,
+  gazetteSince: () => gazetteSince,
+  gazetteSnapshots: () => gazetteSnapshots,
   gazetteState: () => gazetteState,
   generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
@@ -1385,10 +1388,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY14 = 864e5;
+  const DAY15 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY14) * DAY14;
-  return new Date(midnight - (day + 6) % 7 * DAY14).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY15) * DAY15;
+  return new Date(midnight - (day + 6) % 7 * DAY15).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -3365,6 +3368,16 @@ function eventAt(now) {
   if (scheduled) return scheduled;
   const rotation = rotationEvent(weekendWindow(now));
   return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function weekendEventsBetween(from, to) {
+  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
+  for (let w = -1; w < 60; w++) {
+    const win = weekendWindow(from, w);
+    if (win.startMs >= to) break;
+    const r = rotationEvent(win);
+    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
 }
 function eventBoundaries(from, to) {
   const points = /* @__PURE__ */ new Set();
@@ -7866,6 +7879,10 @@ function seasonMonthPhrase(seasonId) {
 function previousSeasonId(now = Date.now()) {
   const d = new Date(now);
   return currentSeasonId(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - 1);
+}
+function seasonEndMs(now = Date.now()) {
+  const d = new Date(now);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
 }
 function seasonXpFor(entry, seasonId) {
   var _a, _b;
@@ -15563,16 +15580,56 @@ function empowerWarlord(npc, growth = COALITION_RULES.failGrowth) {
   }
 }
 
+// src/game/agenda.ts
+var DAY13 = 24 * 36e5;
+function upcomingAgenda(now, days = 30, extra = []) {
+  const to = now + days * DAY13;
+  const items = [];
+  for (const w of bossWindows(now, leviathanSchedule(), 6)) {
+    if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "\u{1F40B}", source: w.fixed ? { type: "levDate", startMs: w.startMs } : { type: "levGen", startMs: w.startMs } });
+  }
+  const months = chroniclesConfig().months;
+  for (const w of bossWindows(now, seasonBossSchedule(), 6)) {
+    if (w.startMs >= to) continue;
+    const local = new Date(w.startMs + 2 * 36e5);
+    const monthId = `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, "0")}`;
+    const month2 = months.find((m) => m.id === monthId);
+    if (month2) items.push({ id: `boss-${w.startMs}`, kind: "seasonboss", title: month2.boss.name, startMs: w.startMs, endMs: w.endMs, link: "/game/boss", fixed: w.fixed, emoji: "\u2694\uFE0F", source: w.fixed ? { type: "sbDate", startMs: w.startMs } : { type: "sbGen", startMs: w.startMs } });
+  }
+  for (const e3 of weekendEventsBetween(now, to))
+    items.push(__spreadValues({ id: e3.key, kind: "event", title: e3.type.name, startMs: e3.startMs, endMs: e3.endMs, link: "/game", emoji: e3.type.emoji }, e3.scheduled ? { fixed: true, source: { type: "scheduled", id: e3.key.slice(0, e3.key.lastIndexOf(":")) } } : { source: { type: "rotation", startMs: e3.startMs, eventType: e3.type.id } }));
+  for (const m of months) {
+    for (let i = 0; i < 4; i++) {
+      const at = episodeUnlockMs(m.id, i);
+      if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : \xE9pisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/chroniques", emoji: "\u{1F4DC}" });
+    }
+  }
+  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY13)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "\u{1F3C6}" });
+  return [...items, ...extra.filter((x) => {
+    var _a;
+    return ((_a = x.endMs) != null ? _a : x.startMs) > now && x.startMs < to;
+  })].sort((a, b) => a.startMs - b.startMs);
+}
+
 // src/game/gazette.ts
 var GAZETTE_KEY = "gazette";
 var GAZETTE_RULES = { publishHour: 9, keepIssues: 8 };
+var numMap = (v) => v && typeof v === "object" ? v : {};
 function gazetteState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
-  return {
+  return __spreadValues({
     issues: Array.isArray(r.issues) ? r.issues.filter((i) => i && typeof i.id === "string") : [],
     lastWeekId: typeof r.lastWeekId === "string" ? r.lastWeekId : "",
-    xpSnapshot: r.xpSnapshot && typeof r.xpSnapshot === "object" ? r.xpSnapshot : {}
-  };
+    xpSnapshot: numMap(r.xpSnapshot),
+    ascSnapshot: numMap(r.ascSnapshot),
+    powerSnapshot: numMap(r.powerSnapshot)
+  }, r.prevSnapshots && typeof r.prevSnapshots === "object" ? { prevSnapshots: { xp: numMap(r.prevSnapshots.xp), asc: numMap(r.prevSnapshots.asc), power: numMap(r.prevSnapshots.power) } } : {});
+}
+function gazetteSnapshots(state, now) {
+  var _a;
+  const replacing = ((_a = state.issues[0]) == null ? void 0 : _a.weekId) === allianceWeekId(now);
+  if (replacing && state.prevSnapshots) return state.prevSnapshots;
+  return { xp: state.xpSnapshot, asc: state.ascSnapshot, power: state.powerSnapshot };
 }
 function gazettePublishAt(now) {
   const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
@@ -15580,6 +15637,16 @@ function gazettePublishAt(now) {
 }
 function gazetteDue(state, now) {
   return state.lastWeekId !== allianceWeekId(now) && now >= gazettePublishAt(now);
+}
+function gazettePrevious(state, now) {
+  const week = allianceWeekId(now);
+  return state.issues.find((i) => i.weekId !== week);
+}
+function gazetteSince(state, now) {
+  var _a, _b;
+  const week = now - 7 * 864e5;
+  const last = (_b = (_a = gazettePrevious(state, now)) == null ? void 0 : _a.toMs) != null ? _b : 0;
+  return last > week && last < now ? last : week;
 }
 function gazetteNumber(n) {
   const v = Math.round(n);
@@ -15590,7 +15657,27 @@ function gazetteNumber(n) {
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 var fmt = gazetteNumber;
+var MEDALS = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+var ROMAN2 = ["", "I", "II", "III", "IV", "V"];
+var DAY_NAMES2 = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+function parisDay3(ms) {
+  const d = new Date(ms);
+  const y = d.getUTCFullYear();
+  const lastSunday = (m) => {
+    const end = new Date(Date.UTC(y, m + 1, 0));
+    return Date.UTC(y, m, end.getUTCDate() - end.getUTCDay(), 1);
+  };
+  const local = new Date(ms + (ms >= lastSunday(2) && ms < lastSunday(9) ? 2 : 1) * 36e5);
+  return `${DAY_NAMES2[local.getUTCDay()]} ${local.getUTCHours()} h`;
+}
+function topCounts2(items, key) {
+  var _a;
+  const m = /* @__PURE__ */ new Map();
+  for (const it of items) m.set(key(it), ((_a = m.get(key(it))) != null ? _a : 0) + 1);
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
 function compileGazette(input, number) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const { now, sinceMs } = input;
   const inWeek = (t) => t >= sinceMs && t < now;
   const sections = [];
@@ -15620,38 +15707,134 @@ function compileGazette(input, number) {
   }
   const hasSnapshot = Object.keys(input.xpSnapshot).length > 0;
   const progress = input.players.map((p) => {
-    var _a, _b;
-    return { pseudo: p.pseudo, gain: hasSnapshot ? p.xp - ((_a = input.xpSnapshot[p.uid]) != null ? _a : p.xp) : (_b = p.seasonXp) != null ? _b : 0 };
+    var _a2, _b2;
+    return { pseudo: p.pseudo, gain: hasSnapshot ? p.xp - ((_a2 = input.xpSnapshot[p.uid]) != null ? _a2 : p.xp) : (_b2 = p.seasonXp) != null ? _b2 : 0 };
   }).filter((p) => p.gain > 0).sort((a, b) => b.gain - a.gain).slice(0, 3);
   if (progress.length > 0) {
     sections.push({
       kind: "progress",
       title: hasSnapshot ? "Ils ont le plus progress\xE9" : "En t\xEAte de la saison",
-      lines: progress.map((p, i) => `${["\u{1F947}", "\u{1F948}", "\u{1F949}"][i]} ${p.pseudo} : +${fmt(p.gain)} XP`)
+      lines: progress.map((p, i) => `${MEDALS[i]} ${p.pseudo} : +${fmt(p.gain)} XP`)
     });
   }
-  const raid = input.raids.filter((r) => inWeek(r.timestamp) && r.loot > 0).sort((a, b) => b.loot - a.loot)[0];
-  if (raid) {
-    sections.push({ kind: "raid", title: "Le casse de la semaine", lines: [`${raid.attackerPseudo} a vid\xE9 les coffres de ${raid.defenderPseudo} : ${fmt(raid.loot)} ressources emport\xE9es.`] });
+  const ascSnap = (_a = input.ascSnapshot) != null ? _a : {};
+  if (Object.keys(ascSnap).length > 0) {
+    const asc = input.players.filter((p) => {
+      var _a2, _b2;
+      return ((_a2 = p.ascensions) != null ? _a2 : 0) > ((_b2 = ascSnap[p.uid]) != null ? _b2 : 0);
+    });
+    if (asc.length > 0) {
+      sections.push({ kind: "ascension", title: "Ascensions", lines: asc.slice(0, 6).map((p) => {
+        var _a2;
+        return `${p.pseudo} franchit l'Ascension ${ROMAN2[Math.min(5, (_a2 = p.ascensions) != null ? _a2 : 0)] || p.ascensions} et repart plus fort.`;
+      }) });
+    }
   }
-  const warlord = [...input.warlords].sort((a, b) => b.power - a.power)[0];
-  if (warlord) {
-    sections.push({ kind: "warlord", title: "Le seigneur \xE0 surveiller", lines: [`${warlord.name} aligne ${fmt(warlord.power)} de puissance. Prudence aux abords de son territoire.`] });
+  const weekRaids = input.raids.filter((r) => inWeek(r.timestamp) && r.loot > 0);
+  const raid = [...weekRaids].sort((a, b) => b.loot - a.loot)[0];
+  if (raid) {
+    const raiders = topCounts2(weekRaids, (r) => r.attackerPseudo);
+    const lines = [`${raid.attackerPseudo} a vid\xE9 les coffres de ${raid.defenderPseudo} : ${fmt(raid.loot)} ressources emport\xE9es.`];
+    if (raiders[0] && raiders[0][1] >= 2) lines.push(`Le plus actif : ${raiders[0][0]}, avec ${raiders[0][1]} pillages r\xE9ussis.`);
+    sections.push({ kind: "raid", title: "Le casse de la semaine", lines });
+  }
+  const defenses = ((_b = input.defenses) != null ? _b : []).filter((d) => inWeek(d.timestamp));
+  const wall = topCounts2(defenses, (d) => d.defenderPseudo)[0];
+  if (wall) {
+    sections.push({ kind: "defense", title: "Le rempart", lines: [`${wall[0]} a repouss\xE9 ${wall[1]} attaque${wall[1] > 1 ? "s" : ""}. Les pillards iront voir ailleurs.`] });
+  }
+  const trades = ((_c = input.trades) != null ? _c : []).filter((t) => inWeek(t.filledAtMs));
+  if (trades.length > 0) {
+    const big = [...trades].sort((a, b) => b.amount - a.amount)[0];
+    const seller = topCounts2(trades, (t) => t.sellerPseudo)[0];
+    sections.push({
+      kind: "market",
+      title: "La place du march\xE9",
+      lines: [
+        `${trades.length} \xE9change${trades.length > 1 ? "s" : ""} conclu${trades.length > 1 ? "s" : ""}, ${fmt(trades.reduce((a, t) => a + t.amount, 0))} ressources ont chang\xE9 de mains.`,
+        `Plus grosse affaire : ${big.sellerPseudo} c\xE8de ${fmt(big.amount)} ressources \xE0 ${big.buyerPseudo}.`,
+        ...seller && seller[1] >= 3 ? [`Marchand de la semaine : ${seller[0]} (${seller[1]} ventes).`] : []
+      ]
+    });
+  }
+  const gifts = ((_d = input.gifts) != null ? _d : []).filter((g) => inWeek(g.timestamp));
+  if (gifts.length > 0) {
+    const giver = topCounts2(gifts, (g) => g.fromPseudo)[0];
+    sections.push({
+      kind: "solidarity",
+      title: "Entraide",
+      lines: [`${gifts.length} envoi${gifts.length > 1 ? "s" : ""} de ressources entre commandants, ${fmt(gifts.reduce((a, g) => a + g.amount, 0))} au total.`, ...giver ? [`Le plus g\xE9n\xE9reux : ${giver[0]}.`] : []]
+    });
+  }
+  const founded = ((_e = input.alliances) != null ? _e : []).filter((a) => inWeek(a.createdAtMs));
+  if (founded.length > 0) {
+    sections.push({ kind: "alliance", title: "Nouvelles banni\xE8res", lines: founded.slice(0, 6).map((a) => `[${a.tag}] ${a.name} hisse ses couleurs.`) });
+  }
+  const powerSnap = (_f = input.powerSnapshot) != null ? _f : {};
+  const rising = input.warlords.map((w) => __spreadProps(__spreadValues({}, w), { gain: powerSnap[w.name] !== void 0 ? w.power - powerSnap[w.name] : 0 })).filter((w) => w.gain > 0).sort((a, b) => b.gain - a.gain)[0];
+  const strongest = [...input.warlords].sort((a, b) => b.power - a.power)[0];
+  if (rising) {
+    sections.push({ kind: "warlord", title: "Le seigneur qui monte", lines: [`${rising.name} gagne ${fmt(rising.gain)} de puissance en une semaine (${fmt(rising.power)} au total). Prudence aux abords de son territoire.`] });
+  } else if (strongest) {
+    sections.push({ kind: "warlord", title: "Le seigneur \xE0 surveiller", lines: [`${strongest.name} aligne ${fmt(strongest.power)} de puissance. Prudence aux abords de son territoire.`] });
   }
   const newcomers = input.players.filter((p) => p.createdAtMs && inWeek(p.createdAtMs)).map((p) => p.pseudo);
   if (newcomers.length > 0) {
     sections.push({ kind: "newcomers", title: "Bienvenue aux nouveaux commandants", lines: [newcomers.slice(0, 12).join(", ") + (newcomers.length > 12 ? ` et ${newcomers.length - 12} autres` : "") + "."] });
   }
+  const agenda = upcomingAgenda(now, 7).filter((i) => i.startMs >= now);
+  if (agenda.length > 0) {
+    sections.push({ kind: "agenda", title: "Cette semaine dans le secteur", lines: agenda.slice(0, 6).map((i) => `${parisDay3(i.startMs)} : ${i.title}.`) });
+  }
+  const prevSections = new Map(((_h = (_g = input.previous) == null ? void 0 : _g.sections) != null ? _h : []).map((s) => [s.kind, JSON.stringify(s.lines)]));
+  const fresh = sections.filter((s) => s.kind === "agenda" || prevSections.get(s.kind) !== JSON.stringify(s.lines));
+  const stats = {
+    battles: (_i = input.battles) != null ? _i : weekRaids.length + defenses.length,
+    raids: weekRaids.length,
+    defenses: defenses.length,
+    loot: weekRaids.reduce((a, r) => a + r.loot, 0),
+    trades: trades.length,
+    tradeVolume: trades.reduce((a, t) => a + t.amount, 0),
+    gifts: gifts.length,
+    newcomers: newcomers.length,
+    activePlayers: input.players.filter((p) => {
+      var _a2;
+      return ((_a2 = p.lastActiveMs) != null ? _a2 : 0) >= sinceMs;
+    }).length
+  };
   const killed = bosses.find((b) => b.status === "killed");
-  const headline = killed ? `${killed.name} tombe sous les coups du secteur` : wars.find((w) => w.winnerTag) ? `[${wars.find((w) => w.winnerTag).winnerTag}] gagne sa guerre` : vendettas.find((v) => v.won) ? `${vendettas.find((v) => v.won).warlordName} humili\xE9 par ${vendettas.find((v) => v.won).ownerPseudo}` : raid ? `${raid.attackerPseudo} signe le casse de la semaine` : progress[0] ? `${progress[0].pseudo} file en t\xEAte` : "Semaine calme dans le secteur";
+  const wonWar = wars.find((w) => w.winnerTag);
+  const wonVendetta = vendettas.find((v) => v.won);
+  const candidates = [
+    killed && `${killed.name} tombe sous les coups du secteur`,
+    wonWar && `[${wonWar.winnerTag}] gagne sa guerre`,
+    wonVendetta && `${wonVendetta.warlordName} humili\xE9 par ${wonVendetta.ownerPseudo}`,
+    raid && `${raid.attackerPseudo} signe le casse de la semaine`,
+    wall && wall[1] >= 2 && `${wall[0]}, rempart du secteur`,
+    progress[0] && `${progress[0].pseudo} file en t\xEAte`,
+    rising && `${rising.name} gagne en puissance`,
+    founded[0] && `[${founded[0].tag}] hisse ses couleurs`
+  ].filter((h) => typeof h === "string");
+  const headline = (_k = (_j = candidates.find((h) => {
+    var _a2;
+    return h !== ((_a2 = input.previous) == null ? void 0 : _a2.headline);
+  })) != null ? _j : candidates[0]) != null ? _k : "Semaine calme dans le secteur";
   const weekId2 = allianceWeekId(now);
-  return { id: `gz-${weekId2}-${now}`, number, weekId: weekId2, publishedAtMs: now, fromMs: sinceMs, toMs: now, headline, sections };
+  return { id: `gz-${weekId2}-${now}`, number, weekId: weekId2, publishedAtMs: now, fromMs: sinceMs, toMs: now, headline, sections: fresh, stats };
 }
-function publishGazette(state, issue, players) {
+function publishGazette(state, issue, players, warlords = []) {
+  var _a;
+  const replacing = ((_a = state.issues[0]) == null ? void 0 : _a.weekId) === issue.weekId;
   return {
     issues: [issue, ...state.issues.filter((i) => i.weekId !== issue.weekId)].slice(0, GAZETTE_RULES.keepIssues),
     lastWeekId: issue.weekId,
-    xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp]))
+    prevSnapshots: replacing && state.prevSnapshots ? state.prevSnapshots : { xp: state.xpSnapshot, asc: state.ascSnapshot, power: state.powerSnapshot },
+    xpSnapshot: Object.fromEntries(players.map((p) => [p.uid, p.xp])),
+    ascSnapshot: Object.fromEntries(players.map((p) => {
+      var _a2;
+      return [p.uid, (_a2 = p.ascensions) != null ? _a2 : 0];
+    })),
+    powerSnapshot: Object.fromEntries(warlords.map((w) => [w.name, Math.round(w.power)]))
   };
 }
 
@@ -20271,20 +20454,20 @@ var BROADCAST_SEGMENTS = [
   { id: "alliance", label: "Une alliance", hint: "Tous les membres de l'alliance choisie." },
   { id: "noAlliance", label: "Sans alliance", hint: "Joueurs qui n'ont pas encore rejoint d'alliance." }
 ];
-var DAY13 = 24 * 36e5;
+var DAY14 = 24 * 36e5;
 function broadcastTargets(players, segment, now, allianceId) {
   const idle = (p) => now - Math.min(now, lastActivity(p));
   switch (segment) {
     case "all":
       return players;
     case "active7":
-      return players.filter((p) => idle(p) < 7 * DAY13);
+      return players.filter((p) => idle(p) < 7 * DAY14);
     case "inactive7":
-      return players.filter((p) => idle(p) >= 7 * DAY13 && idle(p) < 30 * DAY13);
+      return players.filter((p) => idle(p) >= 7 * DAY14 && idle(p) < 30 * DAY14);
     case "inactive30":
-      return players.filter((p) => idle(p) >= 30 * DAY13);
+      return players.filter((p) => idle(p) >= 30 * DAY14);
     case "new7":
-      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY13);
+      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY14);
     case "alliance":
       return allianceId ? players.filter((p) => p.allianceId === allianceId) : [];
     case "noAlliance":
@@ -20534,7 +20717,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.15.14" : "dev";
+var LOGIC_VERSION = true ? "5.16.0" : "dev";
 
 // src/server/hooksEntry.ts
 function flushPlayer(player, queues, now) {
