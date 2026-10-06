@@ -1,3 +1,4 @@
+import { BanGate } from "@/components/layout/BanGate";
 import { Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
@@ -86,6 +87,7 @@ export default function App() {
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MaintenanceGate>
+          <BanGate>
           <Suspense fallback={null}>
           <Routes>
             <Route
@@ -158,6 +160,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
+          </BanGate>
         </MaintenanceGate>
       </BrowserRouter>
 

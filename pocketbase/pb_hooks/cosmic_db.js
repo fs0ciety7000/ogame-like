@@ -8493,4 +8493,183 @@ function publicStatus(e) {
   });
 }
 
-module.exports = { timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.26 : modération (bannissement, suppression par l'équipe) ---------- */
+
+const BANS_STORE_KEY = "cosmic_bans";
+
+function readModeration(txApp, key) {
+  try {
+    return toPlain(txApp.findFirstRecordByData("moderation", "key", key)).data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeModeration(txApp, key, data) {
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("moderation", "key", key);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("moderation"));
+    rec.set("key", key);
+  }
+  rec.set("data", data);
+  txApp.save(rec);
+}
+
+/** Liste des bannis, gardée en mémoire du serveur (lue en base au premier besoin). */
+function readBans(game) {
+  try {
+    const cached = $app.store().get(BANS_STORE_KEY);
+    if (cached) return game.normalizeBans(JSON.parse(cached));
+  } catch (_) {
+    /* cache illisible : relu en base */
+  }
+  const bans = game.normalizeBans(readModeration($app, game.MODERATION_KEYS.bans));
+  try {
+    $app.store().set(BANS_STORE_KEY, JSON.stringify(bans));
+  } catch (_) {
+    /* sans cache, on relira la base */
+  }
+  return bans;
+}
+
+function saveBans(txApp, game, bans) {
+  writeModeration(txApp, game.MODERATION_KEYS.bans, bans);
+  try {
+    $app.store().set(BANS_STORE_KEY, JSON.stringify(bans));
+  } catch (_) {
+    /* cache reconstruit au prochain besoin */
+  }
+}
+
+function banError(game, ban) {
+  return new ApiError(403, game.banMessage(ban), { banned: true, untilMs: ban.untilMs, reason: ban.reason });
+}
+
+/** Middleware : un joueur banni ne peut plus rien faire (sauf voir son bannissement). */
+function banGuard(e) {
+  if (!e.auth || e.hasSuperuserAuth() || e.auth.collection().name !== "users") return;
+  const game = loadGame();
+  const ban = game.activeBan(readBans(game), e.auth.id, Date.now());
+  if (!ban || game.allowedWhileBanned(e.request.method, e.request.url.path)) return;
+  if (isGameAdmin(e)) return;
+  throw banError(game, ban);
+}
+
+/** Connexion (mot de passe, OAuth, code) refusée tant que le bannissement court. */
+function banAuthGuard(e) {
+  const game = loadGame();
+  const ban = e.record ? game.activeBan(readBans(game), e.record.id, Date.now()) : null;
+  if (ban) throw banError(game, ban);
+}
+
+/** GET /api/cosmic/ban/me — mon bannissement en cours (ou null). */
+function banMe(e) {
+  const game = loadGame();
+  return e.json(200, { ban: game.activeBan(readBans(game), e.auth.id, Date.now()) });
+}
+
+function adminActor(e) {
+  return e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser";
+}
+
+/** GET/POST /api/cosmic/admin/ban — liste ; { uid, hours|null, reason } bannit ; { uid, lift: true } lève. */
+function adminBan(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  if (e.request.method !== "POST") {
+    const bans = readBans(game);
+    return e.json(200, { bans: Object.keys(bans).map((k) => Object.assign({ active: !!game.activeBan(bans, k, now) }, bans[k])) });
+  }
+  const req = body(e);
+  const uid = String(req.uid || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const bans = game.pruneBans(game.normalizeBans(readModeration(txApp, game.MODERATION_KEYS.bans)), now);
+    const rec = findOrNull(txApp, "players", uid);
+    const pseudo = rec ? rec.getString("pseudo") : (bans[uid] || {}).pseudo || uid;
+    if (req.lift === true) {
+      if (!bans[uid]) throw new BadRequestError("Ce joueur n'est pas banni.");
+      saveBans(txApp, game, game.unbanPlayer(bans, uid));
+      writeAdminLog(txApp, e, "joueur : débanni", uid, pseudo, { levé: true }, String(req.reason || "").trim() || "levée manuelle");
+      out = { lifted: true };
+      return;
+    }
+    if (!rec) throw new NotFoundError("Joueur introuvable.");
+    if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Un administrateur ne peut pas être banni.");
+    const hours = req.hours === null || req.hours === undefined ? null : Number(req.hours);
+    let next;
+    try {
+      next = game.banPlayer(bans, { uid, pseudo, hours, reason: String(req.reason || ""), byName: adminActor(e) }, now);
+    } catch (err) {
+      throw new BadRequestError(String((err && err.message) || err));
+    }
+    saveBans(txApp, game, next);
+    writeAdminLog(txApp, e, hours === null ? "joueur : banni" : "joueur : suspendu", uid, pseudo, { durée: hours === null ? "permanent" : `${hours} h`, jusquA: next[uid].untilMs }, next[uid].reason);
+    out = next[uid];
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/admin/player/delete { uid, confirm (pseudo), reason } — suppression définitive du compte et de l'empire. */
+function adminDeletePlayer(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const reason = String(req.reason || "").trim();
+  if (reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+  const summary = { fleets: 0, offers: 0, notifications: 0, alliance: null };
+  let pseudo = uid;
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "players", uid);
+    if (!rec) throw new NotFoundError("Joueur introuvable.");
+    pseudo = rec.getString("pseudo");
+    if (String(req.confirm || "") !== pseudo) throw new BadRequestError("Confirmation incorrecte : tape le pseudo du joueur.");
+    if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Retire d'abord ses droits d'administrateur.");
+    // Alliance : le joueur en sort (l'alliance disparaît si elle se vide).
+    const allianceId = rec.getString("allianceId");
+    if (allianceId) {
+      const a = findOrNull(txApp, "alliances", allianceId);
+      if (a) {
+        const next = game.removeMember(toPlain(a), uid);
+        if (!next) txApp.delete(a);
+        else {
+          a.set("members", next.members);
+          a.set("memberPseudos", next.memberPseudos);
+          a.set("roles", next.roles);
+          a.set("createdBy", next.createdBy);
+          txApp.save(a);
+        }
+        summary.alliance = next ? "quittée" : "dissoute";
+      }
+    }
+    txApp.findRecordsByFilter("fleets", "ownerUid = {:u}", "", 0, 0, { u: uid }).forEach((f) => {
+      txApp.delete(f);
+      summary.fleets++;
+    });
+    txApp.findRecordsByFilter("market_offers", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((o) => {
+      txApp.delete(o);
+      summary.offers++;
+    });
+    txApp.findRecordsByFilter("notifications", "player_id = {:u}", "", 0, 0, { u: uid }).forEach((n) => {
+      txApp.delete(n);
+      summary.notifications++;
+    });
+    txApp.findRecordsByFilter("passkeys", "user = {:u}", "", 0, 0, { u: uid }).forEach((p) => txApp.delete(p));
+    const q = findOrNull(txApp, "queues", uid);
+    if (q) txApp.delete(q);
+    txApp.delete(rec);
+    deleteProfile(txApp, uid);
+    const user = findOrNull(txApp, "users", uid);
+    if (user) txApp.delete(user);
+    const bans = game.normalizeBans(readModeration(txApp, game.MODERATION_KEYS.bans));
+    if (bans[uid]) saveBans(txApp, game, game.unbanPlayer(bans, uid));
+    writeAdminLog(txApp, e, "joueur : supprimé", uid, pseudo, summary, reason);
+  });
+  return e.json(200, Object.assign({ pseudo }, summary));
+}
+
+module.exports = { banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

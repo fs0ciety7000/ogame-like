@@ -2901,5 +2901,33 @@
     "indexes": [
       "CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"
     ]
+  },
+  {
+    "id": "pbc_ce_moderation",
+    "name": "moderation",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"
+    ]
   }
 ]

@@ -560,6 +560,22 @@ routerUse((e) => {
   return e.next();
 });
 
+/* ---------- 5.26 : modération ---------- */
+
+// Un joueur banni ne peut plus rien faire, ni se reconnecter, tant que le bannissement court.
+routerUse((e) => {
+  require(`${__hooks}/cosmic_db.js`).banGuard(e);
+  return e.next();
+});
+onRecordAuthRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).banAuthGuard(e);
+  return e.next();
+}, "users");
+routerAdd("GET", "/api/cosmic/ban/me", (e) => require(`${__hooks}/cosmic_db.js`).banMe(e), $apis.requireAuth("users"));
+routerAdd("GET", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.js`).adminBan(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.js`).adminBan(e), $apis.requireAuth("users", "_superusers"));
+routerAdd("POST", "/api/cosmic/admin/player/delete", (e) => require(`${__hooks}/cosmic_db.js`).adminDeletePlayer(e), $apis.requireAuth("users", "_superusers"));
+
 // Réouverture automatique à l'heure prévue, vérifiée chaque minute.
 cronAdd("cosmic_maintenance", "* * * * *", () => {
   require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_maintenance", "* * * * *", () => {

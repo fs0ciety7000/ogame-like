@@ -1,5 +1,6 @@
 import PocketBase, { type RecordSubscription } from "pocketbase";
 import { createSharedSubscriber } from "@/lib/sharedSubscriptions";
+import { markBanned } from "@/store/banStore";
 
 /** URL du serveur PocketBase (voir .env.example). */
 const pbUrl = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
@@ -11,6 +12,12 @@ export const pb = new PocketBase(pbUrl);
 // Plusieurs écrans lancent les mêmes requêtes en parallèle (abonnements,
 // heartbeat) : l'annulation automatique du SDK les ferait échouer.
 pb.autoCancellation(false);
+
+// 5.26 : un compte banni reçoit 403 « banned » sur toutes ses requêtes : l'écran de suspension prend le relais.
+pb.afterSend = (response, data) => {
+  if (response.status === 403 && data && typeof data === "object" && (data as { data?: { banned?: unknown } }).data?.banned) markBanned(String((data as { message?: string }).message ?? "Compte suspendu."));
+  return data;
+};
 
 /** Abonnement temps réel qui renvoie une fonction de désabonnement
  *  synchrone, comme l'API React/Zustand l'attend. Chaque appel a son propre
