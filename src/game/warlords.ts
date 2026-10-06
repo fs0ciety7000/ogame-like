@@ -778,8 +778,13 @@ export function openVendetta(
   npc: PlayerState,
   rt: WarlordRuntime | undefined,
   now: number,
+  /** 5.26.3 : Jeton de vendetta (Comptoir) : le seigneur en fuite est rappelé. */
+  recall = false,
 ): Vendetta {
-  if (rt && rt.absentUntilMs > now) throw new GameActionError(`${d.name} a quitté le secteur : reviens après son retour.`);
+  if (rt && rt.absentUntilMs > now) {
+    if (!recall) throw new GameActionError(`${d.name} a quitté le secteur : reviens après son retour, ou rappelle-le avec un Jeton de vendetta.`);
+    rt.absentUntilMs = now;
+  }
   if (activeVendetta(state, d.id, now)) throw new GameActionError(`Une vendetta est déjà ouverte contre ${d.name}.`);
   if (state.vendettas.some((v) => v.status === "active" && now < v.endsAtMs && v.ownerUid === opener.uid)) throw new GameActionError("Tu mènes déjà une vendetta : termine-la d'abord.");
   if (scope === "alliance" && !opener.allianceId) throw new GameActionError("Rejoins une alliance pour ouvrir une vendetta d'alliance.");

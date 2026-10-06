@@ -17,6 +17,8 @@ export interface GlobalMessage {
   /** 5.26.2 : salon (vide : canal global) et réactions. */
   room?: string;
   reactions?: ChatReactions;
+  /** 5.26.3 : couleur de pseudo (Comptoir), jeton du thème. */
+  nameTone?: string;
 }
 
 async function loadRecent(room: string): Promise<GlobalMessage[]> {
@@ -158,8 +160,11 @@ export async function reactGlobalMessage(id: string, emoji: string): Promise<{ r
   }
 }
 
-export function useChatRooms(): { rooms: ChatRoom[]; reload: () => void } {
-  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+type ListedRoom = ChatRoom & { pending?: boolean };
+
+export function useChatRooms(): { rooms: ChatRoom[]; loaded: boolean; reload: () => void; add: (room: ChatRoom) => void } {
+  const [rooms, setRooms] = useState<ListedRoom[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     let alive = true;
@@ -167,7 +172,12 @@ export function useChatRooms(): { rooms: ChatRoom[]; reload: () => void } {
       void pb
         .collection("chat_rooms")
         .getFullList<ChatRoom>({ sort: "-lastMessageAtMs", requestKey: null })
-        .then((r) => alive && setRooms(r))
+        .then((r) => {
+          if (!alive) return;
+          // Un salon tout juste créé peut manquer à la liste (temps réel en retard) : on le garde.
+          setRooms((prev) => [...r, ...prev.filter((p) => p.pending && Date.now() - p.createdAtMs < 60_000 && !r.some((x) => x.id === p.id))]);
+          setLoaded(true);
+        })
         .catch(() => {});
     refresh();
     const unsubscribe = subscribeRecords<ChatRoom>("chat_rooms", "*", coalesce(refresh, 300));
@@ -176,7 +186,12 @@ export function useChatRooms(): { rooms: ChatRoom[]; reload: () => void } {
       unsubscribe();
     };
   }, [tick]);
-  return { rooms, reload: () => setTick((t) => t + 1) };
+  return {
+    rooms,
+    loaded,
+    reload: () => setTick((t) => t + 1),
+    add: (room) => setRooms((prev) => [{ ...room, pending: true }, ...prev.filter((p) => p.id !== room.id)]),
+  };
 }
 
 export async function createChatRoom(name: string, topic: string): Promise<ChatRoom> {
@@ -184,6 +199,15 @@ export async function createChatRoom(name: string, topic: string): Promise<ChatR
     return await pb.send<ChatRoom>("/api/cosmic/global/room", { method: "POST", body: { action: "create", name, topic } });
   } catch (err) {
     throw new Error(errorMessage(err, "Création du salon impossible."));
+  }
+}
+
+/** 5.26.3 : icône du salon (Bannière de salon, Comptoir). */
+export async function setChatRoomIcon(id: string, icon: string): Promise<void> {
+  try {
+    await pb.send("/api/cosmic/global/room", { method: "POST", body: { action: "icon", id, icon } });
+  } catch (err) {
+    throw new Error(errorMessage(err, "Icône impossible à changer."));
   }
 }
 

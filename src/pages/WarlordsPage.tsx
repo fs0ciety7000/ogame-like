@@ -21,6 +21,7 @@ import { PERSONALITY_LABELS, TIER_LABELS, WARLORD_RULES, warlordRankRules, type 
 import { productionHours } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { onVacation } from "@/game/vacation";
+import { bountyState } from "@/game/bounties";
 import { declareVendetta, fetchWarlords, useWarlordsStore } from "@/services/warlordService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -54,6 +55,7 @@ export function WarlordsPage() {
   const [attack, setAttack] = useState<{ uid: string; pseudo: string } | null>(null);
   const [vendetta, setVendetta] = useState<WarlordPublic | null>(null);
   const [scope, setScope] = useState<"player" | "alliance">("player");
+  const [recall, setRecall] = useState(false);
   const [busy, setBusy] = useState(false);
   const [coalition, setCoalition] = useState<Coalition | null>(null);
 
@@ -77,13 +79,14 @@ export function WarlordsPage() {
   const now = Date.now();
   const cost = player ? productionHours(player, WARLORD_RULES.vendetta.costHours) : {};
   const away = player ? onVacation(player, now) : false;
+  const tokens = player ? bountyState(player).vendettaTokens : 0;
   const mine = list?.find((w) => w.vendetta && (w.vendetta.ownerUid === player?.uid || (w.vendetta.allianceId && w.vendetta.allianceId === player?.allianceId)));
 
   const open = async () => {
     if (!vendetta) return;
     setBusy(true);
     try {
-      await declareVendetta(vendetta.id, scope);
+      await declareVendetta(vendetta.id, scope, recall);
       toast.success(`Vendetta déclarée à ${vendetta.name}`, { description: "72 h pour lui détruire deux fois sa puissance de flotte." });
       setVendetta(null);
       await reload();
@@ -212,7 +215,17 @@ export function WarlordsPage() {
                       <Button size="sm" variant="secondary" disabled={gone || away} onClick={() => setAttack({ uid: w.uid, pseudo: w.name })}>
                         <Sword className="h-3.5 w-3.5" /> Attaquer
                       </Button>
+                      {gone && tokens > 0 && (
+                        <Button size="sm" variant="warn" disabled={away || !!mine} onClick={() => {
+                            setRecall(true);
+                            setVendetta(w);
+                            if ((w.rank ?? 1) >= 5) setScope("alliance");
+                          }} title={mine ? "Termine d'abord ta vendetta en cours." : `Jeton de vendetta : ${tokens} en réserve.`}>
+                          <Swords className="h-3.5 w-3.5" /> Le rappeler
+                        </Button>
+                      )}
                       <Button size="sm" disabled={gone || away || !!v || !!mine} onClick={() => {
+                          setRecall(false);
                           setVendetta(w);
                           if ((w.rank ?? 1) >= 5) setScope("alliance");
                         }} title={mine ? "Termine d'abord ta vendetta en cours." : undefined}>
@@ -255,6 +268,11 @@ export function WarlordsPage() {
         <DialogContent className="max-w-lg">
           <DialogTitle>Vendetta contre {vendetta?.name}</DialogTitle>
           <div className="space-y-3 text-sm text-slate-300">
+            {recall && (
+              <HudCallout tone="gold" className="text-xs">
+                <strong className="text-gold-glow">Jeton de vendetta.</strong> Le seigneur est rappelé de sa fuite : un jeton est dépensé quand la vendetta est déclarée (il t'en reste <span className="font-mono tabular-nums">{tokens}</span>).
+              </HudCallout>
+            )}
             <p>
               Pendant <strong>{WARLORD_RULES.vendetta.durationHours} h</strong>, détruis l'équivalent de <strong>{WARLORD_RULES.vendetta.goalFactor}× sa puissance de flotte</strong> (attaques, ou défense quand il t'attaque).
             </p>

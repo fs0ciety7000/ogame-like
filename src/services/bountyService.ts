@@ -36,6 +36,16 @@ export function exchangeBountyAmber(amount: number): Promise<{ gain: Partial<Rec
   return callGame("bounty", { action: "exchange", amount });
 }
 
+/** 5.26.3 : couleur de pseudo (objet de prestige du Comptoir). */
+export function setBountyNameTone(tone: string): Promise<{ tone: string }> {
+  return callGame("bounty", { action: "nameTone", tone });
+}
+
+/** 5.26.3 : don d'Ambre au pot commun (badge « Mécène »). */
+export function donateAmberToPot(amount: number): Promise<{ amber: number; donated: number }> {
+  return callGame("bounty", { action: "donate", amount });
+}
+
 export function fireRecallBeacon(fleetId: string): Promise<{ message: string }> {
   return callGame("bounty", { action: "beacon", fleetId });
 }

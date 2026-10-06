@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeMute, addReport, cleanGlobalMessage, filterText, normalizeReactions, rateLimitError, roomIdle, toggleReaction, validateRoom } from "@/game/globalChat";
+import { activeMute, addReport, cleanGlobalMessage, filterText, KESH_REACTION, normalizeReactions, rateLimitError, roomIcon, roomIdle, toggleReaction, validateRoom } from "@/game/globalChat";
 
 describe("canal global", () => {
   it("masque les grossièretés, accents et casse compris, sans toucher aux mots qui les contiennent", () => {
@@ -42,6 +42,16 @@ describe("5.26.2 : réactions et salons", () => {
     expect(toggleReaction(r, "🔥", "b")).toEqual({});
     expect(() => toggleReaction({}, "💩", "a")).toThrow();
     expect(normalizeReactions({ "👍": ["a", "a", 3], "x": ["b"] })).toEqual({ "👍": ["a"] });
+  });
+
+  it("5.26.3 : réaction kesh'vaar réservée aux acheteurs, mais toujours retirable ; icônes de salon filtrées", () => {
+    expect(() => toggleReaction({}, KESH_REACTION, "a")).toThrow(/Comptoir/);
+    const r = toggleReaction({}, KESH_REACTION, "a", true);
+    expect(r[KESH_REACTION]).toEqual(["a"]);
+    expect(toggleReaction(r, KESH_REACTION, "a")).toEqual({});
+    expect(normalizeReactions(r)).toEqual(r);
+    expect(roomIcon("skull")).toBe("skull");
+    expect(roomIcon("<script>")).toBe("");
   });
 
   it("valide un salon (nom, filtre, doublon, plafonds) et repère les salons muets", () => {

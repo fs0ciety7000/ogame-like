@@ -39,6 +39,12 @@ describe("v4.0 commanders", () => {
     grantCommanderXp(p, "admiral", xpForLevel(10));
     grantCommanderXp(p, "engineer", 5000);
     expect(p.commanders?.roster.engineer?.xp).toBe(0);
+    // 5.26.3 : Phéromone de recrutement : +25 % d'XP tant qu'elle dure.
+    const before = p.commanders!.roster.steward!.xp;
+    p.resourcesUpdatedAtMs = NOW;
+    p.bounties = { ...(p.bounties ?? {}), pheromoneUntilMs: NOW + 3600_000 } as PlayerState["bounties"];
+    grantCommanderXp(p, "steward", 100);
+    expect(p.commanders!.roster.steward!.xp - before).toBe(125);
     expect(playerModifiers(p).attack).toBeCloseTo(0.1);
     expect(playerModifiers(p).buildTime).toBe(0);
     // Relève et nomination, puis délai de 24 h.

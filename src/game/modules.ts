@@ -32,6 +32,8 @@ export interface ModuleItem {
   built: boolean;
   foundAtMs: number;
   source: string;
+  /** 5.26.3 : rareté déjà relancée (Rappel de plan, une fois par plan). */
+  rerolled?: boolean;
 }
 
 export interface ModulesState {

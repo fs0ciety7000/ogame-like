@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
-import { acceptTradeContract, cancelTradeContract, checkDelivery, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
+import { acceptTradeContract, cancelTradeContract, checkDelivery, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, sortTradeContracts, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
 import type { PlayerState } from "@/types/game";
 
 function player(uid: string): PlayerState {
@@ -19,6 +19,22 @@ function contract(client: PlayerState, extra: Partial<TradeContract> = {}): Trad
 }
 
 describe("v5.1 : contrats entre joueurs", () => {
+  it("5.26.3 : un Contrat prioritaire passe en tête pendant 24 h", () => {
+    const client = player("c");
+    client.bounties = { priorityContracts: 1 } as PlayerState["bounties"];
+    const c = createTradeContract(client, { wantRes: "nano", wantAmount: 10_000, payRes: "scrap", payAmount: 10_000, hours: 12 }, 0, NOW);
+    expect(c.priorityUntilMs).toBe(NOW + 24 * H);
+    expect((client.bounties as { priorityContracts: number }).priorityContracts).toBe(0);
+    const plain = createTradeContract(client, { wantRes: "nano", wantAmount: 10_000, payRes: "scrap", payAmount: 10_000, hours: 12 }, 0, NOW);
+    expect(plain.priorityUntilMs ?? 0).toBe(0);
+    const list = [
+      { id: "old-prio", createdAtMs: NOW - H, priorityUntilMs: NOW + H },
+      { id: "new", createdAtMs: NOW },
+      { id: "expired", createdAtMs: NOW + 1, priorityUntilMs: NOW - 1 },
+    ];
+    expect(sortTradeContracts(list, NOW).map((x) => x.id)).toEqual(["old-prio", "expired", "new"]);
+  });
+
   it("bloque le paiement, valide délai, prix et limite", () => {
     const client = player("c");
     contract(client);

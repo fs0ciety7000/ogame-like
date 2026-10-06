@@ -70,7 +70,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
         <StatTile size="sm" tone="gold" label="Total 30 j" value={<span className="font-mono">{formatCompact(total)}</span>} sub="équiv. ressource commune" />
         <StatTile size="sm" tone="accent" label="Moyenne / jour" value={<span className="font-mono">{formatCompact(Math.round(total / POT_DAILY_DAYS))}</span>} />
         <StatTile size="sm" tone="neutral" label="Première source" value={<span className="text-base">{top.sum > 0 ? SHORT[top.id] : "—"}</span>} sub={top.sum > 0 ? `${Math.round((top.sum / Math.max(1, total)) * 100)} % des entrées` : undefined} />
-        <StatTile size="sm" tone="gold" label="Ambre 30 j" value={<AmberAmount value={amber} label={false} className="font-mono tabular-nums" />} sub="taxe des enchères en Ambre" />
+        <StatTile size="sm" tone="gold" label="Ambre 30 j" value={<AmberAmount value={amber} label={false} className="font-mono tabular-nums" />} sub="taxe des enchères et dons des mécènes" />
       </div>
 
       {total === 0 && amber === 0 ? (

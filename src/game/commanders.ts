@@ -416,8 +416,15 @@ export function commanderEffects(player: Pick<PlayerState, "commanders">): Effec
 }
 
 /** XP gagnée par les officiers en poste de ce rôle (de base ou de saison). Modifie le joueur. */
+/** 5.26.3 : bonus d'XP de la Phéromone de recrutement (même valeur que BOUNTY_SHOP_RULES.pheromonePct). */
+export const PHEROMONE_PCT = 0.25;
+
 export function grantCommanderXp(player: PlayerState, role: CommanderId, amount: number): void {
   if (!(amount > 0)) return;
+  // 5.26.3 : Phéromone de recrutement (Comptoir) : +25 % tant qu'elle dure. Le joueur est
+  // rattrapé avant chaque action : resourcesUpdatedAtMs vaut l'instant présent.
+  const pheromone = Number((player.bounties as { pheromoneUntilMs?: number } | undefined)?.pheromoneUntilMs) || 0;
+  if (pheromone > (player.resourcesUpdatedAtMs ?? 0)) amount = Math.round(amount * (1 + PHEROMONE_PCT));
   const st = commandersState(player);
   const ids = st.active.filter((id) => findCommander(id)?.role === role && st.roster[id]);
   if (ids.length === 0) return;

@@ -276,6 +276,8 @@ function profileFeats(player) {
     leviathanKills: Number(stats.leviathanKills) || 0,
     warsWon: Number(stats.warsWon) || 0,
     bounties: Number(stats.bounties) || 0,
+    // 5.26.3 : badge « Mécène » (Ambre versée au pot commun).
+    patron: Number(stats.amberDonated) || 0,
     kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}),
     showcase: showcaseOf(player),
   };
@@ -468,7 +470,11 @@ function resolveSpyArrival(txApp, game, rec, now) {
     .findRecordsByFilter("fleets", "ownerUid = {:u} && status != 'done'", "arriveAtMs", 50, 0, { u: targetUid })
     .map((r) => fleetFromRecord(r, true));
   const probes = Object.keys(fleet.units).reduce((sum, k) => sum + (fleet.units[k] || 0), 0);
+  // 5.26.3 : Sondes fantômes (Comptoir) : l'espionnage ne peut pas être repéré.
+  const phantom = game.consumeCharge(spy.player, "phantoms");
+  if (phantom) savePlayer(txApp, game, spy, spy.player, spy.queues);
   const out = game.resolveSpyArrival({
+    undetectable: phantom,
     now,
     spy: spy.player,
     spyQueues: spy.queues,
@@ -483,7 +489,7 @@ function resolveSpyArrival(txApp, game, rec, now) {
   report.load(out.report);
   txApp.save(report);
   // 5.22 : la notification mène au rapport (journal de combat, section Espionnage).
-  notify(txApp, fleet.ownerUid, (out.spyNotifications || []).map((n) => (n.link ? n : Object.assign({}, n, { link: `/game/combats?espion=${report.id}` }))));
+  notify(txApp, fleet.ownerUid, (out.spyNotifications || []).map((n) => Object.assign({}, n, n.link ? {} : { link: `/game/combats?espion=${report.id}` }, phantom ? { message: `${n.message} Sondes fantômes : passées inaperçues.` } : {})));
   notify(txApp, targetUid, out.targetNotifications);
   // v4.0 : sondes abattues, l'Espionne en poste de la cible progresse.
   if (out.detected) {
@@ -4750,6 +4756,15 @@ function bountyRequest(e) {
         out = game.buyShopItem(player, queues, req.item, now, req.buildingId ? String(req.buildingId) : undefined);
       } else if (req.action === "exchange") {
         out = { gain: game.exchangeAmber(player, req.amount, now) };
+      } else if (req.action === "nameTone") {
+        // 5.26.3 : couleur de pseudo (objet du Comptoir).
+        out = { nameTone: game.setNameTone(player, req.tone) };
+      } else if (req.action === "donate") {
+        // 5.26.3 : don d'Ambre au pot commun (badge « Mécène »).
+        const amber = game.donateAmber(player, req.amount);
+        const potRec = configRecord(txApp, game.SERVER_POT_KEY);
+        writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "donation", amber, now, player.pseudo));
+        out = { amber, donated: Number((player.stats || {}).amberDonated) || 0 };
       } else if (req.action === "beacon") {
         const rec = findOrNull(txApp, "fleets", String(req.fleetId || ""));
         if (!rec) throw new game.GameActionError("Flotte introuvable.");
@@ -7332,9 +7347,13 @@ function warlordsRequest(e) {
       if ((me.player.resources[res] || 0) < cost[res]) throw new BadRequestError(`Une vendetta coûte ${game.WARLORD_RULES.vendetta.costHours} h de production : il te manque des ressources.`);
     });
     const npc = loadPlayer(txApp, game, npcUid);
+    // 5.26.3 : Jeton de vendetta : rappelle le seigneur en fuite.
+    const rt = state.byId[d.id];
+    const recall = !!req.recall && !!rt && rt.absentUntilMs > now;
+    if (recall && !game.consumeCharge(me.player, "vendettaTokens")) throw new BadRequestError("Aucun Jeton de vendetta : il s'en trouve au Comptoir de la Ruche.");
     let v;
     try {
-      v = game.openVendetta(state, d, me.player, req.scope === "alliance" ? "alliance" : "player", npc.player, state.byId[d.id], now);
+      v = game.openVendetta(state, d, me.player, req.scope === "alliance" ? "alliance" : "player", npc.player, rt, now, recall);
     } catch (err) {
       throw asHttpError(game, err);
     }
@@ -8837,7 +8856,9 @@ function globalSend(e) {
       txApp.save(room);
     }
     const rec = new Record(txApp.findCollectionByNameOrId("global_messages"));
-    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked, room: roomId, reactions: {} });
+    // 5.26.3 : couleur de pseudo (objet de prestige du Comptoir), figée sur le message.
+    const nameTone = game.nameToneOf({ bounties: toPlain(player).bounties });
+    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked, room: roomId, reactions: {}, nameTone });
     txApp.save(rec);
     bumpPlayerStat(txApp, uid, "globalMessages", 1);
     out = { id: rec.id, text: filtered.text, masked: filtered.masked };
@@ -8862,8 +8883,15 @@ function globalReact(e) {
     const rec = findOrNull(txApp, "global_messages", String(req.id || ""));
     if (!rec || rec.getBool("hidden")) throw new NotFoundError("Message introuvable.");
     let next;
+    const emoji = String(req.emoji || "");
+    // 5.26.3 : réaction kesh'vaar, objet de prestige du Comptoir.
+    let canKesh = false;
+    if (emoji === game.KESH_REACTION) {
+      const me = findOrNull(txApp, "players", uid);
+      canKesh = !!me && game.ownsShopItem({ bounties: toPlain(me).bounties }, "keshReaction");
+    }
     try {
-      next = game.toggleReaction(toPlain(rec).reactions, String(req.emoji || ""), uid);
+      next = game.toggleReaction(toPlain(rec).reactions, emoji, uid, canKesh);
     } catch (err) {
       throw new BadRequestError(String((err && err.message) || err));
     }
@@ -8903,6 +8931,18 @@ function globalRoom(e) {
       }
       const rec = new Record(txApp.findCollectionByNameOrId("chat_rooms"));
       rec.load({ name: room.name, topic: room.topic, ownerUid: uid, ownerPseudo: player.getString("pseudo"), createdAtMs: now, lastMessageAtMs: now, closed: false });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (req.action === "icon") {
+      // 5.26.3 : Bannière de salon (Comptoir) : icône choisie par le créateur.
+      const rec = findOrNull(txApp, "chat_rooms", String(req.id || ""));
+      if (!rec || rec.getBool("closed")) throw new NotFoundError("Salon introuvable.");
+      if (rec.getString("ownerUid") !== uid) throw new ForbiddenError("Seul son créateur choisit l'icône du salon.");
+      const me = findOrNull(txApp, "players", uid);
+      if (!me || !game.ownsShopItem({ bounties: toPlain(me).bounties }, "roomBanner")) throw new ForbiddenError("Bannière de salon : à débloquer au Comptoir de la Ruche.");
+      rec.set("icon", game.roomIcon(req.icon));
       txApp.save(rec);
       out = toPlain(rec);
       return;
@@ -9241,6 +9281,8 @@ function auctionsTick(now) {
           }
           if (deal.tax > 0) {
             if (a.res === "amber") {
+              // 5.26.3 : la taxe payée en Ambre compte pour le badge « Mécène » du vendeur.
+              if (findOrNull(txApp, "players", a.sellerId)) bumpPlayerStat(txApp, a.sellerId, "amberDonated", deal.tax);
               const potRec = configRecord(txApp, game.SERVER_POT_KEY);
               writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "auction", deal.tax, now));
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);

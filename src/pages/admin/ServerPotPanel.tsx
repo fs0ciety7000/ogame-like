@@ -110,7 +110,7 @@ export function ServerPotPanel() {
           </Button>
         </div>
         <p className="text-xs text-slate-400">
-          Les taxes du marché (offres et ordres d'achat), des enchères (ressources et Ambre) et la part perdue des cadeaux hors alliance arrivent ici au lieu de disparaître. Le pot sert aux concours et
+          Les taxes du marché (offres et ordres d'achat), des enchères (ressources et Ambre), les dons d'Ambre des mécènes et la part perdue des cadeaux hors alliance arrivent ici au lieu de disparaître. Le pot sert aux concours et
           récompenses collectives : verse-le à un joueur ci-dessous.
         </p>
         <div>
@@ -121,7 +121,7 @@ export function ServerPotPanel() {
           {sources.map((s) => (
             <div key={s} className="border border-white/[0.06] bg-white/[0.02] p-2">
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{POT_SOURCE_LABELS[s]} (total reçu)</p>
-              <Amounts values={pot.totals[s] ?? {}} amber={s === "auction" ? pot.amberTotal : 0} />
+              <Amounts values={pot.totals[s] ?? {}} amber={s === "auction" ? pot.amberTotal - (pot.amberTotals?.donation ?? 0) : (pot.amberTotals?.[s] ?? 0)} />
             </div>
           ))}
         </div>

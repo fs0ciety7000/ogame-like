@@ -151,7 +151,7 @@ export function MessagesPage() {
       <PageHeader eyebrow="Cosmic Empires / Social" title="Communications" description="Le canal de tout le serveur et tes échanges privés." />
 
       {/* 5.26 : canal global et messages privés, en onglets (?onglet=global|prives). */}
-      <Tabs value={tab} onValueChange={(v) => setParams({ onglet: v }, { replace: true })}>
+      <Tabs value={tab} onValueChange={(v) => setParams((prev) => ({ onglet: v, ...(prev.get("salon") ? { salon: prev.get("salon")! } : {}) }), { replace: true })}>
         <TabsList>
           <TabsTrigger value="global" className="flex items-center gap-1.5">
             <Globe2 className="h-3.5 w-3.5" aria-hidden /> Canal global

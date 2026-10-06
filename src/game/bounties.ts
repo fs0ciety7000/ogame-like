@@ -1,8 +1,9 @@
 import { allianceSiegeFactor } from "@/game/alliances";
 import { playerCombatEffects } from "@/game/effectTargets";
-import { applyHull, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { advanceWorkshop, applyHull, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { MODULE_RARITIES, modulesState, type ModuleRarity } from "@/game/modules";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
-import { addDossiers, COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { addDossiers, COMMANDER_XP, grantCommanderXp, PHEROMONE_PCT } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
@@ -144,6 +145,14 @@ export interface BountyState {
   shieldBoughtAtMs: number;
   /** Plan, titre, cadre, emblème, emojis. */
   owned: string[];
+  /** 5.26.3 : Sondes fantômes, Contrats prioritaires et Jetons de vendetta en réserve. */
+  phantoms: number;
+  priorityContracts: number;
+  vendettaTokens: number;
+  /** Phéromone de recrutement : XP des officiers +25 % jusqu'à cette date. */
+  pheromoneUntilMs: number;
+  /** Couleur de pseudo choisie (jeton du thème, vide : aucune). */
+  nameTone: string;
 }
 
 export function emptyBountyState(): BountyState {
@@ -165,6 +174,11 @@ export function emptyBountyState(): BountyState {
     shieldUntilMs: 0,
     shieldBoughtAtMs: 0,
     owned: [],
+    phantoms: 0,
+    priorityContracts: 0,
+    vendettaTokens: 0,
+    pheromoneUntilMs: 0,
+    nameTone: "",
   };
 }
 
@@ -186,6 +200,11 @@ export function bountyState(player: Pick<PlayerState, "bounties">): BountyState 
     slot: raw.slot === undefined ? -1 : num(raw.slot),
     doneToday: num(raw.doneToday),
     owned: Array.isArray(raw.owned) ? raw.owned.map(String) : [],
+    phantoms: Math.max(0, num(raw.phantoms)),
+    priorityContracts: Math.max(0, num(raw.priorityContracts)),
+    vendettaTokens: Math.max(0, num(raw.vendettaTokens)),
+    pheromoneUntilMs: num(raw.pheromoneUntilMs),
+    nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : "",
   };
 }
 
@@ -442,7 +461,29 @@ function note(title: string, message: string, now: number): NewNotification {
 
 /* ---------- Comptoir de la Ruche ---------- */
 
-export type ShopItemId = "accelerator" | "boost" | "jammer" | "beacon" | "shield" | "dossier" | "blueprint" | "planner" | "title" | "frame" | "emblem" | "emojis";
+export type ShopItemId =
+  | "accelerator"
+  | "boost"
+  | "jammer"
+  | "beacon"
+  | "shield"
+  | "dossier"
+  | "phantom"
+  | "painkiller"
+  | "reroll"
+  | "priority"
+  | "pheromone"
+  | "vendettaToken"
+  | "blueprint"
+  | "planner"
+  | "title"
+  | "frame"
+  | "emblem"
+  | "emojis"
+  | "nameColor"
+  | "keshReaction"
+  | "roomBanner"
+  | "planetFx";
 
 export interface ShopItem {
   id: ShopItemId;
@@ -460,7 +501,21 @@ export const BOUNTY_SHOP_RULES = {
   shieldHours: 6,
   shieldCooldownDays: 7,
   title: "Chasseur de l'Essaim",
+  /** 5.26.3 */
+  painkillerHours: 2,
+  pheromoneHours: 24,
+  pheromonePct: PHEROMONE_PCT,
+  priorityHours: 24,
 };
+
+/** 5.26.3 : couleurs de pseudo (jetons du thème ; le rouge reste réservé au danger). */
+export const NAME_TONES: { id: string; label: string }[] = [
+  { id: "accent", label: "Cyan" },
+  { id: "mint", label: "Menthe" },
+  { id: "gold", label: "Or" },
+  { id: "ember", label: "Braise" },
+  { id: "violet", label: "Violet" },
+];
 
 export const SHOP_ITEMS: ShopItem[] = [
   { id: "accelerator", name: "Accélérateur de chantier", price: 30, group: "consumable", description: "Une construction de bâtiment en cours se termine 1 h plus tôt." },
@@ -469,19 +524,37 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ramène aussitôt une flotte en vol à la base, avec sa cargaison. 3 en réserve au plus." },
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le lève." },
   { id: "dossier", name: "Dossier d'entraînement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, même hors poste (page Commandants)." },
+  { id: "phantom", name: "Sondes fantômes", price: 40, group: "consumable", description: "Ton prochain espionnage passe inaperçu : sondes impossibles à repérer, la cible n'en sait rien. 3 en réserve au plus." },
+  { id: "painkiller", name: "Analgésique d'atelier", price: 50, group: "consumable", description: "Les réparations en cours à l'Atelier avancent aussitôt de 2 h." },
+  { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de rareté d'un plan de module commun (une fois par plan)." },
+  { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en tête des contrats visibles pendant 24 h. 3 en réserve au plus." },
+  { id: "pheromone", name: "Phéromone de recrutement", price: 90, group: "consumable", description: "Tes officiers gagnent 25 % d'XP en plus pendant 24 h (cumulable dans le temps)." },
+  { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite après une vendetta : tu peux lui en déclarer une nouvelle sans attendre son retour. 3 en réserve au plus." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)." },
   { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels." },
   { id: "title", name: "Titre « Chasseur de l'Essaim »", price: 120, group: "cosmetic", description: "Un titre à afficher à côté de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambré autour de ta fiche publique." },
   { id: "emblem", name: "Emblème de l'Essaim", price: 150, group: "cosmetic", description: "L'emblème kesh'vaar sur ta fiche publique." },
   { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." },
+  { id: "nameColor", name: "Couleur de pseudo", price: 120, group: "cosmetic", description: "Ton pseudo en couleur dans le canal global et les salons (cyan, menthe, or, braise ou violet, modifiable à volonté)." },
+  { id: "keshReaction", name: "Réaction kesh'vaar", price: 60, group: "cosmetic", description: "Une 7e réaction, l'emblème de l'Essaim, sous les messages du canal. Visible de tous." },
+  { id: "roomBanner", name: "Bannière de salon", price: 80, group: "cosmetic", description: "Une icône au choix pour ton salon thématique, affichée dans la liste des salons." },
+  { id: "planetFx", name: "Effet de planète", price: 200, group: "cosmetic", description: "Débloque l'anneau d'ambre et l'aurore pour ta planète d'accueil (Profil)." },
 ];
 
 export function findShopItem(id: unknown): ShopItem | undefined {
   return SHOP_ITEMS.find((i) => i.id === id);
 }
 
-const ONE_TIME: ShopItemId[] = ["blueprint", "planner", "title", "frame", "emblem", "emojis"];
+const ONE_TIME: ShopItemId[] = ["blueprint", "planner", "title", "frame", "emblem", "emojis", "nameColor", "keshReaction", "roomBanner", "planetFx"];
+/** Objets en réserve (3 au plus chacun) et leur compteur. */
+const CHARGES: Partial<Record<ShopItemId, "jammers" | "beacons" | "phantoms" | "priorityContracts" | "vendettaTokens">> = {
+  jammer: "jammers",
+  beacon: "beacons",
+  phantom: "phantoms",
+  priority: "priorityContracts",
+  vendettaToken: "vendettaTokens",
+};
 
 export function owns(st: Pick<BountyState, "owned">, id: ShopItemId): boolean {
   return st.owned.includes(id);
@@ -493,12 +566,16 @@ export function plannerUnlocked(player: Pick<PlayerState, "bounties"> | null | u
 }
 
 /** Pourquoi l'objet ne peut pas être acheté (null s'il peut l'être). */
-export function shopBlocker(player: Pick<PlayerState, "bounties"> & Partial<Pick<PlayerState, "units">>, item: ShopItem, now: number, queues?: Pick<QueuesState, "buildingUpgrades">): string | null {
+export function shopBlocker(player: Pick<PlayerState, "bounties"> & Partial<Pick<PlayerState, "units" | "workshop" | "modules">>, item: ShopItem, now: number, queues?: Pick<QueuesState, "buildingUpgrades">): string | null {
   const st = bountyState(player);
   if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "Déjà acquis.";
-  if ((item.id === "jammer" && st.jammers >= BOUNTY_SHOP_RULES.maxCharges) || (item.id === "beacon" && st.beacons >= BOUNTY_SHOP_RULES.maxCharges)) {
-    return `${BOUNTY_SHOP_RULES.maxCharges} en réserve au plus.`;
+  const charge = CHARGES[item.id];
+  if (charge && st[charge] >= BOUNTY_SHOP_RULES.maxCharges) return `${BOUNTY_SHOP_RULES.maxCharges} en réserve au plus.`;
+  if (item.id === "painkiller") {
+    const w = workshopState(player as Pick<PlayerState, "workshop">);
+    if (w.jobs.length === 0 && Object.keys(w.hull).length === 0) return "Rien en réparation à l'Atelier.";
   }
+  if (item.id === "reroll" && rerollablePlans(player as Pick<PlayerState, "modules">).length === 0) return "Aucun plan commun à relancer.";
   if (item.id === "shield") {
     const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY;
     if (st.shieldBoughtAtMs && now < ready) return `Disponible à nouveau dans ${Math.ceil((ready - now) / DAY)} j.`;
@@ -509,7 +586,7 @@ export function shopBlocker(player: Pick<PlayerState, "bounties"> & Partial<Pick
 }
 
 /** Achat au Comptoir (le joueur doit être rattrapé à `now`). */
-export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: unknown, now: number, buildingId?: string): { message: string } {
+export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: unknown, now: number, buildingId?: string, random: () => number = Math.random): { message: string } {
   const item = findShopItem(itemId);
   if (!item) throw new GameActionError("Objet inconnu.");
   const blocker = shopBlocker(player, item, now, queues);
@@ -545,6 +622,47 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
     case "dossier":
       addDossiers(player, 1);
       message = "Dossier d'entraînement rangé : remets-le à un officier depuis la page Commandants.";
+      break;
+    // 5.26.3
+    case "phantom":
+      st.phantoms += 1;
+      message = "Sondes fantômes prêtes : ton prochain espionnage passera inaperçu.";
+      break;
+    case "painkiller": {
+      // L'Atelier avance de 2 h d'un coup : rattrapage, puis 2 h de travail supplémentaires.
+      advanceWorkshop(player, now);
+      const w = workshopState(player);
+      player.workshop = { ...w, updatedAtMs: now - BOUNTY_SHOP_RULES.painkillerHours * HOUR };
+      const done = advanceWorkshop(player, now);
+      message = done.length ? `Atelier : 2 h de réparations faites. ${done[0].message}` : "Atelier : 2 h de réparations faites.";
+      break;
+    }
+    case "reroll": {
+      const plans = rerollablePlans(player);
+      const plan = plans.find((m) => m.id === buildingId) ?? plans[0];
+      const rarity = rollRarity(random);
+      const ms = modulesState(player);
+      ms.items = ms.items.map((m) => (m.id === plan.id ? { ...m, rarity, rerolled: true } : m));
+      player.modules = ms;
+      const label = MODULE_RARITIES.find((r) => r.id === rarity)?.label.toLowerCase() ?? rarity;
+      message = rarity === "common" ? "Rappel de plan : le plan reste commun." : `Rappel de plan : le plan devient ${label} !`;
+      break;
+    }
+    case "priority":
+      st.priorityContracts += 1;
+      message = "Contrat prioritaire prêt : ton prochain contrat passera en tête pendant 24 h.";
+      break;
+    case "pheromone":
+      st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR;
+      message = "Phéromone de recrutement : XP des officiers +25 % pendant 24 h.";
+      break;
+    case "vendettaToken":
+      st.vendettaTokens += 1;
+      message = "Jeton de vendetta prêt : rappelle un seigneur en fuite depuis la page Seigneurs.";
+      break;
+    case "nameColor":
+      st.nameTone = st.nameTone || "gold";
+      message = "Couleur de pseudo acquise : change-la depuis le Comptoir.";
       break;
     case "blueprint":
       player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: player.units[KESH_HUNTER_UNIT.id]?.count ?? 0 };
@@ -837,3 +955,86 @@ export function adminSetAmber(player: PlayerState, amount: number): { before: nu
   player.bounties = { ...st, amber: after };
   return { before, after };
 }
+
+/* ---------- 5.26.3 : consommables et prestige ---------- */
+
+/** Plans de module communs (non fabriqués) qui n'ont pas encore été relancés. */
+export function rerollablePlans(player: Pick<PlayerState, "modules">) {
+  return modulesState(player).items.filter((m) => !m.built && m.rarity === "common" && !m.rerolled);
+}
+
+/** Tirage de rareté (mêmes poids que les plans tombés au combat). */
+function rollRarity(random: () => number): ModuleRarity {
+  const total = MODULE_RARITIES.reduce((a, r) => a + r.weight, 0);
+  let roll = random() * total;
+  for (const r of MODULE_RARITIES) if ((roll -= r.weight) < 0) return r.id;
+  return MODULE_RARITIES[MODULE_RARITIES.length - 1].id;
+}
+
+/** Consomme un objet en réserve (false s'il n'y en a pas). */
+export function consumeCharge(player: Pick<PlayerState, "bounties">, key: "phantoms" | "priorityContracts" | "vendettaTokens"): boolean {
+  const st = bountyState(player);
+  if (st[key] <= 0) return false;
+  st[key] -= 1;
+  (player as PlayerState).bounties = st;
+  return true;
+}
+
+/** Couleur de pseudo choisie (vide si l'objet n'est pas acquis). */
+export function nameToneOf(player: Pick<PlayerState, "bounties">): string {
+  const st = bountyState(player);
+  return owns(st, "nameColor") ? st.nameTone : "";
+}
+
+/** 5.26.3 : objets de prestige achetés (réaction kesh, bannière de salon, effet de planète). */
+export function ownsShopItem(player: Pick<PlayerState, "bounties">, id: ShopItemId): boolean {
+  return owns(bountyState(player), id);
+}
+
+/** Change la couleur de pseudo (objet acquis au Comptoir). */
+export function setNameTone(player: PlayerState, tone: unknown): string {
+  const st = bountyState(player);
+  if (!owns(st, "nameColor")) throw new GameActionError("La couleur de pseudo s'obtient au Comptoir de la Ruche.");
+  const id = String(tone ?? "");
+  if (id && !NAME_TONES.some((t) => t.id === id)) throw new GameActionError("Couleur inconnue.");
+  st.nameTone = id;
+  player.bounties = st;
+  return id;
+}
+
+/** Phéromone active (XP des officiers +25 %). */
+export function pheromoneActive(player: Pick<PlayerState, "bounties">, now: number): boolean {
+  return bountyState(player).pheromoneUntilMs > now;
+}
+
+/* Badge « Mécène » : Ambre versée au pot commun (dons, taxe des enchères en Ambre). */
+export const PATRON_TIERS: { at: number; label: string; tone: "neutral" | "accent" | "violet" | "gold" }[] = [
+  { at: 25, label: "Mécène de bronze", tone: "neutral" },
+  { at: 100, label: "Mécène d'argent", tone: "accent" },
+  { at: 500, label: "Mécène d'or", tone: "gold" },
+  { at: 2000, label: "Grand mécène", tone: "violet" },
+];
+
+export function patronTier(amberDonated: number): (typeof PATRON_TIERS)[number] | null {
+  let out: (typeof PATRON_TIERS)[number] | null = null;
+  for (const t of PATRON_TIERS) if (amberDonated >= t.at) out = t;
+  return out;
+}
+
+/** Prochain palier (null au sommet). */
+export function nextPatronTier(amberDonated: number): (typeof PATRON_TIERS)[number] | null {
+  return PATRON_TIERS.find((t) => amberDonated < t.at) ?? null;
+}
+
+/** Don d'Ambre au pot commun : débite le joueur et compte pour le badge (le serveur crédite le pot). */
+export function donateAmber(player: PlayerState, amountIn: unknown): number {
+  const amount = Math.floor(Number(amountIn));
+  if (!(amount >= 1 && amount <= 10_000)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
+  const st = bountyState(player);
+  if (st.amber < amount) throw new GameActionError("Pas assez d'Ambre.");
+  st.amber -= amount;
+  player.bounties = st;
+  bumpStat(player, "amberDonated", amount);
+  return amount;
+}
+

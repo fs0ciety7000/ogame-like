@@ -2553,6 +2553,12 @@
         "type": "number",
         "required": false,
         "onlyInt": false
+      },
+      {
+        "name": "priorityUntilMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -3251,6 +3257,14 @@
         "required": false,
         "maxSize": 20000,
         "presentable": false
+      },
+      {
+        "name": "nameTone",
+        "type": "text",
+        "max": 40,
+        "presentable": false,
+        "id": "text_gm_nametone",
+        "required": false
       }
     ],
     "indexes": [
@@ -3314,6 +3328,14 @@
         "type": "bool",
         "required": false,
         "presentable": false
+      },
+      {
+        "name": "icon",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false,
+        "id": "text_cr_icon"
       }
     ],
     "indexes": [

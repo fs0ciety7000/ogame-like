@@ -31,7 +31,13 @@ export interface PlanetPalette {
   land: string;
 }
 
-type LookPlayer = Partial<Pick<PlayerState, "stats" | "pirates" | "referral" | "seasonPass" | "ascensions" | "unlockedAchievements">>;
+type LookPlayer = Partial<Pick<PlayerState, "stats" | "pirates" | "referral" | "seasonPass" | "ascensions" | "unlockedAchievements" | "bounties">>;
+
+/** 5.26.3 : Effet de planète (Comptoir de la Ruche). Lecture brute : pas d'import circulaire avec bounties. */
+const hasPlanetFx = (p: LookPlayer): boolean => {
+  const owned = (p.bounties as { owned?: unknown } | undefined)?.owned;
+  return Array.isArray(owned) && owned.includes("planetFx");
+};
 
 interface LookDef {
   id: string;
@@ -75,11 +81,12 @@ const OPTIONS: Record<PlanetSlot, LookDef[]> = {
     { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => (p.seasonPass?.completed ?? []).length > 0 },
     { id: "debris", label: "Ceinture de débris", hint: "Recycler un champ de débris", unlocked: (p) => stat(p, "recycled") > 0 },
     { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p as Parameters<typeof pirateState>[0], f.id).lairsTaken > 0) },
+    { id: "ambre", label: "Anneau d'ambre", hint: "Effet de planète (Comptoir de la Ruche)", unlocked: hasPlanetFx },
   ],
   atmosphere: [
     { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
     { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
-    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succès", unlocked: (p) => (p.unlockedAchievements ?? []).length >= 20 },
+    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succès, ou Effet de planète (Comptoir)", unlocked: (p) => (p.unlockedAchievements ?? []).length >= 20 || hasPlanetFx(p) },
     { id: "doree", label: "Brume dorée", hint: "Conclure 25 échanges au marché", unlocked: (p) => stat(p, "marketTrades") >= 25 },
     { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1_000_000 },
   ],
