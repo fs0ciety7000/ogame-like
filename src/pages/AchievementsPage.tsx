@@ -180,7 +180,7 @@ export function AchievementsPage() {
       <Card className="flex flex-wrap items-center gap-4 p-4">
         <Trophy className="h-8 w-8 text-gold-glow" />
         <div>
-          <p className="font-display text-xl text-slate-100">
+          <p className="font-mono text-xl tabular-nums text-slate-100">
             {done.length} / {list.length}
           </p>
           <p className="text-xs text-slate-400">
@@ -197,7 +197,10 @@ export function AchievementsPage() {
         <div className="flex gap-3 text-xs">
           {(Object.keys(TIER_LABELS) as AchievementTier[]).map((t) => (
             <span key={t} className={TIER_STYLE[t].text}>
-              {TIER_LABELS[t]} {done.filter((a) => a.tier === t).length}/{list.filter((a) => a.tier === t).length}
+              {TIER_LABELS[t]}{" "}
+              <span className="font-mono tabular-nums">
+                {done.filter((a) => a.tier === t).length}/{list.filter((a) => a.tier === t).length}
+              </span>
             </span>
           ))}
         </div>

@@ -10,7 +10,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
-import { HudSwitch } from "@/components/ui/hud";
+import { HudChip, HudSwitch, type HudTone } from "@/components/ui/hud";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
@@ -277,6 +277,8 @@ const BOSS_NAV: Record<BossPhase, { label: string; chip: string; color: string }
   dormant: { label: "En sommeil", chip: "Zzz", color: "var(--color-slate-500)" },
 };
 
+const BOSS_TONE: Record<BossPhase, HudTone> = { active: "danger", killed: "mint", failed: "ember", dormant: "neutral" };
+
 /** Minute courante (les fins de combat sont gérées sans attendre le serveur). */
 function useMinute(): number {
   const [now, setNow] = useState(() => Date.now());
@@ -345,12 +347,12 @@ function BossDot({ phase, className }: { phase: BossPhase | null; className?: st
 
 /** Pastille de texte à droite du libellé (barre latérale). */
 function BossChip({ info }: { info: { phase: BossPhase; returnMs: number | null; now: number } }) {
-  const { color } = BOSS_NAV[info.phase];
   const { chip, full } = bossNavText(info);
+  // DESIGN.md : pastille d'état = HudChip (ton = sens : danger en combat, mint abattu, ember retiré, neutre en sommeil).
   return (
-    <span title={full} className="shrink-0 whitespace-nowrap border px-1 py-px font-mono text-[8.5px] font-bold uppercase tabular-nums tracking-[0.12em]" style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
+    <HudChip size="sm" tone={BOSS_TONE[info.phase]} title={full} className="shrink-0 whitespace-nowrap px-1 py-px text-[8.5px] tabular-nums tracking-[0.12em]">
       {chip}
-    </span>
+    </HudChip>
   );
 }
 

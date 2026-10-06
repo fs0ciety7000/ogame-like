@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
 import { economySnapshot } from "@/game/economy";
-import { HudMeter } from "@/components/ui/hud";
+import { HudCallout, HudMeter } from "@/components/ui/hud";
 import { EXCHANGE_TAX_PCT, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
@@ -128,11 +128,11 @@ export function ResourcesPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-l-2 border-cyan-glow bg-cyan-glow/[0.06] px-4 py-3 text-sm">
+          <HudCallout tone="accent" className="flex items-center justify-between px-4 py-3 text-sm">
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tu recevras</span>
             <span className="flex flex-col items-end gap-0.5">
-              <span className="hud-title text-lg tabular-nums text-cyan-glow">
-                {formatNumber(quote.net)} <ResourceIcon id={buyRes.id} /> {buyRes.name}
+              <span className="flex items-center gap-1.5 text-lg text-cyan-glow">
+                <span className="font-mono tabular-nums">{formatNumber(quote.net)}</span> <ResourceIcon id={buyRes.id} /> <span className="font-display">{buyRes.name}</span>
               </span>
               {quote.tax > 0 && (
                 <span className="font-mono text-[11px] tabular-nums text-slate-500">
@@ -140,7 +140,7 @@ export function ResourcesPage() {
                 </span>
               )}
             </span>
-          </div>
+          </HudCallout>
 
           <Button onClick={() => void handleTrade()} disabled={submitting || sellId === buyId || quote.net <= 0}>
             {submitting ? "Échange…" : "Échanger"}
