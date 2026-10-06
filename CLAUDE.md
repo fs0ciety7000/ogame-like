@@ -31,6 +31,19 @@ Valable pour toute la session et tout le projet, à chaque demande :
    statut « livrée » et renvoie à sa fiche.
 5. Ces fichiers sont la mémoire du projet : les relire en début de session et avant chaque lot, ne jamais repartir de zéro.
 
+## Règle n° 2 : tout est réglable dans le panel admin
+
+> **Instructions : tout ce qui est dans GameRules etc pour les fonctionnalités existantes et futures doivent pouvoir être gérées dans le panel admin !**
+
+- Chaque chiffre de jeu (stats, effets, coûts, durées, plafonds, bonus, calendriers, textes de règle) vit dans un contenu réglable :
+  unités, technos, bâtiments, factions… dans leur onglet ; le reste dans `GameRules` (`content.ts`), avec un libellé dans `RULE_GROUP_LABELS`.
+- Une nouvelle fonctionnalité ajoute ses réglages à `GameRules` (ou à une section de contenu) **et** son éditeur dans l'admin, dans le même lot.
+  Un champ sans section dédiée reste éditable dans **Admin → Règles → Tous les réglages (avancé)** (`AllRulesEditor`), qui affiche chaque champ
+  automatiquement ; une section dédiée avec libellés clairs reste la règle pour les chiffres courants.
+- Une constante par défaut peut rester dans le code ; la valeur en vigueur vient toujours des règles. Une valeur réglable doit être JSON pur
+  (pas de fonction, de `Date`, de `undefined`).
+- Garde : `rulesAdmin.test.ts` (libellé de chaque groupe, valeurs éditables sans perte, éditeur monté) et `reglages671.test.ts` (réglages appliqués).
+
 ## Langue et ton
 
 - Tout en **français** : code commenté, textes du jeu, commits, PR, docs.
@@ -63,9 +76,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   +100 % à son niveau maximal ni le niveau maximal de l'unité qu'elle monte (`validateTechEffect`). Avant d'ajouter un bonus « contre les PNJ »,
   vérifier qu'il n'existe pas déjà dans l'unité (ex. `KESH_PVE_BONUS`) : incident `tech19_2`, revue AU1.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
-- Tout chiffre de jeu (stats, effets, coûts, durées, plafonds, bonus) se règle dans l'admin : unités et technos dans le contenu, le reste dans
-  une section de `rules` (`GameRules`, fusion dans `content.ts`, champ dans `panels.tsx` ou l'onglet du domaine). Pas de nouvelle constante
-  de jeu seulement dans le code ; une constante par défaut peut rester, la valeur en vigueur vient des règles.
+- Réglages : voir la règle n° 2 (tout `GameRules` dans le panel admin). Nouveau groupe de règles : fusion dans `mergeContent`, `Object.assign`
+  dans `applyGameContent`, libellé dans `RULE_GROUP_LABELS`, champs dans `panels.tsx` ou l'onglet du domaine.
 - Initialisation des modules : un objet de règles au niveau du module ne lit jamais une constante importée d'un autre module du moteur
   (`keshPveBonus: KESH_PVE_BONUS` a planté le chargement du jeu dans le navigateur : import circulaire units ↔ combat, tests verts).
   Valeur littérale, ou accesseur (`get x() { … }`) lu à l'usage. Toujours ouvrir l'appli dans un navigateur après un changement du moteur.

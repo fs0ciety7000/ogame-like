@@ -23,6 +23,7 @@ import {
 } from "@/services/adminService";
 import { NumberField, Section } from "@/pages/admin/fields";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
+import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -893,6 +894,8 @@ export function RulesPanel() {
         </Section>
         <EventsAndSeasonsSections rules={rules} setRules={setRules} />
       </Card>
+      {/* 6.7.2 : tout GameRules est réglable dans l'admin, même sans section dédiée. */}
+      <AllRulesEditor rules={rules} setRules={setRules} />
     </div>
   );
 }

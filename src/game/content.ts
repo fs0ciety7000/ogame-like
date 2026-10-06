@@ -340,7 +340,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
 
 /* ---------- validation (interface d'administration) ---------- */
 
-const RULE_GROUP_LABELS: Record<string, string> = {
+export const RULE_GROUP_LABELS: Record<string, string> = {
   pvp: "Protections",
   combat: "Combat",
   economy: "Économie",
