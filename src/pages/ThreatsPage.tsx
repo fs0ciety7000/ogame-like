@@ -1,3 +1,4 @@
+import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
@@ -289,7 +290,7 @@ export function ThreatsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Menaces" title="Menaces" description="Les factions qui rôdent aux confins de la galaxie. Une seule à la fois peut te viser." />
-      {factions.length === 0 && <Card><EmptyState icon="☠️" title="Calme plat">Aucune faction hostile active pour l'instant.</EmptyState></Card>}
+      {factions.length === 0 && <Card><EmptyState icon="☠️" title="Calme plat" action={<EmptyAction to="/game/unites?onglet=defense">Renforcer les défenses</EmptyAction>}>Aucune faction hostile active pour l'instant.</EmptyState></Card>}
       {factions.map((f) => (
         <FactionCard key={f.id} faction={f} player={player} onLair={() => setLairFaction(f)} />
       ))}

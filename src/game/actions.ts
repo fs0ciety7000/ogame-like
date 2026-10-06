@@ -38,6 +38,7 @@ import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recr
 import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
+import { buildModule, mountModule, recycleModule, unmountModule } from "@/game/modules";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
@@ -95,6 +96,10 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
+  | { type: "moduleBuild"; moduleId: string }
+  | { type: "moduleMount"; moduleId: string; cls: string; slot: number }
+  | { type: "moduleUnmount"; cls: string; slot: number }
+  | { type: "moduleRecycle"; moduleId: string }
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
   | { type: "streakClaim" }
@@ -436,6 +441,26 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       st.amber += out.amber;
       player.bounties = st;
       return { amber: out.amber };
+    }
+
+    // 5.26 : modules de vaisseaux.
+    case "moduleBuild":
+      return buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+
+    case "moduleMount":
+      mountModule(player, action.moduleId, action.cls, action.slot);
+      return undefined;
+
+    case "moduleUnmount":
+      unmountModule(player, action.cls, action.slot);
+      return undefined;
+
+    case "moduleRecycle": {
+      const amber = recycleModule(player, action.moduleId);
+      const st = bountyState(player);
+      st.amber += amber;
+      player.bounties = st;
+      return { amber };
     }
 
     case "setProfileStyle":

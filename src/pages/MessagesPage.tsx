@@ -4,7 +4,9 @@ import { EmptyAction, PagedList } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeft, Ban, Check, CheckCheck, Loader2, Mail, Search, Send } from "lucide-react";
+import { ArrowLeft, Ban, Check, CheckCheck, Globe2, Loader2, Mail, Search, Send } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GlobalChannel } from "@/components/game/GlobalChannel";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,8 @@ export function MessagesPage() {
   const conversations = useMemo(() => groupConversations(messages, uid), [messages, uid]);
   const current = conversations.find((c) => c.uid === withUid);
   const withPseudo = current?.pseudo ?? params.get("pseudo") ?? "";
+  const tab = withUid ? "prives" : params.get("onglet") === "global" ? "global" : params.get("onglet") === "prives" ? "prives" : "global";
+  const unreadTotal = conversations.reduce((n, c) => n + c.unread, 0);
 
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [search, setSearch] = useState("");
@@ -120,8 +124,23 @@ export function MessagesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Opérations" title="Messages" description="Échanges privés entre commandants." />
+      <PageHeader eyebrow="Cosmic Empires / Social" title="Communications" description="Le canal de tout le serveur et tes échanges privés." />
 
+      {/* 5.26 : canal global et messages privés, en onglets (?onglet=global|prives). */}
+      <Tabs value={tab} onValueChange={(v) => setParams({ onglet: v }, { replace: true })}>
+        <TabsList>
+          <TabsTrigger value="global" className="flex items-center gap-1.5">
+            <Globe2 className="h-3.5 w-3.5" aria-hidden /> Canal global
+          </TabsTrigger>
+          <TabsTrigger value="prives" className="flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5" aria-hidden /> Messages privés
+            {unreadTotal > 0 && <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{unreadTotal}</span>}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="global" className="mt-4">
+          <GlobalChannel uid={uid} onOpenPlayer={setSheet} />
+        </TabsContent>
+        <TabsContent value="prives" className="mt-4">
       <div className="grid gap-3 md:grid-cols-[18rem_1fr]">
         {/* Conversations */}
         <Card className={cn("flex flex-col gap-2 p-3", withUid && "max-md:hidden")}>
@@ -182,7 +201,7 @@ export function MessagesPage() {
           ) : (
             <>
               <div className="flex items-center gap-2 border-b border-cyan-glow/15 px-3 py-2">
-                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setParams({})} aria-label="Retour aux conversations">
+                <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setParams({ onglet: "prives" })} aria-label="Retour aux conversations">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <button type="button" className="min-w-0 flex-1 truncate text-left font-semibold text-slate-100 hover:text-cyan-glow" onClick={() => setSheet({ uid: withUid, pseudo: withPseudo })}>
@@ -253,6 +272,9 @@ export function MessagesPage() {
           )}
         </Card>
       </div>
+
+        </TabsContent>
+      </Tabs>
 
       <PlayerSheetDialog target={sheet} onClose={() => setSheet(null)} />
     </div>

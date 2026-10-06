@@ -34,6 +34,6 @@ export function adminServerPotDeposit(resources: Record<string, number>, note: s
   return pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "deposit", resources, note } });
 }
 
-export function adminServerPotGrant(toUid: string, resources: Record<string, number>, note: string): Promise<ServerPot> {
-  return pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "grant", toUid, resources, note } });
+export function adminServerPotGrant(toUid: string, resources: Record<string, number>, note: string, amber = 0): Promise<ServerPot> {
+  return pb.send("/api/cosmic/admin/serverpot", { method: "POST", body: { action: "grant", toUid, resources, note, amber } });
 }

@@ -9,11 +9,12 @@ import type { ResourceId } from "@/types/game";
 
 export const SERVER_POT_KEY = "server_pot";
 
-export type PotSource = "market" | "gift" | "admin";
+export type PotSource = "market" | "gift" | "auction" | "admin";
 
 export const POT_SOURCE_LABELS: Record<PotSource, string> = {
   market: "Taxes du marché",
   gift: "Taxe des cadeaux",
+  auction: "Taxe des enchères",
   admin: "Administration",
 };
 
@@ -22,13 +23,18 @@ export interface ServerPot {
   resources: Partial<Record<ResourceId, number>>;
   /** Total reçu depuis la création, par source puis ressource. */
   totals: Partial<Record<PotSource, Partial<Record<ResourceId, number>>>>;
+  /** 5.26 : Ambre de Ruche (taxe des enchères en Ambre), à part des ressources :
+   *  le casino et les concours ne versent que des ressources. */
+  amber: number;
+  /** Ambre reçue depuis la création. */
+  amberTotal: number;
   /** Derniers mouvements (+ entrées, − sorties), 100 au plus. */
-  log: { atMs: number; source: PotSource; resources: Partial<Record<ResourceId, number>>; note?: string }[];
+  log: { atMs: number; source: PotSource; resources: Partial<Record<ResourceId, number>>; amber?: number; note?: string }[];
   updatedAtMs: number;
 }
 
 export function emptyServerPot(): ServerPot {
-  return { resources: {}, totals: {}, log: [], updatedAtMs: 0 };
+  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
 }
 
 function cleanAmounts(raw: unknown): Partial<Record<ResourceId, number>> {
@@ -51,9 +57,11 @@ export function normalizeServerPot(raw: unknown): ServerPot {
   return {
     resources: cleanAmounts(r.resources),
     totals,
+    amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
     log: (Array.isArray(r.log) ? r.log : [])
       .filter((l) => l && typeof l === "object" && (l.source as string) in POT_SOURCE_LABELS)
-      .map((l) => ({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources), ...(l.note ? { note: String(l.note).slice(0, 200) } : {}) }))
+      .map((l) => ({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources), ...(Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), ...(l.note ? { note: String(l.note).slice(0, 200) } : {}) }))
       .slice(-100),
     updatedAtMs: Number(r.updatedAtMs) || 0,
   };
@@ -74,6 +82,7 @@ export function addToPot(pot: ServerPot, source: PotSource, amounts: Partial<Rec
     total[k] = (total[k] ?? 0) + n;
   }
   return {
+    ...pot,
     resources,
     totals: { ...pot.totals, [source]: total },
     log: [...pot.log, { atMs: now, source, resources: add, ...(note ? { note } : {}) }].slice(-100),
@@ -105,4 +114,24 @@ export function giftTax(sent: Partial<Record<string, number>>, delivered: Partia
     if (lost > 0) out[k as ResourceId] = lost;
   }
   return out;
+}
+
+/** 5.26 : verse de l'Ambre dans le pot (taxe des enchères en Ambre). */
+export function addAmberToPot(pot: ServerPot, source: PotSource, amount: number, now: number, note?: string): ServerPot {
+  const n = Math.floor(Number(amount));
+  if (!(n > 0)) return pot;
+  return {
+    ...pot,
+    amber: pot.amber + n,
+    amberTotal: pot.amberTotal + n,
+    log: [...pot.log, { atMs: now, source, resources: {}, amber: n, ...(note ? { note } : {}) }].slice(-100),
+    updatedAtMs: now,
+  };
+}
+
+/** Retire de l'Ambre du pot (administration) ; jamais sous zéro. Renvoie le pot et la quantité retirée. */
+export function takeAmberFromPot(pot: ServerPot, amount: number, now: number, note: string): { pot: ServerPot; taken: number } {
+  const n = Math.min(Math.floor(Number(amount)) || 0, pot.amber);
+  if (!(n > 0)) return { pot, taken: 0 };
+  return { pot: { ...pot, amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note } as ServerPot["log"][number]].slice(-100), updatedAtMs: now }, taken: n };
 }

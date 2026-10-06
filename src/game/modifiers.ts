@@ -1,6 +1,7 @@
 import { mutatorEffects } from "@/game/mutators";
 import { commanderEffects } from "@/game/commanders";
 import { relicEffects } from "@/game/relics";
+import { moduleEffects } from "@/game/modules";
 import { territoryEffects } from "@/game/territories";
 import { talentEffects } from "@/game/talents";
 import { synthesisEffects } from "@/game/synthesis";
@@ -45,7 +46,7 @@ export interface Modifiers {
   tradeTax: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
@@ -60,6 +61,8 @@ export function empireEffects(player: ModPlayer | null | undefined, now: number 
     ...commanderEffects(player as Pick<PlayerState, "commanders">),
     ...relicEffects(player as Pick<PlayerState, "relics" | "ascensions">),
     ...talentEffects(player as Pick<PlayerState, "talents">),
+    // 5.26 : modules de vaisseaux montés.
+    ...moduleEffects(player as Pick<PlayerState, "modules">),
     ...territoryEffects(player.territory, now),
     // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
     ...mutatorEffects(now),

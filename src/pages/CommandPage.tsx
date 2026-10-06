@@ -1,10 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
-import { EmptyAction, HudPanel } from "@/components/ui/panel";
+import { EmptyAction, FoldSection, HudPanel } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
-import { Anchor, BookOpen, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
+import { Anchor, BookOpen, Boxes, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EffectSheet } from "@/components/game/EffectSheet";
+import { ModulesTab } from "@/components/game/ModulesTab";
 import {
   COMMANDER_RULES,
   COMMANDER_SOURCES,
@@ -68,7 +69,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatDuration, alpha } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 /* =====================================================
    État-major (v4.0) : officiers en poste, reliques équipées et Labo de
@@ -322,21 +323,21 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
         getLabel={(def) => def.name}
         render={(def) => <CommanderCard key={def.id} def={def} player={player} now={now} />}
       />
-      <p className="hud-eyebrow text-[10px] text-violet-glow">Officiers rares · ne se recrutent pas : un commandant de saison de ce rôle au palier 30 d'un passe, ou une trouvaille très rare sur un boss</p>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {COMMANDERS.filter((d) => d.rare).map((def) => (
-          <CommanderCard key={def.id} def={def} player={player} now={now} />
-        ))}
-      </div>
+      <FoldSection id="etat-major-rares" tone="violet" title="Officiers rares" aside={<span className="text-[11px] text-slate-500">Ne se recrutent pas : commandant de saison de ce rôle au palier 30, ou trouvaille très rare sur un boss</span>}>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {COMMANDERS.filter((d) => d.rare).map((def) => (
+            <CommanderCard key={def.id} def={def} player={player} now={now} />
+          ))}
+        </div>
+      </FoldSection>
       {SEASON_COMMANDERS.length > 0 && (
-        <>
-          <p className="hud-eyebrow text-[10px] text-gold-glow">Commandants de saison · un par passe, au dernier palier</p>
+        <FoldSection id="etat-major-saison" tone="gold" defaultOpen={false} title={<>Commandants de saison <span className="font-mono text-slate-500">{SEASON_COMMANDERS.length}</span></>} aside={<span className="text-[11px] text-slate-500">Un par passe, au dernier palier</span>}>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[...SEASON_COMMANDERS].reverse().map((def) => (
               <CommanderCard key={def.id} def={def} player={player} now={now} />
             ))}
           </div>
-        </>
+        </FoldSection>
       )}
       <p className="text-xs text-slate-500">Changer un officier de poste : une fois par {COMMANDER_RULES.swapCooldownHours} h et par officier. Niveau maximal : {COMMANDER_RULES.maxLevel}.</p>
     </div>
@@ -414,117 +415,122 @@ function RelicsTab({ player }: { player: PlayerState }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <HudPanel icon={<Gem />} title="Emplacements de la base" tone="gold" aside={<span className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? " · un 4e à la première Ascension" : ""}</span>}>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {Array.from({ length: n }).map((_, i) => {
-            const item = st.items.find((r) => r.id === st.slots[i]);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setSlot(i)}
-                className={cn("hud-cut-sm flex min-h-28 flex-col items-center justify-center gap-1.5 border p-2 text-center transition-colors", slot === i ? "border-cyan-glow/70 bg-cyan-glow/10" : "border-white/10 bg-white/[0.02] hover:border-cyan-glow/40")}
-              >
-                {item ? (
-                  <>
-                    <RelicBadge item={item} className="h-12 w-12" />
-                    <span className="text-xs font-semibold text-slate-100">{findTemplate(item.template)?.name}</span>
-                    <span className="text-[11px]" style={{ color: rarityInfo(item.rarity).color }}>{describeRelic(item)}</span>
-                  </>
-                ) : (
-                  <span className="text-xs text-slate-500">Emplacement {i + 1} libre</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {equipped.length > 0 && (
-          <p className="text-xs text-slate-400">
-            Total :{" "}
-            {[
-              mods.attack && `+${Math.round(mods.attack * 100)} % attaque`,
-              mods.defense && `+${Math.round(mods.defense * 100)} % défense`,
-              mods.buildTime && `−${Math.round(mods.buildTime * 100)} % construction`,
-              mods.researchTime && `−${Math.round(mods.researchTime * 100)} % recherche`,
-              mods.repair && `+${Math.round(mods.repair * 100)} % réparation`,
-              mods.cargo && `+${Math.round(mods.cargo * 100)} % soute`,
-              mods.productionAll && `+${Math.round(mods.productionAll * 100)} % production`,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "effets spécifiques"}
-          </p>
-        )}
-        {st.slots[slot] && (
-          <Button size="sm" variant="outline" className="self-start" disabled={busy} onClick={() => void act(() => equipRelic(slot, null), () => "Relique retirée.")}>
-            Vider l'emplacement {slot + 1}
-          </Button>
-        )}
-      </HudPanel>
+      {/* 5.26 : emplacements et fusions à gauche, collection à droite sur grand écran. */}
+      <div className="grid items-start gap-4 xl:grid-cols-2">
+        <div className="flex min-w-0 flex-col gap-4">
+          <HudPanel icon={<Gem />} title="Emplacements de la base" tone="gold" aside={<span className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? " · un 4e à la première Ascension" : ""}</span>}>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {Array.from({ length: n }).map((_, i) => {
+                const item = st.items.find((r) => r.id === st.slots[i]);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSlot(i)}
+                    className={cn("hud-cut-sm flex min-h-28 flex-col items-center justify-center gap-1.5 border p-2 text-center transition-colors", slot === i ? "border-cyan-glow/70 bg-cyan-glow/10" : "border-white/10 bg-white/[0.02] hover:border-cyan-glow/40")}
+                  >
+                    {item ? (
+                      <>
+                        <RelicBadge item={item} className="h-12 w-12" />
+                        <span className="text-xs font-semibold text-slate-100">{findTemplate(item.template)?.name}</span>
+                        <span className="text-[11px]" style={{ color: rarityInfo(item.rarity).color }}>{describeRelic(item)}</span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-500">Emplacement {i + 1} libre</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {equipped.length > 0 && (
+              <p className="text-xs text-slate-400">
+                Total :{" "}
+                {[
+                  mods.attack && `+${Math.round(mods.attack * 100)} % attaque`,
+                  mods.defense && `+${Math.round(mods.defense * 100)} % défense`,
+                  mods.buildTime && `−${Math.round(mods.buildTime * 100)} % construction`,
+                  mods.researchTime && `−${Math.round(mods.researchTime * 100)} % recherche`,
+                  mods.repair && `+${Math.round(mods.repair * 100)} % réparation`,
+                  mods.cargo && `+${Math.round(mods.cargo * 100)} % soute`,
+                  mods.productionAll && `+${Math.round(mods.productionAll * 100)} % production`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || "effets spécifiques"}
+              </p>
+            )}
+            {st.slots[slot] && (
+              <Button size="sm" variant="outline" className="self-start" disabled={busy} onClick={() => void act(() => equipRelic(slot, null), () => "Relique retirée.")}>
+                Vider l'emplacement {slot + 1}
+              </Button>
+            )}
+          </HudPanel>
 
-      {groups.length > 0 && (
-        <HudPanel icon={<Combine />} title="Fusions possibles" tone="gold" accent className="gap-2">
-          {groups.map((g) => {
-            const next = RARITIES[RARITIES.findIndex((r) => r.id === g[0].rarity) + 1];
-            return (
-              <div key={`${g[0].template}${g[0].rarity}`} className="flex flex-wrap items-center gap-2 text-sm">
-                <RelicBadge item={g[0]} className="h-8 w-8" />
-                <span className="flex-1 text-slate-300">
-                  {RELIC_RULES.fuseCount} × {findTemplate(g[0].template)?.name} ({rarityInfo(g[0].rarity).label.toLowerCase()}) → <span style={{ color: next.color }}>{next.label.toLowerCase()}</span>
-                </span>
-                <Button size="sm" variant="warn" disabled={busy} onClick={() => void act(() => fuseRelics(g[0].template, g[0].rarity), () => "Fusion réussie !")}>
-                  Fusionner
-                </Button>
-              </div>
-            );
-          })}
+          {groups.length > 0 && (
+            <HudPanel icon={<Combine />} title="Fusions possibles" tone="gold" accent className="gap-2">
+              {groups.map((g) => {
+                const next = RARITIES[RARITIES.findIndex((r) => r.id === g[0].rarity) + 1];
+                return (
+                  <div key={`${g[0].template}${g[0].rarity}`} className="flex flex-wrap items-center gap-2 text-sm">
+                    <RelicBadge item={g[0]} className="h-8 w-8" />
+                    <span className="flex-1 text-slate-300">
+                      {RELIC_RULES.fuseCount} × {findTemplate(g[0].template)?.name} ({rarityInfo(g[0].rarity).label.toLowerCase()}) → <span style={{ color: next.color }}>{next.label.toLowerCase()}</span>
+                    </span>
+                    <Button size="sm" variant="warn" disabled={busy} onClick={() => void act(() => fuseRelics(g[0].template, g[0].rarity), () => "Fusion réussie !")}>
+                      Fusionner
+                    </Button>
+                  </div>
+                );
+              })}
+            </HudPanel>
+          )}
+
+        </div>
+        <HudPanel icon={<Library />} title="Collection" className="gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-xs text-slate-500">
+              {st.items.length} / {RELIC_RULES.maxItems} · expéditions, proie d'élite, Léviathan
+            </p>
+          </div>
+          {sorted.length === 0 && (
+            <EmptyState icon="🏺" title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
+              Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.
+            </EmptyState>
+          )}
+          <div className="grid gap-2 md:grid-cols-2">
+            {sorted.map((item) => {
+              const t = findTemplate(item.template);
+              const r = rarityInfo(item.rarity);
+              const isEquipped = equippedIds.has(item.id);
+              return (
+                <div key={item.id} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
+                  <RelicBadge item={item} className="h-11 w-11" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-100">{t?.name}</p>
+                    <p className="text-xs" style={{ color: r.color }}>
+                      {r.label} · {describeRelic(item)}
+                    </p>
+                    <p className="truncate text-[11px] italic text-slate-500">{t?.lore}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    {isEquipped ? (
+                      <HudTag tone="mint">Équipée</HudTag>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void act(() => equipRelic(slot, item.id), () => `${t?.name} équipée (emplacement ${slot + 1}).`)}>
+                          Équiper
+                        </Button>
+                        <Button size="sm" variant="ghost" disabled={busy} title={`Recycler contre ${r.recycle} Ambre`} onClick={() => void act(() => recycleRelic(item.id), (out) => `Recyclée : +${(out as { amber: number }).amber} Ambre.`)}>
+                          <Recycle className="h-3.5 w-3.5" /> {r.recycle}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </HudPanel>
-      )}
-
-      <HudPanel icon={<Library />} title="Collection" className="gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-xs text-slate-500">
-            {st.items.length} / {RELIC_RULES.maxItems} · expéditions, proie d'élite, Léviathan
-          </p>
-        </div>
-        {sorted.length === 0 && (
-          <EmptyState icon="🏺" title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
-            Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.
-          </EmptyState>
-        )}
-        <div className="grid gap-2 md:grid-cols-2">
-          {sorted.map((item) => {
-            const t = findTemplate(item.template);
-            const r = rarityInfo(item.rarity);
-            const isEquipped = equippedIds.has(item.id);
-            return (
-              <div key={item.id} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
-                <RelicBadge item={item} className="h-11 w-11" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-100">{t?.name}</p>
-                  <p className="text-xs" style={{ color: r.color }}>
-                    {r.label} · {describeRelic(item)}
-                  </p>
-                  <p className="truncate text-[11px] italic text-slate-500">{t?.lore}</p>
-                </div>
-                <div className="flex shrink-0 flex-col gap-1">
-                  {isEquipped ? (
-                    <HudTag tone="mint">Équipée</HudTag>
-                  ) : (
-                    <>
-                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => void act(() => equipRelic(slot, item.id), () => `${t?.name} équipée (emplacement ${slot + 1}).`)}>
-                        Équiper
-                      </Button>
-                      <Button size="sm" variant="ghost" disabled={busy} title={`Recycler contre ${r.recycle} Ambre`} onClick={() => void act(() => recycleRelic(item.id), (out) => `Recyclée : +${(out as { amber: number }).amber} Ambre.`)}>
-                        <Recycle className="h-3.5 w-3.5" /> {r.recycle}
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </HudPanel>
+      </div>
     </div>
   );
 }
@@ -592,83 +598,85 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
         <StatTile label="Brouilleur de défense" value={veilLeft ? `±${st.veil!.pct} %` : "Inactif"} sub={veilLeft ? `Encore ${formatDuration(Math.ceil(veilLeft / 1000))}` : "Fausse les rapports d'espionnage"} tone="mint" icon={<Eye className="h-4 w-4" />} />
       </div>
 
-      <HudPanel icon={<FlaskConical />} title="Synthèse" tone="accent">
-        {st.crafting ? (
-          <div className="flex items-center gap-3">
-            <CapsuleIcon type={st.crafting.type} className="h-12 w-12" />
-            <div className="flex-1">
-              <p className="text-sm text-slate-100">
-                {CAPSULES[st.crafting.type].name} · niveau {st.crafting.level} ({capsulePct(st.crafting.level)} %)
-              </p>
-              <p className="font-mono text-xs text-slate-400">Prête dans {formatDuration(Math.max(0, Math.ceil((st.crafting.endsAtMs - now) / 1000)))}</p>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <HudPanel icon={<FlaskConical />} title="Synthèse" tone="accent">
+          {st.crafting ? (
+            <div className="flex items-center gap-3">
+              <CapsuleIcon type={st.crafting.type} className="h-12 w-12" />
+              <div className="flex-1">
+                <p className="text-sm text-slate-100">
+                  {CAPSULES[st.crafting.type].name} · niveau {st.crafting.level} ({capsulePct(st.crafting.level)} %)
+                </p>
+                <p className="font-mono text-xs text-slate-400">Prête dans {formatDuration(Math.max(0, Math.ceil((st.crafting.endsAtMs - now) / 1000)))}</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
-              Niveau de la capsule
-              <div className="flex flex-wrap gap-1">
-                {Array.from({ length: level }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setChosen(i + 1)}
-                    className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-glow bg-violet-glow/20 text-slate-100" : "border-white/10 text-slate-400 hover:border-violet-glow/50")}
-                  >
-                    {i + 1}
-                  </button>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                Niveau de la capsule
+                <div className="flex flex-wrap gap-1">
+                  {Array.from({ length: level }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setChosen(i + 1)}
+                      className={cn("h-8 min-w-8 border px-2 font-mono text-xs", craftLevel === i + 1 ? "border-violet-glow bg-violet-glow/20 text-slate-100" : "border-white/10 text-slate-400 hover:border-violet-glow/50")}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-slate-400">
+                Coût : <CostLine cost={cost} /> · durée {formatDuration(craftSeconds(craftLevel))}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {CAPSULE_TYPES.map((type) => (
+                  <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
+                    <CapsuleIcon type={type} className="h-11 w-11" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-100">{CAPSULES[type].name}</p>
+                      <p className="text-xs text-slate-400">{CAPSULES[type].description(capsulePct(craftLevel))}</p>
+                    </div>
+                    <Button size="sm" variant="secondary" disabled={busy || st.stock[type].length >= SYNTH_RULES.maxStock} onClick={() => void act(() => craftCapsule(type, craftLevel), `${CAPSULES[type].name} en synthèse.`)}>
+                      Synthétiser
+                    </Button>
+                  </div>
                 ))}
               </div>
-            </div>
-            <p className="text-xs text-slate-400">
-              Coût : <CostLine cost={cost} /> · durée {formatDuration(craftSeconds(craftLevel))}
-            </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {CAPSULE_TYPES.map((type) => (
-                <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
-                  <CapsuleIcon type={type} className="h-11 w-11" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-100">{CAPSULES[type].name}</p>
-                    <p className="text-xs text-slate-400">{CAPSULES[type].description(capsulePct(craftLevel))}</p>
-                  </div>
-                  <Button size="sm" variant="secondary" disabled={busy || st.stock[type].length >= SYNTH_RULES.maxStock} onClick={() => void act(() => craftCapsule(type, craftLevel), `${CAPSULES[type].name} en synthèse.`)}>
-                    Synthétiser
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </HudPanel>
+            </>
+          )}
+        </HudPanel>
 
-      <HudPanel icon={<Package />} title="Réserve" className="gap-2">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {CAPSULE_TYPES.map((type) => {
-            const stock = [...st.stock[type]].sort((a, b) => b - a);
-            const activable = CAPSULES[type].use === "activate";
-            const running = type === "armor" ? armorLeft > 0 : type === "veil" ? veilLeft > 0 : false;
-            return (
-              <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
-                <CapsuleIcon type={type} className="h-10 w-10" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-slate-100">{CAPSULES[type].short}</p>
-                  <p className="font-mono text-xs text-slate-400">{stock.length ? stock.map((l) => `N${l}`).join(" · ") : "vide"} ({stock.length}/{SYNTH_RULES.maxStock})</p>
+        <HudPanel icon={<Package />} title="Réserve" className="gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {CAPSULE_TYPES.map((type) => {
+              const stock = [...st.stock[type]].sort((a, b) => b - a);
+              const activable = CAPSULES[type].use === "activate";
+              const running = type === "armor" ? armorLeft > 0 : type === "veil" ? veilLeft > 0 : false;
+              return (
+                <div key={type} className="flex items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
+                  <CapsuleIcon type={type} className="h-10 w-10" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-slate-100">{CAPSULES[type].short}</p>
+                    <p className="font-mono text-xs text-slate-400">{stock.length ? stock.map((l) => `N${l}`).join(" · ") : "vide"} ({stock.length}/{SYNTH_RULES.maxStock})</p>
+                  </div>
+                  {activable ? (
+                    <Button size="sm" variant="warn" disabled={busy || stock.length === 0 || running} onClick={() => void act(() => activateCapsule(type, stock[0]), `${CAPSULES[type].name} active pendant ${SYNTH_RULES.activeHours} h.`)}>
+                      Activer
+                    </Button>
+                  ) : (
+                    <span className="text-[11px] text-slate-500">À l'envoi d'une attaque</span>
+                  )}
                 </div>
-                {activable ? (
-                  <Button size="sm" variant="warn" disabled={busy || stock.length === 0 || running} onClick={() => void act(() => activateCapsule(type, stock[0]), `${CAPSULES[type].name} active pendant ${SYNTH_RULES.activeHours} h.`)}>
-                    Activer
-                  </Button>
-                ) : (
-                  <span className="text-[11px] text-slate-500">À l'envoi d'une attaque</span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-xs text-slate-500">
-          Les capsules ne jouent qu'entre joueurs et n'apparaissent pas dans l'espionnage. Une Espionne en poste chez l'adversaire peut toutefois flairer une « anomalie chimique ».
-        </p>
-      </HudPanel>
+              );
+            })}
+          </div>
+          <p className="text-xs text-slate-500">
+            Les capsules ne jouent qu'entre joueurs et n'apparaissent pas dans l'espionnage. Une Espionne en poste chez l'adversaire peut toutefois flairer une « anomalie chimique ».
+          </p>
+        </HudPanel>
+      </div>
     </div>
   );
 }
@@ -678,24 +686,28 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
 export function CommandPage() {
   const player = usePlayerStore((s) => s.player);
   useNowTicker();
+  const [params, setParams] = useSearchParams();
   const now = Date.now();
   if (!player) return null;
   const st = commandersState(player);
   const tabs: { id: string; label: string; icon: ReactNode }[] = [
     { id: "commanders", label: "Commandants", icon: <Medal className="h-3.5 w-3.5" /> },
     { id: "relics", label: "Reliques", icon: <Gem className="h-3.5 w-3.5" /> },
+    { id: "modules", label: "Modules", icon: <Boxes className="h-3.5 w-3.5" /> },
     { id: "synthesis", label: "Labo de synthèse", icon: <FlaskConical className="h-3.5 w-3.5" /> },
     { id: "effects", label: "Effets", icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
+  // 5.26 : onglet dans l'adresse (lien direct, retour arrière).
+  const tab = tabs.some((t) => t.id === params.get("onglet")) ? params.get("onglet")! : "commanders";
   return (
     <div className="flex flex-col gap-5">
       <PageHeader backdrop="/assets/blog/articles/5-9/poste-commandement.webp"
         eyebrow="Commandement"
         title="État-major"
-        description="Tes officiers, tes reliques et ton Labo de synthèse : des bonus permanents et des coups tordus."
+        description="Tes officiers, tes reliques, tes modules de vaisseaux et ton Labo de synthèse : des bonus permanents et des coups tordus."
         right={st.active.length === 0 && Object.keys(st.roster).length === 0 ? <HudTag tone="gold">Premier officier offert</HudTag> : undefined}
       />
-      <Tabs defaultValue="commanders">
+      <Tabs value={tab} onValueChange={(v) => setParams((p) => (p.set("onglet", v), p), { replace: true })}>
         <TabsList>
           {tabs.map((t) => (
             <TabsTrigger key={t.id} value={t.id} className="inline-flex items-center gap-1.5">
@@ -708,6 +720,9 @@ export function CommandPage() {
         </TabsContent>
         <TabsContent value="relics" className="mt-4">
           <RelicsTab player={player} />
+        </TabsContent>
+        <TabsContent value="modules" className="mt-4">
+          <ModulesTab player={player} />
         </TabsContent>
         <TabsContent value="synthesis" className="mt-4">
           <SynthesisTab player={player} now={now} />

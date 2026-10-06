@@ -66,7 +66,9 @@ __export(hooksEntry_exports, {
   ALLIANCE_RULES: () => ALLIANCE_RULES,
   ALLIANCE_SAGA_KEY: () => ALLIANCE_SAGA_KEY,
   ALLIANCE_SAGA_RULES: () => ALLIANCE_SAGA_RULES,
+  ANNOUNCEMENTS_KEY: () => ANNOUNCEMENTS_KEY,
   ANOMALY_RULES: () => ANOMALY_RULES,
+  AUCTION_RULES: () => AUCTION_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   BALANCE_EXCLUDED_PSEUDOS: () => BALANCE_EXCLUDED_PSEUDOS,
@@ -81,6 +83,7 @@ __export(hooksEntry_exports, {
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
+  CHAT_MODERATION_KEYS: () => CHAT_MODERATION_KEYS,
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
@@ -97,6 +100,7 @@ __export(hooksEntry_exports, {
   GAME_EMOJIS: () => GAME_EMOJIS,
   GAME_FIELDS: () => GAME_FIELDS,
   GAZETTE_KEY: () => GAZETTE_KEY,
+  GLOBAL_CHAT_RULES: () => GLOBAL_CHAT_RULES,
   GameActionError: () => GameActionError,
   KESH_EMOJIS: () => KESH_EMOJIS,
   LEAGUES_KEY: () => LEAGUES_KEY,
@@ -111,7 +115,9 @@ __export(hooksEntry_exports, {
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
   MARKET_RULES: () => MARKET_RULES,
   MESSAGE_RULES: () => MESSAGE_RULES,
+  METRICS_KEYS: () => METRICS_KEYS,
   MISSIONS: () => MISSIONS,
+  MODERATION_KEYS: () => MODERATION_KEYS,
   OFFENSIVE_UNITS: () => OFFENSIVE_UNITS,
   ONLINE_MS: () => ONLINE_MS,
   PASSKEY_RULES: () => PASSKEY_RULES,
@@ -149,20 +155,25 @@ __export(hooksEntry_exports, {
   XP_SOURCE_LABELS: () => XP_SOURCE_LABELS,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
+  activeBan: () => activeBan,
+  activeMute: () => activeMute,
   activeUltimatum: () => activeUltimatum,
   activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
   activityProfile: () => activityProfile,
   adaptWarlord: () => adaptWarlord,
+  addAmberToPot: () => addAmberToPot,
   addCapsule: () => addCapsule,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
   addPassPoints: () => addPassPoints,
   addRelic: () => addRelic,
+  addReport: () => addReport,
   addReportComment: () => addReportComment,
   addSeasonPower: () => addSeasonPower,
   addThreat: () => addThreat,
   addToPot: () => addToPot,
+  addVitals: () => addVitals,
   adminGrantOfficer: () => adminGrantOfficer,
   adminSetAmber: () => adminSetAmber,
   allianceBossDef: () => allianceBossDef,
@@ -172,6 +183,7 @@ __export(hooksEntry_exports, {
   allianceRole: () => allianceRole,
   allianceStandings: () => allianceStandings,
   allianceWeekId: () => allianceWeekId,
+  allowedWhileBanned: () => allowedWhileBanned,
   anomalyChance: () => anomalyChance,
   answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
@@ -192,6 +204,8 @@ __export(hooksEntry_exports, {
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
   balanceSnapshot: () => balanceSnapshot,
+  banMessage: () => banMessage,
+  banPlayer: () => banPlayer,
   battlePairs: () => battlePairs,
   beaconReturn: () => beaconReturn,
   bestTotals: () => bestTotals,
@@ -210,6 +224,7 @@ __export(hooksEntry_exports, {
   buyShopItem: () => buyShopItem,
   callAllianceBoss: () => callAllianceBoss,
   campaignsState: () => campaignsState,
+  canCancel: () => canCancel,
   canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
   canGoDeeper: () => canGoDeeper,
@@ -238,6 +253,7 @@ __export(hooksEntry_exports, {
   claimChallengeReward: () => claimChallengeReward,
   claimCodexCategory: () => claimCodexCategory,
   claimDailyTokens: () => claimDailyTokens,
+  cleanGlobalMessage: () => cleanGlobalMessage,
   cleanNewPseudo: () => cleanNewPseudo,
   cleanPasskeyName: () => cleanPasskeyName,
   clearDecoy: () => clearDecoy,
@@ -267,11 +283,16 @@ __export(hooksEntry_exports, {
   contractDeposit: () => contractDeposit,
   createOffer: () => createOffer,
   createTradeContract: () => createTradeContract,
+  creditBid: () => creditBid,
+  cronStatus: () => cronStatus,
+  cronSummary: () => cronSummary,
+  currencyLabel: () => currencyLabel,
   currentGameContent: () => currentGameContent,
   currentSeasonId: () => currentSeasonId,
   dailyMemberOf: () => dailyMemberOf,
   dailyPhase: () => dailyPhase,
   dailyTreasuryBonus: () => dailyTreasuryBonus,
+  debitBid: () => debitBid,
   debrisTotal: () => debrisTotal,
   declareWar: () => declareWar,
   deepLegMs: () => deepLegMs,
@@ -307,9 +328,11 @@ __export(hooksEntry_exports, {
   factionOfLair: () => factionOfLair,
   failTradeContract: () => failTradeContract,
   fillBuyOrder: () => fillBuyOrder,
+  filterText: () => filterText,
   findAllianceChallenge: () => findAllianceChallenge,
   findFaction: () => findFaction,
   findPassSeason: () => findPassSeason,
+  findPoll: () => findPoll,
   findUnit: () => findUnit,
   findWarlord: () => findWarlord,
   finishAllTimers: () => finishAllTimers,
@@ -330,6 +353,7 @@ __export(hooksEntry_exports, {
   getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   giftTax: () => giftTax,
   githubIssueBody: () => githubIssueBody,
+  giveLot: () => giveLot,
   giveTitle: () => giveTitle,
   grantAllianceBossReward: () => grantAllianceBossReward,
   grantChallengeReward: () => grantChallengeReward,
@@ -371,6 +395,7 @@ __export(hooksEntry_exports, {
   lootTokensThisWeek: () => lootTokensThisWeek,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
+  maintenanceShouldAutoStart: () => maintenanceShouldAutoStart,
   makeRelic: () => makeRelic,
   mergeDebris: () => mergeDebris,
   missionRewardFactor: () => missionRewardFactor,
@@ -384,16 +409,21 @@ __export(hooksEntry_exports, {
   nextMonthId: () => nextMonthId,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeAllianceChallenge: () => normalizeAllianceChallenge,
+  normalizeAnnouncementSettings: () => normalizeAnnouncementSettings,
+  normalizeBans: () => normalizeBans,
   normalizeBossHistory: () => normalizeBossHistory,
   normalizeCasino: () => normalizeCasino,
   normalizeCasinoSettings: () => normalizeCasinoSettings,
   normalizeChallengeState: () => normalizeChallengeState,
   normalizeContests: () => normalizeContests,
+  normalizeCronMetrics: () => normalizeCronMetrics,
   normalizeCustomEmojis: () => normalizeCustomEmojis,
   normalizeElite: () => normalizeElite,
+  normalizeFilter: () => normalizeFilter,
   normalizeLeagues: () => normalizeLeagues,
   normalizeLeviathan: () => normalizeLeviathan,
   normalizeMaintenance: () => normalizeMaintenance,
+  normalizeMutes: () => normalizeMutes,
   normalizeProcedural: () => normalizeProcedural,
   normalizeSegment: () => normalizeSegment,
   normalizeServerPot: () => normalizeServerPot,
@@ -426,6 +456,7 @@ __export(hooksEntry_exports, {
   performTransportArrival: () => performTransportArrival,
   pickWarlordTarget: () => pickWarlordTarget,
   pirateTick: () => pirateTick,
+  placeBid: () => placeBid,
   playerCasino: () => playerCasino,
   previousSeasonId: () => previousSeasonId,
   previousSummary: () => previousSummary,
@@ -433,6 +464,7 @@ __export(hooksEntry_exports, {
   proposeAchievementTiers: () => proposeAchievementTiers,
   proposeDaily: () => proposeDaily,
   proposePact: () => proposePact,
+  pruneBans: () => pruneBans,
   pruneContests: () => pruneContests,
   pseudoLogin: () => pseudoLogin,
   publicPosts: () => publicPosts,
@@ -442,6 +474,7 @@ __export(hooksEntry_exports, {
   pushBossHistory: () => pushBossHistory,
   pushSnapshot: () => pushSnapshot,
   rankOf: () => rankOf,
+  rateLimitError: () => rateLimitError,
   reactToBossFeed: () => reactToBossFeed,
   readAllianceSaga: () => readAllianceSaga,
   readCoalitions: () => readCoalitions,
@@ -449,6 +482,7 @@ __export(hooksEntry_exports, {
   readWarChest: () => readWarChest,
   recallFleet: () => recallFleet,
   recordCoalitionDamage: () => recordCoalitionDamage,
+  recordCronRun: () => recordCronRun,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
   recordVendettaDamage: () => recordVendettaDamage,
@@ -467,6 +501,7 @@ __export(hooksEntry_exports, {
   relicLabel: () => relicLabel,
   removeChallengeTitle: () => removeChallengeTitle,
   removeLeviathanTitle: () => removeLeviathanTitle,
+  removeMember: () => removeMember,
   removeTitle: () => removeTitle,
   renamePlayer: () => renamePlayer,
   renderBlogList: () => renderBlogList,
@@ -502,6 +537,8 @@ __export(hooksEntry_exports, {
   sanitizeMessageText: () => sanitizeMessageText,
   sanitizeNewReport: () => sanitizeNewReport,
   sanitizePactMessage: () => sanitizePactMessage,
+  sanitizeVitals: () => sanitizeVitals,
+  scheduleMaintenance: () => scheduleMaintenance,
   scheduleState: () => scheduleState,
   scoreBattle: () => scoreBattle,
   scoreHoldHour: () => scoreHoldHour,
@@ -518,6 +555,7 @@ __export(hooksEntry_exports, {
   seasonXpFor: () => seasonXpFor,
   sectorLabel: () => sectorLabel,
   sectorOf: () => sectorOf,
+  settleAuction: () => settleAuction,
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
@@ -530,18 +568,24 @@ __export(hooksEntry_exports, {
   startAllianceChallengeWeek: () => startAllianceChallengeWeek,
   startChallenge: () => startChallenge,
   startDaily: () => startDaily,
+  startScheduledMaintenance: () => startScheduledMaintenance,
   startVacation: () => startVacation,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  takeAmberFromPot: () => takeAmberFromPot,
   takeFromPot: () => takeFromPot,
+  takeLot: () => takeLot,
+  tally: () => tally,
   territoryWarRewards: () => territoryWarRewards,
   territoryWarWindow: () => territoryWarWindow,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
   trackCampaign: () => trackCampaign,
   tutorialRaidPower: () => tutorialRaidPower,
+  unbanPlayer: () => unbanPlayer,
   unclaimedRewardees: () => unclaimedRewardees,
   unitsAwayOf: () => unitsAwayOf,
+  upcomingMaintenance: () => upcomingMaintenance,
   updateDailyProgress: () => updateDailyProgress,
   upsertPassSeason: () => upsertPassSeason,
   utcDayStart: () => utcDayStart,
@@ -549,11 +593,14 @@ __export(hooksEntry_exports, {
   validateCasinoSettings: () => validateCasinoSettings,
   validateContest: () => validateContest,
   validateGameContent: () => validateGameContent,
+  validateListing: () => validateListing,
   validateRules: () => validateRules,
+  validateVote: () => validateVote,
   vendettaTitle: () => vendettaTitle,
   vendettaWinners: () => vendettaWinners,
   verifyAssertion: () => verifyAssertion,
   verifyRegistration: () => verifyRegistration,
+  vitalsReport: () => vitalsReport,
   voteDaily: () => voteDaily,
   warSeasonBonuses: () => warSeasonBonuses,
   warTreasuryReward: () => warTreasuryReward,
@@ -1713,6 +1760,153 @@ function consumeAegis(player, now) {
   st.aegisWeek = week;
   player.relics = st;
   return true;
+}
+
+// src/game/modules.ts
+var MODULE_CLASSES = ["light", "medium", "heavy", "support"];
+var MODULE_RULES = { slotsPerClass: 2, maxItems: 30 };
+var MODULE_RARITIES = [
+  { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
+  { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
+  { id: "epic", label: "\xC9pique", weight: 10, tone: "violet", recycleAmber: 8 },
+  { id: "legendary", label: "L\xE9gendaire", weight: 2, tone: "gold", recycleAmber: 20 }
+];
+var MODULE_FAMILIES = {
+  armement: { label: "Armement", stat: "unitAttack", classes: ["light", "medium", "heavy"], values: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 }, unit: "pct" },
+  blindage: { label: "Blindage", stat: "unitHp", classes: ["light", "medium", "heavy"], values: { common: 0.05, rare: 0.08, epic: 0.12, legendary: 0.18 }, unit: "pct" },
+  soute: { label: "Soute", stat: "cargo", classes: ["support"], values: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 }, unit: "pct" },
+  propulsion: { label: "Propulsion", stat: "fleetSpeed", classes: ["support"], values: { common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 }, unit: "pct" },
+  voile: { label: "Voile furtif", stat: "counterSpy", classes: ["support"], values: { common: 1, rare: 2, epic: 3, legendary: 4 }, unit: "level" }
+};
+var MODULE_TEMPLATES = [
+  { id: "canons_surcharges", name: "Canons surcharg\xE9s", family: "armement", description: "Batteries pouss\xE9es au-del\xE0 des normes : plus de d\xE9g\xE2ts, plus de chaleur." },
+  { id: "matrice_de_visee", name: "Matrice de vis\xE9e", family: "armement", description: "Calculateur balistique r\xE9cup\xE9r\xE9 sur une \xE9pave pirate." },
+  { id: "blindage_reactif", name: "Blindage r\xE9actif", family: "blindage", description: "Plaques qui explosent vers l'ext\xE9rieur sous l'impact." },
+  { id: "champ_dissipateur", name: "Champ dissipateur", family: "blindage", description: "Fine bulle d'\xE9nergie qui \xE9tale les coups sur toute la coque." },
+  { id: "soute_modulaire", name: "Soute modulaire", family: "soute", description: "Cloisons repliables : chaque recoin devient de la place." },
+  { id: "post_combustion", name: "Post-combustion", family: "propulsion", description: "R\xE9acteurs gav\xE9s de carburant instable : on arrive plus t\xF4t." },
+  { id: "voile_furtif", name: "Voile furtif", family: "voile", description: "Brouille les sondes adverses autour de la flotte de soutien." }
+];
+var MODULE_BUILD_COST = {
+  common: { scrap: 2e4, energy: 1e4, nano: 5e3 },
+  rare: { scrap: 6e4, energy: 3e4, nano: 15e3 },
+  epic: { scrap: 18e4, energy: 9e4, nano: 45e3, data: 5e3 },
+  legendary: { scrap: 5e5, energy: 25e4, nano: 12e4, data: 2e4 }
+};
+function findModuleTemplate(id) {
+  return MODULE_TEMPLATES.find((t) => t.id === id);
+}
+function moduleRarity(id) {
+  var _a;
+  return (_a = MODULE_RARITIES.find((r) => r.id === id)) != null ? _a : MODULE_RARITIES[0];
+}
+function moduleValue(item) {
+  var _a;
+  const t = findModuleTemplate(item.template);
+  return t ? (_a = MODULE_FAMILIES[t.family].values[item.rarity]) != null ? _a : 0 : 0;
+}
+function moduleLabel(item) {
+  var _a, _b;
+  return `${(_b = (_a = findModuleTemplate(item.template)) == null ? void 0 : _a.name) != null ? _b : item.template} (${moduleRarity(item.rarity).label.toLowerCase()})`;
+}
+var emptySlots = () => ({ light: [null, null], medium: [null, null], heavy: [null, null], support: [null, null] });
+function modulesState(player) {
+  var _a, _b;
+  const raw = (_a = player.modules) != null ? _a : {};
+  const items = (Array.isArray(raw.items) ? raw.items : []).filter(
+    (m) => !!m && typeof m.id === "string" && !!findModuleTemplate(m.template) && MODULE_RARITIES.some((r) => r.id === m.rarity)
+  );
+  const ids = new Set(items.filter((m) => m.built).map((m) => m.id));
+  const slots = emptySlots();
+  for (const cls of MODULE_CLASSES) {
+    const list = Array.isArray((_b = raw.slots) == null ? void 0 : _b[cls]) ? raw.slots[cls] : [];
+    slots[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => list[i] && ids.has(list[i]) ? list[i] : null);
+  }
+  return { items, slots };
+}
+function moduleEffects(player) {
+  const st = modulesState(player);
+  const out = [];
+  for (const cls of MODULE_CLASSES) {
+    for (const id of st.slots[cls]) {
+      const item = id ? st.items.find((m) => m.id === id) : void 0;
+      const t = item ? findModuleTemplate(item.template) : void 0;
+      if (!item || !t) continue;
+      const fam = MODULE_FAMILIES[t.family];
+      if (!fam.classes.includes(cls)) continue;
+      out.push(__spreadProps(__spreadValues({ stat: fam.stat }, fam.stat === "unitAttack" || fam.stat === "unitHp" ? { target: `class:${cls}` } : {}), { value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } }));
+    }
+  }
+  return out;
+}
+function newId2(now, random) {
+  return `m${now.toString(36)}${Math.floor(random() * 1e9).toString(36)}`;
+}
+function rollModulePlan(source, now, random = Math.random, minRarity = "common") {
+  const min = MODULE_RARITIES.findIndex((r) => r.id === minRarity);
+  const pool = MODULE_RARITIES.slice(Math.max(0, min));
+  const total2 = pool.reduce((s, r) => s + r.weight, 0);
+  let roll = random() * total2;
+  let rarity = pool[pool.length - 1].id;
+  for (const r of pool) {
+    if ((roll -= r.weight) < 0) {
+      rarity = r.id;
+      break;
+    }
+  }
+  const template = MODULE_TEMPLATES[Math.floor(random() * MODULE_TEMPLATES.length) % MODULE_TEMPLATES.length].id;
+  return { id: newId2(now, random), template, rarity, built: false, foundAtMs: now, source };
+}
+function addModuleItem(player, item) {
+  const st = modulesState(player);
+  if (st.items.length >= MODULE_RULES.maxItems) return false;
+  st.items.push(item);
+  player.modules = st;
+  return true;
+}
+function find(st, id) {
+  const item = st.items.find((m) => m.id === String(id));
+  if (!item) throw new GameActionError("Module introuvable.");
+  return item;
+}
+function buildModule(player, id, pay2) {
+  const st = modulesState(player);
+  const item = find(st, id);
+  if (item.built) throw new GameActionError("Ce module est d\xE9j\xE0 fabriqu\xE9.");
+  pay2(MODULE_BUILD_COST[item.rarity]);
+  item.built = true;
+  player.modules = st;
+  return item;
+}
+function mountModule(player, id, cls, slot) {
+  const st = modulesState(player);
+  const item = find(st, id);
+  if (!item.built) throw new GameActionError("Fabrique d'abord ce plan.");
+  const c = String(cls);
+  if (!MODULE_CLASSES.includes(c)) throw new GameActionError("Classe inconnue.");
+  const fam = MODULE_FAMILIES[findModuleTemplate(item.template).family];
+  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${fam.classes.length === 1 ? "le Soutien" : "les classes Faible, Moyen ou Fort"}.`);
+  const i = Math.floor(Number(slot));
+  if (!(i >= 0 && i < MODULE_RULES.slotsPerClass)) throw new GameActionError("Emplacement invalide.");
+  for (const k of MODULE_CLASSES) st.slots[k] = st.slots[k].map((s) => s === item.id ? null : s);
+  st.slots[c][i] = item.id;
+  player.modules = st;
+}
+function unmountModule(player, cls, slot) {
+  const st = modulesState(player);
+  const c = String(cls);
+  const i = Math.floor(Number(slot));
+  if (!MODULE_CLASSES.includes(c) || !(i >= 0 && i < MODULE_RULES.slotsPerClass)) throw new GameActionError("Emplacement invalide.");
+  st.slots[c][i] = null;
+  player.modules = st;
+}
+function recycleModule(player, id) {
+  const st = modulesState(player);
+  const item = find(st, id);
+  for (const k of MODULE_CLASSES) st.slots[k] = st.slots[k].map((s) => s === item.id ? null : s);
+  st.items = st.items.filter((m) => m.id !== item.id);
+  player.modules = st;
+  return moduleRarity(item.rarity).recycleAmber * (item.built ? 2 : 1);
 }
 
 // src/game/galaxy.ts
@@ -6030,13 +6224,13 @@ var LOOT_SOURCE_LABELS = {
 };
 function defaultLootTables() {
   return {
-    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
-    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
-    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
-    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 },
-    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
-    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1 },
-    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 }
+    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.2 },
+    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.18 },
+    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.12 },
+    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.04 },
+    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.08 },
+    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1, moduleChance: 0.05 },
+    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.03 }
   };
 }
 var LOOT_TABLES = defaultLootTables();
@@ -6070,6 +6264,7 @@ function validateLootTables(tables) {
     if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
     if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
     if (t.tokenChance !== void 0 && !pct7(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
+    if (t.moduleChance !== void 0 && !pct7(t.moduleChance)) errors.push(`${label3} : chance de plan de module entre 0 et 1.`);
     const tmin = (_c = t.tokenMin) != null ? _c : 1;
     const tmax = (_d = t.tokenMax) != null ? _d : 1;
     if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
@@ -6081,7 +6276,7 @@ function lootDifficulty(enemy, own) {
   return Math.max(0.5, Math.min(2, enemy / own));
 }
 function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficulty = 1) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e, _f;
   const t = LOOT_TABLES[source];
   if (!t) return {};
   const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
@@ -6114,6 +6309,10 @@ function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficu
       player.casino = __spreadProps(__spreadValues({}, playerCasino(player)), { lootWeek: { id: casinoWeekId(now), tokens: week.used + got } });
     }
   }
+  if (((_e = t.moduleChance) != null ? _e : 0) > 0 && random() < Math.min(1, ((_f = t.moduleChance) != null ? _f : 0) * mult)) {
+    const plan = rollModulePlan(`loot:${source}`, now, random, source.endsWith("Boss") ? "rare" : "common");
+    if (addModuleItem(player, plan)) drop.module = moduleLabel(plan);
+  }
   return drop;
 }
 function describeLoot(drop) {
@@ -6121,6 +6320,7 @@ function describeLoot(drop) {
   const parts = [];
   if (drop.relic) parts.push(`Relique : ${drop.relic}`);
   if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
+  if (drop.module) parts.push(`Plan de module : ${drop.module}`);
   if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
   return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
 }
@@ -9124,6 +9324,8 @@ function empireEffects(player, now = Date.now()) {
     ...commanderEffects(player),
     ...relicEffects(player),
     ...talentEffects(player),
+    // 5.26 : modules de vaisseaux montés.
+    ...moduleEffects(player),
     ...territoryEffects(player.territory, now),
     // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
     ...mutatorEffects(now)
@@ -15378,7 +15580,68 @@ function publicShowcase(p) {
   };
 }
 
+// src/game/polls.ts
+var POLL_RULES = { minOptions: 2, maxOptions: 6, maxQuestion: 160, maxOption: 80 };
+function normalizePoll(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  const question = typeof r.question === "string" ? r.question.trim().slice(0, POLL_RULES.maxQuestion) : "";
+  const options = (Array.isArray(r.options) ? r.options : []).map((o) => typeof o === "string" ? o.trim().slice(0, POLL_RULES.maxOption) : "").filter(Boolean).slice(0, POLL_RULES.maxOptions);
+  if (!question || options.length < POLL_RULES.minOptions) return null;
+  const closes = Number(r.closesAtMs);
+  return { question, options, closesAtMs: Number.isFinite(closes) && closes > 0 ? closes : null, showResults: r.showResults === "always" ? "always" : "after_vote" };
+}
+function pollOpen(poll, now) {
+  return poll.closesAtMs === null || now < poll.closesAtMs;
+}
+function validateVote(poll, choice, now) {
+  if (!poll) throw new Error("Sondage introuvable.");
+  if (!pollOpen(poll, now)) throw new Error("Ce sondage est clos.");
+  const i = Math.floor(Number(choice));
+  if (!(i >= 0 && i < poll.options.length) || String(i) !== String(choice).trim()) throw new Error("Choix invalide.");
+  return i;
+}
+function tally(poll, choices, mine, now) {
+  const counts = poll.options.map(() => 0);
+  for (const c of choices) if (c >= 0 && c < counts.length) counts[c]++;
+  return { counts, total: counts.reduce((a, b) => a + b, 0), mine, open: pollOpen(poll, now) };
+}
+
 // src/game/announcements.ts
+var ANNOUNCEMENTS_KEY = "announcements";
+function findPoll(settings, id) {
+  var _a, _b;
+  return (_b = (_a = settings.custom.find((a) => a.id === id)) == null ? void 0 : _a.poll) != null ? _b : null;
+}
+var str = (v, max = 600) => String(v != null ? v : "").slice(0, max);
+var num5 = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;
+function normalizeAnnouncementSettings(raw) {
+  const r = raw != null ? raw : {};
+  const custom = (Array.isArray(r.custom) ? r.custom : []).filter((a) => !!a && typeof a === "object" && typeof a.id === "string").map((a) => {
+    var _a, _b, _c;
+    return {
+      id: str(a.id, 60),
+      eyebrow: str(a.eyebrow, 120),
+      title: str(a.title, 120),
+      text: str(a.text, 600),
+      art: a.art ? str(a.art, 300) : void 0,
+      artMobile: a.artMobile ? str(a.artMobile, 300) : void 0,
+      tone: a.tone === "gold" ? "gold" : "danger",
+      features: (Array.isArray(a.features) ? a.features : []).slice(0, 4).map((f) => ({ title: str(f == null ? void 0 : f.title, 80), text: str(f == null ? void 0 : f.text, 200), to: str((f == null ? void 0 : f.to) || "/game", 120), image: (f == null ? void 0 : f.image) ? str(f.image, 300) : void 0 })),
+      cta: { label: str(((_a = a.cta) == null ? void 0 : _a.label) || "Voir", 40), to: str(((_b = a.cta) == null ? void 0 : _b.to) || "/game", 120) },
+      createdAtMs: (_c = num5(a.createdAtMs)) != null ? _c : 0,
+      poll: normalizePoll(a.poll)
+    };
+  });
+  const schedule = {};
+  if (r.schedule && typeof r.schedule === "object") {
+    for (const [id, s] of Object.entries(r.schedule)) {
+      if (!s || typeof s !== "object") continue;
+      schedule[id] = { startsAtMs: num5(s.startsAtMs), endsAtMs: num5(s.endsAtMs), disabled: s.disabled === true };
+    }
+  }
+  return { custom, schedule };
+}
 var SEEN_LIMIT = 120;
 var SEEN_ID = /^[A-Za-z0-9._:-]{1,60}$/;
 function addSeenAnnouncements(current2, ids) {
@@ -15652,6 +15915,22 @@ function applyAction(s, action) {
       st.amber += out.amber;
       player.bounties = st;
       return { amber: out.amber };
+    }
+    // 5.26 : modules de vaisseaux.
+    case "moduleBuild":
+      return buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+    case "moduleMount":
+      mountModule(player, action.moduleId, action.cls, action.slot);
+      return void 0;
+    case "moduleUnmount":
+      unmountModule(player, action.cls, action.slot);
+      return void 0;
+    case "moduleRecycle": {
+      const amber = recycleModule(player, action.moduleId);
+      const st = bountyState(player);
+      st.amber += amber;
+      player.bounties = st;
+      return { amber };
     }
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
@@ -16309,6 +16588,7 @@ var GAME_FIELDS = [
   "bounties",
   "commanders",
   "relics",
+  "modules",
   "synthesis",
   "profileStyle",
   "renamed",
@@ -16989,12 +17269,12 @@ var IGNORED = [
   /The user aborted a request|AbortError|autocancelled/i
 ];
 var EXTENSION = /chrome-extension:|moz-extension:|safari-extension:/i;
-var str = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+var str2 = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
 function sanitizeClientError(input) {
-  const message = str(input.message, AUTO_ERROR_RULES.messageMax);
-  const stack = str(input.stack, AUTO_ERROR_RULES.stackMax);
+  const message = str2(input.message, AUTO_ERROR_RULES.messageMax);
+  const stack = str2(input.stack, AUTO_ERROR_RULES.stackMax);
   if (!message || isIgnoredError(message, stack)) return null;
-  return { message, stack, page: str(input.page, 200), version: str(input.version, 20) };
+  return { message, stack, page: str2(input.page, 200), version: str2(input.version, 20) };
 }
 function isIgnoredError(message, stack = "") {
   return IGNORED.some((re) => re.test(message)) || EXTENSION.test(message) || EXTENSION.test(stack);
@@ -17032,10 +17312,11 @@ var SERVER_POT_KEY = "server_pot";
 var POT_SOURCE_LABELS = {
   market: "Taxes du march\xE9",
   gift: "Taxe des cadeaux",
+  auction: "Taxe des ench\xE8res",
   admin: "Administration"
 };
 function emptyServerPot() {
-  return { resources: {}, totals: {}, log: [], updatedAtMs: 0 };
+  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
 }
 function cleanAmounts(raw) {
   const out = {};
@@ -17057,7 +17338,9 @@ function normalizeServerPot(raw) {
   return {
     resources: cleanAmounts(r.resources),
     totals,
-    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
+    amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
+    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
     updatedAtMs: Number(r.updatedAtMs) || 0
   };
 }
@@ -17075,12 +17358,12 @@ function addToPot(pot, source, amounts, now, note4) {
     resources[k] = ((_b = resources[k]) != null ? _b : 0) + n;
     total2[k] = ((_c = total2[k]) != null ? _c : 0) + n;
   }
-  return {
+  return __spreadProps(__spreadValues({}, pot), {
     resources,
     totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
-  };
+  });
 }
 function takeFromPot(pot, amounts, now, note4) {
   var _a, _b;
@@ -17104,6 +17387,21 @@ function giftTax(sent, delivered) {
     if (lost > 0) out[k] = lost;
   }
   return out;
+}
+function addAmberToPot(pot, source, amount3, now, note4) {
+  const n = Math.floor(Number(amount3));
+  if (!(n > 0)) return pot;
+  return __spreadProps(__spreadValues({}, pot), {
+    amber: pot.amber + n,
+    amberTotal: pot.amberTotal + n,
+    log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
+    updatedAtMs: now
+  });
+}
+function takeAmberFromPot(pot, amount3, now, note4) {
+  const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
+  if (!(n > 0)) return { pot, taken: 0 };
+  return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
 }
 
 // src/game/messages.ts
@@ -17385,8 +17683,22 @@ function sanitizePactMessage(raw) {
 }
 
 // src/game/maintenance.ts
+var MAINTENANCE_NOTICE_MS = 24 * 36e5;
 var MAINTENANCE_KEY = "maintenance";
-var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true, scheduled: null };
+function normalizeScheduled(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  const start = Number(r.startAtMs);
+  if (!Number.isFinite(start) || start <= 0) return null;
+  const end = Number(r.endsAtMs);
+  return {
+    startAtMs: Math.round(start),
+    endsAtMs: Number.isFinite(end) && end > start ? Math.round(end) : null,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : ""
+  };
+}
 var MAX_MESSAGE = 600;
 var MAX_VERSION = 20;
 function normalizeMaintenance(raw) {
@@ -17399,7 +17711,8 @@ function normalizeMaintenance(raw) {
     version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
     startedAtMs: Number(r.startedAtMs) || 0,
     endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
-    autoEnd: r.autoEnd !== false
+    autoEnd: r.autoEnd !== false,
+    scheduled: normalizeScheduled(r.scheduled)
   };
 }
 function nextMaintenance(previous, request, now) {
@@ -17412,8 +17725,28 @@ function nextMaintenance(previous, request, now) {
     version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
     startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
     endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
-    autoEnd: request.autoEnd !== false
+    autoEnd: request.autoEnd !== false,
+    scheduled: null
   };
+}
+function scheduleMaintenance(previous, schedule, now) {
+  if (schedule === null || schedule === void 0) return __spreadProps(__spreadValues({}, previous), { scheduled: null });
+  const next = normalizeScheduled(schedule);
+  if (!next || next.startAtMs <= now) throw new Error("Choisis un d\xE9but de maintenance dans le futur.");
+  return __spreadProps(__spreadValues({}, previous), { scheduled: __spreadProps(__spreadValues({}, next), { message: next.message.trim(), version: next.version.trim() }) });
+}
+function maintenanceShouldAutoStart(m, now) {
+  return !m.enabled && !!m.scheduled && now >= m.scheduled.startAtMs;
+}
+function startScheduledMaintenance(m, now) {
+  const s = m.scheduled;
+  if (!s) return m;
+  return { enabled: true, message: s.message, version: s.version, startedAtMs: now, endsAtMs: s.endsAtMs !== null && s.endsAtMs > now ? s.endsAtMs : null, autoEnd: true, scheduled: null };
+}
+function upcomingMaintenance(m, now) {
+  if (m.enabled || !m.scheduled) return null;
+  const inMs = m.scheduled.startAtMs - now;
+  return inMs > 0 && inMs <= MAINTENANCE_NOTICE_MS ? __spreadProps(__spreadValues({}, m.scheduled), { inMs }) : null;
 }
 function maintenanceShouldAutoEnd(m, now) {
   return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
@@ -19729,10 +20062,10 @@ function hexToBytes(hex) {
   }
   return array;
 }
-function utf8ToBytes(str2) {
-  if (typeof str2 !== "string")
+function utf8ToBytes(str3) {
+  if (typeof str3 !== "string")
     throw new Error("string expected");
-  return new Uint8Array(new TextEncoder().encode(str2));
+  return new Uint8Array(new TextEncoder().encode(str3));
 }
 function toBytes(data) {
   if (typeof data === "string")
@@ -19797,8 +20130,8 @@ function _abytes2(value2, length, title = "") {
   }
   return value2;
 }
-function numberToHexUnpadded(num6) {
-  const hex = num6.toString(16);
+function numberToHexUnpadded(num7) {
+  const hex = num7.toString(16);
   return hex.length & 1 ? "0" + hex : hex;
 }
 function hexToNumber(hex) {
@@ -20096,15 +20429,15 @@ function validateField(field) {
   _validateObject(field, opts);
   return field;
 }
-function FpPow(Fp, num6, power) {
+function FpPow(Fp, num7, power) {
   if (power < _0n2)
     throw new Error("invalid exponent, negatives unsupported");
   if (power === _0n2)
     return Fp.ONE;
   if (power === _1n2)
-    return num6;
+    return num7;
   let p = Fp.ONE;
-  let d = num6;
+  let d = num7;
   while (power > _0n2) {
     if (power & _1n2)
       p = Fp.mul(p, d);
@@ -20115,18 +20448,18 @@ function FpPow(Fp, num6, power) {
 }
 function FpInvertBatch(Fp, nums, passZero = false) {
   const inverted = new Array(nums.length).fill(passZero ? Fp.ZERO : void 0);
-  const multipliedAcc = nums.reduce((acc, num6, i) => {
-    if (Fp.is0(num6))
+  const multipliedAcc = nums.reduce((acc, num7, i) => {
+    if (Fp.is0(num7))
       return acc;
     inverted[i] = acc;
-    return Fp.mul(acc, num6);
+    return Fp.mul(acc, num7);
   }, Fp.ONE);
   const invertedAcc = Fp.inv(multipliedAcc);
-  nums.reduceRight((acc, num6, i) => {
-    if (Fp.is0(num6))
+  nums.reduceRight((acc, num7, i) => {
+    if (Fp.is0(num7))
       return acc;
     inverted[i] = Fp.mul(acc, inverted[i]);
-    return Fp.mul(acc, num6);
+    return Fp.mul(acc, num7);
   }, invertedAcc);
   return inverted;
 }
@@ -20186,36 +20519,36 @@ function Field(ORDER, bitLenOrOpts, isLE = false, opts = {}) {
     ZERO: _0n2,
     ONE: _1n2,
     allowedLengths,
-    create: (num6) => mod(num6, ORDER),
-    isValid: (num6) => {
-      if (typeof num6 !== "bigint")
-        throw new Error("invalid field element: expected bigint, got " + typeof num6);
-      return _0n2 <= num6 && num6 < ORDER;
+    create: (num7) => mod(num7, ORDER),
+    isValid: (num7) => {
+      if (typeof num7 !== "bigint")
+        throw new Error("invalid field element: expected bigint, got " + typeof num7);
+      return _0n2 <= num7 && num7 < ORDER;
     },
-    is0: (num6) => num6 === _0n2,
+    is0: (num7) => num7 === _0n2,
     // is valid and invertible
-    isValidNot0: (num6) => !f.is0(num6) && f.isValid(num6),
-    isOdd: (num6) => (num6 & _1n2) === _1n2,
-    neg: (num6) => mod(-num6, ORDER),
+    isValidNot0: (num7) => !f.is0(num7) && f.isValid(num7),
+    isOdd: (num7) => (num7 & _1n2) === _1n2,
+    neg: (num7) => mod(-num7, ORDER),
     eql: (lhs, rhs) => lhs === rhs,
-    sqr: (num6) => mod(num6 * num6, ORDER),
+    sqr: (num7) => mod(num7 * num7, ORDER),
     add: (lhs, rhs) => mod(lhs + rhs, ORDER),
     sub: (lhs, rhs) => mod(lhs - rhs, ORDER),
     mul: (lhs, rhs) => mod(lhs * rhs, ORDER),
-    pow: (num6, power) => FpPow(f, num6, power),
+    pow: (num7, power) => FpPow(f, num7, power),
     div: (lhs, rhs) => mod(lhs * invert(rhs, ORDER), ORDER),
     // Same as above, but doesn't normalize
-    sqrN: (num6) => num6 * num6,
+    sqrN: (num7) => num7 * num7,
     addN: (lhs, rhs) => lhs + rhs,
     subN: (lhs, rhs) => lhs - rhs,
     mulN: (lhs, rhs) => lhs * rhs,
-    inv: (num6) => invert(num6, ORDER),
+    inv: (num7) => invert(num7, ORDER),
     sqrt: _sqrt || ((n) => {
       if (!sqrtP)
         sqrtP = FpSqrt(ORDER);
       return sqrtP(f, n);
     }),
-    toBytes: (num6) => isLE ? numberToBytesLE(num6, BYTES) : numberToBytesBE(num6, BYTES),
+    toBytes: (num7) => isLE ? numberToBytesLE(num7, BYTES) : numberToBytesBE(num7, BYTES),
     fromBytes: (bytes, skipValidation = true) => {
       if (allowedLengths) {
         if (!allowedLengths.includes(bytes.length) || bytes.length > BYTES) {
@@ -20260,8 +20593,8 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   const minLen = getMinHashLength(fieldOrder);
   if (len < 16 || len < minLen || len > 1024)
     throw new Error("expected " + minLen + "-1024 bytes of input, got " + len);
-  const num6 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
-  const reduced = mod(num6, fieldOrder - _1n2) + _1n2;
+  const num7 = isLE ? bytesToNumberLE(key) : bytesToNumberBE(key);
+  const reduced = mod(num7, fieldOrder - _1n2) + _1n2;
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
@@ -21163,7 +21496,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
 }
 
 // node_modules/@noble/curves/esm/abstract/weierstrass.js
-var divNearest = (num6, den) => (num6 + (num6 >= 0 ? den : -den) / _2n2) / den;
+var divNearest = (num7, den) => (num7 + (num7 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
   const c1 = divNearest(b2 * k, n);
@@ -21263,11 +21596,11 @@ var DER = {
   // - add zero byte if exists
   // - if next byte doesn't have a flag, leading zero is not allowed (minimal encoding)
   _int: {
-    encode(num6) {
+    encode(num7) {
       const { Err: E2 } = DER;
-      if (num6 < _0n4)
+      if (num7 < _0n4)
         throw new E2("integer: negative integers are not allowed");
-      let hex = numberToHexUnpadded(num6);
+      let hex = numberToHexUnpadded(num7);
       if (Number.parseInt(hex[0], 16) & 8)
         hex = "00" + hex;
       if (hex.length & 1)
@@ -21310,20 +21643,20 @@ var _3n2 = BigInt(3);
 var _4n2 = BigInt(4);
 function _normFnElement(Fn, key) {
   const { BYTES: expected } = Fn;
-  let num6;
+  let num7;
   if (typeof key === "bigint") {
-    num6 = key;
+    num7 = key;
   } else {
     let bytes = ensureBytes("private key", key);
     try {
-      num6 = Fn.fromBytes(bytes);
+      num7 = Fn.fromBytes(bytes);
     } catch (error) {
       throw new Error(`invalid private key: expected ui8a of size ${expected}, got ${typeof key}`);
     }
   }
-  if (!Fn.isValidNot0(num6))
+  if (!Fn.isValidNot0(num7))
     throw new Error("invalid private key: out of range [1..N-1]");
-  return num6;
+  return num7;
 }
 function weierstrassN(params, extraOpts = {}) {
   const validated = _createCurveFields("weierstrass", params, extraOpts);
@@ -21877,10 +22210,10 @@ function ecdsa(Point, hash3, ecdsaOpts = {}) {
     const HALF = CURVE_ORDER >> _1n4;
     return number > HALF;
   }
-  function validateRS(title, num6) {
-    if (!Fn.isValidNot0(num6))
+  function validateRS(title, num7) {
+    if (!Fn.isValidNot0(num7))
       throw new Error(`invalid signature ${title}: out of range 1..Point.Fn.ORDER`);
-    return num6;
+    return num7;
   }
   function validateSigLength(bytes, format) {
     validateSigFormat(format);
@@ -21990,17 +22323,17 @@ function ecdsa(Point, hash3, ecdsaOpts = {}) {
   const bits2int = ecdsaOpts.bits2int || function bits2int_def(bytes) {
     if (bytes.length > 8192)
       throw new Error("input is too large");
-    const num6 = bytesToNumberBE(bytes);
+    const num7 = bytesToNumberBE(bytes);
     const delta = bytes.length * 8 - fnBits;
-    return delta > 0 ? num6 >> BigInt(delta) : num6;
+    return delta > 0 ? num7 >> BigInt(delta) : num7;
   };
   const bits2int_modN = ecdsaOpts.bits2int_modN || function bits2int_modN_def(bytes) {
     return Fn.create(bits2int(bytes));
   };
   const ORDER_MASK = bitMask(fnBits);
-  function int2octets(num6) {
-    aInRange("num < 2^" + fnBits, num6, _0n4, ORDER_MASK);
-    return Fn.toBytes(num6);
+  function int2octets(num7) {
+    aInRange("num < 2^" + fnBits, num7, _0n4, ORDER_MASK);
+    return Fn.toBytes(num7);
   }
   function validateMsgAndHash(message, prehash) {
     _abytes2(message, void 0, "message");
@@ -22575,7 +22908,7 @@ var CONTEST_RULES = {
   /** Part du pot qu'un concours peut engager, au plus. */
   maxPotShare: 0.8
 };
-var num5 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+var num6 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 function normalizeContests(raw) {
   const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
   return {
@@ -22586,14 +22919,14 @@ function normalizeContests(raw) {
         title: String((_a = c.title) != null ? _a : "").slice(0, 80),
         description: String((_b = c.description) != null ? _b : "").slice(0, 400),
         metric: c.metric,
-        startMs: num5(c.startMs),
-        endMs: num5(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num5(c.potShare))),
-        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num5(p))).slice(0, 10),
+        startMs: num6(c.startMs),
+        endMs: num6(c.endMs),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare))),
+        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num6(p))).slice(0, 10),
         status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
         standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
-        updatedAtMs: num5(c.updatedAtMs)
+        updatedAtMs: num6(c.updatedAtMs)
       }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
     })
   };
@@ -22929,8 +23262,295 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.25.0" : "dev";
-var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]}]' : "[]";
+var LOGIC_VERSION = true ? "5.26.0" : "dev";
+var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)"]}]' : "[]";
+
+// src/game/serverMetrics.ts
+var METRICS_KEYS = { cron: "cron", vitals: "web_vitals" };
+function cronIntervalMs(spec) {
+  const [min = "*", hour = "*", dom = "*"] = spec.trim().split(/\s+/);
+  const step = /^\*\/(\d+)$/;
+  if (dom !== "*") return 30 * 864e5;
+  if (hour !== "*" && !step.test(hour)) return 864e5;
+  if (step.test(hour)) return Number(step.exec(hour)[1]) * 36e5;
+  if (min === "*") return 6e4;
+  if (step.test(min)) return Number(step.exec(min)[1]) * 6e4;
+  return 36e5;
+}
+function normalizeCronMetrics(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [name, v] of Object.entries(raw)) {
+    if (!v || typeof v !== "object") continue;
+    const r = v;
+    const n = (k) => Number.isFinite(Number(r[k])) ? Number(r[k]) : 0;
+    out[name.slice(0, 60)] = {
+      lastAtMs: n("lastAtMs"),
+      lastMs: n("lastMs"),
+      avgMs: n("avgMs"),
+      maxMs: n("maxMs"),
+      runs: n("runs"),
+      fails: n("fails"),
+      lastError: typeof r.lastError === "string" ? r.lastError.slice(0, 300) : "",
+      lastErrorAtMs: n("lastErrorAtMs"),
+      everyMs: n("everyMs") || 6e4
+    };
+  }
+  return out;
+}
+function recordCronRun(metrics, name, spec, startedAtMs, durationMs, error) {
+  var _a, _b, _c, _d, _e;
+  const prev = metrics[name];
+  const ms = Math.max(0, Math.round(durationMs));
+  const run = {
+    lastAtMs: startedAtMs,
+    lastMs: ms,
+    avgMs: prev && prev.runs > 0 ? Math.round(prev.avgMs * 0.8 + ms * 0.2) : ms,
+    maxMs: Math.max((_a = prev == null ? void 0 : prev.maxMs) != null ? _a : 0, ms),
+    runs: ((_b = prev == null ? void 0 : prev.runs) != null ? _b : 0) + 1,
+    fails: ((_c = prev == null ? void 0 : prev.fails) != null ? _c : 0) + (error ? 1 : 0),
+    lastError: error ? error.slice(0, 300) : (_d = prev == null ? void 0 : prev.lastError) != null ? _d : "",
+    lastErrorAtMs: error ? startedAtMs : (_e = prev == null ? void 0 : prev.lastErrorAtMs) != null ? _e : 0,
+    everyMs: cronIntervalMs(spec)
+  };
+  return __spreadProps(__spreadValues({}, metrics), { [name]: run });
+}
+function cronStatus(run, now) {
+  if (now - run.lastAtMs > run.everyMs * 2 + 12e4) return "late";
+  if (run.lastErrorAtMs && run.lastErrorAtMs >= run.lastAtMs) return "failing";
+  if (run.lastMs > 2e4) return "slow";
+  return "ok";
+}
+function cronSummary(metrics, now) {
+  const all = Object.values(metrics).map((r) => cronStatus(r, now));
+  return { total: all.length, late: all.filter((s) => s === "late").length, failing: all.filter((s) => s === "failing").length, slow: all.filter((s) => s === "slow").length };
+}
+var VITALS = [
+  { id: "lcp", label: "Affichage principal (LCP)", unit: "ms", good: 2500, poor: 4e3 },
+  { id: "inp", label: "R\xE9activit\xE9 (INP)", unit: "ms", good: 200, poor: 500 },
+  { id: "cls", label: "Stabilit\xE9 (CLS)", unit: "", good: 0.1, poor: 0.25 },
+  { id: "fcp", label: "Premier affichage (FCP)", unit: "ms", good: 1800, poor: 3e3 },
+  { id: "ttfb", label: "R\xE9ponse du serveur (TTFB)", unit: "ms", good: 800, poor: 1800 }
+];
+var EDGES = [50, 100, 150, 200, 300, 400, 500, 700, 1e3, 1500, 2e3, 2500, 3e3, 4e3, 5e3, 7e3, 1e4, 15e3, 3e4, Infinity];
+var KEEP_DAYS = 14;
+function bucket(v) {
+  return EDGES.findIndex((e3) => v <= e3);
+}
+function sanitizeVitals(raw) {
+  var _a, _b;
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  const values = {};
+  const v = (_a = r.values) != null ? _a : {};
+  for (const m of VITALS) {
+    const n = Number(v[m.id]);
+    if (Number.isFinite(n) && n >= 0 && n < (m.id === "cls" ? 50 : 12e4)) values[m.id] = n;
+  }
+  if (Object.keys(values).length === 0) return null;
+  const route = String((_b = r.route) != null ? _b : "/").split("?")[0].split("/").map((seg) => /\d/.test(seg) || seg.length > 24 ? ":" : seg).join("/").slice(0, 60);
+  return { route: route || "/", device: r.device === "m" ? "m" : "d", values };
+}
+function dayKey(now) {
+  return new Date(now).toISOString().slice(0, 10);
+}
+function addVitals(store, sample, now) {
+  var _a, _b, _c;
+  const key = dayKey(now);
+  const day = store[key] ? { h: __spreadValues({}, store[key].h), pages: __spreadValues({}, store[key].pages) } : { h: {}, pages: {} };
+  for (const [metric, value2] of Object.entries(sample.values)) {
+    const k = `${metric}.${sample.device}`;
+    const hist = [...(_a = day.h[k]) != null ? _a : new Array(EDGES.length).fill(0)];
+    hist[bucket(metric === "cls" ? value2 * 1e3 : value2)]++;
+    day.h[k] = hist;
+  }
+  const page = (_b = day.pages[sample.route]) != null ? _b : { n: 0, lcpSum: 0 };
+  if (day.pages[sample.route] || Object.keys(day.pages).length < 60) {
+    day.pages[sample.route] = { n: page.n + 1, lcpSum: page.lcpSum + ((_c = sample.values.lcp) != null ? _c : 0) };
+  }
+  const out = __spreadProps(__spreadValues({}, store), { [key]: day });
+  const cutoff = dayKey(now - KEEP_DAYS * 864e5);
+  for (const d of Object.keys(out)) if (d < cutoff) delete out[d];
+  return out;
+}
+function percentile(hist, p) {
+  const total2 = hist.reduce((a, b) => a + b, 0);
+  if (!total2) return null;
+  let acc = 0;
+  for (let i = 0; i < hist.length; i++) {
+    acc += hist[i];
+    if (acc >= total2 * p) return EDGES[i] === Infinity ? EDGES[i - 1] : EDGES[i];
+  }
+  return null;
+}
+function vitalsReport(store, now, days = 7) {
+  var _a;
+  const keys = Object.keys(store).filter((d) => d >= dayKey(now - (days - 1) * 864e5));
+  const sum3 = (k) => keys.reduce((acc, d) => {
+    var _a2;
+    return ((_a2 = store[d].h[k]) != null ? _a2 : []).map((n, i) => {
+      var _a3;
+      return n + ((_a3 = acc[i]) != null ? _a3 : 0);
+    });
+  }, []);
+  const pages = {};
+  let samples = 0;
+  for (const d of keys) {
+    for (const [route, p] of Object.entries(store[d].pages)) {
+      const cur = (_a = pages[route]) != null ? _a : { n: 0, lcpSum: 0 };
+      pages[route] = { n: cur.n + p.n, lcpSum: cur.lcpSum + p.lcpSum };
+      samples += p.n;
+    }
+  }
+  const metrics = VITALS.map((m) => {
+    const mob = sum3(`${m.id}.m`);
+    const desk = sum3(`${m.id}.d`);
+    const both = mob.length ? mob.map((n, i) => {
+      var _a2;
+      return n + ((_a2 = desk[i]) != null ? _a2 : 0);
+    }) : desk;
+    const scale = (v) => v === null ? null : m.id === "cls" ? v / 1e3 : v;
+    const p75 = scale(percentile(both, 0.75));
+    return {
+      id: m.id,
+      p75,
+      p75Mobile: scale(percentile(mob, 0.75)),
+      p75Desktop: scale(percentile(desk, 0.75)),
+      rating: p75 === null ? null : p75 <= m.good ? "good" : p75 <= m.poor ? "needs" : "poor"
+    };
+  });
+  const slowPages = Object.entries(pages).filter(([, p]) => p.n >= 3 && p.lcpSum > 0).map(([route, p]) => ({ route, n: p.n, lcpAvg: Math.round(p.lcpSum / p.n) })).sort((a, b) => b.lcpAvg - a.lcpAvg).slice(0, 8);
+  return { samples, metrics, slowPages };
+}
+
+// src/game/moderation.ts
+var MODERATION_KEYS = { bans: "bans" };
+var MAX_REASON = 300;
+function normalizeBans(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [uid, v] of Object.entries(raw)) {
+    if (!v || typeof v !== "object") continue;
+    const r = v;
+    const until = Number(r.untilMs);
+    out[uid] = {
+      uid,
+      pseudo: typeof r.pseudo === "string" ? r.pseudo.slice(0, 40) : "",
+      untilMs: r.untilMs === null || r.untilMs === void 0 ? null : Number.isFinite(until) ? until : null,
+      reason: typeof r.reason === "string" ? r.reason.slice(0, MAX_REASON) : "",
+      byName: typeof r.byName === "string" ? r.byName.slice(0, 60) : "",
+      atMs: Number(r.atMs) || 0
+    };
+  }
+  return out;
+}
+function activeBan(bans, uid, now) {
+  const b = bans[uid];
+  if (!b) return null;
+  return b.untilMs === null || b.untilMs > now ? b : null;
+}
+function banPlayer(bans, input, now) {
+  const reason = input.reason.trim();
+  if (!input.uid) throw new Error("Joueur manquant.");
+  if (reason.length < 5) throw new Error("Indique un motif (5 caract\xE8res au moins).");
+  if (input.hours !== null && !(input.hours > 0 && input.hours <= 24 * 3650)) throw new Error("Dur\xE9e invalide.");
+  const entry = {
+    uid: input.uid,
+    pseudo: input.pseudo.slice(0, 40),
+    untilMs: input.hours === null ? null : Math.round(now + input.hours * 36e5),
+    reason: reason.slice(0, MAX_REASON),
+    byName: input.byName.slice(0, 60),
+    atMs: now
+  };
+  return __spreadProps(__spreadValues({}, bans), { [input.uid]: entry });
+}
+function unbanPlayer(bans, uid) {
+  const next = __spreadValues({}, bans);
+  delete next[uid];
+  return next;
+}
+function pruneBans(bans, now) {
+  var _a;
+  const out = {};
+  for (const [uid, b] of Object.entries(bans)) if (activeBan(bans, uid, now) || now - ((_a = b.untilMs) != null ? _a : now) < 30 * 864e5) out[uid] = b;
+  return out;
+}
+function allowedWhileBanned(method, path) {
+  if (path === "/api/cosmic/ban/me" || path === "/api/cosmic/status" || path === "/api/health") return true;
+  if (path.indexOf("/api/realtime") === 0) return true;
+  return method === "GET" && /^\/api\/collections\/game_config\/records/.test(path);
+}
+function banMessage(b) {
+  return b.untilMs === null ? `Compte banni d\xE9finitivement. Motif : ${b.reason}` : `Compte suspendu jusqu'au ${new Date(b.untilMs).toISOString().slice(0, 16).replace("T", " ")} (UTC). Motif : ${b.reason}`;
+}
+
+// src/game/globalChat.ts
+var GLOBAL_CHAT_RULES = {
+  maxLength: 300,
+  cooldownMs: 4e3,
+  perMinute: 8,
+  reportsToHide: 3,
+  /** Messages gardés en base (les plus anciens sont effacés). */
+  keep: 500,
+  /** Messages chargés à l'ouverture. */
+  page: 60
+};
+var CHAT_MODERATION_KEYS = { mutes: "chat_mutes", filter: "chat_filter" };
+var BASE_FILTER = ["connard", "connasse", "salope", "encule", "encul\xE9", "pute", "batard", "b\xE2tard", "fdp", "ntm", "nique", "pd", "tapette", "negro", "bougnoule", "youpin"];
+var fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function filterText(text, extra = []) {
+  const words = [...new Set([...BASE_FILTER, ...extra].map(fold).filter((w) => w.length >= 2))];
+  if (words.length === 0) return { text, masked: false };
+  const folded = fold(text);
+  const marks = new Array(text.length).fill(false);
+  for (const w of words) {
+    const re = new RegExp(`(^|[^a-z0-9])(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?)(?=$|[^a-z0-9])`, "g");
+    let m;
+    while (m = re.exec(folded)) {
+      const start = m.index + m[1].length;
+      for (let i = start; i < start + m[2].length; i++) marks[i] = true;
+      if (re.lastIndex === m.index) re.lastIndex++;
+    }
+  }
+  if (folded.length !== text.length) return { text, masked: false };
+  const out = [...text].map((c, i) => marks[i] ? "*" : c).join("");
+  return { text: out, masked: out !== text };
+}
+function cleanGlobalMessage(raw) {
+  const text = String(raw != null ? raw : "").replace(/\s+/g, " ").trim().slice(0, GLOBAL_CHAT_RULES.maxLength);
+  if (!text) throw new Error("Message vide.");
+  return text;
+}
+function rateLimitError(recentSentAtMs, now) {
+  const last = Math.max(0, ...recentSentAtMs);
+  if (now - last < GLOBAL_CHAT_RULES.cooldownMs) return "Doucement : un message toutes les 4 secondes.";
+  if (recentSentAtMs.filter((t) => now - t < 6e4).length >= GLOBAL_CHAT_RULES.perMinute) return "Trop de messages en une minute : patiente un peu.";
+  return null;
+}
+function normalizeMutes(raw) {
+  var _a, _b;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [uid, v] of Object.entries(raw)) {
+    if (!v || typeof v !== "object") continue;
+    const r = v;
+    out[uid] = { untilMs: r.untilMs === null ? null : Number(r.untilMs) || 0, reason: String((_a = r.reason) != null ? _a : "").slice(0, 200), byName: String((_b = r.byName) != null ? _b : "").slice(0, 60) };
+  }
+  return out;
+}
+function activeMute(mutes, uid, now) {
+  const m = mutes[uid];
+  return m && (m.untilMs === null || m.untilMs > now) ? m : null;
+}
+function normalizeFilter(raw) {
+  const words = raw == null ? void 0 : raw.words;
+  return (Array.isArray(words) ? words : []).map((w) => String(w).trim().slice(0, 40)).filter(Boolean).slice(0, 200);
+}
+function addReport(reporters, uid) {
+  const list = (Array.isArray(reporters) ? reporters : []).filter((x) => typeof x === "string");
+  const next = list.includes(uid) ? list : [...list, uid];
+  return { reporters: next, hide: next.length >= GLOBAL_CHAT_RULES.reportsToHide };
+}
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [
@@ -22993,6 +23613,129 @@ function instrumentHtml(html, pixelUrl, track) {
   const withLinks = html.replace(/href="(https?:\/\/[^"]+)"/g, (m, url2) => url2.includes("/api/cosmic/unsubscribe") ? m : `href="${track(url2.replace(/&amp;/g, "&"))}"`);
   const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">`;
   return withLinks.includes("</body>") ? withLinks.replace("</body>", `${pixel}</body>`) : withLinks + pixel;
+}
+
+// src/game/auctions.ts
+var AUCTION_RULES = {
+  /** Surenchère minimale (5 % au-dessus de la meilleure). */
+  minIncrement: 0.05,
+  antiSnipeMs: 5 * 6e4,
+  taxRate: 0.05,
+  maxOpenPerSeller: 5,
+  durationsH: [6, 12, 24, 48],
+  /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
+  minStart: { common: 100, rare: 1, amber: 1 },
+  maxStart: 1e12
+};
+var AUCTION_CURRENCIES = [...RESOURCE_LIST.map((r) => r.id), "amber"];
+function currencyKind(res) {
+  var _a;
+  if (res === "amber") return "amber";
+  return ((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? "rare" : "common";
+}
+function minStartFor(res) {
+  return AUCTION_RULES.minStart[currencyKind(res)];
+}
+function currencyLabel(res) {
+  var _a, _b;
+  return res === "amber" ? "Ambre" : (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res;
+}
+function validateListing(raw, openCount) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const kind = r.kind === "relic" || r.kind === "module" ? r.kind : null;
+  if (!kind) throw new GameActionError("Objet \xE0 vendre inconnu.");
+  const itemId = typeof r.itemId === "string" ? r.itemId : "";
+  if (!itemId) throw new GameActionError("Choisis l'objet \xE0 vendre.");
+  const res = String(r.res);
+  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie inconnue.");
+  const startPrice = Math.floor(Number(r.startPrice));
+  const min = minStartFor(res);
+  if (!(startPrice >= min && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise \xE0 prix : au moins ${min} ${currencyLabel(res).toLowerCase()}.`);
+  const durationH = Math.floor(Number(r.durationH));
+  if (!AUCTION_RULES.durationsH.includes(durationH)) throw new GameActionError("Dur\xE9e refus\xE9e.");
+  if (openCount >= AUCTION_RULES.maxOpenPerSeller) throw new GameActionError(`${AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.`);
+  return { kind, itemId, res, startPrice, durationH };
+}
+function takeLot(player, kind, itemId) {
+  if (kind === "relic") {
+    const st2 = relicsState(player);
+    const item2 = st2.items.find((r) => r.id === itemId);
+    if (!item2) throw new GameActionError("Relique introuvable.");
+    if (item2.rarity === "mythic") throw new GameActionError("Une relique mythique ne se vend pas.");
+    if (st2.slots.includes(item2.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
+    st2.items = st2.items.filter((r) => r.id !== item2.id);
+    player.relics = st2;
+    return { item: item2, label: relicLabel(item2), rarity: item2.rarity };
+  }
+  const st = modulesState(player);
+  const item = st.items.find((m) => m.id === itemId);
+  if (!item) throw new GameActionError("Plan introuvable.");
+  if (item.built) throw new GameActionError("Seuls les plans (non fabriqu\xE9s) se vendent aux ench\xE8res.");
+  st.items = st.items.filter((m) => m.id !== item.id);
+  player.modules = st;
+  return { item, label: `Plan : ${moduleLabel(item)}`, rarity: item.rarity };
+}
+function giveLot(player, kind, item) {
+  if (kind === "relic") {
+    const st2 = relicsState(player);
+    if (!st2.items.some((r) => r.id === item.id)) st2.items.push(item);
+    player.relics = st2;
+    return;
+  }
+  const st = modulesState(player);
+  if (!st.items.some((m) => m.id === item.id)) st.items.push(__spreadProps(__spreadValues({}, item), { built: false }));
+  player.modules = st;
+}
+function minNextBid(a) {
+  if (!(a.bid > 0)) return a.startPrice;
+  return Math.max(a.bid + 1, Math.ceil(a.bid * (1 + AUCTION_RULES.minIncrement)));
+}
+function placeBid(a, uid, pseudo, amountIn, now) {
+  if (a.status !== "open" || now >= a.endsAtMs) throw new GameActionError("Cette vente est close.");
+  if (a.sellerId === uid) throw new GameActionError("Tu ne peux pas ench\xE9rir sur ta propre vente.");
+  const amount3 = Math.floor(Number(amountIn));
+  const min = minNextBid(a);
+  if (!(amount3 >= min)) throw new GameActionError(`Ench\xE8re minimale : ${min}.`);
+  if (amount3 > AUCTION_RULES.maxStart * 10) throw new GameActionError("Ench\xE8re trop \xE9lev\xE9e.");
+  const same = a.bidderId === uid;
+  const refund = a.bidderId && !same ? { uid: a.bidderId, amount: a.bid } : null;
+  const charge = same ? amount3 - a.bid : amount3;
+  a.bid = amount3;
+  a.bidderId = uid;
+  a.bidderPseudo = pseudo;
+  a.bids += 1;
+  if (a.endsAtMs - now < AUCTION_RULES.antiSnipeMs) a.endsAtMs = now + AUCTION_RULES.antiSnipeMs;
+  return { refund, charge, endsAtMs: a.endsAtMs };
+}
+function settleAuction(a) {
+  if (!(a.bid > 0) || !a.bidderId) return { status: "expired", receiver: a.sellerId, payout: 0, tax: 0 };
+  const tax = Math.floor(a.bid * AUCTION_RULES.taxRate);
+  return { status: "sold", receiver: a.bidderId, payout: a.bid - tax, tax };
+}
+function canCancel(a) {
+  return a.status === "open" && !(a.bid > 0);
+}
+function currencyBalance(player, res) {
+  var _a;
+  return Math.floor(res === "amber" ? bountyState(player).amber : (_a = player.resources[res]) != null ? _a : 0);
+}
+function debitBid(player, res, amount3) {
+  if (!(amount3 > 0)) return;
+  if (currencyBalance(player, res) < amount3) throw new GameActionError(res === "amber" ? "Pas assez d'Ambre pour cette ench\xE8re." : "Ressources insuffisantes pour cette ench\xE8re.");
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber -= amount3;
+    player.bounties = st;
+  } else player.resources[res] -= amount3;
+}
+function creditBid(player, res, amount3) {
+  var _a;
+  if (!(amount3 > 0)) return;
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber += amount3;
+    player.bounties = st;
+  } else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
 }
 
 // src/server/hooksEntry.ts

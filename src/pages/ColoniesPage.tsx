@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -560,136 +561,141 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           </div>
         )}
 
-        <div>
-          <SectionTitle icon={Package} aside={<span className="font-mono text-[10px] text-slate-500">entrepôt {formatCompact(storage)} / ressource commune</span>}>
-            Stocks de la colonie
-          </SectionTitle>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {RESOURCE_LIST.map((r) => (
-              <ResourceTile key={r.id} id={r.id} stock={Math.floor(colony.resources[r.id] ?? 0)} storage={storage} rate={rates[r.id] ?? 0} />
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <SectionTitle
-            icon={Hammer}
-            aside={
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>
-                <SortableGridToggle page="colonie-batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
-              </span>
-            }
-          >
-            Bâtiments
-          </SectionTitle>
-          <SortableGrid
-            page="colonie-batiments"
-            editing={editingCards}
-            className="grid gap-3 md:grid-cols-2"
-            items={ids}
-            getId={(id) => id}
-            getLabel={(id) => (id === DEPOSIT_ID ? colonyBuildingName(colony, id) : (findBuilding(id)?.name ?? id))}
-            render={(id) => <BuildingTile key={id} colony={colony} player={player} id={id} busy={busy} now={now} onUpgrade={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")} />}
-          />
-        </div>
-
-        <div>
-          <SectionTitle icon={Shield} aside={<span className="font-mono text-[10px] text-slate-500">{formatCompact(free)} places libres</span>}>
-            Défenses de la colonie
-          </SectionTitle>
-          <div className="mb-3">
-            <div className="h-2 bg-white/[0.06]">
-              <div className="hud-sheen h-full bg-gradient-to-r from-mint-glow/70 to-cyan-glow" style={{ width: `${hangar.capacity > 0 ? Math.min(100, (hangar.used / hangar.capacity) * 100) : 0}%` }} />
-            </div>
-            {hangar.capacity === 0 && <p className="mt-1 text-[11px] text-ember-glow">Construis le hangar de défense de la colonie pour y placer des défenses.</p>}
-          </div>
-          {placed.length === 0 ? (
-            <EmptyState size="sm" icon="🛡️" title="Aucune défense" className="mb-3">Construis des défenses ci-dessous pour protéger la colonie.</EmptyState>
-          ) : (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {placed.map(([id, st]) => (
-                <span key={id} className="hud-cut-sm flex items-center gap-2 border border-white/[0.07] bg-white/[0.03] py-1 pl-1 pr-2.5" title={findUnit(id)?.name}>
-                  <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-8 w-8 object-contain" />
-                  <span className="flex flex-col leading-tight">
-                    <span className="tabular-mono text-sm font-semibold text-slate-100">{formatCompact(st.count)}</span>
-                    <span className="text-[10px] text-slate-500">{findUnit(id)?.name ?? id}</span>
-                  </span>
+        {/* 5.26 : deux colonnes sur grand écran : les chantiers à gauche, stocks et défenses à droite. */}
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div>
+            <SectionTitle
+              icon={Hammer}
+              aside={
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>
+                  <SortableGridToggle page="colonie-batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
                 </span>
-              ))}
-            </div>
-          )}
-          {colony.defenseJob ? (
-            (() => {
-              const job = colony.defenseJob;
-              const total = colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1000;
-              const left = Math.max(0, job.endTime - now);
-              return (
-                <div className="border border-cyan-glow/30 bg-cyan-glow/[0.04] p-2.5">
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-cyan-glow">
-                    <img src={assetUrl(findUnit(job.unitId)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
-                    <span className="flex-1">
-                      {formatCompact(job.qty)} {findUnit(job.unitId)?.name} en construction
-                    </span>
-                    <span className="inline-flex items-center gap-1 font-mono">
-                      <Clock className="h-3 w-3" /> {formatDuration(Math.floor(left / 1000))}
-                    </span>
-                    <CancelJobButton target={{ kind: "colonyDefense", colonyId: colony.id }} compact />
-                  </div>
-                  <Progress value={total > 0 ? 100 - (left / total) * 100 : 0} className="mt-1.5" />
-                </div>
-              );
-            })()
-          ) : defenses.length === 0 ? (
-            <p className="text-[11px] text-slate-500">Débloque des défenses sur ta planète mère pour en construire ici.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                {defenses.map((u) => (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => setDefense((d) => ({ ...d, unitId: u.id }))}
-                    className={cn(
-                      "hud-cut-sm flex items-center gap-2 border px-2 py-1.5 text-left text-xs transition-colors",
-                      defense.unitId === u.id ? "border-cyan-glow/70 bg-cyan-glow/10 text-cyan-glow" : "border-white/[0.07] bg-white/[0.02] text-slate-300 hover:border-cyan-glow/40",
-                    )}
-                  >
-                    <img src={assetUrl(u.image)} alt="" className="h-9 w-9 object-contain" />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate font-semibold">{u.name}</span>
-                      <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
-                      <span className="font-mono text-[10px] text-slate-500">
-                        {formatDuration(getUnitBuildTime(u, player.techLevels, player))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
-                      </span>
-                    </span>
-                  </button>
+              }
+            >
+              Bâtiments
+            </SectionTitle>
+            <SortableGrid
+              page="colonie-batiments"
+              editing={editingCards}
+              className="grid gap-3 md:grid-cols-2"
+              items={ids}
+              getId={(id) => id}
+              getLabel={(id) => (id === DEPOSIT_ID ? colonyBuildingName(colony, id) : (findBuilding(id)?.name ?? id))}
+              render={(id) => <BuildingTile key={id} colony={colony} player={player} id={id} busy={busy} now={now} onUpgrade={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")} />}
+            />
+          </div>
+
+          <div className="@container flex min-w-0 flex-col gap-5">
+            <div>
+              <SectionTitle icon={Package} aside={<span className="font-mono text-[10px] text-slate-500">entrepôt {formatCompact(storage)} / ressource commune</span>}>
+                Stocks de la colonie
+              </SectionTitle>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
+                {RESOURCE_LIST.map((r) => (
+                  <ResourceTile key={r.id} id={r.id} stock={Math.floor(colony.resources[r.id] ?? 0)} storage={storage} rate={rates[r.id] ?? 0} />
                 ))}
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <NumberInput size="sm" value={defense.qty} max={picked ? maxQty : 0} disabled={!picked} onChange={(v) => setDefense((d) => ({ ...d, qty: v }))} aria-label="Quantité" title="Maximum : place et stock" className="w-44" />
-                {picked && defense.qty > 0 && (
-                  <span className="flex flex-1 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                    <CostChips cost={batchCost} stock={colony.resources} />
-                    <span className="inline-flex items-center gap-1 font-mono" title="Temps de construction">
-                      <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty, colony))}
-                    </span>
-                    <span className={cn("inline-flex items-center gap-1 font-mono", batchSpace > free ? "text-ember-glow" : "")}>
-                      <Warehouse className="h-3 w-3" /> {formatCompact(batchSpace)}/{formatCompact(free)}
-                    </span>
-                  </span>
-                )}
-                <Button
-                  size="sm"
-                  className="ml-auto"
-                  disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable}
-                  onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), "Défenses en construction.")}
-                >
-                  <Shield className="h-3.5 w-3.5" /> Construire
-                </Button>
-              </div>
             </div>
-          )}
+
+            <div>
+              <SectionTitle icon={Shield} aside={<span className="font-mono text-[10px] text-slate-500">{formatCompact(free)} places libres</span>}>
+                Défenses de la colonie
+              </SectionTitle>
+              <div className="mb-3">
+                <div className="h-2 bg-white/[0.06]">
+                  <div className="hud-sheen h-full bg-gradient-to-r from-mint-glow/70 to-cyan-glow" style={{ width: `${hangar.capacity > 0 ? Math.min(100, (hangar.used / hangar.capacity) * 100) : 0}%` }} />
+                </div>
+                {hangar.capacity === 0 && <p className="mt-1 text-[11px] text-ember-glow">Construis le hangar de défense de la colonie pour y placer des défenses.</p>}
+              </div>
+              {placed.length === 0 ? (
+                <EmptyState size="sm" icon="🛡️" title="Aucune défense" className="mb-3">Construis des défenses ci-dessous pour protéger la colonie.</EmptyState>
+              ) : (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {placed.map(([id, st]) => (
+                    <span key={id} className="hud-cut-sm flex items-center gap-2 border border-white/[0.07] bg-white/[0.03] py-1 pl-1 pr-2.5" title={findUnit(id)?.name}>
+                      <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-8 w-8 object-contain" />
+                      <span className="flex flex-col leading-tight">
+                        <span className="tabular-mono text-sm font-semibold text-slate-100">{formatCompact(st.count)}</span>
+                        <span className="text-[10px] text-slate-500">{findUnit(id)?.name ?? id}</span>
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {colony.defenseJob ? (
+                (() => {
+                  const job = colony.defenseJob;
+                  const total = colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1000;
+                  const left = Math.max(0, job.endTime - now);
+                  return (
+                    <div className="border border-cyan-glow/30 bg-cyan-glow/[0.04] p-2.5">
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-cyan-glow">
+                        <img src={assetUrl(findUnit(job.unitId)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
+                        <span className="flex-1">
+                          {formatCompact(job.qty)} {findUnit(job.unitId)?.name} en construction
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-mono">
+                          <Clock className="h-3 w-3" /> {formatDuration(Math.floor(left / 1000))}
+                        </span>
+                        <CancelJobButton target={{ kind: "colonyDefense", colonyId: colony.id }} compact />
+                      </div>
+                      <Progress value={total > 0 ? 100 - (left / total) * 100 : 0} className="mt-1.5" />
+                    </div>
+                  );
+                })()
+              ) : defenses.length === 0 ? (
+                <p className="text-[11px] text-slate-500">Débloque des défenses sur ta planète mère pour en construire ici.</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <div className="grid gap-1.5 @sm:grid-cols-2">
+                    {defenses.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => setDefense((d) => ({ ...d, unitId: u.id }))}
+                        className={cn(
+                          "hud-cut-sm flex items-center gap-2 border px-2 py-1.5 text-left text-xs transition-colors",
+                          defense.unitId === u.id ? "border-cyan-glow/70 bg-cyan-glow/10 text-cyan-glow" : "border-white/[0.07] bg-white/[0.02] text-slate-300 hover:border-cyan-glow/40",
+                        )}
+                      >
+                        <img src={assetUrl(u.image)} alt="" className="h-9 w-9 object-contain" />
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <span className="truncate font-semibold">{u.name}</span>
+                          <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
+                          <span className="font-mono text-[10px] text-slate-500">
+                            {formatDuration(getUnitBuildTime(u, player.techLevels, player))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NumberInput size="sm" value={defense.qty} max={picked ? maxQty : 0} disabled={!picked} onChange={(v) => setDefense((d) => ({ ...d, qty: v }))} aria-label="Quantité" title="Maximum : place et stock" className="w-44" />
+                    {picked && defense.qty > 0 && (
+                      <span className="flex flex-1 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                        <CostChips cost={batchCost} stock={colony.resources} />
+                        <span className="inline-flex items-center gap-1 font-mono" title="Temps de construction">
+                          <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty, colony))}
+                        </span>
+                        <span className={cn("inline-flex items-center gap-1 font-mono", batchSpace > free ? "text-ember-glow" : "")}>
+                          <Warehouse className="h-3 w-3" /> {formatCompact(batchSpace)}/{formatCompact(free)}
+                        </span>
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      className="ml-auto"
+                      disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable}
+                      onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), "Défenses en construction.")}
+                    >
+                      <Shield className="h-3.5 w-3.5" /> Construire
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -846,6 +852,7 @@ function SlotStrip({ player }: { player: PlayerState }) {
 export function ColoniesPage() {
   useNowTicker();
   const raw = usePlayerStore((s) => s.player);
+  const [tab, setTab] = useState<string | null>(null);
   if (!raw) return null;
   // Affichage en direct : colonies rattrapées à l'instant présent.
   const player = structuredClone(raw);
@@ -860,9 +867,25 @@ export function ColoniesPage() {
         description="Jusqu'à deux planètes de plus, avec leurs propres bâtiments, stocks et défenses. Tes technologies, ton alliance et tes ascensions profitent à tout l'empire."
       />
       <SlotStrip player={player} />
-      {colonies.map((c) => (
-        <ColonyCard key={c.id} colony={c} player={player} />
-      ))}
+      {colonies.length > 1 ? (
+        /* 5.26 : une colonie à la fois, au choix, plutôt que deux longues fiches à la suite. */
+        <Tabs value={colonies.some((c) => c.id === tab) ? tab! : colonies[0].id} onValueChange={setTab}>
+          <TabsList>
+            {colonies.map((c) => (
+              <TabsTrigger key={c.id} value={c.id}>
+                <span className="font-mono text-slate-500">{c.slot}</span> {c.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {colonies.map((c) => (
+            <TabsContent key={c.id} value={c.id} className="mt-4">
+              <ColonyCard colony={c} player={player} />
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        colonies.map((c) => <ColonyCard key={c.id} colony={c} player={player} />)
+      )}
       {!raw.colonizing && <FoundColony player={player} />}
       {colonies.length === 0 && raw.colonizing && (
         <Card>

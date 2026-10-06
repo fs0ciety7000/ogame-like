@@ -35,7 +35,7 @@ const QUICK: { key: string; label: string; to: string; icon: LucideIcon }[] = [
   { key: "2", label: "Flotte", to: "/game/unites", icon: Rocket },
   { key: "3", label: "Labo", to: "/game/labo", icon: FlaskConical },
   { key: "4", label: "Galaxie", to: "/game/galaxie", icon: Orbit },
-  { key: "5", label: "Marché", to: "/game/marche", icon: Store },
+  { key: "5", label: "Commerce", to: "/game/commerce", icon: Store },
   { key: "6", label: "Missions", to: "/game/missions", icon: Compass },
 ];
 

@@ -275,6 +275,12 @@
         "maxSize": 50000
       },
       {
+        "name": "modules",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
+      },
+      {
         "name": "synthesis",
         "type": "json",
         "required": false,
@@ -2872,6 +2878,289 @@
     ],
     "indexes": [
       "CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"
+    ]
+  },
+  {
+    "id": "pbc_ce_server_metrics",
+    "name": "server_metrics",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_moderation",
+    "name": "moderation",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_poll_votes",
+    "name": "poll_votes",
+    "type": "base",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "pollId",
+        "type": "text",
+        "required": true,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "uid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "choice",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)",
+      "CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_auctions",
+    "name": "auctions",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "sellerId",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "sellerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": true,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "item",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
+      },
+      {
+        "name": "label",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false
+      },
+      {
+        "name": "rarity",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "res",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "startPrice",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "bid",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "bidderId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "bidderPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "bids",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 12,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "endsAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "closedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "tax",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)",
+      "CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_global_messages",
+    "name": "global_messages",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\" && hidden = false",
+    "viewRule": "@request.auth.id != \"\" && hidden = false",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "uid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "allianceTag",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": true,
+        "max": 400,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "hidden",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "reporters",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
+      },
+      {
+        "name": "masked",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)",
+      "CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)"
     ]
   }
 ]

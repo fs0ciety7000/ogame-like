@@ -30,6 +30,8 @@ export function translateAuthError(err: unknown): string {
   if (!(err instanceof ClientResponseError)) return "Une erreur est survenue. Réessaie.";
   if (err.status === 0) return "Serveur injoignable. Vérifie ta connexion.";
   if (err.status === 429) return "Trop de tentatives. Réessaie dans quelques minutes.";
+  // 5.26 : compte suspendu ou banni : le serveur donne la durée et le motif.
+  if (err.status === 403 && (err.response?.data as Record<string, unknown> | undefined)?.banned) return String(err.response?.message ?? "Compte suspendu.");
 
   const fields = (err.response?.data ?? {}) as Record<string, { code?: string }>;
   if (fields.email?.code === "validation_not_unique") return "Cet email est déjà utilisé.";

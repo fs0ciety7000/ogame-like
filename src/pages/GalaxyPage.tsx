@@ -8,6 +8,7 @@ import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Radar, Recycle, Search, S
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FoldSection } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeDebrisFields, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { debrisTotal, type DebrisField } from "@/game/debris";
@@ -17,7 +18,7 @@ import { formatCoords, galaxyCoords } from "@/game/galaxy";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetProgress, mapPosition } from "@/game/fleets";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { getRankLabel } from "@/game/ranks";
-import { formatClock, formatCompact, formatDuration, timeAgo } from "@/lib/utils";
+import { formatClock, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
@@ -97,6 +98,7 @@ export function GalaxyPage() {
   // v5.1 : territoires d'alliance (secteurs teintés), affichables ou non.
   const territories = useTerritories();
   const [showSectors, setShowSectors] = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
   const fleets = useFleetStore((s) => s.fleets);
   const now = useSmoothNow();
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
@@ -501,7 +503,11 @@ export function GalaxyPage() {
           {blips.length === 0 && (
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
-          <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400 sm:right-auto">
+          {/* 5.26 : légende repliable, pour dégager la carte (surtout sur téléphone). */}
+          <button type="button" onClick={() => setShowLegend((v) => !v)} aria-expanded={showLegend} className="hud-cut-sm absolute bottom-2 left-2 z-10 bg-space-950/80 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:text-cyan-glow">
+            {showLegend ? "Masquer la légende" : "Légende"}
+          </button>
+          {showLegend && <div className="pointer-events-none absolute bottom-9 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400 sm:right-auto">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-gold-glow" /> Toi
             </span>
@@ -525,7 +531,7 @@ export function GalaxyPage() {
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
             </span>
-          </div>
+          </div>}
           <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500 sm:block">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
@@ -564,14 +570,19 @@ export function GalaxyPage() {
                 )}
               </div>
               {travel && (
-                <div className="rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+                <div className="hud-callout hud-tone-neutral px-3 py-2 text-xs text-slate-400">
                   <p>
-                    Distance : <strong className="text-slate-200">{Math.round(travel.distance)}</strong>
+                    Distance : <strong className="font-mono tabular-nums text-slate-200">{formatNumber(Math.round(travel.distance))}</strong>
                   </p>
                   {travel.fast !== null ? (
                     <p>
-                      Temps de vol : <strong className="text-slate-200">{formatDuration(travel.fast)}</strong>
-                      {travel.slow !== travel.fast && <> à {formatDuration(travel.slow!)} selon tes vaisseaux</>}
+                      Temps de vol : <strong className="font-mono tabular-nums text-slate-200">{formatDuration(travel.fast)}</strong>
+                      {travel.slow !== travel.fast && (
+                        <>
+                          {" "}
+                          à <span className="font-mono tabular-nums">{formatDuration(travel.slow!)}</span> selon tes vaisseaux
+                        </>
+                      )}
                     </p>
                   ) : (
                     <p>Aucun vaisseau d'attaque disponible.</p>
@@ -581,7 +592,8 @@ export function GalaxyPage() {
               {selectedDebris && (
                 <div className="hud-callout hud-tone-mint flex items-center gap-2 px-3 py-2 text-xs text-slate-300">
                   <span className="flex-1">
-                    <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> {formatCompact(selectedDebris.scrap)} · <ResourceIcon id="energy" /> {formatCompact(selectedDebris.energy)}
+                    <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> <span className="font-mono tabular-nums">{formatCompact(selectedDebris.scrap)}</span> · <ResourceIcon id="energy" />{" "}
+                    <span className="font-mono tabular-nums">{formatCompact(selectedDebris.energy)}</span>
                   </span>
                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setRecycleField(selectedDebris)}>
                     <Recycle className="mr-1 h-3.5 w-3.5" /> Recycler
@@ -631,10 +643,8 @@ export function GalaxyPage() {
           <TerritoryCard />
           <FleetsPanel />
           {debrisByDistance.length > 0 && (
-            <Card className="flex flex-col gap-2 p-4">
-              <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
-                <Recycle className="h-4 w-4 text-mint-glow" /> Champs de débris
-              </h3>
+            <Card className="p-4">
+              <FoldSection id="galaxie-debris" tone="mint" title={<><Recycle className="h-3.5 w-3.5" /> Champs de débris <span className="font-mono text-slate-500">{debrisByDistance.length}</span></>} className="gap-2">
               {debrisByDistance.slice(0, 6).map((d) => (
                 <div key={d.id} className="flex items-center gap-2 text-xs">
                   <button
@@ -653,6 +663,7 @@ export function GalaxyPage() {
                   </Button>
                 </div>
               ))}
+              </FoldSection>
             </Card>
           )}
         </div>
@@ -678,11 +689,8 @@ function TerritoryCard() {
   const held = map?.sectors.filter((x) => x.allianceId && x.allianceId === me.allianceId) ?? [];
   const homeSector = map?.sectors[home];
   return (
-    <Card className="flex flex-col gap-2 p-4">
-      <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
-        <Grid3x3 className="h-4 w-4 text-mint-glow" /> Territoires
-        {bonus > 0 && <span className="ml-auto font-mono text-xs text-mint-glow">+{Math.round(bonus * 100)} % production</span>}
-      </h3>
+    <Card className="p-4">
+      <FoldSection id="galaxie-territoires" tone="mint" title={<><Grid3x3 className="h-3.5 w-3.5" /> Territoires</>} aside={bonus > 0 ? <span className="font-mono text-xs text-mint-glow">+{Math.round(bonus * 100)} % production</span> : undefined} className="gap-2">
       <p className="text-xs text-slate-400">
         Ta planète est en secteur <b className="text-slate-200">{sectorLabel(home)}</b>
         {homeSector?.allianceId ? (
@@ -704,6 +712,7 @@ function TerritoryCard() {
       <p className="text-[11px] leading-relaxed text-slate-500">
         Un secteur appartient à l'alliance qui y cumule le plus de niveaux de bâtiments (au moins {TERRITORY_RULES.minLevels}), planètes mères et colonies comprises. +{Math.round(TERRITORY_RULES.bonusPerSector * 100)} % de production par secteur tenu où tu es présent, +{Math.round(TERRITORY_RULES.maxBonus * 100)} % au plus. Recalcul toutes les heures.
       </p>
+      </FoldSection>
     </Card>
   );
 }

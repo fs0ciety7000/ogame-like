@@ -1093,7 +1093,7 @@ function tradeContractRequest(e) {
         savePlayer(txApp, game, me.loaded, me.player, me.queues);
         if (c.targetUid) {
           notify(txApp, c.targetUid, [
-            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Marché → Contrats).`, link: "/game/marche?onglet=contrats", createdAtMs: now, read: false },
+            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Commerce → Contrats).`, link: "/game/commerce?onglet=contrats", createdAtMs: now, read: false },
           ]);
         }
         out = toPlain(rec);
@@ -2304,7 +2304,7 @@ function writeMaintenance(txApp, game, previous, next, now, actor) {
     action: "maintenance",
     targetCollection: "game_config",
     recordId: rec.id,
-    recordLabel: next.enabled ? "maintenance activée" : actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée",
+    recordLabel: next.enabled ? (previous.enabled ? "maintenance modifiée" : "maintenance activée") : previous.enabled ? (actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée") : next.scheduled ? "maintenance programmée" : "programmation annulée",
     changes: { avant: previous, après: next, ultimatumsProlongés: extended },
     createdAtMs: now,
   });
@@ -2325,19 +2325,32 @@ function adminMaintenance(e) {
   let response = null;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
-    const next = game.nextMaintenance(previous, req, now);
+    // 5.26 : { schedule: {...} | null } programme ou annule une maintenance future.
+    let next;
+    if (Object.prototype.hasOwnProperty.call(req, "schedule")) {
+      try {
+        next = game.scheduleMaintenance(previous, req.schedule, now);
+      } catch (err) {
+        throw new BadRequestError(String((err && err.message) || err));
+      }
+    } else next = game.nextMaintenance(previous, req, now);
     const extended = writeMaintenance(txApp, game, previous, next, now, actor);
     response = Object.assign({ extended }, next);
   });
   return e.json(200, response);
 }
 
-/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active). */
+/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active)
+ *  et, 5.26, démarre la maintenance programmée à son heure. */
 function autoEndMaintenance(now) {
   const game = loadGame();
   let ended = false;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
+    if (game.maintenanceShouldAutoStart(previous, now)) {
+      writeMaintenance(txApp, game, previous, game.startScheduledMaintenance(previous, now), now, { id: "system", name: "Système (maintenance programmée)" });
+      return;
+    }
     if (!game.maintenanceShouldAutoEnd(previous, now)) return;
     const next = game.nextMaintenance(previous, { enabled: false }, now);
     writeMaintenance(txApp, game, previous, next, now, { id: "system", name: "Système" });
@@ -5438,16 +5451,22 @@ function adminServerPot(e) {
     const rec = configRecord(txApp, game.SERVER_POT_KEY);
     const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
     const owner = loadPlayer(txApp, game, toUid);
-    const next = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
-    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
+    const afterRes = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
     const given = {};
-    const last = next.log[next.log.length - 1];
-    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    if (afterRes !== pot) {
+      const last = afterRes.log[afterRes.log.length - 1];
+      Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    }
+    // 5.26 : Ambre du pot (taxe des enchères en Ambre).
+    const amberOut = game.takeAmberFromPot(afterRes, Number(req.amber) || 0, now, `${note} → ${owner.player.pseudo}`);
+    const next = amberOut.pot;
+    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    if (amberOut.taken > 0) game.creditBid(flushed.player, "amber", amberOut.taken);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, toUid, flushed.notifications.concat([
-      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${game.describeGain(given)} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
+      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${[Object.keys(given).length ? game.describeGain(given) : "", amberOut.taken > 0 ? `${amberOut.taken} Ambre` : ""].filter(Boolean).join(" et ")} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
     ]));
     writeConfig(txApp, game.SERVER_POT_KEY, next);
     const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
@@ -5458,7 +5477,7 @@ function adminServerPot(e) {
       targetCollection: "game_config",
       recordId: game.SERVER_POT_KEY,
       recordLabel: `Pot commun : ${note}`,
-      changes: { versé: given, joueur: owner.player.pseudo },
+      changes: { versé: given, ambre: amberOut.taken, joueur: owner.player.pseudo },
       createdAtMs: now,
     });
     txApp.save(log);
@@ -8350,4 +8369,664 @@ function adminWhatIfData(e) {
   return e.json(200, { empires: players.concat(lords), at: now });
 }
 
-module.exports = { adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.26 : métriques d'exploitation et page de statut ---------- */
+
+const CRON_STORE_KEY = "cosmic_cron_metrics";
+
+function readCronMetrics(game) {
+  try {
+    const raw = $app.store().get(CRON_STORE_KEY);
+    return game.normalizeCronMetrics(raw ? JSON.parse(raw) : null);
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Exécute une tâche planifiée en mesurant sa durée. Les mesures vivent en
+ * mémoire du serveur (pas d'écriture en base chaque minute) : elles repartent
+ * de zéro au redémarrage. Une erreur est consignée puis relancée.
+ */
+function timedCron(name, spec, fn) {
+  const started = Date.now();
+  let error = null;
+  try {
+    fn();
+  } catch (err) {
+    error = String((err && err.message) || err);
+    console.log(`[cosmic] tâche ${name} : ${error}`);
+  }
+  try {
+    const game = loadGame();
+    const next = game.recordCronRun(readCronMetrics(game), name, spec, started, Date.now() - started, error);
+    $app.store().set(CRON_STORE_KEY, JSON.stringify(next));
+  } catch (_) {
+    /* les métriques ne doivent jamais faire échouer une tâche */
+  }
+}
+
+function readServerMetric(txApp, key) {
+  try {
+    return toPlain(txApp.findFirstRecordByData("server_metrics", "key", key)).data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeServerMetric(txApp, key, data) {
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("server_metrics", "key", key);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("server_metrics"));
+    rec.set("key", key);
+  }
+  rec.set("data", data);
+  txApp.save(rec);
+}
+
+/** POST /api/cosmic/vitals { route, device, values } — mesures de performance d'un navigateur. */
+function vitalsRequest(e) {
+  const game = loadGame();
+  const sample = game.sanitizeVitals(body(e));
+  if (!sample) throw new BadRequestError("Mesures invalides.");
+  const now = Date.now();
+  $app.runInTransaction((txApp) => {
+    writeServerMetric(txApp, game.METRICS_KEYS.vitals, game.addVitals(readServerMetric(txApp, game.METRICS_KEYS.vitals) || {}, sample, now));
+  });
+  return e.json(200, { ok: true });
+}
+
+function countStuckFleets(now) {
+  try {
+    return $app.countRecords(
+      "fleets",
+      $dbx.exp(
+        '(status = "outbound" AND arriveAtMs <= {:t}) OR (status = "returning" AND returnAtMs > 0 AND returnAtMs <= {:t}) OR ((status = "stationed" OR status = "decision") AND stationedUntilMs > 0 AND stationedUntilMs <= {:t})',
+        { t: now - STUCK_FLEET_MS },
+      ),
+    );
+  } catch (_) {
+    return -1;
+  }
+}
+
+/** GET /api/cosmic/admin/metrics — tâches planifiées, Web Vitals, flottes bloquées, e-mails programmés. */
+function adminMetrics(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  const cron = readCronMetrics(game);
+  const crons = Object.keys(cron)
+    .sort()
+    .map((name) => Object.assign({ name, status: game.cronStatus(cron[name], now) }, cron[name]));
+  let mailScheduled = 0;
+  try {
+    const rec = configRecord($app, game.MAIL_SCHEDULE_KEY);
+    mailScheduled = game.scheduleState(rec ? toPlain(rec).data : null).list.length;
+  } catch (_) {
+    mailScheduled = 0;
+  }
+  return e.json(200, {
+    now,
+    crons,
+    cronSummary: game.cronSummary(cron, now),
+    vitals: game.vitalsReport(readServerMetric($app, game.METRICS_KEYS.vitals) || {}, now, 7),
+    stuckFleets: countStuckFleets(now),
+    mailScheduled,
+    logicVersion: game.LOGIC_VERSION,
+  });
+}
+
+/** GET /api/cosmic/status — page de statut publique (aucune donnée sensible). */
+function publicStatus(e) {
+  const game = loadGame();
+  const now = Date.now();
+  const m = readMaintenance($app, game);
+  const summary = game.cronSummary(readCronMetrics(game), now);
+  const stuck = countStuckFleets(now);
+  const upcoming = game.upcomingMaintenance(m, now);
+  return e.json(200, {
+    now,
+    logicVersion: game.LOGIC_VERSION,
+    maintenance: { enabled: m.enabled, message: m.message, version: m.version, startedAtMs: m.startedAtMs, endsAtMs: m.endsAtMs },
+    scheduled: m.scheduled ? { startAtMs: m.scheduled.startAtMs, endsAtMs: m.scheduled.endsAtMs, message: m.scheduled.message, version: m.scheduled.version, announced: !!upcoming } : null,
+    services: {
+      api: "ok",
+      tasks: summary.total === 0 ? "unknown" : summary.late || summary.failing ? "degraded" : "ok",
+      fleets: stuck < 0 ? "unknown" : stuck > 0 ? "degraded" : "ok",
+    },
+  });
+}
+
+/* ---------- 5.26 : modération (bannissement, suppression par l'équipe) ---------- */
+
+const BANS_STORE_KEY = "cosmic_bans";
+
+function readModeration(txApp, key) {
+  try {
+    return toPlain(txApp.findFirstRecordByData("moderation", "key", key)).data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeModeration(txApp, key, data) {
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("moderation", "key", key);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("moderation"));
+    rec.set("key", key);
+  }
+  rec.set("data", data);
+  txApp.save(rec);
+}
+
+/** Liste des bannis, gardée en mémoire du serveur (lue en base au premier besoin). */
+function readBans(game) {
+  try {
+    const cached = $app.store().get(BANS_STORE_KEY);
+    if (cached) return game.normalizeBans(JSON.parse(cached));
+  } catch (_) {
+    /* cache illisible : relu en base */
+  }
+  const bans = game.normalizeBans(readModeration($app, game.MODERATION_KEYS.bans));
+  try {
+    $app.store().set(BANS_STORE_KEY, JSON.stringify(bans));
+  } catch (_) {
+    /* sans cache, on relira la base */
+  }
+  return bans;
+}
+
+function saveBans(txApp, game, bans) {
+  writeModeration(txApp, game.MODERATION_KEYS.bans, bans);
+  try {
+    $app.store().set(BANS_STORE_KEY, JSON.stringify(bans));
+  } catch (_) {
+    /* cache reconstruit au prochain besoin */
+  }
+}
+
+function banError(game, ban) {
+  return new ApiError(403, game.banMessage(ban), { banned: true, untilMs: ban.untilMs, reason: ban.reason });
+}
+
+/** Middleware : un joueur banni ne peut plus rien faire (sauf voir son bannissement). */
+function banGuard(e) {
+  if (!e.auth || e.hasSuperuserAuth() || e.auth.collection().name !== "users") return;
+  const game = loadGame();
+  const ban = game.activeBan(readBans(game), e.auth.id, Date.now());
+  if (!ban || game.allowedWhileBanned(e.request.method, e.request.url.path)) return;
+  if (isGameAdmin(e)) return;
+  throw banError(game, ban);
+}
+
+/** Connexion (mot de passe, OAuth, code) refusée tant que le bannissement court. */
+function banAuthGuard(e) {
+  const game = loadGame();
+  const ban = e.record ? game.activeBan(readBans(game), e.record.id, Date.now()) : null;
+  if (ban) throw banError(game, ban);
+}
+
+/** GET /api/cosmic/ban/me — mon bannissement en cours (ou null). */
+function banMe(e) {
+  const game = loadGame();
+  return e.json(200, { ban: game.activeBan(readBans(game), e.auth.id, Date.now()) });
+}
+
+function adminActor(e) {
+  return e.auth ? e.auth.getString("name") || e.auth.getString("username") || e.auth.getString("email") : "superuser";
+}
+
+/** GET/POST /api/cosmic/admin/ban — liste ; { uid, hours|null, reason } bannit ; { uid, lift: true } lève. */
+function adminBan(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  if (e.request.method !== "POST") {
+    const bans = readBans(game);
+    return e.json(200, { bans: Object.keys(bans).map((k) => Object.assign({ active: !!game.activeBan(bans, k, now) }, bans[k])) });
+  }
+  const req = body(e);
+  const uid = String(req.uid || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const bans = game.pruneBans(game.normalizeBans(readModeration(txApp, game.MODERATION_KEYS.bans)), now);
+    const rec = findOrNull(txApp, "players", uid);
+    const pseudo = rec ? rec.getString("pseudo") : (bans[uid] || {}).pseudo || uid;
+    if (req.lift === true) {
+      if (!bans[uid]) throw new BadRequestError("Ce joueur n'est pas banni.");
+      saveBans(txApp, game, game.unbanPlayer(bans, uid));
+      writeAdminLog(txApp, e, "joueur : débanni", uid, pseudo, { levé: true }, String(req.reason || "").trim() || "levée manuelle");
+      out = { lifted: true };
+      return;
+    }
+    if (!rec) throw new NotFoundError("Joueur introuvable.");
+    if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Un administrateur ne peut pas être banni.");
+    const hours = req.hours === null || req.hours === undefined ? null : Number(req.hours);
+    let next;
+    try {
+      next = game.banPlayer(bans, { uid, pseudo, hours, reason: String(req.reason || ""), byName: adminActor(e) }, now);
+    } catch (err) {
+      throw new BadRequestError(String((err && err.message) || err));
+    }
+    saveBans(txApp, game, next);
+    writeAdminLog(txApp, e, hours === null ? "joueur : banni" : "joueur : suspendu", uid, pseudo, { durée: hours === null ? "permanent" : `${hours} h`, jusquA: next[uid].untilMs }, next[uid].reason);
+    out = next[uid];
+  });
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/admin/player/delete { uid, confirm (pseudo), reason } — suppression définitive du compte et de l'empire. */
+function adminDeletePlayer(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const req = body(e);
+  const uid = String(req.uid || "");
+  const reason = String(req.reason || "").trim();
+  if (reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+  const summary = { fleets: 0, offers: 0, notifications: 0, alliance: null };
+  let pseudo = uid;
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "players", uid);
+    if (!rec) throw new NotFoundError("Joueur introuvable.");
+    pseudo = rec.getString("pseudo");
+    if (String(req.confirm || "") !== pseudo) throw new BadRequestError("Confirmation incorrecte : tape le pseudo du joueur.");
+    if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Retire d'abord ses droits d'administrateur.");
+    // Alliance : le joueur en sort (l'alliance disparaît si elle se vide).
+    const allianceId = rec.getString("allianceId");
+    if (allianceId) {
+      const a = findOrNull(txApp, "alliances", allianceId);
+      if (a) {
+        const next = game.removeMember(toPlain(a), uid);
+        if (!next) txApp.delete(a);
+        else {
+          a.set("members", next.members);
+          a.set("memberPseudos", next.memberPseudos);
+          a.set("roles", next.roles);
+          a.set("createdBy", next.createdBy);
+          txApp.save(a);
+        }
+        summary.alliance = next ? "quittée" : "dissoute";
+      }
+    }
+    txApp.findRecordsByFilter("fleets", "ownerUid = {:u}", "", 0, 0, { u: uid }).forEach((f) => {
+      txApp.delete(f);
+      summary.fleets++;
+    });
+    txApp.findRecordsByFilter("market_offers", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((o) => {
+      txApp.delete(o);
+      summary.offers++;
+    });
+    // 5.26 : ses ventes aux enchères ouvertes s'annulent, le meilleur enchérisseur est remboursé.
+    txApp.findRecordsByFilter("auctions", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((a) => {
+      const bidderId = a.getString("bidderId");
+      if (bidderId && findOrNull(txApp, "players", bidderId)) {
+        const b = loadFlushed(txApp, game, bidderId);
+        game.creditBid(b.player, a.getString("res"), a.getFloat("bid"));
+        savePlayer(txApp, game, b.loaded, b.player, b.queues);
+      }
+      a.set("status", "cancelled");
+      a.set("closedAtMs", Date.now());
+      txApp.save(a);
+    });
+    txApp.findRecordsByFilter("notifications", "player_id = {:u}", "", 0, 0, { u: uid }).forEach((n) => {
+      txApp.delete(n);
+      summary.notifications++;
+    });
+    txApp.findRecordsByFilter("passkeys", "user = {:u}", "", 0, 0, { u: uid }).forEach((p) => txApp.delete(p));
+    const q = findOrNull(txApp, "queues", uid);
+    if (q) txApp.delete(q);
+    txApp.delete(rec);
+    deleteProfile(txApp, uid);
+    const user = findOrNull(txApp, "users", uid);
+    if (user) txApp.delete(user);
+    const bans = game.normalizeBans(readModeration(txApp, game.MODERATION_KEYS.bans));
+    if (bans[uid]) saveBans(txApp, game, game.unbanPlayer(bans, uid));
+    writeAdminLog(txApp, e, "joueur : supprimé", uid, pseudo, summary, reason);
+  });
+  return e.json(200, Object.assign({ pseudo }, summary));
+}
+
+/* ---------- 5.26 : sondages des annonces ---------- */
+
+function readPoll(txApp, game, pollId) {
+  const rec = configRecord(txApp, game.ANNOUNCEMENTS_KEY);
+  return game.findPoll(game.normalizeAnnouncementSettings(rec ? toPlain(rec).data : null), pollId);
+}
+
+function pollResults(txApp, game, poll, pollId, uid, now) {
+  const votes = txApp.findRecordsByFilter("poll_votes", "pollId = {:p}", "", 0, 0, { p: pollId });
+  let mine = null;
+  const choices = votes.map((v) => {
+    const c = v.getInt("choice");
+    if (v.getString("uid") === uid) mine = c;
+    return c;
+  });
+  return game.tally(poll, choices, mine, now);
+}
+
+/** GET /api/cosmic/poll?id= — résultats (et mon vote). POST { id, choice } — voter ou changer son vote. */
+function pollRequest(e) {
+  const game = loadGame();
+  const now = Date.now();
+  const uid = e.auth.id;
+  if (e.request.method !== "POST") {
+    const pollId = String((e.requestInfo().query || {}).id || "");
+    const poll = readPoll($app, game, pollId);
+    if (!poll) throw new NotFoundError("Sondage introuvable.");
+    return e.json(200, pollResults($app, game, poll, pollId, uid, now));
+  }
+  const req = body(e);
+  const pollId = String(req.id || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const poll = readPoll(txApp, game, pollId);
+    let choice;
+    try {
+      choice = game.validateVote(poll, req.choice, now);
+    } catch (err) {
+      throw new BadRequestError(String((err && err.message) || err));
+    }
+    let rec = null;
+    try {
+      rec = txApp.findFirstRecordByFilter("poll_votes", "pollId = {:p} && uid = {:u}", { p: pollId, u: uid });
+    } catch (_) {
+      rec = new Record(txApp.findCollectionByNameOrId("poll_votes"));
+      rec.set("pollId", pollId);
+      rec.set("uid", uid);
+    }
+    rec.set("choice", choice);
+    rec.set("createdAtMs", now);
+    txApp.save(rec);
+    out = pollResults(txApp, game, poll, pollId, uid, now);
+  });
+  return e.json(200, out);
+}
+
+/* ---------- 5.26 : canal global ---------- */
+
+function readChatMutes(txApp, game) {
+  return game.normalizeMutes(readModeration(txApp, game.CHAT_MODERATION_KEYS.mutes));
+}
+
+function readChatFilter(txApp, game) {
+  return game.normalizeFilter(readModeration(txApp, game.CHAT_MODERATION_KEYS.filter));
+}
+
+/** POST /api/cosmic/global/send { text } — message dans le canal global. */
+function globalSend(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const now = Date.now();
+  const req = body(e);
+  let text;
+  try {
+    text = game.cleanGlobalMessage(req.text);
+  } catch (err) {
+    throw new BadRequestError(String((err && err.message) || err));
+  }
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const mute = game.activeMute(readChatMutes(txApp, game), uid, now);
+    if (mute) throw new ForbiddenError(mute.untilMs === null ? `Tu n'as plus la parole sur le canal global. Motif : ${mute.reason}` : `Parole retirée sur le canal global jusqu'au ${new Date(mute.untilMs).toISOString().slice(0, 16).replace("T", " ")} (UTC). Motif : ${mute.reason}`);
+    const recent = txApp.findRecordsByFilter("global_messages", "uid = {:u} && createdAtMs > {:t}", "-createdAtMs", 10, 0, { u: uid, t: now - 60_000 }).map((r) => r.getFloat("createdAtMs"));
+    const limited = game.rateLimitError(recent, now);
+    if (limited) throw new BadRequestError(limited);
+    const player = findOrNull(txApp, "players", uid);
+    if (!player) throw new BadRequestError("Profil joueur introuvable.");
+    const filtered = game.filterText(text, readChatFilter(txApp, game));
+    const rec = new Record(txApp.findCollectionByNameOrId("global_messages"));
+    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked });
+    txApp.save(rec);
+    out = { id: rec.id, text: filtered.text, masked: filtered.masked };
+  });
+  // Ménage : seuls les derniers messages sont gardés.
+  try {
+    const old = $app.findRecordsByFilter("global_messages", "id != ''", "-createdAtMs", 50, game.GLOBAL_CHAT_RULES.keep, {});
+    old.forEach((r) => $app.delete(r));
+  } catch (_) {
+    /* ménage au prochain envoi */
+  }
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/global/report { id } — signale un message (masqué d'office à 3 signalements). */
+function globalReport(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const id = String(body(e).id || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "global_messages", id);
+    if (!rec) throw new NotFoundError("Message introuvable.");
+    if (rec.getString("uid") === uid) throw new BadRequestError("Tu ne peux pas signaler ton propre message.");
+    const r = game.addReport(toPlain(rec).reporters, uid);
+    rec.set("reporters", r.reporters);
+    if (r.hide) rec.set("hidden", true);
+    txApp.save(rec);
+    out = { reports: r.reporters.length, hidden: r.hide };
+  });
+  return e.json(200, out);
+}
+
+/** GET/POST /api/cosmic/admin/global — messages signalés ou masqués, sourdines, filtre ; actions de modération. */
+function adminGlobal(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  if (e.request.method !== "POST") {
+    const flagged = $app.findRecordsByFilter("global_messages", "hidden = true || reporters != '[]'", "-createdAtMs", 100, 0, {}).map((r) => {
+      const p = toPlain(r);
+      return { id: r.id, uid: p.uid, pseudo: p.pseudo, text: p.text, createdAtMs: p.createdAtMs, hidden: p.hidden, reports: (p.reporters || []).length };
+    });
+    const mutes = readChatMutes($app, game);
+    return e.json(200, {
+      flagged,
+      mutes: Object.keys(mutes).map((uid) => Object.assign({ uid, active: !!game.activeMute(mutes, uid, now) }, mutes[uid])),
+      filter: readChatFilter($app, game),
+    });
+  }
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = { ok: true };
+  $app.runInTransaction((txApp) => {
+    if (action === "hide" || action === "restore" || action === "delete") {
+      const rec = findOrNull(txApp, "global_messages", String(req.id || ""));
+      if (!rec) throw new NotFoundError("Message introuvable.");
+      if (action === "delete") txApp.delete(rec);
+      else {
+        rec.set("hidden", action === "hide");
+        if (action === "restore") rec.set("reporters", []);
+        txApp.save(rec);
+      }
+      writeAdminLog(txApp, e, `canal : ${action === "delete" ? "supprimé" : action === "hide" ? "masqué" : "rétabli"}`, rec.getString("uid"), rec.getString("pseudo"), { texte: rec.getString("text") }, String(req.reason || "modération du canal"));
+    } else if (action === "mute" || action === "unmute") {
+      const uid = String(req.uid || "");
+      const mutes = readChatMutes(txApp, game);
+      const player = findOrNull(txApp, "players", uid);
+      if (action === "unmute") delete mutes[uid];
+      else {
+        const reason = String(req.reason || "").trim();
+        if (reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+        const hours = req.hours === null || req.hours === undefined ? null : Number(req.hours);
+        if (hours !== null && !(hours > 0)) throw new BadRequestError("Durée invalide.");
+        mutes[uid] = { untilMs: hours === null ? null : now + hours * 3600000, reason: reason.slice(0, 200), byName: adminActor(e) };
+      }
+      writeModeration(txApp, game.CHAT_MODERATION_KEYS.mutes, mutes);
+      writeAdminLog(txApp, e, action === "mute" ? "canal : sourdine" : "canal : parole rendue", uid, player ? player.getString("pseudo") : uid, mutes[uid] || null, String(req.reason || "levée"));
+    } else if (action === "filter") {
+      const words = game.normalizeFilter({ words: req.words });
+      writeModeration(txApp, game.CHAT_MODERATION_KEYS.filter, { words });
+      out = { words };
+    } else throw new BadRequestError("Action inconnue.");
+  });
+  return e.json(200, out);
+}
+
+/* ---------- 5.26 : Hôtel des enchères ---------- */
+
+/** « 150 ferraille », « 12 Ambre ». */
+function auctionAmount(game, res, n) {
+  return res === "amber" ? `${Math.floor(n)} Ambre` : game.describeAmount(res, n);
+}
+
+function auctionNote(title, message, now) {
+  return { kind: "gift", title: title, message: message, createdAtMs: now, read: false, link: "/game/commerce?onglet=encheres" };
+}
+
+/** POST /api/cosmic/auction { action: "list" | "bid" | "cancel", … } */
+function auctionRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    if (action === "list") {
+      const seller = loadFlushed(txApp, game, uid);
+      if (game.onVacation(seller.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour vendre.");
+      const open = txApp.findRecordsByFilter("auctions", 'sellerId = {:u} && status = "open"', "", 50, 0, { u: uid }).length;
+      let listing, lot;
+      try {
+        listing = game.validateListing(req, open);
+        lot = game.takeLot(seller.player, listing.kind, listing.itemId);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, seller.notifications);
+      const rec = new Record(txApp.findCollectionByNameOrId("auctions"));
+      rec.load({
+        sellerId: uid,
+        sellerPseudo: seller.player.pseudo,
+        kind: listing.kind,
+        item: lot.item,
+        label: lot.label,
+        rarity: lot.rarity,
+        res: listing.res,
+        startPrice: listing.startPrice,
+        bid: 0,
+        bidderId: "",
+        bidderPseudo: "",
+        bids: 0,
+        status: "open",
+        createdAtMs: now,
+        endsAtMs: now + listing.durationH * 3600000,
+        closedAtMs: 0,
+        tax: 0,
+      });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    const rec = findOrNull(txApp, "auctions", String(req.id || ""));
+    if (!rec) throw new NotFoundError("Vente introuvable.");
+    const a = toPlain(rec);
+    if (action === "cancel") {
+      if (a.sellerId !== uid) throw new NotFoundError("Vente introuvable.");
+      if (!game.canCancel(a)) throw new BadRequestError("Une vente avec une enchère ne s'annule plus.");
+      const seller = loadFlushed(txApp, game, uid);
+      game.giveLot(seller.player, a.kind, a.item);
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, seller.notifications);
+      rec.set("status", "cancelled");
+      rec.set("closedAtMs", now);
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (action !== "bid") throw new BadRequestError("Action inconnue.");
+    const bidder = loadFlushed(txApp, game, uid);
+    if (game.onVacation(bidder.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour enchérir.");
+    let res;
+    try {
+      res = game.placeBid(a, uid, bidder.player.pseudo, req.amount, now);
+      game.debitBid(bidder.player, a.res, res.charge);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, bidder.loaded, bidder.player, bidder.queues);
+    notify(txApp, uid, bidder.notifications);
+    if (res.refund) {
+      const prev = findOrNull(txApp, "players", res.refund.uid) ? loadFlushed(txApp, game, res.refund.uid) : null;
+      if (prev) {
+        game.creditBid(prev.player, a.res, res.refund.amount);
+        savePlayer(txApp, game, prev.loaded, prev.player, prev.queues);
+        notify(txApp, res.refund.uid, prev.notifications.concat([
+          auctionNote("Enchère dépassée", `${bidder.player.pseudo} a surenchéri sur « ${a.label} » (${auctionAmount(game, a.res, a.bid)}). Ta mise de ${auctionAmount(game, a.res, res.refund.amount)} t'est rendue.`, now),
+        ]));
+      }
+    }
+    ["bid", "bidderId", "bidderPseudo", "bids", "endsAtMs"].forEach((k) => rec.set(k, a[k]));
+    txApp.save(rec);
+    out = toPlain(rec);
+  });
+  return e.json(200, out);
+}
+
+/** Clôture des ventes échues (tâche minute). Renvoie le nombre de ventes closes. */
+function auctionsTick(now) {
+  const game = loadGame();
+  const due = $app.findRecordsByFilter("auctions", 'status = "open" && endsAtMs <= {:t}', "endsAtMs", 50, 0, { t: now });
+  let n = 0;
+  due.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = findOrNull(txApp, "auctions", r.id);
+        if (!rec || rec.getString("status") !== "open") return;
+        const a = toPlain(rec);
+        const deal = game.settleAuction(a);
+        const hasReceiver = !!findOrNull(txApp, "players", deal.receiver);
+        // Gagnant disparu : l'objet revient au vendeur (la mise est perdue).
+        const receiverId = hasReceiver ? deal.receiver : a.sellerId;
+        if (findOrNull(txApp, "players", receiverId)) {
+          const receiver = loadFlushed(txApp, game, receiverId);
+          game.giveLot(receiver.player, a.kind, a.item);
+          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
+          const won = deal.status === "sold" && receiverId === deal.receiver;
+          notify(txApp, receiverId, receiver.notifications.concat([
+            won
+              ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${auctionAmount(game, a.res, a.bid)}.`, now)
+              : auctionNote("Vente sans preneur", `« ${a.label} » n'a pas trouvé preneur : il revient dans ton inventaire.`, now),
+          ]));
+        }
+        if (deal.status === "sold") {
+          if (hasReceiver && findOrNull(txApp, "players", a.sellerId)) {
+            const seller = loadFlushed(txApp, game, a.sellerId);
+            game.creditBid(seller.player, a.res, deal.payout);
+            savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+            notify(txApp, a.sellerId, seller.notifications.concat([
+              auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${auctionAmount(game, a.res, deal.payout)} (taxe : ${auctionAmount(game, a.res, deal.tax)}).`, now),
+            ]));
+          }
+          if (deal.tax > 0) {
+            if (a.res === "amber") {
+              const potRec = configRecord(txApp, game.SERVER_POT_KEY);
+              writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "auction", deal.tax, now));
+            } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
+          }
+          rec.set("tax", deal.tax);
+        }
+        rec.set("status", deal.status);
+        rec.set("closedAtMs", now);
+        txApp.save(rec);
+        n += 1;
+      });
+    } catch (err) {
+      console.log(`[cosmic] clôture d'enchère ${r.id} : ${err}`);
+    }
+  });
+  // Ménage : les ventes closes depuis plus de 30 jours disparaissent.
+  try {
+    $app.findRecordsByFilter("auctions", 'status != "open" && closedAtMs < {:t}', "", 200, 0, { t: now - 30 * 86400000 }).forEach((r) => $app.delete(r));
+  } catch (_) {}
+  return n;
+}
+
+module.exports = { auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

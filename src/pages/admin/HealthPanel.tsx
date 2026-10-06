@@ -13,6 +13,7 @@ import type { GameReport } from "@/game/reports";
 import { adminFetchStats, adminStuckFleets } from "@/services/adminService";
 import { fetchReports } from "@/services/reportService";
 import { useMaintenance } from "@/services/maintenanceService";
+import { MetricsSection } from "@/pages/admin/MetricsSection";
 
 /* 5.15 : santé du serveur, onglet d'accueil de la console. Une ligne par
    vérification (vert / à vérifier / en panne), relançable, et ce qui
@@ -177,6 +178,8 @@ export function HealthPanel({ onOpen }: { onOpen: (tab: string) => void }) {
           {checks === null && <li className="px-4 py-3 text-xs text-slate-500">Vérifications en cours…</li>}
         </ul>
       </Card>
+
+      <MetricsSection />
 
       {autoErrors.length > 0 && (
         <Card className="p-0">

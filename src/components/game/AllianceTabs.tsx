@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { HudPanel, PagedList } from "@/components/ui/panel";
+import { HudPanel, PagedList, EmptyAction } from "@/components/ui/panel";
 import { toast } from "sonner";
 import { Building2, Eye, FlaskConical, Hammer, ScrollText, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -455,7 +455,7 @@ export function IntelTab() {
   return (
     <Card className="divide-y divide-white/5">
       {items.length === 0 && (
-        <EmptyState icon="🛰️" title="Aucun rapport récent">Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</EmptyState>
+        <EmptyState icon="🛰️" title="Aucun rapport récent" action={<EmptyAction to="/game/galaxie">Espionner depuis la carte</EmptyAction>}>Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</EmptyState>
       )}
       {items.map((it) =>
         it.type === "spy" ? (

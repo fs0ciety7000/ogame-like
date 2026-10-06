@@ -1,5 +1,6 @@
+import { BanGate } from "@/components/layout/BanGate";
 import { Suspense, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { installUiFx } from "@/lib/fx/installUiFx";
 import { HudToaster } from "@/components/ui/hud-toast";
@@ -37,6 +38,7 @@ const AscensionPage = lazyPage(() => import("@/pages/AscensionPage"), "Ascension
 const EmpireStatsPage = lazyPage(() => import("@/pages/EmpireStatsPage"), "EmpireStatsPage");
 const FormulasPage = lazyPage(() => import("@/pages/FormulasPage"), "FormulasPage");
 const PublicFormulasPage = lazyPage(() => import("@/pages/PublicFormulasPage"), "PublicFormulasPage");
+const StatusPage = lazyPage(() => import("@/pages/StatusPage"), "StatusPage");
 const CodexPage = lazyPage(() => import("@/pages/CodexPage"), "CodexPage");
 const ChroniclesPage = lazyPage(() => import("@/pages/ChroniclesPage"), "ChroniclesPage");
 const AnnouncementsPage = lazyPage(() => import("@/pages/AnnouncementsPage"), "AnnouncementsPage");
@@ -50,7 +52,8 @@ function BibleRedirect() {
 }
 
 const SimulatorPage = lazyPage(() => import("@/pages/SimulatorPage"), "SimulatorPage");
-const MarketPage = lazyPage(() => import("@/pages/MarketPage"), "MarketPage");
+const PlannerPage = lazyPage(() => import("@/pages/PlannerPage"), "PlannerPage");
+const CommercePage = lazyPage(() => import("@/pages/CommercePage"), "CommercePage");
 const ColoniesPage = lazyPage(() => import("@/pages/ColoniesPage"), "ColoniesPage");
 const LeviathanPage = lazyPage(() => import("@/pages/LeviathanPage"), "LeviathanPage");
 const GazettePage = lazyPage(() => import("@/pages/GazettePage"), "GazettePage");
@@ -84,6 +87,7 @@ export default function App() {
     <TooltipProvider delayDuration={200}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MaintenanceGate>
+          <BanGate>
           <Suspense fallback={null}>
           <Routes>
             <Route
@@ -98,6 +102,7 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/bible" element={<BibleRedirect />} />
             <Route path="/formules" element={<PublicFormulasPage />} />
+            <Route path="/statut" element={<StatusPage />} />
             {/* v5.9 : page statique publique (vérification OAuth Google). */}
             <Route path="/confidentialite" element={<StaticPageRedirect to="/confidentialite.html" />} />
 
@@ -113,7 +118,11 @@ export default function App() {
                 <Route path="galaxie" element={<GalaxyPage />} />
                 <Route path="combats" element={<CombatLogPage />} />
                 <Route path="simulateur" element={<SimulatorPage />} />
-                <Route path="marche" element={<MarketPage />} />
+                <Route path="planificateur" element={<PlannerPage />} />
+                <Route path="commerce" element={<CommercePage />} />
+                {/* 5.26 : Marché et Hôtel des enchères réunis dans Commerce (anciens liens gardés). */}
+                <Route path="marche" element={<CommerceRedirect tab="marche" />} />
+                <Route path="encheres" element={<CommerceRedirect tab="encheres" />} />
                 <Route path="uber" element={<LeviathanPage />} />
                 {/* 5.15 : ancienne adresse du boss mondial (liens des notifications passées). */}
                 <Route path="leviathan" element={<Navigate to="/game/uber" replace />} />
@@ -154,6 +163,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           </Suspense>
+          </BanGate>
         </MaintenanceGate>
       </BrowserRouter>
 
@@ -171,4 +181,11 @@ function StaticPageRedirect({ to }: { to: string }) {
     window.location.replace(to);
   }, [to]);
   return null;
+}
+
+/** 5.26 : anciennes adresses du Marché et de l'Hôtel des enchères → onglet de Commerce. */
+function CommerceRedirect({ tab }: { tab: "marche" | "encheres" }) {
+  const [params] = useSearchParams();
+  const onglet = tab === "marche" && params.get("onglet") === "contrats" ? "contrats" : tab;
+  return <Navigate to={`/game/commerce?onglet=${onglet}`} replace />;
 }

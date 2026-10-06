@@ -30,7 +30,7 @@ export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody,
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
 export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, MARKET_RULES, offerReserved, refundOffer, utcDayStart } from "@/game/market";
 export { RESOURCE_LIST } from "@/game/resources";
-export { addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeFromPot } from "@/game/serverPot";
+export { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
 export { isFormation } from "@/game/formations";
 export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
 export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeClaimable, challengeRewardees, challengeTier, challengeTierIndex, claimChallengeReward, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
@@ -41,7 +41,7 @@ export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoi
 export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, reactToBossFeed, resolveLeviathanAssault, seasonBossFlightMinutes, spawnLeviathan, worldBossForStart, worldBossName, worldBossOf, worldBossTitle } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
-export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
+export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, maintenanceShouldAutoStart, nextMaintenance, normalizeMaintenance, scheduleMaintenance, startScheduledMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
@@ -166,7 +166,7 @@ export {
 export { bossesFoughtBy, claimCodexCategory, CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
 export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, previousSummary, proposeDaily, readDaily, startDaily, updateDailyProgress, voteDaily } from "@/game/allianceDaily";
 export { parisDay } from "@/game/retention";
-export { allianceRole, canDiplomacy, canDiplomacyIn } from "@/game/alliances";
+export { allianceRole, canDiplomacy, canDiplomacyIn, removeMember } from "@/game/alliances";
 export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 export { computeTerritories, SECTOR_COUNT, sectorLabel, sectorOf, TERRITORY_RULES } from "@/game/territories";
 export { closeTerritoryWar, isTerritoryWarActive, normalizeTerritoryWar, openTerritoryWar, scoreHoldHour, scoreTerritoryWar, TERRITORY_WAR_KEY, TERRITORY_WAR_RULES, territoryWarRewards, territoryWarWindow } from "@/game/territoryWar";
@@ -199,6 +199,12 @@ export { allianceWeekId } from "@/game/allianceBoss";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
 export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
+export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
+export { upcomingMaintenance } from "@/game/maintenance";
+export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
+export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
+export { tally, validateVote } from "@/game/polls";
+export { activeMute, addReport, CHAT_MODERATION_KEYS, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";
@@ -214,3 +220,4 @@ export { ONLINE_MS } from "@/game/retention";
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
+export { AUCTION_RULES, canCancel, creditBid, currencyLabel, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";

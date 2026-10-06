@@ -1,3 +1,4 @@
+import { ChatModerationPanel } from "@/pages/admin/ChatModerationPanel";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
@@ -38,8 +39,7 @@ import {
   UserCog,
   HeartPulse,
   ChevronDown,
-  Search,
-} from "lucide-react";
+  Search, MessageSquareOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -144,6 +144,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
       { id: "players", label: "Joueurs", icon: Users, hint: "Profils, ressources, niveaux et files." },
       { id: "activity", label: "Activité & audit", icon: Radar, hint: "En temps réel : qui joue, ce qui tourne chez chacun, l'XP gagnée par source sur 1 h, 24 h et 7 jours, et l'audit complet d'un joueur (signaux d'exploit, combats, échanges, actions de l'équipe)." },
       { id: "reports", label: "Signalements", icon: Bug, hint: "Problèmes signalés par les joueurs : tri, réponses, résolution." },
+      { id: "chat", label: "Canal global", icon: MessageSquareOff, hint: "Modération du canal global : messages signalés, sourdines, mots filtrés." },
       { id: "broadcast", label: "Messages ciblés", icon: Bell, hint: "Notification dans le jeu pour un groupe de joueurs : inactifs, nouveaux, une alliance…" },
       { id: "mail", label: "E-mails", icon: Mail, hint: "Campagnes e-mail : aperçu, test et envoi à tous les joueurs." },
       { id: "banners", label: "Annonces", icon: Megaphone, hint: "Bandeaux en haut du site et annonces plein écran : création et programmation." },
@@ -334,6 +335,9 @@ export function AdminPage() {
             <BannersPanel />
             <AnnouncementsPanel />
           </div>
+        </TabsContent>
+        <TabsContent value="chat">
+          <ChatModerationPanel />
         </TabsContent>
         <TabsContent value="maintenance">
           <MaintenancePanel />

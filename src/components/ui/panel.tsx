@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cascade, scramble } from "@/lib/fx/uiFx";
 import { usePageSize } from "@/lib/pageSize";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { HudTone } from "@/components/ui/hud";
@@ -64,6 +64,60 @@ export function HudPanel({
       </div>
       {children}
     </Card>
+  );
+}
+
+/* 5.26 : section repliable des longues pages (Commandement, Galaxie…). L'état
+   ouvert/fermé est mémorisé sur l'appareil quand `id` est fourni. */
+const FOLD_KEY = "cosmic-empires:folds";
+function readFolds(): Record<string, boolean> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FOLD_KEY) ?? "{}") as unknown;
+    return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, boolean>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function FoldSection({
+  id,
+  title,
+  aside,
+  tone = "muted",
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  id?: string;
+  title: ReactNode;
+  aside?: ReactNode;
+  tone?: HudTone | "muted";
+  defaultOpen?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(() => (id ? (readFolds()[id] ?? defaultOpen) : defaultOpen));
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    if (!id) return;
+    try {
+      localStorage.setItem(FOLD_KEY, JSON.stringify({ ...readFolds(), [id]: next }));
+    } catch {
+      /* stockage indisponible : état gardé pour la session */
+    }
+  };
+  return (
+    <section className={cn("flex flex-col gap-3", className)}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/5 pb-1.5">
+        <button type="button" onClick={toggle} aria-expanded={open} className={cn("hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] transition-colors hover:text-cyan-glow", TITLE_TONE[tone])}>
+          <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !open && "-rotate-90")} aria-hidden />
+          <span className="flex min-w-0 items-center gap-2 text-left [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0">{title}</span>
+        </button>
+        {aside && <div className="ml-auto flex flex-wrap items-center gap-2">{aside}</div>}
+      </div>
+      {open && children}
+    </section>
   );
 }
 

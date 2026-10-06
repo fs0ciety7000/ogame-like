@@ -28,6 +28,7 @@ import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
 import { MythicRelicsCard, TerritoriesAdminCard } from "@/pages/admin/EndgameCards";
 import { PirateTriggerCard } from "@/pages/admin/PirateTriggerCard";
+import { ModerationCard } from "@/pages/admin/ModerationCard";
 import { PlayerToolsCard } from "@/pages/admin/PlayerToolsCard";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
@@ -870,6 +871,7 @@ export function PlayersPanel() {
               </div>
             </div>
             <PlayerToolsCard player={draft} onDone={() => void reload()} />
+            <ModerationCard player={draft} onDeleted={() => (setSelectedId(null), void reload())} />
             {gameStateChanged && (
               <label className="flex flex-col gap-1 text-xs text-gold-glow">
                 Motif de la modification (obligatoire, consigné au journal)

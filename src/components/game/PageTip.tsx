@@ -21,6 +21,8 @@ export const PAGE_TIPS: Record<string, string> = {
   "/game/joueurs": "Tous les commandants du serveur. Les débutants sont protégés 72 h ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.",
   "/game/combats": "Le journal de tes combats et espionnages. Depuis un rapport d'espionnage, « Simuler une attaque » estime l'issue avant d'envoyer ta flotte.",
   "/game/simulateur": "Teste un combat sans risque : la formule est exactement celle des vrais combats. Le résultat indique la puissance qu'il te faudrait pour gagner.",
+  "/game/planificateur": "Tout ce qui tourne au même endroit. Enregistre une suite d'actions (bâtiments, unités, recherches) en modèle et rejoue-la en un clic : l'aperçu te dit avant ce qui passera.",
+  "/game/commerce": "Trois onglets : le Marché pour échanger tes surplus, les Contrats de livraison entre joueurs, et les Enchères pour vendre reliques et plans de modules au plus offrant (en ressources ou en Ambre).",
   "/game/menaces": "Les factions surveillent les commandants trop riches ou trop agressifs. Paie le tribut ou repousse leurs raids pour localiser leur repaire.",
   "/game/alliance": "Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. Jusqu'à 6 commandants.",
 };

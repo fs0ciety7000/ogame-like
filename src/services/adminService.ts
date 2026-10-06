@@ -371,3 +371,31 @@ export function adminBalanceSnapshot(): Promise<import("@/game/balance/history")
 export function adminAllianceSagaTick(): Promise<{ generated: string | null; closed: string | null; alliances: number }> {
   return pb.send("/api/cosmic/admin/alliance-saga", { method: "POST" });
 }
+
+/* 5.26 : modération (bannissement temporaire ou définitif, suppression du compte). */
+export interface AdminBan {
+  uid: string;
+  pseudo: string;
+  untilMs: number | null;
+  reason: string;
+  byName: string;
+  atMs: number;
+  active: boolean;
+}
+
+export async function adminListBans(): Promise<AdminBan[]> {
+  const out = await pb.send<{ bans: AdminBan[] }>("/api/cosmic/admin/ban", { requestKey: null });
+  return out.bans;
+}
+
+export function adminBanPlayer(uid: string, hours: number | null, reason: string) {
+  return pb.send("/api/cosmic/admin/ban", { method: "POST", body: { uid, hours, reason } });
+}
+
+export function adminLiftBan(uid: string, reason = "") {
+  return pb.send("/api/cosmic/admin/ban", { method: "POST", body: { uid, lift: true, reason } });
+}
+
+export function adminDeletePlayer(uid: string, confirm: string, reason: string) {
+  return pb.send<{ pseudo: string; fleets: number; offers: number; notifications: number; alliance: string | null }>("/api/cosmic/admin/player/delete", { method: "POST", body: { uid, confirm, reason } });
+}

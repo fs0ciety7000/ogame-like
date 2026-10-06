@@ -5,7 +5,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
-import { Pager, usePaged } from "@/components/ui/panel";
+import { Pager, usePaged, EmptyAction } from "@/components/ui/panel";
 import { motion } from "framer-motion";
 import { Eye, Sword, Shield, ShieldAlert, Trophy } from "lucide-react";
 import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
@@ -147,7 +147,7 @@ export function CombatLogPage() {
 
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
-          <EmptyState icon="⚔️" title="Aucun combat">Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
+          <EmptyState icon="⚔️" title="Aucun combat" action={<EmptyAction to="/game/joueurs">Trouver une cible</EmptyAction>}>Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
         )}
         {battlePage.items.map((report, index) => {
           if (!uid) return null;
@@ -224,7 +224,7 @@ export function CombatLogPage() {
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
-        {spyList.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport">Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
+        {spyList.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport" action={<EmptyAction to="/game/galaxie">Ouvrir la carte</EmptyAction>}>Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
         {spyPage.items.map((r) => {
           const mine = r.spyUid === uid;
           return (

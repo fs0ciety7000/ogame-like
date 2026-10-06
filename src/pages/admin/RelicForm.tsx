@@ -264,6 +264,7 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
               <th className="py-1 pr-2 font-normal">Jetons</th>
               <th className="py-1 pr-2 font-normal">Jetons min</th>
               <th className="py-1 pr-2 font-normal">Jetons max</th>
+              <th className="py-1 pr-2 font-normal">Plan de module</th>
             </tr>
           </thead>
           <tbody>
@@ -304,6 +305,9 @@ function LootTablesEditor({ value, onChange }: { value: Partial<LootTables> | un
                   </td>
                   <td className="py-1.5 pr-2">
                     <NumInput value={t.tokenMax ?? 1} step={1} onChange={(tokenMax) => setRow(src, { tokenMax: Math.round(tokenMax) })} />
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <NumInput value={t.moduleChance ?? 0} step={0.01} onChange={(moduleChance) => setRow(src, { moduleChance })} />
                   </td>
                 </tr>
               );

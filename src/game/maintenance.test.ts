@@ -12,7 +12,7 @@ describe("mode maintenance (v2.5)", () => {
 
   it("activation : début fixé, fin passée ignorée, début conservé lors d'une mise à jour", () => {
     const on = nextMaintenance(MAINTENANCE_OFF, { enabled: true, message: "  Hop  ", version: "2.5.0", endsAtMs: NOW + 60_000 }, NOW);
-    expect(on).toEqual({ enabled: true, message: "Hop", version: "2.5.0", startedAtMs: NOW, endsAtMs: NOW + 60_000, autoEnd: true });
+    expect(on).toEqual({ enabled: true, message: "Hop", version: "2.5.0", startedAtMs: NOW, endsAtMs: NOW + 60_000, autoEnd: true, scheduled: null });
     const updated = nextMaintenance(on, { enabled: true, endsAtMs: NOW - 1 }, NOW + 30_000);
     expect(updated.startedAtMs).toBe(NOW);
     expect(updated.endsAtMs).toBeNull();
@@ -51,5 +51,28 @@ describe("mode maintenance (v2.5)", () => {
     expect(maintenanceShouldAutoEnd({ ...on, endsAtMs: null }, NOW + 90_000)).toBe(false);
     expect(nextMaintenance(MAINTENANCE_OFF, { enabled: true, autoEnd: false }, NOW).autoEnd).toBe(false);
     expect(normalizeMaintenance({ enabled: true }).autoEnd).toBe(true);
+  });
+});
+
+import { MAINTENANCE_OFF as OFF26, maintenanceShouldAutoStart, nextMaintenance as next26, normalizeMaintenance as norm26, scheduleMaintenance, startScheduledMaintenance, upcomingMaintenance } from "@/game/maintenance";
+
+describe("maintenance programmée (5.26)", () => {
+  const T = 1_800_000_000_000;
+  it("programme, annonce dans les 24 h puis démarre seule", () => {
+    const m = scheduleMaintenance(OFF26, { startAtMs: T + 30 * 3600_000, endsAtMs: T + 31 * 3600_000, message: " Mise à jour " }, T);
+    expect(m.scheduled?.message).toBe("Mise à jour");
+    expect(upcomingMaintenance(m, T)).toBeNull();
+    expect(upcomingMaintenance(m, T + 7 * 3600_000)?.inMs).toBe(23 * 3600_000);
+    expect(maintenanceShouldAutoStart(m, T + 30 * 3600_000 - 1)).toBe(false);
+    const started = startScheduledMaintenance(m, T + 30 * 3600_000);
+    expect(started).toMatchObject({ enabled: true, endsAtMs: T + 31 * 3600_000, scheduled: null, autoEnd: true });
+  });
+  it("refuse un début passé, s'annule, survit à la relecture", () => {
+    expect(() => scheduleMaintenance(OFF26, { startAtMs: T - 1 }, T)).toThrow();
+    const m = scheduleMaintenance(OFF26, { startAtMs: T + 1000 }, T);
+    expect(norm26(JSON.parse(JSON.stringify(m))).scheduled?.startAtMs).toBe(T + 1000);
+    expect(scheduleMaintenance(m, null, T).scheduled).toBeNull();
+    // Ouvrir la maintenance à la main efface la programmation.
+    expect(next26(m, { enabled: true }, T).scheduled).toBeNull();
   });
 });

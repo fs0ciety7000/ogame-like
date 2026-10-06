@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { allAnnouncements } from "@/components/game/Announcement";
+import { PollCard } from "@/components/game/PollCard";
 import { announcementStatus } from "@/game/announcements";
 import { previewAnnouncement, useAnnouncementSettings } from "@/services/announcementService";
 import { markAnnouncementsSeen } from "@/services/playerService";
@@ -33,8 +34,8 @@ export function AnnouncementsPage() {
           const art = a.art ?? a.artMobile ?? a.spotlight?.image;
           return (
             <motion.div key={a.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.04 }}>
-              <Card className="group relative h-full overflow-hidden p-0">
-                <button type="button" className="flex h-full w-full flex-col text-left" onClick={() => {
+              <Card className="group relative flex h-full flex-col overflow-hidden p-0">
+                <button type="button" className="flex w-full flex-1 flex-col text-left" onClick={() => {
                     previewAnnouncement(a.id);
                     if (!seen.includes(a.id)) void markAnnouncementsSeen([a.id]).catch(() => undefined);
                   }}>
@@ -68,6 +69,7 @@ export function AnnouncementsPage() {
                     )}
                   </div>
                 </button>
+                {a.poll && <PollCard id={a.id} poll={a.poll} className="m-4 mt-0" />}
               </Card>
             </motion.div>
           );

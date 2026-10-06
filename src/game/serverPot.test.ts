@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addToPot, emptyServerPot, giftTax, normalizeServerPot, takeFromPot } from "@/game/serverPot";
+import { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
 
 describe("pot commun « Serveur »", () => {
   it("accumule les taxes par source et garde un journal", () => {
@@ -26,5 +26,18 @@ describe("pot commun « Serveur »", () => {
     const pot = normalizeServerPot({ resources: { scrap: "12" }, log: [{ source: "pirate" }, { source: "gift", resources: { scrap: 2 }, atMs: 5 }] });
     expect(pot.resources).toEqual({ scrap: 12 });
     expect(pot.log).toHaveLength(1);
+  });
+});
+
+describe("pot commun : Ambre (5.26)", () => {
+  it("reçoit et verse de l'Ambre, sans toucher aux ressources", () => {
+    const pot = addAmberToPot(emptyServerPot(), "auction", 7, 1);
+    expect(pot).toMatchObject({ amber: 7, amberTotal: 7, resources: {} });
+    expect(normalizeServerPot(JSON.parse(JSON.stringify(pot))).amber).toBe(7);
+    const out = takeAmberFromPot(pot, 10, 2, "test");
+    expect(out.taken).toBe(7);
+    expect(out.pot.amber).toBe(0);
+    expect(out.pot.amberTotal).toBe(7);
+    expect(takeAmberFromPot(out.pot, 1, 3, "x").taken).toBe(0);
   });
 });

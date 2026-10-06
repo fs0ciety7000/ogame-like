@@ -49,7 +49,8 @@ export function UnitsPage() {
   const away = useMemo(() => (uid ? unitsAwayOf(fleets, uid) : {}), [fleets, uid]);
   const rates = useProductionRates(player);
   // 5.18 : onglets Attaque / Défense et filtre par classe (calculée d'après les stats).
-  const [tab, setTab] = useState<"attack" | "defense">("attack");
+  // 5.26 : ?onglet=defense ouvre directement les défenses (liens « Renforcer les défenses »).
+  const [tab, setTab] = useState<"attack" | "defense">(() => (new URLSearchParams(window.location.search).get("onglet") === "defense" ? "defense" : "attack"));
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
   const [editingCards, setEditingCards] = useState(false);
   const classes = useMemo(() => unitClasses(UNITS), []);
@@ -312,7 +313,10 @@ export function UnitsPage() {
                         </>
                       ) : (
                         <>
-                          Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>
+                          Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>{" "}
+                          <Link to="/game/labo" className="font-semibold text-cyan-glow hover:underline">
+                            Lancer la recherche
+                          </Link>
                         </>
                       )}
                     </p>
@@ -454,7 +458,11 @@ export function UnitsPage() {
                             </div>
                             {noRoom ? (
                               <BlockedReason tone="block">
-                                Hangar {hangarLabel} trop petit : {formatNumber(neededSpace)} places demandées pour {formatNumber(freeSpace)} libres. Réduis la quantité ou agrandis le hangar.
+                                Hangar {hangarLabel} trop petit : {formatNumber(neededSpace)} places demandées pour {formatNumber(freeSpace)} libres. Réduis la quantité ou{" "}
+                                <Link to="/game/batiments" className="font-semibold text-cyan-glow hover:underline">
+                                  agrandis le hangar
+                                </Link>
+                                .
                               </BlockedReason>
                             ) : wait > 0 ? (
                               <BlockedReason>{affordText(wait)}</BlockedReason>

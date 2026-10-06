@@ -16,14 +16,40 @@ export interface MaintenanceState {
   endsAtMs: number | null;
   /** Réouverture automatique à l'heure prévue (par défaut). */
   autoEnd: boolean;
+  /** 5.26 : maintenance programmée (annoncée aux joueurs, démarre seule). */
+  scheduled: ScheduledMaintenance | null;
 }
+
+export interface ScheduledMaintenance {
+  startAtMs: number;
+  endsAtMs: number | null;
+  message: string;
+  version: string;
+}
+
+/** 5.26 : bandeau d'annonce affiché aux joueurs dans les 24 h qui précèdent. */
+export const MAINTENANCE_NOTICE_MS = 24 * 3600_000;
 
 export const MAINTENANCE_KEY = "maintenance";
 
 export const DEFAULT_MAINTENANCE_MESSAGE =
   "Nos techniciens interviennent sur les serveurs de la galaxie. Ta progression est sauvegardée : production, flottes en vol et files d'attente reprendront normalement à la réouverture.";
 
-export const MAINTENANCE_OFF: MaintenanceState = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true };
+export const MAINTENANCE_OFF: MaintenanceState = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true, scheduled: null };
+
+function normalizeScheduled(raw: unknown): ScheduledMaintenance | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const start = Number(r.startAtMs);
+  if (!Number.isFinite(start) || start <= 0) return null;
+  const end = Number(r.endsAtMs);
+  return {
+    startAtMs: Math.round(start),
+    endsAtMs: Number.isFinite(end) && end > start ? Math.round(end) : null,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
+  };
+}
 
 const MAX_MESSAGE = 600;
 const MAX_VERSION = 20;
@@ -40,6 +66,7 @@ export function normalizeMaintenance(raw: unknown): MaintenanceState {
     startedAtMs: Number(r.startedAtMs) || 0,
     endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
     autoEnd: r.autoEnd !== false,
+    scheduled: normalizeScheduled(r.scheduled),
   };
 }
 
@@ -52,6 +79,7 @@ export function nextMaintenance(
 ): MaintenanceState {
   const enabled = request.enabled === true;
   if (!enabled) return { ...previous, enabled: false, endsAtMs: null };
+  // Ouvrir la maintenance à la main consomme la maintenance programmée.
   const endsAt = Number(request.endsAtMs);
   return {
     enabled: true,
@@ -60,7 +88,38 @@ export function nextMaintenance(
     startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
     endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
     autoEnd: request.autoEnd !== false,
+    scheduled: null,
   };
+}
+
+/**
+ * 5.26 : programme (ou annule, `schedule` nul) une maintenance future. Elle est
+ * annoncée aux joueurs dans les 24 h qui précèdent et démarre d'elle-même.
+ */
+export function scheduleMaintenance(previous: MaintenanceState, schedule: unknown, now: number): MaintenanceState {
+  if (schedule === null || schedule === undefined) return { ...previous, scheduled: null };
+  const next = normalizeScheduled(schedule);
+  if (!next || next.startAtMs <= now) throw new Error("Choisis un début de maintenance dans le futur.");
+  return { ...previous, scheduled: { ...next, message: next.message.trim(), version: next.version.trim() } };
+}
+
+/** La maintenance programmée doit-elle démarrer maintenant ? */
+export function maintenanceShouldAutoStart(m: MaintenanceState, now: number): boolean {
+  return !m.enabled && !!m.scheduled && now >= m.scheduled.startAtMs;
+}
+
+/** Démarre la maintenance programmée (fin prévue conservée si elle est encore à venir). */
+export function startScheduledMaintenance(m: MaintenanceState, now: number): MaintenanceState {
+  const s = m.scheduled;
+  if (!s) return m;
+  return { enabled: true, message: s.message, version: s.version, startedAtMs: now, endsAtMs: s.endsAtMs !== null && s.endsAtMs > now ? s.endsAtMs : null, autoEnd: true, scheduled: null };
+}
+
+/** Maintenance annoncée dans moins de 24 h (null sinon) : temps avant le début. */
+export function upcomingMaintenance(m: MaintenanceState, now: number): (ScheduledMaintenance & { inMs: number }) | null {
+  if (m.enabled || !m.scheduled) return null;
+  const inMs = m.scheduled.startAtMs - now;
+  return inMs > 0 && inMs <= MAINTENANCE_NOTICE_MS ? { ...m.scheduled, inMs } : null;
 }
 
 /** La maintenance doit-elle se terminer d'elle-même maintenant ? */

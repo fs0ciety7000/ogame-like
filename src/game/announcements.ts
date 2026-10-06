@@ -4,7 +4,14 @@
    et calendrier (début, fin, désactivation) de toutes les annonces.
 ===================================================== */
 
+import { normalizePoll, type Poll } from "@/game/polls";
+
 export const ANNOUNCEMENTS_KEY = "announcements";
+
+/** 5.26 : sondage d'une annonce de l'administration (null si absent). */
+export function findPoll(settings: AnnouncementSettings, id: string): Poll | null {
+  return settings.custom.find((a) => a.id === id)?.poll ?? null;
+}
 
 export interface AnnouncementFeature {
   title: string;
@@ -25,6 +32,8 @@ export interface CustomAnnouncement {
   features?: AnnouncementFeature[];
   cta: { label: string; to: string };
   createdAtMs: number;
+  /** 5.26 : sondage communautaire joint à l'annonce. */
+  poll?: Poll | null;
 }
 
 export interface AnnouncementSchedule {
@@ -60,6 +69,7 @@ export function normalizeAnnouncementSettings(raw: unknown): AnnouncementSetting
       features: (Array.isArray(a.features) ? a.features : []).slice(0, 4).map((f) => ({ title: str(f?.title, 80), text: str(f?.text, 200), to: str(f?.to || "/game", 120), image: f?.image ? str(f.image, 300) : undefined })),
       cta: { label: str(a.cta?.label || "Voir", 40), to: str(a.cta?.to || "/game", 120) },
       createdAtMs: num(a.createdAtMs) ?? 0,
+      poll: normalizePoll(a.poll),
     }));
   const schedule: Record<string, AnnouncementSchedule> = {};
   if (r.schedule && typeof r.schedule === "object") {

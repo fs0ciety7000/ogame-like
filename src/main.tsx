@@ -1,3 +1,4 @@
+import { installWebVitals } from "@/lib/webVitals";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
@@ -36,6 +37,8 @@ startContentSync();
 
 // Erreurs JavaScript remontées à l'équipe sous forme de signalements automatiques.
 installErrorReporter();
+// 5.26 : performances réelles (Web Vitals), un chargement sur quatre.
+installWebVitals();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

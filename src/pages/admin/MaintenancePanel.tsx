@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Eye, Play, Power, RefreshCw, TimerReset } from "lucide-react";
+import { CalendarClock, Eye, Play, Power, RefreshCw, TimerReset } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,12 @@ export function MaintenancePanel() {
     startedAtMs: m.enabled ? m.startedAtMs : now,
     endsAtMs: plannedEnd,
     autoEnd,
+    scheduled: null,
   };
+  // 5.26 : maintenance programmée : même message, version et durée, à partir d'une heure choisie.
+  const [scheduleAt, setScheduleAt] = useState("");
+  const scheduleStart = scheduleAt ? new Date(scheduleAt).getTime() : 0;
+  const scheduleEnd = customEnd ? new Date(customEnd).getTime() : minutes > 0 && scheduleStart ? scheduleStart + minutes * 60_000 : null;
 
   const send = async (request: Parameters<typeof setMaintenance>[0], success: string) => {
     setBusy(true);
@@ -81,6 +86,9 @@ export function MaintenancePanel() {
 
   const start = () => void send({ enabled: true, message, version, endsAtMs: plannedEnd, autoEnd }, m.enabled ? "Maintenance mise à jour." : "Maintenance activée : le jeu est fermé aux joueurs.");
   const stop = () => void send({ enabled: false }, "Maintenance terminée : le jeu est rouvert.");
+  const schedule = () =>
+    void send({ schedule: { startAtMs: scheduleStart, endsAtMs: scheduleEnd && scheduleEnd > scheduleStart ? scheduleEnd : null, message, version } }, "Maintenance programmée : annonce aux joueurs 24 h avant.");
+  const unschedule = () => void send({ schedule: null }, "Programmation annulée.");
   const extend = (extra: number) =>
     void send({ enabled: true, message: m.message, version: m.version, endsAtMs: Math.max(now, m.endsAtMs ?? now) + extra * 60_000, autoEnd: m.autoEnd }, `Fin prévue repoussée de ${extra} min.`);
 
@@ -212,6 +220,45 @@ export function MaintenancePanel() {
             </Button>
           )}
         </div>
+      </Card>
+
+      {/* 5.26 : programmation à l'avance */}
+      <Card className="flex flex-col gap-3 p-5 xl:col-span-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
+            <CalendarClock className="h-4 w-4 text-cyan-glow" /> Programmer à l'avance
+          </h3>
+          {m.scheduled && <HudTag tone="gold">Programmée</HudTag>}
+        </div>
+        {m.scheduled ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+            <span>
+              Début <b className="font-mono text-slate-100">{new Date(m.scheduled.startAtMs).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</b>
+              {m.scheduled.endsAtMs && (
+                <>
+                  {" "}
+                  · fin <b className="font-mono text-slate-100">{new Date(m.scheduled.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</b>
+                </>
+              )}{" "}
+              · dans <span className="font-mono">{formatDuration(Math.max(0, m.scheduled.startAtMs - now) / 1000)}</span>
+            </span>
+            <Button size="sm" variant="ghost" className="ml-auto" disabled={busy} onClick={unschedule}>
+              Annuler la programmation
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label="Début">
+              <Input type="datetime-local" value={scheduleAt} min={toLocalInput(now)} onChange={(e) => setScheduleAt(e.target.value)} />
+            </Field>
+            <p className="min-w-0 flex-1 text-xs text-slate-500">
+              Reprend le message, la version et la durée ci-dessus. Les joueurs voient un bandeau d'annonce 24 h avant (compte à rebours), la page de statut l'affiche, et la maintenance démarre seule à l'heure dite.
+            </p>
+            <Button disabled={busy || !scheduleStart || scheduleStart <= now || m.enabled} onClick={schedule}>
+              <CalendarClock className="h-4 w-4" /> Programmer
+            </Button>
+          </div>
+        )}
       </Card>
 
       <Dialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
