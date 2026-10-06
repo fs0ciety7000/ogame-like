@@ -100,7 +100,7 @@ export function RewardReveal({
               </div>
             )}
             {spun && items.length > 0 && (
-              <div className="relative grid w-full grid-cols-2 gap-1.5">
+              <div className={cn("relative grid w-full gap-1.5", items.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
                 {items.map((it, i) => (
                   <motion.div
                     key={it.key}

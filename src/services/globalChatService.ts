@@ -202,6 +202,77 @@ export async function createChatRoom(name: string, topic: string): Promise<ChatR
   }
 }
 
+/** 5.27 : message épinglé (vide : retire l'épingle) et événement programmé (atMs 0 : retiré). */
+export async function pinRoomMessage(id: string, messageId: string): Promise<void> {
+  try {
+    await pb.send("/api/cosmic/global/room", { method: "POST", body: { action: "pin", id, messageId } });
+  } catch (err) {
+    throw new Error(errorMessage(err, "Épingle impossible."));
+  }
+}
+
+export async function setRoomEvent(id: string, label: string, atMs: number): Promise<void> {
+  try {
+    await pb.send("/api/cosmic/global/room", { method: "POST", body: { action: "event", id, label, atMs } });
+  } catch (err) {
+    throw new Error(errorMessage(err, "Événement impossible à programmer."));
+  }
+}
+
+/* 5.27 : messages non lus par salon (dernier passage mémorisé dans ce navigateur). */
+const ROOM_SEEN_KEY = "cosmic:room-seen";
+
+function readRoomSeen(): Record<string, number> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(ROOM_SEEN_KEY) ?? "{}") as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(raw).filter(([, v]) => typeof v === "number")) as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+
+export const useRoomSeen = create<{ seen: Record<string, number> }>(() => ({ seen: readRoomSeen() }));
+
+export function markRoomSeen(room: string, ms = Date.now()) {
+  const seen = useRoomSeen.getState().seen;
+  if (ms <= (seen[room] ?? 0)) return;
+  const next = { ...seen, [room]: ms };
+  try {
+    localStorage.setItem(ROOM_SEEN_KEY, JSON.stringify(next));
+  } catch {
+    /* non mémorisé */
+  }
+  useRoomSeen.setState({ seen: next });
+}
+
+/** Non-lus par salon (99 au plus) : seuls les salons actifs depuis le dernier passage sont interrogés. */
+export function useRoomUnread(uid: string, rooms: ChatRoom[], current: string): Record<string, number> {
+  const seen = useRoomSeen((s) => s.seen);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const key = rooms.map((r) => `${r.id}:${r.lastMessageAtMs}`).join(",");
+  useEffect(() => {
+    let alive = true;
+    const dayAgo = Date.now() - 86_400_000;
+    const stale = rooms.filter((r) => r.id !== current && r.lastMessageAtMs > Math.max(seen[r.id] ?? 0, dayAgo));
+    void Promise.all(
+      stale.map((r) =>
+        pb
+          .collection("global_messages")
+          .getList(1, 1, { filter: pb.filter("room = {:r} && createdAtMs > {:t} && uid != {:u} && masked = false", { r: r.id, t: Math.max(seen[r.id] ?? 0, dayAgo), u: uid }), fields: "id", requestKey: null })
+          .then((res) => [r.id, Math.min(99, res.totalItems)] as const)
+          .catch(() => [r.id, 0] as const),
+      ),
+    ).then((list) => {
+      if (alive) setCounts(Object.fromEntries(list.filter(([, n]) => n > 0)));
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- key résume la liste des salons.
+  }, [key, seen, current, uid]);
+  return counts;
+}
+
 /** 5.26.3 : icône du salon (Bannière de salon, Comptoir). */
 export async function setChatRoomIcon(id: string, icon: string): Promise<void> {
   try {

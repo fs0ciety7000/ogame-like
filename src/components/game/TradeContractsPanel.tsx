@@ -3,7 +3,7 @@ import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { toast } from "sonner";
-import { ArrowRight, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
+import { ArrowRight, ArrowUpToLine, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
@@ -13,7 +13,8 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { PlayerName } from "@/components/ui/player-name";
 import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { priceBounds } from "@/game/market";
-import { contractDeposit, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
+import { contractDeposit, PRIORITY_CONTRACT_HOURS, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
+import { bountyState } from "@/game/bounties";
 import { distanceBetween, fleetSpeed, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
@@ -121,6 +122,7 @@ export function TradeContractsPanel() {
   useNowTicker();
   const uid = useAuthStore((s) => s.user?.uid);
   const player = usePlayerStore((s) => s.player);
+  const priority = player ? bountyState(player).priorityContracts : 0;
   const [data, setData] = useState<TradeContractsView>({ open: [], mine: [] });
   const [wantRes, setWantRes] = useState<ResourceId>("nano");
   const [payRes, setPayRes] = useState<ResourceId>("scrap");
@@ -200,6 +202,12 @@ export function TradeContractsPanel() {
               (comptoir : {formatNumber(bounds.reference)})
             </button>
             .
+          </p>
+        )}
+        {/* 5.27 : Contrat prioritaire du Comptoir, consommé à la publication. */}
+        {priority > 0 && (
+          <p className="flex items-center gap-1.5 text-xs text-violet-glow">
+            <ArrowUpToLine className="h-3.5 w-3.5" aria-hidden /> Contrat prioritaire : celui-ci passera en tête des contrats pendant {PRIORITY_CONTRACT_HOURS} h (<span className="font-mono tabular-nums">{priority}</span> en réserve).
           </p>
         )}
         <Button

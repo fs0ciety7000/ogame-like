@@ -134,7 +134,7 @@ export interface PlayerState {
   /** v3.9.2 : ne plus recevoir les nouvelles du jeu par e-mail. */
   emailOptOut?: boolean;
   /** v4.0 : notifications d'alliance que le joueur veut recevoir (absent = oui). */
-  notifPrefs?: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean; warlords?: boolean };
+  notifPrefs?: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean; warlords?: boolean; mentions?: boolean };
   /** v4.0 : officiers, reliques et capsules du Labo de synthèse. */
   commanders?: import("@/game/commanders").CommandersState;
   relics?: import("@/game/relics").RelicsState;

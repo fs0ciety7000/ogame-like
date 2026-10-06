@@ -9,7 +9,7 @@ import { seasonEndMs } from "@/game/seasons";
    Chroniques, fin de saison. Calculée à partir des règles en vigueur.
 ===================================================== */
 
-export type AgendaKind = "leviathan" | "seasonboss" | "event" | "chronicle" | "season" | "contest";
+export type AgendaKind = "leviathan" | "seasonboss" | "event" | "chronicle" | "season" | "contest" | "room";
 
 export interface AgendaItem {
   id: string;
@@ -41,6 +41,7 @@ export const AGENDA_COLORS: Record<AgendaKind, string> = {
   chronicle: "var(--color-violet-glow)",
   season: "var(--color-gold-glow)",
   contest: "var(--color-mint-glow)",
+  room: "var(--color-slate-300)",
 };
 
 export const AGENDA_LABELS: Record<AgendaKind, string> = {
@@ -50,6 +51,7 @@ export const AGENDA_LABELS: Record<AgendaKind, string> = {
   chronicle: "Épisode des Chroniques",
   season: "Fin de saison",
   contest: "Concours",
+  room: "Événement de salon",
 };
 
 const DAY = 24 * 3600_000;

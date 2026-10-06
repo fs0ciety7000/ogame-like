@@ -157,6 +157,13 @@ export interface ChatRoom {
   closed: boolean;
   /** 5.26.3 : icône (Bannière de salon), vide sans. */
   icon?: string;
+  /** 5.27 : message épinglé par le créateur (copie du texte au moment de l'épingle). */
+  pinnedId?: string;
+  pinnedText?: string;
+  pinnedPseudo?: string;
+  /** 5.27 : événement programmé par le créateur (« raid de boss 21 h »), 0 sans. */
+  eventLabel?: string;
+  eventAtMs?: number;
 }
 
 /** Vérifie un nouveau salon (nom filtré, plafonds par joueur et serveur). */
@@ -188,6 +195,47 @@ export const ROOM_ICONS: { id: string; label: string }[] = [
 export function roomIcon(raw: unknown): string {
   const id = String(raw ?? "");
   return ROOM_ICONS.some((i) => i.id === id) ? id : "";
+}
+
+/* 5.27 : mentions @pseudo et événements de salon. */
+export const MENTION_RULES = { maxPerMessage: 5 };
+
+/** Pseudos mentionnés (@pseudo), sans doublon (casse ignorée), 5 au plus. */
+export function parseMentions(text: string): string[] {
+  const out: string[] = [];
+  // Sans matchAll ni \p{L} : le moteur JS de PocketBase (goja) ne les gère pas tous.
+  const re = /(^|[^0-9A-Za-z_@\u00C0-\u024F])@([0-9A-Za-z_\u00C0-\u024F-]{3,20})/g;
+  const src = String(text ?? "");
+  for (let m = re.exec(src); m; m = re.exec(src)) {
+    const pseudo = m[2];
+    if (!out.some((p) => p.toLowerCase() === pseudo.toLowerCase())) out.push(pseudo);
+    if (out.length >= MENTION_RULES.maxPerMessage) break;
+  }
+  return out;
+}
+
+/** Le texte mentionne-t-il ce pseudo ? (surbrillance côté client) */
+export function mentions(text: string, pseudo: string): boolean {
+  return !!pseudo && parseMentions(text).some((p) => p.toLowerCase() === pseudo.toLowerCase());
+}
+
+export const ROOM_EVENT_RULES = { labelMin: 3, labelMax: 60, maxAheadDays: 7, durationHours: 1 };
+
+/** Événement de salon : libellé filtré, date dans les 7 prochains jours. atMs 0 : l'événement est retiré. */
+export function validateRoomEvent(raw: { label?: unknown; atMs?: unknown }, now: number, extraFilter?: string[]): { label: string; atMs: number } {
+  const atMs = Math.floor(Number(raw.atMs) || 0);
+  if (!atMs) return { label: "", atMs: 0 };
+  const label = String(raw.label ?? "").replace(/\s+/g, " ").trim();
+  if (label.length < ROOM_EVENT_RULES.labelMin || label.length > ROOM_EVENT_RULES.labelMax) throw new Error(`Événement : ${ROOM_EVENT_RULES.labelMin} à ${ROOM_EVENT_RULES.labelMax} caractères.`);
+  if (filterText(label, extraFilter).masked) throw new Error("Libellé refusé par le filtre du canal.");
+  if (atMs < now) throw new Error("Choisis une heure à venir.");
+  if (atMs > now + ROOM_EVENT_RULES.maxAheadDays * 86_400_000) throw new Error(`Un événement se programme ${ROOM_EVENT_RULES.maxAheadDays} jours à l'avance au plus.`);
+  return { label, atMs };
+}
+
+/** L'événement est-il encore à afficher (à venir ou en cours) ? */
+export function roomEventLive(room: Pick<ChatRoom, "eventAtMs">, now: number): boolean {
+  return !!room.eventAtMs && room.eventAtMs + ROOM_EVENT_RULES.durationHours * 3600_000 > now;
 }
 
 export function roomIdle(room: Pick<ChatRoom, "createdAtMs" | "lastMessageAtMs">, now: number): boolean {

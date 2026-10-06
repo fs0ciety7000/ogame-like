@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeMute, addReport, cleanGlobalMessage, filterText, KESH_REACTION, normalizeReactions, rateLimitError, roomIcon, roomIdle, toggleReaction, validateRoom } from "@/game/globalChat";
+import { activeMute, addReport, cleanGlobalMessage, filterText, KESH_REACTION, mentions, parseMentions, roomEventLive, validateRoomEvent, normalizeReactions, rateLimitError, roomIcon, roomIdle, toggleReaction, validateRoom } from "@/game/globalChat";
 
 describe("canal global", () => {
   it("masque les grossièretés, accents et casse compris, sans toucher aux mots qui les contiennent", () => {
@@ -65,5 +65,26 @@ describe("5.26.2 : réactions et salons", () => {
     expect(() => validateRoom({ name: "Alliances" }, { ...ctx, totalOpen: 30 })).toThrow(/Trop/);
     expect(roomIdle({ createdAtMs: 0, lastMessageAtMs: 0 }, 15 * 86_400_000)).toBe(true);
     expect(roomIdle({ createdAtMs: 0, lastMessageAtMs: 10 * 86_400_000 }, 15 * 86_400_000)).toBe(false);
+  });
+});
+
+describe("5.27 : mentions et événements de salon", () => {
+  it("repère les @pseudo, sans doublon ni adresse e-mail", () => {
+    expect(parseMentions("salut @Testeur et @testeur, @Bob_2 !")).toEqual(["Testeur", "Bob_2"]);
+    expect(parseMentions("écris à moi@test.dev")).toEqual([]);
+    expect(parseMentions("@a1 @b2 @c3 @d4 @e5 @f6 @g7".replace(/(\w\d)/g, "$1x"))).toHaveLength(5);
+    expect(mentions("go @Éloïse", "éloïse")).toBe(true);
+    expect(mentions("go @Eloise", "Bob")).toBe(false);
+  });
+
+  it("valide un événement : libellé, date à venir, 7 jours au plus", () => {
+    const now = 1_000_000_000;
+    expect(validateRoomEvent({ label: "x", atMs: 0 }, now)).toEqual({ label: "", atMs: 0 });
+    expect(validateRoomEvent({ label: "  Raid de   boss ", atMs: now + 3600_000 }, now)).toEqual({ label: "Raid de boss", atMs: now + 3600_000 });
+    expect(() => validateRoomEvent({ label: "ok", atMs: now + 1 }, now)).toThrow(/caractères/);
+    expect(() => validateRoomEvent({ label: "Raid", atMs: now - 1 }, now)).toThrow(/à venir/);
+    expect(() => validateRoomEvent({ label: "Raid", atMs: now + 8 * 86_400_000 }, now)).toThrow(/7 jours/);
+    expect(roomEventLive({ eventAtMs: now }, now + 30 * 60_000)).toBe(true);
+    expect(roomEventLive({ eventAtMs: now }, now + 2 * 3600_000)).toBe(false);
   });
 });

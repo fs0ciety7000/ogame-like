@@ -9,6 +9,8 @@ import { AuctionSection } from "@/components/game/AuctionSection";
 import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
 import { MARKET_RULES } from "@/game/market";
 import { PotDashboard } from "@/components/game/PotDashboard";
+import { DonateCard } from "@/components/game/DonateCard";
+import { PatronsBoard } from "@/components/game/PatronsBoard";
 import { useServerPot } from "@/services/serverPotService";
 
 /* 5.26 : Commerce = Marché (offres et ordres d'achat), Contrats entre
@@ -59,5 +61,14 @@ export function CommercePage() {
 
 function PotTab() {
   const pot = useServerPot();
-  return pot ? <PotDashboard pot={pot} /> : null;
+  return (
+    <div className="flex flex-col gap-4">
+      {/* 5.27 : le don d'Ambre se fait aussi ici, pas seulement au Comptoir de la Ruche. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DonateCard />
+        <PatronsBoard />
+      </div>
+      {pot && <PotDashboard pot={pot} />}
+    </div>
+  );
 }

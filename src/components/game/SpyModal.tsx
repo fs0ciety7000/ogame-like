@@ -1,9 +1,10 @@
 import { allianceFlightFactor } from "@/game/alliances";
-import { EmptyState } from "@/components/ui/hud";
+import { EmptyState, HudCallout } from "@/components/ui/hud";
+import { bountyState } from "@/game/bounties";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Clock, Radar, ShieldAlert } from "lucide-react";
+import { Clock, Ghost, Radar, ShieldAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -153,6 +154,7 @@ export function SpyReportView({ report }: { report: SpyReport }) {
 /** Espionnage (v1.7) : envoi de sondes et dernier rapport obtenu. */
 export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: string } | null; onClose: () => void }) {
   const player = usePlayerStore((s) => s.player);
+  const phantoms = player ? bountyState(player).phantoms : 0;
   const uid = useAuthStore((s) => s.user?.uid);
   const fleets = useFleetStore((s) => s.fleets);
   const [probes, setProbes] = useState(1);
@@ -234,6 +236,15 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
                   className="w-40"
                 />
               </div>
+              {/* 5.27 : Sondes fantômes du Comptoir, consommées au prochain envoi. */}
+              {phantoms > 0 && (
+                <HudCallout tone="violet" className="flex items-center gap-2 text-xs">
+                  <Ghost className="h-3.5 w-3.5 shrink-0 text-violet-glow" aria-hidden />
+                  <span>
+                    <strong className="text-violet-glow">Prochain envoi : fantôme.</strong> Les sondes ne peuvent pas être repérées, la cible n'en saura rien (<span className="font-mono tabular-nums">{phantoms}</span> en réserve).
+                  </span>
+                </HudCallout>
+              )}
               <div className="space-y-1.5 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 shrink-0 text-cyan-glow" />

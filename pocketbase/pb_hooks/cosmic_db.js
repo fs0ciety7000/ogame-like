@@ -4761,10 +4761,19 @@ function bountyRequest(e) {
         out = { nameTone: game.setNameTone(player, req.tone) };
       } else if (req.action === "donate") {
         // 5.26.3 : don d'Ambre au pot commun (badge « Mécène »).
-        const amber = game.donateAmber(player, req.amount);
+        const amber = game.donateAmber(player, req.amount, now);
         const potRec = configRecord(txApp, game.SERVER_POT_KEY);
         writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "donation", amber, now, player.pseudo));
+        // 5.27 : mécènes du mois.
+        const patrons = configRecord(txApp, game.PATRONS_KEY);
+        writeConfig(txApp, game.PATRONS_KEY, game.addPatronage(patrons ? toPlain(patrons).data : null, uid, player.pseudo, amber, now));
         out = { amber, donated: Number((player.stats || {}).amberDonated) || 0 };
+      } else if (req.action === "weekly") {
+        // 5.27 : stock tournant du Comptoir (quantité limitée pour tout le serveur).
+        const stockRec = configRecord(txApp, game.WEEKLY_STOCK_KEY);
+        const res = game.buyWeeklyOffer(player, uid, stockRec ? toPlain(stockRec).data : null, now);
+        writeConfig(txApp, game.WEEKLY_STOCK_KEY, res.stock);
+        out = { message: res.message };
       } else if (req.action === "beacon") {
         const rec = findOrNull(txApp, "fleets", String(req.fleetId || ""));
         if (!rec) throw new game.GameActionError("Flotte introuvable.");
@@ -4789,6 +4798,24 @@ function bountyRequest(e) {
     notify(txApp, uid, flushed.notifications);
   });
   return e.json(200, out || {});
+}
+
+/** 5.27 : rappels du Comptoir (phéromone, voile de chitine) une heure avant la fin, joueurs actifs depuis 7 jours. */
+function shopRemindersTick(now) {
+  const game = loadGame();
+  let sent = 0;
+  $app.runInTransaction((txApp) => {
+    txApp.findRecordsByFilter("players", "npc = '' && lastActiveMs > {:t}", "", 0, 0, { t: now - 7 * 86400000 }).forEach((rec) => {
+      const player = { bounties: parseJsonField(rec, "bounties", null) };
+      const out = game.shopReminders(player, now);
+      if (!out.changed) return;
+      rec.set("bounties", player.bounties);
+      txApp.save(rec);
+      notify(txApp, rec.id, out.notifications);
+      sent += out.notifications.length;
+    });
+  });
+  return sent;
 }
 
 /** Rappel d'une flotte de prime : le contrat redevient disponible. */
@@ -8861,6 +8888,21 @@ function globalSend(e) {
     rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked, room: roomId, reactions: {}, nameTone });
     txApp.save(rec);
     bumpPlayerStat(txApp, uid, "globalMessages", 1);
+    // 5.27 : mentions @pseudo : notification aux joueurs cités (sauf soi, réglage « mentions » respecté).
+    if (!filtered.masked) {
+      const roomName = roomId ? (findOrNull(txApp, "chat_rooms", roomId) || { getString: () => "" }).getString("name") : "";
+      const link = "/game/messages?onglet=global" + (roomId ? "&salon=" + roomId : "");
+      game.parseMentions(filtered.text).forEach((pseudo) => {
+        let target = null;
+        try {
+          target = txApp.findFirstRecordByFilter("players", "pseudo = {:p}", { p: pseudo });
+        } catch (_) {
+          target = null;
+        }
+        if (!target || target.id === uid || mutedNotif(txApp, target.id, "mentions")) return;
+        notify(txApp, target.id, [{ kind: "message", title: `${player.getString("pseudo")} te mentionne`, message: `${roomName ? "#" + roomName : "Canal global"} : ${filtered.text.slice(0, 140)}`, createdAtMs: now, read: false, link }]);
+      });
+    }
     out = { id: rec.id, text: filtered.text, masked: filtered.masked };
   });
   // Ménage : seuls les derniers messages sont gardés.
@@ -8943,6 +8985,39 @@ function globalRoom(e) {
       const me = findOrNull(txApp, "players", uid);
       if (!me || !game.ownsShopItem({ bounties: toPlain(me).bounties }, "roomBanner")) throw new ForbiddenError("Bannière de salon : à débloquer au Comptoir de la Ruche.");
       rec.set("icon", game.roomIcon(req.icon));
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (req.action === "pin" || req.action === "event") {
+      // 5.27 : message épinglé et événement programmé, par le créateur du salon (ou l'équipe pour l'épingle).
+      const rec = findOrNull(txApp, "chat_rooms", String(req.id || ""));
+      if (!rec || rec.getBool("closed")) throw new NotFoundError("Salon introuvable.");
+      const owner = rec.getString("ownerUid") === uid;
+      if (!owner && !(req.action === "pin" && isGameAdmin(e))) throw new ForbiddenError("Réservé au créateur du salon.");
+      if (req.action === "pin") {
+        const msgId = String(req.messageId || "");
+        if (!msgId) {
+          rec.set("pinnedId", "");
+          rec.set("pinnedText", "");
+          rec.set("pinnedPseudo", "");
+        } else {
+          const msg = findOrNull(txApp, "global_messages", msgId);
+          if (!msg || msg.getString("room") !== rec.id || msg.getBool("hidden") || msg.getBool("masked")) throw new BadRequestError("Ce message ne peut pas être épinglé.");
+          rec.set("pinnedId", msg.id);
+          rec.set("pinnedText", msg.getString("text").slice(0, 400));
+          rec.set("pinnedPseudo", msg.getString("pseudo"));
+        }
+      } else {
+        let ev;
+        try {
+          ev = game.validateRoomEvent({ label: req.label, atMs: req.atMs }, now, readChatFilter(txApp, game));
+        } catch (err) {
+          throw new BadRequestError(String((err && err.message) || err));
+        }
+        rec.set("eventLabel", ev.label);
+        rec.set("eventAtMs", ev.atMs);
+      }
       txApp.save(rec);
       out = toPlain(rec);
       return;
@@ -9282,7 +9357,12 @@ function auctionsTick(now) {
           if (deal.tax > 0) {
             if (a.res === "amber") {
               // 5.26.3 : la taxe payée en Ambre compte pour le badge « Mécène » du vendeur.
-              if (findOrNull(txApp, "players", a.sellerId)) bumpPlayerStat(txApp, a.sellerId, "amberDonated", deal.tax);
+              const seller = findOrNull(txApp, "players", a.sellerId);
+              if (seller) {
+                bumpPlayerStat(txApp, a.sellerId, "amberDonated", deal.tax);
+                const patrons = configRecord(txApp, game.PATRONS_KEY);
+                writeConfig(txApp, game.PATRONS_KEY, game.addPatronage(patrons ? toPlain(patrons).data : null, a.sellerId, seller.getString("pseudo"), deal.tax, now));
+              }
               const potRec = configRecord(txApp, game.SERVER_POT_KEY);
               writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "auction", deal.tax, now));
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
@@ -9323,4 +9403,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

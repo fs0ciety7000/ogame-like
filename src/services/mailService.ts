@@ -46,7 +46,7 @@ export async function setEmailOptOut(uid: string, optOut: boolean) {
 }
 
 /** v4.0 : notifications d'alliance (canal, canal diplomatique, annonces). */
-export async function setNotifPrefs(uid: string, prefs: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean }) {
+export async function setNotifPrefs(uid: string, prefs: { allianceChat?: boolean; pactMessages?: boolean; allianceEvents?: boolean; warlords?: boolean; mentions?: boolean }) {
   await pb.collection("players").update(uid, { notifPrefs: prefs });
 }
 

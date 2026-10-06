@@ -3336,6 +3336,45 @@
         "max": 120,
         "presentable": false,
         "id": "text_cr_icon"
+      },
+      {
+        "name": "pinnedId",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false,
+        "id": "text_cr_pinnedid"
+      },
+      {
+        "name": "pinnedText",
+        "type": "text",
+        "required": false,
+        "max": 400,
+        "presentable": false,
+        "id": "text_cr_pinnedtext"
+      },
+      {
+        "name": "pinnedPseudo",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false,
+        "id": "text_cr_pinnedpseudo"
+      },
+      {
+        "name": "eventLabel",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false,
+        "id": "text_cr_eventlabel"
+      },
+      {
+        "name": "eventAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false,
+        "id": "number_cr_eventatms"
       }
     ],
     "indexes": [
