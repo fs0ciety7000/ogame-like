@@ -8728,4 +8728,124 @@ function pollRequest(e) {
   return e.json(200, out);
 }
 
-module.exports = { pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.26 : canal global ---------- */
+
+function readChatMutes(txApp, game) {
+  return game.normalizeMutes(readModeration(txApp, game.CHAT_MODERATION_KEYS.mutes));
+}
+
+function readChatFilter(txApp, game) {
+  return game.normalizeFilter(readModeration(txApp, game.CHAT_MODERATION_KEYS.filter));
+}
+
+/** POST /api/cosmic/global/send { text } — message dans le canal global. */
+function globalSend(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const now = Date.now();
+  const req = body(e);
+  let text;
+  try {
+    text = game.cleanGlobalMessage(req.text);
+  } catch (err) {
+    throw new BadRequestError(String((err && err.message) || err));
+  }
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const mute = game.activeMute(readChatMutes(txApp, game), uid, now);
+    if (mute) throw new ForbiddenError(mute.untilMs === null ? `Tu n'as plus la parole sur le canal global. Motif : ${mute.reason}` : `Parole retirée sur le canal global jusqu'au ${new Date(mute.untilMs).toISOString().slice(0, 16).replace("T", " ")} (UTC). Motif : ${mute.reason}`);
+    const recent = txApp.findRecordsByFilter("global_messages", "uid = {:u} && createdAtMs > {:t}", "-createdAtMs", 10, 0, { u: uid, t: now - 60_000 }).map((r) => r.getFloat("createdAtMs"));
+    const limited = game.rateLimitError(recent, now);
+    if (limited) throw new BadRequestError(limited);
+    const player = findOrNull(txApp, "players", uid);
+    if (!player) throw new BadRequestError("Profil joueur introuvable.");
+    const filtered = game.filterText(text, readChatFilter(txApp, game));
+    const rec = new Record(txApp.findCollectionByNameOrId("global_messages"));
+    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked });
+    txApp.save(rec);
+    out = { id: rec.id, text: filtered.text, masked: filtered.masked };
+  });
+  // Ménage : seuls les derniers messages sont gardés.
+  try {
+    const old = $app.findRecordsByFilter("global_messages", "id != ''", "-createdAtMs", 50, game.GLOBAL_CHAT_RULES.keep, {});
+    old.forEach((r) => $app.delete(r));
+  } catch (_) {
+    /* ménage au prochain envoi */
+  }
+  return e.json(200, out);
+}
+
+/** POST /api/cosmic/global/report { id } — signale un message (masqué d'office à 3 signalements). */
+function globalReport(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const id = String(body(e).id || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "global_messages", id);
+    if (!rec) throw new NotFoundError("Message introuvable.");
+    if (rec.getString("uid") === uid) throw new BadRequestError("Tu ne peux pas signaler ton propre message.");
+    const r = game.addReport(toPlain(rec).reporters, uid);
+    rec.set("reporters", r.reporters);
+    if (r.hide) rec.set("hidden", true);
+    txApp.save(rec);
+    out = { reports: r.reporters.length, hidden: r.hide };
+  });
+  return e.json(200, out);
+}
+
+/** GET/POST /api/cosmic/admin/global — messages signalés ou masqués, sourdines, filtre ; actions de modération. */
+function adminGlobal(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  if (e.request.method !== "POST") {
+    const flagged = $app.findRecordsByFilter("global_messages", "hidden = true || reporters != '[]'", "-createdAtMs", 100, 0, {}).map((r) => {
+      const p = toPlain(r);
+      return { id: r.id, uid: p.uid, pseudo: p.pseudo, text: p.text, createdAtMs: p.createdAtMs, hidden: p.hidden, reports: (p.reporters || []).length };
+    });
+    const mutes = readChatMutes($app, game);
+    return e.json(200, {
+      flagged,
+      mutes: Object.keys(mutes).map((uid) => Object.assign({ uid, active: !!game.activeMute(mutes, uid, now) }, mutes[uid])),
+      filter: readChatFilter($app, game),
+    });
+  }
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = { ok: true };
+  $app.runInTransaction((txApp) => {
+    if (action === "hide" || action === "restore" || action === "delete") {
+      const rec = findOrNull(txApp, "global_messages", String(req.id || ""));
+      if (!rec) throw new NotFoundError("Message introuvable.");
+      if (action === "delete") txApp.delete(rec);
+      else {
+        rec.set("hidden", action === "hide");
+        if (action === "restore") rec.set("reporters", []);
+        txApp.save(rec);
+      }
+      writeAdminLog(txApp, e, `canal : ${action === "delete" ? "supprimé" : action === "hide" ? "masqué" : "rétabli"}`, rec.getString("uid"), rec.getString("pseudo"), { texte: rec.getString("text") }, String(req.reason || "modération du canal"));
+    } else if (action === "mute" || action === "unmute") {
+      const uid = String(req.uid || "");
+      const mutes = readChatMutes(txApp, game);
+      const player = findOrNull(txApp, "players", uid);
+      if (action === "unmute") delete mutes[uid];
+      else {
+        const reason = String(req.reason || "").trim();
+        if (reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
+        const hours = req.hours === null || req.hours === undefined ? null : Number(req.hours);
+        if (hours !== null && !(hours > 0)) throw new BadRequestError("Durée invalide.");
+        mutes[uid] = { untilMs: hours === null ? null : now + hours * 3600000, reason: reason.slice(0, 200), byName: adminActor(e) };
+      }
+      writeModeration(txApp, game.CHAT_MODERATION_KEYS.mutes, mutes);
+      writeAdminLog(txApp, e, action === "mute" ? "canal : sourdine" : "canal : parole rendue", uid, player ? player.getString("pseudo") : uid, mutes[uid] || null, String(req.reason || "levée"));
+    } else if (action === "filter") {
+      const words = game.normalizeFilter({ words: req.words });
+      writeModeration(txApp, game.CHAT_MODERATION_KEYS.filter, { words });
+      out = { words };
+    } else throw new BadRequestError("Action inconnue.");
+  });
+  return e.json(200, out);
+}
+
+module.exports = { globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -123,7 +123,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/game/alliance", label: "Alliance", icon: Flag },
       { to: "/game/guerre-territoire", label: "Guerre de territoire", icon: MapIcon },
-      { to: "/game/messages", label: "Messages", icon: Mail },
+      { to: "/game/messages", label: "Communications", icon: Mail },
       { to: "/game/joueurs", label: "Classement", icon: Users },
       { to: "/game/marche", label: "Marché", icon: Store },
       { to: "/game/casino", label: "Casino", icon: Dices },

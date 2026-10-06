@@ -2970,5 +2970,70 @@
       "CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)",
       "CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"
     ]
+  },
+  {
+    "id": "pbc_ce_global_messages",
+    "name": "global_messages",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\" && hidden = false",
+    "viewRule": "@request.auth.id != \"\" && hidden = false",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "uid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "pseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "allianceTag",
+        "type": "text",
+        "required": false,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "text",
+        "type": "text",
+        "required": true,
+        "max": 400,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "hidden",
+        "type": "bool",
+        "required": false
+      },
+      {
+        "name": "reporters",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000
+      },
+      {
+        "name": "masked",
+        "type": "bool",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)",
+      "CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)"
+    ]
   }
 ]
