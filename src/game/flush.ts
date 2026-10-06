@@ -5,6 +5,7 @@ import { advanceColonies } from "@/game/colonies";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
 import { advanceResources, missionRewards } from "@/game/economy";
 import { ensureContracts, recordContract } from "@/game/contracts";
+import { settleLegacyDaily } from "@/game/dailyMissions";
 import { MISSIONS } from "@/game/missions";
 import { missionRewardFactor } from "@/game/events";
 import { buildingsUnlockedByTech, findTech, techBonus, techEffects, TECHNOLOGIES } from "@/game/technologies";
@@ -99,6 +100,9 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   // Production, plafond de l'entrepôt, entretien de flotte et panne d'énergie.
   player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1000);
   ensureContracts(player, now);
+  // 6.2 (lot N) : missions du jour fusionnées ; celles faites mais pas réclamées sont payées une fois.
+  const legacyTokens = settleLegacyDaily(player, now);
+  if (legacyTokens > 0) notifications.push({ kind: "event", title: "Missions du jour réglées", message: `Les missions du jour rejoignent les objectifs du jour. Tes missions faites t'ont rapporté ${legacyTokens} jeton${legacyTokens > 1 ? "s" : ""}.`, createdAtMs: now, read: false, link: "/game/ordres" });
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);

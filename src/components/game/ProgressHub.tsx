@@ -56,8 +56,9 @@ export function ProgressHub({ now }: { now: number }) {
   const chronReady = !!month && !!cs && month.episodes.some((e, i) => i < open && !cs.claimed.includes(i) && (cs.progress[i] ?? 0) >= e.objective.count);
   // 5.21.1 : résumé toujours visible, chaque case ouvre son onglet.
   const summary: { tab: HubTab; label: string; value: string; sub: string; tone: HudTone; ready: boolean }[] = [
-    { tab: "today", label: "Missions du jour", value: `${dm.tasks.filter((t) => t.claimed).length} / ${dm.tasks.length}`, sub: daily ? "récompense prête" : "récupérées", tone: "mint", ready: daily },
-    { tab: "today", label: "Contrats", value: `${items.filter((c) => c.claimed).length} / ${items.length}`, sub: contracts > 0 ? `${contracts} à récupérer` : "récupérés", tone: "mint", ready: contracts > 0 },
+    // 6.2 (lot N) : missions du jour fusionnées dans les objectifs du jour (plus de tuile quand il n'y a rien).
+    ...(dm.tasks.length ? [{ tab: "today" as HubTab, label: "Missions du jour", value: `${dm.tasks.filter((t) => t.claimed).length} / ${dm.tasks.length}`, sub: daily ? "récompense prête" : "récupérées", tone: "mint" as HudTone, ready: daily }] : []),
+    { tab: "today", label: "Objectifs du jour", value: `${items.filter((c) => c.claimed).length} / ${items.length}`, sub: contracts > 0 ? `${contracts} à récupérer` : "récupérés", tone: "mint", ready: contracts > 0 },
     { tab: "pass", label: "Passe", value: `${tier} / ${pass.tiers.length}`, sub: passClaimable > 0 ? `${passClaimable} palier${passClaimable > 1 ? "s" : ""} à réclamer` : "paliers atteints", tone: "gold", ready: passClaimable > 0 },
     { tab: "chronicles", label: "Chroniques", value: month && cs ? `${cs.claimed.length} / ${month.episodes.length}` : "—", sub: chronReady ? "épisode à valider" : "épisodes terminés", tone: "accent", ready: chronReady },
   ];

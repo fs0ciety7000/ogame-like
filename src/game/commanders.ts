@@ -85,7 +85,7 @@ const BASE_COMMANDERS: Omit<CommanderDef, "role" | "bonus">[] = [
     name: "Oswin Tarr",
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
-    domain: "Missions, contrats du jour, échanges au Comptoir et au marché.",
+    domain: "Missions, objectifs du jour, échanges au Comptoir et au marché.",
   },
   // v5.14 : rôles rares.
   {

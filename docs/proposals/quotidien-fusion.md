@@ -1,7 +1,6 @@
 # Proposition : contrats et missions du jour fusionnés (lot N)
 
-Statut : **principe validé** (2026-10-06 : « Fusionner les contrats et les missions du jour ? Oui »). Chiffres ci-dessous à confirmer avant
-implémentation.
+Statut : **livrée** en 6.2.1, voir `docs/changes/6.2.1-quotidien-fusion.md` (4 objectifs, minuit heure de Paris).
 Suite de l'option 2 de `docs/proposals/journal-de-bord.md` (constat Q1). Lot N de `docs/proposals/feuille-de-route-2026-hiver.md`.
 
 ## 1. Constat

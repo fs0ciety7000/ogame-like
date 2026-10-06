@@ -11,7 +11,9 @@ import type { PlayerState } from "@/types/game";
    trois réunies un bonus. Les actions sont comptées par trackActivity.
 ===================================================== */
 
-export const DAILY_RULES = { tasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
+/** 6.2 (lot N) : fusionnées dans les objectifs du jour (contracts.ts) : plus de tâche tirée. `legacyTasks` sert à payer
+ *  les missions faites et non réclamées le jour de la bascule (settleLegacyDaily). */
+export const DAILY_RULES = { tasks: 0, legacyTasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
 
 /** Tâches possibles (faisables par tout le monde) et quantité demandée. */
 const POOL: { key: ChronicleObjective; count: number }[] = [
@@ -29,11 +31,11 @@ function hash(text: string): number {
   return h;
 }
 
-export function dailyTasksFor(day: string): { key: ChronicleObjective; count: number }[] {
+export function dailyTasksFor(day: string, tasks: number = DAILY_RULES.tasks): { key: ChronicleObjective; count: number }[] {
   const pool = [...POOL];
   const out: { key: ChronicleObjective; count: number }[] = [];
   let seed = hash(day);
-  while (out.length < DAILY_RULES.tasks && pool.length > 0) {
+  while (out.length < tasks && pool.length > 0) {
     const i = seed % pool.length;
     out.push(pool.splice(i, 1)[0]);
     seed = hash(`${day}:${seed}`);
@@ -85,4 +87,26 @@ export function claimDailyMission(player: PlayerState, index: unknown, now: numb
   const tokens = DAILY_RULES.tokensPerTask + (bonus ? DAILY_RULES.allBonusTokens : 0);
   grantTokens(player, tokens);
   return { tokens, bonus };
+}
+
+/** 6.2 (lot N) : bascule sans perte. Les missions du jour faites mais pas réclamées (tirage d'avant, 3 tâches) sont
+ *  payées une fois, automatiquement. Renvoie les jetons versés. */
+export function settleLegacyDaily(player: PlayerState, now: number): number {
+  if (DAILY_RULES.tasks > 0) return 0;
+  const st = passState(player, now);
+  const daily = st.daily;
+  if (!daily || daily.day !== parisDay(now) || daily.settled) return 0;
+  const tasks = dailyTasksFor(daily.day, DAILY_RULES.legacyTasks);
+  const claimed = [...daily.claimed];
+  let tokens = 0;
+  tasks.forEach((t, i) => {
+    if (claimed.includes(i) || (daily.counts[t.key] ?? 0) < t.count) return;
+    claimed.push(i);
+    tokens += DAILY_RULES.tokensPerTask;
+  });
+  if (tokens > 0 && claimed.length >= tasks.length) tokens += DAILY_RULES.allBonusTokens;
+  st.daily = { ...daily, claimed, settled: true };
+  player.seasonPass = st;
+  if (tokens > 0) grantTokens(player, tokens);
+  return tokens;
 }

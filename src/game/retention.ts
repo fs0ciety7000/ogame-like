@@ -33,6 +33,14 @@ export function parisDay(now: number): string {
   return new Date(now + offsetHours * 3600_000).toISOString().slice(0, 10);
 }
 
+/** 6.2 : secondes jusqu'au prochain minuit, heure de Paris. */
+export function secondsToParisMidnight(now: number): number {
+  const offsetHours = (parisHour(now) - new Date(now).getUTCHours() + 24) % 24;
+  const parisNow = now + offsetHours * 3600_000;
+  const nextMidnight = Date.parse(`${new Date(parisNow).toISOString().slice(0, 10)}T00:00:00Z`) + 86_400_000;
+  return Math.max(0, Math.floor((nextMidnight - parisNow) / 1000));
+}
+
 function dayDiff(a: string, b: string): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY);
 }

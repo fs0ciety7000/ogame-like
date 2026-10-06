@@ -58,7 +58,8 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
   const dm = dailyMissions(player, now);
   const dmReady = count("dailyClaim");
   const dmClaimed = dm.tasks.filter((t) => t.claimed).length;
-  out.push({
+  // 6.2 (lot N) : plus de missions du jour (fusionnées dans les objectifs).
+  if (dm.tasks.length > 0) out.push({
     id: "daily",
     label: "Missions du jour",
     period: "jour",
@@ -74,11 +75,11 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
   const cClaimed = items.filter((c) => c.claimed).length;
   out.push({
     id: "contracts",
-    label: "Contrats du jour",
+    label: "Objectifs du jour",
     period: "jour",
     state: cReady > 0 ? "ready" : items.length > 0 && cClaimed >= items.length ? "done" : "todo",
     value: items.length ? `${cClaimed} / ${items.length}` : null,
-    detail: cReady > 0 ? `${cReady} contrat${cReady > 1 ? "s" : ""} rempli${cReady > 1 ? "s" : ""}.` : items.length ? "Remplis-les en jouant, la récompense suit ta production." : "Ils arrivent à ta prochaine action.",
+    detail: cReady > 0 ? `${cReady} objectif${cReady > 1 ? "s" : ""} rempli${cReady > 1 ? "s" : ""}.` : items.length ? "Remplis-les en jouant : ressources rares, XP et jetons." : "Ils arrivent à ta prochaine action.",
     link: "/game/ordres#contrats",
     ready: cReady,
   });

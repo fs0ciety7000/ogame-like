@@ -18,7 +18,7 @@ Toute proposition (`docs/proposals/`) s'appuie dessus ; une fois livrée, ses r�
 | Boucle | Durée | Contenu | Récompense |
 |:--|:--|:--|:--|
 | Session | 2 à 10 min | relancer les files (bâtiments, labo, chantier), récolter, envoyer des flottes | progression visible, notifications |
-| Journée | 24 h | contrats du jour, missions, série de connexion, raids pirates ; tout réuni dans **Ordres du jour** (5.30) | ressources, jetons, Ambre (j6), coffre (j7) |
+| Journée | 24 h | 4 objectifs du jour (minuit Paris), série de connexion, raids pirates ; tout réuni dans **Ordres du jour** (5.30) | ressources, jetons, Ambre (j6), coffre (j7) |
 | Semaine | 7 jours | boss en rotation, défis hebdo, offre de la semaine, tournoi du casino | reliques, plans, titres |
 | Saison | 1 mois | passe (30 paliers), Chroniques, guerres de saison, divisions | bannières, titres, Ambre |
 | Méta | plusieurs mois | Ascension (bâtiments remis au niveau 1, talents), colonies, fin de partie | étoiles, talents, prestige |
@@ -140,3 +140,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 5.33.0 | Lots G, H, I livrés : alliances 8 → 20 (Quartiers fédérés), 10 emplacements de flotte + « Relancer », routes logistiques des colonies ; invariants I12, I13 | `docs/changes/5.33.0-alliances-grandes.md`, `5.33.0-emplacements-flotte.md`, `5.33.0-routes-logistiques.md` |
 | 2026-10-06 | 6.0.0 | Lot J.1 livré : classes d'empire (Industriel, Seigneur de guerre, Explorateur), source « classe » du circuit d'effets, temps limités à −8 % pour tenir le plafond ; invariant I14. Unités de classe (J.2) à venir | `docs/changes/6.0.0-classes-empire.md` |
 | 2026-10-06 | 6.0.1 à 6.2.0 | Lots K, L, M : santé de l'équilibre (admin), production et combat expliqués, butin 30 % du stock exposé + soute de pillage ×2 + sauvetage ≤ 85 % | `docs/changes/6.0.1-sante-equilibre.md`, `6.1.0-lisibilite-suite.md`, `6.2.0-pillage.md` |
+| 2026-10-06 | 6.2.1 | Lot N : contrats et missions du jour fusionnés en 4 objectifs (minuit Paris, totaux inchangés), missions prêtes versées à la bascule | `docs/changes/6.2.1-quotidien-fusion.md` |

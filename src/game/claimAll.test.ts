@@ -19,6 +19,6 @@ describe("tout réclamer", () => {
   });
 
   it("résume par type", () => {
-    expect(describeClaims({ claimContract: 2, passClaim: 1, claimGuide: 0 })).toBe("2 contrats, 1 palier du passe");
+    expect(describeClaims({ claimContract: 2, passClaim: 1, claimGuide: 0 })).toBe("2 objectifs du jour, 1 palier du passe");
   });
 });

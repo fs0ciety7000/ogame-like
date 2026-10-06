@@ -405,7 +405,7 @@ const VILLAIN_TAUNTS = [
 ];
 
 const ORDERS: Record<ChronicleObjective, string[]> = {
-  contract: ["Tiens tes contrats du jour : {count} rempli{s}, et nos routes tiendront.", "Il nous faut des réserves. Remplis {count} contrat{s} avant qu'ils ne coupent les routes."],
+  contract: ["Tiens tes objectifs du jour : {count} rempli{s}, et nos routes tiendront.", "Il nous faut des réserves. Remplis {count} objectif{s} du jour avant qu'ils ne coupent les routes."],
   bounty: ["L'Essaim a des cibles pour toi : remplis {count} prime{s} Kesh'Vaar.", "Chaque fugitif ramené les prive d'un pilote. {count} prime{s}, commandant."],
   raidRepelled: ["Ils vont tester nos défenses. Repousse {count} raid{s} et ils comprendront.", "Tiens la ligne : {count} raid{s} repoussé{s}, pas un de moins."],
   victory: ["Montre au secteur qu'on peut les battre : gagne {count} combat{s}.", "La peur doit changer de camp : {count} victoire{s}, et le secteur relèvera la tête."],

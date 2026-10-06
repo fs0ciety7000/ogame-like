@@ -22,10 +22,10 @@ function completeAll(p: PlayerState, now: number) {
 }
 
 describe("daily contracts", () => {
-  it("draws 3 distinct contracts per day, the same on every call", () => {
+  it("draws 4 distinct objectives per day (6.2 : contrats et missions du jour fusionnés), the same on every call", () => {
     const a = ensureContracts(player(), T0);
-    expect(a.items).toHaveLength(3);
-    expect(new Set(a.items.map((c) => c.type)).size).toBe(3);
+    expect(a.items).toHaveLength(4);
+    expect(new Set(a.items.map((c) => c.type)).size).toBe(4);
     expect(ensureContracts(player(), T0 + 3600_000).items.map((c) => c.type)).toEqual(a.items.map((c) => c.type));
     expect(a.day).toBe(contractDay(T0));
   });

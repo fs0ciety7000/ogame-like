@@ -1,3 +1,5 @@
+import { secondsToParisMidnight } from "@/game/retention";
+import { TokenIcon } from "@/components/casino/TokenIcon";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Flame, Gift, RefreshCw, ScrollText } from "lucide-react";
@@ -15,7 +17,7 @@ import { claimContract, GameActionError, rerollContract } from "@/services/playe
 import { playUnlock } from "@/lib/sfx";
 import { EmojiText } from "@/components/ui/game-icon";
 
-/** Contrats du jour : 3 objectifs, série de jours consécutifs et coffre. */
+/** 6.2 : objectifs du jour (contrats et missions du jour fusionnés) : 4 objectifs, série de jours consécutifs et coffre. */
 export function ContractsCard({ compact = false }: { compact?: boolean }) {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
@@ -31,7 +33,8 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
   const items = fresh ? state.items : [];
   const streak = fresh ? state.streak : 0;
   const doneToday = fresh && state.lastCompletedDay === state.day;
-  const secondsLeft = Math.max(0, Math.floor((Date.parse(`${contractDay(now)}T00:00:00Z`) + 86_400_000 - now) / 1000));
+  // 6.2 : remise à zéro à minuit, heure de Paris.
+  const secondsLeft = secondsToParisMidnight(now);
   const nextChestIn = CONTRACT_RULES.chestEvery - (streak % CONTRACT_RULES.chestEvery);
 
   const claim = async (c: Contract) => {
@@ -44,7 +47,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
         toast.success("Coffre de série ouvert !", { description: getRewardText(res.chest).join(" · "), duration: 7000 });
       } else if (res.dayCompleted) {
         setCelebrate((n) => n + 1);
-        toast.success("Contrats du jour terminés !", { description: "Ta série continue demain." });
+        toast.success("Objectifs du jour terminés !", { description: "Ta série continue demain." });
       }
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
@@ -69,10 +72,10 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
       <AnimatePresence>{celebrate > 0 && <ParticleBurst key={celebrate} count={40} colorVar="var(--color-gold-glow)" />}</AnimatePresence>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ScrollText className="h-4 w-4 text-gold-glow" />
-        <h3 className="font-display text-sm text-slate-100">Contrats du jour</h3>
+        <h3 className="font-display text-sm text-slate-100">Objectifs du jour</h3>
         <span
           className={`hud-chip hud-chip-sm ${streak > 0 ? "hud-tone-gold" : "hud-tone-neutral"}`}
-          title="Jours consécutifs où les 3 contrats ont été terminés"
+          title={`Jours consécutifs où les ${CONTRACT_RULES.perDay} objectifs ont été terminés`}
         >
           <Flame className="h-3 w-3" /> Série {streak}
           {streak > 0 && ` · +${Math.round(streakBonus(streak) * 100)} %`}
@@ -80,13 +83,16 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
         <span className="flex items-center gap-1 text-[11px] text-slate-500">
           <Gift className="h-3 w-3" /> coffre dans {nextChestIn} jour{nextChestIn > 1 ? "s" : ""}
         </span>
-        <span className="ml-auto text-[11px] text-slate-500">nouveaux contrats dans {formatClock(secondsLeft)}</span>
+        <span className="flex items-center gap-1 font-mono text-[11px] tabular-nums text-slate-400">
+          <TokenIcon size={12} /> {CONTRACT_RULES.tokensPerContract} par objectif, +{CONTRACT_RULES.allDoneTokens} les {CONTRACT_RULES.perDay}
+        </span>
+        <span className="ml-auto text-[11px] text-slate-500">nouveaux objectifs dans {formatClock(secondsLeft)}</span>
       </div>
 
       {items.length === 0 ? (
-        <p className="text-xs text-slate-500">Génération des contrats du jour…</p>
+        <p className="text-xs text-slate-500">Génération des objectifs du jour…</p>
       ) : (
-        <div className={compact ? "grid gap-2" : "grid gap-2 md:grid-cols-3"}>
+        <div className={compact ? "grid gap-2" : "grid gap-2 sm:grid-cols-2 xl:grid-cols-4"}>
           {items.map((c) => {
             const done = c.progress >= c.target;
             return (
@@ -127,7 +133,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
           })}
         </div>
       )}
-      {doneToday && <p className="mt-2 text-[11px] text-mint-glow">Tous les contrats du jour sont terminés. Reviens demain pour prolonger ta série !</p>}
+      {doneToday && <p className="mt-2 text-[11px] text-mint-glow">Tous les objectifs du jour sont terminés. Reviens demain pour prolonger ta série !</p>}
     </Card>
   );
 }

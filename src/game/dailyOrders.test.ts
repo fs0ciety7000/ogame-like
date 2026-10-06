@@ -35,12 +35,11 @@ describe("Ordres du jour", () => {
     expect(ordersReadyCount(out.player, NOW)).toBe(0);
   });
 
-  it("missions du jour : progression affichée, rien à réclamer", () => {
+  it("6.2 : les missions du jour sont fusionnées dans les objectifs du jour (plus de ligne à part)", () => {
     const p = player();
     p.streak = { count: 1, lastDay: parisDay(NOW), best: 1, total: 1 };
-    const view = dailyOrders(p, NOW).find((o) => o.id === "daily")!;
-    expect(view.state).toBe("todo");
-    expect(view.value).toBe("0 / 3");
+    expect(dailyOrders(p, NOW).some((o) => o.id === "daily")).toBe(false);
+    expect(dailyOrders(p, NOW).find((o) => o.id === "contracts")?.label).toBe("Objectifs du jour");
   });
 
   it("l'objectif d'alliance n'apparaît que dans une alliance", () => {

@@ -35,6 +35,7 @@ import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/servi
 import { priceBounds } from "@/game/market";
 import { readAllianceSaga, sagaMonthId, sagaOf } from "@/game/allianceSaga";
 import { fetchNpcOpponents } from "@/services/codexService";
+import { CONTRACT_RULES } from "@/game/contracts";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -203,7 +204,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   it("generates daily contracts on the server, refuses early claims and forged progress", async () => {
     await ps.syncPlayer(aId);
     const p = await snap(aId);
-    expect(p?.contracts?.items).toHaveLength(3);
+    expect(p?.contracts?.items).toHaveLength(CONTRACT_RULES.perDay);
     const open = p!.contracts!.items.find((c: { claimed: boolean; progress: number; target: number; id: string }) => !c.claimed && c.progress < c.target);
     if (open) await expect(ps.claimContract(open.id)).rejects.toThrow(/pas encore/);
     await expect(pb.collection("players").update(aId, { contracts: { ...p!.contracts, items: [] } })).rejects.toBeTruthy();

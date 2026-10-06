@@ -1037,7 +1037,7 @@ var BASE_COMMANDERS = [
     name: "Oswin Tarr",
     title: "Intendant",
     portrait: "/assets/commanders/steward.webp",
-    domain: "Missions, contrats du jour, \xE9changes au Comptoir et au march\xE9."
+    domain: "Missions, objectifs du jour, \xE9changes au Comptoir et au march\xE9."
   },
   // v5.14 : rôles rares.
   {
@@ -6059,431 +6059,6 @@ function deliverToColony(colony, cargo) {
   for (const [r, n] of Object.entries(cargo)) colony.resources[r] = ((_a = colony.resources[r]) != null ? _a : 0) + (n != null ? n : 0);
 }
 
-// src/game/contracts.ts
-var CONTRACT_RULES = {
-  perDay: 3,
-  streakBonusPerDay: 0.1,
-  streakBonusMax: 0.5,
-  chestEvery: 7,
-  xpPerContract: 20,
-  rarePerContract: 120,
-  chestRare: 1500,
-  chestXp: 150
-};
-var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
-var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var DAY_MS = 24 * 3600 * 1e3;
-function contractDay(now) {
-  return new Date(now).toISOString().slice(0, 10);
-}
-function previousDay(day) {
-  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
-}
-function seededRandom(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return () => {
-    h = Math.imul(h ^ h >>> 15, 2246822507);
-    h = Math.imul(h ^ h >>> 13, 3266489909);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  };
-}
-function targetFor(type, player) {
-  var _a, _b, _c, _d;
-  switch (type) {
-    case "build_units":
-      return 20;
-    case "missions":
-      return 2;
-    case "spend": {
-      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
-      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
-    }
-    default:
-      return 1;
-  }
-}
-function makeContract(type, player, day, index2) {
-  return { id: `${day}-${index2}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
-}
-function ensureContracts(player, now) {
-  var _a, _b;
-  const day = contractDay(now);
-  const current2 = player.contracts;
-  if (current2 && current2.day === day) return current2;
-  const rand = seededRandom(`${player.uid}:${day}`);
-  const pool = [...ALL_TYPES];
-  const items = [];
-  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
-    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
-    items.push(makeContract(type, player, day, i));
-  }
-  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
-  player.contracts = {
-    day,
-    items,
-    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
-    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
-    rerolled: false
-  };
-  return player.contracts;
-}
-function recordContract(player, type, amount3, now) {
-  if (!(amount3 > 0)) return;
-  const state = ensureContracts(player, now);
-  for (const c of state.items) {
-    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
-  }
-}
-function developmentScale(player) {
-  return rareRewardScale(player);
-}
-function streakBonus(streak) {
-  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
-}
-function contractReward(player, contract) {
-  var _a, _b, _c;
-  const state = player.contracts;
-  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
-  const index2 = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
-  const rare = RARES[(index2 + contract.type.length) % RARES.length];
-  return {
-    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
-    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
-  };
-}
-function chestReward(player) {
-  const scale = developmentScale(player);
-  const out = { xp: CONTRACT_RULES.chestXp };
-  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
-  return out;
-}
-function grant(player, reward, now) {
-  var _a;
-  for (const [res, amount3] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount3, now, "contract");
-    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  }
-}
-function claimContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  const contract = state.items.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
-  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
-  const reward = contractReward(player, contract);
-  grant(player, reward, now);
-  contract.claimed = true;
-  let chest = null;
-  const dayCompleted = state.items.every((c) => c.claimed);
-  if (dayCompleted) {
-    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
-    state.lastCompletedDay = state.day;
-    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
-      chest = chestReward(player);
-      grant(player, chest, now);
-    }
-  }
-  return { reward, dayCompleted, chest };
-}
-function rerollContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
-  const index2 = state.items.findIndex((c) => c.id === contractId);
-  if (index2 < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (state.items[index2].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
-  const used = new Set(state.items.map((c) => c.type));
-  const pool = ALL_TYPES.filter((t) => !used.has(t));
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
-  const type = pool[Math.floor(rand() * pool.length)];
-  const next = makeContract(type, player, state.day, index2);
-  next.id = `${state.day}-${index2}-${type}-r`;
-  state.items[index2] = next;
-  state.rerolled = true;
-  return next;
-}
-
-// src/game/seasonCatalog.ts
-var CATALOG_START = "2026-11";
-var THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"];
-var THEME_PRIMARY = {
-  vide: "logistician",
-  hiver: "warden",
-  forge: "engineer",
-  bazar: "diplomat",
-  maree: "admiral",
-  colonies: "governor",
-  primes: "corsair",
-  comete: "hunter",
-  moisson: "steward",
-  archives: "spy",
-  chantiers: "mechanic",
-  rempart: "strategist"
-};
-var E = (theme, year, name, tagline, synopsis, commander, scene) => ({ theme, year, name, tagline, synopsis, commander, scene });
-var SEASON_CATALOG = [
-  // ---------- L'Appel du Vide (Logisticienne) ----------
-  E("vide", 1, "L'Appel du Vide", "Au-del\xE0 des cartes, des routes \xE0 ouvrir.", "Un signal venu d'au-del\xE0 des franges appelle les flottes. {mentor} veut ouvrir une route avant que {rival} ne la ferme.", { name: "Ilka Morrow", title: "\xC9claireuse des franges", secondary: "spy", lore: "{commander} a cartographi\xE9 trois n\xE9buleuses que tout le monde disait infranchissables.", look: "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind" }, "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind"),
-  E("vide", 2, "Au-del\xE0 des franges", "Chaque route ouverte est une colonie promise.", "Les routes ouvertes l'an dernier m\xE8nent \xE0 des mondes inconnus. {mentor} veut y installer des colons ; {rival} y voit des proies.", { name: "Corentin Vash", title: "Ma\xEEtre des routes", secondary: "governor", lore: "{commander} a men\xE9 le premier convoi de colons au-del\xE0 du Voile, sans perdre un seul vaisseau.", look: "a calm convoy master in a long travel coat, route holograms around his hands, colony ships glowing behind" }, "a long convoy of colony ships threading a glowing corridor between two magenta nebulae, a green world on the horizon"),
-  E("vide", 3, "Terra incognita", "L\xE0 o\xF9 m\xEAme les colosses se perdent.", "Aux confins du Vide, des formes gigantesques d\xE9rivent entre les \xE9toiles. {mentor} veut les pister ; {rival} veut leurs carcasses.", { name: "Sefa Arkwright", title: "Pisteuse du Vide", secondary: "hunter", lore: "{commander} a suivi la piste d'un colosse pendant deux ans, d'un bout \xE0 l'autre du Vide.", look: "a scarred void tracker with a long-range targeting monocle, harpoon rig on her back, enormous shadow drifting behind" }, "an immense dark creature silhouette drifting through a magenta void, a small tracker ship following its luminous trail"),
-  // ---------- Hiver galactique (Gardienne) ----------
-  E("hiver", 1, "Hiver galactique", "Garder le feu, garder les r\xE9serves.", "Une nuit glaciale tombe sur le secteur et les r\xE9serves deviennent vitales. {mentor} confie les entrep\xF4ts aux plus vigilants ; {rival} attend la faille.", { name: "Brynja Solvei", title: "Gardienne du Givre", secondary: "strategist", lore: "{commander} a tenu les entrep\xF4ts de Vashka tout un hiver, sans perdre une caisse.", look: "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind" }, "a fortified ice-covered depot planet under a pale blue aurora, armored doors glowing, distant raider lights in the dark"),
-  E("hiver", 2, "La Longue Nuit", "Quand le soleil ne revient pas, on compte chaque ressource.", "La nuit dure plus longtemps cette ann\xE9e. {mentor} rationne, {rival} pille : chaque r\xE9serve prot\xE9g\xE9e est une victoire.", { name: "Aldo Frostmere", title: "Intendant de la Longue Nuit", secondary: "steward", lore: "{commander} tient les comptes de l'hiver au gramme pr\xE8s, et n'a jamais laiss\xE9 un colon sans chauffage.", look: "a meticulous quartermaster in thick grey furs, frost-rimmed spectacles, glowing inventory hologram, snow falling" }, "endless night over a frozen colony, warm golden lights in armored granaries, a pale aurora overhead"),
-  E("hiver", 3, "Givre \xE9ternel", "Le froid ronge les coques ; on les r\xE9pare.", "Un givre \xE9trange ronge les blindages. {mentor} r\xE9unit m\xE9caniciens et gardiens pour tenir jusqu'au d\xE9gel ; {rival} parie sur l'usure.", { name: "Halvard Rime", title: "Gardien des Cales gel\xE9es", secondary: "mechanic", lore: "{commander} a r\xE9par\xE9 une station enti\xE8re \xE0 mains nues, par moins quatre-vingts degr\xE9s.", look: "a towering armored warden with a frost-covered mechanical arm, blue ice crystals on armor, frozen hangar behind" }, "a frozen orbital hangar with ice crystals on the hulls, welders' blue sparks and a pale aurora through the hangar windows"),
-  // ---------- Forge Stellaire (Ingénieure) ----------
-  E("forge", 1, "Forge Stellaire", "B\xE2tir plus vite que l'ennemi ne d\xE9truit.", "{rival} a mis la main sur les forges du secteur. {mentor} veut les reprendre, chantier par chantier.", { name: "Oriane Ferrand", title: "Ma\xEEtresse de Forge", secondary: "steward", lore: "{commander} a rallum\xE9 une forge \xE9teinte depuis un si\xE8cle, et tenu ses comptes \xE0 l'\xE9quilibre.", look: "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm" }, "a colossal star forge built around a red dwarf, molten rivers of metal and orange sparks, cyan scaffolding lights"),
-  E("forge", 2, "Le Grand Chantier", "Chaque rivet est une victoire.", "Les forges reprises tournent \xE0 plein, mais il manque des bras et des pi\xE8ces. {mentor} lance le plus grand chantier de l'histoire du secteur ; {rival} veut le saboter.", { name: "Bastien Rivet", title: "Architecte des \xC9toiles", secondary: "mechanic", lore: "{commander} a dessin\xE9 les plans de la moiti\xE9 des stations du secteur, et en a mont\xE9 l'autre moiti\xE9.", look: "a bearded master architect with holographic blueprints floating around him, orange forge light, steel scaffolds" }, "a gigantic space station under construction with thousands of welding sparks, cranes and drones, orange and cyan light"),
-  E("forge", 3, "C\u0153ur de l'Enclume", "Forger l'arme qui finira la guerre.", "Au c\u0153ur de l'Enclume, une arme de l\xE9gende attend d'\xEAtre forg\xE9e. {mentor} r\xE9unit ing\xE9nieurs et amiraux ; {rival} veut la voler avant qu'elle ne soit finie.", { name: "Nyra Okonkwo", title: "Ing\xE9nieure en chef", secondary: "admiral", lore: "{commander} con\xE7oit des vaisseaux de ligne, puis les m\xE8ne elle-m\xEAme au combat.", look: "a confident chief engineer in an officer's coat with forge-scorched sleeves, warship blueprint hologram, orange glow" }, "a massive anvil-shaped forge station cradling an unfinished capital warship, orange molten light and cyan tactical holograms"),
-  // ---------- Le Grand Bazar (Diplomate) ----------
-  E("bazar", 1, "Le Grand Bazar", "Tout s'ach\xE8te, sauf la parole donn\xE9e.", "Le Grand Bazar ouvre ses portes \xE0 tous les empires. {mentor} veut y nouer des alliances ; {rival} veut y faire la loi.", { name: "Isidore Vantal", title: "Ambassadeur du Bazar", secondary: "steward", lore: "{commander} a n\xE9goci\xE9 la paix entre deux clans marchands qui se battaient depuis trois g\xE9n\xE9rations.", look: "a silver-tongued diplomat in emerald silk robes, holographic contracts, warm market lights behind" }, "a huge orbital bazaar ring full of colorful stalls and docked merchant ships, emerald and gold lanterns, crowds of aliens"),
-  E("bazar", 2, "Route de la soie stellaire", "Un convoi bien prot\xE9g\xE9 vaut une flotte.", "Une route commerciale relie d\xE9sormais tout le secteur, et les pirates l'ont vue aussi. {mentor} veut la s\xE9curiser ; {rival} veut la taxer.", { name: "Saskia Brel", title: "\xC9missaire corsaire", secondary: "corsair", lore: "{commander} a \xE9t\xE9 pirate avant de devenir diplomate. Elle conna\xEEt toutes les ruses, et en invente encore.", look: "a charismatic former pirate turned envoy, red sash over a diplomatic coat, golden earrings, convoy lights behind" }, "a long trade route of glowing gates across space, merchant convoys escorted by corsair frigates, emerald and red lights"),
-  E("bazar", 3, "Foire des mondes", "On y \xE9change des marchandises\u2026 et des secrets.", "La Foire des mondes attire tous les empires, et tous leurs espions. {mentor} veut des trait\xE9s ; {rival} veut des informations.", { name: "Auriel Kesh", title: "Diplomate de l'ombre", secondary: "spy", lore: "{commander} sait toujours ce que l'autre camp va proposer, avant m\xEAme qu'il le sache lui-m\xEAme.", look: "an elegant masked diplomat in violet and emerald silks, whisper-thin holographic veil, festive fair lights behind" }, "a grand festival of worlds inside a domed station, floating lanterns, envoys of many species, a hidden figure watching from a balcony"),
-  // ---------- Marée d'Acier (Amiral) ----------
-  E("maree", 1, "Mar\xE9e d'Acier", "Une flotte se l\xE8ve, une autre sombre.", "{rival} rassemble ses escadres au bord du secteur. {mentor} sonne le rassemblement : ce mois-ci, chaque bataille compte.", { name: "Maren Kestrel", title: "Amirale des Mar\xE9es", secondary: "strategist", lore: "{commander} a command\xE9 trois flottes de ligne avant ses trente ans. On dit qu'elle n'a jamais perdu une bataille qu'elle avait choisie.", look: "a fierce naval fleet admiral woman, weathered face, long coat with cyan trim, holographic tactical map behind" }, "two enormous battle fleets clashing like waves, cyan and red beams, a capital ship breaking through the line"),
-  E("maree", 2, "Ressac de guerre", "Tenir la ligne, briser la vague.", "Les colosses ont \xE9t\xE9 vus dans le sillage des escadres ennemies. {mentor} veut une flotte capable d'abattre les deux ; {rival} veut les l\xE2cher sur nous.", { name: "Corvin Drakmor", title: "Brise-Ligne", secondary: "hunter", lore: "{commander} a \xE9peronn\xE9 un colosse avec son croiseur, et v\xE9cu pour le raconter.", look: "a grim battle-scarred admiral with a cybernetic jaw, heavy navy coat, colossal beast silhouette behind the fleet" }, "a battle fleet charging through the wake of a colossal space beast, cyan beams, debris and a stormy nebula"),
-  E("maree", 3, "La Grande Houle", "Frapper loin, frapper vite.", "La guerre s'\xE9tend sur tout le secteur. {mentor} veut une flotte qui frappe partout \xE0 la fois ; {rival} compte sur nos lignes trop longues.", { name: "Thessa Haldane", title: "Capitaine de la Houle", secondary: "logistician", lore: "{commander} d\xE9place une flotte enti\xE8re en une nuit, et l'ennemi la cherche encore le lendemain.", look: "a swift fleet captain with windswept hair, flight jacket with cyan route lines, multiple fleet holograms around her" }, "a swarm of fast warships jumping in formation across a star map, cyan hyperspace trails like a rising swell"),
-  // ---------- Nouveaux Mondes (Gouverneure) ----------
-  E("colonies", 1, "Nouveaux Mondes", "Chaque plan\xE8te est une promesse.", "Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies.", { name: "C\xE9lia Marchal", title: "Gouverneure des Franges", secondary: "steward", lore: "{commander} a transform\xE9 une lune st\xE9rile en grenier du secteur en moins de dix ans.", look: "a visionary colonial governor woman in a white and mint long coat, terraformed green planet glowing behind" }, "a freshly terraformed green planet at dawn, colony domes and landing ships, a mint-colored sunrise over new cities"),
-  E("colonies", 2, "La Ru\xE9e vers les franges", "Plus loin, plus vite, plus nombreux.", "Les colonies se multiplient plus vite que les routes pour les ravitailler. {mentor} cherche quelqu'un pour relier les mondes ; {rival} coupe les lignes.", { name: "Ravi Lindqvist", title: "B\xE2tisseur de mondes", secondary: "logistician", lore: "{commander} a reli\xE9 vingt colonies par un r\xE9seau de convois qui ne s'est jamais arr\xEAt\xE9.", look: "an energetic colonial planner with rolled-up sleeves, holographic supply routes connecting planets around him" }, "a chain of young colony worlds linked by glowing supply lanes, cargo ships streaming between them, mint and cyan light"),
-  E("colonies", 3, "Terres d'aube", "Des colonies qui ne tombent pas.", "Les colonies sont devenues riches, donc des cibles. {mentor} veut les fortifier ; {rival} veut les d\xE9pouiller une \xE0 une.", { name: "Anouk Ibarra", title: "Intendante coloniale", secondary: "warden", lore: "{commander} n'a jamais laiss\xE9 un pillard repartir d'une de ses colonies avec une seule caisse.", look: "a determined colonial administrator in mint and steel armor, shield emblem, fortified colony domes behind" }, "fortified colony domes on a dawn-lit world, shield generators humming, raider ships turning away in the sky"),
-  // ---------- Saison des chasseurs (Corsaire) ----------
-  E("primes", 1, "Saison des chasseurs", "Chaque prime a un prix, chaque prix une t\xEAte.", "Les Kesh'Vaar ont affich\xE9 leurs primes les plus folles. {mentor} veut le tableau de chasse le plus long du secteur ; {rival} chasse les chasseurs.", { name: "Jax Varro", title: "Corsaire de la Ruche", secondary: "admiral", lore: "{commander} a rempli plus de primes que n'importe quel capitaine, souvent avec la flotte de quelqu'un d'autre.", look: "a lethal bounty hunter with golden trophy medallions, insect-like armor plates, predatory eyes" }, "a bounty board of glowing holographic wanted posters in a hive-like station, corsair ships docking under golden light"),
-  E("primes", 2, "Tableau de chasse", "Ce qu'on ne voit pas, on ne le rate pas.", "Les cibles se cachent mieux que jamais. {mentor} veut des \xE9claireurs et des corsaires ; {rival} brouille toutes les pistes.", { name: "Nell Sorrow", title: "Traqueuse de primes", secondary: "spy", lore: "{commander} retrouve n'importe qui. On dit qu'elle a retrouv\xE9 un fant\xF4me, et qu'il a pay\xE9.", look: "a shadowy bounty tracker woman with a hood and violet scanning visor, golden bounty tokens on her belt" }, "a dark asteroid hideout lit by a single violet scanner beam, a corsair ship lurking in the shadows, golden bounty markers"),
-  E("primes", 3, "La Grande Traque", "Le plus gros gibier du secteur.", "Une prime colossale est tomb\xE9e : la t\xEAte d'un colosse. {mentor} r\xE9unit les meilleurs chasseurs ; {rival} veut le troph\xE9e pour lui.", { name: "Garrick Fen", title: "Corsaire des Colosses", secondary: "hunter", lore: "{commander} porte au cou la dent du premier colosse qu'il a abattu. Il en cherche une deuxi\xE8me.", look: "a grizzled corsair with a giant beast tooth necklace, crimson coat, harpoon cannons on his ship behind" }, "a pack of corsair ships with harpoon cannons circling an enormous space beast, golden bounty hologram above"),
-  // ---------- Comète écarlate (Chasseur de colosses) ----------
-  E("comete", 1, "Com\xE8te \xE9carlate", "Elle ne passe qu'une fois. Ce qu'elle porte aussi.", "Une com\xE8te \xE9carlate traverse le secteur, et quelque chose d'\xE9norme voyage dans son sillage. {mentor} sonne la chasse ; {rival} veut la prise.", { name: "Kira Valdane", title: "Chasseuse de com\xE8tes", secondary: "admiral", lore: "{commander} a suivi trois com\xE8tes jusqu'au bout. La troisi\xE8me portait un colosse ; elle l'a ramen\xE9.", look: "a daring comet-chasing pilot woman, scarred flight jacket, red glowing comet tail reflected in her visor" }, "a blazing scarlet comet crossing the sector, a colossal creature silhouette in its tail, hunter ships in pursuit"),
-  E("comete", 2, "La Pluie de feu", "Des fragments partout, des monstres dedans.", "La com\xE8te s'est bris\xE9e en mille fragments, et chacun abrite une b\xEAte. {mentor} veut des armes taill\xE9es pour les colosses ; {rival} veut les fragments.", { name: "Orrin Blackthorn", title: "Armurier des chasses", secondary: "engineer", lore: "{commander} forge des harpons capables de percer la carapace d'un colosse, et les teste lui-m\xEAme.", look: "a burly weaponsmith with glowing red harpoon prototypes, soot-covered apron, comet fire in the sky behind" }, "a rain of fiery comet fragments falling across space, giant beasts hatching from them, hunter ships firing harpoons"),
-  E("comete", 3, "Sillage rouge", "Suivre la trace, partager la prise.", "Le sillage de la com\xE8te m\xE8ne aux nids des colosses, gard\xE9s par des pirates. {mentor} veut nettoyer la route ; {rival} veut tout garder.", { name: "Vex Haldor", title: "Grand Veneur", secondary: "corsair", lore: "{commander} partage toujours la prise. C'est pour \xE7a que tout le monde veut chasser avec lui.", look: "a charismatic master hunter with a red cloak, trophy-adorned armor, a colossal skull mounted behind" }, "a red glowing trail through space leading to a nest of colossal beasts, corsair and hunter ships side by side"),
-  // ---------- La Grande Moisson (Intendant) ----------
-  E("moisson", 1, "La Grande Moisson", "R\xE9colter avant l'hiver.", "Les gisements du secteur d\xE9bordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider.", { name: "Basile Granger", title: "Intendant des Greniers", secondary: "governor", lore: "{commander} n'a jamais laiss\xE9 une r\xE9colte se perdre ni un compte tomber faux.", look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields behind" }, "golden harvest fields on a planet seen from orbit, huge harvester ships and granary stations glowing gold"),
-  E("moisson", 2, "Saison d'abondance", "Des r\xE9serves pleines attirent les rapaces.", "L'abondance attire les pillards. {mentor} veut des greniers imprenables ; {rival} a promis \xE0 sa Ruche un festin.", { name: "Ines Hallberg", title: "Tr\xE9sori\xE8re d'empire", secondary: "warden", lore: "{commander} garde les cl\xE9s de tous les coffres de l'empire, et ne les a jamais perdues.", look: "a stern imperial treasurer with golden keys at her belt, armored robes, sealed golden vaults behind" }, "armored golden granary vaults on a fertile world, shield domes shimmering, a hive swarm gathering on the horizon"),
-  E("moisson", 3, "Les Greniers d'or", "Partager la r\xE9colte, gagner des alli\xE9s.", "Les greniers d\xE9bordent, et les empires voisins ont faim. {mentor} veut \xE9changer ; {rival} veut prendre.", { name: "L\xE9opold Sato", title: "Ma\xEEtre des r\xE9coltes", secondary: "diplomat", lore: "{commander} a nourri trois empires pendant la famine, et en a fait trois alli\xE9s.", look: "a wise harvest master in gold and emerald robes, trade agreement holograms, ships loading grain behind" }, "a golden granary station trading with merchant ships of many empires, grain containers glowing gold and emerald"),
-  // ---------- L'Ombre des Archives (Espionne) ----------
-  E("archives", 1, "L'Ombre des Archives", "Ce qui est \xE9crit peut \xEAtre vol\xE9.", "Les archives du secteur ont \xE9t\xE9 pill\xE9es, et les secrets circulent. {mentor} veut les r\xE9cup\xE9rer ; {rival} veut les vendre.", { name: "Selene Marrow", title: "Archiviste de l'ombre", secondary: "strategist", lore: "{commander} a lu tous les rapports d'\xE9tat-major depuis cinquante ans. Elle sait comment chaque guerre finit.", look: "a mysterious spymaster woman in a dark hooded coat, violet holographic data streams, half of face in shadow" }, "a vast dark archive station with endless violet data shelves, a hooded figure stealing a glowing data core"),
-  E("archives", 2, "Les Fichiers noirs", "Un secret bien plac\xE9 vaut une flotte.", "Les Fichiers noirs contiennent des secrets sur tous les empires. {mentor} veut les utiliser pour la paix ; {rival}, pour le chantage.", { name: "Lucien Grave", title: "N\xE9gociateur des secrets", secondary: "diplomat", lore: "{commander} n'a jamais menac\xE9 personne. Il lui suffit de sourire en tenant un dossier.", look: "an elegant spy in a dark violet suit, a black data folder glowing in his hand, quiet smile, shadowy embassy behind" }, "a shadowy embassy room with a single glowing black data file on a table, violet light, silhouettes listening behind glass"),
-  E("archives", 3, "Silence radio", "On ne voit rien venir. Eux non plus.", "Le secteur est plong\xE9 dans un silence radio total. {mentor} veut frapper dans l'ombre ; {rival} fait pareil.", { name: "Nyx Varell", title: "Spectre", secondary: "corsair", lore: "{commander} entre, prend, et ressort. Personne ne l'a jamais vu ; tout le monde a vu ce qui manquait.", look: "a stealthy infiltrator with a dark visor reflecting violet static, sleek black armor, cloaked ship behind" }, "a cloaked raider ship slipping past a sleeping fleet in total radio silence, faint violet static in the dark"),
-  // ---------- L'Arsenal (Mécanicien) ----------
-  E("chantiers", 1, "L'Arsenal", "Une flotte se construit, un rivet \xE0 la fois.", "Une guerre se pr\xE9pare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite.", { name: "Petra Varga", title: "M\xE9canicienne en chef", secondary: "engineer", lore: "{commander} peut remonter un r\xE9acteur les yeux ferm\xE9s, et l'a d\xE9j\xE0 fait, en plein combat.", look: "a gruff shipyard master mechanic woman, welding goggles, ember sparks, colossal hull under construction behind" }, "an enormous orbital shipyard with rows of warships under construction, ember sparks and scaffolding lights"),
-  E("chantiers", 2, "Cale s\xE8che", "Ce qui revient du front repart r\xE9par\xE9.", "Les flottes rentrent du front en lambeaux. {mentor} veut les remettre en ligne avant la prochaine offensive ; {rival} frappe avant.", { name: "Gunnar Holt", title: "Chef de cale", secondary: "admiral", lore: "{commander} a remis en \xE9tat une flotte enti\xE8re en une semaine, et l'a men\xE9e lui-m\xEAme \xE0 la victoire.", look: "a veteran dockmaster with a cybernetic hand, battle-scarred coat over work overalls, damaged warships in dry dock behind" }, "a dry dock full of battle-damaged warships under repair, ember welding sparks, a fleet launching in the background"),
-  E("chantiers", 3, "Rivets et canons", "Des pi\xE8ces partout, \xE0 temps.", "Les chantiers tournent, mais les pi\xE8ces n'arrivent plus. {mentor} veut des convois s\xFBrs ; {rival} vise les cargos.", { name: "Silas Crane", title: "Ma\xEEtre armurier", secondary: "logistician", lore: "{commander} sait o\xF9 se trouve chaque pi\xE8ce de l'empire, et comment l'amener l\xE0 o\xF9 il faut.", look: "a methodical armorer with a tool harness, holographic parts inventory, cargo ships unloading behind" }, "cargo convoys delivering glowing parts to a busy shipyard, cranes moving cannon barrels, ember and cyan lights"),
-  // ---------- Le Rempart (Stratège) ----------
-  E("rempart", 1, "Le Rempart", "Ils frappent. Nous tenons.", "{rival} assi\xE8ge les mondes de la frange, vague apr\xE8s vague. {mentor} confie la d\xE9fense du secteur aux commandants qui tiendront.", { name: "Hadrien Valcourt", title: "Strat\xE8ge de si\xE8ge", secondary: "warden", lore: "{commander} a tenu quarante jours un avant-poste que l'\xE9tat-major avait d\xE9j\xE0 ray\xE9 des cartes.", look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind" }, "a fortress planet ringed with shield walls under siege, waves of raider ships breaking against blue energy barriers"),
-  E("rempart", 2, "Les Murs de Vashka", "Un mur r\xE9par\xE9 est un mur qui tient.", "Les murs ont tenu, mais ils sont fissur\xE9s. {mentor} veut les relever avant la prochaine vague ; {rival} masse ses b\xE9liers.", { name: "Irsa Stenn", title: "Gardienne de la Ligne", secondary: "mechanic", lore: "{commander} r\xE9pare un bouclier sous le feu ennemi comme d'autres reprisent une chaussette.", look: "a tough defensive commander with a repair tool and shield emitter, scorched blue armor, cracked fortress wall behind" }, "repair crews welding a cracked fortress wall in orbit while defensive batteries fire at incoming rams, blue and ember light"),
-  E("rempart", 3, "Ligne de fer", "Tenir le front, puis abattre le colosse.", "Derri\xE8re les vagues ennemies avance un colosse de si\xE8ge. {mentor} veut une ligne qui tienne et des chasseurs qui frappent ; {rival} veut tout raser.", { name: "Osric Keld", title: "Ma\xEEtre des Remparts", secondary: "hunter", lore: "{commander} a attendu qu'un colosse de si\xE8ge soit au pied de ses murs pour l'abattre d'une seule salve.", look: "an imposing iron-clad strategist with a long war cloak, siege cannon behind, colossal siege beast on the horizon" }, "an iron defensive line of battleships facing a colossal siege beast, blue shields and heavy cannon fire")
-];
-function monthIndex(monthId) {
-  const [y, m] = monthId.split("-").map(Number);
-  return y * 12 + (m - 1);
-}
-function catalogIndex(monthId) {
-  const n = monthIndex(monthId) - monthIndex(CATALOG_START);
-  return (n % 36 + 36) % 36;
-}
-function catalogEntryFor(monthId) {
-  const i = catalogIndex(monthId);
-  const theme = THEME_ROTATION[i % 12];
-  const year = Math.floor(i / 12) + 1;
-  return SEASON_CATALOG.find((e3) => e3.theme === theme && e3.year === year);
-}
-function illustrationPrompt(e3, accent) {
-  return `/imagine prompt: sci-fi strategy game key art, ${e3.scene}, cinematic wide shot, dark deep-space palette with ${accent} accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250`;
-}
-function portraitPrompt(e3, accent) {
-  return `/imagine prompt: sci-fi strategy game character portrait, head and shoulders, ${e3.commander.look}, a character named ${e3.commander.name}, centered, facing the viewer, dramatic rim light in ${accent}, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250`;
-}
-
-// src/game/synthesis.ts
-var CAPSULES = {
-  assault: {
-    name: "Stimulant d'assaut",
-    short: "Attaque",
-    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
-    use: "launch"
-  },
-  armor: {
-    name: "Carapace r\xE9active",
-    short: "D\xE9fense",
-    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
-    use: "activate"
-  },
-  decoy: {
-    name: "Brouilleur d'approche",
-    short: "Leurre",
-    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
-    use: "launch"
-  },
-  veil: {
-    name: "Brouilleur de d\xE9fense",
-    short: "Voile",
-    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
-    use: "activate"
-  }
-};
-var CAPSULE_TYPES = Object.keys(CAPSULES);
-var SYNTH_RULES = {
-  pctPerLevel: 5,
-  maxStock: 3,
-  activeHours: 12,
-  /** Coût : 2 h de production commune par niveau de capsule. */
-  costHoursPerLevel: 2,
-  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
-  baseMinutes: 30,
-  minutesPerLevel: 77
-};
-function synthesisEffects(player, now) {
-  const st = synthesisState(player);
-  if (!st.armor || st.armor.untilMs <= now || !(st.armor.pct > 0)) return [];
-  return [{ stat: "defense", value: st.armor.pct / 100, layer: "empire", scope: "pvp", source: { kind: "capsule", id: "armor", label: CAPSULES.armor.name } }];
-}
-function addCapsule(player, type, level3) {
-  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
-  const st = synthesisState(player);
-  if (st.stock[type].length >= SYNTH_RULES.maxStock) return false;
-  st.stock[type] = [...st.stock[type], Math.max(1, Math.min(10, Math.floor(level3) || 1))];
-  player.synthesis = st;
-  return true;
-}
-function capsulePct(level3) {
-  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
-}
-function synthesisState(player) {
-  var _a, _b, _c, _d;
-  const raw = (_a = player.synthesis) != null ? _a : {};
-  const stock = {};
-  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
-  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
-  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
-  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
-}
-function synthLevel(player) {
-  var _a, _b;
-  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
-  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
-}
-function craftSeconds(level3) {
-  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
-}
-function capsuleCost(player, level3) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
-  const out = {};
-  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
-  return out;
-}
-function advanceSynthesis(player, now) {
-  const st = synthesisState(player);
-  if (!st.crafting || st.crafting.endsAtMs > now) return null;
-  const done = { type: st.crafting.type, level: st.crafting.level };
-  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
-  st.crafting = null;
-  player.synthesis = st;
-  return done;
-}
-function craftCapsule(player, typeIn, levelIn, now) {
-  var _a, _b, _c;
-  const type = typeIn;
-  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
-  const level3 = Math.floor(Number(levelIn));
-  const max = synthLevel(player);
-  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
-  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
-  const st = synthesisState(player);
-  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
-  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
-  const cost = capsuleCost(player, level3);
-  for (const [res, n] of Object.entries(cost)) {
-    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
-  }
-  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
-  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
-  player.synthesis = st;
-  return st.crafting;
-}
-function takeCapsule(player, type, levelIn) {
-  const st = synthesisState(player);
-  const stock = [...st.stock[type]].sort((a, b) => b - a);
-  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
-  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
-  const i = stock.indexOf(wanted);
-  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
-  stock.splice(i, 1);
-  st.stock[type] = stock;
-  player.synthesis = st;
-  return capsulePct(wanted);
-}
-function activateCapsule(player, typeIn, levelIn, now) {
-  const type = typeIn;
-  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
-  const st = synthesisState(player);
-  const current2 = st[type];
-  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
-  const pct7 = takeCapsule(player, type, levelIn);
-  const after = synthesisState(player);
-  after[type] = { pct: pct7, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
-  player.synthesis = after;
-  return pct7;
-}
-function consumeArmor(player, now) {
-  const st = synthesisState(player);
-  if (!st.armor || st.armor.untilMs <= now) return 0;
-  const pct7 = st.armor.pct;
-  st.armor = null;
-  player.synthesis = st;
-  return pct7;
-}
-function activeVeil(player, now) {
-  const v = synthesisState(player).veil;
-  return v && v.untilMs > now ? v.pct : 0;
-}
-function decoyUnits(real, pct7, pool, random = Math.random) {
-  var _a;
-  const out = {};
-  const swing = pct7 / 100;
-  for (const [id, qty] of Object.entries(real)) {
-    if (!(qty > 0)) continue;
-    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
-    let target = id;
-    if (pool.length > 1 && random() < swing) {
-      const others = pool.filter((p) => p !== id);
-      target = others[Math.floor(random() * others.length) % others.length];
-    }
-    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
-  }
-  return out;
-}
-function veilCounts(entries, pct7, random = Math.random) {
-  if (!entries) return entries;
-  const swing = pct7 / 100;
-  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
-}
-function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
-  const req = request && typeof request === "object" ? request : {};
-  const out = { boosts: {}, fakeUnits: null };
-  const level3 = (v) => v === true ? void 0 : v;
-  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
-  if (req.decoy) {
-    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
-    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
-  }
-  return out;
-}
-function recordDecoy(player, fleetId, units) {
-  const st = synthesisState(player);
-  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
-  player.synthesis = st;
-}
-function clearDecoy(player, fleetId) {
-  const st = synthesisState(player);
-  if (!st.decoys[fleetId]) return;
-  const next = __spreadValues({}, st.decoys);
-  delete next[fleetId];
-  st.decoys = next;
-  player.synthesis = st;
-}
-
 // src/game/casino.ts
 var CASINO_KEY = "casino";
 var DEFAULT_CASINO = {
@@ -6816,118 +6391,169 @@ function recordWin(state, win) {
   });
 }
 
-// src/game/loot.ts
-var LOOT_SOURCES = ["worldBoss", "seasonBoss", "allianceBoss", "expedition", "warlord", "threat", "pvp"];
-var LOOT_SOURCE_LABELS = {
-  worldBoss: "Boss mondial",
-  seasonBoss: "Boss de saison",
-  allianceBoss: "Boss d'alliance",
-  expedition: "Exp\xE9dition",
-  warlord: "Seigneur de guerre (vendetta, coalition)",
-  threat: "Menaces (repaire pris, raid repouss\xE9)",
-  pvp: "Attaque gagn\xE9e contre un joueur"
+// src/game/contracts.ts
+var CONTRACT_RULES = {
+  perDay: 4,
+  streakBonusPerDay: 0.1,
+  streakBonusMax: 0.5,
+  chestEvery: 7,
+  xpPerContract: 15,
+  rarePerContract: 90,
+  /** 6.2 : jetons du casino par objectif, et en plus quand tous sont faits. */
+  tokensPerContract: 1,
+  allDoneTokens: 1,
+  chestRare: 1500,
+  chestXp: 150
 };
-function defaultLootTables() {
-  return {
-    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.2 },
-    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.18 },
-    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.12 },
-    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.04 },
-    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.08 },
-    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1, moduleChance: 0.05 },
-    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.03 }
+var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
+var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var DAY_MS = 24 * 3600 * 1e3;
+function contractDay(now) {
+  return parisDay(now);
+}
+function previousDay(day) {
+  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
+}
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
   };
 }
-var LOOT_TABLES = defaultLootTables();
-var LOOT_TOKEN_RULES = { weeklyCap: 25 };
-var DEFAULT_LOOT_TOKEN_CAP = 25;
-function setLootTables(tables, weeklyCap) {
-  var _a;
-  const d = defaultLootTables();
-  for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
-  LOOT_TOKEN_RULES.weeklyCap = Number.isFinite(weeklyCap) && weeklyCap >= 0 ? Math.floor(weeklyCap) : DEFAULT_LOOT_TOKEN_CAP;
-}
-function lootTokensThisWeek(player, now) {
-  const lw = playerCasino(player).lootWeek;
-  const used = lw && lw.id === casinoWeekId(now) ? lw.tokens : 0;
-  const cap = LOOT_TOKEN_RULES.weeklyCap;
-  return { used, cap, left: cap > 0 ? Math.max(0, cap - used) : null };
-}
-function validateLootTables(tables) {
+function targetFor(type, player) {
   var _a, _b, _c, _d;
-  const errors = [];
-  for (const src of LOOT_SOURCES) {
-    const t = tables == null ? void 0 : tables[src];
-    if (!t) continue;
-    const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
-    const pct7 = (v) => typeof v === "number" && v >= 0 && v <= 1;
-    if (t.relicChance !== void 0 && !pct7(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
-    if (t.capsuleChance !== void 0 && !pct7(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
-    if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
-    const min = (_a = t.capsuleMin) != null ? _a : 1;
-    const max = (_b = t.capsuleMax) != null ? _b : 10;
-    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
-    if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
-    if (t.tokenChance !== void 0 && !pct7(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
-    if (t.moduleChance !== void 0 && !pct7(t.moduleChance)) errors.push(`${label3} : chance de plan de module entre 0 et 1.`);
-    const tmin = (_c = t.tokenMin) != null ? _c : 1;
-    const tmax = (_d = t.tokenMax) != null ? _d : 1;
-    if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
-  }
-  return errors;
-}
-function lootDifficulty(enemy, own) {
-  if (!(enemy > 0) || !(own > 0)) return 1;
-  return Math.max(0.5, Math.min(2, enemy / own));
-}
-function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficulty = 1) {
-  var _a, _b, _c, _d, _e, _f;
-  const t = LOOT_TABLES[source];
-  if (!t) return {};
-  const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
-  const drop = {};
-  if (random() < Math.min(1, t.relicChance * mult)) {
-    const item = rollRelic(`loot:${source}`, now, random, t.relicMinRarity);
-    if (addRelic(player, item)) drop.relic = relicLabel(item);
-  }
-  if (random() < Math.min(1, t.capsuleChance * mult)) {
-    const st = synthesisState(player);
-    const free2 = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
-    if (free2.length > 0) {
-      const type = free2[Math.floor(random() * free2.length) % free2.length];
-      const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
-      const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
-      const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-      if (addCapsule(player, type, level3)) drop.capsule = { type, level: level3, name: CAPSULES[type].name };
+  switch (type) {
+    case "build_units":
+      return 20;
+    case "missions":
+      return 2;
+    case "spy":
+      return 2;
+    case "spend": {
+      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
+      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
     }
+    default:
+      return 1;
   }
-  const diff = Math.max(0.5, Math.min(2, difficulty));
-  if (((_a = t.tokenChance) != null ? _a : 0) > 0 && random() < Math.min(1, ((_b = t.tokenChance) != null ? _b : 0) * mult * diff)) {
-    const lo = Math.max(1, Math.floor((_c = t.tokenMin) != null ? _c : 1));
-    const hi = Math.max(lo, Math.floor((_d = t.tokenMax) != null ? _d : lo));
-    const rolled = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
-    const week = lootTokensThisWeek(player, now);
-    const n = week.left === null ? rolled : Math.min(rolled, week.left);
-    const got = n > 0 ? grantTokens(player, n) : 0;
-    if (got > 0) {
-      drop.tokens = got;
-      player.casino = __spreadProps(__spreadValues({}, playerCasino(player)), { lootWeek: { id: casinoWeekId(now), tokens: week.used + got } });
-    }
-  }
-  if (((_e = t.moduleChance) != null ? _e : 0) > 0 && random() < Math.min(1, ((_f = t.moduleChance) != null ? _f : 0) * mult)) {
-    const plan = rollModulePlan(`loot:${source}`, now, random, source.endsWith("Boss") ? "rare" : "common");
-    if (addModuleItem(player, plan)) drop.module = moduleLabel(plan);
-  }
-  return drop;
 }
-function describeLoot(drop) {
-  if (!drop) return "";
-  const parts = [];
-  if (drop.relic) parts.push(`Relique : ${drop.relic}`);
-  if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
-  if (drop.module) parts.push(`Plan de module : ${drop.module}`);
-  if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
-  return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
+function makeContract(type, player, day, index2) {
+  return { id: `${day}-${index2}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+}
+function ensureContracts(player, now) {
+  var _a, _b;
+  const day = contractDay(now);
+  const current2 = player.contracts;
+  if (current2 && current2.day === day) {
+    if (current2.items.length < CONTRACT_RULES.perDay) {
+      const used = new Set(current2.items.map((c) => c.type));
+      const rand2 = seededRandom(`${player.uid}:${day}:extra`);
+      const pool2 = ALL_TYPES.filter((t) => !used.has(t));
+      while (current2.items.length < CONTRACT_RULES.perDay && pool2.length > 0) {
+        const type = pool2.splice(Math.floor(rand2() * pool2.length), 1)[0];
+        current2.items.push(makeContract(type, player, day, current2.items.length));
+      }
+    }
+    return current2;
+  }
+  const rand = seededRandom(`${player.uid}:${day}`);
+  const pool = [...ALL_TYPES];
+  const items = [];
+  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
+    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    items.push(makeContract(type, player, day, i));
+  }
+  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
+  player.contracts = {
+    day,
+    items,
+    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
+    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
+    rerolled: false
+  };
+  return player.contracts;
+}
+function recordContract(player, type, amount3, now) {
+  if (!(amount3 > 0)) return;
+  const state = ensureContracts(player, now);
+  for (const c of state.items) {
+    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
+  }
+}
+function developmentScale(player) {
+  return rareRewardScale(player);
+}
+function streakBonus(streak) {
+  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
+}
+function contractReward(player, contract) {
+  var _a, _b, _c;
+  const state = player.contracts;
+  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
+  const index2 = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index2 + contract.type.length) % RARES.length];
+  return {
+    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
+    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
+  };
+}
+function chestReward(player) {
+  const scale = developmentScale(player);
+  const out = { xp: CONTRACT_RULES.chestXp };
+  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
+  return out;
+}
+function grant(player, reward, now) {
+  var _a;
+  for (const [res, amount3] of Object.entries(reward)) {
+    if (res === "xp") applyXpDelta(player, amount3, now, "contract");
+    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  }
+}
+function claimContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  const contract = state.items.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
+  const reward = contractReward(player, contract);
+  grant(player, reward, now);
+  contract.claimed = true;
+  let tokens = Math.max(0, Math.floor(CONTRACT_RULES.tokensPerContract));
+  let chest = null;
+  const dayCompleted = state.items.every((c) => c.claimed);
+  if (dayCompleted) {
+    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
+    state.lastCompletedDay = state.day;
+    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
+      chest = chestReward(player);
+      grant(player, chest, now);
+    }
+    tokens += Math.max(0, Math.floor(CONTRACT_RULES.allDoneTokens));
+  }
+  if (tokens > 0) grantTokens(player, tokens);
+  return { reward, dayCompleted, chest, tokens };
+}
+function rerollContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
+  const index2 = state.items.findIndex((c) => c.id === contractId);
+  if (index2 < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index2].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const used = new Set(state.items.map((c) => c.type));
+  const pool = ALL_TYPES.filter((t) => !used.has(t));
+  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const type = pool[Math.floor(rand() * pool.length)];
+  const next = makeContract(type, player, state.day, index2);
+  next.id = `${state.day}-${index2}-${type}-r`;
+  state.items[index2] = next;
+  state.rerolled = true;
+  return next;
 }
 
 // src/game/formations.ts
@@ -7729,387 +7355,308 @@ function shopReminders(player, now) {
   return { changed: notifications.length > 0, notifications };
 }
 
-// src/game/seasonPass.ts
-var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
-var PASS_POINTS = {
-  contract: 10,
-  bounty: 8,
-  raidRepelled: 8,
-  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
-  victory: 8,
-  bossAssault: 5,
-  dailyLogin: 5,
-  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
-  mission: 0,
-  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
-  vendetta: 40,
-  /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
-  chronicle: 40,
-  seasonBoss: 60,
-  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
-  allianceBoss: 40,
-  allianceBossTry: 15,
-  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
-  coalition: 50,
-  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
-  allianceDaily: 15
-};
-var OBJECTIVE_LABELS = {
-  contract: "Contrats du jour r\xE9cup\xE9r\xE9s",
-  bounty: "Primes Kesh'Vaar remplies",
-  raidRepelled: "Raids de faction repouss\xE9s",
-  victory: "Combats gagn\xE9s",
-  bossAssault: "Assauts sur un boss",
-  mission: "Missions termin\xE9es",
-  spy: "Sondes d'espionnage lanc\xE9es",
-  market: "Offres achet\xE9es au march\xE9",
-  warlordWin: "Seigneurs de guerre pill\xE9s"
-};
-function normalizeTierReqs(raw) {
-  const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
-  return list.filter((r) => !!r && typeof r === "object" && typeof r.key === "string" && Number(r.count) >= 1).map((r) => ({ key: r.key, count: Math.floor(Number(r.count)) }));
-}
-var PASS_TIERS = [
-  [{ kind: "production", hours: 2 }],
-  [{ kind: "amber", amount: 20 }],
-  [{ kind: "capsule", capsule: "assault", level: 3 }],
-  [{ kind: "production", hours: 3 }],
-  [{ kind: "dossier", count: 1 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
-  [{ kind: "capsule", capsule: "armor", level: 3 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
-  [{ kind: "production", hours: 5 }],
-  [{ kind: "capsule", capsule: "decoy", level: 4 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "production", hours: 6 }],
-  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "veil", level: 4 }],
-  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "assault", level: 5 }],
-  [{ kind: "relic", rarity: "rare" }],
-  [{ kind: "production", hours: 8 }],
-  [{ kind: "amber", amount: 30 }],
-  [{ kind: "capsule", capsule: "armor", level: 5 }],
-  [{ kind: "production", hours: 9 }],
-  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
-  [{ kind: "production", hours: 10 }],
-  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
-  [{ kind: "capsule", capsule: "decoy", level: 5 }],
-  [{ kind: "production", hours: 12 }],
-  [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }]
-];
-var DEFAULT_PASS = structuredClone({ rules: PASS_RULES, points: PASS_POINTS, tiers: PASS_TIERS });
-function defaultSeasonPassConfig() {
-  return structuredClone(DEFAULT_PASS);
-}
-function setSeasonPass(cfg) {
-  var _a, _b;
-  const d = defaultSeasonPassConfig();
-  Object.assign(PASS_RULES, d.rules, (_a = cfg == null ? void 0 : cfg.rules) != null ? _a : {});
-  Object.assign(PASS_POINTS, d.points, (_b = cfg == null ? void 0 : cfg.points) != null ? _b : {});
-  PASS_POINTS.mission = 0;
-  const tiers2 = Array.isArray(cfg == null ? void 0 : cfg.tiers) && cfg.tiers.length > 0 ? cfg.tiers : d.tiers;
-  PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
-  PASS_RULES.tiers = PASS_TIERS.length;
-}
-var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
-function validateSeasonPass(cfg) {
-  var _a;
-  const errors = [];
-  if (!cfg) return errors;
-  if (cfg.rules && !(cfg.rules.pointsPerTier >= 1)) errors.push("Passe : points par palier \u2265 1.");
-  for (const [k, v] of Object.entries((_a = cfg.points) != null ? _a : {})) if (!(typeof v === "number" && v >= 0)) errors.push(`Passe : points invalides pour \xAB ${k} \xBB.`);
-  if (cfg.tiers) {
-    if (cfg.tiers.length < 1 || cfg.tiers.length > 60) errors.push("Passe : entre 1 et 60 paliers.");
-    cfg.tiers.forEach(
-      (list, i) => (list != null ? list : []).forEach((r) => {
-        if (!REWARD_KINDS.includes(r == null ? void 0 : r.kind)) errors.push(`Passe, palier ${i + 1} : r\xE9compense inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : raret\xE9 inconnue.`);
-        if ((r == null ? void 0 : r.kind) === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
-      })
-    );
+// src/game/synthesis.ts
+var CAPSULES = {
+  assault: {
+    name: "Stimulant d'assaut",
+    short: "Attaque",
+    description: (p) => `+${p} % d'attaque pour la prochaine attaque lanc\xE9e contre un joueur.`,
+    use: "launch"
+  },
+  armor: {
+    name: "Carapace r\xE9active",
+    short: "D\xE9fense",
+    description: (p) => `+${p} % de d\xE9fense contre la premi\xE8re attaque de joueur subie (12 h).`,
+    use: "activate"
+  },
+  decoy: {
+    name: "Brouilleur d'approche",
+    short: "Leurre",
+    description: (p) => `Le d\xE9fenseur voit une fausse composition de ta flotte (\xB1${p} %). L'heure d'arriv\xE9e reste vraie.`,
+    use: "launch"
+  },
+  veil: {
+    name: "Brouilleur de d\xE9fense",
+    short: "Voile",
+    description: (p) => `Les rapports d'espionnage sur ta base montrent des d\xE9fenses et une flotte fauss\xE9es de \xB1${p} % (12 h).`,
+    use: "activate"
   }
-  return errors;
+};
+var CAPSULE_TYPES = Object.keys(CAPSULES);
+var SYNTH_RULES = {
+  pctPerLevel: 5,
+  maxStock: 3,
+  activeHours: 12,
+  /** Coût : 2 h de production commune par niveau de capsule. */
+  costHoursPerLevel: 2,
+  /** Fabrication : 30 min au niveau 1, environ 12 h au niveau 10. */
+  baseMinutes: 30,
+  minutesPerLevel: 77
+};
+function synthesisEffects(player, now) {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now || !(st.armor.pct > 0)) return [];
+  return [{ stat: "defense", value: st.armor.pct / 100, layer: "empire", scope: "pvp", source: { kind: "capsule", id: "armor", label: CAPSULES.armor.name } }];
 }
-var CAPSULE_AMBER = 15;
-function passTitle(seasonId) {
-  const month2 = seasonLabel(seasonId).toLowerCase();
-  return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
+function addCapsule(player, type, level3) {
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const st = synthesisState(player);
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) return false;
+  st.stock[type] = [...st.stock[type], Math.max(1, Math.min(10, Math.floor(level3) || 1))];
+  player.synthesis = st;
+  return true;
 }
-function passState(player, now) {
+function capsulePct(level3) {
+  return Math.max(0, Math.min(10, Math.floor(level3))) * SYNTH_RULES.pctPerLevel;
+}
+function synthesisState(player) {
   var _a, _b, _c, _d;
-  const raw = (_a = player.seasonPass) != null ? _a : {};
-  const seasonId = currentSeasonId(now);
-  const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
-  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
-  const activity = {};
-  for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
-  const challenge = {};
-  for (const [k, v] of Object.entries((_c = raw.challenge) != null ? _c : {})) if (Number(v) > 0) challenge[k] = Number(v);
-  const cleared = (Array.isArray(raw.cleared) ? raw.cleared : []).map(Number).filter((n) => n >= 1);
-  return __spreadValues(__spreadValues(__spreadValues(__spreadValues({
-    seasonId,
-    points: Math.max(0, Number(raw.points) || 0),
-    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
-    loginDay: String((_d = raw.loginDay) != null ? _d : ""),
-    completed,
-    activity
-  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}), cleared.length ? { cleared } : {}), Object.keys(challenge).length ? { challenge } : {}), raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {});
+  const raw = (_a = player.synthesis) != null ? _a : {};
+  const stock = {};
+  for (const t of CAPSULE_TYPES) stock[t] = (Array.isArray((_b = raw.stock) == null ? void 0 : _b[t]) ? raw.stock[t] : []).map((n) => Math.max(1, Math.min(10, Math.floor(Number(n)) || 1)));
+  const crafting = raw.crafting && CAPSULE_TYPES.includes(raw.crafting.type) ? raw.crafting : null;
+  const decoys = raw.decoys && typeof raw.decoys === "object" ? raw.decoys : {};
+  return { crafting, stock, armor: (_c = raw.armor) != null ? _c : null, veil: (_d = raw.veil) != null ? _d : null, decoys };
 }
-function normalizeDaily(d) {
-  var _a;
-  const counts = {};
-  for (const [k, v] of Object.entries((_a = d.counts) != null ? _a : {})) if (Number(v) > 0) counts[k] = Number(v);
-  return { day: d.day, counts, claimed: (Array.isArray(d.claimed) ? d.claimed : []).map(Number).filter((n) => n >= 0 && n < 10) };
-}
-function passTierToAnnounce(player, now) {
+function synthLevel(player) {
   var _a, _b;
-  if (!player.seasonPass) return { tier: 0, claimable: 0 };
-  const st = passState(player, now);
-  const tier = passTier(st.points, st.seasonId);
-  if (tier <= ((_a = st.notifiedTier) != null ? _a : 0)) return { tier: 0, claimable: 0 };
-  st.notifiedTier = tier;
-  player.seasonPass = st;
-  let claimable = 0;
-  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t) && ((_b = tierRequirements(player, t, now)) == null ? void 0 : _b.met) !== false) claimable += 1;
-  return { tier, claimable };
+  const b = (_a = player.buildings) == null ? void 0 : _a[SYNTH_BUILDING_ID];
+  return b && b.unlocked !== false ? Math.max(0, (_b = b.level) != null ? _b : 0) : 0;
 }
-var MONTH_PASSES = /* @__PURE__ */ new Map();
-var SEASON_OVERRIDES = /* @__PURE__ */ new Map();
-function setPassSeasonOverrides(map) {
-  SEASON_OVERRIDES.clear();
-  for (const [k, v] of map) SEASON_OVERRIDES.set(k, v);
+function craftSeconds(level3) {
+  return (SYNTH_RULES.baseMinutes + (level3 - 1) * SYNTH_RULES.minutesPerLevel) * 60;
 }
-function setMonthPasses(list) {
-  MONTH_PASSES.clear();
-  for (const m of list) if (m.pass && m.pass.pointsPerTier >= 1 && Array.isArray(m.pass.tiers) && m.pass.tiers.length > 0) MONTH_PASSES.set(m.id, m.pass);
-}
-function activePass(seasonId = currentSeasonId()) {
-  var _a, _b;
-  return (_b = (_a = SEASON_OVERRIDES.get(seasonId)) != null ? _a : MONTH_PASSES.get(seasonId)) != null ? _b : { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
-}
-function passTierReqs(seasonId, tier) {
+function capsuleCost(player, level3) {
   var _a;
-  return normalizeTierReqs((_a = activePass(seasonId).requirements) == null ? void 0 : _a[String(tier)]);
+  const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+  const hours2 = SYNTH_RULES.costHoursPerLevel * level3;
+  const out = {};
+  for (const res of ["scrap", "energy", "nano", "data"]) out[res] = Math.max(1e3 * level3, Math.floor(((_a = rates[res]) != null ? _a : 0) * hours2 * 3600));
+  return out;
 }
-function isCumulativePass(seasonId) {
-  return activePass(seasonId).challengeMode === "cumulative";
+function advanceSynthesis(player, now) {
+  const st = synthesisState(player);
+  if (!st.crafting || st.crafting.endsAtMs > now) return null;
+  const done = { type: st.crafting.type, level: st.crafting.level };
+  st.stock[done.type] = [...st.stock[done.type], done.level].slice(-SYNTH_RULES.maxStock);
+  st.crafting = null;
+  player.synthesis = st;
+  return done;
 }
-function cumulativeCleared(st) {
-  const out = /* @__PURE__ */ new Set();
-  const n = activePass(st.seasonId).tiers.length;
-  for (let t = 1; t <= n; t++) {
-    const reqs = passTierReqs(st.seasonId, t);
-    if (reqs.length === 0) continue;
-    if (!reqs.every((r) => {
-      var _a, _b;
-      return ((_b = (_a = st.activity) == null ? void 0 : _a[r.key]) != null ? _b : 0) >= r.count;
-    })) break;
-    out.add(t);
+function craftCapsule(player, typeIn, levelIn, now) {
+  var _a, _b, _c;
+  const type = typeIn;
+  if (!CAPSULE_TYPES.includes(type)) throw new GameActionError("Capsule inconnue.");
+  const level3 = Math.floor(Number(levelIn));
+  const max = synthLevel(player);
+  if (max <= 0) throw new GameActionError("Il faut d'abord construire le Labo de synth\xE8se.");
+  if (!(level3 >= 1 && level3 <= max)) throw new GameActionError(`Ton Labo de synth\xE8se fabrique des capsules jusqu'au niveau ${max}.`);
+  const st = synthesisState(player);
+  if (st.crafting) throw new GameActionError("Une capsule est d\xE9j\xE0 en cours de synth\xE8se.");
+  if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en r\xE9serve au plus.`);
+  const cost = capsuleCost(player, level3);
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_a = player.resources[res]) != null ? _a : 0) < n) throw new GameActionError(`Il manque ${formatInt(n - ((_b = player.resources[res]) != null ? _b : 0))} ressources pour cette capsule.`);
+  }
+  for (const [res, n] of Object.entries(cost)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) - n;
+  st.crafting = { type, level: level3, endsAtMs: now + craftSeconds(level3) * 1e3 };
+  player.synthesis = st;
+  return st.crafting;
+}
+function takeCapsule(player, type, levelIn) {
+  const st = synthesisState(player);
+  const stock = [...st.stock[type]].sort((a, b) => b - a);
+  if (stock.length === 0) throw new GameActionError(`Aucune capsule \xAB ${CAPSULES[type].name} \xBB en r\xE9serve.`);
+  const wanted = levelIn === void 0 || levelIn === null ? stock[0] : Math.floor(Number(levelIn));
+  const i = stock.indexOf(wanted);
+  if (i < 0) throw new GameActionError("Cette capsule n'est plus en r\xE9serve.");
+  stock.splice(i, 1);
+  st.stock[type] = stock;
+  player.synthesis = st;
+  return capsulePct(wanted);
+}
+function activateCapsule(player, typeIn, levelIn, now) {
+  const type = typeIn;
+  if (type !== "armor" && type !== "veil") throw new GameActionError("Cette capsule s'utilise au lancement d'une attaque.");
+  const st = synthesisState(player);
+  const current2 = st[type];
+  if (current2 && current2.untilMs > now) throw new GameActionError("Une capsule de ce type est d\xE9j\xE0 active.");
+  const pct7 = takeCapsule(player, type, levelIn);
+  const after = synthesisState(player);
+  after[type] = { pct: pct7, untilMs: now + SYNTH_RULES.activeHours * 36e5 };
+  player.synthesis = after;
+  return pct7;
+}
+function consumeArmor(player, now) {
+  const st = synthesisState(player);
+  if (!st.armor || st.armor.untilMs <= now) return 0;
+  const pct7 = st.armor.pct;
+  st.armor = null;
+  player.synthesis = st;
+  return pct7;
+}
+function activeVeil(player, now) {
+  const v = synthesisState(player).veil;
+  return v && v.untilMs > now ? v.pct : 0;
+}
+function decoyUnits(real, pct7, pool, random = Math.random) {
+  var _a;
+  const out = {};
+  const swing = pct7 / 100;
+  for (const [id, qty] of Object.entries(real)) {
+    if (!(qty > 0)) continue;
+    const fake = Math.max(1, Math.round(qty * (1 + (random() * 2 - 1) * swing)));
+    let target = id;
+    if (pool.length > 1 && random() < swing) {
+      const others = pool.filter((p) => p !== id);
+      target = others[Math.floor(random() * others.length) % others.length];
+    }
+    out[target] = ((_a = out[target]) != null ? _a : 0) + fake;
   }
   return out;
 }
-function activeChallengeTier(st) {
-  var _a;
-  const n = activePass(st.seasonId).tiers.length;
-  const cleared = isCumulativePass(st.seasonId) ? cumulativeCleared(st) : new Set((_a = st.cleared) != null ? _a : []);
-  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !cleared.has(t)) return t;
-  return 0;
+function veilCounts(entries, pct7, random = Math.random) {
+  if (!entries) return entries;
+  const swing = pct7 / 100;
+  return Object.fromEntries(Object.entries(entries).map(([id, e3]) => [id, __spreadProps(__spreadValues({}, e3), { count: Math.max(0, Math.round(e3.count * (1 + (random() * 2 - 1) * swing))) })]));
 }
-function tierRequirements(player, tier, now) {
-  var _a;
-  const st = passState(player, now);
-  const reqs = passTierReqs(st.seasonId, tier);
-  if (reqs.length === 0) return null;
-  if (isCumulativePass(st.seasonId)) {
-    const status2 = cumulativeCleared(st).has(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
-    const rows2 = reqs.map((r) => {
-      var _a2, _b;
-      const done = Math.min(r.count, (_b = (_a2 = st.activity) == null ? void 0 : _a2[r.key]) != null ? _b : 0);
-      return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
-    });
-    return { status: status2, met: status2 === "cleared", reqs: rows2 };
+function takeLaunchCapsules(player, request, realUnits, pool, random = Math.random) {
+  const req = request && typeof request === "object" ? request : {};
+  const out = { boosts: {}, fakeUnits: null };
+  const level3 = (v) => v === true ? void 0 : v;
+  if (req.assault) out.boosts.assault = takeCapsule(player, "assault", level3(req.assault));
+  if (req.decoy) {
+    out.boosts.decoy = takeCapsule(player, "decoy", level3(req.decoy));
+    out.fakeUnits = decoyUnits(realUnits, out.boosts.decoy, pool, random);
   }
-  const status = ((_a = st.cleared) != null ? _a : []).includes(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
-  const rows = reqs.map((r) => {
-    var _a2, _b;
-    const done = status === "cleared" ? r.count : status === "active" ? Math.min(r.count, (_b = (_a2 = st.challenge) == null ? void 0 : _a2[r.key]) != null ? _b : 0) : 0;
-    return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
-  });
-  return { status, met: status === "cleared", reqs: rows };
+  return out;
 }
-function passTier(points, seasonId = currentSeasonId()) {
-  const pass = activePass(seasonId);
-  return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
+function recordDecoy(player, fleetId, units) {
+  const st = synthesisState(player);
+  st.decoys = __spreadProps(__spreadValues({}, st.decoys), { [fleetId]: units });
+  player.synthesis = st;
 }
-function passMax(seasonId) {
-  const pass = activePass(seasonId);
-  return pass.tiers.length * pass.pointsPerTier;
+function clearDecoy(player, fleetId) {
+  const st = synthesisState(player);
+  if (!st.decoys[fleetId]) return;
+  const next = __spreadValues({}, st.decoys);
+  delete next[fleetId];
+  st.decoys = next;
+  player.synthesis = st;
 }
-function trackActivity(player, key, now, times = 1) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
-  if (!(times > 0)) return;
-  const st = passState(player, now);
-  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
-  const day = parisDay(now);
-  const daily = st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
-  st.daily = __spreadProps(__spreadValues({}, daily), { counts: __spreadProps(__spreadValues({}, daily.counts), { [key]: ((_d = daily.counts[key]) != null ? _d : 0) + times }) });
-  if (isCumulativePass(st.seasonId)) {
-    player.seasonPass = st;
-    return;
-  }
-  const t = activeChallengeTier(st);
-  const reqs = t ? passTierReqs(st.seasonId, t) : [];
-  const req = reqs.find((r) => r.key === key);
-  if (req) {
-    const challenge = __spreadProps(__spreadValues({}, (_e = st.challenge) != null ? _e : {}), { [key]: Math.min(req.count, ((_g = (_f = st.challenge) == null ? void 0 : _f[key]) != null ? _g : 0) + times) });
-    if (reqs.every((r) => {
-      var _a2;
-      return ((_a2 = challenge[r.key]) != null ? _a2 : 0) >= r.count;
-    })) {
-      st.cleared = [...(_h = st.cleared) != null ? _h : [], t].sort((a, b) => a - b);
-      delete st.challenge;
-    } else st.challenge = challenge;
-  }
-  player.seasonPass = st;
-}
-var passHook = null;
-function onPassPoints(hook) {
-  passHook = hook;
-}
-var PASS_OVERFLOW = {
-  /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
-  minPoints: 40,
-  amberPerPoint: 1
+
+// src/game/loot.ts
+var LOOT_SOURCES = ["worldBoss", "seasonBoss", "allianceBoss", "expedition", "warlord", "threat", "pvp"];
+var LOOT_SOURCE_LABELS = {
+  worldBoss: "Boss mondial",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  expedition: "Exp\xE9dition",
+  warlord: "Seigneur de guerre (vendetta, coalition)",
+  threat: "Menaces (repaire pris, raid repouss\xE9)",
+  pvp: "Attaque gagn\xE9e contre un joueur"
 };
-function addPassPoints(player, source, now, times = 1) {
-  passHook == null ? void 0 : passHook(player, source, now, times);
-  trackActivity(player, source, now, times);
-  const st = passState(player, now);
-  const max = passMax(st.seasonId);
-  const gain = PASS_POINTS[source] * Math.max(0, times);
-  const overflow = Math.max(0, st.points + gain - max);
-  st.points = Math.min(max, st.points + gain);
-  player.seasonPass = st;
-  if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
-    const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
-    if (amber > 0) {
-      const b = bountyState(player);
-      b.amber += amber;
-      player.bounties = b;
-      return amber;
+function defaultLootTables() {
+  return {
+    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.2 },
+    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.18 },
+    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.12 },
+    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.04 },
+    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.08 },
+    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1, moduleChance: 0.05 },
+    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.03 }
+  };
+}
+var LOOT_TABLES = defaultLootTables();
+var LOOT_TOKEN_RULES = { weeklyCap: 25 };
+var DEFAULT_LOOT_TOKEN_CAP = 25;
+function setLootTables(tables, weeklyCap) {
+  var _a;
+  const d = defaultLootTables();
+  for (const src of LOOT_SOURCES) LOOT_TABLES[src] = __spreadValues(__spreadValues({}, d[src]), (_a = tables == null ? void 0 : tables[src]) != null ? _a : {});
+  LOOT_TOKEN_RULES.weeklyCap = Number.isFinite(weeklyCap) && weeklyCap >= 0 ? Math.floor(weeklyCap) : DEFAULT_LOOT_TOKEN_CAP;
+}
+function lootTokensThisWeek(player, now) {
+  const lw = playerCasino(player).lootWeek;
+  const used = lw && lw.id === casinoWeekId(now) ? lw.tokens : 0;
+  const cap = LOOT_TOKEN_RULES.weeklyCap;
+  return { used, cap, left: cap > 0 ? Math.max(0, cap - used) : null };
+}
+function validateLootTables(tables) {
+  var _a, _b, _c, _d;
+  const errors = [];
+  for (const src of LOOT_SOURCES) {
+    const t = tables == null ? void 0 : tables[src];
+    if (!t) continue;
+    const label3 = `Butin, ${LOOT_SOURCE_LABELS[src].toLowerCase()}`;
+    const pct7 = (v) => typeof v === "number" && v >= 0 && v <= 1;
+    if (t.relicChance !== void 0 && !pct7(t.relicChance)) errors.push(`${label3} : chance de relique entre 0 et 1.`);
+    if (t.capsuleChance !== void 0 && !pct7(t.capsuleChance)) errors.push(`${label3} : chance de capsule entre 0 et 1.`);
+    if (t.relicMinRarity !== void 0 && !RARITIES.some((r) => r.id === t.relicMinRarity && r.id !== "mythic")) errors.push(`${label3} : raret\xE9 minimale inconnue.`);
+    const min = (_a = t.capsuleMin) != null ? _a : 1;
+    const max = (_b = t.capsuleMax) != null ? _b : 10;
+    if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label3} : niveaux de capsule entiers, 1 \u2264 min \u2264 max \u2264 10.`);
+    if (t.podiumMult !== void 0 && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label3} : bonus du podium entre 1 et 5.`);
+    if (t.tokenChance !== void 0 && !pct7(t.tokenChance)) errors.push(`${label3} : chance de jetons entre 0 et 1.`);
+    if (t.moduleChance !== void 0 && !pct7(t.moduleChance)) errors.push(`${label3} : chance de plan de module entre 0 et 1.`);
+    const tmin = (_c = t.tokenMin) != null ? _c : 1;
+    const tmax = (_d = t.tokenMax) != null ? _d : 1;
+    if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label3} : jetons entiers, 1 \u2264 min \u2264 max \u2264 20.`);
+  }
+  return errors;
+}
+function lootDifficulty(enemy, own) {
+  if (!(enemy > 0) || !(own > 0)) return 1;
+  return Math.max(0.5, Math.min(2, enemy / own));
+}
+function rollLoot(player, source, now, rank2 = -1, random = Math.random, difficulty = 1) {
+  var _a, _b, _c, _d, _e, _f;
+  const t = LOOT_TABLES[source];
+  if (!t) return {};
+  const mult = rank2 >= 0 && rank2 < 3 ? Math.max(1, t.podiumMult) : 1;
+  const drop = {};
+  if (random() < Math.min(1, t.relicChance * mult)) {
+    const item = rollRelic(`loot:${source}`, now, random, t.relicMinRarity);
+    if (addRelic(player, item)) drop.relic = relicLabel(item);
+  }
+  if (random() < Math.min(1, t.capsuleChance * mult)) {
+    const st = synthesisState(player);
+    const free2 = CAPSULE_TYPES.filter((c) => st.stock[c].length < SYNTH_RULES.maxStock);
+    if (free2.length > 0) {
+      const type = free2[Math.floor(random() * free2.length) % free2.length];
+      const lo = Math.max(1, Math.min(10, Math.floor(t.capsuleMin)));
+      const hi = Math.max(lo, Math.min(10, Math.floor(t.capsuleMax)));
+      const level3 = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+      if (addCapsule(player, type, level3)) drop.capsule = { type, level: level3, name: CAPSULES[type].name };
     }
   }
-  return 0;
-}
-function passDailyLogin(player, now) {
-  var _a, _b, _c;
-  const st = passState(player, now);
-  const day = new Date(now).toISOString().slice(0, 10);
-  if (st.loginDay === day) return false;
-  st.loginDay = day;
-  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { dailyLogin: ((_c = (_b = st.activity) == null ? void 0 : _b.dailyLogin) != null ? _c : 0) + 1 });
-  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
-  player.seasonPass = st;
-  return true;
-}
-function describePassReward(r, seasonId) {
-  switch (r.kind) {
-    case "production":
-      return `${r.hours} h de production`;
-    case "amber":
-      return `${r.amount} Ambre`;
-    case "dossier":
-      return r.count > 1 ? `${r.count} Dossiers d'entra\xEEnement` : "Dossier d'entra\xEEnement";
-    case "capsule":
-      return `${CAPSULES[r.capsule].name} N${r.level}`;
-    case "relic":
-      return `Relique ${RARITY_LABELS[r.rarity]}`;
-    case "tokens":
-      return tokensLabel(r.count);
-    case "commander": {
-      const def3 = findCommander(r.id);
-      return def3 ? `Commandant de saison : ${def3.title} ${def3.name}` : "Commandant de saison";
+  const diff = Math.max(0.5, Math.min(2, difficulty));
+  if (((_a = t.tokenChance) != null ? _a : 0) > 0 && random() < Math.min(1, ((_b = t.tokenChance) != null ? _b : 0) * mult * diff)) {
+    const lo = Math.max(1, Math.floor((_c = t.tokenMin) != null ? _c : 1));
+    const hi = Math.max(lo, Math.floor((_d = t.tokenMax) != null ? _d : lo));
+    const rolled = lo + Math.floor(random() * (hi - lo + 1)) % (hi - lo + 1);
+    const week = lootTokensThisWeek(player, now);
+    const n = week.left === null ? rolled : Math.min(rolled, week.left);
+    const got = n > 0 ? grantTokens(player, n) : 0;
+    if (got > 0) {
+      drop.tokens = got;
+      player.casino = __spreadProps(__spreadValues({}, playerCasino(player)), { lootWeek: { id: casinoWeekId(now), tokens: week.used + got } });
     }
-    case "cosmetic":
-      return seasonId ? `Banni\xE8re et titre \xAB ${passTitle(seasonId)} \xBB` : "Banni\xE8re et titre de la saison";
   }
+  if (((_e = t.moduleChance) != null ? _e : 0) > 0 && random() < Math.min(1, ((_f = t.moduleChance) != null ? _f : 0) * mult)) {
+    const plan = rollModulePlan(`loot:${source}`, now, random, source.endsWith("Boss") ? "rare" : "common");
+    if (addModuleItem(player, plan)) drop.module = moduleLabel(plan);
+  }
+  return drop;
 }
-var RARITY_LABELS = { common: "commune", rare: "rare", epic: "\xE9pique", legendary: "l\xE9gendaire", mythic: "mythique" };
-function grantPassReward(player, r, seasonId, now, random = Math.random) {
-  var _a, _b, _c;
-  if (r.kind === "production") {
-    for (const [res, n] of Object.entries(productionHours(player, r.hours))) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
-    return describePassReward(r);
-  }
-  if (r.kind === "amber") {
-    const b = bountyState(player);
-    b.amber += r.amount;
-    player.bounties = b;
-    return describePassReward(r);
-  }
-  if (r.kind === "dossier") {
-    addDossiers(player, r.count);
-    return describePassReward(r);
-  }
-  if (r.kind === "capsule") {
-    const syn = synthesisState(player);
-    if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
-      syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
-      player.synthesis = syn;
-      return describePassReward(r);
-    }
-    const b = bountyState(player);
-    b.amber += CAPSULE_AMBER;
-    player.bounties = b;
-    return `${CAPSULE_AMBER} Ambre (r\xE9serve de capsules pleine)`;
-  }
-  if (r.kind === "tokens") {
-    grantTokens(player, r.count);
-    return describePassReward(r);
-  }
-  if (r.kind === "commander") {
-    if (unlockSeasonCommander(player, r.id)) return describePassReward(r);
-    addDossiers(player, 2);
-    return "2 Dossiers d'entra\xEEnement (commandant d\xE9j\xE0 recrut\xE9)";
-  }
-  if (r.kind === "relic") {
-    let first = true;
-    const item = rollRelic("pass", now, () => first ? (first = false, 0) : random(), r.rarity);
-    if (addRelic(player, item)) return `Relique : ${relicLabel(item)}`;
-    const b = bountyState(player);
-    b.amber += 40;
-    player.bounties = b;
-    return "40 Ambre (collection de reliques pleine)";
-  }
-  const title = passTitle(seasonId);
-  if (!((_b = player.titles) != null ? _b : []).some((t) => t.label === title)) player.titles = [...(_c = player.titles) != null ? _c : [], { label: title, seasonId: `pass:${seasonId}`, rank: 1 }];
-  const st = passState(player, now);
-  if (!st.completed.includes(seasonId)) st.completed = [...st.completed, seasonId];
-  player.seasonPass = st;
-  return describePassReward(r, seasonId);
-}
-function claimPassTier(player, tierIn, now, random = Math.random) {
-  const tier = Math.floor(Number(tierIn));
-  const st = passState(player, now);
-  const pass = activePass(st.seasonId);
-  if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
-  if (st.claimed.includes(tier)) throw new GameActionError("Palier d\xE9j\xE0 r\xE9clam\xE9.");
-  if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
-  const ch = tierRequirements(player, tier, now);
-  if (ch && !ch.met)
-    throw new GameActionError(
-      ch.status === "waiting" ? "Palier verrouill\xE9 : rel\xE8ve d'abord le d\xE9fi des paliers pr\xE9c\xE9dents." : `Palier verrouill\xE9 : ${ch.reqs.filter((r) => !r.met).map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} ${r.done} / ${r.count}`).join(", ")}.`
-    );
-  const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
-  const after = passState(player, now);
-  after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
-  player.seasonPass = after;
-  return gained;
+function describeLoot(drop) {
+  if (!drop) return "";
+  const parts = [];
+  if (drop.relic) parts.push(`Relique : ${drop.relic}`);
+  if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
+  if (drop.module) parts.push(`Plan de module : ${drop.module}`);
+  if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
+  return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
 }
 
 // src/game/pirates.ts
@@ -8823,6 +8370,554 @@ function validateFactions(defs) {
     if (!(f.lair.raidsNeeded >= 1)) errors.push(`${label3} : nombre de raids avant le repaire invalide.`);
   }
   return errors;
+}
+
+// src/game/seasonPass.ts
+var PASS_RULES = { tiers: 30, pointsPerTier: 40 };
+var PASS_POINTS = {
+  contract: 10,
+  bounty: 8,
+  raidRepelled: 8,
+  /** v5.13 : le combat est la voie royale du passe (5 → 8). */
+  victory: 8,
+  bossAssault: 5,
+  dailyLogin: 5,
+  /** v5.13 : plus de points pour les missions (le passe avançait trop vite) ; l'activité reste comptée pour les Chroniques. */
+  mission: 0,
+  /** v4.2 : vendetta gagnée contre un seigneur de guerre. */
+  vendetta: 40,
+  /** v4.3 : épisode des Chroniques terminé, participation au boss de saison. */
+  chronicle: 40,
+  seasonBoss: 60,
+  /** v4.6 : boss d'alliance abattu (au moins 5 % des dégâts), ou simple participation. */
+  allianceBoss: 40,
+  allianceBossTry: 15,
+  /** v4.7 : coalition gagnée contre un seigneur (au moins 3 % de l'objectif). */
+  coalition: 50,
+  /** v4.9 : objectif du jour d'alliance atteint (membre ayant contribué). */
+  allianceDaily: 15
+};
+var OBJECTIVE_LABELS = {
+  contract: "Objectifs du jour r\xE9cup\xE9r\xE9s",
+  bounty: "Primes Kesh'Vaar remplies",
+  raidRepelled: "Raids de faction repouss\xE9s",
+  victory: "Combats gagn\xE9s",
+  bossAssault: "Assauts sur un boss",
+  mission: "Missions termin\xE9es",
+  spy: "Sondes d'espionnage lanc\xE9es",
+  market: "Offres achet\xE9es au march\xE9",
+  warlordWin: "Seigneurs de guerre pill\xE9s"
+};
+function normalizeTierReqs(raw) {
+  const list = Array.isArray(raw) ? raw : raw && typeof raw === "object" ? [raw] : [];
+  return list.filter((r) => !!r && typeof r === "object" && typeof r.key === "string" && Number(r.count) >= 1).map((r) => ({ key: r.key, count: Math.floor(Number(r.count)) }));
+}
+var PASS_TIERS = [
+  [{ kind: "production", hours: 2 }],
+  [{ kind: "amber", amount: 20 }],
+  [{ kind: "capsule", capsule: "assault", level: 3 }],
+  [{ kind: "production", hours: 3 }],
+  [{ kind: "dossier", count: 1 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "production", hours: 4 }, { kind: "tokens", count: 1 }],
+  [{ kind: "capsule", capsule: "armor", level: 3 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "amber", amount: 40 }, { kind: "production", hours: 4 }],
+  [{ kind: "production", hours: 5 }],
+  [{ kind: "capsule", capsule: "decoy", level: 4 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "production", hours: 6 }],
+  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "veil", level: 4 }],
+  [{ kind: "production", hours: 7 }, { kind: "tokens", count: 1 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "assault", level: 5 }],
+  [{ kind: "relic", rarity: "rare" }],
+  [{ kind: "production", hours: 8 }],
+  [{ kind: "amber", amount: 30 }],
+  [{ kind: "capsule", capsule: "armor", level: 5 }],
+  [{ kind: "production", hours: 9 }],
+  [{ kind: "dossier", count: 1 }, { kind: "amber", amount: 40 }],
+  [{ kind: "production", hours: 10 }],
+  [{ kind: "amber", amount: 50 }, { kind: "tokens", count: 2 }],
+  [{ kind: "capsule", capsule: "decoy", level: 5 }],
+  [{ kind: "production", hours: 12 }],
+  [{ kind: "relic", rarity: "epic" }, { kind: "amber", amount: 40 }, { kind: "cosmetic" }]
+];
+var DEFAULT_PASS = structuredClone({ rules: PASS_RULES, points: PASS_POINTS, tiers: PASS_TIERS });
+function defaultSeasonPassConfig() {
+  return structuredClone(DEFAULT_PASS);
+}
+function setSeasonPass(cfg) {
+  var _a, _b;
+  const d = defaultSeasonPassConfig();
+  Object.assign(PASS_RULES, d.rules, (_a = cfg == null ? void 0 : cfg.rules) != null ? _a : {});
+  Object.assign(PASS_POINTS, d.points, (_b = cfg == null ? void 0 : cfg.points) != null ? _b : {});
+  PASS_POINTS.mission = 0;
+  const tiers2 = Array.isArray(cfg == null ? void 0 : cfg.tiers) && cfg.tiers.length > 0 ? cfg.tiers : d.tiers;
+  PASS_TIERS.splice(0, PASS_TIERS.length, ...structuredClone(tiers2));
+  PASS_RULES.tiers = PASS_TIERS.length;
+}
+var REWARD_KINDS = ["production", "amber", "dossier", "capsule", "relic", "tokens", "cosmetic"];
+function validateSeasonPass(cfg) {
+  var _a;
+  const errors = [];
+  if (!cfg) return errors;
+  if (cfg.rules && !(cfg.rules.pointsPerTier >= 1)) errors.push("Passe : points par palier \u2265 1.");
+  for (const [k, v] of Object.entries((_a = cfg.points) != null ? _a : {})) if (!(typeof v === "number" && v >= 0)) errors.push(`Passe : points invalides pour \xAB ${k} \xBB.`);
+  if (cfg.tiers) {
+    if (cfg.tiers.length < 1 || cfg.tiers.length > 60) errors.push("Passe : entre 1 et 60 paliers.");
+    cfg.tiers.forEach(
+      (list, i) => (list != null ? list : []).forEach((r) => {
+        if (!REWARD_KINDS.includes(r == null ? void 0 : r.kind)) errors.push(`Passe, palier ${i + 1} : r\xE9compense inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "capsule" && !(r.capsule in CAPSULES)) errors.push(`Passe, palier ${i + 1} : capsule inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "relic" && !["common", "rare", "epic", "legendary"].includes(r.rarity)) errors.push(`Passe, palier ${i + 1} : raret\xE9 inconnue.`);
+        if ((r == null ? void 0 : r.kind) === "tokens" && !(r.count >= 1 && r.count <= 20)) errors.push(`Passe, palier ${i + 1} : entre 1 et 20 jetons.`);
+      })
+    );
+  }
+  return errors;
+}
+var CAPSULE_AMBER = 15;
+function passTitle(seasonId) {
+  const month2 = seasonLabel(seasonId).toLowerCase();
+  return /^[aeiouéâ]/.test(month2) ? `V\xE9t\xE9ran d'${month2}` : `V\xE9t\xE9ran de ${month2}`;
+}
+function passState(player, now) {
+  var _a, _b, _c, _d;
+  const raw = (_a = player.seasonPass) != null ? _a : {};
+  const seasonId = currentSeasonId(now);
+  const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
+  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
+  const activity = {};
+  for (const [k, v] of Object.entries((_b = raw.activity) != null ? _b : {})) if (Number(v) > 0) activity[k] = Number(v);
+  const challenge = {};
+  for (const [k, v] of Object.entries((_c = raw.challenge) != null ? _c : {})) if (Number(v) > 0) challenge[k] = Number(v);
+  const cleared = (Array.isArray(raw.cleared) ? raw.cleared : []).map(Number).filter((n) => n >= 1);
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues({
+    seasonId,
+    points: Math.max(0, Number(raw.points) || 0),
+    claimed: (Array.isArray(raw.claimed) ? raw.claimed : []).map(Number).filter((n) => n >= 1 && n <= activePass(seasonId).tiers.length),
+    loginDay: String((_d = raw.loginDay) != null ? _d : ""),
+    completed,
+    activity
+  }, Number(raw.notifiedTier) > 0 ? { notifiedTier: Math.floor(Number(raw.notifiedTier)) } : {}), cleared.length ? { cleared } : {}), Object.keys(challenge).length ? { challenge } : {}), raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {});
+}
+function normalizeDaily(d) {
+  var _a;
+  const counts = {};
+  for (const [k, v] of Object.entries((_a = d.counts) != null ? _a : {})) if (Number(v) > 0) counts[k] = Number(v);
+  return __spreadValues({ day: d.day, counts, claimed: (Array.isArray(d.claimed) ? d.claimed : []).map(Number).filter((n) => n >= 0 && n < 10) }, d.settled ? { settled: true } : {});
+}
+function passTierToAnnounce(player, now) {
+  var _a, _b;
+  if (!player.seasonPass) return { tier: 0, claimable: 0 };
+  const st = passState(player, now);
+  const tier = passTier(st.points, st.seasonId);
+  if (tier <= ((_a = st.notifiedTier) != null ? _a : 0)) return { tier: 0, claimable: 0 };
+  st.notifiedTier = tier;
+  player.seasonPass = st;
+  let claimable = 0;
+  for (let t = 1; t <= tier; t++) if (!st.claimed.includes(t) && ((_b = tierRequirements(player, t, now)) == null ? void 0 : _b.met) !== false) claimable += 1;
+  return { tier, claimable };
+}
+var MONTH_PASSES = /* @__PURE__ */ new Map();
+var SEASON_OVERRIDES = /* @__PURE__ */ new Map();
+function setPassSeasonOverrides(map) {
+  SEASON_OVERRIDES.clear();
+  for (const [k, v] of map) SEASON_OVERRIDES.set(k, v);
+}
+function setMonthPasses(list) {
+  MONTH_PASSES.clear();
+  for (const m of list) if (m.pass && m.pass.pointsPerTier >= 1 && Array.isArray(m.pass.tiers) && m.pass.tiers.length > 0) MONTH_PASSES.set(m.id, m.pass);
+}
+function activePass(seasonId = currentSeasonId()) {
+  var _a, _b;
+  return (_b = (_a = SEASON_OVERRIDES.get(seasonId)) != null ? _a : MONTH_PASSES.get(seasonId)) != null ? _b : { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+}
+function passTierReqs(seasonId, tier) {
+  var _a;
+  return normalizeTierReqs((_a = activePass(seasonId).requirements) == null ? void 0 : _a[String(tier)]);
+}
+function isCumulativePass(seasonId) {
+  return activePass(seasonId).challengeMode === "cumulative";
+}
+function cumulativeCleared(st) {
+  const out = /* @__PURE__ */ new Set();
+  const n = activePass(st.seasonId).tiers.length;
+  for (let t = 1; t <= n; t++) {
+    const reqs = passTierReqs(st.seasonId, t);
+    if (reqs.length === 0) continue;
+    if (!reqs.every((r) => {
+      var _a, _b;
+      return ((_b = (_a = st.activity) == null ? void 0 : _a[r.key]) != null ? _b : 0) >= r.count;
+    })) break;
+    out.add(t);
+  }
+  return out;
+}
+function activeChallengeTier(st) {
+  var _a;
+  const n = activePass(st.seasonId).tiers.length;
+  const cleared = isCumulativePass(st.seasonId) ? cumulativeCleared(st) : new Set((_a = st.cleared) != null ? _a : []);
+  for (let t = 1; t <= n; t++) if (passTierReqs(st.seasonId, t).length > 0 && !cleared.has(t)) return t;
+  return 0;
+}
+function tierRequirements(player, tier, now) {
+  var _a;
+  const st = passState(player, now);
+  const reqs = passTierReqs(st.seasonId, tier);
+  if (reqs.length === 0) return null;
+  if (isCumulativePass(st.seasonId)) {
+    const status2 = cumulativeCleared(st).has(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
+    const rows2 = reqs.map((r) => {
+      var _a2, _b;
+      const done = Math.min(r.count, (_b = (_a2 = st.activity) == null ? void 0 : _a2[r.key]) != null ? _b : 0);
+      return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
+    });
+    return { status: status2, met: status2 === "cleared", reqs: rows2 };
+  }
+  const status = ((_a = st.cleared) != null ? _a : []).includes(tier) ? "cleared" : activeChallengeTier(st) === tier ? "active" : "waiting";
+  const rows = reqs.map((r) => {
+    var _a2, _b;
+    const done = status === "cleared" ? r.count : status === "active" ? Math.min(r.count, (_b = (_a2 = st.challenge) == null ? void 0 : _a2[r.key]) != null ? _b : 0) : 0;
+    return __spreadProps(__spreadValues({}, r), { done, met: done >= r.count });
+  });
+  return { status, met: status === "cleared", reqs: rows };
+}
+function passTier(points, seasonId = currentSeasonId()) {
+  const pass = activePass(seasonId);
+  return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
+}
+function passMax(seasonId) {
+  const pass = activePass(seasonId);
+  return pass.tiers.length * pass.pointsPerTier;
+}
+function trackActivity(player, key, now, times = 1) {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  if (!(times > 0)) return;
+  const st = passState(player, now);
+  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { [key]: ((_c = (_b = st.activity) == null ? void 0 : _b[key]) != null ? _c : 0) + times });
+  if (key === "spy" || key === "market") recordContract(player, key, times, now);
+  const day = parisDay(now);
+  const daily = st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
+  st.daily = __spreadProps(__spreadValues({}, daily), { counts: __spreadProps(__spreadValues({}, daily.counts), { [key]: ((_d = daily.counts[key]) != null ? _d : 0) + times }) });
+  if (isCumulativePass(st.seasonId)) {
+    player.seasonPass = st;
+    return;
+  }
+  const t = activeChallengeTier(st);
+  const reqs = t ? passTierReqs(st.seasonId, t) : [];
+  const req = reqs.find((r) => r.key === key);
+  if (req) {
+    const challenge = __spreadProps(__spreadValues({}, (_e = st.challenge) != null ? _e : {}), { [key]: Math.min(req.count, ((_g = (_f = st.challenge) == null ? void 0 : _f[key]) != null ? _g : 0) + times) });
+    if (reqs.every((r) => {
+      var _a2;
+      return ((_a2 = challenge[r.key]) != null ? _a2 : 0) >= r.count;
+    })) {
+      st.cleared = [...(_h = st.cleared) != null ? _h : [], t].sort((a, b) => a - b);
+      delete st.challenge;
+    } else st.challenge = challenge;
+  }
+  player.seasonPass = st;
+}
+var passHook = null;
+function onPassPoints(hook) {
+  passHook = hook;
+}
+var PASS_OVERFLOW = {
+  /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
+  minPoints: 40,
+  amberPerPoint: 1
+};
+function addPassPoints(player, source, now, times = 1) {
+  passHook == null ? void 0 : passHook(player, source, now, times);
+  trackActivity(player, source, now, times);
+  const st = passState(player, now);
+  const max = passMax(st.seasonId);
+  const gain = PASS_POINTS[source] * Math.max(0, times);
+  const overflow = Math.max(0, st.points + gain - max);
+  st.points = Math.min(max, st.points + gain);
+  player.seasonPass = st;
+  if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
+    const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
+    if (amber > 0) {
+      const b = bountyState(player);
+      b.amber += amber;
+      player.bounties = b;
+      return amber;
+    }
+  }
+  return 0;
+}
+function passDailyLogin(player, now) {
+  var _a, _b, _c;
+  const st = passState(player, now);
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (st.loginDay === day) return false;
+  st.loginDay = day;
+  st.activity = __spreadProps(__spreadValues({}, (_a = st.activity) != null ? _a : {}), { dailyLogin: ((_c = (_b = st.activity) == null ? void 0 : _b.dailyLogin) != null ? _c : 0) + 1 });
+  st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
+  player.seasonPass = st;
+  return true;
+}
+function describePassReward(r, seasonId) {
+  switch (r.kind) {
+    case "production":
+      return `${r.hours} h de production`;
+    case "amber":
+      return `${r.amount} Ambre`;
+    case "dossier":
+      return r.count > 1 ? `${r.count} Dossiers d'entra\xEEnement` : "Dossier d'entra\xEEnement";
+    case "capsule":
+      return `${CAPSULES[r.capsule].name} N${r.level}`;
+    case "relic":
+      return `Relique ${RARITY_LABELS[r.rarity]}`;
+    case "tokens":
+      return tokensLabel(r.count);
+    case "commander": {
+      const def3 = findCommander(r.id);
+      return def3 ? `Commandant de saison : ${def3.title} ${def3.name}` : "Commandant de saison";
+    }
+    case "cosmetic":
+      return seasonId ? `Banni\xE8re et titre \xAB ${passTitle(seasonId)} \xBB` : "Banni\xE8re et titre de la saison";
+  }
+}
+var RARITY_LABELS = { common: "commune", rare: "rare", epic: "\xE9pique", legendary: "l\xE9gendaire", mythic: "mythique" };
+function grantPassReward(player, r, seasonId, now, random = Math.random) {
+  var _a, _b, _c;
+  if (r.kind === "production") {
+    for (const [res, n] of Object.entries(productionHours(player, r.hours))) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+    return describePassReward(r);
+  }
+  if (r.kind === "amber") {
+    const b = bountyState(player);
+    b.amber += r.amount;
+    player.bounties = b;
+    return describePassReward(r);
+  }
+  if (r.kind === "dossier") {
+    addDossiers(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "capsule") {
+    const syn = synthesisState(player);
+    if (syn.stock[r.capsule].length < SYNTH_RULES.maxStock) {
+      syn.stock[r.capsule] = [...syn.stock[r.capsule], r.level];
+      player.synthesis = syn;
+      return describePassReward(r);
+    }
+    const b = bountyState(player);
+    b.amber += CAPSULE_AMBER;
+    player.bounties = b;
+    return `${CAPSULE_AMBER} Ambre (r\xE9serve de capsules pleine)`;
+  }
+  if (r.kind === "tokens") {
+    grantTokens(player, r.count);
+    return describePassReward(r);
+  }
+  if (r.kind === "commander") {
+    if (unlockSeasonCommander(player, r.id)) return describePassReward(r);
+    addDossiers(player, 2);
+    return "2 Dossiers d'entra\xEEnement (commandant d\xE9j\xE0 recrut\xE9)";
+  }
+  if (r.kind === "relic") {
+    let first = true;
+    const item = rollRelic("pass", now, () => first ? (first = false, 0) : random(), r.rarity);
+    if (addRelic(player, item)) return `Relique : ${relicLabel(item)}`;
+    const b = bountyState(player);
+    b.amber += 40;
+    player.bounties = b;
+    return "40 Ambre (collection de reliques pleine)";
+  }
+  const title = passTitle(seasonId);
+  if (!((_b = player.titles) != null ? _b : []).some((t) => t.label === title)) player.titles = [...(_c = player.titles) != null ? _c : [], { label: title, seasonId: `pass:${seasonId}`, rank: 1 }];
+  const st = passState(player, now);
+  if (!st.completed.includes(seasonId)) st.completed = [...st.completed, seasonId];
+  player.seasonPass = st;
+  return describePassReward(r, seasonId);
+}
+function claimPassTier(player, tierIn, now, random = Math.random) {
+  const tier = Math.floor(Number(tierIn));
+  const st = passState(player, now);
+  const pass = activePass(st.seasonId);
+  if (!(tier >= 1 && tier <= pass.tiers.length)) throw new GameActionError("Palier inconnu.");
+  if (st.claimed.includes(tier)) throw new GameActionError("Palier d\xE9j\xE0 r\xE9clam\xE9.");
+  if (passTier(st.points, st.seasonId) < tier) throw new GameActionError(`Palier pas encore atteint (${st.points} / ${tier * pass.pointsPerTier} points).`);
+  const ch = tierRequirements(player, tier, now);
+  if (ch && !ch.met)
+    throw new GameActionError(
+      ch.status === "waiting" ? "Palier verrouill\xE9 : rel\xE8ve d'abord le d\xE9fi des paliers pr\xE9c\xE9dents." : `Palier verrouill\xE9 : ${ch.reqs.filter((r) => !r.met).map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} ${r.done} / ${r.count}`).join(", ")}.`
+    );
+  const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));
+  const after = passState(player, now);
+  after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
+  player.seasonPass = after;
+  return gained;
+}
+
+// src/game/dailyMissions.ts
+var DAILY_RULES = { tasks: 0, legacyTasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
+var POOL = [
+  { key: "mission", count: 2 },
+  { key: "spy", count: 2 },
+  { key: "victory", count: 1 },
+  { key: "contract", count: 1 },
+  { key: "market", count: 1 }
+];
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return h;
+}
+function dailyTasksFor(day, tasks = DAILY_RULES.tasks) {
+  const pool = [...POOL];
+  const out = [];
+  let seed = hash(day);
+  while (out.length < tasks && pool.length > 0) {
+    const i = seed % pool.length;
+    out.push(pool.splice(i, 1)[0]);
+    seed = hash(`${day}:${seed}`);
+  }
+  return out;
+}
+function todayState(st, day) {
+  return st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
+}
+function dailyMissions(player, now) {
+  const day = parisDay(now);
+  const daily = todayState(passState(player, now), day);
+  const tasks = dailyTasksFor(day).map((t, i) => {
+    var _a;
+    const progress = Math.min(t.count, (_a = daily.counts[t.key]) != null ? _a : 0);
+    return { key: t.key, label: OBJECTIVE_LABELS[t.key], count: t.count, progress, done: progress >= t.count, claimed: daily.claimed.includes(i) };
+  });
+  return { day, tasks, allClaimed: tasks.every((t) => t.claimed) };
+}
+function claimDailyMission(player, index2, now) {
+  const i = Math.floor(Number(index2));
+  const view = dailyMissions(player, now);
+  const task = view.tasks[i];
+  if (!task) throw new GameActionError("Mission inconnue.");
+  if (task.claimed) throw new GameActionError("Mission d\xE9j\xE0 r\xE9clam\xE9e.");
+  if (!task.done) throw new GameActionError(`Pas encore faite (${task.progress} / ${task.count}).`);
+  const st = passState(player, now);
+  const daily = todayState(st, view.day);
+  st.daily = __spreadProps(__spreadValues({}, daily), { claimed: [...daily.claimed, i] });
+  player.seasonPass = st;
+  const bonus = st.daily.claimed.length >= view.tasks.length;
+  const tokens = DAILY_RULES.tokensPerTask + (bonus ? DAILY_RULES.allBonusTokens : 0);
+  grantTokens(player, tokens);
+  return { tokens, bonus };
+}
+function settleLegacyDaily(player, now) {
+  if (DAILY_RULES.tasks > 0) return 0;
+  const st = passState(player, now);
+  const daily = st.daily;
+  if (!daily || daily.day !== parisDay(now) || daily.settled) return 0;
+  const tasks = dailyTasksFor(daily.day, DAILY_RULES.legacyTasks);
+  const claimed = [...daily.claimed];
+  let tokens = 0;
+  tasks.forEach((t, i) => {
+    var _a;
+    if (claimed.includes(i) || ((_a = daily.counts[t.key]) != null ? _a : 0) < t.count) return;
+    claimed.push(i);
+    tokens += DAILY_RULES.tokensPerTask;
+  });
+  if (tokens > 0 && claimed.length >= tasks.length) tokens += DAILY_RULES.allBonusTokens;
+  st.daily = __spreadProps(__spreadValues({}, daily), { claimed, settled: true });
+  player.seasonPass = st;
+  if (tokens > 0) grantTokens(player, tokens);
+  return tokens;
+}
+
+// src/game/seasonCatalog.ts
+var CATALOG_START = "2026-11";
+var THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"];
+var THEME_PRIMARY = {
+  vide: "logistician",
+  hiver: "warden",
+  forge: "engineer",
+  bazar: "diplomat",
+  maree: "admiral",
+  colonies: "governor",
+  primes: "corsair",
+  comete: "hunter",
+  moisson: "steward",
+  archives: "spy",
+  chantiers: "mechanic",
+  rempart: "strategist"
+};
+var E = (theme, year, name, tagline, synopsis, commander, scene) => ({ theme, year, name, tagline, synopsis, commander, scene });
+var SEASON_CATALOG = [
+  // ---------- L'Appel du Vide (Logisticienne) ----------
+  E("vide", 1, "L'Appel du Vide", "Au-del\xE0 des cartes, des routes \xE0 ouvrir.", "Un signal venu d'au-del\xE0 des franges appelle les flottes. {mentor} veut ouvrir une route avant que {rival} ne la ferme.", { name: "Ilka Morrow", title: "\xC9claireuse des franges", secondary: "spy", lore: "{commander} a cartographi\xE9 trois n\xE9buleuses que tout le monde disait infranchissables.", look: "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind" }, "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind"),
+  E("vide", 2, "Au-del\xE0 des franges", "Chaque route ouverte est une colonie promise.", "Les routes ouvertes l'an dernier m\xE8nent \xE0 des mondes inconnus. {mentor} veut y installer des colons ; {rival} y voit des proies.", { name: "Corentin Vash", title: "Ma\xEEtre des routes", secondary: "governor", lore: "{commander} a men\xE9 le premier convoi de colons au-del\xE0 du Voile, sans perdre un seul vaisseau.", look: "a calm convoy master in a long travel coat, route holograms around his hands, colony ships glowing behind" }, "a long convoy of colony ships threading a glowing corridor between two magenta nebulae, a green world on the horizon"),
+  E("vide", 3, "Terra incognita", "L\xE0 o\xF9 m\xEAme les colosses se perdent.", "Aux confins du Vide, des formes gigantesques d\xE9rivent entre les \xE9toiles. {mentor} veut les pister ; {rival} veut leurs carcasses.", { name: "Sefa Arkwright", title: "Pisteuse du Vide", secondary: "hunter", lore: "{commander} a suivi la piste d'un colosse pendant deux ans, d'un bout \xE0 l'autre du Vide.", look: "a scarred void tracker with a long-range targeting monocle, harpoon rig on her back, enormous shadow drifting behind" }, "an immense dark creature silhouette drifting through a magenta void, a small tracker ship following its luminous trail"),
+  // ---------- Hiver galactique (Gardienne) ----------
+  E("hiver", 1, "Hiver galactique", "Garder le feu, garder les r\xE9serves.", "Une nuit glaciale tombe sur le secteur et les r\xE9serves deviennent vitales. {mentor} confie les entrep\xF4ts aux plus vigilants ; {rival} attend la faille.", { name: "Brynja Solvei", title: "Gardienne du Givre", secondary: "strategist", lore: "{commander} a tenu les entrep\xF4ts de Vashka tout un hiver, sans perdre une caisse.", look: "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind" }, "a fortified ice-covered depot planet under a pale blue aurora, armored doors glowing, distant raider lights in the dark"),
+  E("hiver", 2, "La Longue Nuit", "Quand le soleil ne revient pas, on compte chaque ressource.", "La nuit dure plus longtemps cette ann\xE9e. {mentor} rationne, {rival} pille : chaque r\xE9serve prot\xE9g\xE9e est une victoire.", { name: "Aldo Frostmere", title: "Intendant de la Longue Nuit", secondary: "steward", lore: "{commander} tient les comptes de l'hiver au gramme pr\xE8s, et n'a jamais laiss\xE9 un colon sans chauffage.", look: "a meticulous quartermaster in thick grey furs, frost-rimmed spectacles, glowing inventory hologram, snow falling" }, "endless night over a frozen colony, warm golden lights in armored granaries, a pale aurora overhead"),
+  E("hiver", 3, "Givre \xE9ternel", "Le froid ronge les coques ; on les r\xE9pare.", "Un givre \xE9trange ronge les blindages. {mentor} r\xE9unit m\xE9caniciens et gardiens pour tenir jusqu'au d\xE9gel ; {rival} parie sur l'usure.", { name: "Halvard Rime", title: "Gardien des Cales gel\xE9es", secondary: "mechanic", lore: "{commander} a r\xE9par\xE9 une station enti\xE8re \xE0 mains nues, par moins quatre-vingts degr\xE9s.", look: "a towering armored warden with a frost-covered mechanical arm, blue ice crystals on armor, frozen hangar behind" }, "a frozen orbital hangar with ice crystals on the hulls, welders' blue sparks and a pale aurora through the hangar windows"),
+  // ---------- Forge Stellaire (Ingénieure) ----------
+  E("forge", 1, "Forge Stellaire", "B\xE2tir plus vite que l'ennemi ne d\xE9truit.", "{rival} a mis la main sur les forges du secteur. {mentor} veut les reprendre, chantier par chantier.", { name: "Oriane Ferrand", title: "Ma\xEEtresse de Forge", secondary: "steward", lore: "{commander} a rallum\xE9 une forge \xE9teinte depuis un si\xE8cle, et tenu ses comptes \xE0 l'\xE9quilibre.", look: "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm" }, "a colossal star forge built around a red dwarf, molten rivers of metal and orange sparks, cyan scaffolding lights"),
+  E("forge", 2, "Le Grand Chantier", "Chaque rivet est une victoire.", "Les forges reprises tournent \xE0 plein, mais il manque des bras et des pi\xE8ces. {mentor} lance le plus grand chantier de l'histoire du secteur ; {rival} veut le saboter.", { name: "Bastien Rivet", title: "Architecte des \xC9toiles", secondary: "mechanic", lore: "{commander} a dessin\xE9 les plans de la moiti\xE9 des stations du secteur, et en a mont\xE9 l'autre moiti\xE9.", look: "a bearded master architect with holographic blueprints floating around him, orange forge light, steel scaffolds" }, "a gigantic space station under construction with thousands of welding sparks, cranes and drones, orange and cyan light"),
+  E("forge", 3, "C\u0153ur de l'Enclume", "Forger l'arme qui finira la guerre.", "Au c\u0153ur de l'Enclume, une arme de l\xE9gende attend d'\xEAtre forg\xE9e. {mentor} r\xE9unit ing\xE9nieurs et amiraux ; {rival} veut la voler avant qu'elle ne soit finie.", { name: "Nyra Okonkwo", title: "Ing\xE9nieure en chef", secondary: "admiral", lore: "{commander} con\xE7oit des vaisseaux de ligne, puis les m\xE8ne elle-m\xEAme au combat.", look: "a confident chief engineer in an officer's coat with forge-scorched sleeves, warship blueprint hologram, orange glow" }, "a massive anvil-shaped forge station cradling an unfinished capital warship, orange molten light and cyan tactical holograms"),
+  // ---------- Le Grand Bazar (Diplomate) ----------
+  E("bazar", 1, "Le Grand Bazar", "Tout s'ach\xE8te, sauf la parole donn\xE9e.", "Le Grand Bazar ouvre ses portes \xE0 tous les empires. {mentor} veut y nouer des alliances ; {rival} veut y faire la loi.", { name: "Isidore Vantal", title: "Ambassadeur du Bazar", secondary: "steward", lore: "{commander} a n\xE9goci\xE9 la paix entre deux clans marchands qui se battaient depuis trois g\xE9n\xE9rations.", look: "a silver-tongued diplomat in emerald silk robes, holographic contracts, warm market lights behind" }, "a huge orbital bazaar ring full of colorful stalls and docked merchant ships, emerald and gold lanterns, crowds of aliens"),
+  E("bazar", 2, "Route de la soie stellaire", "Un convoi bien prot\xE9g\xE9 vaut une flotte.", "Une route commerciale relie d\xE9sormais tout le secteur, et les pirates l'ont vue aussi. {mentor} veut la s\xE9curiser ; {rival} veut la taxer.", { name: "Saskia Brel", title: "\xC9missaire corsaire", secondary: "corsair", lore: "{commander} a \xE9t\xE9 pirate avant de devenir diplomate. Elle conna\xEEt toutes les ruses, et en invente encore.", look: "a charismatic former pirate turned envoy, red sash over a diplomatic coat, golden earrings, convoy lights behind" }, "a long trade route of glowing gates across space, merchant convoys escorted by corsair frigates, emerald and red lights"),
+  E("bazar", 3, "Foire des mondes", "On y \xE9change des marchandises\u2026 et des secrets.", "La Foire des mondes attire tous les empires, et tous leurs espions. {mentor} veut des trait\xE9s ; {rival} veut des informations.", { name: "Auriel Kesh", title: "Diplomate de l'ombre", secondary: "spy", lore: "{commander} sait toujours ce que l'autre camp va proposer, avant m\xEAme qu'il le sache lui-m\xEAme.", look: "an elegant masked diplomat in violet and emerald silks, whisper-thin holographic veil, festive fair lights behind" }, "a grand festival of worlds inside a domed station, floating lanterns, envoys of many species, a hidden figure watching from a balcony"),
+  // ---------- Marée d'Acier (Amiral) ----------
+  E("maree", 1, "Mar\xE9e d'Acier", "Une flotte se l\xE8ve, une autre sombre.", "{rival} rassemble ses escadres au bord du secteur. {mentor} sonne le rassemblement : ce mois-ci, chaque bataille compte.", { name: "Maren Kestrel", title: "Amirale des Mar\xE9es", secondary: "strategist", lore: "{commander} a command\xE9 trois flottes de ligne avant ses trente ans. On dit qu'elle n'a jamais perdu une bataille qu'elle avait choisie.", look: "a fierce naval fleet admiral woman, weathered face, long coat with cyan trim, holographic tactical map behind" }, "two enormous battle fleets clashing like waves, cyan and red beams, a capital ship breaking through the line"),
+  E("maree", 2, "Ressac de guerre", "Tenir la ligne, briser la vague.", "Les colosses ont \xE9t\xE9 vus dans le sillage des escadres ennemies. {mentor} veut une flotte capable d'abattre les deux ; {rival} veut les l\xE2cher sur nous.", { name: "Corvin Drakmor", title: "Brise-Ligne", secondary: "hunter", lore: "{commander} a \xE9peronn\xE9 un colosse avec son croiseur, et v\xE9cu pour le raconter.", look: "a grim battle-scarred admiral with a cybernetic jaw, heavy navy coat, colossal beast silhouette behind the fleet" }, "a battle fleet charging through the wake of a colossal space beast, cyan beams, debris and a stormy nebula"),
+  E("maree", 3, "La Grande Houle", "Frapper loin, frapper vite.", "La guerre s'\xE9tend sur tout le secteur. {mentor} veut une flotte qui frappe partout \xE0 la fois ; {rival} compte sur nos lignes trop longues.", { name: "Thessa Haldane", title: "Capitaine de la Houle", secondary: "logistician", lore: "{commander} d\xE9place une flotte enti\xE8re en une nuit, et l'ennemi la cherche encore le lendemain.", look: "a swift fleet captain with windswept hair, flight jacket with cyan route lines, multiple fleet holograms around her" }, "a swarm of fast warships jumping in formation across a star map, cyan hyperspace trails like a rising swell"),
+  // ---------- Nouveaux Mondes (Gouverneure) ----------
+  E("colonies", 1, "Nouveaux Mondes", "Chaque plan\xE8te est une promesse.", "Des mondes vierges s'ouvrent aux franges du secteur, et {rival} veut tous les revendiquer. {mentor} lance la course aux colonies.", { name: "C\xE9lia Marchal", title: "Gouverneure des Franges", secondary: "steward", lore: "{commander} a transform\xE9 une lune st\xE9rile en grenier du secteur en moins de dix ans.", look: "a visionary colonial governor woman in a white and mint long coat, terraformed green planet glowing behind" }, "a freshly terraformed green planet at dawn, colony domes and landing ships, a mint-colored sunrise over new cities"),
+  E("colonies", 2, "La Ru\xE9e vers les franges", "Plus loin, plus vite, plus nombreux.", "Les colonies se multiplient plus vite que les routes pour les ravitailler. {mentor} cherche quelqu'un pour relier les mondes ; {rival} coupe les lignes.", { name: "Ravi Lindqvist", title: "B\xE2tisseur de mondes", secondary: "logistician", lore: "{commander} a reli\xE9 vingt colonies par un r\xE9seau de convois qui ne s'est jamais arr\xEAt\xE9.", look: "an energetic colonial planner with rolled-up sleeves, holographic supply routes connecting planets around him" }, "a chain of young colony worlds linked by glowing supply lanes, cargo ships streaming between them, mint and cyan light"),
+  E("colonies", 3, "Terres d'aube", "Des colonies qui ne tombent pas.", "Les colonies sont devenues riches, donc des cibles. {mentor} veut les fortifier ; {rival} veut les d\xE9pouiller une \xE0 une.", { name: "Anouk Ibarra", title: "Intendante coloniale", secondary: "warden", lore: "{commander} n'a jamais laiss\xE9 un pillard repartir d'une de ses colonies avec une seule caisse.", look: "a determined colonial administrator in mint and steel armor, shield emblem, fortified colony domes behind" }, "fortified colony domes on a dawn-lit world, shield generators humming, raider ships turning away in the sky"),
+  // ---------- Saison des chasseurs (Corsaire) ----------
+  E("primes", 1, "Saison des chasseurs", "Chaque prime a un prix, chaque prix une t\xEAte.", "Les Kesh'Vaar ont affich\xE9 leurs primes les plus folles. {mentor} veut le tableau de chasse le plus long du secteur ; {rival} chasse les chasseurs.", { name: "Jax Varro", title: "Corsaire de la Ruche", secondary: "admiral", lore: "{commander} a rempli plus de primes que n'importe quel capitaine, souvent avec la flotte de quelqu'un d'autre.", look: "a lethal bounty hunter with golden trophy medallions, insect-like armor plates, predatory eyes" }, "a bounty board of glowing holographic wanted posters in a hive-like station, corsair ships docking under golden light"),
+  E("primes", 2, "Tableau de chasse", "Ce qu'on ne voit pas, on ne le rate pas.", "Les cibles se cachent mieux que jamais. {mentor} veut des \xE9claireurs et des corsaires ; {rival} brouille toutes les pistes.", { name: "Nell Sorrow", title: "Traqueuse de primes", secondary: "spy", lore: "{commander} retrouve n'importe qui. On dit qu'elle a retrouv\xE9 un fant\xF4me, et qu'il a pay\xE9.", look: "a shadowy bounty tracker woman with a hood and violet scanning visor, golden bounty tokens on her belt" }, "a dark asteroid hideout lit by a single violet scanner beam, a corsair ship lurking in the shadows, golden bounty markers"),
+  E("primes", 3, "La Grande Traque", "Le plus gros gibier du secteur.", "Une prime colossale est tomb\xE9e : la t\xEAte d'un colosse. {mentor} r\xE9unit les meilleurs chasseurs ; {rival} veut le troph\xE9e pour lui.", { name: "Garrick Fen", title: "Corsaire des Colosses", secondary: "hunter", lore: "{commander} porte au cou la dent du premier colosse qu'il a abattu. Il en cherche une deuxi\xE8me.", look: "a grizzled corsair with a giant beast tooth necklace, crimson coat, harpoon cannons on his ship behind" }, "a pack of corsair ships with harpoon cannons circling an enormous space beast, golden bounty hologram above"),
+  // ---------- Comète écarlate (Chasseur de colosses) ----------
+  E("comete", 1, "Com\xE8te \xE9carlate", "Elle ne passe qu'une fois. Ce qu'elle porte aussi.", "Une com\xE8te \xE9carlate traverse le secteur, et quelque chose d'\xE9norme voyage dans son sillage. {mentor} sonne la chasse ; {rival} veut la prise.", { name: "Kira Valdane", title: "Chasseuse de com\xE8tes", secondary: "admiral", lore: "{commander} a suivi trois com\xE8tes jusqu'au bout. La troisi\xE8me portait un colosse ; elle l'a ramen\xE9.", look: "a daring comet-chasing pilot woman, scarred flight jacket, red glowing comet tail reflected in her visor" }, "a blazing scarlet comet crossing the sector, a colossal creature silhouette in its tail, hunter ships in pursuit"),
+  E("comete", 2, "La Pluie de feu", "Des fragments partout, des monstres dedans.", "La com\xE8te s'est bris\xE9e en mille fragments, et chacun abrite une b\xEAte. {mentor} veut des armes taill\xE9es pour les colosses ; {rival} veut les fragments.", { name: "Orrin Blackthorn", title: "Armurier des chasses", secondary: "engineer", lore: "{commander} forge des harpons capables de percer la carapace d'un colosse, et les teste lui-m\xEAme.", look: "a burly weaponsmith with glowing red harpoon prototypes, soot-covered apron, comet fire in the sky behind" }, "a rain of fiery comet fragments falling across space, giant beasts hatching from them, hunter ships firing harpoons"),
+  E("comete", 3, "Sillage rouge", "Suivre la trace, partager la prise.", "Le sillage de la com\xE8te m\xE8ne aux nids des colosses, gard\xE9s par des pirates. {mentor} veut nettoyer la route ; {rival} veut tout garder.", { name: "Vex Haldor", title: "Grand Veneur", secondary: "corsair", lore: "{commander} partage toujours la prise. C'est pour \xE7a que tout le monde veut chasser avec lui.", look: "a charismatic master hunter with a red cloak, trophy-adorned armor, a colossal skull mounted behind" }, "a red glowing trail through space leading to a nest of colossal beasts, corsair and hunter ships side by side"),
+  // ---------- La Grande Moisson (Intendant) ----------
+  E("moisson", 1, "La Grande Moisson", "R\xE9colter avant l'hiver.", "Les gisements du secteur d\xE9bordent comme jamais. {mentor} veut remplir les greniers ; {rival} veut les vider.", { name: "Basile Granger", title: "Intendant des Greniers", secondary: "governor", lore: "{commander} n'a jamais laiss\xE9 une r\xE9colte se perdre ni un compte tomber faux.", look: "a prosperous imperial steward in gold-embroidered robes, glowing ledger hologram, golden harvest fields behind" }, "golden harvest fields on a planet seen from orbit, huge harvester ships and granary stations glowing gold"),
+  E("moisson", 2, "Saison d'abondance", "Des r\xE9serves pleines attirent les rapaces.", "L'abondance attire les pillards. {mentor} veut des greniers imprenables ; {rival} a promis \xE0 sa Ruche un festin.", { name: "Ines Hallberg", title: "Tr\xE9sori\xE8re d'empire", secondary: "warden", lore: "{commander} garde les cl\xE9s de tous les coffres de l'empire, et ne les a jamais perdues.", look: "a stern imperial treasurer with golden keys at her belt, armored robes, sealed golden vaults behind" }, "armored golden granary vaults on a fertile world, shield domes shimmering, a hive swarm gathering on the horizon"),
+  E("moisson", 3, "Les Greniers d'or", "Partager la r\xE9colte, gagner des alli\xE9s.", "Les greniers d\xE9bordent, et les empires voisins ont faim. {mentor} veut \xE9changer ; {rival} veut prendre.", { name: "L\xE9opold Sato", title: "Ma\xEEtre des r\xE9coltes", secondary: "diplomat", lore: "{commander} a nourri trois empires pendant la famine, et en a fait trois alli\xE9s.", look: "a wise harvest master in gold and emerald robes, trade agreement holograms, ships loading grain behind" }, "a golden granary station trading with merchant ships of many empires, grain containers glowing gold and emerald"),
+  // ---------- L'Ombre des Archives (Espionne) ----------
+  E("archives", 1, "L'Ombre des Archives", "Ce qui est \xE9crit peut \xEAtre vol\xE9.", "Les archives du secteur ont \xE9t\xE9 pill\xE9es, et les secrets circulent. {mentor} veut les r\xE9cup\xE9rer ; {rival} veut les vendre.", { name: "Selene Marrow", title: "Archiviste de l'ombre", secondary: "strategist", lore: "{commander} a lu tous les rapports d'\xE9tat-major depuis cinquante ans. Elle sait comment chaque guerre finit.", look: "a mysterious spymaster woman in a dark hooded coat, violet holographic data streams, half of face in shadow" }, "a vast dark archive station with endless violet data shelves, a hooded figure stealing a glowing data core"),
+  E("archives", 2, "Les Fichiers noirs", "Un secret bien plac\xE9 vaut une flotte.", "Les Fichiers noirs contiennent des secrets sur tous les empires. {mentor} veut les utiliser pour la paix ; {rival}, pour le chantage.", { name: "Lucien Grave", title: "N\xE9gociateur des secrets", secondary: "diplomat", lore: "{commander} n'a jamais menac\xE9 personne. Il lui suffit de sourire en tenant un dossier.", look: "an elegant spy in a dark violet suit, a black data folder glowing in his hand, quiet smile, shadowy embassy behind" }, "a shadowy embassy room with a single glowing black data file on a table, violet light, silhouettes listening behind glass"),
+  E("archives", 3, "Silence radio", "On ne voit rien venir. Eux non plus.", "Le secteur est plong\xE9 dans un silence radio total. {mentor} veut frapper dans l'ombre ; {rival} fait pareil.", { name: "Nyx Varell", title: "Spectre", secondary: "corsair", lore: "{commander} entre, prend, et ressort. Personne ne l'a jamais vu ; tout le monde a vu ce qui manquait.", look: "a stealthy infiltrator with a dark visor reflecting violet static, sleek black armor, cloaked ship behind" }, "a cloaked raider ship slipping past a sleeping fleet in total radio silence, faint violet static in the dark"),
+  // ---------- L'Arsenal (Mécanicien) ----------
+  E("chantiers", 1, "L'Arsenal", "Une flotte se construit, un rivet \xE0 la fois.", "Une guerre se pr\xE9pare, et {rival} arme ses flottes plus vite que tout le monde. {mentor} rouvre les vieux chantiers navals : il faut des coques, et vite.", { name: "Petra Varga", title: "M\xE9canicienne en chef", secondary: "engineer", lore: "{commander} peut remonter un r\xE9acteur les yeux ferm\xE9s, et l'a d\xE9j\xE0 fait, en plein combat.", look: "a gruff shipyard master mechanic woman, welding goggles, ember sparks, colossal hull under construction behind" }, "an enormous orbital shipyard with rows of warships under construction, ember sparks and scaffolding lights"),
+  E("chantiers", 2, "Cale s\xE8che", "Ce qui revient du front repart r\xE9par\xE9.", "Les flottes rentrent du front en lambeaux. {mentor} veut les remettre en ligne avant la prochaine offensive ; {rival} frappe avant.", { name: "Gunnar Holt", title: "Chef de cale", secondary: "admiral", lore: "{commander} a remis en \xE9tat une flotte enti\xE8re en une semaine, et l'a men\xE9e lui-m\xEAme \xE0 la victoire.", look: "a veteran dockmaster with a cybernetic hand, battle-scarred coat over work overalls, damaged warships in dry dock behind" }, "a dry dock full of battle-damaged warships under repair, ember welding sparks, a fleet launching in the background"),
+  E("chantiers", 3, "Rivets et canons", "Des pi\xE8ces partout, \xE0 temps.", "Les chantiers tournent, mais les pi\xE8ces n'arrivent plus. {mentor} veut des convois s\xFBrs ; {rival} vise les cargos.", { name: "Silas Crane", title: "Ma\xEEtre armurier", secondary: "logistician", lore: "{commander} sait o\xF9 se trouve chaque pi\xE8ce de l'empire, et comment l'amener l\xE0 o\xF9 il faut.", look: "a methodical armorer with a tool harness, holographic parts inventory, cargo ships unloading behind" }, "cargo convoys delivering glowing parts to a busy shipyard, cranes moving cannon barrels, ember and cyan lights"),
+  // ---------- Le Rempart (Stratège) ----------
+  E("rempart", 1, "Le Rempart", "Ils frappent. Nous tenons.", "{rival} assi\xE8ge les mondes de la frange, vague apr\xE8s vague. {mentor} confie la d\xE9fense du secteur aux commandants qui tiendront.", { name: "Hadrien Valcourt", title: "Strat\xE8ge de si\xE8ge", secondary: "warden", lore: "{commander} a tenu quarante jours un avant-poste que l'\xE9tat-major avait d\xE9j\xE0 ray\xE9 des cartes.", look: "a stern siege strategist in heavy blue-grey armor, battle-worn cloak, fortress walls and shield generators behind" }, "a fortress planet ringed with shield walls under siege, waves of raider ships breaking against blue energy barriers"),
+  E("rempart", 2, "Les Murs de Vashka", "Un mur r\xE9par\xE9 est un mur qui tient.", "Les murs ont tenu, mais ils sont fissur\xE9s. {mentor} veut les relever avant la prochaine vague ; {rival} masse ses b\xE9liers.", { name: "Irsa Stenn", title: "Gardienne de la Ligne", secondary: "mechanic", lore: "{commander} r\xE9pare un bouclier sous le feu ennemi comme d'autres reprisent une chaussette.", look: "a tough defensive commander with a repair tool and shield emitter, scorched blue armor, cracked fortress wall behind" }, "repair crews welding a cracked fortress wall in orbit while defensive batteries fire at incoming rams, blue and ember light"),
+  E("rempart", 3, "Ligne de fer", "Tenir le front, puis abattre le colosse.", "Derri\xE8re les vagues ennemies avance un colosse de si\xE8ge. {mentor} veut une ligne qui tienne et des chasseurs qui frappent ; {rival} veut tout raser.", { name: "Osric Keld", title: "Ma\xEEtre des Remparts", secondary: "hunter", lore: "{commander} a attendu qu'un colosse de si\xE8ge soit au pied de ses murs pour l'abattre d'une seule salve.", look: "an imposing iron-clad strategist with a long war cloak, siege cannon behind, colossal siege beast on the horizon" }, "an iron defensive line of battleships facing a colossal siege beast, blue shields and heavy cannon fire")
+];
+function monthIndex(monthId) {
+  const [y, m] = monthId.split("-").map(Number);
+  return y * 12 + (m - 1);
+}
+function catalogIndex(monthId) {
+  const n = monthIndex(monthId) - monthIndex(CATALOG_START);
+  return (n % 36 + 36) % 36;
+}
+function catalogEntryFor(monthId) {
+  const i = catalogIndex(monthId);
+  const theme = THEME_ROTATION[i % 12];
+  const year = Math.floor(i / 12) + 1;
+  return SEASON_CATALOG.find((e3) => e3.theme === theme && e3.year === year);
+}
+function illustrationPrompt(e3, accent) {
+  return `/imagine prompt: sci-fi strategy game key art, ${e3.scene}, cinematic wide shot, dark deep-space palette with ${accent} accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250`;
+}
+function portraitPrompt(e3, accent) {
+  return `/imagine prompt: sci-fi strategy game character portrait, head and shoulders, ${e3.commander.look}, a character named ${e3.commander.name}, centered, facing the viewer, dramatic rim light in ${accent}, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250`;
 }
 
 // src/game/planetLook.ts
@@ -9948,6 +10043,8 @@ function flushState(playerIn, queuesIn, now) {
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1e3);
   player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1e3);
   ensureContracts(player, now);
+  const legacyTokens = settleLegacyDaily(player, now);
+  if (legacyTokens > 0) notifications.push({ kind: "event", title: "Missions du jour r\xE9gl\xE9es", message: `Les missions du jour rejoignent les objectifs du jour. Tes missions faites t'ont rapport\xE9 ${legacyTokens} jeton${legacyTokens > 1 ? "s" : ""}.`, createdAtMs: now, read: false, link: "/game/ordres" });
   player.resourcesUpdatedAtMs = now;
   recordResourceHistory(player, now);
   ensureSeasonRollover(player, now);
@@ -15077,61 +15174,6 @@ function chooseEmpireClass(player, idIn, now) {
   return next;
 }
 
-// src/game/dailyMissions.ts
-var DAILY_RULES = { tasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
-var POOL = [
-  { key: "mission", count: 2 },
-  { key: "spy", count: 2 },
-  { key: "victory", count: 1 },
-  { key: "contract", count: 1 },
-  { key: "market", count: 1 }
-];
-function hash(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
-  return h;
-}
-function dailyTasksFor(day) {
-  const pool = [...POOL];
-  const out = [];
-  let seed = hash(day);
-  while (out.length < DAILY_RULES.tasks && pool.length > 0) {
-    const i = seed % pool.length;
-    out.push(pool.splice(i, 1)[0]);
-    seed = hash(`${day}:${seed}`);
-  }
-  return out;
-}
-function todayState(st, day) {
-  return st.daily && st.daily.day === day ? st.daily : { day, counts: {}, claimed: [] };
-}
-function dailyMissions(player, now) {
-  const day = parisDay(now);
-  const daily = todayState(passState(player, now), day);
-  const tasks = dailyTasksFor(day).map((t, i) => {
-    var _a;
-    const progress = Math.min(t.count, (_a = daily.counts[t.key]) != null ? _a : 0);
-    return { key: t.key, label: OBJECTIVE_LABELS[t.key], count: t.count, progress, done: progress >= t.count, claimed: daily.claimed.includes(i) };
-  });
-  return { day, tasks, allClaimed: tasks.every((t) => t.claimed) };
-}
-function claimDailyMission(player, index2, now) {
-  const i = Math.floor(Number(index2));
-  const view = dailyMissions(player, now);
-  const task = view.tasks[i];
-  if (!task) throw new GameActionError("Mission inconnue.");
-  if (task.claimed) throw new GameActionError("Mission d\xE9j\xE0 r\xE9clam\xE9e.");
-  if (!task.done) throw new GameActionError(`Pas encore faite (${task.progress} / ${task.count}).`);
-  const st = passState(player, now);
-  const daily = todayState(st, view.day);
-  st.daily = __spreadProps(__spreadValues({}, daily), { claimed: [...daily.claimed, i] });
-  player.seasonPass = st;
-  const bonus = st.daily.claimed.length >= view.tasks.length;
-  const tokens = DAILY_RULES.tokensPerTask + (bonus ? DAILY_RULES.allBonusTokens : 0);
-  grantTokens(player, tokens);
-  return { tokens, bonus };
-}
-
 // src/game/streak.ts
 var STREAK_RULES = {
   /** Heures de production des ressources communes, jours 1 à 7. */
@@ -15839,7 +15881,7 @@ var VILLAIN_TAUNTS = [
   "Continue de t'agiter, petit commandant. {boss} adore les proies qui bougent."
 ];
 var ORDERS = {
-  contract: ["Tiens tes contrats du jour : {count} rempli{s}, et nos routes tiendront.", "Il nous faut des r\xE9serves. Remplis {count} contrat{s} avant qu'ils ne coupent les routes."],
+  contract: ["Tiens tes objectifs du jour : {count} rempli{s}, et nos routes tiendront.", "Il nous faut des r\xE9serves. Remplis {count} objectif{s} du jour avant qu'ils ne coupent les routes."],
   bounty: ["L'Essaim a des cibles pour toi : remplis {count} prime{s} Kesh'Vaar.", "Chaque fugitif ramen\xE9 les prive d'un pilote. {count} prime{s}, commandant."],
   raidRepelled: ["Ils vont tester nos d\xE9fenses. Repousse {count} raid{s} et ils comprendront.", "Tiens la ligne : {count} raid{s} repouss\xE9{s}, pas un de moins."],
   victory: ["Montre au secteur qu'on peut les battre : gagne {count} combat{s}.", "La peur doit changer de camp : {count} victoire{s}, et le secteur rel\xE8vera la t\xEAte."],
@@ -24574,7 +24616,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "6.2.0" : "dev";
+var LOGIC_VERSION = true ? "6.2.1" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
 
 // src/game/serverMetrics.ts

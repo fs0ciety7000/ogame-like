@@ -5,7 +5,7 @@
 |:--|:--|:--|
 | 4 communes, 4 rares | production, missions, combats, expéditions | tout |
 | Ambre de Ruche | primes, élite, boss, série j6, saisons, parrainage | Comptoir, accélérations, renommage, indices, enchères |
-| Jetons de casino | missions du jour, série, combats (plafond 25/semaine), passe, défis | machine à sous du pot commun |
+| Jetons de casino | objectifs du jour, série, combats (plafond 25/semaine), passe, défis | machine à sous du pot commun |
 | Réputation Kesh | primes | rangs de chasseur |
 | Notoriété pirate | combats contre les factions | traités, raids |
 | XP | presque tout | rangs, divisions |

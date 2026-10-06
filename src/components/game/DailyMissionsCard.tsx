@@ -17,6 +17,8 @@ export function DailyMissionsCard({ now }: { now: number }) {
   const [busy, setBusy] = useState<number | null>(null);
   if (!player) return null;
   const { tasks, allClaimed } = dailyMissions(player, now);
+  // 6.2 (lot N) : fusionnées dans les objectifs du jour.
+  if (tasks.length === 0) return null;
   const claim = async (i: number) => {
     setBusy(i);
     try {

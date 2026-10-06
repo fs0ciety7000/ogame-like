@@ -59,7 +59,7 @@ export const CLAIM_LABELS: Record<ClaimAllAction["type"], [string, string]> = {
   streakClaim: ["récompense de série", "récompenses de série"],
   dailyClaim: ["mission du jour", "missions du jour"],
   chronicleClaim: ["épisode des Chroniques", "épisodes des Chroniques"],
-  claimContract: ["contrat", "contrats"],
+  claimContract: ["objectif du jour", "objectifs du jour"],
   passClaim: ["palier du passe", "paliers du passe"],
   claimOnboarding: ["objectif de prise en main", "objectifs de prise en main"],
   claimGuide: ["objectif du Carnet", "objectifs du Carnet"],

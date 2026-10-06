@@ -4,6 +4,8 @@ import { GameActionError } from "@/game/errors";
 import { applyXpDelta } from "@/game/seasons";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { formatInt } from "@/game/format";
+import { grantTokens } from "@/game/casino";
+import { parisDay } from "@/game/retention";
 
 /* =====================================================
    Contrats quotidiens : 3 objectifs par jour (minuit UTC), tirés au sort
@@ -20,7 +22,10 @@ export type ContractType =
   | "win_defense"
   | "missions"
   | "gift"
-  | "spend";
+  | "spend"
+  // 6.2 (lot N) : objectifs repris des missions du jour.
+  | "spy"
+  | "market";
 
 export interface Contract {
   id: string;
@@ -39,13 +44,18 @@ export interface ContractsState {
   rerolled: boolean;
 }
 
+/* 6.2 (lot N, proposals/quotidien-fusion.md) : contrats et missions du jour fusionnés en 4 objectifs du jour,
+   remis à zéro à minuit (heure de Paris). Totaux par jour inchangés : 360 rares × échelle, 60 XP, 5 jetons. */
 export const CONTRACT_RULES = {
-  perDay: 3,
+  perDay: 4,
   streakBonusPerDay: 0.1,
   streakBonusMax: 0.5,
   chestEvery: 7,
-  xpPerContract: 20,
-  rarePerContract: 120,
+  xpPerContract: 15,
+  rarePerContract: 90,
+  /** 6.2 : jetons du casino par objectif, et en plus quand tous sont faits. */
+  tokensPerContract: 1,
+  allDoneTokens: 1,
   chestRare: 1500,
   chestXp: 150,
 };
@@ -59,14 +69,17 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
   missions: (n) => `Terminer ${n} missions`,
   gift: (n) => `Envoyer ${n} don${n > 1 ? "s" : ""} de ressources`,
   spend: (n) => `Dépenser ${formatInt(n)} ressources`,
+  spy: (n) => `Lancer ${n} sonde${n > 1 ? "s" : ""} d'espionnage`,
+  market: (n) => `Acheter ${n} offre${n > 1 ? "s" : ""} au marché`,
 };
 
-const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend"];
+const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
 const RARES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 const DAY_MS = 24 * 3600 * 1000;
 
+/** Jour des objectifs (6.2 : heure de Paris, comme les missions du jour d'avant). */
 export function contractDay(now: number): string {
-  return new Date(now).toISOString().slice(0, 10);
+  return parisDay(now);
 }
 
 function previousDay(day: string): string {
@@ -91,6 +104,8 @@ function targetFor(type: ContractType, player: PlayerState): number {
       return 20;
     case "missions":
       return 2;
+    case "spy":
+      return 2;
     case "spend": {
       // Une heure de production commune, au minimum 5 000.
       const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
@@ -110,7 +125,19 @@ function makeContract(type: ContractType, player: PlayerState, day: string, inde
 export function ensureContracts(player: PlayerState, now: number): ContractsState {
   const day = contractDay(now);
   const current = player.contracts;
-  if (current && current.day === day) return current;
+  if (current && current.day === day) {
+    // 6.2 : bascule de 3 à 4 objectifs dans la journée, sans rien retirer.
+    if (current.items.length < CONTRACT_RULES.perDay) {
+      const used = new Set(current.items.map((c) => c.type));
+      const rand = seededRandom(`${player.uid}:${day}:extra`);
+      const pool = ALL_TYPES.filter((t) => !used.has(t));
+      while (current.items.length < CONTRACT_RULES.perDay && pool.length > 0) {
+        const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+        current.items.push(makeContract(type, player, day, current.items.length));
+      }
+    }
+    return current;
+  }
 
   const rand = seededRandom(`${player.uid}:${day}`);
   const pool = [...ALL_TYPES];
@@ -179,6 +206,8 @@ export interface ClaimResult {
   reward: Record<string, number>;
   dayCompleted: boolean;
   chest: Record<string, number> | null;
+  /** 6.2 : jetons du casino versés. */
+  tokens?: number;
 }
 
 export function claimContract(player: PlayerState, contractId: string, now: number): ClaimResult {
@@ -191,6 +220,8 @@ export function claimContract(player: PlayerState, contractId: string, now: numb
   const reward = contractReward(player, contract);
   grant(player, reward, now);
   contract.claimed = true;
+  // 6.2 : un jeton du casino par objectif (repris des missions du jour).
+  let tokens = Math.max(0, Math.floor(CONTRACT_RULES.tokensPerContract));
 
   let chest: Record<string, number> | null = null;
   const dayCompleted = state.items.every((c) => c.claimed);
@@ -201,8 +232,10 @@ export function claimContract(player: PlayerState, contractId: string, now: numb
       chest = chestReward(player);
       grant(player, chest, now);
     }
+    tokens += Math.max(0, Math.floor(CONTRACT_RULES.allDoneTokens));
   }
-  return { reward, dayCompleted, chest };
+  if (tokens > 0) grantTokens(player, tokens);
+  return { reward, dayCompleted, chest, tokens };
 }
 
 /** Remplace un contrat non réclamé (une fois par jour). */
