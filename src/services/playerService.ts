@@ -743,6 +743,11 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
+/** 5.26.2 : indice d'un succès secret (Ambre). */
+export function buyAchievementHint(achievementId: string) {
+  return act<{ hint: string }>({ type: "achievementHint", achievementId });
+}
+
 /** 5.26 : modules de vaisseaux. */
 export function buildShipModule(moduleId: string) {
   return act<import("@/game/modules").ModuleItem>({ type: "moduleBuild", moduleId });

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   ACHIEVEMENTS,
   derivedAchievements,
+  ACHIEVEMENT_HINT_PRICE,
+  achievementHint,
   achievementProgress,
   achievementVisibility,
   previousTier,
@@ -124,5 +126,19 @@ describe("5.26.1 : brouillard des paliers", () => {
     expect(previousTier(chain, chain[2])?.id).toBe(chain[1].id);
     const secret = DEFAULT_ACHIEVEMENTS.find((a) => a.id === "phoenix")!;
     expect(achievementVisibility([secret], new Set()).get("phoenix")).toBe("secret");
+  });
+});
+
+describe("5.26.2 : indices des succès secrets", () => {
+  beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
+  it("un indice par secret, payé en Ambre, jamais pour un succès visible ou obtenu", () => {
+    const p = makePlayer({ bounties: { amber: 60 } as PlayerState["bounties"] });
+    expect(() => performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "first_blood" }, 1)).toThrow(/indice/);
+    const out = performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 1);
+    expect((out.result as { hint: string }).hint).toMatch(/cendres/);
+    expect(out.player.bounties?.amber).toBe(60 - ACHIEVEMENT_HINT_PRICE);
+    expect(out.player.stats?.hintsBought).toEqual(["phoenix"]);
+    expect(() => performPlayerAction(out.player, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 2)).toThrow(/déjà/);
+    expect(achievementHint({ metric: "victories", category: "combat" })).toMatch(/combat/);
   });
 });

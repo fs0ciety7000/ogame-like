@@ -8,6 +8,7 @@ import { COMMON_RESOURCES } from "@/game/economy";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { factionStates, findFaction } from "@/game/pirates";
 import { playerStats } from "@/game/stats";
+import { GameActionError } from "@/game/errors";
 import { normalizePlanetLook } from "@/game/planetLook";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -367,6 +368,39 @@ export function setAchievements(defs: AchievementDef[]) {
   ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
+
+/* ---------- 5.26.2 : indices des succès secrets ---------- */
+
+/** Prix d'un indice (Ambre de Ruche), payé une fois par succès secret. */
+export const ACHIEVEMENT_HINT_PRICE = 25;
+
+/** Indices cryptiques par mesure : une piste, jamais le seuil exact. */
+const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {
+  defeats: "Celui qui tombe souvent finit par apprendre à se relever.",
+  phoenix: "Les cendres d'une défaite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
+  nightResearch: "Les laboratoires sont plus calmes quand la galaxie dort, aux heures où même les sentinelles bâillent.",
+  bestMissionDay: "Un seul jour, un équipage infatigable, et un registre des missions qui déborde.",
+  evasions: "Une base vide ne craint pas les pillards : sois ailleurs quand ils frappent.",
+  diplomat: "Payer sans jamais dire non. Encore. Et encore.",
+  factionsThreatened: "Quand toutes les factions connaissent ton nom, tu as réussi… en quelque sorte.",
+  rareOfficers: "L'état-major complet réunit ceux qu'on ne croise qu'une fois.",
+  seasonCommanders: "Chaque saison offre un visage ; il faudra tous les réunir.",
+  casinoJackpots: "Trois fois le même chiffre, et le pot commun change de mains.",
+};
+
+/** Indice d'un succès (piste de la mesure, sinon la catégorie). */
+export function achievementHint(a: Pick<AchievementDef, "metric" | "category">): string {
+  return METRIC_HINTS[a.metric] ?? `Une piste du côté de : ${CATEGORY_LABELS[a.category].label.toLowerCase()}.`;
+}
+
+/** Achat d'un indice : succès secret, pas encore obtenu ni indiqué ; l'Ambre est débitée par l'appelant. */
+export function checkHintPurchase(player: Pick<PlayerState, "unlockedAchievements" | "stats">, id: unknown): AchievementDef {
+  const a = ACHIEVEMENTS.find((x) => x.id === String(id) && x.enabled);
+  if (!a || !a.secret) throw new GameActionError("Ce succès n'a pas d'indice.");
+  if ((player.unlockedAchievements ?? []).includes(a.id)) throw new GameActionError("Succès déjà obtenu.");
+  if ((playerStats(player).hintsBought ?? []).includes(a.id)) throw new GameActionError("Indice déjà acheté.");
+  return a;
+}
 
 /** 5.26.1 : brouillard des succès. Par mesure, les paliers obtenus et le prochain
  *  sont visibles ; les suivants restent dans le brouillard (nom, seuil et récompense

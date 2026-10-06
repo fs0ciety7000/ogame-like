@@ -38,6 +38,7 @@ import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recr
 import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
+import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
 import { buildModule, mountModule, recycleModule, unmountModule } from "@/game/modules";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
@@ -96,6 +97,7 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
+  | { type: "achievementHint"; achievementId: string }
   | { type: "moduleBuild"; moduleId: string }
   | { type: "moduleMount"; moduleId: string; cls: string; slot: number }
   | { type: "moduleUnmount"; cls: string; slot: number }
@@ -443,6 +445,17 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       st.amber += out.amber;
       player.bounties = st;
       return { amber: out.amber };
+    }
+
+    // 5.26.2 : indice d'un succès secret, payé en Ambre.
+    case "achievementHint": {
+      const a = checkHintPurchase(player, action.achievementId);
+      const st = bountyState(player);
+      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      player.bounties = st;
+      player.stats = { ...(player.stats ?? {}), hintsBought: [...(player.stats?.hintsBought ?? []), a.id] };
+      return { hint: achievementHint(a) };
     }
 
     // 5.26 : modules de vaisseaux.

@@ -8638,6 +8638,31 @@ function setAchievements(defs) {
   ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
+var ACHIEVEMENT_HINT_PRICE = 25;
+var METRIC_HINTS = {
+  defeats: "Celui qui tombe souvent finit par apprendre \xE0 se relever.",
+  phoenix: "Les cendres d'une d\xE9faite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
+  nightResearch: "Les laboratoires sont plus calmes quand la galaxie dort, aux heures o\xF9 m\xEAme les sentinelles b\xE2illent.",
+  bestMissionDay: "Un seul jour, un \xE9quipage infatigable, et un registre des missions qui d\xE9borde.",
+  evasions: "Une base vide ne craint pas les pillards : sois ailleurs quand ils frappent.",
+  diplomat: "Payer sans jamais dire non. Encore. Et encore.",
+  factionsThreatened: "Quand toutes les factions connaissent ton nom, tu as r\xE9ussi\u2026 en quelque sorte.",
+  rareOfficers: "L'\xE9tat-major complet r\xE9unit ceux qu'on ne croise qu'une fois.",
+  seasonCommanders: "Chaque saison offre un visage ; il faudra tous les r\xE9unir.",
+  casinoJackpots: "Trois fois le m\xEAme chiffre, et le pot commun change de mains."
+};
+function achievementHint(a) {
+  var _a;
+  return (_a = METRIC_HINTS[a.metric]) != null ? _a : `Une piste du c\xF4t\xE9 de : ${CATEGORY_LABELS2[a.category].label.toLowerCase()}.`;
+}
+function checkHintPurchase(player, id) {
+  var _a, _b;
+  const a = ACHIEVEMENTS.find((x) => x.id === String(id) && x.enabled);
+  if (!a || !a.secret) throw new GameActionError("Ce succ\xE8s n'a pas d'indice.");
+  if (((_a = player.unlockedAchievements) != null ? _a : []).includes(a.id)) throw new GameActionError("Succ\xE8s d\xE9j\xE0 obtenu.");
+  if (((_b = playerStats(player).hintsBought) != null ? _b : []).includes(a.id)) throw new GameActionError("Indice d\xE9j\xE0 achet\xE9.");
+  return a;
+}
 function achievementValue(a, player) {
   const m = METRICS[a.metric];
   return m ? m.value(player) : 0;
@@ -15844,7 +15869,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -16070,6 +16095,16 @@ function applyAction(s, action) {
       st.amber += out.amber;
       player.bounties = st;
       return { amber: out.amber };
+    }
+    // 5.26.2 : indice d'un succès secret, payé en Ambre.
+    case "achievementHint": {
+      const a = checkHintPurchase(player, action.achievementId);
+      const st = bountyState(player);
+      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      player.bounties = st;
+      player.stats = __spreadProps(__spreadValues({}, (_A = player.stats) != null ? _A : {}), { hintsBought: [...(_C = (_B = player.stats) == null ? void 0 : _B.hintsBought) != null ? _C : [], a.id] });
+      return { hint: achievementHint(a) };
     }
     // 5.26 : modules de vaisseaux.
     case "moduleBuild": {

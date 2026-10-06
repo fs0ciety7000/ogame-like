@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { PagedList } from "@/components/ui/panel";
-import { CloudFog, Lock, Search, Trophy } from "lucide-react";
+import { CloudFog, Lightbulb, Lock, Search, Trophy } from "lucide-react";
+import { toast } from "sonner";
+import { askConfirm } from "@/components/ui/confirm-dialog";
+import { AmberAmount } from "@/components/ui/amber";
+import { bountyState } from "@/game/bounties";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { EmptyState, HudChip } from "@/components/ui/hud";
+import { EmptyState, HudCallout, HudChip } from "@/components/ui/hud";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import {
   ACHIEVEMENTS,
+  ACHIEVEMENT_HINT_PRICE,
+  achievementHint,
   achievementProgress,
   achievementVisibility,
   previousTier,
@@ -20,7 +26,7 @@ import {
   type AchievementDef,
   type AchievementTier,
 } from "@/game/achievements";
-import { fetchAchievementRates } from "@/services/playerService";
+import { buyAchievementHint, fetchAchievementRates, GameActionError } from "@/services/playerService";
 import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -99,6 +105,7 @@ function AchievementCard({ a, player, rate, visibility, before }: { a: Achieveme
           <span className={cn("shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
         </div>
         <p className="text-xs text-slate-400">{hidden ? "Succès secret : à toi de le découvrir." : a.description}</p>
+        {hidden && a.secret && <SecretHint a={a} player={player} />}
         {!unlocked && !hidden && progress.target > 1 && (
           <div className="flex items-center gap-2">
             <Progress value={(progress.value / progress.target) * 100} className="h-1.5 flex-1" />
@@ -115,6 +122,37 @@ function AchievementCard({ a, player, rate, visibility, before }: { a: Achieveme
         </p>
       </div>
     </div>
+  );
+}
+
+/** 5.26.2 : indice cryptique d'un succès secret, acheté une fois en Ambre. */
+function SecretHint({ a, player }: { a: AchievementDef; player: PlayerState }) {
+  const [busy, setBusy] = useState(false);
+  const bought = (player.stats?.hintsBought ?? []).includes(a.id);
+  if (bought) return <HudCallout tone="violet" className="px-2 py-1.5 text-[11px] italic text-slate-300">{achievementHint(a)}</HudCallout>;
+  const amber = bountyState(player).amber;
+  const buy = async () => {
+    const ok = await askConfirm({
+      title: "Acheter un indice ?",
+      message: "Une piste cryptique sur ce succès secret, sans le seuil exact. Elle reste affichée ensuite.",
+      details: <AmberAmount value={ACHIEVEMENT_HINT_PRICE} className="font-mono tabular-nums" />,
+      confirmLabel: "Acheter l'indice",
+      tone: "gold",
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await buyAchievementHint(a.id);
+      toast.success("Indice débloqué.");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Achat impossible.");
+    }
+    setBusy(false);
+  };
+  return (
+    <Button size="sm" variant="ghost" className="self-start" disabled={busy || amber < ACHIEVEMENT_HINT_PRICE} title={amber < ACHIEVEMENT_HINT_PRICE ? "Pas assez d'Ambre." : undefined} onClick={() => void buy()}>
+      <Lightbulb className="h-3.5 w-3.5" /> Indice · <AmberAmount value={ACHIEVEMENT_HINT_PRICE} label={false} className="font-mono tabular-nums" />
+    </Button>
   );
 }
 
