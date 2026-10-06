@@ -1,6 +1,7 @@
 import { Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
+import { installUiFx } from "@/lib/fx/installUiFx";
 import { HudToaster } from "@/components/ui/hud-toast";
 import { ConfirmHost } from "@/components/ui/confirm-dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -66,6 +67,15 @@ const MessagesPage = lazyPage(() => import("@/pages/MessagesPage"), "MessagesPag
 const SharedReportPage = lazyPage(() => import("@/pages/SharedReportPage"), "SharedReportPage");
 const JournalPage = lazyPage(() => import("@/pages/JournalPage"), "JournalPage");
 const SettingsPage = lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage");
+
+/** 5.25 : retour visuel global (clics, survols, panneaux) installé une fois. */
+function UiFx() {
+  useEffect(() => {
+    const uninstall = installUiFx();
+    return uninstall;
+  }, []);
+  return null;
+}
 
 export default function App() {
   return (
@@ -149,6 +159,7 @@ export default function App() {
 
       <HudToaster />
       <ConfirmHost />
+      <UiFx />
     </TooltipProvider>
     </MotionConfig>
   );

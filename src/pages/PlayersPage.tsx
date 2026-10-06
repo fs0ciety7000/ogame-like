@@ -190,8 +190,8 @@ export function PlayersPage() {
     return ranked.filter((p) => p.pseudo.toLowerCase().includes(q));
   }, [ranked, search]);
   // 5.15.12 : 50 joueurs à la fois.
-  // 5.24 : 20 joueurs par page.
-  const playersPage = usePaged(filtered, 20, `${mode}|${search}`);
+  // 5.24 : joueurs paginés (taille des Réglages).
+  const playersPage = usePaged(filtered, undefined, `${mode}|${search}`);
   const shownPlayers = playersPage.items;
 
   return (

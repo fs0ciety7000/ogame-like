@@ -6,7 +6,7 @@ Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
 ## Jetons
 
 Tout passe par les variables `--th-*` de `src/index.css`, redéfinies par `html[data-theme]`
-(Tactique, Holo, Cockpit, Netrunner, Aurora, Signal, Voyageur, Omni, Spartan, Constellation). En Tailwind : `cyan-glow` (accent), `mint-glow`,
+(Tactique, Holo, Cockpit, Netrunner, Aurora, Signal, Voyageur, Omni, Spartan, Constellation, Ishimura, Atlas, Matrice). En Tailwind : `cyan-glow` (accent), `mint-glow`,
 `ember-glow`, `danger-glow`, `gold-glow`, `violet-glow`, `space-*`, `slate-*`, `font-display`, `font-mono`.
 Texte clair : `text-slate-100` (le « blanc » du thème : ivoire en Voyageur, os en Constellation), jamais `text-white`.
 Transparence d'un accent : `color-mix(in srgb, var(--color-cyan-glow) 35%, transparent)`, jamais `rgba(…)` en dur.
@@ -57,6 +57,29 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
   (fondue vers la gauche et le bas, opacité réduite) : à réserver aux pages « lieu » (Casino…), le texte reste prioritaire.
 - Panneaux : `Card` / classe `glass-panel` ; formes : `hud-cut` (12 px) et `hud-cut-sm` (5 px).
+
+## Retour visuel (GSAP, `src/lib/fx`)
+
+Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décorer. Tout passe par `src/lib/fx/uiFx.ts`
+(GSAP et ses plugins SplitText, ScrambleText, Text, Flip, chargés à la demande) : rien ne bouge si le joueur coupe
+« Animations de l'interface » (Réglages) ou si son système demande de réduire les animations.
+
+| Effet | Quand | Où |
+|---|---|---|
+| `glitch` (RVB 140 ms) | tout clic sur un bouton, un onglet | global (`installUiFx`), rien à écrire |
+| `laserScan` | action principale confirmée dans un panneau | bouton `.hud-btn-primary` (ou `data-fx-scan`) dans un `glass-panel` |
+| `lightUp` (lettres qui s'allument) | arrivée sur une page | titre de `PageHeader` |
+| `scramble` (texte décodé) | libellé qui apparaît | fil d'Ariane, titre de `HudPanel`, titre de fenêtre, survol du menu |
+| `typewrite` (frappe terminal) | texte produit par la machine | rapports, journaux de bord |
+| `unfold` | ouverture d'une fenêtre | `DialogContent` |
+| `cascade` | nouvelle page d'une liste | `PagedList` |
+| `alarmGlitch` | danger imminent (seul usage du glitch en boucle) | alerte d'attaque |
+| `interference`, `bootSequence` | changement de page, ouverture de session | `PageTransition`, `AppShell` |
+
+- Durées courtes : 150 à 600 ms ; seul l'amorçage dépasse la seconde (une fois par session, un clic le passe).
+- Une seule lueur forte par vue ; les couleurs viennent des jetons (`token("--th-accent")`), jamais en dur.
+- `data-fx="none"` sur un conteneur coupe le glitch de ses boutons (jeu en cours, glisser-déposer…).
+- Un texte animé doit être du texte seul (pas d'icône dedans) ; donner une `key` liée au texte pour que React le remonte.
 
 ## À faire / à éviter
 

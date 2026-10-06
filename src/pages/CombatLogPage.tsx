@@ -129,7 +129,7 @@ export function CombatLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, wantedSpy]);
   const spyList = extraSpy && !spyReports.some((r) => r.id === extraSpy.id) ? [extraSpy, ...spyReports] : spyReports;
-  // 5.24 : 20 rapports par page (combats et espionnage).
+  // 5.24 : rapports paginés, combats et espionnage (taille des Réglages).
   const battlePage = usePaged(reports);
   const spyPage = usePaged(spyList);
   const showSpyIndex = spyPage.showIndex;

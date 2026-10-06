@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { alarmGlitch } from "@/lib/fx/uiFx";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AlertTriangle, Orbit, Wind, X } from "lucide-react";
@@ -64,6 +65,13 @@ export function RaidAlert() {
     force((n) => n + 1);
   };
   const left = next ? Math.max(0, Math.floor((next.arriveAtMs - now) / 1000)) : 0;
+  // 5.25 : le panneau d'alerte décroche par à-coups, comme un signal brouillé.
+  const glitchRef = useRef<HTMLDivElement>(null);
+  const alertId = next?.id;
+  useEffect(() => {
+    if (!alertId || !glitchRef.current) return;
+    return alarmGlitch(glitchRef.current);
+  }, [alertId]);
 
   return (
     <>
@@ -88,12 +96,14 @@ export function RaidAlert() {
                 <X className="h-4 w-4" />
               </button>
               <AlertTriangle className="mx-auto h-10 w-10 animate-pulse text-danger-glow" />
-              <p className="hud-eyebrow mt-3 text-[11px] text-danger-glow">Attaque imminente</p>
+              <div ref={glitchRef}>
+                <p className="hud-eyebrow mt-3 text-[11px] text-danger-glow">Attaque imminente</p>
               <p className="mt-1 font-display text-lg text-slate-100">
                 {next.mission === "pirate" ? `Raid : ${next.ownerPseudo}` : `${next.ownerPseudo} attaque`}
                 {next.targetOwnerUid ? ` ta colonie ${next.targetPseudo}` : ""}
               </p>
               <p className="hud-title mt-3 font-mono text-6xl tabular-nums text-danger-glow drop-shadow-[0_0_18px_var(--color-danger-glow)]">{formatClock(left)}</p>
+              </div>
               {imminent.length > 1 && <p className="mt-1 text-xs text-slate-400">+ {imminent.length - 1} autre{imminent.length > 2 ? "s" : ""} flotte{imminent.length > 2 ? "s" : ""} dans les 5 minutes</p>}
               <Incoming3D ships={Object.values(next.units ?? {}).reduce((a, b) => a + (b ?? 0), 0) || 6} arriveAtMs={next.arriveAtMs} />
               <ThreatGauge fleet={next} className="mt-4" />

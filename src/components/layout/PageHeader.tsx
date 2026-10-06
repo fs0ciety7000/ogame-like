@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { motion } from "framer-motion";
-import { DecodeText } from "@/components/ui/decode-text";
+import { lightUp, scramble } from "@/lib/fx/uiFx";
 import { assetUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,13 @@ export function PageHeader({
   /** Illustration discrète derrière l'en-tête (fondue vers la gauche et le bas pour garder le texte lisible). */
   backdrop?: string;
 }) {
+  // 5.25 : le titre s'allume lettre par lettre (tube néon), le fil d'Ariane se décode.
+  const titleRef = useRef<HTMLSpanElement>(null);
+  const eyebrowRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (titleRef.current) void lightUp(titleRef.current);
+    if (eyebrowRef.current) void scramble(eyebrowRef.current, eyebrow, 0.5);
+  }, [title, eyebrow]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -42,9 +49,11 @@ export function PageHeader({
           <span className="signal-barcode" />
           <span>{signalCode(title)}</span>
         </span>
-        <p className="hud-eyebrow text-cyan-glow/80">{eyebrow}</p>
+        <p className="hud-eyebrow text-cyan-glow/80">
+          <span ref={eyebrowRef} key={eyebrow}>{eyebrow}</span>
+        </p>
         <h1 className="hud-title mt-1 text-3xl text-slate-100 sm:text-4xl">
-          <DecodeText text={title} />
+          <span ref={titleRef} key={title}>{title}</span>
         </h1>
         {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
       </div>

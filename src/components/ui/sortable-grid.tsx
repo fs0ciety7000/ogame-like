@@ -1,4 +1,5 @@
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { fxOn, loadFx, type FxKit } from "@/lib/fx/uiFx";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { rectSortingStrategy, SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -49,7 +50,26 @@ export function SortableGrid<T>({
   const visible = ordered.map(getId);
   // Ordre complet : l'ordre enregistré (y compris les cartes filtrées), puis les nouvelles.
   const full = applyOrder([...(saved ?? []), ...visible.filter((id) => !(saved ?? []).includes(id))], saved);
-  const move = (active: string, over: string) => setCardOrder(page, moveCard(full, visible, active, over));
+  // 5.25 : déplacement aux flèches : les cartes glissent vers leur place (GSAP Flip).
+  const gridRef = useRef<HTMLDivElement>(null);
+  const kitRef = useRef<FxKit | null>(null);
+  const flipState = useRef<ReturnType<FxKit["Flip"]["getState"]> | null>(null);
+  useEffect(() => {
+    if (editing && fxOn()) void loadFx().then((k) => (kitRef.current = k));
+  }, [editing]);
+  const move = (active: string, over: string, animate = false) => {
+    const kit = kitRef.current;
+    if (animate && kit && gridRef.current && fxOn()) flipState.current = kit.Flip.getState(gridRef.current.children);
+    setCardOrder(page, moveCard(full, visible, active, over));
+  };
+  const orderKey = visible.join("|");
+  useLayoutEffect(() => {
+    const state = flipState.current;
+    const kit = kitRef.current;
+    if (!state || !kit || !gridRef.current) return;
+    flipState.current = null;
+    kit.Flip.from(state, { targets: gridRef.current.children, duration: 0.4, ease: "power3.inOut", absolute: false });
+  }, [orderKey]);
 
   if (!editing) return <div className={className}>{ordered.map((it, i) => render(it, i))}</div>;
 
@@ -59,14 +79,14 @@ export function SortableGrid<T>({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={visible} strategy={rectSortingStrategy}>
-        <div className={className}>
+        <div ref={gridRef} className={className}>
           {ordered.map((it, i) => (
             <SortableCard
               key={visible[i]}
               id={visible[i]}
               label={getLabel?.(it) ?? visible[i]}
-              onPrev={i > 0 ? () => move(visible[i], visible[i - 1]) : undefined}
-              onNext={i < visible.length - 1 ? () => move(visible[i], visible[i + 1]) : undefined}
+              onPrev={i > 0 ? () => move(visible[i], visible[i - 1], true) : undefined}
+              onNext={i < visible.length - 1 ? () => move(visible[i], visible[i + 1], true) : undefined}
             >
               {render(it, i)}
             </SortableCard>

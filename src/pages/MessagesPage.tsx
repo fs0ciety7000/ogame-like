@@ -146,7 +146,7 @@ export function MessagesPage() {
               Cherche un joueur pour lui écrire.
             </EmptyState>
           )}
-          <PagedList items={conversations} size={15} className="flex flex-col" render={(c) => (
+          <PagedList items={conversations} className="flex flex-col" render={(c) => (
               <button
                 key={c.uid}
                 type="button"

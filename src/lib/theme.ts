@@ -3,7 +3,7 @@ import { create } from "zustand";
 /* Thèmes d'interface (v2.4) : jetons définis dans src/index.css sous
    html[data-theme]. Le choix est propre à chaque appareil. */
 
-export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora" | "signal" | "voyageur" | "omni" | "spartan" | "constellation";
+export type ThemeId = "tactique" | "holo" | "cockpit" | "netrunner" | "aurora" | "signal" | "voyageur" | "omni" | "spartan" | "constellation" | "ishimura" | "atlas" | "matrice";
 
 export const THEMES: { id: ThemeId; name: string; inspiration: string; description: string; swatches: string[] }[] = [
   {
@@ -75,6 +75,27 @@ export const THEMES: { id: ThemeId; name: string; inspiration: string; descripti
     inspiration: "Esprit Starfield",
     description: "NASA-punk : os et graphite, typographie technique, bandes rouge, orange, jaune et bleu en tête de panneau. Aucun halo.",
     swatches: ["#ece6d6", "#e0582c", "#f2b33d", "#18191c"],
+  },
+  {
+    id: "ishimura",
+    name: "Ishimura",
+    inspiration: "Esprit Dead Space",
+    description: "Hologrammes orange projetés sur du noir, glace cyan, lueur diégétique et lignes de balayage.",
+    swatches: ["#ff9a2e", "#6fd8ff", "#ff2a2a", "#14110d"],
+  },
+  {
+    id: "atlas",
+    name: "Atlas",
+    inspiration: "Esprit No Man's Sky",
+    description: "Nuit violette, magenta saturé, sarcelle et soleil jaune : un cosmos coloré et optimiste.",
+    swatches: ["#ff4fd8", "#29f0d0", "#ffd23f", "#22124f"],
+  },
+  {
+    id: "matrice",
+    name: "Matrice",
+    inspiration: "Esprit Ghost in the Shell",
+    description: "Noir pur, vert matrice et cyan électrique, typographie terminal ; le magenta signale le danger.",
+    swatches: ["#3dff6e", "#00f0ff", "#ff2d6f", "#07110a"],
   },
 ];
 

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { typewrite } from "@/lib/fx/uiFx";
 import { Pager, usePaged } from "@/components/ui/panel";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
@@ -95,10 +96,10 @@ export function JournalPage() {
 
   const sinceLastVisit = useMemo(() => items.filter((n) => n.createdAtMs > lastVisit), [items, lastVisit]);
   const shown = useMemo(() => items.filter((n) => inCategory(n.kind, tab)), [items, tab]);
-  // 5.24 : 20 entrées par page, regroupées par jour ; les plus anciennes se chargent depuis la dernière page.
-  const journalPage = usePaged(shown, 20, tab);
+  // 5.24 : entrées paginées (taille des Réglages), regroupées par jour ; les plus anciennes se chargent depuis la dernière page.
+  const journalPage = usePaged(shown, undefined, tab);
   const pageItems = journalPage.items;
-  const onLastPage = journalPage.pager.page >= Math.ceil(shown.length / 20) - 1;
+  const onLastPage = journalPage.pager.page >= Math.ceil(shown.length / journalPage.pager.size) - 1;
   const days = useMemo(() => {
     const groups: { label: string; items: GameNotification[] }[] = [];
     for (const n of pageItems) {
@@ -121,7 +122,7 @@ export function JournalPage() {
             <p className="text-sm text-slate-400">Rien de nouveau depuis ta dernière visite du journal.</p>
           ) : (
             <>
-              <p className="text-sm text-slate-200">{summarizeKinds(sinceLastVisit.map((n) => n.kind))}.</p>
+              <TypedLine className="text-sm text-slate-200" text={`${summarizeKinds(sinceLastVisit.map((n) => n.kind))}.`} />
               <div className="flex flex-wrap gap-2">
                 {NOTIFICATION_CATEGORIES.filter((c) => c.id !== "all").map((c) => {
                   const count = sinceLastVisit.filter((n) => inCategory(n.kind, c.id)).length;
@@ -195,5 +196,18 @@ export function JournalPage() {
         </Button>
       )}
     </div>
+  );
+}
+
+/** 5.25 : résumé tapé façon terminal de bord (une fois par texte). */
+function TypedLine({ text, className }: { text: string; className?: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (ref.current) void typewrite(ref.current, text);
+  }, [text]);
+  return (
+    <p ref={ref} key={text} className={className}>
+      {text}
+    </p>
   );
 }
