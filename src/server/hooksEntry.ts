@@ -220,4 +220,4 @@ export { ONLINE_MS } from "@/game/retention";
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-export { AUCTION_RULES, canCancel, creditBid, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUCTION_RULES, canCancel, creditBid, currencyBalance, debitBid, minStartFor, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
+import { AUCTION_HISTORY_RULES, AUCTION_RULES, canCancel, describeWatch, lotKey, normalizeAuctionHistory, priceSummary, recordSale, validateWatch, watchersFor, creditBid, currencyBalance, debitBid, minStartFor, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
 import { addModuleItem, modulesState } from "@/game/modules";
 import { relicsState } from "@/game/relics";
 import { defaultPlayerState } from "@/game/defaults";
@@ -107,5 +107,39 @@ describe("hôtel des enchères", () => {
     p.resources.aiFragment = 4;
     debitBid(p, "aiFragment", 3);
     expect(p.resources.aiFragment).toBe(1);
+  });
+
+  it("5.26.2 : historique des prix par lot (modèle + rareté) et résumé par monnaie", () => {
+    const lot = { kind: "module" as const, item: { id: "p", template: "canons_surcharges", rarity: "epic" as const, built: false, foundAtMs: 0, source: "" }, label: "Plan : Canons surchargés", rarity: "epic" };
+    let h = normalizeAuctionHistory(null);
+    h = recordSale(h, { ...lot, res: "scrap", bid: 100 }, 1);
+    h = recordSale(h, { ...lot, res: "scrap", bid: 300 }, 2);
+    h = recordSale(h, { ...lot, res: "amber", bid: 9 }, 3);
+    h = recordSale(h, { ...lot, res: "scrap", bid: 0 }, 4);
+    const key = lotKey("module", lot.item);
+    expect(key).toBe("module:canons_surcharges:epic");
+    expect(h.lots[key].label).toBe("Canons surchargés");
+    expect(priceSummary(h.lots[key].sales, "scrap")).toEqual({ count: 2, median: 200, last: 300, min: 100, max: 300 });
+    expect(priceSummary(h.lots[key].sales, "energy")).toBeNull();
+    for (let i = 0; i < 30; i++) h = recordSale(h, { ...lot, res: "scrap", bid: 10 + i }, 10 + i);
+    expect(h.lots[key].sales).toHaveLength(AUCTION_HISTORY_RULES.perLot);
+    expect(normalizeAuctionHistory(JSON.parse(JSON.stringify(h)))).toEqual(h);
+  });
+
+  it("5.26.2 : alertes de vente (rareté minimale, modèle, jamais le vendeur)", () => {
+    const w = validateWatch({ kind: "module", minRarity: "legendary" }, 0);
+    expect(describeWatch(w)).toBe("Plans légendaires");
+    expect(describeWatch({ kind: "relic", minRarity: "epic", template: "" })).toBe("Reliques épiques ou mieux");
+    expect(() => validateWatch({ kind: "any", minRarity: "rare", template: "canons_surcharges" }, 0)).toThrow();
+    expect(() => validateWatch({ kind: "module", minRarity: "rare" }, 5)).toThrow();
+    const watches = [
+      { uid: "a", ...w },
+      { uid: "b", kind: "any" as const, minRarity: "epic", template: "" },
+      { uid: "s", kind: "any" as const, minRarity: "common", template: "" },
+      { uid: "c", kind: "module" as const, minRarity: "common", template: "matrice_de_visee" },
+    ];
+    expect(watchersFor(watches, "s", "module", { template: "canons_surcharges", rarity: "legendary" })).toEqual(["a", "b"]);
+    expect(watchersFor(watches, "s", "module", { template: "matrice_de_visee", rarity: "rare" })).toEqual(["c"]);
+    expect(watchersFor(watches, "x", "relic", { template: "t", rarity: "rare" })).toEqual(["s"]);
   });
 });

@@ -3099,6 +3099,55 @@
     ]
   },
   {
+    "id": "pbc_ce_auction_watches",
+    "name": "auction_watches",
+    "type": "base",
+    "listRule": "uid = @request.auth.id",
+    "viewRule": "uid = @request.auth.id",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "uid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": true,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "minRarity",
+        "type": "text",
+        "required": true,
+        "max": 12,
+        "presentable": false
+      },
+      {
+        "name": "template",
+        "type": "text",
+        "required": false,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"
+    ]
+  },
+  {
     "id": "pbc_ce_global_messages",
     "name": "global_messages",
     "type": "base",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
-import type { Auction, AuctionCurrency, AuctionKind } from "@/game/auctions";
+import { AUCTION_HISTORY_KEY, normalizeAuctionHistory, type Auction, type AuctionCurrency, type AuctionHistory, type AuctionKind, type AuctionWatch } from "@/game/auctions";
 
 /* 5.26 : Hôtel des enchères (ventes ouvertes en direct, mes ventes et mises closes). */
 
@@ -62,4 +62,54 @@ export function bidAuction(id: string, amount: number) {
 
 export function cancelAuction(id: string) {
   return call<Auction>({ action: "cancel", id }, "Annulation impossible.");
+}
+
+/* 5.26.2 : historique des prix (game_config, lecture publique) et alertes de vente. */
+
+export function useAuctionHistory(): AuctionHistory {
+  const [h, setH] = useState<AuctionHistory>({ lots: {} });
+  useEffect(() => {
+    let alive = true;
+    const refresh = () =>
+      void pb
+        .collection("game_config")
+        .getFirstListItem<{ data: unknown }>(pb.filter("key = {:k}", { k: AUCTION_HISTORY_KEY }), { requestKey: null })
+        .then((rec) => alive && setH(normalizeAuctionHistory(rec.data)))
+        .catch(() => {});
+    refresh();
+    const unsubscribe = subscribeRecords("auctions", "*", coalesce(refresh, 1500));
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, []);
+  return h;
+}
+
+export function useAuctionWatches(uid: string | undefined): { watches: AuctionWatch[]; reload: () => void } {
+  const [watches, setWatches] = useState<AuctionWatch[]>([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!uid) {
+      return;
+    }
+    let alive = true;
+    void pb
+      .collection("auction_watches")
+      .getFullList<AuctionWatch>({ filter: pb.filter("uid = {:u}", { u: uid }), sort: "createdAtMs", requestKey: null })
+      .then((list) => alive && setWatches(list))
+      .catch(() => alive && setWatches([]));
+    return () => {
+      alive = false;
+    };
+  }, [uid, tick]);
+  return { watches, reload: () => setTick((t) => t + 1) };
+}
+
+export function watchAuctions(watch: Pick<AuctionWatch, "kind" | "minRarity" | "template">) {
+  return call<AuctionWatch>({ action: "watch", watch }, "Alerte refusée.");
+}
+
+export function unwatchAuctions(id: string) {
+  return call<{ ok: boolean }>({ action: "unwatch", id }, "Suppression impossible.");
 }

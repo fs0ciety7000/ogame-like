@@ -8958,6 +8958,37 @@ function auctionRequest(e) {
       });
       txApp.save(rec);
       out = toPlain(rec);
+      // 5.26.2 : alertes de vente (« préviens-moi si un plan légendaire est mis en vente »).
+      try {
+        const watches = txApp.findRecordsByFilter("auction_watches", "", "", 2000, 0).map((w) => toPlain(w));
+        game.watchersFor(watches, uid, listing.kind, lot.item).forEach((wuid) => {
+          if (!findOrNull(txApp, "players", wuid)) return;
+          notify(txApp, wuid, [auctionNote("Alerte enchères", `${seller.player.pseudo} met en vente « ${lot.label} » (mise à prix ${auctionAmount(game, listing.res, listing.startPrice)}, ${listing.durationH} h).`, now)]);
+        });
+      } catch (err) {
+        console.log(`[cosmic] alertes d'enchères : ${err}`);
+      }
+      return;
+    }
+    if (action === "watch") {
+      const mine = txApp.findRecordsByFilter("auction_watches", "uid = {:u}", "", 50, 0, { u: uid });
+      let w;
+      try {
+        w = game.validateWatch(req.watch, mine.length);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      const rec = new Record(txApp.findCollectionByNameOrId("auction_watches"));
+      rec.load({ uid: uid, kind: w.kind, minRarity: w.minRarity, template: w.template, createdAtMs: now });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (action === "unwatch") {
+      const w = findOrNull(txApp, "auction_watches", String(req.id || ""));
+      if (!w || w.getString("uid") !== uid) throw new NotFoundError("Alerte introuvable.");
+      txApp.delete(w);
+      out = { ok: true };
       return;
     }
     const rec = findOrNull(txApp, "auctions", String(req.id || ""));
@@ -9050,6 +9081,9 @@ function auctionsTick(now) {
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
           }
           rec.set("tax", deal.tax);
+          // 5.26.2 : historique des prix (gardé au-delà du ménage des 30 jours).
+          const histRec = configRecord(txApp, game.AUCTION_HISTORY_KEY);
+          writeConfig(txApp, game.AUCTION_HISTORY_KEY, game.recordSale(game.normalizeAuctionHistory(histRec ? toPlain(histRec).data : null), a, now));
         }
         rec.set("status", deal.status);
         rec.set("closedAtMs", now);

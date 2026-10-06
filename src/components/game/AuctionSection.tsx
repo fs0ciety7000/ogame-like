@@ -9,10 +9,11 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { AmberIcon } from "@/components/ui/amber";
 import { IconSelect, type IconSelectOption } from "@/components/ui/icon-select";
-import { AUCTION_CURRENCIES, AUCTION_RULES, canCancel, currencyBalance, currencyKind, currencyLabel, lotRarity, minNextBid, minStartFor, type Auction, type AuctionCurrency, type AuctionKind } from "@/game/auctions";
+import { AUCTION_CURRENCIES, AUCTION_RULES, canCancel, lotKey, type AuctionSale, currencyBalance, currencyKind, currencyLabel, lotRarity, minNextBid, minStartFor, type Auction, type AuctionCurrency, type AuctionKind } from "@/game/auctions";
 import { relicLabel, relicsState, describeRelic } from "@/game/relics";
 import { describeModule, moduleLabel, modulesState } from "@/game/modules";
-import { bidAuction, cancelAuction, listAuction, useAuctions } from "@/services/auctionService";
+import { bidAuction, cancelAuction, listAuction, useAuctionHistory, useAuctions } from "@/services/auctionService";
+import { LotQuote, PriceHistoryPanel, WatchPanel } from "@/components/game/AuctionInsights";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
@@ -142,8 +143,10 @@ function SellPanel() {
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Durée</span>
             {AUCTION_RULES.durationsH.map((h) => (
-              <HudChip key={h} size="sm" tone={hours === h ? "gold" : "neutral"} onClick={() => setHours(h)} aria-pressed={hours === h}>
-                {h} h
+              <HudChip key={h} size="sm" tone={hours === h ? "gold" : "neutral"} asChild>
+                <button type="button" onClick={() => setHours(h)} aria-pressed={hours === h}>
+                  <span className="font-mono tabular-nums">{h} h</span>
+                </button>
               </HudChip>
             ))}
           </div>
@@ -161,7 +164,7 @@ function SellPanel() {
   );
 }
 
-function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
+function AuctionRow({ a, uid, now, sales }: { a: Auction; uid: string; now: number; sales?: AuctionSale[] }) {
   const player = usePlayerStore((s) => s.player);
   const min = minNextBid(a);
   const [amount, setAmount] = useState(min);
@@ -222,6 +225,7 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
           <span className="inline-flex items-center gap-1">
             {a.bid > 0 ? "meilleure" : "mise à prix"} <Price res={a.res} value={a.bid > 0 ? a.bid : a.startPrice} className="text-slate-100" />
           </span>
+          <LotQuote sales={sales} res={a.res} />
           {a.bid > 0 && <span>par {a.bidderPseudo} · <span className="font-mono tabular-nums">{a.bids}</span> enchère{a.bids > 1 ? "s" : ""}</span>}
           <span className={cn("inline-flex items-center gap-1 font-mono", left < AUCTION_RULES.antiSnipeMs ? "text-ember-glow" : "text-slate-400")}>
             <Timer className="h-3 w-3" aria-hidden /> {left > 0 ? formatDuration(left / 1000) : "clôture…"}
@@ -252,6 +256,7 @@ export function AuctionSection() {
   const player = usePlayerStore((s) => s.player);
   const uid = player?.uid;
   const { open, closed, loaded } = useAuctions(uid);
+  const history = useAuctionHistory();
   const [filter, setFilter] = useState<"all" | AuctionKind | "mine">("all");
   const now = Date.now();
   if (!player || !uid) return null;
@@ -287,8 +292,10 @@ export function AuctionSection() {
                   ["mine", "Les miennes"],
                 ] as const
               ).map(([k, label]) => (
-                <HudChip key={k} size="sm" tone={filter === k ? "accent" : "neutral"} onClick={() => setFilter(k)} aria-pressed={filter === k}>
-                  {label}
+                <HudChip key={k} size="sm" tone={filter === k ? "accent" : "neutral"} asChild>
+                  <button type="button" onClick={() => setFilter(k)} aria-pressed={filter === k}>
+                    {label}
+                  </button>
                 </HudChip>
               ))}
             </div>
@@ -301,13 +308,15 @@ export function AuctionSection() {
           )}
           <div className="flex flex-col gap-2">
             {visible.map((a) => (
-              <AuctionRow key={a.id} a={a} uid={uid} now={now} />
+              <AuctionRow key={a.id} a={a} uid={uid} now={now} sales={history.lots[lotKey(a.kind, a.item)]?.sales} />
             ))}
           </div>
         </HudPanel>
 
         <div className="flex min-w-0 flex-col gap-4">
           <SellPanel />
+          <WatchPanel uid={uid} />
+          <PriceHistoryPanel history={history} />
           <HudPanel icon={<History />} title="Mes ventes et mises closes" tone="muted">
             {closed.length === 0 ? (
               <p className="text-sm text-slate-500">Rien de clos pour l'instant.</p>
