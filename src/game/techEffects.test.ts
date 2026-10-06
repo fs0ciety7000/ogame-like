@@ -68,7 +68,8 @@ describe("effets des technologies (v2.6)", () => {
     expect(getProductionRatesPerSecond(player.buildings, lv).energy).toBe(base.energy);
 
     expect(getStorageCapacity(buildings, lv)).toBe(Math.floor(getStorageCapacity(buildings) * 1.5));
-    expect(protectedAmount(buildings, "scrap", lv)).toBe(Math.floor(getStorageCapacity(buildings, lv) * (ECONOMY_RULES.protectedStoragePct + 0.1)));
+    // Règle de capacité (avant l'activation de la règle en heures, 5.32).
+    expect(protectedAmount(buildings, "scrap", lv, undefined, undefined, Date.UTC(2026, 0, 1))).toBe(Math.floor(getStorageCapacity(buildings, lv) * (ECONOMY_RULES.protectedStoragePct + 0.1)));
 
     const units = { chasseur: { level: 2, count: 10 } };
     expect(getFleetUpkeep(units, lv)).toBeCloseTo(getFleetUpkeep(units) * 0.5);

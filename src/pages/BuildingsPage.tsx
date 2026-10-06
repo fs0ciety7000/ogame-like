@@ -39,7 +39,7 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { UpgradeCompare } from "@/components/game/UpgradeCompare";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
-import { buildPlan, nextPlannedLevel, planSlots } from "@/game/buildPlan";
+import { activeBuildCount, buildPlan, buildSlots, nextPlannedLevel, planSlots } from "@/game/buildPlan";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -129,7 +129,11 @@ export function BuildingsPage() {
         </TabsContent>
         <TabsContent value="batiments" className="flex flex-col gap-4">
       <BuildPlanCard player={player} queues={queues} now={now} />
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* 5.32 : chantiers en parallèle (proposals/constructeurs.md). */}
+        <HudChip size="sm" tone={activeBuildCount(queues) >= buildSlots(player) ? "ember" : "neutral"} title="Améliorations de bâtiments menées en même temps. +1 à la Fonderie quantique 5 et 10.">
+          Chantiers <span className="font-mono tabular-nums">{activeBuildCount(queues)} / {buildSlots(player)}</span>
+        </HudChip>
         <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
 
@@ -249,7 +253,7 @@ export function BuildingsPage() {
                   {!isLocked && building.effect?.type === "storage" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
                       <GameIcon name="storage" /> {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · <GameIcon name="shield" />{" "}
-                      {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage
+                      jusqu'à {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage ({ECONOMY_RULES.protectedHours} h de production au plus)
                     </p>
                   )}
                   {!isLocked && building.effect?.type === "repair" && (

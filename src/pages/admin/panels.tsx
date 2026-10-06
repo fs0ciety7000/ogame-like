@@ -767,6 +767,27 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedStoragePct: v ?? 0 } }))}
           />
           <NumberField
+            label="5.32 : heures de production à l'abri, au plus (0 = part de l'entrepôt seule)"
+            value={rules.economy.protectedHours}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="5.32 : plancher à l'abri par ressource commune (comptes neufs)"
+            value={rules.economy.protectedFloor}
+            min={0}
+            step={100_000}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedFloor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="5.32 : chantiers de bâtiments en parallèle, de base (+1 à la Fonderie quantique 5 et 10)"
+            value={rules.economy.buildSlotsBase}
+            min={1}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, buildSlotsBase: Math.max(1, v ?? 6) } }))}
+          />
+          <NumberField
             label="Rares des missions et contrats : production horaire de référence (0 = désactivé)"
             value={rules.economy.missionRareProductionRef}
             min={0}

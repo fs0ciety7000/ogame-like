@@ -1,6 +1,6 @@
 # Proposition : feuille de route 2026, 4e trimestre
 
-Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F : propositions chiffrées sur données de production, en attente de décision (`entrepot-pillage.md`, `constructeurs.md`).
+Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F livrés ensemble en 5.32.0 (`docs/changes/5.32.0-entrepot-chantiers.md`) ; option B du lot E (butin) à simuler.
 Question 2 sans réponse : le lot C affiche contrats et missions du jour ensemble, sans fusionner leurs règles ; la fusion reste à décider.
 
 Sources :

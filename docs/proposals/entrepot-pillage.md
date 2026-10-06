@@ -1,6 +1,6 @@
 # Proposition : entrepôt, pillage et sauvetage (lot E)
 
-Statut : **en attente de décision** (chiffres ci-dessous).
+Statut : **livrée en partie (5.32.0)** : options A et C, avec 8 h et une activation le 13 octobre 2026 (décision du 2026-10-06 : « fais ce qu'il y a de mieux »). Option B en attente d'une simulation. Fiche : `docs/changes/5.32.0-entrepot-chantiers.md`.
 Constats : E1, E2 de `docs/audit/2026-10-06-audit-global.md`. Lot E de `docs/proposals/feuille-de-route-2026-q4.md`.
 
 ## 1. Constat

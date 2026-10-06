@@ -49,7 +49,7 @@ import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel"
 import { setProfileStyle } from "@/game/profile";
 import { learnTalent, resetTalents } from "@/game/talents";
 import { addSeenAnnouncements } from "@/game/announcements";
-import { addPlanned, removePlanned } from "@/game/buildPlan";
+import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -234,6 +234,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!state.unlocked && !def.startsUnlocked) throw new GameActionError("Ce bâtiment n'est pas débloqué.");
       if (queues.buildingUpgrades[def.id]) throw new GameActionError("Amélioration déjà en cours.");
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
+      const slotBlocker = buildSlotBlocker(player, queues);
+      if (slotBlocker) throw new GameActionError(slotBlocker);
       const nextLevel = state.level + 1;
       const paid = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), playerBuildingDiscount(player));
       pay(player, paid, now);

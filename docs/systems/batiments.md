@@ -25,6 +25,6 @@ Coûts : géométriques de `baseCost` à `maxCost`, palier 2 à partir du niv. 1
 `buildings.ts`, `buildPlan.ts`, `cancel.ts`. Admin : Contenu → Bâtiments (effets, coûts, prérequis `requires`).
 
 ## État (audit 2026-10-06)
-- 13 bâtiments seulement et une seule file de construction : peu de décisions d'ordre de construction une fois le rythme pris. Comparaison : OGame et Clash of Clans font des constructeurs parallèles un levier central.
+- Chantiers : un par bâtiment, en parallèle. Depuis la 5.32, au plus 6 en même temps (+1 à la Fonderie quantique 5 et 10, réglable) ; un chantier lancé avant la limite va à son terme, la file planifiée attend un chantier libre sans expirer. Compteur « Chantiers n / m » sur la page Bâtiments.
 - ~~`homeLevels` compte les bâtiments verrouillés~~ : corrigé en 5.28.1 (C3).
 - Rabais de coût : technologies × couche empire (`playerBuildingDiscount`, plafond empire 50 %) depuis la 5.28.1.

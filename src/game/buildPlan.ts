@@ -3,6 +3,7 @@ import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildin
 import { recordContract } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
 import { canAffordAll } from "@/game/resources";
+import { ECONOMY_RULES } from "@/game/economy";
 import { bumpStat } from "@/game/stats";
 import type { NewNotification } from "@/game/flush";
 import type { PlayerState, QueuesState, ResourceId, Resources } from "@/types/game";
@@ -21,6 +22,31 @@ export const BUILD_PLAN_RULES = {
   slotLevels: [0, 5, 10],
   maxWaitHours: 24,
 };
+
+/* 5.32 (proposals/constructeurs.md, option C) : chantiers de bâtiments en parallèle. 6 de base (réglable :
+   ECONOMY_RULES.buildSlotsBase), +1 à la Fonderie quantique niveau 5, +1 au niveau 10. Un chantier déjà en cours
+   au-delà de la limite (avant la 5.32) va à son terme ; seul le lancement suivant attend. */
+export const BUILD_SLOT_BONUS_LEVELS = [5, 10];
+
+export function buildSlots(player: Pick<PlayerState, "buildings">): number {
+  const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
+  const level = s?.unlocked ? s.level ?? 0 : 0;
+  return Math.max(1, Math.floor(ECONOMY_RULES.buildSlotsBase)) + BUILD_SLOT_BONUS_LEVELS.filter((l) => level >= l).length;
+}
+
+export function activeBuildCount(queues: Pick<QueuesState, "buildingUpgrades">): number {
+  return Object.values(queues.buildingUpgrades ?? {}).filter(Boolean).length;
+}
+
+/** Raison du refus quand tous les chantiers sont occupés, sinon null. */
+export function buildSlotBlocker(player: Pick<PlayerState, "buildings">, queues: Pick<QueuesState, "buildingUpgrades">): string | null {
+  const slots = buildSlots(player);
+  if (activeBuildCount(queues) < slots) return null;
+  const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
+  const level = s?.unlocked ? s.level ?? 0 : 0;
+  const next = BUILD_SLOT_BONUS_LEVELS.find((l) => level < l);
+  return `Tous tes chantiers sont occupés (${slots} / ${slots}). ${next !== undefined ? `Un chantier de plus s'ouvre avec la Fonderie quantique niveau ${next}. ` : ""}Programme l'amélioration : elle démarrera dès qu'un chantier se libère.`;
+}
 
 export interface PlannedUpgrade {
   buildingId: string;
@@ -96,6 +122,11 @@ export function advanceBuildPlan(player: PlayerState, queues: QueuesState, now: 
     if (entry.level !== state.level + 1) {
       // Un niveau plus haut attend le précédent ; sans lui (annulé), il est retiré.
       if (keep.some((k) => k.buildingId === entry.buildingId)) keep.push(entry);
+      continue;
+    }
+    // 5.32 : tous les chantiers occupés : on attend, sans délai d'expiration (ce n'est pas un manque de ressources).
+    if (buildSlotBlocker(player, queues)) {
+      keep.push(entry);
       continue;
     }
     const cost = applyBuildingDiscount(getBuildingUpgradeCost(def, entry.level), playerBuildingDiscount(player));

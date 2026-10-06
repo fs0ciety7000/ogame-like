@@ -1,6 +1,6 @@
 # Proposition : chantiers et files de recherche (lot F)
 
-Statut : **en attente de décision**.
+Statut : **livrée (5.32.0)** : option C, avec 6 chantiers de base, +1 à la Fonderie quantique 5 et 10, et 4 recherches inchangées (décision du 2026-10-06). Fiche : `docs/changes/5.32.0-entrepot-chantiers.md`.
 Constat : E3 de `docs/audit/2026-10-06-audit-global.md`, **corrigé** par cette proposition (voir §2).
 
 ## 1. Constat

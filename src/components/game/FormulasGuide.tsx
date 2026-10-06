@@ -245,7 +245,8 @@ panne d'énergie (stock à 0 et bilan négatif) : × ${ECONOMY_RULES.outageProdu
       <Block id="stockage" title="Stockage et bunker" icon={Warehouse} intro="L'entrepôt plafonne les ressources communes. Au-delà, la production s'arrête (ce qui dépasse déjà est gardé). Une partie du stock est à l'abri du pillage.">
         <Formula>
           {`capacité = Σ base × croissance^niveau (entrepôts) × (1 + technologies) × (1 + 2 % par niveau d'Intendant)
-à l'abri = capacité × (${pct(ECONOMY_RULES.protectedStoragePct)} + technologies + Bastion d'alliance), au plus 75 % (+ Bastion)`}
+à l'abri = capacité × (${pct(ECONOMY_RULES.protectedStoragePct)} + technologies + Bastion d'alliance), au plus 75 % (+ Bastion)
+5.32 : à l'abri ≤ ${ECONOMY_RULES.protectedHours} h de production de la ressource (au moins ${n(ECONOMY_RULES.protectedFloor)})`}
         </Formula>
         {p && (
           <Mine>

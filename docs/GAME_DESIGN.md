@@ -58,6 +58,8 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I7 | Rien dans `src/game` n'utilise `Intl` / `localeCompare` / `toLocaleString` | tout `src/game` | `serverSafe.test.ts` |
 | I8 | Une remise en service automatique ne tourne que si le serveur a lu les flottes en vol (`awayKnown`) | `actions.ts` (`performPlayerAction`), `cosmic_db.js` (`dockAutoOnReturn`) | `caleSeche.test.ts` |
 | I9 | Chaque stat d'effet est lue dans la couche empire (champ de `Modifiers` consommé, ou lecteur direct) | `modifiers.ts`, `effectTargets.ts`, `hangar.ts`, `workshop.ts` | `effectsRead.test.ts` |
+| I10 | La part à l'abri du pillage ne dépasse jamais la règle de capacité ; une fois la règle en heures active, elle vaut au plus max(plancher, H h de production) | `economy.ts` (`protectedAmount`) | `storageRisk.test.ts` |
+| I11 | Un chantier de bâtiment ne se lance que si un chantier est libre (`buildSlots`) ; un chantier déjà en cours n'est jamais annulé par la règle | `buildPlan.ts`, `actions.ts` | `storageRisk.test.ts` |
 
 ## 5. Règles de conception
 
@@ -131,3 +133,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 5.29.0 | Lot B livré : P1 (fenêtres rares à la demande, 925 → 880 Ko), P2 (horloge unique), P3 (16 tâches en 3 cadences). Le moteur reste dans le bundle d'entrée | `docs/changes/5.29.0-performance.md` |
 | 2026-10-06 | 5.30.0 | Lot C livré (option 1) : Ordres du jour, « Tout réclamer » étendu (série, missions, Chroniques), pastille unique, rendez-vous de la semaine. Fusion contrats/missions et lissage du calendrier à décider | `docs/changes/5.30.0-ordres-du-jour.md`, `proposals/journal-de-bord.md` |
 | 2026-10-06 | 5.31.0 | Lot D livré : Portefeuille, glossaire, détail des durées, « Passe » au lieu de « passe de saison ». Données de prod (lecture seule) : E1 confirmé (115 h à l'abri contre 57 h de stock), E2 revu (sauvetage max 80 %), E3 corrigé (chantiers déjà parallèles) | `docs/changes/5.31.0-lisibilite.md`, `proposals/entrepot-pillage.md`, `proposals/constructeurs.md` |
+| 2026-10-06 | 5.32.0 | Lots E et F livrés : abri ≤ 8 h de production (activation le 13/10, carte « Ce que tu risques »), 6 chantiers + paliers Fonderie ; invariants I10, I11 | `docs/changes/5.32.0-entrepot-chantiers.md` |
