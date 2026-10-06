@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { SkeletonCards } from "@/components/ui/skeleton";
-import { HudPanel } from "@/components/ui/panel";
+import { HudPanel, PagedList } from "@/components/ui/panel";
 import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight, Crown, Flag, History, Hourglass, Medal, Skull, Swords, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -192,7 +192,7 @@ export function BossHallPage() {
               </HudChip>
             ))}
           >
-            {shown.length === 0 ? <EmptyState size="sm" icon="🔎" title="Rien dans cette catégorie">Essaie un autre filtre.</EmptyState> : <ul className="flex flex-col gap-2">{shown.map((e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />)}</ul>}
+            {shown.length === 0 ? <EmptyState size="sm" icon="🔎" title="Rien dans cette catégorie">Essaie un autre filtre.</EmptyState> : <PagedList key={filter} items={shown} className="flex flex-col gap-2" render={(e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />} />}
           </HudPanel>
         </>
       )}

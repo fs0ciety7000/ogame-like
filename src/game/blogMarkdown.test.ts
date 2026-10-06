@@ -74,4 +74,10 @@ describe("devblog : outils", () => {
     const p = (id: string, title: string) => ({ id, slug: id, title, excerpt: "", body: "", category: "notes", tags: [], coverUrl: "", status: "published" as const, publishedAtMs: 1, updatedAtMs: 1, pinned: false, version: "", authorUid: "", authorPseudo: "", authorAvatarUrl: "", authorRole: "" });
     expect(searchPosts([p("a", "Les Furets"), p("b", "Le Léviathan")], "léviathan").map((x) => x.id)).toEqual(["b"]);
   });
+  it("5.24 : une vidéo s'écrit comme une image et devient un lecteur", () => {
+    const html = md('![Bande-annonce](/assets/video/presentation.mp4 "Vingt secondes")');
+    expect(html).toContain('<video src="https://jeu/assets/video/presentation.mp4" controls playsinline preload="metadata" aria-label="Bande-annonce"></video>');
+    expect(html).toContain("<figcaption>Vingt secondes</figcaption>");
+    expect(md("![x](javascript:alert(1).mp4)")).not.toContain("javascript:");
+  });
 });

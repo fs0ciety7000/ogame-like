@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { BookOpen, Lock } from "lucide-react";
+import { BookOpen, LayoutGrid, Lock, Orbit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +13,7 @@ import { useBossHistory } from "@/services/bossHistoryService";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { AmberAmount } from "@/components/ui/amber";
 import { RewardReveal } from "@/components/game/RewardReveal";
+import { HoloCylinderLazy, hasWebGL } from "@/components/fx/HoloCylinderLazy";
 import { GameActionError } from "@/services/playerService";
 import { useContentStore } from "@/services/contentService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -20,6 +21,8 @@ import { assetUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 
 /* v4.8 : le Codex, encyclopédie du secteur qui se débloque en jouant. */
+
+const VIEW_KEY = "cosmic-empires:codex-view";
 
 export function CodexPage() {
   const player = usePlayerStore((s) => s.player);
@@ -42,6 +45,22 @@ export function CodexPage() {
   if (!player) return null;
   const progress = codexProgress(entries);
   const shown = tab === "all" ? entries : entries.filter((e) => e.category === tab);
+  // 5.24 : archives holographiques (cylindre 3D) ou grille classique, choix mémorisé.
+  const [view, setView] = useState<"holo" | "grid">(() => {
+    try {
+      return (localStorage.getItem(VIEW_KEY) as "holo" | "grid" | null) ?? (hasWebGL() ? "holo" : "grid");
+    } catch {
+      return "grid";
+    }
+  });
+  const pickView = (v: "holo" | "grid") => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* stockage indisponible : choix pour la session */
+    }
+  };
   const hasTitle = (player.titles ?? []).some((t) => t.label === CODEX_TITLE);
 
   const claim = async () => {
@@ -70,6 +89,45 @@ export function CodexPage() {
       setClaiming(null);
     }
   };
+
+  const grid = (
+  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    {shown.map((e, i) => (
+      <motion.button
+        key={e.id}
+        type="button"
+        disabled={!e.unlocked}
+        onClick={() => setOpen(e)}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: Math.min(i, 15) * 0.025 }}
+        whileHover={e.unlocked ? { y: -3 } : undefined}
+        className={cn(
+          "hud-cut group relative flex flex-col overflow-hidden border text-left transition-colors",
+          e.unlocked ? "border-gold-glow/25 bg-space-900/60 hover:border-gold-glow/60" : "cursor-default border-white/5 bg-space-950/60",
+        )}
+      >
+        <div className="relative aspect-square w-full overflow-hidden bg-space-950">
+          <img
+            src={assetUrl(e.image)}
+            alt=""
+            loading="lazy"
+            className={cn("h-full w-full object-cover transition-transform duration-500", e.unlocked ? "group-hover:scale-105" : "scale-110 opacity-25 blur-md grayscale")}
+          />
+          {!e.unlocked && (
+            <span className="absolute inset-0 grid place-items-center">
+              <Lock className="h-6 w-6 text-slate-500" />
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5 p-2.5">
+          <span className={cn("truncate font-display text-sm", e.unlocked ? "text-slate-100" : "text-slate-600")}>{e.unlocked ? e.name : "???"}</span>
+          <span className="truncate text-[10px] text-slate-500">{e.unlocked ? e.subtitle : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint}</span>
+        </div>
+      </motion.button>
+    ))}
+  </div>
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -144,42 +202,29 @@ export function CodexPage() {
         </div>
       </Tabs>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {shown.map((e, i) => (
-          <motion.button
-            key={e.id}
-            type="button"
-            disabled={!e.unlocked}
-            onClick={() => setOpen(e)}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(i, 15) * 0.025 }}
-            whileHover={e.unlocked ? { y: -3 } : undefined}
-            className={cn(
-              "hud-cut group relative flex flex-col overflow-hidden border text-left transition-colors",
-              e.unlocked ? "border-gold-glow/25 bg-space-900/60 hover:border-gold-glow/60" : "cursor-default border-white/5 bg-space-950/60",
-            )}
-          >
-            <div className="relative aspect-square w-full overflow-hidden bg-space-950">
-              <img
-                src={assetUrl(e.image)}
-                alt=""
-                loading="lazy"
-                className={cn("h-full w-full object-cover transition-transform duration-500", e.unlocked ? "group-hover:scale-105" : "scale-110 opacity-25 blur-md grayscale")}
-              />
-              {!e.unlocked && (
-                <span className="absolute inset-0 grid place-items-center">
-                  <Lock className="h-6 w-6 text-slate-500" />
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-0.5 p-2.5">
-              <span className={cn("truncate font-display text-sm", e.unlocked ? "text-slate-100" : "text-slate-600")}>{e.unlocked ? e.name : "???"}</span>
-              <span className="truncate text-[10px] text-slate-500">{e.unlocked ? e.subtitle : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint}</span>
-            </div>
-          </motion.button>
-        ))}
+      <div className="flex justify-end gap-1.5">
+        <Button size="sm" variant={view === "holo" ? "secondary" : "ghost"} onClick={() => pickView("holo")} aria-pressed={view === "holo"}>
+          <Orbit className="h-3.5 w-3.5" /> Archives 3D
+        </Button>
+        <Button size="sm" variant={view === "grid" ? "secondary" : "ghost"} onClick={() => pickView("grid")} aria-pressed={view === "grid"}>
+          <LayoutGrid className="h-3.5 w-3.5" /> Grille
+        </Button>
       </div>
+
+      {view === "holo" && shown.length > 0 ? (
+        <HoloCylinderLazy
+          key={tab}
+          className="hud-cut h-[340px] border border-cyan-glow/15 bg-space-950/60 sm:h-[420px]"
+          items={shown.map((e) => ({ id: e.id, image: e.image, label: e.name, sub: e.unlocked ? e.subtitle : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint, locked: !e.unlocked }))}
+          onSelect={(it) => {
+            const e = shown.find((x) => x.id === it.id);
+            if (e?.unlocked) setOpen(e);
+          }}
+          fallback={grid}
+        />
+      ) : (
+        grid
+      )}
 
       <RewardReveal
         open={revealed !== null}

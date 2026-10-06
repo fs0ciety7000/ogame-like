@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { HudChip } from "@/components/ui/hud";
 import { ClaimAllChip } from "@/components/game/ClaimAllChip";
+import { Link } from "react-router-dom";
+import { AmberIcon } from "@/components/ui/amber";
+import { bountyState } from "@/game/bounties";
 
 /** v5.2 : bonus de production actifs (infobulle). Ils se multiplient entre eux. */
 /** Bonus de production actifs, en section d'infobulle. */
@@ -37,6 +40,7 @@ export function ResourceHud() {
 
   const history = player.resourceHistory ?? [];
   const economy = economySnapshot({ ...player, resources }, Date.now());
+  const amber = bountyState(player).amber;
 
   const common = RESOURCE_LIST.filter((r) => r.rarity === "common");
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
@@ -121,6 +125,27 @@ export function ResourceHud() {
       })}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
+      {/* 5.24 : Ambre, monnaie premium : liseré doré, coin coupé, à part des ressources. */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link
+            to="/game/primes"
+            aria-label={`Ambre : ${formatNumber(amber)}`}
+            className="hud-cut-sm flex items-center gap-1.5 border border-gold-glow/40 border-t-2 border-t-gold-glow bg-gradient-to-b from-gold-glow/15 to-gold-glow/[0.03] px-2 py-1 text-xs transition-colors hover:border-gold-glow/70 hover:from-gold-glow/25"
+          >
+            <AmberIcon className="h-5 w-5" />
+            <AnimatedNumber value={amber} format={formatNumber} className="tabular-mono font-medium text-gold-glow" />
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>
+          <TooltipCard
+            title="Ambre de Ruche"
+            icon={<AmberIcon className="h-3.5 w-3.5" />}
+            rows={[{ label: "Solde", value: formatNumber(amber) }]}
+            note="Monnaie premium : gagnée aux primes, au passe, au Codex et aux Chroniques ; se dépense au Comptoir Kesh'Vaar."
+          />
+        </TooltipContent>
+      </Tooltip>
       <HostileFleetAlert />
       <ClaimAllChip />
       <StreakBadge />

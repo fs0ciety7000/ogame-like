@@ -1,5 +1,6 @@
 import { ChroniclesCard } from "@/components/game/ChroniclesCard";
 import { useState } from "react";
+import { RewardReveal } from "@/components/game/RewardReveal";
 import { toast } from "sonner";
 import { Check, Gift, Lock, Ticket } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -65,6 +66,7 @@ export function SeasonPassPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
   const [busy, setBusy] = useState<number | null>(null);
+  const [revealed, setRevealed] = useState<number | null>(null);
   if (!player) return null;
   const now = Date.now();
   const st = passState(player, now);
@@ -83,17 +85,29 @@ export function SeasonPassPage() {
   const claimable = Array.from({ length: tier }, (_, i) => i + 1).filter((t) => !st.claimed.includes(t) && reqOf(t)?.met !== false);
   const commander = season ? findCommander(season.commander.id) : undefined;
 
-  const claim = async (t: number) => {
+  const claim = async (t: number, reveal = false) => {
     setBusy(t);
     try {
       const out = await claimPassTier(t);
-      toast.success(`Palier ${t} réclamé`, { description: out.gained.join(" · ") });
+      if (reveal) setRevealed(t);
+      else toast.success(`Palier ${t} réclamé`, { description: out.gained.join(" · ") });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Réclamation impossible.");
     } finally {
       setBusy(null);
     }
   };
+  // 5.24 : roue holographique sur toutes les récompenses du passe, arrêt sur le palier réclamé.
+  const reelItems = (() => {
+    const seen = new Map<string, { id: string; image: string; label: string }>();
+    for (const r of pass.tiers.flat()) {
+      const image = rewardIcon(r);
+      if (!seen.has(image)) seen.set(image, { id: image, image, label: describePassReward(r, st.seasonId) });
+    }
+    return [...seen.values()];
+  })();
+  const revealedRewards = revealed ? pass.tiers[revealed - 1] ?? [] : [];
+  const reelTarget = revealedRewards.length > 0 ? Math.max(0, reelItems.findIndex((it) => it.image === rewardIcon(revealedRewards[0]))) : 0;
   const claimAll = async () => {
     for (const t of claimable) await claim(t);
   };
@@ -198,7 +212,7 @@ export function SeasonPassPage() {
                 ))}
               </div>
               {reached && !claimed && (
-                <Button size="sm" variant={locked ? "outline" : "primary"} disabled={busy !== null || locked} onClick={() => void claim(t)}>
+                <Button size="sm" variant={locked ? "outline" : "primary"} disabled={busy !== null || locked} onClick={() => void claim(t, true)}>
                   {locked ? (current ? "Défi en cours" : "Défi à relever") : "Réclamer"}
                 </Button>
               )}
@@ -206,6 +220,22 @@ export function SeasonPassPage() {
           );
         })}
       </div>
+      <RewardReveal
+        open={revealed !== null}
+        onClose={() => setRevealed(null)}
+        icon={<Gift />}
+        title={`Palier ${revealed ?? ""} réclamé`}
+        items={revealedRewards.map((r, k) => ({
+          key: String(k),
+          node: (
+            <span className="inline-flex items-center gap-2 text-xs text-slate-100">
+              <img src={assetUrl(rewardIcon(r))} alt="" className="h-6 w-6 shrink-0 object-contain" />
+              {describePassReward(r, st.seasonId)}
+            </span>
+          ),
+        }))}
+        reel={revealedRewards.length > 0 ? { items: reelItems.map((it, i) => (i === reelTarget ? { ...it, label: describePassReward(revealedRewards[0], st.seasonId) } : it)), target: reelTarget } : undefined}
+      />
       <p className="text-xs text-slate-500">
         Palier {tiers} : {pass.tiers[tiers - 1].map((r) => describePassReward(r, st.seasonId)).join(", ")}. Le titre « {passTitle(st.seasonId)} » et la bannière de la saison sont gardés pour toujours.
       </p>

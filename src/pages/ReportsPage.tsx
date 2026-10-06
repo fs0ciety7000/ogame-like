@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PagedList } from "@/components/ui/panel";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -274,7 +275,7 @@ export function ReportsPage() {
               <EmptyState icon="🔧" title="Aucun signalement">Tout fonctionne ? Parfait. Sinon, décris le problème à gauche.</EmptyState>
             </Card>
           ) : (
-            reports.map((r) => <ReportCard key={r.id} report={r} open={openId === r.id} onToggle={() => toggle(r.id)} />)
+            <PagedList items={reports} className="flex flex-col gap-3" render={(r) => <ReportCard key={r.id} report={r} open={openId === r.id} onToggle={() => toggle(r.id)} />} />
           )}
         </div>
       </div>

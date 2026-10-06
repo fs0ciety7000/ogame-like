@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,5 +93,35 @@ export function Pager({ page, total, size = PAGE_SIZE, onPage }: { page: number;
         Suivant →
       </Button>
     </nav>
+  );
+}
+
+/** 5.24 : liste découpée en pages (20 par défaut) ; la page revient en arrière si la liste rétrécit. */
+export function usePaged<T>(items: T[], size = PAGE_SIZE, resetKey?: unknown) {
+  const [page, setPage] = useState(0);
+  // Nouveau filtre ou nouvelle recherche : retour en page 1.
+  useEffect(() => {
+    setPage(0);
+  }, [resetKey]);
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const p = Math.min(page, pages - 1);
+  return {
+    items: items.slice(p * size, (p + 1) * size),
+    /** Rang du premier élément de la page (pour les index globaux). */
+    offset: p * size,
+    /** Aller à la page qui contient l'élément d'indice `index`. */
+    showIndex: (index: number) => setPage(Math.max(0, Math.floor(index / size))),
+    pager: { page: p, total: items.length, size, onPage: setPage },
+  };
+}
+
+/** 5.24 : liste paginée prête à poser (conteneur + pagination). `key` sur le filtre pour revenir en page 1. */
+export function PagedList<T>({ items, size = PAGE_SIZE, className, render, as: Tag = "div" }: { items: T[]; size?: number; className?: string; render: (item: T, index: number) => ReactNode; as?: "div" | "ul" | "ol" }) {
+  const pg = usePaged(items, size);
+  return (
+    <>
+      <Tag className={className}>{pg.items.map((it, i) => render(it, pg.offset + i))}</Tag>
+      <Pager {...pg.pager} />
+    </>
   );
 }

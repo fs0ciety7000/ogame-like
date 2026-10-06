@@ -46,7 +46,18 @@ function ChestDialog({ chest, onClose }: { chest: StreakChest | null; onClose: (
         })),
       ]
     : [];
-  return <RewardReveal open={chest !== null} onClose={onClose} icon={<PackageOpen />} title="Coffre de la série" description="Sept jours d'affilée : voici ce que contenait le coffre." items={items} />;
+  // 5.24 : la roue passe sur le contenu possible du coffre et s'arrête sur l'Ambre.
+  const reel = chest
+    ? {
+        target: 0,
+        items: [
+          { id: "amber", image: "/assets/bounties/amber.webp", label: `${chest.amber} Ambre` },
+          { id: "tokens", image: "/assets/casino/jeton.webp", label: `${chest.tokens} jetons` },
+          ...(["scrap", "energy", "nano", "data"] as const).map((id) => ({ id, image: `/assets/icons/${id}.webp`, label: id })),
+        ],
+      }
+    : undefined;
+  return <RewardReveal open={chest !== null} onClose={onClose} icon={<PackageOpen />} title="Coffre de la série" description="Sept jours d'affilée : voici ce que contenait le coffre." items={items} reel={reel} />;
 }
 
 /** v5.3 : pastille de l'en-tête — série de connexion quotidienne. */

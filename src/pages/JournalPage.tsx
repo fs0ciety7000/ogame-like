@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Pager, usePaged } from "@/components/ui/panel";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { NotificationCard } from "@/components/game/NotificationCard";
@@ -94,16 +95,20 @@ export function JournalPage() {
 
   const sinceLastVisit = useMemo(() => items.filter((n) => n.createdAtMs > lastVisit), [items, lastVisit]);
   const shown = useMemo(() => items.filter((n) => inCategory(n.kind, tab)), [items, tab]);
+  // 5.24 : 20 entrées par page, regroupées par jour ; les plus anciennes se chargent depuis la dernière page.
+  const journalPage = usePaged(shown, 20, tab);
+  const pageItems = journalPage.items;
+  const onLastPage = journalPage.pager.page >= Math.ceil(shown.length / 20) - 1;
   const days = useMemo(() => {
     const groups: { label: string; items: GameNotification[] }[] = [];
-    for (const n of shown) {
+    for (const n of pageItems) {
       const label = dayLabel(n.createdAtMs);
       const last = groups[groups.length - 1];
       if (last?.label === label) last.items.push(n);
       else groups.push({ label, items: [n] });
     }
     return groups;
-  }, [shown]);
+  }, [pageItems]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -183,7 +188,8 @@ export function JournalPage() {
       {loading && (
         <SkeletonList rows={6} />
       )}
-      {!loading && page > 0 && page < totalPages && (
+      <Pager {...journalPage.pager} />
+      {!loading && onLastPage && page > 0 && page < totalPages && (
         <Button variant="outline" className="self-center" onClick={() => void loadPage(page + 1)}>
           Remonter plus loin
         </Button>

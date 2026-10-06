@@ -1,4 +1,5 @@
 import { PlayerName } from "@/components/ui/player-name";
+import { PagedList } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { useEffect, useState } from "react";
@@ -118,8 +119,7 @@ export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) 
   if (ranking.length === 0) return <EmptyState size="sm" icon="⚔️" title="Personne n'a encore frappé">Le premier assaut ouvrira le classement.</EmptyState>;
   const top = ranking[0].damage;
   return (
-    <ol className="flex flex-col gap-1.5">
-      {ranking.map((c, i) => (
+    <PagedList as="ol" items={ranking} className="flex flex-col gap-1.5" render={(c, i) => (
         <li key={c.uid} className={cn("grid grid-cols-[2rem_1fr_auto] items-center gap-2 text-sm", c.uid === uid && "text-cyan-glow")}>
           <span className="font-mono text-xs text-slate-500">#{i + 1}</span>
           <span className="min-w-0">
@@ -132,8 +132,7 @@ export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) 
             {formatCompact(c.damage)} <span className="text-slate-500">· {c.assaults} assaut{c.assaults > 1 ? "s" : ""}</span>
           </span>
         </li>
-      ))}
-    </ol>
+      )} />
   );
 }
 

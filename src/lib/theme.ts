@@ -94,8 +94,14 @@ export const useThemeStore = create<{ theme: ThemeId }>(() => ({ theme: initial(
 
 export function applyTheme(theme: ThemeId) {
   document.documentElement.dataset.theme = theme;
-  const meta = document.querySelector('meta[name="theme-color"]');
-  meta?.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue("--th-space-900").trim() || "#05070f");
+  // 5.24 : lire le style avant la fin du chargement force une mise en page
+  // (avertissement Firefox, risque de flash sans style) : on attend `load`.
+  const syncMeta = () => {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta?.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue("--th-space-900").trim() || "#05070f");
+  };
+  if (document.readyState === "complete") syncMeta();
+  else window.addEventListener("load", syncMeta, { once: true });
 }
 
 export function setTheme(theme: ThemeId) {

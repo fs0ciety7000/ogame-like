@@ -1,7 +1,6 @@
-import { ShowMoreButton } from "@/components/ui/panel";
+import { Pager, usePaged } from "@/components/ui/panel";
 import { MassSpyDialog } from "@/components/game/MassSpyDialog";
 import { quickProbeCount, quickSpy } from "@/lib/quickSpy";
-import { useShowMore } from "@/hooks/useShowMore";
 import { EmptyState } from "@/components/ui/hud";
 import { TitleBadge } from "@/components/game/TitleBadge";
 import { OnlineDot } from "@/components/ui/online-dot";
@@ -191,7 +190,9 @@ export function PlayersPage() {
     return ranked.filter((p) => p.pseudo.toLowerCase().includes(q));
   }, [ranked, search]);
   // 5.15.12 : 50 joueurs à la fois.
-  const { shown: shownPlayers, more: morePlayers, showMore: showMorePlayers } = useShowMore(filtered, 50, `${mode}|${search}`);
+  // 5.24 : 20 joueurs par page.
+  const playersPage = usePaged(filtered, 20, `${mode}|${search}`);
+  const shownPlayers = playersPage.items;
 
   return (
     <div className="flex flex-col gap-4">
@@ -463,7 +464,7 @@ export function PlayersPage() {
               </motion.div>
             );
           })}
-          <ShowMoreButton more={morePlayers} step={50} onClick={showMorePlayers} />
+          <Pager {...playersPage.pager} />
         </Card>
         </>
       )}

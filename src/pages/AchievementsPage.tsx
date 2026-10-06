@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { PagedList } from "@/components/ui/panel";
 import { Lock, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -139,11 +140,7 @@ export function AchievementsPage() {
           );
         })}
       </div>
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {shown.map((a) => (
-          <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} />
-        ))}
-      </div>
+      <PagedList key={tab} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} />} />
     </div>
   );
 }

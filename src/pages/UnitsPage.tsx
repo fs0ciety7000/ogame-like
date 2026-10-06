@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useMemo, useState } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PostureCard } from "@/components/game/PostureCard";
+import { HoloCylinderLazy } from "@/components/fx/HoloCylinderLazy";
 import { UnitSpecButton } from "@/components/game/UnitSpecSheet";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -49,6 +51,7 @@ export function UnitsPage() {
   // 5.18 : onglets Attaque / Défense et filtre par classe (calculée d'après les stats).
   const [tab, setTab] = useState<"attack" | "defense">("attack");
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
+  const [editingCards, setEditingCards] = useState(false);
   const classes = useMemo(() => unitClasses(UNITS), []);
   const repairDock = player ? workshopUnits(player) : {};
 
@@ -139,6 +142,20 @@ export function UnitsPage() {
         })}
       </div>
 
+      {/* 5.24 : vitrine holographique des unités au hangar de l'onglet, effectif sous chacune. */}
+      {(() => {
+        const owned = UNITS.filter((u) => u.category === tab && (player.units[u.id]?.count ?? 0) > 0);
+        if (owned.length === 0) return null;
+        return (
+          <HoloCylinderLazy
+            mode="gallery"
+            className="hud-cut h-[260px] border border-cyan-glow/15 bg-space-950/60 sm:h-[300px]"
+            items={owned.map((u) => ({ id: u.id, image: u.image, label: u.name, sub: `× ${formatNumber(player.units[u.id]?.count ?? 0)} au hangar` }))}
+            fallback={null}
+          />
+        );
+      })()}
+
       <div className="flex flex-col gap-2">
         <Tabs value={tab} onValueChange={(v) => {
             setTab(v === "defense" ? "defense" : "attack");
@@ -164,11 +181,13 @@ export function UnitsPage() {
           <span className="text-[11px] text-slate-500">
             Classe d'après l'attaque et la résistance. Au combat, Fort bat Moyen, Moyen bat Faible, Faible bat Fort (<span className="font-mono">±{Math.round(COMBAT_RULES.classEdge * 100)} %</span> de dégâts) : panache ta flotte.
           </span>
+          <div className="ml-auto">
+            <SortableGridToggle page="unites" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5">
-        {UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter)).map((unit, index) => {
+      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);
@@ -449,8 +468,7 @@ export function UnitsPage() {
               </Card>
             </motion.div>
           );
-        })}
-      </div>
+        }} />
     </div>
   );
 }

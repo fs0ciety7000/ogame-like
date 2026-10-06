@@ -1,6 +1,6 @@
 import { LinkifiedText } from "@/components/ui/linkified-text";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { EmptyAction } from "@/components/ui/panel";
+import { EmptyAction, PagedList } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -146,8 +146,7 @@ export function MessagesPage() {
               Cherche un joueur pour lui écrire.
             </EmptyState>
           )}
-          <div className="flex flex-col">
-            {conversations.map((c) => (
+          <PagedList items={conversations} size={15} className="flex flex-col" render={(c) => (
               <button
                 key={c.uid}
                 type="button"
@@ -170,8 +169,7 @@ export function MessagesPage() {
                   <LinkifiedText text={c.last.text} />
                 </span>
               </button>
-            ))}
-          </div>
+            )} />
         </Card>
 
         {/* Fil */}

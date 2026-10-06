@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import type { HoloItem } from "@/components/fx/HoloCylinder";
+import { HoloCylinderLazy, hasWebGL } from "@/components/fx/HoloCylinderLazy";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -7,7 +9,9 @@ import { cn } from "@/lib/utils";
 /* 5.15.12 : révélation de récompense commune (coffre de série, rapport de
    saison, fin de chapitre, catégorie du Codex, palier du passe) : un sceau
    qui s'ouvre, un éclat doré, puis les gains un à un. Sans animation si le
-   joueur a demandé de les réduire. */
+   joueur a demandé de les réduire.
+   5.24 : avec `reel`, une roue holographique fait défiler les récompenses
+   possibles et s'arrête sur le gain avant d'afficher le détail. */
 
 /** Classes écrites en entier (Tailwind ne voit pas les noms construits). */
 const TONES = {
@@ -31,6 +35,7 @@ export function RewardReveal({
   footer,
   closeLabel = "Récupéré",
   tone = "gold",
+  reel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -41,9 +46,16 @@ export function RewardReveal({
   footer?: ReactNode;
   closeLabel?: string;
   tone?: "gold" | "accent" | "mint";
+  /** Roue : récompenses possibles et indice du gain. */
+  reel?: { items: HoloItem[]; target: number };
 }) {
   const reduce = useReducedMotion();
   const t = TONES[tone];
+  const canReel = !!reel && reel.items.length > 1 && !reduce && hasWebGL();
+  const [spun, setSpun] = useState(!canReel);
+  useEffect(() => {
+    if (open) setSpun(!canReel);
+  }, [open, canReel]);
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       {open && (
@@ -70,7 +82,24 @@ export function RewardReveal({
             </motion.span>
             <DialogTitle className="hud-title relative text-lg text-slate-100">{title}</DialogTitle>
             {description && <DialogDescription className="relative text-xs text-slate-400">{description}</DialogDescription>}
-            {items.length > 0 && (
+            {canReel && reel && (
+              <div className="relative w-full">
+                <HoloCylinderLazy
+                  mode="reel"
+                  items={reel.items}
+                  reelTarget={reel.target}
+                  onReelDone={() => setSpun(true)}
+                  onUnsupported={() => setSpun(true)}
+                  className="hud-cut h-44 w-full border border-gold-glow/20 bg-space-950/70"
+                />
+                {spun && reel.items[reel.target] && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1.5 font-display text-sm text-gold-glow">
+                    {reel.items[reel.target].label}
+                  </motion.p>
+                )}
+              </div>
+            )}
+            {spun && items.length > 0 && (
               <div className="relative grid w-full grid-cols-2 gap-1.5">
                 {items.map((it, i) => (
                   <motion.div
@@ -78,17 +107,23 @@ export function RewardReveal({
                     className={cn("hud-cut-sm flex items-center justify-center border px-2 py-2", t.tile)}
                     initial={reduce ? false : { opacity: 0, y: 8, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: reduce ? 0 : 0.5 + i * 0.15 }}
+                    transition={{ delay: reduce ? 0 : (canReel ? 0.1 : 0.5) + i * 0.15 }}
                   >
                     {it.node}
                   </motion.div>
                 ))}
               </div>
             )}
-            {footer}
-            <Button className="relative mt-1" onClick={onClose}>
-              {closeLabel}
-            </Button>
+            {spun && footer}
+            {spun ? (
+              <Button className="relative mt-1" onClick={onClose}>
+                {closeLabel}
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="relative mt-1" onClick={() => setSpun(true)}>
+                Passer
+              </Button>
+            )}
           </div>
         </DialogContent>
       )}
