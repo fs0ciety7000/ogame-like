@@ -76,6 +76,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   sinon le code des pages paresseuses remonte dans un bloc chargé au démarrage.
 - Ne pas lancer prettier sur le dépôt.
 - Chaque lot front se termine par un audit DESIGN.md des fichiers touchés, plus une vérification mobile (largeur 375 px, sans défilement horizontal).
+- Captures d'écran (vérifications, livrables, rapports) : toujours en thème **Constellation**. Le thème est gardé par appareil :
+  `localStorage.setItem("cosmic-empires:theme", "constellation")` dans un `addInitScript` de Playwright, avant le chargement de la page.
 
 ## Valider avant de committer
 
