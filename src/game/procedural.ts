@@ -15,6 +15,7 @@ import {
 import { parisOffsetMs } from "@/game/events";
 import { formatInt } from "@/game/format";
 import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassReward } from "@/game/seasonPass";
+import { passGenRules, percentile, type PassPace } from "@/game/passGen";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import type { CapsuleType } from "@/game/synthesis";
@@ -139,6 +140,8 @@ export interface WorldDigest {
   chapterShare: number;
   /** v5.5 : nombre médian de membres actifs par alliance (saga d'alliance). */
   allianceSizeMedian?: number;
+  /** 6.8.1 : points de passe par jour (joueur médian, plus actif), jusqu'au dernier palier pour ceux qui l'ont atteint. */
+  passPace?: PassPace;
 }
 
 type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
@@ -160,7 +163,8 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
   const weeklyMedian: WorldDigest["weeklyMedian"] = {};
   const totals: WorldDigest["totals"] = {};
   const heroes: WorldDigest["heroes"] = {};
-  for (const k of ACTIVITY_KEYS) {
+  // 6.8.1 : les assauts de boss aussi (défis des paliers), sans entrer dans les objectifs des chapitres.
+  for (const k of [...ACTIVITY_KEYS, "bossAssault" as const]) {
     const counts = passes.map((s) => s.activity?.[k] ?? 0);
     totals[k] = counts.reduce((a, b) => a + b, 0);
     weeklyMedian[k] = round2((median(counts) / observedDays) * 7);
@@ -193,8 +197,22 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     passTiers,
     passFinishedShare: share(tiers.filter((t) => t >= passTiers).length),
     chapterShare: month ? share(states.filter((s) => month.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    passPace: passPace(passes, monthId, observedDays, now),
     allianceSizeMedian: median(Object.values(active.reduce<Record<string, number>>((acc, p) => (p.allianceId ? { ...acc, [p.allianceId]: (acc[p.allianceId] ?? 0) + 1 } : acc), {}))),
   };
+}
+
+/** 6.8.1 : points de passe par jour sur le mois observé. Un joueur au dernier palier compte jusqu'au jour où il l'a atteint
+ *  (ses points ne montent plus ensuite) ; « plus actif » : centile réglable (passGen.topPercentile). */
+function passPace(passes: ReturnType<typeof passState>[], monthId: string, observedDays: number, now: number): PassPace | undefined {
+  const rates = passes
+    .filter((s) => s.seasonId === monthId)
+    .map((s) => {
+      const days = s.finishedAtMs ? Math.max(1, observedDays - Math.floor((now - s.finishedAtMs) / 86_400_000)) : observedDays;
+      return s.points / days;
+    });
+  if (rates.length === 0) return undefined;
+  return { median: round2(median(rates)), top: round2(percentile(rates, passGenRules().topPercentile)) };
 }
 
 /* ---------- difficulté ---------- */

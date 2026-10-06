@@ -15960,6 +15960,226 @@ function isCancelTarget(raw) {
   }
 }
 
+// src/game/passGen.ts
+var PASS_GEN_RULES = {
+  /** false : ancien gabarit fixe des récompenses (points par palier toujours calculés). */
+  enabled: true,
+  /** Valeur des paliers 1 à 29, en heures de production équivalentes. */
+  budgetHours: 140,
+  /** Le dernier palier ordinaire vaut (1 + courbe) fois le premier. */
+  curve: 2,
+  /** Paliers jalons : valeur multipliée, deux récompenses. */
+  milestones: [5, 10, 15, 20, 25],
+  milestoneBoost: 2.5,
+  /** Reliques données aux paliers indiqués (comptées dans le budget). */
+  rareRelicTiers: [20],
+  epicRelicTiers: [],
+  /** Valeur d'une unité, en heures de production (1 h de production = 1). */
+  values: { amber: 0.1, tokens: 1, dossier: 3, capsule3: 2, capsule4: 3, capsule5: 4, relicRare: 10, relicEpic: 20 },
+  /** Plafonds du mois (paliers 1 à 29). */
+  caps: { amber: 350, tokens: 6, dossier: 4, capsules: 10 },
+  /** Heures de production au plus par récompense. */
+  productionMaxHours: 12,
+  /** Poids de tirage des récompenses (0 : jamais). */
+  weights: { production: 3, amber: 3, capsule: 2, dossier: 1, tokens: 1 },
+  /** Rythme : jour de fin visé pour le joueur médian, et pas avant ce jour pour le plus actif. */
+  targetMedianDay: 24,
+  targetTopDay: 15,
+  /** Le joueur médian doit finir au plus tard ce jour, quitte à laisser le plus actif finir plus tôt. */
+  latestMedianDay: 28,
+  /** « Plus actif » : ce centile des points par jour (0,9 = 9e décile). */
+  topPercentile: 0.9,
+  pointsMin: 25,
+  pointsMax: 200,
+  /** Poids des actions dans les défis des paliers (0 : jamais). */
+  challengeWeights: { victory: 1, contract: 1, spy: 1, market: 1, bounty: 1, warlordWin: 1, bossAssault: 0.5, raidRepelled: 0, mission: 0 },
+  /** Actions que le joueur ne déclenche pas à volonté : seulement si la médiane du serveur en fait au moins autant par semaine. */
+  passiveKeys: ["warlordWin", "bossAssault", "raidRepelled"],
+  passiveMinWeekly: 0.5
+};
+var DEFAULTS = structuredClone(PASS_GEN_RULES);
+function passGenRules() {
+  var _a, _b, _c, _d;
+  const r = PASS_GEN_RULES;
+  return __spreadProps(__spreadValues(__spreadValues({}, DEFAULTS), r), {
+    values: __spreadValues(__spreadValues({}, DEFAULTS.values), (_a = r.values) != null ? _a : {}),
+    caps: __spreadValues(__spreadValues({}, DEFAULTS.caps), (_b = r.caps) != null ? _b : {}),
+    weights: __spreadValues(__spreadValues({}, DEFAULTS.weights), (_c = r.weights) != null ? _c : {}),
+    challengeWeights: __spreadValues(__spreadValues({}, DEFAULTS.challengeWeights), (_d = r.challengeWeights) != null ? _d : {})
+  });
+}
+function validatePassGenRules(r) {
+  var _a, _b, _c, _d, _e;
+  if (!r) return [];
+  const e3 = [];
+  const L2 = "Passe g\xE9n\xE9r\xE9";
+  if (!(r.budgetHours > 0)) e3.push(`${L2} : budget > 0.`);
+  if (!(r.curve >= 0 && r.curve <= 10)) e3.push(`${L2} : courbe entre 0 et 10.`);
+  if (!(r.milestoneBoost >= 1 && r.milestoneBoost <= 10)) e3.push(`${L2} : renfort des jalons entre 1 et 10.`);
+  for (const t of [...(_a = r.milestones) != null ? _a : [], ...(_b = r.rareRelicTiers) != null ? _b : [], ...(_c = r.epicRelicTiers) != null ? _c : []])
+    if (!(Number.isInteger(t) && t >= 1 && t <= 29)) e3.push(`${L2} : palier ${t} hors des paliers 1 \xE0 29.`);
+  if (!(r.targetTopDay >= 1 && r.targetTopDay <= r.targetMedianDay && r.targetMedianDay <= r.latestMedianDay && r.latestMedianDay <= 31))
+    e3.push(`${L2} : jours cibles dans l'ordre (plus actif \u2264 m\xE9dian \u2264 au plus tard \u2264 31).`);
+  if (!(r.topPercentile > 0.5 && r.topPercentile <= 1)) e3.push(`${L2} : centile du plus actif entre 0,5 et 1.`);
+  if (!(r.pointsMin >= 1 && r.pointsMin <= r.pointsMax)) e3.push(`${L2} : points par palier min \u2264 max.`);
+  if (!(r.productionMaxHours >= 1)) e3.push(`${L2} : heures de production par r\xE9compense \u2265 1.`);
+  for (const [k, v] of Object.entries((_d = r.values) != null ? _d : {})) if (!(Number(v) > 0)) e3.push(`${L2} : valeur \xAB ${k} \xBB > 0.`);
+  if (!Object.values((_e = r.challengeWeights) != null ? _e : {}).some((v) => Number(v) > 0)) e3.push(`${L2} : au moins une action dans les d\xE9fis.`);
+  return e3;
+}
+function rewardValue(r, rules = passGenRules()) {
+  const v = rules.values;
+  switch (r.kind) {
+    case "production":
+      return r.hours;
+    case "amber":
+      return r.amount * v.amber;
+    case "tokens":
+      return r.count * v.tokens;
+    case "dossier":
+      return r.count * v.dossier;
+    case "capsule":
+      return r.level >= 5 ? v.capsule5 : r.level >= 4 ? v.capsule4 : v.capsule3;
+    case "relic":
+      return r.rarity === "epic" || r.rarity === "legendary" ? v.relicEpic : v.relicRare;
+    default:
+      return 0;
+  }
+}
+function tiersValue(tiers2, rules = passGenRules()) {
+  return tiers2.reduce((a, t) => a + t.reduce((b, r) => b + rewardValue(r, rules), 0), 0);
+}
+var CAPSULES2 = ["assault", "armor", "decoy", "veil"];
+var capsuleLevel = (t) => t < 10 ? 3 : t < 20 ? 4 : 5;
+function tierBudgets(tiers2, rules = passGenRules()) {
+  const n = Math.max(1, tiers2 - 1);
+  const w = Array.from({ length: n }, (_, i) => (1 + rules.curve * i / Math.max(1, n - 1)) * (rules.milestones.includes(i + 1) ? rules.milestoneBoost : 1));
+  const total2 = w.reduce((a, b) => a + b, 0);
+  return w.map((x) => rules.budgetHours * x / total2);
+}
+function generateBudgetTiers(rng, tiers2 = 30, rules = passGenRules()) {
+  var _a, _b, _c;
+  const budgets = tierBudgets(tiers2, rules);
+  const used = { amber: 0, tokens: 0, dossier: 0, capsules: 0 };
+  const out = [];
+  let carry = 0;
+  let prev = null;
+  let capIdx = Math.floor(rng() * CAPSULES2.length);
+  const v = rules.values;
+  const make = (kind, goal, t) => {
+    if (kind === "production") return { kind, hours: Math.max(1, Math.min(rules.productionMaxHours, Math.round(goal))) };
+    if (kind === "amber") {
+      const left = rules.caps.amber - used.amber;
+      const amount3 = Math.min(left - left % 5, Math.max(5, Math.round(goal / v.amber / 5) * 5));
+      return amount3 >= 5 ? { kind, amount: amount3 } : null;
+    }
+    if (kind === "tokens") {
+      const count2 = Math.min(rules.caps.tokens - used.tokens, Math.max(1, Math.round(goal / v.tokens)));
+      return count2 >= 1 ? { kind, count: count2 } : null;
+    }
+    if (kind === "dossier") {
+      const count2 = Math.min(rules.caps.dossier - used.dossier, Math.max(1, Math.round(goal / v.dossier)));
+      return count2 >= 1 ? { kind, count: count2 } : null;
+    }
+    if (used.capsules >= rules.caps.capsules) return null;
+    return { kind: "capsule", capsule: CAPSULES2[capIdx % CAPSULES2.length], level: capsuleLevel(t) };
+  };
+  const note4 = (r) => {
+    if (r.kind === "amber") used.amber += r.amount;
+    else if (r.kind === "tokens") used.tokens += r.count;
+    else if (r.kind === "dossier") used.dossier += r.count;
+    else if (r.kind === "capsule") {
+      used.capsules += 1;
+      capIdx += 1;
+    }
+  };
+  const draw = (goal, t, exclude) => {
+    var _a2;
+    const kinds = Object.keys(rules.weights).filter((k) => {
+      var _a3;
+      return ((_a3 = rules.weights[k]) != null ? _a3 : 0) > 0 && !exclude.includes(k);
+    });
+    const fits = kinds.filter((k) => {
+      const r = make(k, goal, t);
+      return r !== null && rewardValue(r, rules) <= Math.max(goal * 1.5, 1);
+    });
+    const pool = fits.length > 0 ? fits : ["production"];
+    const total3 = pool.reduce((a, k) => a + rules.weights[k], 0);
+    let x = rng() * total3;
+    return (_a2 = pool.find((k) => (x -= rules.weights[k]) <= 0)) != null ? _a2 : pool[0];
+  };
+  for (let t = 1; t < tiers2; t++) {
+    let goal = budgets[t - 1] + carry;
+    const list = [];
+    for (const [ts, rarity] of [
+      [rules.rareRelicTiers, "rare"],
+      [rules.epicRelicTiers, "epic"]
+    ]) {
+      if (!ts.includes(t)) continue;
+      const r = { kind: "relic", rarity };
+      list.push(r);
+      goal -= rewardValue(r, rules);
+    }
+    const milestone = rules.milestones.includes(t);
+    const slots = list.length > 0 ? goal > 1 ? 1 : 0 : milestone ? 2 : 1;
+    const taken = prev ? [prev] : [];
+    for (let s = 0; s < slots; s++) {
+      const share = s === 0 && slots === 2 ? goal * 0.6 : goal - list.reduce((a, r2) => a + (r2.kind === "relic" ? 0 : rewardValue(r2, rules)), 0);
+      const kind = draw(share, t, taken);
+      const r = (_a = make(kind, share, t)) != null ? _a : make("production", share, t);
+      note4(r);
+      list.push(r);
+      taken.push(r.kind);
+    }
+    carry = budgets[t - 1] + carry - list.reduce((a, r) => a + rewardValue(r, rules), 0);
+    prev = (_c = (_b = list.find((r) => r.kind !== "relic")) == null ? void 0 : _b.kind) != null ? _c : prev;
+    out.push(list);
+  }
+  if (carry >= 0.5 && out.length > 0) {
+    const last = out[out.length - 1];
+    const prod = last.find((r) => r.kind === "production");
+    if (prod) prod.hours += Math.round(carry);
+    else last.push({ kind: "production", hours: Math.round(carry) });
+  }
+  out.push([]);
+  const total2 = tiersValue(out, rules);
+  return {
+    tiers: out,
+    reasons: [
+      `R\xE9compenses tir\xE9es sous budget : ${Math.round(total2)} h de production \xE9quivalentes pour ${rules.budgetHours} h vis\xE9es (paliers 1 \xE0 ${tiers2 - 1}, jalons ${rules.milestones.join(", ")}).`,
+      `Plafonds du mois : ${used.amber} / ${rules.caps.amber} Ambre, ${used.tokens} / ${rules.caps.tokens} jetons, ${used.dossier} / ${rules.caps.dossier} dossiers, ${used.capsules} / ${rules.caps.capsules} capsules.`
+    ]
+  };
+}
+var round5 = (x) => Math.round(x / 5) * 5;
+function computePointsPerTier(pace, tiers2, rules = passGenRules()) {
+  if (!pace || !(pace.median > 0)) return null;
+  const top = Math.max(pace.top, pace.median);
+  const byMedian = pace.median * rules.targetMedianDay / tiers2;
+  const byTop = top * rules.targetTopDay / tiers2;
+  const medianMax = pace.median * rules.latestMedianDay / tiers2;
+  const raw = Math.max(byMedian, Math.min(byTop, medianMax));
+  const ppt = Math.max(rules.pointsMin, Math.min(rules.pointsMax, round5(raw)));
+  const reasons = [
+    `Points par jour mesur\xE9s : ${Math.round(pace.median)} (joueur m\xE9dian), ${Math.round(top)} (plus actif, ${Math.round(rules.topPercentile * 100)}e centile).`,
+    `Points par palier : ${ppt} (m\xE9dian au dernier palier vers le jour ${Math.round(tiers2 * ppt / pace.median)}, plus actif vers le jour ${Math.round(tiers2 * ppt / top)} ; cibles ${rules.targetMedianDay} et ${rules.targetTopDay}).`
+  ];
+  if (byTop > medianMax) reasons.push(`Le plus actif va beaucoup plus vite que le m\xE9dian : le m\xE9dian garde sa fin au jour ${rules.latestMedianDay} au plus tard.`);
+  if (ppt !== round5(raw)) reasons.push(`Garde-fou : points par palier born\xE9s entre ${rules.pointsMin} et ${rules.pointsMax}.`);
+  return { ppt, reasons };
+}
+function percentile(xs, p) {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p * s.length) - 1))];
+}
+function challengePool(weeklyMedian, rules = passGenRules()) {
+  return Object.entries(rules.challengeWeights).filter(([, w]) => Number(w) > 0).filter(([k]) => {
+    var _a;
+    return !rules.passiveKeys.includes(k) || ((_a = weeklyMedian[k]) != null ? _a : 0) >= rules.passiveMinWeekly;
+  }).map(([k, w]) => ({ key: k, weight: Number(w) }));
+}
+
 // src/game/procedural.ts
 var PROCEDURAL_KEY = "procedural";
 var DEFAULT_PROCEDURAL = { enabled: true, chapters: true, pass: true, achievements: true, leadDay: 20, log: [] };
@@ -16034,7 +16254,7 @@ function worldDigest(players, now) {
   const weeklyMedian = {};
   const totals = {};
   const heroes = {};
-  for (const k of ACTIVITY_KEYS) {
+  for (const k of [...ACTIVITY_KEYS, "bossAssault"]) {
     const counts = passes.map((s) => {
       var _a2, _b2;
       return (_b2 = (_a2 = s.activity) == null ? void 0 : _a2[k]) != null ? _b2 : 0;
@@ -16070,11 +16290,20 @@ function worldDigest(players, now) {
     passTiers,
     passFinishedShare: share(tiers2.filter((t) => t >= passTiers).length),
     chapterShare: month2 ? share(states.filter((s) => month2.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
+    passPace: passPace(passes, monthId, observedDays, now),
     allianceSizeMedian: median3(Object.values(active.reduce((acc, p) => {
       var _a2;
       return p.allianceId ? __spreadProps(__spreadValues({}, acc), { [p.allianceId]: ((_a2 = acc[p.allianceId]) != null ? _a2 : 0) + 1 }) : acc;
     }, {})))
   };
+}
+function passPace(passes, monthId, observedDays, now) {
+  const rates = passes.filter((s) => s.seasonId === monthId).map((s) => {
+    const days = s.finishedAtMs ? Math.max(1, observedDays - Math.floor((now - s.finishedAtMs) / 864e5)) : observedDays;
+    return s.points / days;
+  });
+  if (rates.length === 0) return void 0;
+  return { median: round2(median3(rates)), top: round2(percentile(rates, passGenRules().topPercentile)) };
 }
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 var MATURE_EPISODE_DAYS = 5;
@@ -16495,6 +16724,111 @@ function proposeAchievementTiers(defs, players, now) {
   return out;
 }
 
+// src/game/passSimulator.ts
+function defaultSimProfiles() {
+  const scale = (f) => Object.fromEntries(Object.entries(BASE_COUNTS).map(([k, v]) => [k, Math.round(v * f * 10) / 10]));
+  return [
+    { id: "casual", label: "Occasionnel", weekly: scale(0.5), loginDays: 4, chroniclesPerWeek: 0.5, seasonBossPerWeek: 0.5, allianceDailyPerWeek: 1, allianceBossPerWeek: 0.5 },
+    { id: "median", label: "M\xE9dian", weekly: scale(1), loginDays: 6, chroniclesPerWeek: 1, seasonBossPerWeek: 1, allianceDailyPerWeek: 3, allianceBossPerWeek: 1 },
+    { id: "active", label: "Assidu", weekly: scale(2), loginDays: 7, chroniclesPerWeek: 1, seasonBossPerWeek: 1, allianceDailyPerWeek: 6, allianceBossPerWeek: 1 }
+  ];
+}
+function profileFromMedian(weeklyMedian) {
+  const base = defaultSimProfiles()[1];
+  const weekly = __spreadValues({}, base.weekly);
+  for (const [k, v] of Object.entries(weeklyMedian)) if ((v != null ? v : 0) > 0) weekly[k] = v;
+  return __spreadProps(__spreadValues({}, base), { id: "server", label: "M\xE9diane du serveur", weekly });
+}
+function profilePointsPerDay(p) {
+  var _a, _b, _c, _d, _e;
+  if (p.pointsPerDay !== void 0 && p.pointsPerDay > 0) return p.pointsPerDay;
+  const perWeek = p.loginDays * PASS_POINTS.dailyLogin + ((_a = p.weekly.contract) != null ? _a : 0) * PASS_POINTS.contract + ((_b = p.weekly.bounty) != null ? _b : 0) * PASS_POINTS.bounty + ((_c = p.weekly.victory) != null ? _c : 0) * PASS_POINTS.victory + ((_d = p.weekly.raidRepelled) != null ? _d : 0) * PASS_POINTS.raidRepelled + ((_e = p.weekly.bossAssault) != null ? _e : 0) * PASS_POINTS.bossAssault + Math.min(p.chroniclesPerWeek, 1) * PASS_POINTS.chronicle + p.seasonBossPerWeek * PASS_POINTS.seasonBoss + p.allianceDailyPerWeek * PASS_POINTS.allianceDaily + p.allianceBossPerWeek * PASS_POINTS.allianceBoss;
+  return perWeek / 7;
+}
+function simulatePass(season, profile, monthDays = 30, horizon = 90) {
+  var _a, _b, _c;
+  const tiers2 = season.tiers.length;
+  const ppt = Math.max(1, season.pointsPerTier);
+  const perDay = profilePointsPerDay(profile);
+  const reqs = (t) => {
+    var _a2;
+    return normalizeTierReqs((_a2 = season.requirements) == null ? void 0 : _a2[String(t)]);
+  };
+  const tierDays = Array(tiers2).fill(null);
+  let points = 0;
+  let active = 1;
+  let counters = {};
+  const monthTotals = {};
+  const cumulative = season.challengeMode === "cumulative";
+  let activeSince = 0;
+  const clearedDay = [];
+  let slowest = null;
+  let byPoints = 0;
+  let byChallenge = 0;
+  const skipEmpty = () => {
+    var _a2;
+    while (active <= tiers2 && reqs(active).length === 0) {
+      clearedDay[active] = (_a2 = clearedDay[active]) != null ? _a2 : activeSince;
+      active++;
+    }
+  };
+  skipEmpty();
+  for (let day = 1; day <= horizon; day++) {
+    points += perDay;
+    for (const [k, v] of Object.entries(profile.weekly)) monthTotals[k] = ((_a = monthTotals[k]) != null ? _a : 0) + (v != null ? v : 0) / 7;
+    if (cumulative) {
+      while (active <= tiers2 && reqs(active).every((r) => {
+        var _a2;
+        return ((_a2 = monthTotals[r.key]) != null ? _a2 : 0) + 1e-9 >= r.count;
+      })) {
+        const days = day - activeSince;
+        if (!slowest || days > slowest.days) slowest = { tier: active, days, reqs: reqs(active) };
+        clearedDay[active] = day;
+        active++;
+        activeSince = day;
+        skipEmpty();
+      }
+    } else if (active <= tiers2) {
+      for (const [k, v] of Object.entries(profile.weekly)) counters[k] = ((_b = counters[k]) != null ? _b : 0) + (v != null ? v : 0) / 7;
+      const list = reqs(active);
+      if (list.every((r) => {
+        var _a2;
+        return ((_a2 = counters[r.key]) != null ? _a2 : 0) + 1e-9 >= r.count;
+      })) {
+        const days = day - activeSince;
+        if (!slowest || days > slowest.days) slowest = { tier: active, days, reqs: list };
+        clearedDay[active] = day;
+        active++;
+        counters = {};
+        activeSince = day;
+        skipEmpty();
+      }
+    }
+    for (let t = 1; t <= tiers2; t++) {
+      if (tierDays[t - 1] !== null) continue;
+      const pointsOk = points + 1e-9 >= t * ppt;
+      const challengeOk = clearedDay[t] !== void 0;
+      if (pointsOk && challengeOk) {
+        tierDays[t - 1] = day;
+        const pointsDay = Math.ceil(t * ppt / Math.max(1e-9, perDay));
+        if (((_c = clearedDay[t]) != null ? _c : 0) > pointsDay) byChallenge++;
+        else byPoints++;
+      } else break;
+    }
+    if (tierDays[tiers2 - 1] !== null) break;
+  }
+  const finishDay = tierDays[tiers2 - 1];
+  return {
+    profile,
+    pointsPerDay: Math.round(perDay * 10) / 10,
+    tierDays,
+    tiersInMonth: tierDays.filter((d) => d !== null && d <= monthDays).length,
+    finishDay,
+    bottleneck: byPoints + byChallenge === 0 ? "none" : byChallenge > byPoints ? "challenges" : "points",
+    slowestChallenge: slowest
+  };
+}
+
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
 var PASS_FINAL_AMBER = 300;
@@ -16562,7 +16896,9 @@ function generateTierChallenges(rng, focus, d, tiers2) {
   });
   return out;
 }
-var PASS_TARGET_DAY = 26;
+function passTargetDay() {
+  return passGenRules().targetMedianDay;
+}
 function weeklyRate(key, d) {
   var _a, _b;
   const base = (_a = BASE_COUNTS[key]) != null ? _a : 3;
@@ -16573,13 +16909,12 @@ function tierTargetDays(tiers2) {
   const w = Array.from({ length: tiers2 }, (_, i) => challengeRamp(i + 1, tiers2));
   const total2 = w.reduce((a, b) => a + b, 0);
   let acc = 0;
-  return w.map((x) => (acc += x, PASS_TARGET_DAY * acc / total2));
+  const target = passTargetDay();
+  return w.map((x) => (acc += x, target * acc / total2));
 }
 function generateCumulativeChallenges(rng, focus, d, tiers2) {
-  const playable = CHALLENGE_KEYS.filter((k) => {
-    var _a;
-    return k !== "warlordWin" || ((_a = d.weeklyMedian.warlordWin) != null ? _a : 0) > 0;
-  });
+  const weights = new Map(challengePool(d.weeklyMedian).map((x) => [x.key, x.weight]));
+  const playable = [...weights.keys()];
   const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   const day = tierTargetDays(tiers2);
   const by = (k, t) => weeklyRate(k, d) / 7 * day[t - 1];
@@ -16594,8 +16929,8 @@ function generateCumulativeChallenges(rng, focus, d, tiers2) {
     const extra = free2.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
     const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
     const keys = candidates.map((k) => {
-      var _a;
-      return { k, w: ((_a = used[k]) != null ? _a : 0) * 10 + pool.indexOf(k) + rng() * 3 };
+      var _a, _b;
+      return { k, w: (((_a = used[k]) != null ? _a : 0) * 10 + pool.indexOf(k) + rng() * 3) / ((_b = weights.get(k)) != null ? _b : 1) };
     }).sort((a, b) => a.w - b.w).slice(0, challengeSize(t)).map((x) => x.k);
     keys.forEach((k) => {
       var _a;
@@ -16829,7 +17164,7 @@ function regenerateChallenges(season, digest, variant = 0) {
   return __spreadProps(__spreadValues({}, season), { requirements: gen(rng, focus, digest, season.tiers.length) });
 }
 function generatePassSeason(o) {
-  var _a, _b, _c;
+  var _a, _b, _c, _d, _e;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));
   const rng = seededRandom2(`pass:${o.monthId}:${variant}`);
   const entry = catalogEntryFor(o.monthId);
@@ -16852,10 +17187,20 @@ function generatePassSeason(o) {
     prompt: portraitPrompt(entry, theme.accent)
   };
   const g = generatePass(rng, o.digest, (_c = o.basePointsPerTier) != null ? _c : PASS_RULES.pointsPerTier);
-  const tiers2 = g.pass.tiers.map((t) => t.map((r) => __spreadValues({}, r)));
+  const rules = passGenRules();
+  const reasons = [];
+  let tiers2 = g.pass.tiers.map((t) => t.map((r) => __spreadValues({}, r)));
+  if (rules.enabled) {
+    const b = generateBudgetTiers(seededRandom2(`passgen:${o.monthId}:${variant}`), tiers2.length, rules);
+    tiers2 = b.tiers;
+    reasons.push(...b.reasons);
+  } else reasons.push(`R\xE9compenses : gabarit fixe (budget d\xE9sactiv\xE9), ${Math.round(tiersValue(tiers2.slice(0, -1), rules))} h de production \xE9quivalentes.`);
   tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
+  const computed = computePointsPerTier(o.digest.passPace, tiers2.length, rules);
+  let pointsPerTier = (_d = computed == null ? void 0 : computed.ppt) != null ? _d : g.pass.pointsPerTier;
+  reasons.push(...(_e = computed == null ? void 0 : computed.reasons) != null ? _e : [...g.reasons, "Pas encore de points par jour mesur\xE9s : ajustement sur la part de joueurs qui ont fini."]);
   const focus = shuffle(rng, theme.focus);
-  const reasons = [...g.reasons, `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`];
+  reasons.push(`Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`);
   const requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers2.length);
   const totals = {};
   Object.values(requirements).forEach((list) => list.forEach((r) => {
@@ -16863,13 +17208,27 @@ function generatePassSeason(o) {
     return totals[r.key] = ((_a2 = totals[r.key]) != null ? _a2 : 0) + r.count;
   }));
   reasons.push(
-    `D\xE9fis cumul\xE9s (totaux du mois, paliers dans l'ordre) : le joueur m\xE9dian rel\xE8ve le dernier vers le jour ${PASS_TARGET_DAY}. Sommes des seuils : ${Object.entries(totals).map(([k, n]) => {
+    `D\xE9fis cumul\xE9s (totaux du mois, paliers dans l'ordre) : le joueur m\xE9dian rel\xE8ve le dernier vers le jour ${passTargetDay()}. Sommes des seuils : ${Object.entries(totals).map(([k, n]) => {
       var _a2;
       return `${OBJECTIVE_LABELS[k].toLowerCase()} ${n} (m\xE9diane ${(_a2 = o.digest.weeklyMedian[k]) != null ? _a2 : 0} par semaine)`;
     }).join(", ")}.`
   );
   for (const t of [1, 10, 20, 30].filter((x) => x <= tiers2.length))
     reasons.push(`D\xE9fi du palier ${t} : ${requirements[String(t)].map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} \xD7 ${r.count}`).join(", ")}.`);
+  const pace = passPaceCheck({ pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" }, o.digest);
+  if (pace.topDay !== null && pace.topDay < rules.targetTopDay && pointsPerTier < rules.pointsMax) {
+    for (let ppt = pointsPerTier + 5; ppt <= rules.pointsMax; ppt += 5) {
+      const c = passPaceCheck({ pointsPerTier: ppt, tiers: tiers2, requirements, challengeMode: "cumulative" }, o.digest);
+      if (c.medianDay === null || c.medianDay > rules.latestMedianDay) break;
+      pointsPerTier = ppt;
+      if (c.topDay === null || c.topDay >= rules.targetTopDay) break;
+    }
+    reasons.push(`Simulation : le plus actif finissait au jour ${pace.topDay} ; points par palier port\xE9s \xE0 ${pointsPerTier}.`);
+  }
+  const check = passPaceCheck({ pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" }, o.digest);
+  reasons.push(
+    `Simulation : joueur m\xE9dian au dernier palier ${check.medianDay === null ? "apr\xE8s la fin du mois" : `le jour ${check.medianDay}`} (cible ${rules.targetMedianDay}), plus actif ${check.topDay === null ? "apr\xE8s la fin du mois" : `le jour ${check.topDay}`} (pas avant ${rules.targetTopDay}).`
+  );
   const line = (speaker, text) => ({ speaker, text: fill2(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxi\xE8me acte", "D\xE9nouement"];
   const milestones = [0, 10, 20, 30].map((tier, i) => ({
@@ -16882,13 +17241,23 @@ function generatePassSeason(o) {
     status: "draft",
     theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: theme.image, prompt: illustrationPrompt(entry, theme.accent) },
     scenario: { synopsis: fill2(entry.synopsis, vars), milestones },
-    pointsPerTier: g.pass.pointsPerTier,
+    pointsPerTier,
     tiers: tiers2,
     requirements,
     challengeMode: "cumulative",
     commander,
-    auto: { generatedAtMs: o.now, variant, reasons }
+    auto: { generatedAtMs: o.now, variant, reasons, pace: check }
   };
+}
+function passPaceCheck(season, d) {
+  const [, defMedian, defActive] = defaultSimProfiles();
+  const hasData = Object.values(d.weeklyMedian).some((v) => (v != null ? v : 0) > 0);
+  const median7 = hasData ? profileFromMedian(d.weeklyMedian) : defMedian;
+  const pace = d.passPace;
+  const ratio = pace && pace.median > 0 ? Math.min(4, Math.max(1, pace.top / pace.median)) : 2;
+  const top = __spreadProps(__spreadValues({}, median7), { id: "top", label: "Plus actif", weekly: Object.fromEntries(Object.entries(median7.weekly).map(([k, v]) => [k, (v != null ? v : 0) * ratio])) });
+  const run = (p, ppd) => simulatePass(season, ppd ? __spreadProps(__spreadValues({}, p), { pointsPerDay: ppd }) : p, 31, 62).finishDay;
+  return { medianDay: run(median7, pace == null ? void 0 : pace.median), topDay: pace ? run(top, Math.max(pace.top, pace.median)) : run(defActive) };
 }
 var MONTH = /^\d{4}-\d{2}$/;
 function validatePassSeasons(cfg) {
@@ -18338,6 +18707,7 @@ var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
 var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 var DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
+var DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -18364,7 +18734,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES }
   });
 }
 var current = defaultGameContent();
@@ -18372,7 +18742,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -18444,6 +18814,12 @@ function applyGameContent(overrides) {
         tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.tiers) != null ? _ra : {}),
         multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ua = (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.xpTiers) == null ? void 0 : _ta.multipliers) != null ? _ua : {})
       }),
+      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_wa = (_va = overrides.rules) == null ? void 0 : _va.passGen) != null ? _wa : {}), {
+        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_za = (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) == null ? void 0 : _ya.values) != null ? _za : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_Ca = (_Ba = (_Aa = overrides.rules) == null ? void 0 : _Aa.passGen) == null ? void 0 : _Ba.caps) != null ? _Ca : {}),
+        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Fa = (_Ea = (_Da = overrides.rules) == null ? void 0 : _Da.passGen) == null ? void 0 : _Ea.weights) != null ? _Fa : {}),
+        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Ia = (_Ha = (_Ga = overrides.rules) == null ? void 0 : _Ga.passGen) == null ? void 0 : _Ha.challengeWeights) != null ? _Ia : {})
+      }),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -18468,7 +18844,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_va = content.relicSettings) == null ? void 0 : _va.loot, (_wa = content.relicSettings) == null ? void 0 : _wa.lootTokenCap);
+  setLootTables((_Ja = content.relicSettings) == null ? void 0 : _Ja.loot, (_Ka = content.relicSettings) == null ? void 0 : _Ka.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -18494,7 +18870,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _xa = content.rules.allianceBoss, { bosses: allianceBosses } = _xa, allianceBossRules = __objRest(_xa, ["bosses"]);
+  const _La = content.rules.allianceBoss, { bosses: allianceBosses } = _La, allianceBossRules = __objRest(_La, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -18504,6 +18880,7 @@ function applyGameContent(overrides) {
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
+  Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
   current = content;
   return content;
 }
@@ -18532,7 +18909,8 @@ var RULE_GROUP_LABELS = {
   catchup: "Rattrapage",
   mutators: "Mutateur de saison",
   territoryWar: "Guerre de territoire",
-  xpTiers: "Paliers d'XP"
+  xpTiers: "Paliers d'XP",
+  passGen: "Passe g\xE9n\xE9r\xE9"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
@@ -18581,6 +18959,7 @@ function validateRules(rules) {
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
+  errors.push(...validatePassGenRules(merged.passGen));
   const cb = merged.combat;
   if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par r\xE9sistance > 0.");
   if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
@@ -25056,7 +25435,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "6.8.0" : "dev";
+var LOGIC_VERSION = true ? "6.8.1" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
 
 // src/game/serverMetrics.ts
@@ -25167,7 +25546,7 @@ function addVitals(store, sample, now) {
   for (const d of Object.keys(out)) if (d < cutoff) delete out[d];
   return out;
 }
-function percentile(hist, p) {
+function percentile2(hist, p) {
   const total2 = hist.reduce((a, b) => a + b, 0);
   if (!total2) return null;
   let acc = 0;
@@ -25204,12 +25583,12 @@ function vitalsReport(store, now, days = 7) {
       return n + ((_a2 = desk[i]) != null ? _a2 : 0);
     }) : desk;
     const scale = (v) => v === null ? null : m.id === "cls" ? v / 1e3 : v;
-    const p75 = scale(percentile(both, 0.75));
+    const p75 = scale(percentile2(both, 0.75));
     return {
       id: m.id,
       p75,
-      p75Mobile: scale(percentile(mob, 0.75)),
-      p75Desktop: scale(percentile(desk, 0.75)),
+      p75Mobile: scale(percentile2(mob, 0.75)),
+      p75Desktop: scale(percentile2(desk, 0.75)),
       rating: p75 === null ? null : p75 <= m.good ? "good" : p75 <= m.poor ? "needs" : "poor"
     };
   });

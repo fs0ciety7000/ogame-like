@@ -70,6 +70,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.6.0 | [Menaces PNJ (AU1 : A à D)](6.6.0-menaces-pnj.md) | rework | [menaces-pnj](../proposals/menaces-pnj.md) |
 | 6.7.0 | [Rendez-vous étalés sur la semaine](6.7.0-calendrier-semaine.md) | rework | [calendrier-semaine](../proposals/calendrier-semaine.md) |
 | 6.7.1 | [Casino ouvert en permanence, réglages admin](6.7.1-casino-reglages.md) | correctif | [calendrier-semaine](../proposals/calendrier-semaine.md) |
+| 6.8.1 | [Passe généré par budget](6.8.1-passe-par-budget.md) | fonctionnalité + ajout | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md), lot 2 ; [progression](../proposals/progression.md), A |
 | 6.8.0 | [Progression mesurée, novembre généré](6.8.0-progression-generative.md) | fonctionnalité + ajout | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md), lot 1 ; [progression](../proposals/progression.md), C |
 | 6.7.2 | [Tous les réglages de GameRules dans le panel admin](6.7.2-reglages-admin-complets.md) | ajout | — |
 | — | [Revue AU3 : progression](docs-au3-progression.md) | docs | [progression](../proposals/progression.md) |

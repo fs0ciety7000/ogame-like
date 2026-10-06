@@ -76,8 +76,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   +100 % à son niveau maximal ni le niveau maximal de l'unité qu'elle monte (`validateTechEffect`). Avant d'ajouter un bonus « contre les PNJ »,
   vérifier qu'il n'existe pas déjà dans l'unité (ex. `KESH_PVE_BONUS`) : incident `tech19_2`, revue AU1.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
-- Réglages : voir la règle n° 2 (tout `GameRules` dans le panel admin). Nouveau groupe de règles : fusion dans `mergeContent`, `Object.assign`
-  dans `applyGameContent`, libellé dans `RULE_GROUP_LABELS`, champs dans `panels.tsx` ou l'onglet du domaine.
+- Réglages : voir la règle n° 2 (tout `GameRules` dans le panel admin). Nouveau groupe de règles : fusion dans le bloc `rules` d'`applyGameContent` (chaque sous-objet
+  fusionné champ par champ, sinon un réglage partiel efface les autres), `Object.assign` dans `applyGameContent`, libellé dans `RULE_GROUP_LABELS`, champs dans `panels.tsx` ou l'onglet du domaine.
 - Initialisation des modules : un objet de règles au niveau du module ne lit jamais une constante importée d'un autre module du moteur
   (`keshPveBonus: KESH_PVE_BONUS` a planté le chargement du jeu dans le navigateur : import circulaire units ↔ combat, tests verts).
   Valeur littérale, ou accesseur (`get x() { … }`) lu à l'usage. Toujours ouvrir l'appli dans un navigateur après un changement du moteur.

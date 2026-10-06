@@ -28,6 +28,7 @@ import { CATCHUP_RULES, validateCatchupRules } from "@/game/catchup";
 import { MUTATOR_RULES, validateMutatorRules } from "@/game/mutators";
 import { TERRITORY_WAR_RULES, validateTerritoryWarRules } from "@/game/territoryWar";
 import { XP_TIER_RULES, validateXpTierRules } from "@/game/xpTiers";
+import { PASS_GEN_RULES, validatePassGenRules } from "@/game/passGen";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -84,6 +85,8 @@ export interface GameRules {
   territoryWar: typeof TERRITORY_WAR_RULES;
   /** 5.18 : paliers d'XP journaliers par source et bonus au jeu actif. */
   xpTiers: typeof XP_TIER_RULES;
+  /** 6.8.1 : passe généré (budget des récompenses, rythme, défis). */
+  passGen: typeof PASS_GEN_RULES;
 }
 
 export interface GameContent {
@@ -152,6 +155,7 @@ const DEFAULT_CATCHUP_RULES = { ...CATCHUP_RULES };
 const DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
 const DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 const DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
+const DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
@@ -180,7 +184,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES },
   });
 }
 
@@ -269,6 +273,14 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         tiers: { ...defaults.rules.xpTiers.tiers, ...(overrides.rules?.xpTiers?.tiers ?? {}) },
         multipliers: { ...defaults.rules.xpTiers.multipliers, ...(overrides.rules?.xpTiers?.multipliers ?? {}) },
       },
+      passGen: {
+        ...defaults.rules.passGen,
+        ...(overrides.rules?.passGen ?? {}),
+        values: { ...defaults.rules.passGen.values, ...(overrides.rules?.passGen?.values ?? {}) },
+        caps: { ...defaults.rules.passGen.caps, ...(overrides.rules?.passGen?.caps ?? {}) },
+        weights: { ...defaults.rules.passGen.weights, ...(overrides.rules?.passGen?.weights ?? {}) },
+        challengeWeights: { ...defaults.rules.passGen.challengeWeights, ...(overrides.rules?.passGen?.challengeWeights ?? {}) },
+      },
       streak: (() => {
         const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
         const d = defaults.rules.streak;
@@ -334,6 +346,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   MUTATOR_RULES.overrides = { ...content.rules.mutators.overrides };
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
+  Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
   current = content;
   return content;
 }
@@ -366,6 +379,7 @@ export const RULE_GROUP_LABELS: Record<string, string> = {
   mutators: "Mutateur de saison",
   territoryWar: "Guerre de territoire",
   xpTiers: "Paliers d'XP",
+  passGen: "Passe généré",
 };
 
 /**
@@ -422,6 +436,7 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
+  errors.push(...validatePassGenRules(merged.passGen));
   // 5.18 : combat en tours.
   const cb = merged.combat;
   if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par résistance > 0.");

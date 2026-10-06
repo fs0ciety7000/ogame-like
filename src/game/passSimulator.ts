@@ -27,6 +27,8 @@ export interface PassSimProfile {
   allianceDailyPerWeek: number;
   /** Boss d'alliance abattus, par semaine. */
   allianceBossPerWeek: number;
+  /** 6.8.1 : points de passe par jour mesurés sur le serveur (remplace le calcul par les actions). */
+  pointsPerDay?: number;
 }
 
 /** Profils par défaut, autour des quantités de base des objectifs (≈ une semaine de jeu médiane). */
@@ -72,6 +74,7 @@ export interface PassSimResult {
 
 /** Points de passe par jour d'un profil (sans les défis). */
 export function profilePointsPerDay(p: PassSimProfile): number {
+  if (p.pointsPerDay !== undefined && p.pointsPerDay > 0) return p.pointsPerDay;
   const perWeek =
     p.loginDays * PASS_POINTS.dailyLogin +
     (p.weekly.contract ?? 0) * PASS_POINTS.contract +
