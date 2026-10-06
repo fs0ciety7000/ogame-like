@@ -99,3 +99,73 @@ export function addReport(reporters: unknown, uid: string): { reporters: string[
   const next = list.includes(uid) ? list : [...list, uid];
   return { reporters: next, hide: next.length >= GLOBAL_CHAT_RULES.reportsToHide };
 }
+
+/* ---------- 5.26.2 : réactions emote et salons thématiques ---------- */
+
+/** Réactions proposées sous un message (jeu fixe : lisible et modérable). */
+export const CHAT_REACTIONS = ["👍", "😂", "🔥", "😮", "😢", "👏"] as const;
+export type ChatReactions = Partial<Record<string, string[]>>;
+
+export function normalizeReactions(raw: unknown): ChatReactions {
+  const out: ChatReactions = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const e of CHAT_REACTIONS) {
+    const list = (raw as Record<string, unknown>)[e];
+    if (Array.isArray(list)) {
+      const uids = [...new Set(list.filter((x): x is string => typeof x === "string"))].slice(0, 200);
+      if (uids.length) out[e] = uids;
+    }
+  }
+  return out;
+}
+
+/** Ajoute ou retire la réaction d'un joueur. */
+export function toggleReaction(raw: unknown, emoji: string, uid: string): ChatReactions {
+  if (!(CHAT_REACTIONS as readonly string[]).includes(emoji)) throw new Error("Réaction inconnue.");
+  const r = normalizeReactions(raw);
+  const list = r[emoji] ?? [];
+  const next = list.includes(uid) ? list.filter((x) => x !== uid) : [...list, uid];
+  if (next.length) r[emoji] = next;
+  else delete r[emoji];
+  return r;
+}
+
+export const CHAT_ROOM_RULES = {
+  nameMin: 3,
+  nameMax: 24,
+  topicMax: 120,
+  /** Salons ouverts par joueur, et sur tout le serveur. */
+  perOwner: 1,
+  maxOpen: 30,
+  /** Un salon sans message depuis N jours se ferme tout seul. */
+  idleDays: 14,
+};
+
+export interface ChatRoom {
+  id: string;
+  name: string;
+  topic: string;
+  ownerUid: string;
+  ownerPseudo: string;
+  createdAtMs: number;
+  lastMessageAtMs: number;
+  closed: boolean;
+}
+
+/** Vérifie un nouveau salon (nom filtré, plafonds par joueur et serveur). */
+export function validateRoom(raw: unknown, ctx: { ownerOpen: number; totalOpen: number; names: string[]; extraFilter?: readonly string[] }): { name: string; topic: string } {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const name = String(r.name ?? "").replace(/\s+/g, " ").trim();
+  const topic = String(r.topic ?? "").replace(/\s+/g, " ").trim().slice(0, CHAT_ROOM_RULES.topicMax);
+  if (name.length < CHAT_ROOM_RULES.nameMin || name.length > CHAT_ROOM_RULES.nameMax) throw new Error(`Nom du salon : ${CHAT_ROOM_RULES.nameMin} à ${CHAT_ROOM_RULES.nameMax} caractères.`);
+  if (filterText(name, ctx.extraFilter).masked || filterText(topic, ctx.extraFilter).masked) throw new Error("Nom ou sujet refusé par le filtre du canal.");
+  if (ctx.names.some((n) => fold(n) === fold(name)) || fold(name) === "global") throw new Error("Un salon porte déjà ce nom.");
+  if (ctx.ownerOpen >= CHAT_ROOM_RULES.perOwner) throw new Error("Tu as déjà un salon ouvert : ferme-le d'abord.");
+  if (ctx.totalOpen >= CHAT_ROOM_RULES.maxOpen) throw new Error("Trop de salons ouverts sur le serveur pour l'instant.");
+  return { name, topic };
+}
+
+/** Salon resté muet trop longtemps (fermeture automatique). */
+export function roomIdle(room: Pick<ChatRoom, "createdAtMs" | "lastMessageAtMs">, now: number): boolean {
+  return now - Math.max(room.createdAtMs, room.lastMessageAtMs) > CHAT_ROOM_RULES.idleDays * 86_400_000;
+}

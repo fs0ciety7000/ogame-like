@@ -204,7 +204,7 @@ export { upcomingMaintenance } from "@/game/maintenance";
 export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
 export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
 export { tally, validateVote } from "@/game/polls";
-export { activeMute, addReport, CHAT_MODERATION_KEYS, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
+export { activeMute, addReport, CHAT_MODERATION_KEYS, CHAT_ROOM_RULES, roomIdle, toggleReaction, validateRoom, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";

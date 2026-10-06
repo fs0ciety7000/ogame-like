@@ -3237,11 +3237,87 @@
         "name": "masked",
         "type": "bool",
         "required": false
+      },
+      {
+        "name": "room",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "reactions",
+        "type": "json",
+        "required": false,
+        "maxSize": 20000,
+        "presentable": false
       }
     ],
     "indexes": [
       "CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)",
-      "CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)"
+      "CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)",
+      "CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"
+    ]
+  },
+  {
+    "id": "pbc_ce_chat_rooms",
+    "name": "chat_rooms",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\" && closed = false",
+    "viewRule": "@request.auth.id != \"\" && closed = false",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "name",
+        "type": "text",
+        "required": true,
+        "max": 24,
+        "presentable": false
+      },
+      {
+        "name": "topic",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false
+      },
+      {
+        "name": "ownerUid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "ownerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "name": "lastMessageAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "name": "closed",
+        "type": "bool",
+        "required": false,
+        "presentable": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"
     ]
   }
 ]
