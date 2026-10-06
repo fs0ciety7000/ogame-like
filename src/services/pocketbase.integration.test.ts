@@ -27,7 +27,7 @@ import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
-import { fleetCargoCapacity } from "@/game/combat";
+import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
 import { XP_TIER_RULES } from "@/game/xpTiers";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity, keptOnAscension } from "@/game/buildings";
@@ -330,9 +330,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const bAfter = (await snap(bId))!;
     expect(bAfter.defeats).toBe(1);
     expect(bAfter.lastDefeatAtMs).toBeGreaterThan(0);
-    // Butin limité par la cargaison des 5 chasseurs, retiré au défenseur.
+    // Butin limité par la cargaison des chasseurs (6.2 : × la surcharge de pillage), retiré au défenseur.
     const looted = Object.values((res.loot ?? {}) as Record<string, number>).reduce((a, b) => a + (b ?? 0), 0);
-    expect(looted).toBe(fleetCargoCapacity({ chasseur: { level: 1, count: 0 } }, landed.units));
+    expect(looted).toBe(fleetCargoCapacity({ chasseur: { level: 1, count: 0 } }, landed.units) * COMBAT_RULES.lootCargoFactor);
     expect(bAfter.resources.reinforcedSteel).toBe(bBefore.resources.reinforcedSteel - (res.loot?.reinforcedSteel ?? 0));
 
     // Délai de 2 h (et bouclier) sur la même cible.
