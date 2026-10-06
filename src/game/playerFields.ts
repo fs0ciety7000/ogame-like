@@ -35,6 +35,7 @@ export const GAME_FIELDS = [
   "commanders",
   "relics",
   "modules",
+  "empireClass",
   "synthesis",
   "profileStyle",
   "renamed",

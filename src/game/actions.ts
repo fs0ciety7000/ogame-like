@@ -1,3 +1,4 @@
+import { chooseEmpireClass } from "@/game/empireClassChoose";
 import { assertEliteBuildable } from "@/game/eliteUnits";
 import { playerModifiers } from "@/game/modifiers";
 import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
@@ -93,6 +94,7 @@ export type GameAction =
   | { type: "colonyDefense"; colonyId: string; unitId: string; qty: number }
   | { type: "colonyRename"; colonyId: string; name: string }
   | { type: "colonySpec"; colonyId: string; spec: string }
+  | { type: "empireClass"; classId: string }
   | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
   | { type: "commanderAssign"; ids: string[] }
@@ -414,6 +416,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "colonyRename":
       renameColony(player, String(action.colonyId ?? ""), action.name);
       return undefined;
+
+    case "empireClass":
+      return chooseEmpireClass(player, action.classId, now);
 
     case "colonySpec":
       setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);

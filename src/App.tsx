@@ -22,6 +22,7 @@ const HallOfFamePage = lazyPage(() => import("@/pages/HallOfFamePage"), "HallOfF
 const DashboardPage = lazyPage(() => import("@/pages/DashboardPage"), "DashboardPage");
 const OrdersPage = lazyPage(() => import("@/pages/OrdersPage"), "OrdersPage");
 const WalletPage = lazyPage(() => import("@/pages/WalletPage"), "WalletPage");
+const EmpireClassPage = lazyPage(() => import("@/pages/EmpireClassPage"), "EmpireClassPage");
 const ResourcesPage = lazyPage(() => import("@/pages/ResourcesPage"), "ResourcesPage");
 const BuildingsPage = lazyPage(() => import("@/pages/BuildingsPage"), "BuildingsPage");
 const UnitsPage = lazyPage(() => import("@/pages/UnitsPage"), "UnitsPage");
@@ -113,6 +114,7 @@ export default function App() {
                 <Route index element={<DashboardPage />} />
                 <Route path="ordres" element={<OrdersPage />} />
                 <Route path="portefeuille" element={<WalletPage />} />
+                <Route path="classe" element={<EmpireClassPage />} />
                 <Route path="ressources" element={<ResourcesPage />} />
                 <Route path="batiments" element={<BuildingsPage />} />
                 <Route path="unites" element={<UnitsPage />} />

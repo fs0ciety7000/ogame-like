@@ -92,7 +92,7 @@ export function FleetsPanel({
   const incoming = fleets.filter((f) => isHostile(f, uid));
   const mine = fleets.filter((f) => f.ownerUid === uid && f.status !== "done");
   // 5.33 : emplacements de flotte (sondes et expéditions exclues, comme au serveur).
-  const slots = fleetSlots();
+  const slots = fleetSlots(usePlayerStore.getState().player);
   const used = mine.filter((f) => !SLOT_FREE_MISSIONS.includes(f.mission)).length;
   const full = used >= slots;
   const relaunchBlocked = !!last && full && !SLOT_FREE_MISSIONS.includes(last.mission);

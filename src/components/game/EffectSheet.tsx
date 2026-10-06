@@ -20,6 +20,7 @@ const SOURCE_TONE: Record<EffectSourceKind, HudTone> = {
   capsule: "danger",
   season: "neutral",
   module: "mint",
+  class: "gold",
 };
 
 const GROUPS: { id: EffectStatInfo["group"]; label: string }[] = [

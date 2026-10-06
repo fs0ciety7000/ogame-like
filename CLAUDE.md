@@ -56,6 +56,9 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Une récompense quotidienne ou à réclamer s'ajoute à `pendingClaims` (`claimAll.ts`) : elle est alors couverte par « Tout réclamer »
   et par la pastille unique d'Ordres du jour (`ordersReadyCount`). Pas de nouvelle pastille dans la barre latérale.
 - Une récompense en vaisseaux (épave, coffre…) passe par `addReady` (`workshop.ts`), jamais directement dans `units` ou une flotte : invariant I3.
+- Nouveau champ du profil joueur : l'ajouter à `GAME_FIELDS` (`playerFields.ts`), au type `PlayerState` et à `pocketbase/pb_schema.json`
+  (le serveur crée le champ au démarrage par la synchronisation du schéma). Un nouveau bonus passe par une source du circuit d'effets
+  (`empireEffects`) et reste sous les plafonds : `derived.test.ts` échoue si un maximum théorique les dépasse.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.

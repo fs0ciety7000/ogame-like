@@ -10,7 +10,7 @@ import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudChip, HudSwitch } from "@/components/ui/hud";
 import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet, Compass } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -107,6 +107,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/planificateur", label: "Planificateur", icon: CalendarClock, lock: "planner" },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
+      { to: "/game/classe", label: "Classe d'empire", icon: Compass },
       { to: "/game/ascension", label: "Ascension", icon: Sparkles },
       { to: "/game/statistiques", label: "Statistiques", icon: BarChart3 },
       { to: "/game/portefeuille", label: "Portefeuille", icon: Wallet },

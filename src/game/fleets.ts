@@ -1,3 +1,4 @@
+import { empireClassPerk } from "@/game/empireClass";
 import { assertEliteMission } from "@/game/eliteUnits";
 import { ALLIANCE_BOSS_RULES } from "@/game/allianceBoss";
 import { recordChronicle } from "@/game/chronicles";
@@ -53,12 +54,13 @@ export const FLEET_RULES = {
 /** 5.33 : missions qui n'occupent pas d'emplacement de flotte. */
 export const SLOT_FREE_MISSIONS = ["spy", "expedition"];
 
-export function fleetSlots(_owner?: Pick<PlayerState, "buildings">): number {
-  return Math.max(1, Math.floor(FLEET_RULES.slotsBase));
+export function fleetSlots(owner?: Partial<Pick<PlayerState, "empireClass">> | null): number {
+  // 6.0 : +2 pour la classe Seigneur de guerre.
+  return Math.max(1, Math.floor(FLEET_RULES.slotsBase)) + empireClassPerk(owner, "fleetSlots");
 }
 
 /** Refus quand tous les emplacements sont pris, sinon null. `active` : flottes en vol qui occupent un emplacement. */
-export function fleetSlotBlocker(owner: Pick<PlayerState, "buildings">, mission: string, active: number | undefined): string | null {
+export function fleetSlotBlocker(owner: Partial<Pick<PlayerState, "empireClass">>, mission: string, active: number | undefined): string | null {
   if (active === undefined || SLOT_FREE_MISSIONS.includes(mission)) return null;
   const slots = fleetSlots(owner);
   return active >= slots ? `Tous tes emplacements de flotte sont pris (${slots} / ${slots}). Attends un retour ou rappelle une flotte. Les sondes et les expéditions ne comptent pas.` : null;

@@ -713,6 +713,10 @@ export function setColonySpec(colonyId: string, spec: string) {
   return act({ type: "colonySpec", colonyId, spec });
 }
 
+export function chooseEmpireClass(classId: string) {
+  return act({ type: "empireClass", classId });
+}
+
 export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number) {
   return act({ type: "colonyRoute", colonyId, everyHours, keepPct });
 }

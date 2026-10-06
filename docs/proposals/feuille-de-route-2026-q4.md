@@ -1,6 +1,6 @@
 # Proposition : feuille de route 2026, 4e trimestre
 
-Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F livrés ensemble en 5.32.0 (`docs/changes/5.32.0-entrepot-chantiers.md`) ; option B du lot E (butin) à simuler. Lots G, H et I livrés ensemble en 5.33.0 (`docs/changes/5.33.0-*.md`, propositions `alliances-grandes.md`, `flottes-emplacements.md`, `routes-logistiques.md`) ; reste du lot I (flotte basée, route inverse) plus tard.
+Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F livrés ensemble en 5.32.0 (`docs/changes/5.32.0-entrepot-chantiers.md`) ; option B du lot E (butin) à simuler. Lots G, H et I livrés ensemble en 5.33.0 (`docs/changes/5.33.0-*.md`, propositions `alliances-grandes.md`, `flottes-emplacements.md`, `routes-logistiques.md`) ; reste du lot I (flotte basée, route inverse) plus tard. Lot J.1 (classes) livré en 6.0.0 (`docs/changes/6.0.0-classes-empire.md`) ; J.2 (unités de classe) attend les illustrations.
 Question 2 sans réponse : le lot C affiche contrats et missions du jour ensemble, sans fusionner leurs règles ; la fusion reste à décider.
 
 Sources :
@@ -30,7 +30,7 @@ Objectif de l'utilisateur :
 | **G** | 5.33.0 | Alliances plus grandes | 6 → 12 → 20 membres par recherche d'alliance ; coûts et boss d'alliance proportionnels à la taille ; garnisons et territoires recalés | E5 | L | **oui** |
 | **H** | 5.33.0 | Flottes | emplacements de flotte (base généreuse + technologie), emplacement d'expédition séparé ; presets et « relancer la dernière mission » | E4 | M | **oui** |
 | **I** | 5.33.0 (routes) | Colonies vivantes | routes logistiques automatiques (transport récurrent), file de défense coloniale améliorée ; flotte basée plus tard | E6 | L | **oui** |
-| **J** | 6.0 | Classes d'empire | choisir une identité (Industriel, Seigneur de guerre, Explorateur) avec un bonus et une unité propres, changeable contre de l'Ambre ; inspiré des classes d'OGame | — | XL | **oui** |
+| **J** | 6.0.0 (J.1) | Classes d'empire | choisir une identité (Industriel, Seigneur de guerre, Explorateur) avec un bonus et une unité propres, changeable contre de l'Ambre ; inspiré des classes d'OGame | — | XL | **oui** |
 
 Taille : S ≤ 1 jour, M 2 à 3 jours, L ≈ 1 semaine, XL plusieurs semaines.
 

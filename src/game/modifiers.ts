@@ -4,6 +4,7 @@ import { relicEffects } from "@/game/relics";
 import { moduleEffects } from "@/game/modules";
 import { territoryEffects } from "@/game/territories";
 import { talentEffects } from "@/game/talents";
+import { empireClassEffects } from "@/game/empireClass";
 import { synthesisEffects } from "@/game/synthesis";
 import { techEffectGrants } from "@/game/technologies";
 import { effectSheet, effectTotal, rawEffectTotal, type EffectGrant, type EffectScope, type EffectSheetLine } from "@/game/effects";
@@ -49,7 +50,7 @@ export interface Modifiers {
   buildingDiscount: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
@@ -64,6 +65,8 @@ export function empireEffects(player: ModPlayer | null | undefined, now: number 
     ...commanderEffects(player as Pick<PlayerState, "commanders">),
     ...relicEffects(player as Pick<PlayerState, "relics" | "ascensions">),
     ...talentEffects(player as Pick<PlayerState, "talents">),
+    // 6.0 : classe d'empire.
+    ...empireClassEffects(player),
     // 5.26 : modules de vaisseaux montés.
     ...moduleEffects(player as Pick<PlayerState, "modules">),
     ...territoryEffects(player.territory, now),

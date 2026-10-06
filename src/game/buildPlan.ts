@@ -1,3 +1,4 @@
+import { empireClassPerk } from "@/game/empireClass";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { recordContract } from "@/game/contracts";
@@ -28,10 +29,11 @@ export const BUILD_PLAN_RULES = {
    au-delà de la limite (avant la 5.32) va à son terme ; seul le lancement suivant attend. */
 export const BUILD_SLOT_BONUS_LEVELS = [5, 10];
 
-export function buildSlots(player: Pick<PlayerState, "buildings">): number {
+export function buildSlots(player: Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "empireClass">>): number {
   const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
   const level = s?.unlocked ? s.level ?? 0 : 0;
-  return Math.max(1, Math.floor(ECONOMY_RULES.buildSlotsBase)) + BUILD_SLOT_BONUS_LEVELS.filter((l) => level >= l).length;
+  // 6.0 : +1 pour la classe Industriel.
+  return Math.max(1, Math.floor(ECONOMY_RULES.buildSlotsBase)) + BUILD_SLOT_BONUS_LEVELS.filter((l) => level >= l).length + empireClassPerk(player, "buildSlots");
 }
 
 export function activeBuildCount(queues: Pick<QueuesState, "buildingUpgrades">): number {
@@ -39,7 +41,7 @@ export function activeBuildCount(queues: Pick<QueuesState, "buildingUpgrades">):
 }
 
 /** Raison du refus quand tous les chantiers sont occupés, sinon null. */
-export function buildSlotBlocker(player: Pick<PlayerState, "buildings">, queues: Pick<QueuesState, "buildingUpgrades">): string | null {
+export function buildSlotBlocker(player: Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "empireClass">>, queues: Pick<QueuesState, "buildingUpgrades">): string | null {
   const slots = buildSlots(player);
   if (activeBuildCount(queues) < slots) return null;
   const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];

@@ -1,3 +1,4 @@
+import { empireClassPerk } from "@/game/empireClass";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { playerCombatEffects } from "@/game/effectTargets";
 import { addReady, applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
@@ -145,6 +146,11 @@ function deepen(fleet: ExpeditionFleet, gain: Partial<Record<ResourceId, number>
 
 const riskOf = (fleet: ExpeditionFleet) => 1 + EXPEDITION_RULES.deepRisk * expeditionDepth(fleet);
 
+/** 6.0 : expéditions par jour, +1 pour la classe Explorateur. */
+export function expeditionsPerDay(owner?: Partial<Pick<PlayerState, "empireClass">> | null): number {
+  return Math.max(0, Math.floor(EXPEDITION_RULES.maxPerDay)) + empireClassPerk(owner, "expeditionsPerDay");
+}
+
 /** Liste lisible : « 1 200 ferraille, 300 énergie ». */
 export function fleetShips(units: Record<string, number>): number {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
@@ -155,7 +161,8 @@ export function launchExpedition(owner: PlayerState, raw: Record<string, unknown
   const hours = Number(hoursIn);
   if (!EXPEDITION_RULES.durations.includes(hours)) throw new GameActionError(`Durée d'expédition invalide (${EXPEDITION_RULES.durations.join(", ")} h).`);
   if (active > 0) throw new GameActionError("Une expédition est déjà en cours.");
-  if (today >= EXPEDITION_RULES.maxPerDay) throw new GameActionError(`Limite de ${EXPEDITION_RULES.maxPerDay} expéditions par jour atteinte.`);
+  const perDay = expeditionsPerDay(owner);
+  if (today >= perDay) throw new GameActionError(`Limite de ${perDay} expéditions par jour atteinte.`);
   const units: Record<string, number> = {};
   for (const [id, v] of Object.entries(raw ?? {})) {
     const qty = Math.floor(Number(v));

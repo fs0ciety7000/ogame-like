@@ -16,6 +16,7 @@ import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
 import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
+import { EMPIRE_CLASS_RULES } from "@/game/empireClass";
 import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES, validateBossSchedule } from "@/game/events";
@@ -51,6 +52,8 @@ export interface GameRules {
   combat: typeof COMBAT_RULES;
   economy: typeof ECONOMY_RULES;
   fleets: typeof FLEET_RULES;
+  /** 6.0 : classes d'empire. */
+  classes: typeof EMPIRE_CLASS_RULES;
   spy: typeof SPY_RULES;
   debris: typeof DEBRIS_RULES;
   patrol: typeof PATROL_RULES;
@@ -125,6 +128,7 @@ const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
+const DEFAULT_EMPIRE_CLASS_RULES = { ...EMPIRE_CLASS_RULES };
 const DEFAULT_SPY_RULES = { ...SPY_RULES };
 const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
@@ -163,7 +167,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
   });
 }
 
@@ -205,6 +209,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
       fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
+      classes: { ...defaults.rules.classes, ...(overrides.rules?.classes ?? {}) },
       spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
       debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
@@ -281,6 +286,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
+  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
@@ -320,6 +326,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   combat: "Combat",
   economy: "Économie",
   fleets: "Flottes",
+  classes: "Classes d'empire",
   spy: "Espionnage",
   debris: "Débris",
   patrol: "Patrouilles",

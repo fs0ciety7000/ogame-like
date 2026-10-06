@@ -13,9 +13,10 @@ territoires, modules, capsules, mutateurs de saison (couche « empire »). Plafo
 | Capsules (Labo de synthèse) | 5 %/niv., 3 en stock, 12 h actives |
 | Talents | 3 points par Ascension, rang 3 max |
 | Mutateurs | un par mois (ou aucun) |
+| Classe d'empire (6.0) | une au choix : Industriel, Seigneur de guerre, Explorateur ; 3 effets + 1 avantage propre (chantier, emplacements de flotte, expédition) ; changement 100 Ambre / 7 jours |
 
 ## Code et admin
-`effects.ts`, `modifiers.ts`, `effectTargets.ts`, `effectCatalog.ts`, `commanders.ts`, `relics.ts`, `modules.ts`, `synthesis.ts`, `talents.ts`, `mutators.ts`.
+`effects.ts`, `modifiers.ts`, `effectTargets.ts`, `effectCatalog.ts`, `commanders.ts`, `relics.ts`, `modules.ts`, `synthesis.ts`, `talents.ts`, `mutators.ts`, `empireClass.ts`.
 Admin : éditeur d'effets composables, rapport d'impact.
 
 ## État (audit 2026-10-06)

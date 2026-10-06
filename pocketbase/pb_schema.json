@@ -281,6 +281,12 @@
         "maxSize": 50000
       },
       {
+        "name": "empireClass",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
+      },
+      {
         "name": "synthesis",
         "type": "json",
         "required": false,

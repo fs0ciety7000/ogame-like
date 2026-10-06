@@ -641,6 +641,23 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, slotsBase: v ?? 10 } }))}
           />
         </Section>
+        <Section title="Classes d'empire">
+          <NumberField
+            label="Ambre pour changer de classe"
+            value={rules.classes.changeAmber}
+            min={0}
+            step={10}
+            hint="Le premier choix est gratuit. 0 = changement gratuit."
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, changeAmber: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Jours entre deux changements"
+            value={rules.classes.changeCooldownDays}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, changeCooldownDays: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Espionnage">
           <NumberField
             label="Trajet des sondes : durée fixe (min)"
