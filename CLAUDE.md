@@ -94,6 +94,8 @@ Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hook
   - pour les lots importants, un billet `content/blog/NN-slug.md`.
 - Après la fusion d'une PR qui touche `pocketbase/pb_hooks`, rappeler à l'admin de cliquer « Mettre à jour les hooks ».
 - Aucun secret (mot de passe, jeton) dans le dépôt, même temporaire.
+- `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).
+  Jamais de règle vers la production ni de push sur `main`.
 
 ## Méthode de game design
 
