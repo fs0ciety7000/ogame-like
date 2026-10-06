@@ -59,6 +59,10 @@ export const AUCTION_RULES = {
   /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
   minStart: { common: 100, rare: 1, amber: 1 },
   maxStart: 1e12,
+  /** 6.9.0 (AU4) : alertes de vente par joueur, historique des prix (ventes gardées par lot, lots suivis). */
+  watchMax: 5,
+  historyPerLot: 20,
+  historyMaxLots: 400,
 };
 
 export const AUCTION_CURRENCIES: AuctionCurrency[] = [...RESOURCE_LIST.map((r) => r.id as ResourceId), "amber"];
@@ -235,8 +239,20 @@ export function creditBid(player: PlayerState, res: AuctionCurrency, amount: num
 /* ---------- 5.26.2 : historique des prix et alertes de vente ---------- */
 
 export const AUCTION_HISTORY_KEY = "auction_history";
-export const AUCTION_HISTORY_RULES = { perLot: 20, maxLots: 400 };
-export const AUCTION_WATCH_RULES = { maxPerPlayer: 5 };
+/** Lus dans AUCTION_RULES (réglables dans l'admin). */
+export const AUCTION_HISTORY_RULES = {
+  get perLot() {
+    return AUCTION_RULES.historyPerLot;
+  },
+  get maxLots() {
+    return AUCTION_RULES.historyMaxLots;
+  },
+};
+export const AUCTION_WATCH_RULES = {
+  get maxPerPlayer() {
+    return AUCTION_RULES.watchMax;
+  },
+};
 
 const RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
 

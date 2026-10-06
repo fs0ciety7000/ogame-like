@@ -6,7 +6,8 @@
 ===================================================== */
 
 export const PATRONS_KEY = "patrons";
-export const PATRONS_TOP = 10;
+/** 6.9.0 (AU4) : places du classement des mécènes (GameRules.patrons). */
+export const PATRON_RULES = { top: 10 };
 
 export interface PatronEntry {
   uid: string;
@@ -25,7 +26,7 @@ export interface PatronsState {
 export const monthKey = (now: number) => new Date(now).toISOString().slice(0, 7);
 
 /** Classement du mois, du plus généreux au moins généreux. */
-export function topPatrons(state: PatronsState, n = PATRONS_TOP): PatronEntry[] {
+export function topPatrons(state: PatronsState, n = PATRON_RULES.top): PatronEntry[] {
   return Object.entries(state.byUid)
     .map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber }))
     .filter((e) => e.amber > 0)

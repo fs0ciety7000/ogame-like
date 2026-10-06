@@ -26,6 +26,7 @@ import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { PassGenFields } from "@/pages/admin/PassGenFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
+import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -897,6 +898,7 @@ export function RulesPanel() {
         <EventsAndSeasonsSections rules={rules} setRules={setRules} />
         <PassGenFields rules={rules} setRules={setRules} />
         <ChronicleGenFields rules={rules} setRules={setRules} />
+        <CommerceRulesFields rules={rules} setRules={setRules} />
       </Card>
       {/* 6.7.2 : tout GameRules est réglable dans l'admin, même sans section dédiée. */}
       <AllRulesEditor rules={rules} setRules={setRules} />

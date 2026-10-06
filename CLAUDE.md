@@ -92,6 +92,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
 - Réglages : voir la règle n° 2 (tout `GameRules` dans le panel admin). Nouveau groupe de règles : fusion dans le bloc `rules` d'`applyGameContent` (chaque sous-objet
   fusionné champ par champ, sinon un réglage partiel efface les autres), `Object.assign` dans `applyGameContent`, libellé dans `RULE_GROUP_LABELS`, champs dans `panels.tsx` ou l'onglet du domaine.
+- Contenu à liste fixe (offres de la semaine, alertes, historiques) : ses chiffres vivent dans un objet de règles et la liste les lit par
+  accesseur (`get price() { … }`), ce qui garde les identifiants en dur et les valeurs dans l'admin (6.9.0).
 - Initialisation des modules : un objet de règles au niveau du module ne lit jamais une constante importée d'un autre module du moteur
   (`keshPveBonus: KESH_PVE_BONUS` a planté le chargement du jeu dans le navigateur : import circulaire units ↔ combat, tests verts).
   Valeur littérale, ou accesseur (`get x() { … }`) lu à l'usage. Toujours ouvrir l'appli dans un navigateur après un changement du moteur.

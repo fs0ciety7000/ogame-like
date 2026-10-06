@@ -13,7 +13,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { PlayerName } from "@/components/ui/player-name";
 import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { priceBounds } from "@/game/market";
-import { contractDeposit, PRIORITY_CONTRACT_HOURS, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
+import { contractDeposit, TRADE_CONTRACT_RULES, type TradeContract } from "@/game/tradeContracts";
 import { bountyState } from "@/game/bounties";
 import { distanceBetween, fleetSpeed, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
@@ -207,7 +207,7 @@ export function TradeContractsPanel() {
         {/* 5.27 : Contrat prioritaire du Comptoir, consommé à la publication. */}
         {priority > 0 && (
           <p className="flex items-center gap-1.5 text-xs text-violet-glow">
-            <ArrowUpToLine className="h-3.5 w-3.5" aria-hidden /> Contrat prioritaire : celui-ci passera en tête des contrats pendant {PRIORITY_CONTRACT_HOURS} h (<span className="font-mono tabular-nums">{priority}</span> en réserve).
+            <ArrowUpToLine className="h-3.5 w-3.5" aria-hidden /> Contrat prioritaire : celui-ci passera en tête des contrats pendant {TRADE_CONTRACT_RULES.priorityHours} h (<span className="font-mono tabular-nums">{priority}</span> en réserve).
           </p>
         )}
         <Button

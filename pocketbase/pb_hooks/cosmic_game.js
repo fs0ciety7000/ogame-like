@@ -13435,23 +13435,23 @@ function createOffer(seller, input, openOffers, now) {
   const kind = input.kind === "buy" ? "buy" : "sell";
   return { kind, giveRes, giveAmount, wantRes, wantAmount, expiresAtMs: now + MARKET_RULES.offerHours * 36e5 };
 }
-function acceptOffer(offer, buyer, seller, buysToday, now) {
+function acceptOffer(offer2, buyer, seller, buysToday, now) {
   var _a, _b, _c, _d;
-  if (offer.status !== "open" || now >= offer.expiresAtMs) throw new GameActionError("Cette offre n'est plus disponible.");
-  if (offer.sellerId === buyer.uid) throw new GameActionError("Tu ne peux pas accepter ta propre offre.");
+  if (offer2.status !== "open" || now >= offer2.expiresAtMs) throw new GameActionError("Cette offre n'est plus disponible.");
+  if (offer2.sellerId === buyer.uid) throw new GameActionError("Tu ne peux pas accepter ta propre offre.");
   if (buysToday >= MARKET_RULES.maxBuysPerDay) throw new GameActionError(`Limite de ${MARKET_RULES.maxBuysPerDay} achats par jour atteinte.`);
-  if (((_a = buyer.resources[offer.wantRes]) != null ? _a : 0) < offer.wantAmount) throw new GameActionError(`Pas assez de ${label(offer.wantRes)} pour cette offre.`);
-  const sameAlliance = !!offer.sellerAllianceId && offer.sellerAllianceId === ((_b = buyer.allianceId) != null ? _b : "");
-  const tax = marketTax(offer.wantAmount, sameAlliance, playerModifiers(seller).tradeTax);
-  buyer.resources[offer.wantRes] -= offer.wantAmount;
-  buyer.resources[offer.giveRes] = ((_c = buyer.resources[offer.giveRes]) != null ? _c : 0) + offer.giveAmount;
-  seller.resources[offer.wantRes] = ((_d = seller.resources[offer.wantRes]) != null ? _d : 0) + offer.wantAmount - tax;
+  if (((_a = buyer.resources[offer2.wantRes]) != null ? _a : 0) < offer2.wantAmount) throw new GameActionError(`Pas assez de ${label(offer2.wantRes)} pour cette offre.`);
+  const sameAlliance = !!offer2.sellerAllianceId && offer2.sellerAllianceId === ((_b = buyer.allianceId) != null ? _b : "");
+  const tax = marketTax(offer2.wantAmount, sameAlliance, playerModifiers(seller).tradeTax);
+  buyer.resources[offer2.wantRes] -= offer2.wantAmount;
+  buyer.resources[offer2.giveRes] = ((_c = buyer.resources[offer2.giveRes]) != null ? _c : 0) + offer2.giveAmount;
+  seller.resources[offer2.wantRes] = ((_d = seller.resources[offer2.wantRes]) != null ? _d : 0) + offer2.wantAmount - tax;
   bumpStat(buyer, "marketTrades");
   bumpStat(seller, "marketTrades");
   bumpStat(seller, "marketTax", tax);
-  bumpStat(buyer, "marketVolume", offer.giveAmount);
+  bumpStat(buyer, "marketVolume", offer2.giveAmount);
   recordChronicle(buyer, "market", now);
-  bumpStat(seller, "marketVolume", offer.wantAmount - tax);
+  bumpStat(seller, "marketVolume", offer2.wantAmount - tax);
   grantCommanderXp(buyer, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(seller, "steward", COMMANDER_XP.marketTrade);
   grantCommanderXp(buyer, "diplomat", COMMANDER_XP.marketTrade);
@@ -13461,9 +13461,9 @@ function acceptOffer(offer, buyer, seller, buysToday, now) {
 function buyOrderPaid(order, filled) {
   return Math.floor(order.giveAmount * Math.min(filled, order.wantAmount) / order.wantAmount);
 }
-function offerReserved(offer) {
+function offerReserved(offer2) {
   var _a;
-  return offer.kind === "buy" ? offer.giveAmount - buyOrderPaid(offer, (_a = offer.filled) != null ? _a : 0) : offer.giveAmount;
+  return offer2.kind === "buy" ? offer2.giveAmount - buyOrderPaid(offer2, (_a = offer2.filled) != null ? _a : 0) : offer2.giveAmount;
 }
 function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
   var _a, _b, _c, _d, _e;
@@ -13494,10 +13494,10 @@ function fillBuyOrder(order, supplier, owner, qtyRaw, buysToday, now) {
   grantCommanderXp(owner, "diplomat", COMMANDER_XP.marketTrade);
   return { qty, payment, tax, filled, done: filled >= order.wantAmount };
 }
-function refundOffer(offer, seller) {
+function refundOffer(offer2, seller) {
   var _a;
-  const back = offerReserved(offer);
-  seller.resources[offer.giveRes] = ((_a = seller.resources[offer.giveRes]) != null ? _a : 0) + back;
+  const back = offerReserved(offer2);
+  seller.resources[offer2.giveRes] = ((_a = seller.resources[offer2.giveRes]) != null ? _a : 0) + back;
   return back;
 }
 function describeAmount(res, n) {
@@ -13516,7 +13516,9 @@ var TRADE_CONTRACT_RULES = {
   /** Caution du livreur, en part du paiement. */
   depositPct: 0.1,
   /** Un contrat ouvert sans livreur expire au bout de ce délai (h). */
-  openHours: 48
+  openHours: 48,
+  /** 6.9.0 : durée en tête de liste d'un contrat prioritaire (consommable du Comptoir), en heures. */
+  priorityHours: 24
 };
 var RESOURCE_IDS3 = new Set(RESOURCE_LIST.map((r) => r.id));
 var label2 = (res) => {
@@ -13531,7 +13533,6 @@ function amount2(raw, what) {
 function contractDeposit(payAmount) {
   return Math.max(1, Math.floor(payAmount * TRADE_CONTRACT_RULES.depositPct));
 }
-var PRIORITY_CONTRACT_HOURS = 24;
 function createTradeContract(client, input, active, now) {
   var _a, _b, _c, _d, _e;
   const wantRes = String((_a = input.wantRes) != null ? _a : "");
@@ -13555,7 +13556,7 @@ function createTradeContract(client, input, active, now) {
   client.resources[payRes] -= payAmount;
   const b = (_e = client.bounties) != null ? _e : {};
   const charges = Math.max(0, Number(b.priorityContracts) || 0);
-  const priorityUntilMs = charges > 0 ? now + PRIORITY_CONTRACT_HOURS * 36e5 : 0;
+  const priorityUntilMs = charges > 0 ? now + TRADE_CONTRACT_RULES.priorityHours * 36e5 : 0;
   if (charges > 0) client.bounties = __spreadProps(__spreadValues({}, client.bounties), { priorityContracts: charges - 1 });
   return { targetUid, wantRes, wantAmount, payRes, payAmount, hours: hours2, expiresAtMs: now + TRADE_CONTRACT_RULES.openHours * 36e5, priorityUntilMs };
 }
@@ -18778,6 +18779,432 @@ function validateTerritoryWarRules(r) {
   return errors;
 }
 
+// src/game/auctions.ts
+var AUCTION_RULES = {
+  /** Surenchère minimale (5 % au-dessus de la meilleure). */
+  minIncrement: 0.05,
+  antiSnipeMs: 5 * 6e4,
+  taxRate: 0.05,
+  maxOpenPerSeller: 5,
+  durationsH: [6, 12, 24, 48],
+  /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
+  minStart: { common: 100, rare: 1, amber: 1 },
+  maxStart: 1e12,
+  /** 6.9.0 (AU4) : alertes de vente par joueur, historique des prix (ventes gardées par lot, lots suivis). */
+  watchMax: 5,
+  historyPerLot: 20,
+  historyMaxLots: 400
+};
+var AUCTION_CURRENCIES = [...RESOURCE_LIST.map((r) => r.id), "amber"];
+function currencyKind(res) {
+  var _a;
+  if (res === "amber") return "amber";
+  return ((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? "rare" : "common";
+}
+function minStartFor(res) {
+  return AUCTION_RULES.minStart[currencyKind(res)];
+}
+function currencyLabel(res) {
+  var _a, _b;
+  return res === "amber" ? "Ambre" : (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res;
+}
+function validateListing(raw, openCount) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const kind = r.kind === "relic" || r.kind === "module" ? r.kind : null;
+  if (!kind) throw new GameActionError("Objet \xE0 vendre inconnu.");
+  const itemId = typeof r.itemId === "string" ? r.itemId : "";
+  if (!itemId) throw new GameActionError("Choisis l'objet \xE0 vendre.");
+  const res = String(r.res);
+  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie inconnue.");
+  const startPrice = Math.floor(Number(r.startPrice));
+  const min = minStartFor(res);
+  if (!(startPrice >= min && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise \xE0 prix : au moins ${min} ${currencyLabel(res).toLowerCase()}.`);
+  const durationH = Math.floor(Number(r.durationH));
+  if (!AUCTION_RULES.durationsH.includes(durationH)) throw new GameActionError("Dur\xE9e refus\xE9e.");
+  if (openCount >= AUCTION_RULES.maxOpenPerSeller) throw new GameActionError(`${AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.`);
+  return { kind, itemId, res, startPrice, durationH };
+}
+function takeLot(player, kind, itemId) {
+  if (kind === "relic") {
+    const st2 = relicsState(player);
+    const item2 = st2.items.find((r) => r.id === itemId);
+    if (!item2) throw new GameActionError("Relique introuvable.");
+    if (item2.rarity === "mythic") throw new GameActionError("Une relique mythique ne se vend pas.");
+    if (st2.slots.includes(item2.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
+    st2.items = st2.items.filter((r) => r.id !== item2.id);
+    player.relics = st2;
+    return { item: item2, label: relicLabel(item2), rarity: item2.rarity };
+  }
+  const st = modulesState(player);
+  const item = st.items.find((m) => m.id === itemId);
+  if (!item) throw new GameActionError("Plan introuvable.");
+  if (item.built) throw new GameActionError("Seuls les plans (non fabriqu\xE9s) se vendent aux ench\xE8res.");
+  st.items = st.items.filter((m) => m.id !== item.id);
+  player.modules = st;
+  return { item, label: `Plan : ${moduleLabel(item)}`, rarity: item.rarity };
+}
+function giveLot(player, kind, item) {
+  if (kind === "relic") {
+    const st2 = relicsState(player);
+    if (!st2.items.some((r) => r.id === item.id)) st2.items.push(item);
+    player.relics = st2;
+    return;
+  }
+  const st = modulesState(player);
+  if (!st.items.some((m) => m.id === item.id)) st.items.push(__spreadProps(__spreadValues({}, item), { built: false }));
+  player.modules = st;
+}
+function lotKnown(kind, item) {
+  return kind === "relic" ? !!findTemplate(item.template) : !!findModuleTemplate(String(item.template));
+}
+function minNextBid(a) {
+  if (!(a.bid > 0)) return a.startPrice;
+  return Math.max(a.bid + 1, Math.ceil(a.bid * (1 + AUCTION_RULES.minIncrement)));
+}
+function placeBid(a, uid, pseudo, amountIn, now) {
+  if (a.status !== "open" || now >= a.endsAtMs) throw new GameActionError("Cette vente est close.");
+  if (a.sellerId === uid) throw new GameActionError("Tu ne peux pas ench\xE9rir sur ta propre vente.");
+  const amount3 = Math.floor(Number(amountIn));
+  const min = minNextBid(a);
+  if (!(amount3 >= min)) throw new GameActionError(`Ench\xE8re minimale : ${min}.`);
+  if (amount3 > AUCTION_RULES.maxStart * 10) throw new GameActionError("Ench\xE8re trop \xE9lev\xE9e.");
+  const same = a.bidderId === uid;
+  const refund = a.bidderId && !same ? { uid: a.bidderId, amount: a.bid } : null;
+  const charge = same ? amount3 - a.bid : amount3;
+  a.bid = amount3;
+  a.bidderId = uid;
+  a.bidderPseudo = pseudo;
+  a.bids += 1;
+  if (a.endsAtMs - now < AUCTION_RULES.antiSnipeMs) a.endsAtMs = now + AUCTION_RULES.antiSnipeMs;
+  return { refund, charge, endsAtMs: a.endsAtMs };
+}
+function settleAuction(a) {
+  if (!(a.bid > 0) || !a.bidderId) return { status: "expired", receiver: a.sellerId, payout: 0, tax: 0 };
+  const tax = Math.floor(a.bid * AUCTION_RULES.taxRate);
+  return { status: "sold", receiver: a.bidderId, payout: a.bid - tax, tax };
+}
+function canCancel(a) {
+  return a.status === "open" && !(a.bid > 0);
+}
+function recordAuctionStat(player, side) {
+  bumpStat(player, side === "sold" ? "auctionsSold" : "auctionsWon");
+}
+function currencyBalance(player, res) {
+  var _a;
+  return Math.floor(res === "amber" ? bountyState(player).amber : (_a = player.resources[res]) != null ? _a : 0);
+}
+function debitBid(player, res, amount3) {
+  if (!(amount3 > 0)) return;
+  if (currencyBalance(player, res) < amount3) throw new GameActionError(res === "amber" ? "Pas assez d'Ambre pour cette ench\xE8re." : "Ressources insuffisantes pour cette ench\xE8re.");
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber -= amount3;
+    player.bounties = st;
+  } else player.resources[res] -= amount3;
+}
+function creditBid(player, res, amount3) {
+  var _a;
+  if (!(amount3 > 0)) return;
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber += amount3;
+    player.bounties = st;
+  } else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+}
+var AUCTION_HISTORY_KEY = "auction_history";
+var AUCTION_HISTORY_RULES = {
+  get perLot() {
+    return AUCTION_RULES.historyPerLot;
+  },
+  get maxLots() {
+    return AUCTION_RULES.historyMaxLots;
+  }
+};
+var AUCTION_WATCH_RULES = {
+  get maxPerPlayer() {
+    return AUCTION_RULES.watchMax;
+  }
+};
+var RARITY_RANK = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+function lotKey(kind, item) {
+  var _a, _b;
+  return `${kind}:${String((_a = item.template) != null ? _a : "")}:${String((_b = item.rarity) != null ? _b : "")}`;
+}
+function normalizeAuctionHistory(raw) {
+  var _a, _b;
+  const lots = {};
+  const src = raw && typeof raw === "object" ? raw.lots : null;
+  if (!src || typeof src !== "object") return { lots };
+  for (const [k, v] of Object.entries(src)) {
+    if (!v || typeof v !== "object" || !Array.isArray(v.sales)) continue;
+    const sales = v.sales.map((s) => ({ atMs: Number(s == null ? void 0 : s.atMs) || 0, res: String(s == null ? void 0 : s.res), price: Math.floor(Number(s == null ? void 0 : s.price)) })).filter((s) => AUCTION_CURRENCIES.includes(s.res) && s.price > 0).slice(-AUCTION_HISTORY_RULES.perLot);
+    if (sales.length) lots[k] = { label: String((_a = v.label) != null ? _a : "").slice(0, 120), kind: v.kind === "module" ? "module" : "relic", rarity: String((_b = v.rarity) != null ? _b : ""), sales };
+  }
+  return { lots };
+}
+function recordSale(h, a, now) {
+  var _a, _b, _c, _d;
+  if (!(a.bid > 0)) return h;
+  const key = lotKey(a.kind, a.item);
+  const prev = h.lots[key];
+  const tpl = a.item.template;
+  const name = (_c = a.kind === "module" ? (_a = findModuleTemplate(String(tpl))) == null ? void 0 : _a.name : (_b = findTemplate(tpl)) == null ? void 0 : _b.name) != null ? _c : a.label.replace(/^Plan : /, "");
+  const lots = __spreadProps(__spreadValues({}, h.lots), { [key]: { label: name, kind: a.kind, rarity: a.rarity, sales: [...(_d = prev == null ? void 0 : prev.sales) != null ? _d : [], { atMs: now, res: a.res, price: Math.floor(a.bid) }].slice(-AUCTION_HISTORY_RULES.perLot) } });
+  const keys = Object.keys(lots);
+  if (keys.length > AUCTION_HISTORY_RULES.maxLots) {
+    const last = (k) => {
+      var _a2, _b2;
+      return (_b2 = (_a2 = lots[k].sales[lots[k].sales.length - 1]) == null ? void 0 : _a2.atMs) != null ? _b2 : 0;
+    };
+    keys.sort((x, y) => last(x) - last(y)).slice(0, keys.length - AUCTION_HISTORY_RULES.maxLots).forEach((k) => delete lots[k]);
+  }
+  return { lots };
+}
+function validateWatch(raw, count2) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const kind = r.kind === "relic" || r.kind === "module" || r.kind === "any" ? r.kind : null;
+  if (!kind) throw new GameActionError("Choisis reliques, plans ou les deux.");
+  const minRarity = String((_a = r.minRarity) != null ? _a : "");
+  if (!(minRarity in RARITY_RANK) || minRarity === "mythic") throw new GameActionError("Raret\xE9 inconnue.");
+  const template = typeof r.template === "string" ? r.template.slice(0, 60) : "";
+  if (template && kind === "any") throw new GameActionError("Un mod\xE8le pr\xE9cis demande de choisir reliques ou plans.");
+  if (template && !lotKnown(kind, { template })) throw new GameActionError("Mod\xE8le inconnu.");
+  if (count2 >= AUCTION_WATCH_RULES.maxPerPlayer) throw new GameActionError(`${AUCTION_WATCH_RULES.maxPerPlayer} alertes au plus.`);
+  return { kind, minRarity, template };
+}
+function watchMatches(w, kind, item) {
+  var _a, _b;
+  if (w.kind !== "any" && w.kind !== kind) return false;
+  if (((_a = RARITY_RANK[String(item.rarity)]) != null ? _a : -1) < ((_b = RARITY_RANK[w.minRarity]) != null ? _b : 99)) return false;
+  return !w.template || w.template === item.template;
+}
+function watchersFor(watches, sellerId, kind, item) {
+  const out = /* @__PURE__ */ new Set();
+  for (const w of watches) if (w.uid && w.uid !== sellerId && watchMatches(w, kind, item)) out.add(w.uid);
+  return [...out];
+}
+function linkedAuctionReasons(a) {
+  const out = [];
+  if (a.sellerIp && a.sellerIp === a.bidderIp) out.push("m\xEAme adresse IP");
+  if (a.sellerDevice && a.sellerDevice === a.bidderDevice) out.push("m\xEAme appareil");
+  return out;
+}
+function cleanDeviceId(raw) {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
+}
+
+// src/game/contests.ts
+var CONTESTS_KEY = "contests";
+var CONTEST_RULES = {
+  /** Concours gardés (les plus anciens terminés sont oubliés). */
+  maxKept: 20,
+  /** Places affichées au classement. */
+  standingsSize: 20,
+  /** Part du pot qu'un concours peut engager, au plus. */
+  maxPotShare: 0.8
+};
+var num6 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
+function normalizeContests(raw) {
+  const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
+  return {
+    list: list.filter((c) => !!c && typeof c === "object" && typeof c.id === "string" && c.metric in METRICS).map((c) => {
+      var _a, _b;
+      return __spreadValues(__spreadValues(__spreadProps(__spreadValues({
+        id: c.id,
+        title: String((_a = c.title) != null ? _a : "").slice(0, 80),
+        description: String((_b = c.description) != null ? _b : "").slice(0, 400),
+        metric: c.metric,
+        startMs: num6(c.startMs),
+        endMs: num6(c.endMs),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare)))
+      }, num6(c.amberShare) > 0 ? { amberShare: Math.min(CONTEST_RULES.maxPotShare, num6(c.amberShare)) } : {}), {
+        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num6(p))).slice(0, 10),
+        status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
+        baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
+        standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
+        updatedAtMs: num6(c.updatedAtMs)
+      }), Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
+    })
+  };
+}
+function validateContest(c, now) {
+  var _a, _b;
+  const errors = [];
+  if (!((_a = c.title) == null ? void 0 : _a.trim())) errors.push("Donne un titre au concours.");
+  if (!(c.metric in METRICS)) errors.push("Crit\xE8re inconnu.");
+  if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le d\xE9but.");
+  if (!(c.endMs > now)) errors.push("La fin doit \xEAtre dans le futur.");
+  if (c.endMs - c.startMs > 60 * 24 * 36e5) errors.push("Un concours dure 60 jours au plus.");
+  const max = CONTEST_RULES.maxPotShare;
+  const amber = (_b = c.amberShare) != null ? _b : 0;
+  if (!(c.potShare >= 0 && c.potShare <= max) || !(amber >= 0 && amber <= max)) errors.push(`Parts du pot entre 0 et ${Math.round(max * 100)} %.`);
+  else if (!(c.potShare > 0 || amber > 0)) errors.push("Engage une part des ressources ou de l'Ambre du pot.");
+  const sum3 = c.places.reduce((a, b) => a + b, 0);
+  if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place r\xE9compens\xE9e.");
+  if (sum3 > 1.0001) errors.push("La r\xE9partition des places d\xE9passe 100 %.");
+  return errors;
+}
+function contestPhase(c, now) {
+  if (c.status === "done" || c.status === "cancelled") return c.status;
+  if (now < c.startMs) return "scheduled";
+  return now < c.endMs ? "running" : "ending";
+}
+function metricValue(c, player) {
+  const m = METRICS[c.metric];
+  return m ? Math.max(0, Number(m.value(player)) || 0) : 0;
+}
+function contestScore(c, player) {
+  const base = c.baselines[player.uid];
+  return base === void 0 ? 0 : Math.max(0, metricValue(c, player) - base);
+}
+function refreshContest(c, players, now) {
+  const baselines = __spreadValues({}, c.baselines);
+  for (const p of players) if (baselines[p.uid] === void 0) baselines[p.uid] = metricValue(c, p);
+  const next = __spreadProps(__spreadValues({}, c), { baselines });
+  const standings = players.map((p) => ({ uid: p.uid, pseudo: p.pseudo, score: contestScore(next, p) })).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, CONTEST_RULES.standingsSize);
+  return __spreadProps(__spreadValues({}, next), { standings, updatedAtMs: now });
+}
+function contestPurse(c, pot) {
+  const out = {};
+  for (const [k, v] of Object.entries(pot.resources)) {
+    const n = Math.floor((v != null ? v : 0) * c.potShare);
+    if (n > 0) out[k] = n;
+  }
+  return out;
+}
+function contestAmberPurse(c, pot) {
+  var _a, _b;
+  return Math.max(0, Math.floor(((_a = pot.amber) != null ? _a : 0) * ((_b = c.amberShare) != null ? _b : 0)));
+}
+function contestPrizes(c, purse, amberPurse = 0) {
+  return c.standings.slice(0, c.places.length).map((s, i) => {
+    const resources = {};
+    for (const [k, v] of Object.entries(purse)) {
+      const n = Math.floor(v * c.places[i]);
+      if (n > 0) resources[k] = n;
+    }
+    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources, amber: Math.floor(amberPurse * c.places[i]) };
+  });
+}
+function pruneContests(list) {
+  const open = list.filter((c) => c.status === "scheduled" || c.status === "running");
+  const closed = list.filter((c) => !(c.status === "scheduled" || c.status === "running")).sort((a, b) => b.endMs - a.endMs);
+  return [...open, ...closed].slice(0, CONTEST_RULES.maxKept);
+}
+
+// src/game/weeklyStock.ts
+var WEEKLY_STOCK_RULES = {
+  prices: { rareRelic: 250, rarePlan: 200, epicPlan: 450, tokens: 120 },
+  quantities: { rareRelic: 8, rarePlan: 10, epicPlan: 4, tokens: 15 }
+};
+var offer = (id, name, description) => ({
+  id,
+  name,
+  description,
+  get price() {
+    var _a;
+    return Math.max(1, Math.round((_a = WEEKLY_STOCK_RULES.prices[id]) != null ? _a : 1));
+  },
+  get quantity() {
+    var _a;
+    return Math.max(1, Math.round((_a = WEEKLY_STOCK_RULES.quantities[id]) != null ? _a : 1));
+  }
+});
+var WEEKLY_OFFERS = [
+  offer("rareRelic", "Relique de l'Essaim", "Une relique tir\xE9e au hasard, rare au moins."),
+  offer("rarePlan", "Plan de module rare", "Un plan de module tir\xE9 au hasard, rare au moins."),
+  offer("epicPlan", "Plan de module \xE9pique", "Un plan de module tir\xE9 au hasard, \xE9pique au moins."),
+  offer("tokens", "Sac de jetons", "25 jetons pour la machine \xE0 sous du pot commun.")
+];
+var WEEKLY_STOCK_KEY = "weekly_stock";
+var DAY11 = 864e5;
+var WEEK = 7 * DAY11;
+function weekStartMs(now) {
+  const midnight = Math.floor(now / DAY11) * DAY11;
+  return midnight - (new Date(now).getUTCDay() + 6) % 7 * DAY11;
+}
+function weekKey(now) {
+  return new Date(weekStartMs(now)).toISOString().slice(0, 10);
+}
+function offerOfWeek(now) {
+  return WEEKLY_OFFERS[Math.floor(weekStartMs(now) / WEEK) % WEEKLY_OFFERS.length];
+}
+function weeklyStock(raw, now) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const week = weekKey(now);
+  const offer2 = offerOfWeek(now).id;
+  if (r.week !== week) return { week, offer: offer2, sold: 0, buyers: [] };
+  return { week, offer: offer2, sold: Math.max(0, Math.floor(Number(r.sold) || 0)), buyers: Array.isArray(r.buyers) ? r.buyers.map(String) : [] };
+}
+function weeklyLeft(stock) {
+  const offer2 = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  return Math.max(0, offer2.quantity - stock.sold);
+}
+function weeklyBlocker(player, uid, stock) {
+  var _a, _b, _c;
+  const offer2 = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  if (stock.buyers.includes(uid)) return "D\xE9j\xE0 achet\xE9 cette semaine.";
+  if (weeklyLeft(stock) <= 0) return "\xC9puis\xE9 : retour lundi.";
+  if (offer2.id === "rareRelic" && ((_c = (_b = (_a = player.relics) == null ? void 0 : _a.items) == null ? void 0 : _b.length) != null ? _c : 0) >= RELIC_RULES.maxItems) return "Inventaire de reliques plein.";
+  if ((offer2.id === "rarePlan" || offer2.id === "epicPlan") && modulesState(player).items.length >= MODULE_RULES.maxItems) return "Inventaire de modules plein.";
+  if (bountyState(player).amber < offer2.price) return "Pas assez d'Ambre.";
+  return null;
+}
+function buyWeeklyOffer(player, uid, rawStock, now, random = Math.random) {
+  const stock = weeklyStock(rawStock, now);
+  const offer2 = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  const blocker = weeklyBlocker(player, uid, stock);
+  if (blocker) throw new GameActionError(blocker);
+  let message;
+  if (offer2.id === "rareRelic") {
+    const relic = rollRelic("weekly", now, random, "rare");
+    addRelic(player, relic);
+    message = "Relique de l'Essaim re\xE7ue : retrouve-la dans tes reliques.";
+  } else if (offer2.id === "rarePlan" || offer2.id === "epicPlan") {
+    addModuleItem(player, rollModulePlan("weekly", now, random, offer2.id === "rarePlan" ? "rare" : "epic"));
+    message = `${offer2.name} re\xE7u : retrouve-le dans \xC9tat-major \u2192 Modules.`;
+  } else {
+    grantTokens(player, 25);
+    message = "25 jetons ajout\xE9s \xE0 ta r\xE9serve du casino.";
+  }
+  const st = bountyState(player);
+  st.amber -= offer2.price;
+  st.history = [...st.history, { atMs: now, item: `weekly:${offer2.id}`, amber: offer2.price }].slice(-SHOP_HISTORY_MAX);
+  player.bounties = st;
+  return { stock: __spreadProps(__spreadValues({}, stock), { sold: stock.sold + 1, buyers: [...stock.buyers, uid] }), message };
+}
+
+// src/game/patrons.ts
+var PATRONS_KEY = "patrons";
+var PATRON_RULES = { top: 10 };
+var monthKey = (now) => new Date(now).toISOString().slice(0, 7);
+function topPatrons(state, n = PATRON_RULES.top) {
+  return Object.entries(state.byUid).map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber })).filter((e3) => e3.amber > 0).sort((a, b) => b.amber - a.amber || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0)).slice(0, n);
+}
+function patronsState(raw, now) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const month2 = monthKey(now);
+  const byUid = {};
+  for (const [uid, v] of Object.entries((_a = r.byUid) != null ? _a : {})) {
+    const amber = Math.max(0, Math.floor(Number(v == null ? void 0 : v.amber) || 0));
+    if (amber > 0) byUid[uid] = { pseudo: String((_b = v == null ? void 0 : v.pseudo) != null ? _b : "").slice(0, 40), amber };
+  }
+  const last = r.last && typeof r.last.month === "string" && Array.isArray(r.last.top) ? { month: r.last.month, top: r.last.top.slice(0, 3) } : null;
+  if (r.month && r.month !== month2) return { month: month2, byUid: {}, last: { month: r.month, top: topPatrons({ month: r.month, byUid, last: null }, 3) } };
+  return { month: month2, byUid, last };
+}
+function addPatronage(raw, uid, pseudo, amber, now) {
+  var _a, _b, _c;
+  const st = patronsState(raw, now);
+  const n = Math.floor(Number(amber) || 0);
+  if (!(n > 0) || !uid) return st;
+  const cur = (_b = (_a = st.byUid[uid]) == null ? void 0 : _a.amber) != null ? _b : 0;
+  return __spreadProps(__spreadValues({}, st), { byUid: __spreadProps(__spreadValues({}, st.byUid), { [uid]: { pseudo: pseudo || ((_c = st.byUid[uid]) == null ? void 0 : _c.pseudo) || "?", amber: cur + n } }) });
+}
+
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 function withFixedUnits(units) {
@@ -18813,6 +19240,15 @@ var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 var DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
 var DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
 var DEFAULT_CHRONICLE_GEN_RULES = structuredClone(CHRONICLE_GEN_RULES);
+var DEFAULT_COMMERCE_RULES = {
+  auctions: structuredClone(AUCTION_RULES),
+  tradeContracts: structuredClone(TRADE_CONTRACT_RULES),
+  gifts: structuredClone(GIFT_RULES),
+  contests: structuredClone(CONTEST_RULES),
+  tournamentPoints: structuredClone(OUTCOME_POINTS),
+  weeklyStock: structuredClone(WEEKLY_STOCK_RULES),
+  patrons: structuredClone(PATRON_RULES)
+};
 var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
 var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
@@ -18839,7 +19275,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES }
+    rules: __spreadValues({ pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES }, structuredClone(DEFAULT_COMMERCE_RULES))
   });
 }
 var current = defaultGameContent();
@@ -18847,7 +19283,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -18931,6 +19367,18 @@ function applyGameContent(overrides) {
         objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Ta = (_Sa = (_Ra = overrides.rules) == null ? void 0 : _Ra.chronicleGen) == null ? void 0 : _Sa.objectiveWeights) != null ? _Ta : {}),
         themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Wa = (_Va = (_Ua = overrides.rules) == null ? void 0 : _Ua.chronicleGen) == null ? void 0 : _Va.themeArchetypes) != null ? _Wa : {})
       }),
+      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Ya = (_Xa = overrides.rules) == null ? void 0 : _Xa.auctions) != null ? _Ya : {}), {
+        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_$a = (__a = (_Za = overrides.rules) == null ? void 0 : _Za.auctions) == null ? void 0 : __a.minStart) != null ? _$a : {})
+      }),
+      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (_bb = (_ab = overrides.rules) == null ? void 0 : _ab.tradeContracts) != null ? _bb : {}),
+      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_db = (_cb = overrides.rules) == null ? void 0 : _cb.gifts) != null ? _db : {}),
+      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_fb = (_eb = overrides.rules) == null ? void 0 : _eb.contests) != null ? _fb : {}),
+      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_hb = (_gb = overrides.rules) == null ? void 0 : _gb.tournamentPoints) != null ? _hb : {}),
+      weeklyStock: {
+        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_kb = (_jb = (_ib = overrides.rules) == null ? void 0 : _ib.weeklyStock) == null ? void 0 : _jb.prices) != null ? _kb : {}),
+        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_nb = (_mb = (_lb = overrides.rules) == null ? void 0 : _lb.weeklyStock) == null ? void 0 : _mb.quantities) != null ? _nb : {})
+      },
+      patrons: __spreadValues(__spreadValues({}, defaults.rules.patrons), (_pb = (_ob = overrides.rules) == null ? void 0 : _ob.patrons) != null ? _pb : {}),
       streak: (() => {
         var _a2, _b2, _c2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
@@ -18955,7 +19403,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_Xa = content.relicSettings) == null ? void 0 : _Xa.loot, (_Ya = content.relicSettings) == null ? void 0 : _Ya.lootTokenCap);
+  setLootTables((_qb = content.relicSettings) == null ? void 0 : _qb.loot, (_rb = content.relicSettings) == null ? void 0 : _rb.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -18981,7 +19429,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _Za = content.rules.allianceBoss, { bosses: allianceBosses } = _Za, allianceBossRules = __objRest(_Za, ["bosses"]);
+  const _sb = content.rules.allianceBoss, { bosses: allianceBosses } = _sb, allianceBossRules = __objRest(_sb, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -18993,6 +19441,13 @@ function applyGameContent(overrides) {
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
   Object.assign(CHRONICLE_GEN_RULES, structuredClone(content.rules.chronicleGen));
+  Object.assign(AUCTION_RULES, structuredClone(content.rules.auctions));
+  Object.assign(TRADE_CONTRACT_RULES, structuredClone(content.rules.tradeContracts));
+  Object.assign(GIFT_RULES, structuredClone(content.rules.gifts));
+  Object.assign(CONTEST_RULES, structuredClone(content.rules.contests));
+  Object.assign(OUTCOME_POINTS, structuredClone(content.rules.tournamentPoints));
+  Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
+  Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
   current = content;
   return content;
 }
@@ -19023,7 +19478,14 @@ var RULE_GROUP_LABELS = {
   territoryWar: "Guerre de territoire",
   xpTiers: "Paliers d'XP",
   passGen: "Passe g\xE9n\xE9r\xE9",
-  chronicleGen: "Chroniques g\xE9n\xE9r\xE9es"
+  chronicleGen: "Chroniques g\xE9n\xE9r\xE9es",
+  auctions: "Ench\xE8res",
+  tradeContracts: "Contrats de livraison",
+  gifts: "Cadeaux",
+  contests: "Concours du pot commun",
+  tournamentPoints: "Tournoi du casino : points par tirage",
+  weeklyStock: "Offre de la semaine (Comptoir)",
+  patrons: "M\xE9c\xE8nes"
 };
 function validateRules(rules) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
@@ -19074,6 +19536,17 @@ function validateRules(rules) {
   errors.push(...validateXpTierRules(merged.xpTiers));
   errors.push(...validatePassGenRules(merged.passGen));
   errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  const au = merged.auctions;
+  if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Ench\xE8res : surench\xE8re entre 0 et 1, taxe entre 0 et 0,99.");
+  if (!(Number.isInteger(au.maxOpenPerSeller) && au.maxOpenPerSeller >= 1 && au.watchMax >= 0 && au.historyPerLot >= 1 && au.historyMaxLots >= 1)) errors.push("Ench\xE8res : ventes ouvertes, alertes et historique \u2265 1 (entiers).");
+  if (!(Array.isArray(au.durationsH) && au.durationsH.length > 0 && au.durationsH.every((h) => h > 0 && h <= 168))) errors.push("Ench\xE8res : dur\xE9es entre 1 et 168 h.");
+  const tc = merged.tradeContracts;
+  if (!(tc.minHours >= 1 && tc.minHours <= tc.maxHours && tc.maxActive >= 1 && tc.openHours >= 1 && tc.priorityHours >= 0)) errors.push("Contrats : d\xE9lais min \u2264 max, contrats actifs \u2265 1.");
+  if (!(merged.gifts.outsideAllianceTax >= 0 && merged.gifts.outsideAllianceTax < 1 && merged.gifts.minAccountDays >= 0)) errors.push("Cadeaux : taxe hors alliance entre 0 et 0,99, anciennet\xE9 \u2265 0.");
+  if (!(merged.contests.maxPotShare > 0 && merged.contests.maxPotShare <= 1 && merged.contests.maxKept >= 1 && merged.contests.standingsSize >= 1)) errors.push("Concours : part du pot entre 0 et 1, listes \u2265 1.");
+  if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage \u2265 0.");
+  if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires \u2265 1.");
+  if (!(merged.patrons.top >= 1)) errors.push("M\xE9c\xE8nes : au moins 1 place.");
   const cb = merged.combat;
   if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par r\xE9sistance > 0.");
   if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
@@ -19593,12 +20066,12 @@ var CHALLENGE_RULES = {
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
 };
-var DAY11 = 864e5;
+var DAY12 = 864e5;
 function weekWindow(now) {
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY11) * DAY11;
-  const startMs = midnight - (day + 6) % 7 * DAY11;
-  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY11 };
+  const midnight = Math.floor(now / DAY12) * DAY12;
+  const startMs = midnight - (day + 6) % 7 * DAY12;
+  return { id: `wk-${new Date(startMs).toISOString().slice(0, 10)}`, startMs, endMs: startMs + 7 * DAY12 };
 }
 function isLeviathanWeek(now) {
   const w = weekWindow(now);
@@ -20049,7 +20522,7 @@ var COALITION_RULES = {
   failGrowth: 0.1
 };
 var HOUR13 = 36e5;
-var DAY12 = 24 * HOUR13;
+var DAY13 = 24 * HOUR13;
 function coalitionState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -20075,14 +20548,14 @@ function checkCoalitionTrigger(c, lords, topHumanPower, now) {
     else delete c.overSince[l.id];
   }
   if (c.coalition && c.coalition.status === "active") return null;
-  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY12) return null;
+  if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY13) return null;
   const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR13).sort((a, b) => b.power - a.power)[0];
   if (!ready) return null;
   const coalition = {
     id: `coal-${ready.id}-${now}`,
     warlordId: ready.id,
     startedAtMs: now,
-    endsAtMs: now + COALITION_RULES.durationDays * DAY12,
+    endsAtMs: now + COALITION_RULES.durationDays * DAY13,
     goal: Math.max(1, Math.round(ready.fleetPower * COALITION_RULES.goalFactor)),
     dealt: 0,
     contributions: {},
@@ -20157,9 +20630,9 @@ function empowerWarlord(npc, growth = COALITION_RULES.failGrowth) {
 }
 
 // src/game/agenda.ts
-var DAY13 = 24 * 36e5;
+var DAY14 = 24 * 36e5;
 function upcomingAgenda(now, days = 30, extra = []) {
-  const to = now + days * DAY13;
+  const to = now + days * DAY14;
   const items = [];
   for (const w of bossWindows(now, leviathanSchedule(), 6)) {
     if (w.startMs < to) items.push({ id: `lev-${w.startMs}`, kind: "leviathan", title: worldBossForStart(w.startMs).name, startMs: w.startMs, endMs: w.endMs, link: "/game/uber", fixed: w.fixed, emoji: "\u{1F40B}", source: w.fixed ? { type: "levDate", startMs: w.startMs } : { type: "levGen", startMs: w.startMs } });
@@ -20180,7 +20653,7 @@ function upcomingAgenda(now, days = 30, extra = []) {
       if (at > now && at < to) items.push({ id: `ep-${m.id}-${i}`, kind: "chronicle", title: `Chroniques : \xE9pisode ${i + 1}${m.title ? ` (${m.title})` : ""}`, startMs: at, link: "/game/chroniques", emoji: "\u{1F4DC}" });
     }
   }
-  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY13)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "\u{1F3C6}" });
+  for (let t = seasonEndMs(now); t < to; t = seasonEndMs(t + DAY14)) items.push({ id: `season-${t}`, kind: "season", title: "Fin de la saison", startMs: t, link: "/game/palmares", emoji: "\u{1F3C6}" });
   return [...items, ...extra.filter((x) => {
     var _a;
     return ((_a = x.endMs) != null ? _a : x.startMs) > now && x.startMs < to;
@@ -25177,105 +25650,6 @@ function challengeFromBytes(bytes) {
   return b64urlEncode(bytes);
 }
 
-// src/game/contests.ts
-var CONTESTS_KEY = "contests";
-var CONTEST_RULES = {
-  /** Concours gardés (les plus anciens terminés sont oubliés). */
-  maxKept: 20,
-  /** Places affichées au classement. */
-  standingsSize: 20,
-  /** Part du pot qu'un concours peut engager, au plus. */
-  maxPotShare: 0.8
-};
-var num6 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
-function normalizeContests(raw) {
-  const list = raw && typeof raw === "object" && Array.isArray(raw.list) ? raw.list : [];
-  return {
-    list: list.filter((c) => !!c && typeof c === "object" && typeof c.id === "string" && c.metric in METRICS).map((c) => {
-      var _a, _b;
-      return __spreadValues(__spreadValues(__spreadProps(__spreadValues({
-        id: c.id,
-        title: String((_a = c.title) != null ? _a : "").slice(0, 80),
-        description: String((_b = c.description) != null ? _b : "").slice(0, 400),
-        metric: c.metric,
-        startMs: num6(c.startMs),
-        endMs: num6(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare)))
-      }, num6(c.amberShare) > 0 ? { amberShare: Math.min(CONTEST_RULES.maxPotShare, num6(c.amberShare)) } : {}), {
-        places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num6(p))).slice(0, 10),
-        status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
-        baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
-        standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
-        updatedAtMs: num6(c.updatedAtMs)
-      }), Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
-    })
-  };
-}
-function validateContest(c, now) {
-  var _a, _b;
-  const errors = [];
-  if (!((_a = c.title) == null ? void 0 : _a.trim())) errors.push("Donne un titre au concours.");
-  if (!(c.metric in METRICS)) errors.push("Crit\xE8re inconnu.");
-  if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le d\xE9but.");
-  if (!(c.endMs > now)) errors.push("La fin doit \xEAtre dans le futur.");
-  if (c.endMs - c.startMs > 60 * 24 * 36e5) errors.push("Un concours dure 60 jours au plus.");
-  const max = CONTEST_RULES.maxPotShare;
-  const amber = (_b = c.amberShare) != null ? _b : 0;
-  if (!(c.potShare >= 0 && c.potShare <= max) || !(amber >= 0 && amber <= max)) errors.push(`Parts du pot entre 0 et ${Math.round(max * 100)} %.`);
-  else if (!(c.potShare > 0 || amber > 0)) errors.push("Engage une part des ressources ou de l'Ambre du pot.");
-  const sum3 = c.places.reduce((a, b) => a + b, 0);
-  if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place r\xE9compens\xE9e.");
-  if (sum3 > 1.0001) errors.push("La r\xE9partition des places d\xE9passe 100 %.");
-  return errors;
-}
-function contestPhase(c, now) {
-  if (c.status === "done" || c.status === "cancelled") return c.status;
-  if (now < c.startMs) return "scheduled";
-  return now < c.endMs ? "running" : "ending";
-}
-function metricValue(c, player) {
-  const m = METRICS[c.metric];
-  return m ? Math.max(0, Number(m.value(player)) || 0) : 0;
-}
-function contestScore(c, player) {
-  const base = c.baselines[player.uid];
-  return base === void 0 ? 0 : Math.max(0, metricValue(c, player) - base);
-}
-function refreshContest(c, players, now) {
-  const baselines = __spreadValues({}, c.baselines);
-  for (const p of players) if (baselines[p.uid] === void 0) baselines[p.uid] = metricValue(c, p);
-  const next = __spreadProps(__spreadValues({}, c), { baselines });
-  const standings = players.map((p) => ({ uid: p.uid, pseudo: p.pseudo, score: contestScore(next, p) })).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, CONTEST_RULES.standingsSize);
-  return __spreadProps(__spreadValues({}, next), { standings, updatedAtMs: now });
-}
-function contestPurse(c, pot) {
-  const out = {};
-  for (const [k, v] of Object.entries(pot.resources)) {
-    const n = Math.floor((v != null ? v : 0) * c.potShare);
-    if (n > 0) out[k] = n;
-  }
-  return out;
-}
-function contestAmberPurse(c, pot) {
-  var _a, _b;
-  return Math.max(0, Math.floor(((_a = pot.amber) != null ? _a : 0) * ((_b = c.amberShare) != null ? _b : 0)));
-}
-function contestPrizes(c, purse, amberPurse = 0) {
-  return c.standings.slice(0, c.places.length).map((s, i) => {
-    const resources = {};
-    for (const [k, v] of Object.entries(purse)) {
-      const n = Math.floor(v * c.places[i]);
-      if (n > 0) resources[k] = n;
-    }
-    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources, amber: Math.floor(amberPurse * c.places[i]) };
-  });
-}
-function pruneContests(list) {
-  const open = list.filter((c) => c.status === "scheduled" || c.status === "running");
-  const closed = list.filter((c) => !(c.status === "scheduled" || c.status === "running")).sort((a, b) => b.endMs - a.endMs);
-  return [...open, ...closed].slice(0, CONTEST_RULES.maxKept);
-}
-
 // src/game/broadcast.ts
 var BROADCAST_SEGMENTS = [
   { id: "all", label: "Tous les joueurs", hint: "Tous les comptes (hors PNJ)." },
@@ -25286,20 +25660,20 @@ var BROADCAST_SEGMENTS = [
   { id: "alliance", label: "Une alliance", hint: "Tous les membres de l'alliance choisie." },
   { id: "noAlliance", label: "Sans alliance", hint: "Joueurs qui n'ont pas encore rejoint d'alliance." }
 ];
-var DAY14 = 24 * 36e5;
+var DAY15 = 24 * 36e5;
 function broadcastTargets(players, segment, now, allianceId) {
   const idle = (p) => now - Math.min(now, lastActivity(p));
   switch (segment) {
     case "all":
       return players;
     case "active7":
-      return players.filter((p) => idle(p) < 7 * DAY14);
+      return players.filter((p) => idle(p) < 7 * DAY15);
     case "inactive7":
-      return players.filter((p) => idle(p) >= 7 * DAY14 && idle(p) < 30 * DAY14);
+      return players.filter((p) => idle(p) >= 7 * DAY15 && idle(p) < 30 * DAY15);
     case "inactive30":
-      return players.filter((p) => idle(p) >= 30 * DAY14);
+      return players.filter((p) => idle(p) >= 30 * DAY15);
     case "new7":
-      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY14);
+      return players.filter((p) => !!p.createdAtMs && now - p.createdAtMs < 7 * DAY15);
     case "alliance":
       return allianceId ? players.filter((p) => p.allianceId === allianceId) : [];
     case "noAlliance":
@@ -25938,7 +26312,7 @@ var MAIL_SEGMENTS = [
   { id: "noAlliance", label: "Sans alliance", hint: "Pour les inviter \xE0 en rejoindre une." },
   { id: "alliance", label: "Une alliance", hint: "Les membres d'une alliance choisie." }
 ];
-var DAY15 = 864e5;
+var DAY16 = 864e5;
 function normalizeSegment(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   const id = MAIL_SEGMENTS.some((s) => s.id === r.id) ? r.id : "all";
@@ -25948,13 +26322,13 @@ function inSegment(seg, p, now) {
   const last = Number(p.lastActiveMs) || 0;
   switch (seg.id) {
     case "active7":
-      return now - last < 7 * DAY15;
+      return now - last < 7 * DAY16;
     case "inactive7":
-      return now - last >= 7 * DAY15;
+      return now - last >= 7 * DAY16;
     case "inactive30":
-      return now - last >= 30 * DAY15;
+      return now - last >= 30 * DAY16;
     case "newcomers14":
-      return now - (Number(p.createdAtMs) || 0) < 14 * DAY15;
+      return now - (Number(p.createdAtMs) || 0) < 14 * DAY16;
     case "noAlliance":
       return !p.allianceId;
     case "alliance":
@@ -25989,301 +26363,6 @@ function instrumentHtml(html, pixelUrl, track) {
   const withLinks = html.replace(/href="(https?:\/\/[^"]+)"/g, (m, url2) => url2.includes("/api/cosmic/unsubscribe") ? m : `href="${track(url2.replace(/&amp;/g, "&"))}"`);
   const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">`;
   return withLinks.includes("</body>") ? withLinks.replace("</body>", `${pixel}</body>`) : withLinks + pixel;
-}
-
-// src/game/auctions.ts
-var AUCTION_RULES = {
-  /** Surenchère minimale (5 % au-dessus de la meilleure). */
-  minIncrement: 0.05,
-  antiSnipeMs: 5 * 6e4,
-  taxRate: 0.05,
-  maxOpenPerSeller: 5,
-  durationsH: [6, 12, 24, 48],
-  /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
-  minStart: { common: 100, rare: 1, amber: 1 },
-  maxStart: 1e12
-};
-var AUCTION_CURRENCIES = [...RESOURCE_LIST.map((r) => r.id), "amber"];
-function currencyKind(res) {
-  var _a;
-  if (res === "amber") return "amber";
-  return ((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? "rare" : "common";
-}
-function minStartFor(res) {
-  return AUCTION_RULES.minStart[currencyKind(res)];
-}
-function currencyLabel(res) {
-  var _a, _b;
-  return res === "amber" ? "Ambre" : (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res;
-}
-function validateListing(raw, openCount) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const kind = r.kind === "relic" || r.kind === "module" ? r.kind : null;
-  if (!kind) throw new GameActionError("Objet \xE0 vendre inconnu.");
-  const itemId = typeof r.itemId === "string" ? r.itemId : "";
-  if (!itemId) throw new GameActionError("Choisis l'objet \xE0 vendre.");
-  const res = String(r.res);
-  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie inconnue.");
-  const startPrice = Math.floor(Number(r.startPrice));
-  const min = minStartFor(res);
-  if (!(startPrice >= min && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise \xE0 prix : au moins ${min} ${currencyLabel(res).toLowerCase()}.`);
-  const durationH = Math.floor(Number(r.durationH));
-  if (!AUCTION_RULES.durationsH.includes(durationH)) throw new GameActionError("Dur\xE9e refus\xE9e.");
-  if (openCount >= AUCTION_RULES.maxOpenPerSeller) throw new GameActionError(`${AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.`);
-  return { kind, itemId, res, startPrice, durationH };
-}
-function takeLot(player, kind, itemId) {
-  if (kind === "relic") {
-    const st2 = relicsState(player);
-    const item2 = st2.items.find((r) => r.id === itemId);
-    if (!item2) throw new GameActionError("Relique introuvable.");
-    if (item2.rarity === "mythic") throw new GameActionError("Une relique mythique ne se vend pas.");
-    if (st2.slots.includes(item2.id)) throw new GameActionError("Retire d'abord cette relique de son emplacement.");
-    st2.items = st2.items.filter((r) => r.id !== item2.id);
-    player.relics = st2;
-    return { item: item2, label: relicLabel(item2), rarity: item2.rarity };
-  }
-  const st = modulesState(player);
-  const item = st.items.find((m) => m.id === itemId);
-  if (!item) throw new GameActionError("Plan introuvable.");
-  if (item.built) throw new GameActionError("Seuls les plans (non fabriqu\xE9s) se vendent aux ench\xE8res.");
-  st.items = st.items.filter((m) => m.id !== item.id);
-  player.modules = st;
-  return { item, label: `Plan : ${moduleLabel(item)}`, rarity: item.rarity };
-}
-function giveLot(player, kind, item) {
-  if (kind === "relic") {
-    const st2 = relicsState(player);
-    if (!st2.items.some((r) => r.id === item.id)) st2.items.push(item);
-    player.relics = st2;
-    return;
-  }
-  const st = modulesState(player);
-  if (!st.items.some((m) => m.id === item.id)) st.items.push(__spreadProps(__spreadValues({}, item), { built: false }));
-  player.modules = st;
-}
-function lotKnown(kind, item) {
-  return kind === "relic" ? !!findTemplate(item.template) : !!findModuleTemplate(String(item.template));
-}
-function minNextBid(a) {
-  if (!(a.bid > 0)) return a.startPrice;
-  return Math.max(a.bid + 1, Math.ceil(a.bid * (1 + AUCTION_RULES.minIncrement)));
-}
-function placeBid(a, uid, pseudo, amountIn, now) {
-  if (a.status !== "open" || now >= a.endsAtMs) throw new GameActionError("Cette vente est close.");
-  if (a.sellerId === uid) throw new GameActionError("Tu ne peux pas ench\xE9rir sur ta propre vente.");
-  const amount3 = Math.floor(Number(amountIn));
-  const min = minNextBid(a);
-  if (!(amount3 >= min)) throw new GameActionError(`Ench\xE8re minimale : ${min}.`);
-  if (amount3 > AUCTION_RULES.maxStart * 10) throw new GameActionError("Ench\xE8re trop \xE9lev\xE9e.");
-  const same = a.bidderId === uid;
-  const refund = a.bidderId && !same ? { uid: a.bidderId, amount: a.bid } : null;
-  const charge = same ? amount3 - a.bid : amount3;
-  a.bid = amount3;
-  a.bidderId = uid;
-  a.bidderPseudo = pseudo;
-  a.bids += 1;
-  if (a.endsAtMs - now < AUCTION_RULES.antiSnipeMs) a.endsAtMs = now + AUCTION_RULES.antiSnipeMs;
-  return { refund, charge, endsAtMs: a.endsAtMs };
-}
-function settleAuction(a) {
-  if (!(a.bid > 0) || !a.bidderId) return { status: "expired", receiver: a.sellerId, payout: 0, tax: 0 };
-  const tax = Math.floor(a.bid * AUCTION_RULES.taxRate);
-  return { status: "sold", receiver: a.bidderId, payout: a.bid - tax, tax };
-}
-function canCancel(a) {
-  return a.status === "open" && !(a.bid > 0);
-}
-function recordAuctionStat(player, side) {
-  bumpStat(player, side === "sold" ? "auctionsSold" : "auctionsWon");
-}
-function currencyBalance(player, res) {
-  var _a;
-  return Math.floor(res === "amber" ? bountyState(player).amber : (_a = player.resources[res]) != null ? _a : 0);
-}
-function debitBid(player, res, amount3) {
-  if (!(amount3 > 0)) return;
-  if (currencyBalance(player, res) < amount3) throw new GameActionError(res === "amber" ? "Pas assez d'Ambre pour cette ench\xE8re." : "Ressources insuffisantes pour cette ench\xE8re.");
-  if (res === "amber") {
-    const st = bountyState(player);
-    st.amber -= amount3;
-    player.bounties = st;
-  } else player.resources[res] -= amount3;
-}
-function creditBid(player, res, amount3) {
-  var _a;
-  if (!(amount3 > 0)) return;
-  if (res === "amber") {
-    const st = bountyState(player);
-    st.amber += amount3;
-    player.bounties = st;
-  } else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-}
-var AUCTION_HISTORY_KEY = "auction_history";
-var AUCTION_HISTORY_RULES = { perLot: 20, maxLots: 400 };
-var AUCTION_WATCH_RULES = { maxPerPlayer: 5 };
-var RARITY_RANK = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-function lotKey(kind, item) {
-  var _a, _b;
-  return `${kind}:${String((_a = item.template) != null ? _a : "")}:${String((_b = item.rarity) != null ? _b : "")}`;
-}
-function normalizeAuctionHistory(raw) {
-  var _a, _b;
-  const lots = {};
-  const src = raw && typeof raw === "object" ? raw.lots : null;
-  if (!src || typeof src !== "object") return { lots };
-  for (const [k, v] of Object.entries(src)) {
-    if (!v || typeof v !== "object" || !Array.isArray(v.sales)) continue;
-    const sales = v.sales.map((s) => ({ atMs: Number(s == null ? void 0 : s.atMs) || 0, res: String(s == null ? void 0 : s.res), price: Math.floor(Number(s == null ? void 0 : s.price)) })).filter((s) => AUCTION_CURRENCIES.includes(s.res) && s.price > 0).slice(-AUCTION_HISTORY_RULES.perLot);
-    if (sales.length) lots[k] = { label: String((_a = v.label) != null ? _a : "").slice(0, 120), kind: v.kind === "module" ? "module" : "relic", rarity: String((_b = v.rarity) != null ? _b : ""), sales };
-  }
-  return { lots };
-}
-function recordSale(h, a, now) {
-  var _a, _b, _c, _d;
-  if (!(a.bid > 0)) return h;
-  const key = lotKey(a.kind, a.item);
-  const prev = h.lots[key];
-  const tpl = a.item.template;
-  const name = (_c = a.kind === "module" ? (_a = findModuleTemplate(String(tpl))) == null ? void 0 : _a.name : (_b = findTemplate(tpl)) == null ? void 0 : _b.name) != null ? _c : a.label.replace(/^Plan : /, "");
-  const lots = __spreadProps(__spreadValues({}, h.lots), { [key]: { label: name, kind: a.kind, rarity: a.rarity, sales: [...(_d = prev == null ? void 0 : prev.sales) != null ? _d : [], { atMs: now, res: a.res, price: Math.floor(a.bid) }].slice(-AUCTION_HISTORY_RULES.perLot) } });
-  const keys = Object.keys(lots);
-  if (keys.length > AUCTION_HISTORY_RULES.maxLots) {
-    const last = (k) => {
-      var _a2, _b2;
-      return (_b2 = (_a2 = lots[k].sales[lots[k].sales.length - 1]) == null ? void 0 : _a2.atMs) != null ? _b2 : 0;
-    };
-    keys.sort((x, y) => last(x) - last(y)).slice(0, keys.length - AUCTION_HISTORY_RULES.maxLots).forEach((k) => delete lots[k]);
-  }
-  return { lots };
-}
-function validateWatch(raw, count2) {
-  var _a;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const kind = r.kind === "relic" || r.kind === "module" || r.kind === "any" ? r.kind : null;
-  if (!kind) throw new GameActionError("Choisis reliques, plans ou les deux.");
-  const minRarity = String((_a = r.minRarity) != null ? _a : "");
-  if (!(minRarity in RARITY_RANK) || minRarity === "mythic") throw new GameActionError("Raret\xE9 inconnue.");
-  const template = typeof r.template === "string" ? r.template.slice(0, 60) : "";
-  if (template && kind === "any") throw new GameActionError("Un mod\xE8le pr\xE9cis demande de choisir reliques ou plans.");
-  if (template && !lotKnown(kind, { template })) throw new GameActionError("Mod\xE8le inconnu.");
-  if (count2 >= AUCTION_WATCH_RULES.maxPerPlayer) throw new GameActionError(`${AUCTION_WATCH_RULES.maxPerPlayer} alertes au plus.`);
-  return { kind, minRarity, template };
-}
-function watchMatches(w, kind, item) {
-  var _a, _b;
-  if (w.kind !== "any" && w.kind !== kind) return false;
-  if (((_a = RARITY_RANK[String(item.rarity)]) != null ? _a : -1) < ((_b = RARITY_RANK[w.minRarity]) != null ? _b : 99)) return false;
-  return !w.template || w.template === item.template;
-}
-function watchersFor(watches, sellerId, kind, item) {
-  const out = /* @__PURE__ */ new Set();
-  for (const w of watches) if (w.uid && w.uid !== sellerId && watchMatches(w, kind, item)) out.add(w.uid);
-  return [...out];
-}
-function linkedAuctionReasons(a) {
-  const out = [];
-  if (a.sellerIp && a.sellerIp === a.bidderIp) out.push("m\xEAme adresse IP");
-  if (a.sellerDevice && a.sellerDevice === a.bidderDevice) out.push("m\xEAme appareil");
-  return out;
-}
-function cleanDeviceId(raw) {
-  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
-}
-
-// src/game/weeklyStock.ts
-var WEEKLY_OFFERS = [
-  { id: "rareRelic", name: "Relique de l'Essaim", description: "Une relique tir\xE9e au hasard, rare au moins.", price: 250, quantity: 8 },
-  { id: "rarePlan", name: "Plan de module rare", description: "Un plan de module tir\xE9 au hasard, rare au moins.", price: 200, quantity: 10 },
-  { id: "epicPlan", name: "Plan de module \xE9pique", description: "Un plan de module tir\xE9 au hasard, \xE9pique au moins.", price: 450, quantity: 4 },
-  { id: "tokens", name: "Sac de jetons", description: "25 jetons pour la machine \xE0 sous du pot commun.", price: 120, quantity: 15 }
-];
-var WEEKLY_STOCK_KEY = "weekly_stock";
-var DAY16 = 864e5;
-var WEEK = 7 * DAY16;
-function weekStartMs(now) {
-  const midnight = Math.floor(now / DAY16) * DAY16;
-  return midnight - (new Date(now).getUTCDay() + 6) % 7 * DAY16;
-}
-function weekKey(now) {
-  return new Date(weekStartMs(now)).toISOString().slice(0, 10);
-}
-function offerOfWeek(now) {
-  return WEEKLY_OFFERS[Math.floor(weekStartMs(now) / WEEK) % WEEKLY_OFFERS.length];
-}
-function weeklyStock(raw, now) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const week = weekKey(now);
-  const offer = offerOfWeek(now).id;
-  if (r.week !== week) return { week, offer, sold: 0, buyers: [] };
-  return { week, offer, sold: Math.max(0, Math.floor(Number(r.sold) || 0)), buyers: Array.isArray(r.buyers) ? r.buyers.map(String) : [] };
-}
-function weeklyLeft(stock) {
-  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
-  return Math.max(0, offer.quantity - stock.sold);
-}
-function weeklyBlocker(player, uid, stock) {
-  var _a, _b, _c;
-  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
-  if (stock.buyers.includes(uid)) return "D\xE9j\xE0 achet\xE9 cette semaine.";
-  if (weeklyLeft(stock) <= 0) return "\xC9puis\xE9 : retour lundi.";
-  if (offer.id === "rareRelic" && ((_c = (_b = (_a = player.relics) == null ? void 0 : _a.items) == null ? void 0 : _b.length) != null ? _c : 0) >= RELIC_RULES.maxItems) return "Inventaire de reliques plein.";
-  if ((offer.id === "rarePlan" || offer.id === "epicPlan") && modulesState(player).items.length >= MODULE_RULES.maxItems) return "Inventaire de modules plein.";
-  if (bountyState(player).amber < offer.price) return "Pas assez d'Ambre.";
-  return null;
-}
-function buyWeeklyOffer(player, uid, rawStock, now, random = Math.random) {
-  const stock = weeklyStock(rawStock, now);
-  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
-  const blocker = weeklyBlocker(player, uid, stock);
-  if (blocker) throw new GameActionError(blocker);
-  let message;
-  if (offer.id === "rareRelic") {
-    const relic = rollRelic("weekly", now, random, "rare");
-    addRelic(player, relic);
-    message = "Relique de l'Essaim re\xE7ue : retrouve-la dans tes reliques.";
-  } else if (offer.id === "rarePlan" || offer.id === "epicPlan") {
-    addModuleItem(player, rollModulePlan("weekly", now, random, offer.id === "rarePlan" ? "rare" : "epic"));
-    message = `${offer.name} re\xE7u : retrouve-le dans \xC9tat-major \u2192 Modules.`;
-  } else {
-    grantTokens(player, 25);
-    message = "25 jetons ajout\xE9s \xE0 ta r\xE9serve du casino.";
-  }
-  const st = bountyState(player);
-  st.amber -= offer.price;
-  st.history = [...st.history, { atMs: now, item: `weekly:${offer.id}`, amber: offer.price }].slice(-SHOP_HISTORY_MAX);
-  player.bounties = st;
-  return { stock: __spreadProps(__spreadValues({}, stock), { sold: stock.sold + 1, buyers: [...stock.buyers, uid] }), message };
-}
-
-// src/game/patrons.ts
-var PATRONS_KEY = "patrons";
-var PATRONS_TOP = 10;
-var monthKey = (now) => new Date(now).toISOString().slice(0, 7);
-function topPatrons(state, n = PATRONS_TOP) {
-  return Object.entries(state.byUid).map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber })).filter((e3) => e3.amber > 0).sort((a, b) => b.amber - a.amber || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0)).slice(0, n);
-}
-function patronsState(raw, now) {
-  var _a, _b;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const month2 = monthKey(now);
-  const byUid = {};
-  for (const [uid, v] of Object.entries((_a = r.byUid) != null ? _a : {})) {
-    const amber = Math.max(0, Math.floor(Number(v == null ? void 0 : v.amber) || 0));
-    if (amber > 0) byUid[uid] = { pseudo: String((_b = v == null ? void 0 : v.pseudo) != null ? _b : "").slice(0, 40), amber };
-  }
-  const last = r.last && typeof r.last.month === "string" && Array.isArray(r.last.top) ? { month: r.last.month, top: r.last.top.slice(0, 3) } : null;
-  if (r.month && r.month !== month2) return { month: month2, byUid: {}, last: { month: r.month, top: topPatrons({ month: r.month, byUid, last: null }, 3) } };
-  return { month: month2, byUid, last };
-}
-function addPatronage(raw, uid, pseudo, amber, now) {
-  var _a, _b, _c;
-  const st = patronsState(raw, now);
-  const n = Math.floor(Number(amber) || 0);
-  if (!(n > 0) || !uid) return st;
-  const cur = (_b = (_a = st.byUid[uid]) == null ? void 0 : _a.amber) != null ? _b : 0;
-  return __spreadProps(__spreadValues({}, st), { byUid: __spreadProps(__spreadValues({}, st.byUid), { [uid]: { pseudo: pseudo || ((_c = st.byUid[uid]) == null ? void 0 : _c.pseudo) || "?", amber: cur + n } }) });
 }
 
 // src/server/hooksEntry.ts

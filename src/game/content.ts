@@ -31,6 +31,13 @@ import { XP_TIER_RULES, validateXpTierRules } from "@/game/xpTiers";
 import { PASS_GEN_RULES, validatePassGenRules } from "@/game/passGen";
 import { CHRONICLE_GEN_RULES, validateChronicleGenRules } from "@/game/chronicleGen";
 import { ARCHETYPES } from "@/game/procedural";
+import { AUCTION_RULES } from "@/game/auctions";
+import { TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
+import { GIFT_RULES } from "@/game/actions";
+import { CONTEST_RULES } from "@/game/contests";
+import { OUTCOME_POINTS } from "@/game/casino";
+import { WEEKLY_STOCK_RULES } from "@/game/weeklyStock";
+import { PATRON_RULES } from "@/game/patrons";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -91,6 +98,14 @@ export interface GameRules {
   passGen: typeof PASS_GEN_RULES;
   /** 6.8.2 : chapitres des Chroniques générés (récompenses, objectifs, difficulté, faction du thème). */
   chronicleGen: typeof CHRONICLE_GEN_RULES;
+  /** 6.9.0 (AU4) : commerce réglable dans l'admin. */
+  auctions: typeof AUCTION_RULES;
+  tradeContracts: typeof TRADE_CONTRACT_RULES;
+  gifts: typeof GIFT_RULES;
+  contests: typeof CONTEST_RULES;
+  tournamentPoints: typeof OUTCOME_POINTS;
+  weeklyStock: typeof WEEKLY_STOCK_RULES;
+  patrons: typeof PATRON_RULES;
 }
 
 export interface GameContent {
@@ -161,6 +176,15 @@ const DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 const DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
 const DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
 const DEFAULT_CHRONICLE_GEN_RULES = structuredClone(CHRONICLE_GEN_RULES);
+const DEFAULT_COMMERCE_RULES = {
+  auctions: structuredClone(AUCTION_RULES),
+  tradeContracts: structuredClone(TRADE_CONTRACT_RULES),
+  gifts: structuredClone(GIFT_RULES),
+  contests: structuredClone(CONTEST_RULES),
+  tournamentPoints: structuredClone(OUTCOME_POINTS),
+  weeklyStock: structuredClone(WEEKLY_STOCK_RULES),
+  patrons: structuredClone(PATRON_RULES),
+};
 const DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
 const DEFAULT_PIRATE_RULES = { ...PIRATE_RULES };
 const DEFAULT_MARKET_RULES = { ...MARKET_RULES };
@@ -189,7 +213,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES, ...structuredClone(DEFAULT_COMMERCE_RULES) },
   });
 }
 
@@ -294,6 +318,20 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         objectiveWeights: { ...defaults.rules.chronicleGen.objectiveWeights, ...(overrides.rules?.chronicleGen?.objectiveWeights ?? {}) },
         themeArchetypes: { ...defaults.rules.chronicleGen.themeArchetypes, ...(overrides.rules?.chronicleGen?.themeArchetypes ?? {}) },
       },
+      auctions: {
+        ...defaults.rules.auctions,
+        ...(overrides.rules?.auctions ?? {}),
+        minStart: { ...defaults.rules.auctions.minStart, ...(overrides.rules?.auctions?.minStart ?? {}) },
+      },
+      tradeContracts: { ...defaults.rules.tradeContracts, ...(overrides.rules?.tradeContracts ?? {}) },
+      gifts: { ...defaults.rules.gifts, ...(overrides.rules?.gifts ?? {}) },
+      contests: { ...defaults.rules.contests, ...(overrides.rules?.contests ?? {}) },
+      tournamentPoints: { ...defaults.rules.tournamentPoints, ...(overrides.rules?.tournamentPoints ?? {}) },
+      weeklyStock: {
+        prices: { ...defaults.rules.weeklyStock.prices, ...(overrides.rules?.weeklyStock?.prices ?? {}) },
+        quantities: { ...defaults.rules.weeklyStock.quantities, ...(overrides.rules?.weeklyStock?.quantities ?? {}) },
+      },
+      patrons: { ...defaults.rules.patrons, ...(overrides.rules?.patrons ?? {}) },
       streak: (() => {
         const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
         const d = defaults.rules.streak;
@@ -361,6 +399,13 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
   Object.assign(CHRONICLE_GEN_RULES, structuredClone(content.rules.chronicleGen));
+  Object.assign(AUCTION_RULES, structuredClone(content.rules.auctions));
+  Object.assign(TRADE_CONTRACT_RULES, structuredClone(content.rules.tradeContracts));
+  Object.assign(GIFT_RULES, structuredClone(content.rules.gifts));
+  Object.assign(CONTEST_RULES, structuredClone(content.rules.contests));
+  Object.assign(OUTCOME_POINTS, structuredClone(content.rules.tournamentPoints));
+  Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
+  Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
   current = content;
   return content;
 }
@@ -395,6 +440,13 @@ export const RULE_GROUP_LABELS: Record<string, string> = {
   xpTiers: "Paliers d'XP",
   passGen: "Passe généré",
   chronicleGen: "Chroniques générées",
+  auctions: "Enchères",
+  tradeContracts: "Contrats de livraison",
+  gifts: "Cadeaux",
+  contests: "Concours du pot commun",
+  tournamentPoints: "Tournoi du casino : points par tirage",
+  weeklyStock: "Offre de la semaine (Comptoir)",
+  patrons: "Mécènes",
 };
 
 /**
@@ -453,6 +505,18 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateXpTierRules(merged.xpTiers));
   errors.push(...validatePassGenRules(merged.passGen));
   errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  // 6.9.0 (AU4) : commerce.
+  const au = merged.auctions;
+  if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Enchères : surenchère entre 0 et 1, taxe entre 0 et 0,99.");
+  if (!(Number.isInteger(au.maxOpenPerSeller) && au.maxOpenPerSeller >= 1 && au.watchMax >= 0 && au.historyPerLot >= 1 && au.historyMaxLots >= 1)) errors.push("Enchères : ventes ouvertes, alertes et historique ≥ 1 (entiers).");
+  if (!(Array.isArray(au.durationsH) && au.durationsH.length > 0 && au.durationsH.every((h) => h > 0 && h <= 168))) errors.push("Enchères : durées entre 1 et 168 h.");
+  const tc = merged.tradeContracts;
+  if (!(tc.minHours >= 1 && tc.minHours <= tc.maxHours && tc.maxActive >= 1 && tc.openHours >= 1 && tc.priorityHours >= 0)) errors.push("Contrats : délais min ≤ max, contrats actifs ≥ 1.");
+  if (!(merged.gifts.outsideAllianceTax >= 0 && merged.gifts.outsideAllianceTax < 1 && merged.gifts.minAccountDays >= 0)) errors.push("Cadeaux : taxe hors alliance entre 0 et 0,99, ancienneté ≥ 0.");
+  if (!(merged.contests.maxPotShare > 0 && merged.contests.maxPotShare <= 1 && merged.contests.maxKept >= 1 && merged.contests.standingsSize >= 1)) errors.push("Concours : part du pot entre 0 et 1, listes ≥ 1.");
+  if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage ≥ 0.");
+  if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires ≥ 1.");
+  if (!(merged.patrons.top >= 1)) errors.push("Mécènes : au moins 1 place.");
   // 5.18 : combat en tours.
   const cb = merged.combat;
   if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par résistance > 0.");

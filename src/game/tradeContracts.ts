@@ -23,6 +23,8 @@ export const TRADE_CONTRACT_RULES = {
   depositPct: 0.1,
   /** Un contrat ouvert sans livreur expire au bout de ce délai (h). */
   openHours: 48,
+  /** 6.9.0 : durée en tête de liste d'un contrat prioritaire (consommable du Comptoir), en heures. */
+  priorityHours: 24,
 };
 
 export type TradeContractStatus = "open" | "accepted" | "delivered" | "failed" | "cancelled" | "expired";
@@ -69,7 +71,6 @@ export function contractDeposit(payAmount: number): number {
 export type NewTradeContract = Pick<TradeContract, "targetUid" | "wantRes" | "wantAmount" | "payRes" | "payAmount" | "hours" | "expiresAtMs" | "priorityUntilMs">;
 
 /** 5.26.3 : durée de la mise en avant d'un Contrat prioritaire. */
-export const PRIORITY_CONTRACT_HOURS = 24;
 
 /** Contrats visibles : prioritaires (encore actifs) d'abord, puis les plus récents. */
 export function sortTradeContracts<T extends Pick<TradeContract, "createdAtMs" | "priorityUntilMs">>(list: T[], now: number): T[] {
@@ -102,7 +103,7 @@ export function createTradeContract(client: PlayerState, input: Record<string, u
   // 5.26.3 : un Contrat prioritaire en réserve est utilisé par ce contrat.
   const b = (client.bounties ?? {}) as { priorityContracts?: number };
   const charges = Math.max(0, Number(b.priorityContracts) || 0);
-  const priorityUntilMs = charges > 0 ? now + PRIORITY_CONTRACT_HOURS * 3600_000 : 0;
+  const priorityUntilMs = charges > 0 ? now + TRADE_CONTRACT_RULES.priorityHours * 3600_000 : 0;
   if (charges > 0) client.bounties = { ...(client.bounties as object), priorityContracts: charges - 1 } as PlayerState["bounties"];
   return { targetUid, wantRes, wantAmount, payRes, payAmount, hours, expiresAtMs: now + TRADE_CONTRACT_RULES.openHours * 3600_000, priorityUntilMs };
 }

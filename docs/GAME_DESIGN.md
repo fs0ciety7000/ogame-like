@@ -164,3 +164,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.8.1 | Passe généré par budget : récompenses sous budget (140 h, jalons, plafonds), points par palier calculés (médian jour 24, plus actif pas avant le 15), défis pondérés, simulation avant publication ; réglages `passGen` dans l'admin (I18) | `docs/changes/6.8.1-passe-par-budget.md` |
 | 2026-10-06 | — | Règle n° 3 : travail en continu, questions notées dans `docs/QUESTIONS.md` | `docs/changes/docs-travail-continu.md` |
 | 2026-10-06 | 6.8.2 | Chroniques générées sous réglages : récompenses d'épisode par budget, objectifs pondérés, bornes de difficulté, faction du thème du passe (I19) | `docs/changes/6.8.2-chroniques-generees.md` |
+| 2026-10-06 | 6.9.0 | Revue AU4 (commerce) : garde-fous en place ; 9 réglages du commerce passés dans l'admin (COM-1) ; volumes à relever en AU13 | `docs/audit/2026-10-06-au4-commerce.md`, `docs/changes/6.9.0-commerce-reglable.md` |

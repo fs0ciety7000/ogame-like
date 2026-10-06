@@ -22,11 +22,29 @@ export interface WeeklyOffer {
   quantity: number;
 }
 
+/** 6.9.0 (AU4) : prix (Ambre) et exemplaires réglables dans l'admin (GameRules.weeklyStock). */
+export const WEEKLY_STOCK_RULES = {
+  prices: { rareRelic: 250, rarePlan: 200, epicPlan: 450, tokens: 120 } as Record<WeeklyOfferId, number>,
+  quantities: { rareRelic: 8, rarePlan: 10, epicPlan: 4, tokens: 15 } as Record<WeeklyOfferId, number>,
+};
+
+const offer = (id: WeeklyOfferId, name: string, description: string): WeeklyOffer => ({
+  id,
+  name,
+  description,
+  get price() {
+    return Math.max(1, Math.round(WEEKLY_STOCK_RULES.prices[id] ?? 1));
+  },
+  get quantity() {
+    return Math.max(1, Math.round(WEEKLY_STOCK_RULES.quantities[id] ?? 1));
+  },
+});
+
 export const WEEKLY_OFFERS: WeeklyOffer[] = [
-  { id: "rareRelic", name: "Relique de l'Essaim", description: "Une relique tirée au hasard, rare au moins.", price: 250, quantity: 8 },
-  { id: "rarePlan", name: "Plan de module rare", description: "Un plan de module tiré au hasard, rare au moins.", price: 200, quantity: 10 },
-  { id: "epicPlan", name: "Plan de module épique", description: "Un plan de module tiré au hasard, épique au moins.", price: 450, quantity: 4 },
-  { id: "tokens", name: "Sac de jetons", description: "25 jetons pour la machine à sous du pot commun.", price: 120, quantity: 15 },
+  offer("rareRelic", "Relique de l'Essaim", "Une relique tirée au hasard, rare au moins."),
+  offer("rarePlan", "Plan de module rare", "Un plan de module tiré au hasard, rare au moins."),
+  offer("epicPlan", "Plan de module épique", "Un plan de module tiré au hasard, épique au moins."),
+  offer("tokens", "Sac de jetons", "25 jetons pour la machine à sous du pot commun."),
 ];
 
 export const WEEKLY_STOCK_KEY = "weekly_stock";
