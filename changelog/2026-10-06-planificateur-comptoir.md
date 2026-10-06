@@ -13,8 +13,13 @@ title: Planificateur au Comptoir, taxe d'échange, nouveaux succès, retour des 
 
 ## Succès
 - **Recherche** (sans tenir compte des accents) et **filtres** par état (obtenus, en cours, à obtenir) et par palier sur la page Succès.
-- **19 nouveaux succès** pour les systèmes récents : unités réparées à l'Atelier, modules fabriqués et montés, ventes et achats à l'Hôtel des enchères, reliques en collection, primes Kesh'Vaar, Ambre gagnée. Nouvelle catégorie **Commerce et Ruche**.
-- Le générateur procédural leur ajoute ensuite des paliers supérieurs, comme pour les autres succès.
+- **45 nouveaux succès** pour des systèmes qui n'en avaient pas :
+  - Atelier (unités réparées), modules (fabriqués, emplacements occupés), Hôtel des enchères (ventes, achats), reliques en collection ;
+  - primes et réputation auprès de la Ruche, Ambre gagnée, vendettas contre les seigneurs, casino ;
+  - marché entre joueurs, contrats de livraison, cadeaux, messages privés, canal global ;
+  - Codex, signalements **résolus par l'équipe** (pas au dépôt, pour ne pas encourager le spam), personnalisation du profil, série de connexion, Ascension, rang de légende.
+- Nouvelle catégorie **Commerce et Ruche**. Le générateur procédural ajoute ensuite les paliers supérieurs de toutes ces mesures.
+- **Brouillard des paliers** : pour chaque mesure, tu vois les paliers obtenus et le **prochain** à atteindre ; les suivants restent dans le brouillard (palier et catégorie visibles, nom, seuil et récompense cachés) jusqu'à ce que le précédent tombe. Il y a toujours un objectif clair, sans pouvoir calculer d'avance toute l'échelle pour farmer l'XP. Les succès secrets restent « ??? ».
 
 ## Boss dans le menu
 - Boss mondial et boss de saison : le menu affiche le **temps avant leur retour** quand ils dorment.

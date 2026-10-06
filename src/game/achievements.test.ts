@@ -3,6 +3,8 @@ import {
   ACHIEVEMENTS,
   derivedAchievements,
   achievementProgress,
+  achievementVisibility,
+  previousTier,
   checkNewAchievements,
   DEFAULT_ACHIEVEMENTS,
   METRICS,
@@ -109,5 +111,18 @@ describe("5.26.1 : succès des systèmes récents", () => {
     recordAuctionStat(p, "won");
     const got = checkNewAchievements(p).map((a) => a.id);
     expect(got).toEqual(expect.arrayContaining(["atelier_1", "enchere_vente_1", "enchere_achat_1"]));
+  });
+});
+
+describe("5.26.1 : brouillard des paliers", () => {
+  it("obtenus et prochain palier visibles, les suivants dans le brouillard, les secrets restent secrets", () => {
+    const chain = DEFAULT_ACHIEVEMENTS.filter((a) => a.metric === "victories").sort((x, y) => x.threshold - y.threshold);
+    const v0 = achievementVisibility(chain, new Set());
+    expect(chain.map((a) => v0.get(a.id))).toEqual(["shown", "fog", "fog", "fog", "fog"]);
+    const v1 = achievementVisibility(chain, new Set([chain[0].id]));
+    expect(chain.map((a) => v1.get(a.id))).toEqual(["shown", "shown", "fog", "fog", "fog"]);
+    expect(previousTier(chain, chain[2])?.id).toBe(chain[1].id);
+    const secret = DEFAULT_ACHIEVEMENTS.find((a) => a.id === "phoenix")!;
+    expect(achievementVisibility([secret], new Set()).get("phoenix")).toBe("secret");
   });
 });

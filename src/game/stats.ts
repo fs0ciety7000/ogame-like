@@ -76,6 +76,10 @@ export interface PlayerStats {
   xpDay?: import("@/game/xpTiers").XpDayState;
   /** 5.26.1 : unités sorties de l'Atelier, modules fabriqués, ventes aux enchères conclues et remportées. */
   unitsRepaired?: number;
+  /** 5.26.1 : messages privés et du canal global envoyés, signalements résolus par l'équipe. */
+  privateMessages?: number;
+  globalMessages?: number;
+  reportsResolved?: number;
   modulesBuilt?: number;
   auctionsSold?: number;
   auctionsWon?: number;

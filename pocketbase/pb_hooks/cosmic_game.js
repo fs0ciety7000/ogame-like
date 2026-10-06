@@ -8077,6 +8077,91 @@ function validateFactions(defs) {
   return errors;
 }
 
+// src/game/planetLook.ts
+var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
+var stat = (p, key) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
+};
+var bossesKilled = (p) => {
+  var _a, _b;
+  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
+};
+var free = () => true;
+var OPTIONS = {
+  palette: [
+    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
+    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
+    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
+    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
+    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
+    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
+  ],
+  ring: [
+    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
+    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
+    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
+    } },
+    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
+    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
+  ],
+  atmosphere: [
+    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
+      var _a;
+      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
+    } },
+    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
+    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
+  ],
+  moon: [
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
+    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
+    } },
+    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
+    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
+  ]
+};
+var PLANET_SLOTS = [
+  { slot: "palette", label: "Palette" },
+  { slot: "ring", label: "Anneau" },
+  { slot: "atmosphere", label: "Atmosph\xE8re" },
+  { slot: "moon", label: "Lune" }
+];
+function normalizePlanetLook(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const pick4 = (slot) => {
+    var _a;
+    const id = String((_a = r[slot]) != null ? _a : "");
+    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
+  };
+  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
+}
+function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
+  const req = input && typeof input === "object" ? input : {};
+  const next = __spreadValues({}, current2);
+  for (const { slot } of PLANET_SLOTS) {
+    if (req[slot] === void 0) continue;
+    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
+    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
+    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
+    next[slot] = def3.id;
+  }
+  return next;
+}
+function unlockedPlanetLook(p, look) {
+  var _a;
+  const out = __spreadValues({}, look);
+  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
+  return out;
+}
+
 // src/game/achievements.ts
 var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
 var ACHIEVEMENT_TOKENS = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
@@ -8334,7 +8419,65 @@ var METRICS = {
   amberEarned: { label: "Ambre de Ruche gagn\xE9e (cumul)", value: (p) => {
     var _a;
     return Math.floor(Number((_a = p.bounties) == null ? void 0 : _a.amberEarned) || 0);
-  } }
+  } },
+  bountyReputation: { label: "R\xE9putation aupr\xE8s de la Ruche", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.bounties) == null ? void 0 : _a.reputation) || 0);
+  } },
+  vendettaWins: { label: "Vendettas gagn\xE9es contre les seigneurs", value: (p) => {
+    var _a;
+    return sum(Object.values((_a = playerStats(p).vendettaWins) != null ? _a : {}).map((n) => Number(n) || 0));
+  } },
+  warlordsBeaten: { label: "Seigneurs diff\xE9rents vaincus en vendetta", value: (p) => {
+    var _a;
+    return Object.values((_a = playerStats(p).vendettaWins) != null ? _a : {}).filter((n) => Number(n) > 0).length;
+  } },
+  casinoSpins: { label: "Tours de machine jou\xE9s au casino", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.casino) == null ? void 0 : _a.spins) || 0);
+  } },
+  casinoWins: { label: "Tours gagnants au casino", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.casino) == null ? void 0 : _a.wins) || 0);
+  } },
+  marketTrades: { label: "\xC9changes conclus au march\xE9 entre joueurs", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).marketTrades) != null ? _a : 0;
+  } },
+  contractsDelivered: { label: "Contrats de livraison honor\xE9s", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).contractsDelivered) != null ? _a : 0;
+  } },
+  privateMessages: { label: "Messages priv\xE9s envoy\xE9s", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).privateMessages) != null ? _a : 0;
+  } },
+  globalMessages: { label: "Messages publi\xE9s sur le canal global", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).globalMessages) != null ? _a : 0;
+  } },
+  codexChapters: { label: "Cat\xE9gories du Codex compl\xE9t\xE9es", value: (p) => {
+    var _a;
+    return ((_a = playerStats(p).codexClaimed) != null ? _a : []).length;
+  } },
+  reportsResolved: { label: "Signalements r\xE9solus par l'\xE9quipe", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).reportsResolved) != null ? _a : 0;
+  } },
+  profileCustomized: {
+    label: "\xC9l\xE9ments de profil personnalis\xE9s (banni\xE8re, embl\xE8me, devise, vitrine, plan\xE8te)",
+    value: (p) => {
+      var _a, _b, _c;
+      const s = (_a = p.profileStyle) != null ? _a : {};
+      const planet = JSON.stringify(normalizePlanetLook(s.planet)) !== JSON.stringify(normalizePlanetLook(void 0));
+      return [!!s.banner && s.banner !== "nebula", !!s.emblem && s.emblem !== "rank", !!String((_b = s.motto) != null ? _b : "").trim(), ((_c = s.pinned) != null ? _c : []).length > 0, planet].filter(Boolean).length;
+    }
+  },
+  streakBest: { label: "Meilleure s\xE9rie de connexion (jours)", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.streak) == null ? void 0 : _a.best) || 0);
+  } },
+  ascensionsDone: { label: "Ascensions accomplies", value: (p) => Math.floor(Number(p.ascensions) || 0) }
 };
 function def(id, category, tier, metric, threshold, name, description, emoji, extra = {}) {
   const r = TIER_REWARDS[tier];
@@ -8461,6 +8604,32 @@ function derivedAchievements() {
     def("prime_3", "commerce", "or", "bountiesDone", 150, "Traqueur l\xE9gendaire", "Remplir 150 primes Kesh'Vaar.", "\u{1F3F9}", { auto: true }),
     def("ambre_1", "commerce", "argent", "amberEarned", 500, "Go\xFBt de l'Ambre", "Gagner 500 Ambre de Ruche.", "\u{1F36F}", { auto: true }),
     def("ambre_2", "commerce", "or", "amberEarned", 5e3, "Tr\xE9sor de la Ruche", "Gagner 5 000 Ambre de Ruche.", "\u{1F451}", { auto: true }),
+    // 5.26.1 : Primes, Seigneurs, Casino, Commerce, Communications, Codex, Signalements, Profil, Série, Ascension.
+    def("ruche_rep_1", "commerce", "argent", "bountyReputation", 50, "Ami de la Ruche", "Atteindre 50 de r\xE9putation aupr\xE8s des Kesh'Vaar.", "\u{1F41D}", { auto: true }),
+    def("ruche_rep_2", "commerce", "or", "bountyReputation", 250, "\xC9lu de la Reine", "Atteindre 250 de r\xE9putation aupr\xE8s des Kesh'Vaar.", "\u{1F451}", { auto: true }),
+    def("vendetta_1", "combat", "argent", "vendettaWins", 1, "Vendetta", "Gagner une vendetta contre un seigneur de guerre.", "\u{1F5E1}\uFE0F", { auto: true }),
+    def("vendetta_2", "combat", "or", "vendettaWins", 10, "Tueur de seigneurs", "Gagner 10 vendettas.", "\u2694\uFE0F", { auto: true }),
+    def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs diff\xE9rents en vendetta.", "\u{1F480}", { auto: true }),
+    def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitu\xE9 du casino", "Jouer 10 tours au Casino orbital.", "\u{1F3B0}", { auto: true }),
+    def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "\u{1F340}", { auto: true }),
+    def("marche_1", "commerce", "bronze", "marketTrades", 5, "N\xE9gociant", "Conclure 5 \xE9changes au march\xE9 entre joueurs.", "\u2696\uFE0F", { auto: true }),
+    def("marche_2", "commerce", "argent", "marketTrades", 50, "Courtier", "Conclure 50 \xE9changes au march\xE9 entre joueurs.", "\u{1F4C8}", { auto: true }),
+    def("livraison_1", "commerce", "bronze", "contractsDelivered", 3, "Livreur fiable", "Honorer 3 contrats de livraison.", "\u{1F4E6}", { auto: true }),
+    def("livraison_2", "commerce", "argent", "contractsDelivered", 25, "Transporteur \xE9m\xE9rite", "Honorer 25 contrats de livraison.", "\u{1F69A}", { auto: true }),
+    def("cadeau_1", "alliance", "bronze", "giftsSent", 5, "G\xE9n\xE9reux", "Envoyer 5 cadeaux \xE0 d'autres joueurs.", "\u{1F381}", { auto: true }),
+    def("message_1", "alliance", "bronze", "privateMessages", 10, "Correspondant", "Envoyer 10 messages priv\xE9s.", "\u2709\uFE0F", { auto: true }),
+    def("canal_1", "alliance", "bronze", "globalMessages", 10, "Voix du secteur", "Publier 10 messages sur le canal global.", "\u{1F4E1}", { auto: true }),
+    def("canal_2", "alliance", "argent", "globalMessages", 200, "Pilier du canal", "Publier 200 messages sur le canal global.", "\u{1F4FB}", { auto: true }),
+    def("codex_1", "prestige", "argent", "codexChapters", 1, "Archiviste", "Compl\xE9ter une cat\xE9gorie du Codex.", "\u{1F4DA}", { auto: true }),
+    def("codex_2", "prestige", "or", "codexChapters", 4, "M\xE9moire de la galaxie", "Compl\xE9ter 4 cat\xE9gories du Codex.", "\u{1F5C3}\uFE0F", { auto: true }),
+    def("signal_1", "prestige", "argent", "reportsResolved", 1, "\u0152il de lynx", "Un de tes signalements a \xE9t\xE9 r\xE9solu par l'\xE9quipe.", "\u{1F41E}", { auto: true }),
+    def("signal_2", "prestige", "or", "reportsResolved", 5, "Testeur d'\xE9lite", "Cinq de tes signalements ont \xE9t\xE9 r\xE9solus par l'\xE9quipe.", "\u{1F6E0}\uFE0F", { auto: true }),
+    def("profil_1", "prestige", "bronze", "profileCustomized", 1, "Signe distinctif", "Personnaliser un \xE9l\xE9ment de ta fiche publique.", "\u{1F3A8}", { auto: true }),
+    def("profil_all", "prestige", "argent", "profileCustomized", 5, "Fiche de l\xE9gende", "Personnaliser banni\xE8re, embl\xE8me, devise, vitrine et plan\xE8te.", "\u{1F5BC}\uFE0F", { auto: true }),
+    def("serie_7", "prestige", "bronze", "streakBest", 7, "Une semaine sans faillir", "Tenir une s\xE9rie de connexion de 7 jours.", "\u{1F4C6}", { auto: true }),
+    def("serie_30", "prestige", "or", "streakBest", 30, "Un mois de garde", "Tenir une s\xE9rie de connexion de 30 jours.", "\u{1F5D3}\uFE0F", { auto: true }),
+    def("ascension_1", "prestige", "or", "ascensionsDone", 1, "Renaissance", "Accomplir une Ascension.", "\u2728", { auto: true }),
+    def("rang_legende", "prestige", "legendaire", "xp", 25e4, "L\xE9gende vivante", "Cumuler 250 000 XP.", "\u{1F31F}", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "\u{1F3B0}", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" })
   ];
 }
@@ -15408,91 +15577,6 @@ function autoDraftMonths(currentMonthId, dayOfMonth, leadDay) {
 function nextMonthId(id) {
   const [y, m] = id.split("-").map(Number);
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
-}
-
-// src/game/planetLook.ts
-var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
-var stat = (p, key) => {
-  var _a;
-  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
-};
-var bossesKilled = (p) => {
-  var _a, _b;
-  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
-};
-var free = () => true;
-var OPTIONS = {
-  palette: [
-    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
-    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
-    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
-    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
-    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
-    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
-  ],
-  ring: [
-    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
-    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
-    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
-    } },
-    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
-    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
-  ],
-  atmosphere: [
-    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
-    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
-    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
-      var _a;
-      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
-    } },
-    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
-    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
-  ],
-  moon: [
-    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
-    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
-    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
-    } },
-    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
-    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
-  ]
-};
-var PLANET_SLOTS = [
-  { slot: "palette", label: "Palette" },
-  { slot: "ring", label: "Anneau" },
-  { slot: "atmosphere", label: "Atmosph\xE8re" },
-  { slot: "moon", label: "Lune" }
-];
-function normalizePlanetLook(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const pick4 = (slot) => {
-    var _a;
-    const id = String((_a = r[slot]) != null ? _a : "");
-    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
-  };
-  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
-}
-function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
-  const req = input && typeof input === "object" ? input : {};
-  const next = __spreadValues({}, current2);
-  for (const { slot } of PLANET_SLOTS) {
-    if (req[slot] === void 0) continue;
-    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
-    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
-    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
-    next[slot] = def3.id;
-  }
-  return next;
-}
-function unlockedPlanetLook(p, look) {
-  var _a;
-  const out = __spreadValues({}, look);
-  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
-  return out;
 }
 
 // src/game/profile.ts

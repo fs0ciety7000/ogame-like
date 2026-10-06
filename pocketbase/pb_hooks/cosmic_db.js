@@ -4000,11 +4000,16 @@ function adminReportUpdate(e) {
       out = reportJson(rec);
       return;
     }
+    const wasResolved = rec.getString("status") === "resolved";
     rec.set("status", res.status);
     rec.set("resolution", res.resolution);
     rec.set("history", res.history);
     rec.set("updatedAtMs", now);
     txApp.save(rec);
+    // 5.26.1 : succès « signalements utiles » (résolus par l'équipe seulement, pas de farm au dépôt).
+    if (res.status === "resolved" && !wasResolved && rec.getString("reporterId") && rec.getString("reporterId") !== game.AUTO_REPORTER_ID) {
+      bumpPlayerStat(txApp, rec.getString("reporterId"), "reportsResolved", 1);
+    }
     out = reportJson(rec);
     notifyText = res.notify;
     reporterId = rec.getString("reporterId");
@@ -4225,6 +4230,7 @@ function messageSend(e) {
   const rec = new Record($app.findCollectionByNameOrId("private_messages"));
   rec.load({ fromUid: uid, fromPseudo: sender.getString("pseudo"), toUid: to, toPseudo: target.getString("pseudo"), text, createdAtMs: now, readAtMs: 0 });
   $app.save(rec);
+  bumpPlayerStat($app, uid, "privateMessages", 1);
   // v4.2 : un seigneur de guerre répond par une réplique toute faite (une fois par jour).
   if (target.getString("npc")) {
     try {
@@ -8781,6 +8787,7 @@ function globalSend(e) {
     const rec = new Record(txApp.findCollectionByNameOrId("global_messages"));
     rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked });
     txApp.save(rec);
+    bumpPlayerStat(txApp, uid, "globalMessages", 1);
     out = { id: rec.id, text: filtered.text, masked: filtered.masked };
   });
   // Ménage : seuls les derniers messages sont gardés.
@@ -8864,6 +8871,20 @@ function adminGlobal(e) {
     } else throw new BadRequestError("Action inconnue.");
   });
   return e.json(200, out);
+}
+
+/** 5.26.1 : compteur de succès écrit hors action de jeu (messages, signalements). */
+function bumpPlayerStat(txApp, uid, key, n) {
+  try {
+    const rec = findOrNull(txApp, "players", uid);
+    if (!rec) return;
+    const stats = Object.assign({}, toPlain(rec).stats || {});
+    stats[key] = (Number(stats[key]) || 0) + (n || 1);
+    rec.set("stats", stats);
+    txApp.save(rec);
+  } catch (_) {
+    /* facultatif : le message ou la mise à jour passent quand même */
+  }
 }
 
 /* ---------- 5.26 : Hôtel des enchères ---------- */

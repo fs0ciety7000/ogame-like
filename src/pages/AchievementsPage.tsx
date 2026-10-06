@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PagedList } from "@/components/ui/panel";
-import { Lock, Search, Trophy } from "lucide-react";
+import { CloudFog, Lock, Search, Trophy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState, HudChip } from "@/components/ui/hud";
@@ -11,6 +11,9 @@ import { usePlayerStore } from "@/store/playerStore";
 import {
   ACHIEVEMENTS,
   achievementProgress,
+  achievementVisibility,
+  previousTier,
+  type AchievementVisibility,
   CATEGORY_LABELS,
   TIER_LABELS,
   type AchievementCategory,
@@ -58,18 +61,42 @@ export function AchievementMedal({ a, unlocked, size = 72 }: { a: AchievementDef
   );
 }
 
-function AchievementCard({ a, player, rate }: { a: AchievementDef; player: PlayerState; rate: number | null }) {
+function AchievementCard({ a, player, rate, visibility, before }: { a: AchievementDef; player: PlayerState; rate: number | null; visibility: AchievementVisibility; before: AchievementDef | null }) {
   const unlocked = (player.unlockedAchievements ?? []).includes(a.id);
-  const hidden = a.secret && !unlocked;
+  const fog = !unlocked && visibility === "fog";
+  const hidden = !unlocked && (visibility === "secret" || fog || a.secret);
   const progress = achievementProgress(a, player);
   const style = TIER_STYLE[a.tier];
+  if (fog) {
+    // Palier dans le brouillard : seuls la catégorie et le palier se devinent.
+    return (
+      <div className="hud-cut-sm relative flex gap-3 overflow-hidden border border-dashed border-white/10 bg-black/30 p-3">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,color-mix(in_srgb,var(--color-slate-400)_10%,transparent),transparent_70%)] backdrop-blur-[1px]" aria-hidden />
+        <div className="relative grid h-[72px] w-[72px] shrink-0 place-items-center opacity-40 blur-[1.5px] grayscale">
+          <img src={assetUrl(`/assets/achievements/${a.tier}.webp`)} alt="" className="absolute inset-0 h-full w-full object-contain" loading="lazy" />
+          <CloudFog className="relative h-6 w-6 text-slate-300" aria-hidden />
+        </div>
+        <div className="relative flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="truncate text-sm font-semibold italic text-slate-500">Palier dans le brouillard</p>
+            <span className={cn("shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider opacity-60", style.text)}>{TIER_LABELS[a.tier]}</span>
+          </div>
+          <p className="text-xs text-slate-500">{before ? `Obtiens « ${before.name} » pour le révéler.` : "Révélé quand les paliers précédents tombent."}</p>
+          <p className="text-[11px] text-slate-600">
+            {CATEGORY_LABELS[a.category].emoji} {CATEGORY_LABELS[a.category].label}
+            {rate !== null && ` · ${rate} % des joueurs`}
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={cn("hud-cut-sm flex gap-3 border bg-black/20 p-3", unlocked ? style.border : "border-white/5")}>
       <AchievementMedal a={a} unlocked={unlocked} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline justify-between gap-2">
           <p className={cn("truncate text-sm font-semibold", unlocked ? "text-slate-100" : "text-slate-300")}>{hidden ? "???" : a.name}</p>
-          <span className={cn("shrink-0 text-[10px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
+          <span className={cn("shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
         </div>
         <p className="text-xs text-slate-400">{hidden ? "Succès secret : à toi de le découvrir." : a.description}</p>
         {!unlocked && !hidden && progress.target > 1 && (
@@ -108,6 +135,14 @@ export function AchievementsPage() {
 
   const unlocked = new Set(player.unlockedAchievements ?? []);
   const done = list.filter((a) => unlocked.has(a.id));
+  // 5.26.1 : brouillard des paliers (anti-calcul d'échelle complète).
+  const visibility = achievementVisibility(list, unlocked);
+  const fogged = list.filter((a) => visibility.get(a.id) === "fog").length;
+  // Le palier précédent n'est nommé que s'il est lui-même visible (pas de fuite en cascade).
+  const revealedBefore = (a: AchievementDef) => {
+    const b = previousTier(list, a);
+    return b && (unlocked.has(b.id) || (visibility.get(b.id) === "shown" && !b.secret)) ? b : null;
+  };
   const xp = done.reduce((s, a) => s + a.rewardXp, 0);
   const categories = Object.keys(CATEGORY_LABELS) as AchievementCategory[];
   const ratio = (a: AchievementDef) => {
@@ -122,16 +157,21 @@ export function AchievementsPage() {
       if (status === "all") return true;
       const got = unlocked.has(a.id);
       if (status === "done") return got;
-      if (status === "progress") return !got && ratio(a) > 0;
+      if (status === "progress") return !got && visibility.get(a.id) === "shown" && ratio(a) > 0;
       return !got;
     })
     .filter((a) => {
       if (!q) return true;
-      // Un succès secret non obtenu ne se trahit pas par la recherche.
-      if (a.secret && !unlocked.has(a.id)) return false;
+      // Un succès secret ou dans le brouillard ne se trahit pas par la recherche.
+      if (!unlocked.has(a.id) && (a.secret || visibility.get(a.id) !== "shown")) return false;
       return fold(`${a.name} ${a.description} ${CATEGORY_LABELS[a.category].label} ${TIER_LABELS[a.tier]}`).includes(q);
     })
-    .sort((x, y) => Number(unlocked.has(y.id)) - Number(unlocked.has(x.id)) || ratio(y) - ratio(x));
+    .sort(
+      (x, y) =>
+        Number(unlocked.has(y.id)) - Number(unlocked.has(x.id)) ||
+        Number(visibility.get(x.id) === "fog") - Number(visibility.get(y.id) === "fog") ||
+        ratio(y) - ratio(x),
+    );
   const rate = (id: string) => (rates && rates.players > 0 ? Math.round(((rates.counts[id] ?? 0) / rates.players) * 100) : null);
 
   return (
@@ -143,7 +183,15 @@ export function AchievementsPage() {
           <p className="font-display text-xl text-slate-100">
             {done.length} / {list.length}
           </p>
-          <p className="text-xs text-slate-400">succès obtenus · {formatNumber(xp)} XP gagnés</p>
+          <p className="text-xs text-slate-400">
+            succès obtenus · <span className="font-mono tabular-nums">{formatNumber(xp)}</span> XP gagnés
+            {fogged > 0 && (
+              <>
+                {" "}
+                · <span className="font-mono tabular-nums">{fogged}</span> paliers dans le brouillard
+              </>
+            )}
+          </p>
         </div>
         <Progress value={(done.length / Math.max(1, list.length)) * 100} className="min-w-40 flex-1" />
         <div className="flex gap-3 text-xs">
@@ -195,7 +243,7 @@ export function AchievementsPage() {
           Change la recherche ou les filtres.
         </EmptyState>
       )}
-      <PagedList key={`${tab}|${status}|${tier}|${q}`} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} />} />
+      <PagedList key={`${tab}|${status}|${tier}|${q}`} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} visibility={visibility.get(a.id) ?? "shown"} before={revealedBefore(a)} />} />
     </div>
   );
 }
