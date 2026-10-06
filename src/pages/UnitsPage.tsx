@@ -48,7 +48,7 @@ export function UnitsPage() {
   const fleets = useFleetStore((s) => s.fleets);
   const away = useMemo(() => (uid ? unitsAwayOf(fleets, uid) : {}), [fleets, uid]);
   const rates = useProductionRates(player);
-  // 5.18 : onglets Attaque / Défense et filtre par classe (calculée d'après les stats).
+  // 5.18 : onglets Vaisseaux / Défenses (6.4 : libellés, constat C4) et filtre par classe (calculée d'après les stats).
   // 5.26 : ?onglet=defense ouvre directement les défenses (liens « Renforcer les défenses »).
   const [tab, setTab] = useState<"attack" | "defense">(() => (new URLSearchParams(window.location.search).get("onglet") === "defense" ? "defense" : "attack"));
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
@@ -207,10 +207,10 @@ export function UnitsPage() {
           }}>
           <TabsList>
             <TabsTrigger value="attack">
-              Attaque <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "attack").length}</span>
+              Vaisseaux <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "attack").length}</span>
             </TabsTrigger>
             <TabsTrigger value="defense">
-              Défense <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "defense").length}</span>
+              Défenses <span className="ml-1 font-mono text-slate-500">{UNITS.filter((u) => u.category === "defense").length}</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -284,7 +284,7 @@ export function UnitsPage() {
                 <div className="relative px-4 pt-4">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <HudTag tone={unit.category === "attack" ? "danger" : "accent"}>
-                      {unit.category === "attack" ? "Attaque" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
+                      {unit.category === "attack" ? "Vaisseau" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
                     </HudTag>
                     <span title={classes[unit.id] && classes[unit.id] !== "support" ? `Bat la classe ${UNIT_CLASS_LABELS[CLASS_BEATS[classes[unit.id] as "light"]]}, craint la classe ${UNIT_CLASS_LABELS[(Object.keys(CLASS_BEATS) as ("light" | "medium" | "heavy")[]).find((k) => CLASS_BEATS[k] === classes[unit.id])!]}.` : "Ne combat pas."}>
                       <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>

@@ -4896,6 +4896,17 @@ const CONTENT_MIGRATIONS = [
       { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
     ],
   },
+  // 6.4 (constat C4) : l'Intercepteur est une défense, il ne vole pas (vitesse et soute à 0, attaque 320, défense 80) ;
+  // le Bastion est présenté comme un vaisseau. Seulement si l'admin n'a pas modifié ces champs.
+  {
+    id: "categories-6.4",
+    key: "units",
+    patches: [
+      { id: "intercepteur", field: "stats", from: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 }, to: { attaque: 320, defense: 80, vitesse: 0, cargo: 0 } },
+      { id: "intercepteur", field: "description", from: "Vaisseau ultra-rapide conçu pour intercepter les cibles prioritaires.", to: "Tourelle d'interception à tir rapide : elle abat en priorité les vaisseaux qui attaquent ta planète." },
+      { id: "bastion", field: "description", from: "Forteresse volante au blindage démesuré. Elle tire peu mais encaisse pour toute la flotte : ses PV énormes absorbent une grosse part des tirs. Classe Fort.", to: "Vaisseau-forteresse au blindage démesuré. Elle tire peu mais encaisse pour toute la flotte : ses PV énormes absorbent une grosse part des tirs. Classe Fort." },
+    ],
+  },
   // v5.5 : la techno « Extension des hangars » (tech26) ajoutée aux technologies personnalisées.
   {
     id: "hangar-tech-5.5",

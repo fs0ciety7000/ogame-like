@@ -63,6 +63,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| 6.3.1 | [Vaisseaux et défenses](6.3.1-categories-unites.md) | ajustement | [categories-unites](../proposals/categories-unites.md), lot R |
 | 6.3.0 | [Relancer toutes les missions](6.3.0-relancer.md) | ajout | [flottes-emplacements](../proposals/flottes-emplacements.md), lot O |
 | 6.2.1 | [Objectifs du jour](6.2.1-quotidien-fusion.md) | rework | [quotidien-fusion](../proposals/quotidien-fusion.md), lot N |
 | 6.2.0 | [Un JcJ qui rapporte](6.2.0-pillage.md) | ajustement | [entrepot-pillage](../proposals/entrepot-pillage.md), lot M |

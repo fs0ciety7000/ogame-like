@@ -37,7 +37,7 @@ Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration.
 | C1 | ✅ 5.28.1 | L'**épave d'expédition** ajoute 2 à 5 % de la flotte sans vérifier la place au hangar : l'invariant I3 est violé, et c'est une nouvelle source de surcharge | `expeditions.ts` (`kind === "wreck"`) | les vaisseaux trouvés vont en Cale sèche ou à l'Atelier comme « prêts » |
 | C2 | ✅ 5.28.1 | La remise en service automatique (palier 10) n'a lieu qu'à la prochaine action du joueur | `actions.ts` (`awayKnown`) | l'exécuter aussi au retour des flottes (`processDueFleets`) |
 | C3 | ✅ 5.28.1 | `homeLevels` compte les bâtiments verrouillés au niveau 1 : le seuil des colonies (120 / 140) est atteint plus tôt qu'annoncé | `colonies.ts` (`homeLevels`) | utiliser `effectiveBuildingLevel` (le seuil baisse de 0 à 3 selon le joueur ; décider s'il faut l'ajuster) |
-| C4 | 🟡 | Catégories trompeuses : Bastion en « attaque » avec un profil défensif ; Intercepteur en « défense » mais mobile (vitesse 12, soute 5) | `units.ts` | trancher, puis migrer le contenu |
+| C4 | ✅ 6.3.1 (onglets Vaisseaux / Défenses, Intercepteur tourelle recalée) | Catégories trompeuses : Bastion en « attaque » avec un profil défensif ; Intercepteur en « défense » mais mobile (vitesse 12, soute 5) | `units.ts` | trancher, puis migrer le contenu |
 | C5 | ✅ 5.28.1 | Stats d'effet **sans effet sur la couche empire** : `fleetUpkeep` et `buildingDiscount` ne sont lus que pour les technologies. Le préréglage « Intendance de flotte » ne fait rien sur une relique, un officier ou un module | `economy.ts`, `flush.ts` | lire la couche empire, plus un test de garde générique « chaque stat déclarée est lue dans les deux couches » |
 
 ### Équilibrage

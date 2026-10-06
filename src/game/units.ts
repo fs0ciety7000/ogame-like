@@ -295,9 +295,11 @@ export const DEFAULT_UNITS: UnitDef[] = [
     name: "Intercepteur",
     image: "/assets/units/intercepteur.webp",
     maxLevel: 10,
-    description: "Vaisseau ultra-rapide conçu pour intercepter les cibles prioritaires.",
+    // 6.4 (constat C4) : une défense ne vole pas ; vitesse et soute, jamais utilisées, passent à 0.
+    // Sans elles, elle était dominée par la Batterie AA : attaque 255 → 320, défense 60 → 80 (503 par place contre 492).
+    description: "Tourelle d'interception à tir rapide : elle abat en priorité les vaisseaux qui attaquent ta planète.",
     cost: { scrap: 2000, energy: 1200 },
-    stats: { attaque: 255, defense: 60, vitesse: 12, cargo: 5 },
+    stats: { attaque: 320, defense: 80, vitesse: 0, cargo: 0 },
     category: "defense",
     unlockTech: "tech18",
     // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
@@ -309,7 +311,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     name: "Bastion",
     image: "/assets/units/bastion.webp",
     maxLevel: 10,
-    description: "Forteresse volante au blindage démesuré. Elle tire peu mais encaisse pour toute la flotte : ses PV énormes absorbent une grosse part des tirs. Classe Fort.",
+    description: "Vaisseau-forteresse au blindage démesuré. Elle tire peu mais encaisse pour toute la flotte : ses PV énormes absorbent une grosse part des tirs. Classe Fort.",
     cost: { scrap: 9000, energy: 5000 },
     stats: { attaque: 150, defense: 1400, vitesse: 2, cargo: 100 },
     category: "attack",
