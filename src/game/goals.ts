@@ -2,7 +2,7 @@ import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost,
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints, UNIT_TO_TECH } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
-import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { economySnapshot } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { PlayerState, QueuesState, ResourceId } from "@/types/game";
@@ -92,7 +92,7 @@ export function planGoal(player: PlayerState, queues: QueuesState, goal: Goal, n
   const plans = ownedBlueprints(player);
   const buildFactor = playerBuildTimeFactor(player, now);
   const researchFactor = playerResearchTimeFactor(player, now);
-  const discount = player.bonuses?.buildingUpgradeDiscount ?? 0;
+  const discount = playerBuildingDiscount(player);
 
   const needTech = (techId: string, level: number, depth = 0): void => {
     const tech = findTech(techId);

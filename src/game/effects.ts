@@ -41,6 +41,7 @@ export type EffectStat =
   | "fleetSpeed"
   | "fleetUpkeep"
   | "hangarCapacity"
+  | "dockCapacity"
   // Renseignement
   | "spyLevel"
   | "detection"
@@ -65,7 +66,7 @@ export const EFFECT_SCOPE_LABELS: Record<EffectScope, string> = {
   warlord: "Contre les seigneurs",
 };
 
-export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module";
+export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class";
 
 export interface EffectSourceRef {
   kind: EffectSourceKind;
@@ -107,6 +108,8 @@ export interface EffectStatInfo {
 export const TECH_REDUCTION_CAP = 0.75;
 /** Plafond des réductions de durée de la couche empire. */
 export const EMPIRE_TIME_CAP = 0.5;
+/** 5.28.1 : plafond des réductions de coût et d'entretien de la couche empire (reliques, officiers, modules). */
+export const EMPIRE_COST_CAP = 0.5;
 
 /** 5.23 : portées d'un effet de combat. */
 const COMBAT_SCOPES: EffectScope[] = ["all", "pvp", "pve", "warlord"];
@@ -126,7 +129,7 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
   storage: { label: "Capacité des entrepôts", unit: "pct", group: "economie" },
   protectedStorage: { label: "Entrepôt à l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
-  buildingDiscount: { label: "Coût des bâtiments", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  buildingDiscount: { label: "Coût des bâtiments", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_COST_CAP }, floor: 0 },
   tradeTax: { label: "Taxe du marché et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
   buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
@@ -135,8 +138,9 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   unitCost: { label: "Coût des unités ciblées", unit: "pct", reduction: true, group: "economie", unitTarget: true, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
   cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
   fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
+  fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_COST_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacité des hangars", unit: "pct", group: "flottes" },
+  dockCapacity: { label: "Postes de la Cale sèche", unit: "pct", group: "flottes" },
   spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
   detection: { label: "Détection de l'espionnage", unit: "pct", group: "renseignement" },
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" },
@@ -153,6 +157,7 @@ export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
   capsule: "Capsule",
   season: "Mutateur de saison",
   module: "Module de vaisseau",
+  class: "Classe d'empire",
 };
 
 export interface SumOptions {

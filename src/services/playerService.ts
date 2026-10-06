@@ -3,6 +3,7 @@ import { coalesce } from "@/lib/sharedSubscriptions";
 import { defaultQueues } from "@/game/defaults";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
+import { rememberLastMission } from "@/store/lastMissionStore";
 import type { AwaySummary, GameAction } from "@/game/actions";
 import type { Fleet, FleetMission } from "@/game/fleets";
 import type { DebrisField } from "@/game/debris";
@@ -279,6 +280,8 @@ export interface LeaderboardEntry {
   lastActiveMs?: number;
   /** v5.1 : avatar envoyé (nom de fichier sur la fiche publique). */
   avatar?: string;
+  /** 6.0 : classe d'empire (identifiant). */
+  empireClass?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -300,10 +303,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     vacationUntilMs: (data.vacationUntilMs as number) || undefined,
     lastActiveMs: (data.lastActiveMs as number) || undefined,
     avatar: (data.avatar as string) || undefined,
+    empireClass: (data.empireClass as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -572,7 +576,12 @@ export async function sendFleet(
   mission: FleetMission = "attack",
   options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number } = {},
 ): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
+  const sent = await callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
+  // 5.33 : mémorisé pour « Relancer la dernière mission » (sans le départ différé).
+  const { delayMinutes: _delay, ...again } = options;
+  void _delay;
+  rememberLastMission({ targetUid, targetPseudo: sent?.targetPseudo ?? "", fleet, mission, options: again, at: Date.now() });
+  return sent;
 }
 
 export function recallFleet(fleetId: string): Promise<Fleet> {
@@ -707,6 +716,14 @@ export function setColonySpec(colonyId: string, spec: string) {
   return act({ type: "colonySpec", colonyId, spec });
 }
 
+export function chooseEmpireClass(classId: string) {
+  return act({ type: "empireClass", classId });
+}
+
+export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number) {
+  return act({ type: "colonyRoute", colonyId, everyHours, keepPct });
+}
+
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
   return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
 }
@@ -796,7 +813,22 @@ export function learnTalent(talentId: string) {
 
 /** 5.21 : termine un lot de réparation (ou toute la file) contre de l'Ambre. */
 export function rushWorkshop(jobId?: string) {
-  return act<{ amber: number; units: Record<string, number> }>({ type: "workshopRush", ...(jobId ? { jobId } : {}) });
+  return act<{ amber: number; units: Record<string, number>; ready: Record<string, number> }>({ type: "workshopRush", ...(jobId ? { jobId } : {}) });
+}
+
+/** 5.28 : remet en service les vaisseaux prêts de la Cale sèche (un type, ou tous), dans les places libres du hangar. */
+export function dockCommission(unitId?: string) {
+  return act<{ units: Record<string, number> }>({ type: "dockCommission", ...(unitId ? { unitId } : {}) });
+}
+
+/** 5.28 (palier Triage) : démantèle des vaisseaux de la Cale sèche ou de l'Atelier. */
+export function dockScrap(unitId: string, qty: number) {
+  return act<{ count: number; refund: { scrap: number; energy: number } }>({ type: "dockScrap", unitId, qty });
+}
+
+/** 5.28 : réglages du Triage et de l'ordre de réparation. */
+export function dockSettings(settings: { policy?: string; priority?: string }) {
+  return act({ type: "dockSettings", ...settings });
 }
 
 export function resetTalents() {

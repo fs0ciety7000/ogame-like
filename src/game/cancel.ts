@@ -1,4 +1,4 @@
-import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { bountyState } from "@/game/bounties";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds } from "@/game/colonies";
@@ -99,7 +99,7 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
       const def = findBuilding(target.id);
       if (!entry || !def) throw new GameActionError("Aucune amélioration en cours pour ce bâtiment.");
       const level = (player.buildings[target.id]?.level ?? 0) + 1;
-      const paid = entry.paid ?? applyBuildingDiscount(getBuildingUpgradeCost(def, level), player.bonuses?.buildingUpgradeDiscount ?? 0);
+      const paid = entry.paid ?? applyBuildingDiscount(getBuildingUpgradeCost(def, level), playerBuildingDiscount(player));
       const start = entry.startedAtMs ?? entry.endTime - Math.round(getBuildingUpgradeTime(def, level) * playerBuildTimeFactor(player, now)) * 1000;
       const fraction = refundFraction(start, entry.endTime, now);
       return { refund: scaleCost(paid, fraction), fraction, label: `${def.name} niveau ${level}` };

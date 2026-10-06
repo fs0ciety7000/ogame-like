@@ -1,3 +1,4 @@
+import { EmpireClassChip } from "@/components/game/EmpireClassChip";
 import { Pager, usePaged } from "@/components/ui/panel";
 import { MassSpyDialog } from "@/components/game/MassSpyDialog";
 import { quickProbeCount, quickSpy } from "@/lib/quickSpy";
@@ -382,9 +383,10 @@ export function PlayersPage() {
                       </span>
                     )}
                   </p>
-                  {p.activeTitle && (
+                  {(p.activeTitle || p.empireClass) && (
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <TitleBadge label={p.activeTitle} size="xs" />
+                      {p.activeTitle && <TitleBadge label={p.activeTitle} size="xs" />}
+                      <EmpireClassChip classId={p.empireClass} />
                     </div>
                   )}
                   {/* Rang sous le pseudo quand la colonne dédiée n'a pas la place. */}

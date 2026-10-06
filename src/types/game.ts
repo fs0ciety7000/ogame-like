@@ -140,6 +140,8 @@ export interface PlayerState {
   relics?: import("@/game/relics").RelicsState;
   /** 5.26 : plans et modules de vaisseaux montés par classe. */
   modules?: import("@/game/modules").ModulesState;
+  /** 6.0 : classe d'empire (proposals/classes-empire.md). */
+  empireClass?: import("@/game/empireClass").EmpireClassState | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

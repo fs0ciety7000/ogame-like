@@ -1,8 +1,9 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor } from "@/game/ascension";
-import { playerBuildTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
-import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
+import { playerUnitCapacity } from "@/game/hangar";
+import { applyBuildingDiscount, BUILDINGS, effectiveBuildingLevel, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
 import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
@@ -104,6 +105,93 @@ export interface Colony {
   /** v5.11 : spécialisation choisie et date du dernier changement. */
   spec?: ColonySpecId | null;
   specChangedAtMs?: number;
+  /** 5.33 : route logistique vers la planète mère (null = aucune). */
+  route?: ColonyRoute | null;
+}
+
+/* ---------- 5.33 : routes logistiques (proposals/routes-logistiques.md) ---------- */
+
+export interface ColonyRoute {
+  /** Un convoi part toutes les N heures. */
+  everyHours: number;
+  /** Réserve gardée sur la colonie : part de son entrepôt (communes) ou de son stock (rare). */
+  keepPct: number;
+  nextAtMs: number;
+  lastAtMs?: number;
+  /** Dernier convoi : ce qui est arrivé sur la planète mère. */
+  lastDelivered?: Partial<Record<ResourceId, number>>;
+}
+
+export const COLONY_ROUTE_RULES = {
+  /** Cadences proposées au joueur, en heures. */
+  intervals: [6, 12, 24],
+  /** Part perdue en route (frais de convoi). Le transport manuel reste gratuit. */
+  feePct: 0.1,
+  /** Réserve par défaut et réserve maximale. */
+  defaultKeepPct: 0.2,
+  maxKeepPct: 0.9,
+};
+
+export function setColonyRoute(player: PlayerState, colonyIdIn: string, everyHoursIn: unknown, keepPctIn: unknown, now: number): ColonyRoute | null {
+  const colony = colonyOf(player, colonyIdIn);
+  if (!colony) throw new GameActionError("Colonie introuvable.");
+  const everyHours = Math.floor(Number(everyHoursIn));
+  if (!everyHours) {
+    colony.route = null;
+    return null;
+  }
+  if (!COLONY_ROUTE_RULES.intervals.includes(everyHours)) throw new GameActionError(`Cadence possible : toutes les ${COLONY_ROUTE_RULES.intervals.join(", ")} h.`);
+  const raw = Number(keepPctIn);
+  const keepPct = Number.isFinite(raw) ? Math.min(COLONY_ROUTE_RULES.maxKeepPct, Math.max(0, Math.round(raw * 100) / 100)) : COLONY_ROUTE_RULES.defaultKeepPct;
+  // Changer la cadence repart de maintenant ; changer seulement la réserve garde l'heure du prochain convoi.
+  const keepNext = colony.route && colony.route.everyHours === everyHours;
+  colony.route = { ...(colony.route ?? {}), everyHours, keepPct, nextAtMs: keepNext ? colony.route!.nextAtMs : now + everyHours * 3_600_000 };
+  return colony.route;
+}
+
+/** Ce qu'un convoi enverrait maintenant : prélevé sur la colonie, livré sur la planète mère (frais déduits). Les communes
+ *  ne dépassent jamais l'entrepôt de la planète mère ; la ressource rare n'a pas de plafond, comme partout. */
+export function colonyRouteLoad(colony: Colony, player: PlayerState): { taken: Partial<Record<ResourceId, number>>; delivered: Partial<Record<ResourceId, number>> } {
+  const taken: Partial<Record<ResourceId, number>> = {};
+  const delivered: Partial<Record<ResourceId, number>> = {};
+  const route = colony.route;
+  if (!route) return { taken, delivered };
+  const keep = Math.min(COLONY_ROUTE_RULES.maxKeepPct, Math.max(0, route.keepPct));
+  const kept = 1 - Math.min(0.99, Math.max(0, COLONY_ROUTE_RULES.feePct));
+  const colonyCap = colonyStorage(colony, player);
+  const homeCap = storageCapacityOf(player);
+  const take = (res: ResourceId, available: number, room: number) => {
+    const k = Math.floor(Math.max(0, Math.min(available, room / kept)));
+    const d = Math.floor(k * kept);
+    if (k > 0 && d > 0) {
+      taken[res] = k;
+      delivered[res] = d;
+    }
+  };
+  for (const res of COMMON_RESOURCES) {
+    const stock = Math.floor(colony.resources[res] ?? 0);
+    const reserve = Number.isFinite(colonyCap) ? Math.floor(colonyCap * keep) : 0;
+    const room = Number.isFinite(homeCap) ? Math.max(0, homeCap - (player.resources[res] ?? 0)) : Infinity;
+    take(res, stock - reserve, room);
+  }
+  const rare = colonyBiome(colony);
+  const rareStock = Math.floor(colony.resources[rare] ?? 0);
+  take(rare, rareStock - Math.floor(rareStock * keep), Infinity);
+  return { taken, delivered };
+}
+
+/** Convoi dû : part maintenant (rattrapage compris : un seul convoi, il prend tout ce qui dépasse la réserve). */
+export function runColonyRoute(colony: Colony, player: PlayerState, now: number): Partial<Record<ResourceId, number>> | null {
+  const route = colony.route;
+  if (!route || now < route.nextAtMs) return null;
+  const { taken, delivered } = colonyRouteLoad(colony, player);
+  for (const [res, n] of Object.entries(taken) as [ResourceId, number][]) colony.resources[res] = (colony.resources[res] ?? 0) - n;
+  for (const [res, n] of Object.entries(delivered) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
+  const every = Math.max(1, route.everyHours) * 3_600_000;
+  // Prochain convoi aligné sur la cadence, jamais dans le passé.
+  const missed = Math.floor((now - route.nextAtMs) / every);
+  colony.route = { ...route, lastAtMs: now, lastDelivered: delivered, nextAtMs: route.nextAtMs + (missed + 1) * every };
+  return delivered;
 }
 
 /* ---------- v5.11 : spécialisation des colonies ---------- */
@@ -271,7 +359,8 @@ function emptyResources(): Resources {
 
 /** Niveaux cumulés de la planète mère (v4.9.3 : bâtiments de fin de partie compris). */
 export function homeLevels(player: Pick<PlayerState, "buildings">): number {
-  return BUILDINGS.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  // 5.28.1 (C3) : un bâtiment verrouillé (niveau 1 par défaut, jamais construit) ne compte pas.
+  return BUILDINGS.reduce((a, b) => a + effectiveBuildingLevel(player.buildings, b.id), 0);
 }
 
 export function colonyFoundCost(): Partial<Record<ResourceId, number>> {
@@ -406,7 +495,11 @@ export function advanceColonies(player: PlayerState, now: number): NewNotificati
     player.colonizing = null;
     notes.push({ kind: "building", title: "Nouvelle colonie !", message: `${job.name} est fondée : construis ses extracteurs et envoie-lui des ressources.`, createdAtMs: now, read: false });
   }
-  for (const c of player.colonies ?? []) notes.push(...advanceColony(c, player, now));
+  for (const c of player.colonies ?? []) {
+    notes.push(...advanceColony(c, player, now));
+    // 5.33 : route logistique, après la production de la colonie (la planète mère est déjà à jour).
+    runColonyRoute(c, player, now);
+  }
   return notes;
 }
 
@@ -426,7 +519,7 @@ export function colonyUpgradeCost(player: Pick<PlayerState, "bonuses">, building
   }
   const def = findBuilding(buildingId);
   if (!def) return {};
-  const base = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0);
+  const base = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), playerBuildingDiscount(player));
   return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil((n ?? 0) * COLONY_RULES.costFactor)]));
 }
 
@@ -449,10 +542,12 @@ export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, b
   return colony.building;
 }
 
-/** Place occupée et capacité du hangar de défense d'une colonie. */
-export function colonyDefenseHangar(colony: Colony): { used: number; capacity: number } {
+/** Place occupée et capacité du hangar de défense d'une colonie. 5.27.2 : la tech « Extension des
+ *  hangars » et les effets `hangarCapacity` (portée colonies) s'appliquent aussi (docs/proposals/cale-seche.md, C5). */
+export function colonyDefenseHangar(colony: Colony, player?: Parameters<typeof playerUnitCapacity>[0], now: number = Date.now()): { used: number; capacity: number } {
   const used = Object.entries(colony.defenses).reduce((a, [id, s]) => a + (findUnit(id)?.hangarSpace ?? 1) * s.count, 0);
-  return { used, capacity: Math.floor(getUnitCapacity(colony.buildings, "defense") * colonySpecEffects(colony).hangar) };
+  const base = player ? playerUnitCapacity(player, "defense", now, "colonies", colony.buildings) : getUnitCapacity(colony.buildings, "defense");
+  return { used, capacity: Math.floor(base * colonySpecEffects(colony).hangar) };
 }
 
 /** Durée de construction (secondes) d'un lot de défenses sur une colonie. */
@@ -470,7 +565,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantité invalide.");
   if (colony.defenseJob) throw new GameActionError("Des défenses sont déjà en construction sur cette colonie.");
-  const { used, capacity } = colonyDefenseHangar(colony);
+  const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);
   const paid = { scrap: each.scrap * qty, energy: each.energy * qty };

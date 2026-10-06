@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { distanceBetween, fleetSpeed, PATROL_RULES, patrolEnergyCost, travelSeconds } from "@/game/fleets";
+import { playerModifiers } from "@/game/modifiers";
 import { DEBRIS_RULES, recyclerCapacity, type DebrisField } from "@/game/debris";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { formatDuration, formatNumber } from "@/lib/utils";
@@ -40,7 +41,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
   }
   const current = fleet ?? all;
   const selected = Object.fromEntries(Object.entries(current).filter(([, n]) => n > 0));
-  const cost = player ? patrolEnergyCost(player.units, selected, minutes, player.techLevels) : 0;
+  const cost = player ? patrolEnergyCost(player.units, selected, minutes, player.techLevels, playerModifiers(player).fleetUpkeep) : 0;
   const energy = player?.resources.energy ?? 0;
   const hasShips = Object.keys(selected).length > 0;
 
@@ -212,7 +213,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
   }
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const hasShips = Object.keys(selected).length > 0;
-  const cost = player ? patrolEnergyCost(player.units, selected, hours * 60, player.techLevels) : 0;
+  const cost = player ? patrolEnergyCost(player.units, selected, hours * 60, player.techLevels, playerModifiers(player).fleetUpkeep) : 0;
   const energy = player?.resources.energy ?? 0;
   const flight =
     player && uid && target && hasShips

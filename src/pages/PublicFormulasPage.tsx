@@ -27,7 +27,7 @@ export function PublicFormulasPage() {
           </Link>
         </header>
         <p className="max-w-3xl text-sm text-slate-300">
-          Production, stockage, énergie, puissance d'attaque et de défense, combats, butin, raids, missions, bonus et passe de saison : tout ce que le serveur calcule, expliqué. Les chiffres
+          Production, stockage, énergie, puissance d'attaque et de défense, combats, butin, raids, missions, bonus et passe : tout ce que le serveur calcule, expliqué. Les chiffres
           affichés sont ceux en vigueur aujourd'hui, réglages de l'équipe compris.
         </p>
         <FormulasGuide player={user ? player : null} />

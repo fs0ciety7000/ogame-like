@@ -227,6 +227,13 @@ function syncProfile(app, player) {
     profile.set("planets", colonies);
     changed = true;
   }
+  // 6.0 : classe d'empire publique (identifiant seulement).
+  const cls = parseJsonField(player, "empireClass", null);
+  const clsId = cls && typeof cls.id === "string" ? cls.id : "";
+  if (profile.getString("empireClass") !== clsId) {
+    profile.set("empireClass", clsId);
+    changed = true;
+  }
   // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
   const vac = parseJsonField(player, "vacation", null);
   const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;
@@ -1536,6 +1543,18 @@ function resolveAttackArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
+/**
+ * 5.28.1 (audit C2) : au retour d'une flotte, la Cale sèche au palier 10 remet en service les vaisseaux prêts
+ * (les flottes encore en vol, hors celle qui rentre, comptent dans le hangar). Rend les notifications.
+ */
+function dockAutoOnReturn(txApp, game, uid, player, queues, rec, now) {
+  if (!game.dockAutoCommission(player)) return [];
+  const others = txApp
+    .findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done" && id != {:id}', "", 200, 0, { u: uid, id: rec.id })
+    .map((r) => fleetFromRecord(r));
+  return game.autoCommission(player, queues, game.unitsAwayOf(others, uid), now);
+}
+
 function resolveFleetReturn(txApp, game, rec, now) {
   if (rec.getString("mission") === "expedition") return expeditionStep(txApp, game, rec, now, 2);
   const fleet = fleetFromRecord(rec);
@@ -1543,8 +1562,9 @@ function resolveFleetReturn(txApp, game, rec, now) {
     const owner = loadPlayer(txApp, game, fleet.ownerUid);
     const out = game.performFleetReturn(owner.player, owner.queues, fleet, now);
     game.clearDecoy(out.owner, rec.id);
+    const docked = dockAutoOnReturn(txApp, game, fleet.ownerUid, out.owner, out.queues, rec, now);
     savePlayer(txApp, game, owner, out.owner, out.queues);
-    notify(txApp, fleet.ownerUid, out.notifications);
+    notify(txApp, fleet.ownerUid, out.notifications.concat(docked));
   }
   rec.set("status", "done");
   txApp.save(rec);
@@ -1692,6 +1712,8 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
     // 5.18 : un pacte de non-agression n'empêche plus l'attaque à titre personnel (seulement la guerre d'alliance).
+    // 5.33 : emplacements de flotte (sondes et expéditions exclues).
+    const fleetsActive = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done" && mission != "spy" && mission != "expedition"', "", 200, 0, { u: attackerUid }).length;
     let expeditionsActive = 0;
     let expeditionsToday = 0;
     let leviathan = null;
@@ -1754,6 +1776,7 @@ function launchFleetRequest(e) {
         expeditionHours: Number(body.hours) || 0,
         expeditionsActive,
         expeditionsToday,
+        fleetsActive,
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
         transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,
@@ -2790,6 +2813,7 @@ function saveExpeditionFleet(txApp, rec, fleet) {
 function finishExpeditionFleet(txApp, game, rec, fleet, player, owner, queues, notes, now) {
   notes.push(game.finishExpedition(player, fleet, now));
   game.completeFleetReturn(player, fleet, now);
+  dockAutoOnReturn(txApp, game, fleet.ownerUid, player, queues, rec, now).forEach((n) => notes.push(n));
   savePlayer(txApp, game, owner, player, queues);
   notify(txApp, fleet.ownerUid, notes);
   rec.set("status", "done");
@@ -5007,6 +5031,13 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["cle_soudure"],
   },
+  // 5.28 : Cale sèche ajoutée aux bâtiments personnalisés (docs/proposals/cale-seche.md).
+  {
+    id: "cale-seche-5.28",
+    key: "buildings",
+    patches: [],
+    appendFromDefaults: ["cale_seche"],
+  },
 ];
 
 function canonJson(v) {
@@ -5125,25 +5156,27 @@ function restoreWorkshopUnits(app, sinceMs) {
     Object.keys(back).forEach((uid) => {
       const rec = findOrNull(txApp, "players", uid);
       if (!rec) return;
-      const units = Object.assign({}, toPlain(rec).units || {});
+      // 5.27.2 : rendues à l'Atelier (file de réparation), plus directement au hangar : elles gardent
+      // leur place sans jamais dépasser la capacité au moment de rentrer (docs/proposals/cale-seche.md, C1).
+      const player = toPlain(rec);
+      player.units = player.units || {};
       const lines = [];
       Object.keys(back[uid]).forEach((id) => {
-        const st = units[id] || { level: 1, count: 0 };
-        units[id] = Object.assign({}, st, { count: (st.count || 0) + back[uid][id] });
         const u = game.findUnit(id);
         lines.push(`${game.formatInt(back[uid][id])} ${u ? u.name : id}`);
       });
-      rec.set("units", units);
+      game.sendToWorkshop(player, back[uid], Date.now(), "defense", false);
+      rec.set("workshop", player.workshop);
       txApp.save(rec);
       players++;
       notify(txApp, uid, [
         {
           kind: "event",
           title: "Unités sauvées rendues",
-          message: `L'Atelier n'avait pas enregistré tes unités sauvées depuis la 5.20 : elles rejoignent ta flotte, réparées. ${lines.join(", ")}.`,
+          message: `L'Atelier n'avait pas enregistré tes unités sauvées depuis la 5.20 : elles entrent en réparation à l'Atelier. ${lines.join(", ")}.`,
           createdAtMs: Date.now(),
           read: false,
-          link: "/game/unites",
+          link: "/game/batiments?onglet=atelier",
         },
       ]);
     });
@@ -8501,6 +8534,71 @@ function timedCron(name, spec, fn) {
   }
 }
 
+/* 5.29 (P3) : les tâches de même cadence passent dans une seule tâche planifiée (une machine goja réveillée
+   au lieu de plusieurs). Chaque étape garde son nom, ses métriques et son isolement d'erreur (timedCron) :
+   la page Santé du serveur les liste comme avant. L'ordre compte : les flottes passent en premier. */
+const CADENCES = {
+  minute: {
+    spec: "* * * * *",
+    steps: [
+      ["cosmic_fleets", () => {
+        processDueFleets(loadGame(), Date.now(), null);
+        purgeDebris(Date.now());
+        processAllianceResearch(loadGame(), Date.now());
+      }],
+      ["cosmic_maintenance", () => {
+        if (autoEndMaintenance(Date.now())) console.log("[cosmic] maintenance terminée automatiquement");
+      }],
+      ["cosmic_auctions", () => {
+        const n = auctionsTick(Date.now());
+        if (n > 0) console.log(`[cosmic] ${n} vente(s) aux enchères close(s)`);
+      }],
+    ],
+  },
+  five: {
+    spec: "*/5 * * * *",
+    steps: [
+      ["cosmic_wars", () => warTick(Date.now())],
+      ["cosmic_leviathan", () => leviathanTick(Date.now())],
+      ["cosmic_market", () => {
+        const n = expireMarketOffers(Date.now());
+        if (n > 0) console.log(`[cosmic] ${n} offre(s) du marché expirée(s)`);
+      }],
+      ["cosmic_tradecontracts", () => tradeContractsTick(Date.now())],
+      ["cosmic_mail_schedule", () => {
+        const out = mailScheduleTick(Date.now());
+        if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
+      }],
+      ["cosmic_allianceboss", () => allianceBossTick(Date.now())],
+      ["cosmic_seasonboss", () => seasonBossTick(Date.now())],
+    ],
+  },
+  ten: {
+    spec: "*/10 * * * *",
+    steps: [
+      ["cosmic_shop_reminders", () => shopRemindersTick(Date.now())],
+      ["cosmic_pirates", () => {
+        // En maintenance, les factions attendent : les joueurs ne peuvent pas répondre.
+        if (readMaintenance($app).enabled) return;
+        processPirates(loadGame(), Date.now(), null);
+      }],
+      ["cosmic_challenge", () => challengeTick(Date.now())],
+      ["cosmic_territory_war", () => territoryWarTick(Date.now(), null)],
+      ["cosmic_elite", () => eliteTick(Date.now())],
+      ["cosmic_alliancedaily", () => {
+        const n = allianceDailyTick(Date.now());
+        if (n > 0) console.log(`[cosmic] objectifs du jour : ${n} alliance(s) mise(s) à jour`);
+      }],
+    ],
+  },
+};
+
+function cadenceTick(cadence) {
+  const c = CADENCES[cadence];
+  if (!c) return;
+  for (const [name, fn] of c.steps) timedCron(name, c.spec, fn);
+}
+
 function readServerMetric(txApp, key) {
   try {
     return toPlain(txApp.findFirstRecordByData("server_metrics", "key", key)).data;
@@ -9403,4 +9501,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { cadenceTick, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

@@ -7,6 +7,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Button } from "@/components/ui/button";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { ResourceHistoryChart } from "@/components/game/ResourceHistoryChart";
+import { StorageRiskCard } from "@/components/game/StorageRiskCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
@@ -99,6 +100,7 @@ export function ResourcesPage() {
         ))}
       </div>
 
+      {player && <StorageRiskCard player={player} now={Date.now()} />}
       <ResourceHistoryChart history={player?.resourceHistory} />
 
       <Card>

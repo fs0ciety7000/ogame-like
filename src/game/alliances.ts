@@ -35,7 +35,9 @@ export interface AllianceProjectDef {
 }
 
 export const ALLIANCE_RULES = {
-  maxMembers: 6,
+  /** 5.33 (proposals/alliances-grandes.md) : membres de base ; +membersPerQuarter par niveau de « Quartiers fédérés ». */
+  maxMembers: 8,
+  membersPerQuarter: 4,
   /** Versement : au plus cette part du stock d'une ressource du trésor. */
   distributionMaxPct: 0.2,
   /** Versements par jour (UTC) pour toute l'alliance. */
@@ -62,6 +64,8 @@ export const ALLIANCE_RULES = {
     { id: "industrie", name: "Industrie coopérative", emoji: "🏭", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5 },
     { id: "brouillage", name: "Réseau de brouillage", emoji: "📡", description: "Ajoute des points de contre-espionnage à chaque membre.", perLevel: 1, maxLevel: 5 },
     { id: "bouclier", name: "Bouclier fédéral", emoji: "🛡️", description: "Renforce le bouclier des bases des membres, au-delà du plafond habituel.", perLevel: 0.01, maxLevel: 5 },
+    // 5.33 : agrandit l'alliance (8 → 12 → 16 → 20 membres).
+    { id: "quartiers", name: "Quartiers fédérés", emoji: "🏘️", description: "Agrandit l'alliance : des places de membres en plus.", perLevel: 4, maxLevel: 3 },
   ] as AllianceResearchDef[],
   /** v3.3 : projets (méga-structures). Coût du palier n : base × croissance^(n−1). */
   projectCommonCost: 500_000_000,
@@ -190,9 +194,17 @@ export function newAlliance(founder: { uid: string; pseudo: string }, nameIn: st
   };
 }
 
+/** 5.33 : places de l'alliance = base + Quartiers fédérés. */
+export function allianceMaxMembers(alliance: Pick<Alliance, "research"> | null | undefined): number {
+  const def = findAllianceResearch("quartiers");
+  const lvl = Math.min(def?.maxLevel ?? 0, Math.max(0, Math.floor(alliance?.research?.quartiers ?? 0)));
+  return Math.max(1, Math.floor(ALLIANCE_RULES.maxMembers)) + lvl * Math.max(0, ALLIANCE_RULES.membersPerQuarter);
+}
+
 export function addMember(alliance: Alliance, player: { uid: string; pseudo: string }): Alliance {
   if (alliance.members.includes(player.uid)) throw new GameActionError("Tu es déjà membre de cette alliance.");
-  if (alliance.members.length >= ALLIANCE_RULES.maxMembers) throw new GameActionError(`Cette alliance est complète (${ALLIANCE_RULES.maxMembers} membres).`);
+  const cap = allianceMaxMembers(alliance);
+  if (alliance.members.length >= cap) throw new GameActionError(`Cette alliance est complète (${cap} membres). La recherche « Quartiers fédérés » ouvre 4 places de plus.`);
   return { ...alliance, members: [...alliance.members, player.uid], memberPseudos: { ...alliance.memberPseudos, [player.uid]: player.pseudo } };
 }
 

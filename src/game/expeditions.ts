@@ -1,6 +1,7 @@
+import { empireClassPerk } from "@/game/empireClass";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { playerCombatEffects } from "@/game/effectTargets";
-import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { addReady, applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -145,6 +146,11 @@ function deepen(fleet: ExpeditionFleet, gain: Partial<Record<ResourceId, number>
 
 const riskOf = (fleet: ExpeditionFleet) => 1 + EXPEDITION_RULES.deepRisk * expeditionDepth(fleet);
 
+/** 6.0 : expéditions par jour, +1 pour la classe Explorateur. */
+export function expeditionsPerDay(owner?: Partial<Pick<PlayerState, "empireClass">> | null): number {
+  return Math.max(0, Math.floor(EXPEDITION_RULES.maxPerDay)) + empireClassPerk(owner, "expeditionsPerDay");
+}
+
 /** Liste lisible : « 1 200 ferraille, 300 énergie ». */
 export function fleetShips(units: Record<string, number>): number {
   return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
@@ -155,7 +161,8 @@ export function launchExpedition(owner: PlayerState, raw: Record<string, unknown
   const hours = Number(hoursIn);
   if (!EXPEDITION_RULES.durations.includes(hours)) throw new GameActionError(`Durée d'expédition invalide (${EXPEDITION_RULES.durations.join(", ")} h).`);
   if (active > 0) throw new GameActionError("Une expédition est déjà en cours.");
-  if (today >= EXPEDITION_RULES.maxPerDay) throw new GameActionError(`Limite de ${EXPEDITION_RULES.maxPerDay} expéditions par jour atteinte.`);
+  const perDay = expeditionsPerDay(owner);
+  if (today >= perDay) throw new GameActionError(`Limite de ${perDay} expéditions par jour atteinte.`);
   const units: Record<string, number> = {};
   for (const [id, v] of Object.entries(raw ?? {})) {
     const qty = Math.floor(Number(v));
@@ -265,8 +272,10 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
       const first = Object.keys(fleet.units)[0];
       if (first) found[first] = 1;
     }
-    fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => [id, n + (found[id] ?? 0)]));
-    text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} rejoignent la flotte.`;
+    // 5.28.1 (audit C1) : les vaisseaux trouvés attendent une place au hangar (prêts, Atelier) au lieu de
+    // grossir la flotte sans vérifier la capacité (invariant I3).
+    addReady(player, found);
+    text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} t'attendent à l'Atelier : remets-les en service quand ton hangar a de la place.`;
   } else if (kind === "ambush") {
     const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet), now);
     if (won) {

@@ -1,4 +1,4 @@
-import { BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, keptOnAscension, requiredForAscension } from "@/game/buildings";
 import { defaultResources } from "@/game/defaults";
 import { GameActionError } from "@/game/errors";
 import { bumpStat } from "@/game/stats";
@@ -70,7 +70,7 @@ export interface AscensionCheck {
 
 export function canAscend(player: PlayerState, queues: Pick<QueuesState, "buildingUpgrades"> | null, now: number): AscensionCheck {
   // v3.6 : les bâtiments de fin de partie ne comptent pas.
-  const missing = BUILDINGS.filter((b) => !b.endgame && (player.buildings[b.id]?.level ?? 0) < b.maxLevel).map((b) => ({
+  const missing = BUILDINGS.filter((b) => requiredForAscension(b) && (player.buildings[b.id]?.level ?? 0) < b.maxLevel).map((b) => ({
     id: b.id,
     name: b.name,
     level: player.buildings[b.id]?.level ?? 0,
@@ -84,12 +84,13 @@ export function canAscend(player: PlayerState, queues: Pick<QueuesState, "buildi
   return { ok: true, missing };
 }
 
-/** Ascension : bâtiments au niveau 1 (déblocages conservés), stock de départ. */
+/** Ascension : bâtiments au niveau 1 (déblocages conservés), stock de départ. 5.27.2 : hangars et
+ *  Cale sèche conservés (la flotte est gardée, son logement aussi : invariant I4). */
 export function ascend(player: PlayerState, queues: QueuesState, now: number): void {
   const check = canAscend(player, queues, now);
   if (!check.ok) throw new GameActionError(check.reason ?? "Ascension impossible.");
   for (const b of BUILDINGS) {
-    if (b.endgame) continue; // conservés
+    if (keptOnAscension(b)) continue; // conservés
     const cur = player.buildings[b.id];
     player.buildings[b.id] = { ...(cur ?? { unlocked: !!b.startsUnlocked }), level: 1 };
   }

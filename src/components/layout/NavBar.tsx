@@ -10,7 +10,7 @@ import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudChip, HudSwitch } from "@/components/ui/hud";
 import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet, Compass } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -23,10 +23,9 @@ import { findShopItem, plannerUnlocked } from "@/game/bounties";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
-import { passState, passTier } from "@/game/seasonPass";
-import { chronicleReadyCount } from "@/game/chronicles";
+
 import { codexClaimableCount } from "@/game/codex";
-import { dailyReadyCount } from "@/game/dailyMissions";
+import { ordersReadyCount } from "@/game/dailyOrders";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -100,6 +99,7 @@ const NAV_GROUPS: NavGroup[] = [
     accent: "var(--color-cyan-glow)",
     items: [
       { to: "/game", label: "Accueil", icon: LayoutDashboard, end: true },
+      { to: "/game/ordres", label: "Ordres du jour", icon: ClipboardList },
       { to: "/game/ressources", label: "Ressources", icon: Factory },
       { to: "/game/batiments", label: "Bâtiments", icon: Building2 },
       { to: "/game/unites", label: "Unités", icon: Rocket },
@@ -107,8 +107,10 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/planificateur", label: "Planificateur", icon: CalendarClock, lock: "planner" },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
+      { to: "/game/classe", label: "Classe d'empire", icon: Compass },
       { to: "/game/ascension", label: "Ascension", icon: Sparkles },
       { to: "/game/statistiques", label: "Statistiques", icon: BarChart3 },
+      { to: "/game/portefeuille", label: "Portefeuille", icon: Wallet },
     ],
   },
   {
@@ -225,22 +227,14 @@ function useBadges(): (to: string) => number {
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();
   const leviathanSeen = useLeviathanSeen((s) => s.ids);
-  const passClaimable = usePlayerStore((s) => {
-    if (!s.player) return 0;
-    const st = passState(s.player, Date.now());
-    return Math.max(0, passTier(st.points, st.seasonId) - st.claimed.length);
-  });
-  // 5.15.12 : épisodes à terminer (objectif atteint) et catégories du Codex à réclamer.
-  const chroniclesReady = usePlayerStore((s) => (s.player ? chronicleReadyCount(s.player, Date.now()) : 0));
+  // 5.30 : pastille unique des récompenses prêtes (série, missions, contrats, passe, Chroniques…), = « Tout réclamer ».
+  const ordersReady = usePlayerStore((s) => (s.player ? ordersReadyCount(s.player, Date.now()) : 0));
   const codexReady = usePlayerStore((s) => (s.player ? codexClaimableCount(s.player, Date.now()) : 0));
-  const dailyReady = usePlayerStore((s) => (s.player ? dailyReadyCount(s.player, Date.now()) : 0));
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
   return (to) =>
     ({
-      "/game": dailyReady,
-      "/game/passe": passClaimable,
-      "/game/chroniques": chroniclesReady,
+      "/game/ordres": ordersReady,
       "/game/codex": codexReady,
       "/game/messages": messagesUnread,
       "/game/uber": leviathanNew,

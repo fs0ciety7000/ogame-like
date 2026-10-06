@@ -244,6 +244,7 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
             { value: "repair", label: "Réparation après combat" },
             { value: "hangar", label: "Capacité de hangar" },
             { value: "storage", label: "Entrepôt (stockage)" },
+            { value: "dock", label: "Cale sèche (postes de réparation)" },
           ]}
           onChange={(t) =>
             set({
@@ -254,7 +255,9 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
                     ? { type: "hangar", category: "attack", perLevel: 2000 }
                     : t === "storage"
                       ? { type: "storage", base: 2_000_000, growth: 1.6 }
-                      : undefined,
+                      : t === "dock"
+                        ? { type: "dock", perLevel: 1000, orbitalRepair: 0.05 }
+                        : undefined,
             })
           }
         />
@@ -325,6 +328,25 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
               min={0}
               step={1}
               onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "hangar" }>), perLevel: v ?? 0 } })}
+            />
+          </>
+        )}
+        {b.effect?.type === "dock" && (
+          <>
+            <NumberField
+              label="Postes par niveau (places de hangar)"
+              value={b.effect.perLevel}
+              min={0}
+              step={100}
+              hint="Les vaisseaux sauvés y attendent leur réparation, hors du hangar. Paliers : Triage 5, remise automatique 10, priorités 15, Cale orbitale 20."
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "dock" }>), perLevel: v ?? 0 } })}
+            />
+            <NumberField
+              label="Cale orbitale (palier 20) : vaisseaux sauvés en plus (0,05 = +5 points)"
+              value={b.effect.orbitalRepair ?? 0}
+              min={0}
+              step={0.01}
+              onChange={(v) => set({ effect: { ...(b.effect as Extract<BuildingEffect, { type: "dock" }>), orbitalRepair: v ?? 0 } })}
             />
           </>
         )}

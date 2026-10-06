@@ -86,16 +86,17 @@ routerAdd(
       db.applyContent(txApp, game);
       const loaded = db.loadPlayer(txApp, game, uid);
       // Vaisseaux en mission : ils reviendront, le hangar doit les compter.
-      const away =
-        action && action.type === "buildUnits"
-          ? game.unitsAwayOf(
-              txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),
-              uid,
-            )
-          : {};
+      // 5.28 : aussi pour la remise en service des vaisseaux prêts de la Cale sèche.
+      const needAway = game.actionNeedsAway(loaded.player, action);
+      const away = needAway
+        ? game.unitsAwayOf(
+            txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),
+            uid,
+          )
+        : {};
       let out;
       try {
-        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away);
+        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway);
       } catch (err) {
         throw db.asHttpError(game, err);
       }
@@ -296,14 +297,18 @@ routerAdd(
   $apis.requireAuth("users"),
 );
 
-// Arrivées et retours de flottes : vérifiés chaque minute.
-cronAdd("cosmic_fleets", "* * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_fleets", "* * * * *", () => {
-    const db = require(`${__hooks}/cosmic_db.js`);
-    db.processDueFleets(db.loadGame(), Date.now(), null);
-    db.purgeDebris(Date.now());
-    db.processAllianceResearch(db.loadGame(), Date.now());
-  });
+// 5.29 (P3) : tâches regroupées par cadence (étapes et métriques par nom : cosmic_db.js, CADENCES).
+// Chaque minute : flottes (arrivées, retours, débris, recherches d'alliance), fin de maintenance, enchères.
+cronAdd("cosmic_minute", "* * * * *", () => {
+  require(`${__hooks}/cosmic_db.js`).cadenceTick("minute");
+});
+// Toutes les 5 min : guerres, Léviathan, marché, contrats, campagnes e-mail, boss d'alliance et de saison.
+cronAdd("cosmic_five", "*/5 * * * *", () => {
+  require(`${__hooks}/cosmic_db.js`).cadenceTick("five");
+});
+// Toutes les 10 min : rappels du Comptoir, factions, défi hebdo, guerre de territoire, proie d'élite, objectifs d'alliance.
+cronAdd("cosmic_ten", "*/10 * * * *", () => {
+  require(`${__hooks}/cosmic_db.js`).cadenceTick("ten");
 });
 
 /**
@@ -316,22 +321,7 @@ routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.j
 /** POST /api/cosmic/alliance/intel — rapports récents des membres. */
 routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
-// 5.27 : rappels du Comptoir (phéromone, voile de chitine bientôt finis), toutes les 10 min.
-cronAdd("cosmic_shop_reminders", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_shop_reminders", "*/10 * * * *", () => {
-    require(`${__hooks}/cosmic_db.js`).shopRemindersTick(Date.now());
-  });
-});
 
-// Factions hostiles : inscriptions et ultimatums expirés, toutes les 10 min.
-cronAdd("cosmic_pirates", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_pirates", "*/10 * * * *", () => {
-    const db = require(`${__hooks}/cosmic_db.js`);
-    // En maintenance, les factions attendent : les joueurs ne peuvent pas répondre.
-    if (db.readMaintenance($app).enabled) return;
-    db.processPirates(db.loadGame(), Date.now(), null);
-  });
-});
 
 /** POST /api/cosmic/pirates { answer: "pay" | "refuse" } — réponse à l'ultimatum en cours. */
 routerAdd("POST", "/api/cosmic/pirates", (e) => require(`${__hooks}/cosmic_db.js`).piratesRequest(e), $apis.requireAuth("users"));
@@ -596,30 +586,11 @@ routerAdd("GET", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.j
 routerAdd("POST", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.js`).adminBan(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/player/delete", (e) => require(`${__hooks}/cosmic_db.js`).adminDeletePlayer(e), $apis.requireAuth("users", "_superusers"));
 
-// Réouverture automatique à l'heure prévue, vérifiée chaque minute.
-cronAdd("cosmic_maintenance", "* * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_maintenance", "* * * * *", () => {
-    try {
-      if (require(`${__hooks}/cosmic_db.js`).autoEndMaintenance(Date.now())) console.log("[cosmic] maintenance terminée automatiquement");
-    } catch (err) {
-      console.log(`[cosmic] fin automatique de maintenance : ${err}`);
-    }
-  });
-});
 
 /** Guerres d'alliance (v3.2) : déclaration et reddition ; début et fin planifiés. */
 routerAdd("POST", "/api/cosmic/war", (e) => require(`${__hooks}/cosmic_db.js`).warRequest(e), $apis.requireAuth("users"));
 /** POST /api/cosmic/diplomacy — pactes de non-agression et canal partagé (v3.8). */
 routerAdd("POST", "/api/cosmic/diplomacy", (e) => require(`${__hooks}/cosmic_db.js`).diplomacyRequest(e), $apis.requireAuth("users"));
-cronAdd("cosmic_wars", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_wars", "*/5 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).warTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] guerres : ${err}`);
-    }
-  });
-});
 
 /** Expéditions (v3.1) : décision face à une faction. */
 routerAdd("POST", "/api/cosmic/expedition/choose", (e) => require(`${__hooks}/cosmic_db.js`).expeditionChoose(e), $apis.requireAuth("users"));
@@ -629,22 +600,12 @@ routerAdd("POST", "/api/cosmic/admin/bossrewards", (e) => require(`${__hooks}/co
 routerAdd("GET", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/serverpot", (e) => require(`${__hooks}/cosmic_db.js`).adminServerPot(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/leviathan", (e) => require(`${__hooks}/cosmic_db.js`).adminLeviathan(e), $apis.requireAuth("users", "_superusers"));
-cronAdd("cosmic_leviathan", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_leviathan", "*/5 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).leviathanTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] Léviathan : ${err}`);
-    }
-  });
-});
 
 /** Marché entre joueurs (v3.0) : publier, accepter, annuler une offre. */
 routerAdd("POST", "/api/cosmic/market/create", (e) => require(`${__hooks}/cosmic_db.js`).marketCreate(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/market/accept", (e) => require(`${__hooks}/cosmic_db.js`).marketAccept(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/market/cancel", (e) => require(`${__hooks}/cosmic_db.js`).marketCancel(e), $apis.requireAuth("users"));
 
-// Offres expirées rendues à leur vendeur.
 /* ---------- Défis hebdomadaires (v3.8) ---------- */
 /** v5.10.5 : messages ciblés (notification à un groupe de joueurs). */
 routerAdd("POST", "/api/cosmic/admin/broadcast", (e) => require(`${__hooks}/cosmic_db.js`).adminBroadcast(e), $apis.requireAuth("users", "_superusers"));
@@ -673,15 +634,6 @@ cronAdd("cosmic_contests", "*/15 * * * *", () => {
   });
 });
 
-cronAdd("cosmic_challenge", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_challenge", "*/10 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).challengeTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] défi hebdomadaire : ${err}`);
-    }
-  });
-});
 
 /** POST /api/cosmic/challenge/claim — v5.10 : récompense du défi à réclamer. */
 routerAdd("POST", "/api/cosmic/challenge/claim", (e) => require(`${__hooks}/cosmic_db.js`).challengeClaim(e), $apis.requireAuth("users"));
@@ -695,28 +647,7 @@ routerAdd("POST", "/api/cosmic/admin/challenge", (e) => {
   return e.json(200, db.readChallengeState($app, db.loadGame()));
 }, $apis.requireAuth("users", "_superusers"));
 
-// 5.26 : clôture des ventes de l'Hôtel des enchères.
-cronAdd("cosmic_auctions", "* * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_auctions", "* * * * *", () => {
-    try {
-      const n = require(`${__hooks}/cosmic_db.js`).auctionsTick(Date.now());
-      if (n > 0) console.log(`[cosmic] ${n} vente(s) aux enchères close(s)`);
-    } catch (err) {
-      console.log(`[cosmic] enchères : ${err}`);
-    }
-  });
-});
 
-cronAdd("cosmic_market", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_market", "*/5 * * * *", () => {
-    try {
-      const n = require(`${__hooks}/cosmic_db.js`).expireMarketOffers(Date.now());
-      if (n > 0) console.log(`[cosmic] ${n} offre(s) du marché expirée(s)`);
-    } catch (err) {
-      console.log(`[cosmic] expiration du marché : ${err}`);
-    }
-  });
-});
 
 // Alertes de ressources anormales (v3.3) : analyse horaire des stocks (ou à la demande).
 routerAdd("POST", "/api/cosmic/admin/anomalies", (e) => require(`${__hooks}/cosmic_db.js`).adminScanAnomalies(e), $apis.requireAuth("users", "_superusers"));
@@ -771,29 +702,11 @@ routerAdd(
 );
 
 /** 5.17 : guerre de territoire (ouverture/clôture toutes les 10 min ; points de contrôle avec les territoires). */
-cronAdd("cosmic_territory_war", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_territory_war", "*/10 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).territoryWarTick(Date.now(), null);
-    } catch (err) {
-      console.log(`[cosmic] guerre de territoire : ${err}`);
-    }
-  });
-});
 routerAdd("POST", "/api/cosmic/admin/territory-war", (e) => require(`${__hooks}/cosmic_db.js`).adminTerritoryWar(e), $apis.requireAuth("users", "_superusers"));
 
 /** v5.1 : contrats entre joueurs (« livre-moi X contre Y »). */
 routerAdd("POST", "/api/cosmic/rename", (e) => require(`${__hooks}/cosmic_db.js`).renameRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/trade-contract", (e) => require(`${__hooks}/cosmic_db.js`).tradeContractRequest(e), $apis.requireAuth("users"));
-cronAdd("cosmic_tradecontracts", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_tradecontracts", "*/5 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).tradeContractsTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] contrats : ${err}`);
-    }
-  });
-});
 
 /** v4.9.3 : flottes bloquées (retard de plus de 10 min). */
 routerAdd("GET", "/api/cosmic/admin/stuck-fleets", (e) => require(`${__hooks}/cosmic_db.js`).adminStuckFleets(e), $apis.requireAuth("users", "_superusers"));
@@ -943,16 +856,6 @@ routerAdd("POST", "/api/cosmic/bounty", (e) => require(`${__hooks}/cosmic_db.js`
 /** POST /api/cosmic/admin/elite { now? } — lance la tâche de la proie d'élite tout de suite. */
 routerAdd("POST", "/api/cosmic/admin/elite", (e) => require(`${__hooks}/cosmic_db.js`).adminElite(e), $apis.requireAuth("users", "_superusers"));
 
-// Proie d'élite : nouvelle chaque lundi, fuite et récompenses à l'échéance.
-cronAdd("cosmic_elite", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_elite", "*/10 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).eliteTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] proie d'élite : ${err}`);
-    }
-  });
-});
 
 // Tchat d'alliance : emojis Kesh'Vaar réservés aux détenteurs du pack.
 onRecordCreateRequest((e) => require(`${__hooks}/cosmic_db.js`).allianceMessageCreate(e), "alliance_messages");
@@ -965,16 +868,6 @@ routerAdd("POST", "/api/cosmic/admin/mail", (e) => require(`${__hooks}/cosmic_db
 // 5.16 : suivi des campagnes (ouverture, clic) et envois programmés.
 routerAdd("GET", "/api/cosmic/mail/o", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "open"));
 routerAdd("GET", "/api/cosmic/mail/c", (e) => require(`${__hooks}/cosmic_db.js`).mailTrack(e, "click"));
-cronAdd("cosmic_mail_schedule", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_mail_schedule", "*/5 * * * *", () => {
-    try {
-      const out = require(`${__hooks}/cosmic_db.js`).mailScheduleTick(Date.now());
-      if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
-    } catch (err) {
-      console.log(`[cosmic] campagnes programmées : ${err}`);
-    }
-  });
-});
 
 /** GET/POST /api/cosmic/unsubscribe?u=&t= — désinscription en un clic (lien des e-mails). */
 routerAdd("GET", "/api/cosmic/unsubscribe", (e) => require(`${__hooks}/cosmic_db.js`).unsubscribe(e));
@@ -1061,25 +954,7 @@ routerAdd("POST", "/api/cosmic/alliance/typing", (e) => require(`${__hooks}/cosm
 routerAdd("POST", "/api/cosmic/boss/react", (e) => require(`${__hooks}/cosmic_db.js`).bossReact(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/allianceboss", (e) => require(`${__hooks}/cosmic_db.js`).allianceBossRequest(e), $apis.requireAuth("users"));
 
-cronAdd("cosmic_allianceboss", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_allianceboss", "*/5 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).allianceBossTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] boss d'alliance : ${err}`);
-    }
-  });
-});
 
-cronAdd("cosmic_seasonboss", "*/5 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_seasonboss", "*/5 * * * *", () => {
-    try {
-      require(`${__hooks}/cosmic_db.js`).seasonBossTick(Date.now());
-    } catch (err) {
-      console.log(`[cosmic] boss de saison : ${err}`);
-    }
-  });
-});
 
 /* ---------- v4.8 : déploiement complet (admin ou GitHub Actions) ---------- */
 
@@ -1096,16 +971,6 @@ routerAdd("POST", "/api/cosmic/admin/deploy", (e) => {
 
 /* ---------- v4.9 : objectifs du jour d'alliance ---------- */
 
-cronAdd("cosmic_alliancedaily", "*/10 * * * *", () => {
-  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_alliancedaily", "*/10 * * * *", () => {
-    try {
-      const n = require(`${__hooks}/cosmic_db.js`).allianceDailyTick(Date.now());
-      if (n > 0) console.log(`[cosmic] objectifs du jour : ${n} alliance(s) mise(s) à jour`);
-    } catch (err) {
-      console.log(`[cosmic] objectifs du jour : ${err}`);
-    }
-  });
-});
 
 routerAdd("POST", "/api/cosmic/alliance/daily", (e) => require(`${__hooks}/cosmic_db.js`).allianceDailyVote(e), $apis.requireAuth("users"));
 

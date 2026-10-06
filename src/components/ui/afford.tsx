@@ -1,5 +1,6 @@
 import { Clock, Info } from "lucide-react";
 import { CostPill } from "@/components/ui/hud";
+import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger, type TooltipRow } from "@/components/ui/tooltip";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
@@ -27,8 +28,26 @@ export function canAfford(cost: Amounts, stock: Amounts): boolean {
   return (Object.entries(cost) as [ResourceId, number][]).every(([r, n]) => (stock[r] ?? 0) >= (n ?? 0));
 }
 
-/** Pastilles de coût : manque affiché en orange, durée éventuelle en fin de ligne. */
-export function CostPills({ cost, stock, seconds, perUnit, className }: { cost: Amounts; stock: Amounts; seconds?: number; perUnit?: boolean; className?: string }) {
+/** 5.31 : un multiplicateur et son origine (« d'où vient ce chiffre »). */
+export type FactorLine = { label: string; factor: number };
+
+/** « −20 % », « +10 % » : une réduction en mint, une hausse en ember. */
+export function factorRows(lines: FactorLine[]): TooltipRow[] {
+  return lines.map((l) => {
+    const pct = Math.round((l.factor - 1) * 1000) / 10;
+    return { label: l.label, value: `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct)} %`, tone: pct < 0 ? "mint" : pct > 0 ? "ember" : undefined };
+  });
+}
+
+/** Pastilles de coût : manque affiché en orange, durée éventuelle en fin de ligne. `timeFactors` : détail de la durée en infobulle. */
+export function CostPills({ cost, stock, seconds, perUnit, timeFactors, className }: { cost: Amounts; stock: Amounts; seconds?: number; perUnit?: boolean; timeFactors?: FactorLine[]; className?: string }) {
+  const time =
+    seconds !== undefined ? (
+      <CostPill>
+        <Clock className="h-3 w-3" /> {formatDuration(seconds)}
+        {perUnit && <em className="text-[10px] not-italic opacity-60">/ unité</em>}
+      </CostPill>
+    ) : null;
   return (
     <div className={cn("flex flex-wrap gap-1.5", className)}>
       {(Object.entries(cost) as [ResourceId, number][])
@@ -41,11 +60,24 @@ export function CostPills({ cost, stock, seconds, perUnit, className }: { cost: 
             </CostPill>
           );
         })}
-      {seconds !== undefined && (
-        <CostPill>
-          <Clock className="h-3 w-3" /> {formatDuration(seconds)}
-          {perUnit && <em className="text-[10px] not-italic opacity-60">/ unité</em>}
-        </CostPill>
+      {time && timeFactors ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button type="button" className="cursor-help" aria-label={`Durée : ${formatDuration(seconds ?? 0)}, voir le détail`}>
+              {time}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <TooltipCard
+              title="D'où vient ce temps"
+              icon={<Clock />}
+              rows={timeFactors.length ? factorRows(timeFactors) : [{ label: "Aucun bonus", value: "temps de base" }]}
+              note="Les bonus se multiplient entre eux."
+            />
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        time
       )}
     </div>
   );

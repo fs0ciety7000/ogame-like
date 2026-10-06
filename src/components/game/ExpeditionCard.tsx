@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { HudTag, EmptyState } from "@/components/ui/hud";
 import { FormationPicker } from "@/components/game/FormationPicker";
-import { EXPEDITION_RULES, describeGain, fleetShips } from "@/game/expeditions";
+import { EXPEDITION_RULES, describeGain, expeditionsPerDay, fleetShips } from "@/game/expeditions";
 import { FACTIONS } from "@/game/pirates";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import type { FormationId } from "@/game/formations";
@@ -216,7 +216,7 @@ export function ExpeditionCard() {
         <Compass className="h-4 w-4 text-cyan-glow" />
         <h2 className="hud-title text-sm">Expéditions</h2>
         <span className="text-[11px] text-slate-500">
-          {EXPEDITION_RULES.maxPerDay} par jour · {EXPEDITION_RULES.xpPerHour} XP par heure
+          {expeditionsPerDay(player)} par jour · {EXPEDITION_RULES.xpPerHour} XP par heure
         </span>
         {!active && (
           <Button size="sm" className="ml-auto" onClick={() => setOpen(true)}>

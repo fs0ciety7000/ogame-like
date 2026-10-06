@@ -25,8 +25,16 @@ export const ECONOMY_RULES = {
   upkeepPerPlaceDefense: 0.0075,
   /** Production des autres ressources pendant une panne d'énergie. */
   outageProductionFactor: 0.5,
-  /** Part de la capacité de l'entrepôt à l'abri du pillage. */
+  /** Part de la capacité de l'entrepôt à l'abri du pillage (borne haute). */
   protectedStoragePct: 0.1,
+  /** 5.32 (proposals/entrepot-pillage.md) : à l'abri = au plus ces heures de production, par ressource (0 = règle de capacité seule). */
+  protectedHours: 8,
+  /** Activation de la règle en heures (annonce une semaine avant : 13 octobre 2026, 10 h à Paris). */
+  protectedHoursFromMs: Date.UTC(2026, 9, 13, 8),
+  /** Plancher par ressource commune : un compte neuf reste couvert par la règle de capacité. */
+  protectedFloor: 500_000,
+  /** 5.32 (proposals/constructeurs.md) : chantiers de bâtiments en parallèle, de base (+1 à la Fonderie quantique 5 et 10). */
+  buildSlotsBase: 6,
   /** Missions : ressources communes = au moins ce multiple de (durée × production). */
   missionProductionMultiplier: 1.5,
   /** Missions : ressources rares × (1 + niveaux de bâtiments cumulés / ce diviseur). */
@@ -86,8 +94,9 @@ export function storageCapacityOf(input: EconomyInput): number {
   return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
 
-/** Énergie consommée par seconde par les unités construites. */
-export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels): number {
+/** Énergie consommée par seconde par les unités construites. `empireCut` : réduction de la couche empire
+ *  (`playerModifiers(...).fleetUpkeep`, 5.28.1), appliquée après celle des technologies. */
+export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels, empireCut = 0): number {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units ?? {})) {
     const def = findUnit(id);
@@ -95,7 +104,7 @@ export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels
     const perPlace = def.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
     upkeep += state.count * def.hangarSpace * perPlace;
   }
-  return upkeep * techReductionFactor(techLevels, "fleet_upkeep");
+  return upkeep * techReductionFactor(techLevels, "fleet_upkeep") * (1 - Math.max(0, empireCut));
 }
 
 export interface EconomySnapshot {
@@ -133,7 +142,7 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 /** `now` : applique les bonus de l'événement en cours à cet instant. */
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
   const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now), now === undefined ? 1 : boostAt(input, now));
-  const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels, playerModifiers(input, now, input.effectScope).fleetUpkeep);
   const capacity = storageCapacityOf(input);
   const energyNet = (gross.energy ?? 0) - upkeep;
   const outage = energyNet < 0 && (input.resources.energy ?? 0) <= 0;
@@ -191,7 +200,7 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
   if (elapsedSeconds <= 0) return out;
 
   const gross = boostedRates(input, multipliers, boost);
-  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels, playerModifiers(input, Date.now(), input.effectScope).fleetUpkeep);
   const capacity = storageCapacityOf(input);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
 
@@ -217,7 +226,21 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
 }
 
 /** Quantité d'une ressource à l'abri du pillage (bunker de l'entrepôt). */
-export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
+export function protectedAmount(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0], now: number = Date.now()): number {
+  const byCapacity = capacityProtected(buildings, res, techLevels, allianceLevels, player);
+  // 5.32 : au plus `protectedHours` heures de production de la ressource, jamais sous le plancher ni au-dessus de la règle de capacité.
+  const hours = ECONOMY_RULES.protectedHours;
+  if (!(hours > 0) || now < ECONOMY_RULES.protectedHoursFromMs) return byCapacity;
+  return Math.min(byCapacity, Math.max(ECONOMY_RULES.protectedFloor, Math.floor(hourlyProduction(buildings, res, techLevels) * hours)));
+}
+
+/** Production horaire d'une ressource par les bâtiments et les technologies (hors bonus temporaires). */
+export function hourlyProduction(buildings: Buildings, res: ResourceId, techLevels?: TechLevels): number {
+  return (getProductionRatesPerSecond(buildings, techLevels ?? {})[res] ?? 0) * 3600;
+}
+
+/** Règle de capacité (avant la 5.32) : part de l'entrepôt, technologies et Bastion compris. */
+export function capacityProtected(buildings: Buildings, res: ResourceId, techLevels?: TechLevels, allianceLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels);
   // v3.3 : le Bastion fédéral s'ajoute (et repousse le plafond d'autant).
@@ -281,4 +304,26 @@ export function productionBonuses(input: EconomyInput, now: number, res: Resourc
   const ev = productionMultipliers(now)[res];
   if (ev && ev !== 1) out.push({ label: "Événement en cours", pct: ev - 1 });
   return out;
+}
+
+/* 5.32 : « ce que tu risques » (page Ressources). Stock exposé au pillage, par ressource commune, aujourd'hui et après l'activation. */
+export interface ExposureLine {
+  res: ResourceId;
+  stock: number;
+  protectedNow: number;
+  exposedNow: number;
+  /** Part à l'abri une fois la règle en heures active (égale à protectedNow si elle l'est déjà). */
+  protectedSoon: number;
+  hourly: number;
+}
+
+export function exposureView(player: Pick<PlayerState, "buildings" | "techLevels" | "resources" | "allianceResearch"> & Parameters<typeof playerModifiers>[0], now: number): { lines: ExposureLine[]; activeFromMs: number; active: boolean } {
+  const active = ECONOMY_RULES.protectedHours > 0 && now >= ECONOMY_RULES.protectedHoursFromMs;
+  const lines = COMMON_RESOURCES.map((res) => {
+    const stock = Math.floor(player.resources?.[res] ?? 0);
+    const protectedNow = protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player, now);
+    const protectedSoon = protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player, Math.max(now, ECONOMY_RULES.protectedHoursFromMs));
+    return { res, stock, protectedNow, exposedNow: Math.max(0, stock - protectedNow), protectedSoon, hourly: hourlyProduction(player.buildings, res, player.techLevels) };
+  });
+  return { lines, activeFromMs: ECONOMY_RULES.protectedHoursFromMs, active };
 }

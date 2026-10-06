@@ -767,7 +767,7 @@ export function resolvePirateRaid(
   if (combat.outcome === "attacker_win") {
     const kinds = faction.raid.lootKind === "rare" ? RARE : COMMON_RESOURCES;
     for (const res of kinds) {
-      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player));
+      const exposed = Math.max(0, (player.resources[res] ?? 0) - protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player, now));
       const taken = Math.floor(exposed * faction.raid.lootPct);
       if (taken > 0) {
         loot[res] = taken;

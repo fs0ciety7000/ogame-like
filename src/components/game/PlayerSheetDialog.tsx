@@ -1,3 +1,4 @@
+import { EmpireClassChip } from "@/components/game/EmpireClassChip";
 import { usePlayerStore } from "@/store/playerStore";
 import { HomePlanet } from "@/components/game/HomePlanet";
 import { normalizePlanetLook } from "@/game/planetLook";
@@ -138,6 +139,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             {entry?.activeTitle && (
               <TitleBadge label={entry.activeTitle} size="xs" className="mt-1" />
             )}
+            <EmpireClassChip classId={entry?.empireClass} className="mt-1" />
             {patron && (
               <HudChip size="sm" tone={patron.tone} className="mt-1" title={`${feats!.patron} Ambre versés au pot commun`}>
                 <HandCoins className="h-3 w-3" /> {patron.label}

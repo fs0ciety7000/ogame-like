@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  allianceMaxMembers,
   addMember,
   ALLIANCE_RULES,
   allianceBastionBonus,
@@ -44,12 +45,19 @@ describe("alliance membership", () => {
     expect(() => newAlliance({ uid: "f", pseudo: "F" }, "Correct", "X!", NOW)).toThrow(/tag/);
   });
 
-  it("caps members at 6", () => {
+  it("caps members at 8, +4 per level of Quartiers fédérés (20 at most)", () => {
     let a = make();
     for (let i = 1; i < ALLIANCE_RULES.maxMembers; i++) a = addMember(a, { uid: `m${i}`, pseudo: `M${i}` });
-    expect(a.members).toHaveLength(6);
-    expect(() => addMember(a, { uid: "x", pseudo: "X" })).toThrow(/complète/);
+    expect(a.members).toHaveLength(8);
+    expect(() => addMember(a, { uid: "x", pseudo: "X" })).toThrow(/complète \(8 membres\)/);
     expect(() => addMember(make(), { uid: "f", pseudo: "F" })).toThrow(/déjà/);
+    // 5.33 : Quartiers fédérés ouvre 4 places par niveau.
+    expect(allianceMaxMembers({ research: { quartiers: 1 } })).toBe(12);
+    expect(allianceMaxMembers({ research: { quartiers: 3 } })).toBe(20);
+    expect(allianceMaxMembers({ research: { quartiers: 9 } })).toBe(20);
+    expect(allianceMaxMembers(null)).toBe(8);
+    const grown = addMember({ ...a, research: { quartiers: 1 } }, { uid: "x", pseudo: "X" });
+    expect(grown.members).toHaveLength(9);
   });
 
   it("hands over leadership when the founder leaves, disbands when the last one leaves", () => {

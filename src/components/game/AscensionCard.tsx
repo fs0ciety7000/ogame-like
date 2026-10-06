@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ASCENSION_INSIGNIA, ASCENSION_RULES, ascensionCount, ascensionLabel, ascensionShieldUntil, canAscend, upkeepFreeUntil } from "@/game/ascension";
 import { assetUrl } from "@/lib/assets";
-import { BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, requiredForAscension } from "@/game/buildings";
 import { ascendEmpire, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatDuration } from "@/lib/utils";
@@ -41,7 +41,7 @@ export function AscensionStars({ count, full, className }: { count?: number; ful
 export const ASCENSION_UNLOCK_PCT = 0.75;
 
 export function ascensionProgress(player: { buildings: Record<string, { level?: number } | undefined>; ascensions?: number }) {
-  const base = BUILDINGS.filter((b) => !b.endgame);
+  const base = BUILDINGS.filter((b) => requiredForAscension(b));
   const levels = base.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
   const maxLevels = base.reduce((a, b) => a + b.maxLevel, 0);
   const needed = Math.ceil(maxLevels * ASCENSION_UNLOCK_PCT);
@@ -122,15 +122,14 @@ export function AscensionCard() {
           <DialogTitle>{count + 1}ᵉ ascension</DialogTitle>
           <DialogDescription>Ton empire renaît : c'est définitif.</DialogDescription>
           <ul className="mt-2 space-y-1 text-sm text-slate-300">
-            <li>• Tous tes bâtiments reviennent au <strong>niveau 1</strong> (les déblocages restent acquis).</li>
+            <li>• Tes bâtiments reviennent au <strong>niveau 1</strong> (les déblocages restent acquis), sauf les hangars, la Cale sèche et les bâtiments légendaires : ta flotte garde sa place.</li>
             <li>• Tes ressources reviennent au <strong>stock de départ</strong>.</li>
             <li>• Tu gardes tes technologies, ta flotte, tes défenses, tes succès, tes titres, ton XP et ton rang.</li>
             <li>
               • Bonus permanent : <strong className="text-gold-glow">+{nextProd} % de production</strong> et <strong className="text-gold-glow">−{nextTime} % de durée de construction</strong>.
             </li>
             <li>
-              • Bouclier de {ASCENSION_RULES.shieldHours} h contre les attaques, entretien de flotte suspendu {ASCENSION_RULES.upkeepFreeDays} jours. Au-delà de la capacité des hangars, tes vaisseaux restent mais tu ne
-              peux plus en construire.
+              • Bouclier de {ASCENSION_RULES.shieldHours} h contre les attaques, entretien de flotte suspendu {ASCENSION_RULES.upkeepFreeDays} jours.
             </li>
           </ul>
           <label className="mt-3 flex flex-col gap-1 text-xs text-slate-400">

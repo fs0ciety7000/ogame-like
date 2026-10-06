@@ -13,7 +13,7 @@ import { Link } from "react-router-dom";
 import { closestCorners, DndContext, KeyboardSensor, PointerSensor, TouchSensor, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDown, ArrowUp, Check, Columns2, Eye, EyeOff, Factory, GripVertical, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Columns2, Eye, EyeOff, Factory, GripVertical, RotateCcw, SlidersHorizontal, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudCallout, StatTile } from "@/components/ui/hud";
 import { QueueStrip } from "@/components/game/QueueStrip";
@@ -248,6 +248,18 @@ export function DashboardPage() {
       <OnboardingChecklist player={player} />
       <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
+      {/* 6.0 : rappel tant qu'aucune classe d'empire n'est choisie (premier choix gratuit). */}
+      {!player.empireClass && !player.npc && (
+        <HudCallout tone="gold" className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+          <Compass className="h-4 w-4 shrink-0 text-gold-glow" />
+          <span className="min-w-0 flex-1">
+            <strong className="text-slate-100">Choisis ta classe d'empire</strong> : Industriel, Seigneur de guerre ou Explorateur. Premier choix gratuit.
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/game/classe">Choisir</Link>
+          </Button>
+        </HudCallout>
+      )}
 
       {editing && (
         <HudCallout tone="accent" className="flex flex-wrap items-center gap-3 text-xs text-slate-300">

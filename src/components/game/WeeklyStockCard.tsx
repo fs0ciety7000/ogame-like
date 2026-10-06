@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { CalendarClock, Gem } from "lucide-react";
+import { CalendarClock, Gem, Loader2, ShoppingBag } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
-import { HudChip } from "@/components/ui/hud";
+import { CostPill, HudChip } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
-import { AmberIcon } from "@/components/ui/amber";
+import { AmberAmount } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { nextRestockMs, WEEKLY_OFFERS, weeklyBlocker, weeklyLeft } from "@/game/weeklyStock";
 import { buyWeeklyOffer, useWeeklyStock } from "@/services/comptoirService";
@@ -50,7 +50,7 @@ export function WeeklyStockCard() {
         </HudChip>
       }
     >
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm text-slate-100">{offer.name}</p>
           <p className="text-xs text-slate-400">{offer.description} Un exemplaire par joueur, pour tout le serveur.</p>
@@ -58,10 +58,17 @@ export function WeeklyStockCard() {
             <CalendarClock className="h-3 w-3" aria-hidden /> Nouvelle offre dans <span className="font-mono tabular-nums">{formatDuration(Math.floor((nextRestockMs(now) - now) / 1000))}</span>
           </p>
         </div>
-        <Button size="sm" variant={blocker ? "outline" : "warn"} disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
-          <AmberIcon className="mr-1 h-4 w-4" /> {offer.price}
-          {blocker && blocker !== "Pas assez d'Ambre." ? <span className="ml-2 text-[11px] font-normal text-slate-500">{blocker}</span> : null}
-        </Button>
+        <div className="flex flex-col items-start gap-1.5 sm:items-end">
+          <div className="flex items-center gap-2">
+            <CostPill missing={blocker === "Pas assez d'Ambre." ? `il manque ${offer.price - (player.bounties?.amber ?? 0)}` : undefined}>
+              <AmberAmount value={offer.price} label={false} />
+            </CostPill>
+            <Button size="sm" variant="warn" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingBag className="h-3.5 w-3.5" />} Acheter
+            </Button>
+          </div>
+          {blocker && blocker !== "Pas assez d'Ambre." && <p className="text-[11px] text-ember-glow">{blocker}</p>}
+        </div>
       </div>
     </HudPanel>
   );

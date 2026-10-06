@@ -2,7 +2,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CornerUpLeft, Rocket, Wind, Zap } from "lucide-react";
+import { AlertTriangle, CornerUpLeft, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,14 @@ import { Progress } from "@/components/ui/progress";
 import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { awaitingDeparture, fleetProgress, type Fleet } from "@/game/fleets";
+import { awaitingDeparture, FLEET_MISSION_LABELS, fleetProgress, fleetSlots, SLOT_FREE_MISSIONS, type Fleet } from "@/game/fleets";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
-import { GameActionError, recallFleet } from "@/services/playerService";
+import { GameActionError, recallFleet, sendFleet } from "@/services/playerService";
+import { useLastMission } from "@/store/lastMissionStore";
 import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
 import { usePlayerStore } from "@/store/playerStore";
@@ -85,10 +86,16 @@ export function FleetsPanel({
   const [pending, setPending] = useState<string | null>(null);
   const [patrolOpen, setPatrolOpen] = useState(false);
   const beacons = usePlayerStore((s) => (s.player ? bountyState(s.player).beacons : 0));
+  const last = useLastMission((s) => s.last);
   const now = Date.now();
 
   const incoming = fleets.filter((f) => isHostile(f, uid));
   const mine = fleets.filter((f) => f.ownerUid === uid && f.status !== "done");
+  // 5.33 : emplacements de flotte (sondes et expéditions exclues, comme au serveur).
+  const slots = fleetSlots(usePlayerStore.getState().player);
+  const used = mine.filter((f) => !SLOT_FREE_MISSIONS.includes(f.mission)).length;
+  const full = used >= slots;
+  const relaunchBlocked = !!last && full && !SLOT_FREE_MISSIONS.includes(last.mission);
   const hosted = fleets.filter(
     (f) =>
       f.mission === "garrison" &&
@@ -115,6 +122,19 @@ export function FleetsPanel({
     }
   };
 
+  const relaunch = async () => {
+    if (!last) return;
+    setPending("relaunch");
+    try {
+      await sendFleet(last.targetUid, last.fleet, last.mission, last.options);
+      toast.success("Mission relancée.");
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Relance impossible.");
+    } finally {
+      setPending(null);
+    }
+  };
+
   const recall = async (fleet: Fleet) => {
     setPending(fleet.id);
     try {
@@ -131,9 +151,14 @@ export function FleetsPanel({
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Rocket className="h-4 w-4 text-cyan-glow" />
         <h3 className="font-display text-sm text-slate-100">Flottes</h3>
+        <HudChip size="sm" tone={full ? "ember" : "neutral"} title="Flottes en vol en même temps. Les sondes et les expéditions ne comptent pas.">
+          <span className="font-mono tabular-nums">
+            {used} / {slots}
+          </span>
+        </HudChip>
         <Button
           size="sm"
           variant="ghost"
@@ -145,11 +170,23 @@ export function FleetsPanel({
         </Button>
         <Link
           to="/game/galaxie"
-          className="text-xs text-cyan-glow hover:underline"
+          className="whitespace-nowrap text-xs text-cyan-glow hover:underline"
         >
           Voir sur la carte →
         </Link>
       </div>
+
+      {last && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span className="min-w-0 flex-1 truncate">
+            Dernière mission : {FLEET_MISSION_LABELS[last.mission] ?? last.mission}
+            {last.targetPseudo ? ` · ${last.targetPseudo}` : ""}
+          </span>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={pending === "relaunch" || relaunchBlocked} title={relaunchBlocked ? "Tous tes emplacements de flotte sont pris." : "Mêmes vaisseaux, même cible, mêmes options."} onClick={() => void relaunch()}>
+            <RotateCcw className="mr-1 h-3.5 w-3.5" /> Relancer
+          </Button>
+        </div>
+      )}
 
       {incoming.map((f) => {
         const left = Math.max(0, Math.floor((f.arriveAtMs - now) / 1000));

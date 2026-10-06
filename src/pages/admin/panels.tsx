@@ -215,6 +215,23 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopRushSecondsPerAmber: v ?? 600 } }))}
           />
         </Section>
+        <Section title="Cale sèche (5.28)">
+          <NumberField
+            label="Démantèlement en cale : part du prix rendue (0,6 = 60 %)"
+            value={rules.combat.dockScrapRefund}
+            min={0}
+            step={0.05}
+            hint="Palier Triage (niveau 5). La revente au hangar rend 50 %."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, dockScrapRefund: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Cadence de l'Atelier en plus au palier 10 (0,1 = +10 %)"
+            value={rules.combat.dockAutoSpeedBonus}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, dockAutoSpeedBonus: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Rôles par classe et cible prioritaire (5.21)">
           <NumberField
             label="Avantage de classe (0,2 = ±20 %)"
@@ -615,6 +632,31 @@ export function RulesPanel() {
             hint="Plafond du trajet aller d'une attaque entre joueurs (le retour dure autant). 0 = pas de plafond."
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, maxAttackMinutes: v ?? 0 } }))}
           />
+          <NumberField
+            label="Emplacements de flotte"
+            value={rules.fleets.slotsBase}
+            min={1}
+            step={1}
+            hint="Flottes en vol en même temps par joueur. Les sondes et les expéditions ne comptent pas (elles ont leur propre limite)."
+            onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, slotsBase: v ?? 10 } }))}
+          />
+        </Section>
+        <Section title="Classes d'empire">
+          <NumberField
+            label="Ambre pour changer de classe"
+            value={rules.classes.changeAmber}
+            min={0}
+            step={10}
+            hint="Le premier choix est gratuit. 0 = changement gratuit."
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, changeAmber: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Jours entre deux changements"
+            value={rules.classes.changeCooldownDays}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, changeCooldownDays: v ?? 0 } }))}
+          />
         </Section>
         <Section title="Espionnage">
           <NumberField
@@ -748,6 +790,27 @@ export function RulesPanel() {
             min={0}
             step={0.01}
             onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedStoragePct: v ?? 0 } }))}
+          />
+          <NumberField
+            label="5.32 : heures de production à l'abri, au plus (0 = part de l'entrepôt seule)"
+            value={rules.economy.protectedHours}
+            min={0}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedHours: v ?? 0 } }))}
+          />
+          <NumberField
+            label="5.32 : plancher à l'abri par ressource commune (comptes neufs)"
+            value={rules.economy.protectedFloor}
+            min={0}
+            step={100_000}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, protectedFloor: v ?? 0 } }))}
+          />
+          <NumberField
+            label="5.32 : chantiers de bâtiments en parallèle, de base (+1 à la Fonderie quantique 5 et 10)"
+            value={rules.economy.buildSlotsBase}
+            min={1}
+            step={1}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, buildSlotsBase: Math.max(1, v ?? 6) } }))}
           />
           <NumberField
             label="Rares des missions et contrats : production horaire de référence (0 = désactivé)"

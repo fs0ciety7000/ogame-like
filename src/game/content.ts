@@ -16,6 +16,7 @@ import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
 import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
+import { EMPIRE_CLASS_RULES } from "@/game/empireClass";
 import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES, validateBossSchedule } from "@/game/events";
@@ -51,6 +52,8 @@ export interface GameRules {
   combat: typeof COMBAT_RULES;
   economy: typeof ECONOMY_RULES;
   fleets: typeof FLEET_RULES;
+  /** 6.0 : classes d'empire. */
+  classes: typeof EMPIRE_CLASS_RULES;
   spy: typeof SPY_RULES;
   debris: typeof DEBRIS_RULES;
   patrol: typeof PATROL_RULES;
@@ -125,6 +128,7 @@ const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
+const DEFAULT_EMPIRE_CLASS_RULES = { ...EMPIRE_CLASS_RULES };
 const DEFAULT_SPY_RULES = { ...SPY_RULES };
 const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
@@ -163,7 +167,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
   });
 }
 
@@ -205,6 +209,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
       fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
+      classes: { ...defaults.rules.classes, ...(overrides.rules?.classes ?? {}) },
       spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
       debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
@@ -218,7 +223,12 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         void _hours;
         return { ...d, ...rest, champion: { ...d.champion, ...(o.champion ?? {}) }, podium: { ...d.podium, ...(o.podium ?? {}) }, participation: { ...d.participation, ...(o.participation ?? {}) } };
       })(),
-      alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
+      alliances: (() => {
+        // 5.33 : une recherche d'alliance ajoutée par défaut reste disponible même si l'admin a modifié la liste.
+        const merged = { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) };
+        const ids = new Set((merged.researches ?? []).map((r) => r.id));
+        return { ...merged, researches: [...(merged.researches ?? []), ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] };
+      })(),
       pirates: { ...defaults.rules.pirates, ...(overrides.rules?.pirates ?? {}) },
       market: { ...defaults.rules.market, ...(overrides.rules?.market ?? {}) },
       expeditions: {
@@ -276,6 +286,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(COMBAT_RULES, content.rules.combat);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
+  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
@@ -315,6 +326,7 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   combat: "Combat",
   economy: "Économie",
   fleets: "Flottes",
+  classes: "Classes d'empire",
   spy: "Espionnage",
   debris: "Débris",
   patrol: "Patrouilles",
@@ -397,6 +409,9 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
   if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : réparation horaire des seigneurs entre 0 et 1.");
+  // 5.28 : Cale sèche.
+  if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du démantèlement en Cale sèche entre 0 et 1.");
+  if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale sèche entre 0 et 2.");
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;
@@ -467,6 +482,8 @@ export function validateGameContent(content: GameContent): string[] {
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label} : durées du second palier invalides.`);
     }
     if (b.effect?.type === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label} : capacité d'entrepôt invalide.`);
+    if (b.effect?.type === "dock" && !(b.effect.perLevel >= 0 && (b.effect.orbitalRepair ?? 0) >= 0 && (b.effect.orbitalRepair ?? 0) <= 0.5)) errors.push(`${label} : Cale sèche invalide (postes ≥ 0, Cale orbitale entre 0 et 0,5).`);
+    if (b.requires && !(content.buildings.some((o) => o.id === b.requires!.building) && b.requires.level >= 1)) errors.push(`${label} : bâtiment requis inconnu ou niveau < 1.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un bâtiment doit être débloqué dès le départ.");
 

@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { PlayerName } from "@/components/ui/player-name";
 import { ApplyDialog } from "@/components/game/ApplyDialog";
 import { memberRankLabel, normalizeAllianceProfile, RECRUITING_LABELS } from "@/game/allianceProfile";
-import { allianceRole, ALLIANCE_RULES } from "@/game/alliances";
+import { allianceMaxMembers, allianceRole } from "@/game/alliances";
 import { findAllianceChallenge, type AllianceChallengeState } from "@/game/allianceChallenge";
 import { AllianceError, fetchAllianceChallenge, joinAlliance, subscribeAlliance, withdrawApplication } from "@/services/allianceService";
 import { useTerritories } from "@/services/territoryService";
@@ -45,7 +45,7 @@ export function AlliancePublicPage() {
   const profile = normalizeAllianceProfile(alliance.profile);
   const isMember = alliance.members.includes(player.uid);
   const applied = profile.applications.some((a) => a.uid === player.uid);
-  const full = alliance.members.length >= ALLIANCE_RULES.maxMembers;
+  const full = alliance.members.length >= allianceMaxMembers(alliance);
   const sectors = territories ? territories.sectors.filter((s) => s.allianceId === alliance.id).length : null;
   const challengeRank = challenge ? challenge.standings.findIndex((s) => s.allianceId === alliance.id) : -1;
   const lastWin = challenge?.previous?.results.find((r) => r.allianceId === alliance.id);
@@ -80,7 +80,7 @@ export function AlliancePublicPage() {
           {!isMember && !player.allianceId && (
             <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
               {full ? (
-                <span className="text-sm text-slate-400">Alliance complète ({ALLIANCE_RULES.maxMembers} membres).</span>
+                <span className="text-sm text-slate-400">Alliance complète ({allianceMaxMembers(alliance)} membres).</span>
               ) : profile.recruiting === "open" ? (
                 <Button onClick={() => void join()}>Rejoindre</Button>
               ) : profile.recruiting === "apply" ? (
@@ -109,7 +109,7 @@ export function AlliancePublicPage() {
             <CalendarDays className="h-4 w-4 text-slate-500" /> Fondée {alliance.createdAtMs ? `le ${new Date(alliance.createdAtMs).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : "il y a longtemps"}
           </p>
           <p className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-slate-500" /> {alliance.members.length} / {ALLIANCE_RULES.maxMembers} membres
+            <Users className="h-4 w-4 text-slate-500" /> {alliance.members.length} / {allianceMaxMembers(alliance)} membres
           </p>
           {sectors !== null && (
             <p className="flex items-center gap-2">

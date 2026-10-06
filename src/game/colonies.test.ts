@@ -111,6 +111,15 @@ describe("v4.9.3 : niveaux requis pour fonder", () => {
     expect(homeLevels(p)).toBe(8);
   });
 
+  it("5.28.1 (C3) : un bâtiment verrouillé ne compte pas", () => {
+    const p = empire(0);
+    const before = homeLevels(p);
+    p.buildings.fonderie_quantique = { level: 1, unlocked: false };
+    expect(homeLevels(p)).toBe(before);
+    p.buildings.fonderie_quantique = { level: 1, unlocked: true };
+    expect(homeLevels(p)).toBe(before + 1);
+  });
+
   it("v5.10 : fondation à la moitié de la planète mère (8 au plus), +50 % de production, colonies anciennes relevées", () => {
     expect(foundationLevel(0)).toBe(1);
     expect(foundationLevel(10)).toBe(5);

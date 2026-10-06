@@ -1,3 +1,4 @@
+import { empireClassPerk } from "@/game/empireClass";
 import { assertEliteMission } from "@/game/eliteUnits";
 import { ALLIANCE_BOSS_RULES } from "@/game/allianceBoss";
 import { recordChronicle } from "@/game/chronicles";
@@ -46,7 +47,24 @@ export const FLEET_RULES = {
   mapSize: 100,
   /** v3.7 : durée maximale du trajet d'une attaque, en minutes (0 = aucune). */
   maxAttackMinutes: 90,
+  /** 5.33 (proposals/flottes-emplacements.md) : flottes en vol en même temps (hors sondes et expéditions, qui ont leur limite). */
+  slotsBase: 10,
 };
+
+/** 5.33 : missions qui n'occupent pas d'emplacement de flotte. */
+export const SLOT_FREE_MISSIONS = ["spy", "expedition"];
+
+export function fleetSlots(owner?: Partial<Pick<PlayerState, "empireClass">> | null): number {
+  // 6.0 : +2 pour la classe Seigneur de guerre.
+  return Math.max(1, Math.floor(FLEET_RULES.slotsBase)) + empireClassPerk(owner, "fleetSlots");
+}
+
+/** Refus quand tous les emplacements sont pris, sinon null. `active` : flottes en vol qui occupent un emplacement. */
+export function fleetSlotBlocker(owner: Partial<Pick<PlayerState, "empireClass">>, mission: string, active: number | undefined): string | null {
+  if (active === undefined || SLOT_FREE_MISSIONS.includes(mission)) return null;
+  const slots = fleetSlots(owner);
+  return active >= slots ? `Tous tes emplacements de flotte sont pris (${slots} / ${slots}). Attends un retour ou rappelle une flotte. Les sondes et les expéditions ne comptent pas.` : null;
+}
 
 /** Mode fuite : durée d'une patrouille, en minutes. */
 export const PATROL_RULES = {
@@ -383,6 +401,8 @@ export interface LaunchRequest {
   expeditionHours?: number;
   expeditionsActive?: number;
   expeditionsToday?: number;
+  /** 5.33 : flottes en vol qui occupent un emplacement (lues par le serveur ; absent = pas de contrôle). */
+  fleetsActive?: number;
   formation?: string;
   /** v3.5 : colonie visée par une attaque ou un espionnage (sinon la planète mère). */
   targetColonyId?: string;
@@ -417,6 +437,8 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     if (!colony) throw new GameActionError("Cette colonie n'existe plus.");
     planet = colonyView(target!, colony);
   }
+  const slotBlocker = fleetSlotBlocker(owner, mission, req.fleetsActive);
+  if (slotBlocker) throw new GameActionError(slotBlocker);
   let out: LaunchOutput;
   if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
   else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);
@@ -636,10 +658,10 @@ export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw
 
 /** Énergie payée au départ d'une patrouille : l'entretien de la flotte
  *  pour toute la durée. */
-export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<string, number>, minutes: number, techLevels?: PlayerState["techLevels"]): number {
+export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<string, number>, minutes: number, techLevels?: PlayerState["techLevels"], empireCut = 0): number {
   const selected: PlayerState["units"] = {};
   for (const [id, qty] of Object.entries(fleet)) selected[id] = { level: units[id]?.level ?? 1, count: qty };
-  return Math.ceil(getFleetUpkeep(selected, techLevels) * minutes * 60);
+  return Math.ceil(getFleetUpkeep(selected, techLevels, empireCut) * minutes * 60);
 }
 
 /** Mode fuite : la flotte quitte la base (elle ne défend plus) et revient
@@ -654,7 +676,7 @@ export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, m
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, duration, owner.techLevels);
+  const cost = patrolEnergyCost(owner.units, requested, duration, owner.techLevels, playerModifiers(owner).fleetUpkeep);
   if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la patrouille.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent partir en patrouille.");
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;
@@ -681,7 +703,7 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, hours * 60, owner.techLevels);
+  const cost = patrolEnergyCost(owner.units, requested, hours * 60, owner.techLevels, playerModifiers(owner).fleetUpkeep);
   if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la garnison.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;

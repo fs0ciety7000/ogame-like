@@ -1,4 +1,4 @@
-import { playerBuildTimeFactor } from "@/game/bonuses";
+import { buildTimeBreakdown, playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
@@ -16,7 +16,7 @@ import { ascensionProgress } from "@/components/game/AscensionCard";
 import { Link, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkshopPanel } from "@/components/game/WorkshopPanel";
-import { workshopState } from "@/game/workshop";
+import { dockReadyCount, workshopState } from "@/game/workshop";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -28,6 +28,7 @@ import {
   getBuildingUpgradeCost,
   repairPercentAt,
   storageCapacityAt,
+  unlockBlocker,
   visualTier,
   getBuildingUpgradeTime,
   productionPerSecond,
@@ -38,7 +39,7 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { UpgradeCompare } from "@/components/game/UpgradeCompare";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
-import { buildPlan, nextPlannedLevel, planSlots } from "@/game/buildPlan";
+import { activeBuildCount, buildPlan, buildSlots, nextPlannedLevel, planSlots } from "@/game/buildPlan";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -60,6 +61,7 @@ export function BuildingsPage() {
 
   if (!player || !queues) return null;
   const repairing = workshopState(player).jobs.length;
+  const ready = dockReadyCount(player);
 
   const handleUnlock = async (buildingId: BuildingId) => {
     if (!uid) return;
@@ -100,6 +102,8 @@ export function BuildingsPage() {
 
   const now = Date.now();
   const planFull = buildPlan(queues).length >= planSlots(player);
+  // 5.31 : détail du temps de construction (identique pour tous les bâtiments).
+  const buildFactors = buildTimeBreakdown(player, now);
 
   return (
     <div className="flex flex-col gap-4">
@@ -117,6 +121,7 @@ export function BuildingsPage() {
           <TabsTrigger value="atelier">
             Atelier de réparation
             {repairing > 0 && <span className="ml-1.5 font-mono text-ember-glow">{repairing}</span>}
+            {ready > 0 && <span className="ml-1.5 font-mono text-cyan-glow" title="Vaisseaux prêts en Cale sèche">· {ready} prêts</span>}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="atelier">
@@ -124,7 +129,11 @@ export function BuildingsPage() {
         </TabsContent>
         <TabsContent value="batiments" className="flex flex-col gap-4">
       <BuildPlanCard player={player} queues={queues} now={now} />
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* 5.32 : chantiers en parallèle (proposals/constructeurs.md). */}
+        <HudChip size="sm" tone={activeBuildCount(queues) >= buildSlots(player) ? "ember" : "neutral"} title="Améliorations de bâtiments menées en même temps. +1 à la Fonderie quantique 5 et 10.">
+          Chantiers <span className="font-mono tabular-nums">{activeBuildCount(queues)} / {buildSlots(player)}</span>
+        </HudChip>
         <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
 
@@ -139,7 +148,7 @@ export function BuildingsPage() {
           const level = state.level;
           const nextLevel = level + 1;
           const rawCost = getBuildingUpgradeCost(building, nextLevel);
-          const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
+          const cost = applyBuildingDiscount(rawCost, playerBuildingDiscount(player));
           const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * playerBuildTimeFactor(player, now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
@@ -244,7 +253,7 @@ export function BuildingsPage() {
                   {!isLocked && building.effect?.type === "storage" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
                       <GameIcon name="storage" /> {formatCompact(storageCapacityAt(building.effect, level))} par ressource commune · <GameIcon name="shield" />{" "}
-                      {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage
+                      jusqu'à {formatCompact(storageCapacityAt(building.effect, level) * ECONOMY_RULES.protectedStoragePct)} à l'abri du pillage ({ECONOMY_RULES.protectedHours} h de production au plus)
                     </p>
                   )}
                   {!isLocked && building.effect?.type === "repair" && (
@@ -252,12 +261,24 @@ export function BuildingsPage() {
                       <GameIcon name="repair" /> Répare {Math.round(repairPercentAt(building.effect, level) * 100)} % des vaisseaux perdus
                     </p>
                   )}
+                  {!isLocked && building.effect?.type === "dock" && (
+                    <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300">
+                      <GameIcon name="repair" /> {formatCompact(building.effect.perLevel * level)} postes pour les vaisseaux en réparation, hors hangar ·{" "}
+                      <Link to="/game/batiments?onglet=atelier" className="text-cyan-glow hover:underline">
+                        voir la Cale sèche
+                      </Link>
+                    </p>
+                  )}
                   {!isLocked && building.effect?.type === "hangar" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300"><GameIcon name="fleet" /> {formatCompact(building.effect.perLevel * level)} places de hangar</p>
                   )}
 
                   <div className="mt-auto">
-                    {isLocked ? (
+                    {isLocked && unlockBlocker(building, player.buildings) ? (
+                      <Button className="w-full" variant="secondary" disabled>
+                        <Lock className="h-3.5 w-3.5" /> {unlockBlocker(building, player.buildings)}
+                      </Button>
+                    ) : isLocked ? (
                       unlockInfo ? (
                         "multi" in unlockInfo ? (
                           <>
@@ -300,7 +321,7 @@ export function BuildingsPage() {
                       </Button>
                     ) : (
                       <>
-                        <CostPills cost={cost} stock={player.resources} seconds={time} className="mb-2.5" />
+                        <CostPills cost={cost} stock={player.resources} seconds={time} timeFactors={buildFactors} className="mb-2.5" />
                         {(() => {
                           const wait = secondsToAfford(cost, player.resources, rates);
                           return (
@@ -372,6 +393,8 @@ function categoryLabel(building: (typeof BUILDINGS)[number]): string {
       return "Soutien · Réparation";
     case "hangar":
       return "Militaire · Hangar";
+    case "dock":
+      return "Soutien · Cale sèche";
     default:
       return "Infrastructure";
   }

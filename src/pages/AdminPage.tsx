@@ -129,7 +129,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
   {
     label: "Saison & progression",
     items: [
-      { id: "seasonPass", label: "Passe", icon: Ticket, hint: "Paliers du passe de saison et points par action." },
+      { id: "seasonPass", label: "Passe", icon: Ticket, hint: "Paliers du passe et points par action." },
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },

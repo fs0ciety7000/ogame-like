@@ -19,7 +19,9 @@ export type BuildingEffect =
   /** Entrepôt : capacité par ressource commune = base × growth^niveau. */
   | { type: "storage"; base: number; growth: number }
   /** v3.6 : bouclier planétaire supplémentaire (perLevel × niveau, plafonné à max), au-delà du plafond des hangars. */
-  | { type: "shield"; perLevel: number; max: number };
+  | { type: "shield"; perLevel: number; max: number }
+  /** 5.28 : Cale sèche : postes pour les vaisseaux en réparation (places = perLevel × niveau), hors hangar. */
+  | { type: "dock"; perLevel: number; orbitalRepair?: number };
 
 /** Second palier de coûts (niveaux ≥ fromLevel) : progression géométrique
  *  séparée, pour ne pas modifier les niveaux déjà atteints par les joueurs. */
@@ -50,6 +52,8 @@ export interface BuildingDef {
   unlockCost?: ResourceMap;
   /** Débloqué par une technologie (effet « unlock_buildings ») plutôt que par un coût. */
   unlockedByTech?: string;
+  /** 5.28 : bâtiment requis (débloqué, à ce niveau au moins) avant de pouvoir débloquer celui-ci. */
+  requires?: { building: BuildingId; level: number };
   /** Coût d'amélioration : progression géométrique de baseCost (au niveau
    *  costFromLevel) jusqu'à maxCost (au niveau max). */
   upgrade: { baseCost: ResourceMap; maxCost: ResourceMap; costFromLevel: number; secondsPerLevel: number; tier2?: UpgradeTier };
@@ -59,6 +63,12 @@ export interface BuildingDef {
   production?: { resource: ResourceId; perSecond: number[] };
   effect?: BuildingEffect;
 }
+
+/** 5.28 : identifiant de la Cale sèche. */
+export const DOCK_BUILDING_ID = "cale_seche";
+/** 5.28 : paliers de la Cale sèche (docs/WORKFLOW.md §4.2) : Triage, remise en service
+ *  automatique, priorités, Cale orbitale (+orbitalRepair de vaisseaux sauvés). */
+export const DOCK_TIERS = { triage: 5, auto: 10, priority: 15, orbital: 20 } as const;
 
 // Niveaux 1 à 10 inchangés, puis +25 % par niveau jusqu'au niveau 20.
 // v3.6 : production des bâtiments de fin de partie (ressource rare, par seconde).
@@ -178,6 +188,30 @@ export const DEFAULT_BUILDINGS: BuildingDef[] = [
     unlockedByTech: "tech6",
     upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
     effect: { type: "hangar", category: "defense", perLevel: 2000 },
+  },
+  // 5.28 : Cale sèche (docs/proposals/cale-seche.md) : les vaisseaux sauvés attendent leur réparation
+  // sur des postes, hors du hangar. Courbe de coût de l'Atelier, 1 200 s par niveau.
+  {
+    id: DOCK_BUILDING_ID,
+    name: "Cale sèche",
+    description: "Des postes d'amarrage pour les vaisseaux sauvés au combat : ils attendent leur réparation ici, et le hangar reste libre pour reconstruire.",
+    image: "/assets/buildings/cale_seche.webp",
+    maxLevel: 20,
+    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
+    requires: { building: "atelier_reparation", level: 5 },
+    upgrade: {
+      baseCost: { nano: 2000, data: 2000 },
+      maxCost: { nano: 10_000_000, data: 10_000_000 },
+      costFromLevel: 2,
+      secondsPerLevel: 1200,
+      tier2: tier2(
+        { nano: 10_000_000, data: 10_000_000 },
+        { nano: 800_000_000, data: 800_000_000 },
+        { reinforcedSteel: 10_000, cyberModule: 10_000, syntheticNanites: 10_000, aiFragment: 10_000 },
+        { reinforcedSteel: 1_000_000, cyberModule: 1_000_000, syntheticNanites: 1_000_000, aiFragment: 1_000_000 },
+      ),
+    },
+    effect: { type: "dock", perLevel: 1000, orbitalRepair: 0.05 },
   },
   {
     id: "entrepot",
@@ -372,6 +406,10 @@ export function getRepairPercent(buildings: Buildings): number {
     // pour tout le monde, même jamais débloqué).
     pct += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
   }
+  // 5.28 : Cale orbitale (Cale sèche au palier 20).
+  for (const b of BUILDINGS) {
+    if (b.effect?.type === "dock" && effectiveBuildingLevel(buildings, b.id) >= DOCK_TIERS.orbital) pct += Math.max(0, b.effect.orbitalRepair ?? 0);
+  }
   return pct;
 }
 
@@ -407,6 +445,40 @@ export function getUnitCapacity(buildings: Buildings, category: "attack" | "defe
   }
   const bonus = techLevels ? techBonus(techLevels, "hangar_capacity", category) : 0;
   return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
+}
+
+/** 5.28 : niveau effectif de la Cale sèche (0 sans elle), quel que soit l'identifiant donné en administration. */
+export function dockLevel(buildings: Buildings): number {
+  const def = BUILDINGS.find((b) => b.effect?.type === "dock");
+  return def ? effectiveBuildingLevel(buildings, def.id) : 0;
+}
+
+/** 5.28 : postes de la Cale sèche (places de hangar), sans bonus d'effets. */
+export function dockBaseCapacity(buildings: Buildings): number {
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (b.effect?.type !== "dock") continue;
+    capacity += effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel;
+  }
+  return capacity;
+}
+
+/** 5.28 : bâtiments exigés au niveau maximum pour l'Ascension (la Cale sèche, arrivée après coup, n'en fait pas partie). */
+export function requiredForAscension(b: Pick<BuildingDef, "endgame" | "effect">): boolean {
+  return !b.endgame && b.effect?.type !== "dock";
+}
+
+/** 5.28 : bâtiments conservés à l'Ascension : fin de partie, hangars et Cale sèche (la flotte est gardée, son logement aussi). */
+export function keptOnAscension(b: Pick<BuildingDef, "endgame" | "effect">): boolean {
+  return !!b.endgame || b.effect?.type === "hangar" || b.effect?.type === "dock";
+}
+
+/** 5.28 : raison qui empêche de débloquer ce bâtiment (bâtiment requis), ou null. */
+export function unlockBlocker(def: Pick<BuildingDef, "requires">, buildings: Buildings): string | null {
+  const req = def.requires;
+  if (!req) return null;
+  if (effectiveBuildingLevel(buildings, req.building) >= req.level) return null;
+  return `Requis : ${findBuilding(req.building)?.name ?? req.building} niveau ${req.level}.`;
 }
 
 /** Niveau effectif d'un bâtiment : 0 tant qu'il n'est pas débloqué (tous

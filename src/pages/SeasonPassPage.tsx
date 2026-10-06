@@ -19,7 +19,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
 import { cn, formatClock } from "@/lib/utils";
 
-/* Passe de saison (v4.1) : 30 paliers gratuits par mois. */
+/* Passe (v4.1) : 30 paliers gratuits par mois. */
 
 const SOURCES: [keyof typeof PASS_POINTS, string][] = [
   ["contract", "Contrat du jour récupéré"],
@@ -76,7 +76,7 @@ export function SeasonPassPage() {
   const tier = passTier(st.points, st.seasonId);
   const max = tiers * pass.pointsPerTier;
   const inTier = st.points - tier * pass.pointsPerTier;
-  // v5.13 : passe de saison publié (thème, scénario, prérequis, commandant).
+  // v5.13 : passe publié (thème, scénario, prérequis, commandant).
   const season = publishedPassSeason(st.seasonId);
   const reqOf = (t: number) => tierRequirements(player, t, now);
   // v5.14.1 : un défi à la fois, celui du premier palier pas encore relevé.

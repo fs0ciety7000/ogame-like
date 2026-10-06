@@ -2,6 +2,7 @@ import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, typ
 import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, SEASON_SECONDARY_SHARE } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
 import { TALENT_RULES, TALENTS } from "@/game/talents";
+import { EMPIRE_CLASSES } from "@/game/empireClass";
 import { MODULE_FAMILIES, MODULE_RULES } from "@/game/modules";
 import { TERRITORY_RULES } from "@/game/territories";
 import { effectValuePerLevel, TECH_EFFECT_STAT, techEffects, TECHNOLOGIES } from "@/game/technologies";
@@ -73,6 +74,10 @@ export function effectImpactReport(): ImpactRow[] {
       const target = fam.stat === "unitAttack" || fam.stat === "unitHp" ? `class:${cls}` : undefined;
       add(fam.stat, target, "empire", { kind: "module", label: fam.label, max: fam.values.legendary * MODULE_RULES.slotsPerClass, note: `${MODULE_RULES.slotsPerClass} légendaires` });
     }
+  }
+  // 6.0 : classes d'empire (une seule à la fois : chaque ligne montre la classe qui la donne).
+  for (const c of EMPIRE_CLASSES) {
+    for (const e of c.effects) add(e.stat, e.target, "empire", { kind: "class", label: c.name, max: e.value, note: "une classe à la fois" });
   }
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });

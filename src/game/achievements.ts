@@ -1,7 +1,7 @@
 import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/game/commanders";
 import { SEASON_CATALOG } from "@/game/seasonCatalog";
 import { WORLD_BOSSES } from "@/game/worldBosses";
-import { BUILDINGS, LOCKABLE_BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
 import { COMMON_RESOURCES } from "@/game/economy";
@@ -74,7 +74,7 @@ export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 // v3.6 : les bâtiments de fin de partie (niveau 10 au plus) ne comptent pas.
-const buildingLevels = (p: PlayerState) => BUILDINGS.filter((b) => !b.endgame).map((b) => p.buildings?.[b.id]?.level ?? 0);
+const buildingLevels = (p: PlayerState) => BUILDINGS.filter((b) => requiredForAscension(b)).map((b) => p.buildings?.[b.id]?.level ?? 0);
 const techLevels = (p: PlayerState) => TECHNOLOGIES.map((t) => p.techLevels?.[t.id] ?? 0);
 const factions = (p: PlayerState) => Object.entries(factionStates(p));
 const pct = (n: number, d: number) => (d > 0 ? Math.floor((n / d) * 100) : 0);
@@ -155,6 +155,8 @@ export const METRICS = {
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
   // 5.26.1 : systèmes récents (Atelier, modules, enchères, reliques, primes).
   unitsRepaired: { label: "Unités réparées à l'Atelier (cumul)", value: (p: PlayerState) => playerStats(p).unitsRepaired ?? 0 },
+  unitsDismantled: { label: "Vaisseaux démantelés en Cale sèche (cumul)", value: (p: PlayerState) => playerStats(p).unitsDismantled ?? 0 },
+  dockFull: { label: "Cale sèche remplie (fois)", value: (p: PlayerState) => playerStats(p).dockFull ?? 0 },
   modulesBuilt: { label: "Modules de vaisseaux fabriqués", value: (p: PlayerState) => playerStats(p).modulesBuilt ?? 0 },
   modulesMounted: {
     label: "Emplacements de modules occupés",
@@ -316,6 +318,10 @@ export function derivedAchievements(): AchievementDef[] {
     def("atelier_1", "flotte", "bronze", "unitsRepaired", 50, "Mécano", "Faire réparer 50 unités à l'Atelier.", "🔧", { auto: true }),
     def("atelier_2", "flotte", "argent", "unitsRepaired", 1000, "Chef d'atelier", "Faire réparer 1 000 unités à l'Atelier.", "🛠️", { auto: true }),
     def("atelier_3", "flotte", "or", "unitsRepaired", 20_000, "Résurrecteur de flottes", "Faire réparer 20 000 unités à l'Atelier.", "⚙️", { auto: true }),
+    // 5.28 : Cale sèche.
+    def("cale_pleine", "flotte", "argent", "dockFull", 1, "Cale pleine", "Remplir tous les postes de la Cale sèche après un combat.", "⚓", { auto: true }),
+    def("demolisseur_1", "flotte", "bronze", "unitsDismantled", 100, "Ferrailleur", "Démanteler 100 vaisseaux en Cale sèche.", "🪛", { auto: true }),
+    def("demolisseur_2", "flotte", "or", "unitsDismantled", 1000, "Démolisseur", "Démanteler 1 000 vaisseaux en Cale sèche.", "🏗️", { auto: true }),
     def("module_1", "flotte", "bronze", "modulesBuilt", 1, "Premier module", "Fabriquer un module de vaisseau.", "🧩", { auto: true }),
     def("module_2", "flotte", "argent", "modulesBuilt", 10, "Armurier", "Fabriquer 10 modules de vaisseaux.", "🔩", { auto: true }),
     def("module_full", "flotte", "or", "modulesMounted", 8, "Flotte sur mesure", "Occuper les 8 emplacements de modules.", "🚀", { auto: true }),

@@ -2,6 +2,7 @@
 
 Direction : un cockpit de vaisseau, pas un site. Un centre vivant (planète, galaxie, boss) entouré d'instruments.
 Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
+Tout lot qui touche le front a sa fiche dans `docs/changes/` (section « Design ») ; un nouveau composant ou une nouvelle règle visuelle est ajouté ici dans le même commit (voir `CLAUDE.md`, règle n° 1).
 
 ## Jetons
 
@@ -57,6 +58,12 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
   (fondue vers la gauche et le bas, opacité réduite) : à réserver aux pages « lieu » (Casino…), le texte reste prioritaire.
 - Panneaux : `Card` / classe `glass-panel` ; formes : `hud-cut` (12 px) et `hud-cut-sm` (5 px).
+- **D'où vient ce chiffre** (5.31) : une valeur calculée (durée, coût, production) porte une infobulle `TooltipCard`
+  « D'où vient ce … » : une ligne par multiplicateur (`factorRows` : réduction en mint, hausse en ember), note « Les bonus se multiplient ».
+  Le détail vient du moteur (`*Breakdown`) et un test vérifie que son produit égale la valeur affichée.
+- **Liste de contrôle** (Ordres du jour, 5.30) : une ligne = un `Link` `glass-panel hud-cut-sm`, liseré gauche de la couleur d'état,
+  libellé + rythme (mono), une phrase de détail, valeur mono, `HudChip` d'état, chevron. États : mint = à réclamer, accent = à faire,
+  neutre et opacité réduite = fait. La ligne mène à l'écran qui agit ; la réclamation groupée reste dans l'en-tête de page.
 
 ## Retour visuel (GSAP, `src/lib/fx`)
 

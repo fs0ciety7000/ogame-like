@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ascend, ascensionShieldUntil, canAscend, upkeepFreeUntil } from "@/game/ascension";
-import { BUILDINGS } from "@/game/buildings";
+import { BUILDINGS, keptOnAscension } from "@/game/buildings";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { advanceResources, economySnapshot } from "@/game/economy";
 import { playerBuildTimeFactor } from "@/game/bonuses";
@@ -34,9 +34,12 @@ describe("ascension", () => {
     const p = maxed();
     const before = economySnapshot(p).gross.scrap ?? 0;
     ascend(p, defaultQueues(), NOW);
-    expect(BUILDINGS.filter((b) => !b.endgame).every((b) => p.buildings[b.id].level === 1 && p.buildings[b.id].unlocked)).toBe(true);
+    expect(BUILDINGS.filter((b) => !keptOnAscension(b)).every((b) => p.buildings[b.id].level === 1 && p.buildings[b.id].unlocked)).toBe(true);
     // Bâtiments de fin de partie : conservés.
     expect(p.buildings.fonderie_quantique.level).toBe(10);
+    // 5.27.2 (I4) : hangars conservés, la flotte garde sa place.
+    expect(p.buildings.hangar_attaque.level).toBe(20);
+    expect(p.buildings.hangar_defense.level).toBe(20);
     expect(p.resources.scrap).toBe(100);
     expect(p.resources.reinforcedSteel).toBe(0);
     expect(p.techLevels).toEqual({ tech1: 3 });

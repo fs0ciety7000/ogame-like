@@ -2,11 +2,12 @@ import { useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
 import { Calculator, Coins, Crosshair, Factory, Gauge, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
-import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, getUnitCapacity } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
+import { playerUnitCapacity } from "@/game/hangar";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { allianceShieldBonus } from "@/game/alliances";
 import { ASCENSION_RULES } from "@/game/ascension";
-import { COMMON_RESOURCES, ECONOMY_RULES, economySnapshot, getFleetUpkeep, KESH_BOOST_PCT, productionBonuses, protectedAmount, storageCapacityOf } from "@/game/economy";
+import { COMMON_RESOURCES, ECONOMY_RULES, economySnapshot, KESH_BOOST_PCT, productionBonuses, protectedAmount, storageCapacityOf } from "@/game/economy";
 import { playerModifiers } from "@/game/modifiers";
 import { FACTIONS, PIRATE_RULES, pirateState, raidPower } from "@/game/pirates";
 import { computeCombatXp, PVP_RULES } from "@/game/pvp";
@@ -244,7 +245,8 @@ panne d'énergie (stock à 0 et bilan négatif) : × ${ECONOMY_RULES.outageProdu
       <Block id="stockage" title="Stockage et bunker" icon={Warehouse} intro="L'entrepôt plafonne les ressources communes. Au-delà, la production s'arrête (ce qui dépasse déjà est gardé). Une partie du stock est à l'abri du pillage.">
         <Formula>
           {`capacité = Σ base × croissance^niveau (entrepôts) × (1 + technologies) × (1 + 2 % par niveau d'Intendant)
-à l'abri = capacité × (${pct(ECONOMY_RULES.protectedStoragePct)} + technologies + Bastion d'alliance), au plus 75 % (+ Bastion)`}
+à l'abri = capacité × (${pct(ECONOMY_RULES.protectedStoragePct)} + technologies + Bastion d'alliance), au plus 75 % (+ Bastion)
+5.32 : à l'abri ≤ ${ECONOMY_RULES.protectedHours} h de production de la ressource (au moins ${n(ECONOMY_RULES.protectedFloor)})`}
         </Formula>
         {p && (
           <Mine>
@@ -257,13 +259,13 @@ panne d'énergie (stock à 0 et bilan négatif) : × ${ECONOMY_RULES.outageProdu
 
       <Block id="energie" title="Énergie et entretien" icon={Zap} intro="Chaque place de hangar occupée consomme de l'énergie en continu. Si le stock d'énergie tombe à zéro alors que le bilan est négatif, c'est la panne.">
         <Formula>
-          {`entretien / s = Σ unités × places × (${ECONOMY_RULES.upkeepPerPlaceAttack} flotte | ${ECONOMY_RULES.upkeepPerPlaceDefense} défense) × (1 − technologies)
+          {`entretien / s = Σ unités × places × (${ECONOMY_RULES.upkeepPerPlaceAttack} flotte | ${ECONOMY_RULES.upkeepPerPlaceDefense} défense) × (1 − technologies) × (1 − reliques, officiers, modules)
 bilan d'énergie = production d'énergie − entretien
 après une ascension : entretien offert pendant ${ASCENSION_RULES.upkeepFreeDays} jours`}
         </Formula>
         {p && eco && (
           <Mine>
-            <Row label="Entretien" value={`${n(getFleetUpkeep(units, tech) * 3600)} / h`} />
+            <Row label="Entretien" value={`${n(eco.upkeep * 3600)} / h`} />
             <Row label="Production d'énergie" value={`${n((eco.gross.energy ?? 0) * 3600)} / h`} />
             <Row label="Bilan" value={`${n(((eco.gross.energy ?? 0) - eco.upkeep) * 3600)} / h`} hint={(eco.gross.energy ?? 0) - eco.upkeep < 0 ? "négatif : le stock baisse" : undefined} />
           </Mine>
@@ -285,7 +287,7 @@ garnisons alliées : (ATK + RÉS) × 50 % en plus`}
             <Row label="Attaque de toute ta flotte" value={n(attack * (1 + mods.attack))} hint={mods.attack ? `bonus d'attaque +${pct(mods.attack, 1)} compris` : undefined} />
             <Row label="Défense de ta base" value={n(defense * (1 + mods.defense))} hint={mods.defense ? `bonus de défense +${pct(mods.defense, 1)} compris` : undefined} />
             <Row label="Bouclier" value={pct(shield, 1)} hint={`${pct(COMBAT_RULES.shieldPerLevel, 2)} par niveau de hangar de défense, plafond ${pct(COMBAT_RULES.shieldMax)} + générateur`} />
-            <Row label="Places de hangar" value={`${n(getUnitCapacity(p.buildings, "attack", tech))} flotte · ${n(getUnitCapacity(p.buildings, "defense", tech))} défense`} />
+            <Row label="Places de hangar" value={`${n(playerUnitCapacity(p, "attack"))} flotte · ${n(playerUnitCapacity(p, "defense"))} défense`} />
           </Mine>
         )}
       </Block>

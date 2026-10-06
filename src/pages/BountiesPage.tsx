@@ -6,7 +6,7 @@ import { HudPanel, EmptyAction, PagedList } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowLeftRight, ArrowUpToLine, BookOpen, Eye, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
+import { ArrowUpToLine, Loader2, BookOpen, Eye, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { CostPill, HudChip, HudTag, StatTile, EmptyState, type HudTone } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconSelect } from "@/components/ui/icon-select";
-import { ResourceIcon } from "@/components/ui/game-icon";
 import { PlayerName } from "@/components/ui/player-name";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
@@ -23,7 +22,6 @@ import { findBuilding } from "@/game/buildings";
 import { computeFleetPower, pveAttackFactor } from "@/game/combat";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { findFaction } from "@/game/pirates";
-import { RESOURCE_LIST } from "@/game/resources";
 import { findUnit, KESH_HUNTER_UNIT, OFFENSIVE_UNITS } from "@/game/units";
 import {
   amberFor,
@@ -35,7 +33,6 @@ import {
   eliteActive,
   eliteRanking,
   eliteReadyAt,
-  exchangeLeft,
   FUGITIVES,
   fugitivePower,
   KESH,
@@ -61,7 +58,7 @@ import { PrestigePreview, PREVIEWABLE } from "@/components/game/PrestigePreview"
 import { RewardReveal } from "@/components/game/RewardReveal";
 import { normalizePlanetLook } from "@/game/planetLook";
 import { WEEKLY_OFFERS } from "@/game/weeklyStock";
-import { buyBountyItem, exchangeBountyAmber, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
+import { buyBountyItem, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -469,28 +466,40 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
 /** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, voir docs/prompts-5.27.md). */
 const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {};
 
-function itemStatus(item: ShopItem, st: BountyState, now: number): string | null {
+/** 5.28 : état d'un objet, en pastille (effet actif, réserve, acquis). */
+function itemState(item: ShopItem, st: BountyState, now: number): { label: string; tone: HudTone } | null {
+  const left = (until: number) => formatDuration(Math.floor((until - now) / 1000));
+  const reserve = (n: number) => (n > 0 ? { label: `${n} / ${BOUNTY_SHOP_RULES.maxCharges}`, tone: "neutral" as const } : null);
   switch (item.id) {
     case "boost":
-      return st.boostUntilMs > now ? `Active encore ${formatDuration(Math.floor((st.boostUntilMs - now) / 1000))}` : null;
-    case "jammer":
-      return st.jammers > 0 ? `${st.jammers} en réserve` : null;
-    case "beacon":
-      return st.beacons > 0 ? `${st.beacons} en réserve (bouton « Balise » des flottes)` : null;
+      return st.boostUntilMs > now ? { label: `Actif · ${left(st.boostUntilMs)}`, tone: "mint" } : null;
     case "shield":
-      return st.shieldUntilMs > now ? `Actif encore ${formatDuration(Math.floor((st.shieldUntilMs - now) / 1000))}` : null;
-    case "phantom":
-      return st.phantoms > 0 ? `${st.phantoms} en réserve (prochains espionnages)` : null;
-    case "priority":
-      return st.priorityContracts > 0 ? `${st.priorityContracts} en réserve (prochains contrats de livraison)` : null;
-    case "vendettaToken":
-      return st.vendettaTokens > 0 ? `${st.vendettaTokens} en réserve (page Seigneurs)` : null;
+      return st.shieldUntilMs > now ? { label: `Actif · ${left(st.shieldUntilMs)}`, tone: "mint" } : null;
     case "pheromone":
-      return st.pheromoneUntilMs > now ? `Active encore ${formatDuration(Math.floor((st.pheromoneUntilMs - now) / 1000))}` : null;
+      return st.pheromoneUntilMs > now ? { label: `Active · ${left(st.pheromoneUntilMs)}`, tone: "mint" } : null;
+    case "jammer":
+      return reserve(st.jammers);
+    case "beacon":
+      return reserve(st.beacons);
+    case "phantom":
+      return reserve(st.phantoms);
+    case "priority":
+      return reserve(st.priorityContracts);
+    case "vendettaToken":
+      return reserve(st.vendettaTokens);
     default:
-      return owns(st, item.id) ? "Acquis" : null;
+      return owns(st, item.id) ? { label: "Acquis", tone: "mint" } : null;
   }
 }
+
+/** Où sert un objet en réserve (rappel sous la description). */
+const ITEM_USE: Partial<Record<ShopItemId, string>> = {
+  beacon: "S'utilise depuis tes flottes en vol (bouton « Balise »).",
+  phantom: "Consommé par ton prochain espionnage.",
+  priority: "Consommé par ton prochain contrat de livraison.",
+  vendettaToken: "S'utilise sur la page Seigneurs (bouton « Le rappeler »).",
+  dossier: "L'officier se choisit sur la page Commandants.",
+};
 
 function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerState; st: BountyState }) {
   const queues = usePlayerStore((s) => s.queues);
@@ -502,10 +511,13 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
   const [preview, setPreview] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const canPreview = PREVIEWABLE.includes(item.id);
+  const owned = owns(st, item.id);
   const plans = item.id === "reroll" ? rerollablePlans(player) : [];
   const blocker = shopBlocker(player, item, now, queues ?? undefined);
-  const status = itemStatus(item, st, now);
+  const short = blocker === "Pas assez d'Ambre.";
+  const state = itemState(item, st, now);
   const Icon = ITEM_ICONS[item.id];
+  const look = normalizePlanetLook(player.profileStyle?.planet);
   const buy = async () => {
     if (
       item.price >= 150 &&
@@ -539,14 +551,14 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
     }
   };
   return (
-    <Card className={cn("flex min-w-0 flex-col gap-2 p-4", (item.group === "unit" || item.group === "feature") && "border-gold-glow/40")}>
+    <Card className={cn("flex min-w-0 flex-col gap-3 p-5", owned && "opacity-80")}>
       <div className="flex items-start gap-3">
         {item.id === "blueprint" ? (
-          <img src={assetUrl(KESH_HUNTER_UNIT.image)} alt="" className="h-14 w-14 object-contain" />
+          <img src={assetUrl(KESH_HUNTER_UNIT.image)} alt="" className="h-12 w-12 shrink-0 object-contain" />
         ) : item.id === "emblem" ? (
-          <img src={assetUrl(KESH.emblem)} alt="" className="h-12 w-12 object-contain" />
+          <img src={assetUrl(KESH.emblem)} alt="" className="h-12 w-12 shrink-0 object-contain" />
         ) : item.id === "emojis" ? (
-          <span className="grid grid-cols-2 gap-0.5">
+          <span className="grid h-12 w-12 shrink-0 grid-cols-2 gap-0.5">
             {KESH_EMOJIS.map((e) => (
               <img key={e.code} src={assetUrl(e.url)} alt="" className="h-6 w-6" />
             ))}
@@ -559,8 +571,16 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-display text-sm text-slate-100">{item.name}</p>
-          <p className="text-xs text-slate-400">{item.description}</p>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-display text-sm text-slate-100">{item.name}</p>
+            {state && (
+              <HudChip size="sm" tone={state.tone}>
+                {state.label}
+              </HudChip>
+            )}
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.description}</p>
+          {ITEM_USE[item.id] && <p className="mt-1 text-[11px] text-slate-500">{ITEM_USE[item.id]}</p>}
         </div>
       </div>
       {item.id === "accelerator" && building.length > 1 && (
@@ -581,18 +601,11 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
           ariaLabel="Plan à relancer"
         />
       )}
-      {item.id === "nameColor" && owns(st, "nameColor") && <NameTonePicker current={st.nameTone} />}
-      {canPreview && !owns(st, item.id) && (
-        <>
-          <Button size="sm" variant="ghost" className="self-start" onClick={() => setPreview((v) => !v)} aria-expanded={preview}>
-            <Eye className="h-3.5 w-3.5" /> {preview ? "Masquer l'aperçu" : "Aperçu"}
-          </Button>
-          {preview && (
-            <div className="border border-white/10 bg-space-950/40 p-3">
-              <PrestigePreview item={item.id} pseudo={player.pseudo} look={normalizePlanetLook(player.profileStyle?.planet)} />
-            </div>
-          )}
-        </>
+      {item.id === "nameColor" && owned && <NameTonePicker current={st.nameTone} />}
+      {canPreview && !owned && preview && (
+        <div className="border border-white/10 bg-space-950/40 p-3">
+          <PrestigePreview item={item.id} pseudo={player.pseudo} look={look} />
+        </div>
       )}
       {canPreview && (
         <RewardReveal
@@ -601,15 +614,32 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
           icon={<Icon />}
           title={item.name}
           description="Acquis au Comptoir de la Ruche."
-          items={[{ key: item.id, node: <PrestigePreview item={item.id} pseudo={player.pseudo} look={normalizePlanetLook(player.profileStyle?.planet)} /> }]}
+          items={[{ key: item.id, node: <PrestigePreview item={item.id} pseudo={player.pseudo} look={look} /> }]}
           closeLabel="Superbe"
         />
       )}
-      {status && <p className="text-[11px] text-mint-glow">{status}</p>}
-      <Button size="sm" variant={blocker ? "outline" : "warn"} className="mt-auto min-w-0 max-w-full" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
-        <Amber className="mr-1" /> {item.price}
-        {blocker && blocker !== "Pas assez d'Ambre." ? <span className="ml-2 min-w-0 truncate text-[11px] font-normal text-slate-500">{blocker}</span> : null}
-      </Button>
+      {!owned && (
+        <div className="mt-auto flex flex-col gap-2 border-t border-white/5 pt-3">
+          {blocker && !short && (
+            <p className="flex items-start gap-1.5 text-[11px] text-ember-glow">
+              <Lock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden /> {blocker}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <CostPill missing={short ? `il manque ${item.price - st.amber}` : undefined}>
+              <AmberAmount value={item.price} label={false} />
+            </CostPill>
+            {canPreview && (
+              <Button size="sm" variant="ghost" onClick={() => setPreview((v) => !v)} aria-expanded={preview}>
+                <Eye className="h-3.5 w-3.5" /> {preview ? "Masquer" : "Aperçu"}
+              </Button>
+            )}
+            <Button size="sm" variant="warn" className="ml-auto" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingBag className="h-3.5 w-3.5" />} Acheter
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
@@ -640,50 +670,6 @@ function NameTonePicker({ current }: { current: string }) {
   );
 }
 
-function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) {
-  const [amount, setAmount] = useState(10);
-  const [busy, setBusy] = useState(false);
-  const left = exchangeLeft(player, Date.now());
-  const rares = RESOURCE_LIST.filter((r) => r.rarity === "rare");
-  const exchange = async () => {
-    setBusy(true);
-    try {
-      await exchangeBountyAmber(amount);
-      toast.success(`${amount} Ambre échangés contre ${amount * BOUNTY_RULES.exchange.rarePerAmber} de chaque ressource rare.`);
-    } catch (err) {
-      toast.error(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <HudPanel icon={<ArrowLeftRight />} title="Échange d'Ambre" tone="gold">
-      <div>
-        <p className="text-xs text-slate-400">
-          1 <Amber /> = {BOUNTY_RULES.exchange.rarePerAmber} de chaque ressource rare. {BOUNTY_RULES.exchange.weeklyCap} Ambre par semaine au plus ; l'Ambre ne s'achète pas.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <NumberInput size="sm" min={1} max={Math.max(1, Math.min(left, st.amber))} value={amount} onChange={setAmount} className="w-48" aria-label="Ambre à échanger" />
-        <span className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
-          →
-          {rares.map((r) => (
-            <span key={r.id} className="flex items-center gap-1">
-              <ResourceIcon id={r.id} /> {formatCompact(amount * BOUNTY_RULES.exchange.rarePerAmber)}
-            </span>
-          ))}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button size="sm" disabled={busy || amount > left || amount > st.amber} onClick={() => void exchange()}>
-          Échanger
-        </Button>
-        <span className="text-[11px] text-slate-500">Encore {left} cette semaine</span>
-      </div>
-    </HudPanel>
-  );
-}
-
 /** 5.27 : derniers achats et dons au Comptoir. */
 function ShopHistory({ st }: { st: BountyState }) {
   const list = [...st.history].reverse();
@@ -711,42 +697,117 @@ function ShopHistory({ st }: { st: BountyState }) {
   );
 }
 
-function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
-  const groups: { id: ShopItem["group"]; label: string }[] = [
-    { id: "consumable", label: "Fournitures de l'Essaim" },
-    { id: "unit", label: "Vaisseau" },
-    { id: "feature", label: "Outils de commandement" },
-    { id: "cosmetic", label: "Prestige" },
+/** 5.28 : tout ce qui est en cours ou en réserve, en un coup d'œil. */
+function ShopSummary({ st }: { st: BountyState }) {
+  const now = Date.now();
+  const left = (until: number) => formatDuration(Math.floor((until - now) / 1000));
+  const effects = [
+    { on: st.boostUntilMs > now, label: "Gelée de la Reine", until: st.boostUntilMs },
+    { on: st.shieldUntilMs > now, label: "Voile de chitine", until: st.shieldUntilMs },
+    { on: st.pheromoneUntilMs > now, label: "Phéromone", until: st.pheromoneUntilMs },
+  ].filter((e) => e.on);
+  const reserves = [
+    { n: st.jammers, label: "Brouilleurs", icon: Radar },
+    { n: st.beacons, label: "Balises", icon: Zap },
+    { n: st.phantoms, label: "Sondes fantômes", icon: Ghost },
+    { n: st.priorityContracts, label: "Contrats prioritaires", icon: ArrowUpToLine },
+    { n: st.vendettaTokens, label: "Jetons de vendetta", icon: Swords },
   ];
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-3 lg:grid-cols-[1fr_2fr]">
-        <div className="flex flex-col gap-3">
-          <ExchangeCard player={player} st={st} />
-          <DonateCard />
+    <HudPanel icon={<ShoppingBag />} title="Comptoir de la Ruche" tone="gold" aside={<span className="text-xs text-slate-400">Solde : <AmberAmount value={st.amber} label={false} className="font-mono tabular-nums text-slate-200" /></span>}>
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Effets actifs</p>
+          {effects.length === 0 ? (
+            <p className="text-xs text-slate-500">Aucun pour l'instant.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {effects.map((e) => (
+                <HudChip key={e.label} size="sm" tone="mint">
+                  {e.label} · <span className="tabular-nums">{left(e.until)}</span>
+                </HudChip>
+              ))}
+            </div>
+          )}
         </div>
-        <Card className="relative self-start overflow-hidden p-0">
-          <img src={assetUrl(KESH.hunters)} alt="Chasseurs kesh'vaar" className="h-full max-h-56 w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-space-950 via-transparent to-transparent" />
-          <p className="absolute bottom-3 left-4 right-4 text-sm text-slate-200">
-            Le Comptoir de la Ruche n'accepte que l'Ambre. <span className="text-gold-glow">Chaque prime remplie</span> rapporte de quoi s'équiper.
-          </p>
-        </Card>
-      </div>
-      <WeeklyStockCard />
-      {groups.map((g) => (
-        <section key={g.id} className="flex flex-col gap-2">
-          <h3 className="hud-eyebrow flex items-center gap-2 text-[11px] text-gold-glow">
-            <ShoppingBag className="h-3.5 w-3.5" /> {g.label}
-          </h3>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {SHOP_ITEMS.filter((i) => i.group === g.id).map((item) => (
-              <ShopItemCard key={item.id} item={item} player={player} st={st} />
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Réserves</p>
+          <ul className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+            {reserves.map((r) => (
+              <li key={r.label} className={cn("flex items-center gap-1.5", r.n > 0 ? "text-slate-200" : "text-slate-500")}>
+                <r.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="min-w-0 flex-1 truncate">{r.label}</span>
+                <span className="font-mono tabular-nums">
+                  {r.n} / {BOUNTY_SHOP_RULES.maxCharges}
+                </span>
+              </li>
             ))}
-          </div>
-        </section>
-      ))}
-      <ShopHistory st={st} />
+          </ul>
+        </div>
+      </div>
+    </HudPanel>
+  );
+}
+
+const SHOP_GROUPS: { id: ShopItem["group"]; label: string }[] = [
+  { id: "consumable", label: "Fournitures de l'Essaim" },
+  { id: "unit", label: "Vaisseau" },
+  { id: "feature", label: "Outils de commandement" },
+  { id: "cosmetic", label: "Prestige" },
+];
+
+function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
+  const queues = usePlayerStore((s) => s.queues);
+  const [group, setGroup] = useState<"all" | ShopItem["group"]>("all");
+  const [buyable, setBuyable] = useState(false);
+  const now = Date.now();
+  // Ce qui s'achète maintenant d'abord, ce qui est acquis en dernier.
+  const rank = (i: ShopItem) => (owns(st, i.id) ? 2 : shopBlocker(player, i, now, queues ?? undefined) ? 1 : 0);
+  const shown = (g: ShopItem["group"]) =>
+    SHOP_ITEMS.filter((i) => i.group === g && (!buyable || !shopBlocker(player, i, now, queues ?? undefined))).sort((a, b) => rank(a) - rank(b));
+  const groups = SHOP_GROUPS.filter((g) => group === "all" || g.id === group).map((g) => ({ ...g, items: shown(g.id) }));
+  return (
+    <div className="flex flex-col gap-6">
+      <ShopSummary st={st} />
+      <WeeklyStockCard />
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Rayons du Comptoir">
+        {[{ id: "all" as const, label: "Tout" }, ...SHOP_GROUPS].map((g) => (
+          <HudChip key={g.id} size="sm" tone={group === g.id ? "accent" : "neutral"} asChild>
+            <button type="button" onClick={() => setGroup(g.id)} aria-pressed={group === g.id}>
+              {g.label}
+            </button>
+          </HudChip>
+        ))}
+        <HudChip size="sm" tone={buyable ? "gold" : "neutral"} asChild className="ml-auto">
+          <button type="button" onClick={() => setBuyable((v) => !v)} aria-pressed={buyable}>
+            Achetables maintenant
+          </button>
+        </HudChip>
+      </div>
+      {groups.every((g) => g.items.length === 0) ? (
+        <EmptyState icon="🛍️" title="Rien d'achetable pour l'instant" size="sm">
+          Remplis des primes pour gagner de l'Ambre, ou retire le filtre « Achetables maintenant ».
+        </EmptyState>
+      ) : (
+        groups
+          .filter((g) => g.items.length > 0)
+          .map((g) => (
+            <section key={g.id} className="flex flex-col gap-3">
+              <h3 className="hud-eyebrow flex items-center gap-2 text-[11px] text-gold-glow">
+                {g.label} <span className="font-mono tabular-nums text-slate-500">{g.items.length}</span>
+              </h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {g.items.map((item) => (
+                  <ShopItemCard key={item.id} item={item} player={player} st={st} />
+                ))}
+              </div>
+            </section>
+          ))
+      )}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DonateCard />
+        <ShopHistory st={st} />
+      </div>
       <p className="text-xs text-slate-500">
         Gelée de la Reine : +{Math.round(BOUNTY_SHOP_RULES.boostPct * 100)} % sur la planète mère. Voile de chitine : protège des nouvelles attaques de joueurs, pas des flottes déjà en route ni des factions.
       </p>

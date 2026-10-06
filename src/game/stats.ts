@@ -76,6 +76,9 @@ export interface PlayerStats {
   xpDay?: import("@/game/xpTiers").XpDayState;
   /** 5.26.1 : unités sorties de l'Atelier, modules fabriqués, ventes aux enchères conclues et remportées. */
   unitsRepaired?: number;
+  /** 5.28 : vaisseaux démantelés en Cale sèche, et nombre de fois où la Cale sèche a été remplie. */
+  unitsDismantled?: number;
+  dockFull?: number;
   /** 5.26.2 : succès secrets dont l'indice a été acheté. */
   hintsBought?: string[];
   /** 5.26.3 : Ambre versée au pot commun (dons, taxe des enchères en Ambre) : badge « Mécène ». */
