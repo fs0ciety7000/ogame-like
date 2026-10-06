@@ -12,9 +12,10 @@ import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { removeAvatar } from "@/services/avatarService";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { useEffect, useState, type ReactNode } from "react";
-import { KESH, rankName } from "@/game/bounties";
+import { KESH, patronTier, rankName } from "@/game/bounties";
+import { HudChip } from "@/components/ui/hud";
 import { assetUrl } from "@/lib/assets";
-import { Loader2 } from "lucide-react";
+import { HandCoins, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { FollowOnlineButton } from "@/components/game/RemindersCard";
 import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
@@ -78,6 +79,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
   const ranking = leviathan ? leviathanRanking(leviathan) : [];
   const levIndex = target ? ranking.findIndex((r) => r.uid === target.uid) : -1;
   const feats = sheet?.feats;
+  const patron = patronTier(feats?.patron ?? 0);
   const entry = sheet?.entry;
   const warlords = useWarlordsStore((st) => st.list);
   const lord = entry?.npc ? warlords.find((w) => w.id === entry.npc) : undefined;
@@ -135,6 +137,11 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             )}
             {entry?.activeTitle && (
               <TitleBadge label={entry.activeTitle} size="xs" className="mt-1" />
+            )}
+            {patron && (
+              <HudChip size="sm" tone={patron.tone} className="mt-1" title={`${feats!.patron} Ambre versés au pot commun`}>
+                <HandCoins className="h-3 w-3" /> {patron.label}
+              </HudChip>
             )}
           </div>
         </div>

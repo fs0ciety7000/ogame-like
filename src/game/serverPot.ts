@@ -10,13 +10,14 @@ import { RESOURCE_LIST } from "@/game/resources";
 
 export const SERVER_POT_KEY = "server_pot";
 
-export type PotSource = "market" | "gift" | "auction" | "exchange" | "admin";
+export type PotSource = "market" | "gift" | "auction" | "exchange" | "donation" | "admin";
 
 export const POT_SOURCE_LABELS: Record<PotSource, string> = {
   market: "Taxes du marché",
   gift: "Taxe des cadeaux",
   auction: "Taxe des enchères",
   exchange: "Taxe du comptoir d'échange",
+  donation: "Dons des mécènes",
   admin: "Administration",
 };
 
@@ -30,6 +31,8 @@ export interface ServerPot {
   amber: number;
   /** Ambre reçue depuis la création. */
   amberTotal: number;
+  /** 5.26.3 : Ambre reçue par source (enchères, dons des mécènes). */
+  amberTotals?: Partial<Record<PotSource, number>>;
   /** 5.26.2 : entrées par jour (AAAA-MM-JJ, UTC) et par source, en équivalent ressource
    *  commune (une rare = 50), 30 jours glissants. L'Ambre a sa propre colonne. */
   daily?: Record<string, Partial<Record<PotSource | "amber", number>>>;
@@ -103,6 +106,9 @@ export function normalizeServerPot(raw: unknown): ServerPot {
     amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
     daily: normalizeDaily(r.daily),
     amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
+    amberTotals: Object.fromEntries(
+      (Object.keys(POT_SOURCE_LABELS) as PotSource[]).map((src) => [src, Math.max(0, Math.floor(Number(r.amberTotals?.[src])) || 0)] as const).filter(([, n]) => n > 0),
+    ),
     log: (Array.isArray(r.log) ? r.log : [])
       .filter((l) => l && typeof l === "object" && (l.source as string) in POT_SOURCE_LABELS)
       .map((l) => ({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources), ...(Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), ...(l.note ? { note: String(l.note).slice(0, 200) } : {}) }))
@@ -169,6 +175,7 @@ export function addAmberToPot(pot: ServerPot, source: PotSource, amount: number,
     ...pot,
     amber: pot.amber + n,
     amberTotal: pot.amberTotal + n,
+    amberTotals: { ...pot.amberTotals, [source]: (pot.amberTotals?.[source] ?? 0) + n },
     daily: bumpDaily(pot, "amber", n, now),
     log: [...pot.log, { atMs: now, source, resources: {}, amber: n, ...(note ? { note } : {}) }].slice(-100),
     updatedAtMs: now,

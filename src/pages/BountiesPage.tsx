@@ -6,12 +6,12 @@ import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowLeftRight, BookOpen, CalendarClock, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
+import { ArrowLeftRight, ArrowUpToLine, BookOpen, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, HandCoins, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { CostPill, HudTag, StatTile, EmptyState } from "@/components/ui/hud";
+import { CostPill, HudChip, HudTag, StatTile, EmptyState, type HudTone } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IconSelect } from "@/components/ui/icon-select";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -40,10 +40,14 @@ import {
   fugitivePower,
   KESH,
   KESH_EMOJIS,
+  NAME_TONES,
+  nextPatronTier,
   nextRank,
   nextRefreshMs,
   owns,
+  patronTier,
   rankName,
+  rerollablePlans,
   SHOP_ITEMS,
   shopBlocker,
   viewBounties,
@@ -52,7 +56,8 @@ import {
   type ShopItem,
   type ShopItemId,
 } from "@/game/bounties";
-import { buyBountyItem, exchangeBountyAmber, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
+import { moduleLabel } from "@/game/modules";
+import { buyBountyItem, donateAmberToPot, exchangeBountyAmber, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -445,6 +450,16 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   frame: Star,
   emblem: Trophy,
   emojis: Sparkles,
+  phantom: Ghost,
+  painkiller: Pill,
+  reroll: Dices,
+  priority: ArrowUpToLine,
+  pheromone: Users,
+  vendettaToken: Swords,
+  nameColor: Palette,
+  keshReaction: Smile,
+  roomBanner: Flag,
+  planetFx: Orbit,
 };
 
 function itemStatus(item: ShopItem, st: BountyState, now: number): string | null {
@@ -457,6 +472,14 @@ function itemStatus(item: ShopItem, st: BountyState, now: number): string | null
       return st.beacons > 0 ? `${st.beacons} en réserve (bouton « Balise » des flottes)` : null;
     case "shield":
       return st.shieldUntilMs > now ? `Actif encore ${formatDuration(Math.floor((st.shieldUntilMs - now) / 1000))}` : null;
+    case "phantom":
+      return st.phantoms > 0 ? `${st.phantoms} en réserve (prochains espionnages)` : null;
+    case "priority":
+      return st.priorityContracts > 0 ? `${st.priorityContracts} en réserve (prochains contrats de livraison)` : null;
+    case "vendettaToken":
+      return st.vendettaTokens > 0 ? `${st.vendettaTokens} en réserve (page Seigneurs)` : null;
+    case "pheromone":
+      return st.pheromoneUntilMs > now ? `Active encore ${formatDuration(Math.floor((st.pheromoneUntilMs - now) / 1000))}` : null;
     default:
       return owns(st, item.id) ? "Acquis" : null;
   }
@@ -468,6 +491,7 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
   const now = Date.now();
   const building = Object.entries(queues?.buildingUpgrades ?? {}).filter(([, u]) => u && u.endTime > now);
   const [buildingId, setBuildingId] = useState("");
+  const plans = item.id === "reroll" ? rerollablePlans(player) : [];
   const blocker = shopBlocker(player, item, now, queues ?? undefined);
   const status = itemStatus(item, st, now);
   const Icon = ITEM_ICONS[item.id];
@@ -533,12 +557,88 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
           ariaLabel="Chantier à accélérer"
         />
       )}
+      {item.id === "reroll" && plans.length > 1 && (
+        <IconSelect
+          value={buildingId}
+          onChange={setBuildingId}
+          options={plans.map((m) => ({ value: m.id, label: moduleLabel(m) }))}
+          placeholder={`${moduleLabel(plans[0])} (le premier)`}
+          ariaLabel="Plan à relancer"
+        />
+      )}
+      {item.id === "nameColor" && owns(st, "nameColor") && <NameTonePicker current={st.nameTone} />}
       {status && <p className="text-[11px] text-mint-glow">{status}</p>}
       <Button size="sm" variant={blocker ? "outline" : "warn"} className="mt-auto" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
         <Amber className="mr-1" /> {item.price}
         {blocker && blocker !== "Pas assez d'Ambre." ? <span className="ml-2 truncate text-[11px] font-normal text-slate-500">{blocker}</span> : null}
       </Button>
     </Card>
+  );
+}
+
+/** 5.26.3 : couleur de pseudo, parmi les jetons du thème (DESIGN.md). */
+function NameTonePicker({ current }: { current: string }) {
+  const [busy, setBusy] = useState(false);
+  const pick = async (tone: string) => {
+    setBusy(true);
+    try {
+      await setBountyNameTone(tone);
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-wrap gap-1" role="group" aria-label="Couleur de pseudo">
+      {NAME_TONES.map((t) => (
+        <HudChip key={t.id} size="sm" tone={t.id as HudTone} asChild>
+          <button type="button" disabled={busy} onClick={() => void pick(t.id)} aria-pressed={current === t.id} className={cn(current !== t.id && "opacity-60")}>
+            {t.label}
+          </button>
+        </HudChip>
+      ))}
+    </div>
+  );
+}
+
+/** 5.26.3 : don d'Ambre au pot commun, compté pour le badge « Mécène ». */
+function DonateCard({ player, st }: { player: PlayerState; st: BountyState }) {
+  const [amount, setAmount] = useState(10);
+  const [busy, setBusy] = useState(false);
+  const donated = player.stats?.amberDonated ?? 0;
+  const tier = patronTier(donated);
+  const next = nextPatronTier(donated);
+  const donate = async () => {
+    if (!(await askConfirm({ title: `Verser ${amount} Ambre au pot commun ?`, message: "Le don est définitif : l'Ambre rejoint la réserve du pot, redistribuée lors des concours.", confirmLabel: "Verser", tone: "gold" }))) return;
+    setBusy(true);
+    try {
+      await donateAmberToPot(amount);
+      toast.success(`${amount} Ambre versés au pot commun. Merci, mécène !`);
+    } catch (err) {
+      toast.error(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <HudPanel icon={<HandCoins />} title="Don au pot commun" tone="gold" aside={tier ? <HudChip size="sm" tone={tier.tone}>{tier.label}</HudChip> : undefined}>
+      <p className="text-xs text-slate-400">
+        L'Ambre versée au pot (dons, taxe des enchères en Ambre) fait monter le badge « Mécène » de ta fiche publique. Total versé : <AmberAmount value={donated} label={false} className="font-mono tabular-nums text-slate-200" />
+        {next ? (
+          <>
+            {" "}
+            · <span className="font-mono tabular-nums">{next.at - donated}</span> de plus pour « {next.label} ».
+          </>
+        ) : null}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <NumberInput size="sm" min={1} max={Math.max(1, st.amber)} value={amount} onChange={setAmount} className="w-48" aria-label="Ambre à verser" />
+        <Button size="sm" variant="warn" disabled={busy || amount < 1 || amount > st.amber} onClick={() => void donate()}>
+          Verser
+        </Button>
+      </div>
+    </HudPanel>
   );
 }
 
@@ -596,8 +696,11 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 lg:grid-cols-[1fr_2fr]">
-        <ExchangeCard player={player} st={st} />
-        <Card className="relative overflow-hidden p-0">
+        <div className="flex flex-col gap-3">
+          <ExchangeCard player={player} st={st} />
+          <DonateCard player={player} st={st} />
+        </div>
+        <Card className="relative self-start overflow-hidden p-0">
           <img src={assetUrl(KESH.hunters)} alt="Chasseurs kesh'vaar" className="h-full max-h-56 w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-space-950 via-transparent to-transparent" />
           <p className="absolute bottom-3 left-4 right-4 text-sm text-slate-200">

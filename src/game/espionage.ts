@@ -156,6 +156,8 @@ export interface SpyArrivalInput {
   random?: () => number;
   /** v3.5 : colonie visée (sinon la planète mère). */
   colonyId?: string;
+  /** 5.26.3 : Sondes fantômes (Comptoir) : impossibles à repérer. */
+  undetectable?: boolean;
 }
 
 export interface SpyArrivalOutput {
@@ -180,7 +182,7 @@ export function resolveSpyArrival(input: SpyArrivalInput): SpyArrivalOutput {
   const counter = counterEspionage(target);
   const score = spyScore(level, counter, probes);
   const tier = spyTier(score);
-  const detected = (input.random ?? Math.random)() < Math.min(0.95, detectionChance(level, counter) + playerModifiers(owner).detection);
+  const detected = !input.undetectable && (input.random ?? Math.random)() < Math.min(0.95, detectionChance(level, counter) + playerModifiers(owner).detection);
 
   const random = input.random ?? Math.random;
   const data = colony ? buildSpyReportData(target, { ...flushed.queues, buildingUpgrades: {}, activeResearches: [], unitQueues: { attack: [], defense: [] } }, [], tier, now) : buildSpyReportData(target, flushed.queues, input.targetFleets, tier, now, input.targetGarrisons ?? []);

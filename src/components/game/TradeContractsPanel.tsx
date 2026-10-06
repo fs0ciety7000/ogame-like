@@ -237,6 +237,11 @@ export function TradeContractsPanel() {
                     <span className="min-w-0 truncate text-xs text-slate-400">
                       <PlayerName uid={c.clientUid} pseudo={c.clientPseudo} />
                       {c.targetUid && <HudTag tone="gold" className="ml-1.5">Pour toi</HudTag>}
+                      {(c.priorityUntilMs ?? 0) > Date.now() && (
+                        <HudTag tone="violet" className="ml-1.5">
+                          Prioritaire
+                        </HudTag>
+                      )}
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="text-[10px] font-mono uppercase text-slate-500">livre</span>

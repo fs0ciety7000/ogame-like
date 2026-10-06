@@ -31,8 +31,9 @@ export async function loadWarlords(force = false): Promise<WarlordPublic[]> {
   return view.warlords;
 }
 
-export function declareVendetta(warlordId: string, scope: "player" | "alliance") {
-  return callGame<Vendetta>("warlords", { action: "vendetta", warlordId, scope });
+/** recall (5.26.3) : rappelle un seigneur en fuite avec un Jeton de vendetta du Comptoir. */
+export function declareVendetta(warlordId: string, scope: "player" | "alliance", recall = false) {
+  return callGame<Vendetta>("warlords", { action: "vendetta", warlordId, scope, recall });
 }
 
 export function startVacation(days: number) {

@@ -1,6 +1,6 @@
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import { callGame } from "@/services/playerService";
-import type { TradeContract } from "@/game/tradeContracts";
+import { sortTradeContracts, type TradeContract } from "@/game/tradeContracts";
 import type { Fleet } from "@/game/fleets";
 import type { ResourceId } from "@/types/game";
 
@@ -19,7 +19,8 @@ export async function fetchTradeContracts(): Promise<TradeContractsView> {
     pb.collection("trade_contracts").getFullList<TradeContract>({ filter: pb.filter('status = "open" && expiresAtMs > {:now} && clientUid != {:u} && (targetUid = "" || targetUid = {:u})', { now: Date.now(), u: uid }), sort: "-createdAtMs" }),
     pb.collection("trade_contracts").getList<TradeContract>(1, 30, { filter: pb.filter("clientUid = {:u} || supplierUid = {:u}", { u: uid }), sort: "-createdAtMs" }),
   ]);
-  return { open, mine: mine.items };
+  // 5.26.3 : Contrats prioritaires (Comptoir) en tête pendant 24 h.
+  return { open: sortTradeContracts(open, Date.now()), mine: mine.items };
 }
 
 export function subscribeTradeContracts(onChange: (data: TradeContractsView) => void): () => void {

@@ -20,6 +20,13 @@ describe("planetLook", () => {
     expect(planetLookOptions(p, "palette").find((o) => o.id === "magma")?.unlocked).toBe(false);
   });
 
+  it("5.26.3 : Effet de planète (Comptoir) : anneau d'ambre et aurore", () => {
+    const p = player();
+    expect(() => checkPlanetLook(p, { ring: "ambre" })).toThrow(/verrouillé/);
+    p.bounties = { owned: ["planetFx"] } as unknown as PlayerState["bounties"];
+    expect(checkPlanetLook(p, { ring: "ambre", atmosphere: "aurore" })).toEqual({ ...DEFAULT_PLANET_LOOK, ring: "ambre", atmosphere: "aurore" });
+  });
+
   it("refuses locked or unknown choices, keeps the rest", () => {
     const p = player();
     expect(() => checkPlanetLook(p, { palette: "magma" })).toThrow(/verrouillé/);

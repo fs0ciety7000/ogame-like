@@ -84,5 +84,9 @@ describe("spy reports", () => {
     expect(caught.targetNotifications[0].kind).toBe("spy-detected");
     expect(caught.targetNotifications[0].message).toContain("SPY");
     expect(caught.report.data?.resources).toBeDefined(); // le rapport part quand même
+    // 5.26.3 : Sondes fantômes : jamais repérées, la cible n'en sait rien.
+    const phantom = resolveSpyArrival({ ...base, random: () => 0, undetectable: true });
+    expect(phantom.detected).toBe(false);
+    expect(phantom.targetNotifications).toHaveLength(0);
   });
 });

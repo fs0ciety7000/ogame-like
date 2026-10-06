@@ -104,12 +104,15 @@ export function addReport(reporters: unknown, uid: string): { reporters: string[
 
 /** Réactions proposées sous un message (jeu fixe : lisible et modérable). */
 export const CHAT_REACTIONS = ["👍", "😂", "🔥", "😮", "😢", "👏"] as const;
+/** 5.26.3 : 7e réaction (emblème de l'Essaim), réservée aux acheteurs du Comptoir. */
+export const KESH_REACTION = "kesh";
+const ALL_REACTIONS: readonly string[] = [...CHAT_REACTIONS, KESH_REACTION];
 export type ChatReactions = Partial<Record<string, string[]>>;
 
 export function normalizeReactions(raw: unknown): ChatReactions {
   const out: ChatReactions = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
-  for (const e of CHAT_REACTIONS) {
+  for (const e of ALL_REACTIONS) {
     const list = (raw as Record<string, unknown>)[e];
     if (Array.isArray(list)) {
       const uids = [...new Set(list.filter((x): x is string => typeof x === "string"))].slice(0, 200);
@@ -120,10 +123,12 @@ export function normalizeReactions(raw: unknown): ChatReactions {
 }
 
 /** Ajoute ou retire la réaction d'un joueur. */
-export function toggleReaction(raw: unknown, emoji: string, uid: string): ChatReactions {
-  if (!(CHAT_REACTIONS as readonly string[]).includes(emoji)) throw new Error("Réaction inconnue.");
+export function toggleReaction(raw: unknown, emoji: string, uid: string, canKesh = false): ChatReactions {
+  if (!ALL_REACTIONS.includes(emoji)) throw new Error("Réaction inconnue.");
   const r = normalizeReactions(raw);
   const list = r[emoji] ?? [];
+  // Retirer sa réaction kesh reste possible ; l'ajouter demande l'objet du Comptoir.
+  if (emoji === KESH_REACTION && !canKesh && !list.includes(uid)) throw new Error("Réaction kesh'vaar : à débloquer au Comptoir de la Ruche.");
   const next = list.includes(uid) ? list.filter((x) => x !== uid) : [...list, uid];
   if (next.length) r[emoji] = next;
   else delete r[emoji];
@@ -150,6 +155,8 @@ export interface ChatRoom {
   createdAtMs: number;
   lastMessageAtMs: number;
   closed: boolean;
+  /** 5.26.3 : icône (Bannière de salon), vide sans. */
+  icon?: string;
 }
 
 /** Vérifie un nouveau salon (nom filtré, plafonds par joueur et serveur). */
@@ -166,6 +173,23 @@ export function validateRoom(raw: unknown, ctx: { ownerOpen: number; totalOpen: 
 }
 
 /** Salon resté muet trop longtemps (fermeture automatique). */
+/** 5.26.3 : icônes de salon (Bannière de salon, objet de prestige du Comptoir). */
+export const ROOM_ICONS: { id: string; label: string }[] = [
+  { id: "swords", label: "Combat" },
+  { id: "coins", label: "Commerce" },
+  { id: "skull", label: "Boss" },
+  { id: "rocket", label: "Expéditions" },
+  { id: "shield", label: "Défense" },
+  { id: "crown", label: "Couronne" },
+  { id: "flame", label: "Flamme" },
+  { id: "sparkles", label: "Étoiles" },
+];
+
+export function roomIcon(raw: unknown): string {
+  const id = String(raw ?? "");
+  return ROOM_ICONS.some((i) => i.id === id) ? id : "";
+}
+
 export function roomIdle(room: Pick<ChatRoom, "createdAtMs" | "lastMessageAtMs">, now: number): boolean {
   return now - Math.max(room.createdAtMs, room.lastMessageAtMs) > CHAT_ROOM_RULES.idleDays * 86_400_000;
 }

@@ -156,6 +156,11 @@ describe("v4.2 warlords", () => {
     expect(settleVendettas(state, lost.endsAtMs + 1)).toHaveLength(1);
     expect(state.reprisals).toEqual([{ warlordId: "lysa", uid: "solo", dueAtMs: lost.endsAtMs + 1 }]);
     expect(() => openVendetta(state, d, { uid: "x", pseudo: "X" }, "player", npc, { ...emptyRuntime(), absentUntilMs: NOW + DAY }, NOW)).toThrow(/quitté/);
+    // 5.26.3 : Jeton de vendetta : le seigneur en fuite est rappelé.
+    const rt = { ...emptyRuntime(), absentUntilMs: NOW + DAY };
+    const recalled = openVendetta(state, lord("lysa"), { uid: "y", pseudo: "Y" }, "player", npc, rt, NOW + 1, true);
+    expect(recalled.status).toBe("active");
+    expect(rt.absentUntilMs).toBe(NOW + 1);
   });
 
   it("lines name the player", () => {

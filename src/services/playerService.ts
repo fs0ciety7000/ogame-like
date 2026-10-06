@@ -487,6 +487,8 @@ export interface PlayerFeats {
   warsWon: number;
   /** v3.9 : primes Kesh'Vaar. */
   bounties?: number;
+  /** 5.26.3 : Ambre versée au pot commun (badge « Mécène »). */
+  patron?: number;
   kesh?: { rank: number; frame: boolean; emblem: boolean; shieldUntilMs: number };
   /** v4.0 : bannière, emblème, devise, officiers et reliques. */
   showcase?: import("@/game/profile").PublicShowcase | null;

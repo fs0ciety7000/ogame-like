@@ -128,6 +128,15 @@ function Rings({ kind, opacity, clip }: { kind: string; opacity: number; clip: s
         <ellipse cx={C} cy={C} rx={106} ry={24} fill="none" stroke="var(--color-slate-500)" strokeOpacity={opacity * 0.8} strokeWidth={2} strokeDasharray="0.5 5" strokeLinecap="round" />
       </g>
     );
+  // 5.26.3 : anneau d'ambre (Effet de planète, Comptoir) : large bande dorée qui scintille.
+  if (kind === "ambre")
+    return (
+      <g clipPath={clip}>
+        <ellipse cx={C} cy={C} rx={102} ry={22.5} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={opacity * 0.35} strokeWidth={7} />
+        <ellipse cx={C} cy={C} rx={102} ry={22.5} fill="none" stroke="var(--color-gold-glow)" strokeOpacity={opacity} strokeWidth={1.6} strokeDasharray="1 2.5" strokeLinecap="round" />
+        <ellipse cx={C} cy={C} rx={92} ry={20} fill="none" stroke="var(--color-ember-glow)" strokeOpacity={opacity * 0.7} strokeWidth={0.8} />
+      </g>
+    );
   if (kind === "halo")
     return <ellipse cx={C} cy={C} rx={100} ry={22} fill="none" stroke="var(--color-danger-glow)" strokeOpacity={opacity} strokeWidth={2.4} strokeDasharray="10 3 2 3" clipPath={clip} />;
   return (

@@ -78,6 +78,8 @@ export interface PlayerStats {
   unitsRepaired?: number;
   /** 5.26.2 : succès secrets dont l'indice a été acheté. */
   hintsBought?: string[];
+  /** 5.26.3 : Ambre versée au pot commun (dons, taxe des enchères en Ambre) : badge « Mécène ». */
+  amberDonated?: number;
   /** 5.26.2 : conversations privées archivées (joueur → date d'archivage). */
   archivedChats?: Record<string, number>;
   /** 5.26.1 : messages privés et du canal global envoyés, signalements résolus par l'équipe. */

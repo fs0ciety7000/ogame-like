@@ -7,6 +7,12 @@ import {
   bountyRank,
   bountyState,
   buyShopItem,
+  consumeCharge,
+  donateAmber,
+  nameToneOf,
+  patronTier,
+  rerollablePlans,
+  setNameTone,
   plannerUnlocked,
   checkEliteLaunch,
   closeElite,
@@ -24,6 +30,7 @@ import {
   viewBounties,
 } from "@/game/bounties";
 import { launchBounty, performLaunch } from "@/game/fleets";
+import { MODULE_TEMPLATES } from "@/game/modules";
 import { advanceResources } from "@/game/economy";
 import { checkAttackAllowed } from "@/game/pvp";
 import { pveAttackFactor } from "@/game/combat";
@@ -250,5 +257,78 @@ describe("bounties", () => {
     expect(reward).toMatchObject({ xp: ELITE_RULES.killed.xp * (XP_TIER_RULES.multipliers.bounty ?? 1), amber: ELITE_RULES.killed.amber });
     expect(grantEliteReward(r.state, b, NOW + H)).toEqual({ xp: 0, amber: 0 });
     expect(closeElite(spawnElite(NOW, [a]), NOW + 8 * 24 * H).status).toBe("failed");
+  });
+});
+
+describe("5.26.3 Comptoir : consommables et prestige", () => {
+  const rich = () => {
+    const p = player();
+    p.bounties = { ...bountyState(p), amber: 5000 };
+    return p;
+  };
+
+  it("sondes fantômes, contrats prioritaires et jetons de vendetta : réserves de 3", () => {
+    const p = rich();
+    const q = defaultQueues();
+    for (const id of ["phantom", "priority", "vendettaToken"] as const) {
+      buyShopItem(p, q, id, NOW);
+      buyShopItem(p, q, id, NOW);
+      buyShopItem(p, q, id, NOW);
+      expect(() => buyShopItem(p, q, id, NOW)).toThrow(/réserve/);
+    }
+    expect(bountyState(p)).toMatchObject({ phantoms: 3, priorityContracts: 3, vendettaTokens: 3 });
+    expect(consumeCharge(p, "phantoms")).toBe(true);
+    expect(bountyState(p).phantoms).toBe(2);
+  });
+
+  it("analgésique : 2 h de réparations d'un coup, refusé sans réparation", () => {
+    const p = rich();
+    const q = defaultQueues();
+    expect(() => buyShopItem(p, q, "painkiller", NOW)).toThrow(/Atelier/);
+    p.buildings = { ...p.buildings, atelier_reparation: { level: 5, unlocked: true } };
+    p.workshop = { updatedAtMs: NOW, jobs: [{ id: "j1", unitId: "chasseur", count: 100, hpTotal: 1e9, hpLeft: 1e9, source: "raid", addedAtMs: NOW }], hull: {} } as PlayerState["workshop"];
+    buyShopItem(p, q, "painkiller", NOW);
+    expect(p.workshop!.jobs[0].hpLeft).toBeLessThan(1e9);
+    expect(p.workshop!.updatedAtMs).toBe(NOW);
+  });
+
+  it("rappel de plan : une fois par plan commun", () => {
+    const p = rich();
+    const q = defaultQueues();
+    expect(() => buyShopItem(p, q, "reroll", NOW)).toThrow(/plan commun/);
+    p.modules = { items: [{ id: "m1", template: MODULE_TEMPLATES[0].id, rarity: "common", built: false, foundAtMs: NOW, source: "test" }] } as unknown as PlayerState["modules"];
+    expect(rerollablePlans(p)).toHaveLength(1);
+    buyShopItem(p, q, "reroll", NOW, "m1", () => 0.999);
+    expect(rerollablePlans(p)).toHaveLength(0);
+    expect(() => buyShopItem(p, q, "reroll", NOW)).toThrow(/plan commun/);
+  });
+
+  it("phéromone : cumulable dans le temps", () => {
+    const p = rich();
+    const q = defaultQueues();
+    buyShopItem(p, q, "pheromone", NOW);
+    buyShopItem(p, q, "pheromone", NOW);
+    expect(bountyState(p).pheromoneUntilMs).toBe(NOW + 48 * H);
+  });
+
+  it("couleur de pseudo : réservée aux acheteurs, jetons du thème seulement", () => {
+    const p = rich();
+    expect(() => setNameTone(p, "mint")).toThrow();
+    buyShopItem(p, defaultQueues(), "nameColor", NOW);
+    expect(nameToneOf(p)).toBe("gold");
+    setNameTone(p, "mint");
+    expect(nameToneOf(p)).toBe("mint");
+    expect(() => setNameTone(p, "#ff00ff")).toThrow();
+  });
+
+  it("mécène : don d'Ambre et paliers", () => {
+    const p = rich();
+    expect(() => donateAmber(p, 0)).toThrow();
+    expect(() => donateAmber(p, 6000)).toThrow(/Ambre/);
+    donateAmber(p, 120);
+    expect(bountyState(p).amber).toBe(4880);
+    expect(p.stats?.amberDonated).toBe(120);
+    expect(patronTier(120)?.label).toBe("Mécène d'argent");
+    expect(patronTier(10)).toBeNull();
   });
 });

@@ -49,6 +49,8 @@ export interface TradeContract {
   /** Flotte de livraison en route (une seule par contrat). */
   fleetId: string;
   closedAtMs: number;
+  /** 5.26.3 : Contrat prioritaire (Comptoir) : en tête des contrats visibles jusqu'à cette date. */
+  priorityUntilMs?: number;
 }
 
 const RESOURCE_IDS = new Set(RESOURCE_LIST.map((r) => r.id as string));
@@ -64,7 +66,16 @@ export function contractDeposit(payAmount: number): number {
   return Math.max(1, Math.floor(payAmount * TRADE_CONTRACT_RULES.depositPct));
 }
 
-export type NewTradeContract = Pick<TradeContract, "targetUid" | "wantRes" | "wantAmount" | "payRes" | "payAmount" | "hours" | "expiresAtMs">;
+export type NewTradeContract = Pick<TradeContract, "targetUid" | "wantRes" | "wantAmount" | "payRes" | "payAmount" | "hours" | "expiresAtMs" | "priorityUntilMs">;
+
+/** 5.26.3 : durée de la mise en avant d'un Contrat prioritaire. */
+export const PRIORITY_CONTRACT_HOURS = 24;
+
+/** Contrats visibles : prioritaires (encore actifs) d'abord, puis les plus récents. */
+export function sortTradeContracts<T extends Pick<TradeContract, "createdAtMs" | "priorityUntilMs">>(list: T[], now: number): T[] {
+  const prio = (c: T) => ((c.priorityUntilMs ?? 0) > now ? 1 : 0);
+  return [...list].sort((a, b) => prio(b) - prio(a) || b.createdAtMs - a.createdAtMs);
+}
 
 /** Publication : valide le contrat et bloque le paiement du client. */
 export function createTradeContract(client: PlayerState, input: Record<string, unknown>, active: number, now: number): NewTradeContract {
@@ -88,7 +99,12 @@ export function createTradeContract(client: PlayerState, input: Record<string, u
   if (targetUid && targetUid === client.uid) throw new GameActionError("Tu ne peux pas te livrer toi-même.");
   if ((client.resources[payRes] ?? 0) < payAmount) throw new GameActionError(`Pas assez de ${label(payRes)} pour le paiement.`);
   client.resources[payRes] -= payAmount;
-  return { targetUid, wantRes, wantAmount, payRes, payAmount, hours, expiresAtMs: now + TRADE_CONTRACT_RULES.openHours * 3600_000 };
+  // 5.26.3 : un Contrat prioritaire en réserve est utilisé par ce contrat.
+  const b = (client.bounties ?? {}) as { priorityContracts?: number };
+  const charges = Math.max(0, Number(b.priorityContracts) || 0);
+  const priorityUntilMs = charges > 0 ? now + PRIORITY_CONTRACT_HOURS * 3600_000 : 0;
+  if (charges > 0) client.bounties = { ...(client.bounties as object), priorityContracts: charges - 1 } as PlayerState["bounties"];
+  return { targetUid, wantRes, wantAmount, payRes, payAmount, hours, expiresAtMs: now + TRADE_CONTRACT_RULES.openHours * 3600_000, priorityUntilMs };
 }
 
 /** Acceptation : le livreur dépose sa caution, le délai démarre. */
