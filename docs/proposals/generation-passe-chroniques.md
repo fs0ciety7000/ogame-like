@@ -1,6 +1,6 @@
 # Proposition : passe de saison et Chroniques entièrement génératifs
 
-Statut : **acceptée (option B)** ; lot 1 **livré** en 6.8.0 avec la bibliothèque du lot 3 (`docs/changes/6.8.0-progression-generative.md`) ; lot 2 **livré** en 6.8.1
+Statut : **livrée** (6.8.0, 6.8.1, 6.8.2 : `docs/changes/6.8.2-chroniques-generees.md`). Historique : acceptée (option B) ; lot 1 **livré** en 6.8.0 avec la bibliothèque du lot 3 (`docs/changes/6.8.0-progression-generative.md`) ; lot 2 **livré** en 6.8.1
 (`docs/changes/6.8.1-passe-par-budget.md`, budget 140 h au lieu de 120 h pour garder la valeur de l'ancien gabarit) ; lot 6.8.2 à faire. Demande de l'utilisateur (2026-10-06) : « le Season pass et les chroniques doivent être génératifs.
 Le système doit les générer procéduralement (paliers, prérequis, récompenses etc.) ». Liée à la revue AU3 (`progression.md`, PRG-1 à PRG-3).
 
@@ -74,7 +74,7 @@ types d'objectifs autorisés, difficulté min/max), visibles dans Admin → Gén
 1. **6.8.0** (livré) : traçage des points par source + santé du passe ; titres groupés (AU3 C) ; un seul passe par mois ; bibliothèque
    des chapitres écrits et chapitres générés dès novembre (avancé du lot 3 à la demande de l'utilisateur).
 2. **6.8.1** (livré) : récompenses par budget, points par palier calculés, prérequis étendus, contrôle par simulation avant publication (`passGen`).
-3. **6.8.2** : tables du générateur de Chroniques (`chronicleGen`), récompenses des épisodes par budget, thème commun passe/chapitre.
+3. **6.8.2** (livré) : tables du générateur de Chroniques (`chronicleGen`), récompenses des épisodes par budget, thème commun passe/chapitre.
 
 ## 7. Invariants (tests)
 - Un passe généré : 30 paliers, budget total dans ±5 % de la cible, plafonds respectés (Ambre, jetons, reliques), jalons présents.

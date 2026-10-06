@@ -7,7 +7,7 @@
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
 | Passe | mensuel | 30 paliers ; points par palier calculés (médian fini vers le jour 24, plus actif pas avant le 15, 25 à 200) ; récompenses sous budget de 140 h (jalons 5, 10, 15, 20, 25 ; relique rare au 20 ; plafonds 350 Ambre, 6 jetons, 4 dossiers, 10 capsules) ; catalogue de 36 saisons ; un seul passe par mois dès novembre 2026 ; points tracés par source |
-| Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque |
+| Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque ; récompenses d'épisode sous budget de 10 h × difficulté (0,7 à 1,4) ; faction du thème du passe |
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e |
@@ -45,3 +45,7 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   atteint `passiveMinWeekly` ; raids repoussés à 0 par défaut. Dernier défi visé au jour `targetMedianDay`.
 - Contrôle : `passPaceCheck` simule le médian et le plus actif ; le palier s'allonge si le plus actif finit avant le jour visé.
 - Admin → Règles → Passe généré (tous les chiffres ci-dessus).
+
+## 6.8.2 (lot 3 du passe génératif)
+- `chronicleGen.ts` : récompenses des 4 épisodes sous budget (même table de valeurs que le passe), objectifs pondérés, bornes de
+  difficulté et de quantités, Ambre et relique du chapitre terminé, faction de chaque thème du catalogue. Admin → Règles → Chroniques générées.

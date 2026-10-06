@@ -16,6 +16,8 @@ import { parisOffsetMs } from "@/game/events";
 import { formatInt } from "@/game/format";
 import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { passGenRules, percentile, type PassPace } from "@/game/passGen";
+import { budgetEpisodeRewards, chronicleGenRules, objectiveWeight } from "@/game/chronicleGen";
+import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import type { CapsuleType } from "@/game/synthesis";
@@ -221,24 +223,30 @@ function passPace(passes: ReturnType<typeof passState>[], monthId: string, obser
 export const BASE_COUNTS: Record<ChronicleObjective, number> = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
-/** Un épisode ouvert depuis moins longtemps ne dit encore rien de sa difficulté. */
+/** Un épisode ouvert depuis moins longtemps ne dit encore rien de sa difficulté (6.8.2 : réglable, chronicleGen.matureEpisodeDays). */
 export const MATURE_EPISODE_DAYS = 5;
 
 export function chapterDifficulty(d: WorldDigest): { value: number; reasons: string[] } {
-  const open = d.episodes.filter((e) => e.open && (e.daysOpen ?? MATURE_EPISODE_DAYS) >= MATURE_EPISODE_DAYS);
-  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'épisode ouvert depuis ${MATURE_EPISODE_DAYS} jours : difficulté normale (×1).`] };
+  const r = chronicleGenRules();
+  const mature = r.matureEpisodeDays;
+  const open = d.episodes.filter((e) => e.open && (e.daysOpen ?? mature) >= mature);
+  if (d.activePlayers === 0 || open.length === 0) return { value: 1, reasons: [`Pas encore d'épisode ouvert depuis ${mature} jours : difficulté normale (×1).`] };
   const c = open.reduce((a, e) => a + e.completion, 0) / open.length;
-  const value = round2(clamp(1 + (c - 0.5), 0.7, 1.4));
+  const value = round2(clamp(1 + (c - r.targetCompletion), r.difficultyMin, r.difficultyMax));
   const pctTxt = Math.round(c * 100);
   const why = value > 1.02 ? "les objectifs montent" : value < 0.98 ? "les objectifs baissent" : "difficulté inchangée";
-  return { value, reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont terminé les ${open.length} épisode(s) ouverts depuis au moins ${MATURE_EPISODE_DAYS} jours (cible 50 %) : ${why} (×${value}).`] };
+  return {
+    value,
+    reasons: [`${pctTxt} % des ${d.activePlayers} joueurs actifs ont terminé les ${open.length} épisode(s) ouverts depuis au moins ${mature} jours (cible ${Math.round(r.targetCompletion * 100)} %) : ${why} (×${value}).`],
+  };
 }
 
 /** Nombre demandé pour un objectif : activité médiane d'une semaine × difficulté. */
 export function objectiveCount(type: ChronicleObjective, d: WorldDigest, difficulty: number): number {
+  const r = chronicleGenRules();
   const base = BASE_COUNTS[type];
   const m = d.weeklyMedian[type] ?? 0;
-  const raw = m > 0 ? clamp(m * difficulty, base * 0.5, base * 3) : base * difficulty;
+  const raw = m > 0 ? clamp(m * difficulty, base * r.objectiveMinFactor, base * r.objectiveMaxFactor) : base * difficulty;
   return Math.max(1, Math.round(raw));
 }
 
@@ -451,8 +459,11 @@ function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string
 /* ---------- objectifs ---------- */
 
 function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[]): ChronicleObjective[] {
-  const pool = ACTIVITY_KEYS.filter((k) => k !== "raidRepelled" || (d.weeklyMedian.raidRepelled ?? 0) > 0);
-  const weight = (k: ChronicleObjective) => (1 + Math.min(3, d.weeklyMedian[k] ?? 0)) * (previous.includes(k) ? 0.4 : 1);
+  const playable = ACTIVITY_KEYS.filter((k) => k !== "raidRepelled" || (d.weeklyMedian.raidRepelled ?? 0) > 0);
+  // 6.8.2 : actions autorisées et pondérées (chronicleGen.objectiveWeights) ; il en faut 4 (sinon toutes celles jouables).
+  const allowed = playable.filter((k) => objectiveWeight(k) > 0);
+  const pool = allowed.length >= 4 ? allowed : playable;
+  const weight = (k: ChronicleObjective) => (1 + Math.min(3, d.weeklyMedian[k] ?? 0)) * (previous.includes(k) ? 0.4 : 1) * (objectiveWeight(k) || 1);
   const chosen: ChronicleObjective[] = [];
   // Une action peu pratiquée pour varier le jeu (la moins faite des actions courantes).
   const stretch = [...pool].filter((k) => k !== "warlordWin").sort((a, b) => (d.weeklyMedian[a] ?? 0) - (d.weeklyMedian[b] ?? 0))[Math.floor(rng() * 2)];
@@ -550,7 +561,12 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const d = o.digest;
   const recent = [...o.existing].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(-2);
   const recentArch = recent.map((m) => m.auto?.archetype ?? ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
-  const arch = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
+  const gen = chronicleGenRules();
+  // Tirage d'abord (la suite du tirage ne dépend pas du thème), puis 6.8.2 : la faction du thème du passe, sauf si elle revient deux mois de suite.
+  const drawn = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
+  const themeId = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId).theme : null;
+  const themed = gen.followPassTheme && themeId ? ARCHETYPES.find((a) => a.id === gen.themeArchetypes[themeId]) : undefined;
+  const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
   const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));
   const fresh = (xs: string[]) => pick(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);
   const title = fresh(arch.titles);
@@ -559,7 +575,11 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const { value: difficulty, reasons } = chapterDifficulty(d);
   const previousTypes = (recent.at(-1)?.episodes ?? []).map((e) => e.objective.type);
   const types = chooseObjectives(rng, d, previousTypes);
-  const rewards = episodeRewards(rng, difficulty);
+  // 6.8.2 : récompenses des épisodes tirées sous budget, avec leur propre graine (l'ancien tirage reste fait : le reste du chapitre ne change pas).
+  const template = episodeRewards(rng, difficulty);
+  const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom(`chapter-rewards:${o.monthId}:${o.variant ?? 0}`), difficulty, gen) : template;
+  if (themed) reasons.push(arch === themed ? `Faction du thème du passe (${themeId}) : ${arch.faction}.` : `Le thème du passe (${themeId}) appelait ${themed.faction}, déjà là le mois dernier : faction tirée au sort.`);
+  if (gen.enabled) reasons.push(`Récompenses des épisodes tirées sous budget : ${round2(gen.episodeBudgetHours * difficulty)} h de production équivalentes (×${difficulty}).`);
   const vars: Record<string, string | number> = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = new Set<string>();
   const episodes: ChronicleEpisode[] = types.map((type, i) => {
@@ -601,7 +621,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     },
     episodes,
     synopsis: fill(`${pick(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst(heroLine(rng, d, vars) ?? "")}`.trim(), vars),
-    completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= 1.2 ? "epic" : "rare" }, { kind: "amber", amount: 30 }] },
+    completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] },
     codex,
     auto,
   };
