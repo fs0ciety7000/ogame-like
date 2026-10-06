@@ -83,6 +83,7 @@ npm run build
 ```
 
 Puis le test d'intégration PocketBase (script local de la session, il vide la base) quand le serveur est touché.
+`.env.local` peut pointer vers la production : pour tester l'interface en local, lancer Vite avec `VITE_POCKETBASE_URL=http://127.0.0.1:8090`.
 Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hooks` a été oublié.
 
 ## Livrer

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ALLIANCE_RULES, allianceStandings, projectState } from "@/game/alliances";
+import { allianceMaxMembers, ALLIANCE_RULES, allianceStandings, projectState } from "@/game/alliances";
 import { currentSeasonId } from "@/game/seasons";
 import { warSeasonBonuses } from "@/game/wars";
 import { pb } from "@/lib/pocketbase";
@@ -84,7 +84,7 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
                 </td>
                 <td className="tabular-mono py-2 pr-2 text-right text-slate-200">{formatCompact(r.score)}</td>
                 <td className="tabular-mono py-2 pr-2 text-right text-slate-300">
-                  {r.a.members.length} / {ALLIANCE_RULES.maxMembers}
+                  {r.a.members.length} / {allianceMaxMembers(r.a)}
                 </td>
                 <td className="tabular-mono py-2 pr-2 text-right text-slate-300">{formatCompact(r.xp)}</td>
                 <td className="tabular-mono py-2 pr-2 text-right text-slate-300">

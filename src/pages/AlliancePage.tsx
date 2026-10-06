@@ -47,7 +47,7 @@ import {
   subscribeAlliances,
 } from "@/services/allianceService";
 import { splitMentions } from "@/game/mentions";
-import { allianceRole, ALLIANCE_RULES, canDiplomacy } from "@/game/alliances";
+import { allianceMaxMembers, allianceRole, canDiplomacy } from "@/game/alliances";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AllianceProfileTab } from "@/components/game/AllianceProfileTab";
 import { ApplyDialog } from "@/components/game/ApplyDialog";
@@ -149,19 +149,19 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
               <p className="hud-title truncate text-[15px] normal-case tracking-[0.03em] text-slate-100">{a.name}</p>
               <div className="mt-1 flex items-center gap-2">
                 <div className="flex gap-0.5">
-                  {Array.from({ length: ALLIANCE_RULES.maxMembers }, (_, i) => (
+                  {Array.from({ length: allianceMaxMembers(a) }, (_, i) => (
                     <i key={i} className={i < a.members.length ? "h-1.5 w-3 bg-cyan-glow" : "h-1.5 w-3 bg-white/[0.08]"} />
                   ))}
                 </div>
                 <span className="font-mono text-[10px] text-slate-500">
-                  {a.members.length}/{ALLIANCE_RULES.maxMembers}
+                  {a.members.length}/{allianceMaxMembers(a)}
                 </span>
               </div>
             </div>
             {(() => {
               // v5.10.5 : mode de recrutement (ouvert, sur candidature, fermé) et fiche publique.
               const profile = normalizeAllianceProfile(a.profile);
-              const full = a.members.length >= ALLIANCE_RULES.maxMembers;
+              const full = a.members.length >= allianceMaxMembers(a);
               const applied = profile.applications.some((x) => x.uid === uid);
               return (
                 <span className="flex flex-wrap items-center justify-end gap-1.5">
@@ -401,7 +401,7 @@ function AllianceRoom({
                 [{alliance.tag}] {alliance.name}
               </p>
               <p className="text-xs text-slate-500">
-                {alliance.members.length} / {ALLIANCE_RULES.maxMembers} membres
+                {alliance.members.length} / {allianceMaxMembers(alliance)} membres
               </p>
             </div>
             <ul className="space-y-1.5 text-sm text-slate-300">

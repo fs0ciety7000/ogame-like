@@ -218,7 +218,12 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         void _hours;
         return { ...d, ...rest, champion: { ...d.champion, ...(o.champion ?? {}) }, podium: { ...d.podium, ...(o.podium ?? {}) }, participation: { ...d.participation, ...(o.participation ?? {}) } };
       })(),
-      alliances: { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) },
+      alliances: (() => {
+        // 5.33 : une recherche d'alliance ajoutée par défaut reste disponible même si l'admin a modifié la liste.
+        const merged = { ...defaults.rules.alliances, ...(overrides.rules?.alliances ?? {}) };
+        const ids = new Set((merged.researches ?? []).map((r) => r.id));
+        return { ...merged, researches: [...(merged.researches ?? []), ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] };
+      })(),
       pirates: { ...defaults.rules.pirates, ...(overrides.rules?.pirates ?? {}) },
       market: { ...defaults.rules.market, ...(overrides.rules?.market ?? {}) },
       expeditions: {

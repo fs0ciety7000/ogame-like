@@ -1,6 +1,6 @@
 # Proposition : feuille de route 2026, 4e trimestre
 
-Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F livrés ensemble en 5.32.0 (`docs/changes/5.32.0-entrepot-chantiers.md`) ; option B du lot E (butin) à simuler.
+Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`), lot D en 5.31.0. Lots E et F livrés ensemble en 5.32.0 (`docs/changes/5.32.0-entrepot-chantiers.md`) ; option B du lot E (butin) à simuler. Lots G, H et I livrés ensemble en 5.33.0 (`docs/changes/5.33.0-*.md`, propositions `alliances-grandes.md`, `flottes-emplacements.md`, `routes-logistiques.md`) ; reste du lot I (flotte basée, route inverse) plus tard.
 Question 2 sans réponse : le lot C affiche contrats et missions du jour ensemble, sans fusionner leurs règles ; la fusion reste à décider.
 
 Sources :
@@ -26,10 +26,10 @@ Objectif de l'utilisateur :
 | **C** | 5.30.0 | Journal de bord | un seul écran « Ordres du jour » : contrats et missions du jour fusionnés, série, primes, expéditions, vote d'alliance, rendez-vous de la semaine, « Tout réclamer » ; badge unique dans la barre latérale | Q1 Q4 | M | **oui** |
 | **D** | 5.31.0 | Lisibilité | portefeuille unique (monnaies et jauges, d'où elles viennent, à quoi elles servent) ; « d'où vient ce chiffre » sur les valeurs clés ; nommage des saisons unifié | Q2 Q3 | M | oui (court) |
 | **E** | 5.32.0 | Risque et récompense | protection de l'entrepôt en heures de production (≈ 8 h) au lieu de 10 % de la capacité ; courbe d'entrepôt recalée ; plafond global de sauvetage 95 % → 80 % ; aperçu « ce que tu risques » sur la page Bâtiments | E1 E2 | M | **oui**, avec données de production |
-| **F** | 5.33.0 | Constructeurs | second constructeur de bâtiments (déblocage chiffré) ; recherche : 2 files de base, 3e et 4e à débloquer | E3 | M | **oui** |
-| **G** | 5.34.0 | Alliances plus grandes | 6 → 12 → 20 membres par recherche d'alliance ; coûts et boss d'alliance proportionnels à la taille ; garnisons et territoires recalés | E5 | L | **oui** |
-| **H** | 5.35.0 | Flottes | emplacements de flotte (base généreuse + technologie), emplacement d'expédition séparé ; presets et « relancer la dernière mission » | E4 | M | **oui** |
-| **I** | 5.36.0 | Colonies vivantes | routes logistiques automatiques (transport récurrent), file de défense coloniale améliorée ; flotte basée plus tard | E6 | L | **oui** |
+| **F** | 5.32.0 | Constructeurs | second constructeur de bâtiments (déblocage chiffré) ; recherche : 2 files de base, 3e et 4e à débloquer | E3 | M | **oui** |
+| **G** | 5.33.0 | Alliances plus grandes | 6 → 12 → 20 membres par recherche d'alliance ; coûts et boss d'alliance proportionnels à la taille ; garnisons et territoires recalés | E5 | L | **oui** |
+| **H** | 5.33.0 | Flottes | emplacements de flotte (base généreuse + technologie), emplacement d'expédition séparé ; presets et « relancer la dernière mission » | E4 | M | **oui** |
+| **I** | 5.33.0 (routes) | Colonies vivantes | routes logistiques automatiques (transport récurrent), file de défense coloniale améliorée ; flotte basée plus tard | E6 | L | **oui** |
 | **J** | 6.0 | Classes d'empire | choisir une identité (Industriel, Seigneur de guerre, Explorateur) avec un bonus et une unité propres, changeable contre de l'Ambre ; inspiré des classes d'OGame | — | XL | **oui** |
 
 Taille : S ≤ 1 jour, M 2 à 3 jours, L ≈ 1 semaine, XL plusieurs semaines.

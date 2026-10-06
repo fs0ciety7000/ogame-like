@@ -632,6 +632,14 @@ export function RulesPanel() {
             hint="Plafond du trajet aller d'une attaque entre joueurs (le retour dure autant). 0 = pas de plafond."
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, maxAttackMinutes: v ?? 0 } }))}
           />
+          <NumberField
+            label="Emplacements de flotte"
+            value={rules.fleets.slotsBase}
+            min={1}
+            step={1}
+            hint="Flottes en vol en même temps par joueur. Les sondes et les expéditions ne comptent pas (elles ont leur propre limite)."
+            onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, slotsBase: v ?? 10 } }))}
+          />
         </Section>
         <Section title="Espionnage">
           <NumberField

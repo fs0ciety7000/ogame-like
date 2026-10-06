@@ -164,7 +164,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <p className="text-xs text-slate-500 sm:col-span-2">Les factions elles-mêmes (déclencheur, tribut, raids, repaire, textes) se règlent dans l'onglet « Factions ».</p>
       </Section>
       <Section title="Alliances">
-        <NumberField label="Membres maximum par alliance" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
+        <NumberField label="Membres de base par alliance (+4 par niveau de Quartiers fédérés)" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
         <NumberField label="Versement : part max du stock (0,2 = 20 %)" value={rules.alliances.distributionMaxPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionMaxPct: v ?? 0 } }))} />
         <NumberField label="Versements par jour" value={rules.alliances.distributionsPerDay} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionsPerDay: v ?? 0 } }))} />
         <NumberField label="Recherche niv. 1 : coût commun" value={rules.alliances.researchCommonCost} min={0} step={1000000} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, researchCommonCost: v ?? 0 } }))} />

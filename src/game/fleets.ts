@@ -46,7 +46,23 @@ export const FLEET_RULES = {
   mapSize: 100,
   /** v3.7 : durée maximale du trajet d'une attaque, en minutes (0 = aucune). */
   maxAttackMinutes: 90,
+  /** 5.33 (proposals/flottes-emplacements.md) : flottes en vol en même temps (hors sondes et expéditions, qui ont leur limite). */
+  slotsBase: 10,
 };
+
+/** 5.33 : missions qui n'occupent pas d'emplacement de flotte. */
+export const SLOT_FREE_MISSIONS = ["spy", "expedition"];
+
+export function fleetSlots(_owner?: Pick<PlayerState, "buildings">): number {
+  return Math.max(1, Math.floor(FLEET_RULES.slotsBase));
+}
+
+/** Refus quand tous les emplacements sont pris, sinon null. `active` : flottes en vol qui occupent un emplacement. */
+export function fleetSlotBlocker(owner: Pick<PlayerState, "buildings">, mission: string, active: number | undefined): string | null {
+  if (active === undefined || SLOT_FREE_MISSIONS.includes(mission)) return null;
+  const slots = fleetSlots(owner);
+  return active >= slots ? `Tous tes emplacements de flotte sont pris (${slots} / ${slots}). Attends un retour ou rappelle une flotte. Les sondes et les expéditions ne comptent pas.` : null;
+}
 
 /** Mode fuite : durée d'une patrouille, en minutes. */
 export const PATROL_RULES = {
@@ -383,6 +399,8 @@ export interface LaunchRequest {
   expeditionHours?: number;
   expeditionsActive?: number;
   expeditionsToday?: number;
+  /** 5.33 : flottes en vol qui occupent un emplacement (lues par le serveur ; absent = pas de contrôle). */
+  fleetsActive?: number;
   formation?: string;
   /** v3.5 : colonie visée par une attaque ou un espionnage (sinon la planète mère). */
   targetColonyId?: string;
@@ -417,6 +435,8 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     if (!colony) throw new GameActionError("Cette colonie n'existe plus.");
     planet = colonyView(target!, colony);
   }
+  const slotBlocker = fleetSlotBlocker(owner, mission, req.fleetsActive);
+  if (slotBlocker) throw new GameActionError(slotBlocker);
   let out: LaunchOutput;
   if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
   else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);

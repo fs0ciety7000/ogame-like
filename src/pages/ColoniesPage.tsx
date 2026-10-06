@@ -39,6 +39,8 @@ import { homeLevels,
   COLONY_SPECS,
   colonySpecEffects,
   colonySpecReadyAt,
+  COLONY_ROUTE_RULES,
+  colonyRouteLoad,
   findColonySpec,
   type Colony,
   type ColonySpecId,
@@ -53,6 +55,7 @@ import {
   GameActionError,
   renameColony,
   sendTransport,
+  setColonyRoute,
   setColonySpec,
   startColonization,
   upgradeColonyBuilding,
@@ -300,6 +303,76 @@ function ColonySpecPicker({ colony, busy, onPick }: { colony: Colony; busy: bool
   );
 }
 
+/** 5.33 (proposals/routes-logistiques.md) : convoi automatique vers la planète mère. */
+const ROUTE_KEEPS = [0, 0.2, 0.5];
+
+function AmountsLine({ amounts }: { amounts: Amounts }) {
+  const list = (Object.entries(amounts) as [ResourceId, number][]).filter(([, n]) => n > 0);
+  if (!list.length) return <span className="text-slate-500">rien</span>;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
+      {list.map(([id, n]) => (
+        <span key={id} className="inline-flex items-center gap-1">
+          <ResourceIcon id={id} className="h-3.5 w-3.5" />
+          <span className="font-mono tabular-nums text-slate-200">{formatCompact(n)}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; player: PlayerState; busy: boolean; onSet: (everyHours: number, keepPct: number) => void }) {
+  const now = Date.now();
+  const route = colony.route ?? null;
+  const keep = route?.keepPct ?? COLONY_ROUTE_RULES.defaultKeepPct;
+  const preview = route ? colonyRouteLoad(colony, player).delivered : null;
+  const fee = Math.round(COLONY_ROUTE_RULES.feePct * 100);
+  const choice = (active: boolean) =>
+    cn("hud-cut-sm border px-2 py-1 font-mono text-[11px] tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-50", active ? "border-mint-glow/60 bg-mint-glow/10 text-mint-glow" : "border-white/10 bg-white/[0.02] text-slate-300 enabled:hover:border-cyan-glow/50");
+  return (
+    <div className="mt-3">
+      <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+        Route logistique
+        {route ? <HudChip size="sm" tone="mint">toutes les {route.everyHours} h</HudChip> : <HudChip size="sm" tone="neutral">arrêtée</HudChip>}
+        {route && <span className="normal-case tracking-normal">prochain convoi dans {formatClock(Math.max(0, Math.ceil((route.nextAtMs - now) / 1000)))}</span>}
+      </p>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <button type="button" className={choice(!route)} disabled={busy || !route} aria-pressed={!route} onClick={() => onSet(0, keep)}>
+          Arrêt
+        </button>
+        {COLONY_ROUTE_RULES.intervals.map((h) => (
+          <button key={h} type="button" className={choice(route?.everyHours === h)} disabled={busy || route?.everyHours === h} aria-pressed={route?.everyHours === h} onClick={() => onSet(h, keep)}>
+            {h} h
+          </button>
+        ))}
+        <span className="ml-1 text-[11px] text-slate-500">Réserve</span>
+        {ROUTE_KEEPS.map((k) => (
+          <button key={k} type="button" className={choice(Math.abs(keep - k) < 0.001)} disabled={busy || !route || Math.abs(keep - k) < 0.001} aria-pressed={Math.abs(keep - k) < 0.001} onClick={() => onSet(route?.everyHours ?? 0, k)}>
+            {Math.round(k * 100)} %
+          </button>
+        ))}
+      </div>
+      <p className="mt-1.5 text-[11px] leading-snug text-slate-400">
+        {route ? (
+          <>
+            Si le convoi partait maintenant : <AmountsLine amounts={preview ?? {}} />
+            {route.lastAtMs ? (
+              <>
+                {" "}· dernier : <AmountsLine amounts={route.lastDelivered ?? {}} />
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>Un convoi ramène le stock de la colonie vers ta planète mère, sans flotte. Il garde la réserve choisie.</>
+        )}
+      </p>
+      <p className="mt-0.5 text-[11px] text-slate-500">
+        <span className="font-mono tabular-nums">{fee} %</span> perdus en route. Jamais au-delà de ton entrepôt. Le transport par flotte reste gratuit.
+      </p>
+    </div>
+  );
+}
+
 /** Ce que rapporte le niveau suivant d'un entrepôt ou d'un hangar de défense. */
 function effectLine(colony: Colony, player: PlayerState, id: string, level: number): string | null {
   if (id === DEPOSIT_ID) {
@@ -528,6 +601,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             {shielded && <HudTag tone="accent">Bouclier actif</HudTag>}
           </div>
           <ColonySpecPicker colony={colony} busy={busy} onPick={(id) => void act(() => setColonySpec(colony.id, id), "Spécialisation enregistrée.")} />
+          <ColonyRoutePanel colony={colony} player={player} busy={busy} onSet={(every, keep) => void act(() => setColonyRoute(colony.id, every, keep), every ? "Route enregistrée." : "Route arrêtée.")} />
         </div>
         <div className="relative flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setTransport("deliver")}>

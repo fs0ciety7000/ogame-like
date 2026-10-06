@@ -3,6 +3,7 @@ import { coalesce } from "@/lib/sharedSubscriptions";
 import { defaultQueues } from "@/game/defaults";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
+import { rememberLastMission } from "@/store/lastMissionStore";
 import type { AwaySummary, GameAction } from "@/game/actions";
 import type { Fleet, FleetMission } from "@/game/fleets";
 import type { DebrisField } from "@/game/debris";
@@ -572,7 +573,12 @@ export async function sendFleet(
   mission: FleetMission = "attack",
   options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number } = {},
 ): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
+  const sent = await callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
+  // 5.33 : mémorisé pour « Relancer la dernière mission » (sans le départ différé).
+  const { delayMinutes: _delay, ...again } = options;
+  void _delay;
+  rememberLastMission({ targetUid, targetPseudo: sent?.targetPseudo ?? "", fleet, mission, options: again, at: Date.now() });
+  return sent;
 }
 
 export function recallFleet(fleetId: string): Promise<Fleet> {
@@ -705,6 +711,10 @@ export function renameColony(colonyId: string, name: string) {
 
 export function setColonySpec(colonyId: string, spec: string) {
   return act({ type: "colonySpec", colonyId, spec });
+}
+
+export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number) {
+  return act({ type: "colonyRoute", colonyId, everyHours, keepPct });
 }
 
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {

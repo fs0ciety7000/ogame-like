@@ -10,10 +10,11 @@
 | Gisement rare | biome, 0,1 à 3/s (15 niveaux) |
 | Spécialisations | dont Bastion (hangar de défense +50 %) ; changement tous les 7 jours |
 | Défense | défenses seulement, hangar propre (tech « Extension des hangars » appliquée depuis la 5.28) |
+| Route logistique (5.33) | convoi vers la planète mère toutes les 6, 12 ou 24 h ; réserve 0, 20 ou 50 % de l'entrepôt de la colonie (même part du gisement) ; 10 % perdus en route ; jamais au-delà de l'entrepôt de la planète mère ; un seul convoi au rattrapage |
 
 ## Code et admin
 `colonies.ts`, `ColoniesPage.tsx`.
 
 ## État (audit 2026-10-06)
-- Les colonies restent des « fermes » à défendre : pas de flotte basée, pas de chantier naval, transport manuel.
+- Routes logistiques depuis la 5.33 (audit E6, `proposals/routes-logistiques.md`). Restent : pas de flotte basée, pas de chantier naval, pas de route inverse.
 - Seuil de fondation : seuls les bâtiments construits comptent (`effectiveBuildingLevel`) depuis la 5.28.1 (C3).

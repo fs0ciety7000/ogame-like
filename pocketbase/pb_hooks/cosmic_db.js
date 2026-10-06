@@ -1705,6 +1705,8 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, contractRec.getString("clientUid"), "Le client n'existe plus.").player;
     }
     // 5.18 : un pacte de non-agression n'empêche plus l'attaque à titre personnel (seulement la guerre d'alliance).
+    // 5.33 : emplacements de flotte (sondes et expéditions exclues).
+    const fleetsActive = txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done" && mission != "spy" && mission != "expedition"', "", 200, 0, { u: attackerUid }).length;
     let expeditionsActive = 0;
     let expeditionsToday = 0;
     let leviathan = null;
@@ -1767,6 +1769,7 @@ function launchFleetRequest(e) {
         expeditionHours: Number(body.hours) || 0,
         expeditionsActive,
         expeditionsToday,
+        fleetsActive,
         formation: game.isFormation(body.formation) ? body.formation : "balanced",
         transport: mission === "transport" ? { colonyId: body.colonyId, direction: body.direction, cargo: body.cargo } : undefined,
         bountyId: mission === "bounty" ? String(body.bountyId || "") : undefined,

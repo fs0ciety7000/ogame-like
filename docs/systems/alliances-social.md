@@ -3,9 +3,9 @@
 ## Alliances
 | Élément | Valeur |
 |:--|:--|
-| Taille | **6 membres** au plus ; rangs personnalisés (6), candidatures |
+| Taille | **8 membres** de base, +4 par niveau de Quartiers fédérés (12, 16, 20 au plus, 5.33) ; rangs personnalisés (6), candidatures |
 | Trésor | versements ≤ 20 % du stock d'une ressource, 10 par jour |
-| Recherches | 4 (logistique, industrie, brouillage, bouclier), 5 niveaux, 50 M communes × 2^(n−1) |
+| Recherches | 5 : logistique, industrie, brouillage, bouclier (5 niveaux) et Quartiers fédérés (3 niveaux, +4 membres) ; 50 M communes × 2^(n−1), 12 h × n |
 | Projets | 3 méga-structures, 5 paliers, 500 M × 2^(n−1) |
 | Garnisons | 50 % de la puissance, 1 à 24 h, 3 par hôte |
 | Guerres | 3 membres min., 5 M + 5 M, préparation 12 h, 72 h |
@@ -23,5 +23,6 @@ messages privés (archives), réactions, sondages, gazette quotidienne, signalem
 `territoryWar.ts`, `seasonWars.ts`, `diplomacy.ts`, `globalChat.ts`, `messages.ts`, `gazette.ts`.
 
 ## État (audit 2026-10-06)
-- **6 membres** pour autant de systèmes collectifs (guerres, territoires sur 24 secteurs, boss d'alliance, sagas) : peu de joueurs par
-  alliance pour remplir tout ce contenu. Clash of Clans tient sur des clans de 50. Voir audit E5.
+- Taille : 8 membres de base et jusqu'à 20 avec Quartiers fédérés depuis la 5.33 (audit E5, `proposals/alliances-grandes.md`). Boss d'alliance
+  déjà proportionnel (PV = puissance des membres actifs, coût = heures de production de chaque membre). Territoires et garnisons à relever si
+  une alliance dépasse 12.

@@ -63,6 +63,10 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| 5.33.0 | [Routes logistiques des colonies](5.33.0-routes-logistiques.md) | fonctionnalité | [routes-logistiques](../proposals/routes-logistiques.md) |
+| 5.33.0 | [Emplacements de flotte et « Relancer »](5.33.0-emplacements-flotte.md) | fonctionnalité | [flottes-emplacements](../proposals/flottes-emplacements.md) |
+| 5.33.0 | [Alliances jusqu'à 20 membres](5.33.0-alliances-grandes.md) | fonctionnalité | [alliances-grandes](../proposals/alliances-grandes.md) |
+| 5.32.0 | [Entrepôt plus risqué, chantiers comptés](5.32.0-entrepot-chantiers.md) | ajustement + fonctionnalité | [entrepot-pillage](../proposals/entrepot-pillage.md), [constructeurs](../proposals/constructeurs.md) |
 | — | [Outillage : commandes autorisées](outillage-permissions.md) | docs | aucune |
 | 5.31.0 | [Portefeuille et chiffres expliqués](5.31.0-lisibilite.md) | fonctionnalité | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md), lot D |
 | 5.30.0 | [Ordres du jour](5.30.0-ordres-du-jour.md) | fonctionnalité | [journal-de-bord](../proposals/journal-de-bord.md) |
