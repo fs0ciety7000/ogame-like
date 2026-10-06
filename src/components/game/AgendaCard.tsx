@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { useState } from "react";
 import { HudChip, EmptyState } from "@/components/ui/hud";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useChatRooms } from "@/services/globalChatService";
+import { ROOM_EVENT_RULES } from "@/game/globalChat";
 import { AGENDA_COLORS, AGENDA_LABELS, upcomingAgenda, type AgendaItem, type AgendaKind } from "@/game/agenda";
 import { contestPhase } from "@/game/contests";
 import { useContests } from "@/services/contestService";
@@ -20,7 +22,7 @@ import { cn, alpha } from "@/lib/utils";
 
 const DAYS = 30;
 const DAY = 24 * 3600_000;
-const ROWS: AgendaKind[] = ["leviathan", "seasonboss", "event", "contest", "chronicle", "season"];
+const ROWS: AgendaKind[] = ["leviathan", "seasonboss", "event", "contest", "room", "chronicle", "season"];
 
 const when = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -33,6 +35,12 @@ export function useAgenda(now: number, days = DAYS): AgendaItem[] {
   const extra: AgendaItem[] = (admin ? (contests?.list ?? []) : [])
     .filter((c) => ["scheduled", "running"].includes(contestPhase(c, now)))
     .map((c) => ({ id: c.id, kind: "contest", title: `Concours : ${c.title}`, startMs: c.startMs, endMs: c.endMs, link: "/game/concours", emoji: "🎁" }));
+  // 5.27 : événements programmés par les créateurs de salons.
+  const { rooms } = useChatRooms();
+  for (const r of rooms) {
+    if (r.eventAtMs && r.eventAtMs + ROOM_EVENT_RULES.durationHours * 3600_000 > now && r.eventAtMs < now + days * DAY)
+      extra.push({ id: `room-${r.id}`, kind: "room", title: `#${r.name} : ${r.eventLabel}`, startMs: r.eventAtMs, endMs: r.eventAtMs + ROOM_EVENT_RULES.durationHours * 3600_000, link: `/game/messages?onglet=global&salon=${r.id}`, emoji: "💬" });
+  }
   // Un boss déjà abattu (ou retiré) dans sa fenêtre en cours n'est plus « en cours ».
   const over = (st: typeof leviathan) => (st && !isActive(st, now) ? st.startMs : null);
   const doneLev = over(leviathan);

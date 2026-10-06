@@ -526,7 +526,7 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
     }
   };
   return (
-    <Card className={cn("flex flex-col gap-2 p-4", (item.group === "unit" || item.group === "feature") && "border-gold-glow/40")}>
+    <Card className={cn("flex min-w-0 flex-col gap-2 p-4", (item.group === "unit" || item.group === "feature") && "border-gold-glow/40")}>
       <div className="flex items-start gap-3">
         {item.id === "blueprint" ? (
           <img src={assetUrl(KESH_HUNTER_UNIT.image)} alt="" className="h-14 w-14 object-contain" />
@@ -568,9 +568,9 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
       )}
       {item.id === "nameColor" && owns(st, "nameColor") && <NameTonePicker current={st.nameTone} />}
       {status && <p className="text-[11px] text-mint-glow">{status}</p>}
-      <Button size="sm" variant={blocker ? "outline" : "warn"} className="mt-auto" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
+      <Button size="sm" variant={blocker ? "outline" : "warn"} className="mt-auto min-w-0 max-w-full" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
         <Amber className="mr-1" /> {item.price}
-        {blocker && blocker !== "Pas assez d'Ambre." ? <span className="ml-2 truncate text-[11px] font-normal text-slate-500">{blocker}</span> : null}
+        {blocker && blocker !== "Pas assez d'Ambre." ? <span className="ml-2 min-w-0 truncate text-[11px] font-normal text-slate-500">{blocker}</span> : null}
       </Button>
     </Card>
   );
@@ -713,7 +713,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
           <h3 className="hud-eyebrow flex items-center gap-2 text-[11px] text-gold-glow">
             <ShoppingBag className="h-3.5 w-3.5" /> {g.label}
           </h3>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {SHOP_ITEMS.filter((i) => i.group === g.id).map((item) => (
               <ShopItemCard key={item.id} item={item} player={player} st={st} />
             ))}

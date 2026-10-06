@@ -8861,6 +8861,21 @@ function globalSend(e) {
     rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked, room: roomId, reactions: {}, nameTone });
     txApp.save(rec);
     bumpPlayerStat(txApp, uid, "globalMessages", 1);
+    // 5.27 : mentions @pseudo : notification aux joueurs cités (sauf soi, réglage « mentions » respecté).
+    if (!filtered.masked) {
+      const roomName = roomId ? (findOrNull(txApp, "chat_rooms", roomId) || { getString: () => "" }).getString("name") : "";
+      const link = "/game/messages?onglet=global" + (roomId ? "&salon=" + roomId : "");
+      game.parseMentions(filtered.text).forEach((pseudo) => {
+        let target = null;
+        try {
+          target = txApp.findFirstRecordByFilter("players", "pseudo = {:p}", { p: pseudo });
+        } catch (_) {
+          target = null;
+        }
+        if (!target || target.id === uid || mutedNotif(txApp, target.id, "mentions")) return;
+        notify(txApp, target.id, [{ kind: "message", title: `${player.getString("pseudo")} te mentionne`, message: `${roomName ? "#" + roomName : "Canal global"} : ${filtered.text.slice(0, 140)}`, createdAtMs: now, read: false, link }]);
+      });
+    }
     out = { id: rec.id, text: filtered.text, masked: filtered.masked };
   });
   // Ménage : seuls les derniers messages sont gardés.
@@ -8943,6 +8958,39 @@ function globalRoom(e) {
       const me = findOrNull(txApp, "players", uid);
       if (!me || !game.ownsShopItem({ bounties: toPlain(me).bounties }, "roomBanner")) throw new ForbiddenError("Bannière de salon : à débloquer au Comptoir de la Ruche.");
       rec.set("icon", game.roomIcon(req.icon));
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (req.action === "pin" || req.action === "event") {
+      // 5.27 : message épinglé et événement programmé, par le créateur du salon (ou l'équipe pour l'épingle).
+      const rec = findOrNull(txApp, "chat_rooms", String(req.id || ""));
+      if (!rec || rec.getBool("closed")) throw new NotFoundError("Salon introuvable.");
+      const owner = rec.getString("ownerUid") === uid;
+      if (!owner && !(req.action === "pin" && isGameAdmin(e))) throw new ForbiddenError("Réservé au créateur du salon.");
+      if (req.action === "pin") {
+        const msgId = String(req.messageId || "");
+        if (!msgId) {
+          rec.set("pinnedId", "");
+          rec.set("pinnedText", "");
+          rec.set("pinnedPseudo", "");
+        } else {
+          const msg = findOrNull(txApp, "global_messages", msgId);
+          if (!msg || msg.getString("room") !== rec.id || msg.getBool("hidden") || msg.getBool("masked")) throw new BadRequestError("Ce message ne peut pas être épinglé.");
+          rec.set("pinnedId", msg.id);
+          rec.set("pinnedText", msg.getString("text").slice(0, 400));
+          rec.set("pinnedPseudo", msg.getString("pseudo"));
+        }
+      } else {
+        let ev;
+        try {
+          ev = game.validateRoomEvent({ label: req.label, atMs: req.atMs }, now, readChatFilter(txApp, game));
+        } catch (err) {
+          throw new BadRequestError(String((err && err.message) || err));
+        }
+        rec.set("eventLabel", ev.label);
+        rec.set("eventAtMs", ev.atMs);
+      }
       txApp.save(rec);
       out = toPlain(rec);
       return;

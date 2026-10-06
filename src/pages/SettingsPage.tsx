@@ -413,6 +413,7 @@ const ALLIANCE_NOTIFS = [
   { key: "pactMessages", label: "Canal diplomatique", hint: "Notification quand une alliance liée par un pacte écrit." },
   { key: "allianceEvents", label: "Annonces de l'alliance", hint: "Pactes proposés ou rompus, guerres, déclarations." },
   { key: "warlords", label: "Messages des seigneurs de guerre", hint: "Provocations et répliques des empires tenus par le jeu (une par jour au plus)." },
+  { key: "mentions", label: "Mentions dans le canal", hint: "Notification quand quelqu'un écrit @ton pseudo dans le canal global ou un salon." },
 ] as const;
 
 function AllianceNotifsCard() {

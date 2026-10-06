@@ -285,6 +285,8 @@ describe("5.26.3 Comptoir : consommables et prestige", () => {
     const p = rich();
     const q = defaultQueues();
     expect(() => buyShopItem(p, q, "painkiller", NOW)).toThrow(/Atelier/);
+    p.workshop = { updatedAtMs: NOW, jobs: [{ id: "j0", unitId: "chasseur", count: 1, hpTotal: 10, hpLeft: 10, source: "raid", addedAtMs: NOW }], hull: {} } as PlayerState["workshop"];
+    expect(() => buyShopItem(p, q, "painkiller", NOW)).toThrow(/Construis d'abord/);
     p.buildings = { ...p.buildings, atelier_reparation: { level: 5, unlocked: true } };
     p.workshop = { updatedAtMs: NOW, jobs: [{ id: "j1", unitId: "chasseur", count: 100, hpTotal: 1e9, hpLeft: 1e9, source: "raid", addedAtMs: NOW }], hull: {} } as PlayerState["workshop"];
     buyShopItem(p, q, "painkiller", NOW);

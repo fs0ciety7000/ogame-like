@@ -1,6 +1,6 @@
 import { allianceSiegeFactor } from "@/game/alliances";
 import { playerCombatEffects } from "@/game/effectTargets";
-import { advanceWorkshop, applyHull, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { advanceWorkshop, applyHull, atelierLevel, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { MODULE_RARITIES, modulesState, type ModuleRarity } from "@/game/modules";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { addDossiers, COMMANDER_XP, grantCommanderXp, PHEROMONE_PCT } from "@/game/commanders";
@@ -566,12 +566,14 @@ export function plannerUnlocked(player: Pick<PlayerState, "bounties"> | null | u
 }
 
 /** Pourquoi l'objet ne peut pas être acheté (null s'il peut l'être). */
-export function shopBlocker(player: Pick<PlayerState, "bounties"> & Partial<Pick<PlayerState, "units" | "workshop" | "modules">>, item: ShopItem, now: number, queues?: Pick<QueuesState, "buildingUpgrades">): string | null {
+export function shopBlocker(player: Pick<PlayerState, "bounties"> & Partial<Pick<PlayerState, "units" | "workshop" | "modules" | "buildings">>, item: ShopItem, now: number, queues?: Pick<QueuesState, "buildingUpgrades">): string | null {
   const st = bountyState(player);
   if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "Déjà acquis.";
   const charge = CHARGES[item.id];
   if (charge && st[charge] >= BOUNTY_SHOP_RULES.maxCharges) return `${BOUNTY_SHOP_RULES.maxCharges} en réserve au plus.`;
   if (item.id === "painkiller") {
+    // 5.27 : sans Atelier construit, l'analgésique n'aurait presque rien à accélérer.
+    if (atelierLevel({ buildings: player.buildings ?? {} } as Pick<PlayerState, "buildings">) <= 0) return "Construis d'abord l'Atelier de réparation.";
     const w = workshopState(player as Pick<PlayerState, "workshop">);
     if (w.jobs.length === 0 && Object.keys(w.hull).length === 0) return "Rien en réparation à l'Atelier.";
   }
