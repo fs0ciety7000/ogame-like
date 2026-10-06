@@ -1,4 +1,5 @@
 import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
+import { coalesce } from "@/lib/sharedSubscriptions";
 import { defaultQueues } from "@/game/defaults";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
@@ -135,6 +136,18 @@ function loadInitial(
     });
 }
 
+/** Vrai si l'enregistrement reçu est identique au précédent (hors champs techniques). */
+function sameRecordGuard() {
+  let last = "";
+  return (rec: PbRecord) => {
+    const { updated: _u, created: _c, collectionId: _ci, collectionName: _cn, ...rest } = rec as PbRecord & Record<string, unknown>;
+    const sig = JSON.stringify(rest);
+    if (sig === last) return true;
+    last = sig;
+    return false;
+  };
+}
+
 /** onServerData(true) dès qu'une donnée fraîche arrive du serveur — sert à
  *  l'indicateur de connexion de l'en-tête (voir connectionStore). */
 export function subscribePlayer(
@@ -158,9 +171,11 @@ export function subscribePlayer(
     },
   );
 
+  // 5.26 : une écriture qui ne change rien au joueur (horodatage seul) ne redessine pas les écrans.
+  const same = sameRecordGuard();
   const unsubscribe = subscribeRecords<PbRecord>("players", uid, (e) => {
     if (e.action === "delete") cb(null);
-    else cb(playerFromRecord(e.record));
+    else if (!same(e.record)) cb(playerFromRecord(e.record));
     onServerData?.(true);
   });
 
@@ -180,8 +195,10 @@ export function subscribeQueues(uid: string, cb: (queues: QueuesState | null) =>
     (serverAnswered) => serverAnswered && cb(null),
   );
 
+  const same = sameRecordGuard();
   const unsubscribe = subscribeRecords<PbRecord>("queues", uid, (e) => {
-    cb(e.action === "delete" ? null : queuesFromRecord(e.record));
+    if (e.action === "delete") cb(null);
+    else if (!same(e.record)) cb(queuesFromRecord(e.record));
   });
 
   return () => {
@@ -205,7 +222,8 @@ function subscribeList<T>(
       .then((items) => active && cb(items))
       .catch((err) => console.error(`Lecture ${collection} impossible :`, err));
   };
-  const trigger = throttleMs > 0 ? throttle(refresh, throttleMs) : refresh;
+  // 5.26 : une rafale d'évènements (plusieurs écritures d'une même action) ne relit la liste qu'une fois.
+  const trigger = throttleMs > 0 ? throttle(refresh, throttleMs) : coalesce(refresh, 120);
   refresh();
   const unsubscribe = subscribeRecords(collection, "*", trigger, filter || undefined);
   return () => {

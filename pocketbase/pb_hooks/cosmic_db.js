@@ -2304,7 +2304,7 @@ function writeMaintenance(txApp, game, previous, next, now, actor) {
     action: "maintenance",
     targetCollection: "game_config",
     recordId: rec.id,
-    recordLabel: next.enabled ? "maintenance activée" : actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée",
+    recordLabel: next.enabled ? (previous.enabled ? "maintenance modifiée" : "maintenance activée") : previous.enabled ? (actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée") : next.scheduled ? "maintenance programmée" : "programmation annulée",
     changes: { avant: previous, après: next, ultimatumsProlongés: extended },
     createdAtMs: now,
   });
@@ -2325,19 +2325,32 @@ function adminMaintenance(e) {
   let response = null;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
-    const next = game.nextMaintenance(previous, req, now);
+    // 5.26 : { schedule: {...} | null } programme ou annule une maintenance future.
+    let next;
+    if (Object.prototype.hasOwnProperty.call(req, "schedule")) {
+      try {
+        next = game.scheduleMaintenance(previous, req.schedule, now);
+      } catch (err) {
+        throw new BadRequestError(String((err && err.message) || err));
+      }
+    } else next = game.nextMaintenance(previous, req, now);
     const extended = writeMaintenance(txApp, game, previous, next, now, actor);
     response = Object.assign({ extended }, next);
   });
   return e.json(200, response);
 }
 
-/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active). */
+/** Tâche planifiée : rouvre le jeu à l'heure prévue (si l'option est active)
+ *  et, 5.26, démarre la maintenance programmée à son heure. */
 function autoEndMaintenance(now) {
   const game = loadGame();
   let ended = false;
   $app.runInTransaction((txApp) => {
     const previous = readMaintenance(txApp, game);
+    if (game.maintenanceShouldAutoStart(previous, now)) {
+      writeMaintenance(txApp, game, previous, game.startScheduledMaintenance(previous, now), now, { id: "system", name: "Système (maintenance programmée)" });
+      return;
+    }
     if (!game.maintenanceShouldAutoEnd(previous, now)) return;
     const next = game.nextMaintenance(previous, { enabled: false }, now);
     writeMaintenance(txApp, game, previous, next, now, { id: "system", name: "Système" });
@@ -8350,4 +8363,134 @@ function adminWhatIfData(e) {
   return e.json(200, { empires: players.concat(lords), at: now });
 }
 
-module.exports = { adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.26 : métriques d'exploitation et page de statut ---------- */
+
+const CRON_STORE_KEY = "cosmic_cron_metrics";
+
+function readCronMetrics(game) {
+  try {
+    const raw = $app.store().get(CRON_STORE_KEY);
+    return game.normalizeCronMetrics(raw ? JSON.parse(raw) : null);
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Exécute une tâche planifiée en mesurant sa durée. Les mesures vivent en
+ * mémoire du serveur (pas d'écriture en base chaque minute) : elles repartent
+ * de zéro au redémarrage. Une erreur est consignée puis relancée.
+ */
+function timedCron(name, spec, fn) {
+  const started = Date.now();
+  let error = null;
+  try {
+    fn();
+  } catch (err) {
+    error = String((err && err.message) || err);
+    console.log(`[cosmic] tâche ${name} : ${error}`);
+  }
+  try {
+    const game = loadGame();
+    const next = game.recordCronRun(readCronMetrics(game), name, spec, started, Date.now() - started, error);
+    $app.store().set(CRON_STORE_KEY, JSON.stringify(next));
+  } catch (_) {
+    /* les métriques ne doivent jamais faire échouer une tâche */
+  }
+}
+
+function readServerMetric(txApp, key) {
+  try {
+    return toPlain(txApp.findFirstRecordByData("server_metrics", "key", key)).data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeServerMetric(txApp, key, data) {
+  let rec = null;
+  try {
+    rec = txApp.findFirstRecordByData("server_metrics", "key", key);
+  } catch (_) {
+    rec = new Record(txApp.findCollectionByNameOrId("server_metrics"));
+    rec.set("key", key);
+  }
+  rec.set("data", data);
+  txApp.save(rec);
+}
+
+/** POST /api/cosmic/vitals { route, device, values } — mesures de performance d'un navigateur. */
+function vitalsRequest(e) {
+  const game = loadGame();
+  const sample = game.sanitizeVitals(body(e));
+  if (!sample) throw new BadRequestError("Mesures invalides.");
+  const now = Date.now();
+  $app.runInTransaction((txApp) => {
+    writeServerMetric(txApp, game.METRICS_KEYS.vitals, game.addVitals(readServerMetric(txApp, game.METRICS_KEYS.vitals) || {}, sample, now));
+  });
+  return e.json(200, { ok: true });
+}
+
+function countStuckFleets(now) {
+  try {
+    return $app.countRecords(
+      "fleets",
+      $dbx.exp(
+        '(status = "outbound" AND arriveAtMs <= {:t}) OR (status = "returning" AND returnAtMs > 0 AND returnAtMs <= {:t}) OR ((status = "stationed" OR status = "decision") AND stationedUntilMs > 0 AND stationedUntilMs <= {:t})',
+        { t: now - STUCK_FLEET_MS },
+      ),
+    );
+  } catch (_) {
+    return -1;
+  }
+}
+
+/** GET /api/cosmic/admin/metrics — tâches planifiées, Web Vitals, flottes bloquées, e-mails programmés. */
+function adminMetrics(e) {
+  if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
+  const game = loadGame();
+  const now = Date.now();
+  const cron = readCronMetrics(game);
+  const crons = Object.keys(cron)
+    .sort()
+    .map((name) => Object.assign({ name, status: game.cronStatus(cron[name], now) }, cron[name]));
+  let mailScheduled = 0;
+  try {
+    const rec = configRecord($app, game.MAIL_SCHEDULE_KEY);
+    mailScheduled = game.scheduleState(rec ? toPlain(rec).data : null).list.length;
+  } catch (_) {
+    mailScheduled = 0;
+  }
+  return e.json(200, {
+    now,
+    crons,
+    cronSummary: game.cronSummary(cron, now),
+    vitals: game.vitalsReport(readServerMetric($app, game.METRICS_KEYS.vitals) || {}, now, 7),
+    stuckFleets: countStuckFleets(now),
+    mailScheduled,
+    logicVersion: game.LOGIC_VERSION,
+  });
+}
+
+/** GET /api/cosmic/status — page de statut publique (aucune donnée sensible). */
+function publicStatus(e) {
+  const game = loadGame();
+  const now = Date.now();
+  const m = readMaintenance($app, game);
+  const summary = game.cronSummary(readCronMetrics(game), now);
+  const stuck = countStuckFleets(now);
+  const upcoming = game.upcomingMaintenance(m, now);
+  return e.json(200, {
+    now,
+    logicVersion: game.LOGIC_VERSION,
+    maintenance: { enabled: m.enabled, message: m.message, version: m.version, startedAtMs: m.startedAtMs, endsAtMs: m.endsAtMs },
+    scheduled: m.scheduled ? { startAtMs: m.scheduled.startAtMs, endsAtMs: m.scheduled.endsAtMs, message: m.scheduled.message, version: m.scheduled.version, announced: !!upcoming } : null,
+    services: {
+      api: "ok",
+      tasks: summary.total === 0 ? "unknown" : summary.late || summary.failing ? "degraded" : "ok",
+      fleets: stuck < 0 ? "unknown" : stuck > 0 ? "degraded" : "ok",
+    },
+  });
+}
+
+module.exports = { timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

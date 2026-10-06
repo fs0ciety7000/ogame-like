@@ -2873,5 +2873,33 @@
     "indexes": [
       "CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"
     ]
+  },
+  {
+    "id": "pbc_ce_server_metrics",
+    "name": "server_metrics",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "key",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "data",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000000
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"
+    ]
   }
 ]

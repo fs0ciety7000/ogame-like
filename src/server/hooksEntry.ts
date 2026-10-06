@@ -41,7 +41,7 @@ export { describeGain, EXPEDITION_RULES, finishExpedition, resolveExpeditionChoi
 export { checkLeviathanLaunch, closeLeviathan, grantLeviathanReward, LEVIATHAN_KEY, LEVIATHAN_RULES, leviathanRanking, leviathanSchedule, leviathanWindow, inferKilledBy, rescheduleBoss, endingReminderDue, normalizeLeviathan, recordLeviathanTimeline, removeLeviathanTitle, resizeLeviathan, reactToBossFeed, resolveLeviathanAssault, seasonBossFlightMinutes, spawnLeviathan, worldBossForStart, worldBossName, worldBossOf, worldBossTitle } from "@/game/leviathan";
 export { completeFleetReturn } from "@/game/fleets";
 export { formatInt } from "@/game/format";
-export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, nextMaintenance, normalizeMaintenance } from "@/game/maintenance";
+export { extendUltimatums, MAINTENANCE_KEY, maintenanceShouldAutoEnd, maintenanceShouldAutoStart, nextMaintenance, normalizeMaintenance, scheduleMaintenance, startScheduledMaintenance } from "@/game/maintenance";
 
 import { flushState } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
@@ -199,6 +199,8 @@ export { allianceWeekId } from "@/game/allianceBoss";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
 export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
+export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
+export { upcomingMaintenance } from "@/game/maintenance";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";

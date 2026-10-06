@@ -1,4 +1,5 @@
 import PocketBase, { type RecordSubscription } from "pocketbase";
+import { createSharedSubscriber } from "@/lib/sharedSubscriptions";
 
 /** URL du serveur PocketBase (voir .env.example). */
 const pbUrl = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
@@ -15,27 +16,23 @@ pb.autoCancellation(false);
  *  synchrone, comme l'API React/Zustand l'attend. Chaque appel a son propre
  *  désabonnement : contrairement à `collection.unsubscribe(topic)`, il ne
  *  coupe pas les autres écrans abonnés au même topic. */
+const shared = createSharedSubscriber<RecordSubscription<{ id: string }>>((key, err) => console.error(`Abonnement ${key} impossible :`, err));
+
+/** 5.26 : flux temps réel ouverts et écrans abonnés (diagnostic, Web Vitals). */
+export const realtimeStats = shared.stats;
+
 export function subscribeRecords<T = Record<string, unknown>>(
   collection: string,
   topic: string,
   handler: (e: RecordSubscription<T & { id: string }>) => void,
   filter?: string,
 ): () => void {
-  let cancelled = false;
-  let unsubscribe: (() => Promise<void>) | null = null;
-
-  pb.collection(collection)
-    .subscribe<T & { id: string }>(topic, handler, filter ? { filter } : undefined)
-    .then((fn) => {
-      if (cancelled) void fn();
-      else unsubscribe = fn;
-    })
-    .catch((err) => console.error(`Abonnement ${collection}/${topic} impossible :`, err));
-
-  return () => {
-    cancelled = true;
-    void unsubscribe?.();
-  };
+  // 5.26 : un seul abonnement serveur par (collection, sujet, filtre), partagé entre les écrans.
+  return shared.subscribe(
+    `${collection}/${topic}${filter ? `?${filter}` : ""}`,
+    (emit) => pb.collection(collection).subscribe<{ id: string }>(topic, emit, filter ? { filter } : undefined),
+    handler as (e: RecordSubscription<{ id: string }>) => void,
+  );
 }
 
 /** Limite une fonction à un appel par intervalle (le dernier appel en

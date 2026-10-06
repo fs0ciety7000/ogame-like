@@ -37,6 +37,7 @@ const AscensionPage = lazyPage(() => import("@/pages/AscensionPage"), "Ascension
 const EmpireStatsPage = lazyPage(() => import("@/pages/EmpireStatsPage"), "EmpireStatsPage");
 const FormulasPage = lazyPage(() => import("@/pages/FormulasPage"), "FormulasPage");
 const PublicFormulasPage = lazyPage(() => import("@/pages/PublicFormulasPage"), "PublicFormulasPage");
+const StatusPage = lazyPage(() => import("@/pages/StatusPage"), "StatusPage");
 const CodexPage = lazyPage(() => import("@/pages/CodexPage"), "CodexPage");
 const ChroniclesPage = lazyPage(() => import("@/pages/ChroniclesPage"), "ChroniclesPage");
 const AnnouncementsPage = lazyPage(() => import("@/pages/AnnouncementsPage"), "AnnouncementsPage");
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/bible" element={<BibleRedirect />} />
             <Route path="/formules" element={<PublicFormulasPage />} />
+            <Route path="/statut" element={<StatusPage />} />
             {/* v5.9 : page statique publique (vérification OAuth Google). */}
             <Route path="/confidentialite" element={<StaticPageRedirect to="/confidentialite.html" />} />
 

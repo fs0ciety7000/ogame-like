@@ -1,3 +1,4 @@
+import { UpcomingMaintenanceNotice } from "@/components/layout/MaintenanceBanner";
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -287,7 +288,12 @@ export function LoginPage() {
           <a href="/confidentialite.html" className="transition hover:text-cyan-glow">
             Confidentialité
           </a>
+          <span aria-hidden className="text-slate-700">·</span>
+          <a href="/statut" className="transition hover:text-cyan-glow">
+            Statut
+          </a>
         </div>
+        <UpcomingMaintenanceNotice className="mt-4 border" />
         <TrailerCard className="mt-6 lg:hidden" />
         <BlogLatest className="mt-6 lg:hidden" />
         </motion.div>
