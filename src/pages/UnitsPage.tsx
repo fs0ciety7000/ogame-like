@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useMemo, useState } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
 import { toast } from "sonner";
@@ -50,6 +51,7 @@ export function UnitsPage() {
   // 5.18 : onglets Attaque / Défense et filtre par classe (calculée d'après les stats).
   const [tab, setTab] = useState<"attack" | "defense">("attack");
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
+  const [editingCards, setEditingCards] = useState(false);
   const classes = useMemo(() => unitClasses(UNITS), []);
   const repairDock = player ? workshopUnits(player) : {};
 
@@ -179,11 +181,13 @@ export function UnitsPage() {
           <span className="text-[11px] text-slate-500">
             Classe d'après l'attaque et la résistance. Au combat, Fort bat Moyen, Moyen bat Faible, Faible bat Fort (<span className="font-mono">±{Math.round(COMBAT_RULES.classEdge * 100)} %</span> de dégâts) : panache ta flotte.
           </span>
+          <div className="ml-auto">
+            <SortableGridToggle page="unites" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5">
-        {UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter)).map((unit, index) => {
+      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);
@@ -464,8 +468,7 @@ export function UnitsPage() {
               </Card>
             </motion.div>
           );
-        })}
-      </div>
+        }} />
     </div>
   );
 }

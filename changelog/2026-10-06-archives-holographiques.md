@@ -2,7 +2,7 @@
 version: 5.24.0
 iteration: 115
 date: 2026-10-06
-title: Archives holographiques, Ambre dans le HUD et thème Constellation éclairci
+title: Archives holographiques, cartes réorganisables, Ambre dans le HUD et thème Constellation éclairci
 ---
 Un lot visuel : un cylindre holographique en 3D pour parcourir le Codex, exposer ta flotte et faire tourner les récompenses.
 
@@ -14,6 +14,7 @@ Un lot visuel : un cylindre holographique en 3D pour parcourir le Codex, exposer
 - Sans WebGL ou avec les animations réduites, l'affichage classique reste en place.
 
 ## Interface
+- **Cartes réorganisables** : sur Bâtiments, Unités, Missions, État-major (officiers) et les bâtiments des colonies, le bouton **Réorganiser** permet de déplacer les cartes au glisser-déposer (souris, appui long au doigt, clavier) ou avec les flèches. L'ordre est retenu sur l'appareil, page par page ; **Ordre par défaut** le rétablit.
 - **Ambre dans le bandeau du haut** : ton solde d'Ambre s'affiche en permanence, avec son icône et un liseré doré qui la distingue des ressources. Un clic mène aux Primes et au Comptoir.
 - **Accueil** : la barre des chantiers ne suit plus le défilement.
 

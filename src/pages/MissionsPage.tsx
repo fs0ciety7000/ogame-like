@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ export function MissionsPage() {
   const queues = usePlayerStore((s) => s.queues);
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
+  const [editingCards, setEditingCards] = useState(false);
 
   if (!player || !queues) return null;
 
@@ -54,9 +56,11 @@ export function MissionsPage() {
       <ContractsCard />
 
       <ExpeditionCard />
+      <div className="flex justify-end">
+        <SortableGridToggle page="missions" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {Object.values(MISSIONS).map((mission) => {
+      <SortableGrid page="missions" editing={editingCards} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" items={Object.values(MISSIONS)} getId={(mission) => mission.key} getLabel={(mission) => mission.name} render={(mission, index) => {
           const active = queues.activeMissions.find((m) => m.key === mission.key);
           const hasReq = hasPrerequisites(mission, player.units);
           const prereqEntries = Object.entries(mission.prereq);
@@ -125,8 +129,7 @@ export function MissionsPage() {
               </div>
             </Card>
           );
-        })}
-      </div>
+        }} />
     </div>
   );
 }

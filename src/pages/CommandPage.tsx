@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
@@ -301,6 +302,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
 function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
   const st = commandersState(player);
   const slots = commanderSlots(player);
+  const [editingCards, setEditingCards] = useState(false);
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -308,11 +310,18 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
         <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length + SEASON_COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
         <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {COMMANDERS.filter((d) => !d.rare).map((def) => (
-          <CommanderCard key={def.id} def={def} player={player} now={now} />
-        ))}
+      <div className="flex justify-end">
+        <SortableGridToggle page="officiers" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
+      <SortableGrid
+        page="officiers"
+        editing={editingCards}
+        className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+        items={COMMANDERS.filter((d) => !d.rare)}
+        getId={(def) => def.id}
+        getLabel={(def) => def.name}
+        render={(def) => <CommanderCard key={def.id} def={def} player={player} now={now} />}
+      />
       <p className="hud-eyebrow text-[10px] text-violet-glow">Officiers rares · ne se recrutent pas : un commandant de saison de ce rôle au palier 30 d'un passe, ou une trouvaille très rare sur un boss</p>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {COMMANDERS.filter((d) => d.rare).map((def) => (

@@ -1,7 +1,7 @@
 ---
 slug: archives-holographiques
 title: "5.24 : des archives qui tournent, l'Ambre à portée de vue"
-excerpt: "Le Codex, ta flotte et tes récompenses passent sur un cylindre holographique en 3D. L'Ambre rejoint le bandeau du haut, et le thème Constellation sort du noir."
+excerpt: "Le Codex, ta flotte et tes récompenses passent sur un cylindre holographique en 3D. Les cartes se réorganisent au glisser-déposer, l'Ambre rejoint le bandeau du haut et le thème Constellation sort du noir."
 category: mises-a-jour
 tags: [interface, codex, 3d, ambre, themes]
 version: "5.24.0"
@@ -25,6 +25,10 @@ Les fiches verrouillées du Codex apparaissent tramées et sombres : tu vois qu'
 
 > [!TIP]
 > Tu préfères la grille ? Le bouton **Grille** du Codex la ramène, et ton choix est retenu. Avec les animations réduites, le jeu garde l'affichage classique partout.
+
+## Tes cartes, ton ordre
+
+Sur Bâtiments, Unités, Missions, État-major et dans les colonies, le bouton **Réorganiser** te laisse ranger les cartes comme tu veux : glisse-les par leur poignée, ou utilise les flèches. Tes bâtiments clés en haut, tes unités favorites en premier. L'ordre est retenu sur ton appareil, page par page.
 
 ## L'Ambre toujours visible
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { playerUnitCost } from "@/game/effectTargets";
 import { EmptyAction } from "@/components/ui/panel";
 import { playerCargoCapacity } from "@/game/modifiers";
@@ -439,6 +440,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const [transport, setTransport] = useState<"deliver" | "collect" | null>(null);
   const [defense, setDefense] = useState<{ unitId: string; qty: number }>({ unitId: "", qty: 0 });
   const [rename, setRename] = useState<string | null>(null);
+  const [editingCards, setEditingCards] = useState(false);
   const fleets = useFleetStore((s) => s.fleets);
   const now = Date.now();
   const rates = colonyHourlyRates(colony, player);
@@ -572,15 +574,24 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <div>
           <SectionTitle
             icon={Hammer}
-            aside={<span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>}
+            aside={
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>
+                <SortableGridToggle page="colonie-batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+              </span>
+            }
           >
             Bâtiments
           </SectionTitle>
-          <div className="grid gap-3 md:grid-cols-2">
-            {ids.map((id) => (
-              <BuildingTile key={id} colony={colony} player={player} id={id} busy={busy} now={now} onUpgrade={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")} />
-            ))}
-          </div>
+          <SortableGrid
+            page="colonie-batiments"
+            editing={editingCards}
+            className="grid gap-3 md:grid-cols-2"
+            items={ids}
+            getId={(id) => id}
+            getLabel={(id) => (id === DEPOSIT_ID ? colonyBuildingName(colony, id) : (findBuilding(id)?.name ?? id))}
+            render={(id) => <BuildingTile key={id} colony={colony} player={player} id={id} busy={busy} now={now} onUpgrade={() => void act(() => upgradeColonyBuilding(colony.id, id), "Construction lancée.")} />}
+          />
         </div>
 
         <div>

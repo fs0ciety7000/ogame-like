@@ -2,6 +2,7 @@ import { playerBuildTimeFactor } from "@/game/bonuses";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
+import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Lock, Wrench } from "lucide-react";
@@ -51,6 +52,7 @@ export function BuildingsPage() {
   const queues = usePlayerStore((s) => s.queues);
   const uid = useAuthStore((s) => s.user?.uid);
   const [pending, setPending] = useState<string | null>(null);
+  const [editingCards, setEditingCards] = useState(false);
   const rates = useProductionRates(player);
   // 5.20 : onglets Bâtiments / Atelier de réparation (?onglet=atelier).
   const [params, setParams] = useSearchParams();
@@ -122,9 +124,11 @@ export function BuildingsPage() {
         </TabsContent>
         <TabsContent value="batiments" className="flex flex-col gap-4">
       <BuildPlanCard player={player} queues={queues} now={now} />
+      <div className="flex justify-end">
+        <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+      </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5">
-        {BUILDINGS.map((building, index) => {
+      <SortableGrid page="batiments" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5" items={BUILDINGS} getId={(building) => building.id} getLabel={(building) => building.name} render={(building, index) => {
           const state = player.buildings[building.id];
           // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
           // bâtiment non débloqué est verrouillé, y compris l'Atelier de
@@ -321,8 +325,7 @@ export function BuildingsPage() {
               </Card>
             </motion.div>
           );
-        })}
-      </div>
+        }} />
         </TabsContent>
       </Tabs>
     </div>
