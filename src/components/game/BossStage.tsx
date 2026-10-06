@@ -102,7 +102,8 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
             art.lore && (phase === "active" || phase === "dormant") && <p className="mt-0.5 hidden max-w-2xl text-xs text-slate-300 sm:block">{art.lore}</p>
           )}
         </div>
-        <div className="text-right">
+        {/* Revue AU2 : sur mobile, le décompte passe sous le nom (sinon le nom se coupe sur 4 lignes). */}
+        <div className="w-full sm:w-auto sm:text-right">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : nextLabel ?? (next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : "")}</p>
           <p className="font-display text-xl tabular-nums text-slate-100">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
         </div>

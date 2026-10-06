@@ -1,6 +1,7 @@
 # Proposition : menaces PNJ, suites de la revue AU1
 
-Statut : **en attente de décision**. Constats : `docs/audit/2026-10-06-au1-menaces-pnj.md`.
+Statut : **en attente de décision**. Constats : `docs/audit/2026-10-06-au1-menaces-pnj.md` et `docs/audit/2026-10-06-au2-boss.md`.
+La décision A règle aussi BOSS-1 (structure des boss gonflée) ; la décision D vaut pour les primes et les boss (BOSS-4).
 
 ## A. Attaque de `tech19_2` (PNJ-1, 🔴)
 

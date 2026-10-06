@@ -32,3 +32,7 @@ Admin : Factions, Seigneurs, Boss mondiaux, Boss de saison, Boss d'alliance, Pla
 Constats PNJ-1 à PNJ-9 dans `docs/audit/2026-10-06-au1-menaces-pnj.md` : attaque non plafonnée de la techno admin `tech19_2`,
 Traqueur Kesh au-delà de son niveau maximal, aucun repaire ouvert (raids trop rares), unités d'élite jamais débloquées. Décisions :
 `docs/proposals/menaces-pnj.md`.
+
+## Revue AU2 (2026-10-06)
+Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure des boss gonflée par `tech19_2`, taux de boss tués non
+mesuré, calendrier chargé en fin de semaine (lot V) ; décompte de la page Boss corrigé sur mobile.

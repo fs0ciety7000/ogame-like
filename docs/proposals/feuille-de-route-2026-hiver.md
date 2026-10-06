@@ -107,7 +107,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 1 | T | Prise en main à jour (classes, routes, objectifs du jour) | S | livré 6.4.1 |
 | 2 | U | Santé de l'équilibre, suite (sens des routes, défenses par type, emplacements, courbes) | S | livré 6.5.1 |
 | 3 | AU1 | Revue Menaces PNJ : pirates et factions, seigneurs de guerre, primes et Comptoir | M | rapport livré, décisions en attente (`menaces-pnj.md`) |
-| 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | à faire |
+| 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | rapport livré (`2026-10-06-au2-boss.md`) |
 | 5 | V | Rendez-vous de la semaine (Q4) : proposition à partir d'AU1 et AU2, puis implémentation | M | à faire |
 | 6 | AU3 | Revue Progression : Passe, Chroniques, Codex, succès et titres, défis hebdo, série, objectifs du jour, saisons, divisions, palmarès | M | à faire |
 | 7 | AU4 | Revue Commerce : marché, ordres d'achat, contrats, enchères, PNJ marchand, pot commun, concours, casino et tournoi | M | à faire |

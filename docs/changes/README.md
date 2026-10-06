@@ -63,6 +63,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| — | [Revue AU2 : boss](docs-au2-boss.md) | docs, correctif | [menaces-pnj](../proposals/menaces-pnj.md), revue AU2 |
 | — | [Revue AU1 : menaces PNJ](docs-au1-menaces-pnj.md) | docs | [menaces-pnj](../proposals/menaces-pnj.md), revue AU1 |
 | 6.5.1 | [Santé de l'équilibre, suite](6.5.1-sante-suite.md) | ajout | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md), lot U |
 | 6.5.0 | [Vaisseaux de classe](6.5.0-vaisseaux-classe.md) | fonctionnalité | [unites-classe](../proposals/unites-classe.md), lot P |
