@@ -1,6 +1,5 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
-import { HudPanel, ShowMoreButton } from "@/components/ui/panel";
-import { useShowMore } from "@/hooks/useShowMore";
+import { HudPanel, Pager, usePaged } from "@/components/ui/panel";
 import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
 import { useSearchParams } from "react-router-dom";
 import { PlayerName } from "@/components/ui/player-name";
@@ -73,7 +72,9 @@ export function MarketPage() {
     [data.open, uid, filter],
   );
   // 5.15.12 : 20 offres à la fois.
-  const { shown: shownOffers, more: moreOffers, showMore: showMoreOffers } = useShowMore(others, 20, filter);
+  // 5.24 : 20 offres par page.
+  const offersPage = usePaged(others, 20, filter);
+  const shownOffers = offersPage.items;
 
   if (!player) return null;
   const have = (res: string) => player.resources[res as ResourceId] ?? 0;
@@ -271,7 +272,7 @@ export function MarketPage() {
                   </div>
                 );
               })}
-              <ShowMoreButton more={moreOffers} step={20} onClick={showMoreOffers} />
+              <Pager {...offersPage.pager} />
             </div>
           )}
           <p className="text-[11px] text-slate-500">{MARKET_RULES.maxBuysPerDay} achats au plus par jour.</p>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
-import { HudPanel } from "@/components/ui/panel";
+import { HudPanel, PagedList } from "@/components/ui/panel";
 import { toast } from "sonner";
 import { Building2, Eye, FlaskConical, Hammer, ScrollText, Landmark, ShieldAlert, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -209,8 +209,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
 
       <HudPanel icon={<ScrollText />} title="Journal du trésor">
         {logs.length === 0 && <EmptyState size="sm" icon="📜" title="Journal vide">Les dépôts et versements apparaîtront ici.</EmptyState>}
-        <ul className="max-h-[36rem] divide-y divide-white/5 overflow-y-auto text-xs">
-          {logs.map((l) => (
+        <PagedList as="ul" items={logs} className="divide-y divide-white/5 text-xs" render={(l) => (
             <li key={l.id} className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 py-1.5">
               <span className="font-mono text-[11px] tabular-nums text-slate-500">{timeAgo(l.createdAtMs).replace(/^il y a /, "")}</span>
               <span className="min-w-0 text-slate-300">
@@ -224,8 +223,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
                 )}
               </span>
             </li>
-          ))}
-        </ul>
+          )} />
       </HudPanel>
     </div>
   );

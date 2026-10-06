@@ -24,7 +24,8 @@ Un lot visuel : un cylindre holographique en 3D pour parcourir le Codex, exposer
 - **Devblog** : une vidéo s'insère comme une image (`![légende](lien.mp4)`).
 
 ## Listes paginées
-- **20 par page** sur Combats (combats et espionnage), Signalements, Hall of fame des boss, Annonces et Succès ; **15 par page** dans la cloche de notifications et la liste des conversations.
+- **20 par page** sur Combats (combats et espionnage), Joueurs, Marché (offres), Journal, Signalements, Hall of fame des boss, classement des boss mondiaux, journal du trésor d'alliance, Annonces et Succès ; **15 par page** dans la cloche de notifications et la liste des conversations.
+- Les boutons « Afficher plus » laissent la place à une pagination « Précédent / Suivant » ; un nouveau filtre ou une recherche ramène en page 1.
 
 ## Corrections
 - **Thème Constellation** : le fond n'est plus presque noir. Il passe en graphite, avec un halo couleur os, un liseré orange à l'horizon et une trame discrète.
