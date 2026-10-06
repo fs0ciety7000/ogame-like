@@ -28,7 +28,7 @@ export function QueueStrip({ queues, now }: { queues: QueuesState | null; now: n
   // v4.9.3 : case « Colonies » dès qu'une colonie existe ou est en route.
   const slots = (player?.colonies?.length ?? 0) > 0 || player?.colonizing ? [...SLOTS, COLONY_SLOT] : SLOTS;
   return (
-    <div className="-mx-1 grid grid-cols-2 gap-1.5 border-b border-white/5 bg-space-950/80 px-1 py-1.5 backdrop-blur-md sm:sticky sm:top-0 sm:z-10 sm:flex">
+    <div className="-mx-1 grid grid-cols-2 gap-1.5 border-b border-white/5 bg-space-950/80 px-1 py-1.5 backdrop-blur-md sm:flex">
       {slots.map((slot) => {
         const list = events.filter((e) => e.kind === slot.kind);
         const first = list[0];

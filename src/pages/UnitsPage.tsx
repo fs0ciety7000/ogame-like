@@ -15,6 +15,7 @@ import { RadialGauge } from "@/components/ui/radial-gauge";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PostureCard } from "@/components/game/PostureCard";
+import { HoloCylinderLazy } from "@/components/fx/HoloCylinderLazy";
 import { UnitSpecButton } from "@/components/game/UnitSpecSheet";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -138,6 +139,20 @@ export function UnitsPage() {
           );
         })}
       </div>
+
+      {/* 5.24 : vitrine holographique des unités au hangar de l'onglet, effectif sous chacune. */}
+      {(() => {
+        const owned = UNITS.filter((u) => u.category === tab && (player.units[u.id]?.count ?? 0) > 0);
+        if (owned.length === 0) return null;
+        return (
+          <HoloCylinderLazy
+            mode="gallery"
+            className="hud-cut h-[260px] border border-cyan-glow/15 bg-space-950/60 sm:h-[300px]"
+            items={owned.map((u) => ({ id: u.id, image: u.image, label: u.name, sub: `× ${formatNumber(player.units[u.id]?.count ?? 0)} au hangar` }))}
+            fallback={null}
+          />
+        );
+      })()}
 
       <div className="flex flex-col gap-2">
         <Tabs value={tab} onValueChange={(v) => {

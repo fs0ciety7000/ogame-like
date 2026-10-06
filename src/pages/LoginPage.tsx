@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
+import { HoloCylinderLazy } from "@/components/fx/HoloCylinderLazy";
+import { UNITS } from "@/game/units";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusDot } from "@/components/ui/status-dot";
@@ -35,6 +37,9 @@ interface FormValues {
   email: string;
   password: string;
 }
+
+/** Unités de la roue d'accueil : une sur deux, pour varier les silhouettes. */
+const LOGIN_REEL = UNITS.filter((_, i) => i % 2 === 0).slice(0, 16).map((u) => ({ id: u.id, image: u.image, label: u.name }));
 
 export function LoginPage() {
   // v4.7.1 : un lien de parrainage ouvre directement l'inscription.
@@ -111,6 +116,10 @@ export function LoginPage() {
       <SchematicGrid />
       <Nebula />
       <Starfield count={160} />
+      {/* 5.24 : cylindre holographique ralenti et flouté derrière le formulaire. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 opacity-60 blur-[3px]">
+        <HoloCylinderLazy mode="background" items={LOGIN_REEL} className="h-full w-full" />
+      </div>
       <div className="absolute inset-x-0 top-0 z-30">
         <AnnouncementBanners publicOnly />
       </div>

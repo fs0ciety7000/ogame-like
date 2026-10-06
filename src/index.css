@@ -416,7 +416,7 @@
   --th-text-500: #6e6b63;
   --th-text-600: #4b4944;
   --th-ink: #f4f1e8;
-  --th-body-glow: #1a1c20;
+  --th-body-glow: #2a2c31;
   --th-panel: linear-gradient(180deg, rgba(26, 27, 30, 0.95), rgba(12, 13, 15, 0.97));
   --th-edge: color-mix(in srgb, var(--th-text-100) 13%, transparent);
   --th-edge-strong: color-mix(in srgb, var(--th-text-100) 60%, transparent);
@@ -1090,10 +1090,16 @@ main {
 /* ---------- Constellation (esprit Starfield) ---------- */
 /* Graphite mat, bandes rouge-orange-jaune-bleu en tête de panneau, titres
    condensés espacés, bouton os plein. */
+/* 5.24 : fond graphite (et non noir) : halo os en tête, liseré orange à l'horizon,
+   trame d'ingénieur à peine visible. */
 :root[data-theme="constellation"] body {
   background:
-    radial-gradient(ellipse 100% 55% at 50% -10%, var(--th-body-glow) 0%, transparent 60%),
-    var(--color-space-950);
+    radial-gradient(ellipse 110% 65% at 50% -10%, var(--th-body-glow) 0%, transparent 65%),
+    radial-gradient(ellipse 80% 35% at 50% 110%, color-mix(in srgb, var(--th-accent2) 14%, transparent) 0%, transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
+    linear-gradient(180deg, var(--color-space-800), var(--color-space-950) 70%);
+  background-attachment: fixed;
 }
 :root[data-theme="constellation"] .glass-panel {
   backdrop-filter: none;
