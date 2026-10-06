@@ -213,6 +213,10 @@ export interface BossSchedule {
    *  v5.14.2 : `between` — en alternance avec un autre boss hebdomadaire : une apparition
    *  dans chaque intervalle entre deux de ses passages, sans jamais le chevaucher. */
   weekly?: { minGapDays: number; between?: BossSchedule };
+  /** 6.7 (lot V) : jour de départ (0 = dimanche … 6 = samedi, heure de Paris). Rendez-vous mensuel : le n-ième
+   *  (ou le dernier) de ce jour dans le mois ; en alternance : premier de ces jours qui tient entre deux passages
+   *  de l'autre boss (sinon, placement d'avant). Absent : vendredi (mensuel) ou lendemain de l'autre boss (alternance). */
+  weekday?: number | null;
 }
 
 export const MAX_BOSS_DATES = 24;
@@ -242,7 +246,10 @@ export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs:
   }
   // Repli mensuel : pas de rythme hebdomadaire, ou alternance sans boss mondial hebdomadaire.
   const monthly = !s.weekly || (!!s.weekly.between && !alternating);
-  for (let i = -1; s.enabled && monthly && i < 60 && out.length < count; i++) {
+  if (s.enabled && monthly && typeof s.weekday === "number") {
+    for (const win of monthlyWeekdayWindows(now, s, count + skipped.size)) if (!skipped.has(win.startMs) && out.length < count) out.push(win);
+  }
+  for (let i = -1; s.enabled && monthly && typeof s.weekday !== "number" && i < 60 && out.length < count; i++) {
     const w = weekendWindow(now, i);
     if (!onWeekend(w, s.weekend)) continue;
     const startMs = w.fridayMs + s.startHour * HOUR;
@@ -255,6 +262,36 @@ export function bossWindows(now: number, s: BossSchedule, count = 1): { startMs:
     if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
   }
   return out.sort((a, b) => a.startMs - b.startMs).slice(0, count);
+}
+
+/** 6.7 : le n-ième (ou le dernier) jour `weekday` de chaque mois, à `startHour` (heure de Paris). */
+function monthlyWeekdayWindows(now: number, s: BossSchedule, count: number): { startMs: number; endMs: number }[] {
+  const out: { startMs: number; endMs: number }[] = [];
+  const local = new Date(now + parisOffsetMs(now));
+  const dur = s.durationHours * HOUR;
+  for (let k = -1; k < 24 && out.length < count; k++) {
+    const y = local.getUTCFullYear();
+    const m = local.getUTCMonth() + k;
+    const first = Date.UTC(y, m, 1);
+    const firstDow = new Date(first).getUTCDay();
+    const firstMatch = first + (((s.weekday as number) - firstDow + 7) % 7) * DAY;
+    let day = s.weekend === "last" ? firstMatch + 4 * 7 * DAY : firstMatch + ((NTH[s.weekend as Exclude<BossWeekend, "last">] ?? 1) - 1) * 7 * DAY;
+    if (s.weekend === "last") while (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) day -= 7 * DAY;
+    if (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) continue;
+    const startMs = parisLocalToUtc(day + s.startHour * HOUR);
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
+}
+
+/** 6.7 : premier jour `weekday` à `startHour` (heure de Paris) au moins égal à `fromMs`. */
+function nextWeekdayAt(fromMs: number, weekday: number, startHour: number): number {
+  const local = fromMs + parisOffsetMs(fromMs);
+  const midnight = Math.floor(local / DAY) * DAY;
+  const ahead = (weekday - new Date(local).getUTCDay() + 7) % 7;
+  let t = parisLocalToUtc(midnight + ahead * DAY + startHour * HOUR);
+  if (t < fromMs) t = parisLocalToUtc(midnight + (ahead + 7) * DAY + startHour * HOUR);
+  return t;
 }
 
 /** Passage hebdomadaire n° w d'un boss (rotation des jours des boss mondiaux). */
@@ -273,7 +310,10 @@ function alternateWindows(now: number, s: BossSchedule, other: BossSchedule, cou
     const a = weeklyWindow(w, other);
     const b = weeklyWindow(w + 1, other);
     const dur = s.durationHours * HOUR;
-    const startMs = a.endMs + DAY + dur <= b.startMs ? a.endMs + DAY : a.endMs + dur <= b.startMs ? a.endMs : null;
+    // 6.7 : jour fixé (mardi par défaut pour le boss de la chronique) : le premier qui tient dans l'intervalle.
+    const fixedDay = typeof s.weekday === "number" ? nextWeekdayAt(a.endMs, s.weekday, s.startHour) : null;
+    // Le jour fixé ne tient pas : placement d'avant (lendemain de l'autre boss), pour garder le même nombre de combats.
+    const startMs = fixedDay !== null && fixedDay + dur <= b.startMs ? fixedDay : a.endMs + DAY + dur <= b.startMs ? a.endMs + DAY : a.endMs + dur <= b.startMs ? a.endMs : null;
     if (startMs === null) continue;
     if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
   }
@@ -281,6 +321,9 @@ function alternateWindows(now: number, s: BossSchedule, other: BossSchedule, cou
 }
 
 const DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+
+/** 6.7 (lot V) : jours de la semaine pour les réglages (0 = dimanche). */
+export const WEEKDAY_OPTIONS: { value: string; label: string }[] = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label: DAY_NAMES[d][0].toUpperCase() + DAY_NAMES[d].slice(1) }));
 const WEEKEND_WORDS: Record<BossWeekend, string> = { first: "premier", second: "deuxième", third: "troisième", fourth: "quatrième", last: "dernier" };
 
 /** « 18 h », « 23 h 30 » */
@@ -291,9 +334,9 @@ function hourLabel(h: number): string {
 }
 
 /** Fin d'un boss : « lundi 18 h » (jour de la semaine et heure de Paris). */
-export function bossEndLabel(s: Pick<BossSchedule, "startHour" | "durationHours">): string {
+export function bossEndLabel(s: Pick<BossSchedule, "startHour" | "durationHours" | "weekday">): string {
   const end = s.startHour + s.durationHours;
-  return `${DAY_NAMES[(5 + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+  return `${DAY_NAMES[((typeof s.weekday === "number" ? s.weekday : 5) + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
 }
 
 const MONTH_NAMES = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -334,8 +377,11 @@ export function eveReminderDue(next: { startMs: number } | null | undefined, las
 export function describeBossSchedule(s: BossSchedule, now = Date.now()): string {
   const extra = (s.dates ?? []).some((d) => d.startMs + d.durationHours * HOUR > now);
   if (!s.enabled) return extra ? "à des dates fixées par l'équipe" : "pas d'apparition programmée pour l'instant";
-  if (s.weekly?.between) return `chaque semaine en alternance avec le boss mondial (entre deux de ses passages), pour ${s.durationHours} h${extra ? ", et à des dates fixées par l'équipe" : ""}`;
-  if (s.weekly) return `chaque semaine, un jour différent à ${hourLabel(s.startHour)}, pour ${s.durationHours} h${extra ? ", et à des dates fixées par l'équipe" : ""}`;
+  const alternating = !!(s.weekly?.between?.enabled && s.weekly.between.weekly);
+  if (alternating && typeof s.weekday === "number") return `chaque ${DAY_NAMES[s.weekday]} à ${hourLabel(s.startHour)} pour ${s.durationHours} h (ou le lendemain du boss mondial s'il occupe le ${DAY_NAMES[s.weekday]})${extra ? ", et à des dates fixées par l'équipe" : ""}`;
+  if (alternating) return `chaque semaine en alternance avec le boss mondial (entre deux de ses passages), pour ${s.durationHours} h${extra ? ", et à des dates fixées par l'équipe" : ""}`;
+  if (s.weekly && !s.weekly.between) return `chaque semaine, un jour différent à ${hourLabel(s.startHour)}, pour ${s.durationHours} h${extra ? ", et à des dates fixées par l'équipe" : ""}`;
+  if (typeof s.weekday === "number") return `le ${WEEKEND_WORDS[s.weekend] ?? "premier"} ${DAY_NAMES[s.weekday]} de chaque mois, de ${hourLabel(s.startHour)} au ${bossEndLabel(s)}${extra ? ", et à des dates fixées par l'équipe" : ""}`;
   return `le ${WEEKEND_WORDS[s.weekend] ?? "premier"} week-end de chaque mois, du vendredi ${hourLabel(s.startHour)} au ${bossEndLabel(s)}${extra ? ", et à des dates fixées par l'équipe" : ""}`;
 }
 
@@ -349,6 +395,7 @@ export function validateBossSchedule(label: string, s: Partial<BossSchedule>): s
   if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label} : week-end inconnu.`);
   if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label} : heure de départ entre 0 et 23.`);
   if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label} : durée entre 1 et 160 h.`);
+  if (typeof s.weekday === "number" && !(Number.isInteger(s.weekday) && s.weekday >= 0 && s.weekday <= 6)) errors.push(`${label} : jour de départ inconnu.`);
   const dates = s.dates ?? [];
   if (dates.length > MAX_BOSS_DATES) errors.push(`${label} : ${MAX_BOSS_DATES} dates précises au plus.`);
   dates.forEach((d, i) => {

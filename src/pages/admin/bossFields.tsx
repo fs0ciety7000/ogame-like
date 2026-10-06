@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CalendarPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BOSS_WEEKENDS, bossWindows, describeBossSchedule, MAX_BOSS_DATES, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
+import { BOSS_WEEKENDS, bossWindows, describeBossSchedule, MAX_BOSS_DATES, WEEKDAY_OPTIONS, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
 import { CheckboxField, Field, NumberField, SelectField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,7 @@ export function BossScheduleFields({
   clash,
   weekly,
   nameFor,
+  weekday,
 }: {
   label: string;
   value: BossSchedule;
@@ -34,6 +35,8 @@ export function BossScheduleFields({
   clash?: string;
   weekly?: { on: boolean; onChange: (v: boolean) => void };
   nameFor?: (startMs: number) => string;
+  /** 6.7 (lot V) : jour de départ réglable (boss de la chronique). */
+  weekday?: boolean;
 }) {
   const now = Date.now();
   const upcoming = bossWindows(now, value, weekly?.on ? 6 : 4);
@@ -41,6 +44,7 @@ export function BossScheduleFields({
   // v5.14.2 : en alternance avec le boss mondial, le jour et l'heure suivent sa fin.
   const alternating = !!value.weekly?.between;
   const isWeekly = !!weekly?.on || alternating;
+  const fixedDay = typeof value.weekday === "number";
   return (
     <>
       {weekly && (
@@ -59,10 +63,19 @@ export function BossScheduleFields({
             onChange={(v) => onChange({ enabled: v })}
             hint="Décoché : plus d'apparition chaque mois. Les dates précises ci-dessous et le lancement manuel restent possibles."
           />
-          <SelectField<BossWeekend> label="Week-end du mois" value={value.weekend} options={BOSS_WEEKENDS.map((w) => ({ value: w.id, label: w.label }))} onChange={(v) => onChange({ weekend: v })} />
+          <SelectField<BossWeekend> label={fixedDay ? "Semaine du mois" : "Week-end du mois"} value={value.weekend} options={BOSS_WEEKENDS.map((w) => ({ value: w.id, label: w.label }))} onChange={(v) => onChange({ weekend: v })} />
         </>
       )}
-      {!alternating && <NumberField label={isWeekly ? "Heure d'apparition (heure de Paris)" : "Départ le vendredi à (heure de Paris)"} value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />}
+      {weekday && (
+        <SelectField<string>
+          label="Jour de départ"
+          value={fixedDay ? String(value.weekday) : ""}
+          options={[{ value: "", label: alternating ? "Lendemain du boss mondial (ancien rythme)" : "Vendredi du week-end (ancien rythme)" }, ...WEEKDAY_OPTIONS]}
+          onChange={(v) => onChange({ weekday: v === "" ? null : Number(v) })}
+          hint={alternating ? "Si ce jour ne tient pas entre deux boss mondiaux, le boss part le lendemain du boss mondial." : "Le premier, deuxième… ou dernier de ce jour dans le mois."}
+        />
+      )}
+      {(!alternating || fixedDay) && <NumberField label={isWeekly || fixedDay ? "Heure d'apparition (heure de Paris)" : "Départ le vendredi à (heure de Paris)"} value={value.startHour} min={0} step={1} onChange={(v) => onChange({ startHour: Math.min(23, Math.max(0, Math.round(v ?? 18))) })} />}
       <NumberField label="Durée de présence (h)" value={value.durationHours} min={1} step={1} onChange={(v) => onChange({ durationHours: Math.min(160, Math.max(1, Math.round(v ?? 1))) })} />
       <BossDatesEditor dates={dates} defaultHours={value.durationHours} onChange={(d) => onChange({ dates: d })} />
       <Field label="Prochaines apparitions" hint={clash} className="sm:col-span-2">

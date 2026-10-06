@@ -21,6 +21,9 @@
 | Contrats | 4 à 72 h, caution 10 %, 3 actifs |
 | Cadeaux | 3 jours d'ancienneté ; taxe 20 % hors alliance |
 | Pot commun | alimenté par les taxes et les dons ; concours, casino, mécènes |
+
+Casino orbital : ouvert chaque **mercredi 18 h pour 30 h** par défaut (6.7, rendez-vous de la semaine réglable), un tournoi par ouverture ;
+les week-ends et les créneaux précis restent possibles dans l'admin.
 | Comptoir de la Ruche | consommables, prestige, offre de la semaine |
 
 ## Code et admin

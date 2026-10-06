@@ -49,7 +49,7 @@ describe("casino : jetons, tournoi, bilan", () => {
   });
 
   it("tournoi : ouverture, points, clôture et podium", () => {
-    let st = normalizeCasino({ settings: { mode: "scheduled", weekends: true } });
+    let st = normalizeCasino({ settings: { mode: "scheduled", weekly: null, weekends: true } });
     st = rollTournament(st, SAT).state;
     expect(st.tournament?.id).toMatch(/^we-/);
     st = scoreSpin(st, "a", "Alpha", "star3");
@@ -67,7 +67,7 @@ describe("casino : jetons, tournoi, bilan", () => {
   });
 
   it("fermeture : fin du week-end à Paris", () => {
-    const closes = casinoClosesAt(DEFAULT_CASINO, SAT)!;
+    const closes = casinoClosesAt({ ...DEFAULT_CASINO, weekly: null, weekends: true }, SAT)!;
     // Lundi 00 h à Paris = dimanche 22 h UTC (heure d'été).
     expect(new Date(closes).toISOString()).toBe("2026-10-04T22:00:00.000Z");
     expect(casinoClosesAt({ ...DEFAULT_CASINO, mode: "open" }, SAT)).toBeNull();

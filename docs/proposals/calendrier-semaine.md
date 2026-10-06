@@ -1,6 +1,6 @@
 # Proposition : rendez-vous étalés sur la semaine (lot V, constat Q4)
 
-Statut : **en attente de décision**. Lot V de `docs/proposals/feuille-de-route-2026-hiver.md` §7 ; constats Q4 (audit global), BOSS-3
+Statut : **livrée** (6.7.0, `docs/changes/6.7.0-calendrier-semaine.md`). Décision : B avec les réglages de C. Lot V de `docs/proposals/feuille-de-route-2026-hiver.md` §7 ; constats Q4 (audit global), BOSS-3
 (`docs/audit/2026-10-06-au2-boss.md`).
 
 ## 1. Le problème vu par le joueur
@@ -11,9 +11,9 @@ Statut : **en attente de décision**. Lot V de `docs/proposals/feuille-de-route-
 | Rendez-vous | Quand | Durée |
 |:--|:--|:--|
 | Événement du week-end (bonus) | vendredi 18 h → dimanche | ~54 h |
-| Boss mondial | vendredi 18 h, un week-end choisi du mois (`bossWeekend`) | 72 h |
-| Boss de la chronique | en alternance avec le boss mondial, le week-end | 48 h |
-| Tournoi du casino | le week-end | ~54 h |
+| Boss mondial | serveur : vendredi 18 h, un week-end choisi du mois (`bossWeekend`) ; par défaut dans le code : rotation hebdomadaire, un jour différent chaque semaine | 72 h |
+| Boss de la chronique | serveur : dernier week-end du mois ; en rotation : lendemain du boss mondial | 48 h |
+| Tournoi du casino | à chaque ouverture du casino : le week-end (samedi et dimanche) | 48 h |
 | Guerre de territoire | un week-end sur deux, fin dimanche 22 h | ~54 h |
 | Proie d'élite (primes) | lundi 0 h → dimanche | 7 jours |
 | Boss d'alliance | à la demande | 24 h |
@@ -40,3 +40,10 @@ Jusqu'à 4 rendez-vous se chevauchent le samedi ; aucun ne commence entre le lun
 
 ## 6. Invariants
 - Deux rendez-vous serveur (hors proie d'élite) ne commencent jamais le même jour (test du planificateur).
+
+## 7. Livraison (6.7.0)
+- Casino : rendez-vous de la semaine, mercredi 18 h pour 30 h, week-ends décochés ; anciens réglages convertis à la lecture.
+- Boss de la chronique : jour de départ réglable, mardi 18 h pour 48 h. En mode mensuel : dernier mardi du mois. En alternance : premier
+  mardi qui tient entre deux boss mondiaux, sinon le placement d'avant, pour garder le même nombre de combats (une semaine sautée aurait
+  retiré des points de passe).
+- Mesure BOSS-2 reportée (voir la fiche).

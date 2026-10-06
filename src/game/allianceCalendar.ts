@@ -1,7 +1,14 @@
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
 import { allianceBossDef, allianceBossOfWeek, allianceWeekId, type AllianceBossState } from "@/game/allianceBoss";
 import { seasonBossSchedule, seasonBossWindow } from "@/game/chronicles";
-import { parisLocalToUtc } from "@/game/events";
+
+/** 6.7 (lot V) : « Mardi 18 h », sinon l'ancien libellé. */
+function seasonBossDetail(): string {
+  const s = seasonBossSchedule();
+  if (typeof s.weekday === "number") return `${WEEKDAY_OPTIONS.find((o) => o.value === String(s.weekday))?.label ?? ""} ${s.startHour} h`;
+  return s.weekly?.between ? "Entre deux boss mondiaux" : "Dernier week-end du mois";
+}
+import { parisLocalToUtc, WEEKDAY_OPTIONS } from "@/game/events";
 import { gazettePublishAt } from "@/game/gazette";
 import { nextLeviathanStart, worldBossForStart, worldBossName, type LeviathanState } from "@/game/leviathan";
 import { parisDay } from "@/game/retention";
@@ -65,7 +72,7 @@ export function allianceCalendar(input: CalendarInput, now: number, horizonDays 
   }
 
   const sb = seasonBossWindow(now, true);
-  if (sb && sb.endMs > now && sb.startMs <= horizon) out.push({ kind: "seasonBoss", title: "Boss de saison", detail: seasonBossSchedule().weekly?.between ? "Entre deux boss mondiaux" : "Dernier week-end du mois", startMs: sb.startMs, endMs: sb.endMs, to: "/game/boss" });
+  if (sb && sb.endMs > now && sb.startMs <= horizon) out.push({ kind: "seasonBoss", title: "Boss de saison", detail: seasonBossDetail(), startMs: sb.startMs, endMs: sb.endMs, to: "/game/boss" });
 
   let gz = gazettePublishAt(now);
   if (gz <= now) gz = gazettePublishAt(now + 7 * DAY);

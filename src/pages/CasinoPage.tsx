@@ -518,7 +518,7 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
     ["Succès", `Or ${ACHIEVEMENT_TOKENS.or}, Légendaire ${ACHIEVEMENT_TOKENS.legendaire}, Mythique ${ACHIEVEMENT_TOKENS.mythique}`],
     ["Butin des boss", `${pct(LOOT_TABLES.worldBoss.tokenChance)} de chances, plus au podium`],
     ["Butin des combats", `seigneurs ${pct(LOOT_TABLES.warlord.tokenChance)}, menaces ${pct(LOOT_TABLES.threat.tokenChance)}, joueurs ${pct(LOOT_TABLES.pvp.tokenChance)}, expéditions ${pct(LOOT_TABLES.expedition.tokenChance)}`],
-    ["Tournoi du week-end", r.tournament.join(", ") + " pour le podium"],
+    ["Tournoi de chaque ouverture", r.tournament.join(", ") + " pour le podium"],
   ];
   return (
     <HudPanel icon={<Coins />} title="Gagner des jetons" tone="gold">

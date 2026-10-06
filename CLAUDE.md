@@ -63,6 +63,9 @@ Valable pour toute la session et tout le projet, à chaque demande :
   +100 % à son niveau maximal ni le niveau maximal de l'unité qu'elle monte (`validateTechEffect`). Avant d'ajouter un bonus « contre les PNJ »,
   vérifier qu'il n'existe pas déjà dans l'unité (ex. `KESH_PVE_BONUS`) : incident `tech19_2`, revue AU1.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
+- Calendrier : un rendez-vous serveur récurrent a un jour et une heure réglables dans l'admin (`BossSchedule.weekday`, `CasinoSettings.weekly`) et
+  ne démarre pas le même jour qu'un autre (invariant I16, `calendrier67.test.ts`). Un nouveau réglage optionnel lu depuis la base garde
+  `null` pour « ancien comportement » : un champ absent reprend la valeur par défaut à la fusion des règles.
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.
 - Une migration ponctuelle (`onBootstrap`) qui rend ou retire des unités, des ressources ou des niveaux **respecte les plafonds**

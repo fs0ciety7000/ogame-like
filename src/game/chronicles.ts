@@ -603,8 +603,11 @@ export const SEASON_BOSS_RULES: {
   dates: BossDate[];
   /** 5.15.14 : apparitions régulières annulées (début exact), depuis le planificateur. */
   skips?: number[];
-  /** Heure d'apparition le vendredi (heure de Paris). */
+  /** Heure d'apparition (heure de Paris). */
   startHour: number;
+  /** 6.7 (lot V) : jour d'apparition (0 = dimanche … 6 = samedi) ; mardi par défaut. Absent ou null : ancien
+   *  rythme (vendredi du week-end choisi, ou lendemain du boss mondial en alternance). */
+  weekday?: number | null;
   /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
   hpFactor: number;
   minHp: number;
@@ -627,6 +630,8 @@ export const SEASON_BOSS_RULES: {
   dates: [],
   skips: [],
   startHour: 18,
+  // 6.7 (lot V, calendrier-semaine.md) : le boss de la chronique ouvre la semaine, mardi 18 h → jeudi 18 h.
+  weekday: 2,
   hpFactor: 3,
   minHp: 100_000,
   durationHours: 48,
@@ -642,6 +647,7 @@ export function seasonBossSchedule(): BossSchedule {
     durationHours: SEASON_BOSS_RULES.durationHours,
     dates: SEASON_BOSS_RULES.dates ?? [],
     skips: SEASON_BOSS_RULES.skips ?? [],
+    weekday: typeof SEASON_BOSS_RULES.weekday === "number" ? SEASON_BOSS_RULES.weekday : null,
     // v5.14.2 : une fois par semaine, entre deux passages du boss mondial (repli mensuel sans rotation hebdomadaire).
     ...(SEASON_BOSS_RULES.alternate !== false ? { weekly: { minGapDays: 0, between: leviathanSchedule() } } : {}),
   };
@@ -651,8 +657,8 @@ export function seasonBossSchedule(): BossSchedule {
 export function seasonBossWindow(now: number, includeUpcoming = false): { id: string; monthId: string; startMs: number; endMs: number } | null {
   const [w] = bossWindows(now, seasonBossSchedule(), 1);
   if (!w) return null;
-  const friday = parisDate(w.startMs);
-  const monthId = `${friday.y}-${String(friday.m).padStart(2, "0")}`;
+  const start = parisDate(w.startMs);
+  const monthId = `${start.y}-${String(start.m).padStart(2, "0")}`;
   if (!config.months.some((m) => m.id === monthId)) return null;
   if (now < w.startMs && !includeUpcoming) return null;
   // Date précise : identifiant propre (plusieurs combats possibles dans le même mois).

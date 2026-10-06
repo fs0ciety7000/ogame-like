@@ -129,9 +129,9 @@ export function SeasonBossPanel() {
           label="Chaque semaine, en alternance avec le boss mondial"
           checked={sb.alternate !== false}
           onChange={(v) => setSb({ alternate: v })}
-          hint="Une apparition entre deux passages du boss mondial, jamais en même temps. Décoché : un week-end par mois."
+          hint="Une apparition entre deux passages du boss mondial, jamais en même temps. Décoché : une fois par mois."
         />
-        <BossScheduleFields label="Boss de saison" value={sb.alternate !== false ? { ...sb, weekly: { minGapDays: 0, between: leviathanSchedule() } } : sb} onChange={(p) => setSb(p)} />
+        <BossScheduleFields label="Boss de saison" weekday value={sb.alternate !== false ? { ...sb, weekly: { minGapDays: 0, between: leviathanSchedule() } } : sb} onChange={(p) => setSb(p)} />
         {live && isActive(live, now) && (
           <HudCallout tone="accent" className="text-xs sm:col-span-2">
             Combat en cours : fin le <span className="font-mono text-slate-100">{formatDateTime(live.endMs)}</span> ({Math.round((live.endMs - live.startMs) / 3600_000)} h, fixées à son apparition). Une nouvelle durée vaut pour les prochains combats ; à l'enregistrement, tu pourras aussi l'appliquer à celui-ci.

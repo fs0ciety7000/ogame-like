@@ -21,7 +21,7 @@ technologie (+10 attaque et défense par niveau, 6.6). « Relancer » une prime 
 | Boss | Rythme | Points de structure |
 |:--|:--|:--|
 | Boss mondiaux (6 en rotation : Léviathan, Matriarche, Titan de rouille, Spectre du Chœur, Cométophage, Abyssal) | hebdo, 72 h | 4 × puissance d'attaque des actifs |
-| Boss de saison | mensuel (Chroniques) | réglable |
+| Boss de saison (chronique) | mardi 18 h, 48 h (6.7) : dernier mardi du mois si le boss mondial est mensuel, sinon chaque mardi libre entre deux boss mondiaux | réglable |
 | Boss d'alliance | appelé (3 h de production), 24 h | 2,5 × puissance des membres |
 Phases : riposte sous 50 %, bouclier et faiblesse sous 25 %. Pertes 8 % par assaut (réparables).
 
@@ -39,4 +39,5 @@ livrées en 6.6.0 (`docs/changes/6.6.0-menaces-pnj.md`).
 
 ## Revue AU2 (2026-10-06)
 Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure des boss gonflée par `tech19_2`, taux de boss tués non
-mesuré, calendrier chargé en fin de semaine (lot V) ; décompte de la page Boss corrigé sur mobile.
+mesuré, calendrier chargé en fin de semaine (lot V, livré en 6.7.0 : boss de la chronique le mardi, tournoi le mercredi) ; décompte de la
+page Boss corrigé sur mobile.

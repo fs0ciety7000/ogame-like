@@ -18,8 +18,9 @@ import { leviathanSchedule } from "@/game/leviathan";
 
 /** v5.14.2 : le rendez-vous mensuel d'avant l'alternance (repli quand elle est décochée). */
 function monthly<T>(fn: () => T): T {
-  const saved = { alternate: SEASON_BOSS_RULES.alternate, durationHours: SEASON_BOSS_RULES.durationHours };
-  Object.assign(SEASON_BOSS_RULES, { alternate: false, durationHours: 53 });
+  // 6.7 : `weekday: null` garde l'ancien rythme (vendredi du week-end choisi) ; le mardi est testé dans calendrier67.test.ts.
+  const saved = { alternate: SEASON_BOSS_RULES.alternate, durationHours: SEASON_BOSS_RULES.durationHours, weekday: SEASON_BOSS_RULES.weekday };
+  Object.assign(SEASON_BOSS_RULES, { alternate: false, durationHours: 53, weekday: null });
   try {
     return fn();
   } finally {
