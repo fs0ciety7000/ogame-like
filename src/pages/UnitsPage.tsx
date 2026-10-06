@@ -1,5 +1,7 @@
 import { playerModifiers } from "@/game/modifiers";
 import { eliteStatus } from "@/game/eliteUnits";
+import { classUnitBlocker } from "@/game/classUnits";
+import { findEmpireClass } from "@/game/empireClass";
 import { playerUnitCost } from "@/game/effectTargets";
 import { PERSONALITY_LABELS } from "@/game/warlords";
 import { Link } from "react-router-dom";
@@ -334,7 +336,7 @@ export function UnitsPage() {
                 <div className="relative flex flex-1 flex-col gap-3 p-4 pt-3">
                   <div>
                     <h3 className="hud-title text-xl text-slate-100">{unit.name}</h3>
-                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint && !unit.elite ? "" : unit.description}</p>
+                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint && !unit.elite && !unit.empireClass ? "" : unit.description}</p>
                     <div className="-ml-2 mt-1">
                       <UnitSpecButton unit={unit} player={player} />
                     </div>
@@ -348,6 +350,14 @@ export function UnitsPage() {
                           Unité d'élite : tout le Labo au maximum et une vendetta gagnée contre un seigneur {PERSONALITY_LABELS[unit.elite].toLowerCase()}.{" "}
                           <Link to="/game/seigneurs" className="font-semibold text-ember-glow hover:underline">
                             Seigneurs
+                          </Link>
+                        </>
+                      ) : unit.empireClass ? (
+                        <>
+                          Vaisseau de classe {findEmpireClass(unit.empireClass)?.name ?? unit.empireClass} : choisis cette classe, puis recherche{" "}
+                          <strong className="text-slate-300">{findTech(unit.classTech ?? "")?.nom ?? "sa technologie"}</strong> au Labo.{" "}
+                          <Link to="/game/classe" className="font-semibold text-cyan-glow hover:underline">
+                            Classe d'empire
                           </Link>
                         </>
                       ) : unit.blueprint ? (
@@ -494,17 +504,21 @@ export function UnitsPage() {
                         const batch = { scrap: each.scrap * qty(unit.id), energy: each.energy * qty(unit.id) };
                         const wait = secondsToAfford(batch, player.resources, rates);
                         const noRoom = neededSpace > freeSpace;
+                        // 6.5 : un vaisseau de classe ne se construit plus après un changement de classe (il reste et vole).
+                        const classBlock = classUnitBlocker(player, unit);
                         return (
                           <div>
                             <div className="flex gap-2">
-                              <Button className="flex-1" disabled={pending === unit.id || noRoom || wait > 0} onClick={() => void handleBuild(unit.id)}>
+                              <Button className="flex-1" disabled={pending === unit.id || noRoom || wait > 0 || !!classBlock} onClick={() => void handleBuild(unit.id)}>
                                 Construire ×{formatNumber(qty(unit.id))}
                               </Button>
                               <Button variant="outline" disabled={pending === unit.id || data.count === 0} onClick={() => void handleSell(unit.id)}>
                                 Vendre
                               </Button>
                             </div>
-                            {noRoom ? (
+                            {classBlock ? (
+                              <BlockedReason tone="block">{classBlock} Tes vaisseaux déjà construits restent à toi.</BlockedReason>
+                            ) : noRoom ? (
                               <BlockedReason tone="block">
                                 Hangar {hangarLabel} trop petit : {formatNumber(neededSpace)} places demandées pour {formatNumber(freeSpace)} libres. Réduis la quantité ou{" "}
                                 <Link to="/game/batiments" className="font-semibold text-cyan-glow hover:underline">

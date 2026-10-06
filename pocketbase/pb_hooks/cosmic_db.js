@@ -4896,6 +4896,13 @@ const CONTENT_MIGRATIONS = [
       { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
     ],
   },
+  // 6.5 (lot P) : vaisseaux de classe ajoutés au contenu personnalisé (le moteur les impose aussi, avec leur verrou).
+  {
+    id: "class-units-6.5",
+    key: "units",
+    patches: [],
+    appendFromDefaults: ["recolteur", "croiseur_raid", "eclaireur_lointain"],
+  },
   // 6.4 (constat C4) : l'Intercepteur est une défense, il ne vole pas (vitesse et soute à 0, attaque 320, défense 80) ;
   // le Bastion est présenté comme un vaisseau. Seulement si l'admin n'a pas modifié ces champs.
   {

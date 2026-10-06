@@ -1,3 +1,4 @@
+import { expeditionDurationFactor } from "@/game/classUnits";
 import { empireClassPerk } from "@/game/empireClass";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { playerCombatEffects } from "@/game/effectTargets";
@@ -173,7 +174,8 @@ export function launchExpedition(owner: PlayerState, raw: Record<string, unknown
   }
   if (fleetShips(units) < EXPEDITION_RULES.minShips) throw new GameActionError(`Il faut au moins ${EXPEDITION_RULES.minShips} vaisseaux pour une expédition.`);
   for (const [id, qty] of Object.entries(units)) owner.units[id] = { ...owner.units[id], count: owner.units[id].count - qty };
-  const durationMs = hours * 3600_000;
+  // 6.5 : un Éclaireur lointain dans la flotte raccourcit l'expédition de 15 %.
+  const durationMs = Math.round(hours * 3600_000 * expeditionDurationFactor(units));
   return {
     attacker: owner,
     fleet: {

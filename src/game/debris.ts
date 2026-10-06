@@ -1,3 +1,4 @@
+import { CLASS_UNIT_RULES, HARVESTER_ID } from "@/game/classUnits";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { playerCargoCapacity } from "@/game/modifiers";
 
@@ -67,7 +68,16 @@ export function mergeDebris(field: DebrisField | null, add: DebrisAmount, locati
  *  exactement comme sur leur fiche : CAP × niveau × nombre, technos de cale et officiers compris. */
 export function recyclerCapacity(player: Parameters<typeof playerCargoCapacity>[0], fleet: Record<string, number>): number {
   const drones = Math.max(0, Math.floor(Number(fleet?.[DEBRIS_RULES.recyclerUnitId]) || 0));
-  return drones > 0 ? playerCargoCapacity(player, { [DEBRIS_RULES.recyclerUnitId]: drones }) : 0;
+  // 6.5 : le Récolteur (Industriel) recycle aussi, avec 25 % de capacité en plus de sa soute.
+  const harvesters = Math.max(0, Math.floor(Number(fleet?.[HARVESTER_ID]) || 0));
+  const fromDrones = drones > 0 ? playerCargoCapacity(player, { [DEBRIS_RULES.recyclerUnitId]: drones }) : 0;
+  const fromHarvesters = harvesters > 0 ? Math.floor(playerCargoCapacity(player, { [HARVESTER_ID]: harvesters }) * (1 + CLASS_UNIT_RULES.harvesterRecycleBonus)) : 0;
+  return fromDrones + fromHarvesters;
+}
+
+/** 6.5 : unités qui peuvent recycler (drones, et le Récolteur de l'Industriel). */
+export function isRecyclerUnit(id: string): boolean {
+  return id === DEBRIS_RULES.recyclerUnitId || id === HARVESTER_ID;
 }
 
 /** Ramassage : proportionnel aux deux ressources, dans la limite de la capacité. */

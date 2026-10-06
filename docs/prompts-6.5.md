@@ -1,6 +1,6 @@
 # 6.5 : prompts Midjourney des vaisseaux de classe (lot P, J.2)
 
-Trois illustrations à produire, une par classe d'empire. Elles conditionnent le code du lot P (`docs/proposals/unites-classe.md`).
+Les trois illustrations sont en place (512 × 512, 6.5.0). Les prompts restent ici pour les régénérer.
 
 Rappels de style (voir `docs/DESIGN.md`) :
 
@@ -13,9 +13,9 @@ braise pour le Seigneur de guerre, cyan pour l'Explorateur.
 
 | Fichier | Unité | Classe | État |
 |:--|:--|:--|:--|
-| `recolteur.webp` | Récolteur | Industriel | à produire |
-| `croiseur_raid.webp` | Croiseur de raid | Seigneur de guerre | à produire |
-| `eclaireur_lointain.webp` | Éclaireur lointain | Explorateur | à produire |
+| `recolteur.webp` | Récolteur | Industriel | en place |
+| `croiseur_raid.webp` | Croiseur de raid | Seigneur de guerre | en place |
+| `eclaireur_lointain.webp` | Éclaireur lointain | Explorateur | en place |
 
 ### Récolteur (Industriel, soute)
 

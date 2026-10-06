@@ -1,6 +1,7 @@
 import { empireEffects, playerModifiers } from "@/game/modifiers";
 import { unitEffect } from "@/game/effectTargets";
 import type { UnitCategory } from "@/types/game";
+import type { EmpireClassId } from "@/game/empireClass";
 import { BLUEPRINT_UNITS, techEffectGrants, techReductionFactor } from "@/game/technologies";
 
 export interface UnitStats {
@@ -37,6 +38,10 @@ export interface UnitDef {
   workshopHpPerSec?: number;
   /** 5.22 : unité d'élite qui contre le trait d'une personnalité de seigneur (voir eliteUnits.ts). */
   elite?: "opportunist" | "builder" | "aggressive";
+  /** 6.5 : vaisseau de classe, constructible seulement dans cette classe d'empire (voir classUnits.ts). */
+  empireClass?: EmpireClassId;
+  /** 6.5 : technologie de référence d'un vaisseau de classe : son niveau suit celui de la techno. */
+  classTech?: string;
 }
 
 /** v3.9 : vaisseau des Kesh'Vaar, plan acheté au Comptoir de la Ruche.
@@ -105,6 +110,56 @@ export const ELITE_UNITS: UnitDef[] = [
 ];
 
 export const ELITE_UNIT_IDS = ELITE_UNITS.map((u) => u.id);
+
+/** 6.5 (lot P, proposals/unites-classe.md) : un vaisseau par classe d'empire. Toujours présents (comme les
+ *  unités d'élite) ; leur niveau suit la technologie de référence (`classTech`), pas `unlockTech`, pour ne pas
+ *  détourner le déblocage de l'unité d'origine de cette techno. */
+export const CLASS_UNITS: UnitDef[] = [
+  {
+    id: "recolteur",
+    name: "Récolteur",
+    image: "/assets/units/recolteur.webp",
+    maxLevel: 10,
+    description: "Vaisseau-usine de l'Industriel : 80 de soute par place, et il recycle les champs de débris avec 25 % de capacité en plus. Réservé à la classe Industriel.",
+    cost: { scrap: 2500, energy: 1000 },
+    stats: { attaque: 40, defense: 60, vitesse: 4, cargo: 160 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 2,
+    empireClass: "industriel",
+    classTech: "tech9",
+  },
+  {
+    id: "croiseur_raid",
+    name: "Croiseur de raid",
+    image: "/assets/units/croiseur_raid.webp",
+    maxLevel: 10,
+    description: "Prédateur du Seigneur de guerre : frappe comme un chasseur et emporte 90 de butin (180 au pillage), sans escorte de cargos. Réservé à la classe Seigneur de guerre.",
+    cost: { scrap: 6000, energy: 3500 },
+    stats: { attaque: 600, defense: 150, vitesse: 9, cargo: 90 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 5,
+    empireClass: "seigneur",
+    classTech: "tech13",
+  },
+  {
+    id: "eclaireur_lointain",
+    name: "Éclaireur lointain",
+    image: "/assets/units/eclaireur_lointain.webp",
+    maxLevel: 10,
+    description: "Le vaisseau le plus rapide du jeu. Une expédition qui en emmène au moins un dure 15 % de moins. Réservé à la classe Explorateur.",
+    cost: { scrap: 1500, energy: 1000 },
+    stats: { attaque: 60, defense: 40, vitesse: 24, cargo: 30 },
+    category: "attack",
+    unlockTech: "",
+    hangarSpace: 1,
+    empireClass: "explorateur",
+    classTech: "tech20",
+  },
+];
+
+export const CLASS_UNIT_IDS = CLASS_UNITS.map((u) => u.id);
 
 export function isEliteUnit(id: string): boolean {
   return ELITE_UNIT_IDS.includes(id);
@@ -349,6 +404,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
   },
   KESH_HUNTER_UNIT,
   ...ELITE_UNITS,
+  ...CLASS_UNITS,
 ];
 
 /* ---------- registre courant (remplacé par applyGameContent) ---------- */

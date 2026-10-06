@@ -146,3 +146,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.3.2 | Lot S (P1) : UI tierce dans un bloc `ui` stable, entrée 897 → 742 Ko ; découpe du moteur à proposer (contenu paresseux) | `docs/changes/6.3.2-bundle-ui.md` |
 | 2026-10-06 | 6.4.0 | Lot Q : route de ravitaillement (mère → colonie, réserve 30 % de la mère), file de défense coloniale (5 lots, places réservées) | `docs/changes/6.4.0-colonies-suite.md` |
 | 2026-10-06 | 6.4.1 | Lot T : Carnet du commandant à jour (chapitre Ton empire : objectif du jour, classe ; étape route logistique) | `docs/changes/6.4.1-prise-en-main.md` |
+| 2026-10-06 | 6.5.0 | Lot P (J.2) : vaisseaux de classe (Récolteur, Croiseur de raid, Éclaireur lointain), verrou de classe, bonus de rôle de flotte | `docs/changes/6.5.0-vaisseaux-classe.md` |

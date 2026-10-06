@@ -1,5 +1,6 @@
 import { chooseEmpireClass } from "@/game/empireClassChoose";
 import { assertEliteBuildable } from "@/game/eliteUnits";
+import { assertClassUnitBuildable } from "@/game/classUnits";
 import { playerModifiers } from "@/game/modifiers";
 import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
 import { autoCommission, commissionDocked, hangarLoad } from "@/game/hangar";
@@ -253,6 +254,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const qty = Math.min(positiveInt(action.qty, "Quantité"), MAX_QTY);
       // 5.22 : unité d'élite : débloquée ET Labo toujours complet.
       if (unit.elite) assertEliteBuildable(player, unit.id);
+      // 6.5 : vaisseau de classe : la classe d'empire du joueur et sa techno de référence.
+      if (unit.empireClass) assertClassUnitBuildable(player, unit);
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;

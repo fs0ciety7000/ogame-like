@@ -22,6 +22,7 @@ import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
 import { addPassPoints, passTierToAnnounce } from "@/game/seasonPass";
 import { advanceWeeklyRecap } from "@/game/weeklyRecap";
 import { endVacation, VACATION_RULES } from "@/game/vacation";
+import { syncClassUnits } from "@/game/classUnits";
 import { advanceBuildPlan } from "@/game/buildPlan";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
@@ -337,6 +338,10 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   }
 
   // --- v5.10 : titres du catalogue débloqués par une mesure ---
+  // 6.5 : vaisseaux de classe (niveau = techno de référence, dans la bonne classe).
+  for (const id of syncClassUnits(player)) {
+    notifications.push({ kind: "event", title: "Vaisseau de classe débloqué", message: `${findUnit(id)?.name ?? id} rejoint ton chantier.`, createdAtMs: now, read: false, link: "/game/unites" });
+  }
   // 5.22 : unités d'élite (Labo complet et vendetta gagnée contre la personnalité visée).
   for (const id of refreshEliteUnlocks(player)) {
     notifications.push({ kind: "event", title: "Unité d'élite débloquée", message: `${findUnit(id)?.name ?? id} rejoint ton chantier. Elle ne combat que les seigneurs de guerre.`, createdAtMs: now, read: false, link: "/game/unites" });

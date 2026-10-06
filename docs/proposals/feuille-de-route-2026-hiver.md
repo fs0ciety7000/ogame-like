@@ -115,7 +115,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 9 | AU6 | Revue Communications : messages, canal global, salons, modération, annonces, sondages, gazette, notifications | M | à faire |
 | 10 | AU7 | Revue Galaxie et combat : carte, joueurs et classement, espionnage, rapports, journal, simulateur | M | à faire |
 | 11 | AU8 | Revue État-major et bonus : officiers, reliques, talents, Ascension, classes, circuit d'effets | M | à faire |
-| 12 | P | Vaisseaux de classe, dès réception des illustrations (peut passer avant) | M | en attente des images |
+| 12 | P | Vaisseaux de classe, dès réception des illustrations (peut passer avant) | M | livré 6.5.0 |
 | 13 | AU9 | Revue Unités : hangars, Atelier et Cale sèche, modules | M | à faire |
 | 14 | AU10 | Revue Flottes : missions, expéditions, emplacements, « Relancer » | M | à faire |
 | 15 | AU11 | Revue Économie : ressources, bâtiments, Labo, planificateur, portefeuille | M | à faire |

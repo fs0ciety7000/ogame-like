@@ -1,4 +1,5 @@
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
+import { CLASS_UNIT_RULES, HARVESTER_ID } from "@/game/classUnits";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyAction } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
@@ -125,30 +126,39 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-/** Recyclage d'un champ de débris par des Drones récupérateurs. */
+/** Recyclage d'un champ de débris par des Drones récupérateurs (6.5 : et des Récolteurs de l'Industriel). */
 export function RecycleDialog({ field, onClose }: { field: DebrisField | null; onClose: () => void }) {
   const player = usePlayerStore((s) => s.player);
   const uid = useAuthStore((s) => s.user?.uid);
-  const [drones, setDrones] = useState(0);
+  const [picked, setPicked] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const droneId = DEBRIS_RULES.recyclerUnitId;
-  const owned = player?.units[droneId]?.count ?? 0;
+  // Les Récolteurs n'apparaissent que si le joueur en possède.
+  const ids = [droneId, ...((player?.units[HARVESTER_ID]?.count ?? 0) > 0 ? [HARVESTER_ID] : [])];
+  const ownedOf = (id: string) => player?.units[id]?.count ?? 0;
   const total = field ? field.scrap + field.energy : 0;
   // 5.16 : la capacité d'un drone est sa cargaison (CAP), comme sur sa fiche.
-  const perDrone = player ? recyclerCapacity(player, { [droneId]: 1 }) : 0;
-  const needed = perDrone > 0 ? Math.min(owned, Math.ceil(total / perDrone)) : owned;
-  const count = Math.max(0, Math.min(owned, drones || needed));
-  const capacity = player ? recyclerCapacity(player, { [droneId]: count }) : 0;
-  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, { [droneId]: count }), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
+  const perUnit = (id: string) => (player ? recyclerCapacity(player, { [id]: 1 }) : 0);
+  const perDrone = perUnit(droneId);
+  const needed = perDrone > 0 ? Math.min(ownedOf(droneId), Math.ceil(total / perDrone)) : ownedOf(droneId);
+  const fleet: Record<string, number> = {};
+  for (const id of ids) {
+    const want = picked[id] ?? (id === droneId ? needed : 0);
+    const n = Math.max(0, Math.min(ownedOf(id), want));
+    if (n > 0) fleet[id] = n;
+  }
+  const count = Object.values(fleet).reduce((a, n) => a + n, 0);
+  const capacity = player ? recyclerCapacity(player, fleet) : 0;
+  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, fleet), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {
     if (!field || count <= 0) return;
     setSubmitting(true);
     try {
-      await sendFleet(field.id, { [droneId]: count }, "recycle");
+      await sendFleet(field.id, fleet, "recycle");
       triggerWarpEffect();
       toast.success("Recycleurs en route", { description: "Premier arrivé, premier servi : un autre joueur peut te devancer." });
-      setDrones(0);
+      setPicked({});
       onClose();
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Envoi impossible.");
@@ -169,25 +179,30 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
             submitting ? <RadarScan label="Décollage…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
-              <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
-                <span className="flex-1 text-slate-200">{findUnit(droneId)?.name ?? "Drone récupérateur"}</span>
-                <span className="text-xs text-slate-500">Possédés : {owned}</span>
-                <NumberInput size="sm" min={owned > 0 ? 1 : 0} max={owned} disabled={owned === 0} value={count} onChange={setDrones} aria-label="Nombre de drones" className="w-40" />
-              </div>
+              {ids.map((id) => (
+                <div key={id} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
+                  <span className="flex-1 text-slate-200">{findUnit(id)?.name ?? id}</span>
+                  <span className="text-xs text-slate-500">
+                    Possédés : <span className="font-mono tabular-nums">{ownedOf(id)}</span> · <span className="font-mono tabular-nums">{formatNumber(perUnit(id))}</span> chacun
+                  </span>
+                  <NumberInput size="sm" min={0} max={ownedOf(id)} disabled={ownedOf(id) === 0} value={fleet[id] ?? 0} onChange={(v) => setPicked((p) => ({ ...p, [id]: v }))} aria-label={`Nombre : ${findUnit(id)?.name ?? id}`} className="w-40" />
+                </div>
+              ))}
               <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p>
-                  <GameIcon name="recycle" /> Capacité : <strong className="tabular-mono text-slate-200">{formatNumber(capacity)}</strong> ({formatNumber(perDrone)} par drone)
+                  <GameIcon name="recycle" /> Capacité : <strong className="tabular-mono text-slate-200">{formatNumber(capacity)}</strong>
                   {capacity >= total ? " : tout le champ." : ` sur ${formatNumber(total)}.`}
                 </p>
+                {ids.includes(HARVESTER_ID) && <p>Récolteur : <span className="font-mono tabular-nums">+{Math.round(CLASS_UNIT_RULES.harvesterRecycleBonus * 100)} %</span> de capacité en plus de sa soute.</p>}
                 {flight !== null && (
                   <p className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-cyan-glow" /> Trajet : <strong className="text-slate-200">{formatDuration(flight)}</strong>, puis retour.
                   </p>
                 )}
-                {owned === 0 && <p className="text-danger-glow">Il te faut des Drones récupérateurs.</p>}
+                {ids.every((id) => ownedOf(id) === 0) && <p className="text-danger-glow">Il te faut des Drones récupérateurs.</p>}
               </div>
               <Button className="w-full" disabled={count <= 0} onClick={() => void send()}>
-                <Recycle className="mr-1.5 h-4 w-4" /> Envoyer {count} drone{count > 1 ? "s" : ""}
+                <Recycle className="mr-1.5 h-4 w-4" /> Envoyer {count} recycleur{count > 1 ? "s" : ""}
               </Button>
             </div>
           )}

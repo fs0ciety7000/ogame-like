@@ -9,7 +9,7 @@ import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type Season
 import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
-import { DEFAULT_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
+import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
@@ -120,6 +120,12 @@ function withFixedUnits(units: UnitDef[]): UnitDef[] {
     const i = out.findIndex((u) => u.id === e.id);
     if (i < 0) out.push(e);
     else out[i] = { ...out[i], elite: e.elite, unlockTech: "", maxLevel: 1 };
+  }
+  // 6.5 : vaisseaux de classe (et leur verrou de classe, même si la fiche a été modifiée).
+  for (const c of CLASS_UNITS) {
+    const i = out.findIndex((u) => u.id === c.id);
+    if (i < 0) out.push(c);
+    else out[i] = { ...out[i], empireClass: c.empireClass, classTech: out[i].classTech || c.classTech, unlockTech: "" };
   }
   return out;
 }
@@ -490,7 +496,7 @@ export function validateGameContent(content: GameContent): string[] {
   checkIds("Unités", content.units.map((u) => u.id));
   for (const u of content.units) {
     const label = `Unité ${u.name || u.id}`;
-    if (!u.blueprint && !u.elite && !techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
+    if (!u.blueprint && !u.elite && !u.empireClass && !techIds.has(u.unlockTech)) errors.push(`${label} : techno de déblocage « ${u.unlockTech} » inexistante.`);
     if (u.category !== "attack" && u.category !== "defense") errors.push(`${label} : catégorie invalide.`);
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
     if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);
