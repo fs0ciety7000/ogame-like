@@ -14,7 +14,6 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, fetchMarketTrades, subscribeOffers } from "@/services/marketService";
 import { MarketPriceChart, formatRatio } from "@/components/game/MarketPriceChart";
 import { MARKET_HISTORY_RULES, priceFlag } from "@/game/marketHistory";
-const MARKET_HISTORY_DAYS = MARKET_HISTORY_RULES.days;
 import { GameActionError } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
@@ -208,7 +207,7 @@ export function MarketSection() {
                       </span>
                     )}
                     {flag && (
-                      <span title={`${formatRatio(flag.factor)} le prix habituel des ${MARKET_HISTORY_DAYS} derniers jours`}>
+                      <span title={`${formatRatio(flag.factor)} le prix habituel des ${MARKET_HISTORY_RULES.days} derniers jours`}>
                         <HudTag tone={flag.kind === "high" ? "danger" : "gold"}>{flag.kind === "high" ? "Prix anormal : cher" : "Prix anormal : bradé"}</HudTag>
                       </span>
                     )}

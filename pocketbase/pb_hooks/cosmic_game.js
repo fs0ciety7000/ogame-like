@@ -947,6 +947,13 @@ function unitClasses(all = UNITS) {
   }
   return out;
 }
+var UNIT_AUDIT_RULES = {
+  strongAbove: 1.6,
+  weakBelow: 0.6,
+  /** Unités lourdes de fin de partie (au moins `endgameSlots` places) : leur avance est voulue, jusqu'à ce rapport. */
+  endgameSlots: 10,
+  endgameStrongAbove: 2.2
+};
 
 // src/game/effectTargets.ts
 var CATEGORY_LABELS = { attack: "Vaisseaux", defense: "D\xE9fenses" };
@@ -19205,843 +19212,209 @@ function addPatronage(raw, uid, pseudo, amber, now) {
   return __spreadProps(__spreadValues({}, st), { byUid: __spreadProps(__spreadValues({}, st.byUid), { [uid]: { pseudo: pseudo || ((_c = st.byUid[uid]) == null ? void 0 : _c.pseudo) || "?", amber: cur + n } }) });
 }
 
-// src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
-function withFixedUnits(units) {
-  const out = units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? [...units] : [...units, KESH_HUNTER_UNIT];
-  for (const e3 of ELITE_UNITS) {
-    const i = out.findIndex((u) => u.id === e3.id);
-    if (i < 0) out.push(e3);
-    else out[i] = __spreadProps(__spreadValues({}, out[i]), { elite: e3.elite, unlockTech: "", maxLevel: 1 });
-  }
-  for (const c of CLASS_UNITS) {
-    const i = out.findIndex((u) => u.id === c.id);
-    if (i < 0) out.push(c);
-    else out[i] = __spreadProps(__spreadValues({}, out[i]), { empireClass: c.empireClass, classTech: out[i].classTech || c.classTech, unlockTech: "" });
-  }
-  return out;
-}
-var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
-var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
-var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
-var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
-var DEFAULT_EMPIRE_CLASS_RULES = __spreadValues({}, EMPIRE_CLASS_RULES);
-var DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
-var DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
-var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
-var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
-var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
-var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
-var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
-var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
-var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
-var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
-var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
-var DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
-var DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
-var DEFAULT_CHRONICLE_GEN_RULES = structuredClone(CHRONICLE_GEN_RULES);
-var DEFAULT_COMMERCE_RULES = {
-  auctions: structuredClone(AUCTION_RULES),
-  tradeContracts: structuredClone(TRADE_CONTRACT_RULES),
-  gifts: structuredClone(GIFT_RULES),
-  contests: structuredClone(CONTEST_RULES),
-  tournamentPoints: structuredClone(OUTCOME_POINTS),
-  weeklyStock: structuredClone(WEEKLY_STOCK_RULES),
-  patrons: structuredClone(PATRON_RULES)
-};
-var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
-var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
-var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
-var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
-var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
-var DEFAULT_SEASON_BOSS_RULES = __spreadValues({}, SEASON_BOSS_RULES);
-var DEFAULT_ALLIANCE_BOSS_RULES = __spreadProps(__spreadValues({}, ALLIANCE_BOSS_RULES), { bosses: DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b)) });
-var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
-function defaultGameContent() {
-  return structuredClone({
-    buildings: DEFAULT_BUILDINGS,
-    units: DEFAULT_UNITS,
-    technologies: DEFAULT_TECHNOLOGIES,
-    missions: Object.values(DEFAULT_MISSIONS),
-    factions: DEFAULT_FACTIONS,
-    ranks: DEFAULT_RANKS,
-    achievements: DEFAULT_ACHIEVEMENTS,
-    warlords: defaultWarlordsConfig(),
-    seasonPass: defaultSeasonPassConfig(),
-    chronicles: defaultChroniclesConfig(),
-    passSeasons: defaultPassSeasonsConfig(),
-    relics: DEFAULT_RELICS,
-    relicSettings: defaultRelicSettings(),
-    worldBosses: DEFAULT_WORLD_BOSSES,
-    officers: defaultOfficersConfig(),
-    titles: DEFAULT_TITLES,
-    rules: __spreadValues({ pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES }, structuredClone(DEFAULT_COMMERCE_RULES))
-  });
-}
-var current = defaultGameContent();
-function currentGameContent() {
-  return structuredClone(current);
-}
-function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb;
-  const defaults = defaultGameContent();
-  const content = {
-    buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
-    units: withFixedUnits((_b = overrides.units) != null ? _b : defaults.units),
-    technologies: (_c = overrides.technologies) != null ? _c : defaults.technologies,
-    missions: (_d = overrides.missions) != null ? _d : defaults.missions,
-    factions: (_e = overrides.factions) != null ? _e : defaults.factions,
-    ranks: (_f = overrides.ranks) != null ? _f : defaults.ranks,
-    achievements: (_g = overrides.achievements) != null ? _g : defaults.achievements,
-    warlords: (_h = overrides.warlords) != null ? _h : defaults.warlords,
-    seasonPass: (_i = overrides.seasonPass) != null ? _i : defaults.seasonPass,
-    chronicles: (_j = overrides.chronicles) != null ? _j : defaults.chronicles,
-    passSeasons: overrides.passSeasons && Array.isArray(overrides.passSeasons.seasons) ? overrides.passSeasons : defaults.passSeasons,
-    relics: (_k = overrides.relics) != null ? _k : defaults.relics,
-    titles: (_l = overrides.titles) != null ? _l : defaults.titles,
-    worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
-    officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
-    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_m = overrides.relicSettings) != null ? _m : {}), {
-      rarities: Object.fromEntries(
-        Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
-          var _a2, _b2, _c2;
-          return [id, __spreadValues(__spreadValues({}, v), (_c2 = (_b2 = (_a2 = overrides.relicSettings) == null ? void 0 : _a2.rarities) == null ? void 0 : _b2[id]) != null ? _c2 : {})];
-        })
-      )
-    }),
-    rules: {
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_o = (_n = overrides.rules) == null ? void 0 : _n.pvp) != null ? _o : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_q = (_p = overrides.rules) == null ? void 0 : _p.combat) != null ? _q : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_s = (_r = overrides.rules) == null ? void 0 : _r.economy) != null ? _s : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_u = (_t = overrides.rules) == null ? void 0 : _t.fleets) != null ? _u : {}),
-      classes: __spreadValues(__spreadValues({}, defaults.rules.classes), (_w = (_v = overrides.rules) == null ? void 0 : _v.classes) != null ? _w : {}),
-      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_y = (_x = overrides.rules) == null ? void 0 : _x.colonies) != null ? _y : {}),
-      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_A = (_z = overrides.rules) == null ? void 0 : _z.colonyRoutes) != null ? _A : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_C = (_B = overrides.rules) == null ? void 0 : _B.spy) != null ? _C : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_E = (_D = overrides.rules) == null ? void 0 : _D.debris) != null ? _E : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_G = (_F = overrides.rules) == null ? void 0 : _F.patrol) != null ? _G : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_I = (_H = overrides.rules) == null ? void 0 : _H.events) != null ? _I : {}),
-      seasons: (() => {
-        var _a2, _b2, _d2, _e2, _f2;
-        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
-        const d = defaults.rules.seasons;
-        const _c2 = o, { tiers: _tiers, participationHours: _hours } = _c2, rest = __objRest(_c2, ["tiers", "participationHours"]);
-        void _tiers;
-        void _hours;
-        return __spreadProps(__spreadValues(__spreadValues({}, d), rest), { champion: __spreadValues(__spreadValues({}, d.champion), (_d2 = o.champion) != null ? _d2 : {}), podium: __spreadValues(__spreadValues({}, d.podium), (_e2 = o.podium) != null ? _e2 : {}), participation: __spreadValues(__spreadValues({}, d.participation), (_f2 = o.participation) != null ? _f2 : {}) });
-      })(),
-      alliances: (() => {
-        var _a2, _b2, _c2, _d2;
-        const merged = __spreadValues(__spreadValues({}, defaults.rules.alliances), (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.alliances) != null ? _b2 : {});
-        const ids = new Set(((_c2 = merged.researches) != null ? _c2 : []).map((r) => r.id));
-        return __spreadProps(__spreadValues({}, merged), { researches: [...(_d2 = merged.researches) != null ? _d2 : [], ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] });
-      })(),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_K = (_J = overrides.rules) == null ? void 0 : _J.pirates) != null ? _K : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_M = (_L = overrides.rules) == null ? void 0 : _L.market) != null ? _M : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) != null ? _O : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_R = (_Q = (_P = overrides.rules) == null ? void 0 : _P.expeditions) == null ? void 0 : _Q.weights) != null ? _R : {})
-      }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_T = (_S = overrides.rules) == null ? void 0 : _S.leviathan) != null ? _T : {}),
-      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_V = (_U = overrides.rules) == null ? void 0 : _U.seasonBoss) != null ? _V : {}),
-      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_X = (_W = overrides.rules) == null ? void 0 : _W.allianceBoss) != null ? _X : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.wars) != null ? _Z : {}),
-      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_$ = (__ = overrides.rules) == null ? void 0 : __.catchup) != null ? _$ : {}),
-      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.mutators) != null ? _ba : {}), { overrides: __spreadValues({}, (_ea = (_da = (_ca = overrides.rules) == null ? void 0 : _ca.mutators) == null ? void 0 : _da.overrides) != null ? _ea : {}) }),
-      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ga = (_fa = overrides.rules) == null ? void 0 : _fa.territoryWar) != null ? _ga : {}), {
-        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ja = (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) == null ? void 0 : _ia.points) != null ? _ja : {}),
-        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ma = (_la = (_ka = overrides.rules) == null ? void 0 : _ka.territoryWar) == null ? void 0 : _la.rewards) != null ? _ma : {})
-      }),
-      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_oa = (_na = overrides.rules) == null ? void 0 : _na.xpTiers) != null ? _oa : {}), {
-        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.tiers) != null ? _ra : {}),
-        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ua = (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.xpTiers) == null ? void 0 : _ta.multipliers) != null ? _ua : {})
-      }),
-      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_wa = (_va = overrides.rules) == null ? void 0 : _va.passGen) != null ? _wa : {}), {
-        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_za = (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) == null ? void 0 : _ya.values) != null ? _za : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_Ca = (_Ba = (_Aa = overrides.rules) == null ? void 0 : _Aa.passGen) == null ? void 0 : _Ba.caps) != null ? _Ca : {}),
-        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Fa = (_Ea = (_Da = overrides.rules) == null ? void 0 : _Da.passGen) == null ? void 0 : _Ea.weights) != null ? _Fa : {}),
-        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Ia = (_Ha = (_Ga = overrides.rules) == null ? void 0 : _Ga.passGen) == null ? void 0 : _Ha.challengeWeights) != null ? _Ia : {})
-      }),
-      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_Ka = (_Ja = overrides.rules) == null ? void 0 : _Ja.chronicleGen) != null ? _Ka : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Na = (_Ma = (_La = overrides.rules) == null ? void 0 : _La.chronicleGen) == null ? void 0 : _Ma.weights) != null ? _Na : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Qa = (_Pa = (_Oa = overrides.rules) == null ? void 0 : _Oa.chronicleGen) == null ? void 0 : _Pa.caps) != null ? _Qa : {}),
-        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Ta = (_Sa = (_Ra = overrides.rules) == null ? void 0 : _Ra.chronicleGen) == null ? void 0 : _Sa.objectiveWeights) != null ? _Ta : {}),
-        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Wa = (_Va = (_Ua = overrides.rules) == null ? void 0 : _Ua.chronicleGen) == null ? void 0 : _Va.themeArchetypes) != null ? _Wa : {})
-      }),
-      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Ya = (_Xa = overrides.rules) == null ? void 0 : _Xa.auctions) != null ? _Ya : {}), {
-        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_$a = (__a = (_Za = overrides.rules) == null ? void 0 : _Za.auctions) == null ? void 0 : __a.minStart) != null ? _$a : {})
-      }),
-      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (_bb = (_ab = overrides.rules) == null ? void 0 : _ab.tradeContracts) != null ? _bb : {}),
-      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_db = (_cb = overrides.rules) == null ? void 0 : _cb.gifts) != null ? _db : {}),
-      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_fb = (_eb = overrides.rules) == null ? void 0 : _eb.contests) != null ? _fb : {}),
-      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_hb = (_gb = overrides.rules) == null ? void 0 : _gb.tournamentPoints) != null ? _hb : {}),
-      weeklyStock: {
-        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_kb = (_jb = (_ib = overrides.rules) == null ? void 0 : _ib.weeklyStock) == null ? void 0 : _jb.prices) != null ? _kb : {}),
-        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_nb = (_mb = (_lb = overrides.rules) == null ? void 0 : _lb.weeklyStock) == null ? void 0 : _mb.quantities) != null ? _nb : {})
-      },
-      patrons: __spreadValues(__spreadValues({}, defaults.rules.patrons), (_pb = (_ob = overrides.rules) == null ? void 0 : _ob.patrons) != null ? _pb : {}),
-      streak: (() => {
-        var _a2, _b2, _c2;
-        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
-        const d = defaults.rules.streak;
-        const hours2 = Array.isArray(o.hours) && o.hours.length === d.hours.length && o.hours.every((h) => Number.isFinite(h) && h >= 0) ? [...o.hours] : [...d.hours];
-        return __spreadProps(__spreadValues(__spreadValues({}, d), o), { hours: hours2, chest: __spreadValues(__spreadValues({}, d.chest), (_c2 = o.chest) != null ? _c2 : {}) });
-      })()
-    }
-  };
-  setBuildings(content.buildings);
-  setUnits(content.units);
-  setTechnologies(content.technologies);
-  for (const t of content.technologies) for (const e3 of techEffects(t)) if (e3.type === "unlock_next_level" && e3.target) UNIT_TO_TECH[e3.target] = t.id;
-  setMissions(content.missions);
-  setFactions(content.factions);
-  setRanks(content.ranks);
-  setOfficers(content.officers);
-  setWorldBosses(content.worldBosses);
-  setAchievements(content.achievements);
-  setWarlords(content.warlords);
-  setSeasonPass(content.seasonPass);
-  setChronicles(content.chronicles);
-  setPassSeasons(content.passSeasons);
-  setRelics(content.relics, content.relicSettings);
-  setLootTables((_qb = content.relicSettings) == null ? void 0 : _qb.loot, (_rb = content.relicSettings) == null ? void 0 : _rb.lootTokenCap);
-  setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
-  Object.assign(PVP_RULES, content.rules.pvp);
-  Object.assign(COMBAT_RULES, content.rules.combat);
-  setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
-  Object.assign(ECONOMY_RULES, content.rules.economy);
-  Object.assign(FLEET_RULES, content.rules.fleets);
-  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
-  Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
-  Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
-  Object.assign(SPY_RULES, content.rules.spy);
-  Object.assign(DEBRIS_RULES, content.rules.debris);
-  Object.assign(PATROL_RULES, content.rules.patrol);
-  Object.assign(EVENT_RULES, content.rules.events);
-  Object.assign(SEASON_RULES, content.rules.seasons);
-  Object.assign(ALLIANCE_RULES, content.rules.alliances);
-  Object.assign(PIRATE_RULES, content.rules.pirates);
-  Object.assign(MARKET_RULES, content.rules.market);
-  Object.assign(EXPEDITION_RULES, content.rules.expeditions);
-  Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
-  Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
-  const sb = content.rules.seasonBoss;
-  SEASON_BOSS_TUNING.cooldownHours = sb.cooldownHours;
-  SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
-  SEASON_BOSS_TUNING.lossMult = sb.lossMult;
-  SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _sb = content.rules.allianceBoss, { bosses: allianceBosses } = _sb, allianceBossRules = __objRest(_sb, ["bosses"]);
-  Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
-  setAllianceBosses(allianceBosses);
-  Object.assign(WAR_RULES, content.rules.wars);
-  Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
-  Object.assign(CATCHUP_RULES, content.rules.catchup);
-  MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
-  MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
-  Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
-  Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
-  Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
-  Object.assign(CHRONICLE_GEN_RULES, structuredClone(content.rules.chronicleGen));
-  Object.assign(AUCTION_RULES, structuredClone(content.rules.auctions));
-  Object.assign(TRADE_CONTRACT_RULES, structuredClone(content.rules.tradeContracts));
-  Object.assign(GIFT_RULES, structuredClone(content.rules.gifts));
-  Object.assign(CONTEST_RULES, structuredClone(content.rules.contests));
-  Object.assign(OUTCOME_POINTS, structuredClone(content.rules.tournamentPoints));
-  Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
-  Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
-  current = content;
-  return content;
-}
-var RULE_GROUP_LABELS = {
-  pvp: "Protections",
-  combat: "Combat",
-  economy: "\xC9conomie",
-  fleets: "Flottes",
-  classes: "Classes d'empire",
-  colonies: "Colonies",
-  colonyRoutes: "Routes de colonies",
-  spy: "Espionnage",
-  debris: "D\xE9bris",
-  patrol: "Patrouilles",
-  events: "\xC9v\xE9nements",
-  seasons: "Saisons",
-  alliances: "Alliances",
-  pirates: "Pirates",
-  market: "March\xE9",
-  expeditions: "Exp\xE9ditions",
-  leviathan: "L\xE9viathan",
-  seasonBoss: "Boss de saison",
-  allianceBoss: "Boss d'alliance",
-  wars: "Guerres",
-  streak: "S\xE9rie de connexion",
-  catchup: "Rattrapage",
-  mutators: "Mutateur de saison",
-  territoryWar: "Guerre de territoire",
-  xpTiers: "Paliers d'XP",
-  passGen: "Passe g\xE9n\xE9r\xE9",
-  chronicleGen: "Chroniques g\xE9n\xE9r\xE9es",
-  auctions: "Ench\xE8res",
-  tradeContracts: "Contrats de livraison",
-  gifts: "Cadeaux",
-  contests: "Concours du pot commun",
-  tournamentPoints: "Tournoi du casino : points par tirage",
-  weeklyStock: "Offre de la semaine (Comptoir)",
-  patrons: "M\xE9c\xE8nes"
-};
-function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
-  const errors = [];
-  if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
-  const defaults = defaultGameContent().rules;
-  for (const [group, value2] of Object.entries(rules)) {
-    const def3 = defaults[group];
-    const label3 = (_a = RULE_GROUP_LABELS[group]) != null ? _a : group;
-    if (!def3) continue;
-    if (!value2 || typeof value2 !== "object") {
-      errors.push(`${label3} : section illisible.`);
-      continue;
-    }
-    for (const [key, v] of Object.entries(value2)) {
-      const d = def3[key];
-      if (d === void 0 || v === void 0) continue;
-      if (typeof d === "number") {
-        if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un nombre.`);
-        else if (d >= 0 && v < 0) errors.push(`${label3} : \xAB ${key} \xBB ne peut pas \xEAtre n\xE9gatif.`);
-        else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre entre \u22121 et 0.`);
-        else if (/Pct$/.test(key) && v > 1) errors.push(`${label3} : \xAB ${key} \xBB est une part (0,1 = 10 %), 1 au plus.`);
-      } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre oui ou non.`);
-      else if (typeof d === "string" && typeof v !== "string") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un texte.`);
-      else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre une liste.`);
-    }
-  }
-  const merged = mergeRulesForCheck(rules);
-  const cb6 = merged.combat;
-  if (!(cb6.techCombatCap >= 0 && cb6.techCombatCap <= 5)) errors.push("Combat : plafond des technos de combat entre 0 et 5 (+500 %).");
-  if (!(cb6.techCombatPerTechMax >= 0 && cb6.techCombatPerTechMax <= cb6.techCombatCap)) errors.push("Combat : une techno ne peut pas d\xE9passer le plafond total des technos de combat.");
-  if (!(cb6.keshPveBonus >= 0 && cb6.keshPveBonus <= 3)) errors.push("Combat : bonus du Traqueur contre les PNJ entre 0 et 3 (+300 %).");
-  if (!(merged.pirates.lairLocateCostHours >= 0 && merged.pirates.lairLocateMinRepelled >= 0)) errors.push("Factions : \xAB Localiser \xBB invalide.");
-  if (!(merged.classes.harvesterRecycleBonus >= 0 && merged.classes.harvesterRecycleBonus <= 5)) errors.push("Classes : bonus de recyclage du R\xE9colteur entre 0 et 5.");
-  if (!(merged.classes.scoutExpeditionTime >= 0 && merged.classes.scoutExpeditionTime < 1)) errors.push("Classes : r\xE9duction d'exp\xE9dition de l'\xC9claireur entre 0 et 0,99.");
-  if (!(merged.colonies.defenseQueueMax >= 0 && merged.colonies.defenseQueueMax <= 20)) errors.push("Colonies : file de d\xE9fense entre 0 et 20 lots.");
-  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= ((_c = (_b = merged.colonies.levelsRequired) == null ? void 0 : _b.length) != null ? _c : 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
-  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_d = merged.events.bossWeekend) != null ? _d : "first", startHour: (_e = merged.leviathan.startHour) != null ? _e : 18, durationHours: merged.leviathan.durationHours, dates: (_f = merged.events.bossDates) != null ? _f : [] }));
-  errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
-  const sbr = merged.seasonBoss;
-  if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
-  if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
-  if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
-  if (!((_g = merged.leviathan.name) == null ? void 0 : _g.trim())) errors.push("L\xE9viathan : nom vide.");
-  errors.push(...validateCatchupRules(merged.catchup));
-  errors.push(...validateMutatorRules(merged.mutators));
-  errors.push(...validateTerritoryWarRules(merged.territoryWar));
-  errors.push(...validateXpTierRules(merged.xpTiers));
-  errors.push(...validatePassGenRules(merged.passGen));
-  errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
-  const au = merged.auctions;
-  if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Ench\xE8res : surench\xE8re entre 0 et 1, taxe entre 0 et 0,99.");
-  if (!(Number.isInteger(au.maxOpenPerSeller) && au.maxOpenPerSeller >= 1 && au.watchMax >= 0 && au.historyPerLot >= 1 && au.historyMaxLots >= 1)) errors.push("Ench\xE8res : ventes ouvertes, alertes et historique \u2265 1 (entiers).");
-  if (!(Array.isArray(au.durationsH) && au.durationsH.length > 0 && au.durationsH.every((h) => h > 0 && h <= 168))) errors.push("Ench\xE8res : dur\xE9es entre 1 et 168 h.");
-  const tc = merged.tradeContracts;
-  if (!(tc.minHours >= 1 && tc.minHours <= tc.maxHours && tc.maxActive >= 1 && tc.openHours >= 1 && tc.priorityHours >= 0)) errors.push("Contrats : d\xE9lais min \u2264 max, contrats actifs \u2265 1.");
-  if (!(merged.gifts.outsideAllianceTax >= 0 && merged.gifts.outsideAllianceTax < 1 && merged.gifts.minAccountDays >= 0)) errors.push("Cadeaux : taxe hors alliance entre 0 et 0,99, anciennet\xE9 \u2265 0.");
-  if (!(merged.contests.maxPotShare > 0 && merged.contests.maxPotShare <= 1 && merged.contests.maxKept >= 1 && merged.contests.standingsSize >= 1)) errors.push("Concours : part du pot entre 0 et 1, listes \u2265 1.");
-  if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage \u2265 0.");
-  if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires \u2265 1.");
-  if (!(merged.patrons.top >= 1)) errors.push("M\xE9c\xE8nes : au moins 1 place.");
-  const cb = merged.combat;
-  if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par r\xE9sistance > 0.");
-  if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
-  for (const [k, label3] of [["retreatAt", "retraite"], ["cautiousRetreatAt", "retraite prudente"], ["attackerWinBelow", "seuil de victoire"], ["timeoutWinMargin", "avance au dernier tour"], ["homeFleetDefenseFactor", "vaisseaux \xE0 quai"], ["riposteHomeFleet", "riposte"]]) {
-    if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label3} entre 0 et 1.`);
-  }
-  if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
-  if (!(cb.hullDamageShare >= 0 && cb.hullDamageShare <= 0.9)) errors.push("Combat : part des d\xE9g\xE2ts conserv\xE9s entre 0 et 0,9.");
-  if (!(cb.hullMaxDamage >= 0.1 && cb.hullMaxDamage <= 0.99)) errors.push("Combat : usure maximale entre 0,1 et 0,99.");
-  if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
-  if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
-  if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
-  if (!(cb.classEdge >= 0 && cb.classEdge <= 0.9)) errors.push("Combat : avantage de classe entre 0 et 0,9.");
-  if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
-  if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
-  if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
-  if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
-  if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
-  for (const ev of (_h = merged.events.scheduled) != null ? _h : []) {
-    if (ev.repeatWeeks === void 0) continue;
-    if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
-    if (!(Number.isInteger(ev.repeatCount) && ((_i = ev.repeatCount) != null ? _i : 0) >= 2 && ((_j = ev.repeatCount) != null ? _j : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
-  }
-  const st = merged.streak;
-  if (st) {
-    if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
-    for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_k = st.chest) == null ? void 0 : _k[key];
-      if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
-    }
-  }
-  return errors;
-}
-function mergeRulesForCheck(rules) {
-  const d = defaultGameContent().rules;
-  const out = __spreadValues({}, d);
-  for (const [k, v] of Object.entries(rules)) if (v && typeof v === "object" && !Array.isArray(v)) out[k] = __spreadValues(__spreadValues({}, d[k]), v);
-  return out;
-}
-var ID_PATTERN = /^[A-Za-z0-9_]+$/;
-function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
-  const errors = [];
-  errors.push(...validateRules(content.rules));
-  const resources = new Set(RESOURCE_LIST.map((r) => r.id));
-  const techIds = new Set(content.technologies.map((t) => t.id));
-  const unitIds = new Set(content.units.map((u) => u.id));
-  const checkIds = (label3, ids) => {
-    const seen = /* @__PURE__ */ new Set();
-    for (const id of ids) {
-      if (!id || !ID_PATTERN.test(id)) errors.push(`${label3} : identifiant \xAB ${id} \xBB invalide (lettres, chiffres, _).`);
-      if (seen.has(id)) errors.push(`${label3} : identifiant \xAB ${id} \xBB en double.`);
-      seen.add(id);
-    }
-  };
-  const checkResources = (label3, map) => {
-    for (const [res, v] of Object.entries(map != null ? map : {})) {
-      if (!resources.has(res)) errors.push(`${label3} : ressource inconnue \xAB ${res} \xBB.`);
-      if (typeof v !== "number" || !Number.isFinite(v) || v < 0) errors.push(`${label3} : valeur invalide pour ${res}.`);
-    }
-  };
-  checkIds("B\xE2timents", content.buildings.map((b) => b.id));
-  for (const b of content.buildings) {
-    const label3 = `B\xE2timent ${b.name || b.id}`;
-    if (!(b.maxLevel >= 1)) errors.push(`${label3} : niveau max doit \xEAtre \u2265 1.`);
-    checkResources(`${label3} (d\xE9blocage)`, b.unlockCost);
-    checkResources(`${label3} (co\xFBt initial)`, (_a = b.upgrade) == null ? void 0 : _a.baseCost);
-    checkResources(`${label3} (co\xFBt max)`, (_b = b.upgrade) == null ? void 0 : _b.maxCost);
-    if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label3} : techno \xAB ${b.unlockedByTech} \xBB inexistante.`);
-    if (b.production && !resources.has(b.production.resource)) errors.push(`${label3} : ressource produite inconnue.`);
-    if (b.production && b.production.perSecond.length === 0) errors.push(`${label3} : table de production vide.`);
-    const t2 = (_c = b.upgrade) == null ? void 0 : _c.tier2;
-    if (t2) {
-      if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label3} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
-      checkResources(`${label3} (second palier, co\xFBt initial)`, t2.baseCost);
-      checkResources(`${label3} (second palier, co\xFBt max)`, t2.maxCost);
-      if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
-    }
-    if (((_d = b.effect) == null ? void 0 : _d.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
-    if (((_e = b.effect) == null ? void 0 : _e.type) === "dock" && !(b.effect.perLevel >= 0 && ((_f = b.effect.orbitalRepair) != null ? _f : 0) >= 0 && ((_g = b.effect.orbitalRepair) != null ? _g : 0) <= 0.5)) errors.push(`${label3} : Cale s\xE8che invalide (postes \u2265 0, Cale orbitale entre 0 et 0,5).`);
-    if (b.requires && !(content.buildings.some((o) => o.id === b.requires.building) && b.requires.level >= 1)) errors.push(`${label3} : b\xE2timent requis inconnu ou niveau < 1.`);
-  }
-  if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
-  checkIds("Unit\xE9s", content.units.map((u) => u.id));
-  for (const u of content.units) {
-    const label3 = `Unit\xE9 ${u.name || u.id}`;
-    if (!u.blueprint && !u.elite && !u.empireClass && !techIds.has(u.unlockTech)) errors.push(`${label3} : techno de d\xE9blocage \xAB ${u.unlockTech} \xBB inexistante.`);
-    if (u.category !== "attack" && u.category !== "defense") errors.push(`${label3} : cat\xE9gorie invalide.`);
-    if (!(u.hangarSpace >= 1)) errors.push(`${label3} : places de hangar doit \xEAtre \u2265 1.`);
-    if (u.levelBonus !== void 0 && !(u.levelBonus >= 0)) errors.push(`${label3} : gain par niveau invalide.`);
-    checkResources(`${label3} (co\xFBt)`, u.cost);
-  }
-  checkIds("Technologies", content.technologies.map((t) => t.id));
-  for (const t of content.technologies) {
-    const label3 = `Techno ${t.nom || t.id}`;
-    if (t.effects && t.effects.length > 0) {
-      for (const e3 of t.effects) errors.push(...validateTechEffect(label3, e3, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)), maxLevel: t.maxLevel, unitMaxLevel: (id) => {
-        var _a2;
-        return (_a2 = content.units.find((u) => u.id === id)) == null ? void 0 : _a2.maxLevel;
-      } }));
-    } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
-    checkResources(`${label3} (co\xFBt)`, t.baseCost);
-    if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_h = t.prereq) != null ? _h : {})) {
-      if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
-      if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
-    }
-  }
-  const byId = new Map(content.technologies.map((t) => [t.id, t]));
-  const visiting = /* @__PURE__ */ new Set();
-  const done = /* @__PURE__ */ new Set();
-  const visit = (id, path) => {
-    var _a2, _b2;
-    if (done.has(id)) return;
-    if (visiting.has(id)) {
-      errors.push(`Technologies : cycle de pr\xE9requis ${[...path, id].join(" \u2192 ")}.`);
-      return;
-    }
-    visiting.add(id);
-    for (const req of Object.keys((_b2 = (_a2 = byId.get(id)) == null ? void 0 : _a2.prereq) != null ? _b2 : {})) if (byId.has(req)) visit(req, [...path, id]);
-    visiting.delete(id);
-    done.add(id);
-  };
-  for (const t of content.technologies) visit(t.id, []);
-  checkIds("Missions", content.missions.map((m) => m.key));
-  for (const m of content.missions) {
-    const label3 = `Mission ${m.name || m.key}`;
-    if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_i = m.prereq) != null ? _i : {})) {
-      if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
-    }
-    const res = __spreadValues({}, (_j = m.reward) != null ? _j : {});
-    delete res.xp;
-    checkResources(`${label3} (r\xE9compense)`, res);
-  }
-  errors.push(...validateFactions((_k = content.factions) != null ? _k : []));
-  errors.push(...validateWarlords(content.warlords));
-  errors.push(...validateSeasonPass(content.seasonPass));
-  errors.push(...validateChronicles(content.chronicles));
-  errors.push(...validatePassSeasons(content.passSeasons));
-  errors.push(...validateRanks((_l = content.ranks) != null ? _l : []));
-  errors.push(...validateAchievements((_m = content.achievements) != null ? _m : []));
-  errors.push(...validateRelics((_n = content.relics) != null ? _n : [], (_o = content.relicSettings) != null ? _o : defaultRelicSettings()));
-  errors.push(...validateLootTables((_p = content.relicSettings) == null ? void 0 : _p.loot));
-  const cap = (_q = content.relicSettings) == null ? void 0 : _q.lootTokenCap;
-  if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
-  errors.push(...validateTitles((_r = content.titles) != null ? _r : []));
-  errors.push(...validateWorldBosses(content.worldBosses));
-  errors.push(...validateOfficers(content.officers));
-  return [...new Set(errors)];
-}
+// src/game/actionTemplates.ts
+var TEMPLATE_RULES = { maxTemplates: 12, maxSteps: 20, maxUnitQty: 1e5 };
 
-// src/game/staff.ts
-var STAFF_KEY = "staff";
-var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
-var STAFF_TITLE_SEASON = "staff";
-var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
-var BALANCE_EXCLUDED_PSEUDOS = ["Tartiflex", "Nicotine", "Tomdindon"];
-function isStaffRole(v) {
-  return v === "developer" || v === "admin";
-}
-function normalizeStaff(raw) {
-  const roles = {};
-  const src = raw && typeof raw === "object" ? raw.roles : null;
-  if (src && typeof src === "object") {
-    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
-  }
-  return { roles };
-}
-function applyStaffTitle(player, role, display = false) {
-  var _a, _b, _c, _d;
-  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
-  const staffLabels = Object.values(STAFF_LABELS);
-  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
-  const label3 = role ? STAFF_LABELS[role] : null;
-  player.titles = label3 ? [{ label: label3, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
-  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label3) player.activeTitle = "";
-  if (label3 && display) player.activeTitle = label3;
-  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
-}
-
-// src/game/reports.ts
-var REPORT_CATEGORIES = [
-  { id: "bug", label: "Bug", hint: "Quelque chose ne marche pas comme pr\xE9vu" },
-  { id: "display", label: "Affichage", hint: "Page mal affich\xE9e, texte coup\xE9, mobile\u2026" },
-  { id: "balance", label: "\xC9quilibrage", hint: "Co\xFBts, gains, combats, factions\u2026" },
-  { id: "account", label: "Compte", hint: "Connexion, mot de passe, progression perdue" },
-  { id: "idea", label: "Suggestion", hint: "Une id\xE9e pour am\xE9liorer le jeu" },
-  { id: "other", label: "Autre", hint: "Tout le reste" }
-];
-var REPORT_STATUSES = [
-  { id: "new", label: "Nouveau", tone: "accent" },
-  { id: "in_progress", label: "En cours", tone: "gold" },
-  { id: "resolved", label: "R\xE9solu", tone: "mint" },
-  { id: "rejected", label: "Non retenu", tone: "danger" }
-];
-var REPORT_RULES = {
-  titleMax: 120,
-  descriptionMin: 10,
-  descriptionMax: 4e3,
-  commentMax: 2e3,
-  resolutionMax: 2e3,
-  /** Signalements par joueur sur 24 h glissantes. */
-  maxPerDay: 5
+// src/game/allianceDaily.ts
+var ALLIANCE_DAILY_RULES = {
+  proposeHour: 6,
+  voteEndHour: 10,
+  /** Membre actif : connecté dans les 3 derniers jours. */
+  activeDays: 3,
+  treasuryHours: 4,
+  missionsPerMember: 4,
+  researchPerMember: 2,
+  powerPct: 0.02,
+  passPoints: 15,
+  rewardHours: 1,
+  treasuryPct: 0.1
 };
-function isReportCategory(v) {
-  return REPORT_CATEGORIES.some((c) => c.id === v);
+var DAILY_KINDS = ["treasury", "missions", "power", "research"];
+var DAILY_STAT = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
+function dailyPhase(now) {
+  const h = parisHour(now);
+  if (h < ALLIANCE_DAILY_RULES.proposeHour) return "before";
+  return h < ALLIANCE_DAILY_RULES.voteEndHour ? "voting" : "active";
 }
-function isReportStatus(v) {
-  return REPORT_STATUSES.some((s) => s.id === v);
+function hash2(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
-function reportStatusLabel(status) {
-  var _a, _b;
-  return (_b = (_a = REPORT_STATUSES.find((s) => s.id === status)) == null ? void 0 : _a.label) != null ? _b : status;
-}
-var clean = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
-function sanitizeNewReport(input) {
-  const title = clean(input.title, REPORT_RULES.titleMax);
-  const description = clean(input.description, REPORT_RULES.descriptionMax);
-  if (!title) throw new GameActionError("Donne un titre \xE0 ton signalement.");
-  if (description.length < REPORT_RULES.descriptionMin) throw new GameActionError("D\xE9cris le probl\xE8me en quelques mots de plus.");
-  const raw = input.context && typeof input.context === "object" ? input.context : {};
-  return {
-    category: isReportCategory(input.category) ? input.category : "other",
-    title,
-    description,
-    context: {
-      version: clean(raw.version, 20),
-      page: clean(raw.page, 200),
-      theme: clean(raw.theme, 20),
-      userAgent: clean(raw.userAgent, 300),
-      screen: clean(raw.screen, 40)
-    }
-  };
-}
-function assertReportQuota(previousCreatedAtMs, now) {
-  const recent = previousCreatedAtMs.filter((t) => now - t < 24 * 36e5).length;
-  if (recent >= REPORT_RULES.maxPerDay) throw new GameActionError(`Tu as d\xE9j\xE0 envoy\xE9 ${REPORT_RULES.maxPerDay} signalements aujourd'hui : r\xE9essaie demain ou compl\xE8te un signalement existant.`);
-}
-function addReportComment(history, author, text, now) {
-  const body = clean(text, REPORT_RULES.commentMax);
-  if (!body) throw new GameActionError("Le message est vide.");
-  return [...history, { kind: "comment", atMs: now, byId: author.id, byName: author.name, staff: author.staff, text: body }];
-}
-function applyStaffUpdate(report, author, update, now) {
-  var _a, _b, _c, _d;
-  let history = [...(_a = report.history) != null ? _a : []];
-  let status = report.status;
-  let resolution = (_b = report.resolution) != null ? _b : "";
-  const notes = [];
-  if (update.status !== void 0) {
-    if (!isReportStatus(update.status)) throw new GameActionError("Statut inconnu.");
-    if (update.status !== status) {
-      status = update.status;
-      history.push({ kind: "status", atMs: now, byId: author.id, byName: author.name, staff: true, status });
-      notes.push(`statut : ${reportStatusLabel(status)}`);
-    }
-  }
-  if (update.resolution !== void 0) {
-    const next = clean(update.resolution, REPORT_RULES.resolutionMax);
-    if (next !== resolution) {
-      resolution = next;
-      if (next) notes.push("r\xE9solution renseign\xE9e");
-    }
-  }
-  if (typeof update.comment === "string" && update.comment.trim()) {
-    history = addReportComment(history, { id: author.id, name: author.name, staff: true }, update.comment, now);
-    notes.push("nouvelle r\xE9ponse");
-  }
-  const changed = status !== report.status || resolution !== ((_c = report.resolution) != null ? _c : "") || history.length !== ((_d = report.history) != null ? _d : []).length;
-  return { status, resolution, history, changed, notify: notes.length > 0 ? notes.join(", ") : null };
-}
-function githubIssueBody(report, link) {
-  var _a, _b, _c;
-  const ctx = (_a = report.context) != null ? _a : {};
-  const cat = (_c = (_b = REPORT_CATEGORIES.find((c) => c.id === report.category)) == null ? void 0 : _b.label) != null ? _c : report.category;
-  return [
-    `**Signal\xE9 en jeu** par ${report.reporterPseudo || "un joueur"} \xB7 ${cat}`,
-    "",
-    report.description,
-    "",
-    "| Contexte | |",
-    "|---|---|",
-    `| Version | ${ctx.version || "?"} |`,
-    `| Page | ${ctx.page || "?"} |`,
-    `| Th\xE8me | ${ctx.theme || "?"} |`,
-    `| \xC9cran | ${ctx.screen || "?"} |`,
-    `| Navigateur | ${ctx.userAgent || "?"} |`,
-    "",
-    report.screenshot ? `Capture jointe au signalement (voir l'administration).` : "",
-    `Suivi dans l'administration : ${link}`
-  ].filter((l) => l !== null).join("\n");
-}
-
-// src/game/errorReports.ts
-var AUTO_ERROR_RULES = {
-  /** Erreurs envoyées par joueur sur une journée (UTC). */
-  maxPerDay: 10,
-  messageMax: 300,
-  stackMax: 3e3,
-  /** Joueurs touchés gardés en mémoire sur le signalement. */
-  affectedMax: 30
-};
-var AUTO_REPORTER_ID = "system";
-var IGNORED = [
-  /^Script error\.?$/i,
-  /ResizeObserver loop/i,
-  /Failed to fetch dynamically imported module/i,
-  /Importing a module script failed/i,
-  /error loading dynamically imported module/i,
-  /^(TypeError: )?(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i,
-  /The user aborted a request|AbortError|autocancelled/i
-];
-var EXTENSION = /chrome-extension:|moz-extension:|safari-extension:/i;
-var str2 = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
-function sanitizeClientError(input) {
-  const message = str2(input.message, AUTO_ERROR_RULES.messageMax);
-  const stack = str2(input.stack, AUTO_ERROR_RULES.stackMax);
-  if (!message || isIgnoredError(message, stack)) return null;
-  return { message, stack, page: str2(input.page, 200), version: str2(input.version, 20) };
-}
-function isIgnoredError(message, stack = "") {
-  return IGNORED.some((re) => re.test(message)) || EXTENSION.test(message) || EXTENSION.test(stack);
-}
-function normalizeStack(stack) {
-  return stack.split("\n").slice(0, 6).map(
-    (l) => l.replace(/https?:\/\/[^/\s)]+/g, "").replace(/-[A-Za-z0-9_-]{6,}\.js/g, ".js").replace(/\?[^\s):]*/g, "").replace(/:\d+:\d+/g, "").replace(/:\d+/g, "").trim()
-  ).filter(Boolean).join("\n");
-}
-function errorKey(message, stack) {
-  const text = `${message.replace(/\d+/g, "#")}
-${normalizeStack(stack)}`;
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = (h << 5) + h + text.charCodeAt(i) | 0;
-  return `e${(h >>> 0).toString(16)}`;
-}
-function autoReportTitle(message) {
-  return `[Auto] ${message}`.slice(0, 120);
-}
-function autoReportDescription(err) {
-  return [err.message, "", err.stack || "(pile indisponible)"].join("\n").slice(0, 4e3);
-}
-function addOccurrence(report, pseudo, now) {
-  const closed = report.status === "resolved" || report.status === "rejected";
-  const affected = report.affected.includes(pseudo) || !pseudo ? report.affected : [...report.affected, pseudo].slice(-AUTO_ERROR_RULES.affectedMax);
-  const history = closed ? [...report.history, { kind: "status", atMs: now, byId: AUTO_REPORTER_ID, byName: "Syst\xE8me", staff: true, status: "new", text: "L'erreur s'est reproduite apr\xE8s la cl\xF4ture." }] : report.history;
-  return { status: closed ? "new" : report.status, history, occurrences: (report.occurrences || 1) + 1, affected, reopened: closed };
-}
-function errorQuotaKey(uid, now) {
-  return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
-}
-
-// src/game/serverPot.ts
-var SERVER_POT_KEY = "server_pot";
-var POT_SOURCE_LABELS = {
-  market: "Taxes du march\xE9",
-  gift: "Taxe des cadeaux",
-  auction: "Taxe des ench\xE8res",
-  exchange: "Taxe du comptoir d'\xE9change",
-  donation: "Dons des m\xE9c\xE8nes",
-  admin: "Administration"
-};
-function emptyServerPot() {
-  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
-}
-function cleanAmounts(raw) {
-  const out = {};
-  if (!raw || typeof raw !== "object") return out;
-  for (const [k, v] of Object.entries(raw)) {
-    const n = Math.floor(Number(v));
-    if (Number.isFinite(n) && n !== 0) out[k] = n;
-  }
-  return out;
-}
-var POT_DAILY_DAYS = 30;
-var RARE_WEIGHT = 50;
-var dayOf = (now) => new Date(now).toISOString().slice(0, 10);
-function normalizeDaily2(raw) {
+function proposeDaily(allianceId, day, members, now) {
   var _a;
+  const R = ALLIANCE_DAILY_RULES;
+  const active = Math.max(1, members.filter((m) => m.active).length);
+  const resourceBase = {};
+  for (const m of members.filter((x) => x.active)) {
+    for (const [res, n] of Object.entries(m.production4h)) resourceBase[res] = ((_a = resourceBase[res]) != null ? _a : 0) + Math.round(n != null ? n : 0);
+  }
+  const treasuryTarget = Math.max(1e3, Object.values(resourceBase).reduce((a, b) => a + (b != null ? b : 0), 0));
+  const fleet = members.reduce((a, m) => a + m.fleetPower, 0);
+  const targets = {
+    treasury: treasuryTarget,
+    missions: R.missionsPerMember * active,
+    power: Math.max(500, Math.round(fleet * R.powerPct)),
+    research: R.researchPerMember * active
+  };
+  const skip = hash2(`${allianceId}:${day}`) % DAILY_KINDS.length;
+  const proposals = DAILY_KINDS.filter((_, i) => i !== skip).map((kind) => ({ kind, target: targets[kind] }));
+  return { day, proposals, votes: {}, status: "voting", chosen: null, baseline: {}, progress: 0, contributions: {}, resourceBase, updatedAtMs: now };
+}
+function voteDaily(daily, uid, role, index2, now) {
+  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers votent l'objectif du jour.");
+  if (daily.status !== "voting" || dailyPhase(now) !== "voting" || daily.day !== parisDay(now)) throw new GameActionError(`Le vote est ouvert de ${ALLIANCE_DAILY_RULES.proposeHour} h \xE0 ${ALLIANCE_DAILY_RULES.voteEndHour} h.`);
+  const i = Math.floor(Number(index2));
+  if (!(i >= 0 && i < daily.proposals.length)) throw new GameActionError("Objectif inconnu.");
+  daily.votes = __spreadProps(__spreadValues({}, daily.votes), { [uid]: i });
+}
+function winningProposal(daily) {
+  const counts = daily.proposals.map((_, i) => Object.values(daily.votes).filter((v) => v === i).length);
+  let best = 0;
+  counts.forEach((c, i) => {
+    if (c > counts[best]) best = i;
+  });
+  return best;
+}
+function statOf(stats, kind) {
+  var _a;
+  return Number((_a = stats == null ? void 0 : stats[DAILY_STAT[kind]]) != null ? _a : 0) || 0;
+}
+function startDaily(daily, members, now) {
+  const chosen = winningProposal(daily);
+  const kind = daily.proposals[chosen].kind;
+  daily.chosen = chosen;
+  daily.status = "active";
+  daily.baseline = Object.fromEntries(members.map((m) => [m.uid, statOf(m.stats, kind)]));
+  daily.progress = 0;
+  daily.contributions = {};
+  daily.updatedAtMs = now;
+}
+function updateDailyProgress(daily, members, now) {
+  if (daily.status !== "active" || daily.chosen === null) return false;
+  const { kind, target } = daily.proposals[daily.chosen];
+  const contributions = {};
+  for (const m of members) {
+    if (daily.baseline[m.uid] === void 0) daily.baseline[m.uid] = statOf(m.stats, kind);
+    const delta = statOf(m.stats, kind) - daily.baseline[m.uid];
+    if (delta > 0) contributions[m.uid] = Math.round(delta);
+  }
+  daily.contributions = contributions;
+  daily.progress = Object.values(contributions).reduce((a, b) => a + b, 0);
+  daily.updatedAtMs = now;
+  if (daily.progress >= target) {
+    daily.status = "done";
+    daily.doneAtMs = now;
+    return true;
+  }
+  return false;
+}
+function dailyTreasuryBonus(daily) {
   const out = {};
-  if (!raw || typeof raw !== "object") return out;
-  const keys = [...Object.keys(POT_SOURCE_LABELS), "amber"];
-  for (const day of Object.keys(raw).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-POT_DAILY_DAYS)) {
-    const row = (_a = raw[day]) != null ? _a : {};
-    const clean3 = {};
-    for (const k of keys) {
-      const n = Math.floor(Number(row[k]));
-      if (n > 0) clean3[k] = n;
-    }
-    out[day] = clean3;
+  for (const [res, n] of Object.entries(daily.resourceBase)) {
+    const v = Math.floor((n != null ? n : 0) * ALLIANCE_DAILY_RULES.treasuryPct);
+    if (v > 0) out[res] = v;
   }
   return out;
 }
-function bumpDaily(pot, key, value2, now) {
-  var _a, _b, _c, _d;
-  if (!(value2 > 0)) return pot.daily;
-  const day = dayOf(now);
-  const daily = __spreadValues({}, (_a = pot.daily) != null ? _a : {});
-  daily[day] = __spreadProps(__spreadValues({}, (_b = daily[day]) != null ? _b : {}), { [key]: ((_d = (_c = daily[day]) == null ? void 0 : _c[key]) != null ? _d : 0) + Math.floor(value2) });
-  const days = Object.keys(daily).sort();
-  for (const d of days.slice(0, Math.max(0, days.length - POT_DAILY_DAYS))) delete daily[d];
-  return daily;
+function readDaily(raw) {
+  const d = raw;
+  return d && typeof d === "object" && typeof d.day === "string" && Array.isArray(d.proposals) ? d : null;
 }
-function potValue(amounts) {
-  return Object.entries(amounts).reduce((a, [k, v]) => {
+function previousSummary(daily) {
+  if (!daily) return void 0;
+  return { day: daily.day, kind: daily.chosen !== null ? daily.proposals[daily.chosen].kind : null, status: daily.status === "done" ? "done" : "failed" };
+}
+function dailyMemberOf(p, now) {
+  var _a, _b, _c;
+  return {
+    uid: p.uid,
+    active: now - lastActivity(p) < ALLIANCE_DAILY_RULES.activeDays * 864e5,
+    stats: (_a = p.stats) != null ? _a : {},
+    production4h: productionHours(p, ALLIANCE_DAILY_RULES.treasuryHours),
+    fleetPower: computeFullPower((_b = p.units) != null ? _b : {}, (_c = p.techLevels) != null ? _c : {}, OFFENSIVE_UNITS, ["attack"])
+  };
+}
+
+// src/game/allianceSaga.ts
+var ALLIANCE_SAGA_KEY = "alliance_saga";
+var ALLIANCE_SAGA_RULES = {
+  objectives: 3,
+  /** Points par objectif : 100 × progression, plafonnée à 2 (objectif dépassé). */
+  pointsPerObjective: 100,
+  overflowCap: 2,
+  /** Heures de production des membres versées au trésor, 1re à 3e. */
+  rewardHours: [24, 12, 6],
+  /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
+  weeks: 4,
+  share: 0.6
+};
+function readAllianceSaga(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  return {
+    sagas: Array.isArray(r.sagas) ? r.sagas.slice(-12) : [],
+    standing: r.standing && Array.isArray(r.standing.rows) ? r.standing : null,
+    closed: Array.isArray(r.closed) ? r.closed.slice(-24) : []
+  };
+}
+function sagaOf(state, monthId) {
+  var _a;
+  return (_a = state.sagas.find((s) => s.monthId === monthId)) != null ? _a : null;
+}
+var SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande Coalition", "Les Banni\xE8res lev\xE9es", "Le Pacte des \xE9toiles", "La Marche commune"];
+var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alliance", "Fer de lance"];
+function generateAllianceSaga(monthId, digest, difficulty, now) {
+  var _a;
+  const rng = seededRandom2(`saga:${monthId}`);
+  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
+  const pool = [...ACTIVITY_KEYS].filter((k) => {
+    var _a2;
+    return k !== "warlordWin" || ((_a2 = digest.weeklyMedian.warlordWin) != null ? _a2 : 0) > 0;
+  });
+  const chosen = [];
+  while (chosen.length < ALLIANCE_SAGA_RULES.objectives && pool.length > 0) chosen.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
+  const size = Math.max(2, Math.round((_a = digest.allianceSizeMedian) != null ? _a : 3));
+  const objectives = chosen.map((type) => {
+    var _a2;
+    const weekly = Math.max((_a2 = digest.weeklyMedian[type]) != null ? _a2 : 0, BASE_COUNTS[type] / 2);
+    return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
+  });
+  const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
+  return {
+    monthId,
+    title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
+    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)(?=\s)|^L'/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
+    bossName,
+    image: arch.image,
+    accent: arch.accent,
+    objectives,
+    winnerTitle: `${SAGA_WINNERS[Math.floor(rng() * SAGA_WINNERS.length)]} (${seasonLabel(monthId).toLowerCase()})`,
+    generatedAtMs: now
+  };
+}
+function sagaProgress(def3, members, now) {
+  return def3.objectives.map((o) => members.reduce((a, m) => {
+    var _a, _b;
+    return a + ((_b = (_a = passState(m, now).activity) == null ? void 0 : _a[o.type]) != null ? _b : 0);
+  }, 0));
+}
+function sagaPoints(def3, progress) {
+  return def3.objectives.reduce((a, o, i) => {
     var _a;
-    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? RARE_WEIGHT : 1);
+    return a + Math.round(ALLIANCE_SAGA_RULES.pointsPerObjective * Math.min(ALLIANCE_SAGA_RULES.overflowCap, ((_a = progress[i]) != null ? _a : 0) / Math.max(1, o.count)));
   }, 0);
 }
-function normalizeServerPot(raw) {
-  var _a;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const totals = {};
-  for (const src of Object.keys(POT_SOURCE_LABELS)) {
-    const t = cleanAmounts((_a = r.totals) == null ? void 0 : _a[src]);
-    if (Object.keys(t).length) totals[src] = t;
-  }
-  return {
-    resources: cleanAmounts(r.resources),
-    totals,
-    amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
-    daily: normalizeDaily2(r.daily),
-    amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
-    amberTotals: Object.fromEntries(
-      Object.keys(POT_SOURCE_LABELS).map((src) => {
-        var _a2;
-        return [src, Math.max(0, Math.floor(Number((_a2 = r.amberTotals) == null ? void 0 : _a2[src])) || 0)];
-      }).filter(([, n]) => n > 0)
-    ),
-    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
-    updatedAtMs: Number(r.updatedAtMs) || 0
-  };
-}
-function addToPot(pot, source, amounts, now, note4) {
-  var _a, _b, _c;
-  const add2 = {};
-  for (const [k, v] of Object.entries(amounts)) {
-    const n = Math.floor(Number(v));
-    if (Number.isFinite(n) && n > 0) add2[k] = n;
-  }
-  if (Object.keys(add2).length === 0) return pot;
-  const resources = __spreadValues({}, pot.resources);
-  const total2 = __spreadValues({}, (_a = pot.totals[source]) != null ? _a : {});
-  for (const [k, n] of Object.entries(add2)) {
-    resources[k] = ((_b = resources[k]) != null ? _b : 0) + n;
-    total2[k] = ((_c = total2[k]) != null ? _c : 0) + n;
-  }
-  return __spreadProps(__spreadValues({}, pot), {
-    resources,
-    totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
-    daily: source === "admin" ? pot.daily : bumpDaily(pot, source, potValue(add2), now),
-    log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
-    updatedAtMs: now
+function sagaStandings(def3, alliances, now) {
+  const rows = alliances.map((a) => {
+    const progress = sagaProgress(def3, a.members, now);
+    return { allianceId: a.id, name: a.name, tag: a.tag, members: a.members.length, progress, points: sagaPoints(def3, progress), rank: 0 };
   });
+  rows.sort((x, y) => y.points - x.points || y.progress.reduce((a, b) => a + b, 0) - x.progress.reduce((a, b) => a + b, 0));
+  rows.forEach((r, i) => r.rank = i + 1);
+  return rows.filter((r) => r.points > 0 || r.members > 0);
 }
-function takeFromPot(pot, amounts, now, note4) {
-  var _a, _b;
-  const resources = __spreadValues({}, pot.resources);
-  const taken = {};
-  for (const [k, v] of Object.entries(amounts)) {
-    const want = Math.floor(Number(v));
-    if (!Number.isFinite(want) || want <= 0) continue;
-    const n = Math.min(want, (_a = resources[k]) != null ? _a : 0);
-    if (n <= 0) continue;
-    resources[k] = ((_b = resources[k]) != null ? _b : 0) - n;
-    taken[k] = -n;
-  }
-  if (Object.keys(taken).length === 0) return pot;
-  return __spreadProps(__spreadValues({}, pot), { resources, log: [...pot.log, { atMs: now, source: "admin", resources: taken, note: note4 }].slice(-100), updatedAtMs: now });
-}
-function giftTax(sent, delivered) {
-  const out = {};
-  for (const [k, v] of Object.entries(sent)) {
-    const lost = Math.floor(Number(v) || 0) - Math.floor(Number(delivered[k]) || 0);
-    if (lost > 0) out[k] = lost;
-  }
-  return out;
-}
-function addAmberToPot(pot, source, amount3, now, note4) {
-  var _a, _b;
-  const n = Math.floor(Number(amount3));
-  if (!(n > 0)) return pot;
-  return __spreadProps(__spreadValues({}, pot), {
-    amber: pot.amber + n,
-    amberTotal: pot.amberTotal + n,
-    amberTotals: __spreadProps(__spreadValues({}, pot.amberTotals), { [source]: ((_b = (_a = pot.amberTotals) == null ? void 0 : _a[source]) != null ? _b : 0) + n }),
-    daily: bumpDaily(pot, "amber", n, now),
-    log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
-    updatedAtMs: now
-  });
-}
-function takeAmberFromPot(pot, amount3, now, note4) {
-  const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
-  if (!(n > 0)) return { pot, taken: 0 };
-  return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
+function sagaMonthId(now) {
+  return chronicleMonthId(now);
 }
 
 // src/game/challenges.ts
@@ -20183,327 +19556,6 @@ function normalizeChallengeState(raw) {
   return { current: (_a = r.current) != null ? _a : null, previous: (_b = r.previous) != null ? _b : null, titleHolder: (_c = r.titleHolder) != null ? _c : null };
 }
 
-// src/game/bossHistory.ts
-var BOSS_HISTORY_KEY = "boss_history";
-var MAX_ENTRIES = 120;
-var MAX_RANKED = 150;
-var BOSS_KIND_LABELS = {
-  leviathan: "Boss mondial",
-  seasonboss: "Boss de saison",
-  allianceboss: "Boss d'alliance"
-};
-function bossHistoryEntry(kind, state, meta) {
-  var _a;
-  const ranking = leviathanRanking(state);
-  const ended = state.endedAtMs || state.endMs;
-  return __spreadValues(__spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({
-    id: `${kind}:${state.id}`,
-    kind,
-    name: meta.name
-  }, meta.image ? { image: meta.image } : {}), meta.allianceId ? { allianceId: meta.allianceId, allianceName: (_a = meta.allianceName) != null ? _a : "" } : {}), {
-    startMs: state.startMs,
-    endedAtMs: ended,
-    won: state.status === "killed",
-    maxHp: state.maxHp,
-    totalDamage: ranking.reduce((a, c) => a + c.damage, 0),
-    participants: ranking.length,
-    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
-    top: ranking.slice(0, 5).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage }))
-  }), state.killedBy ? { killedBy: state.killedBy } : {}), {
-    ranking: ranking.slice(0, MAX_RANKED).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults }))
-  }), state.rewards ? { rewards: Object.fromEntries(ranking.slice(0, MAX_RANKED).filter((c) => {
-    var _a2;
-    return (_a2 = state.rewards) == null ? void 0 : _a2[c.uid];
-  }).map((c) => [c.uid, state.rewards[c.uid]])) } : {});
-}
-function normalizeBossHistory(raw) {
-  const list = raw && typeof raw === "object" && Array.isArray(raw.entries) ? raw.entries : [];
-  return list.filter((e3) => !!e3 && typeof e3 === "object" && typeof e3.id === "string" && e3.kind in BOSS_KIND_LABELS);
-}
-function pushBossHistory(list, entry) {
-  return [entry, ...list.filter((e3) => e3.id !== entry.id)].sort((a, b) => b.endedAtMs - a.endedAtMs).slice(0, MAX_ENTRIES);
-}
-
-// src/game/diplomacy.ts
-var DIPLOMACY_RULES = {
-  /** Préavis de rupture, en heures (le pacte protège encore). */
-  breakNoticeHours: 24,
-  /** Pactes simultanés (proposés, actifs ou en préavis) par alliance. */
-  maxPacts: 3,
-  messageMax: 500
-};
-var HOUR11 = 36e5;
-function pactStatusAt(p, now) {
-  return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
-}
-function pactBinds(p, now) {
-  const s = pactStatusAt(p, now);
-  return s === "active" || s === "ending";
-}
-function pactOpen(p, now) {
-  const s = pactStatusAt(p, now);
-  return s === "proposed" || s === "active" || s === "ending";
-}
-function involves(p, allianceId) {
-  return p.allianceA === allianceId || p.allianceB === allianceId;
-}
-function bindingPactBetween(pacts, a, b, now) {
-  var _a;
-  if (!a || !b || a === b) return null;
-  return (_a = pacts.find((p) => involves(p, a) && involves(p, b) && pactBinds(p, now))) != null ? _a : null;
-}
-function assertLeader(alliance, uid, what) {
-  if (!canDiplomacyIn(alliance, uid)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
-}
-function proposePact(input) {
-  const { own, target, pacts, now } = input;
-  assertLeader(own, input.actorUid, "proposer un pacte");
-  if (own.id === target.id) throw new GameActionError("Impossible de signer un pacte avec sa propre alliance.");
-  if (input.atWar) throw new GameActionError(`Vous \xEAtes en guerre contre [${target.tag}] : la paix d'abord.`);
-  if (pacts.some((p) => involves(p, own.id) && involves(p, target.id) && pactOpen(p, now))) throw new GameActionError(`Une relation est d\xE9j\xE0 en cours avec [${target.tag}].`);
-  const count2 = (id) => pacts.filter((p) => involves(p, id) && pactOpen(p, now)).length;
-  if (count2(own.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`${DIPLOMACY_RULES.maxPacts} pactes au plus par alliance.`);
-  if (count2(target.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`[${target.tag}] a d\xE9j\xE0 ${DIPLOMACY_RULES.maxPacts} pactes.`);
-  return {
-    allianceA: own.id,
-    allianceB: target.id,
-    tagA: own.tag,
-    tagB: target.tag,
-    nameA: own.name,
-    nameB: target.name,
-    status: "proposed",
-    proposedByUid: input.actorUid,
-    proposedByPseudo: input.actorPseudo,
-    createdAtMs: now,
-    acceptedAtMs: 0,
-    endsAtMs: 0,
-    brokenByTag: ""
-  };
-}
-function answerPact(pact, own, actorUid, answer, now) {
-  if (pactStatusAt(pact, now) !== "proposed") throw new GameActionError("Ce pacte n'est plus en attente.");
-  if (answer === "cancel") {
-    if (own.id !== pact.allianceA) throw new GameActionError("Seule l'alliance qui a propos\xE9 peut retirer sa proposition.");
-    assertLeader(own, actorUid, "retirer une proposition");
-    return __spreadProps(__spreadValues({}, pact), { status: "cancelled" });
-  }
-  if (own.id !== pact.allianceB) throw new GameActionError("Seule l'alliance invit\xE9e peut r\xE9pondre.");
-  assertLeader(own, actorUid, "r\xE9pondre \xE0 un pacte");
-  return answer === "accept" ? __spreadProps(__spreadValues({}, pact), { status: "active", acceptedAtMs: now }) : __spreadProps(__spreadValues({}, pact), { status: "declined" });
-}
-function breakPact(pact, own, actorUid, now) {
-  if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
-  if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
-  assertLeader(own, actorUid, "rompre un pacte");
-  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR11, brokenByTag: own.tag });
-}
-function sanitizePactMessage(raw) {
-  const text = String(raw != null ? raw : "").trim();
-  if (!text) throw new GameActionError("Message vide.");
-  if (text.length > DIPLOMACY_RULES.messageMax) throw new GameActionError(`Message trop long (${DIPLOMACY_RULES.messageMax} caract\xE8res max).`);
-  return text;
-}
-
-// src/game/maintenance.ts
-var MAINTENANCE_NOTICE_MS = 24 * 36e5;
-var MAINTENANCE_KEY = "maintenance";
-var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true, scheduled: null };
-function normalizeScheduled(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  const start = Number(r.startAtMs);
-  if (!Number.isFinite(start) || start <= 0) return null;
-  const end = Number(r.endsAtMs);
-  return {
-    startAtMs: Math.round(start),
-    endsAtMs: Number.isFinite(end) && end > start ? Math.round(end) : null,
-    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
-    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : ""
-  };
-}
-var MAX_MESSAGE = 600;
-var MAX_VERSION = 20;
-function normalizeMaintenance(raw) {
-  if (!raw || typeof raw !== "object") return __spreadValues({}, MAINTENANCE_OFF);
-  const r = raw;
-  const endsAt = Number(r.endsAtMs);
-  return {
-    enabled: r.enabled === true,
-    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
-    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
-    startedAtMs: Number(r.startedAtMs) || 0,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
-    autoEnd: r.autoEnd !== false,
-    scheduled: normalizeScheduled(r.scheduled)
-  };
-}
-function nextMaintenance(previous, request, now) {
-  const enabled = request.enabled === true;
-  if (!enabled) return __spreadProps(__spreadValues({}, previous), { enabled: false, endsAtMs: null });
-  const endsAt = Number(request.endsAtMs);
-  return {
-    enabled: true,
-    message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
-    version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
-    startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
-    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
-    autoEnd: request.autoEnd !== false,
-    scheduled: null
-  };
-}
-function scheduleMaintenance(previous, schedule, now) {
-  if (schedule === null || schedule === void 0) return __spreadProps(__spreadValues({}, previous), { scheduled: null });
-  const next = normalizeScheduled(schedule);
-  if (!next || next.startAtMs <= now) throw new Error("Choisis un d\xE9but de maintenance dans le futur.");
-  return __spreadProps(__spreadValues({}, previous), { scheduled: __spreadProps(__spreadValues({}, next), { message: next.message.trim(), version: next.version.trim() }) });
-}
-function maintenanceShouldAutoStart(m, now) {
-  return !m.enabled && !!m.scheduled && now >= m.scheduled.startAtMs;
-}
-function startScheduledMaintenance(m, now) {
-  const s = m.scheduled;
-  if (!s) return m;
-  return { enabled: true, message: s.message, version: s.version, startedAtMs: now, endsAtMs: s.endsAtMs !== null && s.endsAtMs > now ? s.endsAtMs : null, autoEnd: true, scheduled: null };
-}
-function upcomingMaintenance(m, now) {
-  if (m.enabled || !m.scheduled) return null;
-  const inMs = m.scheduled.startAtMs - now;
-  return inMs > 0 && inMs <= MAINTENANCE_NOTICE_MS ? __spreadProps(__spreadValues({}, m.scheduled), { inMs }) : null;
-}
-function maintenanceShouldAutoEnd(m, now) {
-  return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
-}
-function extendUltimatums(pirates, startedAtMs, now) {
-  const pausedMs = now - startedAtMs;
-  if (!pirates || typeof pirates !== "object" || startedAtMs <= 0 || pausedMs <= 0) return null;
-  const shift = (state) => {
-    const u = state.ultimatum;
-    if (!u || typeof u.expiresAtMs !== "number" || u.expiresAtMs <= startedAtMs) return false;
-    state.ultimatum = __spreadProps(__spreadValues({}, u), { expiresAtMs: u.expiresAtMs + pausedMs });
-    return true;
-  };
-  const copy = JSON.parse(JSON.stringify(pirates));
-  let changed = false;
-  if ("notoriety" in copy || "nextListAtMs" in copy) changed = shift(copy);
-  else for (const state of Object.values(copy)) if (state && typeof state === "object" && shift(state)) changed = true;
-  return changed ? copy : null;
-}
-
-// src/game/anomalies.ts
-var ANOMALY_RULES = {
-  /** Gain de valeur par heure au-delà de N heures de production totale. */
-  productionHours: 50,
-  /** Seuil minimal par heure (début de partie). */
-  minPerHour: 5e7,
-  /** Clé game_config où le serveur note la dernière analyse. */
-  scanKey: "anomaly_scan"
-};
-var HOUR12 = 36e5;
-var ALL = RESOURCE_LIST.map((r) => r.id);
-function unitValue(res) {
-  if (COMMON_RESOURCES.includes(res)) return 1;
-  return 1 / getTradeRate(COMMON_RESOURCES[0], res);
-}
-function stockValue(r) {
-  return ALL.reduce((a, res) => {
-    var _a;
-    return a + Math.max(0, (_a = r[res]) != null ? _a : 0) * unitValue(res);
-  }, 0);
-}
-function anomalyThreshold(player, hours2) {
-  var _a;
-  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
-  const perHour = COMMON_RESOURCES.reduce((a, res) => {
-    var _a2;
-    return a + ((_a2 = rates[res]) != null ? _a2 : 0);
-  }, 0) * 3600;
-  return Math.max(ANOMALY_RULES.minPerHour, ANOMALY_RULES.productionHours * perHour) * Math.max(1, hours2);
-}
-function detectResourceAnomalies(player, sinceMs) {
-  var _a, _b, _c, _d, _e;
-  const points = [...(_a = player.resourceHistory) != null ? _a : []].sort((a, b) => a.t - b.t);
-  const lastT = (_c = (_b = points[points.length - 1]) == null ? void 0 : _b.t) != null ? _c : 0;
-  const current2 = Number(player.resourcesUpdatedAtMs) || 0;
-  if (current2 > lastT) points.push({ t: current2, r: player.resources });
-  const out = [];
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    if (b.t <= sinceMs) continue;
-    const gain = stockValue(b.r) - stockValue(a.r);
-    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR12);
-    if (gain <= threshold) continue;
-    const deltas = {};
-    for (const res of ALL) {
-      const d = Math.round(((_d = b.r[res]) != null ? _d : 0) - ((_e = a.r[res]) != null ? _e : 0));
-      if (d !== 0) deltas[res] = d;
-    }
-    out.push({ gain: Math.round(gain), threshold: Math.round(threshold), fromMs: a.t, toMs: b.t, deltas });
-  }
-  return out;
-}
-var fmtDate = (ms) => new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
-function describeAnomalies(list) {
-  return list.map((a) => {
-    const detail = Object.entries(a.deltas).map(([res, d]) => {
-      var _a, _b;
-      return `${(_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res} ${d > 0 ? "+" : ""}${formatInt(d)}`;
-    }).join(", ");
-    return `\u2022 ${fmtDate(a.fromMs)} \u2192 ${fmtDate(a.toMs)} : valeur +${formatInt(a.gain)} (seuil ${formatInt(a.threshold)}). ${detail}.`;
-  }).join("\n");
-}
-
-// src/game/referral.ts
-var REFERRAL_RULES = {
-  linkWindowHours: 48,
-  rewardXp: 2e3,
-  minAgeDays: 3,
-  perMonth: 5,
-  amberSponsor: 150,
-  amberRecruit: 100,
-  banner: "recruteur"
-};
-function referralState(p) {
-  var _a;
-  const raw = (_a = p.referral) != null ? _a : {};
-  return __spreadProps(__spreadValues({}, raw), { recruits: Number(raw.recruits) || 0, monthly: raw.monthly && typeof raw.monthly === "object" ? raw.monthly : {} });
-}
-function month(now) {
-  return new Date(now).toISOString().slice(0, 7);
-}
-function linkReferrer(recruit, sponsor, now) {
-  var _a;
-  const st = referralState(recruit);
-  if (sponsor.uid === recruit.uid) throw new GameActionError("Tu ne peux pas \xEAtre ton propre parrain.");
-  if (st.by) throw new GameActionError("Tu as d\xE9j\xE0 un parrain.");
-  if (now - ((_a = recruit.createdAtMs) != null ? _a : 0) > REFERRAL_RULES.linkWindowHours * 36e5) throw new GameActionError("Le parrainage se d\xE9clare dans les 48 h qui suivent l'inscription.");
-  if (referralState(sponsor).by === recruit.uid) throw new GameActionError("Ce joueur est d\xE9j\xE0 ton filleul.");
-  recruit.referral = __spreadProps(__spreadValues({}, st), { by: sponsor.uid, byPseudo: sponsor.pseudo, linkedAtMs: now, rewarded: false });
-}
-function referralDue(recruit, verified, now) {
-  var _a, _b;
-  const st = referralState(recruit);
-  return !!st.by && !st.rewarded && verified && ((_a = recruit.xp) != null ? _a : 0) >= REFERRAL_RULES.rewardXp && now - ((_b = recruit.createdAtMs) != null ? _b : now) >= REFERRAL_RULES.minAgeDays * 864e5;
-}
-function grantReferral(sponsor, recruit, now) {
-  var _a, _b, _c, _d, _e;
-  const s = referralState(sponsor);
-  const r = referralState(recruit);
-  const m = month(now);
-  const capped = ((_b = (_a = s.monthly) == null ? void 0 : _a[m]) != null ? _b : 0) >= REFERRAL_RULES.perMonth;
-  const rb = bountyState(recruit);
-  rb.amber += REFERRAL_RULES.amberRecruit;
-  recruit.bounties = rb;
-  recruit.referral = __spreadProps(__spreadValues({}, r), { rewarded: true });
-  if (!capped) {
-    const sb = bountyState(sponsor);
-    sb.amber += REFERRAL_RULES.amberSponsor;
-    sponsor.bounties = sb;
-    sponsor.referral = __spreadProps(__spreadValues({}, s), { recruits: ((_c = s.recruits) != null ? _c : 0) + 1, monthly: __spreadProps(__spreadValues({}, s.monthly), { [m]: ((_e = (_d = s.monthly) == null ? void 0 : _d[m]) != null ? _e : 0) + 1 }) });
-  }
-  return { capped };
-}
-
 // src/game/coalition.ts
 var COALITION_RULES = {
   thresholdFactor: 1.5,
@@ -20521,8 +19573,8 @@ var COALITION_RULES = {
   /** Échec : le seigneur gagne cette part de puissance. */
   failGrowth: 0.1
 };
-var HOUR13 = 36e5;
-var DAY13 = 24 * HOUR13;
+var HOUR11 = 36e5;
+var DAY13 = 24 * HOUR11;
 function coalitionState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -20549,7 +19601,7 @@ function checkCoalitionTrigger(c, lords, topHumanPower, now) {
   }
   if (c.coalition && c.coalition.status === "active") return null;
   if (now - c.lastEndMs < COALITION_RULES.cooldownDays * DAY13) return null;
-  const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR13).sort((a, b) => b.power - a.power)[0];
+  const ready = lords.filter((l) => l.present && c.overSince[l.id] !== void 0 && now - c.overSince[l.id] >= COALITION_RULES.holdHours * HOUR11).sort((a, b) => b.power - a.power)[0];
   if (!ready) return null;
   const coalition = {
     id: `coal-${ready.id}-${now}`,
@@ -20627,6 +19679,86 @@ function empowerWarlord(npc, growth = COALITION_RULES.failGrowth) {
   for (const [id, st] of Object.entries((_a = npc.units) != null ? _a : {})) {
     if (st.count > 0) npc.units[id] = __spreadProps(__spreadValues({}, st), { count: Math.round(st.count * (1 + growth)) });
   }
+}
+
+// src/game/diplomacy.ts
+var DIPLOMACY_RULES = {
+  /** Préavis de rupture, en heures (le pacte protège encore). */
+  breakNoticeHours: 24,
+  /** Pactes simultanés (proposés, actifs ou en préavis) par alliance. */
+  maxPacts: 3,
+  messageMax: 500
+};
+var HOUR12 = 36e5;
+function pactStatusAt(p, now) {
+  return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
+}
+function pactBinds(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "active" || s === "ending";
+}
+function pactOpen(p, now) {
+  const s = pactStatusAt(p, now);
+  return s === "proposed" || s === "active" || s === "ending";
+}
+function involves(p, allianceId) {
+  return p.allianceA === allianceId || p.allianceB === allianceId;
+}
+function bindingPactBetween(pacts, a, b, now) {
+  var _a;
+  if (!a || !b || a === b) return null;
+  return (_a = pacts.find((p) => involves(p, a) && involves(p, b) && pactBinds(p, now))) != null ? _a : null;
+}
+function assertLeader(alliance, uid, what) {
+  if (!canDiplomacyIn(alliance, uid)) throw new GameActionError(`Seuls le fondateur, les officiers et les diplomates peuvent ${what}.`);
+}
+function proposePact(input) {
+  const { own, target, pacts, now } = input;
+  assertLeader(own, input.actorUid, "proposer un pacte");
+  if (own.id === target.id) throw new GameActionError("Impossible de signer un pacte avec sa propre alliance.");
+  if (input.atWar) throw new GameActionError(`Vous \xEAtes en guerre contre [${target.tag}] : la paix d'abord.`);
+  if (pacts.some((p) => involves(p, own.id) && involves(p, target.id) && pactOpen(p, now))) throw new GameActionError(`Une relation est d\xE9j\xE0 en cours avec [${target.tag}].`);
+  const count2 = (id) => pacts.filter((p) => involves(p, id) && pactOpen(p, now)).length;
+  if (count2(own.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`${DIPLOMACY_RULES.maxPacts} pactes au plus par alliance.`);
+  if (count2(target.id) >= DIPLOMACY_RULES.maxPacts) throw new GameActionError(`[${target.tag}] a d\xE9j\xE0 ${DIPLOMACY_RULES.maxPacts} pactes.`);
+  return {
+    allianceA: own.id,
+    allianceB: target.id,
+    tagA: own.tag,
+    tagB: target.tag,
+    nameA: own.name,
+    nameB: target.name,
+    status: "proposed",
+    proposedByUid: input.actorUid,
+    proposedByPseudo: input.actorPseudo,
+    createdAtMs: now,
+    acceptedAtMs: 0,
+    endsAtMs: 0,
+    brokenByTag: ""
+  };
+}
+function answerPact(pact, own, actorUid, answer, now) {
+  if (pactStatusAt(pact, now) !== "proposed") throw new GameActionError("Ce pacte n'est plus en attente.");
+  if (answer === "cancel") {
+    if (own.id !== pact.allianceA) throw new GameActionError("Seule l'alliance qui a propos\xE9 peut retirer sa proposition.");
+    assertLeader(own, actorUid, "retirer une proposition");
+    return __spreadProps(__spreadValues({}, pact), { status: "cancelled" });
+  }
+  if (own.id !== pact.allianceB) throw new GameActionError("Seule l'alliance invit\xE9e peut r\xE9pondre.");
+  assertLeader(own, actorUid, "r\xE9pondre \xE0 un pacte");
+  return answer === "accept" ? __spreadProps(__spreadValues({}, pact), { status: "active", acceptedAtMs: now }) : __spreadProps(__spreadValues({}, pact), { status: "declined" });
+}
+function breakPact(pact, own, actorUid, now) {
+  if (!involves(pact, own.id)) throw new GameActionError("Ce pacte ne concerne pas ton alliance.");
+  if (pactStatusAt(pact, now) !== "active") throw new GameActionError("Ce pacte n'est pas actif.");
+  assertLeader(own, actorUid, "rompre un pacte");
+  return __spreadProps(__spreadValues({}, pact), { status: "ending", endsAtMs: now + DIPLOMACY_RULES.breakNoticeHours * HOUR12, brokenByTag: own.tag });
+}
+function sanitizePactMessage(raw) {
+  const text = String(raw != null ? raw : "").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > DIPLOMACY_RULES.messageMax) throw new GameActionError(`Message trop long (${DIPLOMACY_RULES.messageMax} caract\xE8res max).`);
+  return text;
 }
 
 // src/game/agenda.ts
@@ -20887,6 +20019,1515 @@ function publishGazette(state, issue, players, warlords = []) {
   };
 }
 
+// src/game/globalChat.ts
+var GLOBAL_CHAT_RULES = {
+  maxLength: 300,
+  cooldownMs: 4e3,
+  perMinute: 8,
+  reportsToHide: 3,
+  /** Messages gardés en base (les plus anciens sont effacés). */
+  keep: 500,
+  /** Messages chargés à l'ouverture. */
+  page: 60
+};
+var CHAT_MODERATION_KEYS = { mutes: "chat_mutes", filter: "chat_filter" };
+var BASE_FILTER = ["connard", "connasse", "salope", "encule", "encul\xE9", "pute", "batard", "b\xE2tard", "fdp", "ntm", "nique", "pd", "tapette", "negro", "bougnoule", "youpin"];
+var fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function filterText(text, extra = []) {
+  const words = [...new Set([...BASE_FILTER, ...extra].map(fold).filter((w) => w.length >= 2))];
+  if (words.length === 0) return { text, masked: false };
+  const folded = fold(text);
+  const marks = new Array(text.length).fill(false);
+  for (const w of words) {
+    const re = new RegExp(`(^|[^a-z0-9])(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?)(?=$|[^a-z0-9])`, "g");
+    let m;
+    while (m = re.exec(folded)) {
+      const start = m.index + m[1].length;
+      for (let i = start; i < start + m[2].length; i++) marks[i] = true;
+      if (re.lastIndex === m.index) re.lastIndex++;
+    }
+  }
+  if (folded.length !== text.length) return { text, masked: false };
+  const out = [...text].map((c, i) => marks[i] ? "*" : c).join("");
+  return { text: out, masked: out !== text };
+}
+function cleanGlobalMessage(raw) {
+  const text = String(raw != null ? raw : "").replace(/\s+/g, " ").trim().slice(0, GLOBAL_CHAT_RULES.maxLength);
+  if (!text) throw new Error("Message vide.");
+  return text;
+}
+function rateLimitError(recentSentAtMs, now) {
+  const last = Math.max(0, ...recentSentAtMs);
+  if (now - last < GLOBAL_CHAT_RULES.cooldownMs) return "Doucement : un message toutes les 4 secondes.";
+  if (recentSentAtMs.filter((t) => now - t < 6e4).length >= GLOBAL_CHAT_RULES.perMinute) return "Trop de messages en une minute : patiente un peu.";
+  return null;
+}
+function normalizeMutes(raw) {
+  var _a, _b;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [uid, v] of Object.entries(raw)) {
+    if (!v || typeof v !== "object") continue;
+    const r = v;
+    out[uid] = { untilMs: r.untilMs === null ? null : Number(r.untilMs) || 0, reason: String((_a = r.reason) != null ? _a : "").slice(0, 200), byName: String((_b = r.byName) != null ? _b : "").slice(0, 60) };
+  }
+  return out;
+}
+function activeMute(mutes, uid, now) {
+  const m = mutes[uid];
+  return m && (m.untilMs === null || m.untilMs > now) ? m : null;
+}
+function normalizeFilter(raw) {
+  const words = raw == null ? void 0 : raw.words;
+  return (Array.isArray(words) ? words : []).map((w) => String(w).trim().slice(0, 40)).filter(Boolean).slice(0, 200);
+}
+function addReport(reporters, uid) {
+  const list = (Array.isArray(reporters) ? reporters : []).filter((x) => typeof x === "string");
+  const next = list.includes(uid) ? list : [...list, uid];
+  return { reporters: next, hide: next.length >= GLOBAL_CHAT_RULES.reportsToHide };
+}
+var CHAT_REACTIONS = ["\u{1F44D}", "\u{1F602}", "\u{1F525}", "\u{1F62E}", "\u{1F622}", "\u{1F44F}"];
+var KESH_REACTION = "kesh";
+var ALL_REACTIONS = [...CHAT_REACTIONS, KESH_REACTION];
+function normalizeReactions(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const e3 of ALL_REACTIONS) {
+    const list = raw[e3];
+    if (Array.isArray(list)) {
+      const uids = [...new Set(list.filter((x) => typeof x === "string"))].slice(0, 200);
+      if (uids.length) out[e3] = uids;
+    }
+  }
+  return out;
+}
+function toggleReaction(raw, emoji, uid, canKesh = false) {
+  var _a;
+  if (!ALL_REACTIONS.includes(emoji)) throw new Error("R\xE9action inconnue.");
+  const r = normalizeReactions(raw);
+  const list = (_a = r[emoji]) != null ? _a : [];
+  if (emoji === KESH_REACTION && !canKesh && !list.includes(uid)) throw new Error("R\xE9action kesh'vaar : \xE0 d\xE9bloquer au Comptoir de la Ruche.");
+  const next = list.includes(uid) ? list.filter((x) => x !== uid) : [...list, uid];
+  if (next.length) r[emoji] = next;
+  else delete r[emoji];
+  return r;
+}
+var CHAT_ROOM_RULES = {
+  nameMin: 3,
+  nameMax: 24,
+  topicMax: 120,
+  /** Salons ouverts par joueur, et sur tout le serveur. */
+  perOwner: 1,
+  maxOpen: 30,
+  /** Un salon sans message depuis N jours se ferme tout seul. */
+  idleDays: 14
+};
+function validateRoom(raw, ctx) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const name = String((_a = r.name) != null ? _a : "").replace(/\s+/g, " ").trim();
+  const topic = String((_b = r.topic) != null ? _b : "").replace(/\s+/g, " ").trim().slice(0, CHAT_ROOM_RULES.topicMax);
+  if (name.length < CHAT_ROOM_RULES.nameMin || name.length > CHAT_ROOM_RULES.nameMax) throw new Error(`Nom du salon : ${CHAT_ROOM_RULES.nameMin} \xE0 ${CHAT_ROOM_RULES.nameMax} caract\xE8res.`);
+  if (filterText(name, ctx.extraFilter).masked || filterText(topic, ctx.extraFilter).masked) throw new Error("Nom ou sujet refus\xE9 par le filtre du canal.");
+  if (ctx.names.some((n) => fold(n) === fold(name)) || fold(name) === "global") throw new Error("Un salon porte d\xE9j\xE0 ce nom.");
+  if (ctx.ownerOpen >= CHAT_ROOM_RULES.perOwner) throw new Error("Tu as d\xE9j\xE0 un salon ouvert : ferme-le d'abord.");
+  if (ctx.totalOpen >= CHAT_ROOM_RULES.maxOpen) throw new Error("Trop de salons ouverts sur le serveur pour l'instant.");
+  return { name, topic };
+}
+var ROOM_ICONS = [
+  { id: "swords", label: "Combat" },
+  { id: "coins", label: "Commerce" },
+  { id: "skull", label: "Boss" },
+  { id: "rocket", label: "Exp\xE9ditions" },
+  { id: "shield", label: "D\xE9fense" },
+  { id: "crown", label: "Couronne" },
+  { id: "flame", label: "Flamme" },
+  { id: "sparkles", label: "\xC9toiles" }
+];
+function roomIcon(raw) {
+  const id = String(raw != null ? raw : "");
+  return ROOM_ICONS.some((i) => i.id === id) ? id : "";
+}
+var MENTION_RULES = { maxPerMessage: 5 };
+function parseMentions(text) {
+  const out = [];
+  const re = /(^|[^0-9A-Za-z_@\u00C0-\u024F])@([0-9A-Za-z_\u00C0-\u024F-]{3,20})/g;
+  const src = String(text != null ? text : "");
+  for (let m = re.exec(src); m; m = re.exec(src)) {
+    const pseudo = m[2];
+    if (!out.some((p) => p.toLowerCase() === pseudo.toLowerCase())) out.push(pseudo);
+    if (out.length >= MENTION_RULES.maxPerMessage) break;
+  }
+  return out;
+}
+var ROOM_EVENT_RULES = { labelMin: 3, labelMax: 60, maxAheadDays: 7, durationHours: 1 };
+function validateRoomEvent(raw, now, extraFilter) {
+  var _a;
+  const atMs = Math.floor(Number(raw.atMs) || 0);
+  if (!atMs) return { label: "", atMs: 0 };
+  const label3 = String((_a = raw.label) != null ? _a : "").replace(/\s+/g, " ").trim();
+  if (label3.length < ROOM_EVENT_RULES.labelMin || label3.length > ROOM_EVENT_RULES.labelMax) throw new Error(`\xC9v\xE9nement : ${ROOM_EVENT_RULES.labelMin} \xE0 ${ROOM_EVENT_RULES.labelMax} caract\xE8res.`);
+  if (filterText(label3, extraFilter).masked) throw new Error("Libell\xE9 refus\xE9 par le filtre du canal.");
+  if (atMs < now) throw new Error("Choisis une heure \xE0 venir.");
+  if (atMs > now + ROOM_EVENT_RULES.maxAheadDays * 864e5) throw new Error(`Un \xE9v\xE9nement se programme ${ROOM_EVENT_RULES.maxAheadDays} jours \xE0 l'avance au plus.`);
+  return { label: label3, atMs };
+}
+function roomIdle(room, now) {
+  return now - Math.max(room.createdAtMs, room.lastMessageAtMs) > CHAT_ROOM_RULES.idleDays * 864e5;
+}
+
+// src/game/goals.ts
+var GOAL_RULES = { maxGoals: 6, maxFleet: 1e5 };
+
+// src/game/leagues.ts
+var LEAGUES_KEY = "leagues";
+var LEAGUE_TIERS = [
+  { id: "bronze", label: "Bronze", color: "var(--th-medal-bronze)", tokens: 1, placementPct: 0.25 },
+  { id: "argent", label: "Argent", color: "var(--th-medal-silver)", tokens: 1, placementPct: 0.25 },
+  { id: "or", label: "Or", color: "var(--th-medal-gold)", tokens: 2, placementPct: 0.2 },
+  { id: "platine", label: "Platine", color: "var(--th-rarity-rare)", tokens: 2, placementPct: 0.15 },
+  { id: "diamant", label: "Diamant", color: "var(--th-rarity-epic)", tokens: 3, placementPct: 0.1 },
+  { id: "mythique", label: "Mythique", color: "var(--th-rarity-mythic)", tokens: 4, placementPct: 0.05 }
+];
+var LEAGUE_RULES = {
+  /** Part de chaque division qui monte / descend à la fin de la semaine. */
+  promotePct: 0.2,
+  relegatePct: 0.2,
+  /** Semaines gardées dans l'historique de chaque joueur. */
+  historyWeeks: 8
+};
+var WEEK_MS = 7 * 24 * 3600 * 1e3;
+function leagueWeekStart(now) {
+  const d = new Date(now);
+  const day = (d.getUTCDay() + 6) % 7;
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
+}
+function leagueWeekId(now) {
+  return new Date(leagueWeekStart(now)).toISOString().slice(0, 10);
+}
+function leagueWeekLabel(weekId2) {
+  var _a;
+  const months = ["janv.", "f\xE9vr.", "mars", "avr.", "mai", "juin", "juil.", "ao\xFBt", "sept.", "oct.", "nov.", "d\xE9c."];
+  const [, m, d] = weekId2.split("-").map(Number);
+  return `semaine du ${d != null ? d : "?"} ${(_a = months[(m != null ? m : 1) - 1]) != null ? _a : ""}`.trim();
+}
+var TIER_IDS = new Set(LEAGUE_TIERS.map((t) => t.id));
+function normalizeLeagues(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  if (r.version !== 2) return { version: 2, weekId: "", tiers: {}, base: {}, last: null, history: {} };
+  const tiers2 = {};
+  for (const [uid, t] of Object.entries(r.tiers && typeof r.tiers === "object" ? r.tiers : {})) if (TIER_IDS.has(t)) tiers2[uid] = t;
+  const base = {};
+  for (const [uid, v] of Object.entries(r.base && typeof r.base === "object" ? r.base : {})) if (Number.isFinite(Number(v))) base[uid] = Math.max(0, Number(v));
+  const history = {};
+  for (const [uid, list] of Object.entries(r.history && typeof r.history === "object" ? r.history : {})) {
+    if (!Array.isArray(list)) continue;
+    history[uid] = list.filter((h) => h && typeof h.weekId === "string" && TIER_IDS.has(h.tier)).slice(-LEAGUE_RULES.historyWeeks);
+  }
+  return { version: 2, weekId: typeof r.weekId === "string" ? r.weekId : "", tiers: tiers2, base, last: r.last && typeof r.last === "object" ? r.last : null, history };
+}
+function leagueInfo(tier) {
+  var _a;
+  return (_a = LEAGUE_TIERS.find((t) => t.id === tier)) != null ? _a : LEAGUE_TIERS[0];
+}
+var index = (tier) => LEAGUE_TIERS.findIndex((t) => t.id === tier);
+var xpOf = (e3) => Math.max(0, Number(e3.xp) || 0);
+function placementTiers(entries) {
+  const sorted = entries.filter((e3) => !e3.npc).sort((a, b) => xpOf(b) - xpOf(a) || (a.uid < b.uid ? -1 : 1));
+  const n = sorted.length;
+  const out = {};
+  const fromTop = [...LEAGUE_TIERS].reverse();
+  sorted.forEach((e3, i) => {
+    var _a, _b;
+    if (xpOf(e3) <= 0) {
+      out[e3.uid] = "bronze";
+      return;
+    }
+    const f = (i + 0.5) / n;
+    let acc = 0;
+    out[e3.uid] = (_b = (_a = fromTop.find((t) => (acc += t.placementPct) >= f - 1e-9)) == null ? void 0 : _a.id) != null ? _b : "bronze";
+  });
+  return out;
+}
+function weeklyScore(state, e3) {
+  const base = state.base[e3.uid];
+  return base === void 0 ? 0 : Math.max(0, xpOf(e3) - base);
+}
+function leagueStandings(entries, state, tier) {
+  const placed = placementTiers(entries);
+  const members = entries.filter((e3) => {
+    var _a, _b;
+    return !e3.npc && ((_b = (_a = state.tiers[e3.uid]) != null ? _a : placed[e3.uid]) != null ? _b : "bronze") === tier;
+  }).map((e3) => ({ uid: e3.uid, pseudo: e3.pseudo, score: weeklyScore(state, e3) })).sort((a, b) => b.score - a.score || (a.pseudo < b.pseudo ? -1 : 1));
+  const n = members.length;
+  const top = index(tier) === LEAGUE_TIERS.length - 1;
+  const up = top ? 0 : Math.ceil(n * LEAGUE_RULES.promotePct);
+  const down = index(tier) > 0 ? Math.floor(n * LEAGUE_RULES.relegatePct) : 0;
+  return members.map((m, i) => __spreadProps(__spreadValues({}, m), {
+    rank: i + 1,
+    // Les inactifs (0 XP dans la semaine) ne montent jamais et descendent toujours (hors Bronze).
+    zone: m.score > 0 && i < up ? "up" : index(tier) > 0 && (m.score <= 0 || i >= n - down) ? "down" : "stay"
+  }));
+}
+function championTitle(tier) {
+  return `Champion ${leagueInfo(tier).label}`;
+}
+function leagueTick(stateIn, entries, now) {
+  var _a, _b, _c;
+  const players = entries.filter((e3) => !e3.npc);
+  const week = leagueWeekId(now);
+  const baseOf = () => Object.fromEntries(players.map((e3) => [e3.uid, xpOf(e3)]));
+  if (!stateIn.weekId) {
+    return { state: { version: 2, weekId: week, tiers: placementTiers(players), base: baseOf(), last: null, history: (_a = stateIn.history) != null ? _a : {} }, rewards: [], closedWeekId: null };
+  }
+  if (stateIn.weekId === week) {
+    const placed = placementTiers(players);
+    const tiers3 = __spreadValues({}, stateIn.tiers);
+    const base = __spreadValues({}, stateIn.base);
+    let changed = false;
+    for (const e3 of players) {
+      if (!tiers3[e3.uid]) {
+        tiers3[e3.uid] = (_b = placed[e3.uid]) != null ? _b : "bronze";
+        changed = true;
+      }
+      if (base[e3.uid] === void 0) {
+        base[e3.uid] = xpOf(e3);
+        changed = true;
+      }
+    }
+    return { state: changed ? __spreadProps(__spreadValues({}, stateIn), { tiers: tiers3, base }) : stateIn, rewards: [], closedWeekId: null };
+  }
+  const state = __spreadProps(__spreadValues({}, stateIn), { tiers: __spreadValues({}, stateIn.tiers) });
+  for (const e3 of players) if (!state.tiers[e3.uid]) state.tiers[e3.uid] = "bronze";
+  const tiers2 = __spreadValues({}, state.tiers);
+  const moves = {};
+  const history = __spreadValues({}, state.history);
+  const rewards = [];
+  for (const t of LEAGUE_TIERS) {
+    for (const row of leagueStandings(players, state, t.id)) {
+      const to = row.zone === "up" ? LEAGUE_TIERS[index(t.id) + 1].id : row.zone === "down" ? LEAGUE_TIERS[index(t.id) - 1].id : t.id;
+      tiers2[row.uid] = to;
+      moves[row.uid] = { from: t.id, to, rank: row.rank };
+      history[row.uid] = [...(_c = history[row.uid]) != null ? _c : [], { weekId: stateIn.weekId, tier: t.id, rank: row.rank, score: row.score, move: row.zone }].slice(-LEAGUE_RULES.historyWeeks);
+      if (row.score > 0) rewards.push({ uid: row.uid, tier: t.id, to, rank: row.rank, score: row.score, move: row.zone, tokens: t.tokens, title: row.rank === 1 ? championTitle(t.id) : "" });
+    }
+  }
+  const alive = new Set(players.map((e3) => e3.uid));
+  for (const uid of Object.keys(tiers2)) if (!alive.has(uid)) delete tiers2[uid];
+  for (const uid of Object.keys(history)) if (!alive.has(uid)) delete history[uid];
+  return { state: { version: 2, weekId: week, tiers: tiers2, base: baseOf(), last: { weekId: stateIn.weekId, moves }, history }, rewards, closedWeekId: stateIn.weekId };
+}
+function grantLeagueTitle(player, title, rank2, now) {
+  var _a;
+  if (!title) return;
+  const entry = { label: title, seasonId: currentSeasonId(now), rank: rank2 };
+  player.titles = [...((_a = player.titles) != null ? _a : []).filter((t) => t.label !== title), entry];
+  if (!player.activeTitle) player.activeTitle = title;
+}
+
+// src/game/marketHistory.ts
+var MARKET_HISTORY_RULES = {
+  days: 30,
+  /** Échanges minimum sur la période pour juger un prix. */
+  minTrades: 3,
+  highFactor: 2,
+  lowFactor: 0.5
+};
+
+// src/game/referral.ts
+var REFERRAL_RULES = {
+  linkWindowHours: 48,
+  rewardXp: 2e3,
+  minAgeDays: 3,
+  perMonth: 5,
+  amberSponsor: 150,
+  amberRecruit: 100,
+  banner: "recruteur"
+};
+function referralState(p) {
+  var _a;
+  const raw = (_a = p.referral) != null ? _a : {};
+  return __spreadProps(__spreadValues({}, raw), { recruits: Number(raw.recruits) || 0, monthly: raw.monthly && typeof raw.monthly === "object" ? raw.monthly : {} });
+}
+function month(now) {
+  return new Date(now).toISOString().slice(0, 7);
+}
+function linkReferrer(recruit, sponsor, now) {
+  var _a;
+  const st = referralState(recruit);
+  if (sponsor.uid === recruit.uid) throw new GameActionError("Tu ne peux pas \xEAtre ton propre parrain.");
+  if (st.by) throw new GameActionError("Tu as d\xE9j\xE0 un parrain.");
+  if (now - ((_a = recruit.createdAtMs) != null ? _a : 0) > REFERRAL_RULES.linkWindowHours * 36e5) throw new GameActionError("Le parrainage se d\xE9clare dans les 48 h qui suivent l'inscription.");
+  if (referralState(sponsor).by === recruit.uid) throw new GameActionError("Ce joueur est d\xE9j\xE0 ton filleul.");
+  recruit.referral = __spreadProps(__spreadValues({}, st), { by: sponsor.uid, byPseudo: sponsor.pseudo, linkedAtMs: now, rewarded: false });
+}
+function referralDue(recruit, verified, now) {
+  var _a, _b;
+  const st = referralState(recruit);
+  return !!st.by && !st.rewarded && verified && ((_a = recruit.xp) != null ? _a : 0) >= REFERRAL_RULES.rewardXp && now - ((_b = recruit.createdAtMs) != null ? _b : now) >= REFERRAL_RULES.minAgeDays * 864e5;
+}
+function grantReferral(sponsor, recruit, now) {
+  var _a, _b, _c, _d, _e;
+  const s = referralState(sponsor);
+  const r = referralState(recruit);
+  const m = month(now);
+  const capped = ((_b = (_a = s.monthly) == null ? void 0 : _a[m]) != null ? _b : 0) >= REFERRAL_RULES.perMonth;
+  const rb = bountyState(recruit);
+  rb.amber += REFERRAL_RULES.amberRecruit;
+  recruit.bounties = rb;
+  recruit.referral = __spreadProps(__spreadValues({}, r), { rewarded: true });
+  if (!capped) {
+    const sb = bountyState(sponsor);
+    sb.amber += REFERRAL_RULES.amberSponsor;
+    sponsor.bounties = sb;
+    sponsor.referral = __spreadProps(__spreadValues({}, s), { recruits: ((_c = s.recruits) != null ? _c : 0) + 1, monthly: __spreadProps(__spreadValues({}, s.monthly), { [m]: ((_e = (_d = s.monthly) == null ? void 0 : _d[m]) != null ? _e : 0) + 1 }) });
+  }
+  return { capped };
+}
+
+// src/game/rename.ts
+var RENAME_RULES = {
+  amber: 10,
+  minLength: 3,
+  maxLength: 20
+};
+function pseudoLogin(pseudo) {
+  return pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+function cleanNewPseudo(raw) {
+  const pseudo = String(raw != null ? raw : "").trim().replace(/\s+/g, " ");
+  if (pseudo.length > RENAME_RULES.maxLength) throw new GameActionError(`Le pseudo fait ${RENAME_RULES.maxLength} caract\xE8res au plus.`);
+  if (pseudoLogin(pseudo).length < RENAME_RULES.minLength) throw new GameActionError("Le pseudo doit contenir au moins 3 caract\xE8res valides (lettres, chiffres, - ou _).");
+  return pseudo;
+}
+function renamePlayer(player, raw, now) {
+  if (player.renamed) throw new GameActionError("Tu as d\xE9j\xE0 chang\xE9 de pseudo.");
+  const pseudo = cleanNewPseudo(raw);
+  if (pseudo === player.pseudo) throw new GameActionError("C'est d\xE9j\xE0 ton pseudo.");
+  const st = bountyState(player);
+  if (st.amber < RENAME_RULES.amber) throw new GameActionError(`Il te faut ${RENAME_RULES.amber} Ambre.`);
+  st.amber -= RENAME_RULES.amber;
+  player.bounties = st;
+  player.renamed = { fromPseudo: player.pseudo, atMs: now };
+  player.pseudo = pseudo;
+  return { pseudo, login: pseudoLogin(pseudo) };
+}
+
+// src/game/reports.ts
+var REPORT_CATEGORIES = [
+  { id: "bug", label: "Bug", hint: "Quelque chose ne marche pas comme pr\xE9vu" },
+  { id: "display", label: "Affichage", hint: "Page mal affich\xE9e, texte coup\xE9, mobile\u2026" },
+  { id: "balance", label: "\xC9quilibrage", hint: "Co\xFBts, gains, combats, factions\u2026" },
+  { id: "account", label: "Compte", hint: "Connexion, mot de passe, progression perdue" },
+  { id: "idea", label: "Suggestion", hint: "Une id\xE9e pour am\xE9liorer le jeu" },
+  { id: "other", label: "Autre", hint: "Tout le reste" }
+];
+var REPORT_STATUSES = [
+  { id: "new", label: "Nouveau", tone: "accent" },
+  { id: "in_progress", label: "En cours", tone: "gold" },
+  { id: "resolved", label: "R\xE9solu", tone: "mint" },
+  { id: "rejected", label: "Non retenu", tone: "danger" }
+];
+var REPORT_RULES = {
+  titleMax: 120,
+  descriptionMin: 10,
+  descriptionMax: 4e3,
+  commentMax: 2e3,
+  resolutionMax: 2e3,
+  /** Signalements par joueur sur 24 h glissantes. */
+  maxPerDay: 5
+};
+function isReportCategory(v) {
+  return REPORT_CATEGORIES.some((c) => c.id === v);
+}
+function isReportStatus(v) {
+  return REPORT_STATUSES.some((s) => s.id === v);
+}
+function reportStatusLabel(status) {
+  var _a, _b;
+  return (_b = (_a = REPORT_STATUSES.find((s) => s.id === status)) == null ? void 0 : _a.label) != null ? _b : status;
+}
+var clean = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+function sanitizeNewReport(input) {
+  const title = clean(input.title, REPORT_RULES.titleMax);
+  const description = clean(input.description, REPORT_RULES.descriptionMax);
+  if (!title) throw new GameActionError("Donne un titre \xE0 ton signalement.");
+  if (description.length < REPORT_RULES.descriptionMin) throw new GameActionError("D\xE9cris le probl\xE8me en quelques mots de plus.");
+  const raw = input.context && typeof input.context === "object" ? input.context : {};
+  return {
+    category: isReportCategory(input.category) ? input.category : "other",
+    title,
+    description,
+    context: {
+      version: clean(raw.version, 20),
+      page: clean(raw.page, 200),
+      theme: clean(raw.theme, 20),
+      userAgent: clean(raw.userAgent, 300),
+      screen: clean(raw.screen, 40)
+    }
+  };
+}
+function assertReportQuota(previousCreatedAtMs, now) {
+  const recent = previousCreatedAtMs.filter((t) => now - t < 24 * 36e5).length;
+  if (recent >= REPORT_RULES.maxPerDay) throw new GameActionError(`Tu as d\xE9j\xE0 envoy\xE9 ${REPORT_RULES.maxPerDay} signalements aujourd'hui : r\xE9essaie demain ou compl\xE8te un signalement existant.`);
+}
+function addReportComment(history, author, text, now) {
+  const body = clean(text, REPORT_RULES.commentMax);
+  if (!body) throw new GameActionError("Le message est vide.");
+  return [...history, { kind: "comment", atMs: now, byId: author.id, byName: author.name, staff: author.staff, text: body }];
+}
+function applyStaffUpdate(report, author, update, now) {
+  var _a, _b, _c, _d;
+  let history = [...(_a = report.history) != null ? _a : []];
+  let status = report.status;
+  let resolution = (_b = report.resolution) != null ? _b : "";
+  const notes = [];
+  if (update.status !== void 0) {
+    if (!isReportStatus(update.status)) throw new GameActionError("Statut inconnu.");
+    if (update.status !== status) {
+      status = update.status;
+      history.push({ kind: "status", atMs: now, byId: author.id, byName: author.name, staff: true, status });
+      notes.push(`statut : ${reportStatusLabel(status)}`);
+    }
+  }
+  if (update.resolution !== void 0) {
+    const next = clean(update.resolution, REPORT_RULES.resolutionMax);
+    if (next !== resolution) {
+      resolution = next;
+      if (next) notes.push("r\xE9solution renseign\xE9e");
+    }
+  }
+  if (typeof update.comment === "string" && update.comment.trim()) {
+    history = addReportComment(history, { id: author.id, name: author.name, staff: true }, update.comment, now);
+    notes.push("nouvelle r\xE9ponse");
+  }
+  const changed = status !== report.status || resolution !== ((_c = report.resolution) != null ? _c : "") || history.length !== ((_d = report.history) != null ? _d : []).length;
+  return { status, resolution, history, changed, notify: notes.length > 0 ? notes.join(", ") : null };
+}
+function githubIssueBody(report, link) {
+  var _a, _b, _c;
+  const ctx = (_a = report.context) != null ? _a : {};
+  const cat = (_c = (_b = REPORT_CATEGORIES.find((c) => c.id === report.category)) == null ? void 0 : _b.label) != null ? _c : report.category;
+  return [
+    `**Signal\xE9 en jeu** par ${report.reporterPseudo || "un joueur"} \xB7 ${cat}`,
+    "",
+    report.description,
+    "",
+    "| Contexte | |",
+    "|---|---|",
+    `| Version | ${ctx.version || "?"} |`,
+    `| Page | ${ctx.page || "?"} |`,
+    `| Th\xE8me | ${ctx.theme || "?"} |`,
+    `| \xC9cran | ${ctx.screen || "?"} |`,
+    `| Navigateur | ${ctx.userAgent || "?"} |`,
+    "",
+    report.screenshot ? `Capture jointe au signalement (voir l'administration).` : "",
+    `Suivi dans l'administration : ${link}`
+  ].filter((l) => l !== null).join("\n");
+}
+
+// src/game/ruleRegistry.ts
+var REGISTERED_RULES = {
+  achievementTokens: { label: "Succ\xE8s : jetons par palier", target: () => ACHIEVEMENT_TOKENS },
+  achievementTierRewards: { label: "Succ\xE8s : XP et production par palier", target: () => TIER_REWARDS },
+  achievementXpAlert: { label: "Anti-abus : XP des succ\xE8s", target: () => ACHIEVEMENT_XP_ALERT },
+  actionTemplates: { label: "File d'actions : mod\xE8les", target: () => TEMPLATE_RULES },
+  allianceDaily: { label: "Alliance : objectif du jour", target: () => ALLIANCE_DAILY_RULES },
+  allianceProfile: { label: "Alliance : fiche, rangs et candidatures", target: () => ALLIANCE_PROFILE_RULES },
+  allianceSaga: { label: "Alliance : saga", target: () => ALLIANCE_SAGA_RULES },
+  ascension: { label: "Ascension", target: () => ASCENSION_RULES },
+  bossPhases: { label: "Boss : phases (riposte, bouclier, faiblesse)", target: () => BOSS_PHASE_RULES },
+  bossReminders: { label: "Boss : rappels (veille, fin)", target: () => BOSS_REMINDERS },
+  bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES },
+  bountyShop: { label: "Comptoir de la Ruche", target: () => BOUNTY_SHOP_RULES },
+  buildPlan: { label: "File planifi\xE9e des b\xE2timents", target: () => BUILD_PLAN_RULES },
+  buildingUnlockCost: { label: "B\xE2timents : co\xFBt de d\xE9blocage", target: () => BUILDING_UNLOCK_COST },
+  cancel: { label: "Annulation des chantiers", target: () => CANCEL_RULES },
+  chapterBaseCounts: { label: "Chroniques : quantit\xE9s de base des objectifs", target: () => BASE_COUNTS },
+  chatRooms: { label: "Salons", target: () => CHAT_ROOM_RULES },
+  coalition: { label: "Coalitions de seigneurs", target: () => COALITION_RULES },
+  colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
+  colonySpec: { label: "Colonies : sp\xE9cialisation", target: () => COLONY_SPEC_RULES },
+  commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
+  dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },
+  dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },
+  diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES },
+  dockTiers: { label: "Cale s\xE8che : paliers de niveau", target: () => DOCK_TIERS },
+  eliteBounty: { label: "Proie d'\xE9lite", target: () => ELITE_RULES },
+  gazette: { label: "Gazette", target: () => GAZETTE_RULES },
+  globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
+  goals: { label: "Objectifs personnels", target: () => GOAL_RULES },
+  leagues: { label: "Divisions", target: () => LEAGUE_RULES },
+  marketHistory: { label: "March\xE9 : historique des prix", target: () => MARKET_HISTORY_RULES },
+  mentions: { label: "Mentions", target: () => MENTION_RULES },
+  messages: { label: "Messagerie priv\xE9e", target: () => MESSAGE_RULES },
+  moduleCost: { label: "Modules : co\xFBt de fabrication", target: () => MODULE_BUILD_COST },
+  modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES },
+  passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW },
+  polls: { label: "Sondages", target: () => POLL_RULES },
+  profile: { label: "Profil", target: () => PROFILE_RULES },
+  referral: { label: "Parrainage", target: () => REFERRAL_RULES },
+  rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
+  reports: { label: "Signalements", target: () => REPORT_RULES },
+  roomEvents: { label: "\xC9v\xE9nements de salon", target: () => ROOM_EVENT_RULES },
+  seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES },
+  synthesis: { label: "Labo de synth\xE8se", target: () => SYNTH_RULES },
+  talents: { label: "Talents d'Ascension", target: () => TALENT_RULES },
+  territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES },
+  treaties: { label: "Trait\xE9s avec les factions", target: () => TREATY_RULES },
+  tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID },
+  unitAudit: { label: "\xC9quilibrage : seuils de l'audit des unit\xE9s", target: () => UNIT_AUDIT_RULES },
+  vacation: { label: "Mode vacances", target: () => VACATION_RULES },
+  warChest: { label: "Coffre de guerre", target: () => WAR_CHEST_RULES },
+  warlords: { label: "Seigneurs de guerre", target: () => WARLORD_RULES },
+  weeklyChallenge: { label: "D\xE9fi de la semaine", target: () => CHALLENGE_RULES },
+  worldBossRotation: { label: "Boss mondiaux : rotation", target: () => WORLD_BOSS_RULES }
+};
+var isPlain = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+function mergeRuleGroup(defaults, override) {
+  if (!isPlain(defaults) || !isPlain(override)) return override === void 0 ? structuredClone(defaults) : structuredClone(override);
+  const out = structuredClone(defaults);
+  for (const [k, v] of Object.entries(override)) if (v !== void 0) out[k] = k in defaults ? mergeRuleGroup(defaults[k], v) : structuredClone(v);
+  return out;
+}
+function registeredRuleSnapshot() {
+  return Object.fromEntries(Object.entries(REGISTERED_RULES).map(([k, r]) => [k, structuredClone(r.target())]));
+}
+function applyRegisteredRules(groups) {
+  for (const [k, r] of Object.entries(REGISTERED_RULES)) {
+    const v = groups[k];
+    if (isPlain(v)) Object.assign(r.target(), structuredClone(v));
+  }
+}
+
+// src/game/content.ts
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
+function withFixedUnits(units) {
+  const out = units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? [...units] : [...units, KESH_HUNTER_UNIT];
+  for (const e3 of ELITE_UNITS) {
+    const i = out.findIndex((u) => u.id === e3.id);
+    if (i < 0) out.push(e3);
+    else out[i] = __spreadProps(__spreadValues({}, out[i]), { elite: e3.elite, unlockTech: "", maxLevel: 1 });
+  }
+  for (const c of CLASS_UNITS) {
+    const i = out.findIndex((u) => u.id === c.id);
+    if (i < 0) out.push(c);
+    else out[i] = __spreadProps(__spreadValues({}, out[i]), { empireClass: c.empireClass, classTech: out[i].classTech || c.classTech, unlockTech: "" });
+  }
+  return out;
+}
+var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
+var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
+var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
+var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
+var DEFAULT_EMPIRE_CLASS_RULES = __spreadValues({}, EMPIRE_CLASS_RULES);
+var DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
+var DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
+var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
+var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
+var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
+var DEFAULT_EVENT_RULES = structuredClone(EVENT_RULES);
+var DEFAULT_SEASON_RULES = structuredClone(SEASON_RULES);
+var DEFAULT_STREAK_RULES = structuredClone(STREAK_RULES);
+var DEFAULT_CATCHUP_RULES = __spreadValues({}, CATCHUP_RULES);
+var DEFAULT_MUTATOR_RULES = structuredClone(MUTATOR_RULES);
+var DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
+var DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
+var DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
+var DEFAULT_CHRONICLE_GEN_RULES = structuredClone(CHRONICLE_GEN_RULES);
+var DEFAULT_REGISTERED_RULES = registeredRuleSnapshot();
+var DEFAULT_COMMERCE_RULES = {
+  auctions: structuredClone(AUCTION_RULES),
+  tradeContracts: structuredClone(TRADE_CONTRACT_RULES),
+  gifts: structuredClone(GIFT_RULES),
+  contests: structuredClone(CONTEST_RULES),
+  tournamentPoints: structuredClone(OUTCOME_POINTS),
+  weeklyStock: structuredClone(WEEKLY_STOCK_RULES),
+  patrons: structuredClone(PATRON_RULES)
+};
+var DEFAULT_ALLIANCE_RULES = structuredClone(ALLIANCE_RULES);
+var DEFAULT_PIRATE_RULES = __spreadValues({}, PIRATE_RULES);
+var DEFAULT_MARKET_RULES = __spreadValues({}, MARKET_RULES);
+var DEFAULT_EXPEDITION_RULES = structuredClone(EXPEDITION_RULES);
+var DEFAULT_LEVIATHAN_RULES = __spreadValues({}, LEVIATHAN_RULES);
+var DEFAULT_SEASON_BOSS_RULES = __spreadValues({}, SEASON_BOSS_RULES);
+var DEFAULT_ALLIANCE_BOSS_RULES = __spreadProps(__spreadValues({}, ALLIANCE_BOSS_RULES), { bosses: DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b)) });
+var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
+function defaultGameContent() {
+  return structuredClone({
+    buildings: DEFAULT_BUILDINGS,
+    units: DEFAULT_UNITS,
+    technologies: DEFAULT_TECHNOLOGIES,
+    missions: Object.values(DEFAULT_MISSIONS),
+    factions: DEFAULT_FACTIONS,
+    ranks: DEFAULT_RANKS,
+    achievements: DEFAULT_ACHIEVEMENTS,
+    warlords: defaultWarlordsConfig(),
+    seasonPass: defaultSeasonPassConfig(),
+    chronicles: defaultChroniclesConfig(),
+    passSeasons: defaultPassSeasonsConfig(),
+    relics: DEFAULT_RELICS,
+    relicSettings: defaultRelicSettings(),
+    worldBosses: DEFAULT_WORLD_BOSSES,
+    officers: defaultOfficersConfig(),
+    titles: DEFAULT_TITLES,
+    rules: __spreadValues(__spreadValues({ pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES }, structuredClone(DEFAULT_COMMERCE_RULES)), structuredClone(DEFAULT_REGISTERED_RULES))
+  });
+}
+var current = defaultGameContent();
+function currentGameContent() {
+  return structuredClone(current);
+}
+function applyGameContent(overrides) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb;
+  const defaults = defaultGameContent();
+  const content = {
+    buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
+    units: withFixedUnits((_b = overrides.units) != null ? _b : defaults.units),
+    technologies: (_c = overrides.technologies) != null ? _c : defaults.technologies,
+    missions: (_d = overrides.missions) != null ? _d : defaults.missions,
+    factions: (_e = overrides.factions) != null ? _e : defaults.factions,
+    ranks: (_f = overrides.ranks) != null ? _f : defaults.ranks,
+    achievements: (_g = overrides.achievements) != null ? _g : defaults.achievements,
+    warlords: (_h = overrides.warlords) != null ? _h : defaults.warlords,
+    seasonPass: (_i = overrides.seasonPass) != null ? _i : defaults.seasonPass,
+    chronicles: (_j = overrides.chronicles) != null ? _j : defaults.chronicles,
+    passSeasons: overrides.passSeasons && Array.isArray(overrides.passSeasons.seasons) ? overrides.passSeasons : defaults.passSeasons,
+    relics: (_k = overrides.relics) != null ? _k : defaults.relics,
+    titles: (_l = overrides.titles) != null ? _l : defaults.titles,
+    worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
+    officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
+    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_m = overrides.relicSettings) != null ? _m : {}), {
+      rarities: Object.fromEntries(
+        Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
+          var _a2, _b2, _c2;
+          return [id, __spreadValues(__spreadValues({}, v), (_c2 = (_b2 = (_a2 = overrides.relicSettings) == null ? void 0 : _a2.rarities) == null ? void 0 : _b2[id]) != null ? _c2 : {})];
+        })
+      )
+    }),
+    rules: __spreadProps(__spreadValues({
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_o = (_n = overrides.rules) == null ? void 0 : _n.pvp) != null ? _o : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_q = (_p = overrides.rules) == null ? void 0 : _p.combat) != null ? _q : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_s = (_r = overrides.rules) == null ? void 0 : _r.economy) != null ? _s : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_u = (_t = overrides.rules) == null ? void 0 : _t.fleets) != null ? _u : {}),
+      classes: __spreadValues(__spreadValues({}, defaults.rules.classes), (_w = (_v = overrides.rules) == null ? void 0 : _v.classes) != null ? _w : {}),
+      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_y = (_x = overrides.rules) == null ? void 0 : _x.colonies) != null ? _y : {}),
+      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_A = (_z = overrides.rules) == null ? void 0 : _z.colonyRoutes) != null ? _A : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_C = (_B = overrides.rules) == null ? void 0 : _B.spy) != null ? _C : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_E = (_D = overrides.rules) == null ? void 0 : _D.debris) != null ? _E : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_G = (_F = overrides.rules) == null ? void 0 : _F.patrol) != null ? _G : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_I = (_H = overrides.rules) == null ? void 0 : _H.events) != null ? _I : {}),
+      seasons: (() => {
+        var _a2, _b2, _d2, _e2, _f2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
+        const d = defaults.rules.seasons;
+        const _c2 = o, { tiers: _tiers, participationHours: _hours } = _c2, rest = __objRest(_c2, ["tiers", "participationHours"]);
+        void _tiers;
+        void _hours;
+        return __spreadProps(__spreadValues(__spreadValues({}, d), rest), { champion: __spreadValues(__spreadValues({}, d.champion), (_d2 = o.champion) != null ? _d2 : {}), podium: __spreadValues(__spreadValues({}, d.podium), (_e2 = o.podium) != null ? _e2 : {}), participation: __spreadValues(__spreadValues({}, d.participation), (_f2 = o.participation) != null ? _f2 : {}) });
+      })(),
+      alliances: (() => {
+        var _a2, _b2, _c2, _d2;
+        const merged = __spreadValues(__spreadValues({}, defaults.rules.alliances), (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.alliances) != null ? _b2 : {});
+        const ids = new Set(((_c2 = merged.researches) != null ? _c2 : []).map((r) => r.id));
+        return __spreadProps(__spreadValues({}, merged), { researches: [...(_d2 = merged.researches) != null ? _d2 : [], ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] });
+      })(),
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_K = (_J = overrides.rules) == null ? void 0 : _J.pirates) != null ? _K : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_M = (_L = overrides.rules) == null ? void 0 : _L.market) != null ? _M : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) != null ? _O : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_R = (_Q = (_P = overrides.rules) == null ? void 0 : _P.expeditions) == null ? void 0 : _Q.weights) != null ? _R : {})
+      }),
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_T = (_S = overrides.rules) == null ? void 0 : _S.leviathan) != null ? _T : {}),
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_V = (_U = overrides.rules) == null ? void 0 : _U.seasonBoss) != null ? _V : {}),
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_X = (_W = overrides.rules) == null ? void 0 : _W.allianceBoss) != null ? _X : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.wars) != null ? _Z : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_$ = (__ = overrides.rules) == null ? void 0 : __.catchup) != null ? _$ : {}),
+      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.mutators) != null ? _ba : {}), { overrides: __spreadValues({}, (_ea = (_da = (_ca = overrides.rules) == null ? void 0 : _ca.mutators) == null ? void 0 : _da.overrides) != null ? _ea : {}) }),
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ga = (_fa = overrides.rules) == null ? void 0 : _fa.territoryWar) != null ? _ga : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ja = (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) == null ? void 0 : _ia.points) != null ? _ja : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ma = (_la = (_ka = overrides.rules) == null ? void 0 : _ka.territoryWar) == null ? void 0 : _la.rewards) != null ? _ma : {})
+      }),
+      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_oa = (_na = overrides.rules) == null ? void 0 : _na.xpTiers) != null ? _oa : {}), {
+        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.tiers) != null ? _ra : {}),
+        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ua = (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.xpTiers) == null ? void 0 : _ta.multipliers) != null ? _ua : {})
+      }),
+      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_wa = (_va = overrides.rules) == null ? void 0 : _va.passGen) != null ? _wa : {}), {
+        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_za = (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) == null ? void 0 : _ya.values) != null ? _za : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_Ca = (_Ba = (_Aa = overrides.rules) == null ? void 0 : _Aa.passGen) == null ? void 0 : _Ba.caps) != null ? _Ca : {}),
+        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Fa = (_Ea = (_Da = overrides.rules) == null ? void 0 : _Da.passGen) == null ? void 0 : _Ea.weights) != null ? _Fa : {}),
+        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Ia = (_Ha = (_Ga = overrides.rules) == null ? void 0 : _Ga.passGen) == null ? void 0 : _Ha.challengeWeights) != null ? _Ia : {})
+      }),
+      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_Ka = (_Ja = overrides.rules) == null ? void 0 : _Ja.chronicleGen) != null ? _Ka : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Na = (_Ma = (_La = overrides.rules) == null ? void 0 : _La.chronicleGen) == null ? void 0 : _Ma.weights) != null ? _Na : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Qa = (_Pa = (_Oa = overrides.rules) == null ? void 0 : _Oa.chronicleGen) == null ? void 0 : _Pa.caps) != null ? _Qa : {}),
+        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Ta = (_Sa = (_Ra = overrides.rules) == null ? void 0 : _Ra.chronicleGen) == null ? void 0 : _Sa.objectiveWeights) != null ? _Ta : {}),
+        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Wa = (_Va = (_Ua = overrides.rules) == null ? void 0 : _Ua.chronicleGen) == null ? void 0 : _Va.themeArchetypes) != null ? _Wa : {})
+      }),
+      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Ya = (_Xa = overrides.rules) == null ? void 0 : _Xa.auctions) != null ? _Ya : {}), {
+        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_$a = (__a = (_Za = overrides.rules) == null ? void 0 : _Za.auctions) == null ? void 0 : __a.minStart) != null ? _$a : {})
+      }),
+      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (_bb = (_ab = overrides.rules) == null ? void 0 : _ab.tradeContracts) != null ? _bb : {}),
+      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_db = (_cb = overrides.rules) == null ? void 0 : _cb.gifts) != null ? _db : {}),
+      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_fb = (_eb = overrides.rules) == null ? void 0 : _eb.contests) != null ? _fb : {}),
+      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_hb = (_gb = overrides.rules) == null ? void 0 : _gb.tournamentPoints) != null ? _hb : {}),
+      weeklyStock: {
+        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_kb = (_jb = (_ib = overrides.rules) == null ? void 0 : _ib.weeklyStock) == null ? void 0 : _jb.prices) != null ? _kb : {}),
+        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_nb = (_mb = (_lb = overrides.rules) == null ? void 0 : _lb.weeklyStock) == null ? void 0 : _mb.quantities) != null ? _nb : {})
+      },
+      patrons: __spreadValues(__spreadValues({}, defaults.rules.patrons), (_pb = (_ob = overrides.rules) == null ? void 0 : _ob.patrons) != null ? _pb : {})
+    }, Object.fromEntries(
+      Object.keys(REGISTERED_RULES).map((k) => {
+        var _a2;
+        return [k, mergeRuleGroup(defaults.rules[k], (_a2 = overrides.rules) == null ? void 0 : _a2[k])];
+      })
+    )), {
+      streak: (() => {
+        var _a2, _b2, _c2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.streak) != null ? _b2 : {};
+        const d = defaults.rules.streak;
+        const hours2 = Array.isArray(o.hours) && o.hours.length === d.hours.length && o.hours.every((h) => Number.isFinite(h) && h >= 0) ? [...o.hours] : [...d.hours];
+        return __spreadProps(__spreadValues(__spreadValues({}, d), o), { hours: hours2, chest: __spreadValues(__spreadValues({}, d.chest), (_c2 = o.chest) != null ? _c2 : {}) });
+      })()
+    })
+  };
+  setBuildings(content.buildings);
+  setUnits(content.units);
+  setTechnologies(content.technologies);
+  for (const t of content.technologies) for (const e3 of techEffects(t)) if (e3.type === "unlock_next_level" && e3.target) UNIT_TO_TECH[e3.target] = t.id;
+  setMissions(content.missions);
+  setFactions(content.factions);
+  setRanks(content.ranks);
+  setOfficers(content.officers);
+  setWorldBosses(content.worldBosses);
+  setAchievements(content.achievements);
+  setWarlords(content.warlords);
+  setSeasonPass(content.seasonPass);
+  setChronicles(content.chronicles);
+  setPassSeasons(content.passSeasons);
+  setRelics(content.relics, content.relicSettings);
+  setLootTables((_qb = content.relicSettings) == null ? void 0 : _qb.loot, (_rb = content.relicSettings) == null ? void 0 : _rb.lootTokenCap);
+  setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
+  Object.assign(PVP_RULES, content.rules.pvp);
+  Object.assign(COMBAT_RULES, content.rules.combat);
+  setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
+  Object.assign(ECONOMY_RULES, content.rules.economy);
+  Object.assign(FLEET_RULES, content.rules.fleets);
+  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
+  Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
+  Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
+  Object.assign(SPY_RULES, content.rules.spy);
+  Object.assign(DEBRIS_RULES, content.rules.debris);
+  Object.assign(PATROL_RULES, content.rules.patrol);
+  Object.assign(EVENT_RULES, content.rules.events);
+  Object.assign(SEASON_RULES, content.rules.seasons);
+  Object.assign(ALLIANCE_RULES, content.rules.alliances);
+  Object.assign(PIRATE_RULES, content.rules.pirates);
+  Object.assign(MARKET_RULES, content.rules.market);
+  Object.assign(EXPEDITION_RULES, content.rules.expeditions);
+  Object.assign(LEVIATHAN_RULES, content.rules.leviathan);
+  Object.assign(SEASON_BOSS_RULES, content.rules.seasonBoss);
+  const sb = content.rules.seasonBoss;
+  SEASON_BOSS_TUNING.cooldownHours = sb.cooldownHours;
+  SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
+  SEASON_BOSS_TUNING.lossMult = sb.lossMult;
+  SEASON_BOSS_TUNING.weakness = sb.weakness;
+  const _sb = content.rules.allianceBoss, { bosses: allianceBosses } = _sb, allianceBossRules = __objRest(_sb, ["bosses"]);
+  Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
+  setAllianceBosses(allianceBosses);
+  Object.assign(WAR_RULES, content.rules.wars);
+  Object.assign(STREAK_RULES, structuredClone(content.rules.streak));
+  Object.assign(CATCHUP_RULES, content.rules.catchup);
+  MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
+  MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
+  Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
+  Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
+  Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
+  Object.assign(CHRONICLE_GEN_RULES, structuredClone(content.rules.chronicleGen));
+  Object.assign(AUCTION_RULES, structuredClone(content.rules.auctions));
+  Object.assign(TRADE_CONTRACT_RULES, structuredClone(content.rules.tradeContracts));
+  Object.assign(GIFT_RULES, structuredClone(content.rules.gifts));
+  Object.assign(CONTEST_RULES, structuredClone(content.rules.contests));
+  Object.assign(OUTCOME_POINTS, structuredClone(content.rules.tournamentPoints));
+  Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
+  Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
+  applyRegisteredRules(content.rules);
+  current = content;
+  return content;
+}
+var RULE_GROUP_LABELS = __spreadValues({
+  pvp: "Protections",
+  combat: "Combat",
+  economy: "\xC9conomie",
+  fleets: "Flottes",
+  classes: "Classes d'empire",
+  colonies: "Colonies",
+  colonyRoutes: "Routes de colonies",
+  spy: "Espionnage",
+  debris: "D\xE9bris",
+  patrol: "Patrouilles",
+  events: "\xC9v\xE9nements",
+  seasons: "Saisons",
+  alliances: "Alliances",
+  pirates: "Pirates",
+  market: "March\xE9",
+  expeditions: "Exp\xE9ditions",
+  leviathan: "L\xE9viathan",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  wars: "Guerres",
+  streak: "S\xE9rie de connexion",
+  catchup: "Rattrapage",
+  mutators: "Mutateur de saison",
+  territoryWar: "Guerre de territoire",
+  xpTiers: "Paliers d'XP",
+  passGen: "Passe g\xE9n\xE9r\xE9",
+  chronicleGen: "Chroniques g\xE9n\xE9r\xE9es",
+  auctions: "Ench\xE8res",
+  tradeContracts: "Contrats de livraison",
+  gifts: "Cadeaux",
+  contests: "Concours du pot commun",
+  tournamentPoints: "Tournoi du casino : points par tirage",
+  weeklyStock: "Offre de la semaine (Comptoir)",
+  patrons: "M\xE9c\xE8nes"
+}, Object.fromEntries(Object.entries(REGISTERED_RULES).map(([k, r]) => [k, r.label])));
+function validateRules(rules) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  const errors = [];
+  if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
+  const defaults = defaultGameContent().rules;
+  for (const [group, value2] of Object.entries(rules)) {
+    const def3 = defaults[group];
+    const label3 = (_a = RULE_GROUP_LABELS[group]) != null ? _a : group;
+    if (!def3) continue;
+    if (!value2 || typeof value2 !== "object") {
+      errors.push(`${label3} : section illisible.`);
+      continue;
+    }
+    for (const [key, v] of Object.entries(value2)) {
+      const d = def3[key];
+      if (d === void 0 || v === void 0) continue;
+      if (typeof d === "number") {
+        if (typeof v !== "number" || !Number.isFinite(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un nombre.`);
+        else if (d >= 0 && v < 0) errors.push(`${label3} : \xAB ${key} \xBB ne peut pas \xEAtre n\xE9gatif.`);
+        else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre entre \u22121 et 0.`);
+        else if (/Pct$/.test(key) && v > 1) errors.push(`${label3} : \xAB ${key} \xBB est une part (0,1 = 10 %), 1 au plus.`);
+      } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre oui ou non.`);
+      else if (typeof d === "string" && typeof v !== "string") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un texte.`);
+      else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre une liste.`);
+    }
+  }
+  const merged = mergeRulesForCheck(rules);
+  const cb6 = merged.combat;
+  if (!(cb6.techCombatCap >= 0 && cb6.techCombatCap <= 5)) errors.push("Combat : plafond des technos de combat entre 0 et 5 (+500 %).");
+  if (!(cb6.techCombatPerTechMax >= 0 && cb6.techCombatPerTechMax <= cb6.techCombatCap)) errors.push("Combat : une techno ne peut pas d\xE9passer le plafond total des technos de combat.");
+  if (!(cb6.keshPveBonus >= 0 && cb6.keshPveBonus <= 3)) errors.push("Combat : bonus du Traqueur contre les PNJ entre 0 et 3 (+300 %).");
+  if (!(merged.pirates.lairLocateCostHours >= 0 && merged.pirates.lairLocateMinRepelled >= 0)) errors.push("Factions : \xAB Localiser \xBB invalide.");
+  if (!(merged.classes.harvesterRecycleBonus >= 0 && merged.classes.harvesterRecycleBonus <= 5)) errors.push("Classes : bonus de recyclage du R\xE9colteur entre 0 et 5.");
+  if (!(merged.classes.scoutExpeditionTime >= 0 && merged.classes.scoutExpeditionTime < 1)) errors.push("Classes : r\xE9duction d'exp\xE9dition de l'\xC9claireur entre 0 et 0,99.");
+  if (!(merged.colonies.defenseQueueMax >= 0 && merged.colonies.defenseQueueMax <= 20)) errors.push("Colonies : file de d\xE9fense entre 0 et 20 lots.");
+  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= ((_c = (_b = merged.colonies.levelsRequired) == null ? void 0 : _b.length) != null ? _c : 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_d = merged.events.bossWeekend) != null ? _d : "first", startHour: (_e = merged.leviathan.startHour) != null ? _e : 18, durationHours: merged.leviathan.durationHours, dates: (_f = merged.events.bossDates) != null ? _f : [] }));
+  errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
+  const sbr = merged.seasonBoss;
+  if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
+  if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
+  if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
+  if (!((_g = merged.leviathan.name) == null ? void 0 : _g.trim())) errors.push("L\xE9viathan : nom vide.");
+  errors.push(...validateCatchupRules(merged.catchup));
+  errors.push(...validateMutatorRules(merged.mutators));
+  errors.push(...validateTerritoryWarRules(merged.territoryWar));
+  errors.push(...validateXpTierRules(merged.xpTiers));
+  errors.push(...validatePassGenRules(merged.passGen));
+  errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  const au = merged.auctions;
+  if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Ench\xE8res : surench\xE8re entre 0 et 1, taxe entre 0 et 0,99.");
+  if (!(Number.isInteger(au.maxOpenPerSeller) && au.maxOpenPerSeller >= 1 && au.watchMax >= 0 && au.historyPerLot >= 1 && au.historyMaxLots >= 1)) errors.push("Ench\xE8res : ventes ouvertes, alertes et historique \u2265 1 (entiers).");
+  if (!(Array.isArray(au.durationsH) && au.durationsH.length > 0 && au.durationsH.every((h) => h > 0 && h <= 168))) errors.push("Ench\xE8res : dur\xE9es entre 1 et 168 h.");
+  const tc = merged.tradeContracts;
+  if (!(tc.minHours >= 1 && tc.minHours <= tc.maxHours && tc.maxActive >= 1 && tc.openHours >= 1 && tc.priorityHours >= 0)) errors.push("Contrats : d\xE9lais min \u2264 max, contrats actifs \u2265 1.");
+  if (!(merged.gifts.outsideAllianceTax >= 0 && merged.gifts.outsideAllianceTax < 1 && merged.gifts.minAccountDays >= 0)) errors.push("Cadeaux : taxe hors alliance entre 0 et 0,99, anciennet\xE9 \u2265 0.");
+  if (!(merged.contests.maxPotShare > 0 && merged.contests.maxPotShare <= 1 && merged.contests.maxKept >= 1 && merged.contests.standingsSize >= 1)) errors.push("Concours : part du pot entre 0 et 1, listes \u2265 1.");
+  if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage \u2265 0.");
+  if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires \u2265 1.");
+  if (!(merged.patrons.top >= 1)) errors.push("M\xE9c\xE8nes : au moins 1 place.");
+  const terr = merged.territories;
+  const terrDef = defaultGameContent().rules.territories;
+  if (terr.cols !== terrDef.cols || terr.rows !== terrDef.rows) errors.push(`Territoires d'alliance : la grille reste ${terrDef.cols} \xD7 ${terrDef.rows} (les secteurs en cours en d\xE9pendent).`);
+  const cb = merged.combat;
+  if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par r\xE9sistance > 0.");
+  if (!(Number.isInteger(cb.maxRounds) && cb.maxRounds >= 1 && cb.maxRounds <= 20)) errors.push("Combat : nombre de tours entier entre 1 et 20.");
+  for (const [k, label3] of [["retreatAt", "retraite"], ["cautiousRetreatAt", "retraite prudente"], ["attackerWinBelow", "seuil de victoire"], ["timeoutWinMargin", "avance au dernier tour"], ["homeFleetDefenseFactor", "vaisseaux \xE0 quai"], ["riposteHomeFleet", "riposte"]]) {
+    if (!(cb[k] >= 0 && cb[k] <= 1)) errors.push(`Combat : ${label3} entre 0 et 1.`);
+  }
+  if (!(cb.pveHpFactor > 0 && cb.pveHpFactor <= 5)) errors.push("Combat : PV des ennemis PNJ entre 0 et 5.");
+  if (!(cb.hullDamageShare >= 0 && cb.hullDamageShare <= 0.9)) errors.push("Combat : part des d\xE9g\xE2ts conserv\xE9s entre 0 et 0,9.");
+  if (!(cb.hullMaxDamage >= 0.1 && cb.hullMaxDamage <= 0.99)) errors.push("Combat : usure maximale entre 0,1 et 0,99.");
+  if (!(cb.workshopHpPerSec > 0)) errors.push("Combat : cadence de l'Atelier > 0.");
+  if (!(cb.workshopLevelGain >= 0 && cb.workshopLevelGain <= 5)) errors.push("Combat : gain de l'Atelier par niveau entre 0 et 5.");
+  if (!(cb.workshopBaseFactor >= 0 && cb.workshopBaseFactor <= 1)) errors.push("Combat : cadence sans Atelier entre 0 et 1.");
+  if (!(cb.classEdge >= 0 && cb.classEdge <= 0.9)) errors.push("Combat : avantage de classe entre 0 et 0,9.");
+  if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
+  if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
+  if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
+  if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
+  if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
+  for (const ev of (_h = merged.events.scheduled) != null ? _h : []) {
+    if (ev.repeatWeeks === void 0) continue;
+    if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_i = ev.repeatCount) != null ? _i : 0) >= 2 && ((_j = ev.repeatCount) != null ? _j : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+  }
+  const st = merged.streak;
+  if (st) {
+    if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
+    for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
+      const r = (_k = st.chest) == null ? void 0 : _k[key];
+      if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
+    }
+  }
+  return errors;
+}
+function mergeRulesForCheck(rules) {
+  const d = defaultGameContent().rules;
+  const out = __spreadValues({}, d);
+  for (const [k, v] of Object.entries(rules))
+    if (v && typeof v === "object" && !Array.isArray(v)) out[k] = k in REGISTERED_RULES ? mergeRuleGroup(d[k], v) : __spreadValues(__spreadValues({}, d[k]), v);
+  return out;
+}
+var ID_PATTERN = /^[A-Za-z0-9_]+$/;
+function validateGameContent(content) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
+  const errors = [];
+  errors.push(...validateRules(content.rules));
+  const resources = new Set(RESOURCE_LIST.map((r) => r.id));
+  const techIds = new Set(content.technologies.map((t) => t.id));
+  const unitIds = new Set(content.units.map((u) => u.id));
+  const checkIds = (label3, ids) => {
+    const seen = /* @__PURE__ */ new Set();
+    for (const id of ids) {
+      if (!id || !ID_PATTERN.test(id)) errors.push(`${label3} : identifiant \xAB ${id} \xBB invalide (lettres, chiffres, _).`);
+      if (seen.has(id)) errors.push(`${label3} : identifiant \xAB ${id} \xBB en double.`);
+      seen.add(id);
+    }
+  };
+  const checkResources = (label3, map) => {
+    for (const [res, v] of Object.entries(map != null ? map : {})) {
+      if (!resources.has(res)) errors.push(`${label3} : ressource inconnue \xAB ${res} \xBB.`);
+      if (typeof v !== "number" || !Number.isFinite(v) || v < 0) errors.push(`${label3} : valeur invalide pour ${res}.`);
+    }
+  };
+  checkIds("B\xE2timents", content.buildings.map((b) => b.id));
+  for (const b of content.buildings) {
+    const label3 = `B\xE2timent ${b.name || b.id}`;
+    if (!(b.maxLevel >= 1)) errors.push(`${label3} : niveau max doit \xEAtre \u2265 1.`);
+    checkResources(`${label3} (d\xE9blocage)`, b.unlockCost);
+    checkResources(`${label3} (co\xFBt initial)`, (_a = b.upgrade) == null ? void 0 : _a.baseCost);
+    checkResources(`${label3} (co\xFBt max)`, (_b = b.upgrade) == null ? void 0 : _b.maxCost);
+    if (b.unlockedByTech && !techIds.has(b.unlockedByTech)) errors.push(`${label3} : techno \xAB ${b.unlockedByTech} \xBB inexistante.`);
+    if (b.production && !resources.has(b.production.resource)) errors.push(`${label3} : ressource produite inconnue.`);
+    if (b.production && b.production.perSecond.length === 0) errors.push(`${label3} : table de production vide.`);
+    const t2 = (_c = b.upgrade) == null ? void 0 : _c.tier2;
+    if (t2) {
+      if (!(t2.fromLevel >= 2 && t2.fromLevel <= b.maxLevel)) errors.push(`${label3} : le second palier doit commencer entre le niveau 2 et le niveau max.`);
+      checkResources(`${label3} (second palier, co\xFBt initial)`, t2.baseCost);
+      checkResources(`${label3} (second palier, co\xFBt max)`, t2.maxCost);
+      if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
+    }
+    if (((_d = b.effect) == null ? void 0 : _d.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
+    if (((_e = b.effect) == null ? void 0 : _e.type) === "dock" && !(b.effect.perLevel >= 0 && ((_f = b.effect.orbitalRepair) != null ? _f : 0) >= 0 && ((_g = b.effect.orbitalRepair) != null ? _g : 0) <= 0.5)) errors.push(`${label3} : Cale s\xE8che invalide (postes \u2265 0, Cale orbitale entre 0 et 0,5).`);
+    if (b.requires && !(content.buildings.some((o) => o.id === b.requires.building) && b.requires.level >= 1)) errors.push(`${label3} : b\xE2timent requis inconnu ou niveau < 1.`);
+  }
+  if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
+  checkIds("Unit\xE9s", content.units.map((u) => u.id));
+  for (const u of content.units) {
+    const label3 = `Unit\xE9 ${u.name || u.id}`;
+    if (!u.blueprint && !u.elite && !u.empireClass && !techIds.has(u.unlockTech)) errors.push(`${label3} : techno de d\xE9blocage \xAB ${u.unlockTech} \xBB inexistante.`);
+    if (u.category !== "attack" && u.category !== "defense") errors.push(`${label3} : cat\xE9gorie invalide.`);
+    if (!(u.hangarSpace >= 1)) errors.push(`${label3} : places de hangar doit \xEAtre \u2265 1.`);
+    if (u.levelBonus !== void 0 && !(u.levelBonus >= 0)) errors.push(`${label3} : gain par niveau invalide.`);
+    checkResources(`${label3} (co\xFBt)`, u.cost);
+  }
+  checkIds("Technologies", content.technologies.map((t) => t.id));
+  for (const t of content.technologies) {
+    const label3 = `Techno ${t.nom || t.id}`;
+    if (t.effects && t.effects.length > 0) {
+      for (const e3 of t.effects) errors.push(...validateTechEffect(label3, e3, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)), maxLevel: t.maxLevel, unitMaxLevel: (id) => {
+        var _a2;
+        return (_a2 = content.units.find((u) => u.id === id)) == null ? void 0 : _a2.maxLevel;
+      } }));
+    } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
+    checkResources(`${label3} (co\xFBt)`, t.baseCost);
+    if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
+    for (const req of Object.keys((_h = t.prereq) != null ? _h : {})) {
+      if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
+      if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
+    }
+  }
+  const byId = new Map(content.technologies.map((t) => [t.id, t]));
+  const visiting = /* @__PURE__ */ new Set();
+  const done = /* @__PURE__ */ new Set();
+  const visit = (id, path) => {
+    var _a2, _b2;
+    if (done.has(id)) return;
+    if (visiting.has(id)) {
+      errors.push(`Technologies : cycle de pr\xE9requis ${[...path, id].join(" \u2192 ")}.`);
+      return;
+    }
+    visiting.add(id);
+    for (const req of Object.keys((_b2 = (_a2 = byId.get(id)) == null ? void 0 : _a2.prereq) != null ? _b2 : {})) if (byId.has(req)) visit(req, [...path, id]);
+    visiting.delete(id);
+    done.add(id);
+  };
+  for (const t of content.technologies) visit(t.id, []);
+  checkIds("Missions", content.missions.map((m) => m.key));
+  for (const m of content.missions) {
+    const label3 = `Mission ${m.name || m.key}`;
+    if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
+    for (const unitId of Object.keys((_i = m.prereq) != null ? _i : {})) {
+      if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
+    }
+    const res = __spreadValues({}, (_j = m.reward) != null ? _j : {});
+    delete res.xp;
+    checkResources(`${label3} (r\xE9compense)`, res);
+  }
+  errors.push(...validateFactions((_k = content.factions) != null ? _k : []));
+  errors.push(...validateWarlords(content.warlords));
+  errors.push(...validateSeasonPass(content.seasonPass));
+  errors.push(...validateChronicles(content.chronicles));
+  errors.push(...validatePassSeasons(content.passSeasons));
+  errors.push(...validateRanks((_l = content.ranks) != null ? _l : []));
+  errors.push(...validateAchievements((_m = content.achievements) != null ? _m : []));
+  errors.push(...validateRelics((_n = content.relics) != null ? _n : [], (_o = content.relicSettings) != null ? _o : defaultRelicSettings()));
+  errors.push(...validateLootTables((_p = content.relicSettings) == null ? void 0 : _p.loot));
+  const cap = (_q = content.relicSettings) == null ? void 0 : _q.lootTokenCap;
+  if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
+  errors.push(...validateTitles((_r = content.titles) != null ? _r : []));
+  errors.push(...validateWorldBosses(content.worldBosses));
+  errors.push(...validateOfficers(content.officers));
+  return [...new Set(errors)];
+}
+
+// src/game/staff.ts
+var STAFF_KEY = "staff";
+var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
+var STAFF_TITLE_SEASON = "staff";
+var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
+var BALANCE_EXCLUDED_PSEUDOS = ["Tartiflex", "Nicotine", "Tomdindon"];
+function isStaffRole(v) {
+  return v === "developer" || v === "admin";
+}
+function normalizeStaff(raw) {
+  const roles = {};
+  const src = raw && typeof raw === "object" ? raw.roles : null;
+  if (src && typeof src === "object") {
+    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
+  }
+  return { roles };
+}
+function applyStaffTitle(player, role, display = false) {
+  var _a, _b, _c, _d;
+  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
+  const staffLabels = Object.values(STAFF_LABELS);
+  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
+  const label3 = role ? STAFF_LABELS[role] : null;
+  player.titles = label3 ? [{ label: label3, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
+  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label3) player.activeTitle = "";
+  if (label3 && display) player.activeTitle = label3;
+  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
+}
+
+// src/game/errorReports.ts
+var AUTO_ERROR_RULES = {
+  /** Erreurs envoyées par joueur sur une journée (UTC). */
+  maxPerDay: 10,
+  messageMax: 300,
+  stackMax: 3e3,
+  /** Joueurs touchés gardés en mémoire sur le signalement. */
+  affectedMax: 30
+};
+var AUTO_REPORTER_ID = "system";
+var IGNORED = [
+  /^Script error\.?$/i,
+  /ResizeObserver loop/i,
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /error loading dynamically imported module/i,
+  /^(TypeError: )?(Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/i,
+  /The user aborted a request|AbortError|autocancelled/i
+];
+var EXTENSION = /chrome-extension:|moz-extension:|safari-extension:/i;
+var str2 = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
+function sanitizeClientError(input) {
+  const message = str2(input.message, AUTO_ERROR_RULES.messageMax);
+  const stack = str2(input.stack, AUTO_ERROR_RULES.stackMax);
+  if (!message || isIgnoredError(message, stack)) return null;
+  return { message, stack, page: str2(input.page, 200), version: str2(input.version, 20) };
+}
+function isIgnoredError(message, stack = "") {
+  return IGNORED.some((re) => re.test(message)) || EXTENSION.test(message) || EXTENSION.test(stack);
+}
+function normalizeStack(stack) {
+  return stack.split("\n").slice(0, 6).map(
+    (l) => l.replace(/https?:\/\/[^/\s)]+/g, "").replace(/-[A-Za-z0-9_-]{6,}\.js/g, ".js").replace(/\?[^\s):]*/g, "").replace(/:\d+:\d+/g, "").replace(/:\d+/g, "").trim()
+  ).filter(Boolean).join("\n");
+}
+function errorKey(message, stack) {
+  const text = `${message.replace(/\d+/g, "#")}
+${normalizeStack(stack)}`;
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = (h << 5) + h + text.charCodeAt(i) | 0;
+  return `e${(h >>> 0).toString(16)}`;
+}
+function autoReportTitle(message) {
+  return `[Auto] ${message}`.slice(0, 120);
+}
+function autoReportDescription(err) {
+  return [err.message, "", err.stack || "(pile indisponible)"].join("\n").slice(0, 4e3);
+}
+function addOccurrence(report, pseudo, now) {
+  const closed = report.status === "resolved" || report.status === "rejected";
+  const affected = report.affected.includes(pseudo) || !pseudo ? report.affected : [...report.affected, pseudo].slice(-AUTO_ERROR_RULES.affectedMax);
+  const history = closed ? [...report.history, { kind: "status", atMs: now, byId: AUTO_REPORTER_ID, byName: "Syst\xE8me", staff: true, status: "new", text: "L'erreur s'est reproduite apr\xE8s la cl\xF4ture." }] : report.history;
+  return { status: closed ? "new" : report.status, history, occurrences: (report.occurrences || 1) + 1, affected, reopened: closed };
+}
+function errorQuotaKey(uid, now) {
+  return `cosmic-err:${uid}:${new Date(now).toISOString().slice(0, 10)}`;
+}
+
+// src/game/serverPot.ts
+var SERVER_POT_KEY = "server_pot";
+var POT_SOURCE_LABELS = {
+  market: "Taxes du march\xE9",
+  gift: "Taxe des cadeaux",
+  auction: "Taxe des ench\xE8res",
+  exchange: "Taxe du comptoir d'\xE9change",
+  donation: "Dons des m\xE9c\xE8nes",
+  admin: "Administration"
+};
+function emptyServerPot() {
+  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
+}
+function cleanAmounts(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const n = Math.floor(Number(v));
+    if (Number.isFinite(n) && n !== 0) out[k] = n;
+  }
+  return out;
+}
+var POT_DAILY_DAYS = 30;
+var RARE_WEIGHT = 50;
+var dayOf = (now) => new Date(now).toISOString().slice(0, 10);
+function normalizeDaily2(raw) {
+  var _a;
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  const keys = [...Object.keys(POT_SOURCE_LABELS), "amber"];
+  for (const day of Object.keys(raw).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-POT_DAILY_DAYS)) {
+    const row = (_a = raw[day]) != null ? _a : {};
+    const clean3 = {};
+    for (const k of keys) {
+      const n = Math.floor(Number(row[k]));
+      if (n > 0) clean3[k] = n;
+    }
+    out[day] = clean3;
+  }
+  return out;
+}
+function bumpDaily(pot, key, value2, now) {
+  var _a, _b, _c, _d;
+  if (!(value2 > 0)) return pot.daily;
+  const day = dayOf(now);
+  const daily = __spreadValues({}, (_a = pot.daily) != null ? _a : {});
+  daily[day] = __spreadProps(__spreadValues({}, (_b = daily[day]) != null ? _b : {}), { [key]: ((_d = (_c = daily[day]) == null ? void 0 : _c[key]) != null ? _d : 0) + Math.floor(value2) });
+  const days = Object.keys(daily).sort();
+  for (const d of days.slice(0, Math.max(0, days.length - POT_DAILY_DAYS))) delete daily[d];
+  return daily;
+}
+function potValue(amounts) {
+  return Object.entries(amounts).reduce((a, [k, v]) => {
+    var _a;
+    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? RARE_WEIGHT : 1);
+  }, 0);
+}
+function normalizeServerPot(raw) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const totals = {};
+  for (const src of Object.keys(POT_SOURCE_LABELS)) {
+    const t = cleanAmounts((_a = r.totals) == null ? void 0 : _a[src]);
+    if (Object.keys(t).length) totals[src] = t;
+  }
+  return {
+    resources: cleanAmounts(r.resources),
+    totals,
+    amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    daily: normalizeDaily2(r.daily),
+    amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
+    amberTotals: Object.fromEntries(
+      Object.keys(POT_SOURCE_LABELS).map((src) => {
+        var _a2;
+        return [src, Math.max(0, Math.floor(Number((_a2 = r.amberTotals) == null ? void 0 : _a2[src])) || 0)];
+      }).filter(([, n]) => n > 0)
+    ),
+    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
+    updatedAtMs: Number(r.updatedAtMs) || 0
+  };
+}
+function addToPot(pot, source, amounts, now, note4) {
+  var _a, _b, _c;
+  const add2 = {};
+  for (const [k, v] of Object.entries(amounts)) {
+    const n = Math.floor(Number(v));
+    if (Number.isFinite(n) && n > 0) add2[k] = n;
+  }
+  if (Object.keys(add2).length === 0) return pot;
+  const resources = __spreadValues({}, pot.resources);
+  const total2 = __spreadValues({}, (_a = pot.totals[source]) != null ? _a : {});
+  for (const [k, n] of Object.entries(add2)) {
+    resources[k] = ((_b = resources[k]) != null ? _b : 0) + n;
+    total2[k] = ((_c = total2[k]) != null ? _c : 0) + n;
+  }
+  return __spreadProps(__spreadValues({}, pot), {
+    resources,
+    totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
+    daily: source === "admin" ? pot.daily : bumpDaily(pot, source, potValue(add2), now),
+    log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
+    updatedAtMs: now
+  });
+}
+function takeFromPot(pot, amounts, now, note4) {
+  var _a, _b;
+  const resources = __spreadValues({}, pot.resources);
+  const taken = {};
+  for (const [k, v] of Object.entries(amounts)) {
+    const want = Math.floor(Number(v));
+    if (!Number.isFinite(want) || want <= 0) continue;
+    const n = Math.min(want, (_a = resources[k]) != null ? _a : 0);
+    if (n <= 0) continue;
+    resources[k] = ((_b = resources[k]) != null ? _b : 0) - n;
+    taken[k] = -n;
+  }
+  if (Object.keys(taken).length === 0) return pot;
+  return __spreadProps(__spreadValues({}, pot), { resources, log: [...pot.log, { atMs: now, source: "admin", resources: taken, note: note4 }].slice(-100), updatedAtMs: now });
+}
+function giftTax(sent, delivered) {
+  const out = {};
+  for (const [k, v] of Object.entries(sent)) {
+    const lost = Math.floor(Number(v) || 0) - Math.floor(Number(delivered[k]) || 0);
+    if (lost > 0) out[k] = lost;
+  }
+  return out;
+}
+function addAmberToPot(pot, source, amount3, now, note4) {
+  var _a, _b;
+  const n = Math.floor(Number(amount3));
+  if (!(n > 0)) return pot;
+  return __spreadProps(__spreadValues({}, pot), {
+    amber: pot.amber + n,
+    amberTotal: pot.amberTotal + n,
+    amberTotals: __spreadProps(__spreadValues({}, pot.amberTotals), { [source]: ((_b = (_a = pot.amberTotals) == null ? void 0 : _a[source]) != null ? _b : 0) + n }),
+    daily: bumpDaily(pot, "amber", n, now),
+    log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
+    updatedAtMs: now
+  });
+}
+function takeAmberFromPot(pot, amount3, now, note4) {
+  const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
+  if (!(n > 0)) return { pot, taken: 0 };
+  return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
+}
+
+// src/game/bossHistory.ts
+var BOSS_HISTORY_KEY = "boss_history";
+var MAX_ENTRIES = 120;
+var MAX_RANKED = 150;
+var BOSS_KIND_LABELS = {
+  leviathan: "Boss mondial",
+  seasonboss: "Boss de saison",
+  allianceboss: "Boss d'alliance"
+};
+function bossHistoryEntry(kind, state, meta) {
+  var _a;
+  const ranking = leviathanRanking(state);
+  const ended = state.endedAtMs || state.endMs;
+  return __spreadValues(__spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({
+    id: `${kind}:${state.id}`,
+    kind,
+    name: meta.name
+  }, meta.image ? { image: meta.image } : {}), meta.allianceId ? { allianceId: meta.allianceId, allianceName: (_a = meta.allianceName) != null ? _a : "" } : {}), {
+    startMs: state.startMs,
+    endedAtMs: ended,
+    won: state.status === "killed",
+    maxHp: state.maxHp,
+    totalDamage: ranking.reduce((a, c) => a + c.damage, 0),
+    participants: ranking.length,
+    assaults: ranking.reduce((a, c) => a + c.assaults, 0),
+    top: ranking.slice(0, 5).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage }))
+  }), state.killedBy ? { killedBy: state.killedBy } : {}), {
+    ranking: ranking.slice(0, MAX_RANKED).map((c) => ({ uid: c.uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults }))
+  }), state.rewards ? { rewards: Object.fromEntries(ranking.slice(0, MAX_RANKED).filter((c) => {
+    var _a2;
+    return (_a2 = state.rewards) == null ? void 0 : _a2[c.uid];
+  }).map((c) => [c.uid, state.rewards[c.uid]])) } : {});
+}
+function normalizeBossHistory(raw) {
+  const list = raw && typeof raw === "object" && Array.isArray(raw.entries) ? raw.entries : [];
+  return list.filter((e3) => !!e3 && typeof e3 === "object" && typeof e3.id === "string" && e3.kind in BOSS_KIND_LABELS);
+}
+function pushBossHistory(list, entry) {
+  return [entry, ...list.filter((e3) => e3.id !== entry.id)].sort((a, b) => b.endedAtMs - a.endedAtMs).slice(0, MAX_ENTRIES);
+}
+
+// src/game/maintenance.ts
+var MAINTENANCE_NOTICE_MS = 24 * 36e5;
+var MAINTENANCE_KEY = "maintenance";
+var MAINTENANCE_OFF = { enabled: false, message: "", version: "", startedAtMs: 0, endsAtMs: null, autoEnd: true, scheduled: null };
+function normalizeScheduled(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  const start = Number(r.startAtMs);
+  if (!Number.isFinite(start) || start <= 0) return null;
+  const end = Number(r.endsAtMs);
+  return {
+    startAtMs: Math.round(start),
+    endsAtMs: Number.isFinite(end) && end > start ? Math.round(end) : null,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : ""
+  };
+}
+var MAX_MESSAGE = 600;
+var MAX_VERSION = 20;
+function normalizeMaintenance(raw) {
+  if (!raw || typeof raw !== "object") return __spreadValues({}, MAINTENANCE_OFF);
+  const r = raw;
+  const endsAt = Number(r.endsAtMs);
+  return {
+    enabled: r.enabled === true,
+    message: typeof r.message === "string" ? r.message.slice(0, MAX_MESSAGE) : "",
+    version: typeof r.version === "string" ? r.version.slice(0, MAX_VERSION) : "",
+    startedAtMs: Number(r.startedAtMs) || 0,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > 0 ? endsAt : null,
+    autoEnd: r.autoEnd !== false,
+    scheduled: normalizeScheduled(r.scheduled)
+  };
+}
+function nextMaintenance(previous, request, now) {
+  const enabled = request.enabled === true;
+  if (!enabled) return __spreadProps(__spreadValues({}, previous), { enabled: false, endsAtMs: null });
+  const endsAt = Number(request.endsAtMs);
+  return {
+    enabled: true,
+    message: (typeof request.message === "string" ? request.message.trim() : "").slice(0, MAX_MESSAGE),
+    version: (typeof request.version === "string" ? request.version.trim() : "").slice(0, MAX_VERSION),
+    startedAtMs: previous.enabled && previous.startedAtMs > 0 ? previous.startedAtMs : now,
+    endsAtMs: Number.isFinite(endsAt) && endsAt > now ? Math.round(endsAt) : null,
+    autoEnd: request.autoEnd !== false,
+    scheduled: null
+  };
+}
+function scheduleMaintenance(previous, schedule, now) {
+  if (schedule === null || schedule === void 0) return __spreadProps(__spreadValues({}, previous), { scheduled: null });
+  const next = normalizeScheduled(schedule);
+  if (!next || next.startAtMs <= now) throw new Error("Choisis un d\xE9but de maintenance dans le futur.");
+  return __spreadProps(__spreadValues({}, previous), { scheduled: __spreadProps(__spreadValues({}, next), { message: next.message.trim(), version: next.version.trim() }) });
+}
+function maintenanceShouldAutoStart(m, now) {
+  return !m.enabled && !!m.scheduled && now >= m.scheduled.startAtMs;
+}
+function startScheduledMaintenance(m, now) {
+  const s = m.scheduled;
+  if (!s) return m;
+  return { enabled: true, message: s.message, version: s.version, startedAtMs: now, endsAtMs: s.endsAtMs !== null && s.endsAtMs > now ? s.endsAtMs : null, autoEnd: true, scheduled: null };
+}
+function upcomingMaintenance(m, now) {
+  if (m.enabled || !m.scheduled) return null;
+  const inMs = m.scheduled.startAtMs - now;
+  return inMs > 0 && inMs <= MAINTENANCE_NOTICE_MS ? __spreadProps(__spreadValues({}, m.scheduled), { inMs }) : null;
+}
+function maintenanceShouldAutoEnd(m, now) {
+  return m.enabled && m.autoEnd && m.endsAtMs !== null && now >= m.endsAtMs;
+}
+function extendUltimatums(pirates, startedAtMs, now) {
+  const pausedMs = now - startedAtMs;
+  if (!pirates || typeof pirates !== "object" || startedAtMs <= 0 || pausedMs <= 0) return null;
+  const shift = (state) => {
+    const u = state.ultimatum;
+    if (!u || typeof u.expiresAtMs !== "number" || u.expiresAtMs <= startedAtMs) return false;
+    state.ultimatum = __spreadProps(__spreadValues({}, u), { expiresAtMs: u.expiresAtMs + pausedMs });
+    return true;
+  };
+  const copy = JSON.parse(JSON.stringify(pirates));
+  let changed = false;
+  if ("notoriety" in copy || "nextListAtMs" in copy) changed = shift(copy);
+  else for (const state of Object.values(copy)) if (state && typeof state === "object" && shift(state)) changed = true;
+  return changed ? copy : null;
+}
+
+// src/game/anomalies.ts
+var ANOMALY_RULES = {
+  /** Gain de valeur par heure au-delà de N heures de production totale. */
+  productionHours: 50,
+  /** Seuil minimal par heure (début de partie). */
+  minPerHour: 5e7,
+  /** Clé game_config où le serveur note la dernière analyse. */
+  scanKey: "anomaly_scan"
+};
+var HOUR13 = 36e5;
+var ALL = RESOURCE_LIST.map((r) => r.id);
+function unitValue(res) {
+  if (COMMON_RESOURCES.includes(res)) return 1;
+  return 1 / getTradeRate(COMMON_RESOURCES[0], res);
+}
+function stockValue(r) {
+  return ALL.reduce((a, res) => {
+    var _a;
+    return a + Math.max(0, (_a = r[res]) != null ? _a : 0) * unitValue(res);
+  }, 0);
+}
+function anomalyThreshold(player, hours2) {
+  var _a;
+  const rates = getProductionRatesPerSecond(player.buildings, (_a = player.techLevels) != null ? _a : {});
+  const perHour = COMMON_RESOURCES.reduce((a, res) => {
+    var _a2;
+    return a + ((_a2 = rates[res]) != null ? _a2 : 0);
+  }, 0) * 3600;
+  return Math.max(ANOMALY_RULES.minPerHour, ANOMALY_RULES.productionHours * perHour) * Math.max(1, hours2);
+}
+function detectResourceAnomalies(player, sinceMs) {
+  var _a, _b, _c, _d, _e;
+  const points = [...(_a = player.resourceHistory) != null ? _a : []].sort((a, b) => a.t - b.t);
+  const lastT = (_c = (_b = points[points.length - 1]) == null ? void 0 : _b.t) != null ? _c : 0;
+  const current2 = Number(player.resourcesUpdatedAtMs) || 0;
+  if (current2 > lastT) points.push({ t: current2, r: player.resources });
+  const out = [];
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (b.t <= sinceMs) continue;
+    const gain = stockValue(b.r) - stockValue(a.r);
+    const threshold = anomalyThreshold(player, (b.t - a.t) / HOUR13);
+    if (gain <= threshold) continue;
+    const deltas = {};
+    for (const res of ALL) {
+      const d = Math.round(((_d = b.r[res]) != null ? _d : 0) - ((_e = a.r[res]) != null ? _e : 0));
+      if (d !== 0) deltas[res] = d;
+    }
+    out.push({ gain: Math.round(gain), threshold: Math.round(threshold), fromMs: a.t, toMs: b.t, deltas });
+  }
+  return out;
+}
+var fmtDate = (ms) => new Date(ms).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+function describeAnomalies(list) {
+  return list.map((a) => {
+    const detail = Object.entries(a.deltas).map(([res, d]) => {
+      var _a, _b;
+      return `${(_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res} ${d > 0 ? "+" : ""}${formatInt(d)}`;
+    }).join(", ");
+    return `\u2022 ${fmtDate(a.fromMs)} \u2192 ${fmtDate(a.toMs)} : valeur +${formatInt(a.gain)} (seuil ${formatInt(a.threshold)}). ${detail}.`;
+  }).join("\n");
+}
+
 // src/game/codex.ts
 var CODEX_TITLE = "Archiviste";
 var CODEX_CATEGORIES = [
@@ -21079,155 +21720,6 @@ function claimCodexCategory(player, entries, category, now) {
   if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now);
   player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { codexClaimed: [...codexClaimedCategories(player), id] });
   return st.reward;
-}
-
-// src/game/allianceDaily.ts
-var ALLIANCE_DAILY_RULES = {
-  proposeHour: 6,
-  voteEndHour: 10,
-  /** Membre actif : connecté dans les 3 derniers jours. */
-  activeDays: 3,
-  treasuryHours: 4,
-  missionsPerMember: 4,
-  researchPerMember: 2,
-  powerPct: 0.02,
-  passPoints: 15,
-  rewardHours: 1,
-  treasuryPct: 0.1
-};
-var DAILY_KINDS = ["treasury", "missions", "power", "research"];
-var DAILY_STAT = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
-function dailyPhase(now) {
-  const h = parisHour(now);
-  if (h < ALLIANCE_DAILY_RULES.proposeHour) return "before";
-  return h < ALLIANCE_DAILY_RULES.voteEndHour ? "voting" : "active";
-}
-function hash2(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-function proposeDaily(allianceId, day, members, now) {
-  var _a;
-  const R = ALLIANCE_DAILY_RULES;
-  const active = Math.max(1, members.filter((m) => m.active).length);
-  const resourceBase = {};
-  for (const m of members.filter((x) => x.active)) {
-    for (const [res, n] of Object.entries(m.production4h)) resourceBase[res] = ((_a = resourceBase[res]) != null ? _a : 0) + Math.round(n != null ? n : 0);
-  }
-  const treasuryTarget = Math.max(1e3, Object.values(resourceBase).reduce((a, b) => a + (b != null ? b : 0), 0));
-  const fleet = members.reduce((a, m) => a + m.fleetPower, 0);
-  const targets = {
-    treasury: treasuryTarget,
-    missions: R.missionsPerMember * active,
-    power: Math.max(500, Math.round(fleet * R.powerPct)),
-    research: R.researchPerMember * active
-  };
-  const skip = hash2(`${allianceId}:${day}`) % DAILY_KINDS.length;
-  const proposals = DAILY_KINDS.filter((_, i) => i !== skip).map((kind) => ({ kind, target: targets[kind] }));
-  return { day, proposals, votes: {}, status: "voting", chosen: null, baseline: {}, progress: 0, contributions: {}, resourceBase, updatedAtMs: now };
-}
-function voteDaily(daily, uid, role, index2, now) {
-  if (role !== "founder" && role !== "officer") throw new GameActionError("Seuls le fondateur et les officiers votent l'objectif du jour.");
-  if (daily.status !== "voting" || dailyPhase(now) !== "voting" || daily.day !== parisDay(now)) throw new GameActionError(`Le vote est ouvert de ${ALLIANCE_DAILY_RULES.proposeHour} h \xE0 ${ALLIANCE_DAILY_RULES.voteEndHour} h.`);
-  const i = Math.floor(Number(index2));
-  if (!(i >= 0 && i < daily.proposals.length)) throw new GameActionError("Objectif inconnu.");
-  daily.votes = __spreadProps(__spreadValues({}, daily.votes), { [uid]: i });
-}
-function winningProposal(daily) {
-  const counts = daily.proposals.map((_, i) => Object.values(daily.votes).filter((v) => v === i).length);
-  let best = 0;
-  counts.forEach((c, i) => {
-    if (c > counts[best]) best = i;
-  });
-  return best;
-}
-function statOf(stats, kind) {
-  var _a;
-  return Number((_a = stats == null ? void 0 : stats[DAILY_STAT[kind]]) != null ? _a : 0) || 0;
-}
-function startDaily(daily, members, now) {
-  const chosen = winningProposal(daily);
-  const kind = daily.proposals[chosen].kind;
-  daily.chosen = chosen;
-  daily.status = "active";
-  daily.baseline = Object.fromEntries(members.map((m) => [m.uid, statOf(m.stats, kind)]));
-  daily.progress = 0;
-  daily.contributions = {};
-  daily.updatedAtMs = now;
-}
-function updateDailyProgress(daily, members, now) {
-  if (daily.status !== "active" || daily.chosen === null) return false;
-  const { kind, target } = daily.proposals[daily.chosen];
-  const contributions = {};
-  for (const m of members) {
-    if (daily.baseline[m.uid] === void 0) daily.baseline[m.uid] = statOf(m.stats, kind);
-    const delta = statOf(m.stats, kind) - daily.baseline[m.uid];
-    if (delta > 0) contributions[m.uid] = Math.round(delta);
-  }
-  daily.contributions = contributions;
-  daily.progress = Object.values(contributions).reduce((a, b) => a + b, 0);
-  daily.updatedAtMs = now;
-  if (daily.progress >= target) {
-    daily.status = "done";
-    daily.doneAtMs = now;
-    return true;
-  }
-  return false;
-}
-function dailyTreasuryBonus(daily) {
-  const out = {};
-  for (const [res, n] of Object.entries(daily.resourceBase)) {
-    const v = Math.floor((n != null ? n : 0) * ALLIANCE_DAILY_RULES.treasuryPct);
-    if (v > 0) out[res] = v;
-  }
-  return out;
-}
-function readDaily(raw) {
-  const d = raw;
-  return d && typeof d === "object" && typeof d.day === "string" && Array.isArray(d.proposals) ? d : null;
-}
-function previousSummary(daily) {
-  if (!daily) return void 0;
-  return { day: daily.day, kind: daily.chosen !== null ? daily.proposals[daily.chosen].kind : null, status: daily.status === "done" ? "done" : "failed" };
-}
-function dailyMemberOf(p, now) {
-  var _a, _b, _c;
-  return {
-    uid: p.uid,
-    active: now - lastActivity(p) < ALLIANCE_DAILY_RULES.activeDays * 864e5,
-    stats: (_a = p.stats) != null ? _a : {},
-    production4h: productionHours(p, ALLIANCE_DAILY_RULES.treasuryHours),
-    fleetPower: computeFullPower((_b = p.units) != null ? _b : {}, (_c = p.techLevels) != null ? _c : {}, OFFENSIVE_UNITS, ["attack"])
-  };
-}
-
-// src/game/rename.ts
-var RENAME_RULES = {
-  amber: 10,
-  minLength: 3,
-  maxLength: 20
-};
-function pseudoLogin(pseudo) {
-  return pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
-}
-function cleanNewPseudo(raw) {
-  const pseudo = String(raw != null ? raw : "").trim().replace(/\s+/g, " ");
-  if (pseudo.length > RENAME_RULES.maxLength) throw new GameActionError(`Le pseudo fait ${RENAME_RULES.maxLength} caract\xE8res au plus.`);
-  if (pseudoLogin(pseudo).length < RENAME_RULES.minLength) throw new GameActionError("Le pseudo doit contenir au moins 3 caract\xE8res valides (lettres, chiffres, - ou _).");
-  return pseudo;
-}
-function renamePlayer(player, raw, now) {
-  if (player.renamed) throw new GameActionError("Tu as d\xE9j\xE0 chang\xE9 de pseudo.");
-  const pseudo = cleanNewPseudo(raw);
-  if (pseudo === player.pseudo) throw new GameActionError("C'est d\xE9j\xE0 ton pseudo.");
-  const st = bountyState(player);
-  if (st.amber < RENAME_RULES.amber) throw new GameActionError(`Il te faut ${RENAME_RULES.amber} Ambre.`);
-  st.amber -= RENAME_RULES.amber;
-  player.bounties = st;
-  player.renamed = { fromPseudo: player.pseudo, atMs: now };
-  player.pseudo = pseudo;
-  return { pseudo, login: pseudoLogin(pseudo) };
 }
 
 // src/game/balance/v516.ts
@@ -21599,87 +22091,6 @@ function balanceHealth(input, now, windowDays = 7) {
     classUnits: owned(CLASS_UNIT_IDS),
     classes: { none: players.filter((p) => !p.empireClass).length, rows }
   };
-}
-
-// src/game/allianceSaga.ts
-var ALLIANCE_SAGA_KEY = "alliance_saga";
-var ALLIANCE_SAGA_RULES = {
-  objectives: 3,
-  /** Points par objectif : 100 × progression, plafonnée à 2 (objectif dépassé). */
-  pointsPerObjective: 100,
-  overflowCap: 2,
-  /** Heures de production des membres versées au trésor, 1re à 3e. */
-  rewardHours: [24, 12, 6],
-  /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
-  weeks: 4,
-  share: 0.6
-};
-function readAllianceSaga(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  return {
-    sagas: Array.isArray(r.sagas) ? r.sagas.slice(-12) : [],
-    standing: r.standing && Array.isArray(r.standing.rows) ? r.standing : null,
-    closed: Array.isArray(r.closed) ? r.closed.slice(-24) : []
-  };
-}
-function sagaOf(state, monthId) {
-  var _a;
-  return (_a = state.sagas.find((s) => s.monthId === monthId)) != null ? _a : null;
-}
-var SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande Coalition", "Les Banni\xE8res lev\xE9es", "Le Pacte des \xE9toiles", "La Marche commune"];
-var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alliance", "Fer de lance"];
-function generateAllianceSaga(monthId, digest, difficulty, now) {
-  var _a;
-  const rng = seededRandom2(`saga:${monthId}`);
-  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
-  const pool = [...ACTIVITY_KEYS].filter((k) => {
-    var _a2;
-    return k !== "warlordWin" || ((_a2 = digest.weeklyMedian.warlordWin) != null ? _a2 : 0) > 0;
-  });
-  const chosen = [];
-  while (chosen.length < ALLIANCE_SAGA_RULES.objectives && pool.length > 0) chosen.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-  const size = Math.max(2, Math.round((_a = digest.allianceSizeMedian) != null ? _a : 3));
-  const objectives = chosen.map((type) => {
-    var _a2;
-    const weekly = Math.max((_a2 = digest.weeklyMedian[type]) != null ? _a2 : 0, BASE_COUNTS[type] / 2);
-    return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
-  });
-  const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
-  return {
-    monthId,
-    title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
-    lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)(?=\s)|^L'/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom grav\xE9 dans les archives.`,
-    bossName,
-    image: arch.image,
-    accent: arch.accent,
-    objectives,
-    winnerTitle: `${SAGA_WINNERS[Math.floor(rng() * SAGA_WINNERS.length)]} (${seasonLabel(monthId).toLowerCase()})`,
-    generatedAtMs: now
-  };
-}
-function sagaProgress(def3, members, now) {
-  return def3.objectives.map((o) => members.reduce((a, m) => {
-    var _a, _b;
-    return a + ((_b = (_a = passState(m, now).activity) == null ? void 0 : _a[o.type]) != null ? _b : 0);
-  }, 0));
-}
-function sagaPoints(def3, progress) {
-  return def3.objectives.reduce((a, o, i) => {
-    var _a;
-    return a + Math.round(ALLIANCE_SAGA_RULES.pointsPerObjective * Math.min(ALLIANCE_SAGA_RULES.overflowCap, ((_a = progress[i]) != null ? _a : 0) / Math.max(1, o.count)));
-  }, 0);
-}
-function sagaStandings(def3, alliances, now) {
-  const rows = alliances.map((a) => {
-    const progress = sagaProgress(def3, a.members, now);
-    return { allianceId: a.id, name: a.name, tag: a.tag, members: a.members.length, progress, points: sagaPoints(def3, progress), rank: 0 };
-  });
-  rows.sort((x, y) => y.points - x.points || y.progress.reduce((a, b) => a + b, 0) - x.progress.reduce((a, b) => a + b, 0));
-  rows.forEach((r, i) => r.rank = i + 1);
-  return rows.filter((r) => r.points > 0 || r.members > 0);
-}
-function sagaMonthId(now) {
-  return chronicleMonthId(now);
 }
 
 // src/game/blog.ts
@@ -25776,152 +26187,6 @@ function startAllianceChallengeWeek(players, now, previous, next) {
   return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
 }
 
-// src/game/leagues.ts
-var LEAGUES_KEY = "leagues";
-var LEAGUE_TIERS = [
-  { id: "bronze", label: "Bronze", color: "var(--th-medal-bronze)", tokens: 1, placementPct: 0.25 },
-  { id: "argent", label: "Argent", color: "var(--th-medal-silver)", tokens: 1, placementPct: 0.25 },
-  { id: "or", label: "Or", color: "var(--th-medal-gold)", tokens: 2, placementPct: 0.2 },
-  { id: "platine", label: "Platine", color: "var(--th-rarity-rare)", tokens: 2, placementPct: 0.15 },
-  { id: "diamant", label: "Diamant", color: "var(--th-rarity-epic)", tokens: 3, placementPct: 0.1 },
-  { id: "mythique", label: "Mythique", color: "var(--th-rarity-mythic)", tokens: 4, placementPct: 0.05 }
-];
-var LEAGUE_RULES = {
-  /** Part de chaque division qui monte / descend à la fin de la semaine. */
-  promotePct: 0.2,
-  relegatePct: 0.2,
-  /** Semaines gardées dans l'historique de chaque joueur. */
-  historyWeeks: 8
-};
-var WEEK_MS = 7 * 24 * 3600 * 1e3;
-function leagueWeekStart(now) {
-  const d = new Date(now);
-  const day = (d.getUTCDay() + 6) % 7;
-  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);
-}
-function leagueWeekId(now) {
-  return new Date(leagueWeekStart(now)).toISOString().slice(0, 10);
-}
-function leagueWeekLabel(weekId2) {
-  var _a;
-  const months = ["janv.", "f\xE9vr.", "mars", "avr.", "mai", "juin", "juil.", "ao\xFBt", "sept.", "oct.", "nov.", "d\xE9c."];
-  const [, m, d] = weekId2.split("-").map(Number);
-  return `semaine du ${d != null ? d : "?"} ${(_a = months[(m != null ? m : 1) - 1]) != null ? _a : ""}`.trim();
-}
-var TIER_IDS = new Set(LEAGUE_TIERS.map((t) => t.id));
-function normalizeLeagues(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  if (r.version !== 2) return { version: 2, weekId: "", tiers: {}, base: {}, last: null, history: {} };
-  const tiers2 = {};
-  for (const [uid, t] of Object.entries(r.tiers && typeof r.tiers === "object" ? r.tiers : {})) if (TIER_IDS.has(t)) tiers2[uid] = t;
-  const base = {};
-  for (const [uid, v] of Object.entries(r.base && typeof r.base === "object" ? r.base : {})) if (Number.isFinite(Number(v))) base[uid] = Math.max(0, Number(v));
-  const history = {};
-  for (const [uid, list] of Object.entries(r.history && typeof r.history === "object" ? r.history : {})) {
-    if (!Array.isArray(list)) continue;
-    history[uid] = list.filter((h) => h && typeof h.weekId === "string" && TIER_IDS.has(h.tier)).slice(-LEAGUE_RULES.historyWeeks);
-  }
-  return { version: 2, weekId: typeof r.weekId === "string" ? r.weekId : "", tiers: tiers2, base, last: r.last && typeof r.last === "object" ? r.last : null, history };
-}
-function leagueInfo(tier) {
-  var _a;
-  return (_a = LEAGUE_TIERS.find((t) => t.id === tier)) != null ? _a : LEAGUE_TIERS[0];
-}
-var index = (tier) => LEAGUE_TIERS.findIndex((t) => t.id === tier);
-var xpOf = (e3) => Math.max(0, Number(e3.xp) || 0);
-function placementTiers(entries) {
-  const sorted = entries.filter((e3) => !e3.npc).sort((a, b) => xpOf(b) - xpOf(a) || (a.uid < b.uid ? -1 : 1));
-  const n = sorted.length;
-  const out = {};
-  const fromTop = [...LEAGUE_TIERS].reverse();
-  sorted.forEach((e3, i) => {
-    var _a, _b;
-    if (xpOf(e3) <= 0) {
-      out[e3.uid] = "bronze";
-      return;
-    }
-    const f = (i + 0.5) / n;
-    let acc = 0;
-    out[e3.uid] = (_b = (_a = fromTop.find((t) => (acc += t.placementPct) >= f - 1e-9)) == null ? void 0 : _a.id) != null ? _b : "bronze";
-  });
-  return out;
-}
-function weeklyScore(state, e3) {
-  const base = state.base[e3.uid];
-  return base === void 0 ? 0 : Math.max(0, xpOf(e3) - base);
-}
-function leagueStandings(entries, state, tier) {
-  const placed = placementTiers(entries);
-  const members = entries.filter((e3) => {
-    var _a, _b;
-    return !e3.npc && ((_b = (_a = state.tiers[e3.uid]) != null ? _a : placed[e3.uid]) != null ? _b : "bronze") === tier;
-  }).map((e3) => ({ uid: e3.uid, pseudo: e3.pseudo, score: weeklyScore(state, e3) })).sort((a, b) => b.score - a.score || (a.pseudo < b.pseudo ? -1 : 1));
-  const n = members.length;
-  const top = index(tier) === LEAGUE_TIERS.length - 1;
-  const up = top ? 0 : Math.ceil(n * LEAGUE_RULES.promotePct);
-  const down = index(tier) > 0 ? Math.floor(n * LEAGUE_RULES.relegatePct) : 0;
-  return members.map((m, i) => __spreadProps(__spreadValues({}, m), {
-    rank: i + 1,
-    // Les inactifs (0 XP dans la semaine) ne montent jamais et descendent toujours (hors Bronze).
-    zone: m.score > 0 && i < up ? "up" : index(tier) > 0 && (m.score <= 0 || i >= n - down) ? "down" : "stay"
-  }));
-}
-function championTitle(tier) {
-  return `Champion ${leagueInfo(tier).label}`;
-}
-function leagueTick(stateIn, entries, now) {
-  var _a, _b, _c;
-  const players = entries.filter((e3) => !e3.npc);
-  const week = leagueWeekId(now);
-  const baseOf = () => Object.fromEntries(players.map((e3) => [e3.uid, xpOf(e3)]));
-  if (!stateIn.weekId) {
-    return { state: { version: 2, weekId: week, tiers: placementTiers(players), base: baseOf(), last: null, history: (_a = stateIn.history) != null ? _a : {} }, rewards: [], closedWeekId: null };
-  }
-  if (stateIn.weekId === week) {
-    const placed = placementTiers(players);
-    const tiers3 = __spreadValues({}, stateIn.tiers);
-    const base = __spreadValues({}, stateIn.base);
-    let changed = false;
-    for (const e3 of players) {
-      if (!tiers3[e3.uid]) {
-        tiers3[e3.uid] = (_b = placed[e3.uid]) != null ? _b : "bronze";
-        changed = true;
-      }
-      if (base[e3.uid] === void 0) {
-        base[e3.uid] = xpOf(e3);
-        changed = true;
-      }
-    }
-    return { state: changed ? __spreadProps(__spreadValues({}, stateIn), { tiers: tiers3, base }) : stateIn, rewards: [], closedWeekId: null };
-  }
-  const state = __spreadProps(__spreadValues({}, stateIn), { tiers: __spreadValues({}, stateIn.tiers) });
-  for (const e3 of players) if (!state.tiers[e3.uid]) state.tiers[e3.uid] = "bronze";
-  const tiers2 = __spreadValues({}, state.tiers);
-  const moves = {};
-  const history = __spreadValues({}, state.history);
-  const rewards = [];
-  for (const t of LEAGUE_TIERS) {
-    for (const row of leagueStandings(players, state, t.id)) {
-      const to = row.zone === "up" ? LEAGUE_TIERS[index(t.id) + 1].id : row.zone === "down" ? LEAGUE_TIERS[index(t.id) - 1].id : t.id;
-      tiers2[row.uid] = to;
-      moves[row.uid] = { from: t.id, to, rank: row.rank };
-      history[row.uid] = [...(_c = history[row.uid]) != null ? _c : [], { weekId: stateIn.weekId, tier: t.id, rank: row.rank, score: row.score, move: row.zone }].slice(-LEAGUE_RULES.historyWeeks);
-      if (row.score > 0) rewards.push({ uid: row.uid, tier: t.id, to, rank: row.rank, score: row.score, move: row.zone, tokens: t.tokens, title: row.rank === 1 ? championTitle(t.id) : "" });
-    }
-  }
-  const alive = new Set(players.map((e3) => e3.uid));
-  for (const uid of Object.keys(tiers2)) if (!alive.has(uid)) delete tiers2[uid];
-  for (const uid of Object.keys(history)) if (!alive.has(uid)) delete history[uid];
-  return { state: { version: 2, weekId: week, tiers: tiers2, base: baseOf(), last: { weekId: stateIn.weekId, moves }, history }, rewards, closedWeekId: stateIn.weekId };
-}
-function grantLeagueTitle(player, title, rank2, now) {
-  var _a;
-  if (!title) return;
-  const entry = { label: title, seasonId: currentSeasonId(now), rank: rank2 };
-  player.titles = [...((_a = player.titles) != null ? _a : []).filter((t) => t.label !== title), entry];
-  if (!player.activeTitle) player.activeTitle = title;
-}
-
 // src/game/logicVersion.ts
 var LOGIC_VERSION = true ? "6.8.2" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
@@ -26143,163 +26408,6 @@ function allowedWhileBanned(method, path) {
 }
 function banMessage(b) {
   return b.untilMs === null ? `Compte banni d\xE9finitivement. Motif : ${b.reason}` : `Compte suspendu jusqu'au ${new Date(b.untilMs).toISOString().slice(0, 16).replace("T", " ")} (UTC). Motif : ${b.reason}`;
-}
-
-// src/game/globalChat.ts
-var GLOBAL_CHAT_RULES = {
-  maxLength: 300,
-  cooldownMs: 4e3,
-  perMinute: 8,
-  reportsToHide: 3,
-  /** Messages gardés en base (les plus anciens sont effacés). */
-  keep: 500,
-  /** Messages chargés à l'ouverture. */
-  page: 60
-};
-var CHAT_MODERATION_KEYS = { mutes: "chat_mutes", filter: "chat_filter" };
-var BASE_FILTER = ["connard", "connasse", "salope", "encule", "encul\xE9", "pute", "batard", "b\xE2tard", "fdp", "ntm", "nique", "pd", "tapette", "negro", "bougnoule", "youpin"];
-var fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-function filterText(text, extra = []) {
-  const words = [...new Set([...BASE_FILTER, ...extra].map(fold).filter((w) => w.length >= 2))];
-  if (words.length === 0) return { text, masked: false };
-  const folded = fold(text);
-  const marks = new Array(text.length).fill(false);
-  for (const w of words) {
-    const re = new RegExp(`(^|[^a-z0-9])(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?)(?=$|[^a-z0-9])`, "g");
-    let m;
-    while (m = re.exec(folded)) {
-      const start = m.index + m[1].length;
-      for (let i = start; i < start + m[2].length; i++) marks[i] = true;
-      if (re.lastIndex === m.index) re.lastIndex++;
-    }
-  }
-  if (folded.length !== text.length) return { text, masked: false };
-  const out = [...text].map((c, i) => marks[i] ? "*" : c).join("");
-  return { text: out, masked: out !== text };
-}
-function cleanGlobalMessage(raw) {
-  const text = String(raw != null ? raw : "").replace(/\s+/g, " ").trim().slice(0, GLOBAL_CHAT_RULES.maxLength);
-  if (!text) throw new Error("Message vide.");
-  return text;
-}
-function rateLimitError(recentSentAtMs, now) {
-  const last = Math.max(0, ...recentSentAtMs);
-  if (now - last < GLOBAL_CHAT_RULES.cooldownMs) return "Doucement : un message toutes les 4 secondes.";
-  if (recentSentAtMs.filter((t) => now - t < 6e4).length >= GLOBAL_CHAT_RULES.perMinute) return "Trop de messages en une minute : patiente un peu.";
-  return null;
-}
-function normalizeMutes(raw) {
-  var _a, _b;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const out = {};
-  for (const [uid, v] of Object.entries(raw)) {
-    if (!v || typeof v !== "object") continue;
-    const r = v;
-    out[uid] = { untilMs: r.untilMs === null ? null : Number(r.untilMs) || 0, reason: String((_a = r.reason) != null ? _a : "").slice(0, 200), byName: String((_b = r.byName) != null ? _b : "").slice(0, 60) };
-  }
-  return out;
-}
-function activeMute(mutes, uid, now) {
-  const m = mutes[uid];
-  return m && (m.untilMs === null || m.untilMs > now) ? m : null;
-}
-function normalizeFilter(raw) {
-  const words = raw == null ? void 0 : raw.words;
-  return (Array.isArray(words) ? words : []).map((w) => String(w).trim().slice(0, 40)).filter(Boolean).slice(0, 200);
-}
-function addReport(reporters, uid) {
-  const list = (Array.isArray(reporters) ? reporters : []).filter((x) => typeof x === "string");
-  const next = list.includes(uid) ? list : [...list, uid];
-  return { reporters: next, hide: next.length >= GLOBAL_CHAT_RULES.reportsToHide };
-}
-var CHAT_REACTIONS = ["\u{1F44D}", "\u{1F602}", "\u{1F525}", "\u{1F62E}", "\u{1F622}", "\u{1F44F}"];
-var KESH_REACTION = "kesh";
-var ALL_REACTIONS = [...CHAT_REACTIONS, KESH_REACTION];
-function normalizeReactions(raw) {
-  const out = {};
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
-  for (const e3 of ALL_REACTIONS) {
-    const list = raw[e3];
-    if (Array.isArray(list)) {
-      const uids = [...new Set(list.filter((x) => typeof x === "string"))].slice(0, 200);
-      if (uids.length) out[e3] = uids;
-    }
-  }
-  return out;
-}
-function toggleReaction(raw, emoji, uid, canKesh = false) {
-  var _a;
-  if (!ALL_REACTIONS.includes(emoji)) throw new Error("R\xE9action inconnue.");
-  const r = normalizeReactions(raw);
-  const list = (_a = r[emoji]) != null ? _a : [];
-  if (emoji === KESH_REACTION && !canKesh && !list.includes(uid)) throw new Error("R\xE9action kesh'vaar : \xE0 d\xE9bloquer au Comptoir de la Ruche.");
-  const next = list.includes(uid) ? list.filter((x) => x !== uid) : [...list, uid];
-  if (next.length) r[emoji] = next;
-  else delete r[emoji];
-  return r;
-}
-var CHAT_ROOM_RULES = {
-  nameMin: 3,
-  nameMax: 24,
-  topicMax: 120,
-  /** Salons ouverts par joueur, et sur tout le serveur. */
-  perOwner: 1,
-  maxOpen: 30,
-  /** Un salon sans message depuis N jours se ferme tout seul. */
-  idleDays: 14
-};
-function validateRoom(raw, ctx) {
-  var _a, _b;
-  const r = raw && typeof raw === "object" ? raw : {};
-  const name = String((_a = r.name) != null ? _a : "").replace(/\s+/g, " ").trim();
-  const topic = String((_b = r.topic) != null ? _b : "").replace(/\s+/g, " ").trim().slice(0, CHAT_ROOM_RULES.topicMax);
-  if (name.length < CHAT_ROOM_RULES.nameMin || name.length > CHAT_ROOM_RULES.nameMax) throw new Error(`Nom du salon : ${CHAT_ROOM_RULES.nameMin} \xE0 ${CHAT_ROOM_RULES.nameMax} caract\xE8res.`);
-  if (filterText(name, ctx.extraFilter).masked || filterText(topic, ctx.extraFilter).masked) throw new Error("Nom ou sujet refus\xE9 par le filtre du canal.");
-  if (ctx.names.some((n) => fold(n) === fold(name)) || fold(name) === "global") throw new Error("Un salon porte d\xE9j\xE0 ce nom.");
-  if (ctx.ownerOpen >= CHAT_ROOM_RULES.perOwner) throw new Error("Tu as d\xE9j\xE0 un salon ouvert : ferme-le d'abord.");
-  if (ctx.totalOpen >= CHAT_ROOM_RULES.maxOpen) throw new Error("Trop de salons ouverts sur le serveur pour l'instant.");
-  return { name, topic };
-}
-var ROOM_ICONS = [
-  { id: "swords", label: "Combat" },
-  { id: "coins", label: "Commerce" },
-  { id: "skull", label: "Boss" },
-  { id: "rocket", label: "Exp\xE9ditions" },
-  { id: "shield", label: "D\xE9fense" },
-  { id: "crown", label: "Couronne" },
-  { id: "flame", label: "Flamme" },
-  { id: "sparkles", label: "\xC9toiles" }
-];
-function roomIcon(raw) {
-  const id = String(raw != null ? raw : "");
-  return ROOM_ICONS.some((i) => i.id === id) ? id : "";
-}
-var MENTION_RULES = { maxPerMessage: 5 };
-function parseMentions(text) {
-  const out = [];
-  const re = /(^|[^0-9A-Za-z_@\u00C0-\u024F])@([0-9A-Za-z_\u00C0-\u024F-]{3,20})/g;
-  const src = String(text != null ? text : "");
-  for (let m = re.exec(src); m; m = re.exec(src)) {
-    const pseudo = m[2];
-    if (!out.some((p) => p.toLowerCase() === pseudo.toLowerCase())) out.push(pseudo);
-    if (out.length >= MENTION_RULES.maxPerMessage) break;
-  }
-  return out;
-}
-var ROOM_EVENT_RULES = { labelMin: 3, labelMax: 60, maxAheadDays: 7, durationHours: 1 };
-function validateRoomEvent(raw, now, extraFilter) {
-  var _a;
-  const atMs = Math.floor(Number(raw.atMs) || 0);
-  if (!atMs) return { label: "", atMs: 0 };
-  const label3 = String((_a = raw.label) != null ? _a : "").replace(/\s+/g, " ").trim();
-  if (label3.length < ROOM_EVENT_RULES.labelMin || label3.length > ROOM_EVENT_RULES.labelMax) throw new Error(`\xC9v\xE9nement : ${ROOM_EVENT_RULES.labelMin} \xE0 ${ROOM_EVENT_RULES.labelMax} caract\xE8res.`);
-  if (filterText(label3, extraFilter).masked) throw new Error("Libell\xE9 refus\xE9 par le filtre du canal.");
-  if (atMs < now) throw new Error("Choisis une heure \xE0 venir.");
-  if (atMs > now + ROOM_EVENT_RULES.maxAheadDays * 864e5) throw new Error(`Un \xE9v\xE9nement se programme ${ROOM_EVENT_RULES.maxAheadDays} jours \xE0 l'avance au plus.`);
-  return { label: label3, atMs };
-}
-function roomIdle(room, now) {
-  return now - Math.max(room.createdAtMs, room.lastMessageAtMs) > CHAT_ROOM_RULES.idleDays * 864e5;
 }
 
 // src/game/mailSegments.ts

@@ -43,7 +43,11 @@ Valable pour toute la session et tout le projet, à chaque demande :
   automatiquement ; une section dédiée avec libellés clairs reste la règle pour les chiffres courants.
 - Une constante par défaut peut rester dans le code ; la valeur en vigueur vient toujours des règles. Une valeur réglable doit être JSON pur
   (pas de fonction, de `Date`, de `undefined`).
-- Garde : `rulesAdmin.test.ts` (libellé de chaque groupe, valeurs éditables sans perte, éditeur monté) et `reglages671.test.ts` (réglages appliqués).
+- Un nouvel objet de règles du moteur (`export const X_RULES = { … }`) se déclare dans le **registre** `src/game/ruleRegistry.ts` (libellé +
+  accesseur) : il devient un groupe de `GameRules`, fusionné, appliqué et éditable sans autre code. Une constante numérique de règle devient
+  un champ d'un objet de règles (pas de `export const MAX_X = 3`).
+- Garde : `rulesAdmin.test.ts` (libellé de chaque groupe, valeurs éditables sans perte, éditeur monté), `reglages671.test.ts` (réglages appliqués)
+  et `ruleRegistry.test.ts` (tout `*_RULES` du moteur relié à l'admin, sauf exceptions justifiées).
 
 ## Règle n° 3 : travailler en continu, noter les questions
 

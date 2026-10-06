@@ -38,6 +38,7 @@ import { CONTEST_RULES } from "@/game/contests";
 import { OUTCOME_POINTS } from "@/game/casino";
 import { WEEKLY_STOCK_RULES } from "@/game/weeklyStock";
 import { PATRON_RULES } from "@/game/patrons";
+import { applyRegisteredRules, mergeRuleGroup, REGISTERED_RULES, registeredRuleSnapshot, type RegisteredRuleGroups } from "@/game/ruleRegistry";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -59,7 +60,8 @@ import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, type Achie
    action arbitrée : les deux voient toujours les mêmes règles.
 ===================================================== */
 
-export interface GameRules {
+/** 6.9.1 : les groupes du registre des réglages (`ruleRegistry.ts`) font aussi partie des règles. */
+export interface GameRules extends RegisteredRuleGroups {
   pvp: typeof PVP_RULES;
   combat: typeof COMBAT_RULES;
   economy: typeof ECONOMY_RULES;
@@ -176,6 +178,8 @@ const DEFAULT_TERRITORY_WAR_RULES = structuredClone(TERRITORY_WAR_RULES);
 const DEFAULT_XP_TIER_RULES = structuredClone(XP_TIER_RULES);
 const DEFAULT_PASS_GEN_RULES = structuredClone(PASS_GEN_RULES);
 const DEFAULT_CHRONICLE_GEN_RULES = structuredClone(CHRONICLE_GEN_RULES);
+/** 6.9.1 : valeurs par défaut des groupes du registre (lues au chargement, avant tout réglage). */
+const DEFAULT_REGISTERED_RULES = registeredRuleSnapshot();
 const DEFAULT_COMMERCE_RULES = {
   auctions: structuredClone(AUCTION_RULES),
   tradeContracts: structuredClone(TRADE_CONTRACT_RULES),
@@ -213,7 +217,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES, ...structuredClone(DEFAULT_COMMERCE_RULES) },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES, passGen: DEFAULT_PASS_GEN_RULES, chronicleGen: DEFAULT_CHRONICLE_GEN_RULES, ...structuredClone(DEFAULT_COMMERCE_RULES), ...structuredClone(DEFAULT_REGISTERED_RULES) },
   });
 }
 
@@ -332,6 +336,10 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
         quantities: { ...defaults.rules.weeklyStock.quantities, ...(overrides.rules?.weeklyStock?.quantities ?? {}) },
       },
       patrons: { ...defaults.rules.patrons, ...(overrides.rules?.patrons ?? {}) },
+      // 6.9.1 : registre des réglages, fusion profonde (un champ ajouté plus tard garde sa valeur par défaut).
+      ...(Object.fromEntries(
+        Object.keys(REGISTERED_RULES).map((k) => [k, mergeRuleGroup((defaults.rules as unknown as Record<string, unknown>)[k], (overrides.rules as Record<string, unknown> | undefined)?.[k])]),
+      ) as RegisteredRuleGroups),
       streak: (() => {
         const o = (overrides.rules?.streak ?? {}) as Partial<GameRules["streak"]>;
         const d = defaults.rules.streak;
@@ -406,6 +414,7 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   Object.assign(OUTCOME_POINTS, structuredClone(content.rules.tournamentPoints));
   Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
   Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
+  applyRegisteredRules(content.rules);
   current = content;
   return content;
 }
@@ -447,6 +456,7 @@ export const RULE_GROUP_LABELS: Record<string, string> = {
   tournamentPoints: "Tournoi du casino : points par tirage",
   weeklyStock: "Offre de la semaine (Comptoir)",
   patrons: "Mécènes",
+  ...Object.fromEntries(Object.entries(REGISTERED_RULES).map(([k, r]) => [k, r.label])),
 };
 
 /**
@@ -517,6 +527,10 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage ≥ 0.");
   if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires ≥ 1.");
   if (!(merged.patrons.top >= 1)) errors.push("Mécènes : au moins 1 place.");
+  // 6.9.1 : la grille des territoires est figée (l'état des secteurs en dépend).
+  const terr = merged.territories as { cols?: number; rows?: number };
+  const terrDef = defaultGameContent().rules.territories as { cols?: number; rows?: number };
+  if (terr.cols !== terrDef.cols || terr.rows !== terrDef.rows) errors.push(`Territoires d'alliance : la grille reste ${terrDef.cols} × ${terrDef.rows} (les secteurs en cours en dépendent).`);
   // 5.18 : combat en tours.
   const cb = merged.combat;
   if (!(cb.hpPerResistance > 0)) errors.push("Combat : points de vie par résistance > 0.");
@@ -559,7 +573,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
 function mergeRulesForCheck(rules: Partial<GameRules>): GameRules {
   const d = defaultGameContent().rules;
   const out = { ...d } as Record<string, unknown>;
-  for (const [k, v] of Object.entries(rules)) if (v && typeof v === "object" && !Array.isArray(v)) out[k] = { ...(d as unknown as Record<string, object>)[k], ...v };
+  for (const [k, v] of Object.entries(rules))
+    if (v && typeof v === "object" && !Array.isArray(v)) out[k] = k in REGISTERED_RULES ? mergeRuleGroup((d as unknown as Record<string, unknown>)[k], v) : { ...(d as unknown as Record<string, object>)[k], ...v };
   return out as unknown as GameRules;
 }
 
