@@ -109,7 +109,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 3 | AU1 | Revue Menaces PNJ : pirates et factions, seigneurs de guerre, primes et Comptoir | M | livré : rapport + décisions A à D en 6.6.0 |
 | 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | rapport livré (`2026-10-06-au2-boss.md`) |
 | 5 | V | Rendez-vous de la semaine (Q4) : proposition à partir d'AU1 et AU2, puis implémentation | M | livré 6.7.0 (mesure BOSS-2 reportée) |
-| 6 | AU3 | Revue Progression : Passe, Chroniques, Codex, succès et titres, défis hebdo, série, objectifs du jour, saisons, divisions, palmarès | M | à faire |
+| 6 | AU3 | Revue Progression : Passe, Chroniques, Codex, succès et titres, défis hebdo, série, objectifs du jour, saisons, divisions, palmarès | M | rapport livré (`2026-10-06-au3-progression.md`), décisions en attente (`progression.md`) |
 | 7 | AU4 | Revue Commerce : marché, ordres d'achat, contrats, enchères, PNJ marchand, pot commun, concours, casino et tournoi | M | à faire |
 | 8 | AU5 | Revue Alliances : membres et rôles, trésor, recherches, guerres, guerre de territoire, projets, saga, diplomatie, calendrier | M | à faire |
 | 9 | AU6 | Revue Communications : messages, canal global, salons, modération, annonces, sondages, gazette, notifications | M | à faire |

@@ -22,3 +22,8 @@
 ## État (audit 2026-10-06)
 - Corvées quotidiennes réunies depuis la 5.30 dans **Ordres du jour** (`/game/ordres`, `dailyOrders.ts`) : liste de contrôle, « Tout réclamer » (série, objectifs du jour, passe, Chroniques, prise en main), pastille unique, rendez-vous de la semaine. Contrats et missions fusionnés en 4 objectifs du jour depuis la 6.2.1.
 - Nommage unifié (5.31) : « Saison » = le mois (XP, divisions) ; « Passe » = les 30 paliers ; « Chroniques » = l'histoire du mois. Glossaire dans le Portefeuille ; un test interdit « passe de saison » dans les écrans joueurs.
+
+## Revue AU3 (2026-10-06)
+Constats PRG-1 à PRG-8 dans `docs/audit/2026-10-06-au3-progression.md` : passe d'octobre fini en 6 jours par 4 joueurs sur 14 (points non
+expliqués par le barème du code, à vérifier en production), rien à gagner après le dernier palier, points non tracés par source, titres en
+série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
