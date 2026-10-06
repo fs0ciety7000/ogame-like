@@ -247,11 +247,13 @@ export function AchievementsPage() {
         {(["all", ...categories] as const).map((c) => {
           const items = c === "all" ? list : list.filter((a) => a.category === c);
           return (
-            <HudChip key={c} role="tab" aria-selected={tab === c} tone={tab === c ? "accent" : "neutral"} onClick={() => setTab(c)}>
-              {c === "all" ? "Tous" : `${CATEGORY_LABELS[c].emoji} ${CATEGORY_LABELS[c].label}`}{" "}
-              <span className="tabular-nums opacity-70">
-                {items.filter((a) => unlocked.has(a.id)).length}/{items.length}
-              </span>
+            <HudChip key={c} tone={tab === c ? "accent" : "neutral"} asChild>
+              <button type="button" role="tab" aria-selected={tab === c} onClick={() => setTab(c)}>
+                {c === "all" ? "Tous" : `${CATEGORY_LABELS[c].emoji} ${CATEGORY_LABELS[c].label}`}{" "}
+                <span className="font-mono tabular-nums opacity-70">
+                  {items.filter((a) => unlocked.has(a.id)).length}/{items.length}
+                </span>
+              </button>
             </HudChip>
           );
         })}
@@ -263,15 +265,19 @@ export function AchievementsPage() {
         </label>
         <div className="flex flex-wrap gap-1" role="group" aria-label="État">
           {STATUS_FILTERS.map((f) => (
-            <HudChip key={f.id} size="sm" tone={status === f.id ? "accent" : "neutral"} aria-pressed={status === f.id} onClick={() => setStatus(f.id)}>
-              {f.label}
+            <HudChip key={f.id} size="sm" tone={status === f.id ? "accent" : "neutral"} asChild>
+              <button type="button" aria-pressed={status === f.id} onClick={() => setStatus(f.id)}>
+                {f.label}
+              </button>
             </HudChip>
           ))}
         </div>
         <div className="flex flex-wrap gap-1" role="group" aria-label="Palier">
           {(["all", ...(Object.keys(TIER_LABELS) as AchievementTier[])] as const).map((t) => (
-            <HudChip key={t} size="sm" tone={tier === t ? "accent" : "neutral"} aria-pressed={tier === t} onClick={() => setTier(t)}>
-              {t === "all" ? "Tous paliers" : TIER_LABELS[t]}
+            <HudChip key={t} size="sm" tone={tier === t ? "accent" : "neutral"} asChild>
+              <button type="button" aria-pressed={tier === t} onClick={() => setTier(t)}>
+                {t === "all" ? "Tous paliers" : TIER_LABELS[t]}
+              </button>
             </HudChip>
           ))}
         </div>
