@@ -53,6 +53,7 @@ function BibleRedirect() {
 
 const SimulatorPage = lazyPage(() => import("@/pages/SimulatorPage"), "SimulatorPage");
 const PlannerPage = lazyPage(() => import("@/pages/PlannerPage"), "PlannerPage");
+const AuctionHousePage = lazyPage(() => import("@/pages/AuctionHousePage"), "AuctionHousePage");
 const MarketPage = lazyPage(() => import("@/pages/MarketPage"), "MarketPage");
 const ColoniesPage = lazyPage(() => import("@/pages/ColoniesPage"), "ColoniesPage");
 const LeviathanPage = lazyPage(() => import("@/pages/LeviathanPage"), "LeviathanPage");
@@ -120,6 +121,7 @@ export default function App() {
                 <Route path="simulateur" element={<SimulatorPage />} />
                 <Route path="planificateur" element={<PlannerPage />} />
                 <Route path="marche" element={<MarketPage />} />
+                <Route path="encheres" element={<AuctionHousePage />} />
                 <Route path="uber" element={<LeviathanPage />} />
                 {/* 5.15 : ancienne adresse du boss mondial (liens des notifications passées). */}
                 <Route path="leviathan" element={<Navigate to="/game/uber" replace />} />

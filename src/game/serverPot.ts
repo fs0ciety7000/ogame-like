@@ -9,11 +9,12 @@ import type { ResourceId } from "@/types/game";
 
 export const SERVER_POT_KEY = "server_pot";
 
-export type PotSource = "market" | "gift" | "admin";
+export type PotSource = "market" | "gift" | "auction" | "admin";
 
 export const POT_SOURCE_LABELS: Record<PotSource, string> = {
   market: "Taxes du marché",
   gift: "Taxe des cadeaux",
+  auction: "Taxe des enchères",
   admin: "Administration",
 };
 

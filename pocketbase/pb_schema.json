@@ -2978,6 +2978,127 @@
     ]
   },
   {
+    "id": "pbc_ce_auctions",
+    "name": "auctions",
+    "type": "base",
+    "listRule": "@request.auth.id != \"\"",
+    "viewRule": "@request.auth.id != \"\"",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "sellerId",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "sellerPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "kind",
+        "type": "text",
+        "required": true,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "item",
+        "type": "json",
+        "required": false,
+        "maxSize": 5000
+      },
+      {
+        "name": "label",
+        "type": "text",
+        "required": false,
+        "max": 120,
+        "presentable": false
+      },
+      {
+        "name": "rarity",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "res",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "startPrice",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "bid",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "bidderId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "bidderPseudo",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "bids",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 12,
+        "presentable": false
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "endsAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "closedAtMs",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "tax",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)",
+      "CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"
+    ]
+  },
+  {
     "id": "pbc_ce_global_messages",
     "name": "global_messages",
     "type": "base",

@@ -573,6 +573,7 @@ onRecordAuthRequest((e) => {
 }, "users");
 routerAdd("GET", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).pollRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).pollRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/auction", (e) => require(`${__hooks}/cosmic_db.js`).auctionRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/global/send", (e) => require(`${__hooks}/cosmic_db.js`).globalSend(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/global/report", (e) => require(`${__hooks}/cosmic_db.js`).globalReport(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/cosmic/admin/global", (e) => require(`${__hooks}/cosmic_db.js`).adminGlobal(e), $apis.requireAuth("users", "_superusers"));
@@ -680,6 +681,18 @@ routerAdd("POST", "/api/cosmic/admin/challenge", (e) => {
   db.challengeTick(Number(body.now) || Date.now());
   return e.json(200, db.readChallengeState($app, db.loadGame()));
 }, $apis.requireAuth("users", "_superusers"));
+
+// 5.26 : clôture des ventes de l'Hôtel des enchères.
+cronAdd("cosmic_auctions", "* * * * *", () => {
+  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_auctions", "* * * * *", () => {
+    try {
+      const n = require(`${__hooks}/cosmic_db.js`).auctionsTick(Date.now());
+      if (n > 0) console.log(`[cosmic] ${n} vente(s) aux enchères close(s)`);
+    } catch (err) {
+      console.log(`[cosmic] enchères : ${err}`);
+    }
+  });
+});
 
 cronAdd("cosmic_market", "*/5 * * * *", () => {
   require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_market", "*/5 * * * *", () => {

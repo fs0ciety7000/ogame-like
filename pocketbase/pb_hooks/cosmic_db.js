@@ -8654,6 +8654,18 @@ function adminDeletePlayer(e) {
       txApp.delete(o);
       summary.offers++;
     });
+    // 5.26 : ses ventes aux enchères ouvertes s'annulent, le meilleur enchérisseur est remboursé.
+    txApp.findRecordsByFilter("auctions", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((a) => {
+      const bidderId = a.getString("bidderId");
+      if (bidderId && findOrNull(txApp, "players", bidderId)) {
+        const b = loadFlushed(txApp, game, bidderId);
+        game.creditBid(b.player, a.getString("res"), a.getFloat("bid"));
+        savePlayer(txApp, game, b.loaded, b.player, b.queues);
+      }
+      a.set("status", "cancelled");
+      a.set("closedAtMs", Date.now());
+      txApp.save(a);
+    });
     txApp.findRecordsByFilter("notifications", "player_id = {:u}", "", 0, 0, { u: uid }).forEach((n) => {
       txApp.delete(n);
       summary.notifications++;
@@ -8848,4 +8860,157 @@ function adminGlobal(e) {
   return e.json(200, out);
 }
 
-module.exports = { globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+/* ---------- 5.26 : Hôtel des enchères ---------- */
+
+function auctionNote(title, message, now) {
+  return { kind: "gift", title: title, message: message, createdAtMs: now, read: false, link: "/game/encheres" };
+}
+
+/** POST /api/cosmic/auction { action: "list" | "bid" | "cancel", … } */
+function auctionRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const action = String(req.action || "");
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const now = Date.now();
+    if (action === "list") {
+      const seller = loadFlushed(txApp, game, uid);
+      if (game.onVacation(seller.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour vendre.");
+      const open = txApp.findRecordsByFilter("auctions", 'sellerId = {:u} && status = "open"', "", 50, 0, { u: uid }).length;
+      let listing, lot;
+      try {
+        listing = game.validateListing(req, open);
+        lot = game.takeLot(seller.player, listing.kind, listing.itemId);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, seller.notifications);
+      const rec = new Record(txApp.findCollectionByNameOrId("auctions"));
+      rec.load({
+        sellerId: uid,
+        sellerPseudo: seller.player.pseudo,
+        kind: listing.kind,
+        item: lot.item,
+        label: lot.label,
+        rarity: lot.rarity,
+        res: listing.res,
+        startPrice: listing.startPrice,
+        bid: 0,
+        bidderId: "",
+        bidderPseudo: "",
+        bids: 0,
+        status: "open",
+        createdAtMs: now,
+        endsAtMs: now + listing.durationH * 3600000,
+        closedAtMs: 0,
+        tax: 0,
+      });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    const rec = findOrNull(txApp, "auctions", String(req.id || ""));
+    if (!rec) throw new NotFoundError("Vente introuvable.");
+    const a = toPlain(rec);
+    if (action === "cancel") {
+      if (a.sellerId !== uid) throw new NotFoundError("Vente introuvable.");
+      if (!game.canCancel(a)) throw new BadRequestError("Une vente avec une enchère ne s'annule plus.");
+      const seller = loadFlushed(txApp, game, uid);
+      game.giveLot(seller.player, a.kind, a.item);
+      savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+      notify(txApp, uid, seller.notifications);
+      rec.set("status", "cancelled");
+      rec.set("closedAtMs", now);
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (action !== "bid") throw new BadRequestError("Action inconnue.");
+    const bidder = loadFlushed(txApp, game, uid);
+    if (game.onVacation(bidder.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour enchérir.");
+    let res;
+    try {
+      res = game.placeBid(a, uid, bidder.player.pseudo, req.amount, now);
+      game.debitBid(bidder.player, a.res, res.charge);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, bidder.loaded, bidder.player, bidder.queues);
+    notify(txApp, uid, bidder.notifications);
+    if (res.refund) {
+      const prev = findOrNull(txApp, "players", res.refund.uid) ? loadFlushed(txApp, game, res.refund.uid) : null;
+      if (prev) {
+        game.creditBid(prev.player, a.res, res.refund.amount);
+        savePlayer(txApp, game, prev.loaded, prev.player, prev.queues);
+        notify(txApp, res.refund.uid, prev.notifications.concat([
+          auctionNote("Enchère dépassée", `${bidder.player.pseudo} a surenchéri sur « ${a.label} » (${game.describeAmount(a.res, a.bid)}). Ta mise de ${game.describeAmount(a.res, res.refund.amount)} t'est rendue.`, now),
+        ]));
+      }
+    }
+    ["bid", "bidderId", "bidderPseudo", "bids", "endsAtMs"].forEach((k) => rec.set(k, a[k]));
+    txApp.save(rec);
+    out = toPlain(rec);
+  });
+  return e.json(200, out);
+}
+
+/** Clôture des ventes échues (tâche minute). Renvoie le nombre de ventes closes. */
+function auctionsTick(now) {
+  const game = loadGame();
+  const due = $app.findRecordsByFilter("auctions", 'status = "open" && endsAtMs <= {:t}', "endsAtMs", 50, 0, { t: now });
+  let n = 0;
+  due.forEach((r) => {
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const rec = findOrNull(txApp, "auctions", r.id);
+        if (!rec || rec.getString("status") !== "open") return;
+        const a = toPlain(rec);
+        const deal = game.settleAuction(a);
+        const hasReceiver = !!findOrNull(txApp, "players", deal.receiver);
+        // Gagnant disparu : l'objet revient au vendeur (la mise est perdue).
+        const receiverId = hasReceiver ? deal.receiver : a.sellerId;
+        if (findOrNull(txApp, "players", receiverId)) {
+          const receiver = loadFlushed(txApp, game, receiverId);
+          game.giveLot(receiver.player, a.kind, a.item);
+          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
+          const won = deal.status === "sold" && receiverId === deal.receiver;
+          notify(txApp, receiverId, receiver.notifications.concat([
+            won
+              ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${game.describeAmount(a.res, a.bid)}.`, now)
+              : auctionNote("Vente sans preneur", `« ${a.label} » n'a pas trouvé preneur : il revient dans ton inventaire.`, now),
+          ]));
+        }
+        if (deal.status === "sold") {
+          if (hasReceiver && findOrNull(txApp, "players", a.sellerId)) {
+            const seller = loadFlushed(txApp, game, a.sellerId);
+            game.creditBid(seller.player, a.res, deal.payout);
+            savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
+            notify(txApp, a.sellerId, seller.notifications.concat([
+              auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${game.describeAmount(a.res, deal.payout)} (taxe : ${game.describeAmount(a.res, deal.tax)}).`, now),
+            ]));
+          }
+          if (deal.tax > 0) addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
+          rec.set("tax", deal.tax);
+        }
+        rec.set("status", deal.status);
+        rec.set("closedAtMs", now);
+        txApp.save(rec);
+        n += 1;
+      });
+    } catch (err) {
+      console.log(`[cosmic] clôture d'enchère ${r.id} : ${err}`);
+    }
+  });
+  // Ménage : les ventes closes depuis plus de 30 jours disparaissent.
+  try {
+    $app.findRecordsByFilter("auctions", 'status != "open" && closedAtMs < {:t}', "", 200, 0, { t: now - 30 * 86400000 }).forEach((r) => $app.delete(r));
+  } catch (_) {}
+  return n;
+}
+
+module.exports = { auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

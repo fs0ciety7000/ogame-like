@@ -178,7 +178,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
                       title={fits ? undefined : `${fam.label} : pas sur la classe ${UNIT_CLASS_LABELS[sel.cls]}`}
                       onClick={() => void act(() => mountShipModule(item.id, sel.cls, sel.slot), () => `${t.name} monté sur ${UNIT_CLASS_LABELS[sel.cls]}.`)}
                     >
-                      Monter ({UNIT_CLASS_LABELS[sel.cls]} {sel.slot + 1})
+                      {fits ? `Monter (${UNIT_CLASS_LABELS[sel.cls]} ${sel.slot + 1})` : fam.classes.length === 1 ? "Soutien seulement" : "Pas sur le Soutien"}
                     </Button>
                   )}
                   {!item.built && (
