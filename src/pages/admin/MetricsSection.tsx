@@ -83,7 +83,7 @@ export function MetricsSection() {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                <thead className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
                   <tr>
                     <th className="py-1.5 font-normal">Mesure</th>
                     <th className="py-1.5 text-right font-normal">Tous</th>
@@ -133,7 +133,7 @@ export function MetricsSection() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="text-[10px] uppercase tracking-[0.14em] text-slate-500">
+              <thead className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
                 <tr>
                   <th className="py-1.5 font-normal">Tâche</th>
                   <th className="py-1.5 font-normal">État</th>
