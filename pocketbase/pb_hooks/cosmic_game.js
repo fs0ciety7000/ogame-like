@@ -20213,7 +20213,10 @@ function balanceSnapshot(live, reports, now) {
     pillableHours: live.health.exposure.pillableHours,
     protectedHours: live.health.exposure.protectedHours,
     avgLoot: live.health.pvp.avgLoot,
-    classes: Object.fromEntries(live.health.classes.rows.map((r) => [r.id, r.players]))
+    classes: Object.fromEntries(live.health.classes.rows.map((r) => [r.id, r.players])),
+    fullSlotsPct: live.health.parallel.fullSlotsPct,
+    routes: live.health.colonies.withRoute,
+    supplyRoutes: live.health.colonies.supply
   } : {});
 }
 function pushSnapshot(history, snap) {
@@ -20350,6 +20353,18 @@ function balanceHealth(input, now, windowDays = 7) {
     var _a2;
     return (_a2 = fleetsBy[u]) != null ? _a2 : 0;
   });
+  const fullSlots = players.filter((p) => {
+    var _a2;
+    return ((_a2 = fleetsBy[p.uid]) != null ? _a2 : 0) >= fleetSlots(p);
+  }).length;
+  const owned = (ids) => ids.map((id) => {
+    var _a2, _b;
+    const counts = players.map((p) => {
+      var _a3, _b2, _c;
+      return (_c = (_b2 = (_a3 = p.units) == null ? void 0 : _a3[id]) == null ? void 0 : _b2.count) != null ? _c : 0;
+    });
+    return { id, name: (_b = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b : id, total: counts.reduce((a, b) => a + b, 0), owners: counts.filter((n) => n > 0).length };
+  }).sort((a, b) => b.total - a.total);
   const colonies2 = players.flatMap((p) => {
     var _a2;
     return (_a2 = p.colonies) != null ? _a2 : [];
@@ -20381,9 +20396,17 @@ function balanceHealth(input, now, windowDays = 7) {
       avgPct: salvage.length ? Math.round(salvage.reduce((a, b) => a + b, 0) / salvage.length * 100) : 0,
       maxPct: salvage.length ? Math.round(Math.max(...salvage) * 100) : 0
     },
-    parallel: { buildsMedian: median6(builds), buildsMax: builds.length ? Math.max(...builds) : 0, fleetsMedian: median6(fleets), fleetsMax: fleets.length ? Math.max(...fleets) : 0 },
+    parallel: { buildsMedian: median6(builds), buildsMax: builds.length ? Math.max(...builds) : 0, fleetsMedian: median6(fleets), fleetsMax: fleets.length ? Math.max(...fleets) : 0, fullSlotsPct: players.length ? Math.round(fullSlots / players.length * 100) : 0 },
     alliances: { count: input.alliances.length, sizes: input.alliances.map((a) => a.members.length).sort((a, b) => b - a) },
-    colonies: { colonies: colonies2.length, withRoute: colonies2.filter((c) => !!c.route).length },
+    colonies: { colonies: colonies2.length, withRoute: colonies2.filter((c) => !!c.route).length, supply: colonies2.filter((c) => {
+      var _a2;
+      return ((_a2 = c.route) == null ? void 0 : _a2.direction) === "supply";
+    }).length, queued: colonies2.filter((c) => {
+      var _a2, _b;
+      return ((_b = (_a2 = c.defenseQueue) == null ? void 0 : _a2.length) != null ? _b : 0) > 0;
+    }).length },
+    defenses: owned(DEFENSIVE_UNITS),
+    classUnits: owned(CLASS_UNIT_IDS),
     classes: { none: players.filter((p) => !p.empireClass).length, rows }
   };
 }

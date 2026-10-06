@@ -42,6 +42,10 @@ export interface BalanceSnapshot {
   protectedHours?: number;
   avgLoot?: number;
   classes?: Record<string, number>;
+  /** 6.5.1 (lot U) : part des joueurs à court d'emplacements de flotte, routes de colonies (dont ravitaillement). */
+  fullSlotsPct?: number;
+  routes?: number;
+  supplyRoutes?: number;
 }
 
 type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
@@ -84,6 +88,9 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
           protectedHours: live.health.exposure.protectedHours,
           avgLoot: live.health.pvp.avgLoot,
           classes: Object.fromEntries(live.health.classes.rows.map((r) => [r.id, r.players])),
+          fullSlotsPct: live.health.parallel.fullSlotsPct,
+          routes: live.health.colonies.withRoute,
+          supplyRoutes: live.health.colonies.supply,
         }
       : {}),
   };

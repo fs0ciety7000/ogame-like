@@ -59,4 +59,25 @@ describe("santé de l'équilibre", () => {
     expect(h.exposure.stockHours).toBeGreaterThan(0);
     expect(h.salvage.maxPct).toBeGreaterThanOrEqual(h.salvage.avgPct);
   });
+
+  it("6.4.2 : emplacements pleins, sens des routes, files de défense, défenses et vaisseaux de classe", () => {
+    const a = player("a", "industriel");
+    const b = player("b");
+    a.units.batterie_aa = { level: 1, count: 30 };
+    b.units.batterie_aa = { level: 1, count: 10 };
+    b.units.intercepteur = { level: 1, count: 5 };
+    a.units.recolteur = { level: 2, count: 7 };
+    a.colonies = [
+      { id: "a-c1", route: { everyHours: 6, keepPct: 0.5, nextAtMs: NOW, direction: "supply" }, defenseQueue: [{ unitId: "roquette", qty: 1, endTime: 0 }] },
+      { id: "a-c2", route: { everyHours: 6, keepPct: 0.2, nextAtMs: NOW } },
+    ] as never;
+    const fleets = Array.from({ length: 10 }, () => ({ ownerUid: "b", mission: "attack" }));
+    const h = balanceHealth({ players: [a, b], reports: [], fleets, builds: {}, alliances: [] }, NOW, 7);
+    expect(h.parallel.fullSlotsPct).toBe(50);
+    expect(h.colonies).toMatchObject({ colonies: 2, withRoute: 2, supply: 1, queued: 1 });
+    expect(h.defenses[0]).toMatchObject({ id: "batterie_aa", total: 40, owners: 2 });
+    expect(h.defenses.find((d) => d.id === "intercepteur")).toMatchObject({ total: 5, owners: 1 });
+    expect(h.classUnits.find((c) => c.id === "recolteur")).toMatchObject({ total: 7, owners: 1 });
+  });
 });
+

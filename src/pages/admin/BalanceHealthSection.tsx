@@ -18,8 +18,8 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
         <StatTile size="sm" tone="danger" label="Butin moyen" value={formatCompact(health.pvp.avgLoot)} sub={`${String(health.pvp.battlesPerDay).replace(".", ",")} combats JcJ / jour (${health.pvp.windowDays} j)`} />
         <StatTile size="sm" tone="violet" label="Sauvetage" value={`${health.salvage.avgPct} %`} sub={`max ${health.salvage.maxPct} %`} />
         <StatTile size="sm" tone="gold" label="Chantiers en parallèle" value={`${health.parallel.buildsMedian}`} sub={`médiane · max ${health.parallel.buildsMax}`} />
-        <StatTile size="sm" tone="accent" label="Flottes en vol" value={`${health.parallel.fleetsMedian}`} sub={`médiane · max ${health.parallel.fleetsMax}`} />
-        <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub="colonies avec route" />
+        <StatTile size="sm" tone="accent" label="Flottes en vol" value={`${health.parallel.fleetsMedian}`} sub={`médiane · max ${health.parallel.fleetsMax} · ${health.parallel.fullSlotsPct ?? 0} % à court d'emplacements`} />
+        <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub={`dont ${health.colonies.supply ?? 0} en ravitaillement · ${health.colonies.queued ?? 0} files de défense`} />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <span>Alliances ({health.alliances.count}) :</span>
@@ -44,6 +44,28 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           sans classe <span className="ml-1 font-mono tabular-nums">{health.classes.none}</span>
         </HudChip>
       </div>
+      {/* 6.5.1 (lot U) : unités possédées par type (relevés de 6.3.1 et 6.5). */}
+      <UnitRows label="Défenses construites" tone="accent" rows={health.defenses ?? []} />
+      <UnitRows label="Vaisseaux de classe" tone="violet" rows={health.classUnits ?? []} />
+    </div>
+  );
+}
+
+function UnitRows({ label, tone, rows }: { label: string; tone: "accent" | "violet"; rows: { id: string; name: string; total: number; owners: number }[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+      <span>{label} :</span>
+      {rows.some((r) => r.total > 0) ? (
+        rows
+          .filter((r) => r.total > 0)
+          .map((r) => (
+            <HudChip key={r.id} size="sm" tone={tone} title={`${r.owners} joueur${r.owners > 1 ? "s" : ""}`}>
+              {r.name} <span className="ml-1 font-mono tabular-nums">{formatCompact(r.total)}</span>
+            </HudChip>
+          ))
+      ) : (
+        <span className="text-slate-500">aucun</span>
+      )}
     </div>
   );
 }

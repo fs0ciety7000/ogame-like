@@ -67,6 +67,11 @@ export function buildSeries(h: BalanceSnapshot[]): Series[] {
     { id: "lairs", title: "Repaires pris (cumul)", hint: "joueurs actifs", unit: "", points: h.map((s) => s.lairsTaken), floor0: true },
     { id: "hangar", title: "Hangars d'attaque remplis (moyenne)", hint: "100 % = hangars pleins", unit: "%", points: h.map((s) => s.avgHangarAttack * 100), ref: 100, floor0: true },
     { id: "prod", title: "Production médiane par heure", hint: "toutes ressources, joueurs actifs", unit: "", points: h.map((s) => s.medianProduction), floor0: true },
+    // 6.5.1 (lot U) : courbes des relevés de la santé de l'équilibre (photos depuis la 6.0.1).
+    { id: "pillable", title: "Stock pillable (médiane, en heures)", hint: "heures de production exposées au pillage", unit: "", points: h.map((s) => s.pillableHours ?? null), floor0: true },
+    { id: "loot", title: "Butin moyen par attaque JcJ réussie", hint: "7 jours glissants", unit: "", points: h.map((s) => s.avgLoot ?? null), floor0: true },
+    { id: "slots", title: "Joueurs à court d'emplacements de flotte", hint: "au-delà de 20 %, envisager des emplacements à débloquer (O.2)", unit: "%", points: h.map((s) => s.fullSlotsPct ?? null), ref: 20, floor0: true },
+    { id: "routes", title: "Routes de colonies", hint: "toutes routes ; le ravitaillement est dans le tableau", unit: "", points: h.map((s) => s.routes ?? null), floor0: true },
     {
       id: "warlord",
       title: "Seigneur le plus fort ÷ meilleure défense",

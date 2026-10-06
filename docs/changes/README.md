@@ -63,6 +63,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| 6.5.1 | [Santé de l'équilibre, suite](6.5.1-sante-suite.md) | ajout | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md), lot U |
 | 6.5.0 | [Vaisseaux de classe](6.5.0-vaisseaux-classe.md) | fonctionnalité | [unites-classe](../proposals/unites-classe.md), lot P |
 | 6.4.1 | [Prise en main à jour](6.4.1-prise-en-main.md) | ajout | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md), lot T |
 | 6.4.0 | [Colonies, suite](6.4.0-colonies-suite.md) | fonctionnalité | [colonies-suite](../proposals/colonies-suite.md), lot Q |

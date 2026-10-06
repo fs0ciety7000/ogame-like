@@ -105,7 +105,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
 | 1 | T | Prise en main à jour (classes, routes, objectifs du jour) | S | livré 6.4.1 |
-| 2 | U | Santé de l'équilibre, suite (sens des routes, défenses par type, emplacements, courbes) | S | à faire |
+| 2 | U | Santé de l'équilibre, suite (sens des routes, défenses par type, emplacements, courbes) | S | livré 6.5.1 |
 | 3 | AU1 | Revue Menaces PNJ : pirates et factions, seigneurs de guerre, primes et Comptoir | M | à faire |
 | 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | à faire |
 | 5 | V | Rendez-vous de la semaine (Q4) : proposition à partir d'AU1 et AU2, puis implémentation | M | à faire |
@@ -129,3 +129,14 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 
 Ordre : les revues commencent par les systèmes les plus joués et les moins audités ; les plus récents (unités, flottes, économie,
 colonies) ensuite ; la revue transverse clôt la série.
+
+### Constats préalables transmis pour les revues
+
+- **AU11 (Labo) et AU1 (Traqueur Kesh)** : technologie `tech19_2` « Traqueur Kesh », ajoutée en production par le panneau admin (transmise le
+  2026-10-06). Effets : `unlock_next_level` → `traqueur_kesh`, `unit_attack` 0,07 par niveau, `fleet_speed` sans valeur ; niveau max 20 ;
+  10 Ambre ; prérequis tech1 19, tech16 5, tech18 5, tech22 3. À vérifier :
+  - le Traqueur Kesh a `maxLevel: 1` : la techno monte à 20 mais l'unité ne dépasse pas le niveau 1 ; la description promet
+    « +1 700 attaque et +1 700 défense par niveau » ;
+  - `unit_attack` 0,07 × 20 = +140 % d'attaque de **toutes** les unités : plafonds de la couche techno et `derived.test.ts` ;
+  - `fleet_speed` sans `value` : effet nul ou valeur par défaut ? ;
+  - le plan du Comptoir (`blueprint`) et cette techno se recoupent-ils ?

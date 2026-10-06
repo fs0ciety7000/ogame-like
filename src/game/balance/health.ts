@@ -2,7 +2,8 @@ import { getRepairPercent } from "@/game/buildings";
 import { exposureView } from "@/game/economy";
 import { EMPIRE_CLASSES } from "@/game/empireClass";
 import { economySnapshot } from "@/game/economy";
-import { SLOT_FREE_MISSIONS } from "@/game/fleets";
+import { fleetSlots, SLOT_FREE_MISSIONS } from "@/game/fleets";
+import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, findUnit } from "@/game/units";
 import { withRepairBonus } from "@/game/modifiers";
 import { isPvpReport } from "@/game/balance/combatTypes";
 import type { BattleReport, PlayerState } from "@/types/game";
@@ -41,9 +42,15 @@ export interface BalanceHealth {
   };
   pvp: { battlesPerDay: number; avgLoot: number; windowDays: number };
   salvage: { avgPct: number; maxPct: number };
-  parallel: { buildsMedian: number; buildsMax: number; fleetsMedian: number; fleetsMax: number };
+  /** 6.5.1 (lot U) : fullSlotsPct = part des joueurs dont tous les emplacements de flotte sont pris. */
+  parallel: { buildsMedian: number; buildsMax: number; fleetsMedian: number; fleetsMax: number; fullSlotsPct: number };
   alliances: { count: number; sizes: number[] };
-  colonies: { colonies: number; withRoute: number };
+  /** 6.5.1 : supply = routes de ravitaillement (planète mère → colonie), queued = colonies avec des défenses en file. */
+  colonies: { colonies: number; withRoute: number; supply: number; queued: number };
+  /** 6.5.1 : défenses construites par type (total chez les joueurs actifs, nombre de joueurs qui en ont). */
+  defenses: { id: string; name: string; total: number; owners: number }[];
+  /** 6.5.1 : vaisseaux de classe (6.5). */
+  classUnits: { id: string; name: string; total: number; owners: number }[];
   classes: { none: number; rows: { id: string; name: string; players: number; sharePct: number; medianProduction: number }[] };
 }
 
@@ -87,6 +94,15 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
   const uids = players.map((p) => p.uid);
   const builds = uids.map((u) => input.builds[u] ?? 0);
   const fleets = uids.map((u) => fleetsBy[u] ?? 0);
+  const fullSlots = players.filter((p) => (fleetsBy[p.uid] ?? 0) >= fleetSlots(p)).length;
+  // Unités possédées (planète mère), par type.
+  const owned = (ids: string[]) =>
+    ids
+      .map((id) => {
+        const counts = players.map((p) => p.units?.[id]?.count ?? 0);
+        return { id, name: findUnit(id)?.name ?? id, total: counts.reduce((a, b) => a + b, 0), owners: counts.filter((n) => n > 0).length };
+      })
+      .sort((a, b) => b.total - a.total);
   // Colonies.
   const colonies = players.flatMap((p) => p.colonies ?? []);
   // Classes.
@@ -111,9 +127,11 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
       avgPct: salvage.length ? Math.round((salvage.reduce((a, b) => a + b, 0) / salvage.length) * 100) : 0,
       maxPct: salvage.length ? Math.round(Math.max(...salvage) * 100) : 0,
     },
-    parallel: { buildsMedian: median(builds), buildsMax: builds.length ? Math.max(...builds) : 0, fleetsMedian: median(fleets), fleetsMax: fleets.length ? Math.max(...fleets) : 0 },
+    parallel: { buildsMedian: median(builds), buildsMax: builds.length ? Math.max(...builds) : 0, fleetsMedian: median(fleets), fleetsMax: fleets.length ? Math.max(...fleets) : 0, fullSlotsPct: players.length ? Math.round((fullSlots / players.length) * 100) : 0 },
     alliances: { count: input.alliances.length, sizes: input.alliances.map((a) => a.members.length).sort((a, b) => b - a) },
-    colonies: { colonies: colonies.length, withRoute: colonies.filter((c) => !!c.route).length },
+    colonies: { colonies: colonies.length, withRoute: colonies.filter((c) => !!c.route).length, supply: colonies.filter((c) => c.route?.direction === "supply").length, queued: colonies.filter((c) => (c.defenseQueue?.length ?? 0) > 0).length },
+    defenses: owned(DEFENSIVE_UNITS),
+    classUnits: owned(CLASS_UNIT_IDS),
     classes: { none: players.filter((p) => !p.empireClass).length, rows },
   };
 }
