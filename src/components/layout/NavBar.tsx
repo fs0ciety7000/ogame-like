@@ -10,7 +10,7 @@ import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Gavel } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -125,8 +125,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/guerre-territoire", label: "Guerre de territoire", icon: MapIcon },
       { to: "/game/messages", label: "Communications", icon: Mail },
       { to: "/game/joueurs", label: "Classement", icon: Users },
-      { to: "/game/marche", label: "Marché", icon: Store },
-      { to: "/game/encheres", label: "Hôtel des enchères", icon: Gavel },
+      { to: "/game/commerce", label: "Commerce", icon: Store },
       { to: "/game/casino", label: "Casino", icon: Dices },
       { to: "/game/gazette", label: "Gazette", icon: Newspaper },
     ],

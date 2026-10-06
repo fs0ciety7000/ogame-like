@@ -2,12 +2,13 @@ import { GameActionError } from "@/game/errors";
 import { findTemplate, rarityInfo, relicLabel, relicsState, type RelicItem } from "@/game/relics";
 import { findModuleTemplate, moduleLabel, modulesState, moduleRarity, type ModuleItem } from "@/game/modules";
 import { RESOURCE_LIST } from "@/game/resources";
+import { bountyState } from "@/game/bounties";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
    5.26 : Hôtel des enchères. Un joueur met en vente une relique (ni
-   mythique, ni équipée) ou un PLAN de module, contre une ressource
-   commune. Chaque enchère est payée tout de suite (mise sous séquestre) ;
+   mythique, ni équipée) ou un PLAN de module, contre la monnaie de son
+   choix : ressource commune, ressource rare ou Ambre. Chaque enchère est payée tout de suite (mise sous séquestre) ;
    le précédent meilleur enchérisseur est remboursé aussitôt. Une enchère
    dans les 5 dernières minutes repousse la fin à 5 minutes (anti-dernière
    seconde). À la clôture : l'objet part au gagnant, le vendeur reçoit le
@@ -16,6 +17,8 @@ import type { PlayerState, ResourceId } from "@/types/game";
 ===================================================== */
 
 export type AuctionKind = "relic" | "module";
+/** Monnaie d'une vente : une ressource (commune ou rare) ou l'Ambre de Ruche. */
+export type AuctionCurrency = ResourceId | "amber";
 export type AuctionStatus = "open" | "sold" | "expired" | "cancelled";
 
 export interface Auction {
@@ -26,7 +29,7 @@ export interface Auction {
   item: RelicItem | ModuleItem;
   label: string;
   rarity: string;
-  res: ResourceId;
+  res: AuctionCurrency;
   startPrice: number;
   /** Meilleure enchère (0 : aucune). */
   bid: number;
@@ -47,16 +50,30 @@ export const AUCTION_RULES = {
   taxRate: 0.05,
   maxOpenPerSeller: 5,
   durationsH: [6, 12, 24, 48],
-  minStart: 100,
+  /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
+  minStart: { common: 100, rare: 1, amber: 1 },
   maxStart: 1e12,
 };
 
-export const AUCTION_CURRENCIES: ResourceId[] = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id as ResourceId);
+export const AUCTION_CURRENCIES: AuctionCurrency[] = [...RESOURCE_LIST.map((r) => r.id as ResourceId), "amber"];
+
+export function currencyKind(res: AuctionCurrency): "common" | "rare" | "amber" {
+  if (res === "amber") return "amber";
+  return RESOURCE_LIST.find((r) => r.id === res)?.rarity === "rare" ? "rare" : "common";
+}
+
+export function minStartFor(res: AuctionCurrency): number {
+  return AUCTION_RULES.minStart[currencyKind(res)];
+}
+
+export function currencyLabel(res: AuctionCurrency): string {
+  return res === "amber" ? "Ambre" : (RESOURCE_LIST.find((r) => r.id === res)?.name ?? res);
+}
 
 export interface ListingRequest {
   kind: AuctionKind;
   itemId: string;
-  res: ResourceId;
+  res: AuctionCurrency;
   startPrice: number;
   durationH: number;
 }
@@ -67,10 +84,11 @@ export function validateListing(raw: unknown, openCount: number): ListingRequest
   if (!kind) throw new GameActionError("Objet à vendre inconnu.");
   const itemId = typeof r.itemId === "string" ? r.itemId : "";
   if (!itemId) throw new GameActionError("Choisis l'objet à vendre.");
-  const res = String(r.res) as ResourceId;
-  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie refusée : une ressource commune seulement.");
+  const res = String(r.res) as AuctionCurrency;
+  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie inconnue.");
   const startPrice = Math.floor(Number(r.startPrice));
-  if (!(startPrice >= AUCTION_RULES.minStart && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise à prix entre ${AUCTION_RULES.minStart} et 10^12.`);
+  const min = minStartFor(res);
+  if (!(startPrice >= min && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise à prix : au moins ${min} ${currencyLabel(res).toLowerCase()}.`);
   const durationH = Math.floor(Number(r.durationH));
   if (!AUCTION_RULES.durationsH.includes(durationH)) throw new GameActionError("Durée refusée.");
   if (openCount >= AUCTION_RULES.maxOpenPerSeller) throw new GameActionError(`${AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.`);
@@ -177,14 +195,28 @@ export function canCancel(a: Pick<Auction, "status" | "bid">): boolean {
   return a.status === "open" && !(a.bid > 0);
 }
 
+/** Solde du joueur dans la monnaie de la vente. */
+export function currencyBalance(player: Pick<PlayerState, "resources" | "bounties">, res: AuctionCurrency): number {
+  return Math.floor(res === "amber" ? bountyState(player).amber : (player.resources[res] ?? 0));
+}
+
 /** Débite l'enchérisseur (séquestre). */
-export function debitBid(player: PlayerState, res: ResourceId, amount: number): void {
+export function debitBid(player: PlayerState, res: AuctionCurrency, amount: number): void {
   if (!(amount > 0)) return;
-  if (Math.floor(player.resources[res] ?? 0) < amount) throw new GameActionError("Ressources insuffisantes pour cette enchère.");
-  player.resources[res] -= amount;
+  if (currencyBalance(player, res) < amount) throw new GameActionError(res === "amber" ? "Pas assez d'Ambre pour cette enchère." : "Ressources insuffisantes pour cette enchère.");
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber -= amount;
+    player.bounties = st;
+  } else player.resources[res] -= amount;
 }
 
 /** Rembourse ou paie (enchère dépassée, vente conclue). */
-export function creditBid(player: PlayerState, res: ResourceId, amount: number): void {
-  if (amount > 0) player.resources[res] = (player.resources[res] ?? 0) + amount;
+export function creditBid(player: PlayerState, res: AuctionCurrency, amount: number): void {
+  if (!(amount > 0)) return;
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber += amount;
+    player.bounties = st;
+  } else player.resources[res] = (player.resources[res] ?? 0) + amount;
 }

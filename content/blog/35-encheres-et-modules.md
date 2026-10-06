@@ -10,16 +10,21 @@ cover: /assets/blog/articles/5-9/poste-commandement.webp
 > [!LORE] Note du Comptoir
 > « On a ouvert une salle des ventes. Les reliques changent de main, la taxe nourrit le pot commun, et personne ne gagne à la dernière seconde. »
 
+## Commerce : trois onglets
+
+Le Marché s'appelle désormais **Commerce** : offres et ordres d'achat, contrats de livraison et enchères, sur la même page.
+
 ## Hôtel des enchères
 
 | Règle | Valeur |
 |:--|:--|
 | Objets | reliques (ni mythiques, ni équipées), plans de modules |
-| Monnaie | une ressource commune au choix du vendeur |
+| Monnaie | au choix du vendeur : ressource commune, ressource rare ou Ambre |
+| Mise à prix minimale | 100 en ressource commune, 1 en ressource rare ou en Ambre |
 | Durée | 6, 12, 24 ou 48 h |
 | Surenchère minimale | +5 % |
 | Anti-dernière seconde | une enchère dans les 5 dernières minutes prolonge de 5 minutes |
-| Taxe | 5 % du prix final, versée au pot commun |
+| Taxe | 5 % du prix final, versée au pot commun (l'Ambre a sa propre réserve dans le pot) |
 
 Ta mise est **prélevée dès que tu enchéris** et **rendue aussitôt** si quelqu'un passe devant : tu ne peux pas promettre ce que tu n'as pas. Sans enchère, l'objet revient au vendeur ; une vente sans enchère peut être annulée.
 

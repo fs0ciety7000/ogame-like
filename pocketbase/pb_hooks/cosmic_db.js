@@ -1093,7 +1093,7 @@ function tradeContractRequest(e) {
         savePlayer(txApp, game, me.loaded, me.player, me.queues);
         if (c.targetUid) {
           notify(txApp, c.targetUid, [
-            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Marché → Contrats).`, link: "/game/marche?onglet=contrats", createdAtMs: now, read: false },
+            { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Commerce → Contrats).`, link: "/game/commerce?onglet=contrats", createdAtMs: now, read: false },
           ]);
         }
         out = toPlain(rec);
@@ -5451,16 +5451,22 @@ function adminServerPot(e) {
     const rec = configRecord(txApp, game.SERVER_POT_KEY);
     const pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
     const owner = loadPlayer(txApp, game, toUid);
-    const next = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
-    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
+    const afterRes = game.takeFromPot(pot, req.resources || {}, now, `${note} → ${owner.player.pseudo}`);
     const given = {};
-    const last = next.log[next.log.length - 1];
-    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    if (afterRes !== pot) {
+      const last = afterRes.log[afterRes.log.length - 1];
+      Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    }
+    // 5.26 : Ambre du pot (taxe des enchères en Ambre).
+    const amberOut = game.takeAmberFromPot(afterRes, Number(req.amber) || 0, now, `${note} → ${owner.player.pseudo}`);
+    const next = amberOut.pot;
+    if (next === pot) throw new BadRequestError("Rien à verser (montants vides ou pot insuffisant).");
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    if (amberOut.taken > 0) game.creditBid(flushed.player, "amber", amberOut.taken);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
     notify(txApp, toUid, flushed.notifications.concat([
-      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${game.describeGain(given)} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
+      { kind: "event", title: "Récompense du pot commun", message: `${note} : ${[Object.keys(given).length ? game.describeGain(given) : "", amberOut.taken > 0 ? `${amberOut.taken} Ambre` : ""].filter(Boolean).join(" et ")} versés depuis le pot du serveur.`, createdAtMs: now, read: false, data: { resources: given } },
     ]));
     writeConfig(txApp, game.SERVER_POT_KEY, next);
     const log = new Record(txApp.findCollectionByNameOrId("admin_logs"));
@@ -5471,7 +5477,7 @@ function adminServerPot(e) {
       targetCollection: "game_config",
       recordId: game.SERVER_POT_KEY,
       recordLabel: `Pot commun : ${note}`,
-      changes: { versé: given, joueur: owner.player.pseudo },
+      changes: { versé: given, ambre: amberOut.taken, joueur: owner.player.pseudo },
       createdAtMs: now,
     });
     txApp.save(log);
@@ -8862,8 +8868,13 @@ function adminGlobal(e) {
 
 /* ---------- 5.26 : Hôtel des enchères ---------- */
 
+/** « 150 ferraille », « 12 Ambre ». */
+function auctionAmount(game, res, n) {
+  return res === "amber" ? `${Math.floor(n)} Ambre` : game.describeAmount(res, n);
+}
+
 function auctionNote(title, message, now) {
-  return { kind: "gift", title: title, message: message, createdAtMs: now, read: false, link: "/game/encheres" };
+  return { kind: "gift", title: title, message: message, createdAtMs: now, read: false, link: "/game/commerce?onglet=encheres" };
 }
 
 /** POST /api/cosmic/auction { action: "list" | "bid" | "cancel", … } */
@@ -8947,7 +8958,7 @@ function auctionRequest(e) {
         game.creditBid(prev.player, a.res, res.refund.amount);
         savePlayer(txApp, game, prev.loaded, prev.player, prev.queues);
         notify(txApp, res.refund.uid, prev.notifications.concat([
-          auctionNote("Enchère dépassée", `${bidder.player.pseudo} a surenchéri sur « ${a.label} » (${game.describeAmount(a.res, a.bid)}). Ta mise de ${game.describeAmount(a.res, res.refund.amount)} t'est rendue.`, now),
+          auctionNote("Enchère dépassée", `${bidder.player.pseudo} a surenchéri sur « ${a.label} » (${auctionAmount(game, a.res, a.bid)}). Ta mise de ${auctionAmount(game, a.res, res.refund.amount)} t'est rendue.`, now),
         ]));
       }
     }
@@ -8981,7 +8992,7 @@ function auctionsTick(now) {
           const won = deal.status === "sold" && receiverId === deal.receiver;
           notify(txApp, receiverId, receiver.notifications.concat([
             won
-              ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${game.describeAmount(a.res, a.bid)}.`, now)
+              ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${auctionAmount(game, a.res, a.bid)}.`, now)
               : auctionNote("Vente sans preneur", `« ${a.label} » n'a pas trouvé preneur : il revient dans ton inventaire.`, now),
           ]));
         }
@@ -8991,10 +9002,15 @@ function auctionsTick(now) {
             game.creditBid(seller.player, a.res, deal.payout);
             savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
             notify(txApp, a.sellerId, seller.notifications.concat([
-              auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${game.describeAmount(a.res, deal.payout)} (taxe : ${game.describeAmount(a.res, deal.tax)}).`, now),
+              auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${auctionAmount(game, a.res, deal.payout)} (taxe : ${auctionAmount(game, a.res, deal.tax)}).`, now),
             ]));
           }
-          if (deal.tax > 0) addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
+          if (deal.tax > 0) {
+            if (a.res === "amber") {
+              const potRec = configRecord(txApp, game.SERVER_POT_KEY);
+              writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "auction", deal.tax, now));
+            } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
+          }
           rec.set("tax", deal.tax);
         }
         rec.set("status", deal.status);

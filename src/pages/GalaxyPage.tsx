@@ -18,7 +18,7 @@ import { formatCoords, galaxyCoords } from "@/game/galaxy";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetProgress, mapPosition } from "@/game/fleets";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { getRankLabel } from "@/game/ranks";
-import { formatClock, formatCompact, formatDuration, timeAgo } from "@/lib/utils";
+import { formatClock, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
@@ -570,14 +570,19 @@ export function GalaxyPage() {
                 )}
               </div>
               {travel && (
-                <div className="rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+                <div className="hud-callout hud-tone-neutral px-3 py-2 text-xs text-slate-400">
                   <p>
-                    Distance : <strong className="text-slate-200">{Math.round(travel.distance)}</strong>
+                    Distance : <strong className="font-mono tabular-nums text-slate-200">{formatNumber(Math.round(travel.distance))}</strong>
                   </p>
                   {travel.fast !== null ? (
                     <p>
-                      Temps de vol : <strong className="text-slate-200">{formatDuration(travel.fast)}</strong>
-                      {travel.slow !== travel.fast && <> à {formatDuration(travel.slow!)} selon tes vaisseaux</>}
+                      Temps de vol : <strong className="font-mono tabular-nums text-slate-200">{formatDuration(travel.fast)}</strong>
+                      {travel.slow !== travel.fast && (
+                        <>
+                          {" "}
+                          à <span className="font-mono tabular-nums">{formatDuration(travel.slow!)}</span> selon tes vaisseaux
+                        </>
+                      )}
                     </p>
                   ) : (
                     <p>Aucun vaisseau d'attaque disponible.</p>
@@ -587,7 +592,8 @@ export function GalaxyPage() {
               {selectedDebris && (
                 <div className="hud-callout hud-tone-mint flex items-center gap-2 px-3 py-2 text-xs text-slate-300">
                   <span className="flex-1">
-                    <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> {formatCompact(selectedDebris.scrap)} · <ResourceIcon id="energy" /> {formatCompact(selectedDebris.energy)}
+                    <GameIcon name="recycle" /> Débris : <ResourceIcon id="scrap" /> <span className="font-mono tabular-nums">{formatCompact(selectedDebris.scrap)}</span> · <ResourceIcon id="energy" />{" "}
+                    <span className="font-mono tabular-nums">{formatCompact(selectedDebris.energy)}</span>
                   </span>
                   <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setRecycleField(selectedDebris)}>
                     <Recycle className="mr-1 h-3.5 w-3.5" /> Recycler

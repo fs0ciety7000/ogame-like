@@ -1,6 +1,6 @@
 import { BanGate } from "@/components/layout/BanGate";
 import { Suspense, useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { installUiFx } from "@/lib/fx/installUiFx";
 import { HudToaster } from "@/components/ui/hud-toast";
@@ -53,8 +53,7 @@ function BibleRedirect() {
 
 const SimulatorPage = lazyPage(() => import("@/pages/SimulatorPage"), "SimulatorPage");
 const PlannerPage = lazyPage(() => import("@/pages/PlannerPage"), "PlannerPage");
-const AuctionHousePage = lazyPage(() => import("@/pages/AuctionHousePage"), "AuctionHousePage");
-const MarketPage = lazyPage(() => import("@/pages/MarketPage"), "MarketPage");
+const CommercePage = lazyPage(() => import("@/pages/CommercePage"), "CommercePage");
 const ColoniesPage = lazyPage(() => import("@/pages/ColoniesPage"), "ColoniesPage");
 const LeviathanPage = lazyPage(() => import("@/pages/LeviathanPage"), "LeviathanPage");
 const GazettePage = lazyPage(() => import("@/pages/GazettePage"), "GazettePage");
@@ -120,8 +119,10 @@ export default function App() {
                 <Route path="combats" element={<CombatLogPage />} />
                 <Route path="simulateur" element={<SimulatorPage />} />
                 <Route path="planificateur" element={<PlannerPage />} />
-                <Route path="marche" element={<MarketPage />} />
-                <Route path="encheres" element={<AuctionHousePage />} />
+                <Route path="commerce" element={<CommercePage />} />
+                {/* 5.26 : Marché et Hôtel des enchères réunis dans Commerce (anciens liens gardés). */}
+                <Route path="marche" element={<CommerceRedirect tab="marche" />} />
+                <Route path="encheres" element={<CommerceRedirect tab="encheres" />} />
                 <Route path="uber" element={<LeviathanPage />} />
                 {/* 5.15 : ancienne adresse du boss mondial (liens des notifications passées). */}
                 <Route path="leviathan" element={<Navigate to="/game/uber" replace />} />
@@ -180,4 +181,11 @@ function StaticPageRedirect({ to }: { to: string }) {
     window.location.replace(to);
   }, [to]);
   return null;
+}
+
+/** 5.26 : anciennes adresses du Marché et de l'Hôtel des enchères → onglet de Commerce. */
+function CommerceRedirect({ tab }: { tab: "marche" | "encheres" }) {
+  const [params] = useSearchParams();
+  const onglet = tab === "marche" && params.get("onglet") === "contrats" ? "contrats" : tab;
+  return <Navigate to={`/game/commerce?onglet=${onglet}`} replace />;
 }

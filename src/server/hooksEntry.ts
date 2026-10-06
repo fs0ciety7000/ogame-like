@@ -30,7 +30,7 @@ export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody,
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
 export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, MARKET_RULES, offerReserved, refundOffer, utcDayStart } from "@/game/market";
 export { RESOURCE_LIST } from "@/game/resources";
-export { addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeFromPot } from "@/game/serverPot";
+export { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
 export { isFormation } from "@/game/formations";
 export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
 export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeClaimable, challengeRewardees, challengeTier, challengeTierIndex, claimChallengeReward, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
@@ -220,4 +220,4 @@ export { ONLINE_MS } from "@/game/retention";
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-export { AUCTION_RULES, canCancel, creditBid, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { AUCTION_RULES, canCancel, creditBid, currencyLabel, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";

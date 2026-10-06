@@ -1,11 +1,12 @@
 import { Coins } from "lucide-react";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { AmberAmount } from "@/components/ui/amber";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatCompact } from "@/lib/utils";
 import { useServerPot } from "@/services/serverPotService";
 import type { ResourceId } from "@/types/game";
 
-/** v5.10 : solde du pot commun « Serveur », visible des joueurs (Marché). */
+/** v5.10 : solde du pot commun « Serveur », visible des joueurs (Commerce). Ambre comprise (5.26). */
 export function ServerPotCard() {
   const pot = useServerPot();
   if (!pot) return null;
@@ -15,7 +16,7 @@ export function ServerPotCard() {
       <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-gold-glow">
         <Coins className="h-3.5 w-3.5" /> Pot commun du serveur
       </span>
-      {list.length === 0 ? (
+      {list.length === 0 && !(pot.amber > 0) ? (
         <span className="text-slate-500">vide pour l'instant</span>
       ) : (
         list.map(([id, v]) => (
@@ -24,7 +25,8 @@ export function ServerPotCard() {
           </span>
         ))
       )}
-      <span className="basis-full text-[11px] text-slate-500 sm:ml-auto sm:basis-auto">Taxes du marché et des cadeaux : réservé aux concours et récompenses collectives.</span>
+      {pot.amber > 0 && <AmberAmount value={pot.amber} label={false} className="font-mono tabular-nums" />}
+      <span className="basis-full text-[11px] text-slate-500 sm:ml-auto sm:basis-auto">Taxes du marché, des enchères et des cadeaux : réservé aux concours et récompenses collectives.</span>
     </div>
   );
 }

@@ -162,6 +162,7 @@ __export(hooksEntry_exports, {
   activeWarBetween: () => activeWarBetween,
   activityProfile: () => activityProfile,
   adaptWarlord: () => adaptWarlord,
+  addAmberToPot: () => addAmberToPot,
   addCapsule: () => addCapsule,
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
@@ -285,6 +286,7 @@ __export(hooksEntry_exports, {
   creditBid: () => creditBid,
   cronStatus: () => cronStatus,
   cronSummary: () => cronSummary,
+  currencyLabel: () => currencyLabel,
   currentGameContent: () => currentGameContent,
   currentSeasonId: () => currentSeasonId,
   dailyMemberOf: () => dailyMemberOf,
@@ -570,6 +572,7 @@ __export(hooksEntry_exports, {
   startVacation: () => startVacation,
   stationGarrison: () => stationGarrison,
   surrender: () => surrender,
+  takeAmberFromPot: () => takeAmberFromPot,
   takeFromPot: () => takeFromPot,
   takeLot: () => takeLot,
   tally: () => tally,
@@ -17313,7 +17316,7 @@ var POT_SOURCE_LABELS = {
   admin: "Administration"
 };
 function emptyServerPot() {
-  return { resources: {}, totals: {}, log: [], updatedAtMs: 0 };
+  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
 }
 function cleanAmounts(raw) {
   const out = {};
@@ -17335,7 +17338,9 @@ function normalizeServerPot(raw) {
   return {
     resources: cleanAmounts(r.resources),
     totals,
-    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
+    amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
+    log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
     updatedAtMs: Number(r.updatedAtMs) || 0
   };
 }
@@ -17353,12 +17358,12 @@ function addToPot(pot, source, amounts, now, note4) {
     resources[k] = ((_b = resources[k]) != null ? _b : 0) + n;
     total2[k] = ((_c = total2[k]) != null ? _c : 0) + n;
   }
-  return {
+  return __spreadProps(__spreadValues({}, pot), {
     resources,
     totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
-  };
+  });
 }
 function takeFromPot(pot, amounts, now, note4) {
   var _a, _b;
@@ -17382,6 +17387,21 @@ function giftTax(sent, delivered) {
     if (lost > 0) out[k] = lost;
   }
   return out;
+}
+function addAmberToPot(pot, source, amount3, now, note4) {
+  const n = Math.floor(Number(amount3));
+  if (!(n > 0)) return pot;
+  return __spreadProps(__spreadValues({}, pot), {
+    amber: pot.amber + n,
+    amberTotal: pot.amberTotal + n,
+    log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
+    updatedAtMs: now
+  });
+}
+function takeAmberFromPot(pot, amount3, now, note4) {
+  const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
+  if (!(n > 0)) return { pot, taken: 0 };
+  return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
 }
 
 // src/game/messages.ts
@@ -23603,10 +23623,23 @@ var AUCTION_RULES = {
   taxRate: 0.05,
   maxOpenPerSeller: 5,
   durationsH: [6, 12, 24, 48],
-  minStart: 100,
+  /** Mise à prix minimale : ressource commune, ressource rare, Ambre. */
+  minStart: { common: 100, rare: 1, amber: 1 },
   maxStart: 1e12
 };
-var AUCTION_CURRENCIES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
+var AUCTION_CURRENCIES = [...RESOURCE_LIST.map((r) => r.id), "amber"];
+function currencyKind(res) {
+  var _a;
+  if (res === "amber") return "amber";
+  return ((_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.rarity) === "rare" ? "rare" : "common";
+}
+function minStartFor(res) {
+  return AUCTION_RULES.minStart[currencyKind(res)];
+}
+function currencyLabel(res) {
+  var _a, _b;
+  return res === "amber" ? "Ambre" : (_b = (_a = RESOURCE_LIST.find((r) => r.id === res)) == null ? void 0 : _a.name) != null ? _b : res;
+}
 function validateListing(raw, openCount) {
   const r = raw && typeof raw === "object" ? raw : {};
   const kind = r.kind === "relic" || r.kind === "module" ? r.kind : null;
@@ -23614,9 +23647,10 @@ function validateListing(raw, openCount) {
   const itemId = typeof r.itemId === "string" ? r.itemId : "";
   if (!itemId) throw new GameActionError("Choisis l'objet \xE0 vendre.");
   const res = String(r.res);
-  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie refus\xE9e : une ressource commune seulement.");
+  if (!AUCTION_CURRENCIES.includes(res)) throw new GameActionError("Monnaie inconnue.");
   const startPrice = Math.floor(Number(r.startPrice));
-  if (!(startPrice >= AUCTION_RULES.minStart && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise \xE0 prix entre ${AUCTION_RULES.minStart} et 10^12.`);
+  const min = minStartFor(res);
+  if (!(startPrice >= min && startPrice <= AUCTION_RULES.maxStart)) throw new GameActionError(`Mise \xE0 prix : au moins ${min} ${currencyLabel(res).toLowerCase()}.`);
   const durationH = Math.floor(Number(r.durationH));
   if (!AUCTION_RULES.durationsH.includes(durationH)) throw new GameActionError("Dur\xE9e refus\xE9e.");
   if (openCount >= AUCTION_RULES.maxOpenPerSeller) throw new GameActionError(`${AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.`);
@@ -23681,15 +23715,27 @@ function settleAuction(a) {
 function canCancel(a) {
   return a.status === "open" && !(a.bid > 0);
 }
-function debitBid(player, res, amount3) {
+function currencyBalance(player, res) {
   var _a;
+  return Math.floor(res === "amber" ? bountyState(player).amber : (_a = player.resources[res]) != null ? _a : 0);
+}
+function debitBid(player, res, amount3) {
   if (!(amount3 > 0)) return;
-  if (Math.floor((_a = player.resources[res]) != null ? _a : 0) < amount3) throw new GameActionError("Ressources insuffisantes pour cette ench\xE8re.");
-  player.resources[res] -= amount3;
+  if (currencyBalance(player, res) < amount3) throw new GameActionError(res === "amber" ? "Pas assez d'Ambre pour cette ench\xE8re." : "Ressources insuffisantes pour cette ench\xE8re.");
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber -= amount3;
+    player.bounties = st;
+  } else player.resources[res] -= amount3;
 }
 function creditBid(player, res, amount3) {
   var _a;
-  if (amount3 > 0) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  if (!(amount3 > 0)) return;
+  if (res === "amber") {
+    const st = bountyState(player);
+    st.amber += amount3;
+    player.bounties = st;
+  } else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
 }
 
 // src/server/hooksEntry.ts

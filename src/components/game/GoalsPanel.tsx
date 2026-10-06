@@ -9,7 +9,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { BUILDINGS } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
-import { GOAL_RULES, planGoal, type Goal, type GoalKind, type GoalPlan } from "@/game/goals";
+import { GOAL_RULES, planGoal, type GoalKind, type GoalPlan } from "@/game/goals";
 import type { ActionStep } from "@/game/actionTemplates";
 import { addGoal, removeGoal, useGoals } from "@/lib/goalStore";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
@@ -49,7 +49,7 @@ function eta(plan: GoalPlan) {
   return `≈ ${formatDuration(plan.etaSeconds)}`;
 }
 
-function GoalRow({ goal, plan, onRemove, onTemplate }: { goal: Goal; plan: GoalPlan; onRemove: () => void; onTemplate: () => void }) {
+function GoalRow({ plan, onRemove, onTemplate }: { plan: GoalPlan; onRemove: () => void; onTemplate: () => void }) {
   const [open, setOpen] = useState(false);
   const missing = Object.entries(plan.missing) as [ResourceId, number][];
   return (
@@ -63,7 +63,9 @@ function GoalRow({ goal, plan, onRemove, onTemplate }: { goal: Goal; plan: GoalP
         <>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
             <span className="font-mono">{plan.steps.length} étape{plan.steps.length > 1 ? "s" : ""}</span>
-            <span>chantiers {formatDuration(plan.buildSeconds)}</span>
+            <span>
+              chantiers <span className="font-mono tabular-nums">{formatDuration(plan.buildSeconds)}</span>
+            </span>
             {missing.length > 0 ? (
               <span className="flex flex-wrap items-center gap-2">
                 manque
@@ -169,7 +171,7 @@ export function GoalsPanel({ uid, player, queues, now, onTemplate }: { uid: stri
       ) : (
         <ul className="flex flex-col gap-2">
           {plans.map(({ goal, plan }) => (
-            <GoalRow key={goal.id} goal={goal} plan={plan} onRemove={() => removeGoal(uid, goal.id)} onTemplate={() => onTemplate(`Objectif : ${plan.label}`.slice(0, 32), planToTemplate(plan))} />
+            <GoalRow key={goal.id} plan={plan} onRemove={() => removeGoal(uid, goal.id)} onTemplate={() => onTemplate(`Objectif : ${plan.label}`.slice(0, 32), planToTemplate(plan))} />
           ))}
         </ul>
       )}

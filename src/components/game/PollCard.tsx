@@ -74,7 +74,13 @@ export function PollCard({ id, poll, className }: { id: string; poll: Poll; clas
         })}
       </ul>
       <p className="text-[11px] text-slate-500">
-        {show ? `${formatNumber(results?.total ?? 0)} vote${(results?.total ?? 0) > 1 ? "s" : ""}` : "Vote pour voir les résultats."}
+        {show ? (
+          <>
+            <span className="font-mono tabular-nums">{formatNumber(results?.total ?? 0)}</span> vote{(results?.total ?? 0) > 1 ? "s" : ""}
+          </>
+        ) : (
+          "Vote pour voir les résultats."
+        )}
         {open && results?.mine !== null && results?.mine !== undefined && " · tu peux changer d'avis jusqu'à la clôture."}
       </p>
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUCTION_RULES, canCancel, debitBid, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
+import { AUCTION_RULES, canCancel, creditBid, currencyBalance, debitBid, minStartFor, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
 import { addModuleItem, modulesState } from "@/game/modules";
 import { relicsState } from "@/game/relics";
 import { defaultPlayerState } from "@/game/defaults";
@@ -15,7 +15,10 @@ const auction = (patch: Partial<Auction> = {}): Auction => ({
 describe("hôtel des enchères", () => {
   it("valide une mise en vente", () => {
     expect(validateListing({ kind: "relic", itemId: "a", res: "scrap", startPrice: 5000, durationH: 24 }, 0).startPrice).toBe(5000);
-    expect(() => validateListing({ kind: "relic", itemId: "a", res: "aiFragment", startPrice: 5000, durationH: 24 }, 0)).toThrow(/commune/);
+    expect(validateListing({ kind: "relic", itemId: "a", res: "aiFragment", startPrice: 3, durationH: 24 }, 0).res).toBe("aiFragment");
+    expect(validateListing({ kind: "module", itemId: "a", res: "amber", startPrice: 1, durationH: 6 }, 0).res).toBe("amber");
+    expect(() => validateListing({ kind: "relic", itemId: "a", res: "pierre", startPrice: 5000, durationH: 24 }, 0)).toThrow(/inconnue/);
+    expect(() => validateListing({ kind: "relic", itemId: "a", res: "scrap", startPrice: 50, durationH: 24 }, 0)).toThrow(/au moins 100/);
     expect(() => validateListing({ kind: "relic", itemId: "a", res: "scrap", startPrice: 5000, durationH: 7 }, 0)).toThrow(/Durée/);
     expect(() => validateListing({ kind: "relic", itemId: "a", res: "scrap", startPrice: 5000, durationH: 24 }, AUCTION_RULES.maxOpenPerSeller)).toThrow(/ouvertes/);
   });
@@ -88,5 +91,21 @@ describe("hôtel des enchères", () => {
     expect(() => debitBid(p, "scrap", 11)).toThrow(/insuffisantes/);
     debitBid(p, "scrap", 10);
     expect(p.resources.scrap).toBe(0);
+  });
+
+  it("monnaies : ressources rares et Ambre, débitées et créditées au bon endroit", () => {
+    expect(minStartFor("scrap")).toBe(100);
+    expect(minStartFor("aiFragment")).toBe(1);
+    expect(minStartFor("amber")).toBe(1);
+    const p = player({ bounties: { amber: 30 } as PlayerState["bounties"] });
+    expect(currencyBalance(p, "amber")).toBe(30);
+    expect(() => debitBid(p, "amber", 31)).toThrow(/Ambre/);
+    debitBid(p, "amber", 12);
+    expect(currencyBalance(p, "amber")).toBe(18);
+    creditBid(p, "amber", 5);
+    expect(currencyBalance(p, "amber")).toBe(23);
+    p.resources.aiFragment = 4;
+    debitBid(p, "aiFragment", 3);
+    expect(p.resources.aiFragment).toBe(1);
   });
 });

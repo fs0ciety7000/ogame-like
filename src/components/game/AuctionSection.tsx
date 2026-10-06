@@ -1,36 +1,50 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Gavel, Gem, History, Puzzle, Tag, Timer, Trophy, X } from "lucide-react";
-import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudCallout, HudChip, StatTile } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { askConfirm } from "@/components/ui/confirm-dialog";
-import { ResourceSelect } from "@/components/game/ResourceSelect";
-import { AUCTION_CURRENCIES, AUCTION_RULES, canCancel, lotRarity, minNextBid, type Auction, type AuctionKind } from "@/game/auctions";
+import { AmberIcon } from "@/components/ui/amber";
+import { IconSelect, type IconSelectOption } from "@/components/ui/icon-select";
+import { AUCTION_CURRENCIES, AUCTION_RULES, canCancel, currencyBalance, currencyKind, currencyLabel, lotRarity, minNextBid, minStartFor, type Auction, type AuctionCurrency, type AuctionKind } from "@/game/auctions";
 import { relicLabel, relicsState, describeRelic } from "@/game/relics";
 import { describeModule, moduleLabel, modulesState } from "@/game/modules";
-import { RESOURCE_LIST } from "@/game/resources";
 import { bidAuction, cancelAuction, listAuction, useAuctions } from "@/services/auctionService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
-import type { ResourceId } from "@/types/game";
 
-/* 5.26 : Hôtel des enchères. Reliques (ni mythiques, ni équipées) et plans
-   de modules, contre une ressource commune ; taxe de 5 % au pot commun. */
+/* 5.26 : Hôtel des enchères (onglet de la page Commerce). Reliques (ni
+   mythiques, ni équipées) et plans de modules, contre une ressource commune,
+   une ressource rare ou de l'Ambre ; taxe de 5 % au pot commun. */
 
-const resName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
+function CurrencyIcon({ res, className }: { res: AuctionCurrency; className?: string }) {
+  return res === "amber" ? <AmberIcon className={cn("h-3.5 w-3.5", className)} /> : <ResourceIcon id={res} className={cn("h-3.5 w-3.5", className)} />;
+}
 
-function Price({ res, value, className }: { res: string; value: number; className?: string }) {
+function Price({ res, value, className }: { res: AuctionCurrency; value: number; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 font-mono", className)}>
-      <ResourceIcon id={res as ResourceId} className="h-3.5 w-3.5" />
+    <span className={cn("inline-flex items-center gap-1 font-mono tabular-nums", className)}>
+      <CurrencyIcon res={res} />
       {formatCompact(value)}
     </span>
   );
+}
+
+const CURRENCY_GROUPS: Record<ReturnType<typeof currencyKind>, string> = { common: "commune", rare: "rare", amber: "Ruche" };
+
+/** Monnaie de la vente : ressources communes, rares, ou Ambre. */
+function CurrencySelect({ value, onChange }: { value: AuctionCurrency; onChange: (v: AuctionCurrency) => void }) {
+  const options: IconSelectOption<AuctionCurrency>[] = AUCTION_CURRENCIES.map((c) => ({
+    value: c,
+    label: currencyLabel(c),
+    icon: <CurrencyIcon res={c} />,
+    hint: <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{CURRENCY_GROUPS[currencyKind(c)]}</span>,
+  }));
+  return <IconSelect value={value} onChange={onChange} options={options} size="sm" ariaLabel="Monnaie de la vente" />;
 }
 
 function LotIcon({ kind }: { kind: AuctionKind }) {
@@ -45,7 +59,7 @@ function LotIcon({ kind }: { kind: AuctionKind }) {
 function SellPanel() {
   const player = usePlayerStore((s) => s.player);
   const [pick, setPick] = useState("");
-  const [res, setRes] = useState<ResourceId>("scrap");
+  const [res, setRes] = useState<AuctionCurrency>("scrap");
   const [price, setPrice] = useState(10_000);
   const [hours, setHours] = useState(24);
   const [busy, setBusy] = useState(false);
@@ -71,7 +85,7 @@ function SellPanel() {
     if (!lot) return;
     const ok = await askConfirm({
       title: `Mettre en vente ${lot.label} ?`,
-      message: `Mise à prix ${formatNumber(price)} ${resName(res).toLowerCase()}, ${hours} h. L'objet quitte ton inventaire ; tu ne pourras annuler que tant que personne n'a enchéri.`,
+      message: `Mise à prix ${formatNumber(price)} ${currencyLabel(res).toLowerCase()}, ${hours} h. L'objet quitte ton inventaire ; tu ne pourras annuler que tant que personne n'a enchéri.`,
       confirmLabel: "Mettre en vente",
       tone: "gold",
     });
@@ -115,11 +129,14 @@ function SellPanel() {
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Monnaie</span>
-              <ResourceSelect value={res} onChange={setRes} only={AUCTION_CURRENCIES} size="sm" ariaLabel="Monnaie de la vente" />
+              <CurrencySelect value={res} onChange={(v) => {
+                  setRes(v);
+                  setPrice((p) => Math.max(p, minStartFor(v)));
+                }} />
             </label>
             <label className="flex flex-col gap-1">
               <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Mise à prix</span>
-              <NumberInput size="sm" quick={false} min={AUCTION_RULES.minStart} step={resourceStep(Math.max(1000, price * 10))} value={price} onChange={setPrice} aria-label="Mise à prix" />
+              <NumberInput size="sm" quick={false} min={minStartFor(res)} step={currencyKind(res) === "common" ? resourceStep(Math.max(1000, price * 10)) : 1} value={price} onChange={setPrice} aria-label="Mise à prix" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -131,9 +148,11 @@ function SellPanel() {
             ))}
           </div>
           <p className="text-[11px] text-slate-500">
-            Taxe de {Math.round(AUCTION_RULES.taxRate * 100)} % sur le prix final, versée au pot commun. {AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.
+            Mise à prix minimale : <span className="font-mono tabular-nums">{formatNumber(minStartFor(res))}</span> {currencyLabel(res).toLowerCase()}. Taxe de{" "}
+            <span className="font-mono tabular-nums">{Math.round(AUCTION_RULES.taxRate * 100)} %</span> sur le prix final, versée au pot
+            commun (Ambre comprise). {AUCTION_RULES.maxOpenPerSeller} ventes ouvertes au plus.
           </p>
-          <Button variant="warn" disabled={!lot || busy || !(price >= AUCTION_RULES.minStart)} onClick={() => void submit()}>
+          <Button variant="warn" disabled={!lot || busy || !(price >= minStartFor(res))} onClick={() => void submit()}>
             <Gavel className="h-4 w-4" /> Mettre en vente
           </Button>
         </div>
@@ -151,7 +170,7 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
   const leading = a.bidderId === uid;
   const left = Math.max(0, a.endsAtMs - now);
   const rarity = lotRarity(a.kind, a.rarity);
-  const stock = Math.floor(player?.resources[a.res] ?? 0);
+  const stock = player ? currencyBalance(player, a.res) : 0;
   const need = leading ? amount - a.bid : amount;
   const value = Math.max(amount, min);
 
@@ -159,7 +178,7 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
     setBusy(true);
     try {
       await bidAuction(a.id, value);
-      toast.success(`Enchère placée : ${formatNumber(value)} ${resName(a.res).toLowerCase()}.`);
+      toast.success(`Enchère placée : ${formatNumber(value)} ${currencyLabel(a.res).toLowerCase()}.`);
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -203,7 +222,7 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
           <span className="inline-flex items-center gap-1">
             {a.bid > 0 ? "meilleure" : "mise à prix"} <Price res={a.res} value={a.bid > 0 ? a.bid : a.startPrice} className="text-slate-100" />
           </span>
-          {a.bid > 0 && <span>par {a.bidderPseudo} · {a.bids} enchère{a.bids > 1 ? "s" : ""}</span>}
+          {a.bid > 0 && <span>par {a.bidderPseudo} · <span className="font-mono tabular-nums">{a.bids}</span> enchère{a.bids > 1 ? "s" : ""}</span>}
           <span className={cn("inline-flex items-center gap-1 font-mono", left < AUCTION_RULES.antiSnipeMs ? "text-ember-glow" : "text-slate-400")}>
             <Timer className="h-3 w-3" aria-hidden /> {left > 0 ? formatDuration(left / 1000) : "clôture…"}
           </span>
@@ -217,8 +236,8 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
         )
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <NumberInput size="sm" quick={false} min={min} step={resourceStep(Math.max(1000, min * 10))} value={value} onChange={setAmount} className="w-36" aria-label="Montant de l'enchère" />
-          <Button size="sm" variant="secondary" disabled={busy || left <= 0 || need > stock} title={need > stock ? `Il te manque ${formatNumber(need - stock)} ${resName(a.res).toLowerCase()}.` : undefined} onClick={() => void bid()}>
+          <NumberInput size="sm" quick={false} min={min} step={currencyKind(a.res) === "common" ? resourceStep(Math.max(1000, min * 10)) : 1} value={value} onChange={setAmount} className="w-36" aria-label="Montant de l'enchère" />
+          <Button size="sm" variant="secondary" disabled={busy || left <= 0 || need > stock} title={need > stock ? `Il te manque ${formatNumber(need - stock)} ${currencyLabel(a.res).toLowerCase()}.` : undefined} onClick={() => void bid()}>
             <Gavel className="h-3.5 w-3.5" /> {leading ? "Surenchérir" : "Enchérir"}
           </Button>
         </div>
@@ -227,7 +246,8 @@ function AuctionRow({ a, uid, now }: { a: Auction; uid: string; now: number }) {
   );
 }
 
-export function AuctionHousePage() {
+/** Onglet « Enchères » de la page Commerce. */
+export function AuctionSection() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
   const uid = player?.uid;
@@ -242,11 +262,10 @@ export function AuctionHousePage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader
-        eyebrow="Commerce"
-        title="Hôtel des enchères"
-        description="Reliques et plans de modules au plus offrant. Ta mise est prélevée tout de suite et rendue si quelqu'un surenchérit ; une enchère dans les 5 dernières minutes prolonge la vente."
-      />
+      <p className="text-sm text-slate-400">
+        Reliques et plans de modules au plus offrant, en ressources ou en Ambre. Ta mise est prélevée tout de suite et rendue si quelqu'un surenchérit ; une enchère dans les 5
+        dernières minutes prolonge la vente.
+      </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Ventes ouvertes" value={formatNumber(open.length)} tone="accent" />
         <StatTile label="En tête sur" value={formatNumber(leadingCount)} tone="mint" />

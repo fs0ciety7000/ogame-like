@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
-import type { Auction, AuctionKind } from "@/game/auctions";
-import type { ResourceId } from "@/types/game";
+import type { Auction, AuctionCurrency, AuctionKind } from "@/game/auctions";
 
 /* 5.26 : Hôtel des enchères (ventes ouvertes en direct, mes ventes et mises closes). */
 
@@ -53,7 +52,7 @@ async function call<T>(payload: Record<string, unknown>, fallback: string): Prom
   }
 }
 
-export function listAuction(input: { kind: AuctionKind; itemId: string; res: ResourceId; startPrice: number; durationH: number }) {
+export function listAuction(input: { kind: AuctionKind; itemId: string; res: AuctionCurrency; startPrice: number; durationH: number }) {
   return call<Auction>({ action: "list", ...input }, "Mise en vente impossible.");
 }
 

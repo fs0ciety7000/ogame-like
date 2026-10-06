@@ -12,16 +12,17 @@ import { POT_SOURCE_LABELS, type PotSource, type ServerPot } from "@/game/server
 import { adminServerPot, adminServerPotDeposit, adminServerPotGrant } from "@/services/serverPotService";
 import type { ResourceId } from "@/types/game";
 import { askConfirm } from "@/components/ui/confirm-dialog";
+import { AmberIcon } from "@/components/ui/amber";
 
 /* v5.10 : pot commun « Serveur » — solde, provenance, mouvements, et
    versement à un joueur (concours, événements). */
 
-function Amounts({ values, sign = false }: { values: Partial<Record<string, number>>; sign?: boolean }) {
+function Amounts({ values, amber = 0, sign = false }: { values: Partial<Record<string, number>>; amber?: number; sign?: boolean }) {
   const order = RESOURCE_LIST.map((r) => r.id as string);
   const list = Object.entries(values)
     .filter(([, v]) => (v ?? 0) !== 0)
     .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])) as [ResourceId, number][];
-  if (list.length === 0) return <span className="text-xs text-slate-500">—</span>;
+  if (list.length === 0 && !amber) return <span className="text-xs text-slate-500">—</span>;
   return (
     <span className="flex flex-wrap gap-1">
       {list.map(([id, v]) => (
@@ -30,6 +31,12 @@ function Amounts({ values, sign = false }: { values: Partial<Record<string, numb
           {formatCompact(v)}
         </span>
       ))}
+      {amber !== 0 && (
+        <span className="inline-flex items-center gap-1 border border-white/10 bg-white/[0.03] px-1.5 py-0.5 font-mono text-[11px] tabular-nums">
+          <AmberIcon /> {sign && amber > 0 ? "+" : ""}
+          {formatCompact(amber)}
+        </span>
+      )}
     </span>
   );
 }
@@ -40,6 +47,7 @@ export function ServerPotPanel() {
   const [pseudo, setPseudo] = useState("");
   const [note, setNote] = useState("");
   const [amounts, setAmounts] = useState<Record<string, number>>({});
+  const [amberGrant, setAmberGrant] = useState(0);
   // v5.14.2 : dépôt de l'administration (ressources créées, ajoutées au pot).
   const [depNote, setDepNote] = useState("");
   const [deposit, setDeposit] = useState<Record<string, number>>({});
@@ -59,9 +67,10 @@ export function ServerPotPanel() {
     setBusy(true);
     try {
       const target = await pb.collection("players").getFirstListItem<{ id: string; pseudo: string }>(pb.filter("pseudo = {:p}", { p: pseudo.trim() }));
-      setPot(await adminServerPotGrant(target.id, amounts, note));
+      setPot(await adminServerPotGrant(target.id, amounts, note, amberGrant));
       toast.success(`Versé à ${target.pseudo}.`);
       setAmounts({});
+      setAmberGrant(0);
     } catch (err) {
       const msg = (err as { response?: { message?: string } })?.response?.message ?? (err as Error).message;
       toast.error(msg.includes("wasn't found") || msg.includes("404") ? "Joueur introuvable (pseudo exact)." : msg);
@@ -101,18 +110,18 @@ export function ServerPotPanel() {
           </Button>
         </div>
         <p className="text-xs text-slate-400">
-          Les taxes du marché (offres et ordres d'achat) et la part perdue des cadeaux hors alliance arrivent ici au lieu de disparaître. Le pot sert aux concours et
+          Les taxes du marché (offres et ordres d'achat), des enchères (ressources et Ambre) et la part perdue des cadeaux hors alliance arrivent ici au lieu de disparaître. Le pot sert aux concours et
           récompenses collectives : verse-le à un joueur ci-dessous.
         </p>
         <div>
           <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Solde</p>
-          <Amounts values={pot.resources} />
+          <Amounts values={pot.resources} amber={pot.amber} />
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {sources.map((s) => (
             <div key={s} className="border border-white/[0.06] bg-white/[0.02] p-2">
               <p className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{POT_SOURCE_LABELS[s]} (total reçu)</p>
-              <Amounts values={pot.totals[s] ?? {}} />
+              <Amounts values={pot.totals[s] ?? {}} amber={s === "auction" ? pot.amberTotal : 0} />
             </div>
           ))}
         </div>
@@ -160,12 +169,20 @@ export function ServerPotPanel() {
           {RESOURCE_LIST.filter((r) => (pot.resources[r.id] ?? 0) > 0).map((r) => (
             <div key={r.id} className="flex items-center gap-2 text-sm">
               <span className="flex-1 text-slate-300">
-                <ResourceIcon id={r.id} /> {r.name} <span className="text-xs text-slate-500">(max {formatNumber(pot.resources[r.id] ?? 0)})</span>
+                <ResourceIcon id={r.id} /> {r.name} <span className="font-mono text-xs tabular-nums text-slate-500">(max {formatNumber(pot.resources[r.id] ?? 0)})</span>
               </span>
               <NumberInput size="sm" max={pot.resources[r.id] ?? 0} value={amounts[r.id] ?? 0} onChange={(v) => setAmounts((a) => ({ ...a, [r.id]: v }))} className="w-36" aria-label={`Montant ${r.name}`} />
             </div>
           ))}
         </div>
+        {pot.amber > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="flex-1 text-slate-300">
+              <AmberIcon /> Ambre <span className="font-mono text-xs tabular-nums text-slate-500">(max {formatNumber(pot.amber)})</span>
+            </span>
+            <NumberInput size="sm" max={pot.amber} value={amberGrant} onChange={setAmberGrant} className="w-36" aria-label="Montant Ambre" />
+          </div>
+        )}
         <Button className="self-start" disabled={busy || !pseudo.trim() || !note.trim()} onClick={() => void grant()}>
           Verser
         </Button>
@@ -181,7 +198,7 @@ export function ServerPotPanel() {
               <li key={`${l.atMs}-${i}`} className="flex flex-wrap items-center gap-2 border-b border-white/5 pb-1.5 text-xs">
                 <span className="w-24 shrink-0 font-mono text-slate-500">{timeAgo(l.atMs)}</span>
                 <span className="w-32 shrink-0 text-slate-300">{POT_SOURCE_LABELS[l.source]}</span>
-                <Amounts values={l.resources} sign />
+                <Amounts values={l.resources} amber={l.amber ?? 0} sign />
                 {l.note && <span className="text-slate-400">· {l.note}</span>}
               </li>
             ))}

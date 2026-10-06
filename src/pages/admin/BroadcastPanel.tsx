@@ -18,7 +18,7 @@ const LINKS = [
   { value: "/game/etat-major", label: "État-major (officiers, reliques, capsules)" },
   { value: "/game/boss", label: "Boss de saison" },
   { value: "/game/concours", label: "Concours" },
-  { value: "/game/marche", label: "Marché" },
+  { value: "/game/commerce", label: "Commerce" },
   { value: "/game/alliance", label: "Alliance" },
   { value: "/game/passe", label: "Passe de saison" },
   { value: "/game/nouveautes", label: "Nouveautés" },

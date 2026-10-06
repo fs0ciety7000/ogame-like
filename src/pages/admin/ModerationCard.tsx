@@ -100,7 +100,14 @@ export function ModerationCard({ player, onDeleted }: { player: AdminPlayer; onD
       {ban ? (
         <HudCallout tone="danger" className="flex flex-wrap items-center gap-3 text-xs">
           <span className="min-w-0 flex-1">
-            {ban.untilMs === null ? "Banni définitivement" : `Suspendu encore ${formatDuration(Math.max(0, ban.untilMs - Date.now()) / 1000)}`} · par {ban.byName}
+            {ban.untilMs === null ? (
+              "Banni définitivement"
+            ) : (
+              <>
+                Suspendu encore <span className="font-mono tabular-nums">{formatDuration(Math.max(0, ban.untilMs - Date.now()) / 1000)}</span>
+              </>
+            )}{" "}
+            · par {ban.byName}
             <span className="block text-slate-400">Motif : {ban.reason}</span>
           </span>
           <Button size="sm" variant="secondary" disabled={busy} onClick={() => void lift()}>

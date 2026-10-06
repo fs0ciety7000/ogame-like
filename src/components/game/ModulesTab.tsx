@@ -183,7 +183,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
                   )}
                   {!item.built && (
                     <Button size="sm" variant="ghost" asChild title="Mettre aux enchères">
-                      <Link to="/game/encheres">
+                      <Link to="/game/commerce?onglet=encheres">
                         <Gavel className="h-3.5 w-3.5" />
                       </Link>
                     </Button>

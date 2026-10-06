@@ -74,7 +74,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
         <span className="text-[11px] text-slate-500">tout le serveur · modéré</span>
         {muted.length > 0 && (
           <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setShowMuted((v) => !v)} aria-pressed={showMuted}>
-            {showMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />} {showMuted ? "Cacher" : "Voir"} les masqués ({muted.length})
+            {showMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />} {showMuted ? "Cacher" : "Voir"} les masqués <span className="font-mono tabular-nums">({muted.length})</span>
           </Button>
         )}
       </div>

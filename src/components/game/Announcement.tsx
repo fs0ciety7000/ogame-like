@@ -61,7 +61,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     features: [
       { title: "Statistiques et cartes", text: "Tout l'empire sur une page, export CSV ou PDF, carte d'empire et de profil à partager sur Discord.", to: "/game/statistiques", image: "/assets/logo/logo.webp" },
       { title: "Alliances", text: "24 secteurs à tenir, guerres de saison, coffre de guerre et une saga par mois aux objectifs communs.", to: "/game/alliance?onglet=saga", image: "/assets/story/gravhorn.webp" },
-      { title: "Commerce", text: "Ordres d'achat, contrats de livraison et le Courtier du Comptoir quand personne ne vend.", to: "/game/marche", image: "/assets/warlords/kragmor-sceau.webp" },
+      { title: "Commerce", text: "Ordres d'achat, contrats de livraison et le Courtier du Comptoir quand personne ne vend.", to: "/game/commerce", image: "/assets/warlords/kragmor-sceau.webp" },
       { title: "Colonies", text: "Un biome et son gisement rare par colonie, et tous les bonus de l'empire appliqués là-bas aussi.", to: "/game/colonies", image: "/assets/buildings/gisement_aiFragment.webp" },
       { title: "Chapitres vivants", text: "Un chapitre par mois écrit d'après vos exploits, avec titres, bannières et page Formules.", to: "/game/passe", image: "/assets/chronicles/2026-10-sceau.webp" },
       { title: "Fin de partie", text: "Talents d'Ascension, reliques mythiques, série de connexion et officiers qui progressent partout.", to: "/game/etat-major", image: "/assets/buildings/fonderie_quantique.webp" },
@@ -97,7 +97,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     emblem: "/assets/leviathan/leviathan-emblem.webp",
     features: [
       { title: "Codex", text: "Fiches illustrées à débloquer en jouant. À 100 %, le titre « Archiviste ».", to: "/game/codex", image: "/assets/warlords/brannoc-sceau.webp" },
-      { title: "Prix du marché", text: "Courbe des 30 derniers jours par ressource, badge « Prix anormal ».", to: "/game/marche" },
+      { title: "Prix du marché", text: "Courbe des 30 derniers jours par ressource, badge « Prix anormal ».", to: "/game/commerce" },
       { title: "Spectacle", text: "Intro de combat, colonies en orbite, portraits vivants, neige d'hiver.", to: "/game" },
     ],
     cta: { label: "Ouvrir le Codex", to: "/game/codex" },
@@ -231,7 +231,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     features: [
       { title: "Dix seigneurs", text: "Agressifs, opportunistes, bâtisseurs, marchands : badge PNJ, hors récompenses de classement.", to: "/game/seigneurs", image: "/assets/warlords/zharkesh-sceau.webp" },
       { title: "Raids mesurés", text: "Une attaque par cible tous les 3 jours au plus, jamais sous Bronze I, 3 à 5 h de trajet, butin plafonné.", to: "/game/seigneurs", image: "/assets/warlords/tivrek-sceau.webp" },
-      { title: "Marché vivant", text: "Les marchands publient leurs offres chaque jour, à ±10 % du comptoir.", to: "/game/marche", image: "/assets/warlords/kragmor-sceau.webp" },
+      { title: "Marché vivant", text: "Les marchands publient leurs offres chaque jour, à ±10 % du comptoir.", to: "/game/commerce", image: "/assets/warlords/kragmor-sceau.webp" },
       { title: "Mode vacances", text: "2 à 21 jours : base protégée, production à 25 %, chantiers en pause.", to: "/game/reglages" },
     ],
     cta: { label: "Voir les seigneurs", to: "/game/seigneurs" },
@@ -338,7 +338,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
     features: [
       { title: "Le Léviathan", text: "Vendredi 18 h → lundi 18 h. Un assaut toutes les 4 h, récompenses selon tes dégâts.", to: "/game/uber" },
       { title: "Expéditions", text: "2 à 8 h dans l'inconnu : gisements, épaves, embuscades, rencontres… et des choix.", to: "/game/missions" },
-      { title: "Marché", text: "Échange tes surplus avec les autres commandants, sans passer par le comptoir.", to: "/game/marche" },
+      { title: "Marché", text: "Échange tes surplus avec les autres commandants, sans passer par le comptoir.", to: "/game/commerce" },
       { title: "Formations et posture", text: "Assaut, Prudente, Raid… et choisis comment ta base encaisse les attaques.", to: "/game/unites" },
       { title: "Simulateur", text: "Teste un combat sans risque avant d'envoyer ta flotte.", to: "/game/simulateur" },
       { title: "Guerres d'alliance", text: "Déclare la guerre, marque des points, remporte le trésor et le titre « Vainqueurs ».", to: "/game/alliance" },

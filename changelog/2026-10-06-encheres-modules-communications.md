@@ -6,11 +6,14 @@ title: Hôtel des enchères, modules de vaisseaux, canal global et planificateur
 ---
 Une grosse mise à jour de confort et de jeu : de quoi échanger, s'équiper, se parler et s'organiser.
 
+## Commerce : Marché, Contrats et Enchères
+- Le Marché devient **Commerce**, une seule page à trois onglets : **Marché** (offres et ordres d'achat), **Contrats** de livraison et **Enchères**. Les anciens liens mènent au bon onglet.
+
 ## Hôtel des enchères
-- Mets en vente une **relique** (ni mythique, ni équipée) ou un **plan de module**, contre une ressource commune, pour 6, 12, 24 ou 48 h.
+- Mets en vente une **relique** (ni mythique, ni équipée) ou un **plan de module**, pour 6, 12, 24 ou 48 h, contre la monnaie de ton choix : **ressource commune, ressource rare ou Ambre**.
 - Ta mise est **prélevée tout de suite** et **rendue** dès que quelqu'un surenchérit (au moins +5 %).
 - Une enchère dans les **5 dernières minutes** prolonge la vente de 5 minutes.
-- À la clôture : l'objet part au gagnant, le vendeur touche le prix moins **5 % de taxe, versée au pot commun**. Sans enchère, l'objet revient.
+- À la clôture : l'objet part au gagnant, le vendeur touche le prix moins **5 % de taxe, versée au pot commun** (en Ambre pour une vente en Ambre). Sans enchère, l'objet revient.
 
 ## Modules de vaisseaux
 - Les combats laissent parfois un **plan de module** (boss : rare au minimum).

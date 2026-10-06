@@ -1,7 +1,5 @@
 import { ResourceSelect } from "@/components/game/ResourceSelect";
 import { HudPanel, Pager, usePaged } from "@/components/ui/panel";
-import { TradeContractsPanel } from "@/components/game/TradeContractsPanel";
-import { useSearchParams } from "react-router-dom";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -11,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
 import { EmptyState, HudTag } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { ServerPotCard } from "@/components/game/ServerPotCard";
 import { buyOrderPaid, MARKET_RULES, marketTax, priceBounds, type MarketOffer } from "@/game/market";
 import { RESOURCE_LIST } from "@/game/resources";
 import { acceptMarketOffer, cancelMarketOffer, createMarketOffer, fetchMarketTrades, subscribeOffers } from "@/services/marketService";
@@ -39,7 +35,8 @@ function errorText(err: unknown, fallback: string) {
   return err instanceof GameActionError ? err.message : fallback;
 }
 
-export function MarketPage() {
+/** 5.26 : section « Marché » de la page Commerce (offres et ordres d'achat). */
+export function MarketSection() {
   const uid = useAuthStore((s) => s.user?.uid);
   const player = usePlayerStore((s) => s.player);
   const [data, setData] = useState<{ open: MarketOffer[]; mine: MarketOffer[] }>({ open: [], mine: [] });
@@ -49,8 +46,6 @@ export function MarketPage() {
   const [wantAmount, setWantAmount] = useState(0);
   const [filter, setFilter] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [params, setParams] = useSearchParams();
-  const tab = params.get("onglet") === "contrats" ? "contrats" : "offres";
   // v5.1 : « sell » = je donne X contre Y ; « buy » = ordre d'achat, je paie X (réservé) pour recevoir Y, rempli en plusieurs fois.
   const [mode, setMode] = useState<"sell" | "buy">("sell");
   const [fillQty, setFillQty] = useState<Record<string, number>>({});
@@ -107,35 +102,6 @@ export function MarketPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader
-        eyebrow="Cosmic Empires / Opérations"
-        title="Marché"
-        description={`Échange tes surplus avec les autres commandants. Taxe de ${Math.round(MARKET_RULES.taxPct * 100)} % sur la vente (${Math.round(MARKET_RULES.allianceTaxPct * 100)} % entre membres d'une alliance), versée au pot commun du serveur.`}
-      />
-      <ServerPotCard />
-
-      {/* v5.1 : offres et ordres d'achat, ou contrats de livraison entre joueurs. */}
-      <div className="flex gap-1 border-b border-white/10">
-        {(
-          [
-            ["offres", "Offres et ordres"],
-            ["contrats", "Contrats"],
-          ] as const
-        ).map(([id, text]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setParams(id === "offres" ? {} : { onglet: id }, { replace: true })}
-            className={cn("-mb-px border-b-2 px-3 py-2 font-display text-xs font-semibold uppercase tracking-[0.12em] transition-colors", tab === id ? "border-cyan-glow text-cyan-glow" : "border-transparent text-slate-500 hover:text-slate-300")}
-          >
-            {text}
-          </button>
-        ))}
-      </div>
-      {tab === "contrats" ? (
-        <TradeContractsPanel />
-      ) : (
-      <>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card className="flex flex-col gap-3 p-4">
@@ -315,8 +281,6 @@ export function MarketPage() {
             })}
           </div>
         </HudPanel>
-      )}
-      </>
       )}
     </div>
   );
