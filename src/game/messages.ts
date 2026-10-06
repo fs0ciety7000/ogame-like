@@ -62,3 +62,20 @@ export function groupConversations(messages: PrivateMessage[], me: string): Conv
   }
   return [...byUid.values()];
 }
+
+/** 5.26.2 : une conversation archivée reste cachée tant qu'aucun message n'arrive après l'archivage. */
+export function isConversationArchived(conv: Pick<Conversation, "uid" | "last">, archive: Record<string, number> | undefined): boolean {
+  const at = archive?.[conv.uid];
+  return !!at && conv.last.createdAtMs <= at;
+}
+
+/** Archive (ou ressort) une conversation ; 100 conversations archivées au plus. */
+export function setConversationArchived(archive: Record<string, number> | undefined, uid: string, archived: boolean, now: number): Record<string, number> {
+  const next = { ...(archive ?? {}) };
+  if (archived) next[uid] = now;
+  else delete next[uid];
+  const keys = Object.keys(next).sort((a, b) => next[b] - next[a]);
+  for (const k of keys.slice(100)) delete next[k];
+  return next;
+}
+

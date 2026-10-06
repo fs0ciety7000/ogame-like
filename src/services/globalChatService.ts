@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
+import { create } from "zustand";
 import { GLOBAL_CHAT_RULES } from "@/game/globalChat";
 
 /* 5.26 : canal global du serveur (messages publics, modérés par le serveur). */
@@ -84,4 +85,56 @@ export function writePersonalMutes(list: string[]) {
   } catch {
     /* gardé pour la session */
   }
+}
+
+/* 5.26.2 : messages du canal global non lus (badge « Communications »). La date du
+   dernier passage sur le canal est gardée sur l'appareil. */
+const SEEN_KEY = "cosmic-empires:global-seen";
+
+function readSeen(): number {
+  try {
+    return Number(localStorage.getItem(SEEN_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export const useGlobalSeen = create<{ seenMs: number }>(() => ({ seenMs: readSeen() }));
+
+/** Le canal vient d'être lu (onglet ouvert, nouveau message affiché). */
+export function markGlobalSeen(ms = Date.now()) {
+  if (ms <= useGlobalSeen.getState().seenMs) return;
+  try {
+    localStorage.setItem(SEEN_KEY, String(ms));
+  } catch {
+    /* non mémorisé */
+  }
+  useGlobalSeen.setState({ seenMs: ms });
+}
+
+/** Nombre de messages des autres joueurs arrivés depuis le dernier passage (99 au plus). */
+export function useGlobalUnreadCount(uid: string | null | undefined): number {
+  const seenMs = useGlobalSeen((s) => s.seenMs);
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!uid) {
+      return;
+    }
+    let alive = true;
+    // Jamais venu sur le canal : on ne compte que la dernière journée.
+    const since = seenMs || Date.now() - 86_400_000;
+    const refresh = () =>
+      void pb
+        .collection("global_messages")
+        .getList(1, 1, { filter: pb.filter("createdAtMs > {:t} && uid != {:u} && masked = false", { t: since, u: uid }), fields: "id", requestKey: null })
+        .then((r) => alive && setCount(Math.min(99, r.totalItems)))
+        .catch(() => {});
+    refresh();
+    const unsubscribe = subscribeRecords<GlobalMessage>("global_messages", "*", coalesce(refresh, 500));
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, [uid, seenMs]);
+  return uid ? count : 0;
 }

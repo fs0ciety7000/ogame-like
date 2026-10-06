@@ -14512,6 +14512,32 @@ function pendingClaims(player, now) {
   return out;
 }
 
+// src/game/messages.ts
+var MESSAGE_RULES = {
+  maxLength: 1e3,
+  /** Messages envoyés au plus par minute et par jour (anti-spam). */
+  perMinute: 8,
+  perDay: 300
+};
+function sanitizeMessageText(raw) {
+  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
+  return text;
+}
+function assertMessageQuota(lastMinute, lastDay) {
+  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
+  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
+}
+function setConversationArchived(archive, uid, archived, now) {
+  const next = __spreadValues({}, archive != null ? archive : {});
+  if (archived) next[uid] = now;
+  else delete next[uid];
+  const keys = Object.keys(next).sort((a, b) => next[b] - next[a]);
+  for (const k of keys.slice(100)) delete next[k];
+  return next;
+}
+
 // src/game/cancel.ts
 var CANCEL_RULES = {
   /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
@@ -15948,7 +15974,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -16203,6 +16229,13 @@ function applyAction(s, action) {
       st.amber += amber;
       player.bounties = st;
       return { amber };
+    }
+    // 5.26.2 : archivage d'une conversation privée (elle revient au prochain message reçu).
+    case "chatArchive": {
+      const other = String((_D = action.with) != null ? _D : "").slice(0, 40);
+      if (!other) throw new GameActionError("Conversation inconnue.");
+      player.stats = __spreadProps(__spreadValues({}, (_E = player.stats) != null ? _E : {}), { archivedChats: setConversationArchived((_F = player.stats) == null ? void 0 : _F.archivedChats, other, !!action.archived, now) });
+      return void 0;
     }
     // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
     case "moduleFuse":
@@ -17723,24 +17756,6 @@ function takeAmberFromPot(pot, amount3, now, note4) {
   const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
   if (!(n > 0)) return { pot, taken: 0 };
   return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
-}
-
-// src/game/messages.ts
-var MESSAGE_RULES = {
-  maxLength: 1e3,
-  /** Messages envoyés au plus par minute et par jour (anti-spam). */
-  perMinute: 8,
-  perDay: 300
-};
-function sanitizeMessageText(raw) {
-  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  if (!text) throw new GameActionError("Message vide.");
-  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
-  return text;
-}
-function assertMessageQuota(lastMinute, lastDay) {
-  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
-  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
 // src/game/challenges.ts

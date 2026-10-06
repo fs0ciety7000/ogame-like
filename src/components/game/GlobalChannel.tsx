@@ -10,7 +10,7 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/hud";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { GLOBAL_CHAT_RULES } from "@/game/globalChat";
-import { readPersonalMutes, reportGlobalMessage, sendGlobalMessage, useGlobalMessages, writePersonalMutes } from "@/services/globalChatService";
+import { markGlobalSeen, readPersonalMutes, reportGlobalMessage, sendGlobalMessage, useGlobalMessages, writePersonalMutes } from "@/services/globalChatService";
 import { cn } from "@/lib/utils";
 
 /* 5.26 : canal global : tout le serveur, en direct. Signaler un message
@@ -23,6 +23,10 @@ function clock(ms: number) {
 
 export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer: (p: { uid: string; pseudo: string }) => void }) {
   const { messages, loaded, remove } = useGlobalMessages();
+  // 5.26.2 : canal affiché = lu (badge « Communications » remis à zéro).
+  useEffect(() => {
+    if (loaded) markGlobalSeen(Math.max(Date.now(), messages[messages.length - 1]?.createdAtMs ?? 0));
+  }, [loaded, messages]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);

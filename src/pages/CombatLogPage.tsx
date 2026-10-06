@@ -145,6 +145,12 @@ export function CombatLogPage() {
       <PageHeader eyebrow="Cosmic Empires / Archives" title="Journal de combat" description="Historique des attaques lancées et reçues." />
       <VictoryCardDialog card={card?.input ?? null} target={card?.target ?? "/game"} onClose={() => setCard(null)} />
 
+      {/* 5.26.2 : deux colonnes, combats à gauche, espionnage à droite (empilés sur mobile). */}
+      <div className="grid items-start gap-4 xl:grid-cols-2">
+      <section className="flex min-w-0 flex-col gap-3">
+      <h2 className="hud-title flex items-center gap-2 text-base text-slate-100">
+        <Sword className="h-4 w-4 text-cyan-glow" /> Combats
+      </h2>
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
           <EmptyState icon="⚔️" title="Aucun combat" action={<EmptyAction to="/game/joueurs">Trouver une cible</EmptyAction>}>Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
@@ -219,8 +225,10 @@ export function CombatLogPage() {
         })}
       </Card>
       <Pager {...battlePage.pager} />
+      </section>
 
-      <h2 className="hud-title mt-2 flex items-center gap-2 text-base text-slate-100">
+      <section className="flex min-w-0 flex-col gap-3">
+      <h2 className="hud-title flex items-center gap-2 text-base text-slate-100">
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
@@ -264,6 +272,8 @@ export function CombatLogPage() {
         })}
       </Card>
       <Pager {...spyPage.pager} />
+      </section>
+      </div>
     </div>
   );
 }

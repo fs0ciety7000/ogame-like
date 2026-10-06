@@ -30,6 +30,7 @@ import { dailyReadyCount } from "@/game/dailyMissions";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
+import { useGlobalUnreadCount } from "@/services/globalChatService";
 import { useAuthStore } from "@/store/authStore";
 
 interface NavItem {
@@ -221,7 +222,7 @@ function useBadges(): (to: string) => number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
-  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();
   const leviathanSeen = useLeviathanSeen((s) => s.ids);
   const passClaimable = usePlayerStore((s) => {
@@ -790,7 +791,7 @@ function MobileTabBar() {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
-  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const hidden = useHiddenRoutes();
   const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && !hidden.has(i.to));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));

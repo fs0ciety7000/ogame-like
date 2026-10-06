@@ -765,6 +765,11 @@ export function recycleShipModule(moduleId: string) {
   return act<{ amber: number }>({ type: "moduleRecycle", moduleId });
 }
 
+/** 5.26.2 : archiver une conversation privée (elle revient au prochain message reçu). */
+export function archiveConversation(other: string, archived: boolean) {
+  return act({ type: "chatArchive", with: other, archived });
+}
+
 /** 5.26.2 : fusion de trois plans identiques, préréglages de montage. */
 export function fuseShipModules(moduleIds: string[]) {
   return act<import("@/game/modules").ModuleItem>({ type: "moduleFuse", moduleIds });

@@ -39,6 +39,7 @@ import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
 import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
+import { setConversationArchived } from "@/game/messages";
 import { applyModulePreset, buildModule, deleteModulePreset, fuseModulePlans, mountModule, recycleModule, saveModulePreset, unmountModule } from "@/game/modules";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
@@ -103,6 +104,7 @@ export type GameAction =
   | { type: "moduleUnmount"; cls: string; slot: number }
   | { type: "moduleRecycle"; moduleId: string }
   | { type: "moduleFuse"; moduleIds: string[] }
+  | { type: "chatArchive"; with: string; archived: boolean }
   | { type: "modulePresetSave"; name: string }
   | { type: "modulePresetApply"; index: number }
   | { type: "modulePresetDelete"; index: number }
@@ -483,6 +485,14 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       st.amber += amber;
       player.bounties = st;
       return { amber };
+    }
+
+    // 5.26.2 : archivage d'une conversation privée (elle revient au prochain message reçu).
+    case "chatArchive": {
+      const other = String(action.with ?? "").slice(0, 40);
+      if (!other) throw new GameActionError("Conversation inconnue.");
+      player.stats = { ...(player.stats ?? {}), archivedChats: setConversationArchived(player.stats?.archivedChats, other, !!action.archived, now) };
+      return undefined;
     }
 
     // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
