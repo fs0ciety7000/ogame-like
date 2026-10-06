@@ -8,8 +8,13 @@ import type { Buildings, CombatLog, CombatLogUnit, CombatOutcome, ResourceId, Te
 export const COMBAT_RULES = {
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,
-  /** Part des ressources communes pillée (ferraille, énergie, nano, données). */
-  lootPercentCommon: 0.1,
+  /** Part des ressources communes pillée (ferraille, énergie, nano, données), sur le stock exposé (hors abri).
+   *  6.2 (lot M) : 0,1 → 0,3, le butin suit enfin le stock. */
+  lootPercentCommon: 0.3,
+  /** 6.2 (lot M) : au pillage, une flotte charge jusqu'à ce multiple de sa soute (surcharge). */
+  lootCargoFactor: 2,
+  /** 6.2 (lot M) : part maximale des vaisseaux détruits sauvés (Atelier, Cale orbitale, bonus). */
+  repairCap: 0.85,
   /** 5.23 : part du butin emportée sur un match nul. */
   drawLootShare: 0.3,
   /** Bonus de puissance du défenseur, qui se bat chez lui. */
@@ -573,7 +578,8 @@ export function resolveCombat(params: {
   const survivors: Record<string, number> = {};
   // 5.20 : les unités sauvées par l'Atelier partent en réparation, elles ne portent pas de butin.
   for (const [unitId, sent] of Object.entries(fleet)) survivors[unitId] = Math.max(0, sent - (attackerLosses[unitId] ?? 0) - (attackerRecovered[unitId] ?? 0));
-  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * (params.cargoFactor ?? 1));
+  // 6.2 (lot M) : surcharge de pillage (COMBAT_RULES.lootCargoFactor).
+  const cargoCapacity = Math.floor(fleetCargoCapacity(attackerUnits, survivors, attackerTechLevels) * (params.cargoFactor ?? 1) * Math.max(1, R.lootCargoFactor ?? 1));
   let loot: Partial<Record<ResourceId, number>> | null = null;
   // 5.23 : un match nul rapporte une part du butin (drawLootShare).
   if (outcome === "attacker_win" || (outcome === "draw" && R.drawLootShare > 0)) {

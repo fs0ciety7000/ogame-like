@@ -5038,6 +5038,28 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["cale_seche"],
   },
+  // 5.33 / 6.2 : nouveaux défauts appliqués aux règles personnalisées, seulement s'ils valent encore l'ancien défaut.
+  {
+    id: "rules-6.2",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      let touched = false;
+      const al = data && data.alliances;
+      if (al && typeof al === "object" && al.maxMembers === 6) {
+        al.maxMembers = 8;
+        touched = true;
+        changes.push("alliances : 8 membres de base");
+      }
+      const c = data && data.combat;
+      if (c && typeof c === "object" && c.lootPercentCommon === 0.1) {
+        c.lootPercentCommon = 0.3;
+        touched = true;
+        changes.push("combat : butin 30 % des ressources communes exposées");
+      }
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

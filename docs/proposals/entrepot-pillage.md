@@ -1,6 +1,6 @@
 # Proposition : entrepôt, pillage et sauvetage (lot E)
 
-Statut : **livrée en partie (5.32.0)** : options A et C, avec 8 h et une activation le 13 octobre 2026 (décision du 2026-10-06 : « fais ce qu'il y a de mieux »). Option B en attente d'une simulation. Fiche : `docs/changes/5.32.0-entrepot-chantiers.md`.
+Statut : **livrée en partie (5.32.0)** : options A et C, avec 8 h et une activation le 13 octobre 2026 (décision du 2026-10-06 : « fais ce qu'il y a de mieux »). Option B livrée en 6.2.0 sans attendre la simulation (décision du 2026-10-06 : « on code, on ajustera ») : butin 30 % du stock exposé, soute de pillage ×2, sauvetage plafonné à 85 % ; suivi dans la santé de l'équilibre (admin). Fiche : `docs/changes/6.2.0-pillage.md`. Fiche : `docs/changes/5.32.0-entrepot-chantiers.md`.
 Constats : E1, E2 de `docs/audit/2026-10-06-audit-global.md`. Lot E de `docs/proposals/feuille-de-route-2026-q4.md`.
 
 ## 1. Constat

@@ -8,7 +8,7 @@ import { empireClassEffects } from "@/game/empireClass";
 import { synthesisEffects } from "@/game/synthesis";
 import { techEffectGrants } from "@/game/technologies";
 import { effectSheet, effectTotal, rawEffectTotal, type EffectGrant, type EffectScope, type EffectSheetLine } from "@/game/effects";
-import { fleetCargoCapacity } from "@/game/combat";
+import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -130,7 +130,8 @@ export function productionFactor(player: ModPlayer | null | undefined, res: Reso
 
 /** Part des vaisseaux réparés, bonus compris (plafond 95 %). */
 export function withRepairBonus(base: number, player: ModPlayer | null | undefined): number {
-  return Math.min(0.95, base + playerModifiers(player).repair);
+  // 6.2 (lot M) : plafond réglable (COMBAT_RULES.repairCap), 95 % → 85 %.
+  return Math.min(Math.max(0, Math.min(0.95, COMBAT_RULES.repairCap ?? 0.95)), base + playerModifiers(player).repair);
 }
 
 /** v5.9 : soute d'une flotte, bonus de soute compris (Soute pliée, talents…).

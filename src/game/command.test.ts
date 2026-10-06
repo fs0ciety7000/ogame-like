@@ -76,7 +76,7 @@ describe("v4.0 relics", () => {
     expect(consumeAegis(p, NOW + 8 * 86400_000)).toBe(true);
     addRelic(p, relic("r", "matrice_reparation", "legendary"));
     equipRelic(p, 1, "r");
-    expect(withRepairBonus(0.9, p)).toBe(0.95);
+    expect(withRepairBonus(0.9, p)).toBe(0.85); // 6.2 (lot M) : plafond de sauvetage 95 % → 85 %
   });
 });
 

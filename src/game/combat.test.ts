@@ -75,7 +75,7 @@ describe("resolveCombat", () => {
     expect(result.loot).toBeNull();
   });
 
-  it("grants loot only when the attacker wins outright (8 % rares, 10 % communes)", () => {
+  it("grants loot only when the attacker wins outright (8 % rares, 30 % communes, 6.2)", () => {
     const params = baseCombatParams();
     params.attackerUnits = unitsWith({ chasseur: { level: 1, count: 100 }, cargo: { level: 1, count: 1000 } });
     params.fleet = { chasseur: 10, cargo: 1000 };
@@ -83,7 +83,7 @@ describe("resolveCombat", () => {
     const result = resolveCombat(params);
     expect(result.outcome).toBe("attacker_win");
     expect(result.loot?.reinforcedSteel).toBe(80);
-    expect(result.loot?.scrap).toBe(500);
+    expect(result.loot?.scrap).toBe(1500);
   });
 
   it("limits the loot to the cargo capacity of the surviving fleet", () => {
@@ -259,5 +259,21 @@ describe("5.18 combat en tours", () => {
     const base = { ...baseCombatParams(), fleet: {}, defenderUnits: unitsWith({ canon_plasma: { level: 1, count: 200 } }) };
     expect(resolveCombat({ ...base, attackerPowerOverride: 100 }).outcome).toBe("defender_win");
     expect(resolveCombat({ ...base, attackerPowerOverride: 200 * 105 * 1.15 * 2 }).outcome).toBe("attacker_win");
+  });
+});
+
+describe("6.2 (lot M) : pillage en surcharge", () => {
+  it("la soute de pillage vaut lootCargoFactor × la soute des survivants", () => {
+    const params = baseCombatParams();
+    params.defenderResources = { scrap: 1_000_000_000 };
+    const result = resolveCombat(params);
+    const total = Object.values(result.loot ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+    expect(COMBAT_RULES.lootCargoFactor).toBe(2);
+    expect(total).toBe(result.cargoCapacity);
+    const saved = COMBAT_RULES.lootCargoFactor;
+    COMBAT_RULES.lootCargoFactor = 1;
+    const single = resolveCombat(baseCombatParams());
+    COMBAT_RULES.lootCargoFactor = saved;
+    expect(result.cargoCapacity).toBe(single.cargoCapacity * 2);
   });
 });

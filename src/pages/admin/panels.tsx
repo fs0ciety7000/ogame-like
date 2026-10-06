@@ -119,7 +119,23 @@ export function RulesPanel() {
             min={0}
             step={0.01}
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, lootPercent: v ?? 0 } }))}
-            hint="Limité par la cargaison (stat CAP) des vaisseaux survivants."
+            hint="Sur le stock exposé (hors abri), limité par la soute des survivants × la surcharge ci-dessous."
+          />
+          <NumberField
+            label="Surcharge de pillage (× la soute)"
+            value={rules.combat.lootCargoFactor}
+            min={1}
+            step={0.5}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, lootCargoFactor: v ?? 1 } }))}
+            hint="Une flotte qui pille charge jusqu'à ce multiple de sa soute. Les transports ne sont pas concernés."
+          />
+          <NumberField
+            label="Sauvetage maximal des vaisseaux détruits (0,85 = 85 %)"
+            value={rules.combat.repairCap}
+            min={0}
+            step={0.05}
+            hint="0,95 au plus."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, repairCap: v ?? 0.85 } }))}
           />
         </Section>
         <Section title="Équilibre attaque / défense">
