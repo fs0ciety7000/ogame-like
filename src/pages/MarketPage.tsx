@@ -72,8 +72,8 @@ export function MarketPage() {
     [data.open, uid, filter],
   );
   // 5.15.12 : 20 offres à la fois.
-  // 5.24 : 20 offres par page.
-  const offersPage = usePaged(others, 20, filter);
+  // 5.24 : offres paginées (taille des Réglages).
+  const offersPage = usePaged(others, undefined, filter);
   const shownOffers = offersPage.items;
 
   if (!player) return null;

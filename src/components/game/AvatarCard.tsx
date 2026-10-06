@@ -61,12 +61,12 @@ export function AvatarCard({ player }: { player: PlayerState }) {
   };
 
   return (
-    <Card className="flex flex-col items-center gap-4 p-4 sm:flex-row">
+    <Card className="flex flex-col items-center gap-4 p-4 @md:flex-row">
       <PlayerAvatar uid={player.uid} pseudo={player.pseudo} file={file} className="h-24 w-24" />
-      <div className="flex flex-1 flex-col gap-2 text-center sm:text-left">
+      <div className="flex flex-1 flex-col gap-2 text-center @md:text-left">
         <p className="hud-title text-sm text-slate-100">Avatar</p>
         <p className="text-xs text-slate-400">Visible sur ta fiche publique. L'image est recadrée en carré (256 px). Pas de contenu choquant : la modération peut la retirer.</p>
-        <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+        <div className="flex flex-wrap justify-center gap-2 @md:justify-start">
           <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
           <Button variant="primary" disabled={busy} onClick={() => input.current?.click()}>
             <ImagePlus className="h-4 w-4" /> {file ? "Changer" : "Choisir une image"}
@@ -104,7 +104,7 @@ function PresetGroup({ label, presets, busy, onPick }: { label: string; presets:
   return (
     <section>
       <p className="hud-eyebrow mb-2 text-slate-400">{label}</p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2 @md:grid-cols-5">
         {shown.map((p) => (
           <button
             key={p.id}

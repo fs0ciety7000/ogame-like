@@ -31,6 +31,7 @@ import { NotificationBell } from "@/components/layout/NotificationBell";
 import { fullscreenSupported, isFullscreen, toggleFullscreen } from "@/lib/fullscreen";
 import { PageLoader } from "@/components/layout/PageLoader";
 import { BootSequence } from "@/components/layout/BootSequence";
+import { bootSequence } from "@/lib/fx/uiFx";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { logout } from "@/services/authService";
 import { useGameSync } from "@/hooks/useGameSync";
@@ -152,6 +153,10 @@ export function AppShell() {
   const contentLoaded = useContentStore((s) => s.loaded);
   const contentVersion = useContentStore((s) => s.version);
   const isAdmin = useIsAdmin();
+  // 5.25 : séquence d'amorçage du poste de commandement (une fois par session).
+  useEffect(() => {
+    void bootSequence();
+  }, []);
   const blog = useBlogAccess();
   const location = useLocation();
 

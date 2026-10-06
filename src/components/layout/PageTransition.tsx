@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { interference } from "@/lib/fx/uiFx";
+import { resetPanelLighting } from "@/lib/fx/installUiFx";
 import { AnimatePresence, motion, useReducedMotion, type TargetAndTransition, type Transition } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import { useThemeStore, type ThemeId } from "@/lib/theme";
@@ -102,6 +104,27 @@ export const THEME_MOTION: Record<ThemeId, ThemeMotion> = {
     transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
     sweep: false,
   },
+  ishimura: {
+    initial: { opacity: 0, scaleY: 0.96, filter: "brightness(1.8)" },
+    animate: { opacity: [0, 1, 0.7, 1], scaleY: 1, filter: "brightness(1)", transitionEnd: CLEAR },
+    exit: { opacity: 0 },
+    transition: { duration: 0.26, ease: "easeOut" },
+    sweep: true,
+  },
+  atlas: {
+    initial: { opacity: 0, y: 14, scale: 0.99 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -8 },
+    transition: { duration: 0.24, ease: [0.2, 0.8, 0.2, 1] },
+    sweep: true,
+  },
+  matrice: {
+    initial: { opacity: 0, clipPath: "inset(0 0 100% 0)" },
+    animate: { opacity: 1, clipPath: "inset(0 0 0% 0)", transitionEnd: CLEAR },
+    exit: { opacity: 0 },
+    transition: { duration: 0.28, ease: "linear" },
+    sweep: false,
+  },
 };
 
 const REDUCED: ThemeMotion = { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.12 }, sweep: false };
@@ -111,6 +134,16 @@ export function PageTransition({ children }: { children: ReactNode }) {
   const reduced = useReducedMotion() ?? false;
   const theme = useThemeStore((s) => s.theme);
   const m = reduced ? REDUCED : (THEME_MOTION[theme] ?? BASE);
+  // 5.25 : interférence de signal et panneaux qui se rallument à chaque changement de page.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    void interference();
+    resetPanelLighting();
+  }, [location.pathname]);
 
   return (
     <AnimatePresence mode="wait" initial={false}>

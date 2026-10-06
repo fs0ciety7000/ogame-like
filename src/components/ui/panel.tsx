@@ -1,4 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { cascade, scramble } from "@/lib/fx/uiFx";
+import { usePageSize } from "@/lib/pageSize";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,12 +42,23 @@ export function HudPanel({
   className?: string;
   children?: ReactNode;
 }) {
+  // 5.25 : un titre texte se décode à l'apparition du panneau.
+  const titleRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (typeof title === "string" && titleRef.current) void scramble(titleRef.current, title, 0.45);
+  }, [title]);
   return (
     <Card className={cn("hud-panel flex flex-col gap-3 p-4", accent && "border-t-2 border-t-gold-glow", className)}>
       <div className="flex flex-wrap items-center gap-2">
         <h2 className={cn("hud-panel-title hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
           {icon}
-          <span className="min-w-0">{title}</span>
+          {typeof title === "string" ? (
+            <span ref={titleRef} key={title} className="min-w-0">
+              {title}
+            </span>
+          ) : (
+            <span className="min-w-0">{title}</span>
+          )}
         </h2>
         {aside && <div className="ml-auto flex flex-wrap items-center gap-2">{aside}</div>}
       </div>
@@ -96,13 +109,16 @@ export function Pager({ page, total, size = PAGE_SIZE, onPage }: { page: number;
   );
 }
 
-/** 5.24 : liste découpée en pages (20 par défaut) ; la page revient en arrière si la liste rétrécit. */
-export function usePaged<T>(items: T[], size = PAGE_SIZE, resetKey?: unknown) {
+/** 5.24 : liste découpée en pages (taille choisie dans les Réglages) ; la page revient en arrière si la liste rétrécit. */
+export function usePaged<T>(items: T[], sizeOverride?: number, resetKey?: unknown) {
+  // 5.25 : taille de page choisie par le joueur (Réglages, 10 par défaut).
+  const pref = usePageSize();
+  const size = sizeOverride ?? pref;
   const [page, setPage] = useState(0);
   // Nouveau filtre ou nouvelle recherche : retour en page 1.
   useEffect(() => {
     setPage(0);
-  }, [resetKey]);
+  }, [resetKey, size]);
   const pages = Math.max(1, Math.ceil(items.length / size));
   const p = Math.min(page, pages - 1);
   return {
@@ -116,11 +132,21 @@ export function usePaged<T>(items: T[], size = PAGE_SIZE, resetKey?: unknown) {
 }
 
 /** 5.24 : liste paginée prête à poser (conteneur + pagination). `key` sur le filtre pour revenir en page 1. */
-export function PagedList<T>({ items, size = PAGE_SIZE, className, render, as: Tag = "div" }: { items: T[]; size?: number; className?: string; render: (item: T, index: number) => ReactNode; as?: "div" | "ul" | "ol" }) {
+export function PagedList<T>({ items, size, className, render, as: Tag = "div" }: { items: T[]; size?: number; className?: string; render: (item: T, index: number) => ReactNode; as?: "div" | "ul" | "ol" }) {
   const pg = usePaged(items, size);
+  // 5.25 : en changeant de page, les éléments arrivent en cascade.
+  const ref = useRef<HTMLElement>(null);
+  const firstPage = useRef(true);
+  useEffect(() => {
+    if (firstPage.current) {
+      firstPage.current = false;
+      return;
+    }
+    if (ref.current) void cascade(ref.current.children);
+  }, [pg.pager.page]);
   return (
     <>
-      <Tag className={className}>{pg.items.map((it, i) => render(it, pg.offset + i))}</Tag>
+      <Tag ref={ref as never} className={className}>{pg.items.map((it, i) => render(it, pg.offset + i))}</Tag>
       <Pager {...pg.pager} />
     </>
   );

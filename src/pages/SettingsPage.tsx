@@ -3,7 +3,9 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge, Sparkles, ListOrdered } from "lucide-react";
+import { PAGE_SIZES, setPageSize, usePageSize } from "@/lib/pageSize";
+import { setUiFx, useUiFxStore } from "@/lib/fx/uiFx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -597,6 +599,8 @@ function ThemeCard() {
   const skin = useSeasonSkinStore((s) => s.enabled);
   const winter = useWinterStore((s) => s.enabled);
   const cockpit = useCockpitView((s) => s.enabled);
+  const uiFx = useUiFxStore((s) => s.enabled);
+  const pageSize = usePageSize();
   const month = chronicleOf(Date.now());
   return (
     <Card>
@@ -640,6 +644,30 @@ function ThemeCard() {
           </span>
           <HudSwitch checked={cockpit} onCheckedChange={setCockpitView} label="Vue cockpit" />
         </label>
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
+              <Sparkles className="h-3.5 w-3.5 text-cyan-glow" /> Animations de l'interface
+            </span>
+            <span className="text-xs text-slate-500">Glitch au clic, balayage laser, textes décodés, panneaux qui s'allument, interférence entre les pages, séquence d'amorçage. Coupées d'office si ton système demande de réduire les animations.</span>
+          </span>
+          <HudSwitch checked={uiFx} onCheckedChange={setUiFx} label="Animations de l'interface" />
+        </label>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
+              <ListOrdered className="h-3.5 w-3.5 text-cyan-glow" /> Éléments par page
+            </span>
+            <span className="text-xs text-slate-500">Combats, joueurs, marché, journal, notifications et autres longues listes.</span>
+          </span>
+          <span className="flex gap-1" role="group" aria-label="Éléments par page">
+            {PAGE_SIZES.map((n) => (
+              <Button key={n} size="sm" variant={pageSize === n ? "secondary" : "ghost"} aria-pressed={pageSize === n} onClick={() => setPageSize(n)} className="font-mono">
+                {n}
+              </Button>
+            ))}
+          </span>
+        </div>
         <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
           <span>
             <span className="flex items-center gap-2 text-slate-200">

@@ -28,6 +28,8 @@ import { ReferralCard } from "@/components/game/ReferralCard";
 import { RenameCard } from "@/components/game/RenameCard";
 import { AvatarCard } from "@/components/game/AvatarCard";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
+import { Button } from "@/components/ui/button";
+import { Palette } from "lucide-react";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -60,121 +62,141 @@ export function ProfilePage() {
   const unitsTotal = UNITS.reduce((sum, u) => sum + (player.units[u.id]?.level ?? 0), 0);
   const unitsPercent = Math.floor((unitsTotal / Math.max(1, UNITS.reduce((s, u) => s + u.maxLevel, 0))) * 100);
 
+  const fights = player.victories + player.defeats;
+  const unlocked = ACHIEVEMENTS.filter((a) => a.enabled && (player.unlockedAchievements ?? []).includes(a.id)).length;
+  const achievementsTotal = ACHIEVEMENTS.filter((a) => a.enabled).length;
+
+  /* 5.25 : deux colonnes. À gauche, le dossier (rang, chiffres, progression, palmarès) ;
+     à droite, tout ce que le joueur modifie (avatar, bannière et devise, pseudo, parrainage). */
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." right={<EmpireShareActions player={player} kind="profile" />} />
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." right={
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+            {/* Sur une colonne, la personnalisation passe sous le dossier : raccourci direct. */}
+            <Button asChild variant="ghost" size="sm" className="xl:hidden">
+              <a href="#personnalisation">
+                <Palette className="h-3.5 w-3.5" /> Personnaliser
+              </a>
+            </Button>
+            <EmpireShareActions player={player} kind="profile" />
+          </div>
+        } />
 
-      <Card className="flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:text-left">
-        <RadialGauge value={progress.percent} size={96} strokeWidth={5}>
-          <img src={getRankIcon(player.xp)} alt="" className="h-16 w-16 object-contain" />
-        </RadialGauge>
-        <div className="flex-1">
-          <p className="font-display text-xl text-slate-100">{getRankLabel(player.xp)}</p>
-          <AscensionStars count={player.ascensions} full className="my-1" />
-          <p className="text-xs text-slate-500">
-            {rankIndex > 0 ? `Rang précédent : ${RANKS[rankIndex - 1]?.name}` : "Aucun rang précédent"}
-          </p>
-          <p className="text-xs text-slate-500">{progress.next ? `Rang suivant : ${progress.next} (${formatNumber(progress.nextXp ?? 0)} XP)` : "Rang maximum atteint"}</p>
-          <p className="mt-1 text-sm text-cyan-glow">{formatNumber(player.xp)} XP</p>
-        </div>
-      </Card>
-
-      <AvatarCard player={player} />
-
-      <ProfileStyleCard player={player} />
-
-      <RenameCard player={player} />
-
-      <ReferralCard player={player} />
-
-      <RankLadder xp={player.xp} />
-
-      <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
-
-      <SeasonHistoryCard uid={player.uid} currentXp={player.seasonXp ?? 0} />
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Victoires" value={formatNumber(player.victories)} tone="mint" sub={`${player.victories + player.defeats > 0 ? Math.round((player.victories / (player.victories + player.defeats)) * 100) : 0} % de réussite`} />
-        <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="danger" />
-        <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="accent" />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Bâtiments</CardTitle>
-            <span className="text-xs text-slate-400">{buildingsPercent}%</span>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {BUILDINGS.map((b) => {
-              const level = effectiveBuildingLevel(player.buildings, b.id);
-              return (
-                <div key={b.id}>
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>{b.name}</span>
-                    <span className="tabular-mono">{level} / {b.maxLevel}</span>
-                  </div>
-                  <LevelTicks level={level} max={b.maxLevel} next={false} className="mt-1" />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Unités</CardTitle>
-            <span className="text-xs text-slate-400">{unitsPercent}%</span>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {UNITS.map((u) => {
-              const level = player.units[u.id]?.level ?? 0;
-              return (
-                <div key={u.id}>
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>{u.name}</span>
-                    <span className="tabular-mono">{level} / {u.maxLevel}</span>
-                  </div>
-                  <LevelTicks level={level} max={u.maxLevel} next={false} className="mt-1" />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Succès</CardTitle>
-          <Link to="/game/succes" className="text-xs text-cyan-glow hover:underline">
-            {ACHIEVEMENTS.filter((a) => a.enabled && (player.unlockedAchievements ?? []).includes(a.id)).length} / {ACHIEVEMENTS.filter((a) => a.enabled).length} · Tout voir →
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            const recent = (player.unlockedAchievements ?? [])
-              .map((id) => ACHIEVEMENTS.find((a) => a.id === id))
-              .filter((a): a is (typeof ACHIEVEMENTS)[number] => !!a)
-              .slice(-8)
-              .reverse();
-            return recent.length === 0 ? (
-              <EmptyState size="sm" icon="🏅" title="Aucun succès" action={<EmptyAction to="/game/succes">Voir les succès</EmptyAction>}>
-                Ta première victoire t'en rapportera un !
-              </EmptyState>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {recent.map((a) => (
-                  <div key={a.id} className="flex w-20 flex-col items-center gap-1 text-center" title={a.description}>
-                    <AchievementMedal a={a} unlocked size={64} />
-                    <span className="text-[10px] leading-tight text-slate-300">{a.name}</span>
-                  </div>
-                ))}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+        {/* ---------- Dossier ---------- */}
+        <section className="flex min-w-0 flex-col gap-6" aria-label="Dossier du commandant">
+          <Card className="flex flex-col gap-5 p-5">
+            <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
+              <RadialGauge value={progress.percent} size={104} strokeWidth={5}>
+                <img src={getRankIcon(player.xp)} alt="" className="h-16 w-16 object-contain" />
+              </RadialGauge>
+              <div className="min-w-0 flex-1">
+                <p className="hud-eyebrow text-slate-500">Rang actuel</p>
+                <p className="font-display text-2xl text-slate-100">{getRankLabel(player.xp)}</p>
+                <AscensionStars count={player.ascensions} full className="my-1" />
+                <p className="font-mono text-sm tabular-nums text-cyan-glow">{formatNumber(player.xp)} XP</p>
+                <Progress value={progress.percent} className="mt-2 h-1.5" />
+                <p className="mt-1.5 flex flex-wrap justify-center gap-x-4 text-xs text-slate-500 sm:justify-start">
+                  <span>{rankIndex > 0 ? `Précédent : ${RANKS[rankIndex - 1]?.name}` : "Premier rang"}</span>
+                  <span>{progress.next ? `Suivant : ${progress.next} à ${formatNumber(progress.nextXp ?? 0)} XP` : "Rang maximum atteint"}</span>
+                </p>
               </div>
-            );
-          })()}
-        </CardContent>
-      </Card>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+              <StatTile label="Victoires" value={formatNumber(player.victories)} tone="mint" sub={`${fights > 0 ? Math.round((player.victories / fights) * 100) : 0} % de réussite`} />
+              <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="danger" sub={`${formatNumber(fights)} combats`} />
+              <div className="col-span-2 sm:col-span-1">
+                <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="accent" />
+              </div>
+            </div>
+          </Card>
+
+          <RankLadder xp={player.xp} />
+
+          <TitlesCard titles={player.titles ?? []} active={player.activeTitle ?? ""} />
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Succès</CardTitle>
+              <Link to="/game/succes" className="text-xs text-cyan-glow hover:underline">
+                <span className="font-mono tabular-nums">{unlocked} / {achievementsTotal}</span> · Tout voir →
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const recent = (player.unlockedAchievements ?? [])
+                  .map((id) => ACHIEVEMENTS.find((a) => a.id === id))
+                  .filter((a): a is (typeof ACHIEVEMENTS)[number] => !!a)
+                  .slice(-8)
+                  .reverse();
+                return recent.length === 0 ? (
+                  <EmptyState size="sm" icon="🏅" title="Aucun succès" action={<EmptyAction to="/game/succes">Voir les succès</EmptyAction>}>
+                    Ta première victoire t'en rapportera un !
+                  </EmptyState>
+                ) : (
+                  <div className="flex flex-wrap gap-3">
+                    {recent.map((a) => (
+                      <div key={a.id} className="flex w-20 flex-col items-center gap-1 text-center" title={a.description}>
+                        <AchievementMedal a={a} unlocked size={64} />
+                        <span className="text-[10px] leading-tight text-slate-300">{a.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          <SeasonHistoryCard uid={player.uid} currentXp={player.seasonXp ?? 0} />
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ProgressList title="Bâtiments" percent={buildingsPercent} rows={BUILDINGS.map((b) => ({ id: b.id, name: b.name, level: effectiveBuildingLevel(player.buildings, b.id), max: b.maxLevel }))} />
+            <ProgressList title="Unités" percent={unitsPercent} rows={UNITS.map((u) => ({ id: u.id, name: u.name, level: player.units[u.id]?.level ?? 0, max: u.maxLevel }))} />
+          </div>
+        </section>
+
+        {/* ---------- Personnalisation ---------- */}
+        <section id="personnalisation" className="@container flex min-w-0 scroll-mt-20 flex-col gap-6" aria-label="Personnalisation">
+          <p className="hud-eyebrow -mb-3 text-cyan-glow/80">Personnalisation</p>
+          <AvatarCard player={player} />
+          <ProfileStyleCard player={player} />
+          <RenameCard player={player} />
+          <ReferralCard player={player} />
+        </section>
+      </div>
     </div>
+  );
+}
+
+/** Niveaux des bâtiments ou des unités, repliés au-delà de 8 lignes. */
+function ProgressList({ title, percent, rows }: { title: string; percent: number; rows: { id: string; name: string; level: number; max: number }[] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? rows : rows.slice(0, 8);
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{title}</CardTitle>
+        <span className="font-mono text-xs tabular-nums text-slate-400">{percent} %</span>
+      </CardHeader>
+      <CardContent className="space-y-2.5">
+        {shown.map((r) => (
+          <div key={r.id}>
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>{r.name}</span>
+              <span className="tabular-mono">
+                {r.level} / {r.max}
+              </span>
+            </div>
+            <LevelTicks level={r.level} max={r.max} next={false} className="mt-1" />
+          </div>
+        ))}
+        {rows.length > 8 && (
+          <button type="button" onClick={() => setAll((v) => !v)} className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
+            {all ? "Replier" : `Afficher les ${rows.length - 8} autres`}
+          </button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

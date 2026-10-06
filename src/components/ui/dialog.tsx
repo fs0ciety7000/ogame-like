@@ -2,6 +2,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { scramble, unfold } from "@/lib/fx/uiFx";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -45,10 +46,20 @@ export function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   const [drag, setDrag] = React.useState(0);
   const closeRef = React.useRef<HTMLButtonElement | null>(null);
+  // 5.25 : la fenêtre se déplie depuis sa ligne médiane, son titre se décode.
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    void unfold(el);
+    const title = el.querySelector<HTMLElement>("h2");
+    if (title && title.childElementCount === 0) void scramble(title, title.textContent ?? "", 0.45);
+  }, []);
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in data-[state=closed]:animate-out data-[state=closed]:fade-out" />
       <DialogPrimitive.Content
+        ref={contentRef}
         className={cn(
           // !fixed : .glass-panel pose position:relative (pour son ::before
           // décoratif) ; sur ce même élément, à spécificité égale et définie

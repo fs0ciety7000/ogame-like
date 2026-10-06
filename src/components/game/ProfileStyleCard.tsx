@@ -94,7 +94,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
       <div className="flex flex-col gap-4 px-4 pb-4">
         <div>
           <p className="hud-eyebrow mb-2 text-slate-400">Bannière</p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 @lg:grid-cols-3">
             {banners.map((b) => (
               <Option key={b.id} option={b} selected={banner === b.id} onPick={() => setBanner(b.id)}>
                 <div className="h-16 w-full bg-cover bg-center" style={b.image ? { backgroundImage: `url(${assetUrl(b.image)})` } : { background: b.gradient }} />
@@ -104,7 +104,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
         </div>
         <div>
           <p className="hud-eyebrow mb-2 text-slate-400">Emblème</p>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          <div className="grid grid-cols-3 gap-2 @lg:grid-cols-4">
             {emblems.map((e) => (
               <Option key={e.id} option={e} selected={emblem === e.id} onPick={() => setEmblem(e.id)}>
                 <div className="grid h-20 place-items-center bg-white/[0.02] pb-4">
@@ -117,7 +117,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
         {/* 5.16 : planète personnalisée (fiche publique, galaxie, accueil) */}
         <div>
           <p className="hud-eyebrow mb-2 text-slate-400">Planète</p>
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+          <div className="flex flex-col items-center gap-4 @md:flex-row @md:items-start">
             <div className="grid shrink-0 place-items-center">
               <HomePlanet buildings={player.buildings} size={56} look={planet} />
             </div>

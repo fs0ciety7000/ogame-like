@@ -50,8 +50,8 @@ export function NotificationBell() {
   }, [open, tab]);
 
   const shown = items.filter((n) => inCategory(n.kind, tab));
-  // 5.24 : 15 groupes par page ; retour à la première page en changeant d'onglet.
-  const notifPage = usePaged(groupNotifications(shown), 15);
+  // 5.24 : groupes paginés (taille des Réglages) ; retour à la première page en changeant d'onglet.
+  const notifPage = usePaged(groupNotifications(shown));
   const toFirstPage = notifPage.pager.onPage;
   useEffect(() => {
     toFirstPage(0);

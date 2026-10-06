@@ -428,6 +428,119 @@
   --th-stripe-4: #3f7fbf;
 }
 
+/* 5.25 : Ishimura — esprit Dead Space. Hologrammes diégétiques orange projetés sur
+   du noir, glace cyan en second accent, lueur de projection. */
+:root[data-theme="ishimura"] {
+  --th-font-title: "Saira Condensed", sans-serif;
+  --th-font-body: "Saira", sans-serif;
+  --th-title-track: 0.14em;
+  --th-cut: 10px;
+  --th-accent: #ff9a2e;
+  --th-accent2: #6fd8ff;
+  --th-ok: #7dffb0;
+  --th-danger: #ff2a2a;
+  --th-gold: #ffd36b;
+  --th-ember: #ff6a1a;
+  --th-space-950: #020203;
+  --th-space-900: #050506;
+  --th-space-800: #0b0a09;
+  --th-space-700: #14110d;
+  --th-space-600: #201a13;
+  --th-space-500: #30271c;
+  --th-text-100: #fff1dc;
+  --th-text-200: #f2dfc2;
+  --th-text-300: #d6bf9c;
+  --th-text-400: #a48d6c;
+  --th-text-500: #7a6850;
+  --th-text-600: #544737;
+  --th-ink: #fff1dc;
+  --th-body-glow: #2a1300;
+  --th-panel: linear-gradient(180deg, color-mix(in srgb, #ff9a2e 6%, #050403), color-mix(in srgb, #050403 96%, transparent));
+  --th-edge: color-mix(in srgb, var(--th-accent) 35%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent) 85%, transparent);
+  --th-btn-ink: #1a0b00;
+  --th-scan: 0.06;
+}
+
+/* 5.25 : Atlas — esprit No Man's Sky. Nuit violette, magenta saturé, sarcelle,
+   soleil jaune : un univers coloré et optimiste. */
+:root[data-theme="atlas"] {
+  --th-font-title: "Exo 2", sans-serif;
+  --th-font-body: "Exo 2", sans-serif;
+  --th-title-track: 0.06em;
+  --th-cut: 14px;
+  --th-accent: #ff4fd8;
+  --th-accent2: #29f0d0;
+  --th-ok: #9dff5c;
+  --th-danger: #ff3d5a;
+  --th-gold: #ffd23f;
+  --th-ember: #ff8a3d;
+  --th-space-950: #0a0418;
+  --th-space-900: #10072a;
+  --th-space-800: #180c3a;
+  --th-space-700: #22124f;
+  --th-space-600: #2f1a68;
+  --th-space-500: #432690;
+  --th-text-100: #f2f6ff;
+  --th-text-200: #dde5ff;
+  --th-text-300: #b9c4f0;
+  --th-text-400: #8b97cf;
+  --th-text-500: #6470a6;
+  --th-text-600: #454f80;
+  --th-ink: #f2f6ff;
+  --th-body-glow: #4a1170;
+  --th-panel: linear-gradient(160deg, color-mix(in srgb, #ff4fd8 7%, #10072a), color-mix(in srgb, #29f0d0 5%, #0a0418));
+  --th-edge: color-mix(in srgb, var(--th-accent) 30%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent2) 80%, transparent);
+  --th-btn-ink: #1a0418;
+  --th-scan: 0.02;
+}
+
+/* 5.25 : Matrice — esprit Ghost in the Shell / Matrix. Noir pur, vert matrice,
+   cyan électrique ; le magenta est réservé au danger. */
+:root[data-theme="matrice"] {
+  --th-font-title: "Share Tech Mono", monospace;
+  --th-font-body: "Rajdhani", sans-serif;
+  --th-title-track: 0.1em;
+  --th-cut: 8px;
+  --th-accent: #3dff6e;
+  --th-accent2: #00f0ff;
+  --th-ok: #3dff6e;
+  --th-danger: #ff2d6f;
+  --th-gold: #e8ff3d;
+  --th-ember: #ffb02e;
+  --th-space-950: #000000;
+  --th-space-900: #010302;
+  --th-space-800: #030805;
+  --th-space-700: #07110a;
+  --th-space-600: #0d1c11;
+  --th-space-500: #16301c;
+  --th-text-100: #e6ffe9;
+  --th-text-200: #c4f5cb;
+  --th-text-300: #9be0a6;
+  --th-text-400: #6fb07b;
+  --th-text-500: #4d8256;
+  --th-text-600: #345a3b;
+  --th-ink: #e6ffe9;
+  --th-body-glow: #00210b;
+  --th-panel: linear-gradient(180deg, color-mix(in srgb, #3dff6e 4%, #000), #000);
+  --th-edge: color-mix(in srgb, var(--th-accent) 28%, transparent);
+  --th-edge-strong: color-mix(in srgb, var(--th-accent2) 80%, transparent);
+  --th-btn-ink: #001505;
+  --th-scan: 0.07;
+}
+/* Ishimura : la projection déborde légèrement de son cadre (lueur néon). */
+:root[data-theme="ishimura"] .glass-panel {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--th-accent) 18%, transparent));
+}
+:root[data-theme="ishimura"] .hud-title,
+:root[data-theme="matrice"] .hud-title {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--th-accent) 45%, transparent);
+}
+:root[data-theme="matrice"] h1.hud-title {
+  color: var(--th-accent);
+}
+
 html, body, #root {
   height: 100%;
 }
@@ -1099,7 +1212,6 @@ main {
     linear-gradient(color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(180deg, var(--color-space-800), var(--color-space-950) 70%);
-  background-attachment: fixed;
 }
 :root[data-theme="constellation"] .glass-panel {
   backdrop-filter: none;
@@ -2082,4 +2194,69 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .tab-enter[data-state="active"], .meter-fill, .cal-cell, [role="tab"][data-state="active"] { animation: none; }
   .tab-enter[data-state="active"]::before { display: none; }
+}
+
+/* ===== 5.25 : retour visuel (GSAP, src/lib/fx). Jetons du thème uniquement. ===== */
+@property --fx-flare {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+/* Éclat bref d'un panneau qui confirme une action (piloté par laserScan). */
+.glass-panel {
+  box-shadow: inset 0 0 calc(var(--fx-flare) * 36px) color-mix(in srgb, var(--color-cyan-glow) calc(var(--fx-flare) * 45%), transparent);
+}
+.fx-laser {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: 2px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--color-cyan-glow) 20%, var(--th-text-100) 50%, var(--color-cyan-glow) 80%, transparent);
+  box-shadow: 0 0 14px var(--color-cyan-glow);
+}
+/* Curseur bloc pendant la frappe façon terminal. */
+.fx-caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: fx-blink 0.7s steps(1) infinite;
+}
+@keyframes fx-blink {
+  50% { opacity: 0; }
+}
+/* Interférence de signal au changement de page : bandes décalées très brèves. */
+.fx-interference {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.fx-interference span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--color-cyan-glow) 14%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-cyan-glow) 45%, transparent);
+}
+/* Séquence d'amorçage (une fois par session). */
+.fx-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--color-space-950);
+  font-family: var(--font-mono);
+  color: var(--color-cyan-glow);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fx-caret::after { animation: none; }
+  .fx-interference, .fx-boot { display: none; }
 }

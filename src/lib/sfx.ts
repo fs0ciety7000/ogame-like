@@ -226,6 +226,12 @@ const AMBIENCE: Record<ThemeId, { notes: number[]; type: OscillatorType; cutoff:
   spartan: { notes: [36.7, 55, 73.4, 87.3], type: "triangle", cutoff: 480, lfo: 0.06 },
   // Constellation : accord ouvert, contemplatif (Sol, Ré, Sol, Si).
   constellation: { notes: [49, 73.4, 98, 123.5], type: "sine", cutoff: 900, lfo: 0.03 },
+  // Ishimura : bourdon grave et inquiétant (La, Sib, Mi).
+  ishimura: { notes: [55, 58.3, 82.4], type: "sawtooth", cutoff: 300, lfo: 0.04 },
+  // Atlas : accord majeur lumineux (Do, Mi, Sol, Si).
+  atlas: { notes: [65.4, 82.4, 98, 123.5], type: "triangle", cutoff: 1300, lfo: 0.1 },
+  // Matrice : pulsation numérique sèche (Mi, Si, Mi).
+  matrice: { notes: [41.2, 61.7, 82.4], type: "square", cutoff: 380, lfo: 0.2 },
 };
 
 function buildAmbience(audio: AudioContext, theme: ThemeId): AmbienceGraph {
