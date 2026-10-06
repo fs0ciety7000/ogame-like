@@ -52,7 +52,7 @@ export function buildTimeBreakdown(player: TimePlayer, now: number): FactorLine[
     { label: "Technologies", factor: techReductionFactor(player.techLevels, "building_time") },
     { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
     { label: "Ascension", factor: ascensionBuildTimeFactor(player) },
-    { label: "Officiers, reliques, talents, modules", factor: 1 - playerModifiers(player).buildTime },
+    { label: "Officiers, reliques, talents, classe", factor: 1 - playerModifiers(player).buildTime },
   ]);
 }
 
@@ -62,6 +62,6 @@ export function researchTimeBreakdown(player: TimePlayer, now: number): FactorLi
     { label: "Événement en cours", factor: researchTimeFactor(now) },
     { label: "Technologies", factor: techReductionFactor(player.techLevels, "research_time") },
     { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
-    { label: "Officiers, reliques, talents, modules", factor: 1 - playerModifiers(player).researchTime },
+    { label: "Officiers, reliques, talents, classe", factor: 1 - playerModifiers(player).researchTime },
   ]);
 }

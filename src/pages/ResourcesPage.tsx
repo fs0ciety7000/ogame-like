@@ -11,7 +11,11 @@ import { StorageRiskCard } from "@/components/game/StorageRiskCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
-import { economySnapshot } from "@/game/economy";
+import { economySnapshot, productionBreakdown } from "@/game/economy";
+import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { factorRows } from "@/components/ui/afford";
+import { Factory } from "lucide-react";
+import type { PlayerState } from "@/types/game";
 import { HudCallout, HudMeter } from "@/components/ui/hud";
 import { EXCHANGE_TAX_PCT, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { GameActionError, tradeResources } from "@/services/playerService";
@@ -81,10 +85,12 @@ export function ResourcesPage() {
               {res.rarity === "common" && Number.isFinite(economy.capacity) && (
                 <div className="relative mt-3">
                   <div className="flex justify-between font-mono text-[10px] text-slate-500">
-                    <span className={(rates[res.id] ?? 0) > 0 ? "text-mint-glow" : (rates[res.id] ?? 0) < 0 ? "text-danger-glow" : ""}>
-                      {(rates[res.id] ?? 0) > 0 ? "+" : ""}
-                      {formatCompact(rates[res.id] ?? 0)}/s
-                    </span>
+                    <ProductionWhy player={player} res={res.id}>
+                      <span className={(rates[res.id] ?? 0) > 0 ? "text-mint-glow" : (rates[res.id] ?? 0) < 0 ? "text-danger-glow" : ""}>
+                        {(rates[res.id] ?? 0) > 0 ? "+" : ""}
+                        {formatCompact(rates[res.id] ?? 0)}/s
+                      </span>
+                    </ProductionWhy>
                     <span>{Math.min(100, Math.round((resources[res.id] / economy.capacity) * 100))} %</span>
                   </div>
                   <HudMeter
@@ -150,5 +156,31 @@ export function ResourcesPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** 6.1 (lot L, constat Q3) : d'où vient la production d'une ressource (base des extracteurs, puis chaque bonus). */
+function ProductionWhy({ player, res, children }: { player: PlayerState; res: ResourceId; children: React.ReactNode }) {
+  const b = productionBreakdown(player, res, Date.now());
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="cursor-help" aria-label="Voir d'où vient cette production">
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <TooltipCard
+          title="D'où vient cette production"
+          icon={<Factory />}
+          rows={[
+            { label: "Extracteurs", value: `${formatCompact(b.baseHourly)} / h` },
+            ...factorRows(b.lines, true),
+            { label: "Total brut", value: `${formatCompact(b.totalHourly)} / h`, tone: "accent" },
+          ]}
+          note={res === "energy" ? "L'entretien de la flotte est déduit de l'énergie. Les bonus se multiplient entre eux." : "Les bonus se multiplient entre eux. Entrepôt plein : la production s'arrête."}
+        />
+      </TooltipContent>
+    </Tooltip>
   );
 }

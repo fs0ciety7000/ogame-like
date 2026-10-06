@@ -1,4 +1,4 @@
-import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, PRODUCTION_RESOURCE_BY_BUILDING, productionPerSecond } from "@/game/buildings";
 import type { MissionDef } from "@/game/missions";
 import { getProductionBonus, getProductionRatesPerSecond } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -326,4 +326,36 @@ export function exposureView(player: Pick<PlayerState, "buildings" | "techLevels
     return { res, stock, protectedNow, exposedNow: Math.max(0, stock - protectedNow), protectedSoon, hourly: hourlyProduction(player.buildings, res, player.techLevels) };
   });
   return { lines, activeFromMs: ECONOMY_RULES.protectedHoursFromMs, active };
+}
+
+/* ---------- 6.1 (lot L, constat Q3) : d'où vient la production ---------- */
+
+export interface ProductionBreakdown {
+  /** Production des extracteurs seuls, par heure. */
+  baseHourly: number;
+  lines: { label: string; factor: number }[];
+  /** Production brute par heure, tous bonus compris (= economySnapshot). */
+  totalHourly: number;
+}
+
+/** Production horaire d'une ressource, décomposée : base des extracteurs puis chaque multiplicateur. */
+export function productionBreakdown(input: EconomyInput, res: ResourceId, now: number): ProductionBreakdown {
+  let base = 0;
+  for (const b of BUILDINGS) {
+    if (PRODUCTION_RESOURCE_BY_BUILDING[b.id] !== res) continue;
+    const level = effectiveBuildingLevel(input.buildings, b.id);
+    if (level > 0) base += productionPerSecond(b.id, level);
+  }
+  const mods = playerModifiers(input, now, input.effectScope);
+  const raw = [
+    { label: "Technologies", factor: 1 + getProductionBonus(input.techLevels) + techBonus(input.techLevels, "resource_production", res) },
+    { label: "Industrie coopérative (alliance)", factor: allianceProductionFactor(input.allianceResearch) },
+    { label: "Ascension", factor: ascensionProductionFactor(input) },
+    { label: "Coup de pouce Kesh et rattrapage", factor: boostAt(input, now) },
+    { label: "Colonie", factor: input.productionFactor ?? 1 },
+    { label: "Officiers, reliques, talents, classe, territoire", factor: 1 + mods.productionAll + (mods.production[res] ?? 0) },
+    { label: "Événement en cours", factor: productionMultipliers(now)[res] ?? 1 },
+  ];
+  const lines = raw.filter((l) => Math.abs(l.factor - 1) > 1e-9);
+  return { baseHourly: base * 3600, lines, totalHourly: (economySnapshot(input, now).gross[res] ?? 0) * 3600 };
 }

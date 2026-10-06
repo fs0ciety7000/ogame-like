@@ -31,11 +31,12 @@ export function canAfford(cost: Amounts, stock: Amounts): boolean {
 /** 5.31 : un multiplicateur et son origine (« d'où vient ce chiffre »). */
 export type FactorLine = { label: string; factor: number };
 
-/** « −20 % », « +10 % » : une réduction en mint, une hausse en ember. */
-export function factorRows(lines: FactorLine[]): TooltipRow[] {
+/** « −20 % », « +10 % » : par défaut (durées), une réduction en mint et une hausse en ember ; `upIsGood` inverse (production, puissance). */
+export function factorRows(lines: FactorLine[], upIsGood = false): TooltipRow[] {
   return lines.map((l) => {
     const pct = Math.round((l.factor - 1) * 1000) / 10;
-    return { label: l.label, value: `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct)} %`, tone: pct < 0 ? "mint" : pct > 0 ? "ember" : undefined };
+    const good = upIsGood ? pct > 0 : pct < 0;
+    return { label: l.label, value: `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct)} %`, tone: pct === 0 ? undefined : good ? "mint" : "ember" };
   });
 }
 

@@ -57,7 +57,7 @@ Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration.
 |:--|:--|:--|:--|
 | Q1 | ✅ 5.30.0 (sans fusion) | **Trop de corvées quotidiennes**, réparties dans des écrans différents : contrats du jour (3), missions du jour (3), série, primes (4), expéditions (3), vote d'alliance, défis, passe, chroniques, boss (jusqu'à 4 en même temps) | un **Journal de bord** unique (ordres du jour, rendez-vous, « Tout réclamer ») ; fusionner contrats et missions du jour |
 | Q2 | ✅ 5.31.0 | **14 monnaies et jauges** ; « saison » désigne trois choses (saison XP, passe, Chroniques) | portefeuille unique avec glossaire, nommage unifié (« Saison » = mois ; « Passe » ; « Chronique » = histoire du mois) |
-| Q3 | ✅ 5.31.0 (durées ; production et combat à suivre) | Les bonus s'empilent (tech, officiers, reliques, modules, talents, territoires, capsules, mutateurs) sans être visibles au moment de décider | infobulle « d'où vient ce chiffre » sur chaque valeur clé (combat, coûts, temps), branchée sur `effectSheet` |
+| Q3 | ✅ 5.31.0 (durées), 6.1.0 (production, combat) | Les bonus s'empilent (tech, officiers, reliques, modules, talents, territoires, capsules, mutateurs) sans être visibles au moment de décider | infobulle « d'où vient ce chiffre » sur chaque valeur clé (combat, coûts, temps), branchée sur `effectSheet` |
 | Q4 | ✅ 5.30.0 (affichage ; lissage à décider) | Les rendez-vous tombent le même week-end (boss mondial, guerre de territoire, tournoi du casino, élite) | calendrier lissé par le planificateur, un « temps fort » par week-end |
 
 ### Performance

@@ -1,3 +1,4 @@
+import { playerModifiers } from "@/game/modifiers";
 import { eliteStatus } from "@/game/eliteUnits";
 import { playerUnitCost } from "@/game/effectTargets";
 import { PERSONALITY_LABELS } from "@/game/warlords";
@@ -375,6 +376,8 @@ export function UnitsPage() {
                         const defenseTechBonus = Math.round(techBonus(player.techLevels, "unit_defense") * 100);
                         const atk = Math.round(unitStat(player.units, player.techLevels, unit.id, "attack"));
                         const def = Math.round(unitStat(player.units, player.techLevels, unit.id, "defense"));
+                        const empireAtk = Math.round(playerModifiers(player).attack * 100);
+                        const empireDef = Math.round(playerModifiers(player).defense * 100);
                         return (
                           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
                             <Tooltip>
@@ -391,6 +394,8 @@ export function UnitsPage() {
                                     { label: `Niveau ${data.level}`, value: `+${formatNumber((data.level - 1) * unitLevelBonus(unit))}` },
                                     ...(attackTechBonus > 0 ? [{ label: "Puissance d'attaque (tech)", value: `+${attackTechBonus} %`, tone: "mint" as const }] : []),
                                     { label: "Total", value: formatNumber(atk), tone: "accent" },
+                                    // 6.1 (lot L) : couche empire, appliquée au combat (officiers, reliques, talents, classe).
+                                    ...(empireAtk > 0 ? [{ label: "Au combat : officiers, reliques, talents, classe", value: `+${empireAtk} %`, tone: "mint" as const }] : []),
                                   ]}
                                 />
                               </TooltipContent>
@@ -409,6 +414,7 @@ export function UnitsPage() {
                                     { label: `Niveau ${data.level}`, value: `+${formatNumber((data.level - 1) * unitLevelBonus(unit))}` },
                                     ...(defenseTechBonus > 0 ? [{ label: "Blindage avancé (tech)", value: `+${defenseTechBonus} %`, tone: "mint" as const }] : []),
                                     { label: "Total", value: formatNumber(def), tone: "accent" },
+                                    ...(empireDef > 0 ? [{ label: "Au combat : officiers, reliques, talents, classe", value: `+${empireDef} %`, tone: "mint" as const }] : []),
                                     { label: "Points de vie au combat", value: formatNumber(def * COMBAT_RULES.hpPerResistance) },
                                   ]}
                                 />
