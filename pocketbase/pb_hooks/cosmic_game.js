@@ -1771,7 +1771,7 @@ function consumeAegis(player, now) {
 
 // src/game/modules.ts
 var MODULE_CLASSES = ["light", "medium", "heavy", "support"];
-var MODULE_RULES = { slotsPerClass: 2, maxItems: 30 };
+var MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
 var MODULE_RARITIES = [
   { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
   { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
@@ -1829,7 +1829,15 @@ function modulesState(player) {
     const list = Array.isArray((_b = raw.slots) == null ? void 0 : _b[cls]) ? raw.slots[cls] : [];
     slots[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => list[i] && ids.has(list[i]) ? list[i] : null);
   }
-  return { items, slots };
+  const presets = (Array.isArray(raw.presets) ? raw.presets : []).filter((p) => !!p && typeof p.name === "string" && !!p.slots && typeof p.slots === "object").slice(0, MODULE_RULES.maxPresets).map((p) => {
+    const ps = emptySlots();
+    for (const cls of MODULE_CLASSES) {
+      const list = Array.isArray(p.slots[cls]) ? p.slots[cls] : [];
+      ps[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => typeof list[i] === "string" ? list[i] : null);
+    }
+    return { name: p.name.slice(0, 24), slots: ps };
+  });
+  return presets.length ? { items, slots, presets } : { items, slots };
 }
 function moduleEffects(player) {
   const st = modulesState(player);
@@ -1914,6 +1922,71 @@ function recycleModule(player, id) {
   st.items = st.items.filter((m) => m.id !== item.id);
   player.modules = st;
   return moduleRarity(item.rarity).recycleAmber * (item.built ? 2 : 1);
+}
+function nextModuleRarity(r) {
+  const i = MODULE_RARITIES.findIndex((x) => x.id === r);
+  return i >= 0 && i < MODULE_RARITIES.length - 1 ? MODULE_RARITIES[i + 1].id : null;
+}
+function fuseModulePlans(player, ids, now, random = Math.random) {
+  const st = modulesState(player);
+  const list = Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+  if (list.length !== MODULE_RULES.fuseCount) throw new GameActionError(`Choisis ${MODULE_RULES.fuseCount} plans identiques.`);
+  const items = list.map((id) => find(st, id));
+  if (items.some((m) => m.built)) throw new GameActionError("Seuls les plans (non fabriqu\xE9s) se fusionnent.");
+  const [first] = items;
+  if (items.some((m) => m.template !== first.template || m.rarity !== first.rarity)) throw new GameActionError("Les trois plans doivent \xEAtre identiques (m\xEAme mod\xE8le, m\xEAme raret\xE9).");
+  const next = nextModuleRarity(first.rarity);
+  if (!next) throw new GameActionError("Un plan l\xE9gendaire ne se fusionne plus.");
+  const fused = { id: newId2(now, random), template: first.template, rarity: next, built: false, foundAtMs: now, source: "fusion" };
+  st.items = [...st.items.filter((m) => !list.includes(m.id)), fused];
+  player.modules = st;
+  return fused;
+}
+function saveModulePreset(player, nameIn) {
+  var _a;
+  const st = modulesState(player);
+  const name = String(nameIn != null ? nameIn : "").trim().slice(0, 24);
+  if (!name) throw new GameActionError("Nomme ce pr\xE9r\xE9glage.");
+  const presets = [...(_a = st.presets) != null ? _a : []];
+  const preset = { name, slots: JSON.parse(JSON.stringify(st.slots)) };
+  const i = presets.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0) presets[i] = preset;
+  else if (presets.length >= MODULE_RULES.maxPresets) throw new GameActionError(`${MODULE_RULES.maxPresets} pr\xE9r\xE9glages au plus.`);
+  else presets.push(preset);
+  player.modules = __spreadProps(__spreadValues({}, st), { presets });
+  return preset;
+}
+function applyModulePreset(player, index2) {
+  var _a;
+  const st = modulesState(player);
+  const preset = ((_a = st.presets) != null ? _a : [])[Math.floor(Number(index2))];
+  if (!preset) throw new GameActionError("Pr\xE9r\xE9glage introuvable.");
+  const built = new Set(st.items.filter((m) => m.built).map((m) => m.id));
+  let missing = 0;
+  const slots = emptySlots();
+  const used = /* @__PURE__ */ new Set();
+  for (const cls of MODULE_CLASSES) {
+    slots[cls] = preset.slots[cls].map((id) => {
+      if (!id) return null;
+      const item = st.items.find((m) => m.id === id);
+      const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template).family] : null;
+      if (!item || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
+        missing += 1;
+        return null;
+      }
+      used.add(id);
+      return id;
+    });
+  }
+  player.modules = __spreadProps(__spreadValues({}, st), { slots });
+  return { missing };
+}
+function deleteModulePreset(player, index2) {
+  var _a;
+  const st = modulesState(player);
+  const i = Math.floor(Number(index2));
+  if (!((_a = st.presets) != null ? _a : [])[i]) throw new GameActionError("Pr\xE9r\xE9glage introuvable.");
+  player.modules = __spreadProps(__spreadValues({}, st), { presets: st.presets.filter((_, k) => k !== i) });
 }
 
 // src/game/galaxy.ts
@@ -16131,6 +16204,16 @@ function applyAction(s, action) {
       player.bounties = st;
       return { amber };
     }
+    // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
+    case "moduleFuse":
+      return fuseModulePlans(player, action.moduleIds, now);
+    case "modulePresetSave":
+      return saveModulePreset(player, action.name);
+    case "modulePresetApply":
+      return applyModulePreset(player, action.index);
+    case "modulePresetDelete":
+      deleteModulePreset(player, action.index);
+      return void 0;
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
     case "talentLearn":

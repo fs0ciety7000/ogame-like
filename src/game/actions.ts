@@ -39,7 +39,7 @@ import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
 import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
-import { buildModule, mountModule, recycleModule, unmountModule } from "@/game/modules";
+import { applyModulePreset, buildModule, deleteModulePreset, fuseModulePlans, mountModule, recycleModule, saveModulePreset, unmountModule } from "@/game/modules";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
@@ -102,6 +102,10 @@ export type GameAction =
   | { type: "moduleMount"; moduleId: string; cls: string; slot: number }
   | { type: "moduleUnmount"; cls: string; slot: number }
   | { type: "moduleRecycle"; moduleId: string }
+  | { type: "moduleFuse"; moduleIds: string[] }
+  | { type: "modulePresetSave"; name: string }
+  | { type: "modulePresetApply"; index: number }
+  | { type: "modulePresetDelete"; index: number }
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
   | { type: "streakClaim" }
@@ -480,6 +484,20 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.bounties = st;
       return { amber };
     }
+
+    // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
+    case "moduleFuse":
+      return fuseModulePlans(player, action.moduleIds, now);
+
+    case "modulePresetSave":
+      return saveModulePreset(player, action.name);
+
+    case "modulePresetApply":
+      return applyModulePreset(player, action.index);
+
+    case "modulePresetDelete":
+      deleteModulePreset(player, action.index);
+      return undefined;
 
     case "setProfileStyle":
       return setProfileStyle(player, action.style);

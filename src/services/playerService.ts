@@ -765,6 +765,23 @@ export function recycleShipModule(moduleId: string) {
   return act<{ amber: number }>({ type: "moduleRecycle", moduleId });
 }
 
+/** 5.26.2 : fusion de trois plans identiques, préréglages de montage. */
+export function fuseShipModules(moduleIds: string[]) {
+  return act<import("@/game/modules").ModuleItem>({ type: "moduleFuse", moduleIds });
+}
+
+export function saveModulePresetAction(name: string) {
+  return act({ type: "modulePresetSave", name });
+}
+
+export function applyModulePresetAction(index: number) {
+  return act<{ missing: number }>({ type: "modulePresetApply", index });
+}
+
+export function deleteModulePresetAction(index: number) {
+  return act({ type: "modulePresetDelete", index });
+}
+
 /** v5.1 : talents d'Ascension. */
 export function learnTalent(talentId: string) {
   return act({ type: "talentLearn", talentId });

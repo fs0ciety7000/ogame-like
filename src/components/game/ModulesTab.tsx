@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Boxes, EyeOff, Gavel, Hammer, Package, Recycle, Rocket, Shield, Swords, X } from "lucide-react";
+import { Boxes, Combine, EyeOff, Gavel, Hammer, Package, Recycle, Rocket, Save, Shield, Swords, X } from "lucide-react";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
-import { EmptyState, HUD_TONE, HudChip, HudTag } from "@/components/ui/hud";
+import { EmptyState, HUD_TONE, HudCallout, HudChip, HudTag } from "@/components/ui/hud";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { askConfirm } from "@/components/ui/confirm-dialog";
@@ -11,6 +12,8 @@ import { GameActionError } from "@/game/errors";
 import {
   describeModule,
   findModuleTemplate,
+  fusablePlanGroups,
+  nextModuleRarity,
   MODULE_BUILD_COST,
   MODULE_CLASSES,
   MODULE_FAMILIES,
@@ -24,7 +27,7 @@ import {
 } from "@/game/modules";
 import { canAffordAll } from "@/game/resources";
 import { UNIT_CLASS_LABELS, type UnitClass } from "@/game/unitClasses";
-import { buildShipModule, mountShipModule, recycleShipModule, unmountShipModule } from "@/services/playerService";
+import { applyModulePresetAction, buildShipModule, deleteModulePresetAction, fuseShipModules, mountShipModule, recycleShipModule, saveModulePresetAction, unmountShipModule } from "@/services/playerService";
 import { cn, formatCompact } from "@/lib/utils";
 import type { PlayerState, ResourceId, Resources } from "@/types/game";
 
@@ -52,6 +55,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
   const st = modulesState(player);
   const [busy, setBusy] = useState(false);
   const [sel, setSel] = useState<{ cls: UnitClass; slot: number }>({ cls: "light", slot: 0 });
+  const [presetName, setPresetName] = useState("");
 
   const act = async (task: () => Promise<unknown>, msg: (out: unknown) => string) => {
     setBusy(true);
@@ -66,6 +70,16 @@ export function ModulesTab({ player }: { player: PlayerState }) {
   const order = (m: ModuleItem) => MODULE_RARITIES.findIndex((r) => r.id === m.rarity);
   const sorted = [...st.items].sort((a, b) => Number(b.built) - Number(a.built) || order(b) - order(a) || a.template.localeCompare(b.template));
   const plans = st.items.filter((m) => !m.built).length;
+
+  const fusable = fusablePlanGroups(st);
+  const presets = st.presets ?? [];
+
+  const fuse = async (g: (typeof fusable)[number]) => {
+    const name = findModuleTemplate(g.template)?.name;
+    const next = moduleRarity(nextModuleRarity(g.rarity)!);
+    const ok = await askConfirm({ title: `Fusionner trois plans « ${name} » ?`, message: `Trois plans ${moduleRarity(g.rarity).label.toLowerCase()}s disparaissent ; tu obtiens un plan ${next.label.toLowerCase()}, à fabriquer.`, confirmLabel: "Fusionner", tone: "gold" });
+    if (ok) void act(() => fuseShipModules(g.ids.slice(0, MODULE_RULES.fuseCount)), () => `Plan ${next.label.toLowerCase()} obtenu : ${name}.`);
+  };
 
   const recycle = async (item: ModuleItem) => {
     const amber = moduleRarity(item.rarity).recycleAmber * (item.built ? 2 : 1);
@@ -112,12 +126,69 @@ export function ModulesTab({ player }: { player: PlayerState }) {
             </div>
           ))}
         </div>
+        <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+          <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
+            Préréglages <span className="tabular-nums">{presets.length} / {MODULE_RULES.maxPresets}</span>
+          </p>
+          {presets.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map((p, i) => (
+                <span key={p.name} className="inline-flex items-center gap-1">
+                  <HudChip size="sm" tone="mint" asChild>
+                    <button type="button" disabled={busy} title="Appliquer ce montage" onClick={() => void act(() => applyModulePresetAction(i), (out) => ((out as { missing: number }).missing > 0 ? `« ${p.name} » appliqué : ${(out as { missing: number }).missing} module(s) manquant(s), emplacement(s) laissé(s) libre(s).` : `« ${p.name} » appliqué.`))}>
+                      {p.name}
+                    </button>
+                  </HudChip>
+                  <button
+                    type="button"
+                    className="text-slate-500 hover:text-danger-glow"
+                    disabled={busy}
+                    aria-label={`Supprimer le préréglage ${p.name}`}
+                    title="Supprimer"
+                    onClick={() => void askConfirm({ title: `Supprimer « ${p.name} » ?`, message: "Le montage actuel ne change pas.", confirmLabel: "Supprimer", tone: "danger" }).then((ok) => {
+                        if (ok) void act(() => deleteModulePresetAction(i), () => "Préréglage supprimé.");
+                      })}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = presetName.trim();
+              if (name) void act(() => saveModulePresetAction(name), () => `Montage enregistré sous « ${name} ».`).then(() => setPresetName(""));
+            }}
+          >
+            <Input value={presetName} maxLength={24} onChange={(e) => setPresetName(e.target.value)} placeholder="Nom (Raid, Défense…)" className="h-8 text-xs" aria-label="Nom du préréglage" />
+            <Button type="submit" size="sm" variant="secondary" disabled={busy || !presetName.trim()}>
+              <Save className="h-3.5 w-3.5" /> Enregistrer
+            </Button>
+          </form>
+        </div>
       </HudPanel>
 
       <HudPanel icon={<Hammer />} title="Atelier des modules" className="gap-2" aside={<span className="font-mono text-xs text-slate-500">{st.items.length} / {MODULE_RULES.maxItems}</span>}>
         <p className="text-xs text-slate-500">
           Les plans tombent au combat (boss, seigneurs, menaces, expéditions, joueurs). {plans > 0 && <>Un plan non fabriqué se vend à l'Hôtel des enchères.</>}
         </p>
+        {fusable.map((g) => {
+          const next = moduleRarity(nextModuleRarity(g.rarity)!);
+          return (
+            <HudCallout key={`${g.template}:${g.rarity}`} tone={next.tone === "neutral" ? "accent" : next.tone} className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+              <Combine className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="font-mono tabular-nums">{g.ids.length}</span> plans « {findModuleTemplate(g.template)?.name} » {moduleRarity(g.rarity).label.toLowerCase()}s : trois se fusionnent en un plan {next.label.toLowerCase()}.
+              </span>
+              <Button size="sm" variant="secondary" disabled={busy} onClick={() => void fuse(g)}>
+                <Combine className="h-3.5 w-3.5" /> Fusionner
+              </Button>
+            </HudCallout>
+          );
+        })}
         {sorted.length === 0 && (
           <EmptyState icon="🧩" title="Aucun plan de module" action={<EmptyAction to="/game/uber">Affronter le boss mondial</EmptyAction>} className="p-0">
             Les boss donnent les meilleurs plans (rare au minimum) ; seigneurs, menaces, expéditions et attaques gagnées en laissent parfois.
