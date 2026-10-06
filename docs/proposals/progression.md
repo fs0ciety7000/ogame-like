@@ -1,6 +1,6 @@
 # Proposition : progression, suites de la revue AU3
 
-Statut : **en attente de décision**. Constats : `docs/audit/2026-10-06-au3-progression.md`.
+Statut : **en cours** : C (titres groupés) et la mesure du rythme (A, traçage par source) livrés en 6.8.0 (`docs/changes/6.8.0-progression-generative.md`) ; A et B suivent en 6.8.1. Constats : `docs/audit/2026-10-06-au3-progression.md`.
 Les points A et B sont repris et étendus par `docs/proposals/generation-passe-chroniques.md` (passe et Chroniques entièrement génératifs).
 
 ## 1. Le problème vu par le joueur

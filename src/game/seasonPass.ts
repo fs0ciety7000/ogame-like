@@ -9,6 +9,7 @@ import { productionHours } from "@/game/pirates";
 import { addRelic, rollRelic, relicLabel, type RelicRarity } from "@/game/relics";
 import { CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
+import { CATALOG_START } from "@/game/seasonCatalog";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -187,6 +188,10 @@ export interface PassState {
   daily?: { day: string; counts: Record<string, number>; claimed: number[]; settled?: boolean };
   /** v5.14.1 : avancée du défi en cours (un palier à la fois), par action. */
   challenge?: Record<string, number>;
+  /** 6.8.0 (AU3, PRG-3) : points réellement gagnés ce mois, par source (connexion, primes, combats…). */
+  bySource?: Record<string, number>;
+  /** 6.8.0 : instant où le dernier palier a été atteint (rythme du passe, santé de l'équilibre). */
+  finishedAtMs?: number;
 }
 
 export function passTitle(seasonId: string): string {
@@ -205,6 +210,8 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
   const challenge: Record<string, number> = {};
   for (const [k, v] of Object.entries(raw.challenge ?? {})) if (Number(v) > 0) challenge[k] = Number(v);
   const cleared = (Array.isArray(raw.cleared) ? raw.cleared : []).map(Number).filter((n) => n >= 1);
+  const bySource: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw.bySource ?? {})) if (Number(v) > 0) bySource[k] = Number(v);
   return {
     seasonId,
     points: Math.max(0, Number(raw.points) || 0),
@@ -216,7 +223,16 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
     ...(cleared.length ? { cleared } : {}),
     ...(Object.keys(challenge).length ? { challenge } : {}),
     ...(raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {}),
+    ...(Object.keys(bySource).length ? { bySource } : {}),
+    ...(Number(raw.finishedAtMs) > 0 ? { finishedAtMs: Number(raw.finishedAtMs) } : {}),
   };
+}
+
+/** 6.8.0 : enregistre les points réellement gagnés (après plafond) et l'instant où le passe est fini. */
+function notePoints(st: PassState, source: string, before: number, now: number): void {
+  const gained = st.points - before;
+  if (gained > 0) st.bySource = { ...(st.bySource ?? {}), [source]: (st.bySource?.[source] ?? 0) + gained };
+  if (!st.finishedAtMs && st.points >= passMax(st.seasonId)) st.finishedAtMs = now;
 }
 
 /** 5.15.12 : compteurs et réclamations du jour (valeurs positives seulement). */
@@ -270,7 +286,9 @@ export function setMonthPasses(list: { id: string; pass?: MonthPass }[]): void {
 
 /** Paliers et points par palier du passe d'une saison. */
 export function activePass(seasonId: string = currentSeasonId()): MonthPass {
-  return SEASON_OVERRIDES.get(seasonId) ?? MONTH_PASSES.get(seasonId) ?? { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
+  // 6.8.0 : un seul passe par mois. Dès le catalogue (passes de saison générés), le passe du chapitre n'est plus lu.
+  const chapterPass = seasonId < CATALOG_START ? MONTH_PASSES.get(seasonId) : undefined;
+  return SEASON_OVERRIDES.get(seasonId) ?? chapterPass ?? { pointsPerTier: PASS_RULES.pointsPerTier, tiers: PASS_TIERS };
 }
 
 /** v5.14.1 : prérequis d'un palier du passe d'une saison. */
@@ -392,7 +410,9 @@ export function addPassPoints(player: PlayerState, source: PassSource, now: numb
   const max = passMax(st.seasonId);
   const gain = PASS_POINTS[source] * Math.max(0, times);
   const overflow = Math.max(0, st.points + gain - max);
+  const before = st.points;
   st.points = Math.min(max, st.points + gain);
+  notePoints(st, source, before, now);
   player.seasonPass = st;
   if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
     const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
@@ -413,7 +433,9 @@ export function passDailyLogin(player: PlayerState, now: number): boolean {
   if (st.loginDay === day) return false;
   st.loginDay = day;
   st.activity = { ...(st.activity ?? {}), dailyLogin: (st.activity?.dailyLogin ?? 0) + 1 };
+  const before = st.points;
   st.points = Math.min(passMax(st.seasonId), st.points + PASS_POINTS.dailyLogin);
+  notePoints(st, "dailyLogin", before, now);
   player.seasonPass = st;
   return true;
 }

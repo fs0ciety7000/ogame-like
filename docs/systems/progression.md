@@ -6,8 +6,8 @@
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
-| Passe de saison | mensuel | 30 paliers × 40 points ; catalogue de 36 saisons |
-| Chroniques | mensuel | 4 épisodes, boss de saison |
+| Passe | mensuel | 30 paliers × 40 points ; catalogue de 36 saisons ; un seul passe par mois dès novembre 2026 ; points tracés par source |
+| Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque |
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e |
@@ -27,3 +27,11 @@
 Constats PRG-1 à PRG-8 dans `docs/audit/2026-10-06-au3-progression.md` : passe d'octobre fini en 6 jours par 4 joueurs sur 14 (points non
 expliqués par le barème du code, à vérifier en production), rien à gagner après le dernier palier, points non tracés par source, titres en
 série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
+
+## 6.8.0 (lot 1 du passe génératif)
+- Points du passe gardés par source (`PassState.bySource`) et instant du dernier palier (`finishedAtMs`) ; Admin → Équilibrage → Santé :
+  % au dernier palier, jour médian de fin, points par source, part des succès du joueur médian (et courbes quotidiennes).
+- Un seul passe par mois dès novembre 2026 (`activePass`, invariant I17).
+- Chroniques : novembre → mars écrits à la main passent dans `chronicles.library` (migration `chronicles-library-6.8`) ; le générateur
+  écrit chaque mois dès novembre. Admin → Chroniques → Bibliothèque : « Utiliser » place un chapitre écrit sur un mois.
+- Profil : titres à paliers groupés par famille (plus haut palier + titre affiché), paliers inférieurs dépliables.

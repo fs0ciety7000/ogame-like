@@ -5,6 +5,22 @@ import { formatCompact } from "@/lib/utils";
 /* 6.0.1 (lot K) : santé de l'équilibre. Les relevés de la feuille de route (abri, butin, chantiers,
    flottes, alliances, routes, classes), lus sans accès direct aux données des joueurs. */
 
+const PASS_SOURCE_LABELS: Record<string, string> = {
+  dailyLogin: "Connexion",
+  contract: "Objectifs du jour",
+  bounty: "Primes",
+  raidRepelled: "Raids repoussés",
+  victory: "Victoires",
+  bossAssault: "Assauts de boss",
+  vendetta: "Vendettas",
+  chronicle: "Épisodes",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  allianceBossTry: "Boss d'alliance (essai)",
+  coalition: "Coalitions",
+  allianceDaily: "Objectif d'alliance",
+};
+
 const h = (x: number) => `${String(x).replace(".", ",")} h`;
 
 export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
@@ -19,6 +35,14 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
         <StatTile size="sm" tone="violet" label="Sauvetage" value={`${health.salvage.avgPct} %`} sub={`max ${health.salvage.maxPct} %`} />
         <StatTile size="sm" tone="gold" label="Chantiers en parallèle" value={`${health.parallel.buildsMedian}`} sub={`médiane · max ${health.parallel.buildsMax}`} />
         <StatTile size="sm" tone="accent" label="Flottes en vol" value={`${health.parallel.fleetsMedian}`} sub={`médiane · max ${health.parallel.fleetsMax} · ${health.parallel.fullSlotsPct ?? 0} % à court d'emplacements`} />
+        <StatTile
+          size="sm"
+          tone={health.pass.finishedPct >= 40 && (health.pass.medianFinishDay ?? 31) < 15 ? "danger" : "gold"}
+          label="Passe du mois"
+          value={`${health.pass.finishedPct} % fini`}
+          sub={`${health.pass.medianPoints} / ${health.pass.maxPoints} points (médiane)${health.pass.medianFinishDay ? ` · fini le ${health.pass.medianFinishDay} (médiane)` : ""}`}
+        />
+        <StatTile size="sm" tone="violet" label="Succès (joueur médian)" value={`${health.achievements.medianPct} %`} sub={`${health.achievements.medianUnlocked} sur ${health.achievements.total}`} />
         <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub={`dont ${health.colonies.supply ?? 0} en ravitaillement · ${health.colonies.queued ?? 0} files de défense`} />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -33,6 +57,16 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           <span className="text-slate-500">aucune</span>
         )}
       </div>
+      {health.pass.bySource.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>Points de passe par source :</span>
+          {health.pass.bySource.map((r) => (
+            <HudChip key={r.source} size="sm" tone="gold">
+              {PASS_SOURCE_LABELS[r.source] ?? r.source} <span className="ml-1 font-mono tabular-nums">{r.sharePct} %</span>
+            </HudChip>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <span>Classes :</span>
         {health.classes.rows.map((r) => (

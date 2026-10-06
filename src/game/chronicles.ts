@@ -105,11 +105,17 @@ export interface ChroniclesConfig {
   months: ChronicleMonth[];
   bonus?: ChronicleBonus;
   codexRewards?: CodexRewardTable;
+  /** 6.8.0 : chapitres écrits à la main, hors calendrier. L'admin peut en reprendre un pour un mois ; sinon le générateur écrit le mois. */
+  library?: ChronicleMonth[];
 }
+
+/** 6.8.0 : à partir de ce mois, les chapitres sont générés (valeur littérale : pas d'import lu à l'initialisation du module). */
+export const GENERATED_CHAPTERS_FROM = "2026-11";
 
 const L = (speaker: StoryLine["speaker"], text: string): StoryLine => ({ speaker, text });
 
-export const DEFAULT_CHRONICLES: ChroniclesConfig = {
+/** Chapitres écrits à la main (v4.3, v4.7) : octobre 2026 reste en jeu, novembre → mars passent en bibliothèque (6.8.0). */
+const WRITTEN_CHAPTERS: ChroniclesConfig = {
   months: [
     {
       id: "2026-10",
@@ -396,6 +402,11 @@ export const DEFAULT_CHRONICLES: ChroniclesConfig = {
   ],
 };
 
+export const DEFAULT_CHRONICLES: ChroniclesConfig = {
+  months: WRITTEN_CHAPTERS.months.filter((m) => m.id < GENERATED_CHAPTERS_FROM),
+  library: WRITTEN_CHAPTERS.months.filter((m) => m.id >= GENERATED_CHAPTERS_FROM),
+};
+
 let config: ChroniclesConfig = { ...structuredClone(DEFAULT_CHRONICLES), bonus: structuredClone(DEFAULT_CHRONICLE_BONUS) };
 
 const num = (v: unknown, d: number) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.floor(Number(v)) : d);
@@ -421,6 +432,7 @@ export function setChronicles(next: Partial<ChroniclesConfig> | null | undefined
     months: Array.isArray(next?.months) && next!.months.length > 0 ? structuredClone(next!.months) : structuredClone(DEFAULT_CHRONICLES.months),
     bonus: normalizeChronicleBonus(next?.bonus),
     codexRewards: normalizeCodexRewards(next?.codexRewards),
+    library: Array.isArray(next?.library) ? structuredClone(next!.library) : structuredClone(DEFAULT_CHRONICLES.library ?? []),
   };
   setMonthPasses(config.months);
 }
@@ -725,4 +737,24 @@ export function chronicleReadyCount(player: Pick<PlayerState, "chronicle">, now:
   const st = chronicleState(player, now);
   const open = unlockedEpisodes(now);
   return month.episodes.filter((e, i) => i < open && !st.claimed.includes(i) && (st.progress[i] ?? 0) >= e.objective.count).length;
+}
+
+/** 6.8.0 : reprend un chapitre de la bibliothèque pour un mois (remplace le chapitre généré de ce mois). */
+export function applyLibraryChapter(cfg: ChroniclesConfig, libraryId: string, monthId: string): ChroniclesConfig {
+  const src = (cfg.library ?? []).find((m) => m.id === libraryId);
+  if (!src) throw new Error(`Chapitre « ${libraryId} » absent de la bibliothèque.`);
+  const month: ChronicleMonth = { ...structuredClone(src), id: monthId };
+  delete month.auto;
+  return { ...cfg, months: [...cfg.months.filter((m) => m.id !== monthId), month].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) };
+}
+
+/** 6.8.0 : chapitres écrits à la main encore dans le calendrier à partir de `GENERATED_CHAPTERS_FROM` → bibliothèque.
+ *  Un mois déjà commencé (`now`) n'est jamais retiré. Retourne null si rien ne change. */
+export function moveWrittenToLibrary(cfg: Partial<ChroniclesConfig>, now: number): Partial<ChroniclesConfig> | null {
+  const current = chronicleMonthId(now);
+  const months = Array.isArray(cfg.months) ? cfg.months : [];
+  const moving = months.filter((m) => m && !m.auto && m.id >= GENERATED_CHAPTERS_FROM && m.id > current);
+  if (moving.length === 0) return null;
+  const library = [...(cfg.library ?? []).filter((l) => !moving.some((m) => m.id === l.id)), ...moving];
+  return { ...cfg, months: months.filter((m) => !moving.includes(m)), library };
 }

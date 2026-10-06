@@ -4943,6 +4943,23 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 6.8.0 (passe et Chroniques génératifs) : les chapitres écrits à la main de novembre 2026 à mars 2027 passent en bibliothèque,
+  // le générateur écrit ces mois (un mois déjà commencé n'est jamais retiré).
+  {
+    id: "chronicles-library-6.8",
+    key: "chronicles",
+    patches: [],
+    run(items, changes) {
+      if (!items || typeof items !== "object" || Array.isArray(items)) return false;
+      const next = loadGame().moveWrittenToLibrary(items, Date.now());
+      if (!next) return false;
+      const moved = (next.library || []).filter((l) => !(items.library || []).some((x) => x.id === l.id)).map((l) => l.id);
+      items.months = next.months;
+      items.library = next.library;
+      changes.push("chronicles-library-6.8 : chapitres écrits en bibliothèque (" + moved.join(", ") + ")");
+      return true;
+    },
+  },
   // 6.6 (revue AU1, PNJ-1) : « Traqueur Kesh » (tech19_2) : l'intention de l'admin était un Traqueur 50 % plus efficace
   // contre les PNJ. L'unité porte déjà ce +50 % (KESH_PVE_BONUS, attaque et défense) : le +7 % d'attaque de toutes les
   // unités par niveau (+140 %, JcJ compris) faisait doublon et sortait du cadre. Il est retiré.
@@ -5967,7 +5984,8 @@ function proceduralTick(now, opts) {
       });
       const errors = game.validateGameContent(Object.assign({}, content, { chronicles: { months } })).filter((x) => /^Chroniques/.test(x));
       if (errors.length > 0) throw new Error(`chapitre invalide : ${errors.slice(0, 3).join(" ; ")}`);
-      writeConfig(txApp, "chronicles", { months });
+      // 6.8.0 : garde bonus, récompenses du Codex et bibliothèque (avant : seuls les mois étaient réécrits).
+      writeConfig(txApp, "chronicles", Object.assign({}, content.chronicles, { months }));
     }
     if (settings.achievements && !o.monthId) {
       const proposals = game.proposeAchievementTiers(content.achievements, players, now);
@@ -6072,11 +6090,33 @@ function adminProcedural(e) {
       const monthId = String(req.monthId || "");
       if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
       const existing = game.chroniclesConfig().months.find((m) => m.id === monthId);
-      if (existing && !existing.auto) throw new BadRequestError("Ce mois a une chronique écrite à la main : elle n'est pas remplacée.");
+      if (existing && !existing.auto && !req.confirmWritten) throw new BadRequestError("Ce mois a un chapitre écrit à la main : confirme pour le remplacer par un chapitre généré.");
       if (existing && game.episodeUnlockMs(monthId, 0) <= now && !req.confirmStarted) throw new BadRequestError("Ce chapitre a déjà commencé : confirme pour le réécrire.");
       return e.json(200, proceduralTick(now, { force: true, monthId, variant: Math.max(0, Math.floor(Number(req.variant) || 0)) }));
     }
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
+    // 6.8.0 : reprend un chapitre écrit de la bibliothèque pour un mois (remplace le chapitre généré).
+    if (req.action === "useLibrary") {
+      const monthId = String(req.monthId || "");
+      const libraryId = String(req.libraryId || "");
+      if (!/^\d{4}-\d{2}$/.test(monthId)) throw new BadRequestError("Mois invalide (AAAA-MM).");
+      if (game.episodeUnlockMs(monthId, 0) <= now && !req.confirmStarted) throw new BadRequestError("Ce chapitre a déjà commencé : confirme pour le remplacer.");
+      let month = null;
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        const content = game.currentGameContent();
+        let next;
+        try {
+          next = game.applyLibraryChapter(content.chronicles, libraryId, monthId);
+        } catch (err) {
+          throw new BadRequestError(String((err && err.message) || err));
+        }
+        writeConfig(txApp, "chronicles", next);
+        month = next.months.find((m) => m.id === monthId);
+        bossAdminLog(txApp, e, "chronicles", `Chroniques ${monthId} : chapitre écrit « ${month.title} » repris de la bibliothèque`, {}, now);
+      });
+      return e.json(200, { month });
+    }
     if (req.action === "passSeasonsRun") return e.json(200, { lines: passSeasonsRun(now) });
     // v5.13 : (ré)écrit le brouillon du passe d'un mois. Un passe publié n'est réécrit qu'après confirmation.
     // v5.14.2 : réécrit seulement les défis d'un passe (n'importe quel mois, même en cours).

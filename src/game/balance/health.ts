@@ -5,6 +5,9 @@ import { economySnapshot } from "@/game/economy";
 import { fleetSlots, SLOT_FREE_MISSIONS } from "@/game/fleets";
 import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, findUnit } from "@/game/units";
 import { withRepairBonus } from "@/game/modifiers";
+import { ACHIEVEMENTS } from "@/game/achievements";
+import { passState, PASS_RULES, activePass } from "@/game/seasonPass";
+import { parisOffsetMs } from "@/game/events";
 import { isPvpReport } from "@/game/balance/combatTypes";
 import type { BattleReport, PlayerState } from "@/types/game";
 
@@ -52,6 +55,10 @@ export interface BalanceHealth {
   /** 6.5.1 : vaisseaux de classe (6.5). */
   classUnits: { id: string; name: string; total: number; owners: number }[];
   classes: { none: number; rows: { id: string; name: string; players: number; sharePct: number; medianProduction: number }[] };
+  /** 6.8.0 (AU3) : passe du mois : part des joueurs au dernier palier, jour médian de fin, points médians, points gagnés par source. */
+  pass: { finishedPct: number; medianFinishDay: number | null; medianPoints: number; maxPoints: number; bySource: { source: string; total: number; sharePct: number }[] };
+  /** 6.8.0 (AU3) : succès obtenus par le joueur médian (sur le catalogue en vigueur). */
+  achievements: { total: number; medianUnlocked: number; medianPct: number };
 }
 
 export function median(xs: number[]): number {
@@ -111,7 +118,27 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
     const who = players.filter((p) => p.empireClass?.id === c.id);
     return { id: c.id, name: c.name, players: who.length, sharePct: players.length ? Math.round((who.length / players.length) * 100) : 0, medianProduction: Math.round(median(who.map(prodOf))) };
   });
+  // Passe du mois (6.8.0).
+  const passes = players.map((p) => passState(p, now));
+  const maxPoints = activePass(passes[0]?.seasonId).tiers.length * (activePass(passes[0]?.seasonId).pointsPerTier || PASS_RULES.pointsPerTier);
+  const finished = passes.filter((s) => s.points >= maxPoints);
+  const finishDays = passes.filter((s) => s.finishedAtMs).map((s) => new Date(s.finishedAtMs! + parisOffsetMs(s.finishedAtMs!)).getUTCDate());
+  const sources: Record<string, number> = {};
+  for (const s of passes) for (const [k, v] of Object.entries(s.bySource ?? {})) sources[k] = (sources[k] ?? 0) + v;
+  const sourceTotal = Object.values(sources).reduce((a, b) => a + b, 0);
+  const unlocked = players.map((p) => (p.unlockedAchievements ?? []).length);
+  const achTotal = ACHIEVEMENTS.length;
   return {
+    pass: {
+      finishedPct: players.length ? Math.round((finished.length / players.length) * 100) : 0,
+      medianFinishDay: finishDays.length ? median(finishDays) : null,
+      medianPoints: Math.round(median(passes.map((s) => s.points))),
+      maxPoints,
+      bySource: Object.entries(sources)
+        .map(([source, total]) => ({ source, total, sharePct: sourceTotal ? Math.round((total / sourceTotal) * 100) : 0 }))
+        .sort((a, b) => b.total - a.total),
+    },
+    achievements: { total: achTotal, medianUnlocked: median(unlocked), medianPct: achTotal ? Math.round((median(unlocked) / achTotal) * 100) : 0 },
     exposure: {
       stockHours: round1(median(stock)),
       protectedHours: round1(median(prot)),

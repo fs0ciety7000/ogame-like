@@ -3,6 +3,9 @@ import { defaultPlayerState } from "@/game/defaults";
 import {
   bossEmblems,
   chronicleOf,
+  chroniclesConfig,
+  setChronicles,
+  applyLibraryChapter,
   chronicleState,
   claimChronicle,
   grantSeasonBossReward,
@@ -44,11 +47,14 @@ function player(uid = "u1"): PlayerState {
 }
 
 describe("v4.3 chronicles", () => {
-  it("one episode a week (1st, 8th, 15th, 22nd), three months written", () => {
+  it("one episode a week (1st, 8th, 15th, 22nd) ; 6.8.0 : novembre → mars en bibliothèque, écrits par le générateur", () => {
     expect(chronicleOf(OCT13)?.title).toBe("La Liste");
+    expect(chronicleOf(Date.UTC(2026, 11, 3))).toBeNull();
+    expect(chroniclesConfig().library?.map((m) => m.title)).toEqual(expect.arrayContaining(["Le Silence d'hiver", "Le Dégel"]));
+    // Repris de la bibliothèque, un chapitre écrit revient dans le calendrier.
+    setChronicles(applyLibraryChapter(chroniclesConfig(), "2026-12", "2026-12"));
     expect(chronicleOf(Date.UTC(2026, 11, 3))?.title).toBe("Le Silence d'hiver");
-    expect(chronicleOf(Date.UTC(2027, 0, 3))?.title).toBe("Le Dégel");
-    expect(chronicleOf(Date.UTC(2027, 3, 3))).toBeNull();
+    setChronicles(null);
     expect(unlockedEpisodes(Date.UTC(2026, 9, 2, 10))).toBe(1);
     expect(unlockedEpisodes(OCT13)).toBe(2);
     expect(unlockedEpisodes(Date.UTC(2026, 9, 22, 10))).toBe(4);
@@ -90,6 +96,8 @@ describe("v4.3 chronicles", () => {
   }));
 
   it("v5.14.2 : season boss every week, alternating with the world boss, never at the same time", () => {
+    // 6.8.0 : chapitres de novembre et décembre présents (repris de la bibliothèque ; en jeu, le générateur les écrit).
+    setChronicles(applyLibraryChapter(applyLibraryChapter(chroniclesConfig(), "2026-11", "2026-11"), "2026-12", "2026-12"));
     const now = Date.UTC(2026, 9, 5);
     const world = bossWindows(now, leviathanSchedule(), 12);
     const season = bossWindows(now, seasonBossSchedule(), 12);
@@ -101,6 +109,7 @@ describe("v4.3 chronicles", () => {
     // Un combat par apparition : identifiants distincts.
     const ids = new Set(season.slice(0, 6).map((s) => seasonBossWindow(s.startMs + 1000, false)?.id));
     expect(ids.size).toBe(6);
+    setChronicles(null);
   });
 
   it("rewards: pass points for all, title and unique sceau if killed, epic relic for the podium", () => monthly(() => {

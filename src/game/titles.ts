@@ -151,3 +151,36 @@ export function validateTitles(defs: TitleDef[]): string[] {
   }
   return errors;
 }
+
+/* ---------- 6.8.0 (AU3, PRG-4) : titres groupés par famille ---------- */
+
+const ROMAN_VALUES: Record<string, number> = { I: 1, V: 5, X: 10 };
+function romanValue(r: string): number {
+  let total = 0;
+  for (let i = 0; i < r.length; i++) {
+    const v = ROMAN_VALUES[r[i]] ?? 0;
+    const next = ROMAN_VALUES[r[i + 1]] ?? 0;
+    total += v < next ? -v : v;
+  }
+  return total;
+}
+
+/** « Magnat IV » → { family: "Magnat", rank: 4 } ; un titre sans palier est sa propre famille (rang 0). */
+export function titleFamily(label: string): { family: string; rank: number } {
+  const m = /^(.*\S)\s+([IVX]+)$/.exec(label.trim());
+  return m ? { family: m[1], rank: romanValue(m[2]) } : { family: label.trim(), rank: 0 };
+}
+
+/** Titres proposés au choix : le plus haut palier de chaque famille (le titre affiché reste toujours proposé).
+ *  `hidden` : paliers inférieurs gardés dans la vitrine, mais pas dans la liste de choix. */
+export function groupedTitles<T extends { label: string }>(titles: readonly T[], active = ""): { shown: T[]; hidden: T[] } {
+  const best = new Map<string, T>();
+  for (const t of titles) {
+    const { family, rank } = titleFamily(t.label);
+    const cur = best.get(family);
+    if (!cur || titleFamily(cur.label).rank < rank) best.set(family, t);
+  }
+  const keep = new Set<T>(best.values());
+  for (const t of titles) if (t.label === active) keep.add(t);
+  return { shown: titles.filter((t) => keep.has(t)), hidden: titles.filter((t) => !keep.has(t)) };
+}

@@ -65,6 +65,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I14 | Au plus une classe d'empire active ; ses effets passent par la couche empire et ses plafonds ; aucun maximum théorique de la couche empire (rapport d'impact) ne dépasse son plafond | `empireClass.ts`, `modifiers.ts`, `impact.ts` | `empireClass.test.ts`, `derived.test.ts` |
 | I15 | Couche techno : attaque et défense des unités ≤ +150 % au total ; une techno ≤ +100 % à son niveau maximal et ne monte pas une unité au-delà de son niveau maximal | `effects.ts` (`TECH_COMBAT_CAP`), `technologies.ts` (`validateTechEffect`) | `menaces66.test.ts` |
 | I16 | Avec les réglages par défaut, boss de la chronique (mardi), tournoi du casino (mercredi, casino ouvert en permanence) et événement du week-end (vendredi) ne commencent jamais le même jour ; le boss de la chronique ne chevauche jamais le boss mondial | `events.ts` (`bossWindows`), `casino.ts` (`tournamentWeeklyWindows`) | `calendrier67.test.ts` |
+| I17 | Un seul passe par mois : dès novembre 2026, le passe du chapitre n'est plus lu ; un chapitre écrit à la main ne remplace un mois généré que par choix de l'admin (bibliothèque), et un mois déjà commencé n'est jamais déplacé | `seasonPass.ts` (`activePass`), `chronicles.ts` (`moveWrittenToLibrary`, `applyLibraryChapter`) | `progression680.test.ts` |
 
 ## 5. Règles de conception
 
@@ -157,3 +158,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.7.1 | Casino ouvert en permanence (tournoi du mercredi séparé de l'ouverture) ; plafonds des technos de combat, bonus du Traqueur, « Localiser », bonus des vaisseaux de classe et colonies réglables dans l'admin | `docs/changes/6.7.1-casino-reglages.md` |
 | 2026-10-06 | 6.7.2 | Règle : tout `GameRules` (fonctionnalités existantes et futures) réglable dans le panel admin ; éditeur « Tous les réglages » et test de garde | `docs/changes/6.7.2-reglages-admin-complets.md` |
 | 2026-10-06 | — | Revue AU3 (progression) : passe d'octobre fini en 6 jours par 4 joueurs sur 14 avec des points que le barème du code n'explique pas, rien à gagner après le dernier palier, titres en série ; décisions en attente | `docs/audit/2026-10-06-au3-progression.md` |
+| 2026-10-06 | 6.8.0 | AU3 et passe génératif, lot 1 : points du passe tracés par source, santé du passe et des succès, un seul passe par mois (I17), titres groupés par famille ; novembre → mars en bibliothèque, chapitres générés dès novembre | `docs/changes/6.8.0-progression-generative.md` |

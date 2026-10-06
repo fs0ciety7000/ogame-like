@@ -46,6 +46,9 @@ export interface BalanceSnapshot {
   fullSlotsPct?: number;
   routes?: number;
   supplyRoutes?: number;
+  /** 6.8.0 (AU3) : part des joueurs au dernier palier du passe, part des succès du joueur médian. */
+  passFinishedPct?: number;
+  achievementsPct?: number;
 }
 
 type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
@@ -91,6 +94,8 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
           fullSlotsPct: live.health.parallel.fullSlotsPct,
           routes: live.health.colonies.withRoute,
           supplyRoutes: live.health.colonies.supply,
+          passFinishedPct: live.health.pass.finishedPct,
+          achievementsPct: live.health.achievements.medianPct,
         }
       : {}),
   };

@@ -70,6 +70,8 @@ export function buildSeries(h: BalanceSnapshot[]): Series[] {
     // 6.5.1 (lot U) : courbes des relevés de la santé de l'équilibre (photos depuis la 6.0.1).
     { id: "pillable", title: "Stock pillable (médiane, en heures)", hint: "heures de production exposées au pillage", unit: "", points: h.map((s) => s.pillableHours ?? null), floor0: true },
     { id: "loot", title: "Butin moyen par attaque JcJ réussie", hint: "7 jours glissants", unit: "", points: h.map((s) => s.avgLoot ?? null), floor0: true },
+    { id: "pass", title: "Joueurs au dernier palier du passe", hint: "cible : 50 % en fin de mois, pas avant le 15", unit: "%", points: h.map((s) => s.passFinishedPct ?? null), ref: 50, floor0: true },
+    { id: "ach", title: "Succès obtenus par le joueur médian", hint: "part du catalogue ; une hausse rapide annonce un manque d'objectifs longs", unit: "%", points: h.map((s) => s.achievementsPct ?? null), floor0: true },
     { id: "slots", title: "Joueurs à court d'emplacements de flotte", hint: "au-delà de 20 %, envisager des emplacements à débloquer (O.2)", unit: "%", points: h.map((s) => s.fullSlotsPct ?? null), ref: 20, floor0: true },
     { id: "routes", title: "Routes de colonies", hint: "toutes routes ; le ravitaillement est dans le tableau", unit: "", points: h.map((s) => s.routes ?? null), floor0: true },
     {

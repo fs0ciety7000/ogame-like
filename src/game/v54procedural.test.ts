@@ -123,14 +123,14 @@ describe("v5.4 chapitre généré en jeu", () => {
     expect(checkNewAchievements(p).some((a) => a.id === "chapter_reader")).toBe(true);
   });
 
-  it("le passe du mois remplace le passe commun ce mois-là seulement", () => {
+  it("6.8.0 : un seul passe par mois — dès novembre 2026, le passe du chapitre n'est plus lu (passe de saison ou passe commun)", () => {
     withGenerated();
     const month = chroniclesConfig().months.find((m) => m.id === "2027-04")!;
-    expect(activePass("2027-04")).toEqual(month.pass);
-    expect(activePass("2027-05").pointsPerTier).toBe(PASS_RULES.pointsPerTier);
+    expect(month.pass).toBeTruthy();
+    expect(activePass("2027-04").pointsPerTier).toBe(PASS_RULES.pointsPerTier);
     const now = Date.UTC(2027, 3, 25, 12);
     const p = player("Delta", now);
-    p.seasonPass = { ...passState(p, now), points: month.pass!.pointsPerTier };
+    p.seasonPass = { ...passState(p, now), points: PASS_RULES.pointsPerTier };
     const gained = claimPassTier(p, 1, now);
     expect(gained.length).toBeGreaterThan(0);
     expect(passState(p, now).claimed).toEqual([1]);

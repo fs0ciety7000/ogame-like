@@ -84,6 +84,10 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Calendrier : un rendez-vous serveur récurrent a un jour et une heure réglables dans l'admin (`BossSchedule.weekday`, `CasinoSettings.tournamentWeekly`) et
   ne démarre pas le même jour qu'un autre (invariant I16, `calendrier67.test.ts`). Un nouveau réglage optionnel lu depuis la base garde
   `null` pour « ancien comportement » : un champ absent reprend la valeur par défaut à la fusion des règles.
+- Contenu généré (Chroniques, passe) : le serveur écrit un mois en **gardant le reste de la configuration**
+  (`Object.assign({}, content.chronicles, { months })`), jamais `{ months }` seul (les récompenses réglées dans l'admin étaient effacées).
+  Dès novembre 2026 les chapitres sont générés ; un chapitre écrit à la main va dans `chronicles.library` et n'entre dans un mois que par
+  `applyLibraryChapter` (invariant I17). Un seul passe par mois (`activePass`).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.
 - Une migration ponctuelle (`onBootstrap`) qui rend ou retire des unités, des ressources ou des niveaux **respecte les plafonds**

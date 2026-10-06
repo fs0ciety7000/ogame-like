@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { currentGameContent } from "@/game/content";
-import { chronicleMonthId, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { chronicleMonthId, applyLibraryChapter, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
 import { CODEX_CATEGORIES } from "@/game/codex";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
@@ -98,6 +98,15 @@ export function ChroniclesPanel() {
       <ChronicleBonusSection bonus={normalizeChronicleBonus(cfg.bonus)} onChange={(bonus) => setCfg((c) => ({ ...c, bonus }))} />
       <CodexRewardsSection table={normalizeCodexRewards(cfg.codexRewards)} onChange={(codexRewards) => setCfg((c) => ({ ...c, codexRewards }))} />
       <NextMonthPreview cfg={cfg} onCreate={addMonth} />
+      <LibrarySection
+        cfg={cfg}
+        onUse={(libraryId, monthId) => {
+          const next = applyLibraryChapter(cfg, libraryId, monthId);
+          setCfg(next);
+          setSelected(next.months.findIndex((m) => m.id === monthId));
+          toast.success(`Chapitre écrit placé en ${monthId} : enregistre pour l'appliquer.`);
+        }}
+      />
 
       <div className="flex flex-wrap gap-1.5">
         {cfg.months.map((m, i) => (
@@ -244,5 +253,51 @@ function CodexRewardsSection({ table, onChange }: { table: CodexRewardTable; onC
       ))}
       <p className="text-[11px] text-slate-500 sm:col-span-2">0 et 0 : la catégorie ne rapporte rien (cas des Chroniques, toujours ouvertes).</p>
     </Section>
+  );
+}
+
+/** 6.8.0 : chapitres écrits à la main, hors calendrier (le générateur écrit les mois). L'admin peut en reprendre un pour un mois. */
+function LibrarySection({ cfg, onUse }: { cfg: ChroniclesConfig; onUse: (libraryId: string, monthId: string) => void }) {
+  const library = cfg.library ?? [];
+  const [targets, setTargets] = useState<Record<string, string>>({});
+  if (library.length === 0) return null;
+  return (
+    <Card className="flex flex-col gap-2 p-4">
+      <p className="hud-title text-sm text-slate-100">Bibliothèque des chapitres écrits</p>
+      <p className="text-xs text-slate-400">
+        Les mois sont écrits par le générateur (Admin → Générateur). Un chapitre écrit à la main peut remplacer le chapitre d'un mois : choisis le
+        mois, puis enregistre.
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {library.map((m) => (
+          <li key={m.id} className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="min-w-0 flex-1 truncate text-slate-200">
+              {m.title} <span className="text-slate-500">· {m.boss.name}</span>
+            </span>
+            <input
+              aria-label={`Mois pour ${m.title}`}
+              className="hud-cut-sm w-24 border border-cyan-glow/15 bg-space-900/80 px-2 py-1 font-mono text-xs tabular-nums text-slate-100"
+              placeholder="AAAA-MM"
+              value={targets[m.id] ?? m.id}
+              onChange={(e) => setTargets((t) => ({ ...t, [m.id]: e.target.value }))}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const monthId = (targets[m.id] ?? m.id).trim();
+                if (!/^\d{4}-\d{2}$/.test(monthId)) {
+                  toast.error("Mois invalide (AAAA-MM).");
+                  return;
+                }
+                onUse(m.id, monthId);
+              }}
+            >
+              Utiliser
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

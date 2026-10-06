@@ -4,7 +4,7 @@ import { generatePassSeason, publishPassSeason } from "@/game/passSeasons";
 import { checkMonth, monthCheckSummary, windowsInMonth } from "@/game/monthCheck";
 import { defaultSimProfiles, passDurationVerdict, simulatePass } from "@/game/passSimulator";
 import { leviathanSchedule } from "@/game/leviathan";
-import { seasonBossSchedule } from "@/game/chronicles";
+import { seasonBossSchedule, setChronicles, applyLibraryChapter } from "@/game/chronicles";
 import type { WorldDigest } from "@/game/procedural";
 
 /* 5.15.4 : contrôle de novembre 2026 en CI : passe généré (défis sur les 30
@@ -46,7 +46,10 @@ describe("5.15.4 contrôle de novembre", () => {
 
   it("Chroniques, boss de saison et alternance avec le boss mondial : rien de bloquant", () => {
     const content = currentGameContent();
-    const items = checkMonth("2026-11", { passSeasons: { seasons: [nov()] }, chronicles: content.chronicles });
+    // 6.8.0 : novembre est généré en jeu ; ici, le chapitre écrit de la bibliothèque tient sa place.
+    const chronicles = applyLibraryChapter(content.chronicles, "2026-11", "2026-11");
+    setChronicles(chronicles);
+    const items = checkMonth("2026-11", { passSeasons: { seasons: [nov()] }, chronicles });
     const blocking = items.filter((i) => i.status === "bad");
     expect(blocking.map((i) => `${i.area} / ${i.label} : ${i.detail}`)).toEqual([]);
     expect(monthCheckSummary(items)).not.toBe("bad");

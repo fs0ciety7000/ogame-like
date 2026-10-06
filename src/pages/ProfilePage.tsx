@@ -20,7 +20,7 @@ import { AchievementMedal } from "@/pages/AchievementsPage";
 import { Link } from "react-router-dom";
 import { formatCompact, formatNumber, cn } from "@/lib/utils";
 import { TitleBadge } from "@/components/game/TitleBadge";
-import { TITLES, titleProgress, titleRarity } from "@/game/titles";
+import { groupedTitles, TITLES, titleProgress, titleRarity } from "@/game/titles";
 import { GameIcon } from "@/components/ui/game-icon";
 import { SeasonHistoryCard } from "@/components/game/SeasonHistoryCard";
 import { ProfileStyleCard } from "@/components/game/ProfileStyleCard";
@@ -244,6 +244,9 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
   const player = usePlayerStore((s) => s.player);
   const [pending, setPending] = useState(false);
   const owned = new Set(titles.map((t) => t.label));
+  // 6.8.0 (AU3) : le plus haut palier de chaque famille (« Magnat IV » plutôt que « Magnat II, III, IV »).
+  const grouped = groupedTitles(titles, active);
+  const [showAll, setShowAll] = useState(false);
   // v5.10 : titres du catalogue à débloquer sur une mesure, avec la progression.
   const toUnlock = player ? TITLES.filter((t) => t.enabled && t.unlock && !owned.has(t.label)) : [];
   const choose = async (label: string) => {
@@ -269,7 +272,7 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {[...titles].reverse().map((t) => (
+            {[...(showAll ? titles : grouped.shown)].reverse().map((t) => (
               <button
                 key={t.seasonId}
                 type="button"
@@ -281,7 +284,17 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
                 <TitleBadge label={t.label} />
               </button>
             ))}
-            <p className="w-full text-[11px] text-slate-500">Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).</p>
+            <p className="w-full text-[11px] text-slate-500">
+              Clique pour afficher un titre à côté de ton pseudo (reclique pour le masquer).
+              {grouped.hidden.length > 0 && (
+                <>
+                  {" "}
+                  <button type="button" className="text-cyan-glow hover:underline" onClick={() => setShowAll((v) => !v)}>
+                    {showAll ? "Garder le plus haut palier de chaque titre" : `Voir aussi les ${grouped.hidden.length} paliers inférieurs`}
+                  </button>
+                </>
+              )}
+            </p>
           </div>
         )}
         {player && toUnlock.length > 0 && (
