@@ -1,6 +1,7 @@
 # Proposition : vaisseaux de classe (lot P, J.2)
 
-Statut : **en attente** : illustrations à produire (`docs/prompts-6.5.md`), puis validation des chiffres ci-dessous.
+Statut : **validée** (2026-10-06, décision déléguée) : soute du Croiseur de raid 150, un bonus de rôle par vaisseau via le circuit d'effets.
+Code en attente des illustrations (`docs/prompts-6.5.md`).
 Lot P de `docs/proposals/feuille-de-route-2026-hiver.md` ; suite de `classes-empire.md` (J.2).
 
 ## 1. Le problème vu par le joueur
@@ -30,9 +31,9 @@ celle des sondes). Niveaux 1 à 10 comme les autres unités.
 - Bonus en pourcentage supplémentaire par classe : déjà fait en 6.0, invisible.
 - Unité de classe très puissante : la classe deviendrait obligatoire (règle « aucune unité dominée »).
 
-## 5. Questions ouvertes
-1. Les trois chiffres te conviennent-ils, en particulier la soute du Croiseur de raid (150) après le pillage à 30 % (6.2) ?
-2. Bonus de rôle (recyclage ×1,25, expéditions −15 %) : oui, ou stats seules ?
+## 5. Questions tranchées (2026-10-06)
+1. Soute du Croiseur de raid : **150** (300 au pillage avec la surcharge ×2) : il pille sans escorte, c'est l'identité de la classe.
+2. Bonus de rôle : **oui**, un par vaisseau, par le circuit d'effets (plafonds respectés). Le Croiseur de raid n'en a pas : sa soute suffit.
 
 ## 6. Après validation
 Unités dans `units.ts`, verrou de classe (moteur et serveur), `appendFromDefaults` dans `CONTENT_MIGRATIONS`, tests d'équilibre, fiches.

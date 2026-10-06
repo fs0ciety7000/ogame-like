@@ -85,3 +85,47 @@ Avec K, ces relevés se lisent dans l'admin ; sans K, ils demandent encore un ac
 3. **M** : jusqu'où rendre le JcJ payant ? Piste : un raid réussi prend 30 % du stock exposé, borné par la soute ×2.
 4. **P** : je prépare les prompts des trois vaisseaux de classe maintenant ?
 5. Classes : 100 Ambre pour changer, **validé** (2026-10-06).
+
+## 7. Suite (décidée le 2026-10-06)
+
+> « Ajoute chaque tâche (lot) sur le plan » ; « Audit et review de tout ce qui a été fait » ; « Ok, go, ajoute tout au plan et on commence »
+
+Tout reste sur `claude/hiver-k-s` ; une seule mise en production vers `main` à la fin.
+Décisions déléguées : lot P, soute du Croiseur de raid 150 et un bonus de rôle par vaisseau (voir `unites-classe.md`) ; Q4 (V) et flotte
+basée sur une colonie (Y) acceptés.
+
+### Méthode des revues (lots AU)
+Chaque revue passe la même grille sur un domaine : règles et chiffres (moteur, tests, invariants) ; serveur (tâches, sécurité, performance) ;
+admin (chaque réglage existe, est validé, prend effet) ; interface (DESIGN.md, 375 px, captures en Constellation) ; données de production
+(lecture seule, agrégats anonymes). Livrables : rapport `docs/audit/` à constats numérotés, fiche système créée ou mise à jour, petits
+correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
+
+### Planning
+
+| # | Lot | Contenu | Taille | État |
+|:--|:--|:--|:--|:--|
+| 1 | T | Prise en main à jour (classes, routes, objectifs du jour) | S | à faire |
+| 2 | U | Santé de l'équilibre, suite (sens des routes, défenses par type, emplacements, courbes) | S | à faire |
+| 3 | AU1 | Revue Menaces PNJ : pirates et factions, seigneurs de guerre, primes et Comptoir | M | à faire |
+| 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | à faire |
+| 5 | V | Rendez-vous de la semaine (Q4) : proposition à partir d'AU1 et AU2, puis implémentation | M | à faire |
+| 6 | AU3 | Revue Progression : Passe, Chroniques, Codex, succès et titres, défis hebdo, série, objectifs du jour, saisons, divisions, palmarès | M | à faire |
+| 7 | AU4 | Revue Commerce : marché, ordres d'achat, contrats, enchères, PNJ marchand, pot commun, concours, casino et tournoi | M | à faire |
+| 8 | AU5 | Revue Alliances : membres et rôles, trésor, recherches, guerres, guerre de territoire, projets, saga, diplomatie, calendrier | M | à faire |
+| 9 | AU6 | Revue Communications : messages, canal global, salons, modération, annonces, sondages, gazette, notifications | M | à faire |
+| 10 | AU7 | Revue Galaxie et combat : carte, joueurs et classement, espionnage, rapports, journal, simulateur | M | à faire |
+| 11 | AU8 | Revue État-major et bonus : officiers, reliques, talents, Ascension, classes, circuit d'effets | M | à faire |
+| 12 | P | Vaisseaux de classe, dès réception des illustrations (peut passer avant) | M | en attente des images |
+| 13 | AU9 | Revue Unités : hangars, Atelier et Cale sèche, modules | M | à faire |
+| 14 | AU10 | Revue Flottes : missions, expéditions, emplacements, « Relancer » | M | à faire |
+| 15 | AU11 | Revue Économie : ressources, bâtiments, Labo, planificateur, portefeuille | M | à faire |
+| 16 | AU12 | Revue Colonies : routes, spécialisations, file de défense | S | à faire |
+| 17 | Y | Flotte basée sur une colonie (Q.3) : proposition, puis implémentation | L | à faire |
+| 18 | W | Lisibilité : puissance d'une flotte entière détaillée dans la fenêtre d'attaque | S | à faire |
+| 19 | X | Performance : contenu (succès, saisons, Chroniques) chargé à la demande | M | à faire |
+| 20 | AU13 | Revue transverse et clôture : admin, sécurité serveur, tâches planifiées, accessibilité, blog, statut ; synthèse et feuille de route suivante | M | à faire |
+| — | G.2, J.3, O.2, M.2 | Conditionnels, déclenchés par les relevés de U | — | conditionnel |
+| fin | Mise en production | PR `claude/hiver-k-s` → `main`, puis « Mettre à jour les hooks » | — | à faire |
+
+Ordre : les revues commencent par les systèmes les plus joués et les moins audités ; les plus récents (unités, flottes, économie,
+colonies) ensuite ; la revue transverse clôt la série.

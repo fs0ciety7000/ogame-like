@@ -64,6 +64,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
 | 6.4.0 | [Colonies, suite](6.4.0-colonies-suite.md) | fonctionnalité | [colonies-suite](../proposals/colonies-suite.md), lot Q |
+| — | [Feuille de route : suite et revues AU1 à AU13](docs-feuille-de-route-suite.md) | docs | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md) |
 | — | [Billet de blog des lots N à Q](docs-blog-43.md) | docs | — |
 | — | [Captures en thème Constellation](docs-captures-constellation.md) | docs | — |
 | — | [Vaisseaux de classe : prompts et proposition](docs-unites-classe.md) | docs | [unites-classe](../proposals/unites-classe.md), lot P |
