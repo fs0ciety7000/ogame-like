@@ -19,8 +19,9 @@ Une étape sautée se dit dans la PR.
 Règle : tout ce qui est dans `GameRules` (et les autres contenus de jeu), pour les fonctionnalités existantes et futures, se gère dans le
 panel admin. Une proposition liste les réglages qu'elle ajoute et où l'admin les modifie.
 
-Règle : une proposition qui touche aux données des joueurs (unités, ressources, niveaux) ou à l'équilibre s'arrête à l'étape 5
-et attend la décision.
+Règle (CLAUDE.md règle n° 3) : on n'attend plus la décision à l'étape 5. La recommandation est appliquée, le choix et ses
+alternatives sont notés dans `docs/QUESTIONS.md` pour être revus avec l'utilisateur ; une proposition qui touche aux données des
+joueurs (unités, ressources, niveaux) prend l'option la plus prudente et dit comment revenir en arrière. Un lot fini, on passe au suivant.
 
 Petit changement (ajustement, correctif, refactoring) : les étapes 3 à 5 peuvent être sautées, **jamais la fiche de changement** de
 l'étape 8 (modèle dans `docs/changes/README.md`). Elle se remplit pendant le lot, pas après.

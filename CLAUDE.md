@@ -10,7 +10,8 @@ Le reste est dans `docs/` :
 | `docs/WORKFLOW.md` | chaîne complète d'une fonctionnalité : brief → benchmark → chiffres → moteur → serveur → UI → audit → livraison ; méthode de level design |
 | `docs/systems/*.md` | **une fiche par domaine du jeu** (règles et chiffres en vigueur, code, admin, état) : à lire avant de toucher un système |
 | `docs/audit/*.md` | rapports d'audit datés (constats C, E, Q, P, D numérotés, réutilisés par les propositions) |
-| `docs/proposals/*.md` | propositions chiffrées en attente de décision (une par système), dont la feuille de route |
+| `docs/proposals/*.md` | propositions chiffrées (une par système), dont la feuille de route |
+| `docs/QUESTIONS.md` | **journal des questions et décisions prises seul** (règle n° 3), à revoir avec l'utilisateur |
 | `docs/changes/*.md` | **une fiche par lot livré** (fonctionnalité, ajout, rework, ajustement, correctif, refactoring, docs), modèle et index dans `docs/changes/README.md` |
 | `changelog/*.md`, `content/blog/*.md` | notes de version (joueurs) et billets du devblog |
 
@@ -19,7 +20,7 @@ Le reste est dans `docs/` :
 Valable pour toute la session et tout le projet, à chaque demande :
 
 1. **Avant de coder** un système, de l'équilibre ou ce qui touche les données des joueurs : une proposition `docs/proposals/<système>.md`
-   (plan de `docs/WORKFLOW.md` §2), puis attendre la décision de l'utilisateur.
+   (plan de `docs/WORKFLOW.md` §2), puis appliquer la recommandation sans attendre (règle n° 3) en notant le choix dans `docs/QUESTIONS.md`.
 2. **Pour chaque lot**, même petit (ajout, rework, ajustement, correctif, refactoring, docs) : une fiche `docs/changes/<version>-<slug>.md`
    selon le modèle de `docs/changes/README.md`, ajoutée à l'index. Pas de fiche, pas de commit.
 3. **Report dans les documents de référence**, dans le même commit :
@@ -43,6 +44,19 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Une constante par défaut peut rester dans le code ; la valeur en vigueur vient toujours des règles. Une valeur réglable doit être JSON pur
   (pas de fonction, de `Date`, de `undefined`).
 - Garde : `rulesAdmin.test.ts` (libellé de chaque groupe, valeurs éditables sans perte, éditeur monté) et `reglages671.test.ts` (réglages appliqués).
+
+## Règle n° 3 : travailler en continu, noter les questions
+
+> **Instructions : N'attends plus que je te dise de passer à la suite. Travaille automatiquement. Si tu as des questions ou besoin de
+> précisions. Note et log les, on ajustera ensemble.**
+
+- Un lot fini (fiche, validation, commit, push), on enchaîne sur le suivant de la feuille de route (`docs/proposals/feuille-de-route-*.md`),
+  sans demander.
+- Une question, un doute, un choix de conception ou d'équilibre que l'utilisateur pourrait vouloir trancher : on prend l'option
+  recommandée (la plus prudente pour les données des joueurs), on l'écrit dans `docs/QUESTIONS.md` (date, lot, question, choix fait,
+  comment revenir en arrière) et on continue. La fiche du lot renvoie à l'entrée.
+- Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
+  dans `docs/QUESTIONS.md`.
 
 ## Langue et ton
 
@@ -142,7 +156,7 @@ Avant d'écrire du code pour un système de jeu, suivre `docs/WORKFLOW.md` :
 2. le diagnostic dans le moteur (preuve par un test ou une simulation) ;
 3. le benchmark (OGame, Clash of Clans, jeux de gestion mobiles) ;
 4. au moins deux options comparées, puis une recommandation chiffrée ;
-5. la validation de l'utilisateur, puis l'implémentation par lots.
+5. la recommandation appliquée (règle n° 3 : choix noté dans `docs/QUESTIONS.md`), puis l'implémentation par lots.
 
 Ce qui change l'équilibre ou les données des joueurs passe d'abord par une proposition dans `docs/proposals/`.
 Une fois livrée : statut « livrée » en tête de la proposition, règles reportées dans les fiches systèmes du GDD, ligne au journal d'audit.
