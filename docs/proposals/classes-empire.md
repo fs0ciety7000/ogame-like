@@ -67,7 +67,7 @@ Mais rien dans le jeu ne récompense ce choix ni ne l'affiche.
    l'Explorateur), avec prompts Midjourney, puis illustrations fournies par toi.
 3. J.3 : relevé après deux semaines (répartition des classes, production et butin par classe) et ajustement.
 
-## 8. Questions ouvertes
+## 8. Décisions (2026-10-06)
 
-1. 100 Ambre pour changer : trop cher, pas assez ?
-2. Faut-il montrer la classe sur la fiche publique et dans le classement ?
+1. 100 Ambre pour changer : **validé**.
+2. Classe sur la fiche publique et dans le classement : **oui**, livré (puce de classe, champ public `profiles.empireClass`).

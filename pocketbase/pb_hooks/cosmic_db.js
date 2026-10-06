@@ -227,6 +227,13 @@ function syncProfile(app, player) {
     profile.set("planets", colonies);
     changed = true;
   }
+  // 6.0 : classe d'empire publique (identifiant seulement).
+  const cls = parseJsonField(player, "empireClass", null);
+  const clsId = cls && typeof cls.id === "string" ? cls.id : "";
+  if (profile.getString("empireClass") !== clsId) {
+    profile.set("empireClass", clsId);
+    changed = true;
+  }
   // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
   const vac = parseJsonField(player, "vacation", null);
   const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;

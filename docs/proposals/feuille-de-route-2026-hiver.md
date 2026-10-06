@@ -1,6 +1,6 @@
 # Proposition : feuille de route, hiver 2026-2027 (lots K à S)
 
-Statut : **en attente de décision** (2026-10-06).
+Statut : **en attente de décision sur l'ordre** (2026-10-06). Décisions déjà prises : classes à 100 Ambre (validé) ; classe affichée sur la fiche publique et dans le classement (fait, part de L) ; fusion contrats et missions du jour (validée, chiffrée dans `quotidien-fusion.md`).
 Elle prend la suite de `docs/proposals/feuille-de-route-2026-q4.md` (lots A à J, tous livrés sauf J.2).
 
 Sources :
@@ -81,7 +81,7 @@ Avec K, ces relevés se lisent dans l'admin ; sans K, ils demandent encore un ac
 ## 6. Questions à trancher
 
 1. Valides-tu l'ordre **K → L → M** ?
-2. **N** : fusionner contrats et missions du jour (une seule liste), ou garder deux listes affichées ensemble ?
+2. **N** : fusion contrats et missions du jour **validée** (2026-10-06) ; chiffres dans `quotidien-fusion.md`, 4 ordres par jour, totaux inchangés.
 3. **M** : jusqu'où rendre le JcJ payant ? Piste : un raid réussi prend 30 % du stock exposé, borné par la soute ×2.
 4. **P** : je prépare les prompts des trois vaisseaux de classe maintenant ?
-5. Classes : 100 Ambre pour changer, est-ce le bon prix ?
+5. Classes : 100 Ambre pour changer, **validé** (2026-10-06).

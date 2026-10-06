@@ -10,3 +10,4 @@ title: Classes d'empire
   - **Seigneur de guerre** : +5 % d'attaque, +15 % de butin, −10 % de temps de production des unités, **+2 emplacements de flotte**.
   - **Explorateur** : −8 % de temps de recherche, +15 % de soute, +1 niveau d'espionnage, **+1 expédition par jour**.
 - Changer de classe : **100 Ambre**, une fois tous les **7 jours**.
+- Ta classe s'affiche dans le classement et sur ta fiche.

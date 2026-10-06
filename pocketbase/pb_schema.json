@@ -1384,6 +1384,13 @@
         "presentable": false
       },
       {
+        "name": "empireClass",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
         "name": "ascensions",
         "type": "number",
         "required": false,
