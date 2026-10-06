@@ -29,7 +29,7 @@ export function topPatrons(state: PatronsState, n = PATRONS_TOP): PatronEntry[] 
   return Object.entries(state.byUid)
     .map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber }))
     .filter((e) => e.amber > 0)
-    .sort((a, b) => b.amber - a.amber || a.pseudo.localeCompare(b.pseudo))
+    .sort((a, b) => b.amber - a.amber || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0))
     .slice(0, n);
 }
 

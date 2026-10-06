@@ -24528,7 +24528,7 @@ var PATRONS_KEY = "patrons";
 var PATRONS_TOP = 10;
 var monthKey = (now) => new Date(now).toISOString().slice(0, 7);
 function topPatrons(state, n = PATRONS_TOP) {
-  return Object.entries(state.byUid).map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber })).filter((e3) => e3.amber > 0).sort((a, b) => b.amber - a.amber || a.pseudo.localeCompare(b.pseudo)).slice(0, n);
+  return Object.entries(state.byUid).map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber })).filter((e3) => e3.amber > 0).sort((a, b) => b.amber - a.amber || (a.pseudo < b.pseudo ? -1 : a.pseudo > b.pseudo ? 1 : 0)).slice(0, n);
 }
 function patronsState(raw, now) {
   var _a, _b;
