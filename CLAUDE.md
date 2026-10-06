@@ -8,7 +8,9 @@ Le reste est dans `docs/` :
 | `docs/DESIGN.md` | toute modification du front (jetons, composants HUD, couleurs = sens, animations) |
 | `docs/GAME_DESIGN.md` | **GDD** : piliers, boucles, carte des systèmes, **invariants du moteur**, règles de conception, fiches systèmes, grille et journal d'audit |
 | `docs/WORKFLOW.md` | chaîne complète d'une fonctionnalité : brief → benchmark → chiffres → moteur → serveur → UI → audit → livraison ; méthode de level design |
-| `docs/proposals/*.md` | propositions chiffrées en attente de décision (une par système) |
+| `docs/systems/*.md` | **une fiche par domaine du jeu** (règles et chiffres en vigueur, code, admin, état) : à lire avant de toucher un système |
+| `docs/audit/*.md` | rapports d'audit datés (constats C, E, Q, P, D numérotés, réutilisés par les propositions) |
+| `docs/proposals/*.md` | propositions chiffrées en attente de décision (une par système), dont la feuille de route |
 | `docs/changes/*.md` | **une fiche par lot livré** (fonctionnalité, ajout, rework, ajustement, correctif, refactoring, docs), modèle et index dans `docs/changes/README.md` |
 | `changelog/*.md`, `content/blog/*.md` | notes de version (joueurs) et billets du devblog |
 
@@ -21,7 +23,7 @@ Valable pour toute la session et tout le projet, à chaque demande :
 2. **Pour chaque lot**, même petit (ajout, rework, ajustement, correctif, refactoring, docs) : une fiche `docs/changes/<version>-<slug>.md`
    selon le modèle de `docs/changes/README.md`, ajoutée à l'index. Pas de fiche, pas de commit.
 3. **Report dans les documents de référence**, dans le même commit :
-   - règles de jeu → GDD (`docs/GAME_DESIGN.md`) : invariants §4, fiches systèmes §7, journal §8 ;
+   - règles de jeu → GDD (`docs/GAME_DESIGN.md`) : invariants §4, fiches systèmes §7, journal §8, et fiche du domaine dans `docs/systems/` ;
    - règles visuelles → `docs/DESIGN.md` ;
    - méthode → `docs/WORKFLOW.md` ;
    - règles de travail, pièges, conventions → ce fichier.

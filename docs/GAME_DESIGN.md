@@ -83,7 +83,8 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 
 ## 7. Fiches systèmes
 
-Une fiche par système : rôle, règles, chiffres, paliers, sorties de plafond. Les chiffres réglables sont dans l'admin (Règles, Contenu).
+Le détail de chaque domaine (14 fiches) est dans `docs/systems/` (index : `docs/systems/README.md`). Les fiches ci-dessous gardent les
+systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres, paliers, sorties de plafond. Les chiffres réglables sont dans l'admin (Règles, Contenu).
 
 ### 7.1 Hangars (`hangar.ts`)
 
@@ -123,4 +124,5 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | Date | Version | Constat | Suite |
 |:--|:--|:--|:--|
 | 2026-10-06 | 5.27.1 | Hangars en surcharge : migration 5.22 sans plafond, Ascension qui remet les hangars au niveau 1, stat `hangarCapacity` jamais lue, tech « Extension des hangars » sans effet sur les colonies | `proposals/cale-seche.md` |
+| 2026-10-06 | après 5.28.0 | Audit global : 5 constats de cohérence (C1 épave d'expédition hors plafond, C5 stats empire non lues…), 6 d'équilibrage (E1 entrepôt et pillage, E2 attrition, E5 alliances de 6…), 4 de QoL, 3 de performance | `docs/audit/2026-10-06-audit-global.md`, `proposals/feuille-de-route-2026-q4.md` |
 | 2026-10-06 | 5.28.0 | Lot 0 et Cale sèche livrés : `hangarLoad` unique, surcharge visible, C2 à C6 corrigés, migration 5.22 repassée par l'Atelier ; invariants I3, I4, I5, I8 testés | `caleSeche.test.ts`, test d'intégration « 5.28 Cale sèche » |

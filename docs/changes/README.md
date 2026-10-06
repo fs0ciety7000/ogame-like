@@ -63,6 +63,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| — | [Audit global et fiches systèmes](docs-audit-global.md) | docs | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md) |
 | 5.28.0 | [Cale sèche et hangars remis d'aplomb](5.28.0-cale-seche.md) | fonctionnalité + correctif | [cale-seche](../proposals/cale-seche.md) |
 | 5.27.1 | [Comptoir de la Ruche réagencé](5.27.1-comptoir-reagence.md) | rework | aucune |
 | — | [Méthode et documents de conception](docs-methode.md) | docs | aucune |
