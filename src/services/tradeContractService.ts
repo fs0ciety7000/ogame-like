@@ -1,5 +1,5 @@
 import { pb, subscribeRecords } from "@/lib/pocketbase";
-import { callGame } from "@/services/playerService";
+import { callGame, launchFleet } from "@/services/playerService";
 import { sortTradeContracts, type TradeContract } from "@/game/tradeContracts";
 import type { Fleet } from "@/game/fleets";
 import type { ResourceId } from "@/types/game";
@@ -47,5 +47,5 @@ export function tradeContractAction(action: "accept" | "cancel" | "abandon", id:
 
 /** Envoie la flotte de livraison d'un contrat accepté. */
 export function sendDelivery(contractId: string, fleet: Record<string, number>): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { mission: "delivery", contractId, fleet });
+  return launchFleet<Fleet>({ mission: "delivery", contractId, fleet }, "contrat");
 }

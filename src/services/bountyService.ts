@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { ELITE_TARGET } from "@/game/fleets";
 import { normalizeElite, type EliteHunt, type ShopItemId } from "@/game/bounties";
-import { callGame } from "@/services/playerService";
+import { callGame, launchFleet } from "@/services/playerService";
 import { pb } from "@/lib/pocketbase";
 import type { Fleet } from "@/game/fleets";
 import type { ResourceId } from "@/types/game";
@@ -21,11 +21,11 @@ export function useElite(): EliteHunt | null {
 }
 
 export function sendBountyHunt(bountyId: string, fleet: Record<string, number>, formation: string): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { mission: "bounty", bountyId, fleet, formation });
+  return launchFleet<Fleet>({ mission: "bounty", bountyId, fleet, formation }, "prime");
 }
 
 export function sendEliteAssault(fleet: Record<string, number>, formation: string): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { mission: "elite", targetUid: ELITE_TARGET, fleet, formation });
+  return launchFleet<Fleet>({ mission: "elite", targetUid: ELITE_TARGET, fleet, formation }, "proie d'élite");
 }
 
 export function buyBountyItem(item: ShopItemId, buildingId?: string): Promise<{ message: string }> {

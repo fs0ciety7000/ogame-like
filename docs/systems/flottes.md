@@ -12,7 +12,8 @@
 
 **Emplacements de flotte (5.33)** : 10 flottes en vol à la fois (`FLEET_RULES.slotsBase`, Règles → Flottes en vol). Les sondes et les expéditions ne
 comptent pas ; les garnisons, si. Le serveur compte (`fleetsActive`), le moteur refuse (`fleetSlotBlocker`). Le panneau Flottes affiche « n / 10 »
-et « Relancer » renvoie la dernière mission envoyée (gardée dans le navigateur, revérifiée par le serveur).
+et « Relancer » renvoie la dernière mission envoyée, quelle qu'elle soit depuis la 6.3 (attaque, prime, proie d'élite, boss, transport,
+livraison) : le corps de `fleet/send` est gardé dans le navigateur (`launchFleet`, `lastMissionStore.ts`) et revérifié par le serveur.
 
 ## Code et admin
 `fleets.ts`, `espionage.ts`, `expeditions.ts`, `debris.ts`, `GalaxyPage.tsx`, cron `cosmic_fleets` (chaque minute).

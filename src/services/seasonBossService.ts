@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { normalizeLeviathan, type LeviathanState } from "@/game/leviathan";
-import { callGame } from "@/services/playerService";
+import { launchFleet } from "@/services/playerService";
 import { pb } from "@/lib/pocketbase";
 
 /* Boss de saison (v4.3) : état lu dans game_config (clé « season_boss »),
@@ -17,7 +17,7 @@ export function useSeasonBoss(): LeviathanState | null {
 }
 
 export function sendSeasonBossAssault(fleet: Record<string, number>, formation: string) {
-  return callGame("fleet/send", { targetUid: "seasonboss", fleet, mission: "seasonboss", formation });
+  return launchFleet({ targetUid: "seasonboss", fleet, mission: "seasonboss", formation }, "boss de saison");
 }
 
 export function adminSeasonBoss(action: "start" | "stop" | "resize" | "reschedule", maxHp?: number, endMs?: number) {

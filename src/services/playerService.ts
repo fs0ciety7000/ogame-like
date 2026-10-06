@@ -576,11 +576,17 @@ export async function sendFleet(
   mission: FleetMission = "attack",
   options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number } = {},
 ): Promise<Fleet> {
-  const sent = await callGame<Fleet>("fleet/send", { targetUid, fleet, mission, ...options });
-  // 5.33 : mémorisé pour « Relancer la dernière mission » (sans le départ différé).
-  const { delayMinutes: _delay, ...again } = options;
+  return launchFleet<Fleet>({ targetUid, fleet, mission, ...options });
+}
+
+/** Tout départ de flotte : appelle fleet/send et mémorise la requête pour « Relancer » (5.33, étendu en 6.3
+ *  aux primes, boss, transports et livraisons). Le départ différé n'est pas rejoué. */
+export async function launchFleet<T = Fleet>(body: Record<string, unknown>, targetLabel?: string): Promise<T> {
+  const sent = await callGame<T>("fleet/send", body);
+  const { delayMinutes: _delay, ...again } = body;
   void _delay;
-  rememberLastMission({ targetUid, targetPseudo: sent?.targetPseudo ?? "", fleet, mission, options: again, at: Date.now() });
+  const pseudo = (sent as { targetPseudo?: unknown } | null)?.targetPseudo;
+  rememberLastMission({ body: again, mission: String(body.mission ?? "attack") as FleetMission, targetLabel: targetLabel ?? (typeof pseudo === "string" ? pseudo : ""), at: Date.now() });
   return sent;
 }
 
@@ -725,7 +731,7 @@ export function setColonyRoute(colonyId: string, everyHours: number, keepPct: nu
 }
 
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {
-  return callGame<Fleet>("fleet/send", { colonyId, direction, fleet, cargo, mission: "transport" });
+  return launchFleet<Fleet>({ colonyId, direction, fleet, cargo, mission: "transport" }, direction === "deliver" ? "vers la colonie" : "depuis la colonie");
 }
 
 /* ---------- v4.0 : État-major (officiers, reliques, Labo de synthèse) ---------- */

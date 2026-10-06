@@ -16,7 +16,7 @@ import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
-import { GameActionError, recallFleet, sendFleet } from "@/services/playerService";
+import { GameActionError, recallFleet, launchFleet } from "@/services/playerService";
 import { useLastMission } from "@/store/lastMissionStore";
 import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
@@ -126,7 +126,7 @@ export function FleetsPanel({
     if (!last) return;
     setPending("relaunch");
     try {
-      await sendFleet(last.targetUid, last.fleet, last.mission, last.options);
+      await launchFleet(last.body, last.targetLabel);
       toast.success("Mission relancée.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Relance impossible.");
@@ -180,9 +180,9 @@ export function FleetsPanel({
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
           <span className="min-w-0 flex-1 truncate">
             Dernière mission : {FLEET_MISSION_LABELS[last.mission] ?? last.mission}
-            {last.targetPseudo ? ` · ${last.targetPseudo}` : ""}
+            {last.targetLabel ? ` · ${last.targetLabel}` : ""}
           </span>
-          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={pending === "relaunch" || relaunchBlocked} title={relaunchBlocked ? "Tous tes emplacements de flotte sont pris." : "Mêmes vaisseaux, même cible, mêmes options."} onClick={() => void relaunch()}>
+          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={pending === "relaunch" || relaunchBlocked} title={relaunchBlocked ? "Tous tes emplacements de flotte sont pris." : "Mêmes vaisseaux, même cible, mêmes options (attaque, prime, boss, transport…)."} onClick={() => void relaunch()}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Relancer
           </Button>
         </div>

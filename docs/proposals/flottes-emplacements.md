@@ -51,6 +51,7 @@ Production, 2026-10-06, en lecture seule, collection `fleets` :
 ## 7. Plan de lots
 
 1. H.1 (5.33.0) : règle, réglage admin, compteur, « Relancer », tests.
+1. O (6.3.0) : « Relancer » étendu aux primes, boss, transports et livraisons (`docs/changes/6.3.0-relancer.md`).
 2. H.2 (plus tard, si besoin) : emplacements à débloquer, et passage de la base à 6 ou 8.
 
 ## 8. Questions ouvertes

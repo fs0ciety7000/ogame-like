@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { normalizeLeviathan, type LeviathanState } from "@/game/leviathan";
-import { callGame } from "@/services/playerService";
+import { launchFleet } from "@/services/playerService";
 import { pb } from "@/lib/pocketbase";
 
 /* Léviathan (v3.1) : état lu dans game_config (clé « leviathan »), tenu à
@@ -17,7 +17,7 @@ export function useLeviathan(): LeviathanState | null {
 }
 
 export function sendLeviathanAssault(fleet: Record<string, number>, formation: string) {
-  return callGame("fleet/send", { targetUid: "leviathan", fleet, mission: "leviathan", formation });
+  return launchFleet({ targetUid: "leviathan", fleet, mission: "leviathan", formation }, "boss mondial");
 }
 
 export function adminLeviathan(action: "start" | "stop" | "resize" | "reschedule", maxHp?: number, endMs?: number, bossId?: string) {

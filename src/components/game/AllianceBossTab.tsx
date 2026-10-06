@@ -20,7 +20,7 @@ import {
 } from "@/game/allianceBoss";
 import { leviathanRanking } from "@/game/leviathan";
 import { AllianceError, callAllianceBoss } from "@/services/allianceService";
-import { callGame } from "@/services/playerService";
+import { launchFleet } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatCompact, formatDuration } from "@/lib/utils";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
@@ -29,7 +29,7 @@ import { askConfirm } from "@/components/ui/confirm-dialog";
 /* v4.6 : boss d'alliance, une fois par semaine. */
 
 function sendAllianceBossAssault(fleet: Record<string, number>, formation: string) {
-  return callGame("fleet/send", { targetUid: "allianceboss", fleet, mission: "allianceboss", formation });
+  return launchFleet({ targetUid: "allianceboss", fleet, mission: "allianceboss", formation }, "boss d'alliance");
 }
 
 export function AllianceBossTab({ alliance, player }: { alliance: Alliance; player: PlayerState }) {
