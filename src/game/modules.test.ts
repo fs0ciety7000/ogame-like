@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addModuleItem, buildModule, MODULE_BUILD_COST, MODULE_RULES, moduleEffects, modulesState, mountModule, recycleModule, rollModulePlan, takeModulePlan, unmountModule, type ModuleItem } from "@/game/modules";
+import { addModuleItem, applyModulePreset, buildModule, deleteModulePreset, fusablePlanGroups, fuseModulePlans, saveModulePreset, MODULE_BUILD_COST, MODULE_RULES, moduleEffects, modulesState, mountModule, recycleModule, rollModulePlan, takeModulePlan, unmountModule, type ModuleItem } from "@/game/modules";
 import { empireEffects } from "@/game/modifiers";
 import { effectTotal } from "@/game/effects";
 import { rollLoot, setLootTables, defaultLootTables } from "@/game/loot";
@@ -101,4 +101,45 @@ describe("modules de vaisseaux", () => {
     expect(modulesState(out.player).items[0].built).toBe(true);
     expect(Math.floor(out.player.resources.scrap)).toBeLessThan(MODULE_BUILD_COST.common.scrap!);
   });
+
+  it("5.26.2 : trois plans identiques fusionnent en un plan de rareté supérieure", () => {
+    const p = player();
+    const plan = (id: string, rarity: ModuleItem["rarity"] = "rare", template = "canons_surcharges"): ModuleItem => ({ id, template, rarity, built: false, foundAtMs: 0, source: "t" });
+    ["a", "b", "c"].forEach((id) => addModuleItem(p, plan(id)));
+    addModuleItem(p, plan("d", "epic"));
+    addModuleItem(p, plan("e", "legendary"));
+    expect(fusablePlanGroups(modulesState(p))).toEqual([{ template: "canons_surcharges", rarity: "rare", ids: ["a", "b", "c"] }]);
+    expect(() => fuseModulePlans(p, ["a", "b", "d"], NOW)).toThrow(/identiques/);
+    expect(() => fuseModulePlans(p, ["a", "b"], NOW)).toThrow();
+    const fused = fuseModulePlans(p, ["a", "b", "c"], NOW, () => 0.5);
+    expect(fused).toMatchObject({ template: "canons_surcharges", rarity: "epic", built: false, source: "fusion" });
+    expect(modulesState(p).items.map((m) => m.id).sort()).toEqual(["d", "e", fused.id].sort());
+    expect(fusablePlanGroups(modulesState(p))).toEqual([]);
+  });
+
+  it("5.26.2 : préréglages de montage (enregistrer, appliquer, modules disparus)", () => {
+    const p = player();
+    const mod = (id: string, template: string): ModuleItem => ({ id, template, rarity: "rare", built: true, foundAtMs: 0, source: "t" });
+    addModuleItem(p, mod("x", "canons_surcharges"));
+    addModuleItem(p, mod("y", "matrice_de_visee"));
+    mountModule(p, "x", "light", 0);
+    mountModule(p, "y", "heavy", 1);
+    saveModulePreset(p, "Raid");
+    unmountModule(p, "light", 0);
+    mountModule(p, "x", "medium", 0);
+    saveModulePreset(p, "Défense");
+    expect(modulesState(p).presets?.map((q) => q.name)).toEqual(["Raid", "Défense"]);
+    expect(applyModulePreset(p, 0)).toEqual({ missing: 0 });
+    expect(modulesState(p).slots.light[0]).toBe("x");
+    expect(modulesState(p).slots.medium[0]).toBeNull();
+    recycleModule(p, "y");
+    expect(applyModulePreset(p, 0)).toEqual({ missing: 1 });
+    expect(modulesState(p).slots.heavy[1]).toBeNull();
+    saveModulePreset(p, "raid");
+    expect(modulesState(p).presets).toHaveLength(2);
+    deleteModulePreset(p, 1);
+    expect(modulesState(p).presets?.map((q) => q.name)).toEqual(["raid"]);
+    expect(() => saveModulePreset(p, "  ")).toThrow();
+  });
 });
+

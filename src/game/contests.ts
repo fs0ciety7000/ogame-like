@@ -37,6 +37,8 @@ export interface Contest {
   endMs: number;
   /** Part du pot engagée à la fin (0,25 = 25 %). */
   potShare: number;
+  /** 5.26.2 : part de la réserve d'Ambre du pot engagée à la fin (0 : aucune). */
+  amberShare?: number;
   /** Répartition entre les premières places (somme ≤ 1), ex. [0,5, 0,3, 0,2]. */
   places: number[];
   status: ContestStatus;
@@ -45,7 +47,7 @@ export interface Contest {
   standings: ContestStanding[];
   updatedAtMs: number;
   /** Prix versés à la fin. */
-  results?: { uid: string; pseudo: string; rank: number; score: number; resources: Partial<Record<ResourceId, number>> }[];
+  results?: { uid: string; pseudo: string; rank: number; score: number; resources: Partial<Record<ResourceId, number>>; amber?: number }[];
   createdBy?: string;
 }
 
@@ -68,6 +70,7 @@ export function normalizeContests(raw: unknown): ContestsState {
         startMs: num(c.startMs),
         endMs: num(c.endMs),
         potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num(c.potShare))),
+        ...(num(c.amberShare) > 0 ? { amberShare: Math.min(CONTEST_RULES.maxPotShare, num(c.amberShare)) } : {}),
         places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num(p))).slice(0, 10),
         status: (["scheduled", "running", "done", "cancelled"] as ContestStatus[]).includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
@@ -79,14 +82,17 @@ export function normalizeContests(raw: unknown): ContestsState {
   };
 }
 
-export function validateContest(c: Pick<Contest, "title" | "metric" | "startMs" | "endMs" | "potShare" | "places">, now: number): string[] {
+export function validateContest(c: Pick<Contest, "title" | "metric" | "startMs" | "endMs" | "potShare" | "places" | "amberShare">, now: number): string[] {
   const errors: string[] = [];
   if (!c.title?.trim()) errors.push("Donne un titre au concours.");
   if (!((c.metric as string) in METRICS)) errors.push("Critère inconnu.");
   if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le début.");
   if (!(c.endMs > now)) errors.push("La fin doit être dans le futur.");
   if (c.endMs - c.startMs > 60 * 24 * 3600_000) errors.push("Un concours dure 60 jours au plus.");
-  if (!(c.potShare > 0 && c.potShare <= CONTEST_RULES.maxPotShare)) errors.push(`Part du pot entre 1 % et ${Math.round(CONTEST_RULES.maxPotShare * 100)} %.`);
+  const max = CONTEST_RULES.maxPotShare;
+  const amber = c.amberShare ?? 0;
+  if (!(c.potShare >= 0 && c.potShare <= max) || !(amber >= 0 && amber <= max)) errors.push(`Parts du pot entre 0 et ${Math.round(max * 100)} %.`);
+  else if (!(c.potShare > 0 || amber > 0)) errors.push("Engage une part des ressources ou de l'Ambre du pot.");
   const sum = c.places.reduce((a, b) => a + b, 0);
   if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place récompensée.");
   if (sum > 1.0001) errors.push("La répartition des places dépasse 100 %.");
@@ -133,15 +139,20 @@ export function contestPurse(c: Pick<Contest, "potShare">, pot: Pick<ServerPot, 
   return out;
 }
 
-/** Prix par place (à partir du classement final et de l'enveloppe). */
-export function contestPrizes(c: Contest, purse: Partial<Record<ResourceId, number>>): { uid: string; pseudo: string; rank: number; score: number; resources: Partial<Record<ResourceId, number>> }[] {
+/** 5.26.2 : Ambre engagée (part de la réserve d'Ambre du pot). */
+export function contestAmberPurse(c: Pick<Contest, "amberShare">, pot: Pick<ServerPot, "amber">): number {
+  return Math.max(0, Math.floor((pot.amber ?? 0) * (c.amberShare ?? 0)));
+}
+
+/** Prix par place (à partir du classement final et de l'enveloppe ; Ambre en plus si engagée). */
+export function contestPrizes(c: Contest, purse: Partial<Record<ResourceId, number>>, amberPurse = 0): { uid: string; pseudo: string; rank: number; score: number; resources: Partial<Record<ResourceId, number>>; amber: number }[] {
   return c.standings.slice(0, c.places.length).map((s, i) => {
     const resources: Partial<Record<ResourceId, number>> = {};
     for (const [k, v] of Object.entries(purse) as [ResourceId, number][]) {
       const n = Math.floor(v * c.places[i]);
       if (n > 0) resources[k] = n;
     }
-    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources };
+    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources, amber: Math.floor(amberPurse * c.places[i]) };
   });
 }
 

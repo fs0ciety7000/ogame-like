@@ -4,9 +4,15 @@ import { EmptyAction, PagedList } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowLeft, Ban, Check, CheckCheck, Globe2, Loader2, Mail, Search, Send } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, Ban, Check, CheckCheck, Globe2, Loader2, Mail, Search, Send } from "lucide-react";
+import { isConversationArchived } from "@/game/messages";
+import { archiveConversation } from "@/services/playerService";
+import { markConversationRead as markReadForArchive } from "@/services/messageService";
+import { usePlayerStore } from "@/store/playerStore";
+import { HudChip } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GlobalChannel } from "@/components/game/GlobalChannel";
+import { useGlobalUnreadCount } from "@/services/globalChatService";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,9 +50,16 @@ export function MessagesPage() {
   const withPseudo = current?.pseudo ?? params.get("pseudo") ?? "";
   const tab = withUid ? "prives" : params.get("onglet") === "global" ? "global" : params.get("onglet") === "prives" ? "prives" : "global";
   const unreadTotal = conversations.reduce((n, c) => n + c.unread, 0);
+  const globalUnread = useGlobalUnreadCount(uid);
 
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [search, setSearch] = useState("");
+  // 5.26.2 : conversations archivées (cachées jusqu'au prochain message reçu).
+  const archive = usePlayerStore((s) => s.player?.stats?.archivedChats);
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = conversations.filter((c) => isConversationArchived(c, archive)).length;
+  const listed = conversations.filter((c) => isConversationArchived(c, archive) === showArchived);
+  const currentArchived = !!current && isConversationArchived(current, archive);
   const [blocks, setBlocks] = useState<MessageBlock[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -119,6 +132,17 @@ export function MessagesPage() {
     }
   };
 
+  const toggleArchive = async () => {
+    if (!withUid) return;
+    try {
+      if (!currentArchived && current?.unread) await markReadForArchive(withUid).catch(() => {});
+      await archiveConversation(withUid, !currentArchived);
+      if (!currentArchived) setParams({ onglet: "prives" });
+    } catch {
+      setError("Action impossible pour le moment.");
+    }
+  };
+
   const q = search.trim().toLowerCase();
   const matches = q ? players.filter((p) => p.uid !== uid && p.pseudo.toLowerCase().includes(q)).slice(0, 6) : [];
 
@@ -131,6 +155,7 @@ export function MessagesPage() {
         <TabsList>
           <TabsTrigger value="global" className="flex items-center gap-1.5">
             <Globe2 className="h-3.5 w-3.5" aria-hidden /> Canal global
+            {globalUnread > 0 && tab !== "global" && <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{globalUnread}</span>}
           </TabsTrigger>
           <TabsTrigger value="prives" className="flex items-center gap-1.5">
             <Mail className="h-3.5 w-3.5" aria-hidden /> Messages privés
@@ -165,7 +190,24 @@ export function MessagesPage() {
               Cherche un joueur pour lui écrire.
             </EmptyState>
           )}
-          <PagedList items={conversations} className="flex flex-col" render={(c) => (
+          {archivedCount > 0 && (
+            <div className="flex flex-wrap gap-1">
+              <HudChip size="sm" tone={!showArchived ? "accent" : "neutral"} asChild>
+                <button type="button" onClick={() => setShowArchived(false)} aria-pressed={!showArchived}>
+                  Boîte de réception
+                </button>
+              </HudChip>
+              <HudChip size="sm" tone={showArchived ? "accent" : "neutral"} asChild>
+                <button type="button" onClick={() => setShowArchived(true)} aria-pressed={showArchived}>
+                  <Archive className="h-3 w-3" /> Archives <span className="font-mono tabular-nums">{archivedCount}</span>
+                </button>
+              </HudChip>
+            </div>
+          )}
+          {loaded && listed.length === 0 && conversations.length > 0 && (
+            <p className="px-1 py-3 text-xs text-slate-500">{showArchived ? "Aucune conversation archivée." : "Tout est archivé : une conversation revient ici dès qu'un nouveau message arrive."}</p>
+          )}
+          <PagedList items={listed} className="flex flex-col" render={(c) => (
               <button
                 key={c.uid}
                 type="button"
@@ -207,6 +249,11 @@ export function MessagesPage() {
                 <button type="button" className="min-w-0 flex-1 truncate text-left font-semibold text-slate-100 hover:text-cyan-glow" onClick={() => setSheet({ uid: withUid, pseudo: withPseudo })}>
                   <PlayerName uid={withUid} pseudo={withPseudo} />
                 </button>
+                {current && (
+                  <Button variant="ghost" size="sm" onClick={() => void toggleArchive()} title={currentArchived ? "Remettre dans la boîte de réception" : "Archiver : la conversation revient au prochain message reçu"}>
+                    {currentArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />} {currentArchived ? "Désarchiver" : "Archiver"}
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" onClick={toggleBlock} title={block ? "Recevoir à nouveau ses messages" : "Ne plus recevoir ses messages"}>
                   <Ban className="h-3.5 w-3.5" /> {block ? "Débloquer" : "Bloquer"}
                 </Button>

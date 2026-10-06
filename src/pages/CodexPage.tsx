@@ -42,9 +42,6 @@ export function CodexPage() {
   );
   const [claiming, setClaiming] = useState<CodexCategory | null>(null);
   const [revealed, setRevealed] = useState<{ label: string; tokens: number; amber: number } | null>(null);
-  if (!player) return null;
-  const progress = codexProgress(entries);
-  const shown = tab === "all" ? entries : entries.filter((e) => e.category === tab);
   // 5.24 : archives holographiques (cylindre 3D) ou grille classique, choix mémorisé.
   const [view, setView] = useState<"holo" | "grid">(() => {
     try {
@@ -53,6 +50,9 @@ export function CodexPage() {
       return "grid";
     }
   });
+  if (!player) return null;
+  const progress = codexProgress(entries);
+  const shown = tab === "all" ? entries : entries.filter((e) => e.category === tab);
   const pickView = (v: "holo" | "grid") => {
     setView(v);
     try {

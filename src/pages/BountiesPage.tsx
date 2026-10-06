@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
 import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowLeftRight, BookOpen, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
+import { ArrowLeftRight, BookOpen, CalendarClock, Crosshair, Crown, Hourglass, Lock, Radar, ShieldHalf, ShoppingBag, Sparkles, Star, Timer, Trophy, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -439,6 +440,7 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   shield: ShieldHalf,
   dossier: BookOpen,
   blueprint: Crosshair,
+  planner: CalendarClock,
   title: Crown,
   frame: Star,
   emblem: Trophy,
@@ -500,7 +502,7 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
     }
   };
   return (
-    <Card className={cn("flex flex-col gap-2 p-4", item.group === "unit" && "border-gold-glow/40")}>
+    <Card className={cn("flex flex-col gap-2 p-4", (item.group === "unit" || item.group === "feature") && "border-gold-glow/40")}>
       <div className="flex items-start gap-3">
         {item.id === "blueprint" ? (
           <img src={assetUrl(KESH_HUNTER_UNIT.image)} alt="" className="h-14 w-14 object-contain" />
@@ -588,6 +590,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
   const groups: { id: ShopItem["group"]; label: string }[] = [
     { id: "consumable", label: "Fournitures de l'Essaim" },
     { id: "unit", label: "Vaisseau" },
+    { id: "feature", label: "Outils de commandement" },
     { id: "cosmetic", label: "Prestige" },
   ];
   return (
@@ -627,7 +630,10 @@ export function BountiesPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
   const [target, setTarget] = useState<HuntTarget | null>(null);
-  const [tab, setTab] = useState("board");
+  // 5.26.1 : onglet dans l'adresse (?onglet=comptoir depuis le Planificateur verrouillé).
+  const [params, setParams] = useSearchParams();
+  const tab = params.get("onglet") === "comptoir" ? "shop" : params.get("onglet") === "elite" ? "elite" : "board";
+  const setTab = (v: string) => setParams((p) => (p.set("onglet", v === "shop" ? "comptoir" : v), p), { replace: true });
   const now = Math.floor(Date.now() / 60_000);
   const st = useMemo(() => (player ? viewBounties(player, Date.now()) : null), [player, now]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!player || !st) return null;

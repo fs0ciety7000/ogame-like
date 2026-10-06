@@ -74,6 +74,19 @@ export interface PlayerStats {
   xpHours?: Record<string, Partial<Record<import("@/game/xpAudit").XpSource, number>>>;
   /** 5.18 : XP du jour par source (paliers journaliers). */
   xpDay?: import("@/game/xpTiers").XpDayState;
+  /** 5.26.1 : unités sorties de l'Atelier, modules fabriqués, ventes aux enchères conclues et remportées. */
+  unitsRepaired?: number;
+  /** 5.26.2 : succès secrets dont l'indice a été acheté. */
+  hintsBought?: string[];
+  /** 5.26.2 : conversations privées archivées (joueur → date d'archivage). */
+  archivedChats?: Record<string, number>;
+  /** 5.26.1 : messages privés et du canal global envoyés, signalements résolus par l'équipe. */
+  privateMessages?: number;
+  globalMessages?: number;
+  reportsResolved?: number;
+  modulesBuilt?: number;
+  auctionsSold?: number;
+  auctionsWon?: number;
   /** 5.22 : vendettas gagnées par personnalité de seigneur (déblocage des unités d'élite). */
   vendettaWins?: Record<string, number>;
 }

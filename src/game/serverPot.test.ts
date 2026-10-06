@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
+import { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, POT_DAILY_DAYS, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
 
 describe("pot commun « Serveur »", () => {
   it("accumule les taxes par source et garde un journal", () => {
@@ -39,5 +39,18 @@ describe("pot commun : Ambre (5.26)", () => {
     expect(out.pot.amber).toBe(0);
     expect(out.pot.amberTotal).toBe(7);
     expect(takeAmberFromPot(out.pot, 1, 3, "x").taken).toBe(0);
+  });
+
+  it("agrège les entrées par jour et par source (rare = 50), 30 jours gardés", () => {
+    const day = Date.UTC(2026, 9, 6, 12);
+    let pot = addToPot(emptyServerPot(), "market", { scrap: 100, aiFragment: 2 }, day);
+    pot = addToPot(pot, "exchange", { energy: 5 }, day + 1000);
+    pot = addToPot(pot, "admin", { scrap: 999 }, day + 2000);
+    pot = addAmberToPot(pot, "auction", 7, day + 3000);
+    expect(pot.daily?.["2026-10-06"]).toEqual({ market: 200, exchange: 5, amber: 7 });
+    for (let i = 1; i <= 40; i++) pot = addToPot(pot, "gift", { scrap: 1 }, day + i * 86_400_000);
+    expect(Object.keys(pot.daily ?? {})).toHaveLength(POT_DAILY_DAYS);
+    expect(pot.daily?.["2026-10-06"]).toBeUndefined();
+    expect(Object.keys(normalizeServerPot({ ...pot, daily: { ...pot.daily, bad: { market: 3 } } }).daily ?? {})).toHaveLength(POT_DAILY_DAYS);
   });
 });

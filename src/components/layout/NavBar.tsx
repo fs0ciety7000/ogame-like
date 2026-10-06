@@ -1,16 +1,16 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
-import { bossPhase, isActive, type BossPhase } from "@/game/leviathan";
+import { isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
-import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
-import { HudSwitch } from "@/components/ui/hud";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock } from "lucide-react";
+import { HudChip, HudSwitch } from "@/components/ui/hud";
+import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { LiveClock } from "@/components/layout/LiveClock";
 import { usePlayerStore } from "@/store/playerStore";
+import { findShopItem, plannerUnlocked } from "@/game/bounties";
 import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
@@ -29,6 +30,7 @@ import { dailyReadyCount } from "@/game/dailyMissions";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
+import { useGlobalUnreadCount } from "@/services/globalChatService";
 import { useAuthStore } from "@/store/authStore";
 
 interface NavItem {
@@ -38,12 +40,32 @@ interface NavItem {
   end?: boolean;
   /** v5.1 : page hors de l'application, ouverte dans un nouvel onglet. */
   href?: string;
+  /** 5.26.1 : page à débloquer (Comptoir de la Ruche) ; lien désactivé tant qu'elle ne l'est pas. */
+  lock?: "planner";
 }
+
+const PLANNER_PRICE = findShopItem("planner")?.price ?? 600;
 
 type ItemLinkProps = Omit<React.ComponentProps<typeof NavLink>, "to"> & { item: NavItem };
 
 /** NavLink, ou lien externe (nouvel onglet) pour les pages hors application. */
 function ItemLink({ item, className, children, end: _end, ...rest }: ItemLinkProps) {
+  const locked = usePlayerStore((s) => item.lock === "planner" && !plannerUnlocked(s.player));
+  if (locked) {
+    const cls = typeof className === "function" ? className({ isActive: false, isPending: false, isTransitioning: false }) : className;
+    return (
+      <span
+        role="link"
+        aria-disabled="true"
+        title={`${item.label} : à débloquer au Comptoir de la Ruche (${PLANNER_PRICE} Ambre).`}
+        aria-label={`${item.label}, verrouillé : à débloquer au Comptoir de la Ruche`}
+        className={cn(cls, "pointer-events-auto relative cursor-not-allowed opacity-45 hover:translate-x-0")}
+      >
+        {typeof children === "function" ? children({ isActive: false, isPending: false, isTransitioning: false }) : children}
+        <Lock className="absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500" aria-hidden />
+      </span>
+    );
+  }
   if (item.href) {
     const cls = typeof className === "function" ? className({ isActive: false, isPending: false, isTransitioning: false }) : className;
     return (
@@ -82,7 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/batiments", label: "Bâtiments", icon: Building2 },
       { to: "/game/unites", label: "Unités", icon: Rocket },
       { to: "/game/labo", label: "Labo", icon: FlaskConical },
-      { to: "/game/planificateur", label: "Planificateur", icon: CalendarClock },
+      { to: "/game/planificateur", label: "Planificateur", icon: CalendarClock, lock: "planner" },
       { to: "/game/etat-major", label: "État-major", icon: ShieldStar },
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
       { to: "/game/ascension", label: "Ascension", icon: Sparkles },
@@ -200,7 +222,7 @@ function useBadges(): (to: string) => number {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((s) => s.unread);
-  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const leviathan = useLeviathan();
   const leviathanSeen = useLeviathanSeen((s) => s.ids);
   const passClaimable = usePlayerStore((s) => {
@@ -247,34 +269,6 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-/* v5.10.2 : les onglets des boss changent selon l'état du combat. */
-const BOSS_NAV: Record<BossPhase, { label: string; chip: string; color: string }> = {
-  active: { label: "En cours", chip: "En cours", color: "var(--color-danger-glow)" },
-  killed: { label: "Abattu", chip: "Abattu", color: "var(--color-mint-glow)" },
-  failed: { label: "Retiré", chip: "Retiré", color: "var(--color-ember-glow)" },
-  dormant: { label: "En sommeil", chip: "Zzz", color: "var(--color-slate-500)" },
-};
-
-/** Minute courante (les fins de combat sont gérées sans attendre le serveur). */
-function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
-/** État du boss d'une page de la navigation (null pour les autres pages). */
-function useBossNavPhase(to: string): BossPhase | null {
-  const leviathan = useLeviathan();
-  const seasonBoss = useSeasonBoss();
-  const now = useMinute();
-  if (to === "/game/uber") return bossPhase(leviathan, now);
-  if (to === "/game/boss") return bossPhase(seasonBoss, now);
-  return null;
-}
-
 /** Point d'état posé sur l'icône (pulsant pendant le combat). */
 function BossDot({ phase, className }: { phase: BossPhase | null; className?: string }) {
   if (!phase) return null;
@@ -288,12 +282,13 @@ function BossDot({ phase, className }: { phase: BossPhase | null; className?: st
 }
 
 /** Pastille de texte à droite du libellé (barre latérale). */
-function BossChip({ phase }: { phase: BossPhase }) {
-  const { color, label, chip } = BOSS_NAV[phase];
+function BossChip({ info }: { info: { phase: BossPhase; returnMs: number | null; now: number } }) {
+  const { chip, full } = bossNavText(info);
+  // DESIGN.md : pastille d'état = HudChip (ton = sens : danger en combat, mint abattu, ember retiré, neutre en sommeil).
   return (
-    <span title={label} className="shrink-0 border px-1 py-px font-mono text-[8.5px] font-bold uppercase tracking-[0.12em]" style={{ color, borderColor: `color-mix(in srgb, ${color} 45%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
+    <HudChip size="sm" tone={BOSS_TONE[info.phase]} title={full} className="shrink-0 whitespace-nowrap px-1 py-px text-[8.5px] tabular-nums tracking-[0.12em]">
       {chip}
-    </span>
+    </HudChip>
   );
 }
 
@@ -308,7 +303,8 @@ function bossIconClass(phase: BossPhase | null): string {
 
 /** Lien de la barre latérale (bureau), aux couleurs de son groupe (--nav-accent). */
 function SideLink({ item, badge }: { item: NavItem; badge: number }) {
-  const phase = useBossNavPhase(item.to);
+  const bossInfo = useBossNavInfo(item.to);
+  const phase = bossInfo?.phase ?? null;
   return (
     <ItemLink
       item={item}
@@ -339,7 +335,7 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
             <BossDot phase={phase} />
           </span>
           <span className={cn("min-w-0 flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
-          {phase && <BossChip phase={phase} />}
+          {bossInfo && <BossChip info={bossInfo} />}
           <InlineBadge count={badge} />
           {isActive && !badge && <span className="h-1.5 w-1.5 shrink-0 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
@@ -480,11 +476,12 @@ function useWideScreen(): boolean {
 }
 
 function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
-  const phase = useBossNavPhase(item.to);
+  const bossInfo = useBossNavInfo(item.to);
+  const phase = bossInfo?.phase ?? null;
   return (
     <ItemLink
       item={item}
-      title={phase ? `${item.label} · ${BOSS_NAV[phase].label}` : item.label}
+      title={bossInfo ? `${item.label} · ${bossNavText(bossInfo).full}` : item.label}
       aria-label={item.label}
       className={({ isActive }) =>
         cn(
@@ -663,7 +660,8 @@ function saveTabs(tabs: string[]) {
 
 function TabLink({ item }: { item: NavItem }) {
   const badge = useBadge(item.to);
-  const phase = useBossNavPhase(item.to);
+  const bossInfo = useBossNavInfo(item.to);
+  const phase = bossInfo?.phase ?? null;
   return (
     <ItemLink
       item={item}
@@ -758,7 +756,8 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
 
 function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
   const badge = useBadge(item.to);
-  const phase = useBossNavPhase(item.to);
+  const bossInfo = useBossNavInfo(item.to);
+  const phase = bossInfo?.phase ?? null;
   return (
     <ItemLink
       item={item}
@@ -776,7 +775,11 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
-      {phase && <span className="-mt-1 font-mono text-[8.5px] tracking-[0.12em]" style={{ color: BOSS_NAV[phase].color }}>{BOSS_NAV[phase].label}</span>}
+      {bossInfo && (
+        <span className="-mt-1 whitespace-nowrap font-mono text-[8.5px] tabular-nums tracking-[0.12em]" style={{ color: BOSS_NAV[bossInfo.phase].color }}>
+          {bossNavText(bossInfo).chip}
+        </span>
+      )}
     </ItemLink>
   );
 }
@@ -788,7 +791,7 @@ function MobileTabBar() {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
-  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid));
+  const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const hidden = useHiddenRoutes();
   const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && !hidden.has(i.to));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));

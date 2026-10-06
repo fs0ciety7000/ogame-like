@@ -1,3 +1,4 @@
+import { bumpStat } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { findTemplate, rarityInfo, relicLabel, relicsState, type RelicItem } from "@/game/relics";
 import { findModuleTemplate, moduleLabel, modulesState, moduleRarity, type ModuleItem } from "@/game/modules";
@@ -41,6 +42,11 @@ export interface Auction {
   endsAtMs: number;
   closedAtMs: number;
   tax: number;
+  /** 5.26.2 : empreintes (IP hachée, identifiant d'appareil) du vendeur et du meilleur enchérisseur. */
+  sellerIp?: string;
+  sellerDevice?: string;
+  bidderIp?: string;
+  bidderDevice?: string;
 }
 
 export const AUCTION_RULES = {
@@ -195,6 +201,11 @@ export function canCancel(a: Pick<Auction, "status" | "bid">): boolean {
   return a.status === "open" && !(a.bid > 0);
 }
 
+/** 5.26.1 : compteurs des succès (vente conclue côté vendeur, enchère remportée côté gagnant). */
+export function recordAuctionStat(player: PlayerState, side: "sold" | "won"): void {
+  bumpStat(player, side === "sold" ? "auctionsSold" : "auctionsWon");
+}
+
 /** Solde du joueur dans la monnaie de la vente. */
 export function currencyBalance(player: Pick<PlayerState, "resources" | "bounties">, res: AuctionCurrency): number {
   return Math.floor(res === "amber" ? bountyState(player).amber : (player.resources[res] ?? 0));
@@ -219,4 +230,129 @@ export function creditBid(player: PlayerState, res: AuctionCurrency, amount: num
     st.amber += amount;
     player.bounties = st;
   } else player.resources[res] = (player.resources[res] ?? 0) + amount;
+}
+
+/* ---------- 5.26.2 : historique des prix et alertes de vente ---------- */
+
+export const AUCTION_HISTORY_KEY = "auction_history";
+export const AUCTION_HISTORY_RULES = { perLot: 20, maxLots: 400 };
+export const AUCTION_WATCH_RULES = { maxPerPlayer: 5 };
+
+const RARITY_RANK: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+
+export interface AuctionSale {
+  atMs: number;
+  res: AuctionCurrency;
+  price: number;
+}
+
+/** Ventes conclues par lot (« relic:modele:rarete »), gardées au-delà du ménage des 30 jours. */
+export interface AuctionHistory {
+  lots: Record<string, { label: string; kind: AuctionKind; rarity: string; sales: AuctionSale[] }>;
+}
+
+/** Clé d'un lot : même modèle et même rareté. */
+export function lotKey(kind: AuctionKind, item: { template?: string; rarity?: string }): string {
+  return `${kind}:${String(item.template ?? "")}:${String(item.rarity ?? "")}`;
+}
+
+export function normalizeAuctionHistory(raw: unknown): AuctionHistory {
+  const lots: AuctionHistory["lots"] = {};
+  const src = raw && typeof raw === "object" ? (raw as Partial<AuctionHistory>).lots : null;
+  if (!src || typeof src !== "object") return { lots };
+  for (const [k, v] of Object.entries(src)) {
+    if (!v || typeof v !== "object" || !Array.isArray(v.sales)) continue;
+    const sales = v.sales
+      .map((s) => ({ atMs: Number(s?.atMs) || 0, res: String(s?.res) as AuctionCurrency, price: Math.floor(Number(s?.price)) }))
+      .filter((s) => AUCTION_CURRENCIES.includes(s.res) && s.price > 0)
+      .slice(-AUCTION_HISTORY_RULES.perLot);
+    if (sales.length) lots[k] = { label: String(v.label ?? "").slice(0, 120), kind: v.kind === "module" ? "module" : "relic", rarity: String(v.rarity ?? ""), sales };
+  }
+  return { lots };
+}
+
+/** Ajoute une vente conclue (les lots les moins récents sont oubliés au-delà de 400). */
+export function recordSale(h: AuctionHistory, a: Pick<Auction, "kind" | "item" | "label" | "rarity" | "res" | "bid">, now: number): AuctionHistory {
+  if (!(a.bid > 0)) return h;
+  const key = lotKey(a.kind, a.item as { template?: string; rarity?: string });
+  const prev = h.lots[key];
+  const tpl = (a.item as { template?: string }).template;
+  const name = (a.kind === "module" ? findModuleTemplate(String(tpl))?.name : findTemplate(tpl)?.name) ?? a.label.replace(/^Plan : /, "");
+  const lots = { ...h.lots, [key]: { label: name, kind: a.kind, rarity: a.rarity, sales: [...(prev?.sales ?? []), { atMs: now, res: a.res, price: Math.floor(a.bid) }].slice(-AUCTION_HISTORY_RULES.perLot) } };
+  const keys = Object.keys(lots);
+  if (keys.length > AUCTION_HISTORY_RULES.maxLots) {
+    const last = (k: string) => lots[k].sales[lots[k].sales.length - 1]?.atMs ?? 0;
+    keys.sort((x, y) => last(x) - last(y)).slice(0, keys.length - AUCTION_HISTORY_RULES.maxLots).forEach((k) => delete lots[k]);
+  }
+  return { lots };
+}
+
+/** Résumé des ventes d'un lot dans une monnaie : nombre, médiane, dernière, min, max. */
+export function priceSummary(sales: AuctionSale[], res: AuctionCurrency): { count: number; median: number; last: number; min: number; max: number } | null {
+  const list = sales.filter((s) => s.res === res);
+  if (list.length === 0) return null;
+  const sorted = list.map((s) => s.price).sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  return { count: list.length, median, last: list[list.length - 1].price, min: sorted[0], max: sorted[sorted.length - 1] };
+}
+
+export interface AuctionWatch {
+  id?: string;
+  uid?: string;
+  /** « any » : reliques et plans. */
+  kind: AuctionKind | "any";
+  /** Rareté minimale (incluse). */
+  minRarity: string;
+  /** Modèle précis (vide : tous). */
+  template: string;
+}
+
+export function validateWatch(raw: unknown, count: number): AuctionWatch {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const kind = r.kind === "relic" || r.kind === "module" || r.kind === "any" ? r.kind : null;
+  if (!kind) throw new GameActionError("Choisis reliques, plans ou les deux.");
+  const minRarity = String(r.minRarity ?? "");
+  if (!(minRarity in RARITY_RANK) || minRarity === "mythic") throw new GameActionError("Rareté inconnue.");
+  const template = typeof r.template === "string" ? r.template.slice(0, 60) : "";
+  if (template && kind === "any") throw new GameActionError("Un modèle précis demande de choisir reliques ou plans.");
+  if (template && !lotKnown(kind as AuctionKind, { template })) throw new GameActionError("Modèle inconnu.");
+  if (count >= AUCTION_WATCH_RULES.maxPerPlayer) throw new GameActionError(`${AUCTION_WATCH_RULES.maxPerPlayer} alertes au plus.`);
+  return { kind, minRarity, template };
+}
+
+export function watchMatches(w: Pick<AuctionWatch, "kind" | "minRarity" | "template">, kind: AuctionKind, item: { template?: string; rarity?: string }): boolean {
+  if (w.kind !== "any" && w.kind !== kind) return false;
+  if ((RARITY_RANK[String(item.rarity)] ?? -1) < (RARITY_RANK[w.minRarity] ?? 99)) return false;
+  return !w.template || w.template === item.template;
+}
+
+/** Joueurs à prévenir d'une mise en vente (un seul avis par joueur, jamais le vendeur). */
+export function watchersFor(watches: AuctionWatch[], sellerId: string, kind: AuctionKind, item: { template?: string; rarity?: string }): string[] {
+  const out = new Set<string>();
+  for (const w of watches) if (w.uid && w.uid !== sellerId && watchMatches(w, kind, item)) out.add(w.uid);
+  return [...out];
+}
+
+/** « Plans légendaires », « Reliques épiques ou mieux : Cœur de pulsar ». */
+export function describeWatch(w: Pick<AuctionWatch, "kind" | "minRarity" | "template">): string {
+  const what = w.kind === "relic" ? "Reliques" : w.kind === "module" ? "Plans" : "Reliques et plans";
+  const plural: Record<string, [string, string]> = { common: ["communes", "communs"], rare: ["rares", "rares"], epic: ["épiques", "épiques"], legendary: ["légendaires", "légendaires"] };
+  const rarity = (plural[w.minRarity] ?? [w.minRarity, w.minRarity])[w.kind === "relic" ? 0 : 1];
+  const name = w.template ? (w.kind === "module" ? findModuleTemplate(w.template)?.name : findTemplate(w.template)?.name) : "";
+  return `${what} ${w.minRarity === "legendary" ? rarity : `${rarity} ou mieux`}${name ? ` : ${name}` : ""}`;
+}
+
+/** 5.26.2 : vente conclue entre deux comptes qui partagent une adresse IP ou un appareil. */
+export function linkedAuctionReasons(a: Pick<Auction, "sellerIp" | "sellerDevice" | "bidderIp" | "bidderDevice">): string[] {
+  const out: string[] = [];
+  if (a.sellerIp && a.sellerIp === a.bidderIp) out.push("même adresse IP");
+  if (a.sellerDevice && a.sellerDevice === a.bidderDevice) out.push("même appareil");
+  return out;
+}
+
+/** Identifiant d'appareil envoyé par le client (hexadécimal, 16 à 64 caractères), sinon vide. */
+export function cleanDeviceId(raw: unknown): string {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
 }

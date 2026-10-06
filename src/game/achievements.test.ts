@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   ACHIEVEMENTS,
   derivedAchievements,
+  ACHIEVEMENT_HINT_PRICE,
+  achievementHint,
   achievementProgress,
+  achievementVisibility,
+  previousTier,
   checkNewAchievements,
   DEFAULT_ACHIEVEMENTS,
   METRICS,
@@ -13,6 +17,8 @@ import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
 import { performPlayerAction } from "@/game/actions";
 import { bumpStat, parisHour, recordMission } from "@/game/stats";
+import { advanceWorkshop, sendToWorkshop } from "@/game/workshop";
+import { recordAuctionStat } from "@/game/auctions";
 import type { PlayerState } from "@/types/game";
 
 function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
@@ -85,5 +91,54 @@ describe("succès (v2.3)", () => {
   it("knows the Paris hour (summer and winter time)", () => {
     expect(parisHour(Date.UTC(2026, 6, 1, 1))).toBe(3);
     expect(parisHour(Date.UTC(2026, 0, 15, 2))).toBe(3);
+  });
+});
+
+describe("5.26.1 : succès des systèmes récents", () => {
+  beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
+
+  it("Atelier, enchères, modules, reliques, primes et Ambre ont leurs succès (même avec un catalogue personnalisé)", () => {
+    setAchievements([]);
+    const ids = new Set(ACHIEVEMENTS.map((a) => a.id));
+    for (const id of ["atelier_1", "enchere_vente_1", "enchere_achat_1", "module_1", "module_full", "relique_5", "prime_1", "ambre_1"]) expect(ids.has(id)).toBe(true);
+    expect(validateAchievements(derivedAchievements())).toEqual([]);
+  });
+
+  it("les compteurs débloquent les succès", () => {
+    const p = makePlayer();
+    sendToWorkshop(p, { chasseur: 60 }, 0, "raid", true);
+    advanceWorkshop(p, 1, true);
+    expect(METRICS.unitsRepaired.value(p)).toBe(60);
+    recordAuctionStat(p, "sold");
+    recordAuctionStat(p, "won");
+    const got = checkNewAchievements(p).map((a) => a.id);
+    expect(got).toEqual(expect.arrayContaining(["atelier_1", "enchere_vente_1", "enchere_achat_1"]));
+  });
+});
+
+describe("5.26.1 : brouillard des paliers", () => {
+  it("obtenus et prochain palier visibles, les suivants dans le brouillard, les secrets restent secrets", () => {
+    const chain = DEFAULT_ACHIEVEMENTS.filter((a) => a.metric === "victories").sort((x, y) => x.threshold - y.threshold);
+    const v0 = achievementVisibility(chain, new Set());
+    expect(chain.map((a) => v0.get(a.id))).toEqual(["shown", "fog", "fog", "fog", "fog"]);
+    const v1 = achievementVisibility(chain, new Set([chain[0].id]));
+    expect(chain.map((a) => v1.get(a.id))).toEqual(["shown", "shown", "fog", "fog", "fog"]);
+    expect(previousTier(chain, chain[2])?.id).toBe(chain[1].id);
+    const secret = DEFAULT_ACHIEVEMENTS.find((a) => a.id === "phoenix")!;
+    expect(achievementVisibility([secret], new Set()).get("phoenix")).toBe("secret");
+  });
+});
+
+describe("5.26.2 : indices des succès secrets", () => {
+  beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
+  it("un indice par secret, payé en Ambre, jamais pour un succès visible ou obtenu", () => {
+    const p = makePlayer({ bounties: { amber: 60 } as PlayerState["bounties"] });
+    expect(() => performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "first_blood" }, 1)).toThrow(/indice/);
+    const out = performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 1);
+    expect((out.result as { hint: string }).hint).toMatch(/cendres/);
+    expect(out.player.bounties?.amber).toBe(60 - ACHIEVEMENT_HINT_PRICE);
+    expect(out.player.stats?.hintsBought).toEqual(["phoenix"]);
+    expect(() => performPlayerAction(out.player, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 2)).toThrow(/déjà/);
+    expect(achievementHint({ metric: "victories", category: "combat" })).toMatch(/combat/);
   });
 });

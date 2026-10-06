@@ -9,6 +9,7 @@ import { CONTEST_RULES, contestPhase, validateContest, type ContestsState } from
 import { adminCancelContest, adminCreateContest, useContests } from "@/services/contestService";
 import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
+import { useServerPot } from "@/services/serverPotService";
 
 /* v5.10.5 : création et suivi des concours du pot commun. */
 
@@ -27,6 +28,7 @@ function toLocalInput(ms: number): string {
 
 export function ContestsAdmin() {
   const live = useContests();
+  const pot = useServerPot();
   const [state, setState] = useState<ContestsState | null>(null);
   const contests = state ?? live;
   const now = Date.now();
@@ -36,10 +38,11 @@ export function ContestsAdmin() {
   const [start, setStart] = useState(() => toLocalInput(now));
   const [end, setEnd] = useState(() => toLocalInput(now + 7 * 24 * 3600_000));
   const [share, setShare] = useState(25);
+  const [amberShare, setAmberShare] = useState(0);
   const [places, setPlaces] = useState("podium");
   const [busy, setBusy] = useState(false);
-  const draft = { title, description, metric, startMs: new Date(start).getTime(), endMs: new Date(end).getTime(), potShare: share / 100, places: PLACES.find((p) => p.id === places)!.places };
-  const errors = useMemo(() => validateContest(draft, now), [title, metric, start, end, share, places]); // eslint-disable-line react-hooks/exhaustive-deps
+  const draft = { title, description, metric, startMs: new Date(start).getTime(), endMs: new Date(end).getTime(), potShare: share / 100, amberShare: amberShare / 100, places: PLACES.find((p) => p.id === places)!.places };
+  const errors = useMemo(() => validateContest(draft, now), [title, metric, start, end, share, amberShare, places]); // eslint-disable-line react-hooks/exhaustive-deps
   const metricOptions = (Object.keys(METRICS) as AchievementMetric[]).map((k) => ({ value: k, label: METRICS[k].label })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
 
   const create = async () => {
@@ -86,7 +89,10 @@ export function ContestsAdmin() {
           <Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} />
         </Field>
         <Field label={`Part du pot engagée (${share} %)`} hint={`${CONTEST_RULES.maxPotShare * 100} % au plus. Calculée sur le solde du pot à la fin.`}>
-          <input type="range" min={1} max={CONTEST_RULES.maxPotShare * 100} value={share} onChange={(e) => setShare(Number(e.target.value))} className="accent-[var(--color-gold-glow)]" aria-label="Part du pot" />
+          <input type="range" min={0} max={CONTEST_RULES.maxPotShare * 100} value={share} onChange={(e) => setShare(Number(e.target.value))} className="accent-[var(--color-gold-glow)]" aria-label="Part du pot" />
+        </Field>
+        <Field label={`Part de l'Ambre du pot (${amberShare} %)`} hint={`Réserve d'Ambre actuelle : ${pot?.amber ?? 0}. 0 % : concours sans Ambre.`}>
+          <input type="range" min={0} max={CONTEST_RULES.maxPotShare * 100} value={amberShare} onChange={(e) => setAmberShare(Number(e.target.value))} className="accent-[var(--color-gold-glow)]" aria-label="Part de l'Ambre du pot" />
         </Field>
         <SelectField label="Répartition des prix" value={places} options={PLACES.map((p) => ({ value: p.id, label: p.label }))} onChange={setPlaces} />
       </div>
@@ -104,7 +110,7 @@ export function ContestsAdmin() {
               <span className="min-w-0 flex-1">
                 <span className="text-slate-100">{c.title}</span>{" "}
                 <span className="text-xs text-slate-500">
-                  · {METRICS[c.metric]?.label} · {Math.round(c.potShare * 100)} % du pot · {new Date(c.startMs).toLocaleDateString("fr-FR")} → {new Date(c.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  · {METRICS[c.metric]?.label} · {Math.round(c.potShare * 100)} % du pot{c.amberShare ? ` + ${Math.round(c.amberShare * 100)} % de l'Ambre` : ""} · {new Date(c.startMs).toLocaleDateString("fr-FR")} → {new Date(c.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
                   {c.results ? ` · ${c.results.length} gagnant(s)` : c.standings.length ? ` · ${c.standings.length} classé(s)` : ""}
                 </span>
               </span>

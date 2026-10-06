@@ -29,7 +29,7 @@ export function useContests(): ContestsState | null {
   return state;
 }
 
-export function adminCreateContest(contest: Pick<Contest, "title" | "description" | "metric" | "startMs" | "endMs" | "potShare" | "places">): Promise<ContestsState> {
+export function adminCreateContest(contest: Pick<Contest, "title" | "description" | "metric" | "startMs" | "endMs" | "potShare" | "places" | "amberShare">): Promise<ContestsState> {
   return pb.send("/api/cosmic/admin/contests", { method: "POST", body: { action: "create", contest } });
 }
 

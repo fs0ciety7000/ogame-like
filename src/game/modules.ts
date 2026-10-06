@@ -38,10 +38,17 @@ export interface ModulesState {
   items: ModuleItem[];
   /** Deux emplacements par classe : identifiants des modules montés. */
   slots: Record<UnitClass, (string | null)[]>;
+  /** 5.26.2 : préréglages de montage nommés (« Raid », « Défense »…), 5 au plus. */
+  presets?: ModulePreset[];
+}
+
+export interface ModulePreset {
+  name: string;
+  slots: Record<UnitClass, (string | null)[]>;
 }
 
 export const MODULE_CLASSES: UnitClass[] = ["light", "medium", "heavy", "support"];
-export const MODULE_RULES = { slotsPerClass: 2, maxItems: 30 };
+export const MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
 
 export const MODULE_RARITIES: { id: ModuleRarity; label: string; weight: number; tone: "neutral" | "accent" | "violet" | "gold"; recycleAmber: number }[] = [
   { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
@@ -119,7 +126,18 @@ export function modulesState(player: Pick<PlayerState, "modules">): ModulesState
     const list = Array.isArray(raw.slots?.[cls]) ? raw.slots![cls] : [];
     slots[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => (list[i] && ids.has(list[i]!) ? list[i]! : null));
   }
-  return { items, slots };
+  const presets = (Array.isArray(raw.presets) ? raw.presets : [])
+    .filter((p): p is ModulePreset => !!p && typeof p.name === "string" && !!p.slots && typeof p.slots === "object")
+    .slice(0, MODULE_RULES.maxPresets)
+    .map((p) => {
+      const ps = emptySlots();
+      for (const cls of MODULE_CLASSES) {
+        const list = Array.isArray(p.slots[cls]) ? p.slots[cls] : [];
+        ps[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => (typeof list[i] === "string" ? list[i] : null));
+      }
+      return { name: p.name.slice(0, 24), slots: ps };
+    });
+  return presets.length ? { items, slots, presets } : { items, slots };
 }
 
 /** Classe où un module est monté (null s'il est libre). */
@@ -235,3 +253,90 @@ export function takeModulePlan(player: PlayerState, id: unknown): ModuleItem {
   player.modules = st;
   return item;
 }
+
+/* ---------- 5.26.2 : fusion des plans et préréglages de montage ---------- */
+
+/** Rareté suivante (null au sommet). */
+export function nextModuleRarity(r: ModuleRarity): ModuleRarity | null {
+  const i = MODULE_RARITIES.findIndex((x) => x.id === r);
+  return i >= 0 && i < MODULE_RARITIES.length - 1 ? MODULE_RARITIES[i + 1].id : null;
+}
+
+/** Groupes de plans fusionnables : même modèle, même rareté, au moins trois, pas légendaires. */
+export function fusablePlanGroups(st: ModulesState): { template: string; rarity: ModuleRarity; ids: string[] }[] {
+  const groups = new Map<string, { template: string; rarity: ModuleRarity; ids: string[] }>();
+  for (const m of st.items) {
+    if (m.built || !nextModuleRarity(m.rarity)) continue;
+    const key = `${m.template}:${m.rarity}`;
+    const g = groups.get(key) ?? { template: m.template, rarity: m.rarity, ids: [] };
+    g.ids.push(m.id);
+    groups.set(key, g);
+  }
+  return [...groups.values()].filter((g) => g.ids.length >= MODULE_RULES.fuseCount);
+}
+
+/** Fusionne trois plans identiques (non fabriqués) en un plan de la rareté supérieure. */
+export function fuseModulePlans(player: PlayerState, ids: unknown, now: number, random: () => number = Math.random): ModuleItem {
+  const st = modulesState(player);
+  const list = Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+  if (list.length !== MODULE_RULES.fuseCount) throw new GameActionError(`Choisis ${MODULE_RULES.fuseCount} plans identiques.`);
+  const items = list.map((id) => find(st, id));
+  if (items.some((m) => m.built)) throw new GameActionError("Seuls les plans (non fabriqués) se fusionnent.");
+  const [first] = items;
+  if (items.some((m) => m.template !== first.template || m.rarity !== first.rarity)) throw new GameActionError("Les trois plans doivent être identiques (même modèle, même rareté).");
+  const next = nextModuleRarity(first.rarity);
+  if (!next) throw new GameActionError("Un plan légendaire ne se fusionne plus.");
+  const fused: ModuleItem = { id: newId(now, random), template: first.template, rarity: next, built: false, foundAtMs: now, source: "fusion" };
+  st.items = [...st.items.filter((m) => !list.includes(m.id)), fused];
+  player.modules = st;
+  return fused;
+}
+
+/** Enregistre le montage actuel sous un nom (remplace un préréglage du même nom). */
+export function saveModulePreset(player: PlayerState, nameIn: unknown): ModulePreset {
+  const st = modulesState(player);
+  const name = String(nameIn ?? "").trim().slice(0, 24);
+  if (!name) throw new GameActionError("Nomme ce préréglage.");
+  const presets = [...(st.presets ?? [])];
+  const preset = { name, slots: JSON.parse(JSON.stringify(st.slots)) as ModulePreset["slots"] };
+  const i = presets.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0) presets[i] = preset;
+  else if (presets.length >= MODULE_RULES.maxPresets) throw new GameActionError(`${MODULE_RULES.maxPresets} préréglages au plus.`);
+  else presets.push(preset);
+  player.modules = { ...st, presets };
+  return preset;
+}
+
+/** Applique un préréglage : les modules disparus (recyclés, vendus) laissent l'emplacement libre. */
+export function applyModulePreset(player: PlayerState, index: unknown): { missing: number } {
+  const st = modulesState(player);
+  const preset = (st.presets ?? [])[Math.floor(Number(index))];
+  if (!preset) throw new GameActionError("Préréglage introuvable.");
+  const built = new Set(st.items.filter((m) => m.built).map((m) => m.id));
+  let missing = 0;
+  const slots = emptySlots();
+  const used = new Set<string>();
+  for (const cls of MODULE_CLASSES) {
+    slots[cls] = preset.slots[cls].map((id) => {
+      if (!id) return null;
+      const item = st.items.find((m) => m.id === id);
+      const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template)!.family] : null;
+      if (!item || !built.has(id) || used.has(id) || !fam!.classes.includes(cls)) {
+        missing += 1;
+        return null;
+      }
+      used.add(id);
+      return id;
+    });
+  }
+  player.modules = { ...st, slots };
+  return { missing };
+}
+
+export function deleteModulePreset(player: PlayerState, index: unknown): void {
+  const st = modulesState(player);
+  const i = Math.floor(Number(index));
+  if (!(st.presets ?? [])[i]) throw new GameActionError("Préréglage introuvable.");
+  player.modules = { ...st, presets: st.presets!.filter((_, k) => k !== i) };
+}
+

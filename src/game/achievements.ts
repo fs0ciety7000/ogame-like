@@ -8,6 +8,8 @@ import { COMMON_RESOURCES } from "@/game/economy";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { factionStates, findFaction } from "@/game/pirates";
 import { playerStats } from "@/game/stats";
+import { GameActionError } from "@/game/errors";
+import { normalizePlanetLook } from "@/game/planetLook";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -18,7 +20,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
 ===================================================== */
 
 export type AchievementTier = "bronze" | "argent" | "or" | "legendaire" | "mythique";
-export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "alliance" | "menaces" | "prestige";
+export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "commerce" | "alliance" | "menaces" | "prestige";
 
 export interface AchievementDef {
   id: string;
@@ -62,6 +64,7 @@ export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji
   flotte: { label: "Flotte", emoji: "🚀" },
   missions: { label: "Missions et contrats", emoji: "🧭" },
   logistique: { label: "Renseignement et logistique", emoji: "🛰️" },
+  commerce: { label: "Commerce et Ruche", emoji: "⚖️" },
   alliance: { label: "Alliance", emoji: "🤝" },
   menaces: { label: "Menaces", emoji: "☠️" },
   prestige: { label: "Prestige", emoji: "🏆" },
@@ -150,6 +153,39 @@ export const METRICS = {
   worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
   // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
+  // 5.26.1 : systèmes récents (Atelier, modules, enchères, reliques, primes).
+  unitsRepaired: { label: "Unités réparées à l'Atelier (cumul)", value: (p: PlayerState) => playerStats(p).unitsRepaired ?? 0 },
+  modulesBuilt: { label: "Modules de vaisseaux fabriqués", value: (p: PlayerState) => playerStats(p).modulesBuilt ?? 0 },
+  modulesMounted: {
+    label: "Emplacements de modules occupés",
+    value: (p: PlayerState) => Object.values((p.modules as { slots?: Record<string, (string | null)[]> } | undefined)?.slots ?? {}).reduce((a, list) => a + (Array.isArray(list) ? list.filter(Boolean).length : 0), 0),
+  },
+  auctionsSold: { label: "Ventes conclues à l'Hôtel des enchères", value: (p: PlayerState) => playerStats(p).auctionsSold ?? 0 },
+  auctionsWon: { label: "Enchères remportées", value: (p: PlayerState) => playerStats(p).auctionsWon ?? 0 },
+  relicsOwned: { label: "Reliques en collection", value: (p: PlayerState) => ((p.relics as { items?: unknown[] } | undefined)?.items ?? []).length },
+  bountiesDone: { label: "Primes Kesh'Vaar remplies", value: (p: PlayerState) => playerStats(p).bounties ?? 0 },
+  amberEarned: { label: "Ambre de Ruche gagnée (cumul)", value: (p: PlayerState) => Math.floor(Number((p.bounties as { amberEarned?: number } | undefined)?.amberEarned) || 0) },
+  bountyReputation: { label: "Réputation auprès de la Ruche", value: (p: PlayerState) => Math.floor(Number((p.bounties as { reputation?: number } | undefined)?.reputation) || 0) },
+  vendettaWins: { label: "Vendettas gagnées contre les seigneurs", value: (p: PlayerState) => sum(Object.values(playerStats(p).vendettaWins ?? {}).map((n) => Number(n) || 0)) },
+  warlordsBeaten: { label: "Seigneurs différents vaincus en vendetta", value: (p: PlayerState) => Object.values(playerStats(p).vendettaWins ?? {}).filter((n) => Number(n) > 0).length },
+  casinoSpins: { label: "Tours de machine joués au casino", value: (p: PlayerState) => Math.floor(Number((p.casino as { spins?: number } | undefined)?.spins) || 0) },
+  casinoWins: { label: "Tours gagnants au casino", value: (p: PlayerState) => Math.floor(Number((p.casino as { wins?: number } | undefined)?.wins) || 0) },
+  marketTrades: { label: "Échanges conclus au marché entre joueurs", value: (p: PlayerState) => playerStats(p).marketTrades ?? 0 },
+  contractsDelivered: { label: "Contrats de livraison honorés", value: (p: PlayerState) => playerStats(p).contractsDelivered ?? 0 },
+  privateMessages: { label: "Messages privés envoyés", value: (p: PlayerState) => playerStats(p).privateMessages ?? 0 },
+  globalMessages: { label: "Messages publiés sur le canal global", value: (p: PlayerState) => playerStats(p).globalMessages ?? 0 },
+  codexChapters: { label: "Catégories du Codex complétées", value: (p: PlayerState) => (playerStats(p).codexClaimed ?? []).length },
+  reportsResolved: { label: "Signalements résolus par l'équipe", value: (p: PlayerState) => playerStats(p).reportsResolved ?? 0 },
+  profileCustomized: {
+    label: "Éléments de profil personnalisés (bannière, emblème, devise, vitrine, planète)",
+    value: (p: PlayerState) => {
+      const s = (p.profileStyle ?? {}) as { banner?: string; emblem?: string; motto?: string; pinned?: string[]; planet?: unknown };
+      const planet = JSON.stringify(normalizePlanetLook(s.planet)) !== JSON.stringify(normalizePlanetLook(undefined));
+      return [!!s.banner && s.banner !== "nebula", !!s.emblem && s.emblem !== "rank", !!String(s.motto ?? "").trim(), (s.pinned ?? []).length > 0, planet].filter(Boolean).length;
+    },
+  },
+  streakBest: { label: "Meilleure série de connexion (jours)", value: (p: PlayerState) => Math.floor(Number((p.streak as { best?: number } | undefined)?.best) || 0) },
+  ascensionsDone: { label: "Ascensions accomplies", value: (p: PlayerState) => Math.floor(Number(p.ascensions) || 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -276,6 +312,52 @@ export function derivedAchievements(): AchievementDef[] {
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
     def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
     // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    // 5.26.1 : Atelier, modules, enchères, reliques, primes (paliers suivants : générateur procédural).
+    def("atelier_1", "flotte", "bronze", "unitsRepaired", 50, "Mécano", "Faire réparer 50 unités à l'Atelier.", "🔧", { auto: true }),
+    def("atelier_2", "flotte", "argent", "unitsRepaired", 1000, "Chef d'atelier", "Faire réparer 1 000 unités à l'Atelier.", "🛠️", { auto: true }),
+    def("atelier_3", "flotte", "or", "unitsRepaired", 20_000, "Résurrecteur de flottes", "Faire réparer 20 000 unités à l'Atelier.", "⚙️", { auto: true }),
+    def("module_1", "flotte", "bronze", "modulesBuilt", 1, "Premier module", "Fabriquer un module de vaisseau.", "🧩", { auto: true }),
+    def("module_2", "flotte", "argent", "modulesBuilt", 10, "Armurier", "Fabriquer 10 modules de vaisseaux.", "🔩", { auto: true }),
+    def("module_full", "flotte", "or", "modulesMounted", 8, "Flotte sur mesure", "Occuper les 8 emplacements de modules.", "🚀", { auto: true }),
+    def("enchere_vente_1", "commerce", "bronze", "auctionsSold", 1, "Commissaire-priseur", "Conclure une vente à l'Hôtel des enchères.", "🔨", { auto: true }),
+    def("enchere_vente_2", "commerce", "argent", "auctionsSold", 10, "Marchand d'art", "Conclure 10 ventes aux enchères.", "🖼️", { auto: true }),
+    def("enchere_vente_3", "commerce", "or", "auctionsSold", 50, "Maison de ventes", "Conclure 50 ventes aux enchères.", "🏛️", { auto: true }),
+    def("enchere_achat_1", "commerce", "bronze", "auctionsWon", 1, "Adjugé !", "Remporter une enchère.", "🛎️", { auto: true }),
+    def("enchere_achat_2", "commerce", "argent", "auctionsWon", 10, "Collectionneur avisé", "Remporter 10 enchères.", "🏺", { auto: true }),
+    def("enchere_achat_3", "commerce", "or", "auctionsWon", 50, "Grand acquéreur", "Remporter 50 enchères.", "💼", { auto: true }),
+    def("relique_5", "prestige", "argent", "relicsOwned", 5, "Cabinet de curiosités", "Réunir 5 reliques dans ta collection.", "🗿", { auto: true }),
+    def("relique_20", "prestige", "or", "relicsOwned", 20, "Reliquaire", "Réunir 20 reliques dans ta collection.", "⚱️", { auto: true }),
+    def("prime_1", "commerce", "bronze", "bountiesDone", 1, "Première prime", "Remplir une prime Kesh'Vaar.", "🎯", { auto: true }),
+    def("prime_2", "commerce", "argent", "bountiesDone", 25, "Chasseur de la Ruche", "Remplir 25 primes Kesh'Vaar.", "🐝", { auto: true }),
+    def("prime_3", "commerce", "or", "bountiesDone", 150, "Traqueur légendaire", "Remplir 150 primes Kesh'Vaar.", "🏹", { auto: true }),
+    def("ambre_1", "commerce", "argent", "amberEarned", 500, "Goût de l'Ambre", "Gagner 500 Ambre de Ruche.", "🍯", { auto: true }),
+    def("ambre_2", "commerce", "or", "amberEarned", 5000, "Trésor de la Ruche", "Gagner 5 000 Ambre de Ruche.", "👑", { auto: true }),
+    // 5.26.1 : Primes, Seigneurs, Casino, Commerce, Communications, Codex, Signalements, Profil, Série, Ascension.
+    def("ruche_rep_1", "commerce", "argent", "bountyReputation", 50, "Ami de la Ruche", "Atteindre 50 de réputation auprès des Kesh'Vaar.", "🐝", { auto: true }),
+    def("ruche_rep_2", "commerce", "or", "bountyReputation", 250, "Élu de la Reine", "Atteindre 250 de réputation auprès des Kesh'Vaar.", "👑", { auto: true }),
+    def("vendetta_1", "combat", "argent", "vendettaWins", 1, "Vendetta", "Gagner une vendetta contre un seigneur de guerre.", "🗡️", { auto: true }),
+    def("vendetta_2", "combat", "or", "vendettaWins", 10, "Tueur de seigneurs", "Gagner 10 vendettas.", "⚔️", { auto: true }),
+    def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs différents en vendetta.", "💀", { auto: true }),
+    def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitué du casino", "Jouer 10 tours au Casino orbital.", "🎰", { auto: true }),
+    def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "🍀", { auto: true }),
+    def("marche_1", "commerce", "bronze", "marketTrades", 5, "Négociant", "Conclure 5 échanges au marché entre joueurs.", "⚖️", { auto: true }),
+    def("marche_2", "commerce", "argent", "marketTrades", 50, "Courtier", "Conclure 50 échanges au marché entre joueurs.", "📈", { auto: true }),
+    def("livraison_1", "commerce", "bronze", "contractsDelivered", 3, "Livreur fiable", "Honorer 3 contrats de livraison.", "📦", { auto: true }),
+    def("livraison_2", "commerce", "argent", "contractsDelivered", 25, "Transporteur émérite", "Honorer 25 contrats de livraison.", "🚚", { auto: true }),
+    def("cadeau_1", "alliance", "bronze", "giftsSent", 5, "Généreux", "Envoyer 5 cadeaux à d'autres joueurs.", "🎁", { auto: true }),
+    def("message_1", "alliance", "bronze", "privateMessages", 10, "Correspondant", "Envoyer 10 messages privés.", "✉️", { auto: true }),
+    def("canal_1", "alliance", "bronze", "globalMessages", 10, "Voix du secteur", "Publier 10 messages sur le canal global.", "📡", { auto: true }),
+    def("canal_2", "alliance", "argent", "globalMessages", 200, "Pilier du canal", "Publier 200 messages sur le canal global.", "📻", { auto: true }),
+    def("codex_1", "prestige", "argent", "codexChapters", 1, "Archiviste", "Compléter une catégorie du Codex.", "📚", { auto: true }),
+    def("codex_2", "prestige", "or", "codexChapters", 4, "Mémoire de la galaxie", "Compléter 4 catégories du Codex.", "🗃️", { auto: true }),
+    def("signal_1", "prestige", "argent", "reportsResolved", 1, "Œil de lynx", "Un de tes signalements a été résolu par l'équipe.", "🐞", { auto: true }),
+    def("signal_2", "prestige", "or", "reportsResolved", 5, "Testeur d'élite", "Cinq de tes signalements ont été résolus par l'équipe.", "🛠️", { auto: true }),
+    def("profil_1", "prestige", "bronze", "profileCustomized", 1, "Signe distinctif", "Personnaliser un élément de ta fiche publique.", "🎨", { auto: true }),
+    def("profil_all", "prestige", "argent", "profileCustomized", 5, "Fiche de légende", "Personnaliser bannière, emblème, devise, vitrine et planète.", "🖼️", { auto: true }),
+    def("serie_7", "prestige", "bronze", "streakBest", 7, "Une semaine sans faillir", "Tenir une série de connexion de 7 jours.", "📆", { auto: true }),
+    def("serie_30", "prestige", "or", "streakBest", 30, "Un mois de garde", "Tenir une série de connexion de 30 jours.", "🗓️", { auto: true }),
+    def("ascension_1", "prestige", "or", "ascensionsDone", 1, "Renaissance", "Accomplir une Ascension.", "✨", { auto: true }),
+    def("rang_legende", "prestige", "legendaire", "xp", 250_000, "Légende vivante", "Cumuler 250 000 XP.", "🌟", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
   ];
 }
@@ -286,6 +368,67 @@ export function setAchievements(defs: AchievementDef[]) {
   ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
+
+/* ---------- 5.26.2 : indices des succès secrets ---------- */
+
+/** Prix d'un indice (Ambre de Ruche), payé une fois par succès secret. */
+export const ACHIEVEMENT_HINT_PRICE = 25;
+
+/** Indices cryptiques par mesure : une piste, jamais le seuil exact. */
+const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {
+  defeats: "Celui qui tombe souvent finit par apprendre à se relever.",
+  phoenix: "Les cendres d'une défaite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
+  nightResearch: "Les laboratoires sont plus calmes quand la galaxie dort, aux heures où même les sentinelles bâillent.",
+  bestMissionDay: "Un seul jour, un équipage infatigable, et un registre des missions qui déborde.",
+  evasions: "Une base vide ne craint pas les pillards : sois ailleurs quand ils frappent.",
+  diplomat: "Payer sans jamais dire non. Encore. Et encore.",
+  factionsThreatened: "Quand toutes les factions connaissent ton nom, tu as réussi… en quelque sorte.",
+  rareOfficers: "L'état-major complet réunit ceux qu'on ne croise qu'une fois.",
+  seasonCommanders: "Chaque saison offre un visage ; il faudra tous les réunir.",
+  casinoJackpots: "Trois fois le même chiffre, et le pot commun change de mains.",
+};
+
+/** Indice d'un succès (piste de la mesure, sinon la catégorie). */
+export function achievementHint(a: Pick<AchievementDef, "metric" | "category">): string {
+  return METRIC_HINTS[a.metric] ?? `Une piste du côté de : ${CATEGORY_LABELS[a.category].label.toLowerCase()}.`;
+}
+
+/** Achat d'un indice : succès secret, pas encore obtenu ni indiqué ; l'Ambre est débitée par l'appelant. */
+export function checkHintPurchase(player: Pick<PlayerState, "unlockedAchievements" | "stats">, id: unknown): AchievementDef {
+  const a = ACHIEVEMENTS.find((x) => x.id === String(id) && x.enabled);
+  if (!a || !a.secret) throw new GameActionError("Ce succès n'a pas d'indice.");
+  if ((player.unlockedAchievements ?? []).includes(a.id)) throw new GameActionError("Succès déjà obtenu.");
+  if ((playerStats(player).hintsBought ?? []).includes(a.id)) throw new GameActionError("Indice déjà acheté.");
+  return a;
+}
+
+/** 5.26.1 : brouillard des succès. Par mesure, les paliers obtenus et le prochain
+ *  sont visibles ; les suivants restent dans le brouillard (nom, seuil et récompense
+ *  cachés) jusqu'à ce que le précédent tombe. Un succès secret non obtenu reste secret.
+ *  Le joueur voit toujours un objectif concret, sans pouvoir planifier toute l'échelle. */
+export type AchievementVisibility = "shown" | "fog" | "secret";
+
+export function achievementVisibility(defs: AchievementDef[], unlocked: ReadonlySet<string>): Map<string, AchievementVisibility> {
+  const out = new Map<string, AchievementVisibility>();
+  const byMetric = new Map<string, AchievementDef[]>();
+  for (const a of defs) byMetric.set(a.metric, [...(byMetric.get(a.metric) ?? []), a]);
+  for (const list of byMetric.values()) {
+    let nextShown = false;
+    for (const a of [...list].sort((x, y) => x.threshold - y.threshold)) {
+      if (unlocked.has(a.id)) out.set(a.id, "shown");
+      else if (!nextShown) {
+        nextShown = true;
+        out.set(a.id, a.secret ? "secret" : "shown");
+      } else out.set(a.id, "fog");
+    }
+  }
+  return out;
+}
+
+/** Palier précédent dans la même mesure (pour dire quoi obtenir avant de révéler un palier caché). */
+export function previousTier(defs: AchievementDef[], a: AchievementDef): AchievementDef | null {
+  return defs.filter((d) => d.metric === a.metric && d.threshold < a.threshold).sort((x, y) => y.threshold - x.threshold)[0] ?? null;
+}
 
 export function achievementValue(a: Pick<AchievementDef, "metric">, player: PlayerState): number {
   const m = METRICS[a.metric];

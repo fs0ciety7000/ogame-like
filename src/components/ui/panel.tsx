@@ -165,7 +165,7 @@ export function Pager({ page, total, size = PAGE_SIZE, onPage }: { page: number;
 
 /** 5.24 : liste découpée en pages (taille choisie dans les Réglages) ; la page revient en arrière si la liste rétrécit. */
 export function usePaged<T>(items: T[], sizeOverride?: number, resetKey?: unknown) {
-  // 5.25 : taille de page choisie par le joueur (Réglages, 10 par défaut).
+  // 5.25 : taille de page choisie par le joueur (Réglages, 5 par défaut).
   const pref = usePageSize();
   const size = sizeOverride ?? pref;
   const [page, setPage] = useState(0);

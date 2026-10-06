@@ -109,6 +109,10 @@ routerAdd(
       }
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
+      // 5.26.1 : la taxe du comptoir d'échange part au pot commun.
+      if (action && action.type === "trade" && out.result && out.result.tax > 0) {
+        db.addServerPot(txApp, game, "exchange", { [out.result.taxRes]: out.result.tax }, Date.now());
+      }
       response = { result: out.result === undefined ? null : out.result };
     });
 
@@ -575,6 +579,8 @@ routerAdd("GET", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).p
 routerAdd("POST", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).pollRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/auction", (e) => require(`${__hooks}/cosmic_db.js`).auctionRequest(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/global/send", (e) => require(`${__hooks}/cosmic_db.js`).globalSend(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/global/react", (e) => require(`${__hooks}/cosmic_db.js`).globalReact(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/global/room", (e) => require(`${__hooks}/cosmic_db.js`).globalRoom(e), $apis.requireAuth("users"));
 routerAdd("POST", "/api/cosmic/global/report", (e) => require(`${__hooks}/cosmic_db.js`).globalReport(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/cosmic/admin/global", (e) => require(`${__hooks}/cosmic_db.js`).adminGlobal(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/global", (e) => require(`${__hooks}/cosmic_db.js`).adminGlobal(e), $apis.requireAuth("users", "_superusers"));

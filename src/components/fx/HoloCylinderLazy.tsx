@@ -1,3 +1,4 @@
+import { importWithRetry } from "@/lib/updateReload";
 import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useReducedMotion } from "framer-motion";
 import type { HoloCylinderProps } from "@/components/fx/HoloCylinder";
@@ -6,7 +7,7 @@ import { cn } from "@/lib/utils";
 /* 5.24 : cylindre holographique chargé à la demande (three.js hors du paquet principal).
    Sans WebGL ou avec les animations réduites, on rend `fallback` (souvent rien, ou la grille). */
 
-const HoloCylinder = lazy(() => import("@/components/fx/HoloCylinder"));
+const HoloCylinder = lazy(() => importWithRetry(() => import("@/components/fx/HoloCylinder")));
 
 let webgl: boolean | null = null;
 /** Test une seule fois par session, contexte libéré aussitôt (le navigateur en limite le nombre). */

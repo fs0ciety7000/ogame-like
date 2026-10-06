@@ -513,7 +513,7 @@ export function rerollContract(contractId: string) {
 }
 
 export function tradeResources(_uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {
-  return act<number>({ type: "trade", sellId, buyId, amount });
+  return act<{ gained: number; tax: number; taxRes: ResourceId }>({ type: "trade", sellId, buyId, amount });
 }
 
 /* =====================================================
@@ -743,6 +743,11 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
+/** 5.26.2 : indice d'un succès secret (Ambre). */
+export function buyAchievementHint(achievementId: string) {
+  return act<{ hint: string }>({ type: "achievementHint", achievementId });
+}
+
 /** 5.26 : modules de vaisseaux. */
 export function buildShipModule(moduleId: string) {
   return act<import("@/game/modules").ModuleItem>({ type: "moduleBuild", moduleId });
@@ -758,6 +763,28 @@ export function unmountShipModule(cls: string, slot: number) {
 
 export function recycleShipModule(moduleId: string) {
   return act<{ amber: number }>({ type: "moduleRecycle", moduleId });
+}
+
+/** 5.26.2 : archiver une conversation privée (elle revient au prochain message reçu). */
+export function archiveConversation(other: string, archived: boolean) {
+  return act({ type: "chatArchive", with: other, archived });
+}
+
+/** 5.26.2 : fusion de trois plans identiques, préréglages de montage. */
+export function fuseShipModules(moduleIds: string[]) {
+  return act<import("@/game/modules").ModuleItem>({ type: "moduleFuse", moduleIds });
+}
+
+export function saveModulePresetAction(name: string) {
+  return act({ type: "modulePresetSave", name });
+}
+
+export function applyModulePresetAction(index: number) {
+  return act<{ missing: number }>({ type: "modulePresetApply", index });
+}
+
+export function deleteModulePresetAction(index: number) {
+  return act({ type: "modulePresetDelete", index });
 }
 
 /** v5.1 : talents d'Ascension. */

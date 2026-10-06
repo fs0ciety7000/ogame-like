@@ -3,8 +3,9 @@ import { Award, Clock, Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PlayerName } from "@/components/ui/player-name";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { AmberAmount } from "@/components/ui/amber";
 import { METRICS } from "@/game/achievements";
-import { contestPhase, contestPurse, contestScore, type Contest } from "@/game/contests";
+import { contestAmberPurse, contestPhase, contestPurse, contestScore, type Contest } from "@/game/contests";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { ServerPot } from "@/game/serverPot";
 import { bossCountdown } from "@/components/game/BossStage";
@@ -33,6 +34,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
   const phase = contestPhase(c, now);
   const metric = METRICS[c.metric]?.label ?? c.metric;
   const purse = c.results ? null : pot ? contestPurse(c, pot) : null;
+  const amberPurse = c.results || !pot ? 0 : contestAmberPurse(c, pot);
   const myRank = c.standings.findIndex((s) => s.uid === player.uid);
   const myScore = phase === "running" || phase === "ending" ? contestScore(c, player) : (c.standings.find((s) => s.uid === player.uid)?.score ?? 0);
   const label = phase === "scheduled" ? `Commence dans ${bossCountdown(c.startMs - now)}` : phase === "running" ? `Se termine dans ${bossCountdown(c.endMs - now)}` : phase === "ending" ? "Résultats imminents" : "Terminé";
@@ -63,6 +65,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
               <PlayerName uid={r.uid} pseudo={r.pseudo} className="min-w-0 flex-1 truncate" />
               <span className="text-xs">
                 <Purse amounts={r.resources} />
+                {(r.amber ?? 0) > 0 && <AmberAmount value={r.amber ?? 0} label={false} className="ml-2 font-mono tabular-nums" />}
               </span>
             </li>
           ))}
@@ -72,7 +75,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
         <>
           <div className="flex flex-col gap-1 border border-gold-glow/20 bg-gold-glow/[0.04] p-2 text-xs text-slate-300">
             <span className="flex items-center gap-1.5 text-gold-glow">
-              <Award className="h-3.5 w-3.5" /> {Math.round(c.potShare * 100)} % du pot commun en jeu
+              <Award className="h-3.5 w-3.5" /> {[c.potShare > 0 ? `${Math.round(c.potShare * 100)} % du pot commun` : "", c.amberShare ? `${Math.round(c.amberShare * 100)} % de sa réserve d'Ambre` : ""].filter(Boolean).join(" + ")} en jeu
             </span>
             {purse && (
               <div className="grid gap-1">
@@ -82,6 +85,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
                       {i === 0 ? "1re" : `${i + 1}e`} place
                     </span>
                     <Purse amounts={purse} share={share} />
+                    {amberPurse > 0 && <AmberAmount value={Math.floor(amberPurse * share)} label={false} className="font-mono tabular-nums" />}
                   </span>
                 ))}
               </div>

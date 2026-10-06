@@ -7,6 +7,7 @@ import {
   bountyRank,
   bountyState,
   buyShopItem,
+  plannerUnlocked,
   checkEliteLaunch,
   closeElite,
   ELITE_RULES,
@@ -131,6 +132,19 @@ describe("bounties", () => {
     const contract = viewBounties(p, NOW).board[0];
     const out = performLaunch({ mission: "bounty", now: NOW, owner: p, ownerQueues: defaultQueues(), fleet: { chasseur: 10 }, bountyId: contract.id });
     expect(out.fleet.targetUid).toBe(`bounty_${contract.id}`);
+  });
+
+  it("5.26.1 : le Planificateur s'achète une fois, 600 Ambre", () => {
+    const p = player();
+    const q = defaultQueues();
+    expect(plannerUnlocked(p)).toBe(false);
+    p.bounties = { ...bountyState(p), amber: 599 };
+    expect(() => buyShopItem(p, q, "planner", NOW)).toThrow(/Ambre/);
+    p.bounties = { ...bountyState(p), amber: 700 };
+    buyShopItem(p, q, "planner", NOW);
+    expect(plannerUnlocked(p)).toBe(true);
+    expect(bountyState(p).amber).toBe(100);
+    expect(() => buyShopItem(p, q, "planner", NOW)).toThrow(/Déjà/);
   });
 
   it("sells shop items once, with charges and cooldowns", () => {

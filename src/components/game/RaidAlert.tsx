@@ -1,3 +1,4 @@
+import { importWithRetry } from "@/lib/updateReload";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { alarmGlitch } from "@/lib/fx/uiFx";
 import { Link } from "react-router-dom";
@@ -29,7 +30,7 @@ function readDismissed(): string[] {
 }
 
 /* 5.23 : mini-scène 3D de la flotte en approche (chargée à la demande, absente sans WebGL ou animations réduites). */
-const IncomingThreat3D = lazy(() => import("@/components/fx/IncomingThreat3D"));
+const IncomingThreat3D = lazy(() => importWithRetry(() => import("@/components/fx/IncomingThreat3D")));
 
 function Incoming3D({ ships, arriveAtMs }: { ships: number; arriveAtMs: number }) {
   const still = useReducedMotion() ?? false;

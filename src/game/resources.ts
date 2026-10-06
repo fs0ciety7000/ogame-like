@@ -43,6 +43,16 @@ export function getTradeRate(sellId: ResourceId, buyId: ResourceId): number {
   return 1;
 }
 
+/** 5.26.1 : taxe du comptoir d'échange (part de ce qui est reçu), versée au pot commun. */
+export const EXCHANGE_TAX_PCT = 0.05;
+
+/** Échange au comptoir : brut au taux, taxe (arrondie au supérieur), net reçu. */
+export function tradeQuote(sellId: ResourceId, buyId: ResourceId, amount: number): { gross: number; tax: number; net: number } {
+  const gross = Math.floor(Math.max(0, amount) * getTradeRate(sellId, buyId));
+  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_TAX_PCT)) : 0;
+  return { gross, tax, net: gross - tax };
+}
+
 export function canAffordAll(resources: Resources, costs: Partial<Resources>): boolean {
   return Object.entries(costs).every(([res, val]) => (resources[res as ResourceId] ?? 0) >= (val ?? 0));
 }

@@ -59,6 +59,7 @@ var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "s
 // src/server/hooksEntry.ts
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
+  ACHIEVEMENT_XP_ALERT: () => ACHIEVEMENT_XP_ALERT,
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
   ALLIANCE_CHALLENGE_KEY: () => ALLIANCE_CHALLENGE_KEY,
   ALLIANCE_CHALLENGE_REWARDS: () => ALLIANCE_CHALLENGE_REWARDS,
@@ -68,6 +69,7 @@ __export(hooksEntry_exports, {
   ALLIANCE_SAGA_RULES: () => ALLIANCE_SAGA_RULES,
   ANNOUNCEMENTS_KEY: () => ANNOUNCEMENTS_KEY,
   ANOMALY_RULES: () => ANOMALY_RULES,
+  AUCTION_HISTORY_KEY: () => AUCTION_HISTORY_KEY,
   AUCTION_RULES: () => AUCTION_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
@@ -84,6 +86,7 @@ __export(hooksEntry_exports, {
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   CHAT_MODERATION_KEYS: () => CHAT_MODERATION_KEYS,
+  CHAT_ROOM_RULES: () => CHAT_ROOM_RULES,
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
@@ -155,6 +158,7 @@ __export(hooksEntry_exports, {
   XP_SOURCE_LABELS: () => XP_SOURCE_LABELS,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
+  achievementXpAlert: () => achievementXpAlert,
   activeBan: () => activeBan,
   activeMute: () => activeMute,
   activeUltimatum: () => activeUltimatum,
@@ -253,6 +257,7 @@ __export(hooksEntry_exports, {
   claimChallengeReward: () => claimChallengeReward,
   claimCodexCategory: () => claimCodexCategory,
   claimDailyTokens: () => claimDailyTokens,
+  cleanDeviceId: () => cleanDeviceId,
   cleanGlobalMessage: () => cleanGlobalMessage,
   cleanNewPseudo: () => cleanNewPseudo,
   cleanPasskeyName: () => cleanPasskeyName,
@@ -277,6 +282,7 @@ __export(hooksEntry_exports, {
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
   consumeJammer: () => consumeJammer,
+  contestAmberPurse: () => contestAmberPurse,
   contestPhase: () => contestPhase,
   contestPrizes: () => contestPrizes,
   contestPurse: () => contestPurse,
@@ -392,6 +398,7 @@ __export(hooksEntry_exports, {
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
   linkReferrer: () => linkReferrer,
+  linkedAuctionReasons: () => linkedAuctionReasons,
   lootTokensThisWeek: () => lootTokensThisWeek,
   lossesPower: () => lossesPower,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
@@ -410,6 +417,7 @@ __export(hooksEntry_exports, {
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeAllianceChallenge: () => normalizeAllianceChallenge,
   normalizeAnnouncementSettings: () => normalizeAnnouncementSettings,
+  normalizeAuctionHistory: () => normalizeAuctionHistory,
   normalizeBans: () => normalizeBans,
   normalizeBossHistory: () => normalizeBossHistory,
   normalizeCasino: () => normalizeCasino,
@@ -481,10 +489,12 @@ __export(hooksEntry_exports, {
   readDaily: () => readDaily,
   readWarChest: () => readWarChest,
   recallFleet: () => recallFleet,
+  recordAuctionStat: () => recordAuctionStat,
   recordCoalitionDamage: () => recordCoalitionDamage,
   recordCronRun: () => recordCronRun,
   recordDecoy: () => recordDecoy,
   recordLeviathanTimeline: () => recordLeviathanTimeline,
+  recordSale: () => recordSale,
   recordVendettaDamage: () => recordVendettaDamage,
   recordVendettaWin: () => recordVendettaWin,
   recordWarlordHistory: () => recordWarlordHistory,
@@ -528,6 +538,7 @@ __export(hooksEntry_exports, {
   rollRareOfficer: () => rollRareOfficer,
   rollRelic: () => rollRelic,
   rollTournament: () => rollTournament,
+  roomIdle: () => roomIdle,
   sagaMonthId: () => sagaMonthId,
   sagaOf: () => sagaOf,
   sagaPoints: () => sagaPoints,
@@ -578,6 +589,7 @@ __export(hooksEntry_exports, {
   tally: () => tally,
   territoryWarRewards: () => territoryWarRewards,
   territoryWarWindow: () => territoryWarWindow,
+  toggleReaction: () => toggleReaction,
   tokensLabel: () => tokensLabel,
   tournamentResult: () => tournamentResult,
   trackCampaign: () => trackCampaign,
@@ -594,8 +606,10 @@ __export(hooksEntry_exports, {
   validateContest: () => validateContest,
   validateGameContent: () => validateGameContent,
   validateListing: () => validateListing,
+  validateRoom: () => validateRoom,
   validateRules: () => validateRules,
   validateVote: () => validateVote,
+  validateWatch: () => validateWatch,
   vendettaTitle: () => vendettaTitle,
   vendettaWinners: () => vendettaWinners,
   verifyAssertion: () => verifyAssertion,
@@ -616,6 +630,7 @@ __export(hooksEntry_exports, {
   warlordUid: () => warlordUid,
   warlordsConfig: () => warlordsConfig,
   warlordsState: () => warlordsState,
+  watchersFor: () => watchersFor,
   weekWindow: () => weekWindow,
   windowMs: () => windowMs,
   worldBossForStart: () => worldBossForStart,
@@ -1764,7 +1779,7 @@ function consumeAegis(player, now) {
 
 // src/game/modules.ts
 var MODULE_CLASSES = ["light", "medium", "heavy", "support"];
-var MODULE_RULES = { slotsPerClass: 2, maxItems: 30 };
+var MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
 var MODULE_RARITIES = [
   { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
   { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
@@ -1822,7 +1837,15 @@ function modulesState(player) {
     const list = Array.isArray((_b = raw.slots) == null ? void 0 : _b[cls]) ? raw.slots[cls] : [];
     slots[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => list[i] && ids.has(list[i]) ? list[i] : null);
   }
-  return { items, slots };
+  const presets = (Array.isArray(raw.presets) ? raw.presets : []).filter((p) => !!p && typeof p.name === "string" && !!p.slots && typeof p.slots === "object").slice(0, MODULE_RULES.maxPresets).map((p) => {
+    const ps = emptySlots();
+    for (const cls of MODULE_CLASSES) {
+      const list = Array.isArray(p.slots[cls]) ? p.slots[cls] : [];
+      ps[cls] = Array.from({ length: MODULE_RULES.slotsPerClass }, (_, i) => typeof list[i] === "string" ? list[i] : null);
+    }
+    return { name: p.name.slice(0, 24), slots: ps };
+  });
+  return presets.length ? { items, slots, presets } : { items, slots };
 }
 function moduleEffects(player) {
   const st = modulesState(player);
@@ -1907,6 +1930,71 @@ function recycleModule(player, id) {
   st.items = st.items.filter((m) => m.id !== item.id);
   player.modules = st;
   return moduleRarity(item.rarity).recycleAmber * (item.built ? 2 : 1);
+}
+function nextModuleRarity(r) {
+  const i = MODULE_RARITIES.findIndex((x) => x.id === r);
+  return i >= 0 && i < MODULE_RARITIES.length - 1 ? MODULE_RARITIES[i + 1].id : null;
+}
+function fuseModulePlans(player, ids, now, random = Math.random) {
+  const st = modulesState(player);
+  const list = Array.isArray(ids) ? [...new Set(ids.map(String))] : [];
+  if (list.length !== MODULE_RULES.fuseCount) throw new GameActionError(`Choisis ${MODULE_RULES.fuseCount} plans identiques.`);
+  const items = list.map((id) => find(st, id));
+  if (items.some((m) => m.built)) throw new GameActionError("Seuls les plans (non fabriqu\xE9s) se fusionnent.");
+  const [first] = items;
+  if (items.some((m) => m.template !== first.template || m.rarity !== first.rarity)) throw new GameActionError("Les trois plans doivent \xEAtre identiques (m\xEAme mod\xE8le, m\xEAme raret\xE9).");
+  const next = nextModuleRarity(first.rarity);
+  if (!next) throw new GameActionError("Un plan l\xE9gendaire ne se fusionne plus.");
+  const fused = { id: newId2(now, random), template: first.template, rarity: next, built: false, foundAtMs: now, source: "fusion" };
+  st.items = [...st.items.filter((m) => !list.includes(m.id)), fused];
+  player.modules = st;
+  return fused;
+}
+function saveModulePreset(player, nameIn) {
+  var _a;
+  const st = modulesState(player);
+  const name = String(nameIn != null ? nameIn : "").trim().slice(0, 24);
+  if (!name) throw new GameActionError("Nomme ce pr\xE9r\xE9glage.");
+  const presets = [...(_a = st.presets) != null ? _a : []];
+  const preset = { name, slots: JSON.parse(JSON.stringify(st.slots)) };
+  const i = presets.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (i >= 0) presets[i] = preset;
+  else if (presets.length >= MODULE_RULES.maxPresets) throw new GameActionError(`${MODULE_RULES.maxPresets} pr\xE9r\xE9glages au plus.`);
+  else presets.push(preset);
+  player.modules = __spreadProps(__spreadValues({}, st), { presets });
+  return preset;
+}
+function applyModulePreset(player, index2) {
+  var _a;
+  const st = modulesState(player);
+  const preset = ((_a = st.presets) != null ? _a : [])[Math.floor(Number(index2))];
+  if (!preset) throw new GameActionError("Pr\xE9r\xE9glage introuvable.");
+  const built = new Set(st.items.filter((m) => m.built).map((m) => m.id));
+  let missing = 0;
+  const slots = emptySlots();
+  const used = /* @__PURE__ */ new Set();
+  for (const cls of MODULE_CLASSES) {
+    slots[cls] = preset.slots[cls].map((id) => {
+      if (!id) return null;
+      const item = st.items.find((m) => m.id === id);
+      const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template).family] : null;
+      if (!item || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
+        missing += 1;
+        return null;
+      }
+      used.add(id);
+      return id;
+    });
+  }
+  player.modules = __spreadProps(__spreadValues({}, st), { slots });
+  return { missing };
+}
+function deleteModulePreset(player, index2) {
+  var _a;
+  const st = modulesState(player);
+  const i = Math.floor(Number(index2));
+  if (!((_a = st.presets) != null ? _a : [])[i]) throw new GameActionError("Pr\xE9r\xE9glage introuvable.");
+  player.modules = __spreadProps(__spreadValues({}, st), { presets: st.presets.filter((_, k) => k !== i) });
 }
 
 // src/game/galaxy.ts
@@ -2233,6 +2321,15 @@ function percentiles(values) {
   const v = values.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
   if (!v.length) return { median: 0, p90: 0 };
   return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
+}
+var ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR, minXp: 2e3, minShare: 0.6 };
+function achievementXpAlert(stats, now) {
+  var _a;
+  const t = ledgerTotals(stats, now, ACHIEVEMENT_XP_ALERT.windowMs);
+  const xp = (_a = t.bySource.achievement) != null ? _a : 0;
+  if (xp < ACHIEVEMENT_XP_ALERT.minXp || t.total <= 0) return null;
+  const share = xp / t.total;
+  return share >= ACHIEVEMENT_XP_ALERT.minShare ? { xp, total: t.total, share } : null;
 }
 
 // src/game/worldBosses.ts
@@ -3152,6 +3249,12 @@ function getTradeRate(sellId, buyId) {
   if (sell.rarity === "rare" && buy.rarity === "common") return 50;
   return 1;
 }
+var EXCHANGE_TAX_PCT = 0.05;
+function tradeQuote(sellId, buyId, amount3) {
+  const gross = Math.floor(Math.max(0, amount3) * getTradeRate(sellId, buyId));
+  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_TAX_PCT)) : 0;
+  return { gross, tax, net: gross - tax };
+}
 function canAffordAll(resources, costs) {
   return Object.entries(costs).every(([res, val]) => {
     var _a;
@@ -4018,6 +4121,7 @@ function advanceWorkshop(player, now, instant = false) {
     else st.hull[id] = Math.round(st.hull[id]);
   }
   player.workshop = st;
+  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0));
   const names = Object.entries(done).map(([id, n]) => {
     var _a2, _b2;
     return `${n} \xD7 ${(_b2 = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b2 : id}`;
@@ -4062,6 +4166,7 @@ function rushWorkshop(player, jobId, now, walletOf, saveWallet) {
   st.jobs = st.jobs.filter((j) => !ids.has(j.id));
   if (!st.updatedAtMs) st.updatedAtMs = now;
   player.workshop = st;
+  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0));
   return { amber, units };
 }
 
@@ -6686,6 +6791,7 @@ var SHOP_ITEMS = [
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
   { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
+  { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "D\xE9bloque la page Planificateur : tout ce qui tourne, la file planifi\xE9e, les mod\xE8les d'actions rejouables en un clic et les objectifs personnels." },
   { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
   { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
@@ -6694,7 +6800,7 @@ var SHOP_ITEMS = [
 function findShopItem(id) {
   return SHOP_ITEMS.find((i) => i.id === id);
 }
-var ONE_TIME = ["blueprint", "title", "frame", "emblem", "emojis"];
+var ONE_TIME = ["blueprint", "planner", "title", "frame", "emblem", "emojis"];
 function owns(st, id) {
   return st.owned.includes(id);
 }
@@ -6754,6 +6860,9 @@ function buyShopItem(player, queues, itemId, now, buildingId) {
     case "blueprint":
       player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_d = (_c = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _c.count) != null ? _d : 0 };
       message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
+      break;
+    case "planner":
+      message = "Planificateur d\xE9bloqu\xE9 : retrouve-le dans la barre lat\xE9rale (Empire).";
       break;
     case "title":
       if (!((_e = player.titles) != null ? _e : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
@@ -8064,6 +8173,91 @@ function validateFactions(defs) {
   return errors;
 }
 
+// src/game/planetLook.ts
+var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
+var stat = (p, key) => {
+  var _a;
+  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
+};
+var bossesKilled = (p) => {
+  var _a, _b;
+  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
+};
+var free = () => true;
+var OPTIONS = {
+  palette: [
+    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
+    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
+    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
+    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
+    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
+    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
+  ],
+  ring: [
+    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
+    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
+    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
+    } },
+    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
+    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
+  ],
+  atmosphere: [
+    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
+      var _a;
+      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
+    } },
+    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
+    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
+  ],
+  moon: [
+    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
+    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
+    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
+      var _a, _b;
+      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
+    } },
+    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
+    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
+  ]
+};
+var PLANET_SLOTS = [
+  { slot: "palette", label: "Palette" },
+  { slot: "ring", label: "Anneau" },
+  { slot: "atmosphere", label: "Atmosph\xE8re" },
+  { slot: "moon", label: "Lune" }
+];
+function normalizePlanetLook(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const pick4 = (slot) => {
+    var _a;
+    const id = String((_a = r[slot]) != null ? _a : "");
+    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
+  };
+  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
+}
+function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
+  const req = input && typeof input === "object" ? input : {};
+  const next = __spreadValues({}, current2);
+  for (const { slot } of PLANET_SLOTS) {
+    if (req[slot] === void 0) continue;
+    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
+    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
+    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
+    next[slot] = def3.id;
+  }
+  return next;
+}
+function unlockedPlanetLook(p, look) {
+  var _a;
+  const out = __spreadValues({}, look);
+  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
+  return out;
+}
+
 // src/game/achievements.ts
 var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
 var ACHIEVEMENT_TOKENS = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
@@ -8082,6 +8276,7 @@ var CATEGORY_LABELS2 = {
   flotte: { label: "Flotte", emoji: "\u{1F680}" },
   missions: { label: "Missions et contrats", emoji: "\u{1F9ED}" },
   logistique: { label: "Renseignement et logistique", emoji: "\u{1F6F0}\uFE0F" },
+  commerce: { label: "Commerce et Ruche", emoji: "\u2696\uFE0F" },
   alliance: { label: "Alliance", emoji: "\u{1F91D}" },
   menaces: { label: "Menaces", emoji: "\u2620\uFE0F" },
   prestige: { label: "Prestige", emoji: "\u{1F3C6}" }
@@ -8284,7 +8479,101 @@ var METRICS = {
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p) => {
     var _a;
     return Math.max(0, Math.floor(Number((_a = p.casino) == null ? void 0 : _a.jackpots) || 0));
-  } }
+  } },
+  // 5.26.1 : systèmes récents (Atelier, modules, enchères, reliques, primes).
+  unitsRepaired: { label: "Unit\xE9s r\xE9par\xE9es \xE0 l'Atelier (cumul)", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).unitsRepaired) != null ? _a : 0;
+  } },
+  modulesBuilt: { label: "Modules de vaisseaux fabriqu\xE9s", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).modulesBuilt) != null ? _a : 0;
+  } },
+  modulesMounted: {
+    label: "Emplacements de modules occup\xE9s",
+    value: (p) => {
+      var _a, _b;
+      return Object.values((_b = (_a = p.modules) == null ? void 0 : _a.slots) != null ? _b : {}).reduce((a, list) => a + (Array.isArray(list) ? list.filter(Boolean).length : 0), 0);
+    }
+  },
+  auctionsSold: { label: "Ventes conclues \xE0 l'H\xF4tel des ench\xE8res", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).auctionsSold) != null ? _a : 0;
+  } },
+  auctionsWon: { label: "Ench\xE8res remport\xE9es", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).auctionsWon) != null ? _a : 0;
+  } },
+  relicsOwned: { label: "Reliques en collection", value: (p) => {
+    var _a, _b;
+    return ((_b = (_a = p.relics) == null ? void 0 : _a.items) != null ? _b : []).length;
+  } },
+  bountiesDone: { label: "Primes Kesh'Vaar remplies", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).bounties) != null ? _a : 0;
+  } },
+  amberEarned: { label: "Ambre de Ruche gagn\xE9e (cumul)", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.bounties) == null ? void 0 : _a.amberEarned) || 0);
+  } },
+  bountyReputation: { label: "R\xE9putation aupr\xE8s de la Ruche", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.bounties) == null ? void 0 : _a.reputation) || 0);
+  } },
+  vendettaWins: { label: "Vendettas gagn\xE9es contre les seigneurs", value: (p) => {
+    var _a;
+    return sum(Object.values((_a = playerStats(p).vendettaWins) != null ? _a : {}).map((n) => Number(n) || 0));
+  } },
+  warlordsBeaten: { label: "Seigneurs diff\xE9rents vaincus en vendetta", value: (p) => {
+    var _a;
+    return Object.values((_a = playerStats(p).vendettaWins) != null ? _a : {}).filter((n) => Number(n) > 0).length;
+  } },
+  casinoSpins: { label: "Tours de machine jou\xE9s au casino", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.casino) == null ? void 0 : _a.spins) || 0);
+  } },
+  casinoWins: { label: "Tours gagnants au casino", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.casino) == null ? void 0 : _a.wins) || 0);
+  } },
+  marketTrades: { label: "\xC9changes conclus au march\xE9 entre joueurs", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).marketTrades) != null ? _a : 0;
+  } },
+  contractsDelivered: { label: "Contrats de livraison honor\xE9s", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).contractsDelivered) != null ? _a : 0;
+  } },
+  privateMessages: { label: "Messages priv\xE9s envoy\xE9s", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).privateMessages) != null ? _a : 0;
+  } },
+  globalMessages: { label: "Messages publi\xE9s sur le canal global", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).globalMessages) != null ? _a : 0;
+  } },
+  codexChapters: { label: "Cat\xE9gories du Codex compl\xE9t\xE9es", value: (p) => {
+    var _a;
+    return ((_a = playerStats(p).codexClaimed) != null ? _a : []).length;
+  } },
+  reportsResolved: { label: "Signalements r\xE9solus par l'\xE9quipe", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).reportsResolved) != null ? _a : 0;
+  } },
+  profileCustomized: {
+    label: "\xC9l\xE9ments de profil personnalis\xE9s (banni\xE8re, embl\xE8me, devise, vitrine, plan\xE8te)",
+    value: (p) => {
+      var _a, _b, _c;
+      const s = (_a = p.profileStyle) != null ? _a : {};
+      const planet = JSON.stringify(normalizePlanetLook(s.planet)) !== JSON.stringify(normalizePlanetLook(void 0));
+      return [!!s.banner && s.banner !== "nebula", !!s.emblem && s.emblem !== "rank", !!String((_b = s.motto) != null ? _b : "").trim(), ((_c = s.pinned) != null ? _c : []).length > 0, planet].filter(Boolean).length;
+    }
+  },
+  streakBest: { label: "Meilleure s\xE9rie de connexion (jours)", value: (p) => {
+    var _a;
+    return Math.floor(Number((_a = p.streak) == null ? void 0 : _a.best) || 0);
+  } },
+  ascensionsDone: { label: "Ascensions accomplies", value: (p) => Math.floor(Number(p.ascensions) || 0) }
 };
 function def(id, category, tier, metric, threshold, name, description, emoji, extra = {}) {
   const r = TIER_REWARDS[tier];
@@ -8391,6 +8680,52 @@ function derivedAchievements() {
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux diff\xE9rents.", "\u{1F409}", { auto: true }),
     def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true }),
     // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    // 5.26.1 : Atelier, modules, enchères, reliques, primes (paliers suivants : générateur procédural).
+    def("atelier_1", "flotte", "bronze", "unitsRepaired", 50, "M\xE9cano", "Faire r\xE9parer 50 unit\xE9s \xE0 l'Atelier.", "\u{1F527}", { auto: true }),
+    def("atelier_2", "flotte", "argent", "unitsRepaired", 1e3, "Chef d'atelier", "Faire r\xE9parer 1 000 unit\xE9s \xE0 l'Atelier.", "\u{1F6E0}\uFE0F", { auto: true }),
+    def("atelier_3", "flotte", "or", "unitsRepaired", 2e4, "R\xE9surrecteur de flottes", "Faire r\xE9parer 20 000 unit\xE9s \xE0 l'Atelier.", "\u2699\uFE0F", { auto: true }),
+    def("module_1", "flotte", "bronze", "modulesBuilt", 1, "Premier module", "Fabriquer un module de vaisseau.", "\u{1F9E9}", { auto: true }),
+    def("module_2", "flotte", "argent", "modulesBuilt", 10, "Armurier", "Fabriquer 10 modules de vaisseaux.", "\u{1F529}", { auto: true }),
+    def("module_full", "flotte", "or", "modulesMounted", 8, "Flotte sur mesure", "Occuper les 8 emplacements de modules.", "\u{1F680}", { auto: true }),
+    def("enchere_vente_1", "commerce", "bronze", "auctionsSold", 1, "Commissaire-priseur", "Conclure une vente \xE0 l'H\xF4tel des ench\xE8res.", "\u{1F528}", { auto: true }),
+    def("enchere_vente_2", "commerce", "argent", "auctionsSold", 10, "Marchand d'art", "Conclure 10 ventes aux ench\xE8res.", "\u{1F5BC}\uFE0F", { auto: true }),
+    def("enchere_vente_3", "commerce", "or", "auctionsSold", 50, "Maison de ventes", "Conclure 50 ventes aux ench\xE8res.", "\u{1F3DB}\uFE0F", { auto: true }),
+    def("enchere_achat_1", "commerce", "bronze", "auctionsWon", 1, "Adjug\xE9 !", "Remporter une ench\xE8re.", "\u{1F6CE}\uFE0F", { auto: true }),
+    def("enchere_achat_2", "commerce", "argent", "auctionsWon", 10, "Collectionneur avis\xE9", "Remporter 10 ench\xE8res.", "\u{1F3FA}", { auto: true }),
+    def("enchere_achat_3", "commerce", "or", "auctionsWon", 50, "Grand acqu\xE9reur", "Remporter 50 ench\xE8res.", "\u{1F4BC}", { auto: true }),
+    def("relique_5", "prestige", "argent", "relicsOwned", 5, "Cabinet de curiosit\xE9s", "R\xE9unir 5 reliques dans ta collection.", "\u{1F5FF}", { auto: true }),
+    def("relique_20", "prestige", "or", "relicsOwned", 20, "Reliquaire", "R\xE9unir 20 reliques dans ta collection.", "\u26B1\uFE0F", { auto: true }),
+    def("prime_1", "commerce", "bronze", "bountiesDone", 1, "Premi\xE8re prime", "Remplir une prime Kesh'Vaar.", "\u{1F3AF}", { auto: true }),
+    def("prime_2", "commerce", "argent", "bountiesDone", 25, "Chasseur de la Ruche", "Remplir 25 primes Kesh'Vaar.", "\u{1F41D}", { auto: true }),
+    def("prime_3", "commerce", "or", "bountiesDone", 150, "Traqueur l\xE9gendaire", "Remplir 150 primes Kesh'Vaar.", "\u{1F3F9}", { auto: true }),
+    def("ambre_1", "commerce", "argent", "amberEarned", 500, "Go\xFBt de l'Ambre", "Gagner 500 Ambre de Ruche.", "\u{1F36F}", { auto: true }),
+    def("ambre_2", "commerce", "or", "amberEarned", 5e3, "Tr\xE9sor de la Ruche", "Gagner 5 000 Ambre de Ruche.", "\u{1F451}", { auto: true }),
+    // 5.26.1 : Primes, Seigneurs, Casino, Commerce, Communications, Codex, Signalements, Profil, Série, Ascension.
+    def("ruche_rep_1", "commerce", "argent", "bountyReputation", 50, "Ami de la Ruche", "Atteindre 50 de r\xE9putation aupr\xE8s des Kesh'Vaar.", "\u{1F41D}", { auto: true }),
+    def("ruche_rep_2", "commerce", "or", "bountyReputation", 250, "\xC9lu de la Reine", "Atteindre 250 de r\xE9putation aupr\xE8s des Kesh'Vaar.", "\u{1F451}", { auto: true }),
+    def("vendetta_1", "combat", "argent", "vendettaWins", 1, "Vendetta", "Gagner une vendetta contre un seigneur de guerre.", "\u{1F5E1}\uFE0F", { auto: true }),
+    def("vendetta_2", "combat", "or", "vendettaWins", 10, "Tueur de seigneurs", "Gagner 10 vendettas.", "\u2694\uFE0F", { auto: true }),
+    def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs diff\xE9rents en vendetta.", "\u{1F480}", { auto: true }),
+    def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitu\xE9 du casino", "Jouer 10 tours au Casino orbital.", "\u{1F3B0}", { auto: true }),
+    def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "\u{1F340}", { auto: true }),
+    def("marche_1", "commerce", "bronze", "marketTrades", 5, "N\xE9gociant", "Conclure 5 \xE9changes au march\xE9 entre joueurs.", "\u2696\uFE0F", { auto: true }),
+    def("marche_2", "commerce", "argent", "marketTrades", 50, "Courtier", "Conclure 50 \xE9changes au march\xE9 entre joueurs.", "\u{1F4C8}", { auto: true }),
+    def("livraison_1", "commerce", "bronze", "contractsDelivered", 3, "Livreur fiable", "Honorer 3 contrats de livraison.", "\u{1F4E6}", { auto: true }),
+    def("livraison_2", "commerce", "argent", "contractsDelivered", 25, "Transporteur \xE9m\xE9rite", "Honorer 25 contrats de livraison.", "\u{1F69A}", { auto: true }),
+    def("cadeau_1", "alliance", "bronze", "giftsSent", 5, "G\xE9n\xE9reux", "Envoyer 5 cadeaux \xE0 d'autres joueurs.", "\u{1F381}", { auto: true }),
+    def("message_1", "alliance", "bronze", "privateMessages", 10, "Correspondant", "Envoyer 10 messages priv\xE9s.", "\u2709\uFE0F", { auto: true }),
+    def("canal_1", "alliance", "bronze", "globalMessages", 10, "Voix du secteur", "Publier 10 messages sur le canal global.", "\u{1F4E1}", { auto: true }),
+    def("canal_2", "alliance", "argent", "globalMessages", 200, "Pilier du canal", "Publier 200 messages sur le canal global.", "\u{1F4FB}", { auto: true }),
+    def("codex_1", "prestige", "argent", "codexChapters", 1, "Archiviste", "Compl\xE9ter une cat\xE9gorie du Codex.", "\u{1F4DA}", { auto: true }),
+    def("codex_2", "prestige", "or", "codexChapters", 4, "M\xE9moire de la galaxie", "Compl\xE9ter 4 cat\xE9gories du Codex.", "\u{1F5C3}\uFE0F", { auto: true }),
+    def("signal_1", "prestige", "argent", "reportsResolved", 1, "\u0152il de lynx", "Un de tes signalements a \xE9t\xE9 r\xE9solu par l'\xE9quipe.", "\u{1F41E}", { auto: true }),
+    def("signal_2", "prestige", "or", "reportsResolved", 5, "Testeur d'\xE9lite", "Cinq de tes signalements ont \xE9t\xE9 r\xE9solus par l'\xE9quipe.", "\u{1F6E0}\uFE0F", { auto: true }),
+    def("profil_1", "prestige", "bronze", "profileCustomized", 1, "Signe distinctif", "Personnaliser un \xE9l\xE9ment de ta fiche publique.", "\u{1F3A8}", { auto: true }),
+    def("profil_all", "prestige", "argent", "profileCustomized", 5, "Fiche de l\xE9gende", "Personnaliser banni\xE8re, embl\xE8me, devise, vitrine et plan\xE8te.", "\u{1F5BC}\uFE0F", { auto: true }),
+    def("serie_7", "prestige", "bronze", "streakBest", 7, "Une semaine sans faillir", "Tenir une s\xE9rie de connexion de 7 jours.", "\u{1F4C6}", { auto: true }),
+    def("serie_30", "prestige", "or", "streakBest", 30, "Un mois de garde", "Tenir une s\xE9rie de connexion de 30 jours.", "\u{1F5D3}\uFE0F", { auto: true }),
+    def("ascension_1", "prestige", "or", "ascensionsDone", 1, "Renaissance", "Accomplir une Ascension.", "\u2728", { auto: true }),
+    def("rang_legende", "prestige", "legendaire", "xp", 25e4, "L\xE9gende vivante", "Cumuler 250 000 XP.", "\u{1F31F}", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "\u{1F3B0}", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" })
   ];
 }
@@ -8399,6 +8734,31 @@ function setAchievements(defs) {
   ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
+var ACHIEVEMENT_HINT_PRICE = 25;
+var METRIC_HINTS = {
+  defeats: "Celui qui tombe souvent finit par apprendre \xE0 se relever.",
+  phoenix: "Les cendres d'une d\xE9faite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
+  nightResearch: "Les laboratoires sont plus calmes quand la galaxie dort, aux heures o\xF9 m\xEAme les sentinelles b\xE2illent.",
+  bestMissionDay: "Un seul jour, un \xE9quipage infatigable, et un registre des missions qui d\xE9borde.",
+  evasions: "Une base vide ne craint pas les pillards : sois ailleurs quand ils frappent.",
+  diplomat: "Payer sans jamais dire non. Encore. Et encore.",
+  factionsThreatened: "Quand toutes les factions connaissent ton nom, tu as r\xE9ussi\u2026 en quelque sorte.",
+  rareOfficers: "L'\xE9tat-major complet r\xE9unit ceux qu'on ne croise qu'une fois.",
+  seasonCommanders: "Chaque saison offre un visage ; il faudra tous les r\xE9unir.",
+  casinoJackpots: "Trois fois le m\xEAme chiffre, et le pot commun change de mains."
+};
+function achievementHint(a) {
+  var _a;
+  return (_a = METRIC_HINTS[a.metric]) != null ? _a : `Une piste du c\xF4t\xE9 de : ${CATEGORY_LABELS2[a.category].label.toLowerCase()}.`;
+}
+function checkHintPurchase(player, id) {
+  var _a, _b;
+  const a = ACHIEVEMENTS.find((x) => x.id === String(id) && x.enabled);
+  if (!a || !a.secret) throw new GameActionError("Ce succ\xE8s n'a pas d'indice.");
+  if (((_a = player.unlockedAchievements) != null ? _a : []).includes(a.id)) throw new GameActionError("Succ\xE8s d\xE9j\xE0 obtenu.");
+  if (((_b = playerStats(player).hintsBought) != null ? _b : []).includes(a.id)) throw new GameActionError("Indice d\xE9j\xE0 achet\xE9.");
+  return a;
+}
 function achievementValue(a, player) {
   const m = METRICS[a.metric];
   return m ? m.value(player) : 0;
@@ -14169,6 +14529,32 @@ function pendingClaims(player, now) {
   return out;
 }
 
+// src/game/messages.ts
+var MESSAGE_RULES = {
+  maxLength: 1e3,
+  /** Messages envoyés au plus par minute et par jour (anti-spam). */
+  perMinute: 8,
+  perDay: 300
+};
+function sanitizeMessageText(raw) {
+  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  if (!text) throw new GameActionError("Message vide.");
+  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
+  return text;
+}
+function assertMessageQuota(lastMinute, lastDay) {
+  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
+  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
+}
+function setConversationArchived(archive, uid, archived, now) {
+  const next = __spreadValues({}, archive != null ? archive : {});
+  if (archived) next[uid] = now;
+  else delete next[uid];
+  const keys = Object.keys(next).sort((a, b) => next[b] - next[a]);
+  for (const k of keys.slice(100)) delete next[k];
+  return next;
+}
+
 // src/game/cancel.ts
 var CANCEL_RULES = {
   /** Annulation intégrale dans ce délai après le lancement (clic par erreur). */
@@ -15340,91 +15726,6 @@ function nextMonthId(id) {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 }
 
-// src/game/planetLook.ts
-var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
-var stat = (p, key) => {
-  var _a;
-  return Number((_a = p.stats) == null ? void 0 : _a[key]) || 0;
-};
-var bossesKilled = (p) => {
-  var _a, _b;
-  return ((_b = (_a = p.stats) == null ? void 0 : _a.worldBossKilled) != null ? _b : []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
-};
-var free = () => true;
-var OPTIONS = {
-  palette: [
-    { id: "ocean", label: "Oc\xE9an", hint: "Offerte", unlocked: free },
-    { id: "dunes", label: "Dunes", hint: "Offerte", unlocked: free },
-    { id: "glacier", label: "Glacier", hint: "Offerte", unlocked: free },
-    { id: "canopee", label: "Canop\xE9e", hint: "Terminer 10 exp\xE9ditions", unlocked: (p) => stat(p, "expeditions") >= 10 },
-    { id: "magma", label: "Magma", hint: "Abattre un boss mondial", unlocked: (p) => bossesKilled(p) >= 1 },
-    { id: "cristal", label: "Cristal", hint: "Faire une Ascension", unlocked: (p) => (Number(p.ascensions) || 0) >= 1 }
-  ],
-  ring: [
-    { id: "thin", label: "Anneau fin", hint: "Offert", unlocked: free },
-    { id: "none", label: "Sans anneau", hint: "Offert", unlocked: free },
-    { id: "double", label: "Double anneau", hint: "Terminer un passe de saison", unlocked: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.seasonPass) == null ? void 0 : _a.completed) != null ? _b : []).length > 0;
-    } },
-    { id: "debris", label: "Ceinture de d\xE9bris", hint: "Recycler un champ de d\xE9bris", unlocked: (p) => stat(p, "recycled") > 0 },
-    { id: "halo", label: "Halo pirate", hint: "Faire tomber un repaire pirate", unlocked: (p) => FACTIONS.some((f) => pirateState(p, f.id).lairsTaken > 0) }
-  ],
-  atmosphere: [
-    { id: "clear", label: "Claire", hint: "Offerte", unlocked: free },
-    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
-    { id: "aurore", label: "Aurore", hint: "Obtenir 20 succ\xE8s", unlocked: (p) => {
-      var _a;
-      return ((_a = p.unlockedAchievements) != null ? _a : []).length >= 20;
-    } },
-    { id: "doree", label: "Brume dor\xE9e", hint: "Conclure 25 \xE9changes au march\xE9", unlocked: (p) => stat(p, "marketTrades") >= 25 },
-    { id: "braise", label: "Braise", hint: "Piller 1 M de ressources", unlocked: (p) => stat(p, "loot") >= 1e6 }
-  ],
-  moon: [
-    { id: "none", label: "Aucune", hint: "Offerte", unlocked: free },
-    { id: "grise", label: "Lune grise", hint: "Offerte", unlocked: free },
-    { id: "jumelles", label: "Lunes jumelles", hint: "Parrainer un joueur", unlocked: (p) => {
-      var _a, _b;
-      return ((_b = (_a = p.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0;
-    } },
-    { id: "station", label: "Station orbitale", hint: "Construire 1 000 unit\xE9s", unlocked: (p) => stat(p, "unitsBuilt") >= 1e3 },
-    { id: "eclat", label: "\xC9clat de boss", hint: "Abattre 3 boss mondiaux diff\xE9rents", unlocked: (p) => bossesKilled(p) >= 3 }
-  ]
-};
-var PLANET_SLOTS = [
-  { slot: "palette", label: "Palette" },
-  { slot: "ring", label: "Anneau" },
-  { slot: "atmosphere", label: "Atmosph\xE8re" },
-  { slot: "moon", label: "Lune" }
-];
-function normalizePlanetLook(raw) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const pick4 = (slot) => {
-    var _a;
-    const id = String((_a = r[slot]) != null ? _a : "");
-    return OPTIONS[slot].some((o) => o.id === id) ? id : DEFAULT_PLANET_LOOK[slot];
-  };
-  return { palette: pick4("palette"), ring: pick4("ring"), atmosphere: pick4("atmosphere"), moon: pick4("moon") };
-}
-function checkPlanetLook(p, input, current2 = DEFAULT_PLANET_LOOK) {
-  const req = input && typeof input === "object" ? input : {};
-  const next = __spreadValues({}, current2);
-  for (const { slot } of PLANET_SLOTS) {
-    if (req[slot] === void 0) continue;
-    const def3 = OPTIONS[slot].find((o) => o.id === String(req[slot]));
-    if (!def3) throw new GameActionError("Option de plan\xE8te inconnue.");
-    if (!def3.unlocked(p)) throw new GameActionError(`${def3.label} est verrouill\xE9 : ${def3.hint.toLowerCase()}.`);
-    next[slot] = def3.id;
-  }
-  return next;
-}
-function unlockedPlanetLook(p, look) {
-  var _a;
-  const out = __spreadValues({}, look);
-  for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
-  return out;
-}
-
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 var FREE_BANNERS = [
@@ -15690,7 +15991,7 @@ function hangarUsed(units, away, category) {
 }
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -15811,12 +16112,13 @@ function applyAction(s, action) {
       if (!RESOURCE_IDS4.has(sellId) || !RESOURCE_IDS4.has(buyId) || sellId === buyId) throw new GameActionError("\xC9change invalide.");
       const amount3 = positiveInt(action.amount, "Montant");
       if (((_l = player.resources[sellId]) != null ? _l : 0) < amount3) throw new GameActionError("Pas assez de ressources \xE0 \xE9changer.");
-      const gained = Math.floor(amount3 * getTradeRate(sellId, buyId));
+      const quote = tradeQuote(sellId, buyId, amount3);
+      if (quote.net <= 0) throw new GameActionError("Quantit\xE9 trop faible pour cet \xE9change.");
       player.resources[sellId] -= amount3;
-      player.resources[buyId] = ((_m = player.resources[buyId]) != null ? _m : 0) + gained;
+      player.resources[buyId] = ((_m = player.resources[buyId]) != null ? _m : 0) + quote.net;
       bumpStat(player, "traded", amount3);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
-      return gained;
+      return { gained: quote.net, tax: quote.tax, taxRes: buyId };
     }
     case "claimContract": {
       const claimed = claimContract(player, String((_n = action.contractId) != null ? _n : ""), now);
@@ -15916,9 +16218,22 @@ function applyAction(s, action) {
       player.bounties = st;
       return { amber: out.amber };
     }
+    // 5.26.2 : indice d'un succès secret, payé en Ambre.
+    case "achievementHint": {
+      const a = checkHintPurchase(player, action.achievementId);
+      const st = bountyState(player);
+      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      player.bounties = st;
+      player.stats = __spreadProps(__spreadValues({}, (_A = player.stats) != null ? _A : {}), { hintsBought: [...(_C = (_B = player.stats) == null ? void 0 : _B.hintsBought) != null ? _C : [], a.id] });
+      return { hint: achievementHint(a) };
+    }
     // 5.26 : modules de vaisseaux.
-    case "moduleBuild":
-      return buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+    case "moduleBuild": {
+      const built = buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+      bumpStat(player, "modulesBuilt");
+      return built;
+    }
     case "moduleMount":
       mountModule(player, action.moduleId, action.cls, action.slot);
       return void 0;
@@ -15932,6 +16247,23 @@ function applyAction(s, action) {
       player.bounties = st;
       return { amber };
     }
+    // 5.26.2 : archivage d'une conversation privée (elle revient au prochain message reçu).
+    case "chatArchive": {
+      const other = String((_D = action.with) != null ? _D : "").slice(0, 40);
+      if (!other) throw new GameActionError("Conversation inconnue.");
+      player.stats = __spreadProps(__spreadValues({}, (_E = player.stats) != null ? _E : {}), { archivedChats: setConversationArchived((_F = player.stats) == null ? void 0 : _F.archivedChats, other, !!action.archived, now) });
+      return void 0;
+    }
+    // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
+    case "moduleFuse":
+      return fuseModulePlans(player, action.moduleIds, now);
+    case "modulePresetSave":
+      return saveModulePreset(player, action.name);
+    case "modulePresetApply":
+      return applyModulePreset(player, action.index);
+    case "modulePresetDelete":
+      deleteModulePreset(player, action.index);
+      return void 0;
     case "setProfileStyle":
       return setProfileStyle(player, action.style);
     case "talentLearn":
@@ -17313,6 +17645,7 @@ var POT_SOURCE_LABELS = {
   market: "Taxes du march\xE9",
   gift: "Taxe des cadeaux",
   auction: "Taxe des ench\xE8res",
+  exchange: "Taxe du comptoir d'\xE9change",
   admin: "Administration"
 };
 function emptyServerPot() {
@@ -17327,6 +17660,41 @@ function cleanAmounts(raw) {
   }
   return out;
 }
+var POT_DAILY_DAYS = 30;
+var RARE_WEIGHT = 50;
+var dayOf = (now) => new Date(now).toISOString().slice(0, 10);
+function normalizeDaily2(raw) {
+  var _a;
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  const keys = [...Object.keys(POT_SOURCE_LABELS), "amber"];
+  for (const day of Object.keys(raw).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-POT_DAILY_DAYS)) {
+    const row = (_a = raw[day]) != null ? _a : {};
+    const clean3 = {};
+    for (const k of keys) {
+      const n = Math.floor(Number(row[k]));
+      if (n > 0) clean3[k] = n;
+    }
+    out[day] = clean3;
+  }
+  return out;
+}
+function bumpDaily(pot, key, value2, now) {
+  var _a, _b, _c, _d;
+  if (!(value2 > 0)) return pot.daily;
+  const day = dayOf(now);
+  const daily = __spreadValues({}, (_a = pot.daily) != null ? _a : {});
+  daily[day] = __spreadProps(__spreadValues({}, (_b = daily[day]) != null ? _b : {}), { [key]: ((_d = (_c = daily[day]) == null ? void 0 : _c[key]) != null ? _d : 0) + Math.floor(value2) });
+  const days = Object.keys(daily).sort();
+  for (const d of days.slice(0, Math.max(0, days.length - POT_DAILY_DAYS))) delete daily[d];
+  return daily;
+}
+function potValue(amounts) {
+  return Object.entries(amounts).reduce((a, [k, v]) => {
+    var _a;
+    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? RARE_WEIGHT : 1);
+  }, 0);
+}
 function normalizeServerPot(raw) {
   var _a;
   const r = raw && typeof raw === "object" ? raw : {};
@@ -17339,6 +17707,7 @@ function normalizeServerPot(raw) {
     resources: cleanAmounts(r.resources),
     totals,
     amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    daily: normalizeDaily2(r.daily),
     amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
     log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
     updatedAtMs: Number(r.updatedAtMs) || 0
@@ -17361,6 +17730,7 @@ function addToPot(pot, source, amounts, now, note4) {
   return __spreadProps(__spreadValues({}, pot), {
     resources,
     totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
+    daily: source === "admin" ? pot.daily : bumpDaily(pot, source, potValue(add2), now),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
   });
@@ -17394,6 +17764,7 @@ function addAmberToPot(pot, source, amount3, now, note4) {
   return __spreadProps(__spreadValues({}, pot), {
     amber: pot.amber + n,
     amberTotal: pot.amberTotal + n,
+    daily: bumpDaily(pot, "amber", n, now),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
   });
@@ -17402,24 +17773,6 @@ function takeAmberFromPot(pot, amount3, now, note4) {
   const n = Math.min(Math.floor(Number(amount3)) || 0, pot.amber);
   if (!(n > 0)) return { pot, taken: 0 };
   return { pot: __spreadProps(__spreadValues({}, pot), { amber: pot.amber - n, log: [...pot.log, { atMs: now, source: "admin", resources: {}, amber: -n, note: note4 }].slice(-100), updatedAtMs: now }), taken: n };
-}
-
-// src/game/messages.ts
-var MESSAGE_RULES = {
-  maxLength: 1e3,
-  /** Messages envoyés au plus par minute et par jour (anti-spam). */
-  perMinute: 8,
-  perDay: 300
-};
-function sanitizeMessageText(raw) {
-  const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  if (!text) throw new GameActionError("Message vide.");
-  if (text.length > MESSAGE_RULES.maxLength) throw new GameActionError(`Message trop long (${MESSAGE_RULES.maxLength} caract\xE8res max).`);
-  return text;
-}
-function assertMessageQuota(lastMinute, lastDay) {
-  if (lastMinute >= MESSAGE_RULES.perMinute) throw new GameActionError("Tu envoies trop de messages : patiente une minute.");
-  if (lastDay >= MESSAGE_RULES.perDay) throw new GameActionError("Quota de messages du jour atteint.");
 }
 
 // src/game/challenges.ts
@@ -22914,32 +23267,36 @@ function normalizeContests(raw) {
   return {
     list: list.filter((c) => !!c && typeof c === "object" && typeof c.id === "string" && c.metric in METRICS).map((c) => {
       var _a, _b;
-      return __spreadValues(__spreadValues({
+      return __spreadValues(__spreadValues(__spreadProps(__spreadValues({
         id: c.id,
         title: String((_a = c.title) != null ? _a : "").slice(0, 80),
         description: String((_b = c.description) != null ? _b : "").slice(0, 400),
         metric: c.metric,
         startMs: num6(c.startMs),
         endMs: num6(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare))),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare)))
+      }, num6(c.amberShare) > 0 ? { amberShare: Math.min(CONTEST_RULES.maxPotShare, num6(c.amberShare)) } : {}), {
         places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num6(p))).slice(0, 10),
         status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
         standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
         updatedAtMs: num6(c.updatedAtMs)
-      }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
+      }), Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
     })
   };
 }
 function validateContest(c, now) {
-  var _a;
+  var _a, _b;
   const errors = [];
   if (!((_a = c.title) == null ? void 0 : _a.trim())) errors.push("Donne un titre au concours.");
   if (!(c.metric in METRICS)) errors.push("Crit\xE8re inconnu.");
   if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le d\xE9but.");
   if (!(c.endMs > now)) errors.push("La fin doit \xEAtre dans le futur.");
   if (c.endMs - c.startMs > 60 * 24 * 36e5) errors.push("Un concours dure 60 jours au plus.");
-  if (!(c.potShare > 0 && c.potShare <= CONTEST_RULES.maxPotShare)) errors.push(`Part du pot entre 1 % et ${Math.round(CONTEST_RULES.maxPotShare * 100)} %.`);
+  const max = CONTEST_RULES.maxPotShare;
+  const amber = (_b = c.amberShare) != null ? _b : 0;
+  if (!(c.potShare >= 0 && c.potShare <= max) || !(amber >= 0 && amber <= max)) errors.push(`Parts du pot entre 0 et ${Math.round(max * 100)} %.`);
+  else if (!(c.potShare > 0 || amber > 0)) errors.push("Engage une part des ressources ou de l'Ambre du pot.");
   const sum3 = c.places.reduce((a, b) => a + b, 0);
   if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place r\xE9compens\xE9e.");
   if (sum3 > 1.0001) errors.push("La r\xE9partition des places d\xE9passe 100 %.");
@@ -22973,14 +23330,18 @@ function contestPurse(c, pot) {
   }
   return out;
 }
-function contestPrizes(c, purse) {
+function contestAmberPurse(c, pot) {
+  var _a, _b;
+  return Math.max(0, Math.floor(((_a = pot.amber) != null ? _a : 0) * ((_b = c.amberShare) != null ? _b : 0)));
+}
+function contestPrizes(c, purse, amberPurse = 0) {
   return c.standings.slice(0, c.places.length).map((s, i) => {
     const resources = {};
     for (const [k, v] of Object.entries(purse)) {
       const n = Math.floor(v * c.places[i]);
       if (n > 0) resources[k] = n;
     }
-    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources };
+    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources, amber: Math.floor(amberPurse * c.places[i]) };
   });
 }
 function pruneContests(list) {
@@ -23262,8 +23623,8 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.26.0" : "dev";
-var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)"]}]' : "[]";
+var LOGIC_VERSION = true ? "5.26.2" : "dev";
+var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
 
 // src/game/serverMetrics.ts
 var METRICS_KEYS = { cron: "cron", vitals: "web_vitals" };
@@ -23551,6 +23912,54 @@ function addReport(reporters, uid) {
   const next = list.includes(uid) ? list : [...list, uid];
   return { reporters: next, hide: next.length >= GLOBAL_CHAT_RULES.reportsToHide };
 }
+var CHAT_REACTIONS = ["\u{1F44D}", "\u{1F602}", "\u{1F525}", "\u{1F62E}", "\u{1F622}", "\u{1F44F}"];
+function normalizeReactions(raw) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const e3 of CHAT_REACTIONS) {
+    const list = raw[e3];
+    if (Array.isArray(list)) {
+      const uids = [...new Set(list.filter((x) => typeof x === "string"))].slice(0, 200);
+      if (uids.length) out[e3] = uids;
+    }
+  }
+  return out;
+}
+function toggleReaction(raw, emoji, uid) {
+  var _a;
+  if (!CHAT_REACTIONS.includes(emoji)) throw new Error("R\xE9action inconnue.");
+  const r = normalizeReactions(raw);
+  const list = (_a = r[emoji]) != null ? _a : [];
+  const next = list.includes(uid) ? list.filter((x) => x !== uid) : [...list, uid];
+  if (next.length) r[emoji] = next;
+  else delete r[emoji];
+  return r;
+}
+var CHAT_ROOM_RULES = {
+  nameMin: 3,
+  nameMax: 24,
+  topicMax: 120,
+  /** Salons ouverts par joueur, et sur tout le serveur. */
+  perOwner: 1,
+  maxOpen: 30,
+  /** Un salon sans message depuis N jours se ferme tout seul. */
+  idleDays: 14
+};
+function validateRoom(raw, ctx) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const name = String((_a = r.name) != null ? _a : "").replace(/\s+/g, " ").trim();
+  const topic = String((_b = r.topic) != null ? _b : "").replace(/\s+/g, " ").trim().slice(0, CHAT_ROOM_RULES.topicMax);
+  if (name.length < CHAT_ROOM_RULES.nameMin || name.length > CHAT_ROOM_RULES.nameMax) throw new Error(`Nom du salon : ${CHAT_ROOM_RULES.nameMin} \xE0 ${CHAT_ROOM_RULES.nameMax} caract\xE8res.`);
+  if (filterText(name, ctx.extraFilter).masked || filterText(topic, ctx.extraFilter).masked) throw new Error("Nom ou sujet refus\xE9 par le filtre du canal.");
+  if (ctx.names.some((n) => fold(n) === fold(name)) || fold(name) === "global") throw new Error("Un salon porte d\xE9j\xE0 ce nom.");
+  if (ctx.ownerOpen >= CHAT_ROOM_RULES.perOwner) throw new Error("Tu as d\xE9j\xE0 un salon ouvert : ferme-le d'abord.");
+  if (ctx.totalOpen >= CHAT_ROOM_RULES.maxOpen) throw new Error("Trop de salons ouverts sur le serveur pour l'instant.");
+  return { name, topic };
+}
+function roomIdle(room, now) {
+  return now - Math.max(room.createdAtMs, room.lastMessageAtMs) > CHAT_ROOM_RULES.idleDays * 864e5;
+}
 
 // src/game/mailSegments.ts
 var MAIL_SEGMENTS = [
@@ -23686,6 +24095,9 @@ function giveLot(player, kind, item) {
   if (!st.items.some((m) => m.id === item.id)) st.items.push(__spreadProps(__spreadValues({}, item), { built: false }));
   player.modules = st;
 }
+function lotKnown(kind, item) {
+  return kind === "relic" ? !!findTemplate(item.template) : !!findModuleTemplate(String(item.template));
+}
 function minNextBid(a) {
   if (!(a.bid > 0)) return a.startPrice;
   return Math.max(a.bid + 1, Math.ceil(a.bid * (1 + AUCTION_RULES.minIncrement)));
@@ -23715,6 +24127,9 @@ function settleAuction(a) {
 function canCancel(a) {
   return a.status === "open" && !(a.bid > 0);
 }
+function recordAuctionStat(player, side) {
+  bumpStat(player, side === "sold" ? "auctionsSold" : "auctionsWon");
+}
 function currencyBalance(player, res) {
   var _a;
   return Math.floor(res === "amber" ? bountyState(player).amber : (_a = player.resources[res]) != null ? _a : 0);
@@ -23736,6 +24151,78 @@ function creditBid(player, res, amount3) {
     st.amber += amount3;
     player.bounties = st;
   } else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+}
+var AUCTION_HISTORY_KEY = "auction_history";
+var AUCTION_HISTORY_RULES = { perLot: 20, maxLots: 400 };
+var AUCTION_WATCH_RULES = { maxPerPlayer: 5 };
+var RARITY_RANK = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+function lotKey(kind, item) {
+  var _a, _b;
+  return `${kind}:${String((_a = item.template) != null ? _a : "")}:${String((_b = item.rarity) != null ? _b : "")}`;
+}
+function normalizeAuctionHistory(raw) {
+  var _a, _b;
+  const lots = {};
+  const src = raw && typeof raw === "object" ? raw.lots : null;
+  if (!src || typeof src !== "object") return { lots };
+  for (const [k, v] of Object.entries(src)) {
+    if (!v || typeof v !== "object" || !Array.isArray(v.sales)) continue;
+    const sales = v.sales.map((s) => ({ atMs: Number(s == null ? void 0 : s.atMs) || 0, res: String(s == null ? void 0 : s.res), price: Math.floor(Number(s == null ? void 0 : s.price)) })).filter((s) => AUCTION_CURRENCIES.includes(s.res) && s.price > 0).slice(-AUCTION_HISTORY_RULES.perLot);
+    if (sales.length) lots[k] = { label: String((_a = v.label) != null ? _a : "").slice(0, 120), kind: v.kind === "module" ? "module" : "relic", rarity: String((_b = v.rarity) != null ? _b : ""), sales };
+  }
+  return { lots };
+}
+function recordSale(h, a, now) {
+  var _a, _b, _c, _d;
+  if (!(a.bid > 0)) return h;
+  const key = lotKey(a.kind, a.item);
+  const prev = h.lots[key];
+  const tpl = a.item.template;
+  const name = (_c = a.kind === "module" ? (_a = findModuleTemplate(String(tpl))) == null ? void 0 : _a.name : (_b = findTemplate(tpl)) == null ? void 0 : _b.name) != null ? _c : a.label.replace(/^Plan : /, "");
+  const lots = __spreadProps(__spreadValues({}, h.lots), { [key]: { label: name, kind: a.kind, rarity: a.rarity, sales: [...(_d = prev == null ? void 0 : prev.sales) != null ? _d : [], { atMs: now, res: a.res, price: Math.floor(a.bid) }].slice(-AUCTION_HISTORY_RULES.perLot) } });
+  const keys = Object.keys(lots);
+  if (keys.length > AUCTION_HISTORY_RULES.maxLots) {
+    const last = (k) => {
+      var _a2, _b2;
+      return (_b2 = (_a2 = lots[k].sales[lots[k].sales.length - 1]) == null ? void 0 : _a2.atMs) != null ? _b2 : 0;
+    };
+    keys.sort((x, y) => last(x) - last(y)).slice(0, keys.length - AUCTION_HISTORY_RULES.maxLots).forEach((k) => delete lots[k]);
+  }
+  return { lots };
+}
+function validateWatch(raw, count2) {
+  var _a;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const kind = r.kind === "relic" || r.kind === "module" || r.kind === "any" ? r.kind : null;
+  if (!kind) throw new GameActionError("Choisis reliques, plans ou les deux.");
+  const minRarity = String((_a = r.minRarity) != null ? _a : "");
+  if (!(minRarity in RARITY_RANK) || minRarity === "mythic") throw new GameActionError("Raret\xE9 inconnue.");
+  const template = typeof r.template === "string" ? r.template.slice(0, 60) : "";
+  if (template && kind === "any") throw new GameActionError("Un mod\xE8le pr\xE9cis demande de choisir reliques ou plans.");
+  if (template && !lotKnown(kind, { template })) throw new GameActionError("Mod\xE8le inconnu.");
+  if (count2 >= AUCTION_WATCH_RULES.maxPerPlayer) throw new GameActionError(`${AUCTION_WATCH_RULES.maxPerPlayer} alertes au plus.`);
+  return { kind, minRarity, template };
+}
+function watchMatches(w, kind, item) {
+  var _a, _b;
+  if (w.kind !== "any" && w.kind !== kind) return false;
+  if (((_a = RARITY_RANK[String(item.rarity)]) != null ? _a : -1) < ((_b = RARITY_RANK[w.minRarity]) != null ? _b : 99)) return false;
+  return !w.template || w.template === item.template;
+}
+function watchersFor(watches, sellerId, kind, item) {
+  const out = /* @__PURE__ */ new Set();
+  for (const w of watches) if (w.uid && w.uid !== sellerId && watchMatches(w, kind, item)) out.add(w.uid);
+  return [...out];
+}
+function linkedAuctionReasons(a) {
+  const out = [];
+  if (a.sellerIp && a.sellerIp === a.bidderIp) out.push("m\xEAme adresse IP");
+  if (a.sellerDevice && a.sellerDevice === a.bidderDevice) out.push("m\xEAme appareil");
+  return out;
+}
+function cleanDeviceId(raw) {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
 }
 
 // src/server/hooksEntry.ts

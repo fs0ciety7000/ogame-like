@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
-import type { Auction, AuctionCurrency, AuctionKind } from "@/game/auctions";
+import { AUCTION_HISTORY_KEY, normalizeAuctionHistory, type Auction, type AuctionCurrency, type AuctionHistory, type AuctionKind, type AuctionWatch } from "@/game/auctions";
 
 /* 5.26 : Hôtel des enchères (ventes ouvertes en direct, mes ventes et mises closes). */
 
@@ -44,9 +44,25 @@ function errorMessage(err: unknown, fallback: string) {
   return (err as { response?: { message?: string } })?.response?.message || fallback;
 }
 
+/** 5.26.2 : identifiant d'appareil (aléatoire, gardé sur l'appareil) joint aux ventes et
+ *  enchères : l'équipe repère ainsi les ventes entre comptes d'un même joueur. */
+function deviceId(): string {
+  const KEY = "cosmic-empires:device";
+  try {
+    let id = localStorage.getItem(KEY) ?? "";
+    if (!/^[0-9a-f]{32}$/.test(id)) {
+      id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 async function call<T>(payload: Record<string, unknown>, fallback: string): Promise<T> {
   try {
-    return await pb.send<T>("/api/cosmic/auction", { method: "POST", body: payload });
+    return await pb.send<T>("/api/cosmic/auction", { method: "POST", body: { ...payload, device: deviceId() } });
   } catch (err) {
     throw new Error(errorMessage(err, fallback));
   }
@@ -62,4 +78,54 @@ export function bidAuction(id: string, amount: number) {
 
 export function cancelAuction(id: string) {
   return call<Auction>({ action: "cancel", id }, "Annulation impossible.");
+}
+
+/* 5.26.2 : historique des prix (game_config, lecture publique) et alertes de vente. */
+
+export function useAuctionHistory(): AuctionHistory {
+  const [h, setH] = useState<AuctionHistory>({ lots: {} });
+  useEffect(() => {
+    let alive = true;
+    const refresh = () =>
+      void pb
+        .collection("game_config")
+        .getFirstListItem<{ data: unknown }>(pb.filter("key = {:k}", { k: AUCTION_HISTORY_KEY }), { requestKey: null })
+        .then((rec) => alive && setH(normalizeAuctionHistory(rec.data)))
+        .catch(() => {});
+    refresh();
+    const unsubscribe = subscribeRecords("auctions", "*", coalesce(refresh, 1500));
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, []);
+  return h;
+}
+
+export function useAuctionWatches(uid: string | undefined): { watches: AuctionWatch[]; reload: () => void } {
+  const [watches, setWatches] = useState<AuctionWatch[]>([]);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!uid) {
+      return;
+    }
+    let alive = true;
+    void pb
+      .collection("auction_watches")
+      .getFullList<AuctionWatch>({ filter: pb.filter("uid = {:u}", { u: uid }), sort: "createdAtMs", requestKey: null })
+      .then((list) => alive && setWatches(list))
+      .catch(() => alive && setWatches([]));
+    return () => {
+      alive = false;
+    };
+  }, [uid, tick]);
+  return { watches, reload: () => setTick((t) => t + 1) };
+}
+
+export function watchAuctions(watch: Pick<AuctionWatch, "kind" | "minRarity" | "template">) {
+  return call<AuctionWatch>({ action: "watch", watch }, "Alerte refusée.");
+}
+
+export function unwatchAuctions(id: string) {
+  return call<{ ok: boolean }>({ action: "unwatch", id }, "Suppression impossible.");
 }

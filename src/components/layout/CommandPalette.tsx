@@ -2,7 +2,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowUpCircle, FlaskConical, Flag, Gift, Hammer, Search, User, Zap } from "lucide-react";
+import { ArrowUpCircle, CornerDownRight, FlaskConical, Flag, Gift, Hammer, Search, User, Zap } from "lucide-react";
+import { matchPaletteTabs } from "@/lib/paletteTabs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { BUILDINGS } from "@/game/buildings";
 import { UNITS } from "@/game/units";
@@ -62,6 +63,15 @@ export function CommandPalette() {
         run: () => navigate(n.to),
       }),
     );
+
+    // 5.26.2 : onglets des pages (« enchères », « modules », « atelier »…).
+    const tabItems: PaletteItem[] = matchPaletteTabs(q, hidden).map((t) => ({
+      key: `tab-${t.to}`,
+      label: t.label,
+      sublabel: `Onglet · ${t.pageLabel}`,
+      icon: <CornerDownRight className="h-4 w-4 text-cyan-glow" />,
+      run: () => navigate(t.to),
+    }));
 
     const playerItems: PaletteItem[] = q
       ? players
@@ -154,7 +164,7 @@ export function CommandPalette() {
       }
     }
 
-    return [...actionItems, ...navItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
+    return [...actionItems, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
   }, [query, players, alliances, navigate, hidden, player]);
 
   useEffect(() => {

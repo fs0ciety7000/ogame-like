@@ -1,4 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from "react";
+import { importWithRetry } from "@/lib/updateReload";
 
 /** 5.15.4 : page chargée à la demande. Si son fichier a disparu avec une mise à jour,
  *  main.tsx recharge le site (vite:preloadError) et Vite résout alors l'import à
@@ -8,5 +9,5 @@ import { lazy, type ComponentType, type LazyExoticComponent } from "react";
 export function lazyPage<M, K extends keyof M>(load: () => Promise<M>, name: K): LazyExoticComponent<M[K] & ComponentType<any>> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- idem
   type C = M[K] & ComponentType<any>;
-  return lazy(() => load().then((m) => (m ? { default: m[name] as C } : new Promise<{ default: C }>(() => undefined))));
+  return lazy(() => importWithRetry(load).then((m) => (m ? { default: m[name] as C } : new Promise<{ default: C }>(() => undefined))));
 }

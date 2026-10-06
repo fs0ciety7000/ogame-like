@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Flag, Globe2, Loader2, Send, VolumeX, Volume2 } from "lucide-react";
+import { Flag, Globe2, Hash, Loader2, Plus, Send, SmilePlus, VolumeX, Volume2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
@@ -9,8 +9,11 @@ import { PlayerName } from "@/components/ui/player-name";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/hud";
 import { askConfirm } from "@/components/ui/confirm-dialog";
-import { GLOBAL_CHAT_RULES } from "@/game/globalChat";
-import { readPersonalMutes, reportGlobalMessage, sendGlobalMessage, useGlobalMessages, writePersonalMutes } from "@/services/globalChatService";
+import { CHAT_REACTIONS, CHAT_ROOM_RULES, GLOBAL_CHAT_RULES } from "@/game/globalChat";
+import { HudChip } from "@/components/ui/hud";
+import { Input } from "@/components/ui/input";
+import { useIsAdmin } from "@/services/adminService";
+import { closeChatRoom, createChatRoom, markGlobalSeen, reactGlobalMessage, readPersonalMutes, reportGlobalMessage, sendGlobalMessage, useChatRooms, useGlobalMessages, writePersonalMutes } from "@/services/globalChatService";
 import { cn } from "@/lib/utils";
 
 /* 5.26 : canal global : tout le serveur, en direct. Signaler un message
@@ -22,7 +25,53 @@ function clock(ms: number) {
 }
 
 export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer: (p: { uid: string; pseudo: string }) => void }) {
-  const { messages, loaded, remove } = useGlobalMessages();
+  // 5.26.2 : salons thématiques créés par les joueurs (vide : canal global).
+  const [room, setRoom] = useState("");
+  const { rooms } = useChatRooms();
+  const current = rooms.find((r) => r.id === room) ?? null;
+  const admin = useIsAdmin();
+  const [creating, setCreating] = useState(false);
+  const [roomName, setRoomName] = useState("");
+  const [roomTopic, setRoomTopic] = useState("");
+  useEffect(() => {
+    if (room && rooms.length > 0 && !rooms.some((r) => r.id === room)) setRoom("");
+  }, [room, rooms]);
+  const { messages, loaded, remove, patch } = useGlobalMessages(room);
+  // 5.26.2 : canal affiché = lu (badge « Communications » remis à zéro).
+  useEffect(() => {
+    if (loaded && !room) markGlobalSeen(Math.max(Date.now(), messages[messages.length - 1]?.createdAtMs ?? 0));
+  }, [loaded, messages, room]);
+  const createRoom = async () => {
+    try {
+      const r = await createChatRoom(roomName, roomTopic);
+      toast.success(`Salon « ${r.name} » ouvert.`);
+      setCreating(false);
+      setRoomName("");
+      setRoomTopic("");
+      setRoom(r.id);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+  const closeRoom = async () => {
+    if (!current) return;
+    if (!(await askConfirm({ title: `Fermer le salon « ${current.name} » ?`, message: "Il disparaît de la liste ; ses messages ne sont plus lisibles.", confirmLabel: "Fermer", tone: "danger" }))) return;
+    try {
+      await closeChatRoom(current.id);
+      setRoom("");
+      toast.success("Salon fermé.");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+  const react = async (id: string, emoji: string) => {
+    try {
+      const out = await reactGlobalMessage(id, emoji);
+      patch(id, { reactions: out.reactions });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +89,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
     setSending(true);
     setError(null);
     try {
-      const out = await sendGlobalMessage(draft);
+      const out = await sendGlobalMessage(draft, room);
       setDraft("");
       if (out.masked) toast.message("Certains mots ont été masqués par le filtre du canal.");
     } catch (err) {
@@ -68,10 +117,48 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
 
   return (
     <Card className="flex min-h-[32rem] flex-col p-0">
+      <div className="flex flex-wrap items-center gap-1.5 border-b border-cyan-glow/15 px-3 py-2" role="group" aria-label="Salons">
+        <HudChip size="sm" tone={!room ? "accent" : "neutral"} asChild>
+          <button type="button" onClick={() => setRoom("")} aria-pressed={!room}>
+            <Globe2 className="h-3 w-3" /> Global
+          </button>
+        </HudChip>
+        {rooms.map((r) => (
+          <HudChip key={r.id} size="sm" tone={room === r.id ? "violet" : "neutral"} asChild>
+            <button type="button" onClick={() => setRoom(r.id)} aria-pressed={room === r.id} title={r.topic || r.name}>
+              <Hash className="h-3 w-3" /> {r.name}
+            </button>
+          </HudChip>
+        ))}
+        <Button size="sm" variant="ghost" onClick={() => setCreating((v) => !v)} aria-expanded={creating}>
+          <Plus className="h-3.5 w-3.5" /> Salon
+        </Button>
+      </div>
+      {creating && (
+        <form
+          className="flex flex-col gap-2 border-b border-cyan-glow/15 bg-white/[0.02] px-3 py-2 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void createRoom();
+          }}
+        >
+          <Input value={roomName} maxLength={CHAT_ROOM_RULES.nameMax} onChange={(e) => setRoomName(e.target.value)} placeholder="Nom du salon (Commerce, Boss…)" className="h-8 text-xs sm:w-56" aria-label="Nom du salon" />
+          <Input value={roomTopic} maxLength={CHAT_ROOM_RULES.topicMax} onChange={(e) => setRoomTopic(e.target.value)} placeholder="Sujet (facultatif)" className="h-8 flex-1 text-xs" aria-label="Sujet du salon" />
+          <Button type="submit" size="sm" variant="secondary" disabled={roomName.trim().length < CHAT_ROOM_RULES.nameMin}>
+            Ouvrir
+          </Button>
+          <p className="text-[10px] text-slate-500 sm:hidden">Un salon par joueur ; fermé après {CHAT_ROOM_RULES.idleDays} jours sans message.</p>
+        </form>
+      )}
       <div className="flex flex-wrap items-center gap-2 border-b border-cyan-glow/15 px-3 py-2">
-        <Globe2 className="h-4 w-4 text-cyan-glow" aria-hidden />
-        <p className="font-display text-sm font-semibold text-slate-100">Canal global</p>
-        <span className="text-[11px] text-slate-500">tout le serveur · modéré</span>
+        {current ? <Hash className="h-4 w-4 text-violet-glow" aria-hidden /> : <Globe2 className="h-4 w-4 text-cyan-glow" aria-hidden />}
+        <p className="font-display text-sm font-semibold text-slate-100">{current ? current.name : "Canal global"}</p>
+        <span className="min-w-0 truncate text-[11px] text-slate-500">{current ? `${current.topic ? `${current.topic} · ` : ""}ouvert par ${current.ownerPseudo} · modéré` : "tout le serveur · modéré"}</span>
+        {current && (current.ownerUid === uid || admin) && (
+          <Button size="sm" variant="ghost" onClick={() => void closeRoom()} title="Fermer ce salon">
+            <X className="h-3.5 w-3.5" /> Fermer
+          </Button>
+        )}
         {muted.length > 0 && (
           <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setShowMuted((v) => !v)} aria-pressed={showMuted}>
             {showMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />} {showMuted ? "Cacher" : "Voir"} les masqués <span className="font-mono tabular-nums">({muted.length})</span>
@@ -99,6 +186,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
                 <span className="whitespace-pre-wrap break-words text-slate-300">
                   <LinkifiedText text={m.text} />
                 </span>
+                <Reactions reactions={m.reactions ?? {}} uid={uid} onReact={(e) => void react(m.id, e)} />
               </div>
               {!mine && (
                 <span className="flex shrink-0 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
@@ -134,7 +222,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
               }
             }}
             rows={1}
-            placeholder="Message à tout le serveur… (Entrée pour envoyer)"
+            placeholder={current ? `Message dans #${current.name}… (Entrée pour envoyer)` : "Message à tout le serveur… (Entrée pour envoyer)"}
             aria-label="Message au canal global"
             className="min-h-[2.5rem] flex-1 resize-none border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-glow/60 focus:outline-none"
           />
@@ -153,3 +241,52 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
     </Card>
   );
 }
+
+/** 5.26.2 : réactions sous un message (compte, la mienne en surbrillance) et palette au survol. */
+function Reactions({ reactions, uid, onReact }: { reactions: Partial<Record<string, string[]>>; uid: string; onReact: (emoji: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const used = CHAT_REACTIONS.filter((e) => (reactions[e]?.length ?? 0) > 0);
+  return (
+    <span className="mt-0.5 flex flex-wrap items-center gap-1">
+      {used.map((e) => {
+        const mine = reactions[e]!.includes(uid);
+        return (
+          <button
+            key={e}
+            type="button"
+            onClick={() => onReact(e)}
+            aria-pressed={mine}
+            aria-label={`${e} : ${reactions[e]!.length}`}
+            className={cn("inline-flex items-center gap-1 border px-1.5 text-xs", mine ? "border-cyan-glow/50 bg-cyan-glow/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-glow/30")}
+          >
+            <span aria-hidden>{e}</span>
+            <span className="font-mono text-[10px] tabular-nums text-slate-300">{reactions[e]!.length}</span>
+          </button>
+        );
+      })}
+      <span className={cn("inline-flex items-center gap-0.5", !open && "opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100")}>
+        {open ? (
+          CHAT_REACTIONS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className="px-0.5 text-sm hover:scale-110"
+              aria-label={`Réagir ${e}`}
+              onClick={() => {
+                onReact(e);
+                setOpen(false);
+              }}
+            >
+              {e}
+            </button>
+          ))
+        ) : (
+          <button type="button" className="p-0.5 text-slate-500 hover:text-cyan-glow" aria-label="Ajouter une réaction" title="Réagir" onClick={() => setOpen(true)}>
+            <SmilePlus className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </span>
+    </span>
+  );
+}
+

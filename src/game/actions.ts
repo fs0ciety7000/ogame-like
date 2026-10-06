@@ -25,7 +25,7 @@ import {
   withMissingBuildings,
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
-import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
+import { canAffordAll, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -38,7 +38,9 @@ import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recr
 import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
-import { buildModule, mountModule, recycleModule, unmountModule } from "@/game/modules";
+import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
+import { setConversationArchived } from "@/game/messages";
+import { applyModulePreset, buildModule, deleteModulePreset, fuseModulePlans, mountModule, recycleModule, saveModulePreset, unmountModule } from "@/game/modules";
 import { productionHours } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
@@ -96,10 +98,16 @@ export type GameAction =
   | { type: "relicEquip"; slot: number; relicId: string | null }
   | { type: "relicFuse"; template: string; rarity: string }
   | { type: "relicRecycle"; relicId: string }
+  | { type: "achievementHint"; achievementId: string }
   | { type: "moduleBuild"; moduleId: string }
   | { type: "moduleMount"; moduleId: string; cls: string; slot: number }
   | { type: "moduleUnmount"; cls: string; slot: number }
   | { type: "moduleRecycle"; moduleId: string }
+  | { type: "moduleFuse"; moduleIds: string[] }
+  | { type: "chatArchive"; with: string; archived: boolean }
+  | { type: "modulePresetSave"; name: string }
+  | { type: "modulePresetApply"; index: number }
+  | { type: "modulePresetDelete"; index: number }
   | { type: "talentLearn"; talentId: string }
   | { type: "talentReset" }
   | { type: "streakClaim" }
@@ -309,12 +317,14 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!RESOURCE_IDS.has(sellId) || !RESOURCE_IDS.has(buyId) || sellId === buyId) throw new GameActionError("Échange invalide.");
       const amount = positiveInt(action.amount, "Montant");
       if ((player.resources[sellId] ?? 0) < amount) throw new GameActionError("Pas assez de ressources à échanger.");
-      const gained = Math.floor(amount * getTradeRate(sellId, buyId));
+      // 5.26.1 : taxe sur ce qui est reçu, versée au pot commun par le serveur.
+      const quote = tradeQuote(sellId, buyId, amount);
+      if (quote.net <= 0) throw new GameActionError("Quantité trop faible pour cet échange.");
       player.resources[sellId] -= amount;
-      player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
+      player.resources[buyId] = (player.resources[buyId] ?? 0) + quote.net;
       bumpStat(player, "traded", amount);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
-      return gained;
+      return { gained: quote.net, tax: quote.tax, taxRes: buyId };
     }
 
     case "claimContract": {
@@ -443,9 +453,23 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       return { amber: out.amber };
     }
 
+    // 5.26.2 : indice d'un succès secret, payé en Ambre.
+    case "achievementHint": {
+      const a = checkHintPurchase(player, action.achievementId);
+      const st = bountyState(player);
+      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      player.bounties = st;
+      player.stats = { ...(player.stats ?? {}), hintsBought: [...(player.stats?.hintsBought ?? []), a.id] };
+      return { hint: achievementHint(a) };
+    }
+
     // 5.26 : modules de vaisseaux.
-    case "moduleBuild":
-      return buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+    case "moduleBuild": {
+      const built = buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+      bumpStat(player, "modulesBuilt");
+      return built;
+    }
 
     case "moduleMount":
       mountModule(player, action.moduleId, action.cls, action.slot);
@@ -462,6 +486,28 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.bounties = st;
       return { amber };
     }
+
+    // 5.26.2 : archivage d'une conversation privée (elle revient au prochain message reçu).
+    case "chatArchive": {
+      const other = String(action.with ?? "").slice(0, 40);
+      if (!other) throw new GameActionError("Conversation inconnue.");
+      player.stats = { ...(player.stats ?? {}), archivedChats: setConversationArchived(player.stats?.archivedChats, other, !!action.archived, now) };
+      return undefined;
+    }
+
+    // 5.26.2 : fusion de trois plans identiques, préréglages de montage.
+    case "moduleFuse":
+      return fuseModulePlans(player, action.moduleIds, now);
+
+    case "modulePresetSave":
+      return saveModulePreset(player, action.name);
+
+    case "modulePresetApply":
+      return applyModulePreset(player, action.index);
+
+    case "modulePresetDelete":
+      deleteModulePreset(player, action.index);
+      return undefined;
 
     case "setProfileStyle":
       return setProfileStyle(player, action.style);

@@ -4000,11 +4000,16 @@ function adminReportUpdate(e) {
       out = reportJson(rec);
       return;
     }
+    const wasResolved = rec.getString("status") === "resolved";
     rec.set("status", res.status);
     rec.set("resolution", res.resolution);
     rec.set("history", res.history);
     rec.set("updatedAtMs", now);
     txApp.save(rec);
+    // 5.26.1 : succès « signalements utiles » (résolus par l'équipe seulement, pas de farm au dépôt).
+    if (res.status === "resolved" && !wasResolved && rec.getString("reporterId") && rec.getString("reporterId") !== game.AUTO_REPORTER_ID) {
+      bumpPlayerStat(txApp, rec.getString("reporterId"), "reportsResolved", 1);
+    }
     out = reportJson(rec);
     notifyText = res.notify;
     reporterId = rec.getString("reporterId");
@@ -4169,13 +4174,36 @@ function scanAnomalies(now) {
       alerts.push({ id: rec.id, title: rec.getString("title"), text });
     });
   });
+  // 5.26.2 : XP de succès anormale sur 24 h (un signalement par joueur et par jour).
+  const day = new Date(now).toISOString().slice(0, 10);
+  for (let page = 0; page < 20; page++) {
+    const recs = $app.findRecordsByFilter("players", "npc = ''", "id", 200, page * 200);
+    recs.forEach((r) => {
+      const p = toPlain(r);
+      const hit = game.achievementXpAlert(p.stats, now);
+      if (!hit) return;
+      $app.runInTransaction((txApp) => {
+        const alert = autoAccountReport(
+          txApp,
+          game,
+          `achxp:${r.id}:${day}`,
+          `XP de succès anormale : ${p.pseudo || r.id}`,
+          `${hit.xp} XP de succès en 24 h, soit ${Math.round(hit.share * 100)} % de son XP (${hit.total}). Vérifier les mesures du joueur (farm d'un succès ?) et les éditions admin.`,
+          [p.pseudo || r.id],
+          now,
+        );
+        if (alert) alerts.push(alert);
+      });
+    });
+    if (recs.length < 200) break;
+  }
   scanRec.set("data", { lastScanMs: now });
   $app.save(scanRec);
   alerts.forEach((a) => {
     const link = appUrl(`/game/admin?onglet=reports&signalement=${a.id}`);
     adminIds().forEach((id) => {
       try {
-        notify($app, id, [{ kind: "report", title: "Ressources anormales", message: a.title, createdAtMs: now, read: false }]);
+        notify($app, id, [{ kind: "report", title: "Alerte de compte", message: a.title, createdAtMs: now, read: false }]);
       } catch (_) {
         /* facultatif */
       }
@@ -4225,6 +4253,7 @@ function messageSend(e) {
   const rec = new Record($app.findCollectionByNameOrId("private_messages"));
   rec.load({ fromUid: uid, fromPseudo: sender.getString("pseudo"), toUid: to, toPseudo: target.getString("pseudo"), text, createdAtMs: now, readAtMs: 0 });
   $app.save(rec);
+  bumpPlayerStat($app, uid, "privateMessages", 1);
   // v4.2 : un seigneur de guerre répond par une réplique toute faite (une fois par jour).
   if (target.getString("npc")) {
     try {
@@ -4994,6 +5023,12 @@ function ensureSchema(app) {
         return;
       }
       if (have.type !== f.type) return;
+      // 5.26.2 : un champ devenu caché (empreintes des enchères) l'est aussi en production.
+      if (f.hidden === true && have.hidden !== true) {
+        have.hidden = true;
+        dirty = true;
+        changes.push(`${w.name}.${f.name} (caché)`);
+      }
       if (f.type === "json" && Number(f.maxSize) > Number(have.maxSize || 0)) {
         have.maxSize = f.maxSize;
         dirty = true;
@@ -5604,24 +5639,38 @@ function contestsTick(now) {
 function finishContest(txApp, game, c, now) {
   const rec = configRecord(txApp, game.SERVER_POT_KEY);
   let pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
-  const prizes = game.contestPrizes(c, game.contestPurse(c, pot));
+  const prizes = game.contestPrizes(c, game.contestPurse(c, pot), game.contestAmberPurse(c, pot));
   const results = [];
   prizes.forEach((prize) => {
-    if (!findOrNull(txApp, "players", prize.uid) || Object.keys(prize.resources).length === 0) return;
-    const before = pot;
-    pot = game.takeFromPot(pot, prize.resources, now, `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`);
-    if (pot === before) return;
-    const last = pot.log[pot.log.length - 1];
+    if (!findOrNull(txApp, "players", prize.uid)) return;
+    const note = `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`;
     const given = {};
-    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    if (Object.keys(prize.resources).length > 0) {
+      const before = pot;
+      pot = game.takeFromPot(pot, prize.resources, now, note);
+      if (pot !== before) {
+        const last = pot.log[pot.log.length - 1];
+        Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+      }
+    }
+    // 5.26.2 : part d'Ambre (réserve du pot), créditée au solde de la Ruche.
+    let amber = 0;
+    if (prize.amber > 0) {
+      const took = game.takeAmberFromPot(pot, prize.amber, now, note);
+      pot = took.pot;
+      amber = took.taken;
+    }
+    if (Object.keys(given).length === 0 && amber === 0) return;
     const owner = loadPlayer(txApp, game, prize.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    if (amber > 0) game.creditBid(flushed.player, "amber", amber);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    const parts = [Object.keys(given).length ? game.describeGain(given) : "", amber > 0 ? `${amber} Ambre` : ""].filter(Boolean).join(" et ");
     notify(txApp, prize.uid, flushed.notifications.concat([
-      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${game.describeGain(given)} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given } },
+      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${parts} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given, amber } },
     ]));
-    results.push(Object.assign({}, prize, { resources: given }));
+    results.push(Object.assign({}, prize, { resources: given, amber }));
   });
   writeConfig(txApp, game.SERVER_POT_KEY, pot);
   return Object.assign({}, c, { status: "done", results });
@@ -5648,6 +5697,7 @@ function adminContests(e) {
         startMs: Math.max(now, Number(c.startMs) || now),
         endMs: Number(c.endMs) || 0,
         potShare: Number(c.potShare) || 0,
+        amberShare: Number(c.amberShare) || 0,
         places: (Array.isArray(c.places) ? c.places : []).map(Number),
         status: "scheduled",
         baselines: {},
@@ -8778,9 +8828,18 @@ function globalSend(e) {
     const player = findOrNull(txApp, "players", uid);
     if (!player) throw new BadRequestError("Profil joueur introuvable.");
     const filtered = game.filterText(text, readChatFilter(txApp, game));
+    // 5.26.2 : salon thématique (vide : canal global).
+    const roomId = String(req.room || "");
+    if (roomId) {
+      const room = findOrNull(txApp, "chat_rooms", roomId);
+      if (!room || room.getBool("closed")) throw new BadRequestError("Ce salon est fermé.");
+      room.set("lastMessageAtMs", now);
+      txApp.save(room);
+    }
     const rec = new Record(txApp.findCollectionByNameOrId("global_messages"));
-    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked });
+    rec.load({ uid, pseudo: player.getString("pseudo"), allianceTag: allianceTagOf(txApp, player.getString("allianceId")) || "", text: filtered.text, createdAtMs: now, hidden: false, reporters: [], masked: filtered.masked, room: roomId, reactions: {} });
     txApp.save(rec);
+    bumpPlayerStat(txApp, uid, "globalMessages", 1);
     out = { id: rec.id, text: filtered.text, masked: filtered.masked };
   });
   // Ménage : seuls les derniers messages sont gardés.
@@ -8790,6 +8849,75 @@ function globalSend(e) {
   } catch (_) {
     /* ménage au prochain envoi */
   }
+  return e.json(200, out);
+}
+
+/** 5.26.2 : POST /api/cosmic/global/react { id, emoji } — ajoute ou retire une réaction. */
+function globalReact(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    const rec = findOrNull(txApp, "global_messages", String(req.id || ""));
+    if (!rec || rec.getBool("hidden")) throw new NotFoundError("Message introuvable.");
+    let next;
+    try {
+      next = game.toggleReaction(toPlain(rec).reactions, String(req.emoji || ""), uid);
+    } catch (err) {
+      throw new BadRequestError(String((err && err.message) || err));
+    }
+    rec.set("reactions", next);
+    txApp.save(rec);
+    out = { reactions: next };
+  });
+  return e.json(200, out);
+}
+
+/** 5.26.2 : POST /api/cosmic/global/room { action: "create", name, topic } | { action: "close", id }. */
+function globalRoom(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const now = Date.now();
+  let out = null;
+  $app.runInTransaction((txApp) => {
+    // Salons muets depuis trop longtemps : fermés au passage.
+    txApp.findRecordsByFilter("chat_rooms", "closed = false", "", 200, 0).forEach((r) => {
+      if (game.roomIdle({ createdAtMs: r.getFloat("createdAtMs"), lastMessageAtMs: r.getFloat("lastMessageAtMs") }, now)) {
+        r.set("closed", true);
+        txApp.save(r);
+      }
+    });
+    if (req.action === "create") {
+      const mute = game.activeMute(readChatMutes(txApp, game), uid, now);
+      if (mute) throw new ForbiddenError("Parole retirée : création de salon impossible.");
+      const player = findOrNull(txApp, "players", uid);
+      if (!player) throw new BadRequestError("Profil joueur introuvable.");
+      const open = txApp.findRecordsByFilter("chat_rooms", "closed = false", "", 200, 0);
+      let room;
+      try {
+        room = game.validateRoom(req, { ownerOpen: open.filter((r) => r.getString("ownerUid") === uid).length, totalOpen: open.length, names: open.map((r) => r.getString("name")), extraFilter: readChatFilter(txApp, game) });
+      } catch (err) {
+        throw new BadRequestError(String((err && err.message) || err));
+      }
+      const rec = new Record(txApp.findCollectionByNameOrId("chat_rooms"));
+      rec.load({ name: room.name, topic: room.topic, ownerUid: uid, ownerPseudo: player.getString("pseudo"), createdAtMs: now, lastMessageAtMs: now, closed: false });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (req.action === "close") {
+      const rec = findOrNull(txApp, "chat_rooms", String(req.id || ""));
+      if (!rec) throw new NotFoundError("Salon introuvable.");
+      if (rec.getString("ownerUid") !== uid && !isGameAdmin(e)) throw new ForbiddenError("Seul son créateur (ou l'équipe) ferme ce salon.");
+      rec.set("closed", true);
+      txApp.save(rec);
+      out = { ok: true };
+      return;
+    }
+    throw new BadRequestError("Action inconnue.");
+  });
   return e.json(200, out);
 }
 
@@ -8866,6 +8994,71 @@ function adminGlobal(e) {
   return e.json(200, out);
 }
 
+/** 5.26.1 : compteur de succès écrit hors action de jeu (messages, signalements). */
+function bumpPlayerStat(txApp, uid, key, n) {
+  try {
+    const rec = findOrNull(txApp, "players", uid);
+    if (!rec) return;
+    const stats = Object.assign({}, toPlain(rec).stats || {});
+    stats[key] = (Number(stats[key]) || 0) + (n || 1);
+    rec.set("stats", stats);
+    txApp.save(rec);
+  } catch (_) {
+    /* facultatif : le message ou la mise à jour passent quand même */
+  }
+}
+
+/* ---------- 5.26.2 : anti-abus (signalements automatiques réservés à l'équipe) ---------- */
+
+/** Empreinte réseau d'une requête : IP hachée (jamais stockée en clair). */
+function requestIpHash(e) {
+  let ip = "";
+  try {
+    ip = String(e.realIP() || "");
+  } catch (_) {
+    ip = "";
+  }
+  return ip ? $security.sha256(`ip|${ip}`).slice(0, 24) : "";
+}
+
+/** Crée (ou relance) un signalement automatique « Compte » ; renvoie l'alerte à envoyer, ou null s'il existait déjà. */
+function autoAccountReport(txApp, game, autoKey, title, description, affected, now) {
+  const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: autoKey })[0];
+  if (existing) return null;
+  const rec = new Record(txApp.findCollectionByNameOrId("reports"));
+  rec.set("reporterId", game.AUTO_REPORTER_ID);
+  rec.set("reporterPseudo", "Système");
+  rec.set("category", "account");
+  rec.set("title", title);
+  rec.set("description", description);
+  rec.set("context", { version: "", page: "", theme: "", userAgent: "", screen: "" });
+  rec.set("status", "new");
+  rec.set("resolution", "");
+  rec.set("githubUrl", "");
+  rec.set("history", [{ kind: "created", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text: "Détecté automatiquement (anti-abus)." }]);
+  rec.set("autoKey", autoKey);
+  rec.set("occurrences", 1);
+  rec.set("affected", affected);
+  rec.set("createdAtMs", now);
+  rec.set("updatedAtMs", now);
+  rec.set("reporterSeenAtMs", now);
+  txApp.save(rec);
+  return { id: rec.id, title: title, text: description };
+}
+
+/** Prévient les administrateurs (notification + e-mail) d'une alerte anti-abus. */
+function notifyAbuseAlert(alert, now) {
+  const link = appUrl(`/game/admin?onglet=reports&signalement=${alert.id}`);
+  adminIds().forEach((id) => {
+    try {
+      notify($app, id, [{ kind: "report", title: "Alerte anti-abus", message: alert.title, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+    sendMail(userEmail(id), `[Cosmic Empires] ${alert.title}`, alert.text.split("\n"), link);
+  });
+}
+
 /* ---------- 5.26 : Hôtel des enchères ---------- */
 
 /** « 150 ferraille », « 12 Ambre ». */
@@ -8919,9 +9112,42 @@ function auctionRequest(e) {
         endsAtMs: now + listing.durationH * 3600000,
         closedAtMs: 0,
         tax: 0,
+        sellerIp: requestIpHash(e),
+        sellerDevice: game.cleanDeviceId(req.device),
       });
       txApp.save(rec);
       out = toPlain(rec);
+      // 5.26.2 : alertes de vente (« préviens-moi si un plan légendaire est mis en vente »).
+      try {
+        const watches = txApp.findRecordsByFilter("auction_watches", "", "", 2000, 0).map((w) => toPlain(w));
+        game.watchersFor(watches, uid, listing.kind, lot.item).forEach((wuid) => {
+          if (!findOrNull(txApp, "players", wuid)) return;
+          notify(txApp, wuid, [auctionNote("Alerte enchères", `${seller.player.pseudo} met en vente « ${lot.label} » (mise à prix ${auctionAmount(game, listing.res, listing.startPrice)}, ${listing.durationH} h).`, now)]);
+        });
+      } catch (err) {
+        console.log(`[cosmic] alertes d'enchères : ${err}`);
+      }
+      return;
+    }
+    if (action === "watch") {
+      const mine = txApp.findRecordsByFilter("auction_watches", "uid = {:u}", "", 50, 0, { u: uid });
+      let w;
+      try {
+        w = game.validateWatch(req.watch, mine.length);
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      const rec = new Record(txApp.findCollectionByNameOrId("auction_watches"));
+      rec.load({ uid: uid, kind: w.kind, minRarity: w.minRarity, template: w.template, createdAtMs: now });
+      txApp.save(rec);
+      out = toPlain(rec);
+      return;
+    }
+    if (action === "unwatch") {
+      const w = findOrNull(txApp, "auction_watches", String(req.id || ""));
+      if (!w || w.getString("uid") !== uid) throw new NotFoundError("Alerte introuvable.");
+      txApp.delete(w);
+      out = { ok: true };
       return;
     }
     const rec = findOrNull(txApp, "auctions", String(req.id || ""));
@@ -8963,6 +9189,9 @@ function auctionRequest(e) {
       }
     }
     ["bid", "bidderId", "bidderPseudo", "bids", "endsAtMs"].forEach((k) => rec.set(k, a[k]));
+    // 5.26.2 : empreinte du meilleur enchérisseur (détection des comptes liés à la clôture).
+    rec.set("bidderIp", requestIpHash(e));
+    rec.set("bidderDevice", game.cleanDeviceId(req.device));
     txApp.save(rec);
     out = toPlain(rec);
   });
@@ -8974,6 +9203,7 @@ function auctionsTick(now) {
   const game = loadGame();
   const due = $app.findRecordsByFilter("auctions", 'status = "open" && endsAtMs <= {:t}', "endsAtMs", 50, 0, { t: now });
   let n = 0;
+  const linkedAlerts = [];
   due.forEach((r) => {
     try {
       $app.runInTransaction((txApp) => {
@@ -8981,6 +9211,8 @@ function auctionsTick(now) {
         const rec = findOrNull(txApp, "auctions", r.id);
         if (!rec || rec.getString("status") !== "open") return;
         const a = toPlain(rec);
+        // Champs cachés (5.26.2) : absents de l'export JSON, lus directement.
+        ["sellerIp", "sellerDevice", "bidderIp", "bidderDevice"].forEach((k) => (a[k] = rec.getString(k)));
         const deal = game.settleAuction(a);
         const hasReceiver = !!findOrNull(txApp, "players", deal.receiver);
         // Gagnant disparu : l'objet revient au vendeur (la mise est perdue).
@@ -8988,8 +9220,9 @@ function auctionsTick(now) {
         if (findOrNull(txApp, "players", receiverId)) {
           const receiver = loadFlushed(txApp, game, receiverId);
           game.giveLot(receiver.player, a.kind, a.item);
-          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
           const won = deal.status === "sold" && receiverId === deal.receiver;
+          if (won) game.recordAuctionStat(receiver.player, "won");
+          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
           notify(txApp, receiverId, receiver.notifications.concat([
             won
               ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${auctionAmount(game, a.res, a.bid)}.`, now)
@@ -9000,6 +9233,7 @@ function auctionsTick(now) {
           if (hasReceiver && findOrNull(txApp, "players", a.sellerId)) {
             const seller = loadFlushed(txApp, game, a.sellerId);
             game.creditBid(seller.player, a.res, deal.payout);
+            game.recordAuctionStat(seller.player, "sold");
             savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
             notify(txApp, a.sellerId, seller.notifications.concat([
               auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${auctionAmount(game, a.res, deal.payout)} (taxe : ${auctionAmount(game, a.res, deal.tax)}).`, now),
@@ -9012,6 +9246,23 @@ function auctionsTick(now) {
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
           }
           rec.set("tax", deal.tax);
+          // 5.26.2 : vente entre comptes liés (même IP ou même appareil) : signalement à l'équipe.
+          const linked = game.linkedAuctionReasons(a);
+          if (linked.length > 0) {
+            const alert = autoAccountReport(
+              txApp,
+              game,
+              `auction-linked:${a.id}`,
+              `Enchère entre comptes liés : ${a.sellerPseudo} → ${a.bidderPseudo}`,
+              `« ${a.label} » vendu ${auctionAmount(game, a.res, a.bid)} par ${a.sellerPseudo} à ${a.bidderPseudo} (${linked.join(", ")}). Possible transfert entre comptes d'un même joueur.`,
+              [a.sellerPseudo, a.bidderPseudo],
+              now,
+            );
+            if (alert) linkedAlerts.push(alert);
+          }
+          // 5.26.2 : historique des prix (gardé au-delà du ménage des 30 jours).
+          const histRec = configRecord(txApp, game.AUCTION_HISTORY_KEY);
+          writeConfig(txApp, game.AUCTION_HISTORY_KEY, game.recordSale(game.normalizeAuctionHistory(histRec ? toPlain(histRec).data : null), a, now));
         }
         rec.set("status", deal.status);
         rec.set("closedAtMs", now);
@@ -9022,6 +9273,7 @@ function auctionsTick(now) {
       console.log(`[cosmic] clôture d'enchère ${r.id} : ${err}`);
     }
   });
+  linkedAlerts.forEach((al) => notifyAbuseAlert(al, now));
   // Ménage : les ventes closes depuis plus de 30 jours disparaissent.
   try {
     $app.findRecordsByFilter("auctions", 'status != "open" && closedAtMs < {:t}', "", 200, 0, { t: now - 30 * 86400000 }).forEach((r) => $app.delete(r));
@@ -9029,4 +9281,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

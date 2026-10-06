@@ -192,7 +192,7 @@ export { GAME_EMOJIS, normalizeCustomEmojis, EMOJIS_KEY } from "@/game/emojis";
 export { KESH_EMOJIS } from "@/game/bounties";
 export { BLOG_WELCOME } from "@/game/blogWelcome";
 export { challengeFromBytes, cleanPasskeyName, clientChallenge, PASSKEY_RULES, PasskeyError, utf8Encode as passkeyUtf8, verifyAssertion, verifyRegistration } from "@/game/webauthn";
-export { CONTESTS_KEY, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
+export { CONTESTS_KEY, contestAmberPurse, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
 export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
 export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
 export { allianceWeekId } from "@/game/allianceBoss";
@@ -204,7 +204,7 @@ export { upcomingMaintenance } from "@/game/maintenance";
 export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
 export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
 export { tally, validateVote } from "@/game/polls";
-export { activeMute, addReport, CHAT_MODERATION_KEYS, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
+export { activeMute, addReport, CHAT_MODERATION_KEYS, CHAT_ROOM_RULES, roomIdle, toggleReaction, validateRoom, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";
@@ -212,7 +212,7 @@ export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HIS
 export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
 export { signTreaty } from "@/game/pirates";
 // 5.17.1 : audit de l'XP et de l'activité des joueurs (administration).
-export { activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
+export { achievementXpAlert, ACHIEVEMENT_XP_ALERT, activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
 export { MISSIONS } from "@/game/missions";
 export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
@@ -220,4 +220,4 @@ export { ONLINE_MS } from "@/game/retention";
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-export { AUCTION_RULES, canCancel, creditBid, currencyLabel, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";

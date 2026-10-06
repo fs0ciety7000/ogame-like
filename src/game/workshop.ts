@@ -1,3 +1,4 @@
+import { bumpStat } from "@/game/stats";
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { findUnit } from "@/game/units";
@@ -258,6 +259,8 @@ export function advanceWorkshop(player: PlayerState, now: number, instant = fals
     else st.hull[id] = Math.round(st.hull[id]);
   }
   player.workshop = st;
+  // 5.26.1 : succès « unités réparées ».
+  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0));
   const names = Object.entries(done).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`);
   if (!names.length) return [];
   return [{ kind: "building", title: "Atelier : réparations terminées", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
@@ -355,5 +358,6 @@ export function rushWorkshop<W extends { amber: number }>(player: PlayerState, j
   st.jobs = st.jobs.filter((j) => !ids.has(j.id));
   if (!st.updatedAtMs) st.updatedAtMs = now;
   player.workshop = st;
+  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0));
   return { amber, units };
 }

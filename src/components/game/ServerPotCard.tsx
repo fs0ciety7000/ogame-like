@@ -26,7 +26,7 @@ export function ServerPotCard() {
         ))
       )}
       {pot.amber > 0 && <AmberAmount value={pot.amber} label={false} className="font-mono tabular-nums" />}
-      <span className="basis-full text-[11px] text-slate-500 sm:ml-auto sm:basis-auto">Taxes du marché, des enchères et des cadeaux : réservé aux concours et récompenses collectives.</span>
+      <span className="basis-full text-[11px] text-slate-500 sm:ml-auto sm:basis-auto">Taxes du marché, des enchères, des cadeaux et du comptoir : réservé aux concours et récompenses collectives.</span>
     </div>
   );
 }

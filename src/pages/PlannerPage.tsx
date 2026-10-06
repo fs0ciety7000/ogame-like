@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, CalendarClock, Copy, FlaskConical, Hammer, ListPlus, Pencil, Play, Plus, Rocket, Trash2, Wand2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CalendarClock, Copy, FlaskConical, Hammer, ListPlus, Lock, Pencil, Play, Plus, Rocket, ShoppingBag, Target, Trash2, Wand2, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { AmberAmount } from "@/components/ui/amber";
+import { bountyState, findShopItem, plannerUnlocked } from "@/game/bounties";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GoalsPanel } from "@/components/game/GoalsPanel";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
 import { HudPanel } from "@/components/ui/panel";
-import { EmptyState, HudTag } from "@/components/ui/hud";
+import { EmptyState, HudChip, HudTag } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -23,7 +26,7 @@ import { unitsAwayOf } from "@/game/fleets";
 import { previewTemplate, stepLabel, templateFromQueues, TEMPLATE_RULES, type ActionStep, type ActionTemplate, type StepPreview } from "@/game/actionTemplates";
 import { deleteActionTemplate, saveActionTemplate, useActionTemplates } from "@/lib/actionTemplateStore";
 import { GameActionError, performGameAction, planBuilding } from "@/services/playerService";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
 /* 5.26 : Planificateur. Tout ce qui tourne (chantiers, recherches, unités,
@@ -246,7 +249,56 @@ function QuickPlan({ player }: { player: PlayerState }) {
   );
 }
 
+/** 5.26.1 : la page s'achète au Comptoir de la Ruche ; avant, un écran verrouillé y mène. */
 export function PlannerPage() {
+  const unlocked = usePlayerStore((s) => plannerUnlocked(s.player));
+  return unlocked ? <PlannerContent /> : <PlannerLocked />;
+}
+
+function PlannerLocked() {
+  const player = usePlayerStore((s) => s.player);
+  const price = findShopItem("planner")?.price ?? 600;
+  const amber = player ? bountyState(player).amber : 0;
+  const missing = Math.max(0, price - amber);
+  return (
+    <div className="flex flex-col gap-5">
+      <PageHeader eyebrow="Cosmic Empires / Empire" title="Planificateur" description="Tout ce qui tourne au même endroit, des modèles d'actions rejouables en un clic et tes objectifs personnels." />
+      <HudPanel icon={<Lock />} title="Outil verrouillé" tone="gold" accent className="max-w-2xl">
+        <p className="text-sm text-slate-300">
+          Le Planificateur s'achète une fois pour toutes au <strong className="text-slate-100">Comptoir de la Ruche</strong> (page Primes), contre de l'Ambre.
+        </p>
+        <ul className="flex flex-col gap-1.5 text-sm text-slate-400">
+          <li className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4 shrink-0 text-cyan-glow" aria-hidden /> Frise de tout ce qui tourne et file planifiée des bâtiments.
+          </li>
+          <li className="flex items-center gap-2">
+            <Wand2 className="h-4 w-4 shrink-0 text-cyan-glow" aria-hidden /> Modèles d'actions (bâtiments, unités, recherches) rejoués en un clic, avec aperçu.
+          </li>
+          <li className="flex items-center gap-2">
+            <Target className="h-4 w-4 shrink-0 text-cyan-glow" aria-hidden /> Objectifs personnels : plan complet, coût, manque et date estimée.
+          </li>
+        </ul>
+        <div className="flex flex-wrap items-center gap-3">
+          <HudChip tone="gold">
+            <AmberAmount value={price} className="font-mono tabular-nums" />
+          </HudChip>
+          <span className="font-mono text-xs tabular-nums text-slate-400">
+            solde {formatNumber(amber)}
+            {missing > 0 && ` · il manque ${formatNumber(missing)}`}
+          </span>
+          <Button asChild variant="warn" className="ml-auto">
+            <Link to="/game/primes?onglet=comptoir">
+              <ShoppingBag className="h-4 w-4" /> Aller au Comptoir de la Ruche
+            </Link>
+          </Button>
+        </div>
+        {missing > 0 && <p className="text-xs text-slate-500">L'Ambre se gagne en remplissant des primes Kesh'Vaar, à la série de connexion et au passe de saison.</p>}
+      </HudPanel>
+    </div>
+  );
+}
+
+function PlannerContent() {
   useNowTicker();
   const now = Date.now();
   const player = usePlayerStore((s) => s.player);

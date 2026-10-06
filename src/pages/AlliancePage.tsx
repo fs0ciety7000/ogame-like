@@ -211,6 +211,10 @@ function AllianceRoom({
   // v4.0 : onglet ouvert par un lien de notification, non lus du canal diplomatique.
   const tabParam = useSearchParams()[0].get("onglet");
   const [tab, setTabState] = useState(() => (tabParam && ALLIANCE_TABS.includes(tabParam) ? tabParam : "membres"));
+  // 5.26.2 : un lien vers un autre onglet (palette Ctrl+K, notification) change l'onglet ouvert.
+  useEffect(() => {
+    if (tabParam && ALLIANCE_TABS.includes(tabParam)) setTabState(tabParam);
+  }, [tabParam]);
   // 5.15 : dernier sous-onglet ouvert dans chaque section (on y revient en changeant de section).
   const memory = useRef<Record<string, string>>({});
   const pactUnread = usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeMute, addReport, cleanGlobalMessage, filterText, rateLimitError } from "@/game/globalChat";
+import { activeMute, addReport, cleanGlobalMessage, filterText, normalizeReactions, rateLimitError, roomIdle, toggleReaction, validateRoom } from "@/game/globalChat";
 
 describe("canal global", () => {
   it("masque les grossièretés, accents et casse compris, sans toucher aux mots qui les contiennent", () => {
@@ -29,5 +29,31 @@ describe("canal global", () => {
   it("sourdine temporaire ou permanente", () => {
     expect(activeMute({ u: { untilMs: 10, reason: "x", byName: "" } }, "u", 11)).toBeNull();
     expect(activeMute({ u: { untilMs: null, reason: "x", byName: "" } }, "u", 1e15)).not.toBeNull();
+  });
+});
+
+describe("5.26.2 : réactions et salons", () => {
+  it("bascule une réaction et refuse les emotes hors liste", () => {
+    let r = toggleReaction({}, "🔥", "a");
+    r = toggleReaction(r, "🔥", "b");
+    expect(r["🔥"]).toEqual(["a", "b"]);
+    r = toggleReaction(r, "🔥", "a");
+    expect(r["🔥"]).toEqual(["b"]);
+    expect(toggleReaction(r, "🔥", "b")).toEqual({});
+    expect(() => toggleReaction({}, "💩", "a")).toThrow();
+    expect(normalizeReactions({ "👍": ["a", "a", 3], "x": ["b"] })).toEqual({ "👍": ["a"] });
+  });
+
+  it("valide un salon (nom, filtre, doublon, plafonds) et repère les salons muets", () => {
+    const ctx = { ownerOpen: 0, totalOpen: 0, names: ["Commerce"] };
+    expect(validateRoom({ name: "  Chasseurs   de boss ", topic: "Raids" }, ctx)).toEqual({ name: "Chasseurs de boss", topic: "Raids" });
+    expect(() => validateRoom({ name: "ab" }, ctx)).toThrow(/caractères/);
+    expect(() => validateRoom({ name: "commerce" }, ctx)).toThrow(/déjà/);
+    expect(() => validateRoom({ name: "Global" }, ctx)).toThrow(/déjà/);
+    expect(() => validateRoom({ name: "Salle des connards" }, ctx)).toThrow(/filtre/);
+    expect(() => validateRoom({ name: "Alliances" }, { ...ctx, ownerOpen: 1 })).toThrow(/ferme/);
+    expect(() => validateRoom({ name: "Alliances" }, { ...ctx, totalOpen: 30 })).toThrow(/Trop/);
+    expect(roomIdle({ createdAtMs: 0, lastMessageAtMs: 0 }, 15 * 86_400_000)).toBe(true);
+    expect(roomIdle({ createdAtMs: 0, lastMessageAtMs: 10 * 86_400_000 }, 15 * 86_400_000)).toBe(false);
   });
 });

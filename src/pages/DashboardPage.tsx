@@ -31,6 +31,7 @@ import { ColoniesCard } from "@/components/game/ColoniesCard";
 import { WorkshopHomeCard } from "@/components/game/WorkshopHomeCard";
 import { EventCard } from "@/components/game/EventBanner";
 import { LeviathanBanner } from "@/components/game/LeviathanBanner";
+import { BossReturnCard } from "@/components/game/BossReturnCard";
 import { CasinoBanner } from "@/components/casino/CasinoBanner";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { NextActionsCard } from "@/components/game/NextActionsCard";
@@ -172,7 +173,12 @@ export function DashboardPage() {
     ),
     workshop: <WorkshopHomeCard />,
     colonies: <ColoniesCard />,
-    leviathan: <LeviathanBanner />,
+    leviathan: (
+      <div className="flex flex-col gap-4">
+        <LeviathanBanner />
+        <BossReturnCard />
+      </div>
+    ),
     events: (
       <div className="flex flex-col gap-4">
         <EventCard />
