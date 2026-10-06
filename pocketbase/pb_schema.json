@@ -3091,6 +3091,38 @@
         "name": "tax",
         "type": "number",
         "required": false
+      },
+      {
+        "name": "sellerIp",
+        "type": "text",
+        "required": false,
+        "max": 64,
+        "presentable": false,
+        "hidden": true
+      },
+      {
+        "name": "sellerDevice",
+        "type": "text",
+        "required": false,
+        "max": 64,
+        "presentable": false,
+        "hidden": true
+      },
+      {
+        "name": "bidderIp",
+        "type": "text",
+        "required": false,
+        "max": 64,
+        "presentable": false,
+        "hidden": true
+      },
+      {
+        "name": "bidderDevice",
+        "type": "text",
+        "required": false,
+        "max": 64,
+        "presentable": false,
+        "hidden": true
       }
     ],
     "indexes": [

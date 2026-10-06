@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUCTION_HISTORY_RULES, AUCTION_RULES, canCancel, describeWatch, lotKey, normalizeAuctionHistory, priceSummary, recordSale, validateWatch, watchersFor, creditBid, currencyBalance, debitBid, minStartFor, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
+import { cleanDeviceId, linkedAuctionReasons, AUCTION_HISTORY_RULES, AUCTION_RULES, canCancel, describeWatch, lotKey, normalizeAuctionHistory, priceSummary, recordSale, validateWatch, watchersFor, creditBid, currencyBalance, debitBid, minStartFor, giveLot, minNextBid, placeBid, settleAuction, takeLot, validateListing, type Auction } from "@/game/auctions";
 import { addModuleItem, modulesState } from "@/game/modules";
 import { relicsState } from "@/game/relics";
 import { defaultPlayerState } from "@/game/defaults";
@@ -141,5 +141,16 @@ describe("hôtel des enchères", () => {
     expect(watchersFor(watches, "s", "module", { template: "canons_surcharges", rarity: "legendary" })).toEqual(["a", "b"]);
     expect(watchersFor(watches, "s", "module", { template: "matrice_de_visee", rarity: "rare" })).toEqual(["c"]);
     expect(watchersFor(watches, "x", "relic", { template: "t", rarity: "rare" })).toEqual(["s"]);
+  });
+});
+
+
+describe("5.26.2 : enchères entre comptes liés", () => {
+  it("repère même IP ou même appareil", () => {
+    expect(linkedAuctionReasons({ sellerIp: "a", bidderIp: "a", sellerDevice: "x", bidderDevice: "y" })).toEqual(["même adresse IP"]);
+    expect(linkedAuctionReasons({ sellerIp: "a", bidderIp: "b", sellerDevice: "x", bidderDevice: "x" })).toEqual(["même appareil"]);
+    expect(linkedAuctionReasons({ sellerIp: "", bidderIp: "", sellerDevice: "", bidderDevice: "" })).toEqual([]);
+    expect(cleanDeviceId("ABCDEF0123456789abcdef0123456789")).toBe("abcdef0123456789abcdef0123456789");
+    expect(cleanDeviceId("<script>")).toBe("");
   });
 });

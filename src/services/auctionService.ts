@@ -44,9 +44,25 @@ function errorMessage(err: unknown, fallback: string) {
   return (err as { response?: { message?: string } })?.response?.message || fallback;
 }
 
+/** 5.26.2 : identifiant d'appareil (aléatoire, gardé sur l'appareil) joint aux ventes et
+ *  enchères : l'équipe repère ainsi les ventes entre comptes d'un même joueur. */
+function deviceId(): string {
+  const KEY = "cosmic-empires:device";
+  try {
+    let id = localStorage.getItem(KEY) ?? "";
+    if (!/^[0-9a-f]{32}$/.test(id)) {
+      id = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
+
 async function call<T>(payload: Record<string, unknown>, fallback: string): Promise<T> {
   try {
-    return await pb.send<T>("/api/cosmic/auction", { method: "POST", body: payload });
+    return await pb.send<T>("/api/cosmic/auction", { method: "POST", body: { ...payload, device: deviceId() } });
   } catch (err) {
     throw new Error(errorMessage(err, fallback));
   }

@@ -4174,13 +4174,36 @@ function scanAnomalies(now) {
       alerts.push({ id: rec.id, title: rec.getString("title"), text });
     });
   });
+  // 5.26.2 : XP de succès anormale sur 24 h (un signalement par joueur et par jour).
+  const day = new Date(now).toISOString().slice(0, 10);
+  for (let page = 0; page < 20; page++) {
+    const recs = $app.findRecordsByFilter("players", "npc = ''", "id", 200, page * 200);
+    recs.forEach((r) => {
+      const p = toPlain(r);
+      const hit = game.achievementXpAlert(p.stats, now);
+      if (!hit) return;
+      $app.runInTransaction((txApp) => {
+        const alert = autoAccountReport(
+          txApp,
+          game,
+          `achxp:${r.id}:${day}`,
+          `XP de succès anormale : ${p.pseudo || r.id}`,
+          `${hit.xp} XP de succès en 24 h, soit ${Math.round(hit.share * 100)} % de son XP (${hit.total}). Vérifier les mesures du joueur (farm d'un succès ?) et les éditions admin.`,
+          [p.pseudo || r.id],
+          now,
+        );
+        if (alert) alerts.push(alert);
+      });
+    });
+    if (recs.length < 200) break;
+  }
   scanRec.set("data", { lastScanMs: now });
   $app.save(scanRec);
   alerts.forEach((a) => {
     const link = appUrl(`/game/admin?onglet=reports&signalement=${a.id}`);
     adminIds().forEach((id) => {
       try {
-        notify($app, id, [{ kind: "report", title: "Ressources anormales", message: a.title, createdAtMs: now, read: false }]);
+        notify($app, id, [{ kind: "report", title: "Alerte de compte", message: a.title, createdAtMs: now, read: false }]);
       } catch (_) {
         /* facultatif */
       }
@@ -5000,6 +5023,12 @@ function ensureSchema(app) {
         return;
       }
       if (have.type !== f.type) return;
+      // 5.26.2 : un champ devenu caché (empreintes des enchères) l'est aussi en production.
+      if (f.hidden === true && have.hidden !== true) {
+        have.hidden = true;
+        dirty = true;
+        changes.push(`${w.name}.${f.name} (caché)`);
+      }
       if (f.type === "json" && Number(f.maxSize) > Number(have.maxSize || 0)) {
         have.maxSize = f.maxSize;
         dirty = true;
@@ -8902,6 +8931,57 @@ function bumpPlayerStat(txApp, uid, key, n) {
   }
 }
 
+/* ---------- 5.26.2 : anti-abus (signalements automatiques réservés à l'équipe) ---------- */
+
+/** Empreinte réseau d'une requête : IP hachée (jamais stockée en clair). */
+function requestIpHash(e) {
+  let ip = "";
+  try {
+    ip = String(e.realIP() || "");
+  } catch (_) {
+    ip = "";
+  }
+  return ip ? $security.sha256(`ip|${ip}`).slice(0, 24) : "";
+}
+
+/** Crée (ou relance) un signalement automatique « Compte » ; renvoie l'alerte à envoyer, ou null s'il existait déjà. */
+function autoAccountReport(txApp, game, autoKey, title, description, affected, now) {
+  const existing = txApp.findRecordsByFilter("reports", "autoKey = {:k}", "-createdAtMs", 1, 0, { k: autoKey })[0];
+  if (existing) return null;
+  const rec = new Record(txApp.findCollectionByNameOrId("reports"));
+  rec.set("reporterId", game.AUTO_REPORTER_ID);
+  rec.set("reporterPseudo", "Système");
+  rec.set("category", "account");
+  rec.set("title", title);
+  rec.set("description", description);
+  rec.set("context", { version: "", page: "", theme: "", userAgent: "", screen: "" });
+  rec.set("status", "new");
+  rec.set("resolution", "");
+  rec.set("githubUrl", "");
+  rec.set("history", [{ kind: "created", atMs: now, byId: game.AUTO_REPORTER_ID, byName: "Système", staff: true, text: "Détecté automatiquement (anti-abus)." }]);
+  rec.set("autoKey", autoKey);
+  rec.set("occurrences", 1);
+  rec.set("affected", affected);
+  rec.set("createdAtMs", now);
+  rec.set("updatedAtMs", now);
+  rec.set("reporterSeenAtMs", now);
+  txApp.save(rec);
+  return { id: rec.id, title: title, text: description };
+}
+
+/** Prévient les administrateurs (notification + e-mail) d'une alerte anti-abus. */
+function notifyAbuseAlert(alert, now) {
+  const link = appUrl(`/game/admin?onglet=reports&signalement=${alert.id}`);
+  adminIds().forEach((id) => {
+    try {
+      notify($app, id, [{ kind: "report", title: "Alerte anti-abus", message: alert.title, createdAtMs: now, read: false }]);
+    } catch (_) {
+      /* facultatif */
+    }
+    sendMail(userEmail(id), `[Cosmic Empires] ${alert.title}`, alert.text.split("\n"), link);
+  });
+}
+
 /* ---------- 5.26 : Hôtel des enchères ---------- */
 
 /** « 150 ferraille », « 12 Ambre ». */
@@ -8955,6 +9035,8 @@ function auctionRequest(e) {
         endsAtMs: now + listing.durationH * 3600000,
         closedAtMs: 0,
         tax: 0,
+        sellerIp: requestIpHash(e),
+        sellerDevice: game.cleanDeviceId(req.device),
       });
       txApp.save(rec);
       out = toPlain(rec);
@@ -9030,6 +9112,9 @@ function auctionRequest(e) {
       }
     }
     ["bid", "bidderId", "bidderPseudo", "bids", "endsAtMs"].forEach((k) => rec.set(k, a[k]));
+    // 5.26.2 : empreinte du meilleur enchérisseur (détection des comptes liés à la clôture).
+    rec.set("bidderIp", requestIpHash(e));
+    rec.set("bidderDevice", game.cleanDeviceId(req.device));
     txApp.save(rec);
     out = toPlain(rec);
   });
@@ -9041,6 +9126,7 @@ function auctionsTick(now) {
   const game = loadGame();
   const due = $app.findRecordsByFilter("auctions", 'status = "open" && endsAtMs <= {:t}', "endsAtMs", 50, 0, { t: now });
   let n = 0;
+  const linkedAlerts = [];
   due.forEach((r) => {
     try {
       $app.runInTransaction((txApp) => {
@@ -9048,6 +9134,8 @@ function auctionsTick(now) {
         const rec = findOrNull(txApp, "auctions", r.id);
         if (!rec || rec.getString("status") !== "open") return;
         const a = toPlain(rec);
+        // Champs cachés (5.26.2) : absents de l'export JSON, lus directement.
+        ["sellerIp", "sellerDevice", "bidderIp", "bidderDevice"].forEach((k) => (a[k] = rec.getString(k)));
         const deal = game.settleAuction(a);
         const hasReceiver = !!findOrNull(txApp, "players", deal.receiver);
         // Gagnant disparu : l'objet revient au vendeur (la mise est perdue).
@@ -9081,6 +9169,20 @@ function auctionsTick(now) {
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
           }
           rec.set("tax", deal.tax);
+          // 5.26.2 : vente entre comptes liés (même IP ou même appareil) : signalement à l'équipe.
+          const linked = game.linkedAuctionReasons(a);
+          if (linked.length > 0) {
+            const alert = autoAccountReport(
+              txApp,
+              game,
+              `auction-linked:${a.id}`,
+              `Enchère entre comptes liés : ${a.sellerPseudo} → ${a.bidderPseudo}`,
+              `« ${a.label} » vendu ${auctionAmount(game, a.res, a.bid)} par ${a.sellerPseudo} à ${a.bidderPseudo} (${linked.join(", ")}). Possible transfert entre comptes d'un même joueur.`,
+              [a.sellerPseudo, a.bidderPseudo],
+              now,
+            );
+            if (alert) linkedAlerts.push(alert);
+          }
           // 5.26.2 : historique des prix (gardé au-delà du ménage des 30 jours).
           const histRec = configRecord(txApp, game.AUCTION_HISTORY_KEY);
           writeConfig(txApp, game.AUCTION_HISTORY_KEY, game.recordSale(game.normalizeAuctionHistory(histRec ? toPlain(histRec).data : null), a, now));
@@ -9094,6 +9196,7 @@ function auctionsTick(now) {
       console.log(`[cosmic] clôture d'enchère ${r.id} : ${err}`);
     }
   });
+  linkedAlerts.forEach((al) => notifyAbuseAlert(al, now));
   // Ménage : les ventes closes depuis plus de 30 jours disparaissent.
   try {
     $app.findRecordsByFilter("auctions", 'status != "open" && closedAtMs < {:t}', "", 200, 0, { t: now - 30 * 86400000 }).forEach((r) => $app.delete(r));

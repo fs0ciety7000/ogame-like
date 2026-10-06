@@ -259,3 +259,15 @@ export function percentiles(values: number[]): { median: number; p90: number } {
   if (!v.length) return { median: 0, p90: 0 };
   return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
 }
+
+/* 5.26.2 : alerte de l'équipe sur un gain d'XP de succès anormal (24 h glissantes). */
+export const ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR, minXp: 2000, minShare: 0.6 };
+
+/** XP de succès sur 24 h si elle dépasse le seuil et la part de l'XP totale (sinon null). */
+export function achievementXpAlert(stats: PlayerState["stats"], now: number): { xp: number; total: number; share: number } | null {
+  const t = ledgerTotals(stats, now, ACHIEVEMENT_XP_ALERT.windowMs);
+  const xp = t.bySource.achievement ?? 0;
+  if (xp < ACHIEVEMENT_XP_ALERT.minXp || t.total <= 0) return null;
+  const share = xp / t.total;
+  return share >= ACHIEVEMENT_XP_ALERT.minShare ? { xp, total: t.total, share } : null;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyXpDelta } from "@/game/seasons";
-import { activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, recordXp } from "@/game/xpAudit";
+import { achievementXpAlert, activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, recordXp } from "@/game/xpAudit";
 import type { PlayerState } from "@/types/game";
 
 const HOUR = 3600_000;
@@ -119,5 +119,17 @@ describe("signaux d'alerte", () => {
   it("calcule médiane et 90e centile", () => {
     expect(percentiles([5, 1, 3, 2, 4, 6, 7, 8, 9, 10])).toEqual({ median: 5, p90: 10 });
     expect(percentiles([])).toEqual({ median: 0, p90: 0 });
+  });
+});
+
+
+describe("5.26.2 : alerte XP de succès", () => {
+  it("signale une XP de succès forte et majoritaire sur 24 h", () => {
+    const now = 100 * 3600_000;
+    const h = Math.floor(now / 3600_000);
+    expect(achievementXpAlert({ xpHours: { [h]: { achievement: 2500, mission: 500 } } } as never, now)).toMatchObject({ xp: 2500, total: 3000 });
+    expect(achievementXpAlert({ xpHours: { [h]: { achievement: 2500, mission: 5000 } } } as never, now)).toBeNull();
+    expect(achievementXpAlert({ xpHours: { [h]: { achievement: 500 } } } as never, now)).toBeNull();
+    expect(achievementXpAlert({ xpHours: { [h - 30]: { achievement: 9000 } } } as never, now)).toBeNull();
   });
 });

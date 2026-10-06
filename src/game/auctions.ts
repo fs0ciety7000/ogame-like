@@ -42,6 +42,11 @@ export interface Auction {
   endsAtMs: number;
   closedAtMs: number;
   tax: number;
+  /** 5.26.2 : empreintes (IP hachée, identifiant d'appareil) du vendeur et du meilleur enchérisseur. */
+  sellerIp?: string;
+  sellerDevice?: string;
+  bidderIp?: string;
+  bidderDevice?: string;
 }
 
 export const AUCTION_RULES = {
@@ -336,4 +341,18 @@ export function describeWatch(w: Pick<AuctionWatch, "kind" | "minRarity" | "temp
   const rarity = (plural[w.minRarity] ?? [w.minRarity, w.minRarity])[w.kind === "relic" ? 0 : 1];
   const name = w.template ? (w.kind === "module" ? findModuleTemplate(w.template)?.name : findTemplate(w.template)?.name) : "";
   return `${what} ${w.minRarity === "legendary" ? rarity : `${rarity} ou mieux`}${name ? ` : ${name}` : ""}`;
+}
+
+/** 5.26.2 : vente conclue entre deux comptes qui partagent une adresse IP ou un appareil. */
+export function linkedAuctionReasons(a: Pick<Auction, "sellerIp" | "sellerDevice" | "bidderIp" | "bidderDevice">): string[] {
+  const out: string[] = [];
+  if (a.sellerIp && a.sellerIp === a.bidderIp) out.push("même adresse IP");
+  if (a.sellerDevice && a.sellerDevice === a.bidderDevice) out.push("même appareil");
+  return out;
+}
+
+/** Identifiant d'appareil envoyé par le client (hexadécimal, 16 à 64 caractères), sinon vide. */
+export function cleanDeviceId(raw: unknown): string {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
 }

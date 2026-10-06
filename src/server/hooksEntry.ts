@@ -212,7 +212,7 @@ export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HIS
 export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
 export { signTreaty } from "@/game/pirates";
 // 5.17.1 : audit de l'XP et de l'activité des joueurs (administration).
-export { activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
+export { achievementXpAlert, ACHIEVEMENT_XP_ALERT, activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
 export { MISSIONS } from "@/game/missions";
 export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
@@ -220,4 +220,4 @@ export { ONLINE_MS } from "@/game/retention";
 export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
