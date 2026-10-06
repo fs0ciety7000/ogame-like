@@ -17,7 +17,9 @@ export function WorkshopHomeCard() {
   if (!player) return null;
   const now = Date.now();
   const view = workshopView(player, now);
-  if (view.jobs.length === 0 && view.hulls.length === 0) return null;
+  // 5.28 : vaisseaux prêts en Cale sèche = action à mener (accent).
+  const ready = Object.values(view.dock.ready).reduce((a, b) => a + b, 0);
+  if (view.jobs.length === 0 && view.hulls.length === 0 && ready === 0) return null;
   const next = view.jobs[0];
   const immobilized = view.jobs.reduce((s, j) => s + j.job.count, 0);
   const worst = view.hulls[0];
@@ -30,9 +32,16 @@ export function WorkshopHomeCard() {
           <Wrench className="h-4 w-4 text-ember-glow" />
         </motion.span>
         <h2 className="hud-title text-sm">Atelier de réparation</h2>
-        <HudChip tone="ember" size="sm" alert>
-          En réparation
-        </HudChip>
+        {(view.jobs.length > 0 || view.hulls.length > 0) && (
+          <HudChip tone="ember" size="sm" alert>
+            En réparation
+          </HudChip>
+        )}
+        {ready > 0 && (
+          <HudChip asChild tone="accent" size="sm">
+            <Link to="/game/batiments?onglet=atelier">Prêts : {formatNumber(ready)}</Link>
+          </HudChip>
+        )}
         <Link to="/game/batiments?onglet=atelier" className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
           Atelier →
         </Link>

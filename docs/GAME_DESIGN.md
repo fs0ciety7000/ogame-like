@@ -1,7 +1,7 @@
-# Game design : Cosmic Empires
+# Game design : Cosmic Empires (GDD)
 
-Référence de conception. `DESIGN.md` dit à quoi le jeu ressemble ; ce document dit **comment il fonctionne et pourquoi**.
-Toute proposition (`docs/proposals/`) s'appuie dessus. Une règle qui change ici change aussi dans le moteur et ses tests.
+Document de conception de référence (GDD). `DESIGN.md` dit à quoi le jeu ressemble ; ce document dit **comment il fonctionne et pourquoi**.
+Toute proposition (`docs/proposals/`) s'appuie dessus ; une fois livrée, ses règles rejoignent les fiches systèmes (§7). Une règle qui change ici change aussi dans le moteur et ses tests.
 
 ## 1. Piliers
 
@@ -49,13 +49,14 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 
 | # | Invariant | Où | Test |
 |:--|:--|:--|:--|
-| I1 | Unités conservées : base + en vol + Atelier + pertes = avant combat | `attack.ts`, `pirates.ts`, `bounties.ts`, `workshop.ts` | `workshop.test.ts`, `attack.test.ts` |
-| I2 | **Places de hangar** : base + en vol + Atelier + file ≤ capacité, **à chaque construction** | `actions.ts` (`buildUnits`) | `actions.test.ts` |
-| I3 | Aucun ajout d'unités hors construction, retour de flotte ou fin de réparation | tout `src/game` + migrations | à écrire (voir `proposals/cale-seche.md`) |
-| I4 | Capacité ne baisse jamais sous la flotte existante sans état « surcharge » explicite | `ascension.ts`, contenu admin | à écrire |
-| I5 | Une même grandeur se calcule par **une seule** fonction (client, serveur, statistiques) | `hangarUsed`, `getUnitCapacity` | garde à écrire |
+| I1 | Unités conservées : base + en vol + Atelier + prêts + pertes = avant combat | `attack.ts`, `pirates.ts`, `bounties.ts`, `workshop.ts` | `workshop.test.ts`, `attack.test.ts`, `caleSeche.test.ts` |
+| I2 | **Places de hangar** : base + en vol + Atelier hors Cale sèche + file ≤ capacité, **à chaque construction** ; en cale ≤ postes | `actions.ts` (`buildUnits`) via `hangarLoad` | `actions.test.ts`, `caleSeche.test.ts` |
+| I3 | Aucun ajout d'unités hors construction, retour de flotte, fin de réparation ou remise en service (qui vérifie la place) | tout `src/game` + migrations | `caleSeche.test.ts` (I3) |
+| I4 | La capacité ne baisse jamais sous la flotte sans état « surcharge » visible ; l'Ascension garde hangars et Cale sèche | `ascension.ts` (`keptOnAscension`) | `ascension.test.ts`, `caleSeche.test.ts` (I4) |
+| I5 | Places et capacité des hangars : une seule fonction (`hangarLoad`, `playerUnitCapacity` dans `hangar.ts`) | client, serveur, Statistiques | `caleSeche.test.ts` (I5, garde sur `getUnitCapacity(`) |
 | I6 | Le butin et les livraisons arrivent même entrepôt plein (choix assumé) | `fleets.ts` | `fleets.test.ts` |
 | I7 | Rien dans `src/game` n'utilise `Intl` / `localeCompare` / `toLocaleString` | tout `src/game` | `serverSafe.test.ts` |
+| I8 | Une remise en service automatique ne tourne que si le serveur a lu les flottes en vol (`awayKnown`) | `actions.ts` (`performPlayerAction`) | `caleSeche.test.ts` |
 
 ## 5. Règles de conception
 
@@ -80,8 +81,46 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 - [ ] Les colonies suivent-elles la règle de la planète mère, ou l'écart est-il documenté ?
 - [ ] Un test couvre-t-il l'invariant ?
 
-## 7. Journal des audits
+## 7. Fiches systèmes
+
+Une fiche par système : rôle, règles, chiffres, paliers, sorties de plafond. Les chiffres réglables sont dans l'admin (Règles, Contenu).
+
+### 7.1 Hangars (`hangar.ts`)
+
+- Capacité = Σ (niveau × places par niveau) des bâtiments « hangar » × (1 + technologies, dont Extension des hangars) × (1 + effets d'empire `hangarCapacity`).
+- Places occupées = à quai + en vol + à l'Atelier hors Cale sèche + file du chantier (`hangarLoad`).
+- Surcharge (occupé > capacité) : rien n'est détruit ; la construction de la catégorie est refusée et la page Unités propose trois sorties (améliorer, envoyer une flotte, vendre / démanteler).
+- Conservés à l'Ascension (avec la Cale sèche et les bâtiments légendaires). Colonies : hangar de défense propre, mêmes technologies, effets de portée « colonies ».
+
+### 7.2 Atelier de réparation (`workshop.ts`)
+
+- Sauve une part des unités détruites (5 %/niv. jusqu'au 10, puis 2 %/niv. ; 70 % au niv. 20 ; plafond global 95 % avec les bonus).
+- Répare en PV/s : 30 au niv. 1, +25 %/niv. ; d'abord la file (lots), puis les coques. Accélérations : Nanoréparation, Mécanicien, Clé de soudure, Vaisseaux-ateliers, Ambre, Analgésique.
+- Un lot gardé au hangar rentre dès qu'il est réparé (il avait sa place). Un lot en Cale sèche devient « prêt ».
+
+### 7.3 Cale sèche (5.28, `cale_seche`)
+
+| Élément | Valeur |
+|:--|:--|
+| Déblocage | Atelier niv. 5, puis 20 de chaque ressource rare |
+| Postes | 1 000 × niveau (places de hangar), + effet `dockCapacity` |
+| Coût / temps | courbe de l'Atelier (nano + données), 1 200 s par niveau, palier 2 au niv. 11 |
+| Remplissage | les prêts d'abord, puis les lots par ordre d'arrivée ; le surplus garde sa place au hangar |
+| Prêts | rentrent au hangar s'il y a de la place : bouton « Remettre en service », automatique au palier 10 |
+
+| Palier | Effet |
+|:--|:--|
+| 1 | les sauvés occupent des postes, pas le hangar |
+| 5 · Triage | démanteler (60 % du prix, réglable) ; réglage après combat : tout réparer, démanteler ce qui ne tient pas, tout démanteler |
+| 10 · Remise automatique | prêts rentrés dès qu'une place se libère (à la prochaine action du joueur) ; Atelier +10 % |
+| 15 · Priorités | ordre de réparation : arrivée, ou une classe d'abord |
+| 20 · Cale orbitale | +5 points de vaisseaux sauvés |
+
+Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche (niv. 0), l'Atelier se comporte comme en 5.20.
+
+## 8. Journal des audits
 
 | Date | Version | Constat | Suite |
 |:--|:--|:--|:--|
 | 2026-10-06 | 5.27.1 | Hangars en surcharge : migration 5.22 sans plafond, Ascension qui remet les hangars au niveau 1, stat `hangarCapacity` jamais lue, tech « Extension des hangars » sans effet sur les colonies | `proposals/cale-seche.md` |
+| 2026-10-06 | 5.28.0 | Lot 0 et Cale sèche livrés : `hangarLoad` unique, surcharge visible, C2 à C6 corrigés, migration 5.22 repassée par l'Atelier ; invariants I3, I4, I5, I8 testés | `caleSeche.test.ts`, test d'intégration « 5.28 Cale sèche » |

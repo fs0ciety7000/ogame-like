@@ -1,7 +1,9 @@
 import { bumpStat } from "@/game/stats";
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
-import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { BUILDINGS, DOCK_TIERS, dockBaseCapacity, dockLevel, effectiveBuildingLevel } from "@/game/buildings";
 import { findUnit } from "@/game/units";
+import { unitClasses, type UnitClass } from "@/game/unitClasses";
+import { playerUnitCost } from "@/game/effectTargets";
 import { effectTotal } from "@/game/effects";
 import { allEffects } from "@/game/modifiers";
 import type { NewNotification } from "@/game/flush";
@@ -23,6 +25,13 @@ import type { PlayerState, Units } from "@/types/game";
    L'Atelier répare en PV par seconde, selon son niveau : d'abord les unités
    en file (dans l'ordre), puis les coques abîmées. Sans Atelier, une petite
    cadence de base (équipages) répare quand même les coques.
+
+   5.28 : Cale sèche (docs/proposals/cale-seche.md, docs/GAME_DESIGN.md §8).
+   Les lots en file occupent d'abord les postes de la Cale sèche (par ordre
+   d'arrivée), le reste garde sa place au hangar. Un lot réparé en cale ne
+   rentre au hangar que s'il y a de la place : sinon il attend, « Prêt »
+   (`ready`), et la remise en service se fait à la demande (ou toute seule
+   au palier 10, côté serveur, qui connaît les flottes en vol).
 ===================================================== */
 
 export interface WorkshopJob {
@@ -48,22 +57,240 @@ export const WORKSHOP_SOURCE_LABELS: Record<WorkshopSource, string> = {
   boss: "Boss",
 };
 
+/** 5.28 : que faire des vaisseaux sauvés (palier Triage de la Cale sèche). */
+export type DockPolicy = "repair" | "scrapOverflow" | "scrapAll";
+/** 5.28 : ordre de réparation (palier Priorités) : arrivée, ou une classe d'abord. */
+export type DockPriority = "arrival" | UnitClass;
+
+export const DOCK_POLICY_LABELS: Record<DockPolicy, string> = {
+  repair: "Tout réparer",
+  scrapOverflow: "Démanteler ce qui ne tient pas en cale",
+  scrapAll: "Tout démanteler",
+};
+
 export interface PlayerWorkshop {
   updatedAtMs: number;
   jobs: WorkshopJob[];
   /** PV manquants par type d'unité (tout le stock). */
   hull: Record<string, number>;
+  /** 5.28 : vaisseaux réparés en Cale sèche, en attente d'une place au hangar. */
+  ready?: Record<string, number>;
+  /** 5.28 : réglage du Triage (absent : tout réparer). */
+  policy?: DockPolicy;
+  /** 5.28 : ordre de réparation (absent : arrivée). */
+  priority?: DockPriority;
+  /** 5.28 : dernier démantèlement automatique (affiché dans la Cale sèche). */
+  lastScrap?: { atMs: number; units: Record<string, number>; refund: { scrap: number; energy: number } } | null;
 }
 
 const ATELIER_ID = "atelier_reparation";
 
+const POLICIES: DockPolicy[] = ["repair", "scrapOverflow", "scrapAll"];
+const PRIORITIES: DockPriority[] = ["arrival", "heavy", "medium", "light", "support"];
+
 export function workshopState(player: Pick<PlayerState, "workshop">): PlayerWorkshop {
   const w = player.workshop;
-  return {
+  const ready: Record<string, number> = {};
+  for (const [id, n] of Object.entries(w?.ready && typeof w.ready === "object" ? w.ready : {})) {
+    const c = Math.floor(Number(n) || 0);
+    if (c > 0) ready[id] = c;
+  }
+  const out: PlayerWorkshop = {
     updatedAtMs: w?.updatedAtMs ?? 0,
     jobs: Array.isArray(w?.jobs) ? w!.jobs.filter((j) => j && j.count > 0) : [],
     hull: w?.hull && typeof w.hull === "object" ? { ...w.hull } : {},
   };
+  if (Object.keys(ready).length) out.ready = ready;
+  if (w?.policy && POLICIES.includes(w.policy) && w.policy !== "repair") out.policy = w.policy;
+  if (w?.priority && PRIORITIES.includes(w.priority) && w.priority !== "arrival") out.priority = w.priority;
+  if (w?.lastScrap && typeof w.lastScrap === "object") out.lastScrap = w.lastScrap;
+  return out;
+}
+
+/* ---------- 5.28 : Cale sèche ---------- */
+
+type DockPlayer = Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "techLevels" | "commanders" | "relics" | "ascensions" | "talents" | "territory" | "modules" | "synthesis">>;
+
+const spaceOf = (unitId: string) => Math.max(1, findUnit(unitId)?.hangarSpace ?? 1);
+
+/** Postes de la Cale sèche (en places de hangar), bonus d'effets compris (stat `dockCapacity`). */
+export function dockCapacity(player: DockPlayer, now: number = Date.now()): number {
+  const base = dockBaseCapacity(player.buildings ?? {});
+  if (base <= 0) return 0;
+  const grants = allEffects(player, now);
+  const bonus = effectTotal(grants, "tech", "dockCapacity") + effectTotal(grants, "empire", "dockCapacity");
+  return bonus > 0 ? Math.floor(base * (1 + bonus)) : base;
+}
+
+export interface DockAllocation {
+  capacity: number;
+  /** Places occupées en cale : vaisseaux prêts + lots en cale. */
+  used: number;
+  /** Unités de chaque lot posées en cale (par identifiant de lot). */
+  jobs: Record<string, number>;
+  /** Unités en cale par type : lots en réparation (hors prêts). */
+  repairing: Record<string, number>;
+  ready: Record<string, number>;
+}
+
+/** Répartition des lots entre cale et hangar : les prêts d'abord, puis les lots par ordre d'arrivée. */
+export function allocateDock(st: Pick<PlayerWorkshop, "jobs" | "ready">, capacity: number): DockAllocation {
+  const ready = { ...(st.ready ?? {}) };
+  let used = 0;
+  for (const [id, n] of Object.entries(ready)) used += n * spaceOf(id);
+  const jobs: Record<string, number> = {};
+  const repairing: Record<string, number> = {};
+  const byArrival = st.jobs.map((job, i) => ({ job, i })).sort((a, b) => (a.job.addedAtMs ?? 0) - (b.job.addedAtMs ?? 0) || a.i - b.i);
+  for (const { job } of byArrival) {
+    const space = spaceOf(job.unitId);
+    const room = capacity - used;
+    const fit = room > 0 ? Math.min(job.count, Math.floor(room / space)) : 0;
+    if (fit <= 0) continue;
+    jobs[job.id] = fit;
+    repairing[job.unitId] = (repairing[job.unitId] ?? 0) + fit;
+    used += fit * space;
+  }
+  return { capacity, used, jobs, repairing, ready };
+}
+
+export function dockAllocation(player: DockPlayer & Pick<PlayerState, "workshop">, now: number = Date.now()): DockAllocation {
+  return allocateDock(workshopState(player), dockCapacity(player, now));
+}
+
+/** Unités à l'Atelier qui gardent une place au hangar (hors Cale sèche). */
+export function workshopHangarUnits(player: DockPlayer & Pick<PlayerState, "workshop">, now: number = Date.now()): Record<string, number> {
+  const st = workshopState(player);
+  const alloc = allocateDock(st, dockCapacity(player, now));
+  const out: Record<string, number> = {};
+  for (const j of st.jobs) {
+    const n = j.count - (alloc.jobs[j.id] ?? 0);
+    if (n > 0) out[j.unitId] = (out[j.unitId] ?? 0) + n;
+  }
+  return out;
+}
+
+/** Vaisseaux réparés qui attendent une place au hangar. */
+export function dockReady(player: Pick<PlayerState, "workshop">): Record<string, number> {
+  return { ...(workshopState(player).ready ?? {}) };
+}
+
+export function dockReadyCount(player: Pick<PlayerState, "workshop">): number {
+  return Object.values(dockReady(player)).reduce((a, b) => a + b, 0);
+}
+
+/** Palier atteint : Triage (5), remise automatique (10), priorités (15), Cale orbitale (20). */
+export function dockTier(player: Pick<PlayerState, "buildings">, tier: keyof typeof DOCK_TIERS): boolean {
+  return dockLevel(player.buildings ?? {}) >= DOCK_TIERS[tier];
+}
+
+/** Ordre de réparation : la classe prioritaire d'abord, sinon l'ordre d'arrivée (tri stable). */
+function orderJobs(st: PlayerWorkshop, player: Pick<PlayerState, "buildings">) {
+  const pr = st.priority;
+  if (!pr || pr === "arrival" || !dockTier(player, "priority")) return;
+  const classes = unitClasses();
+  const rank = (j: WorkshopJob) => (classes[j.unitId] === pr ? 0 : 1);
+  st.jobs = st.jobs.map((job, i) => ({ job, i })).sort((a, b) => rank(a.job) - rank(b.job) || a.i - b.i).map((x) => x.job);
+}
+
+/** Remboursement d'un démantèlement en cale (part du prix payé aujourd'hui). */
+export function dockScrapValue(player: PlayerState, unitId: string, count: number, now: number): { scrap: number; energy: number } {
+  const unit = findUnit(unitId);
+  if (!unit || count <= 0) return { scrap: 0, energy: 0 };
+  const each = playerUnitCost(unit, player, now);
+  const k = Math.max(0, Math.min(1, COMBAT_RULES.dockScrapRefund));
+  return { scrap: Math.floor(each.scrap * k) * count, energy: Math.floor(each.energy * k) * count };
+}
+
+function creditScrap(player: PlayerState, units: Record<string, number>, now: number): { scrap: number; energy: number } {
+  const total = { scrap: 0, energy: 0 };
+  for (const [id, n] of Object.entries(units)) {
+    const v = dockScrapValue(player, id, n, now);
+    total.scrap += v.scrap;
+    total.energy += v.energy;
+  }
+  player.resources.scrap = (player.resources.scrap ?? 0) + total.scrap;
+  player.resources.energy = (player.resources.energy ?? 0) + total.energy;
+  bumpStat(player, "unitsDismantled", Object.values(units).reduce((a, b) => a + b, 0));
+  return total;
+}
+
+/**
+ * 5.28 (palier Triage) : démantèle des vaisseaux de la Cale sèche ou de l'Atelier : les prêts d'abord,
+ * puis les derniers lots arrivés. Rend `dockScrapRefund` de leur prix et libère la place.
+ */
+export function dockScrap(player: PlayerState, unitId: string, qtyIn: number, now: number): { count: number; refund: { scrap: number; energy: number } } {
+  if (!dockTier(player, "triage")) throw new GameActionError(`Le démantèlement s'ouvre au niveau ${DOCK_TIERS.triage} de la Cale sèche.`);
+  const st = workshopState(player);
+  let left = Math.floor(Number(qtyIn) || 0);
+  if (!(left > 0)) throw new GameActionError("Quantité invalide.");
+  const have = (st.ready?.[unitId] ?? 0) + st.jobs.filter((j) => j.unitId === unitId).reduce((a, j) => a + j.count, 0);
+  if (have < left) throw new GameActionError("Il n'y a pas autant de vaisseaux de ce type à l'Atelier.");
+  const taken = left;
+  const fromReady = Math.min(left, st.ready?.[unitId] ?? 0);
+  if (fromReady > 0 && st.ready) {
+    st.ready[unitId] -= fromReady;
+    if (st.ready[unitId] <= 0) delete st.ready[unitId];
+    left -= fromReady;
+  }
+  for (let i = st.jobs.length - 1; i >= 0 && left > 0; i--) {
+    const job = st.jobs[i];
+    if (job.unitId !== unitId) continue;
+    const n = Math.min(left, job.count);
+    const perHp = job.count > 0 ? job.hpLeft / job.count : 0;
+    const perTotal = job.count > 0 ? job.hpTotal / job.count : 0;
+    job.count -= n;
+    job.hpLeft = Math.max(0, job.hpLeft - perHp * n);
+    job.hpTotal = Math.max(0, job.hpTotal - perTotal * n);
+    left -= n;
+  }
+  st.jobs = st.jobs.filter((j) => j.count > 0);
+  if (st.ready && !Object.keys(st.ready).length) delete st.ready;
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  return { count: taken, refund: creditScrap(player, { [unitId]: taken }, now) };
+}
+
+/** 5.28 : réglages du Triage (palier 5) et de l'ordre de réparation (palier 15). */
+export function setDockSettings(player: PlayerState, settings: { policy?: unknown; priority?: unknown }): void {
+  const st = workshopState(player);
+  if (settings.policy !== undefined) {
+    if (!POLICIES.includes(settings.policy as DockPolicy)) throw new GameActionError("Réglage du triage inconnu.");
+    if (settings.policy !== "repair" && !dockTier(player, "triage")) throw new GameActionError(`Le triage s'ouvre au niveau ${DOCK_TIERS.triage} de la Cale sèche.`);
+    if (settings.policy === "repair") delete st.policy;
+    else st.policy = settings.policy as DockPolicy;
+  }
+  if (settings.priority !== undefined) {
+    if (!PRIORITIES.includes(settings.priority as DockPriority)) throw new GameActionError("Ordre de réparation inconnu.");
+    if (settings.priority !== "arrival" && !dockTier(player, "priority")) throw new GameActionError(`L'ordre de réparation se règle au niveau ${DOCK_TIERS.priority} de la Cale sèche.`);
+    if (settings.priority === "arrival") delete st.priority;
+    else st.priority = settings.priority as DockPriority;
+  }
+  player.workshop = st;
+}
+
+/**
+ * 5.28 : remet en service des vaisseaux prêts, dans la limite de `freePlaces` (places libres du hangar,
+ * calculées par l'appelant avec les flottes en vol : voir hangar.ts). Rend les unités rentrées.
+ */
+export function commissionReady(player: PlayerState, freePlaces: number, unitId?: string): Record<string, number> {
+  const st = workshopState(player);
+  const moved: Record<string, number> = {};
+  let free = Math.max(0, Math.floor(freePlaces));
+  const ids = Object.keys(st.ready ?? {}).filter((id) => !unitId || id === unitId);
+  for (const id of ids) {
+    const space = spaceOf(id);
+    const n = Math.min(st.ready![id], Math.floor(free / space));
+    if (n <= 0) continue;
+    const unit = player.units[id] ?? { level: 1, count: 0 };
+    player.units[id] = { ...unit, level: Math.max(1, unit.level || 1), count: (unit.count ?? 0) + n };
+    st.ready![id] -= n;
+    if (st.ready![id] <= 0) delete st.ready![id];
+    free -= n * space;
+    moved[id] = n;
+  }
+  if (st.ready && !Object.keys(st.ready).length) delete st.ready;
+  player.workshop = st;
+  return moved;
 }
 
 export function atelierLevel(player: Pick<PlayerState, "buildings">): number {
@@ -76,7 +303,9 @@ type RatePlayer = Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "un
 /** 5.21 : bonus de cadence (Nanoréparation, Mécanicien, Clé de soudure), en fraction. */
 export function workshopSpeedBonus(player: RatePlayer): number {
   const grants = allEffects(player);
-  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed");
+  // 5.28 : Cale sèche au palier 10 : l'Atelier travaille plus vite.
+  const dock = dockLevel(player.buildings ?? {}) >= DOCK_TIERS.auto ? Math.max(0, COMBAT_RULES.dockAutoSpeedBonus) : 0;
+  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed") + dock;
 }
 
 /** 5.21 : PV par seconde ajoutés par les vaisseaux-ateliers à quai. */
@@ -97,7 +326,7 @@ export function workshopRate(player: RatePlayer): number {
   return (base + repairShipRate(player)) * (1 + Math.max(0, workshopSpeedBonus(player)));
 }
 
-/** Unités immobilisées à l'Atelier, par type (elles gardent leur place de hangar). */
+/** Unités immobilisées à l'Atelier, par type (en cale ou au hangar ; les prêts n'en font pas partie). */
 export function workshopUnits(player: Pick<PlayerState, "workshop">): Record<string, number> {
   const out: Record<string, number> = {};
   for (const j of workshopState(player).jobs) out[j.unitId] = (out[j.unitId] ?? 0) + j.count;
@@ -190,14 +419,47 @@ export function sendToWorkshop(player: PlayerState, recovered: Record<string, nu
   if (player.npc) return;
   const st = workshopState(player);
   if (!st.updatedAtMs) st.updatedAtMs = now;
+  // 5.28 : Triage (palier 5) : démanteler tout, ou ce qui ne tient pas en cale.
+  const policy = dockTier(player, "triage") ? (st.policy ?? "repair") : "repair";
+  const scrapped: Record<string, number> = {};
+  const added: WorkshopJob[] = [];
   for (const [unitId, n] of Object.entries(recovered ?? {})) {
     const count = Math.floor(n ?? 0);
     if (count <= 0) continue;
     if (fromBase && player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - count);
+    if (policy === "scrapAll") {
+      scrapped[unitId] = (scrapped[unitId] ?? 0) + count;
+      continue;
+    }
     const hp = count * unitBaseHp(player.units ?? {}, player.techLevels ?? {}, unitId);
-    st.jobs.push({ id: `${now.toString(36)}-${unitId}-${st.jobs.length}`, unitId, count, hpTotal: hp, hpLeft: hp, source, addedAtMs: now });
+    const job: WorkshopJob = { id: `${now.toString(36)}-${unitId}-${st.jobs.length}`, unitId, count, hpTotal: hp, hpLeft: hp, source, addedAtMs: now };
+    st.jobs.push(job);
+    added.push(job);
+  }
+  if (policy === "scrapOverflow" && added.length) {
+    const alloc = allocateDock(st, dockCapacity(player, now));
+    for (const job of added) {
+      const out = job.count - (alloc.jobs[job.id] ?? 0);
+      if (out <= 0) continue;
+      const per = job.hpTotal / job.count;
+      job.count -= out;
+      job.hpTotal = per * job.count;
+      job.hpLeft = job.hpTotal;
+      scrapped[job.unitId] = (scrapped[job.unitId] ?? 0) + out;
+    }
+    st.jobs = st.jobs.filter((j) => j.count > 0);
   }
   player.workshop = st;
+  if (Object.keys(scrapped).length) {
+    const refund = creditScrap(player, scrapped, now);
+    st.lastScrap = { atMs: now, units: scrapped, refund };
+    player.workshop = st;
+  }
+  // 5.28 : succès « Cale pleine ».
+  if (added.length && dockLevel(player.buildings ?? {}) > 0) {
+    const alloc = allocateDock(st, dockCapacity(player, now));
+    if (alloc.capacity > 0 && alloc.used >= alloc.capacity) bumpStat(player, "dockFull");
+  }
 }
 
 /**
@@ -231,17 +493,17 @@ export function advanceWorkshop(player: PlayerState, now: number, instant = fals
   const since = st.updatedAtMs || now;
   let budget = instant ? Infinity : Math.max(0, (now - since) / 1000) * workshopRate(player);
   st.updatedAtMs = now;
+  orderJobs(st, player);
+  const capacity = dockCapacity(player, now);
   const done: Record<string, number> = {};
+  const docked: Record<string, number> = {};
   while (st.jobs.length && budget > 0) {
     const job = st.jobs[0];
     const spend = Math.min(budget, job.hpLeft);
     job.hpLeft -= spend;
     budget -= spend;
     if (job.hpLeft > 0.5) break;
-    st.jobs.shift();
-    const unit = player.units[job.unitId] ?? { level: 1, count: 0 };
-    player.units[job.unitId] = { ...unit, level: Math.max(1, unit.level || 1), count: (unit.count ?? 0) + job.count };
-    done[job.unitId] = (done[job.unitId] ?? 0) + job.count;
+    finishJob(player, st, job, capacity, done, docked);
   }
   // Puis les coques abîmées, les plus atteintes d'abord.
   const hullIds = Object.keys(st.hull).sort((a, b) => (st.hull[b] ?? 0) - (st.hull[a] ?? 0));
@@ -260,10 +522,33 @@ export function advanceWorkshop(player: PlayerState, now: number, instant = fals
   }
   player.workshop = st;
   // 5.26.1 : succès « unités réparées ».
-  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0));
-  const names = Object.entries(done).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`);
-  if (!names.length) return [];
-  return [{ kind: "building", title: "Atelier : réparations terminées", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
+  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0) + Object.values(docked).reduce((a, b) => a + b, 0));
+  return repairNotes(done, docked, now);
+}
+
+/** Lot terminé : la part posée en Cale sèche devient « prête », le reste rentre au hangar (il y avait sa place). */
+function finishJob(player: PlayerState, st: PlayerWorkshop, job: WorkshopJob, capacity: number, done: Record<string, number>, docked: Record<string, number>) {
+  const inDock = Math.min(job.count, allocateDock(st, capacity).jobs[job.id] ?? 0);
+  st.jobs = st.jobs.filter((j) => j !== job);
+  const home = job.count - inDock;
+  if (home > 0) {
+    const unit = player.units[job.unitId] ?? { level: 1, count: 0 };
+    player.units[job.unitId] = { ...unit, level: Math.max(1, unit.level || 1), count: (unit.count ?? 0) + home };
+    done[job.unitId] = (done[job.unitId] ?? 0) + home;
+  }
+  if (inDock > 0) {
+    st.ready = { ...(st.ready ?? {}), [job.unitId]: (st.ready?.[job.unitId] ?? 0) + inDock };
+    docked[job.unitId] = (docked[job.unitId] ?? 0) + inDock;
+  }
+}
+
+function repairNotes(done: Record<string, number>, docked: Record<string, number>, now: number): NewNotification[] {
+  const list = (m: Record<string, number>) => Object.entries(m).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`).join(", ");
+  const parts: string[] = [];
+  if (Object.keys(done).length) parts.push(`De retour au hangar : ${list(done)}.`);
+  if (Object.keys(docked).length) parts.push(`Prêts en Cale sèche, à remettre en service : ${list(docked)}.`);
+  if (!parts.length) return [];
+  return [{ kind: "building", title: "Atelier : réparations terminées", message: parts.join(" "), createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
 }
 
 export interface WorkshopEta {
@@ -310,6 +595,8 @@ export interface WorkshopView {
   hullDoneAtMs: number | null;
   /** Fin de toutes les réparations (file + coques). */
   doneAtMs: number | null;
+  /** 5.28 : Cale sèche (postes, lots en cale, vaisseaux prêts). */
+  dock: DockAllocation & { level: number };
 }
 
 /** Vue de l'Atelier à l'instant `now` (avance simulée depuis la dernière mise à jour du serveur). */
@@ -324,7 +611,8 @@ export function workshopView(player: PlayerState, now: number): WorkshopView {
     .sort((a, b) => a.percent - b.percent);
   const jobs = eta.jobs.map(({ job, endsAtMs }) => ({ job, endsAtMs, progress: job.hpTotal > 0 ? 1 - job.hpLeft / job.hpTotal : 1 }));
   const lastJob = jobs.length ? jobs[jobs.length - 1].endsAtMs : null;
-  return { rate: eta.rate, level: atelierLevel(player), jobs, hulls, hullDoneAtMs: eta.hullDoneAtMs, doneAtMs: eta.hullDoneAtMs ?? lastJob };
+  const dock = { ...allocateDock(st, dockCapacity(clone, now)), level: dockLevel(player.buildings ?? {}) };
+  return { rate: eta.rate, level: atelierLevel(player), jobs, hulls, hullDoneAtMs: eta.hullDoneAtMs, doneAtMs: eta.hullDoneAtMs ?? lastJob, dock };
 }
 
 /* ---------- 5.21 : réparation accélérée à l'Ambre ---------- */
@@ -340,7 +628,7 @@ export function workshopRushCost(player: RatePlayer & Pick<PlayerState, "worksho
 }
 
 /** Termine un lot (ou toute la file) contre de l'Ambre : les unités rentrent au hangar. Rend le coût payé. */
-export function rushWorkshop<W extends { amber: number }>(player: PlayerState, jobId: string | undefined, now: number, walletOf: (p: PlayerState) => W, saveWallet: (p: PlayerState, w: W) => void): { amber: number; units: Record<string, number> } {
+export function rushWorkshop<W extends { amber: number }>(player: PlayerState, jobId: string | undefined, now: number, walletOf: (p: PlayerState) => W, saveWallet: (p: PlayerState, w: W) => void): { amber: number; units: Record<string, number>; ready: Record<string, number> } {
   const { amber, jobs } = workshopRushCost(player, jobId);
   if (!jobs.length) throw new GameActionError(jobId ? "Ce lot n'est plus à l'Atelier." : "Aucune unité à l'Atelier.");
   const wallet = walletOf(player);
@@ -349,15 +637,13 @@ export function rushWorkshop<W extends { amber: number }>(player: PlayerState, j
   saveWallet(player, wallet);
   const st = workshopState(player);
   const ids = new Set(jobs.map((j) => j.id));
+  const capacity = dockCapacity(player, now);
   const units: Record<string, number> = {};
-  for (const job of jobs) {
-    const unit = player.units[job.unitId] ?? { level: 1, count: 0 };
-    player.units[job.unitId] = { ...unit, level: Math.max(1, unit.level || 1), count: (unit.count ?? 0) + job.count };
-    units[job.unitId] = (units[job.unitId] ?? 0) + job.count;
-  }
-  st.jobs = st.jobs.filter((j) => !ids.has(j.id));
+  const ready: Record<string, number> = {};
+  // 5.28 : la part en Cale sèche devient « prête » (place au hangar à trouver), le reste rentre.
+  for (const job of st.jobs.filter((j) => ids.has(j.id))) finishJob(player, st, job, capacity, units, ready);
   if (!st.updatedAtMs) st.updatedAtMs = now;
   player.workshop = st;
-  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0));
-  return { amber, units };
+  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0) + Object.values(ready).reduce((a, b) => a + b, 0));
+  return { amber, units, ready };
 }

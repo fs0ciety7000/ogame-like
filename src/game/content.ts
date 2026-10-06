@@ -397,6 +397,9 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
   if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : réparation horaire des seigneurs entre 0 et 1.");
+  // 5.28 : Cale sèche.
+  if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du démantèlement en Cale sèche entre 0 et 1.");
+  if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale sèche entre 0 et 2.");
   // 5.16 : récurrence des événements programmés.
   for (const ev of merged.events.scheduled ?? []) {
     if (ev.repeatWeeks === undefined) continue;
@@ -467,6 +470,8 @@ export function validateGameContent(content: GameContent): string[] {
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label} : durées du second palier invalides.`);
     }
     if (b.effect?.type === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label} : capacité d'entrepôt invalide.`);
+    if (b.effect?.type === "dock" && !(b.effect.perLevel >= 0 && (b.effect.orbitalRepair ?? 0) >= 0 && (b.effect.orbitalRepair ?? 0) <= 0.5)) errors.push(`${label} : Cale sèche invalide (postes ≥ 0, Cale orbitale entre 0 et 0,5).`);
+    if (b.requires && !(content.buildings.some((o) => o.id === b.requires!.building) && b.requires.level >= 1)) errors.push(`${label} : bâtiment requis inconnu ou niveau < 1.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un bâtiment doit être débloqué dès le départ.");
 

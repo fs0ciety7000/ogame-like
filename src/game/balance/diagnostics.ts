@@ -6,7 +6,7 @@ import { COMBAT_519_SINCE_MS, COMBAT_KINDS, combatTypeStats, isPvpReport, warlor
 import { costValue, extractorCurve, missionTable, empireProfile, techProfile, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower } from "@/game/combat";
 import { economySnapshot, missionRewards } from "@/game/economy";
-import { getUnitCapacity } from "@/game/buildings";
+import { playerUnitCapacity } from "@/game/hangar";
 import { MISSIONS } from "@/game/missions";
 import { FACTIONS } from "@/game/pirates";
 import { RARITIES } from "@/game/relics";
@@ -211,9 +211,9 @@ export function computeLiveBalance(
       shieldPct: Math.round(getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) * 100),
       defenseBonusPct: Math.round(playerModifiers(p).defense * 100),
       attackPlacesUsed: places(units, OFFENSIVE_UNITS),
-      attackPlaces: getUnitCapacity(p.buildings, "attack", tech),
+      attackPlaces: playerUnitCapacity(p, "attack", now),
       defensePlacesUsed: places(units, DEFENSIVE_UNITS),
-      defensePlaces: getUnitCapacity(p.buildings, "defense", tech),
+      defensePlaces: playerUnitCapacity(p, "defense", now),
       productionPerHour: Math.round(perHour),
       outage: eco.outage,
       fullStorage: eco.full.length,

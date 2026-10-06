@@ -1,6 +1,7 @@
 import { ACHIEVEMENTS } from "@/game/achievements";
-import { hullPercent, workshopUnits } from "@/game/workshop";
-import { BUILDINGS, effectiveBuildingLevel, getUnitCapacity } from "@/game/buildings";
+import { dockReadyCount, hullPercent, workshopHangarUnits, workshopUnits } from "@/game/workshop";
+import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
+import { hangarLoad } from "@/game/hangar";
 import { chronicleState } from "@/game/chronicles";
 import { colonyBiome, colonyDefenseHangar, colonyHourlyRates, colonyStorage, depositLevel, type Colony } from "@/game/colonies";
 import { allianceShieldBonus } from "@/game/alliances";
@@ -18,7 +19,7 @@ import { playerStats } from "@/game/stats";
 import { streakState } from "@/game/streak";
 import { talentPoints } from "@/game/talents";
 import { TECHNOLOGIES } from "@/game/technologies";
-import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNITS } from "@/game/units";
+import { OFFENSIVE_UNITS, UNITS } from "@/game/units";
 import type { PlayerState, ResourceId, Units } from "@/types/game";
 
 /* =====================================================
@@ -137,7 +138,7 @@ function colonyPlanet(colony: Colony, player: PlayerState): PlanetStats {
     stock: { ...colony.resources },
     capacity: colonyStorage(colony, player),
     defensePower: Math.round(homeDefensePower(units, player.techLevels ?? {}, 0) * (1 + playerModifiers(player).defense)),
-    defensePlaces: colonyDefenseHangar(colony),
+    defensePlaces: colonyDefenseHangar(colony, player),
     biome: RESOURCE_LIST.find((r) => r.id === colonyBiome(colony))?.name,
     depositLevel: depositLevel(colony),
   };
@@ -152,17 +153,19 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
   const colonies = player.colonies ?? [];
   const away = unitsAwayOf(fleets, player.uid);
   const repairDock = workshopUnits(player);
+  // 5.28 : seules les unités de l'Atelier hors Cale sèche occupent le hangar.
+  const repairInHangar = workshopHangarUnits(player, now);
   const colonyPlanets = colonies.map((c) => colonyPlanet(c, player));
 
   // ---- Planète mère ----
   const homePerHour: Partial<Record<ResourceId, number>> = {};
   for (const r of RESOURCE_LIST) homePerHour[r.id] = Math.round((eco.gross[r.id] ?? 0) * 3600);
   const homeLevels = sum(BUILDINGS.map((b) => effectiveBuildingLevel(player.buildings, b.id)));
-  const usedPlaces = (ids: string[], counts: Record<string, number>) => sum(ids.map((id) => (counts[id] ?? 0) * (findUnit(id)?.hangarSpace ?? 1)));
-  const homeCounts = Object.fromEntries(Object.entries(units).map(([id, s]) => [id, s?.count ?? 0]));
-  // 5.20 : les unités à l'Atelier gardent leur place de hangar.
-  const attackPlaces = { used: usedPlaces(OFFENSIVE_UNITS, homeCounts) + usedPlaces(OFFENSIVE_UNITS, away) + usedPlaces(OFFENSIVE_UNITS, repairDock), capacity: getUnitCapacity(player.buildings, "attack", tech) };
-  const defensePlaces = { used: usedPlaces(DEFENSIVE_UNITS, homeCounts) + usedPlaces(DEFENSIVE_UNITS, repairDock), capacity: getUnitCapacity(player.buildings, "defense", tech) };
+  // 5.27.2 : calcul unique des places (hangar.ts) : à quai, en vol et à l'Atelier hors Cale sèche.
+  const attackLoad = hangarLoad(player, null, away, "attack", now);
+  const defenseLoad = hangarLoad(player, null, away, "defense", now);
+  const attackPlaces = { used: attackLoad.occupied, capacity: attackLoad.capacity };
+  const defensePlaces = { used: defenseLoad.occupied, capacity: defenseLoad.capacity };
   const homeDefense = Math.round(homeDefensePower(units, tech));
   const home: PlanetStats = {
     id: "home",
@@ -189,7 +192,7 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
     const per = u.category === "attack" ? atk : atk + def;
     const docked = repairDock[u.id] ?? 0;
     const hp = (homeN + awayN) * Math.max(1, def) * COMBAT_RULES.hpPerResistance;
-    return { id: u.id, name: u.name, category: u.category, level, home: homeN, away: awayN, colonies: colN, attack: Math.round(atk), defense: Math.round(def), power: Math.round(per * (homeN + awayN + colN)), places: (homeN + awayN + docked) * u.hangarSpace, workshop: docked, hull: hullPercent(player, u.id), hp: Math.round(hp) };
+    return { id: u.id, name: u.name, category: u.category, level, home: homeN, away: awayN, colonies: colN, attack: Math.round(atk), defense: Math.round(def), power: Math.round(per * (homeN + awayN + colN)), places: (homeN + awayN + (repairInHangar[u.id] ?? 0)) * u.hangarSpace, workshop: docked, hull: hullPercent(player, u.id), hp: Math.round(hp) };
   }).filter((l) => l.level > 0 || l.home + l.away + l.colonies + l.workshop > 0);
   const hpTotal = sum(lines.map((l) => l.hp));
   const hpMissing = sum(lines.map((l) => l.hp * (1 - l.hull)));
@@ -269,7 +272,7 @@ export function empireStats(player: PlayerState, fleets: Fleet[], now: number): 
       hullPct: hpTotal > 0 ? 1 - hpMissing / hpTotal : 1,
       hpTotal,
       hpMissing: Math.round(hpMissing),
-      inWorkshop: sum(Object.values(repairDock)),
+      inWorkshop: sum(Object.values(repairDock)) + dockReadyCount(player),
       effectiveAttack,
     },
     fleets: { inFlight: mine.length, byMission, unitsAway: sum(Object.values(away)) },

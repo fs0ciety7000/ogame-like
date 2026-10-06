@@ -30,7 +30,7 @@ import { defaultGameContent } from "@/game/content";
 import { fleetCargoCapacity } from "@/game/combat";
 import { XP_TIER_RULES } from "@/game/xpTiers";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
-import { getBuildingUpgradeTime, findBuilding, getUnitCapacity } from "@/game/buildings";
+import { getBuildingUpgradeTime, findBuilding, getUnitCapacity, keptOnAscension } from "@/game/buildings";
 import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/services/marketService";
 import { priceBounds } from "@/game/market";
 import { readAllianceSaga, sagaMonthId, sagaOf } from "@/game/allianceSaga";
@@ -1138,6 +1138,41 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("5.28 Cale sèche: ready ships come back only into free hangar places, triage scraps for 60 %", async () => {
+    const before = await snap(bId);
+    await admin.collection("players").update(bId, {
+      units: { ...before!.units, chasseur: { level: 1, count: 900 } },
+      buildings: { ...before!.buildings, atelier_reparation: { level: 10, unlocked: true }, hangar_attaque: { level: 1, unlocked: true }, cale_seche: { level: 10, unlocked: true } },
+      workshop: { updatedAtMs: Date.now(), jobs: [], hull: {}, ready: { chasseur: 200 } },
+      testMode: false,
+      resources: RICH,
+    });
+    try {
+      // Hangar 2 000 places, 900 chasseurs (1 800) : 100 rentrent d'eux-mêmes (palier 10), 100 attendent.
+      await ps.syncPlayer("");
+      let p = await snap(bId);
+      const others = Object.entries(p.units as Record<string, { count: number }>).filter(([id]) => id !== "chasseur").reduce((a, [id, u]) => a + (findUnit(id)?.category === "attack" ? (u.count ?? 0) * (findUnit(id)?.hangarSpace ?? 1) : 0), 0);
+      const expected = Math.max(0, Math.min(200, Math.floor((2000 - 1800 - others) / 2)));
+      expect(p.units.chasseur.count).toBe(900 + expected);
+      expect(p.workshop?.ready?.chasseur ?? 0).toBe(200 - expected);
+      if (200 - expected > 0) await expect(ps.dockCommission()).rejects.toThrow(/place/);
+      // Triage : démanteler les prêts restants rend 60 % du prix.
+      const scrapBefore = p.resources.scrap;
+      const left = 200 - expected;
+      if (left > 0) {
+        const out = await ps.dockScrap("chasseur", left);
+        expect(out.count).toBe(left);
+        p = await snap(bId);
+        expect(p.resources.scrap).toBeGreaterThan(scrapBefore);
+        expect(p.workshop?.ready?.chasseur ?? 0).toBe(0);
+      }
+      await ps.dockSettings({ policy: "scrapOverflow" });
+      expect((await snap(bId)).workshop?.policy).toBe("scrapOverflow");
+    } finally {
+      await admin.collection("players").update(bId, { units: before!.units, buildings: before!.buildings, resources: before!.resources, workshop: null, testMode: before!.testMode ?? false });
+    }
+  }, 60_000);
+
   it("v3.4 ascension: resets buildings and resources, keeps the fleet, public stars and shield", async () => {
     const before = await snap(bId);
     // Bâtiments de fin de partie (v3.6) laissés de côté : hors condition, conservés.
@@ -1148,7 +1183,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await ps.ascendEmpire();
       const after = await snap(bId);
       expect(after.ascensions).toBe(1);
-      expect(Object.entries(after.buildings).every(([id, b]) => findBuilding(id)?.endgame || (b as { level: number }).level === 1)).toBe(true);
+      // 5.27.2 : hangars et Cale sèche conservés (invariant I4), comme les bâtiments de fin de partie.
+      expect(Object.entries(after.buildings).every(([id, b]) => (findBuilding(id) && keptOnAscension(findBuilding(id)!)) || (b as { level: number }).level === 1)).toBe(true);
+      expect((after.buildings.hangar_attaque as { level: number }).level).toBe(findBuilding("hangar_attaque")!.maxLevel);
       expect(after.resources.reinforcedSteel).toBe(0);
       expect(after.units.chasseur.count).toBe(77);
       const profile = await pb.collection("profiles").getOne(bId);

@@ -1,6 +1,7 @@
 import { assertEliteBuildable } from "@/game/eliteUnits";
 import { playerModifiers } from "@/game/modifiers";
-import { rushWorkshop, workshopUnits } from "@/game/workshop";
+import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
+import { commissionDocked, hangarLoad } from "@/game/hangar";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
@@ -21,7 +22,7 @@ import {
   findBuilding,
   getBuildingUpgradeCost,
   getBuildingUpgradeTime,
-  getUnitCapacity,
+  unlockBlocker,
   withMissingBuildings,
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -63,7 +64,9 @@ import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } fr
 export type GameAction =
   | { type: "vacationEnd" }
   | { type: "workshopRush"; jobId?: string }
-  | { type: "workshopRush"; jobId?: string }
+  | { type: "dockCommission"; unitId?: string }
+  | { type: "dockScrap"; unitId: string; qty: number }
+  | { type: "dockSettings"; policy?: string; priority?: string }
   | { type: "chronicleClaim"; episode: number }
   | { type: "dailyClaim"; index: number }
   | { type: "cancel"; target: CancelTarget }
@@ -147,11 +150,11 @@ function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: nu
   bumpStat(player, "spent", total);
 }
 
-/** Places de hangar occupées : vaisseaux à quai + vaisseaux en mission. */
-/** Unités hors hangar (en vol) augmentées de celles en réparation à l'Atelier. */
-export function withWorkshop(away: Record<string, number>, player: Pick<PlayerState, "workshop">): Record<string, number> {
+/** Unités hors hangar (en vol) augmentées de celles qui gardent leur place à l'Atelier (5.28 : hors Cale sèche).
+ *  Le calcul complet des places est dans hangar.ts (`hangarLoad`). */
+export function withWorkshop(away: Record<string, number>, player: Parameters<typeof workshopHangarUnits>[0]): Record<string, number> {
   const out = { ...away };
-  for (const [id, n] of Object.entries(workshopUnits(player))) out[id] = (out[id] ?? 0) + n;
+  for (const [id, n] of Object.entries(workshopHangarUnits(player))) out[id] = (out[id] ?? 0) + n;
   return out;
 }
 
@@ -212,6 +215,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const state = player.buildings[action.buildingId];
       if (!info || !state) throw new GameActionError("Ce bâtiment se débloque via le Labo.");
       if (state.unlocked) throw new GameActionError("Déjà débloqué.");
+      // 5.28 : bâtiment requis (Cale sèche : Atelier niveau 5).
+      const def = findBuilding(action.buildingId);
+      const blocker = def ? unlockBlocker(def, player.buildings) : null;
+      if (blocker) throw new GameActionError(blocker);
       const cost: Record<string, number> = {};
       if ("multi" in info) info.resources.forEach((r) => (cost[r.resource] = r.amount));
       else cost[info.resource] = info.amount;
@@ -244,11 +251,15 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;
-      // 5.20 : les unités à l'Atelier gardent leur place.
-      const built = hangarUsed(player.units, withWorkshop(s.unitsAway ?? {}, player), category);
-      const reserved = queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
-        throw new GameActionError(`Capacité du hangar ${category === "attack" ? "d'attaque" : "de défense"} insuffisante.`);
+      // 5.20 : les unités à l'Atelier gardent leur place (5.28 : sauf en Cale sèche). 5.27.2 : calcul unique (hangar.ts).
+      const load = hangarLoad(player, queues, s.unitsAway ?? {}, category, now);
+      if (load.used + qty * unit.hangarSpace > load.capacity) {
+        const name = category === "attack" ? "d'attaque" : "de défense";
+        throw new GameActionError(
+          load.overflow > 0
+            ? `Hangar ${name} en surcharge (${load.overflow} place${load.overflow > 1 ? "s" : ""} de trop) : améliore le hangar, démantèle ou envoie des vaisseaux en mission.`
+            : `Capacité du hangar ${name} insuffisante.`,
+        );
       }
 
       // 5.23 : réductions de coût ciblées (reliques, technos, officiers).
@@ -540,6 +551,25 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       // 5.21 : terminer un lot de réparation (ou toute la file) contre de l'Ambre.
       return rushWorkshop(player, typeof action.jobId === "string" && action.jobId ? action.jobId : undefined, now, bountyState, (p, w) => (p.bounties = w));
 
+    case "dockCommission": {
+      // 5.28 : remettre en service les vaisseaux prêts de la Cale sèche (places libres du hangar).
+      if (dockReadyCount(player) <= 0) throw new GameActionError("Aucun vaisseau prêt en Cale sèche.");
+      const moved = commissionDocked(player, queues, s.unitsAway ?? {}, now, typeof action.unitId === "string" && action.unitId ? action.unitId : undefined);
+      if (!Object.keys(moved).length) throw new GameActionError("Pas de place au hangar : améliore-le, démantèle ou envoie des vaisseaux en mission.");
+      return { units: moved };
+    }
+
+    case "dockScrap": {
+      // 5.28 (palier Triage) : démanteler des vaisseaux de la Cale sèche ou de l'Atelier.
+      const unit = findUnit(String(action.unitId ?? ""));
+      if (!unit) throw new GameActionError("Unité invalide.");
+      return dockScrap(player, unit.id, positiveInt(action.qty, "Quantité"), now);
+    }
+
+    case "dockSettings":
+      setDockSettings(player, { policy: action.policy, priority: action.priority });
+      return { policy: DOCK_POLICY_LABELS[player.workshop?.policy ?? "repair"] };
+
     case "vacationEnd":
       endVacation(player, queues, now, true);
       return true;
@@ -557,6 +587,8 @@ export function performPlayerAction(
   now: number,
   /** Vaisseaux en vol (flottes du joueur), comptés dans le hangar. */
   unitsAway: Record<string, number> = {},
+  /** 5.28 : `unitsAway` a bien été lu (sinon, pas de remise en service automatique : la place serait surestimée). */
+  awayKnown = false,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; result: unknown } {
   const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) };
   const flushed = flushState(preFlushPlayer, queuesIn, now);
@@ -564,7 +596,28 @@ export function performPlayerAction(
     { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
     action,
   );
+  // 5.28 : Cale sèche au palier 10 : les vaisseaux prêts rentrent d'eux-mêmes dès qu'une place se libère.
+  // Le serveur fournit alors les flottes en vol (`dockAutoCommission` dit quand il doit les lire).
+  if (awayKnown && dockAutoCommission(flushed.player)) {
+    const moved = commissionDocked(flushed.player, flushed.queues, unitsAway, now);
+    const names = Object.entries(moved).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`);
+    if (names.length) flushed.notifications.push({ kind: "building", title: "Cale sèche : remise en service", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" });
+  }
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
+}
+
+/** 5.28 : la remise en service automatique peut-elle tourner (palier 10 et vaisseaux prêts) ? */
+export function dockAutoCommission(player: Pick<PlayerState, "buildings" | "workshop">): boolean {
+  return dockTier(player, "auto") && dockReadyCount(player) > 0;
+}
+
+/** 5.28 : le serveur doit-il lire les flottes en vol pour cette action ? (construction, remise en service,
+ *  ou Cale sèche au palier 10 avec des vaisseaux à l'Atelier, qui peuvent devenir prêts au rattrapage.) */
+export function actionNeedsAway(player: Pick<PlayerState, "buildings" | "workshop">, action: { type?: unknown } | null | undefined): boolean {
+  const type = action?.type;
+  if (type === "buildUnits" || type === "dockCommission") return true;
+  const w = player.workshop;
+  return dockTier(player, "auto") && ((w?.jobs?.length ?? 0) > 0 || Object.keys(w?.ready ?? {}).length > 0);
 }
 
 /* ---------- dons de ressources entre joueurs ---------- */

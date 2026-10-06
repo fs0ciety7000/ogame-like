@@ -5007,6 +5007,13 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["cle_soudure"],
   },
+  // 5.28 : Cale sèche ajoutée aux bâtiments personnalisés (docs/proposals/cale-seche.md).
+  {
+    id: "cale-seche-5.28",
+    key: "buildings",
+    patches: [],
+    appendFromDefaults: ["cale_seche"],
+  },
 ];
 
 function canonJson(v) {
@@ -5125,25 +5132,27 @@ function restoreWorkshopUnits(app, sinceMs) {
     Object.keys(back).forEach((uid) => {
       const rec = findOrNull(txApp, "players", uid);
       if (!rec) return;
-      const units = Object.assign({}, toPlain(rec).units || {});
+      // 5.27.2 : rendues à l'Atelier (file de réparation), plus directement au hangar : elles gardent
+      // leur place sans jamais dépasser la capacité au moment de rentrer (docs/proposals/cale-seche.md, C1).
+      const player = toPlain(rec);
+      player.units = player.units || {};
       const lines = [];
       Object.keys(back[uid]).forEach((id) => {
-        const st = units[id] || { level: 1, count: 0 };
-        units[id] = Object.assign({}, st, { count: (st.count || 0) + back[uid][id] });
         const u = game.findUnit(id);
         lines.push(`${game.formatInt(back[uid][id])} ${u ? u.name : id}`);
       });
-      rec.set("units", units);
+      game.sendToWorkshop(player, back[uid], Date.now(), "defense", false);
+      rec.set("workshop", player.workshop);
       txApp.save(rec);
       players++;
       notify(txApp, uid, [
         {
           kind: "event",
           title: "Unités sauvées rendues",
-          message: `L'Atelier n'avait pas enregistré tes unités sauvées depuis la 5.20 : elles rejoignent ta flotte, réparées. ${lines.join(", ")}.`,
+          message: `L'Atelier n'avait pas enregistré tes unités sauvées depuis la 5.20 : elles entrent en réparation à l'Atelier. ${lines.join(", ")}.`,
           createdAtMs: Date.now(),
           read: false,
-          link: "/game/unites",
+          link: "/game/batiments?onglet=atelier",
         },
       ]);
     });

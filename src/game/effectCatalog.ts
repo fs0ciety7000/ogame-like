@@ -88,6 +88,7 @@ export const EFFECT_PRESETS: EffectPreset[] = [
   p("cout_drone", "Drones recyclés", "chantier", { stat: "unitCost", target: "unit:drone_recuperateur" }, { relic: 1.5, tech: 0.02, officer: 0.006 }, "Drones récupérateurs moins chers."),
   p("hangar_attaque", "Hangar en extension", "chantier", { stat: "hangarCapacity", target: "attack" }, WIDE, "Plus de places au hangar d'attaque."),
   p("hangar_defense", "Casemates", "chantier", { stat: "hangarCapacity", target: "defense" }, WIDE, "Plus de places au hangar de défense."),
+  p("cale_postes", "Berceaux repliables", "chantier", { stat: "dockCapacity" }, WIDE, "Plus de postes à la Cale sèche."),
   // Économie et Atelier.
   p("atelier_cadence", "Soudeurs de nuit", "economie", { stat: "repairSpeed" }, { relic: 2, tech: 0.05, officer: 0.02 }, "+ % de PV/s à l'Atelier de réparation."),
   p("reparation", "Nanites de coque", "economie", { stat: "repair" }, WIDE, "Plus de vaisseaux réparés après un combat."),

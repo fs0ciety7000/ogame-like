@@ -6,7 +6,7 @@ Le reste est dans `docs/` :
 | Document | Sert à |
 |:--|:--|
 | `docs/DESIGN.md` | toute modification du front (jetons, composants HUD, couleurs = sens, animations) |
-| `docs/GAME_DESIGN.md` | piliers, boucles de jeu, carte des systèmes, **invariants du moteur**, grille d'audit |
+| `docs/GAME_DESIGN.md` | **GDD** : piliers, boucles, carte des systèmes, **invariants du moteur**, règles de conception, fiches systèmes, grille et journal d'audit |
 | `docs/WORKFLOW.md` | chaîne complète d'une fonctionnalité : brief → benchmark → chiffres → moteur → serveur → UI → audit → livraison ; méthode de level design |
 | `docs/proposals/*.md` | propositions chiffrées en attente de décision (une par système) |
 | `changelog/*.md`, `content/blog/*.md` | notes de version (joueurs) et billets du devblog |
@@ -31,6 +31,9 @@ Le reste est dans `docs/` :
 - Pas de `matchAll` ni de `\p{L}` dans le code empaqueté pour goja : boucle `exec` et classe explicite (`[0-9A-Za-z_À-ɏ-]`).
 - Toute nouvelle fonction appelée par `cosmic_db.js` doit être **exportée dans `hooksEntry.ts`**.
 - Un invariant de `docs/GAME_DESIGN.md` qui change = un test qui change dans le même commit.
+- Places et capacité des hangars : uniquement `hangarLoad` / `playerUnitCapacity` (`src/game/hangar.ts`). Un test interdit `getUnitCapacity(` ailleurs.
+- Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
+- Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.
 - Une migration ponctuelle (`onBootstrap`) qui rend ou retire des unités, des ressources ou des niveaux **respecte les plafonds**
   (hangar, entrepôt) ou documente pourquoi elle les dépasse. Voir l'incident 5.22 dans `docs/proposals/cale-seche.md`.
 
@@ -76,3 +79,5 @@ Avant d'écrire du code pour un système de jeu, suivre `docs/WORKFLOW.md` :
 5. la validation de l'utilisateur, puis l'implémentation par lots.
 
 Ce qui change l'équilibre ou les données des joueurs passe d'abord par une proposition dans `docs/proposals/`.
+Une fois livrée : statut « livrée » en tête de la proposition, règles reportées dans les fiches systèmes du GDD, ligne au journal d'audit.
+Ces documents s'enrichissent à chaque lot : une règle apprise (incident, piège goja, convention) va dans CLAUDE.md le jour même.

@@ -41,6 +41,7 @@ export type EffectStat =
   | "fleetSpeed"
   | "fleetUpkeep"
   | "hangarCapacity"
+  | "dockCapacity"
   // Renseignement
   | "spyLevel"
   | "detection"
@@ -137,6 +138,7 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacité des hangars", unit: "pct", group: "flottes" },
+  dockCapacity: { label: "Postes de la Cale sèche", unit: "pct", group: "flottes" },
   spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
   detection: { label: "Détection de l'espionnage", unit: "pct", group: "renseignement" },
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" },

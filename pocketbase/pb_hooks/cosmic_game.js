@@ -162,6 +162,7 @@ __export(hooksEntry_exports, {
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
   achievementXpAlert: () => achievementXpAlert,
+  actionNeedsAway: () => actionNeedsAway,
   activeBan: () => activeBan,
   activeMute: () => activeMute,
   activeUltimatum: () => activeUltimatum,
@@ -577,6 +578,7 @@ __export(hooksEntry_exports, {
   seasonXpFor: () => seasonXpFor,
   sectorLabel: () => sectorLabel,
   sectorOf: () => sectorOf,
+  sendToWorkshop: () => sendToWorkshop,
   setNameTone: () => setNameTone,
   settleAuction: () => settleAuction,
   settleCoalition: () => settleCoalition,
@@ -820,6 +822,7 @@ var EFFECT_STATS = {
   fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacit\xE9 des hangars", unit: "pct", group: "flottes" },
+  dockCapacity: { label: "Postes de la Cale s\xE8che", unit: "pct", group: "flottes" },
   spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
   detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
@@ -3503,6 +3506,8 @@ function validateTechEffect(label3, e3, refs) {
 }
 
 // src/game/buildings.ts
+var DOCK_BUILDING_ID = "cale_seche";
+var DOCK_TIERS = { triage: 5, auto: 10, priority: 15, orbital: 20 };
 var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
 var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
 function tier2(common, commonMax, rare, rareMax) {
@@ -3615,6 +3620,30 @@ var DEFAULT_BUILDINGS = [
     unlockedByTech: "tech6",
     upgrade: hangarUpgrade(["syntheticNanites", "aiFragment"]),
     effect: { type: "hangar", category: "defense", perLevel: 2e3 }
+  },
+  // 5.28 : Cale sèche (docs/proposals/cale-seche.md) : les vaisseaux sauvés attendent leur réparation
+  // sur des postes, hors du hangar. Courbe de coût de l'Atelier, 1 200 s par niveau.
+  {
+    id: DOCK_BUILDING_ID,
+    name: "Cale s\xE8che",
+    description: "Des postes d'amarrage pour les vaisseaux sauv\xE9s au combat : ils attendent leur r\xE9paration ici, et le hangar reste libre pour reconstruire.",
+    image: "/assets/buildings/cale_seche.webp",
+    maxLevel: 20,
+    unlockCost: { reinforcedSteel: 20, cyberModule: 20, syntheticNanites: 20, aiFragment: 20 },
+    requires: { building: "atelier_reparation", level: 5 },
+    upgrade: {
+      baseCost: { nano: 2e3, data: 2e3 },
+      maxCost: { nano: 1e7, data: 1e7 },
+      costFromLevel: 2,
+      secondsPerLevel: 1200,
+      tier2: tier2(
+        { nano: 1e7, data: 1e7 },
+        { nano: 8e8, data: 8e8 },
+        { reinforcedSteel: 1e4, cyberModule: 1e4, syntheticNanites: 1e4, aiFragment: 1e4 },
+        { reinforcedSteel: 1e6, cyberModule: 1e6, syntheticNanites: 1e6, aiFragment: 1e6 }
+      )
+    },
+    effect: { type: "dock", perLevel: 1e3, orbitalRepair: 0.05 }
   },
   {
     id: "entrepot",
@@ -3761,11 +3790,14 @@ function getBuildingUpgradeTime(building, nextLevel) {
   return (nextLevel - 1) * building.upgrade.secondsPerLevel;
 }
 function getRepairPercent(buildings) {
-  var _a;
+  var _a, _b, _c;
   let pct7 = 0;
   for (const b of BUILDINGS) {
     if (((_a = b.effect) == null ? void 0 : _a.type) !== "repair") continue;
     pct7 += repairPercentAt(b.effect, effectiveBuildingLevel(buildings, b.id));
+  }
+  for (const b of BUILDINGS) {
+    if (((_b = b.effect) == null ? void 0 : _b.type) === "dock" && effectiveBuildingLevel(buildings, b.id) >= DOCK_TIERS.orbital) pct7 += Math.max(0, (_c = b.effect.orbitalRepair) != null ? _c : 0);
   }
   return pct7;
 }
@@ -3799,6 +3831,37 @@ function getUnitCapacity(buildings, category, techLevels2) {
   }
   const bonus = techLevels2 ? techBonus(techLevels2, "hangar_capacity", category) : 0;
   return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
+}
+function dockLevel(buildings) {
+  const def3 = BUILDINGS.find((b) => {
+    var _a;
+    return ((_a = b.effect) == null ? void 0 : _a.type) === "dock";
+  });
+  return def3 ? effectiveBuildingLevel(buildings, def3.id) : 0;
+}
+function dockBaseCapacity(buildings) {
+  var _a;
+  let capacity = 0;
+  for (const b of BUILDINGS) {
+    if (((_a = b.effect) == null ? void 0 : _a.type) !== "dock") continue;
+    capacity += effectiveBuildingLevel(buildings, b.id) * b.effect.perLevel;
+  }
+  return capacity;
+}
+function requiredForAscension(b) {
+  var _a;
+  return !b.endgame && ((_a = b.effect) == null ? void 0 : _a.type) !== "dock";
+}
+function keptOnAscension(b) {
+  var _a, _b;
+  return !!b.endgame || ((_a = b.effect) == null ? void 0 : _a.type) === "hangar" || ((_b = b.effect) == null ? void 0 : _b.type) === "dock";
+}
+function unlockBlocker(def3, buildings) {
+  var _a, _b;
+  const req = def3.requires;
+  if (!req) return null;
+  if (effectiveBuildingLevel(buildings, req.building) >= req.level) return null;
+  return `Requis : ${(_b = (_a = findBuilding(req.building)) == null ? void 0 : _a.name) != null ? _b : req.building} niveau ${req.level}.`;
 }
 function effectiveBuildingLevel(buildings, id) {
   var _a;
@@ -3969,15 +4032,187 @@ function grantResources(player, input) {
 }
 
 // src/game/workshop.ts
+var DOCK_POLICY_LABELS = {
+  repair: "Tout r\xE9parer",
+  scrapOverflow: "D\xE9manteler ce qui ne tient pas en cale",
+  scrapAll: "Tout d\xE9manteler"
+};
 var ATELIER_ID = "atelier_reparation";
+var POLICIES = ["repair", "scrapOverflow", "scrapAll"];
+var PRIORITIES = ["arrival", "heavy", "medium", "light", "support"];
 function workshopState(player) {
   var _a;
   const w = player.workshop;
-  return {
+  const ready = {};
+  for (const [id, n] of Object.entries((w == null ? void 0 : w.ready) && typeof w.ready === "object" ? w.ready : {})) {
+    const c = Math.floor(Number(n) || 0);
+    if (c > 0) ready[id] = c;
+  }
+  const out = {
     updatedAtMs: (_a = w == null ? void 0 : w.updatedAtMs) != null ? _a : 0,
     jobs: Array.isArray(w == null ? void 0 : w.jobs) ? w.jobs.filter((j) => j && j.count > 0) : [],
     hull: (w == null ? void 0 : w.hull) && typeof w.hull === "object" ? __spreadValues({}, w.hull) : {}
   };
+  if (Object.keys(ready).length) out.ready = ready;
+  if ((w == null ? void 0 : w.policy) && POLICIES.includes(w.policy) && w.policy !== "repair") out.policy = w.policy;
+  if ((w == null ? void 0 : w.priority) && PRIORITIES.includes(w.priority) && w.priority !== "arrival") out.priority = w.priority;
+  if ((w == null ? void 0 : w.lastScrap) && typeof w.lastScrap === "object") out.lastScrap = w.lastScrap;
+  return out;
+}
+var spaceOf = (unitId) => {
+  var _a, _b;
+  return Math.max(1, (_b = (_a = findUnit(unitId)) == null ? void 0 : _a.hangarSpace) != null ? _b : 1);
+};
+function dockCapacity(player, now = Date.now()) {
+  var _a;
+  const base = dockBaseCapacity((_a = player.buildings) != null ? _a : {});
+  if (base <= 0) return 0;
+  const grants = allEffects(player, now);
+  const bonus = effectTotal(grants, "tech", "dockCapacity") + effectTotal(grants, "empire", "dockCapacity");
+  return bonus > 0 ? Math.floor(base * (1 + bonus)) : base;
+}
+function allocateDock(st, capacity) {
+  var _a, _b;
+  const ready = __spreadValues({}, (_a = st.ready) != null ? _a : {});
+  let used = 0;
+  for (const [id, n] of Object.entries(ready)) used += n * spaceOf(id);
+  const jobs = {};
+  const repairing = {};
+  const byArrival = st.jobs.map((job, i) => ({ job, i })).sort((a, b) => {
+    var _a2, _b2;
+    return ((_a2 = a.job.addedAtMs) != null ? _a2 : 0) - ((_b2 = b.job.addedAtMs) != null ? _b2 : 0) || a.i - b.i;
+  });
+  for (const { job } of byArrival) {
+    const space = spaceOf(job.unitId);
+    const room = capacity - used;
+    const fit = room > 0 ? Math.min(job.count, Math.floor(room / space)) : 0;
+    if (fit <= 0) continue;
+    jobs[job.id] = fit;
+    repairing[job.unitId] = ((_b = repairing[job.unitId]) != null ? _b : 0) + fit;
+    used += fit * space;
+  }
+  return { capacity, used, jobs, repairing, ready };
+}
+function dockAllocation(player, now = Date.now()) {
+  return allocateDock(workshopState(player), dockCapacity(player, now));
+}
+function workshopHangarUnits(player, now = Date.now()) {
+  var _a, _b;
+  const st = workshopState(player);
+  const alloc = allocateDock(st, dockCapacity(player, now));
+  const out = {};
+  for (const j of st.jobs) {
+    const n = j.count - ((_a = alloc.jobs[j.id]) != null ? _a : 0);
+    if (n > 0) out[j.unitId] = ((_b = out[j.unitId]) != null ? _b : 0) + n;
+  }
+  return out;
+}
+function dockReady(player) {
+  var _a;
+  return __spreadValues({}, (_a = workshopState(player).ready) != null ? _a : {});
+}
+function dockReadyCount(player) {
+  return Object.values(dockReady(player)).reduce((a, b) => a + b, 0);
+}
+function dockTier(player, tier) {
+  var _a;
+  return dockLevel((_a = player.buildings) != null ? _a : {}) >= DOCK_TIERS[tier];
+}
+function orderJobs(st, player) {
+  const pr = st.priority;
+  if (!pr || pr === "arrival" || !dockTier(player, "priority")) return;
+  const classes = unitClasses();
+  const rank2 = (j) => classes[j.unitId] === pr ? 0 : 1;
+  st.jobs = st.jobs.map((job, i) => ({ job, i })).sort((a, b) => rank2(a.job) - rank2(b.job) || a.i - b.i).map((x) => x.job);
+}
+function dockScrapValue(player, unitId, count2, now) {
+  const unit = findUnit(unitId);
+  if (!unit || count2 <= 0) return { scrap: 0, energy: 0 };
+  const each = playerUnitCost(unit, player, now);
+  const k = Math.max(0, Math.min(1, COMBAT_RULES.dockScrapRefund));
+  return { scrap: Math.floor(each.scrap * k) * count2, energy: Math.floor(each.energy * k) * count2 };
+}
+function creditScrap(player, units, now) {
+  var _a, _b;
+  const total2 = { scrap: 0, energy: 0 };
+  for (const [id, n] of Object.entries(units)) {
+    const v = dockScrapValue(player, id, n, now);
+    total2.scrap += v.scrap;
+    total2.energy += v.energy;
+  }
+  player.resources.scrap = ((_a = player.resources.scrap) != null ? _a : 0) + total2.scrap;
+  player.resources.energy = ((_b = player.resources.energy) != null ? _b : 0) + total2.energy;
+  bumpStat(player, "unitsDismantled", Object.values(units).reduce((a, b) => a + b, 0));
+  return total2;
+}
+function dockScrap(player, unitId, qtyIn, now) {
+  var _a, _b, _c, _d;
+  if (!dockTier(player, "triage")) throw new GameActionError(`Le d\xE9mant\xE8lement s'ouvre au niveau ${DOCK_TIERS.triage} de la Cale s\xE8che.`);
+  const st = workshopState(player);
+  let left = Math.floor(Number(qtyIn) || 0);
+  if (!(left > 0)) throw new GameActionError("Quantit\xE9 invalide.");
+  const have = ((_b = (_a = st.ready) == null ? void 0 : _a[unitId]) != null ? _b : 0) + st.jobs.filter((j) => j.unitId === unitId).reduce((a, j) => a + j.count, 0);
+  if (have < left) throw new GameActionError("Il n'y a pas autant de vaisseaux de ce type \xE0 l'Atelier.");
+  const taken = left;
+  const fromReady = Math.min(left, (_d = (_c = st.ready) == null ? void 0 : _c[unitId]) != null ? _d : 0);
+  if (fromReady > 0 && st.ready) {
+    st.ready[unitId] -= fromReady;
+    if (st.ready[unitId] <= 0) delete st.ready[unitId];
+    left -= fromReady;
+  }
+  for (let i = st.jobs.length - 1; i >= 0 && left > 0; i--) {
+    const job = st.jobs[i];
+    if (job.unitId !== unitId) continue;
+    const n = Math.min(left, job.count);
+    const perHp = job.count > 0 ? job.hpLeft / job.count : 0;
+    const perTotal = job.count > 0 ? job.hpTotal / job.count : 0;
+    job.count -= n;
+    job.hpLeft = Math.max(0, job.hpLeft - perHp * n);
+    job.hpTotal = Math.max(0, job.hpTotal - perTotal * n);
+    left -= n;
+  }
+  st.jobs = st.jobs.filter((j) => j.count > 0);
+  if (st.ready && !Object.keys(st.ready).length) delete st.ready;
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  return { count: taken, refund: creditScrap(player, { [unitId]: taken }, now) };
+}
+function setDockSettings(player, settings) {
+  const st = workshopState(player);
+  if (settings.policy !== void 0) {
+    if (!POLICIES.includes(settings.policy)) throw new GameActionError("R\xE9glage du triage inconnu.");
+    if (settings.policy !== "repair" && !dockTier(player, "triage")) throw new GameActionError(`Le triage s'ouvre au niveau ${DOCK_TIERS.triage} de la Cale s\xE8che.`);
+    if (settings.policy === "repair") delete st.policy;
+    else st.policy = settings.policy;
+  }
+  if (settings.priority !== void 0) {
+    if (!PRIORITIES.includes(settings.priority)) throw new GameActionError("Ordre de r\xE9paration inconnu.");
+    if (settings.priority !== "arrival" && !dockTier(player, "priority")) throw new GameActionError(`L'ordre de r\xE9paration se r\xE8gle au niveau ${DOCK_TIERS.priority} de la Cale s\xE8che.`);
+    if (settings.priority === "arrival") delete st.priority;
+    else st.priority = settings.priority;
+  }
+  player.workshop = st;
+}
+function commissionReady(player, freePlaces, unitId) {
+  var _a, _b, _c;
+  const st = workshopState(player);
+  const moved = {};
+  let free2 = Math.max(0, Math.floor(freePlaces));
+  const ids = Object.keys((_a = st.ready) != null ? _a : {}).filter((id) => !unitId || id === unitId);
+  for (const id of ids) {
+    const space = spaceOf(id);
+    const n = Math.min(st.ready[id], Math.floor(free2 / space));
+    if (n <= 0) continue;
+    const unit = (_b = player.units[id]) != null ? _b : { level: 1, count: 0 };
+    player.units[id] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_c = unit.count) != null ? _c : 0) + n });
+    st.ready[id] -= n;
+    if (st.ready[id] <= 0) delete st.ready[id];
+    free2 -= n * space;
+    moved[id] = n;
+  }
+  if (st.ready && !Object.keys(st.ready).length) delete st.ready;
+  player.workshop = st;
+  return moved;
 }
 function atelierLevel(player) {
   var _a, _b;
@@ -3988,8 +4223,10 @@ function atelierLevel(player) {
   return def3 ? effectiveBuildingLevel((_b = player.buildings) != null ? _b : {}, def3.id) : 0;
 }
 function workshopSpeedBonus(player) {
+  var _a;
   const grants = allEffects(player);
-  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed");
+  const dock = dockLevel((_a = player.buildings) != null ? _a : {}) >= DOCK_TIERS.auto ? Math.max(0, COMBAT_RULES.dockAutoSpeedBonus) : 0;
+  return effectTotal(grants, "tech", "repairSpeed") + effectTotal(grants, "empire", "repairSpeed") + dock;
 }
 function repairShipRate(player) {
   var _a, _b, _c, _d;
@@ -4005,12 +4242,6 @@ function workshopRate(player) {
   const level3 = atelierLevel(player);
   const base = level3 <= 0 ? R.workshopHpPerSec * R.workshopBaseFactor : R.workshopHpPerSec * (1 + R.workshopLevelGain * (level3 - 1));
   return (base + repairShipRate(player)) * (1 + Math.max(0, workshopSpeedBonus(player)));
-}
-function workshopUnits(player) {
-  var _a;
-  const out = {};
-  for (const j of workshopState(player).jobs) out[j.unitId] = ((_a = out[j.unitId]) != null ? _a : 0) + j.count;
-  return out;
 }
 function hullMax(player, unitId) {
   var _a, _b, _c, _d, _e;
@@ -4071,18 +4302,49 @@ function applyHull(player, hull) {
   player.workshop = st;
 }
 function sendToWorkshop(player, recovered, now, source, fromBase) {
-  var _a, _b;
+  var _a, _b, _c, _d, _e, _f, _g;
   if (player.npc) return;
   const st = workshopState(player);
   if (!st.updatedAtMs) st.updatedAtMs = now;
+  const policy = dockTier(player, "triage") ? (_a = st.policy) != null ? _a : "repair" : "repair";
+  const scrapped = {};
+  const added = [];
   for (const [unitId, n] of Object.entries(recovered != null ? recovered : {})) {
     const count2 = Math.floor(n != null ? n : 0);
     if (count2 <= 0) continue;
     if (fromBase && player.units[unitId]) player.units[unitId].count = Math.max(0, player.units[unitId].count - count2);
-    const hp = count2 * unitBaseHp((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, unitId);
-    st.jobs.push({ id: `${now.toString(36)}-${unitId}-${st.jobs.length}`, unitId, count: count2, hpTotal: hp, hpLeft: hp, source, addedAtMs: now });
+    if (policy === "scrapAll") {
+      scrapped[unitId] = ((_b = scrapped[unitId]) != null ? _b : 0) + count2;
+      continue;
+    }
+    const hp = count2 * unitBaseHp((_c = player.units) != null ? _c : {}, (_d = player.techLevels) != null ? _d : {}, unitId);
+    const job = { id: `${now.toString(36)}-${unitId}-${st.jobs.length}`, unitId, count: count2, hpTotal: hp, hpLeft: hp, source, addedAtMs: now };
+    st.jobs.push(job);
+    added.push(job);
+  }
+  if (policy === "scrapOverflow" && added.length) {
+    const alloc = allocateDock(st, dockCapacity(player, now));
+    for (const job of added) {
+      const out = job.count - ((_e = alloc.jobs[job.id]) != null ? _e : 0);
+      if (out <= 0) continue;
+      const per = job.hpTotal / job.count;
+      job.count -= out;
+      job.hpTotal = per * job.count;
+      job.hpLeft = job.hpTotal;
+      scrapped[job.unitId] = ((_f = scrapped[job.unitId]) != null ? _f : 0) + out;
+    }
+    st.jobs = st.jobs.filter((j) => j.count > 0);
   }
   player.workshop = st;
+  if (Object.keys(scrapped).length) {
+    const refund = creditScrap(player, scrapped, now);
+    st.lastScrap = { atMs: now, units: scrapped, refund };
+    player.workshop = st;
+  }
+  if (added.length && dockLevel((_g = player.buildings) != null ? _g : {}) > 0) {
+    const alloc = allocateDock(st, dockCapacity(player, now));
+    if (alloc.capacity > 0 && alloc.used >= alloc.capacity) bumpStat(player, "dockFull");
+  }
 }
 function advanceWarlordHull(player, now, instant) {
   const st = workshopState(player);
@@ -4098,7 +4360,6 @@ function advanceWarlordHull(player, now, instant) {
   player.workshop = st;
 }
 function advanceWorkshop(player, now, instant = false) {
-  var _a, _b, _c;
   const w = player.workshop;
   if (!w) return [];
   if (player.npc) {
@@ -4109,21 +4370,21 @@ function advanceWorkshop(player, now, instant = false) {
   const since = st.updatedAtMs || now;
   let budget = instant ? Infinity : Math.max(0, (now - since) / 1e3) * workshopRate(player);
   st.updatedAtMs = now;
+  orderJobs(st, player);
+  const capacity = dockCapacity(player, now);
   const done = {};
+  const docked = {};
   while (st.jobs.length && budget > 0) {
     const job = st.jobs[0];
     const spend2 = Math.min(budget, job.hpLeft);
     job.hpLeft -= spend2;
     budget -= spend2;
     if (job.hpLeft > 0.5) break;
-    st.jobs.shift();
-    const unit = (_a = player.units[job.unitId]) != null ? _a : { level: 1, count: 0 };
-    player.units[job.unitId] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_b = unit.count) != null ? _b : 0) + job.count });
-    done[job.unitId] = ((_c = done[job.unitId]) != null ? _c : 0) + job.count;
+    finishJob(player, st, job, capacity, done, docked);
   }
   const hullIds = Object.keys(st.hull).sort((a, b) => {
-    var _a2, _b2;
-    return ((_a2 = st.hull[b]) != null ? _a2 : 0) - ((_b2 = st.hull[a]) != null ? _b2 : 0);
+    var _a, _b;
+    return ((_a = st.hull[b]) != null ? _a : 0) - ((_b = st.hull[a]) != null ? _b : 0);
   });
   for (const id of hullIds) {
     if (!player.units[id]) {
@@ -4138,13 +4399,34 @@ function advanceWorkshop(player, now, instant = false) {
     else st.hull[id] = Math.round(st.hull[id]);
   }
   player.workshop = st;
-  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0));
-  const names = Object.entries(done).map(([id, n]) => {
-    var _a2, _b2;
-    return `${n} \xD7 ${(_b2 = (_a2 = findUnit(id)) == null ? void 0 : _a2.name) != null ? _b2 : id}`;
-  });
-  if (!names.length) return [];
-  return [{ kind: "building", title: "Atelier : r\xE9parations termin\xE9es", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
+  bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0) + Object.values(docked).reduce((a, b) => a + b, 0));
+  return repairNotes(done, docked, now);
+}
+function finishJob(player, st, job, capacity, done, docked) {
+  var _a, _b, _c, _d, _e, _f, _g, _h;
+  const inDock = Math.min(job.count, (_a = allocateDock(st, capacity).jobs[job.id]) != null ? _a : 0);
+  st.jobs = st.jobs.filter((j) => j !== job);
+  const home = job.count - inDock;
+  if (home > 0) {
+    const unit = (_b = player.units[job.unitId]) != null ? _b : { level: 1, count: 0 };
+    player.units[job.unitId] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_c = unit.count) != null ? _c : 0) + home });
+    done[job.unitId] = ((_d = done[job.unitId]) != null ? _d : 0) + home;
+  }
+  if (inDock > 0) {
+    st.ready = __spreadProps(__spreadValues({}, (_e = st.ready) != null ? _e : {}), { [job.unitId]: ((_g = (_f = st.ready) == null ? void 0 : _f[job.unitId]) != null ? _g : 0) + inDock });
+    docked[job.unitId] = ((_h = docked[job.unitId]) != null ? _h : 0) + inDock;
+  }
+}
+function repairNotes(done, docked, now) {
+  const list = (m) => Object.entries(m).map(([id, n]) => {
+    var _a, _b;
+    return `${n} \xD7 ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
+  }).join(", ");
+  const parts = [];
+  if (Object.keys(done).length) parts.push(`De retour au hangar : ${list(done)}.`);
+  if (Object.keys(docked).length) parts.push(`Pr\xEAts en Cale s\xE8che, \xE0 remettre en service : ${list(docked)}.`);
+  if (!parts.length) return [];
+  return [{ kind: "building", title: "Atelier : r\xE9parations termin\xE9es", message: parts.join(" "), createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
 }
 function withFleet(units, fleet) {
   var _a, _b;
@@ -4165,7 +4447,6 @@ function workshopRushCost(player, jobId) {
   return { amber, seconds, jobs };
 }
 function rushWorkshop(player, jobId, now, walletOf, saveWallet) {
-  var _a, _b, _c;
   const { amber, jobs } = workshopRushCost(player, jobId);
   if (!jobs.length) throw new GameActionError(jobId ? "Ce lot n'est plus \xE0 l'Atelier." : "Aucune unit\xE9 \xE0 l'Atelier.");
   const wallet = walletOf(player);
@@ -4174,17 +4455,14 @@ function rushWorkshop(player, jobId, now, walletOf, saveWallet) {
   saveWallet(player, wallet);
   const st = workshopState(player);
   const ids = new Set(jobs.map((j) => j.id));
+  const capacity = dockCapacity(player, now);
   const units = {};
-  for (const job of jobs) {
-    const unit = (_a = player.units[job.unitId]) != null ? _a : { level: 1, count: 0 };
-    player.units[job.unitId] = __spreadProps(__spreadValues({}, unit), { level: Math.max(1, unit.level || 1), count: ((_b = unit.count) != null ? _b : 0) + job.count });
-    units[job.unitId] = ((_c = units[job.unitId]) != null ? _c : 0) + job.count;
-  }
-  st.jobs = st.jobs.filter((j) => !ids.has(j.id));
+  const ready = {};
+  for (const job of st.jobs.filter((j) => ids.has(j.id))) finishJob(player, st, job, capacity, units, ready);
   if (!st.updatedAtMs) st.updatedAtMs = now;
   player.workshop = st;
-  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0));
-  return { amber, units };
+  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0) + Object.values(ready).reduce((a, b) => a + b, 0));
+  return { amber, units, ready };
 }
 
 // src/game/allianceProfile.ts
@@ -4921,7 +5199,7 @@ function canAscend(player, queues, now) {
   var _a;
   const missing = BUILDINGS.filter((b) => {
     var _a2, _b;
-    return !b.endgame && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
+    return requiredForAscension(b) && ((_b = (_a2 = player.buildings[b.id]) == null ? void 0 : _a2.level) != null ? _b : 0) < b.maxLevel;
   }).map((b) => {
     var _a2, _b;
     return {
@@ -4943,7 +5221,7 @@ function ascend(player, queues, now) {
   const check = canAscend(player, queues, now);
   if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
   for (const b of BUILDINGS) {
-    if (b.endgame) continue;
+    if (keptOnAscension(b)) continue;
     const cur = player.buildings[b.id];
     player.buildings[b.id] = __spreadProps(__spreadValues({}, cur != null ? cur : { unlocked: !!b.startsUnlocked }), { level: 1 });
   }
@@ -4962,6 +5240,67 @@ function playerBuildTimeFactor(player, now) {
 function playerResearchTimeFactor(player, now) {
   if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
+}
+
+// src/game/hangar.ts
+function playerUnitCapacity(player, category, now = Date.now(), scope = "home", buildings = player.buildings) {
+  const raw = getUnitCapacity(buildings != null ? buildings : {}, category);
+  const grants = allEffects(player, now);
+  const tech = effectTotal(grants, "tech", "hangarCapacity", { target: category, scope });
+  const empire = effectTotal(grants, "empire", "hangarCapacity", { target: category, scope });
+  const withTech = tech > 0 ? Math.floor(raw * (1 + tech)) : raw;
+  return empire > 0 ? Math.floor(withTech * (1 + empire)) : withTech;
+}
+function placesOf(units, category) {
+  let used = 0;
+  for (const [id, n] of Object.entries(units)) {
+    const def3 = findUnit(id);
+    if ((def3 == null ? void 0 : def3.category) === category && n > 0) used += n * def3.hangarSpace;
+  }
+  return used;
+}
+function hangarLoad(player, queues, away, category, now = Date.now()) {
+  var _a, _b, _c, _d, _e;
+  const homeUnits = {};
+  for (const [id, u] of Object.entries((_a = player.units) != null ? _a : {})) homeUnits[id] = (_b = u == null ? void 0 : u.count) != null ? _b : 0;
+  const home = placesOf(homeUnits, category);
+  const awayPlaces = placesOf(away != null ? away : {}, category);
+  const workshop = placesOf(workshopHangarUnits(player, now), category);
+  const queue = ((_d = (_c = queues == null ? void 0 : queues.unitQueues) == null ? void 0 : _c[category]) != null ? _d : []).reduce((sum3, item) => {
+    var _a2, _b2;
+    return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
+  }, 0);
+  const capacity = playerUnitCapacity(player, category, now);
+  const occupied = home + awayPlaces + workshop;
+  const used = occupied + queue;
+  const dock = dockAllocation(player, now);
+  const dockUnits = __spreadValues({}, dock.ready);
+  for (const [id, n] of Object.entries(dock.repairing)) dockUnits[id] = ((_e = dockUnits[id]) != null ? _e : 0) + n;
+  return {
+    category,
+    capacity,
+    home,
+    away: awayPlaces,
+    workshop,
+    queue,
+    occupied,
+    used,
+    free: Math.max(0, capacity - used),
+    overflow: Math.max(0, used - capacity),
+    dockUsed: placesOf(dockUnits, category),
+    dockCapacity: dock.capacity
+  };
+}
+function commissionDocked(player, queues, away, now, unitId) {
+  var _a, _b, _c;
+  const moved = {};
+  const ids = Object.keys((_b = (_a = player.workshop) == null ? void 0 : _a.ready) != null ? _b : {}).filter((id) => !unitId || id === unitId);
+  for (const id of ids) {
+    const category = (_c = findUnit(id)) == null ? void 0 : _c.category;
+    if (category !== "attack" && category !== "defense") continue;
+    Object.assign(moved, commissionReady(player, hangarLoad(player, queues, away, category, now).free, id));
+  }
+  return moved;
 }
 
 // src/game/catchup.ts
@@ -5502,12 +5841,13 @@ function upgradeColonyBuilding(player, colonyIdIn, buildingId, now) {
   colony.building = { id: buildingId, level: level3 + 1, endTime: now + colonyUpgradeSeconds(player, buildingId, level3 + 1, now) * 1e3, startedAtMs: now, paid };
   return colony.building;
 }
-function colonyDefenseHangar(colony) {
+function colonyDefenseHangar(colony, player, now = Date.now()) {
   const used = Object.entries(colony.defenses).reduce((a, [id, s]) => {
     var _a, _b;
     return a + ((_b = (_a = findUnit(id)) == null ? void 0 : _a.hangarSpace) != null ? _b : 1) * s.count;
   }, 0);
-  return { used, capacity: Math.floor(getUnitCapacity(colony.buildings, "defense") * colonySpecEffects(colony).hangar) };
+  const base = player ? playerUnitCapacity(player, "defense", now, "colonies", colony.buildings) : getUnitCapacity(colony.buildings, "defense");
+  return { used, capacity: Math.floor(base * colonySpecEffects(colony).hangar) };
 }
 function colonyDefenseSeconds(player, unitId, qty, colony) {
   const unit = findUnit(unitId);
@@ -5523,7 +5863,7 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantit\xE9 invalide.");
   if (colony.defenseJob) throw new GameActionError("Des d\xE9fenses sont d\xE9j\xE0 en construction sur cette colonie.");
-  const { used, capacity } = colonyDefenseHangar(colony);
+  const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);
   const paid = { scrap: each.scrap * qty, energy: each.energy * qty };
@@ -8457,7 +8797,7 @@ var CATEGORY_LABELS2 = {
   prestige: { label: "Prestige", emoji: "\u{1F3C6}" }
 };
 var sum = (xs) => xs.reduce((a, b) => a + b, 0);
-var buildingLevels = (p) => BUILDINGS.filter((b) => !b.endgame).map((b) => {
+var buildingLevels = (p) => BUILDINGS.filter((b) => requiredForAscension(b)).map((b) => {
   var _a, _b, _c;
   return (_c = (_b = (_a = p.buildings) == null ? void 0 : _a[b.id]) == null ? void 0 : _b.level) != null ? _c : 0;
 });
@@ -8660,6 +9000,14 @@ var METRICS = {
     var _a;
     return (_a = playerStats(p).unitsRepaired) != null ? _a : 0;
   } },
+  unitsDismantled: { label: "Vaisseaux d\xE9mantel\xE9s en Cale s\xE8che (cumul)", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).unitsDismantled) != null ? _a : 0;
+  } },
+  dockFull: { label: "Cale s\xE8che remplie (fois)", value: (p) => {
+    var _a;
+    return (_a = playerStats(p).dockFull) != null ? _a : 0;
+  } },
   modulesBuilt: { label: "Modules de vaisseaux fabriqu\xE9s", value: (p) => {
     var _a;
     return (_a = playerStats(p).modulesBuilt) != null ? _a : 0;
@@ -8859,6 +9207,10 @@ function derivedAchievements() {
     def("atelier_1", "flotte", "bronze", "unitsRepaired", 50, "M\xE9cano", "Faire r\xE9parer 50 unit\xE9s \xE0 l'Atelier.", "\u{1F527}", { auto: true }),
     def("atelier_2", "flotte", "argent", "unitsRepaired", 1e3, "Chef d'atelier", "Faire r\xE9parer 1 000 unit\xE9s \xE0 l'Atelier.", "\u{1F6E0}\uFE0F", { auto: true }),
     def("atelier_3", "flotte", "or", "unitsRepaired", 2e4, "R\xE9surrecteur de flottes", "Faire r\xE9parer 20 000 unit\xE9s \xE0 l'Atelier.", "\u2699\uFE0F", { auto: true }),
+    // 5.28 : Cale sèche.
+    def("cale_pleine", "flotte", "argent", "dockFull", 1, "Cale pleine", "Remplir tous les postes de la Cale s\xE8che apr\xE8s un combat.", "\u2693", { auto: true }),
+    def("demolisseur_1", "flotte", "bronze", "unitsDismantled", 100, "Ferrailleur", "D\xE9manteler 100 vaisseaux en Cale s\xE8che.", "\u{1FA9B}", { auto: true }),
+    def("demolisseur_2", "flotte", "or", "unitsDismantled", 1e3, "D\xE9molisseur", "D\xE9manteler 1 000 vaisseaux en Cale s\xE8che.", "\u{1F3D7}\uFE0F", { auto: true }),
     def("module_1", "flotte", "bronze", "modulesBuilt", 1, "Premier module", "Fabriquer un module de vaisseau.", "\u{1F9E9}", { auto: true }),
     def("module_2", "flotte", "argent", "modulesBuilt", 10, "Armurier", "Fabriquer 10 modules de vaisseaux.", "\u{1F529}", { auto: true }),
     def("module_full", "flotte", "or", "modulesMounted", 8, "Flotte sur mesure", "Occuper les 8 emplacements de modules.", "\u{1F680}", { auto: true }),
@@ -10304,7 +10656,11 @@ var COMBAT_RULES = {
   /** 5.21 : cible prioritaire choisie au lancement : poids de la catégorie visée dans la répartition des tirs. */
   targetPriorityWeight: 3,
   /** 5.21 : Ambre pour terminer une réparation : 1 Ambre par tranche de ce nombre de secondes restantes. */
-  workshopRushSecondsPerAmber: 600
+  workshopRushSecondsPerAmber: 600,
+  /** 5.28 : Cale sèche : part du coût d'une unité rendue au démantèlement (palier Triage), contre 50 % à la revente au hangar. */
+  dockScrapRefund: 0.6,
+  /** 5.28 : Cale sèche : cadence de l'Atelier en plus à partir du palier 10. */
+  dockAutoSpeedBonus: 0.1
 };
 function getShieldPercent(buildings, allianceBonus = 0) {
   var _a, _b;
@@ -16153,28 +16509,9 @@ function pay(player, cost, now, spending = true) {
   recordContract(player, "spend", total2, now);
   bumpStat(player, "spent", total2);
 }
-function withWorkshop(away, player) {
-  var _a;
-  const out = __spreadValues({}, away);
-  for (const [id, n] of Object.entries(workshopUnits(player))) out[id] = ((_a = out[id]) != null ? _a : 0) + n;
-  return out;
-}
-function hangarUsed(units, away, category) {
-  var _a;
-  let used = 0;
-  for (const [id, u] of Object.entries(units)) {
-    const def3 = findUnit(id);
-    if ((def3 == null ? void 0 : def3.category) === category) used += ((_a = u == null ? void 0 : u.count) != null ? _a : 0) * def3.hangarSpace;
-  }
-  for (const [id, n] of Object.entries(away)) {
-    const def3 = findUnit(id);
-    if ((def3 == null ? void 0 : def3.category) === category) used += (n > 0 ? n : 0) * def3.hangarSpace;
-  }
-  return used;
-}
 var VACATION_ACTIONS = /* @__PURE__ */ new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
 function applyAction(s, action) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
   const { player, queues, now } = s;
   if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action == null ? void 0 : action.type))) {
     throw new GameActionError("Tu es en vacances : reviens d'abord (Param\xE8tres) pour jouer.");
@@ -16200,6 +16537,9 @@ function applyAction(s, action) {
       const state = player.buildings[action.buildingId];
       if (!info || !state) throw new GameActionError("Ce b\xE2timent se d\xE9bloque via le Labo.");
       if (state.unlocked) throw new GameActionError("D\xE9j\xE0 d\xE9bloqu\xE9.");
+      const def3 = findBuilding(action.buildingId);
+      const blocker = def3 ? unlockBlocker(def3, player.buildings) : null;
+      if (blocker) throw new GameActionError(blocker);
       const cost = {};
       if ("multi" in info) info.resources.forEach((r) => cost[r.resource] = r.amount);
       else cost[info.resource] = info.amount;
@@ -16228,13 +16568,12 @@ function applyAction(s, action) {
       if (unit.elite) assertEliteBuildable(player, unit.id);
       if (((_g = (_f = player.units[unit.id]) == null ? void 0 : _f.level) != null ? _g : 0) <= 0) throw new GameActionError("Cette unit\xE9 doit d'abord \xEAtre d\xE9bloqu\xE9e via le Labo.");
       const category = unit.category;
-      const built = hangarUsed(player.units, withWorkshop((_h = s.unitsAway) != null ? _h : {}, player), category);
-      const reserved = queues.unitQueues[category].reduce((sum3, item) => {
-        var _a2, _b2;
-        return sum3 + ((_b2 = (_a2 = findUnit(item.unitId)) == null ? void 0 : _a2.hangarSpace) != null ? _b2 : 1);
-      }, 0);
-      if (built + reserved + qty * unit.hangarSpace > getUnitCapacity(player.buildings, category, player.techLevels)) {
-        throw new GameActionError(`Capacit\xE9 du hangar ${category === "attack" ? "d'attaque" : "de d\xE9fense"} insuffisante.`);
+      const load = hangarLoad(player, queues, (_h = s.unitsAway) != null ? _h : {}, category, now);
+      if (load.used + qty * unit.hangarSpace > load.capacity) {
+        const name = category === "attack" ? "d'attaque" : "de d\xE9fense";
+        throw new GameActionError(
+          load.overflow > 0 ? `Hangar ${name} en surcharge (${load.overflow} place${load.overflow > 1 ? "s" : ""} de trop) : am\xE9liore le hangar, d\xE9mant\xE8le ou envoie des vaisseaux en mission.` : `Capacit\xE9 du hangar ${name} insuffisante.`
+        );
       }
       const each = playerUnitCost(unit, player, now);
       pay(player, { scrap: each.scrap * qty, energy: each.energy * qty }, now);
@@ -16466,6 +16805,20 @@ function applyAction(s, action) {
       return performCancel(player, queues, action.target, now);
     case "workshopRush":
       return rushWorkshop(player, typeof action.jobId === "string" && action.jobId ? action.jobId : void 0, now, bountyState, (p, w) => p.bounties = w);
+    case "dockCommission": {
+      if (dockReadyCount(player) <= 0) throw new GameActionError("Aucun vaisseau pr\xEAt en Cale s\xE8che.");
+      const moved = commissionDocked(player, queues, (_G = s.unitsAway) != null ? _G : {}, now, typeof action.unitId === "string" && action.unitId ? action.unitId : void 0);
+      if (!Object.keys(moved).length) throw new GameActionError("Pas de place au hangar : am\xE9liore-le, d\xE9mant\xE8le ou envoie des vaisseaux en mission.");
+      return { units: moved };
+    }
+    case "dockScrap": {
+      const unit = findUnit(String((_H = action.unitId) != null ? _H : ""));
+      if (!unit) throw new GameActionError("Unit\xE9 invalide.");
+      return dockScrap(player, unit.id, positiveInt(action.qty, "Quantit\xE9"), now);
+    }
+    case "dockSettings":
+      setDockSettings(player, { policy: action.policy, priority: action.priority });
+      return { policy: DOCK_POLICY_LABELS[(_J = (_I = player.workshop) == null ? void 0 : _I.policy) != null ? _J : "repair"] };
     case "vacationEnd":
       endVacation(player, queues, now, true);
       return true;
@@ -16473,14 +16826,32 @@ function applyAction(s, action) {
       throw new GameActionError("Action inconnue.");
   }
 }
-function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}) {
+function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}, awayKnown = false) {
   const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
     { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
     action
   );
+  if (awayKnown && dockAutoCommission(flushed.player)) {
+    const moved = commissionDocked(flushed.player, flushed.queues, unitsAway, now);
+    const names = Object.entries(moved).map(([id, n]) => {
+      var _a, _b;
+      return `${n} \xD7 ${(_b = (_a = findUnit(id)) == null ? void 0 : _a.name) != null ? _b : id}`;
+    });
+    if (names.length) flushed.notifications.push({ kind: "building", title: "Cale s\xE8che : remise en service", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" });
+  }
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
+}
+function dockAutoCommission(player) {
+  return dockTier(player, "auto") && dockReadyCount(player) > 0;
+}
+function actionNeedsAway(player, action) {
+  var _a, _b, _c;
+  const type = action == null ? void 0 : action.type;
+  if (type === "buildUnits" || type === "dockCommission") return true;
+  const w = player.workshop;
+  return dockTier(player, "auto") && (((_b = (_a = w == null ? void 0 : w.jobs) == null ? void 0 : _a.length) != null ? _b : 0) > 0 || Object.keys((_c = w == null ? void 0 : w.ready) != null ? _c : {}).length > 0);
 }
 var GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
 function giftDeliveryRate(sender, recipient) {
@@ -17493,6 +17864,8 @@ function validateRules(rules) {
   if (!(cb.targetPriorityWeight >= 1 && cb.targetPriorityWeight <= 20)) errors.push("Combat : poids de la cible prioritaire entre 1 et 20.");
   if (!(cb.workshopRushSecondsPerAmber >= 1)) errors.push("Combat : tranche de secondes par Ambre d'au moins 1.");
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
+  if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
+  if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
   for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
@@ -17516,7 +17889,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
   const errors = [];
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
@@ -17554,6 +17927,8 @@ function validateGameContent(content) {
       if (!(t2.baseSeconds >= 0 && t2.secondsPerLevel >= 0)) errors.push(`${label3} : dur\xE9es du second palier invalides.`);
     }
     if (((_d = b.effect) == null ? void 0 : _d.type) === "storage" && !(b.effect.base > 0 && b.effect.growth >= 1)) errors.push(`${label3} : capacit\xE9 d'entrep\xF4t invalide.`);
+    if (((_e = b.effect) == null ? void 0 : _e.type) === "dock" && !(b.effect.perLevel >= 0 && ((_f = b.effect.orbitalRepair) != null ? _f : 0) >= 0 && ((_g = b.effect.orbitalRepair) != null ? _g : 0) <= 0.5)) errors.push(`${label3} : Cale s\xE8che invalide (postes \u2265 0, Cale orbitale entre 0 et 0,5).`);
+    if (b.requires && !(content.buildings.some((o) => o.id === b.requires.building) && b.requires.level >= 1)) errors.push(`${label3} : b\xE2timent requis inconnu ou niveau < 1.`);
   }
   if (!content.buildings.some((b) => b.startsUnlocked)) errors.push("Au moins un b\xE2timent doit \xEAtre d\xE9bloqu\xE9 d\xE8s le d\xE9part.");
   checkIds("Unit\xE9s", content.units.map((u) => u.id));
@@ -17573,7 +17948,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_e = t.prereq) != null ? _e : {})) {
+    for (const req of Object.keys((_h = t.prereq) != null ? _h : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
     }
@@ -17598,25 +17973,25 @@ function validateGameContent(content) {
   for (const m of content.missions) {
     const label3 = `Mission ${m.name || m.key}`;
     if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_f = m.prereq) != null ? _f : {})) {
+    for (const unitId of Object.keys((_i = m.prereq) != null ? _i : {})) {
       if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
     }
-    const res = __spreadValues({}, (_g = m.reward) != null ? _g : {});
+    const res = __spreadValues({}, (_j = m.reward) != null ? _j : {});
     delete res.xp;
     checkResources(`${label3} (r\xE9compense)`, res);
   }
-  errors.push(...validateFactions((_h = content.factions) != null ? _h : []));
+  errors.push(...validateFactions((_k = content.factions) != null ? _k : []));
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
   errors.push(...validatePassSeasons(content.passSeasons));
-  errors.push(...validateRanks((_i = content.ranks) != null ? _i : []));
-  errors.push(...validateAchievements((_j = content.achievements) != null ? _j : []));
-  errors.push(...validateRelics((_k = content.relics) != null ? _k : [], (_l = content.relicSettings) != null ? _l : defaultRelicSettings()));
-  errors.push(...validateLootTables((_m = content.relicSettings) == null ? void 0 : _m.loot));
-  const cap = (_n = content.relicSettings) == null ? void 0 : _n.lootTokenCap;
+  errors.push(...validateRanks((_l = content.ranks) != null ? _l : []));
+  errors.push(...validateAchievements((_m = content.achievements) != null ? _m : []));
+  errors.push(...validateRelics((_n = content.relics) != null ? _n : [], (_o = content.relicSettings) != null ? _o : defaultRelicSettings()));
+  errors.push(...validateLootTables((_p = content.relicSettings) == null ? void 0 : _p.loot));
+  const cap = (_q = content.relicSettings) == null ? void 0 : _q.lootTokenCap;
   if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
-  errors.push(...validateTitles((_o = content.titles) != null ? _o : []));
+  errors.push(...validateTitles((_r = content.titles) != null ? _r : []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
@@ -19332,9 +19707,9 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
       shieldPct: Math.round(getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) * 100),
       defenseBonusPct: Math.round(playerModifiers(p).defense * 100),
       attackPlacesUsed: places(units, OFFENSIVE_UNITS),
-      attackPlaces: getUnitCapacity(p.buildings, "attack", tech),
+      attackPlaces: playerUnitCapacity(p, "attack", now),
       defensePlacesUsed: places(units, DEFENSIVE_UNITS),
-      defensePlaces: getUnitCapacity(p.buildings, "defense", tech),
+      defensePlaces: playerUnitCapacity(p, "defense", now),
       productionPerHour: Math.round(perHour),
       outage: eco.outage,
       fullStorage: eco.full.length
@@ -23815,7 +24190,7 @@ function grantLeagueTitle(player, title, rank2, now) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "5.27.1" : "dev";
+var LOGIC_VERSION = true ? "5.28.0" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
 
 // src/game/serverMetrics.ts

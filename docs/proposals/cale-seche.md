@@ -1,6 +1,6 @@
 # Proposition : hangars en surcharge et Cale sèche
 
-Statut : **en attente de décision** (2026-10-06, après la 5.27.1).
+Statut : **validée et livrée** en 5.28.0 (lot 0 et Cale sèche, lots 1 à 3 réunis). Règles en vigueur : `docs/GAME_DESIGN.md` §7.
 Méthode : `docs/WORKFLOW.md`. Invariants : `docs/GAME_DESIGN.md` §4.
 
 ## 1. Constat
@@ -151,7 +151,22 @@ Postes = 1 000 × niveau, soit la moitié d'un hangar d'attaque au même niveau 
 - **Retirer la limite** à l'OGame : les hangars sont un pilier de progression du jeu depuis la v1.
 - **Taxe d'entretien sur l'excédent** : double peine (`GAME_DESIGN.md` règle 5).
 
-## 8. Questions à trancher
+## 8. Décisions (2026-10-06)
+
+1. Ascension : les hangars et la Cale sèche gardent leur niveau.
+2. Colonies : la tech « Extension des hangars » s'applique (et les effets `hangarCapacity` de portée colonies).
+3. Cale sèche : bâtiment séparé.
+4. Démantèlement en cale : 60 % (réglable dans l'admin, Règles → Cale sèche).
+5. Lot 0 et Cale sèche livrés ensemble.
+
+Écarts avec le texte ci-dessus, décidés à l'implémentation :
+
+- Les réglages du Triage et des priorités sont dans la Cale sèche elle-même (onglet Atelier), pas dans Réglages : là où le joueur en a besoin.
+- Remise automatique (palier 10) : à la prochaine action du joueur (le serveur lit alors ses flottes en vol), pas en tâche de fond.
+- Cale orbitale : le plafond global des vaisseaux sauvés reste celui du jeu (95 %).
+- Illustration : provisoire (image de l'Atelier) en attendant le rendu Midjourney (`docs/prompts-5.28.md`).
+
+## 9. Questions de départ (archivées)
 
 1. **Ascension** : garder les niveaux des hangars (recommandé) ou les remettre à 1 avec surcharge signalée ?
 2. **Colonies** : la tech « Extension des hangars » s'applique-t-elle aux hangars de défense des colonies (recommandé : oui) ?

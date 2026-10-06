@@ -86,16 +86,17 @@ routerAdd(
       db.applyContent(txApp, game);
       const loaded = db.loadPlayer(txApp, game, uid);
       // Vaisseaux en mission : ils reviendront, le hangar doit les compter.
-      const away =
-        action && action.type === "buildUnits"
-          ? game.unitsAwayOf(
-              txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),
-              uid,
-            )
-          : {};
+      // 5.28 : aussi pour la remise en service des vaisseaux prêts de la Cale sèche.
+      const needAway = game.actionNeedsAway(loaded.player, action);
+      const away = needAway
+        ? game.unitsAwayOf(
+            txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),
+            uid,
+          )
+        : {};
       let out;
       try {
-        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away);
+        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway);
       } catch (err) {
         throw db.asHttpError(game, err);
       }

@@ -2,6 +2,7 @@ import { allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
+import { playerUnitCapacity } from "@/game/hangar";
 import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
 import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
@@ -449,10 +450,12 @@ export function upgradeColonyBuilding(player: PlayerState, colonyIdIn: string, b
   return colony.building;
 }
 
-/** Place occupée et capacité du hangar de défense d'une colonie. */
-export function colonyDefenseHangar(colony: Colony): { used: number; capacity: number } {
+/** Place occupée et capacité du hangar de défense d'une colonie. 5.27.2 : la tech « Extension des
+ *  hangars » et les effets `hangarCapacity` (portée colonies) s'appliquent aussi (docs/proposals/cale-seche.md, C5). */
+export function colonyDefenseHangar(colony: Colony, player?: Parameters<typeof playerUnitCapacity>[0], now: number = Date.now()): { used: number; capacity: number } {
   const used = Object.entries(colony.defenses).reduce((a, [id, s]) => a + (findUnit(id)?.hangarSpace ?? 1) * s.count, 0);
-  return { used, capacity: Math.floor(getUnitCapacity(colony.buildings, "defense") * colonySpecEffects(colony).hangar) };
+  const base = player ? playerUnitCapacity(player, "defense", now, "colonies", colony.buildings) : getUnitCapacity(colony.buildings, "defense");
+  return { used, capacity: Math.floor(base * colonySpecEffects(colony).hangar) };
 }
 
 /** Durée de construction (secondes) d'un lot de défenses sur une colonie. */
@@ -470,7 +473,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantité invalide.");
   if (colony.defenseJob) throw new GameActionError("Des défenses sont déjà en construction sur cette colonie.");
-  const { used, capacity } = colonyDefenseHangar(colony);
+  const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);
   const paid = { scrap: each.scrap * qty, energy: each.energy * qty };

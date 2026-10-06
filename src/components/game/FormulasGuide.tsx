@@ -2,7 +2,8 @@ import { useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
 import { Calculator, Coins, Crosshair, Factory, Gauge, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
-import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, getUnitCapacity } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
+import { playerUnitCapacity } from "@/game/hangar";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { allianceShieldBonus } from "@/game/alliances";
 import { ASCENSION_RULES } from "@/game/ascension";
@@ -285,7 +286,7 @@ garnisons alliées : (ATK + RÉS) × 50 % en plus`}
             <Row label="Attaque de toute ta flotte" value={n(attack * (1 + mods.attack))} hint={mods.attack ? `bonus d'attaque +${pct(mods.attack, 1)} compris` : undefined} />
             <Row label="Défense de ta base" value={n(defense * (1 + mods.defense))} hint={mods.defense ? `bonus de défense +${pct(mods.defense, 1)} compris` : undefined} />
             <Row label="Bouclier" value={pct(shield, 1)} hint={`${pct(COMBAT_RULES.shieldPerLevel, 2)} par niveau de hangar de défense, plafond ${pct(COMBAT_RULES.shieldMax)} + générateur`} />
-            <Row label="Places de hangar" value={`${n(getUnitCapacity(p.buildings, "attack", tech))} flotte · ${n(getUnitCapacity(p.buildings, "defense", tech))} défense`} />
+            <Row label="Places de hangar" value={`${n(playerUnitCapacity(p, "attack"))} flotte · ${n(playerUnitCapacity(p, "defense"))} défense`} />
           </Mine>
         )}
       </Block>

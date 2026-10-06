@@ -796,7 +796,22 @@ export function learnTalent(talentId: string) {
 
 /** 5.21 : termine un lot de réparation (ou toute la file) contre de l'Ambre. */
 export function rushWorkshop(jobId?: string) {
-  return act<{ amber: number; units: Record<string, number> }>({ type: "workshopRush", ...(jobId ? { jobId } : {}) });
+  return act<{ amber: number; units: Record<string, number>; ready: Record<string, number> }>({ type: "workshopRush", ...(jobId ? { jobId } : {}) });
+}
+
+/** 5.28 : remet en service les vaisseaux prêts de la Cale sèche (un type, ou tous), dans les places libres du hangar. */
+export function dockCommission(unitId?: string) {
+  return act<{ units: Record<string, number> }>({ type: "dockCommission", ...(unitId ? { unitId } : {}) });
+}
+
+/** 5.28 (palier Triage) : démantèle des vaisseaux de la Cale sèche ou de l'Atelier. */
+export function dockScrap(unitId: string, qty: number) {
+  return act<{ count: number; refund: { scrap: number; energy: number } }>({ type: "dockScrap", unitId, qty });
+}
+
+/** 5.28 : réglages du Triage et de l'ordre de réparation. */
+export function dockSettings(settings: { policy?: string; priority?: string }) {
+  return act({ type: "dockSettings", ...settings });
 }
 
 export function resetTalents() {

@@ -6,6 +6,7 @@ import { TUTORIAL_RAID as TUTORIAL_RAID_RULES } from "@/game/story";
 export { performAttack } from "@/game/attack";
 export {
   performPlayerAction,
+  actionNeedsAway,
   performGift,
   newPlayerProfile,
   applyLegacyBattleReport,
@@ -224,7 +225,7 @@ export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
 // 5.18 : solde d'Ambre modifiable par l'administration.
 export { adminSetAmber } from "@/game/bounties";
-export { applyBossWear } from "@/game/workshop";
+export { applyBossWear, sendToWorkshop } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
 export { buyWeeklyOffer, WEEKLY_STOCK_KEY } from "@/game/weeklyStock";

@@ -21,15 +21,14 @@ import { UnitSpecButton } from "@/components/game/UnitSpecSheet";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { getUnitCapacity } from "@/game/buildings";
-import { hangarUsed, withWorkshop } from "@/game/actions";
+import { hangarLoad, type HangarLoad } from "@/game/hangar";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { CLASS_BEATS, COMBAT_RULES, unitStat } from "@/game/combat";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
-import { hullPercent, workshopUnits } from "@/game/workshop";
+import { dockReadyCount, hullPercent, workshopUnits } from "@/game/workshop";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { GameActionError, enqueueUnitBuild, sellUnit } from "@/services/playerService";
@@ -54,23 +53,22 @@ export function UnitsPage() {
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
   const [editingCards, setEditingCards] = useState(false);
   const classes = useMemo(() => unitClasses(UNITS), []);
-  const repairDock = player ? workshopUnits(player) : {};
-
   if (!player || !queues) return null;
 
   const qty = (id: string) => quantities[id] ?? 1;
   const setQty = (id: string, v: number) => setQuantities((q) => ({ ...q, [id]: Math.max(1, v) }));
 
-  // Places occupées dans le hangar : unités construites + unités en file
-  // (déjà réservées, même calcul que enqueueUnitBuild côté service).
-  // v3.9.1 : les vaisseaux en mission comptent aussi (ils reviendront).
-  const built = (category: "attack" | "defense") => hangarUsed(player.units, withWorkshop(away, player), category);
-  const awaySpace = (category: "attack" | "defense") => hangarUsed({}, away, category);
-  const repairSpace = (category: "attack" | "defense") => hangarUsed({}, withWorkshop({}, player), category);
-  const reserved = (category: "attack" | "defense") =>
-    queues.unitQueues[category].reduce((sum, item) => sum + (findUnit(item.unitId)?.hangarSpace ?? 1), 0);
-
-  const capacity = (category: "attack" | "defense") => getUnitCapacity(player.buildings, category, player.techLevels);
+  // 5.27.2 : places de hangar, même calcul que le serveur (hangar.ts) : à quai, en vol, à l'Atelier hors
+  // Cale sèche, et file du chantier.
+  const loads: Record<"attack" | "defense", HangarLoad> = {
+    attack: hangarLoad(player, queues, away, "attack"),
+    defense: hangarLoad(player, queues, away, "defense"),
+  };
+  const built = (category: "attack" | "defense") => loads[category].occupied;
+  const reserved = (category: "attack" | "defense") => loads[category].queue;
+  const capacity = (category: "attack" | "defense") => loads[category].capacity;
+  const readyInDock = dockReadyCount(player);
+  const repairDock = workshopUnits(player);
 
   const handleBuild = async (unitId: string) => {
     if (!uid) return;
@@ -120,28 +118,72 @@ export function UnitsPage() {
 
       <div className="grid gap-3 sm:grid-cols-2">
         {(["attack", "defense"] as const).map((cat) => {
-          const b = built(cat);
-          const r = reserved(cat);
-          const cap = capacity(cat);
-          const percent = cap > 0 ? ((b + r) / cap) * 100 : 0;
+          const l = loads[cat];
+          const percent = l.capacity > 0 ? (l.used / l.capacity) * 100 : 0;
           return (
             <Card key={cat} className="flex items-center gap-4 p-4">
-              <RadialGauge value={percent} size={64} strokeWidth={5} color={cat === "attack" ? "var(--color-danger-glow)" : "var(--color-cyan-glow)"}>
+              <RadialGauge value={Math.min(100, percent)} size={64} strokeWidth={5} color={l.overflow > 0 ? "var(--color-ember-glow)" : cat === "attack" ? "var(--color-danger-glow)" : "var(--color-cyan-glow)"}>
                 <span className="tabular-mono text-xs font-medium text-slate-200">{Math.round(percent)}%</span>
               </RadialGauge>
-              <div>
-                <p className="text-sm text-slate-300">Capacité {cat === "attack" ? "d'attaque" : "de défense"}</p>
-                <p className="tabular-mono text-xs text-slate-500">
-                  {formatNumber(b + r)} / {formatNumber(cap)} places
-                  {r > 0 && <span className="text-mint-glow"> (dont {formatNumber(r)} en file)</span>}
-                  {awaySpace(cat) > 0 && <span className="text-gold-glow"> (dont {formatNumber(awaySpace(cat))} en vol)</span>}
-                  {repairSpace(cat) > 0 && <span className="text-ember-glow"> (dont {formatNumber(repairSpace(cat))} à l'Atelier)</span>}
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-1.5 text-sm text-slate-300">
+                  Capacité {cat === "attack" ? "d'attaque" : "de défense"}
+                  {l.overflow > 0 && <HudTag tone="ember">Surcharge</HudTag>}
                 </p>
+                <p className="tabular-mono text-xs text-slate-500">
+                  {formatNumber(l.used)} / {formatNumber(l.capacity)} places
+                  {l.queue > 0 && <span className="text-mint-glow"> (dont {formatNumber(l.queue)} en file)</span>}
+                  {l.away > 0 && <span className="text-gold-glow"> (dont {formatNumber(l.away)} en vol)</span>}
+                  {l.workshop > 0 && <span className="text-ember-glow"> (dont {formatNumber(l.workshop)} à l'Atelier)</span>}
+                </p>
+                {cat === "attack" && l.dockCapacity > 0 && (
+                  <p className="tabular-mono text-xs text-slate-500">
+                    Cale sèche : {formatNumber(l.dockUsed)} / {formatNumber(l.dockCapacity)} postes, hors hangar
+                  </p>
+                )}
               </div>
             </Card>
           );
         })}
       </div>
+
+      {/* 5.27.2 : surcharge (ex. migration 5.22, Ascension) : rien n'est détruit, les sorties sont proposées. */}
+      {(["attack", "defense"] as const)
+        .filter((cat) => loads[cat].overflow > 0)
+        .map((cat) => (
+          <HudCallout key={cat} tone="ember" className="flex flex-col gap-2 text-sm text-slate-300">
+            <p>
+              <strong className="text-slate-100">Hangar {cat === "attack" ? "d'attaque" : "de défense"} en surcharge</strong> :{" "}
+              <span className="font-mono">+{formatNumber(loads[cat].overflow)}</span> places au-delà de la capacité. Tes unités restent, mais le chantier ne
+              construit plus rien de cette catégorie tant que la surcharge dure.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm" variant="outline">
+                <Link to="/game/batiments">Améliorer le hangar</Link>
+              </Button>
+              {cat === "attack" && (
+                <Button asChild size="sm" variant="outline">
+                  <Link to="/game/galaxie">Envoyer une flotte</Link>
+                </Button>
+              )}
+              <span className="self-center text-xs text-slate-400">
+                ou vendre l'excédent (bouton « Vendre » de chaque unité, 50 % du prix)
+                {cat === "attack" && " ; à l'Atelier, la Cale sèche libère les places des vaisseaux en réparation"}.
+              </span>
+            </div>
+          </HudCallout>
+        ))}
+      {readyInDock > 0 && (
+        <HudCallout tone="accent" className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-300">
+          <span>
+            <span className="font-mono text-slate-100">{formatNumber(readyInDock)}</span> vaisseau{readyInDock > 1 ? "x" : ""} réparé{readyInDock > 1 ? "s" : ""} attend
+            {readyInDock > 1 ? "ent" : ""} une place en Cale sèche.
+          </span>
+          <Button asChild size="sm">
+            <Link to="/game/batiments?onglet=atelier">Remettre en service</Link>
+          </Button>
+        </HudCallout>
+      )}
 
       {/* 5.24 : vitrine holographique des unités au hangar de l'onglet, effectif sous chacune. */}
       {(() => {

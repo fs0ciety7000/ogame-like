@@ -215,6 +215,23 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, workshopRushSecondsPerAmber: v ?? 600 } }))}
           />
         </Section>
+        <Section title="Cale sèche (5.28)">
+          <NumberField
+            label="Démantèlement en cale : part du prix rendue (0,6 = 60 %)"
+            value={rules.combat.dockScrapRefund}
+            min={0}
+            step={0.05}
+            hint="Palier Triage (niveau 5). La revente au hangar rend 50 %."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, dockScrapRefund: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Cadence de l'Atelier en plus au palier 10 (0,1 = +10 %)"
+            value={rules.combat.dockAutoSpeedBonus}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, dockAutoSpeedBonus: v ?? 0 } }))}
+          />
+        </Section>
         <Section title="Rôles par classe et cible prioritaire (5.21)">
           <NumberField
             label="Avantage de classe (0,2 = ±20 %)"

@@ -448,7 +448,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const storage = colonyStorage(colony, player);
   const inFlight = fleets.filter((f) => f.mission === "transport" && f.targetUid === colony.id && f.status !== "done");
   const defenses = UNITS.filter((u) => u.category === "defense" && (player.units[u.id]?.level ?? 0) > 0);
-  const hangar = colonyDefenseHangar(colony);
+  const hangar = colonyDefenseHangar(colony, player);
   const free = Math.max(0, hangar.capacity - hangar.used);
   const picked = defense.unitId ? findUnit(defense.unitId) : undefined;
   const pickedCost = picked ? playerUnitCost(picked, player) : { scrap: 0, energy: 0 };

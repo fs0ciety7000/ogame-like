@@ -72,6 +72,10 @@ export const COMBAT_RULES = {
   targetPriorityWeight: 3,
   /** 5.21 : Ambre pour terminer une réparation : 1 Ambre par tranche de ce nombre de secondes restantes. */
   workshopRushSecondsPerAmber: 600,
+  /** 5.28 : Cale sèche : part du coût d'une unité rendue au démantèlement (palier Triage), contre 50 % à la revente au hangar. */
+  dockScrapRefund: 0.6,
+  /** 5.28 : Cale sèche : cadence de l'Atelier en plus à partir du palier 10. */
+  dockAutoSpeedBonus: 0.1,
 };
 
 /** Bouclier planétaire du défenseur (Hangar de défense) : 0 → shieldMax. */

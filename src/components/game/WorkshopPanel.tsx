@@ -18,6 +18,7 @@ import { WORKSHOP_SOURCE_LABELS, workshopRushCost, workshopSpeedBonus, workshopV
 import { assetUrl } from "@/lib/assets";
 import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { DockPanel } from "@/components/game/DockPanel";
 
 /* 5.20 : onglet « Atelier de réparation » de la page Bâtiments. File des
    unités immobilisées, coques abîmées, cadence de l'Atelier. Animations :
@@ -67,7 +68,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
     const count = cost.jobs.reduce((s, j) => s + j.count, 0);
     const ok = await askConfirm({
       title: jobId ? "Terminer cette réparation ?" : "Terminer toute la file ?",
-      message: `${formatNumber(count)} unité${count > 1 ? "s" : ""} rentre${count > 1 ? "nt" : ""} au hangar tout de suite, au lieu de ${formatDuration(cost.seconds)}.`,
+      message: `${formatNumber(count)} unité${count > 1 ? "s" : ""} réparée${count > 1 ? "s" : ""} tout de suite, au lieu de ${formatDuration(cost.seconds)}. Celles en Cale sèche y attendent une place au hangar.`,
       details: (
         <span className="flex items-center gap-2 text-sm text-slate-300">
           Coût : <AmberAmount value={cost.amber} className="font-mono text-slate-100" /> <span className="text-slate-500">(tu en as <span className="font-mono">{formatNumber(amber)}</span>)</span>
@@ -80,7 +81,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
     setBusyRush(jobId ?? "all");
     try {
       await rushWorkshop(jobId);
-      toast.success("Réparations terminées : les unités sont au hangar.");
+      toast.success("Réparations terminées.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Impossible de terminer ces réparations pour le moment.");
     } finally {
@@ -125,7 +126,8 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
 
       <HudCallout tone="accent" className="text-xs text-slate-300">
         Après un combat, tes unités gardent leurs dégâts : une flotte abîmée tire moins et encaisse moins. Les unités détruites que l'Atelier sauve
-        restent <strong className="text-slate-100">immobilisées</strong> (elles gardent leur place de hangar) jusqu'à ce que l'Atelier leur ait rendu tous leurs points de vie.
+        restent <strong className="text-slate-100">immobilisées</strong> jusqu'à ce que l'Atelier leur ait rendu tous leurs points de vie : elles gardent leur place de hangar, sauf
+        celles posées en <strong className="text-slate-100">Cale sèche</strong>.
         Il répare d'abord la file, dans l'ordre, puis les coques abîmées. Pour aller plus vite : la techno{" "}
         <Link to="/game/labo" className="text-cyan-glow hover:underline">
           Nanoréparation
@@ -144,6 +146,8 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
           </>
         )}
       </HudCallout>
+
+      <DockPanel player={player} view={view} />
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -172,7 +176,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                     initial={{ opacity: 0, x: -12 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 24, transition: { duration: 0.35 } }}
-                    className="glass-panel hud-cut-sm relative flex items-center gap-3 overflow-hidden p-3"
+                    className="glass-panel hud-cut-sm relative flex flex-wrap items-center gap-3 overflow-hidden p-3"
                   >
                     {i === 0 && (
                       <motion.span
@@ -183,12 +187,13 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                       />
                     )}
                     <img src={assetUrl(unit?.image ?? "")} alt="" className="relative h-12 w-12 shrink-0 object-contain" />
-                    <div className="relative min-w-0 flex-1">
+                    <div className="relative min-w-[11rem] flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-sm text-slate-100">
                           <span className="font-mono">{formatNumber(job.count)}</span> × {unit?.name ?? job.unitId}
                         </span>
                         <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{WORKSHOP_SOURCE_LABELS[job.source] ?? job.source}</span>
+                        {(view.dock.jobs[job.id] ?? 0) > 0 && <HudChip size="sm" tone="neutral">{(view.dock.jobs[job.id] ?? 0) >= job.count ? "En cale" : `${formatNumber(view.dock.jobs[job.id] ?? 0)} en cale`}</HudChip>}
                         {i === 0 ? (
                           <HudChip tone="accent" size="sm" alert>
                             En cours
@@ -205,7 +210,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                         <span>prêtes dans {left(endsAtMs)}</span>
                       </p>
                     </div>
-                    <div className="relative shrink-0">
+                    <div className="relative w-full shrink-0 sm:w-auto">
                       <Button size="sm" variant="outline" disabled={!!busyRush || amber < workshopRushCost(player, job.id).amber} onClick={() => rush(job.id)} title="Terminer ce lot tout de suite contre de l'Ambre">
                         Terminer · <AmberAmount value={workshopRushCost(player, job.id).amber} className="font-mono" />
                       </Button>
