@@ -28,17 +28,17 @@ Limite : pas d'accès aux données de production. Les constats d'équilibrage ch
 ## 2. Constats
 
 Codes : **C** cohérence ou bug, **E** équilibrage, **Q** QoL et lisibilité, **P** performance, **D** documentation et dette.
-Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration.
+Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration. ✅ : corrigé (version).
 
 ### Cohérence et bugs
 
 | # | Gravité | Constat | Preuve | Piste |
 |:--|:--|:--|:--|:--|
-| C1 | 🟠 | L'**épave d'expédition** ajoute 2 à 5 % de la flotte sans vérifier la place au hangar : l'invariant I3 est violé, et c'est une nouvelle source de surcharge | `expeditions.ts` (`kind === "wreck"`) | les vaisseaux trouvés vont en Cale sèche ou à l'Atelier comme « prêts » |
-| C2 | 🟡 | La remise en service automatique (palier 10) n'a lieu qu'à la prochaine action du joueur | `actions.ts` (`awayKnown`) | l'exécuter aussi au retour des flottes (`processDueFleets`) |
-| C3 | 🟡 | `homeLevels` compte les bâtiments verrouillés au niveau 1 : le seuil des colonies (120 / 140) est atteint plus tôt qu'annoncé | `colonies.ts` (`homeLevels`) | utiliser `effectiveBuildingLevel` (le seuil baisse de 0 à 3 selon le joueur ; décider s'il faut l'ajuster) |
+| C1 | ✅ 5.28.1 | L'**épave d'expédition** ajoute 2 à 5 % de la flotte sans vérifier la place au hangar : l'invariant I3 est violé, et c'est une nouvelle source de surcharge | `expeditions.ts` (`kind === "wreck"`) | les vaisseaux trouvés vont en Cale sèche ou à l'Atelier comme « prêts » |
+| C2 | ✅ 5.28.1 | La remise en service automatique (palier 10) n'a lieu qu'à la prochaine action du joueur | `actions.ts` (`awayKnown`) | l'exécuter aussi au retour des flottes (`processDueFleets`) |
+| C3 | ✅ 5.28.1 | `homeLevels` compte les bâtiments verrouillés au niveau 1 : le seuil des colonies (120 / 140) est atteint plus tôt qu'annoncé | `colonies.ts` (`homeLevels`) | utiliser `effectiveBuildingLevel` (le seuil baisse de 0 à 3 selon le joueur ; décider s'il faut l'ajuster) |
 | C4 | 🟡 | Catégories trompeuses : Bastion en « attaque » avec un profil défensif ; Intercepteur en « défense » mais mobile (vitesse 12, soute 5) | `units.ts` | trancher, puis migrer le contenu |
-| C5 | 🟠 | Stats d'effet **sans effet sur la couche empire** : `fleetUpkeep` et `buildingDiscount` ne sont lus que pour les technologies. Le préréglage « Intendance de flotte » ne fait rien sur une relique, un officier ou un module | `economy.ts`, `flush.ts` | lire la couche empire, plus un test de garde générique « chaque stat déclarée est lue dans les deux couches » |
+| C5 | ✅ 5.28.1 | Stats d'effet **sans effet sur la couche empire** : `fleetUpkeep` et `buildingDiscount` ne sont lus que pour les technologies. Le préréglage « Intendance de flotte » ne fait rien sur une relique, un officier ou un module | `economy.ts`, `flush.ts` | lire la couche empire, plus un test de garde générique « chaque stat déclarée est lue dans les deux couches » |
 
 ### Équilibrage
 
@@ -72,7 +72,7 @@ Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration.
 
 | # | Gravité | Constat | Piste |
 |:--|:--|:--|:--|
-| D1 | 🟡 | `README.md` dit que « toute la logique de jeu tourne côté client » : faux depuis la v2 | réécrire le README (architecture serveur, liens vers `CLAUDE.md` et `docs/`) |
+| D1 | ✅ 5.28.1 | `README.md` dit que « toute la logique de jeu tourne côté client » : faux depuis la v2 | réécrire le README (architecture serveur, liens vers `CLAUDE.md` et `docs/`) |
 | D2 | 🟡 | Pas de fiche avant cet audit pour la plupart des systèmes | fait : `docs/systems/` |
 
 ## 3. Benchmark : ce qu'on retient

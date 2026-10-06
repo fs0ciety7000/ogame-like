@@ -19,6 +19,14 @@ export function playerBuildTimeFactor(player: TimePlayer, now: number): number {
   return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 
+/** 5.28.1 : réduction du coût des bâtiments, technologies (Ingénierie de construction) puis couche empire
+ *  (reliques, officiers, modules). Un seul calcul pour le serveur et l'affichage. */
+export function playerBuildingDiscount(player: Partial<Pick<PlayerState, "bonuses">> & Parameters<typeof playerModifiers>[0]): number {
+  const tech = Math.max(0, player.bonuses?.buildingUpgradeDiscount ?? 0);
+  const empire = playerModifiers(player).buildingDiscount;
+  return 1 - (1 - tech) * (1 - empire);
+}
+
 export function playerResearchTimeFactor(player: TimePlayer, now: number): number {
   if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);

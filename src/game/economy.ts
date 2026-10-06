@@ -86,8 +86,9 @@ export function storageCapacityOf(input: EconomyInput): number {
   return factor !== 1 && Number.isFinite(base) ? Math.floor(base * factor) : base;
 }
 
-/** Énergie consommée par seconde par les unités construites. */
-export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels): number {
+/** Énergie consommée par seconde par les unités construites. `empireCut` : réduction de la couche empire
+ *  (`playerModifiers(...).fleetUpkeep`, 5.28.1), appliquée après celle des technologies. */
+export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels, empireCut = 0): number {
   let upkeep = 0;
   for (const [id, state] of Object.entries(units ?? {})) {
     const def = findUnit(id);
@@ -95,7 +96,7 @@ export function getFleetUpkeep(units: Units | undefined, techLevels?: TechLevels
     const perPlace = def.category === "attack" ? ECONOMY_RULES.upkeepPerPlaceAttack : ECONOMY_RULES.upkeepPerPlaceDefense;
     upkeep += state.count * def.hangarSpace * perPlace;
   }
-  return upkeep * techReductionFactor(techLevels, "fleet_upkeep");
+  return upkeep * techReductionFactor(techLevels, "fleet_upkeep") * (1 - Math.max(0, empireCut));
 }
 
 export interface EconomySnapshot {
@@ -133,7 +134,7 @@ function boostedRates(input: EconomyInput, multipliers: Partial<Record<string, n
 /** `now` : applique les bonus de l'événement en cours à cet instant. */
 export function economySnapshot(input: EconomyInput, now?: number): EconomySnapshot {
   const gross = boostedRates(input, now === undefined ? {} : productionMultipliers(now), now === undefined ? 1 : boostAt(input, now));
-  const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = now !== undefined && now < upkeepFreeUntil(input) ? 0 : getFleetUpkeep(input.units, input.techLevels, playerModifiers(input, now, input.effectScope).fleetUpkeep);
   const capacity = storageCapacityOf(input);
   const energyNet = (gross.energy ?? 0) - upkeep;
   const outage = energyNet < 0 && (input.resources.energy ?? 0) <= 0;
@@ -191,7 +192,7 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
   if (elapsedSeconds <= 0) return out;
 
   const gross = boostedRates(input, multipliers, boost);
-  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels);
+  const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels, playerModifiers(input, Date.now(), input.effectScope).fleetUpkeep);
   const capacity = storageCapacityOf(input);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
 

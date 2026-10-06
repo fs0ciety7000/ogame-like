@@ -56,11 +56,12 @@ describe("expeditions", () => {
     expect(fleet.expedition.log).toHaveLength(1);
   });
 
-  it("wrecks add ships, ambushes cost ships", () => {
+  it("wrecks add ready ships (5.28.1 : hors flotte, invariant I3), ambushes cost ships", () => {
     const p = player();
     const fleet = launched(p);
     rollExpeditionEvent(p, fleet, 1, 2000, seq(weightsBefore("wreck"), 1));
-    expect(fleet.units.chasseur).toBeGreaterThan(100);
+    expect(fleet.units.chasseur).toBe(100);
+    expect(p.workshop?.ready?.chasseur ?? 0).toBeGreaterThan(0);
     const before = fleet.units.chasseur;
     rollExpeditionEvent(p, fleet, 2, 3000, seq(weightsBefore("ambush"), 0.5));
     expect(fleet.units.chasseur).toBeLessThan(before);

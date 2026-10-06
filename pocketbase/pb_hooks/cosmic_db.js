@@ -1536,6 +1536,18 @@ function resolveAttackArrival(txApp, game, rec, now) {
   txApp.save(rec);
 }
 
+/**
+ * 5.28.1 (audit C2) : au retour d'une flotte, la Cale sèche au palier 10 remet en service les vaisseaux prêts
+ * (les flottes encore en vol, hors celle qui rentre, comptent dans le hangar). Rend les notifications.
+ */
+function dockAutoOnReturn(txApp, game, uid, player, queues, rec, now) {
+  if (!game.dockAutoCommission(player)) return [];
+  const others = txApp
+    .findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done" && id != {:id}', "", 200, 0, { u: uid, id: rec.id })
+    .map((r) => fleetFromRecord(r));
+  return game.autoCommission(player, queues, game.unitsAwayOf(others, uid), now);
+}
+
 function resolveFleetReturn(txApp, game, rec, now) {
   if (rec.getString("mission") === "expedition") return expeditionStep(txApp, game, rec, now, 2);
   const fleet = fleetFromRecord(rec);
@@ -1543,8 +1555,9 @@ function resolveFleetReturn(txApp, game, rec, now) {
     const owner = loadPlayer(txApp, game, fleet.ownerUid);
     const out = game.performFleetReturn(owner.player, owner.queues, fleet, now);
     game.clearDecoy(out.owner, rec.id);
+    const docked = dockAutoOnReturn(txApp, game, fleet.ownerUid, out.owner, out.queues, rec, now);
     savePlayer(txApp, game, owner, out.owner, out.queues);
-    notify(txApp, fleet.ownerUid, out.notifications);
+    notify(txApp, fleet.ownerUid, out.notifications.concat(docked));
   }
   rec.set("status", "done");
   txApp.save(rec);
@@ -2790,6 +2803,7 @@ function saveExpeditionFleet(txApp, rec, fleet) {
 function finishExpeditionFleet(txApp, game, rec, fleet, player, owner, queues, notes, now) {
   notes.push(game.finishExpedition(player, fleet, now));
   game.completeFleetReturn(player, fleet, now);
+  dockAutoOnReturn(txApp, game, fleet.ownerUid, player, queues, rec, now).forEach((n) => notes.push(n));
   savePlayer(txApp, game, owner, player, queues);
   notify(txApp, fleet.ownerUid, notes);
   rec.set("status", "done");

@@ -1,4 +1,4 @@
-import { playerBuildTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
@@ -142,7 +142,7 @@ export function BuildingsPage() {
           const level = state.level;
           const nextLevel = level + 1;
           const rawCost = getBuildingUpgradeCost(building, nextLevel);
-          const cost = applyBuildingDiscount(rawCost, player.bonuses.buildingUpgradeDiscount);
+          const cost = applyBuildingDiscount(rawCost, playerBuildingDiscount(player));
           const time = Math.round(getBuildingUpgradeTime(building, nextLevel) * playerBuildTimeFactor(player, now));
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;

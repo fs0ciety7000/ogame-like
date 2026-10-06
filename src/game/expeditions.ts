@@ -1,6 +1,6 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { playerCombatEffects } from "@/game/effectTargets";
-import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
+import { addReady, applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { resolveCombat, computeFleetPower } from "@/game/combat";
 import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/relics";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
@@ -265,8 +265,10 @@ export function rollExpeditionEvent(player: PlayerState, fleet: ExpeditionFleet,
       const first = Object.keys(fleet.units)[0];
       if (first) found[first] = 1;
     }
-    fleet.units = Object.fromEntries(Object.entries(fleet.units).map(([id, n]) => [id, n + (found[id] ?? 0)]));
-    text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} rejoignent la flotte.`;
+    // 5.28.1 (audit C1) : les vaisseaux trouvés attendent une place au hangar (prêts, Atelier) au lieu de
+    // grossir la flotte sans vérifier la capacité (invariant I3).
+    addReady(player, found);
+    text = `Épave remise en état : ${Object.entries(found).map(([id, n]) => `${n} ${findUnit(id)?.name ?? id}`).join(", ")} t'attendent à l'Atelier : remets-les en service quand ton hangar a de la place.`;
   } else if (kind === "ambush") {
     const { won, lost } = fightFleet(player, fleet, between(R.ambushMinPower, R.ambushMaxPower, random) * riskOf(fleet), now);
     if (won) {

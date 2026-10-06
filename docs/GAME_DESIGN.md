@@ -51,12 +51,13 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 |:--|:--|:--|:--|
 | I1 | Unités conservées : base + en vol + Atelier + prêts + pertes = avant combat | `attack.ts`, `pirates.ts`, `bounties.ts`, `workshop.ts` | `workshop.test.ts`, `attack.test.ts`, `caleSeche.test.ts` |
 | I2 | **Places de hangar** : base + en vol + Atelier hors Cale sèche + file ≤ capacité, **à chaque construction** ; en cale ≤ postes | `actions.ts` (`buildUnits`) via `hangarLoad` | `actions.test.ts`, `caleSeche.test.ts` |
-| I3 | Aucun ajout d'unités hors construction, retour de flotte, fin de réparation ou remise en service (qui vérifie la place) | tout `src/game` + migrations | `caleSeche.test.ts` (I3) |
+| I3 | Aucun ajout d'unités hors construction, retour de flotte, fin de réparation ou remise en service (qui vérifie la place) ; une récompense en vaisseaux (épave d'expédition) passe par les « prêts » | tout `src/game` + migrations | `caleSeche.test.ts` (I3), `expeditions.test.ts` |
 | I4 | La capacité ne baisse jamais sous la flotte sans état « surcharge » visible ; l'Ascension garde hangars et Cale sèche | `ascension.ts` (`keptOnAscension`) | `ascension.test.ts`, `caleSeche.test.ts` (I4) |
 | I5 | Places et capacité des hangars : une seule fonction (`hangarLoad`, `playerUnitCapacity` dans `hangar.ts`) | client, serveur, Statistiques | `caleSeche.test.ts` (I5, garde sur `getUnitCapacity(`) |
 | I6 | Le butin et les livraisons arrivent même entrepôt plein (choix assumé) | `fleets.ts` | `fleets.test.ts` |
 | I7 | Rien dans `src/game` n'utilise `Intl` / `localeCompare` / `toLocaleString` | tout `src/game` | `serverSafe.test.ts` |
-| I8 | Une remise en service automatique ne tourne que si le serveur a lu les flottes en vol (`awayKnown`) | `actions.ts` (`performPlayerAction`) | `caleSeche.test.ts` |
+| I8 | Une remise en service automatique ne tourne que si le serveur a lu les flottes en vol (`awayKnown`) | `actions.ts` (`performPlayerAction`), `cosmic_db.js` (`dockAutoOnReturn`) | `caleSeche.test.ts` |
+| I9 | Chaque stat d'effet est lue dans la couche empire (champ de `Modifiers` consommé, ou lecteur direct) | `modifiers.ts`, `effectTargets.ts`, `hangar.ts`, `workshop.ts` | `effectsRead.test.ts` |
 
 ## 5. Règles de conception
 
@@ -107,13 +108,13 @@ systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres
 | Postes | 1 000 × niveau (places de hangar), + effet `dockCapacity` |
 | Coût / temps | courbe de l'Atelier (nano + données), 1 200 s par niveau, palier 2 au niv. 11 |
 | Remplissage | les prêts d'abord, puis les lots par ordre d'arrivée ; le surplus garde sa place au hangar |
-| Prêts | rentrent au hangar s'il y a de la place : bouton « Remettre en service », automatique au palier 10 |
+| Prêts | rentrent au hangar s'il y a de la place : bouton « Remettre en service », automatique au palier 10. Existent aussi sans Cale sèche (épave d'expédition) |
 
 | Palier | Effet |
 |:--|:--|
 | 1 | les sauvés occupent des postes, pas le hangar |
 | 5 · Triage | démanteler (60 % du prix, réglable) ; réglage après combat : tout réparer, démanteler ce qui ne tient pas, tout démanteler |
-| 10 · Remise automatique | prêts rentrés dès qu'une place se libère (à la prochaine action du joueur) ; Atelier +10 % |
+| 10 · Remise automatique | prêts rentrés dès qu'une place se libère (à la prochaine action du joueur et au retour de chaque flotte) ; Atelier +10 % |
 | 15 · Priorités | ordre de réparation : arrivée, ou une classe d'abord |
 | 20 · Cale orbitale | +5 points de vaisseaux sauvés |
 
@@ -126,3 +127,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 5.27.1 | Hangars en surcharge : migration 5.22 sans plafond, Ascension qui remet les hangars au niveau 1, stat `hangarCapacity` jamais lue, tech « Extension des hangars » sans effet sur les colonies | `proposals/cale-seche.md` |
 | 2026-10-06 | après 5.28.0 | Audit global : 5 constats de cohérence (C1 épave d'expédition hors plafond, C5 stats empire non lues…), 6 d'équilibrage (E1 entrepôt et pillage, E2 attrition, E5 alliances de 6…), 4 de QoL, 3 de performance | `docs/audit/2026-10-06-audit-global.md`, `proposals/feuille-de-route-2026-q4.md` |
 | 2026-10-06 | 5.28.0 | Lot 0 et Cale sèche livrés : `hangarLoad` unique, surcharge visible, C2 à C6 corrigés, migration 5.22 repassée par l'Atelier ; invariants I3, I4, I5, I8 testés | `caleSeche.test.ts`, test d'intégration « 5.28 Cale sèche » |
+| 2026-10-06 | 5.28.1 | Lot A livré : C1 (épave → prêts), C2 (remise automatique au retour des flottes), C3 (`homeLevels`), C5 (couche empire de `fleetUpkeep` et `buildingDiscount`, invariant I9), D1 (README) | `docs/changes/5.28.1-correctifs.md` |

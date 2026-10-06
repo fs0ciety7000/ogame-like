@@ -10,36 +10,36 @@ Réécriture complète du prototype HTML/CSS/JS d'origine (conservé dans
 - **React 18 + TypeScript + Vite** — SPA rapide, typée de bout en bout.
 - **Tailwind CSS v4 + Radix UI + Framer Motion** — interface sombre façon
   sci‑fi, accessible, animée.
-- **PocketBase** — comptes (connexion par pseudo ou email), base de
-  données et temps réel (SSE), auto‑hébergé. Toute la logique de jeu tourne
-  côté client, avec une production hors‑ligne rattrapée automatiquement ;
-  les règles d'accès PocketBase limitent chaque joueur à ses propres
-  données.
+- **PocketBase** — comptes (pseudo, email, passkeys, Google / Apple), base de
+  données et temps réel (SSE), auto‑hébergé. **Le serveur fait autorité** : chaque
+  action passe par les hooks (`pocketbase/pb_hooks`), qui exécutent le moteur de
+  `src/game` empaqueté pour goja. Le client affiche et anticipe, il n'applique
+  jamais une règle seul.
 - **Zustand** — état client léger, alimenté par les abonnements temps réel.
 - **sonner** — toasts, **cloche de notifications** — journal d'évènements
   persistant (constructions, recherches, missions, combats) alimenté en
   temps réel.
 
-## Fonctionnalités
+## Documentation
 
-- Connexion / inscription par pseudo, avec un vrai email de récupération
-  (mot de passe oublié fonctionnel) et une page Réglages (changer de mot de
-  passe, supprimer son compte).
-- Ressources (communes + rares), production continue même hors‑ligne,
-  comptoir d'échange.
-- Bâtiments à niveaux, coûts/temps échelonnés, déblocages.
-- Unités (file de production par catégorie, capacité liée aux hangars,
-  vente).
-- Laboratoire : arbre de technologies à prérequis, jusqu'à 4 recherches en
-  parallèle.
-- Missions chronométrées avec récompenses.
-- Classement des joueurs en temps réel, espionnage, attaques avec rapport
-  de combat détaillé — livré instantanément au défenseur, même si son
-  onglet était fermé au moment de l'attaque.
-- Rangs, statistiques de victoires/défaites, temps de jeu.
-- Suite de tests (Vitest) sur toute la logique de jeu — `npm run test`.
-- Code-splitting par page + animations (compteurs de ressources, transitions,
-  célébration de montée de rang).
+À lire avant de contribuer (agent ou humain) :
+
+| Fichier | Contenu |
+| --- | --- |
+| `CLAUDE.md` | comment on travaille ici : règles du moteur, du front, validation, livraison |
+| `docs/GAME_DESIGN.md` | GDD : piliers, boucles, invariants du moteur, fiches systèmes, journal d'audit |
+| `docs/systems/` | une fiche par domaine du jeu (règles et chiffres en vigueur, code, admin) |
+| `docs/DESIGN.md` | design system de l'interface (jetons, composants HUD) |
+| `docs/WORKFLOW.md` | chaîne d'une fonctionnalité, du brief à la livraison |
+| `docs/proposals/`, `docs/audit/`, `docs/changes/` | propositions chiffrées, audits datés, une fiche par lot livré |
+| `changelog/`, `content/blog/` | notes de version et devblog |
+
+## En bref
+
+Ressources communes et rares, bâtiments à paliers, laboratoire, chantier naval et hangars, Atelier de réparation et Cale sèche,
+flottes (attaque, espionnage, recyclage, expéditions, patrouilles), PNJ (pirates, seigneurs de guerre, boss mondiaux), alliances
+(territoires, guerres, projets), économie (marché, enchères, Comptoir, pot commun), saisons (passe, Chroniques, divisions),
+Ascension et colonies. Le détail, avec les chiffres, est dans `docs/systems/`.
 
 ## Démarrage
 
@@ -208,16 +208,18 @@ requêtes).
 
 ```
 src/
-  game/        formules pures du jeu (bâtiments, unités, recherche, combat…)
-  services/    accès PocketBase (actions de jeu, abonnements temps réel)
+  game/        moteur pur (TypeScript sans DOM ni réseau) : toutes les règles du jeu, testées
+  server/      hooksEntry.ts : ce que le moteur expose aux hooks PocketBase
+  services/    appels au serveur (routes /api/cosmic/*) et abonnements temps réel
   store/       état client (Zustand) alimenté par les abonnements
   hooks/       synchro temps réel, ressources affichées en direct, tickers
-  components/  UI (primitives + composants de jeu)
-  pages/       une page par écran du jeu
-pocketbase/    schéma (pb_schema.json), script d'installation, hooks serveur (pb_hooks/)
+  components/  UI (primitives HUD + composants de jeu)
+  pages/       une page par écran ; pages/admin/ : administration
+pocketbase/    schéma, script d'installation, hooks serveur (pb_hooks/ : routes, tâches planifiées, moteur empaqueté)
+changelog/     notes de version (frontmatter version, iteration, date, title)
+content/blog/  billets du devblog
+docs/          GDD, design system, méthode, fiches systèmes, audits, propositions, fiches de lot
 scripts/       migration Firebase -> PocketBase, remise à zéro de l'XP
-src/server/    point d'entrée de la logique compilée pour les hooks
-src/pages/admin/ interface d'administration (éditeurs de contenu, joueurs, outils)
 legacy/        ancien prototype HTML/CSS/JS (référence, non utilisé)
 ```
 
@@ -225,15 +227,13 @@ legacy/        ancien prototype HTML/CSS/JS (référence, non utilisé)
 
 ```
 users                 comptes (email, username = pseudo, name = pseudo affiché)
-players/{id}          profil, ressources, bâtiments, unités, techs (id = id du compte)
-queues/{id}           files d'attente (constructions/unités/recherches/missions)
+players/{id}          profil, ressources, bâtiments, unités, technologies, Atelier (id = id du compte)
+queues/{id}           files d'attente (constructions, unités, recherches, missions)
+fleets                flottes en vol (résolues par le serveur à l'arrivée et au retour)
 notifications         journal d'évènements (temps réel)
-battle_reports        rapports de combat (créés par l'attaquant, traités une
-                      seule fois par le défenseur)
-spy_reports, resource_gifts, alliances, alliance_messages
+battle_reports, spy_reports, resource_gifts, alliances, alliance_messages, …
+game_config           contenu et règles réglés dans l'admin (lisible par tous)
 ```
 
-Toute la logique (production, files, combat) est rejouée côté client à
-partir d'un horodatage (`resourcesUpdatedAtMs`) à chaque action et à
-intervalle régulier (~20s), ce qui permet un rattrapage correct de la
-progression pendant les périodes hors‑ligne.
+La production est rejouée par le moteur à partir d'un horodatage (`resourcesUpdatedAtMs`) : côté serveur à chaque action et dans les
+tâches planifiées, côté client pour l'affichage en direct. Les heures hors ligne sont ainsi rattrapées exactement.

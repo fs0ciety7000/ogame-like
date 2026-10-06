@@ -16,5 +16,5 @@
 `fleets.ts`, `espionage.ts`, `expeditions.ts`, `debris.ts`, `GalaxyPage.tsx`, cron `cosmic_fleets` (chaque minute).
 
 ## État (audit 2026-10-06)
-- Épave d'expédition hors plafond de hangar (audit C1).
+- Épave d'expédition : les vaisseaux trouvés vont dans les « prêts » de l'Atelier depuis la 5.28.1 (C1), remis en service selon la place.
 - Absence d'emplacements de flotte : rien ne limite le nombre de flottes simultanées (audit E4).

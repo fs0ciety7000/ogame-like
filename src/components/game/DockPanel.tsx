@@ -41,23 +41,6 @@ export function DockPanel({ player, view }: { player: PlayerState; view: Worksho
   const [busy, setBusy] = useState<string | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
 
-  if (dock.level <= 0) {
-    return (
-      <HudCallout tone="accent" className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
-        <span className="flex items-start gap-2">
-          <Anchor className="mt-0.5 h-4 w-4 shrink-0 text-cyan-glow" />
-          <span>
-            <strong className="text-slate-100">Cale sèche</strong> : des postes pour les vaisseaux en réparation, hors du hangar. Le hangar reste libre pour
-            reconstruire. {def?.requires && <>Requis : Atelier de réparation niveau <span className="font-mono">{def.requires.level}</span>.</>}
-          </span>
-        </span>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/game/batiments">Voir le bâtiment</Link>
-        </Button>
-      </HudCallout>
-    );
-  }
-
   const readyIds = Object.keys(dock.ready);
   const repairingByType: Record<string, number> = {};
   for (const { job } of view.jobs) repairingByType[job.unitId] = (repairingByType[job.unitId] ?? 0) + job.count;
@@ -122,6 +105,46 @@ export function DockPanel({ player, view }: { player: PlayerState; view: Worksho
     } finally {
       setBusy(null);
     }
+  }
+
+  if (dock.level <= 0) {
+    // 5.28.1 : sans Cale sèche, des vaisseaux peuvent quand même attendre (épave d'expédition) : on les montre.
+    return (
+      <div className="flex flex-col gap-3">
+        {readyTotal > 0 && (
+          <HudCallout tone="accent" className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+            <span className="flex items-start gap-2">
+              <PackageCheck className="mt-0.5 h-4 w-4 shrink-0 text-cyan-glow" />
+              <span>
+                <strong className="text-slate-100">Prêts</strong> :{" "}
+                {readyIds.map((id, i) => (
+                  <span key={id}>
+                    {i > 0 && ", "}
+                    <span className="font-mono tabular-nums">{formatNumber(dock.ready[id])}</span> × {findUnit(id)?.name ?? id}
+                  </span>
+                ))}
+                . Remets-les en service quand ton hangar a de la place.
+              </span>
+            </span>
+            <Button size="sm" disabled={!!busy} onClick={() => void commission()}>
+              Remettre en service
+            </Button>
+          </HudCallout>
+        )}
+        <HudCallout tone="accent" className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-300">
+          <span className="flex items-start gap-2">
+            <Anchor className="mt-0.5 h-4 w-4 shrink-0 text-cyan-glow" />
+            <span>
+              <strong className="text-slate-100">Cale sèche</strong> : des postes pour les vaisseaux en réparation, hors du hangar. Le hangar reste libre pour
+              reconstruire. {def?.requires && <>Requis : Atelier de réparation niveau <span className="font-mono">{def.requires.level}</span>.</>}
+            </span>
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/game/batiments">Voir le bâtiment</Link>
+          </Button>
+        </HudCallout>
+      </div>
+    );
   }
 
   return (

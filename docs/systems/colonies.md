@@ -16,4 +16,4 @@
 
 ## État (audit 2026-10-06)
 - Les colonies restent des « fermes » à défendre : pas de flotte basée, pas de chantier naval, transport manuel.
-- `homeLevels` compte les bâtiments verrouillés au niveau 1 (audit C3).
+- Seuil de fondation : seuls les bâtiments construits comptent (`effectiveBuildingLevel`) depuis la 5.28.1 (C3).

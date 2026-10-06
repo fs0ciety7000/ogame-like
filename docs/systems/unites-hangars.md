@@ -17,5 +17,5 @@ Puissance militaire (attaque, défense) et logistique (cargo, drones, sondes). B
 I2, I3, I4, I5 (GDD §4).
 
 ## État (audit 2026-10-06)
-- **Épave d'expédition** : ajoute 2 à 5 % de la flotte sans vérifier la place au hangar (I3 violé). Voir audit C1.
+- Épave d'expédition : corrigée en 5.28.1 (C1), les vaisseaux trouvés passent par les « prêts ».
 - Bastion classé « attaque » avec un profil défensif, et Intercepteur « défense » mobile (vitesse 12, soute 5) : catégories à clarifier (audit C4).

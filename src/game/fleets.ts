@@ -636,10 +636,10 @@ export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw
 
 /** Énergie payée au départ d'une patrouille : l'entretien de la flotte
  *  pour toute la durée. */
-export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<string, number>, minutes: number, techLevels?: PlayerState["techLevels"]): number {
+export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<string, number>, minutes: number, techLevels?: PlayerState["techLevels"], empireCut = 0): number {
   const selected: PlayerState["units"] = {};
   for (const [id, qty] of Object.entries(fleet)) selected[id] = { level: units[id]?.level ?? 1, count: qty };
-  return Math.ceil(getFleetUpkeep(selected, techLevels) * minutes * 60);
+  return Math.ceil(getFleetUpkeep(selected, techLevels, empireCut) * minutes * 60);
 }
 
 /** Mode fuite : la flotte quitte la base (elle ne défend plus) et revient
@@ -654,7 +654,7 @@ export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, m
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, duration, owner.techLevels);
+  const cost = patrolEnergyCost(owner.units, requested, duration, owner.techLevels, playerModifiers(owner).fleetUpkeep);
   if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la patrouille.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent partir en patrouille.");
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;
@@ -681,7 +681,7 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
     const qty = Math.floor(Number(v));
     if (qty > 0) requested[id] = qty;
   }
-  const cost = patrolEnergyCost(owner.units, requested, hours * 60, owner.techLevels);
+  const cost = patrolEnergyCost(owner.units, requested, hours * 60, owner.techLevels, playerModifiers(owner).fleetUpkeep);
   if ((owner.resources.energy ?? 0) < cost) throw new GameActionError(`Il faut ${formatInt(cost)} énergie pour l'entretien de la garnison.`);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seuls les vaisseaux peuvent former une garnison.");
   owner.resources.energy = (owner.resources.energy ?? 0) - cost;

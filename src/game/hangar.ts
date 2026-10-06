@@ -2,7 +2,8 @@ import { getUnitCapacity } from "@/game/buildings";
 import { effectTotal, type EffectScope } from "@/game/effects";
 import { allEffects } from "@/game/modifiers";
 import { findUnit } from "@/game/units";
-import { commissionReady, dockAllocation, workshopHangarUnits } from "@/game/workshop";
+import { commissionReady, dockAllocation, dockReadyCount, dockTier, workshopHangarUnits } from "@/game/workshop";
+import type { NewNotification } from "@/game/flush";
 import type { PlayerState, QueuesState } from "@/types/game";
 
 /* =====================================================
@@ -111,4 +112,21 @@ export function commissionDocked(player: PlayerState, queues: Pick<QueuesState, 
     Object.assign(moved, commissionReady(player, hangarLoad(player, queues, away, category, now).free, id));
   }
   return moved;
+}
+
+/** 5.28 : la remise en service automatique peut-elle tourner (Cale sèche au palier 10 et vaisseaux prêts) ? */
+export function dockAutoCommission(player: Pick<PlayerState, "buildings" | "workshop">): boolean {
+  return dockTier(player, "auto") && dockReadyCount(player) > 0;
+}
+
+/**
+ * 5.28 : remise en service automatique (palier 10). `away` doit venir des flottes en vol réelles (le serveur
+ * les lit) : sans elles, la place libre serait surestimée (invariant I8). Rend la notification à envoyer.
+ */
+export function autoCommission(player: PlayerState, queues: Pick<QueuesState, "unitQueues"> | null | undefined, away: Record<string, number>, now: number): NewNotification[] {
+  if (!dockAutoCommission(player)) return [];
+  const moved = commissionDocked(player, queues, away, now);
+  const names = Object.entries(moved).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`);
+  if (!names.length) return [];
+  return [{ kind: "building", title: "Cale sèche : remise en service", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" }];
 }

@@ -1,13 +1,13 @@
 import { assertEliteBuildable } from "@/game/eliteUnits";
 import { playerModifiers } from "@/game/modifiers";
 import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
-import { commissionDocked, hangarLoad } from "@/game/hangar";
+import { autoCommission, commissionDocked, hangarLoad } from "@/game/hangar";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
-import { playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
@@ -235,7 +235,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (queues.buildingUpgrades[def.id]) throw new GameActionError("Amélioration déjà en cours.");
       if (state.level >= def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       const nextLevel = state.level + 1;
-      const paid = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0);
+      const paid = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), playerBuildingDiscount(player));
       pay(player, paid, now);
       queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000, startedAtMs: now, paid };
       recordContract(player, "upgrade_building", 1, now);
@@ -598,17 +598,8 @@ export function performPlayerAction(
   );
   // 5.28 : Cale sèche au palier 10 : les vaisseaux prêts rentrent d'eux-mêmes dès qu'une place se libère.
   // Le serveur fournit alors les flottes en vol (`dockAutoCommission` dit quand il doit les lire).
-  if (awayKnown && dockAutoCommission(flushed.player)) {
-    const moved = commissionDocked(flushed.player, flushed.queues, unitsAway, now);
-    const names = Object.entries(moved).map(([id, n]) => `${n} × ${findUnit(id)?.name ?? id}`);
-    if (names.length) flushed.notifications.push({ kind: "building", title: "Cale sèche : remise en service", message: `De retour au hangar : ${names.join(", ")}.`, createdAtMs: now, read: false, link: "/game/batiments?onglet=atelier" });
-  }
+  if (awayKnown) flushed.notifications.push(...autoCommission(flushed.player, flushed.queues, unitsAway, now));
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
-}
-
-/** 5.28 : la remise en service automatique peut-elle tourner (palier 10 et vaisseaux prêts) ? */
-export function dockAutoCommission(player: Pick<PlayerState, "buildings" | "workshop">): boolean {
-  return dockTier(player, "auto") && dockReadyCount(player) > 0;
 }
 
 /** 5.28 : le serveur doit-il lire les flottes en vol pour cette action ? (construction, remise en service,

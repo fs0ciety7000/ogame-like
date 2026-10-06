@@ -250,6 +250,21 @@ export function dockScrap(player: PlayerState, unitId: string, qtyIn: number, no
   return { count: taken, refund: creditScrap(player, { [unitId]: taken }, now) };
 }
 
+/**
+ * 5.28.1 : unités remises en état hors chantier (épave d'expédition) : elles attendent, « prêtes », une place
+ * au hangar (remise en service manuelle, ou automatique au palier 10). Jamais ajoutées directement au hangar (I3).
+ */
+export function addReady(player: PlayerState, units: Record<string, number>): void {
+  const st = workshopState(player);
+  const ready = { ...(st.ready ?? {}) };
+  for (const [id, n] of Object.entries(units)) {
+    const c = Math.floor(n ?? 0);
+    if (c > 0) ready[id] = (ready[id] ?? 0) + c;
+  }
+  if (Object.keys(ready).length) st.ready = ready;
+  player.workshop = st;
+}
+
 /** 5.28 : réglages du Triage (palier 5) et de l'ordre de réparation (palier 15). */
 export function setDockSettings(player: PlayerState, settings: { policy?: unknown; priority?: unknown }): void {
   const st = workshopState(player);

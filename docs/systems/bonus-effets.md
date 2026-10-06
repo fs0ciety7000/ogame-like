@@ -19,5 +19,5 @@ territoires, modules, capsules, mutateurs de saison (couche « empire »). Plafo
 Admin : éditeur d'effets composables, rapport d'impact.
 
 ## État (audit 2026-10-06)
-- Règle « une stat déclarée est lue » : `hangarCapacity` corrigée en 5.28, mais **`fleetUpkeep` et `buildingDiscount` ne sont lus que pour la couche tech** : sur une relique, un officier ou un module (couche empire, préréglage « Intendance de flotte »), ils n'ont aucun effet. Test de garde générique à écrire (audit C5).
+- Règle « une stat déclarée est lue » : `hangarCapacity` corrigée en 5.28 ; `fleetUpkeep` et `buildingDiscount` lus dans la couche empire depuis la 5.28.1 (plafond `EMPIRE_COST_CAP` = 50 %, C5). Test de garde `effectsRead.test.ts` : une nouvelle stat sans lecteur empire le fait échouer.
 - Empilement de sources : la page « Fiche d'effets » existe, mais le joueur voit difficilement d'où vient un bonus en situation (combat, chantier).

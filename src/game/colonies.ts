@@ -1,9 +1,9 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { ascensionProductionFactor } from "@/game/ascension";
-import { playerBuildTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { playerUnitCapacity } from "@/game/hangar";
-import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
+import { applyBuildingDiscount, BUILDINGS, effectiveBuildingLevel, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime, getUnitCapacity, PRODUCTION_RESOURCE_BY_BUILDING } from "@/game/buildings";
 import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
@@ -272,7 +272,8 @@ function emptyResources(): Resources {
 
 /** Niveaux cumulés de la planète mère (v4.9.3 : bâtiments de fin de partie compris). */
 export function homeLevels(player: Pick<PlayerState, "buildings">): number {
-  return BUILDINGS.reduce((a, b) => a + (player.buildings[b.id]?.level ?? 0), 0);
+  // 5.28.1 (C3) : un bâtiment verrouillé (niveau 1 par défaut, jamais construit) ne compte pas.
+  return BUILDINGS.reduce((a, b) => a + effectiveBuildingLevel(player.buildings, b.id), 0);
 }
 
 export function colonyFoundCost(): Partial<Record<ResourceId, number>> {
@@ -427,7 +428,7 @@ export function colonyUpgradeCost(player: Pick<PlayerState, "bonuses">, building
   }
   const def = findBuilding(buildingId);
   if (!def) return {};
-  const base = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), player.bonuses?.buildingUpgradeDiscount ?? 0);
+  const base = applyBuildingDiscount(getBuildingUpgradeCost(def, nextLevel), playerBuildingDiscount(player));
   return Object.fromEntries(Object.entries(base).map(([r, n]) => [r, Math.ceil((n ?? 0) * COLONY_RULES.costFactor)]));
 }
 

@@ -1,3 +1,4 @@
+import { playerBuildingDiscount } from "@/game/bonuses";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -127,7 +128,7 @@ export function CommandPalette() {
       for (const b of BUILDINGS.filter((x) => match(x.name)).slice(0, 3)) {
         const level = player.buildings[b.id as BuildingId]?.level ?? 0;
         if (level <= 0 || (b.maxLevel && level >= b.maxLevel)) continue;
-        const cost = applyBuildingDiscount(getBuildingUpgradeCost(b, level + 1), player.bonuses?.buildingUpgradeDiscount ?? 0);
+        const cost = applyBuildingDiscount(getBuildingUpgradeCost(b, level + 1), playerBuildingDiscount(player));
         const ok = canAffordAll(player.resources, cost);
         actionItems.push({
           key: `act-up-${b.id}`,

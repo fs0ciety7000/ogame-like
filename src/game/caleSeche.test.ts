@@ -3,12 +3,13 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { DOCK_TIERS, getRepairPercent, getUnitCapacity, unlockBlocker, findBuilding } from "@/game/buildings";
-import { commissionDocked, hangarLoad, playerUnitCapacity } from "@/game/hangar";
+import { autoCommission, commissionDocked, dockAutoCommission, hangarLoad, playerUnitCapacity } from "@/game/hangar";
 import { advanceWorkshop, dockAllocation, dockReady, dockScrap, rushWorkshop, sendToWorkshop, setDockSettings, workshopHangarUnits, workshopRate, workshopUnits } from "@/game/workshop";
 import { ascend } from "@/game/ascension";
 import { performPlayerAction } from "@/game/actions";
 import { colonyDefenseHangar } from "@/game/colonies";
 import { COMBAT_RULES } from "@/game/combat";
+import { findUnit } from "@/game/units";
 import type { PlayerState, Units } from "@/types/game";
 
 /* 5.27.2 et 5.28 : hangars (invariants I2 à I5) et Cale sèche (docs/proposals/cale-seche.md). */
@@ -155,6 +156,23 @@ describe("5.28 Cale sèche", () => {
     expect(dockReady(known.player)).toEqual({});
     expect(known.player.units.chasseur.count).toBe(1100);
     expect(known.notifications.some((n) => n.title === "Cale sèche : remise en service")).toBe(true);
+  });
+
+  it("5.28.1 (C2) : la remise automatique tourne aussi au retour d'une flotte (autoCommission), avec les autres flottes en vol", () => {
+    const p = player(DOCK_TIERS.auto, { hangar: 3 });
+    p.workshop = { updatedAtMs: NOW, jobs: [], hull: {}, ready: { chasseur: 100 } };
+    expect(dockAutoCommission(p)).toBe(true);
+    const free = hangarLoad(p, null, {}, "attack", NOW).free;
+    // Une autre flotte en vol garde sa place : il n'en reste que 40 pour les prêts.
+    const space = findUnit("chasseur")!.hangarSpace;
+    const notes = autoCommission(p, null, { chasseur: Math.floor(free / space) - 40 }, NOW);
+    expect(p.units.chasseur.count).toBe(1040);
+    expect(dockReady(p)).toEqual({ chasseur: 60 });
+    expect(notes[0]?.title).toBe("Cale sèche : remise en service");
+    const low = player(DOCK_TIERS.auto - 1, { hangar: 3 });
+    low.workshop = { updatedAtMs: NOW, jobs: [], hull: {}, ready: { chasseur: 10 } };
+    expect(autoCommission(low, null, {}, NOW)).toEqual([]);
+    expect(dockReady(low)).toEqual({ chasseur: 10 });
   });
 
   it("palier 10 : l'Atelier répare plus vite", () => {

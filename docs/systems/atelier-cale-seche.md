@@ -12,4 +12,5 @@ Référence complète : GDD `docs/GAME_DESIGN.md` §7.2 et §7.3, proposition li
 
 ## État (audit 2026-10-06)
 - Livré en 5.28.0. À suivre : taux de hangars en surcharge, usage du Triage.
+- 5.28.1 : remise automatique aussi au retour des flottes (C2) ; les « prêts » existent sans Cale sèche (épave d'expédition, C1) et s'affichent dans l'onglet Atelier.
 - Le taux de sauvetage très haut en fin de partie pose une question d'équilibre (voir `combat-jcj.md`, audit E2).

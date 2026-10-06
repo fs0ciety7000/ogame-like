@@ -1,4 +1,4 @@
-import { playerBuildTimeFactor } from "@/game/bonuses";
+import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { recordContract } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
@@ -98,7 +98,7 @@ export function advanceBuildPlan(player: PlayerState, queues: QueuesState, now: 
       if (keep.some((k) => k.buildingId === entry.buildingId)) keep.push(entry);
       continue;
     }
-    const cost = applyBuildingDiscount(getBuildingUpgradeCost(def, entry.level), player.bonuses?.buildingUpgradeDiscount ?? 0);
+    const cost = applyBuildingDiscount(getBuildingUpgradeCost(def, entry.level), playerBuildingDiscount(player));
     if (canAffordAll(player.resources, cost as Partial<Resources>)) {
       let total = 0;
       for (const [res, val] of Object.entries(cost)) {
