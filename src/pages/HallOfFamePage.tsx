@@ -165,7 +165,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
       {results === null ? (
         <SkeletonList rows={5} />
       ) : bySeason.length === 0 ? (
-        <Card><EmptyState icon="🏆" title="Aucune saison terminée">Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
+        <Card><EmptyState icon="🏆" title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs">Classement en cours</EmptyAction>}>Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
       ) : (
         bySeason.map(([seasonId, list]) => (
           <HudPanel

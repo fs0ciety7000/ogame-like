@@ -1,3 +1,4 @@
+import { EmptyAction } from "@/components/ui/panel";
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { EmptyState, HudChip, type HudTone } from "@/components/ui/hud";
@@ -60,7 +61,7 @@ export function EffectSheet({ player, now }: { player: PlayerState; now: number 
   const lines = useMemo(() => playerEffectSheet(player, minute * 60_000), [player, minute]);
   if (lines.length === 0)
     return (
-      <EmptyState icon={<Sparkles className="h-6 w-6" />} title="Aucun effet actif">
+      <EmptyState icon={<Sparkles className="h-6 w-6" />} title="Aucun effet actif" action={<EmptyAction to="/game/etat-major">Recruter un officier</EmptyAction>}>
         Recherche des technologies, nomme des officiers et équipe des reliques : leurs effets s'affichent ici.
       </EmptyState>
     );

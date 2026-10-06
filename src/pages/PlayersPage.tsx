@@ -21,6 +21,7 @@ import {
   Mail,
   Crosshair,
   Radar,
+  Scale,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ import type { Alliance } from "@/types/game";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { NpcBadge, VacationBadge } from "@/components/ui/npc-badge";
 import { PlayerSheetDialog } from "@/components/game/PlayerSheetDialog";
+import { PlayerCompareDialog } from "@/components/game/PlayerCompareDialog";
 import { SeasonRewardsCard } from "@/components/game/SeasonRewardsCard";
 import { DivisionPanel, DivisionScore, useLeagues, type DivisionView } from "@/components/game/DivisionPanel";
 import { leagueStandings, leagueTier, type LeagueRow } from "@/game/leagues";
@@ -77,6 +79,7 @@ export function PlayersPage() {
     xp?: number;
   } | null>(null);
   const [sheetTarget, setSheetTarget] = useState<{ uid: string; pseudo: string } | null>(null);
+  const [comparePair, setComparePair] = useState<{ a: string; b: string } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{
     uid: string;
     pseudo: string;
@@ -402,6 +405,11 @@ export function PlayersPage() {
                       <Radar className="h-4 w-4 text-cyan-glow" />
                     </Button>
                   )}
+                  {!isSelf && !p.npc && uid && (
+                    <Button variant="ghost" size="icon" title={`Comparer avec ${p.pseudo}`} aria-label={`Comparer avec ${p.pseudo}`} onClick={() => setComparePair({ a: uid, b: p.uid })}>
+                      <Scale className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -470,14 +478,22 @@ export function PlayersPage() {
       )}
       </>
 
+      <PlayerCompareDialog pair={comparePair} players={players} onClose={() => setComparePair(null)} />
       <PlayerSheetDialog
         target={sheetTarget}
         onClose={() => setSheetTarget(null)}
         actions={
           sheetTarget && sheetTarget.uid !== uid ? (
-            <Button variant="secondary" size="sm" onClick={() => navigate(`/game/messages?with=${sheetTarget.uid}&pseudo=${encodeURIComponent(sheetTarget.pseudo)}`)}>
-              <Mail className="h-3.5 w-3.5" /> Écrire
-            </Button>
+            <>
+              <Button variant="secondary" size="sm" onClick={() => navigate(`/game/messages?with=${sheetTarget.uid}&pseudo=${encodeURIComponent(sheetTarget.pseudo)}`)}>
+                <Mail className="h-3.5 w-3.5" /> Écrire
+              </Button>
+              {uid && (
+                <Button variant="ghost" size="sm" onClick={() => (setComparePair({ a: uid, b: sheetTarget.uid }), setSheetTarget(null))}>
+                  <Scale className="h-3.5 w-3.5" /> Comparer
+                </Button>
+              )}
+            </>
           ) : null
         }
       />

@@ -1,3 +1,4 @@
+import { EmptyAction } from "@/components/ui/panel";
 import { useEffect, useMemo, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -180,7 +181,7 @@ export function WarTab({ alliance, canLead }: { alliance: Alliance; canLead: boo
       <Card className="p-4">
         <h3 className="hud-title mb-2 text-sm">Guerres passées</h3>
         {past.length === 0 ? (
-          <EmptyState icon={<Swords className="h-5 w-5" />} title="Aucune guerre">Ton alliance n'a encore jamais combattu.</EmptyState>
+          <EmptyState icon={<Swords className="h-5 w-5" />} title="Aucune guerre" action={<EmptyAction to="/game/joueurs?mode=alliances">Voir les alliances</EmptyAction>}>Ton alliance n'a encore jamais combattu.</EmptyState>
         ) : (
           <ul className="flex flex-col divide-y divide-white/5 text-sm">
             {past.map((w) => {
