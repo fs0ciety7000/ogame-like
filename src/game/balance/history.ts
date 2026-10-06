@@ -37,6 +37,11 @@ export interface BalanceSnapshot {
   homeDefenseBonus: number;
   /** 5.21 : combats du jour par type : [combats, victoires du joueur]. */
   kinds?: Partial<Record<CombatKind, [number, number]>>;
+  /** 6.0.1 (lot K) : médianes en heures de production (stock pillable, part à l'abri), butin moyen, joueurs par classe. */
+  pillableHours?: number;
+  protectedHours?: number;
+  avgLoot?: number;
+  classes?: Record<string, number>;
 }
 
 type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
@@ -73,6 +78,14 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
     topWarlord: live.warlords[0]?.power ?? 0,
     homeDefenseBonus: COMBAT_RULES.homeDefenseBonus,
     kinds: combatTypeCounts(reports, now - 86_400_000, now),
+    ...(live.health
+      ? {
+          pillableHours: live.health.exposure.pillableHours,
+          protectedHours: live.health.exposure.protectedHours,
+          avgLoot: live.health.pvp.avgLoot,
+          classes: Object.fromEntries(live.health.classes.rows.map((r) => [r.id, r.players])),
+        }
+      : {}),
   };
 }
 

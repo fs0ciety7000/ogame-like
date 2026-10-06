@@ -180,6 +180,7 @@ export { closeTerritoryWar, isTerritoryWarActive, normalizeTerritoryWar, openTer
 export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
 export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
+export { balanceHealth } from "@/game/balance/health";
 export { currentGameContent, validateGameContent, validateRules } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";

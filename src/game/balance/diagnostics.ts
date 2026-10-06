@@ -185,6 +185,8 @@ export interface LiveBalance {
   combatTypes?: { sinceMs: number; kinds: CombatKindStat[] };
   /** 5.22 : victoires du joueur contre les seigneurs, par rang. */
   warlordRanks?: ReturnType<typeof warlordRankStats>;
+  /** 6.0.1 (lot K) : santé de l'équilibre (abri, butin, chantiers, flottes, alliances, routes, classes). */
+  health?: import("@/game/balance/health").BalanceHealth;
 }
 
 function places(units: PlayerState["units"], ids: string[]): number {

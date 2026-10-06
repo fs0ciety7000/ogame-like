@@ -10,6 +10,7 @@ import { RANK_NUMERALS } from "@/game/warlordRanks";
 import { COMBAT_KINDS } from "@/game/balance/combatTypes";
 import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
+import { BalanceHealthSection } from "@/pages/admin/BalanceHealthSection";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
 import { commonPerHour, empireProfile, extractorCurve, missionTable, techProfile, unitMetrics, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { findUnit, UNITS } from "@/game/units";
@@ -256,6 +257,11 @@ export function BalancePanel() {
         {proposals.length === 0 ? <p className="text-sm text-mint-glow">Aucun déséquilibre détecté.</p> : proposals.map((p) => <ProposalCard key={p.id} p={p} />)}
       </Section>
 
+      {live?.health && (
+        <Section title="Santé de l'équilibre" aside={<span className="text-[11px] text-slate-500">joueurs actifs (14 j) · JcJ sur 7 j</span>}>
+          <BalanceHealthSection health={live.health} />
+        </Section>
+      )}
       {live && (
         <Section title="Historique quotidien">
           <BalanceHistory history={live.history ?? []} onSnapshot={() => void load()} />

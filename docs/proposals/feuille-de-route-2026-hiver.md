@@ -1,6 +1,6 @@
 # Proposition : feuille de route, hiver 2026-2027 (lots K à S)
 
-Statut : **en attente de décision sur l'ordre** (2026-10-06). Décisions déjà prises : classes à 100 Ambre (validé) ; classe affichée sur la fiche publique et dans le classement (fait, part de L) ; fusion contrats et missions du jour (validée, chiffrée dans `quotidien-fusion.md`).
+Statut : **en cours** sur la branche `claude/hiver-k-s` (2026-10-06 : « on code on build, on ajustera sur le long terme »). Lot K livré en 6.0.1 (`docs/changes/6.0.1-sante-equilibre.md`). Décisions déjà prises : classes à 100 Ambre (validé) ; classe affichée sur la fiche publique et dans le classement (fait, part de L) ; fusion contrats et missions du jour (validée, chiffrée dans `quotidien-fusion.md`).
 Elle prend la suite de `docs/proposals/feuille-de-route-2026-q4.md` (lots A à J, tous livrés sauf J.2).
 
 Sources :

@@ -213,6 +213,7 @@ __export(hooksEntry_exports, {
   autoDraftMonths: () => autoDraftMonths,
   autoReportDescription: () => autoReportDescription,
   autoReportTitle: () => autoReportTitle,
+  balanceHealth: () => balanceHealth,
   balanceSnapshot: () => balanceSnapshot,
   banMessage: () => banMessage,
   banPlayer: () => banPlayer,
@@ -5600,6 +5601,17 @@ function missionRewards(mission, player) {
     } else out[res] = Math.floor(fixed * rareScale);
   }
   return out;
+}
+function exposureView(player, now) {
+  const active = ECONOMY_RULES.protectedHours > 0 && now >= ECONOMY_RULES.protectedHoursFromMs;
+  const lines = COMMON_RESOURCES.map((res) => {
+    var _a, _b;
+    const stock = Math.floor((_b = (_a = player.resources) == null ? void 0 : _a[res]) != null ? _b : 0);
+    const protectedNow = protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player, now);
+    const protectedSoon = protectedAmount(player.buildings, res, player.techLevels, player.allianceResearch, player, Math.max(now, ECONOMY_RULES.protectedHoursFromMs));
+    return { res, stock, protectedNow, exposedNow: Math.max(0, stock - protectedNow), protectedSoon, hourly: hourlyProduction(player.buildings, res, player.techLevels) };
+  });
+  return { lines, activeFromMs: ECONOMY_RULES.protectedHoursFromMs, active };
 }
 
 // src/game/colonies.ts
@@ -19938,7 +19950,7 @@ function balanceSnapshot(live, reports, now) {
   });
   const wins = (xs) => xs.filter((r) => r.outcome === "attacker_win").length;
   const hangars = live.players.filter((p) => p.attackPlaces > 0).map((p) => p.attackPlacesUsed / p.attackPlaces);
-  return {
+  return __spreadValues({
     day: new Date(now).toISOString().slice(0, 10),
     atMs: now,
     activePlayers: live.activePlayers,
@@ -19956,7 +19968,12 @@ function balanceSnapshot(live, reports, now) {
     topWarlord: (_b = (_a = live.warlords[0]) == null ? void 0 : _a.power) != null ? _b : 0,
     homeDefenseBonus: COMBAT_RULES.homeDefenseBonus,
     kinds: combatTypeCounts(reports, now - 864e5, now)
-  };
+  }, live.health ? {
+    pillableHours: live.health.exposure.pillableHours,
+    protectedHours: live.health.exposure.protectedHours,
+    avgLoot: live.health.pvp.avgLoot,
+    classes: Object.fromEntries(live.health.classes.rows.map((r) => [r.id, r.players]))
+  } : {});
 }
 function pushSnapshot(history, snap) {
   const list = (Array.isArray(history) ? history : []).filter((s) => s && s.day !== snap.day);
@@ -20047,6 +20064,86 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
     v516: computeBalance516(active, now),
     combatTypes: { sinceMs: COMBAT_519_SINCE_MS, kinds: combatTypeStats(reports, COMBAT_519_SINCE_MS, now) },
     warlordRanks: warlordRankStats(reports)
+  };
+}
+
+// src/game/balance/health.ts
+function median6(xs) {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+var round12 = (x) => Math.round(x * 10) / 10;
+function balanceHealth(input, now, windowDays = 7) {
+  var _a;
+  const players = input.players;
+  const stock = [];
+  const prot = [];
+  const pill = [];
+  let pillable = 0;
+  for (const p of players) {
+    const view = exposureView(p, now);
+    const hourly = view.lines.reduce((a, l) => a + l.hourly, 0);
+    if (!(hourly > 0)) continue;
+    const s = view.lines.reduce((a, l) => a + l.stock, 0);
+    const shown = view.lines.reduce((a, l) => a + Math.min(l.stock, view.active ? l.protectedNow : l.protectedSoon), 0);
+    const protectedCap = view.lines.reduce((a, l) => a + (view.active ? l.protectedNow : l.protectedSoon), 0);
+    stock.push(s / hourly);
+    prot.push(protectedCap / hourly);
+    pill.push(Math.max(0, s - shown) / hourly);
+    if (s - shown > 0) pillable++;
+  }
+  const since = now - windowDays * 864e5;
+  const pvp = input.reports.filter((r) => r.timestamp >= since && isPvpReport(r));
+  const wins = pvp.filter((r) => r.outcome === "attacker_win" && typeof r.lootTotal === "number");
+  const salvage = players.map((p) => withRepairBonus(getRepairPercent(p.buildings), p));
+  const fleetsBy = {};
+  for (const f of input.fleets) if (!SLOT_FREE_MISSIONS.includes(f.mission)) fleetsBy[f.ownerUid] = ((_a = fleetsBy[f.ownerUid]) != null ? _a : 0) + 1;
+  const uids = players.map((p) => p.uid);
+  const builds = uids.map((u) => {
+    var _a2;
+    return (_a2 = input.builds[u]) != null ? _a2 : 0;
+  });
+  const fleets = uids.map((u) => {
+    var _a2;
+    return (_a2 = fleetsBy[u]) != null ? _a2 : 0;
+  });
+  const colonies2 = players.flatMap((p) => {
+    var _a2;
+    return (_a2 = p.colonies) != null ? _a2 : [];
+  });
+  const prodOf = (p) => Object.values(economySnapshot(p, now).gross).reduce((a, b) => a + (b != null ? b : 0), 0) * 3600;
+  const rows = EMPIRE_CLASSES.map((c) => {
+    const who = players.filter((p) => {
+      var _a2;
+      return ((_a2 = p.empireClass) == null ? void 0 : _a2.id) === c.id;
+    });
+    return { id: c.id, name: c.name, players: who.length, sharePct: players.length ? Math.round(who.length / players.length * 100) : 0, medianProduction: Math.round(median6(who.map(prodOf))) };
+  });
+  return {
+    exposure: {
+      stockHours: round12(median6(stock)),
+      protectedHours: round12(median6(prot)),
+      pillableHours: round12(median6(pill)),
+      pillablePlayersPct: stock.length ? Math.round(pillable / stock.length * 100) : 0
+    },
+    pvp: {
+      battlesPerDay: round12(pvp.length / windowDays),
+      avgLoot: wins.length ? Math.round(wins.reduce((a, r) => {
+        var _a2;
+        return a + ((_a2 = r.lootTotal) != null ? _a2 : 0);
+      }, 0) / wins.length) : 0,
+      windowDays
+    },
+    salvage: {
+      avgPct: salvage.length ? Math.round(salvage.reduce((a, b) => a + b, 0) / salvage.length * 100) : 0,
+      maxPct: salvage.length ? Math.round(Math.max(...salvage) * 100) : 0
+    },
+    parallel: { buildsMedian: median6(builds), buildsMax: builds.length ? Math.max(...builds) : 0, fleetsMedian: median6(fleets), fleetsMax: fleets.length ? Math.max(...fleets) : 0 },
+    alliances: { count: input.alliances.length, sizes: input.alliances.map((a) => a.members.length).sort((a, b) => b - a) },
+    colonies: { colonies: colonies2.length, withRoute: colonies2.filter((c) => !!c.route).length },
+    classes: { none: players.filter((p) => !p.empireClass).length, rows }
   };
 }
 

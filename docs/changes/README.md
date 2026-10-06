@@ -63,6 +63,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
+| 6.0.1 | [Santé de l'équilibre (admin)](6.0.1-sante-equilibre.md) | fonctionnalité | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md), lot K |
 | — | [Fusion du quotidien : proposition chiffrée](docs-quotidien-fusion.md) | docs | [quotidien-fusion](../proposals/quotidien-fusion.md) |
 | — | [Feuille de route, hiver 2026-2027](docs-feuille-de-route-hiver.md) | docs | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md) |
 | 6.0.0 | [Classes d'empire](6.0.0-classes-empire.md) | fonctionnalité | [classes-empire](../proposals/classes-empire.md) |

@@ -5257,6 +5257,11 @@ function liveBalance(now, withHistory) {
     .findRecordsByFilter("battle_reports", "timestamp >= {:since}", "-timestamp", 10000, 0, { since: now - 30 * 24 * 3600 * 1000 })
     .map((r) => {
       const out = { attackerUid: r.getString("attackerUid"), defenderUid: r.getString("defenderUid"), outcome: r.getString("outcome"), timestamp: r.getFloat("timestamp") };
+      // 6.0.1 (lot K) : butin total des victoires de l'attaquant (moyenne du JcJ).
+      if (out.outcome === "attacker_win") {
+        const loot = toPlain(r).loot;
+        if (loot && typeof loot === "object") out.lootTotal = Object.keys(loot).reduce((a, k) => a + (Number(loot[k]) || 0), 0);
+      }
       // 5.22 : rang du seigneur engagé (suivi d'équilibrage par rang).
       if (out.attackerUid.indexOf("npc") === 0 || out.defenderUid.indexOf("npc") === 0) {
         const log = toPlain(r).combatLog;
@@ -5265,6 +5270,20 @@ function liveBalance(now, withHistory) {
       return out;
     });
   const live = game.computeLiveBalance(players, warlords, reports, now, 30);
+  // 6.0.1 (lot K) : santé de l'équilibre (joueurs actifs sur 14 jours, comme computeLiveBalance).
+  try {
+    const active = players.filter((p) => now - (p.lastActiveMs || p.resourcesUpdatedAtMs || 0) < 14 * 86400000);
+    const fleets = $app.findRecordsByFilter("fleets", 'status != "done"', "", 0, 0).map((r) => ({ ownerUid: r.getString("ownerUid"), mission: r.getString("mission") }));
+    const builds = {};
+    $app.findAllRecords("queues").forEach((q) => {
+      const ups = toPlain(q).buildingUpgrades || {};
+      builds[q.id] = Object.keys(ups).filter((k) => !!ups[k]).length;
+    });
+    const alliances = $app.findAllRecords("alliances").map((a) => ({ members: toPlain(a).members || [] }));
+    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances }, now, 7);
+  } catch (err) {
+    console.log(`[cosmic] santé de l'équilibre : ${err}`);
+  }
   if (withHistory) live.history = readBalanceHistory($app, game);
   return { game, live, reports };
 }
