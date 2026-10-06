@@ -21,5 +21,5 @@
 `streak.ts`, `achievements.ts`, `ascension.ts`, `talents.ts`, `xpTiers.ts`, `codex.ts`.
 
 ## État (audit 2026-10-06)
-- **Liste de corvées quotidiennes longue** : contrats, missions du jour, série, primes, expéditions, vote d'alliance, défis, passe… Risque de lassitude (audit Q1).
+- Corvées quotidiennes réunies depuis la 5.30 dans **Ordres du jour** (`/game/ordres`, `dailyOrders.ts`) : liste de contrôle, « Tout réclamer » (série, missions, contrats, passe, Chroniques, prise en main), pastille unique, rendez-vous de la semaine. Fusion contrats et missions : en attente de décision (`proposals/journal-de-bord.md`).
 - Trois échelles de « saison » qui se chevauchent (saison XP, passe, Chroniques) avec trois mots différents (audit Q2).

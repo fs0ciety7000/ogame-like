@@ -53,6 +53,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Toute nouvelle fonction appelée par `cosmic_db.js` doit être **exportée dans `hooksEntry.ts`**.
 - Un invariant de `docs/GAME_DESIGN.md` qui change = un test qui change dans le même commit.
 - Places et capacité des hangars : uniquement `hangarLoad` / `playerUnitCapacity` (`src/game/hangar.ts`). Un test interdit `getUnitCapacity(` ailleurs.
+- Une récompense quotidienne ou à réclamer s'ajoute à `pendingClaims` (`claimAll.ts`) : elle est alors couverte par « Tout réclamer »
+  et par la pastille unique d'Ordres du jour (`ordersReadyCount`). Pas de nouvelle pastille dans la barre latérale.
 - Une récompense en vaisseaux (épave, coffre…) passe par `addReady` (`workshop.ts`), jamais directement dans `units` ou une flotte : invariant I3.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Award } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HudPanel } from "@/components/ui/panel";
@@ -13,7 +14,7 @@ import { WeeklyRecapCard } from "@/components/game/WeeklyRecapCard";
 import { dailyMissions } from "@/game/dailyMissions";
 import { activePass, passState, passTier, tierRequirements } from "@/game/seasonPass";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
-import { HUD_TONE, type HudTone } from "@/components/ui/hud";
+import { HUD_TONE, HudChip, type HudTone } from "@/components/ui/hud";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 
@@ -62,7 +63,16 @@ export function ProgressHub({ now }: { now: number }) {
   ];
 
   return (
-    <HudPanel icon={<Award />} title="Progression et récompenses" tone="mint">
+    <HudPanel
+      icon={<Award />}
+      title="Progression et récompenses"
+      tone="mint"
+      aside={
+        <HudChip asChild size="sm" tone="accent">
+          <Link to="/game/ordres">Ordres du jour</Link>
+        </HudChip>
+      }
+    >
       <div id="contrats" className="scroll-mt-24" />
       <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
         {summary.map((s) => (

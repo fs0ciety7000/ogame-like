@@ -18,7 +18,7 @@ Toute proposition (`docs/proposals/`) s'appuie dessus ; une fois livrée, ses r�
 | Boucle | Durée | Contenu | Récompense |
 |:--|:--|:--|:--|
 | Session | 2 à 10 min | relancer les files (bâtiments, labo, chantier), récolter, envoyer des flottes | progression visible, notifications |
-| Journée | 24 h | contrats du jour, missions, série de connexion, raids pirates | ressources, jetons, Ambre (j6), coffre (j7) |
+| Journée | 24 h | contrats du jour, missions, série de connexion, raids pirates ; tout réuni dans **Ordres du jour** (5.30) | ressources, jetons, Ambre (j6), coffre (j7) |
 | Semaine | 7 jours | boss en rotation, défis hebdo, offre de la semaine, tournoi du casino | reliques, plans, titres |
 | Saison | 1 mois | passe (30 paliers), Chroniques, guerres de saison, divisions | bannières, titres, Ambre |
 | Méta | plusieurs mois | Ascension (bâtiments remis au niveau 1, talents), colonies, fin de partie | étoiles, talents, prestige |
@@ -129,3 +129,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 5.28.0 | Lot 0 et Cale sèche livrés : `hangarLoad` unique, surcharge visible, C2 à C6 corrigés, migration 5.22 repassée par l'Atelier ; invariants I3, I4, I5, I8 testés | `caleSeche.test.ts`, test d'intégration « 5.28 Cale sèche » |
 | 2026-10-06 | 5.28.1 | Lot A livré : C1 (épave → prêts), C2 (remise automatique au retour des flottes), C3 (`homeLevels`), C5 (couche empire de `fleetUpkeep` et `buildingDiscount`, invariant I9), D1 (README) | `docs/changes/5.28.1-correctifs.md` |
 | 2026-10-06 | 5.29.0 | Lot B livré : P1 (fenêtres rares à la demande, 925 → 880 Ko), P2 (horloge unique), P3 (16 tâches en 3 cadences). Le moteur reste dans le bundle d'entrée | `docs/changes/5.29.0-performance.md` |
+| 2026-10-06 | 5.30.0 | Lot C livré (option 1) : Ordres du jour, « Tout réclamer » étendu (série, missions, Chroniques), pastille unique, rendez-vous de la semaine. Fusion contrats/missions et lissage du calendrier à décider | `docs/changes/5.30.0-ordres-du-jour.md`, `proposals/journal-de-bord.md` |

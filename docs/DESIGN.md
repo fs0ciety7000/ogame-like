@@ -58,6 +58,9 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
   (fondue vers la gauche et le bas, opacité réduite) : à réserver aux pages « lieu » (Casino…), le texte reste prioritaire.
 - Panneaux : `Card` / classe `glass-panel` ; formes : `hud-cut` (12 px) et `hud-cut-sm` (5 px).
+- **Liste de contrôle** (Ordres du jour, 5.30) : une ligne = un `Link` `glass-panel hud-cut-sm`, liseré gauche de la couleur d'état,
+  libellé + rythme (mono), une phrase de détail, valeur mono, `HudChip` d'état, chevron. États : mint = à réclamer, accent = à faire,
+  neutre et opacité réduite = fait. La ligne mène à l'écran qui agit ; la réclamation groupée reste dans l'en-tête de page.
 
 ## Retour visuel (GSAP, `src/lib/fx`)
 

@@ -1,7 +1,7 @@
 # Proposition : feuille de route 2026, 4e trimestre
 
-Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`).
-Question 2 sans réponse : par défaut, le lot C affiche contrats et missions du jour ensemble, sans fusionner leurs règles.
+Statut : **ordre A → B → C validé** (2026-10-06, « Go lot A, puis B et C »). Lot A livré en 5.28.1 (`docs/changes/5.28.1-correctifs.md`), lot B en 5.29.0 (`docs/changes/5.29.0-performance.md`), lot C en 5.30.0 (option 1 de `docs/proposals/journal-de-bord.md`).
+Question 2 sans réponse : le lot C affiche contrats et missions du jour ensemble, sans fusionner leurs règles ; la fusion reste à décider.
 
 Sources :
 - audit `docs/audit/2026-10-06-audit-global.md`, constats C, E, Q, P, D ;
