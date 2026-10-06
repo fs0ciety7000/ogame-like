@@ -27,3 +27,8 @@ Admin : Factions, Seigneurs, Boss mondiaux, Boss de saison, Boss d'alliance, Pla
 
 ## État (audit 2026-10-06)
 - Système riche, beaucoup de rendez-vous simultanés (boss hebdo + saison + alliance + élite + vendettas + raids) : charge mentale élevée (audit Q1).
+
+## Revue AU1 (2026-10-06)
+Constats PNJ-1 à PNJ-9 dans `docs/audit/2026-10-06-au1-menaces-pnj.md` : attaque non plafonnée de la techno admin `tech19_2`,
+Traqueur Kesh au-delà de son niveau maximal, aucun repaire ouvert (raids trop rares), unités d'élite jamais débloquées. Décisions :
+`docs/proposals/menaces-pnj.md`.

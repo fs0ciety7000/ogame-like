@@ -60,7 +60,7 @@ describe("santé de l'équilibre", () => {
     expect(h.salvage.maxPct).toBeGreaterThanOrEqual(h.salvage.avgPct);
   });
 
-  it("6.4.2 : emplacements pleins, sens des routes, files de défense, défenses et vaisseaux de classe", () => {
+  it("6.5.1 : emplacements pleins, sens des routes, files de défense, défenses et vaisseaux de classe", () => {
     const a = player("a", "industriel");
     const b = player("b");
     a.units.batterie_aa = { level: 1, count: 30 };
