@@ -106,6 +106,10 @@ export interface EffectStatInfo {
 
 /** Plafond des réductions cumulées des technologies (temps, coûts, entretien). */
 export const TECH_REDUCTION_CAP = 0.75;
+/** 6.6 : plafond de l'attaque et de la défense de toutes les unités données par les technologies. */
+export const TECH_COMBAT_CAP = 1.5;
+/** 6.6 : une seule technologie ne donne pas plus que ceci d'attaque ou de défense à son niveau maximal. */
+export const TECH_COMBAT_PER_TECH_MAX = 1;
 /** Plafond des réductions de durée de la couche empire. */
 export const EMPIRE_TIME_CAP = 0.5;
 /** 5.28.1 : plafond des réductions de coût et d'entretien de la couche empire (reliques, officiers, modules). */
@@ -115,8 +119,10 @@ export const EMPIRE_COST_CAP = 0.5;
 const COMBAT_SCOPES: EffectScope[] = ["all", "pvp", "pve", "warlord"];
 
 export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
-  attack: { label: "Attaque", unit: "pct", group: "combat" },
-  defense: { label: "Défense", unit: "pct", group: "combat" },
+  // 6.6 (revue AU1, PNJ-1) : technos plafonnées à +150 % (+100 % de « Puissance d'attaque » / « Blindage avancé »,
+  // +50 % au plus de technos ajoutées par l'admin).
+  attack: { label: "Attaque", unit: "pct", group: "combat", cap: { tech: TECH_COMBAT_CAP } },
+  defense: { label: "Défense", unit: "pct", group: "combat", cap: { tech: TECH_COMBAT_CAP } },
   bossDamage: { label: "Dégâts contre les boss", unit: "pct", group: "combat" },
   repair: { label: "Vaisseaux réparés", unit: "pct", group: "combat" },
   repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },

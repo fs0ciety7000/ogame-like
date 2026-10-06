@@ -12,7 +12,7 @@ Le jeton d'accès à la production a expiré pendant la revue : les chiffres vie
 
 | # | Gravité | Constat | Preuve | Suite |
 |:--|:--|:--|:--|:--|
-| PNJ-1 | 🔴 | **Attaque des unités non plafonnée par la techno `tech19_2`** (ajoutée par l'admin) : `unit_attack` 0,07 par niveau × 20 niveaux = **+140 %** d'attaque de toutes les unités. Aucune techno par défaut ne dépasse +50 %. La validation du contenu accepte jusqu'à 5 (500 %) par niveau | 3 joueurs : niveaux 20, 15, 13 → +140 %, +105 %, +91 % | proposition `menaces-pnj.md` §A |
+| PNJ-1 | 🔴 | **Attaque des unités non plafonnée par la techno `tech19_2`** (ajoutée par l'admin) : `unit_attack` 0,07 par niveau × 20 niveaux = **+140 %** d'attaque de toutes les unités. Puissance d'attaque (tech5) donne déjà +100 % au niveau 10 (correction du 2026-10-06 : la version précédente disait « aucune techno ne dépasse +50 % », c'était faux). La validation du contenu accepte jusqu'à 5 (500 %) par niveau | 3 joueurs : niveaux 20, 15, 13 → +140 %, +105 %, +91 % | proposition `menaces-pnj.md` §A |
 | PNJ-2 | 🟠 | **Traqueur Kesh au-delà de son niveau maximal** : la techno le monte jusqu'à 20, sa fiche dit `maxLevel: 1` ; le moteur ne borne pas le niveau (`flush.ts`, `unlock_next_level`). Avec le bonus par défaut (+5 par niveau), le niveau 20 vaut 515 d'attaque contre 420 : la description « +1 700 attaque par niveau » ne tient que si l'admin a aussi changé `levelBonus` | Traqueurs aux niveaux 20, 15, 13 chez 3 joueurs | §B |
 | PNJ-3 | 🟠 | **Aucun repaire ouvert** sur les 6 factions : il faut 4 à 5 raids repoussés par faction, les joueurs en ont 1 ou 2. Les ultimatums d'une faction arrivent au mieux tous les 3 à 4 jours (déclencheur « richesse », 72 à 96 h) | `lairOpen` : 0 partout ; `repelled` max 2 | §C |
 | PNJ-4 | 🟡 | Raids repoussés à **96 %** (66 sur 69), cible 70 % ; adaptation moyenne 1,01 : trop peu de raids pour que l'adaptation joue | `raidsWon`, `raidsLost`, `adapt` | suit PNJ-3 |
@@ -29,3 +29,7 @@ Le jeton d'accès à la production a expiré pendant la revue : les chiffres vie
 
 ## Décisions à prendre
 Regroupées dans `docs/proposals/menaces-pnj.md` (§A à §D).
+
+## Suite (6.6.0)
+Décisions A à D livrées : `docs/changes/6.6.0-menaces-pnj.md`. Le plafond retenu est +150 % au total et +100 % par techno, pour ne pas
+retirer le +100 % de Puissance d'attaque.

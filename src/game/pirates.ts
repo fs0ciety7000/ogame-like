@@ -130,7 +130,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
-    lair: { name: "Repaire de Varan", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
+    lair: { name: "Repaire de Varan", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
   },
   {
     id: "gravhorn",
@@ -157,7 +157,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 1.5,
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
-    lair: { name: "Chambre des Contrats", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
+    lair: { name: "Chambre des Contrats", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
   },
   {
     id: "inquisition",
@@ -184,7 +184,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
   },
   {
     id: "cartel",
@@ -211,7 +211,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2.5,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Casino Fantôme", raidsNeeded: 5, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
+    lair: { name: "Le Casino Fantôme", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
   },
   {
     id: "meute",
@@ -238,7 +238,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 0.75,
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
-    lair: { name: "La Tanière du Rift", raidsNeeded: 4, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+    lair: { name: "La Tanière du Rift", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
   },
   {
     id: "choeur",
@@ -267,7 +267,7 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2000, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
-    lair: { name: "La Cathédrale du Silence", raidsNeeded: 5, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
+    lair: { name: "La Cathédrale du Silence", raidsNeeded: 3, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
   },
 ];
 
@@ -389,6 +389,33 @@ export function signTreaty(player: PlayerState, factionId: string, kindIn: unkno
   if (kind === "embargo") st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + TREATY_RULES.embargoNotoriety);
   setFactionState(player, faction.id, st);
   return { treaty, paid: cost };
+}
+
+/* ---------- 6.6 (revue AU1, PNJ-3) : localiser un repaire ---------- */
+
+export const LAIR_LOCATE_RULES = {
+  /** Raids repoussés au moins une fois contre la faction. */
+  minRepelled: 1,
+  /** Coût : heures de production commune. */
+  costHours: 12,
+};
+
+/** Ouvre le repaire d'une faction contre de la production, sans attendre les raids. */
+export function locateLair(player: PlayerState, factionId: string, now: number): { paid: Partial<Record<ResourceId, number>> } {
+  const faction = findFaction(factionId);
+  if (!faction || !faction.enabled) throw new GameActionError("Faction inconnue.");
+  const st = pirateState(player, faction.id);
+  if (st.lairOpen) throw new GameActionError(`${faction.lair.name} est déjà localisé.`);
+  if (st.repelled < LAIR_LOCATE_RULES.minRepelled) throw new GameActionError(`Repousse d'abord au moins ${LAIR_LOCATE_RULES.minRepelled} raid de ${faction.name} : tes éclaireurs n'ont aucune piste.`);
+  const cost = productionHours(player, LAIR_LOCATE_RULES.costHours);
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
+    if ((player.resources[res] ?? 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour localiser le repaire.`);
+  }
+  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - n;
+  st.lairOpen = true;
+  setFactionState(player, faction.id, st);
+  void now;
+  return { paid: cost };
 }
 
 /** État de toutes les factions d'un joueur (avec migration de l'ancien

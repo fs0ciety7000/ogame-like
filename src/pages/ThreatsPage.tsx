@@ -19,7 +19,7 @@ import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { accent, openUltimatum } from "@/components/game/PirateUltimatum";
-import { activeTreaty, activeUltimatum, FACTIONS, lairPower, lairUid, pirateState, productionHours, raidPower, targetPower, TREATY_LABELS, TREATY_RULES, type FactionDef, type TreatyKind } from "@/game/pirates";
+import { activeTreaty, activeUltimatum, FACTIONS, LAIR_LOCATE_RULES, lairPower, lairUid, pirateState, productionHours, raidPower, targetPower, TREATY_LABELS, TREATY_RULES, type FactionDef, type TreatyKind } from "@/game/pirates";
 import { fleetSpeed, LAIR_DISTANCE, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { computeFleetPower } from "@/game/combat";
@@ -27,7 +27,7 @@ import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { GameActionError, sendFleet, signFactionTreaty } from "@/services/playerService";
+import { GameActionError, locateFactionLair, sendFleet, signFactionTreaty } from "@/services/playerService";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { cn, formatClock, formatCompact, formatDuration } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -209,8 +209,13 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
                 <>
                   <Progress value={(Math.min(st.repelled, faction.lair.raidsNeeded) / faction.lair.raidsNeeded) * 100} />
                   <p className="text-[11px] text-slate-500">
-                    {Math.min(st.repelled, faction.lair.raidsNeeded)} / {faction.lair.raidsNeeded} raids repoussés pour le localiser.
+                    <span className="font-mono tabular-nums">
+                      {Math.min(st.repelled, faction.lair.raidsNeeded)} / {faction.lair.raidsNeeded}
+                    </span>{" "}
+                    raids repoussés pour le localiser.
                   </p>
+                  {/* 6.6 (revue AU1, PNJ-3) : localiser le repaire plus tôt, contre de la production. */}
+                  {st.repelled >= LAIR_LOCATE_RULES.minRepelled && <LocateLairButton faction={faction} player={player} />}
                 </>
               )}
               {faction.lair.title && <p className="text-[11px] text-slate-500">Titre : « {faction.lair.title} »</p>}
@@ -224,6 +229,28 @@ function FactionCard({ faction, player, onLair }: { faction: FactionDef; player:
 }
 
 /** 5.16 : traités avec la faction (pacte de péage, escorte, embargo). */
+function LocateLairButton({ faction, player }: { faction: FactionDef; player: PlayerState }) {
+  const [busy, setBusy] = useState(false);
+  const cost = productionHours(player, LAIR_LOCATE_RULES.costHours);
+  const locate = async () => {
+    if (!(await askConfirm({ title: `Localiser ${faction.lair.name} ?`, message: `Tes éclaireurs remontent la piste du dernier raid. Coût : ${describeGain(cost)}.`, confirmLabel: "Localiser" }))) return;
+    setBusy(true);
+    try {
+      await locateFactionLair(faction.id);
+      toast.success(`${faction.lair.name} localisé : tu peux lancer l'assaut.`);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Localisation impossible.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button variant="outline" size="sm" className="w-full" disabled={busy} onClick={() => void locate()} title={`${LAIR_LOCATE_RULES.costHours} h de production`}>
+      <Crosshair className="mr-1 h-3.5 w-3.5" /> Localiser · <span className="font-mono tabular-nums">{LAIR_LOCATE_RULES.costHours} h</span>
+    </Button>
+  );
+}
+
 function TreatyRow({ faction, player, busyThreat }: { faction: FactionDef; player: PlayerState; busyThreat: boolean }) {
   const [busy, setBusy] = useState<TreatyKind | null>(null);
   const now = Date.now();

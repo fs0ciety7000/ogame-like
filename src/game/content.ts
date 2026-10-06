@@ -507,7 +507,7 @@ export function validateGameContent(content: GameContent): string[] {
   for (const t of content.technologies) {
     const label = `Techno ${t.nom || t.id}`;
     if (t.effects && t.effects.length > 0) {
-      for (const e of t.effects) errors.push(...validateTechEffect(label, e, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)) }));
+      for (const e of t.effects) errors.push(...validateTechEffect(label, e, { resources, unitIds, buildingIds: new Set(content.buildings.map((b) => b.id)), maxLevel: t.maxLevel, unitMaxLevel: (id) => content.units.find((u) => u.id === id)?.maxLevel }));
     } else if (t.effect !== undefined && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
     checkResources(`${label} (coût)`, t.baseCost);
     if (t.amberCost !== undefined && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label} : ambre par niveau invalide.`);

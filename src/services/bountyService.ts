@@ -20,8 +20,8 @@ export function useElite(): EliteHunt | null {
   return useEliteStore((s) => s.state);
 }
 
-export function sendBountyHunt(bountyId: string, fleet: Record<string, number>, formation: string): Promise<Fleet> {
-  return launchFleet<Fleet>({ mission: "bounty", bountyId, fleet, formation }, "prime");
+export function sendBountyHunt(bountyId: string, fleet: Record<string, number>, formation: string, tier?: number): Promise<Fleet> {
+  return launchFleet<Fleet>({ mission: "bounty", bountyId, fleet, formation }, "prime", tier ? { bountyTier: tier } : undefined);
 }
 
 export function sendEliteAssault(fleet: Record<string, number>, formation: string): Promise<Fleet> {

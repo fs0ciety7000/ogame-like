@@ -63,6 +63,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I12 | Une flotte ne décolle que si une place est libre : flottes en vol hors sondes et expéditions < emplacements (`FLEET_RULES.slotsBase`) ; une flotte déjà en vol n'est jamais rappelée par la règle | `fleets.ts` (`fleetSlotBlocker`), `cosmic_db.js` (`fleetsActive`) | `fleetSlots.test.ts` |
 | I13 | Un convoi de route logistique ne prend jamais sous la réserve de la colonie et ne porte jamais les ressources communes de la planète mère au-delà de son entrepôt | `colonies.ts` (`colonyRouteLoad`, `runColonyRoute`) | `colonyRoutes.test.ts` |
 | I14 | Au plus une classe d'empire active ; ses effets passent par la couche empire et ses plafonds ; aucun maximum théorique de la couche empire (rapport d'impact) ne dépasse son plafond | `empireClass.ts`, `modifiers.ts`, `impact.ts` | `empireClass.test.ts`, `derived.test.ts` |
+| I15 | Couche techno : attaque et défense des unités ≤ +150 % au total ; une techno ≤ +100 % à son niveau maximal et ne monte pas une unité au-delà de son niveau maximal | `effects.ts` (`TECH_COMBAT_CAP`), `technologies.ts` (`validateTechEffect`) | `menaces66.test.ts` |
 
 ## 5. Règles de conception
 
@@ -150,3 +151,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.5.1 | Lot U : santé de l'équilibre, suite (emplacements pleins, sens des routes, files de défense, défenses par type, vaisseaux de classe, courbes) | `docs/changes/6.5.1-sante-suite.md` |
 | 2026-10-06 | — | Revue AU1 (menaces PNJ) : attaque non plafonnée (`tech19_2`), Traqueur au-delà de son niveau max, aucun repaire ouvert ; décisions en attente | `docs/audit/2026-10-06-au1-menaces-pnj.md` |
 | 2026-10-06 | — | Revue AU2 (boss) : structure gonflée par `tech19_2`, taux de boss tués non mesuré, calendrier chargé (lot V) ; décompte mobile corrigé | `docs/audit/2026-10-06-au2-boss.md` |
+| 2026-10-06 | 6.6.0 | AU1 décisions A à D : plafond des technos de combat (I15), effet en doublon de `tech19_2` retiré, Traqueur 20 niveaux (+10), repaires à 3 raids + « Localiser », relance d'une prime remplie | `docs/changes/6.6.0-menaces-pnj.md` |

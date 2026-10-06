@@ -581,12 +581,12 @@ export async function sendFleet(
 
 /** Tout départ de flotte : appelle fleet/send et mémorise la requête pour « Relancer » (5.33, étendu en 6.3
  *  aux primes, boss, transports et livraisons). Le départ différé n'est pas rejoué. */
-export async function launchFleet<T = Fleet>(body: Record<string, unknown>, targetLabel?: string): Promise<T> {
+export async function launchFleet<T = Fleet>(body: Record<string, unknown>, targetLabel?: string, meta?: { bountyTier?: number }): Promise<T> {
   const sent = await callGame<T>("fleet/send", body);
   const { delayMinutes: _delay, ...again } = body;
   void _delay;
   const pseudo = (sent as { targetPseudo?: unknown } | null)?.targetPseudo;
-  rememberLastMission({ body: again, mission: String(body.mission ?? "attack") as FleetMission, targetLabel: targetLabel ?? (typeof pseudo === "string" ? pseudo : ""), at: Date.now() });
+  rememberLastMission({ body: again, mission: String(body.mission ?? "attack") as FleetMission, targetLabel: targetLabel ?? (typeof pseudo === "string" ? pseudo : ""), at: Date.now(), ...(meta ? { meta } : {}) });
   return sent;
 }
 
@@ -724,6 +724,11 @@ export function setColonySpec(colonyId: string, spec: string) {
 
 export function chooseEmpireClass(classId: string) {
   return act({ type: "empireClass", classId });
+}
+
+/** 6.6 (revue AU1) : localiser le repaire d'une faction contre de la production. */
+export function locateFactionLair(factionId: string) {
+  return act({ type: "locateLair", factionId });
 }
 
 export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number, direction: "collect" | "supply" = "collect") {

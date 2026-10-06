@@ -1,4 +1,4 @@
-import { describeEffect, effectTotal, isUnitSelector, TECH_REDUCTION_CAP, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectScope, type EffectStat } from "@/game/effects";
+import { describeEffect, effectTotal, isUnitSelector, TECH_REDUCTION_CAP, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectScope, type EffectStat, TECH_COMBAT_PER_TECH_MAX } from "@/game/effects";
 /** Effets historiques (un seul par techno, avant la v2.6). */
 export type TechEffect =
   | "unlock_recipe"
@@ -328,7 +328,7 @@ const EFFECT_MAX_PER_LEVEL: Partial<Record<TechEffectType, number>> = {
 export function validateTechEffect(
   label: string,
   e: TechEffectDef,
-  refs: { resources: Set<string>; unitIds: Set<string>; buildingIds: Set<string> },
+  refs: { resources: Set<string>; unitIds: Set<string>; buildingIds: Set<string>; maxLevel?: number; unitMaxLevel?: (id: string) => number | undefined },
 ): string[] {
   const errors: string[] = [];
   if (!(e.type in TECH_EFFECT_LABELS)) return [`${label} : effet « ${e.type} » inconnu.`];
@@ -337,6 +337,15 @@ export function validateTechEffect(
   if (e.type === "unlock_next_level" && e.target && !refs.unitIds.has(e.target)) errors.push(`${label} : unité « ${e.target} » inexistante.`);
   for (const id of e.targets ?? []) if (!refs.buildingIds.has(id)) errors.push(`${label} : bâtiment « ${id} » inexistant.`);
   if (e.type === "stat") for (const m of validateComposedEffect(e as Partial<ComposedEffect>, (sel) => isUnitSelector(sel, (id) => refs.unitIds.has(id)))) errors.push(`${label} : ${m}.`);
+  // 6.6 (revue AU1) : une techno d'attaque ou de défense ne dépasse pas +100 % à son niveau maximal.
+  if ((e.type === "unit_attack" || e.type === "unit_defense") && refs.maxLevel !== undefined && effectValuePerLevel(e) * refs.maxLevel > TECH_COMBAT_PER_TECH_MAX + 1e-9) {
+    errors.push(`${label} : « ${TECH_EFFECT_LABELS[e.type]} » donnerait +${Math.round(effectValuePerLevel(e) * refs.maxLevel * 100)} % au niveau ${refs.maxLevel} (+${TECH_COMBAT_PER_TECH_MAX * 100} % au plus).`);
+  }
+  // 6.6 (revue AU1, PNJ-2) : la techno ne monte pas une unité au-delà de son niveau maximal.
+  if (e.type === "unlock_next_level" && e.target && refs.maxLevel !== undefined && refs.unitMaxLevel) {
+    const unitMax = refs.unitMaxLevel(e.target);
+    if (unitMax !== undefined && unitMax < refs.maxLevel) errors.push(`${label} : monte « ${e.target} » jusqu'au niveau ${refs.maxLevel}, mais l'unité s'arrête au niveau ${unitMax} (relève son niveau maximal).`);
+  }
   if (e.value !== undefined) {
     const max = EFFECT_MAX_PER_LEVEL[e.type] ?? 5;
     if (!Number.isFinite(e.value) || e.value < 0 || e.value > max) errors.push(`${label} : valeur par niveau de « ${TECH_EFFECT_LABELS[e.type]} » entre 0 et ${max}.`);

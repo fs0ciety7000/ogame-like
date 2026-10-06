@@ -1,6 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CornerUpLeft, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
 import { GameActionError, recallFleet, launchFleet } from "@/services/playerService";
-import { useLastMission } from "@/store/lastMissionStore";
+import { resolveRelaunch, useLastMission } from "@/store/lastMissionStore";
 import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
 import { usePlayerStore } from "@/store/playerStore";
@@ -86,7 +86,9 @@ export function FleetsPanel({
   const [pending, setPending] = useState<string | null>(null);
   const [patrolOpen, setPatrolOpen] = useState(false);
   const beacons = usePlayerStore((s) => (s.player ? bountyState(s.player).beacons : 0));
-  const last = useLastMission((s) => s.last);
+  const bounties = usePlayerStore((s) => s.player?.bounties);
+  const stored = useLastMission((s) => s.last);
+  const last = useMemo(() => resolveRelaunch(stored, bountyState({ bounties }).board), [stored, bounties]);
   const now = Date.now();
 
   const incoming = fleets.filter((f) => isHostile(f, uid));
@@ -126,7 +128,7 @@ export function FleetsPanel({
     if (!last) return;
     setPending("relaunch");
     try {
-      await launchFleet(last.body, last.targetLabel);
+      await launchFleet(last.body, last.targetLabel, last.meta);
       toast.success("Mission relancée.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Relance impossible.");

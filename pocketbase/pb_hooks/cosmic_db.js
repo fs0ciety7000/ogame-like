@@ -4883,6 +4883,9 @@ const PSEUDO_SIGNUP_MS = 15 * 60000;
 // Chaque migration ne passe qu'une fois (game_config « content_migrations ») et ne
 // remplace une valeur que si elle vaut encore l'ancienne valeur par défaut : un
 // réglage fait à la main dans l'administration est conservé.
+const TRAQUEUR_TECH_DESC = "Débloque le Traqueur Kesh, puis l'améliore : +10 attaque et +10 défense par niveau. Le Traqueur frappe les PNJ 50 % plus fort.";
+const OLD_TRAQUEUR_DESC = "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le Léviathan, en attaque comme en défense.";
+
 const CONTENT_MIGRATIONS = [
   {
     id: "balance-5.4",
@@ -4895,6 +4898,75 @@ const CONTENT_MIGRATIONS = [
       { id: "canon_impulsion", field: "cost", from: { scrap: 2000, energy: 1200 }, to: { scrap: 1200, energy: 600 } },
       { id: "canon_plasma", field: "cost", from: { scrap: 2500, energy: 1500 }, to: { scrap: 1500, energy: 750 } },
     ],
+  },
+  // 6.6 (revue AU1, PNJ-3) : repaires localisés après 3 raids repoussés (au lieu de 4 ou 5).
+  {
+    id: "lairs-6.6",
+    key: "factions",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      let touched = false;
+      items.forEach((f) => {
+        if (f && f.lair && (f.lair.raidsNeeded === 4 || f.lair.raidsNeeded === 5)) {
+          f.lair.raidsNeeded = 3;
+          touched = true;
+          changes.push(`lairs-6.6 : ${f.id}.lair.raidsNeeded`);
+        }
+      });
+      return touched;
+    },
+  },
+  // 6.6 (revue AU1, PNJ-2) : Traqueur Kesh sur 20 niveaux, +10 par niveau (la techno « Traqueur Kesh » le monte à 20).
+  {
+    id: "traqueur-6.6",
+    key: "units",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      const t = items.find((u) => u && u.id === "traqueur_kesh");
+      if (!t) return false;
+      let touched = false;
+      if (t.maxLevel === 1) {
+        t.maxLevel = 20;
+        touched = true;
+      }
+      if (t.levelBonus === undefined || t.levelBonus === 1700) {
+        t.levelBonus = 10;
+        touched = true;
+      }
+      if (t.description === OLD_TRAQUEUR_DESC) {
+        t.description = OLD_TRAQUEUR_DESC + " +10 attaque et +10 défense par niveau.";
+        touched = true;
+      }
+      if (touched) changes.push("traqueur-6.6 : traqueur_kesh (niveaux et gain par niveau)");
+      return touched;
+    },
+  },
+  // 6.6 (revue AU1, PNJ-1) : « Traqueur Kesh » (tech19_2) : l'intention de l'admin était un Traqueur 50 % plus efficace
+  // contre les PNJ. L'unité porte déjà ce +50 % (KESH_PVE_BONUS, attaque et défense) : le +7 % d'attaque de toutes les
+  // unités par niveau (+140 %, JcJ compris) faisait doublon et sortait du cadre. Il est retiré.
+  {
+    id: "tech19_2-6.6",
+    key: "technologies",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      const t = items.find((x) => x && x.id === "tech19_2");
+      if (!t || !Array.isArray(t.effects)) return false;
+      let touched = false;
+      const kept = t.effects.filter((e) => !(e && e.type === "unit_attack" && e.value === 0.07));
+      if (kept.length !== t.effects.length) {
+        t.effects = kept;
+        touched = true;
+      }
+      if (t.desc === "Débloque le Traqueur Kesh, puis l'améliore : +1 700 attaque et +1 700 défense par niveau.") {
+        t.desc = TRAQUEUR_TECH_DESC;
+        touched = true;
+      }
+      if (touched) changes.push("tech19_2-6.6 : attaque de toutes les unités retirée, description");
+      return touched;
+    },
   },
   // 6.5 (lot P) : vaisseaux de classe ajoutés au contenu personnalisé (le moteur les impose aussi, avec leur verrou).
   {

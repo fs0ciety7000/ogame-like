@@ -3,6 +3,8 @@
 ## Pirates et factions (6)
 Confrérie du Vide, Syndicat Gravhorn, Inquisition de l'Aube Blanche, Cartel Néon, Meute d'Ysgrim, Chœur Silencieux.
 Ultimatum → tribut ou raid ; notoriété ; repaire attaquable ; traités (pacte 2 h, escorte 4 h, embargo) de 7 jours.
+Repaire : ouvert après **3 raids repoussés** (toutes les factions, 6.6), ou par **« Localiser »** dès 1 raid repoussé contre 12 h de
+production (`locateLair`, `LAIR_LOCATE_RULES`).
 Raids adaptatifs : +4 % par raid repoussé, −10 % par défaite (×0,9 à ×1,5), cible ≈ 70 % repoussés.
 
 ## Seigneurs de guerre
@@ -11,6 +13,8 @@ Attaque toutes les 48 h ± 6 h, cible protégée 72 h, butin ≤ 6 h de producti
 vendettas (6 h de production, 72 h), unités d'élite.
 
 ## Primes Kesh'Vaar
+Traqueur Kesh (plan du Comptoir) : +50 % d'attaque contre tous les PNJ (`KESH_PVE_BONUS`, attaque et défense), 20 niveaux par sa
+technologie (+10 attaque et défense par niveau, 6.6). « Relancer » une prime remplie vise la suivante du même palier.
 4 par jour, rafraîchies toutes les 8 h ; 4 paliers (10 à 120 Ambre) ; rangs de Larve à Main de la Reine ; proie d'élite hebdo (assaut toutes les 12 h).
 
 ## Boss
@@ -30,8 +34,8 @@ Admin : Factions, Seigneurs, Boss mondiaux, Boss de saison, Boss d'alliance, Pla
 
 ## Revue AU1 (2026-10-06)
 Constats PNJ-1 à PNJ-9 dans `docs/audit/2026-10-06-au1-menaces-pnj.md` : attaque non plafonnée de la techno admin `tech19_2`,
-Traqueur Kesh au-delà de son niveau maximal, aucun repaire ouvert (raids trop rares), unités d'élite jamais débloquées. Décisions :
-`docs/proposals/menaces-pnj.md`.
+Traqueur Kesh au-delà de son niveau maximal, aucun repaire ouvert (raids trop rares), unités d'élite jamais débloquées. Décisions A à D
+livrées en 6.6.0 (`docs/changes/6.6.0-menaces-pnj.md`).
 
 ## Revue AU2 (2026-10-06)
 Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure des boss gonflée par `tech19_2`, taux de boss tués non

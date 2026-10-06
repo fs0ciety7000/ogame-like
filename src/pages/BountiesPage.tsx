@@ -302,7 +302,7 @@ function BoardTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
       intro: `Prime « ${BOUNTY_RULES.tiers[c.tier].label} ». Le fugitif vaut ${Math.round(BOUNTY_RULES.tiers[c.tier].pct * 100)} % de la puissance d'attaque de ta flotte à quai (vaisseaux envoyés compris). Trajet de ${c.minutes} min, retour aussi long.`,
       targetPower: fugitivePower(c.tier, player),
       minutes: c.minutes,
-      send: (fleet, formation) => sendBountyHunt(c.id, fleet, formation),
+      send: (fleet, formation) => sendBountyHunt(c.id, fleet, formation, c.tier),
     });
   };
   return (

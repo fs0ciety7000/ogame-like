@@ -7,6 +7,9 @@ Débloque unités et bâtiments, donne des bonus permanents (couche « tech » d
 - 30 technologies, jusqu'à 4 recherches en parallèle (`MAX_CONCURRENT_RESEARCH`).
 - Coût : `baseCost × costGrowth^(niv−1)` (croissance 1,9 à 2,4 pour les récentes) ; durée `baseTime × 2^(niv−1)` environ.
 - Fin de partie (tech21 à tech26) : coûts en centaines de milliers de communes + rares, 600 s de base.
+- Plafond des technos de combat (6.6, invariant I15) : attaque et défense des unités ≤ **+150 %** au total pour la couche techno
+  (`TECH_COMBAT_CAP`) ; une techno ne dépasse pas **+100 %** à son niveau maximal, et ne monte pas une unité au-delà de son niveau
+  maximal (refus à l'enregistrement du contenu).
 - Effets notables : Extension des hangars (+5 %/niv.), Nanoréparation (+10 % de cadence/niv.), Espionnage, déblocages d'unités (`unlock_next_level`).
 
 ## Code et admin

@@ -50,8 +50,11 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   id: "traqueur_kesh",
   name: "Traqueur Kesh",
   image: "/assets/units/traqueur_kesh.webp",
-  maxLevel: 1,
-  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le Léviathan, en attaque comme en défense.",
+  // 6.6 (revue AU1, PNJ-2) : 20 niveaux (technologie « Traqueur Kesh »), +10 attaque et défense par niveau
+  // (au-delà, il dépasse 1,6 fois la médiane des vaisseaux par coût : unitBalanceAudit). Son atout reste +50 % contre les PNJ.
+  maxLevel: 20,
+  levelBonus: 10,
+  description: "Chasseur organique des Kesh'Vaar, coque de chitine ambrée. Rapide, et redoutable contre tous les PNJ : +50 % d'attaque contre les seigneurs de guerre, les menaces, les primes, les boss et le Léviathan, en attaque comme en défense. +10 attaque et +10 défense par niveau.",
   // 5.18 : 6 000/3 000 et 25 places → 3 000/1 500 et 3 places (l'audit du combat en tours le
   // plaçait à 0,3 × la norme par coût et 0,1 × par place, même avec son bonus contre les PNJ).
   cost: { scrap: 3000, energy: 1500 },

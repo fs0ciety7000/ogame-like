@@ -59,6 +59,9 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Nouveau champ du profil joueur : l'ajouter à `GAME_FIELDS` (`playerFields.ts`), au type `PlayerState` et à `pocketbase/pb_schema.json`
   (le serveur crée le champ au démarrage par la synchronisation du schéma). Un nouveau bonus passe par une source du circuit d'effets
   (`empireEffects`) et reste sous les plafonds : `derived.test.ts` échoue si un maximum théorique les dépasse.
+- Technos de combat : la couche techno plafonne l'attaque et la défense des unités à +150 % (`TECH_COMBAT_CAP`) ; une techno ne dépasse pas
+  +100 % à son niveau maximal ni le niveau maximal de l'unité qu'elle monte (`validateTechEffect`). Avant d'ajouter un bonus « contre les PNJ »,
+  vérifier qu'il n'existe pas déjà dans l'unité (ex. `KESH_PVE_BONUS`) : incident `tech19_2`, revue AU1.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.

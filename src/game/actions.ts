@@ -44,7 +44,7 @@ import { bountyState } from "@/game/bounties";
 import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
 import { setConversationArchived } from "@/game/messages";
 import { applyModulePreset, buildModule, deleteModulePreset, fuseModulePlans, mountModule, recycleModule, saveModulePreset, unmountModule } from "@/game/modules";
-import { productionHours } from "@/game/pirates";
+import { productionHours, locateLair } from "@/game/pirates";
 import { addPassPoints, claimPassTier, passDailyLogin } from "@/game/seasonPass";
 import { PRESENCE_WRITE_MS, recordActiveDay } from "@/game/retention";
 import { isCancelTarget, performCancel, type CancelTarget } from "@/game/cancel";
@@ -97,6 +97,7 @@ export type GameAction =
   | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "empireClass"; classId: string }
   | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number; direction?: "collect" | "supply" }
+  | { type: "locateLair"; factionId: string }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
   | { type: "commanderAssign"; ids: string[] }
   | { type: "commanderTrain"; commanderId: string }
@@ -426,6 +427,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "colonySpec":
       setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);
       return undefined;
+
+    case "locateLair":
+      return locateLair(player, String(action.factionId ?? ""), now);
 
     case "colonyRoute":
       return setColonyRoute(player, String(action.colonyId ?? ""), action.everyHours, action.keepPct, now, action.direction);
