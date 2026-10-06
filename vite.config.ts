@@ -17,9 +17,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          pocketbase: ["pocketbase"],
-          vendor: ["react", "react-dom", "react-router-dom", "zustand", "framer-motion"],
+        // 6.3.2 (lot S) : les briques d'interface tierces dans leur propre bloc. Elles changent rarement :
+        // un déploiement ne les fait plus retélécharger (avant, elles étaient dans le bloc d'entrée).
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("/node_modules/pocketbase/")) return "pocketbase";
+          if (/\/node_modules\/(react|react-dom|react-router|react-router-dom|zustand|framer-motion|scheduler)\//.test(id)) return "vendor";
+          if (/\/node_modules\/(@radix-ui|@floating-ui|tailwind-merge|sonner|react-remove-scroll|react-remove-scroll-bar|react-style-singleton|use-callback-ref|use-sidecar|aria-hidden|clsx|class-variance-authority|get-nonce|tslib)\//.test(id)) return "ui";
+          return undefined;
         },
       },
     },

@@ -64,7 +64,7 @@ Gravité : 🔴 bloque ou fausse le jeu, 🟠 gêne réelle, 🟡 amélioration.
 
 | # | Gravité | Constat | Piste |
 |:--|:--|:--|:--|
-| P1 | ✅ 5.29.0 (en partie) | Bundle principal de **904 Ko** (non compressé) ; changelog de 252 Ko chargé d'un bloc | découpe du moteur par page, changelog paginé à la demande |
+| P1 | ✅ 5.29.0, 6.3.2 (bloc `ui` séparé, entrée 897 → 742 Ko ; moteur encore dans l'entrée) | Bundle principal de **904 Ko** (non compressé) ; changelog de 252 Ko chargé d'un bloc | découpe du moteur par page, changelog paginé à la demande |
 | P2 | ✅ 5.29.0 | Recalculs chaque seconde (`useNowTicker`) sur des pages lourdes : `workshopView` clone l'état ; les effets sont recalculés à chaque rendu | mémoïsation par minute pour les vues lourdes, ticker local aux compteurs |
 | P3 | ✅ 5.29.0 | 30 tâches planifiées, dont 3 chaque minute ; certaines parcourent tous les joueurs | regrouper par cadence et ne traiter que les joueurs concernés (index `nextDueAtMs`) ; mesurer avec les métriques serveur existantes |
 

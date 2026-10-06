@@ -143,3 +143,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.2.1 | Lot N : contrats et missions du jour fusionnés en 4 objectifs (minuit Paris, totaux inchangés), missions prêtes versées à la bascule | `docs/changes/6.2.1-quotidien-fusion.md` |
 | 2026-10-06 | 6.3.0 | Lot O : « Relancer » pour toutes les missions (primes, boss, transports, livraisons) ; emplacements à débloquer laissés aux relevés | `docs/changes/6.3.0-relancer.md` |
 | 2026-10-06 | 6.3.1 | Lot R (C4) : catégorie = vole ou non, onglets Vaisseaux / Défenses ; Intercepteur tourelle (sans vitesse ni soute, 320 / 80) | `docs/changes/6.3.1-categories-unites.md` |
+| 2026-10-06 | 6.3.2 | Lot S (P1) : UI tierce dans un bloc `ui` stable, entrée 897 → 742 Ko ; découpe du moteur à proposer (contenu paresseux) | `docs/changes/6.3.2-bundle-ui.md` |

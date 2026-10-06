@@ -72,6 +72,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Nombres en `font-mono tabular-nums` ; capitales seulement en `font-mono` ; confirmations par `askConfirm`.
 - Corps de `useEffect` entre accolades.
 - Un décompte en direct utilise `useNowTicker` (horloge partagée), jamais son propre `setInterval`. Une fenêtre rare montée dans `AppShell` se charge en `lazyPage`.
+- `manualChunks` (`vite.config.ts`) ne force que des paquets tiers chargés dès l'entrée (bloc `ui`, `vendor`) : jamais `src/game` ni `lucide-react`,
+  sinon le code des pages paresseuses remonte dans un bloc chargé au démarrage.
 - Ne pas lancer prettier sur le dépôt.
 - Chaque lot front se termine par un audit DESIGN.md des fichiers touchés, plus une vérification mobile (largeur 375 px, sans défilement horizontal).
 
