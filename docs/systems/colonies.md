@@ -9,12 +9,12 @@
 | Bâtiments | extracteurs communs, entrepôt, hangar de défense ; niveau 18 max ; production +50 % (« terres neuves ») |
 | Gisement rare | biome, 0,1 à 3/s (15 niveaux) |
 | Spécialisations | dont Bastion (hangar de défense +50 %) ; changement tous les 7 jours |
-| Défense | défenses seulement, hangar propre (tech « Extension des hangars » appliquée depuis la 5.28) |
-| Route logistique (5.33) | convoi vers la planète mère toutes les 6, 12 ou 24 h ; réserve 0, 20 ou 50 % de l'entrepôt de la colonie (même part du gisement) ; 10 % perdus en route ; jamais au-delà de l'entrepôt de la planète mère ; un seul convoi au rattrapage |
+| Défense | défenses seulement, hangar propre (tech « Extension des hangars » appliquée depuis la 5.28) ; depuis la 6.4, 1 lot en construction + 5 en file, payés d'avance, places réservées dès la commande ; un lot en attente annulé est remboursé en entier |
+| Route logistique (5.33) | convoi vers la planète mère toutes les 6, 12 ou 24 h ; réserve 0, 20 ou 50 % de l'entrepôt de la colonie (même part du gisement) ; 10 % perdus en route ; jamais au-delà de l'entrepôt de la planète mère ; un seul convoi au rattrapage. Depuis la 6.4, sens au choix : **Rapatrier** (colonie → mère) ou **Ravitailler** (mère → colonie, remplit l'entrepôt de la colonie à 25, 50 ou 80 %, communes seulement, la mère garde 30 % de son entrepôt) |
 
 ## Code et admin
 `colonies.ts`, `ColoniesPage.tsx`.
 
 ## État (audit 2026-10-06)
-- Routes logistiques depuis la 5.33 (audit E6, `proposals/routes-logistiques.md`). Restent : pas de flotte basée, pas de chantier naval, pas de route inverse.
+- Routes logistiques depuis la 5.33 (audit E6, `proposals/routes-logistiques.md`). Route inverse et file de défense depuis la 6.4 (`proposals/colonies-suite.md`). Restent : pas de flotte basée, pas de chantier naval.
 - Seuil de fondation : seuls les bâtiments construits comptent (`effectiveBuildingLevel`) depuis la 5.28.1 (C3).

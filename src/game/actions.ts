@@ -95,7 +95,7 @@ export type GameAction =
   | { type: "colonyRename"; colonyId: string; name: string }
   | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "empireClass"; classId: string }
-  | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number }
+  | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number; direction?: "collect" | "supply" }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
   | { type: "commanderAssign"; ids: string[] }
   | { type: "commanderTrain"; commanderId: string }
@@ -425,7 +425,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       return undefined;
 
     case "colonyRoute":
-      return setColonyRoute(player, String(action.colonyId ?? ""), action.everyHours, action.keepPct, now);
+      return setColonyRoute(player, String(action.colonyId ?? ""), action.everyHours, action.keepPct, now, action.direction);
 
     case "commanderRecruit": {
       const method = action.method === "production" ? "production" : "amber";

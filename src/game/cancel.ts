@@ -1,7 +1,7 @@
 import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { bountyState } from "@/game/bounties";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
-import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds } from "@/game/colonies";
+import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds, startNextColonyDefense } from "@/game/colonies";
 import { GameActionError } from "@/game/errors";
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
@@ -57,7 +57,7 @@ export type CancelTarget =
   | { kind: "research"; id: string }
   | { kind: "units"; category: "attack" | "defense"; index: number }
   | { kind: "colonyBuilding"; colonyId: string }
-  | { kind: "colonyDefense"; colonyId: string };
+  | { kind: "colonyDefense"; colonyId: string; /** 6.4 : 0 ou absent = lot en construction ; n ≥ 1 = n-ième lot en attente. */ index?: number };
 
 export interface CancelQuote {
   refund: Cost;
@@ -145,6 +145,13 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
     }
     case "colonyDefense": {
       const colony = colonyOf(player, target.colonyId);
+      const waiting = target.index && target.index > 0 ? colony?.defenseQueue?.[target.index - 1] : undefined;
+      if (target.index && target.index > 0) {
+        const wu = waiting ? findUnit(waiting.unitId) : undefined;
+        if (!colony || !waiting || !wu) throw new GameActionError("Ce lot n'est plus dans la file.");
+        // Pas encore commencé : remboursé en entier.
+        return { refund: scaleCost(waiting.paid ?? {}, 1), fraction: 1, label: `${colony.name} : ${waiting.qty} × ${wu.name} (en attente)` };
+      }
       const job = colony?.defenseJob;
       const unit = job ? findUnit(job.unitId) : undefined;
       if (!colony || !job || !unit) throw new GameActionError("Aucune défense en construction sur cette colonie.");
@@ -194,7 +201,14 @@ export function performCancel(player: PlayerState, queues: QueuesState, target: 
     }
     case "colonyDefense": {
       const colony = colonyOf(player, target.colonyId)!;
-      colony.defenseJob = null;
+      if (target.index && target.index > 0) {
+        colony.defenseQueue!.splice(target.index - 1, 1);
+        if (colony.defenseQueue!.length === 0) delete colony.defenseQueue;
+      } else {
+        colony.defenseJob = null;
+        // La file reprend aussitôt avec le lot suivant.
+        startNextColonyDefense(colony, player, now);
+      }
       credit(colony.resources, quote.refund);
       break;
     }
@@ -213,7 +227,7 @@ export function isCancelTarget(raw: unknown): raw is CancelTarget {
       return (t.category === "attack" || t.category === "defense") && Number.isInteger(t.index) && (t.index as number) >= 0;
     case "colonyBuilding":
     case "colonyDefense":
-      return typeof t.colonyId === "string" && !!t.colonyId;
+      return typeof t.colonyId === "string" && !!t.colonyId && (t.index === undefined || (Number.isInteger(t.index) && (t.index as number) >= 0));
     default:
       return false;
   }

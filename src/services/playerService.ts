@@ -726,8 +726,8 @@ export function chooseEmpireClass(classId: string) {
   return act({ type: "empireClass", classId });
 }
 
-export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number) {
-  return act({ type: "colonyRoute", colonyId, everyHours, keepPct });
+export function setColonyRoute(colonyId: string, everyHours: number, keepPct: number, direction: "collect" | "supply" = "collect") {
+  return act({ type: "colonyRoute", colonyId, everyHours, keepPct, direction });
 }
 
 export function sendTransport(colonyId: string, direction: "deliver" | "collect", fleet: Record<string, number>, cargo: Partial<Record<import("@/types/game").ResourceId, number>>): Promise<Fleet> {

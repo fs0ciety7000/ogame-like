@@ -25,6 +25,8 @@ import { homeLevels,
   colonyBuildingIds,
   colonyBuildingName,
   colonyDefenseHangar,
+  colonyDefensePendingSpace,
+  COLONY_DEFENSE_QUEUE_MAX,
   DEPOSIT_ID,
   depositLevel,
   depositPerSecond,
@@ -305,6 +307,8 @@ function ColonySpecPicker({ colony, busy, onPick }: { colony: Colony; busy: bool
 
 /** 5.33 (proposals/routes-logistiques.md) : convoi automatique vers la planète mère. */
 const ROUTE_KEEPS = [0, 0.2, 0.5];
+/** 6.4 : remplissages proposés pour le ravitaillement d'une colonie. */
+const ROUTE_FILLS = [0.25, 0.5, 0.8];
 
 function AmountsLine({ amounts }: { amounts: Amounts }) {
   const list = (Object.entries(amounts) as [ResourceId, number][]).filter(([, n]) => n > 0);
@@ -321,10 +325,15 @@ function AmountsLine({ amounts }: { amounts: Amounts }) {
   );
 }
 
-function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; player: PlayerState; busy: boolean; onSet: (everyHours: number, keepPct: number) => void }) {
+function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; player: PlayerState; busy: boolean; onSet: (everyHours: number, keepPct: number, direction: "collect" | "supply") => void }) {
   const now = Date.now();
   const route = colony.route ?? null;
-  const keep = route?.keepPct ?? COLONY_ROUTE_RULES.defaultKeepPct;
+  // 6.4 : sens de la route ; le ravitaillement vise un remplissage de l'entrepôt de la colonie.
+  const [pickedDir, setPickedDir] = useState<"collect" | "supply">(route?.direction ?? "collect");
+  const dir = route ? (route.direction ?? "collect") : pickedDir;
+  const supply = dir === "supply";
+  const keeps = supply ? ROUTE_FILLS : ROUTE_KEEPS;
+  const keep = route?.keepPct ?? (supply ? ROUTE_FILLS[1] : COLONY_ROUTE_RULES.defaultKeepPct);
   const preview = route ? colonyRouteLoad(colony, player).delivered : null;
   const fee = Math.round(COLONY_ROUTE_RULES.feePct * 100);
   const choice = (active: boolean) =>
@@ -334,20 +343,36 @@ function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; pla
       <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
         Route logistique
         {route ? <HudChip size="sm" tone="mint">toutes les {route.everyHours} h</HudChip> : <HudChip size="sm" tone="neutral">arrêtée</HudChip>}
+        {route && <HudChip size="sm" tone="accent">{supply ? "vers la colonie" : "vers la planète mère"}</HudChip>}
         {route && <span className="normal-case tracking-normal">prochain convoi dans {formatClock(Math.max(0, Math.ceil((route.nextAtMs - now) / 1000)))}</span>}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <button type="button" className={choice(!route)} disabled={busy || !route} aria-pressed={!route} onClick={() => onSet(0, keep)}>
+        <span className="text-[11px] text-slate-500">Sens</span>
+        {(["collect", "supply"] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            className={choice(dir === d)}
+            disabled={busy || dir === d}
+            aria-pressed={dir === d}
+            onClick={() => (route ? onSet(route.everyHours, d === "supply" ? ROUTE_FILLS[1] : COLONY_ROUTE_RULES.defaultKeepPct, d) : setPickedDir(d))}
+          >
+            {d === "collect" ? "Rapatrier" : "Ravitailler"}
+          </button>
+        ))}
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <button type="button" className={choice(!route)} disabled={busy || !route} aria-pressed={!route} onClick={() => onSet(0, keep, dir)}>
           Arrêt
         </button>
         {COLONY_ROUTE_RULES.intervals.map((h) => (
-          <button key={h} type="button" className={choice(route?.everyHours === h)} disabled={busy || route?.everyHours === h} aria-pressed={route?.everyHours === h} onClick={() => onSet(h, keep)}>
+          <button key={h} type="button" className={choice(route?.everyHours === h)} disabled={busy || route?.everyHours === h} aria-pressed={route?.everyHours === h} onClick={() => onSet(h, keep, dir)}>
             {h} h
           </button>
         ))}
-        <span className="ml-1 text-[11px] text-slate-500">Réserve</span>
-        {ROUTE_KEEPS.map((k) => (
-          <button key={k} type="button" className={choice(Math.abs(keep - k) < 0.001)} disabled={busy || !route || Math.abs(keep - k) < 0.001} aria-pressed={Math.abs(keep - k) < 0.001} onClick={() => onSet(route?.everyHours ?? 0, k)}>
+        <span className="ml-1 text-[11px] text-slate-500">{supply ? "Remplir à" : "Réserve"}</span>
+        {keeps.map((k) => (
+          <button key={k} type="button" className={choice(Math.abs(keep - k) < 0.001)} disabled={busy || !route || Math.abs(keep - k) < 0.001} aria-pressed={Math.abs(keep - k) < 0.001} onClick={() => onSet(route?.everyHours ?? 0, k, dir)}>
             {Math.round(k * 100)} %
           </button>
         ))}
@@ -363,11 +388,23 @@ function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; pla
             ) : null}
           </>
         ) : (
-          <>Un convoi ramène le stock de la colonie vers ta planète mère, sans flotte. Il garde la réserve choisie.</>
+          <>
+            {supply
+              ? "Un convoi part de ta planète mère et remplit l'entrepôt de la colonie, sans flotte."
+              : "Un convoi ramène le stock de la colonie vers ta planète mère, sans flotte. Il garde la réserve choisie."}
+          </>
         )}
       </p>
       <p className="mt-0.5 text-[11px] text-slate-500">
-        <span className="font-mono tabular-nums">{fee} %</span> perdus en route. Jamais au-delà de ton entrepôt. Le transport par flotte reste gratuit.
+        <span className="font-mono tabular-nums">{fee} %</span> perdus en route.{" "}
+        {supply ? (
+          <>
+            Ta planète mère garde au moins <span className="font-mono tabular-nums">{Math.round(COLONY_ROUTE_RULES.supplyHomeReservePct * 100)} %</span> de son entrepôt. Ressources communes seulement.
+          </>
+        ) : (
+          "Jamais au-delà de ton entrepôt."
+        )}{" "}
+        Le transport par flotte reste gratuit.
       </p>
     </div>
   );
@@ -522,7 +559,10 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   const inFlight = fleets.filter((f) => f.mission === "transport" && f.targetUid === colony.id && f.status !== "done");
   const defenses = UNITS.filter((u) => u.category === "defense" && (player.units[u.id]?.level ?? 0) > 0);
   const hangar = colonyDefenseHangar(colony, player);
-  const free = Math.max(0, hangar.capacity - hangar.used);
+  // 6.4 : les lots en construction et en attente réservent déjà leurs places.
+  const free = Math.max(0, hangar.capacity - hangar.used - colonyDefensePendingSpace(colony));
+  const queue = colony.defenseQueue ?? [];
+  const queueFull = !!colony.defenseJob && queue.length >= COLONY_DEFENSE_QUEUE_MAX;
   const picked = defense.unitId ? findUnit(defense.unitId) : undefined;
   const pickedCost = picked ? playerUnitCost(picked, player) : { scrap: 0, energy: 0 };
   const maxQty = picked
@@ -601,7 +641,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             {shielded && <HudTag tone="accent">Bouclier actif</HudTag>}
           </div>
           <ColonySpecPicker colony={colony} busy={busy} onPick={(id) => void act(() => setColonySpec(colony.id, id), "Spécialisation enregistrée.")} />
-          <ColonyRoutePanel colony={colony} player={player} busy={busy} onSet={(every, keep) => void act(() => setColonyRoute(colony.id, every, keep), every ? "Route enregistrée." : "Route arrêtée.")} />
+          <ColonyRoutePanel colony={colony} player={player} busy={busy} onSet={(every, keep, dir) => void act(() => setColonyRoute(colony.id, every, keep, dir), every ? "Route enregistrée." : "Route arrêtée.")} />
         </div>
         <div className="relative flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setTransport("deliver")}>
@@ -697,7 +737,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                   ))}
                 </div>
               )}
-              {colony.defenseJob ? (
+              {colony.defenseJob &&
                 (() => {
                   const job = colony.defenseJob;
                   const total = colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1000;
@@ -715,13 +755,34 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                         <CancelJobButton target={{ kind: "colonyDefense", colonyId: colony.id }} compact />
                       </div>
                       <Progress value={total > 0 ? 100 - (left / total) * 100 : 0} className="mt-1.5" />
+                      {queue.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1 border-t border-white/[0.06] pt-2">
+                          {queue.map((w, i) => (
+                            <li key={`${w.unitId}-${i}`} className="flex items-center gap-2 text-[11px] text-slate-400">
+                              <span className="font-mono tabular-nums text-slate-500">{i + 1}.</span>
+                              <span className="flex-1">
+                                <span className="font-mono tabular-nums">{formatCompact(w.qty)}</span> {findUnit(w.unitId)?.name ?? w.unitId} en attente
+                              </span>
+                              <span className="inline-flex items-center gap-1 font-mono tabular-nums">
+                                <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, w.unitId, w.qty, colony))}
+                              </span>
+                              <CancelJobButton target={{ kind: "colonyDefense", colonyId: colony.id, index: i + 1 }} compact />
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   );
-                })()
-              ) : defenses.length === 0 ? (
+                })()}
+              {defenses.length === 0 ? (
                 <p className="text-[11px] text-slate-500">Débloque des défenses sur ta planète mère pour en construire ici.</p>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className={cn("flex flex-col gap-2", colony.defenseJob && "mt-3")}>
+                  {colony.defenseJob && (
+                    <p className="text-[11px] text-slate-500">
+                      Ajoute un lot à la file : <span className="font-mono tabular-nums">{queue.length} / {COLONY_DEFENSE_QUEUE_MAX}</span> en attente, payés tout de suite.
+                    </p>
+                  )}
                   <div className="grid gap-1.5 @sm:grid-cols-2">
                     {defenses.map((u) => (
                       <button
@@ -760,10 +821,11 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                     <Button
                       size="sm"
                       className="ml-auto"
-                      disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable}
-                      onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), "Défenses en construction.")}
+                      disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable || queueFull}
+                      title={queueFull ? `File pleine : ${COLONY_DEFENSE_QUEUE_MAX} lots en attente au plus.` : undefined}
+                      onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), colony.defenseJob ? "Lot ajouté à la file." : "Défenses en construction.")}
                     >
-                      <Shield className="h-3.5 w-3.5" /> Construire
+                      <Shield className="h-3.5 w-3.5" /> {colony.defenseJob ? "Mettre en file" : "Construire"}
                     </Button>
                   </div>
                 </div>

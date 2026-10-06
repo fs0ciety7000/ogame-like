@@ -144,3 +144,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.3.0 | Lot O : « Relancer » pour toutes les missions (primes, boss, transports, livraisons) ; emplacements à débloquer laissés aux relevés | `docs/changes/6.3.0-relancer.md` |
 | 2026-10-06 | 6.3.1 | Lot R (C4) : catégorie = vole ou non, onglets Vaisseaux / Défenses ; Intercepteur tourelle (sans vitesse ni soute, 320 / 80) | `docs/changes/6.3.1-categories-unites.md` |
 | 2026-10-06 | 6.3.2 | Lot S (P1) : UI tierce dans un bloc `ui` stable, entrée 897 → 742 Ko ; découpe du moteur à proposer (contenu paresseux) | `docs/changes/6.3.2-bundle-ui.md` |
+| 2026-10-06 | 6.4.0 | Lot Q : route de ravitaillement (mère → colonie, réserve 30 % de la mère), file de défense coloniale (5 lots, places réservées) | `docs/changes/6.4.0-colonies-suite.md` |
