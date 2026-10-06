@@ -9,7 +9,7 @@ import { useContentStore } from "@/services/contentService";
 
 /* v5.14 : rapport d'impact du circuit d'effets — qui peut donner quoi, et jusqu'où. */
 
-const TONE: Record<EffectSourceKind, HudTone> = { tech: "accent", officer: "gold", relic: "violet", talent: "mint", territory: "ember", capsule: "danger", season: "neutral" };
+const TONE: Record<EffectSourceKind, HudTone> = { tech: "accent", officer: "gold", relic: "violet", talent: "mint", territory: "ember", capsule: "danger", season: "neutral", module: "mint" };
 
 export function ImpactReportPanel() {
   // Abonné au contenu : recalculé quand il change (technos, reliques…). Calcul léger.

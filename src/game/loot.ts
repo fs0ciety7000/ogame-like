@@ -1,3 +1,4 @@
+import { addModuleItem, moduleLabel, rollModulePlan } from "@/game/modules";
 import { addRelic, relicLabel, rollRelic, type RelicRarity, RARITIES } from "@/game/relics";
 import { addCapsule, CAPSULE_TYPES, CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/synthesis";
 import { casinoWeekId, grantTokens, playerCasino } from "@/game/casino";
@@ -29,6 +30,8 @@ export interface LootTable {
   /** 5.15 : nombre de jetons tirés (bornes incluses). */
   tokenMin?: number;
   tokenMax?: number;
+  /** 5.26 : chance de plan de module de vaisseau. */
+  moduleChance?: number;
 }
 
 export type LootTables = Record<LootSource, LootTable>;
@@ -47,13 +50,13 @@ export const LOOT_SOURCE_LABELS: Record<LootSource, string> = {
 
 export function defaultLootTables(): LootTables {
   return {
-    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
-    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2 },
-    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
-    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 },
-    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2 },
-    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1 },
-    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1 },
+    worldBoss: { relicChance: 0.25, relicMinRarity: "rare", capsuleChance: 0.5, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.6, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.2 },
+    seasonBoss: { relicChance: 0.2, relicMinRarity: "rare", capsuleChance: 0.4, capsuleMin: 3, capsuleMax: 6, podiumMult: 1.5, tokenChance: 0.3, tokenMin: 1, tokenMax: 2, moduleChance: 0.18 },
+    allianceBoss: { relicChance: 0.15, relicMinRarity: "common", capsuleChance: 0.35, capsuleMin: 2, capsuleMax: 5, podiumMult: 1.5, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.12 },
+    expedition: { relicChance: 0.03, relicMinRarity: "common", capsuleChance: 0.08, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.04 },
+    warlord: { relicChance: 0.06, relicMinRarity: "common", capsuleChance: 0.15, capsuleMin: 2, capsuleMax: 5, podiumMult: 1, tokenChance: 0.25, tokenMin: 1, tokenMax: 2, moduleChance: 0.08 },
+    threat: { relicChance: 0.04, relicMinRarity: "common", capsuleChance: 0.12, capsuleMin: 1, capsuleMax: 4, podiumMult: 1, tokenChance: 0.12, tokenMin: 1, tokenMax: 1, moduleChance: 0.05 },
+    pvp: { relicChance: 0.01, relicMinRarity: "common", capsuleChance: 0.03, capsuleMin: 1, capsuleMax: 3, podiumMult: 1, tokenChance: 0.06, tokenMin: 1, tokenMax: 1, moduleChance: 0.03 },
   };
 }
 
@@ -95,6 +98,7 @@ export function validateLootTables(tables: Partial<Record<LootSource, Partial<Lo
     if (!(Number.isInteger(min) && Number.isInteger(max) && min >= 1 && max <= 10 && min <= max)) errors.push(`${label} : niveaux de capsule entiers, 1 ≤ min ≤ max ≤ 10.`);
     if (t.podiumMult !== undefined && !(t.podiumMult >= 1 && t.podiumMult <= 5)) errors.push(`${label} : bonus du podium entre 1 et 5.`);
     if (t.tokenChance !== undefined && !pct(t.tokenChance)) errors.push(`${label} : chance de jetons entre 0 et 1.`);
+    if (t.moduleChance !== undefined && !pct(t.moduleChance)) errors.push(`${label} : chance de plan de module entre 0 et 1.`);
     const tmin = t.tokenMin ?? 1;
     const tmax = t.tokenMax ?? 1;
     if (!(Number.isInteger(tmin) && Number.isInteger(tmax) && tmin >= 1 && tmax <= 20 && tmin <= tmax)) errors.push(`${label} : jetons entiers, 1 ≤ min ≤ max ≤ 20.`);
@@ -108,6 +112,8 @@ export interface LootDrop {
   capsule?: { type: CapsuleType; level: number; name: string };
   /** 5.15 : jetons du casino gagnés. */
   tokens?: number;
+  /** 5.26 : plan de module récupéré. */
+  module?: string;
 }
 
 /** 5.15 : difficulté d'un combat, bornée (0,5 = facile, 1 = égal, 2 = très dur) :
@@ -155,6 +161,11 @@ export function rollLoot(player: PlayerState, source: LootSource, now: number, r
       player.casino = { ...playerCasino(player), lootWeek: { id: casinoWeekId(now), tokens: week.used + got } };
     }
   }
+  // 5.26 : plan de module (rareté minimale « rare » sur un boss).
+  if ((t.moduleChance ?? 0) > 0 && random() < Math.min(1, (t.moduleChance ?? 0) * mult)) {
+    const plan = rollModulePlan(`loot:${source}`, now, random, source.endsWith("Boss") ? "rare" : "common");
+    if (addModuleItem(player, plan)) drop.module = moduleLabel(plan);
+  }
   return drop;
 }
 
@@ -164,6 +175,7 @@ export function describeLoot(drop: LootDrop | null | undefined): string {
   const parts: string[] = [];
   if (drop.relic) parts.push(`Relique : ${drop.relic}`);
   if (drop.capsule) parts.push(`Capsule : ${drop.capsule.name} niv. ${drop.capsule.level}`);
+  if (drop.module) parts.push(`Plan de module : ${drop.module}`);
   if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
   return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
 }

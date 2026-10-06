@@ -34,6 +34,7 @@ export const GAME_FIELDS = [
   "bounties",
   "commanders",
   "relics",
+  "modules",
   "synthesis",
   "profileStyle",
   "renamed",

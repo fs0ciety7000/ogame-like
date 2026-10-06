@@ -275,6 +275,12 @@
         "maxSize": 50000
       },
       {
+        "name": "modules",
+        "type": "json",
+        "required": false,
+        "maxSize": 50000
+      },
+      {
         "name": "synthesis",
         "type": "json",
         "required": false,

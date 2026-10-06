@@ -138,6 +138,8 @@ export interface PlayerState {
   /** v4.0 : officiers, reliques et capsules du Labo de synthèse. */
   commanders?: import("@/game/commanders").CommandersState;
   relics?: import("@/game/relics").RelicsState;
+  /** 5.26 : plans et modules de vaisseaux montés par classe. */
+  modules?: import("@/game/modules").ModulesState;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

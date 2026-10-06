@@ -4,7 +4,7 @@ import { EmptyAction, FoldSection, HudPanel } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
-import { Anchor, BookOpen, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
+import { Anchor, BookOpen, Boxes, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EffectSheet } from "@/components/game/EffectSheet";
+import { ModulesTab } from "@/components/game/ModulesTab";
 import {
   COMMANDER_RULES,
   COMMANDER_SOURCES,
@@ -692,6 +693,7 @@ export function CommandPage() {
   const tabs: { id: string; label: string; icon: ReactNode }[] = [
     { id: "commanders", label: "Commandants", icon: <Medal className="h-3.5 w-3.5" /> },
     { id: "relics", label: "Reliques", icon: <Gem className="h-3.5 w-3.5" /> },
+    { id: "modules", label: "Modules", icon: <Boxes className="h-3.5 w-3.5" /> },
     { id: "synthesis", label: "Labo de synthèse", icon: <FlaskConical className="h-3.5 w-3.5" /> },
     { id: "effects", label: "Effets", icon: <Sparkles className="h-3.5 w-3.5" /> },
   ];
@@ -702,7 +704,7 @@ export function CommandPage() {
       <PageHeader backdrop="/assets/blog/articles/5-9/poste-commandement.webp"
         eyebrow="Commandement"
         title="État-major"
-        description="Tes officiers, tes reliques et ton Labo de synthèse : des bonus permanents et des coups tordus."
+        description="Tes officiers, tes reliques, tes modules de vaisseaux et ton Labo de synthèse : des bonus permanents et des coups tordus."
         right={st.active.length === 0 && Object.keys(st.roster).length === 0 ? <HudTag tone="gold">Premier officier offert</HudTag> : undefined}
       />
       <Tabs value={tab} onValueChange={(v) => setParams((p) => (p.set("onglet", v), p), { replace: true })}>
@@ -718,6 +720,9 @@ export function CommandPage() {
         </TabsContent>
         <TabsContent value="relics" className="mt-4">
           <RelicsTab player={player} />
+        </TabsContent>
+        <TabsContent value="modules" className="mt-4">
+          <ModulesTab player={player} />
         </TabsContent>
         <TabsContent value="synthesis" className="mt-4">
           <SynthesisTab player={player} now={now} />

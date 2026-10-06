@@ -2,6 +2,7 @@ import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, typ
 import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, SEASON_SECONDARY_SHARE } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
 import { TALENT_RULES, TALENTS } from "@/game/talents";
+import { MODULE_FAMILIES, MODULE_RULES } from "@/game/modules";
 import { TERRITORY_RULES } from "@/game/territories";
 import { effectValuePerLevel, TECH_EFFECT_STAT, techEffects, TECHNOLOGIES } from "@/game/technologies";
 
@@ -65,6 +66,13 @@ export function effectImpactReport(): ImpactRow[] {
   // Talents d'Ascension : rang maximal.
   for (const t of TALENTS) {
     add(t.effect.kind as EffectStat, t.effect.kind === "production" ? t.effect.res : undefined, "empire", { kind: "talent", label: t.name, max: t.perRank * TALENT_RULES.maxRank, note: `rang ${TALENT_RULES.maxRank}` });
+  }
+  // 5.26 : modules de vaisseaux, deux légendaires montés sur chaque classe permise.
+  for (const fam of Object.values(MODULE_FAMILIES)) {
+    for (const cls of fam.classes) {
+      const target = fam.stat === "unitAttack" || fam.stat === "unitHp" ? `class:${cls}` : undefined;
+      add(fam.stat, target, "empire", { kind: "module", label: fam.label, max: fam.values.legendary * MODULE_RULES.slotsPerClass, note: `${MODULE_RULES.slotsPerClass} légendaires` });
+    }
   }
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });

@@ -743,6 +743,23 @@ export function recycleRelic(relicId: string) {
   return act<{ amber: number }>({ type: "relicRecycle", relicId });
 }
 
+/** 5.26 : modules de vaisseaux. */
+export function buildShipModule(moduleId: string) {
+  return act<import("@/game/modules").ModuleItem>({ type: "moduleBuild", moduleId });
+}
+
+export function mountShipModule(moduleId: string, cls: string, slot: number) {
+  return act({ type: "moduleMount", moduleId, cls, slot });
+}
+
+export function unmountShipModule(cls: string, slot: number) {
+  return act({ type: "moduleUnmount", cls, slot });
+}
+
+export function recycleShipModule(moduleId: string) {
+  return act<{ amber: number }>({ type: "moduleRecycle", moduleId });
+}
+
 /** v5.1 : talents d'Ascension. */
 export function learnTalent(talentId: string) {
   return act({ type: "talentLearn", talentId });
