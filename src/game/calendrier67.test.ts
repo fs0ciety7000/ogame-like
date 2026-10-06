@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { bossWindows, describeBossSchedule, EVENT_RULES, parisOffsetMs } from "@/game/events";
 import { leviathanSchedule } from "@/game/leviathan";
 import { SEASON_BOSS_RULES, seasonBossSchedule, seasonBossWindow } from "@/game/chronicles";
-import { casinoWeeklyWindows, DEFAULT_CASINO } from "@/game/casino";
+import { DEFAULT_CASINO, tournamentWeeklyWindows } from "@/game/casino";
 
 /* 6.7 (lot V, calendrier-semaine.md) : boss de la chronique le mardi 18 h (48 h), tournoi du casino le mercredi
-   18 h (30 h), événement du week-end le vendredi : trois rendez-vous serveur qui ne commencent jamais le même jour. */
+   18 h (30 h, casino ouvert en permanence), événement du week-end le vendredi : trois rendez-vous serveur qui ne commencent jamais le même jour. */
 
 const H = 3600_000;
 const parisDow = (ms: number) => new Date(ms + parisOffsetMs(ms)).getUTCDay();
@@ -28,8 +28,8 @@ describe("6.7 : rendez-vous de la semaine", () => {
   it("défauts : boss de la chronique le mardi 18 h pour 48 h, casino le mercredi 18 h pour 30 h", () => {
     expect(SEASON_BOSS_RULES.weekday).toBe(2);
     expect(SEASON_BOSS_RULES.durationHours).toBe(48);
-    expect(DEFAULT_CASINO.weekly).toEqual({ day: 3, hour: 18, hours: 30 });
-    expect(DEFAULT_CASINO.weekends).toBe(false);
+    expect(DEFAULT_CASINO.tournamentWeekly).toEqual({ day: 3, hour: 18, hours: 30 });
+    expect(DEFAULT_CASINO.mode).toBe("open");
   });
 
   it("boss mondial mensuel (week-end) : le boss de la chronique tombe le dernier mardi du mois", () =>
@@ -66,7 +66,7 @@ describe("6.7 : rendez-vous de la semaine", () => {
     withRules({ bossWeekly: false }, () => {
       const now = Date.UTC(2026, 9, 1);
       const seasonDays = new Set(bossWindows(now, seasonBossSchedule(), 6).map((w) => parisDow(w.startMs)));
-      const casinoDays = new Set(casinoWeeklyWindows(DEFAULT_CASINO, now).map((w) => parisDow(w.startMs)));
+      const casinoDays = new Set(tournamentWeeklyWindows(DEFAULT_CASINO, now).map((w) => parisDow(w.startMs)));
       const weekendEvent = 5; // vendredi 18 h (weekendWindow)
       for (const d of seasonDays) {
         expect(casinoDays.has(d)).toBe(false);

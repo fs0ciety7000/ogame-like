@@ -799,6 +799,7 @@ var EFFECT_SCOPE_LABELS = {
 var TECH_REDUCTION_CAP = 0.75;
 var TECH_COMBAT_CAP = 1.5;
 var TECH_COMBAT_PER_TECH_MAX = 1;
+var TECH_COMBAT_LIMITS = { cap: TECH_COMBAT_CAP, perTechMax: TECH_COMBAT_PER_TECH_MAX };
 var EMPIRE_TIME_CAP = 0.5;
 var EMPIRE_COST_CAP = 0.5;
 var COMBAT_SCOPES = ["all", "pvp", "pve", "warlord"];
@@ -909,6 +910,12 @@ function validateComposedEffect(c, validTarget) {
   if (c.stat === "production" && c.target && !(c.target in RESOURCE_TARGET_LABELS)) errors.push(`ressource \xAB ${c.target} \xBB inconnue`);
   if (c.stat === "hangarCapacity" && c.target && c.target !== "attack" && c.target !== "defense") errors.push("hangar : attack ou defense");
   return errors;
+}
+function setTechCombatLimits(cap, perTechMax) {
+  TECH_COMBAT_LIMITS.cap = cap;
+  TECH_COMBAT_LIMITS.perTechMax = perTechMax;
+  EFFECT_STATS.attack.cap = __spreadProps(__spreadValues({}, EFFECT_STATS.attack.cap), { tech: cap });
+  EFFECT_STATS.defense.cap = __spreadProps(__spreadValues({}, EFFECT_STATS.defense.cap), { tech: cap });
 }
 
 // src/game/unitClasses.ts
@@ -3539,8 +3546,8 @@ function validateTechEffect(label3, e3, refs) {
   if (e3.type === "unlock_next_level" && e3.target && !refs.unitIds.has(e3.target)) errors.push(`${label3} : unit\xE9 \xAB ${e3.target} \xBB inexistante.`);
   for (const id of (_a = e3.targets) != null ? _a : []) if (!refs.buildingIds.has(id)) errors.push(`${label3} : b\xE2timent \xAB ${id} \xBB inexistant.`);
   if (e3.type === "stat") for (const m of validateComposedEffect(e3, (sel) => isUnitSelector(sel, (id) => refs.unitIds.has(id)))) errors.push(`${label3} : ${m}.`);
-  if ((e3.type === "unit_attack" || e3.type === "unit_defense") && refs.maxLevel !== void 0 && effectValuePerLevel(e3) * refs.maxLevel > TECH_COMBAT_PER_TECH_MAX + 1e-9) {
-    errors.push(`${label3} : \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB donnerait +${Math.round(effectValuePerLevel(e3) * refs.maxLevel * 100)} % au niveau ${refs.maxLevel} (+${TECH_COMBAT_PER_TECH_MAX * 100} % au plus).`);
+  if ((e3.type === "unit_attack" || e3.type === "unit_defense") && refs.maxLevel !== void 0 && effectValuePerLevel(e3) * refs.maxLevel > TECH_COMBAT_LIMITS.perTechMax + 1e-9) {
+    errors.push(`${label3} : \xAB ${TECH_EFFECT_LABELS[e3.type]} \xBB donnerait +${Math.round(effectValuePerLevel(e3) * refs.maxLevel * 100)} % au niveau ${refs.maxLevel} (+${Math.round(TECH_COMBAT_LIMITS.perTechMax * 100)} % au plus).`);
   }
   if (e3.type === "unlock_next_level" && e3.target && refs.maxLevel !== void 0 && refs.unitMaxLevel) {
     const unitMax = refs.unitMaxLevel(e3.target);
@@ -5679,7 +5686,9 @@ var COLONY_RULES = {
   /** v5.10 : à la fondation, chaque extracteur et l'entrepôt démarrent à cette part du niveau de la planète mère… */
   foundationShare: 0.5,
   /** …sans dépasser ce niveau. */
-  foundationMax: 8
+  foundationMax: 8,
+  /** 6.4 : lots de défenses en attente par colonie (en plus du lot en construction). */
+  defenseQueueMax: 5
 };
 function foundationBuildingIds() {
   return colonyBuildingIds().filter((id) => {
@@ -5711,7 +5720,6 @@ var COLONY_ROUTE_RULES = {
   /** 6.4 : en ravitaillement, la planète mère garde au moins cette part de son entrepôt. */
   supplyHomeReservePct: 0.3
 };
-var COLONY_DEFENSE_QUEUE_MAX = 5;
 function setColonyRoute(player, colonyIdIn, everyHoursIn, keepPctIn, now, directionIn) {
   var _a, _b;
   const colony = colonyOf(player, colonyIdIn);
@@ -5960,7 +5968,7 @@ function advanceColony(colony, player, now) {
   const notes = [];
   const upgradeOld = !colony.foundation;
   let at = colony.updatedAtMs || now;
-  for (let guard = 0; guard < 10 + COLONY_DEFENSE_QUEUE_MAX; guard++) {
+  for (let guard = 0; guard < 10 + COLONY_RULES.defenseQueueMax; guard++) {
     const next = Math.min((_b = (_a = colony.building) == null ? void 0 : _a.endTime) != null ? _b : Infinity, (_d = (_c = colony.defenseJob) == null ? void 0 : _c.endTime) != null ? _d : Infinity);
     const until = Math.min(next, now);
     if (until > at) {
@@ -6082,7 +6090,7 @@ function buildColonyDefense(player, colonyIdIn, unitId, qtyIn, now) {
   if (((_b = (_a = player.units[unitId]) == null ? void 0 : _a.level) != null ? _b : 0) <= 0) throw new GameActionError("D\xE9bloque d'abord cette d\xE9fense sur ta plan\xE8te m\xE8re.");
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantit\xE9 invalide.");
-  if (colony.defenseJob && ((_d = (_c = colony.defenseQueue) == null ? void 0 : _c.length) != null ? _d : 0) >= COLONY_DEFENSE_QUEUE_MAX) throw new GameActionError(`File pleine : ${COLONY_DEFENSE_QUEUE_MAX} lots en attente au plus.`);
+  if (colony.defenseJob && ((_d = (_c = colony.defenseQueue) == null ? void 0 : _c.length) != null ? _d : 0) >= COLONY_RULES.defenseQueueMax) throw new GameActionError(`File pleine : ${COLONY_RULES.defenseQueueMax} lots en attente au plus.`);
   const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + colonyDefensePendingSpace(colony) + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacit\xE9 du hangar de d\xE9fense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);
@@ -6144,9 +6152,11 @@ function deliverToColony(colony, cargo) {
 // src/game/casino.ts
 var CASINO_KEY = "casino";
 var DEFAULT_CASINO = {
-  mode: "scheduled",
-  // 6.7 (lot V, calendrier-semaine.md) : le tournoi passe du week-end au mercredi 18 h, pour 30 h.
-  weekly: { day: 3, hour: 18, hours: 30 },
+  // 6.7.1 : ouvert en permanence par défaut ; l'équipe peut le fermer ou le programmer (créneaux, week-ends, chaque semaine).
+  mode: "open",
+  weekly: null,
+  // 6.7 (lot V, calendrier-semaine.md) : le tournoi a lieu le mercredi 18 h, pour 30 h.
+  tournamentWeekly: { day: 3, hour: 18, hours: 30 },
   weekends: false,
   windows: [],
   dailyTokens: 1,
@@ -6186,11 +6196,12 @@ function normalizeCasinoSettings(raw) {
   const legacy = r.enabled;
   const mode = r.mode === "open" || r.mode === "closed" || r.mode === "scheduled" ? r.mode : legacy === false ? "closed" : d.mode;
   const windows = (Array.isArray(r.windows) ? r.windows : []).map((w) => ({ startMs: Math.floor(Number(w == null ? void 0 : w.startMs) || 0), endMs: Math.floor(Number(w == null ? void 0 : w.endMs) || 0) })).filter((w) => w.startMs > 0 && w.endMs > w.startMs).sort((a, b) => a.startMs - b.startMs).slice(0, 24);
-  const legacyWeekly = r.weekly === void 0;
   return {
     mode,
-    weekly: legacyWeekly ? __spreadValues({}, d.weekly) : normalizeWeekly(r.weekly),
-    weekends: legacyWeekly ? d.weekends : r.weekends === true,
+    weekly: normalizeWeekly(r.weekly),
+    // 6.7.1 : réglages d'avant le tournoi de la semaine : il passe au mercredi (les réglages d'ouverture ne bougent pas).
+    tournamentWeekly: r.tournamentWeekly === void 0 ? __spreadValues({}, d.tournamentWeekly) : normalizeWeekly(r.tournamentWeekly),
+    weekends: r.weekends === void 0 ? d.weekends : r.weekends === true,
     windows,
     dailyTokens: Math.floor(num(r.dailyTokens, d.dailyTokens, 0, 10)),
     maxTokens: Math.floor(num(r.maxTokens, d.maxTokens, 1, 1e3)),
@@ -6274,8 +6285,9 @@ function validateCasinoSettings(s) {
   if (total2 > 0.9) errors.push(`Les probabilit\xE9s de gain d\xE9passent 90 % (${Math.round(total2 * 100)} %).`);
   if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
   if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
-  if (s.mode === "scheduled" && !s.weekly && !s.weekends && s.windows.length === 0) errors.push("Programme vide : choisis un rendez-vous de la semaine, coche les week-ends ou ajoute un cr\xE9neau.");
-  if (s.weekly && !(s.weekly.hours >= 1 && s.weekly.hours <= 72)) errors.push("Rendez-vous de la semaine : dur\xE9e entre 1 et 72 h.");
+  if (s.mode === "scheduled" && !s.weekly && !s.weekends && s.windows.length === 0) errors.push("Programme vide : ajoute un cr\xE9neau, une ouverture chaque semaine ou coche les week-ends.");
+  if (s.weekly && !(s.weekly.hours >= 1 && s.weekly.hours <= 72)) errors.push("Ouverture de la semaine : dur\xE9e entre 1 et 72 h.");
+  if (s.tournamentWeekly && !(s.tournamentWeekly.hours >= 1 && s.tournamentWeekly.hours <= 72)) errors.push("Tournoi de la semaine : dur\xE9e entre 1 et 72 h.");
   if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place r\xE9compens\xE9e.");
   return errors;
 }
@@ -6285,7 +6297,12 @@ function parisWeekend(now) {
   return d === 0 || d === 6;
 }
 function casinoWeeklyWindows(s, now) {
-  const w = s.weekly;
+  return weeklyWindowsOf(s.weekly, now);
+}
+function tournamentWeeklyWindows(s, now) {
+  return weeklyWindowsOf(s.tournamentWeekly, now);
+}
+function weeklyWindowsOf(w, now) {
   if (!w) return [];
   const local = now + parisOffsetMs(now);
   const midnight = Math.floor(local / DAY5) * DAY5;
@@ -6317,6 +6334,10 @@ function casinoOpen(s, now) {
 function tournamentId(s, now) {
   const id = casinoOpeningId(s, now);
   if (!id) return null;
+  if (s.tournamentWeekly) {
+    const t = tournamentWeeklyWindows(s, now).find((x) => now >= x.startMs && now < x.endMs);
+    return t ? `t-${parisDay(t.startMs)}` : null;
+  }
   return id === "open" ? `open-${casinoWeekId(now)}` : id;
 }
 function rollTournament(state, now) {
@@ -7925,7 +7946,10 @@ var PIRATE_RULES = {
   adaptUp: 0.04,
   adaptDown: 0.1,
   adaptMin: 0.9,
-  adaptMax: 1.5
+  adaptMax: 1.5,
+  /** 6.6 : « Localiser » un repaire : raids repoussés requis et coût en heures de production. */
+  lairLocateMinRepelled: 1,
+  lairLocateCostHours: 12
 };
 var PIRATE_OWNER_UID = "pirates";
 function lairUid(factionId) {
@@ -7980,10 +8004,14 @@ function signTreaty(player, factionId, kindIn, now) {
   return { treaty, paid: cost };
 }
 var LAIR_LOCATE_RULES = {
-  /** Raids repoussés au moins une fois contre la faction. */
-  minRepelled: 1,
+  /** Raids repoussés au moins une fois contre la faction (réglable : Admin → Événements → Factions hostiles). */
+  get minRepelled() {
+    return PIRATE_RULES.lairLocateMinRepelled;
+  },
   /** Coût : heures de production commune. */
-  costHours: 12
+  get costHours() {
+    return PIRATE_RULES.lairLocateCostHours;
+  }
 };
 function locateLair(player, factionId, now) {
   var _a, _b;
@@ -9975,7 +10003,11 @@ var EMPIRE_CLASS_RULES = {
   /** Ambre pour changer de classe (le premier choix est gratuit). */
   changeAmber: 100,
   /** Jours entre deux changements. */
-  changeCooldownDays: 7
+  changeCooldownDays: 7,
+  /** 6.5 : Récolteur, capacité de recyclage en plus de sa soute (0,25 = +25 %). */
+  harvesterRecycleBonus: 0.25,
+  /** 6.5 : Éclaireur lointain, durée d'expédition en moins (0,15 = −15 %). */
+  scoutExpeditionTime: 0.15
 };
 function findEmpireClass(id) {
   return EMPIRE_CLASSES.find((c) => c.id === id);
@@ -10003,10 +10035,14 @@ function empireClassPrice(player) {
 
 // src/game/classUnits.ts
 var CLASS_UNIT_RULES = {
-  /** Récolteur : capacité de recyclage en plus de sa soute. */
-  harvesterRecycleBonus: 0.25,
+  /** Récolteur : capacité de recyclage en plus de sa soute (réglable : Admin → Règles → Classes d'empire). */
+  get harvesterRecycleBonus() {
+    return EMPIRE_CLASS_RULES.harvesterRecycleBonus;
+  },
   /** Éclaireur lointain : durée d'expédition en moins s'il est dans la flotte. */
-  scoutExpeditionTime: 0.15
+  get scoutExpeditionTime() {
+    return EMPIRE_CLASS_RULES.scoutExpeditionTime;
+  }
 };
 var HARVESTER_ID = "recolteur";
 var SCOUT_ID = "eclaireur_lointain";
@@ -10892,7 +10928,6 @@ function ownedBlueprints(player) {
   var _a, _b;
   return ((_b = (_a = player.bounties) == null ? void 0 : _a.owned) == null ? void 0 : _b.includes("blueprint")) ? [KESH_HUNTER_UNIT.id] : [];
 }
-var KESH_PVE_BONUS = 0.5;
 var UNIT_LEVEL_BONUS_DEFAULT = 5;
 var DEFAULT_UNITS = [
   {
@@ -11159,6 +11194,13 @@ function getUnitBuildTime(unit, techLevels2, player) {
 
 // src/game/combat.ts
 var COMBAT_RULES = {
+  /** 6.7.1 : plafond de l'attaque et de la défense données par les technos (1,5 = +150 %). */
+  techCombatCap: 1.5,
+  /** 6.7.1 : une techno, à son niveau maximal, au plus (1 = +100 %). */
+  techCombatPerTechMax: 1,
+  /** 6.7.1 : bonus du Traqueur Kesh contre tous les PNJ (0,5 = +50 %), en attaque comme en défense. */
+  // Valeur littérale : lire KESH_PVE_BONUS ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
+  keshPveBonus: 0.5,
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,
   /** Part des ressources communes pillée (ferraille, énergie, nano, données), sur le stock exposé (hors abri).
@@ -11289,7 +11331,7 @@ function pveAttackFactor(units, techLevels2, fleet) {
   if (!(hunters > 0)) return 1;
   const all = computeFleetPower(units, techLevels2, fleet, ["attack"]);
   if (!(all > 0)) return 1;
-  return 1 + KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
+  return 1 + COMBAT_RULES.keshPveBonus * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) / all;
 }
 function pveHomeDefenseFactor(units, techLevels2, homeFleetFactor = COMBAT_RULES.homeFleetDefenseFactor, defenseFactor = 1) {
   var _a, _b;
@@ -11297,7 +11339,7 @@ function pveHomeDefenseFactor(units, techLevels2, homeFleetFactor = COMBAT_RULES
   if (!(hunters > 0)) return 1;
   const base = homeDefensePower(units, techLevels2, homeFleetFactor, defenseFactor);
   if (!(base > 0)) return 1;
-  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
+  const extra = COMBAT_RULES.keshPveBonus * computeFleetPower(units, techLevels2, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
   return 1 + extra / base;
 }
 function computeFullPower(units, techLevels2, idList, stats) {
@@ -18245,6 +18287,8 @@ var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
 var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
 var DEFAULT_EMPIRE_CLASS_RULES = __spreadValues({}, EMPIRE_CLASS_RULES);
+var DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
+var DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
 var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
 var DEFAULT_DEBRIS_RULES = __spreadValues({}, DEBRIS_RULES);
 var DEFAULT_PATROL_RULES = __spreadValues({}, PATROL_RULES);
@@ -18281,7 +18325,7 @@ function defaultGameContent() {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES }
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES }
   });
 }
 var current = defaultGameContent();
@@ -18289,7 +18333,7 @@ function currentGameContent() {
   return structuredClone(current);
 }
 function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -18321,10 +18365,12 @@ function applyGameContent(overrides) {
       economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_s = (_r = overrides.rules) == null ? void 0 : _r.economy) != null ? _s : {}),
       fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_u = (_t = overrides.rules) == null ? void 0 : _t.fleets) != null ? _u : {}),
       classes: __spreadValues(__spreadValues({}, defaults.rules.classes), (_w = (_v = overrides.rules) == null ? void 0 : _v.classes) != null ? _w : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_y = (_x = overrides.rules) == null ? void 0 : _x.spy) != null ? _y : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_A = (_z = overrides.rules) == null ? void 0 : _z.debris) != null ? _A : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_C = (_B = overrides.rules) == null ? void 0 : _B.patrol) != null ? _C : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_E = (_D = overrides.rules) == null ? void 0 : _D.events) != null ? _E : {}),
+      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_y = (_x = overrides.rules) == null ? void 0 : _x.colonies) != null ? _y : {}),
+      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_A = (_z = overrides.rules) == null ? void 0 : _z.colonyRoutes) != null ? _A : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_C = (_B = overrides.rules) == null ? void 0 : _B.spy) != null ? _C : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_E = (_D = overrides.rules) == null ? void 0 : _D.debris) != null ? _E : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_G = (_F = overrides.rules) == null ? void 0 : _F.patrol) != null ? _G : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_I = (_H = overrides.rules) == null ? void 0 : _H.events) != null ? _I : {}),
       seasons: (() => {
         var _a2, _b2, _d2, _e2, _f2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
@@ -18340,24 +18386,24 @@ function applyGameContent(overrides) {
         const ids = new Set(((_c2 = merged.researches) != null ? _c2 : []).map((r) => r.id));
         return __spreadProps(__spreadValues({}, merged), { researches: [...(_d2 = merged.researches) != null ? _d2 : [], ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] });
       })(),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_G = (_F = overrides.rules) == null ? void 0 : _F.pirates) != null ? _G : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_I = (_H = overrides.rules) == null ? void 0 : _H.market) != null ? _I : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_K = (_J = overrides.rules) == null ? void 0 : _J.expeditions) != null ? _K : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_N = (_M = (_L = overrides.rules) == null ? void 0 : _L.expeditions) == null ? void 0 : _M.weights) != null ? _N : {})
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_K = (_J = overrides.rules) == null ? void 0 : _J.pirates) != null ? _K : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_M = (_L = overrides.rules) == null ? void 0 : _L.market) != null ? _M : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_O = (_N = overrides.rules) == null ? void 0 : _N.expeditions) != null ? _O : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_R = (_Q = (_P = overrides.rules) == null ? void 0 : _P.expeditions) == null ? void 0 : _Q.weights) != null ? _R : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_P = (_O = overrides.rules) == null ? void 0 : _O.leviathan) != null ? _P : {}),
-      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_R = (_Q = overrides.rules) == null ? void 0 : _Q.seasonBoss) != null ? _R : {}),
-      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_T = (_S = overrides.rules) == null ? void 0 : _S.allianceBoss) != null ? _T : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_V = (_U = overrides.rules) == null ? void 0 : _U.wars) != null ? _V : {}),
-      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_X = (_W = overrides.rules) == null ? void 0 : _W.catchup) != null ? _X : {}),
-      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.mutators) != null ? _Z : {}), { overrides: __spreadValues({}, (_aa = (_$ = (__ = overrides.rules) == null ? void 0 : __.mutators) == null ? void 0 : _$.overrides) != null ? _aa : {}) }),
-      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ca = (_ba = overrides.rules) == null ? void 0 : _ba.territoryWar) != null ? _ca : {}), {
-        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_fa = (_ea = (_da = overrides.rules) == null ? void 0 : _da.territoryWar) == null ? void 0 : _ea.points) != null ? _fa : {}),
-        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ia = (_ha = (_ga = overrides.rules) == null ? void 0 : _ga.territoryWar) == null ? void 0 : _ha.rewards) != null ? _ia : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_T = (_S = overrides.rules) == null ? void 0 : _S.leviathan) != null ? _T : {}),
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_V = (_U = overrides.rules) == null ? void 0 : _U.seasonBoss) != null ? _V : {}),
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_X = (_W = overrides.rules) == null ? void 0 : _W.allianceBoss) != null ? _X : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.wars) != null ? _Z : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_$ = (__ = overrides.rules) == null ? void 0 : __.catchup) != null ? _$ : {}),
+      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.mutators) != null ? _ba : {}), { overrides: __spreadValues({}, (_ea = (_da = (_ca = overrides.rules) == null ? void 0 : _ca.mutators) == null ? void 0 : _da.overrides) != null ? _ea : {}) }),
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ga = (_fa = overrides.rules) == null ? void 0 : _fa.territoryWar) != null ? _ga : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ja = (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) == null ? void 0 : _ia.points) != null ? _ja : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ma = (_la = (_ka = overrides.rules) == null ? void 0 : _ka.territoryWar) == null ? void 0 : _la.rewards) != null ? _ma : {})
       }),
-      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_ka = (_ja = overrides.rules) == null ? void 0 : _ja.xpTiers) != null ? _ka : {}), {
-        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_na = (_ma = (_la = overrides.rules) == null ? void 0 : _la.xpTiers) == null ? void 0 : _ma.tiers) != null ? _na : {}),
-        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_qa = (_pa = (_oa = overrides.rules) == null ? void 0 : _oa.xpTiers) == null ? void 0 : _pa.multipliers) != null ? _qa : {})
+      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_oa = (_na = overrides.rules) == null ? void 0 : _na.xpTiers) != null ? _oa : {}), {
+        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.tiers) != null ? _ra : {}),
+        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ua = (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.xpTiers) == null ? void 0 : _ta.multipliers) != null ? _ua : {})
       }),
       streak: (() => {
         var _a2, _b2, _c2;
@@ -18383,13 +18429,16 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_ra = content.relicSettings) == null ? void 0 : _ra.loot, (_sa = content.relicSettings) == null ? void 0 : _sa.lootTokenCap);
+  setLootTables((_va = content.relicSettings) == null ? void 0 : _va.loot, (_wa = content.relicSettings) == null ? void 0 : _wa.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
+  setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
   Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
+  Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
+  Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
@@ -18406,7 +18455,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _ta = content.rules.allianceBoss, { bosses: allianceBosses } = _ta, allianceBossRules = __objRest(_ta, ["bosses"]);
+  const _xa = content.rules.allianceBoss, { bosses: allianceBosses } = _xa, allianceBossRules = __objRest(_xa, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -18425,6 +18474,8 @@ var RULE_GROUP_LABELS = {
   economy: "\xC9conomie",
   fleets: "Flottes",
   classes: "Classes d'empire",
+  colonies: "Colonies",
+  colonyRoutes: "Routes de colonies",
   spy: "Espionnage",
   debris: "D\xE9bris",
   patrol: "Patrouilles",
@@ -18445,7 +18496,7 @@ var RULE_GROUP_LABELS = {
   xpTiers: "Paliers d'XP"
 };
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -18471,13 +18522,22 @@ function validateRules(rules) {
     }
   }
   const merged = mergeRulesForCheck(rules);
-  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_b = merged.events.bossWeekend) != null ? _b : "first", startHour: (_c = merged.leviathan.startHour) != null ? _c : 18, durationHours: merged.leviathan.durationHours, dates: (_d = merged.events.bossDates) != null ? _d : [] }));
+  const cb6 = merged.combat;
+  if (!(cb6.techCombatCap >= 0 && cb6.techCombatCap <= 5)) errors.push("Combat : plafond des technos de combat entre 0 et 5 (+500 %).");
+  if (!(cb6.techCombatPerTechMax >= 0 && cb6.techCombatPerTechMax <= cb6.techCombatCap)) errors.push("Combat : une techno ne peut pas d\xE9passer le plafond total des technos de combat.");
+  if (!(cb6.keshPveBonus >= 0 && cb6.keshPveBonus <= 3)) errors.push("Combat : bonus du Traqueur contre les PNJ entre 0 et 3 (+300 %).");
+  if (!(merged.pirates.lairLocateCostHours >= 0 && merged.pirates.lairLocateMinRepelled >= 0)) errors.push("Factions : \xAB Localiser \xBB invalide.");
+  if (!(merged.classes.harvesterRecycleBonus >= 0 && merged.classes.harvesterRecycleBonus <= 5)) errors.push("Classes : bonus de recyclage du R\xE9colteur entre 0 et 5.");
+  if (!(merged.classes.scoutExpeditionTime >= 0 && merged.classes.scoutExpeditionTime < 1)) errors.push("Classes : r\xE9duction d'exp\xE9dition de l'\xC9claireur entre 0 et 0,99.");
+  if (!(merged.colonies.defenseQueueMax >= 0 && merged.colonies.defenseQueueMax <= 20)) errors.push("Colonies : file de d\xE9fense entre 0 et 20 lots.");
+  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= ((_c = (_b = merged.colonies.levelsRequired) == null ? void 0 : _b.length) != null ? _c : 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_d = merged.events.bossWeekend) != null ? _d : "first", startHour: (_e = merged.leviathan.startHour) != null ? _e : 18, durationHours: merged.leviathan.durationHours, dates: (_f = merged.events.bossDates) != null ? _f : [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
   const sbr = merged.seasonBoss;
   if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
-  if (!((_e = merged.leviathan.name) == null ? void 0 : _e.trim())) errors.push("L\xE9viathan : nom vide.");
+  if (!((_g = merged.leviathan.name) == null ? void 0 : _g.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
@@ -18500,16 +18560,16 @@ function validateRules(rules) {
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
   if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
   if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
-  for (const ev of (_f = merged.events.scheduled) != null ? _f : []) {
+  for (const ev of (_h = merged.events.scheduled) != null ? _h : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
-    if (!(Number.isInteger(ev.repeatCount) && ((_g = ev.repeatCount) != null ? _g : 0) >= 2 && ((_h = ev.repeatCount) != null ? _h : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_i = ev.repeatCount) != null ? _i : 0) >= 2 && ((_j = ev.repeatCount) != null ? _j : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
   }
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
     for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_i = st.chest) == null ? void 0 : _i[key];
+      const r = (_k = st.chest) == null ? void 0 : _k[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
     }
   }

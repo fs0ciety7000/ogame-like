@@ -8486,6 +8486,13 @@ function casinoTick(now) {
     applyContent(txApp, game);
     const casino = readCasino(txApp, game);
     const settled = settleTournament(txApp, game, casino, now);
+    // 6.7.1 : début du tournoi de la semaine (casino ouvert en permanence) : tous les joueurs sont prévenus.
+    const startedT = settled.tournament && String(settled.tournament.id).indexOf("t-") === 0 && (!casino.tournament || casino.tournament.id !== settled.tournament.id);
+    if (startedT) {
+      proceduralPlayers(txApp).forEach((p) => {
+        notify(txApp, p.uid, [{ kind: "event", title: "🏆 Le tournoi du casino commence", message: "Chaque tirage rapporte des points jusqu'à la fin du tournoi. Le podium gagne des jetons, le premier le titre « " + casino.settings.rewards.tournamentTitle + " ».", createdAtMs: now, read: false, link: "/game/casino", data: { image: "/assets/casino/salle-777.webp" } }]);
+      });
+    }
     const id = game.casinoOpeningId(casino.settings, now);
     if (!id || id === casino.announcedId) {
       if (settled !== casino) writeConfig(txApp, game.CASINO_KEY, Object.assign({}, settled, { updatedAtMs: now }));

@@ -1,4 +1,4 @@
-import { DEFENSIVE_UNITS, findUnit, KESH_HUNTER_UNIT, KESH_PVE_BONUS, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, KESH_HUNTER_UNIT, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { techBonus } from "@/game/technologies";
 import { unitClasses } from "@/game/unitClasses";
@@ -6,6 +6,13 @@ import type { Buildings, CombatLog, CombatLogUnit, CombatOutcome, ResourceId, Te
 
 /** Règles de combat réglables depuis l'administration. */
 export const COMBAT_RULES = {
+  /** 6.7.1 : plafond de l'attaque et de la défense données par les technos (1,5 = +150 %). */
+  techCombatCap: 1.5,
+  /** 6.7.1 : une techno, à son niveau maximal, au plus (1 = +100 %). */
+  techCombatPerTechMax: 1,
+  /** 6.7.1 : bonus du Traqueur Kesh contre tous les PNJ (0,5 = +50 %), en attaque comme en défense. */
+  // Valeur littérale : lire KESH_PVE_BONUS ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
+  keshPveBonus: 0.5,
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,
   /** Part des ressources communes pillée (ferraille, énergie, nano, données), sur le stock exposé (hors abri).
@@ -149,7 +156,7 @@ export function pveAttackFactor(units: Units, techLevels: TechLevels, fleet: Rec
   if (!(hunters > 0)) return 1;
   const all = computeFleetPower(units, techLevels, fleet, ["attack"]);
   if (!(all > 0)) return 1;
-  return 1 + (KESH_PVE_BONUS * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"])) / all;
+  return 1 + (COMBAT_RULES.keshPveBonus * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"])) / all;
 }
 
 /** v5.9 : en défense contre un PNJ (raid de menace, seigneur de guerre), les
@@ -159,7 +166,7 @@ export function pveHomeDefenseFactor(units: Units, techLevels: TechLevels, homeF
   if (!(hunters > 0)) return 1;
   const base = homeDefensePower(units, techLevels, homeFleetFactor, defenseFactor);
   if (!(base > 0)) return 1;
-  const extra = KESH_PVE_BONUS * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
+  const extra = COMBAT_RULES.keshPveBonus * computeFleetPower(units, techLevels, { [KESH_HUNTER_UNIT.id]: hunters }, ["attack"]) * homeFleetFactor * (1 + COMBAT_RULES.homeDefenseBonus);
   return 1 + extra / base;
 }
 

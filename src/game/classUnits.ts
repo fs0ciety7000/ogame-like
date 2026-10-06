@@ -1,4 +1,4 @@
-import { findEmpireClass } from "@/game/empireClass";
+import { EMPIRE_CLASS_RULES, findEmpireClass } from "@/game/empireClass";
 import { GameActionError } from "@/game/errors";
 import { CLASS_UNITS, findUnit, type UnitDef } from "@/game/units";
 import type { PlayerState } from "@/types/game";
@@ -12,10 +12,14 @@ import type { PlayerState } from "@/types/game";
 ===================================================== */
 
 export const CLASS_UNIT_RULES = {
-  /** Récolteur : capacité de recyclage en plus de sa soute. */
-  harvesterRecycleBonus: 0.25,
+  /** Récolteur : capacité de recyclage en plus de sa soute (réglable : Admin → Règles → Classes d'empire). */
+  get harvesterRecycleBonus(): number {
+    return EMPIRE_CLASS_RULES.harvesterRecycleBonus;
+  },
   /** Éclaireur lointain : durée d'expédition en moins s'il est dans la flotte. */
-  scoutExpeditionTime: 0.15,
+  get scoutExpeditionTime(): number {
+    return EMPIRE_CLASS_RULES.scoutExpeditionTime;
+  },
 };
 
 export const HARVESTER_ID = "recolteur";

@@ -110,6 +110,8 @@ export const TECH_REDUCTION_CAP = 0.75;
 export const TECH_COMBAT_CAP = 1.5;
 /** 6.6 : une seule technologie ne donne pas plus que ceci d'attaque ou de défense à son niveau maximal. */
 export const TECH_COMBAT_PER_TECH_MAX = 1;
+/** 6.7.1 : valeurs en vigueur (Admin → Règles → Combat : `techCombatCap`, `techCombatPerTechMax`). */
+export const TECH_COMBAT_LIMITS = { cap: TECH_COMBAT_CAP, perTechMax: TECH_COMBAT_PER_TECH_MAX };
 /** Plafond des réductions de durée de la couche empire. */
 export const EMPIRE_TIME_CAP = 0.5;
 /** 5.28.1 : plafond des réductions de coût et d'entretien de la couche empire (reliques, officiers, modules). */
@@ -310,4 +312,12 @@ export function validateComposedEffect(c: Partial<ComposedEffect> | undefined, v
   if (c.stat === "production" && c.target && !(c.target in RESOURCE_TARGET_LABELS)) errors.push(`ressource « ${c.target} » inconnue`);
   if (c.stat === "hangarCapacity" && c.target && c.target !== "attack" && c.target !== "defense") errors.push("hangar : attack ou defense");
   return errors;
+}
+
+/** 6.7.1 : applique les plafonds des technos de combat réglés dans l'administration. */
+export function setTechCombatLimits(cap: number, perTechMax: number): void {
+  TECH_COMBAT_LIMITS.cap = cap;
+  TECH_COMBAT_LIMITS.perTechMax = perTechMax;
+  EFFECT_STATS.attack.cap = { ...EFFECT_STATS.attack.cap, tech: cap };
+  EFFECT_STATS.defense.cap = { ...EFFECT_STATS.defense.cap, tech: cap };
 }

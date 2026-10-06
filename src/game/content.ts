@@ -1,3 +1,5 @@
+import { COLONY_ROUTE_RULES, COLONY_RULES } from "@/game/colonies";
+import { setTechCombatLimits } from "@/game/effects";
 import { ALLIANCE_BOSS_RULES, DEFAULT_ALLIANCE_BOSSES, setAllianceBosses, type AllianceBossDef } from "@/game/allianceBoss";
 import { DEFAULT_WORLD_BOSSES, setWorldBosses, validateWorldBosses, type WorldBossDef } from "@/game/worldBosses";
 import { defaultOfficersConfig, setOfficers, validateOfficers, type OfficersConfig } from "@/game/commanders";
@@ -54,6 +56,9 @@ export interface GameRules {
   fleets: typeof FLEET_RULES;
   /** 6.0 : classes d'empire. */
   classes: typeof EMPIRE_CLASS_RULES;
+  /** 6.7.1 : colonies (fondation, production, file de défense) et routes logistiques. */
+  colonies: typeof COLONY_RULES;
+  colonyRoutes: typeof COLONY_ROUTE_RULES;
   spy: typeof SPY_RULES;
   debris: typeof DEBRIS_RULES;
   patrol: typeof PATROL_RULES;
@@ -135,6 +140,8 @@ const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
 const DEFAULT_EMPIRE_CLASS_RULES = { ...EMPIRE_CLASS_RULES };
+const DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
+const DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
 const DEFAULT_SPY_RULES = { ...SPY_RULES };
 const DEFAULT_DEBRIS_RULES = { ...DEBRIS_RULES };
 const DEFAULT_PATROL_RULES = { ...PATROL_RULES };
@@ -173,7 +180,7 @@ export function defaultGameContent(): GameContent {
     worldBosses: DEFAULT_WORLD_BOSSES,
     officers: defaultOfficersConfig(),
     titles: DEFAULT_TITLES,
-    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
+    rules: { pvp: DEFAULT_PVP_RULES, combat: DEFAULT_COMBAT_RULES, economy: DEFAULT_ECONOMY_RULES, fleets: DEFAULT_FLEET_RULES, classes: DEFAULT_EMPIRE_CLASS_RULES, colonies: DEFAULT_COLONY_RULES, colonyRoutes: DEFAULT_COLONY_ROUTE_RULES, spy: DEFAULT_SPY_RULES, debris: DEFAULT_DEBRIS_RULES, patrol: DEFAULT_PATROL_RULES, events: DEFAULT_EVENT_RULES, seasons: DEFAULT_SEASON_RULES, alliances: DEFAULT_ALLIANCE_RULES, pirates: DEFAULT_PIRATE_RULES, market: DEFAULT_MARKET_RULES, expeditions: DEFAULT_EXPEDITION_RULES, leviathan: DEFAULT_LEVIATHAN_RULES, seasonBoss: DEFAULT_SEASON_BOSS_RULES, allianceBoss: DEFAULT_ALLIANCE_BOSS_RULES, wars: DEFAULT_WAR_RULES, streak: DEFAULT_STREAK_RULES, catchup: DEFAULT_CATCHUP_RULES, mutators: DEFAULT_MUTATOR_RULES, territoryWar: DEFAULT_TERRITORY_WAR_RULES, xpTiers: DEFAULT_XP_TIER_RULES },
   });
 }
 
@@ -216,6 +223,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
       fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
       classes: { ...defaults.rules.classes, ...(overrides.rules?.classes ?? {}) },
+      colonies: { ...defaults.rules.colonies, ...(overrides.rules?.colonies ?? {}) },
+      colonyRoutes: { ...defaults.rules.colonyRoutes, ...(overrides.rules?.colonyRoutes ?? {}) },
       spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
       debris: { ...defaults.rules.debris, ...(overrides.rules?.debris ?? {}) },
       patrol: { ...defaults.rules.patrol, ...(overrides.rules?.patrol ?? {}) },
@@ -290,9 +299,13 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
+  // 6.7.1 : plafonds des technos de combat réglables.
+  setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
   Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
+  Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
+  Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
   Object.assign(SPY_RULES, content.rules.spy);
   Object.assign(DEBRIS_RULES, content.rules.debris);
   Object.assign(PATROL_RULES, content.rules.patrol);
@@ -333,6 +346,8 @@ const RULE_GROUP_LABELS: Record<string, string> = {
   economy: "Économie",
   fleets: "Flottes",
   classes: "Classes d'empire",
+  colonies: "Colonies",
+  colonyRoutes: "Routes de colonies",
   spy: "Espionnage",
   debris: "Débris",
   patrol: "Patrouilles",
@@ -385,6 +400,16 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
     }
   }
   const merged = mergeRulesForCheck(rules);
+  // 6.7.1 : plafonds des technos de combat et bonus du Traqueur.
+  const cb6 = merged.combat;
+  if (!(cb6.techCombatCap >= 0 && cb6.techCombatCap <= 5)) errors.push("Combat : plafond des technos de combat entre 0 et 5 (+500 %).");
+  if (!(cb6.techCombatPerTechMax >= 0 && cb6.techCombatPerTechMax <= cb6.techCombatCap)) errors.push("Combat : une techno ne peut pas dépasser le plafond total des technos de combat.");
+  if (!(cb6.keshPveBonus >= 0 && cb6.keshPveBonus <= 3)) errors.push("Combat : bonus du Traqueur contre les PNJ entre 0 et 3 (+300 %).");
+  if (!(merged.pirates.lairLocateCostHours >= 0 && merged.pirates.lairLocateMinRepelled >= 0)) errors.push("Factions : « Localiser » invalide.");
+  if (!(merged.classes.harvesterRecycleBonus >= 0 && merged.classes.harvesterRecycleBonus <= 5)) errors.push("Classes : bonus de recyclage du Récolteur entre 0 et 5.");
+  if (!(merged.classes.scoutExpeditionTime >= 0 && merged.classes.scoutExpeditionTime < 1)) errors.push("Classes : réduction d'expédition de l'Éclaireur entre 0 et 0,99.");
+  if (!(merged.colonies.defenseQueueMax >= 0 && merged.colonies.defenseQueueMax <= 20)) errors.push("Colonies : file de défense entre 0 et 20 lots.");
+  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= (merged.colonies.levelsRequired?.length ?? 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
   errors.push(...validateBossSchedule("Léviathan", { weekend: merged.events.bossWeekend ?? "first", startHour: merged.leviathan.startHour ?? 18, durationHours: merged.leviathan.durationHours, dates: merged.events.bossDates ?? [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
   // 5.15 : réglages de combat du boss de saison (absents : ceux du boss mondial).

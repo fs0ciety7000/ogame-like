@@ -42,6 +42,8 @@ export const COLONY_RULES = {
   foundationShare: 0.5,
   /** …sans dépasser ce niveau. */
   foundationMax: 8,
+  /** 6.4 : lots de défenses en attente par colonie (en plus du lot en construction). */
+  defenseQueueMax: 5,
 };
 
 /** Bâtiments relevés à la fondation (extracteurs communs et entrepôt). */
@@ -141,7 +143,7 @@ export const COLONY_ROUTE_RULES = {
   supplyHomeReservePct: 0.3,
 };
 
-/** 6.4 : lots de défenses en attente par colonie (en plus du lot en construction). */
+/** 6.4 : valeur par défaut (la valeur en vigueur est `COLONY_RULES.defenseQueueMax`, réglable dans l'admin). */
 export const COLONY_DEFENSE_QUEUE_MAX = 5;
 
 export function setColonyRoute(player: PlayerState, colonyIdIn: string, everyHoursIn: unknown, keepPctIn: unknown, now: number, directionIn?: unknown): ColonyRoute | null {
@@ -477,7 +479,7 @@ export function advanceColony(colony: Colony, player: PlayerState, now: number):
   // niveau jusqu'ici, puis extracteurs et entrepôt relevés au niveau de fondation.
   const upgradeOld = !colony.foundation;
   let at = colony.updatedAtMs || now;
-  for (let guard = 0; guard < 10 + COLONY_DEFENSE_QUEUE_MAX; guard++) {
+  for (let guard = 0; guard < 10 + COLONY_RULES.defenseQueueMax; guard++) {
     const next = Math.min(colony.building?.endTime ?? Infinity, colony.defenseJob?.endTime ?? Infinity);
     const until = Math.min(next, now);
     if (until > at) {
@@ -608,7 +610,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantité invalide.");
   // 6.4 : un lot en construction, jusqu'à COLONY_DEFENSE_QUEUE_MAX en attente (payés d'avance).
-  if (colony.defenseJob && (colony.defenseQueue?.length ?? 0) >= COLONY_DEFENSE_QUEUE_MAX) throw new GameActionError(`File pleine : ${COLONY_DEFENSE_QUEUE_MAX} lots en attente au plus.`);
+  if (colony.defenseJob && (colony.defenseQueue?.length ?? 0) >= COLONY_RULES.defenseQueueMax) throw new GameActionError(`File pleine : ${COLONY_RULES.defenseQueueMax} lots en attente au plus.`);
   const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + colonyDefensePendingSpace(colony) + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);

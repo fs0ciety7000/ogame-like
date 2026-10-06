@@ -42,7 +42,8 @@ Jusqu'à 4 rendez-vous se chevauchent le samedi ; aucun ne commence entre le lun
 - Deux rendez-vous serveur (hors proie d'élite) ne commencent jamais le même jour (test du planificateur).
 
 ## 7. Livraison (6.7.0)
-- Casino : rendez-vous de la semaine, mercredi 18 h pour 30 h, week-ends décochés ; anciens réglages convertis à la lecture.
+- Casino (6.7.1, précision de l'utilisateur) : ouvert en permanence par défaut, fermable ou programmable dans l'admin ; le **tournoi** a sa
+  propre fenêtre, mercredi 18 h pour 30 h, réglable.
 - Boss de la chronique : jour de départ réglable, mardi 18 h pour 48 h. En mode mensuel : dernier mardi du mois. En alternance : premier
   mardi qui tient entre deux boss mondiaux, sinon le placement d'avant, pour garder le même nombre de combats (une semaine sautée aurait
   retiré des points de passe).

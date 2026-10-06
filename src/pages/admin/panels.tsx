@@ -657,6 +657,32 @@ export function RulesPanel() {
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, slotsBase: v ?? 10 } }))}
           />
         </Section>
+        <Section title="Technos de combat et Traqueur Kesh (6.6)">
+          <NumberField
+            label="Plafond des technos d'attaque et de défense (1,5 = +150 %)"
+            value={rules.combat.techCombatCap}
+            min={0}
+            step={0.1}
+            hint="Total de toutes les technos, pour l'attaque et pour la défense des unités."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, techCombatCap: v ?? 1.5 } }))}
+          />
+          <NumberField
+            label="Une techno au niveau max, au plus (1 = +100 %)"
+            value={rules.combat.techCombatPerTechMax}
+            min={0}
+            step={0.1}
+            hint="Une techno qui dépasse est refusée à l'enregistrement (onglet Technologies)."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, techCombatPerTechMax: v ?? 1 } }))}
+          />
+          <NumberField
+            label="Traqueur Kesh : bonus contre les PNJ (0,5 = +50 %)"
+            value={rules.combat.keshPveBonus}
+            min={0}
+            step={0.05}
+            hint="Menaces, seigneurs, primes, boss : en attaque comme en défense. Ses stats et son gain par niveau se règlent dans l'onglet Unités."
+            onChange={(v) => setRules((r) => ({ ...r, combat: { ...r.combat, keshPveBonus: v ?? 0.5 } }))}
+          />
+        </Section>
         <Section title="Classes d'empire">
           <NumberField
             label="Ambre pour changer de classe"
@@ -673,6 +699,35 @@ export function RulesPanel() {
             step={1}
             onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, changeCooldownDays: v ?? 0 } }))}
           />
+          <NumberField
+            label="Récolteur : recyclage en plus de sa soute (0,25 = +25 %)"
+            value={rules.classes.harvesterRecycleBonus}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, harvesterRecycleBonus: v ?? 0 } }))}
+          />
+          <NumberField
+            label="Éclaireur lointain : durée d'expédition en moins (0,15 = −15 %)"
+            value={rules.classes.scoutExpeditionTime}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, scoutExpeditionTime: v ?? 0 } }))}
+          />
+        </Section>
+        <Section title="Colonies">
+          <NumberField label="Colonies au plus" value={rules.colonies.maxColonies} min={0} step={1} hint="Une colonie de plus demande un seuil de niveaux en plus (code)." onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, maxColonies: Math.round(v ?? 0) } }))} />
+          <NumberField label="Fondation : coût par ressource commune" value={rules.colonies.foundCommonCost} min={0} step={1000000} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, foundCommonCost: v ?? 0 } }))} />
+          <NumberField label="Fondation : coût par ressource rare" value={rules.colonies.foundRareCost} min={0} step={100000} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, foundRareCost: v ?? 0 } }))} />
+          <NumberField label="Voyage du vaisseau colonial (h)" value={rules.colonies.foundHours} min={0} step={0.5} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, foundHours: v ?? 0 } }))} />
+          <NumberField label="Stock de départ (par ressource commune)" value={rules.colonies.startStock} min={0} step={1000000} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, startStock: v ?? 0 } }))} />
+          <NumberField label="Niveau max des bâtiments" value={rules.colonies.maxLevel} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, maxLevel: Math.round(v ?? 1) } }))} />
+          <NumberField label="Coût des bâtiments (× planète mère)" value={rules.colonies.costFactor} min={0} step={0.1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, costFactor: v ?? 1 } }))} />
+          <NumberField label="Bonus de production (0,5 = +50 %)" value={rules.colonies.productionBonus} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, productionBonus: v ?? 0 } }))} />
+          <NumberField label="File de défense : lots en attente" value={rules.colonies.defenseQueueMax} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, defenseQueueMax: Math.round(v ?? 0) } }))} />
+          <NumberField label="Routes : frais de convoi (0,1 = 10 %)" value={rules.colonyRoutes.feePct} min={0} step={0.01} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, feePct: v ?? 0 } }))} />
+          <NumberField label="Routes : réserve par défaut de la colonie" value={rules.colonyRoutes.defaultKeepPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, defaultKeepPct: v ?? 0 } }))} />
+          <NumberField label="Routes : réserve maximale" value={rules.colonyRoutes.maxKeepPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, maxKeepPct: v ?? 0 } }))} />
+          <NumberField label="Ravitaillement : la planète mère garde (0,3 = 30 %)" value={rules.colonyRoutes.supplyHomeReservePct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, supplyHomeReservePct: v ?? 0 } }))} />
         </Section>
         <Section title="Espionnage">
           <NumberField

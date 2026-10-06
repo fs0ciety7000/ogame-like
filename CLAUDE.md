@@ -63,7 +63,13 @@ Valable pour toute la session et tout le projet, à chaque demande :
   +100 % à son niveau maximal ni le niveau maximal de l'unité qu'elle monte (`validateTechEffect`). Avant d'ajouter un bonus « contre les PNJ »,
   vérifier qu'il n'existe pas déjà dans l'unité (ex. `KESH_PVE_BONUS`) : incident `tech19_2`, revue AU1.
 - Nouvelle stat d'effet : elle doit être lue dans la couche empire (champ de `Modifiers` consommé ou lecteur direct), sinon `effectsRead.test.ts` échoue (I9).
-- Calendrier : un rendez-vous serveur récurrent a un jour et une heure réglables dans l'admin (`BossSchedule.weekday`, `CasinoSettings.weekly`) et
+- Tout chiffre de jeu (stats, effets, coûts, durées, plafonds, bonus) se règle dans l'admin : unités et technos dans le contenu, le reste dans
+  une section de `rules` (`GameRules`, fusion dans `content.ts`, champ dans `panels.tsx` ou l'onglet du domaine). Pas de nouvelle constante
+  de jeu seulement dans le code ; une constante par défaut peut rester, la valeur en vigueur vient des règles.
+- Initialisation des modules : un objet de règles au niveau du module ne lit jamais une constante importée d'un autre module du moteur
+  (`keshPveBonus: KESH_PVE_BONUS` a planté le chargement du jeu dans le navigateur : import circulaire units ↔ combat, tests verts).
+  Valeur littérale, ou accesseur (`get x() { … }`) lu à l'usage. Toujours ouvrir l'appli dans un navigateur après un changement du moteur.
+- Calendrier : un rendez-vous serveur récurrent a un jour et une heure réglables dans l'admin (`BossSchedule.weekday`, `CasinoSettings.tournamentWeekly`) et
   ne démarre pas le même jour qu'un autre (invariant I16, `calendrier67.test.ts`). Un nouveau réglage optionnel lu depuis la base garde
   `null` pour « ancien comportement » : un champ absent reprend la valeur par défaut à la fusion des règles.
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).

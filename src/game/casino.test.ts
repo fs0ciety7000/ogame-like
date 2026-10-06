@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { casinoClosesAt, casinoOpen, casinoOpeningId, jackpotOdds, claimDailyTokens, DEFAULT_CASINO, nextCasinoOpening, evaluateReels, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings, type SpinOutcome } from "@/game/casino";
+import { casinoClosesAt, casinoOpen, casinoOpeningId, nextTournamentStart, tournamentEndsAt, tournamentId, jackpotOdds, claimDailyTokens, DEFAULT_CASINO, nextCasinoOpening, evaluateReels, grantTokens, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings, type SpinOutcome } from "@/game/casino";
 import type { PlayerState } from "@/types/game";
 
 function seeded(seed: number) {
@@ -82,33 +82,45 @@ describe("ouverture du casino", () => {
   });
 });
 
-describe("6.7 (lot V) : rendez-vous du mercredi", () => {
+describe("6.7.1 : casino ouvert en permanence, tournoi du mercredi", () => {
   const H = 3600_000;
   // Mercredi 7 octobre 2026, 18 h à Paris = 16 h UTC (heure d'été).
   const wed18 = Date.UTC(2026, 9, 7, 16);
-  it("par défaut : ouvert du mercredi 18 h au jeudi 23 h 59, fermé le week-end", () => {
+  const sat = Date.UTC(2026, 9, 10, 12);
+  it("par défaut : ouvert tout le temps, tournoi du mercredi 18 h au jeudi 23 h 59", () => {
     const s = DEFAULT_CASINO;
-    expect(casinoOpen(s, wed18 - 1)).toBe(false);
-    expect(casinoOpeningId(s, wed18)).toBe("k-2026-10-07");
-    expect(casinoOpeningId(s, wed18 + 29 * H)).toBe("k-2026-10-07");
-    expect(casinoOpen(s, wed18 + 30 * H)).toBe(false);
-    expect(casinoOpen(s, Date.UTC(2026, 9, 10, 12))).toBe(false);
-    expect(casinoClosesAt(s, wed18 + H)).toBe(wed18 + 30 * H);
-    expect(nextCasinoOpening(s, wed18 + 31 * H)).toBe(wed18 + 7 * 24 * H);
+    expect(s.mode).toBe("open");
+    expect(casinoOpen(s, sat)).toBe(true);
+    expect(tournamentId(s, wed18 - 1)).toBeNull();
+    expect(tournamentId(s, wed18)).toBe("t-2026-10-07");
+    expect(tournamentId(s, wed18 + 29 * H)).toBe("t-2026-10-07");
+    expect(tournamentId(s, wed18 + 30 * H)).toBeNull();
+    expect(tournamentEndsAt(s, wed18 + H)).toBe(wed18 + 30 * H);
+    expect(nextTournamentStart(s, wed18 + 31 * H)).toBe(wed18 + 7 * 24 * H);
+    expect(validateCasinoSettings(s)).toEqual([]);
   });
   it("à l'heure d'hiver aussi (18 h à Paris = 17 h UTC)", () => {
     const wedWinter = Date.UTC(2026, 10, 4, 17);
-    expect(casinoOpeningId(DEFAULT_CASINO, wedWinter)).toBe("k-2026-11-04");
-    expect(casinoOpen(DEFAULT_CASINO, wedWinter - 1)).toBe(false);
+    expect(tournamentId(DEFAULT_CASINO, wedWinter)).toBe("t-2026-11-04");
+    expect(tournamentId(DEFAULT_CASINO, wedWinter - 1)).toBeNull();
   });
-  it("anciens réglages (sans rendez-vous) : le week-end passe au mercredi ; réglage explicite gardé", () => {
+  it("casino fermé : pas de tournoi ; programmé : le tournoi ne compte que pendant une ouverture", () => {
+    expect(tournamentId({ ...DEFAULT_CASINO, mode: "closed" }, wed18 + H)).toBeNull();
+    const window = normalizeCasinoSettings({ mode: "scheduled", windows: [{ startMs: wed18 + 2 * H, endMs: wed18 + 4 * H }] });
+    expect(tournamentId(window, wed18 + H)).toBeNull();
+    expect(tournamentId(window, wed18 + 3 * H)).toBe("t-2026-10-07");
+    expect(tournamentEndsAt(window, wed18 + 3 * H)).toBe(wed18 + 4 * H);
+  });
+  it("ouverture chaque semaine (programme) et anciens réglages : l'ouverture choisie par l'équipe ne bouge pas", () => {
+    const weekly = normalizeCasinoSettings({ mode: "scheduled", weekly: { day: 2, hour: 20, hours: 4 }, weekends: false });
+    expect(casinoOpeningId(weekly, Date.UTC(2026, 9, 6, 19))).toBe("k-2026-10-06");
+    expect(casinoClosesAt(weekly, Date.UTC(2026, 9, 6, 19))).toBe(Date.UTC(2026, 9, 6, 22));
     const old = normalizeCasinoSettings({ mode: "scheduled", weekends: true });
-    expect(old.weekly).toEqual({ day: 3, hour: 18, hours: 30 });
-    expect(old.weekends).toBe(false);
-    const both = normalizeCasinoSettings({ mode: "scheduled", weekly: { day: 2, hour: 20, hours: 4 }, weekends: true });
-    expect(both.weekly).toEqual({ day: 2, hour: 20, hours: 4 });
-    expect(both.weekends).toBe(true);
-    expect(validateCasinoSettings(DEFAULT_CASINO)).toEqual([]);
+    expect(old.mode).toBe("scheduled");
+    expect(old.weekends).toBe(true);
+    expect(old.weekly).toBeNull();
+    expect(old.tournamentWeekly).toEqual({ day: 3, hour: 18, hours: 30 });
+    expect(normalizeCasinoSettings({ tournamentWeekly: null }).tournamentWeekly).toBeNull();
   });
 });
 

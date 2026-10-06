@@ -64,7 +64,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I13 | Un convoi de route logistique ne prend jamais sous la réserve de la colonie et ne porte jamais les ressources communes de la planète mère au-delà de son entrepôt | `colonies.ts` (`colonyRouteLoad`, `runColonyRoute`) | `colonyRoutes.test.ts` |
 | I14 | Au plus une classe d'empire active ; ses effets passent par la couche empire et ses plafonds ; aucun maximum théorique de la couche empire (rapport d'impact) ne dépasse son plafond | `empireClass.ts`, `modifiers.ts`, `impact.ts` | `empireClass.test.ts`, `derived.test.ts` |
 | I15 | Couche techno : attaque et défense des unités ≤ +150 % au total ; une techno ≤ +100 % à son niveau maximal et ne monte pas une unité au-delà de son niveau maximal | `effects.ts` (`TECH_COMBAT_CAP`), `technologies.ts` (`validateTechEffect`) | `menaces66.test.ts` |
-| I16 | Avec les réglages par défaut, boss de la chronique (mardi), tournoi du casino (mercredi) et événement du week-end (vendredi) ne commencent jamais le même jour ; le boss de la chronique ne chevauche jamais le boss mondial | `events.ts` (`bossWindows`), `casino.ts` (`casinoWeeklyWindows`) | `calendrier67.test.ts` |
+| I16 | Avec les réglages par défaut, boss de la chronique (mardi), tournoi du casino (mercredi, casino ouvert en permanence) et événement du week-end (vendredi) ne commencent jamais le même jour ; le boss de la chronique ne chevauche jamais le boss mondial | `events.ts` (`bossWindows`), `casino.ts` (`tournamentWeeklyWindows`) | `calendrier67.test.ts` |
 
 ## 5. Règles de conception
 
@@ -154,3 +154,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | — | Revue AU2 (boss) : structure gonflée par `tech19_2`, taux de boss tués non mesuré, calendrier chargé (lot V) ; décompte mobile corrigé | `docs/audit/2026-10-06-au2-boss.md` |
 | 2026-10-06 | 6.6.0 | AU1 décisions A à D : plafond des technos de combat (I15), effet en doublon de `tech19_2` retiré, Traqueur 20 niveaux (+10), repaires à 3 raids + « Localiser », relance d'une prime remplie | `docs/changes/6.6.0-menaces-pnj.md` |
 | 2026-10-06 | 6.7.0 | Lot V : boss de la chronique le mardi 18 h (48 h), tournoi du casino le mercredi 18 h (30 h), jours réglables ; invariant I16 | `docs/changes/6.7.0-calendrier-semaine.md` |
+| 2026-10-06 | 6.7.1 | Casino ouvert en permanence (tournoi du mercredi séparé de l'ouverture) ; plafonds des technos de combat, bonus du Traqueur, « Localiser », bonus des vaisseaux de classe et colonies réglables dans l'admin | `docs/changes/6.7.1-casino-reglages.md` |

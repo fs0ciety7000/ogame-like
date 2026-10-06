@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HudChip, HudSwitch } from "@/components/ui/hud";
-import { CASINO_MODES, casinoOpen, expectedHours, nextCasinoOpening, OUTCOME_LABELS, validateCasinoSettings, type CasinoMode, type CasinoSettings } from "@/game/casino";
+import { CASINO_MODES, casinoOpen, expectedHours, nextCasinoOpening, OUTCOME_LABELS, validateCasinoSettings, type CasinoMode, type CasinoSettings, type CasinoWeekly } from "@/game/casino";
 import { adminCasinoSettings, adminGrantTokens, refreshCasino, useCasino } from "@/services/casinoService";
 import { Field, NumberField, SelectField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
@@ -100,19 +100,22 @@ export function CasinoAdmin() {
       </div>
 
       {settings.mode === "scheduled" && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <Field label="Rendez-vous de la semaine" hint="Une ouverture (et un tournoi) chaque semaine, heure de Paris.">
-            <HudSwitch checked={!!settings.weekly} onCheckedChange={(on) => set({ weekly: on ? { day: 3, hour: 18, hours: 30 } : null })} label="Chaque semaine" />
-          </Field>
-          {settings.weekly && (
-            <>
-              <SelectField<string> label="Jour" value={String(settings.weekly.day)} options={WEEKDAY_OPTIONS} onChange={(d) => set({ weekly: { ...settings.weekly!, day: Number(d) } })} />
-              <NumberField label="Heure de départ" min={0} value={settings.weekly.hour} onChange={(h) => set({ weekly: { ...settings.weekly!, hour: Math.max(0, Math.min(23, Math.floor(h ?? 18))) } })} />
-              <NumberField label="Durée (h)" min={1} value={settings.weekly.hours} onChange={(h) => set({ weekly: { ...settings.weekly!, hours: Math.max(1, Math.min(72, Math.floor(h ?? 30))) } })} />
-            </>
-          )}
-        </div>
+        <WeeklyFields
+          label="Ouverture chaque semaine"
+          hint="Le casino ouvre chaque semaine, heure de Paris."
+          value={settings.weekly}
+          fallback={{ day: 6, hour: 10, hours: 48 }}
+          onChange={(weekly) => set({ weekly })}
+        />
       )}
+
+      <WeeklyFields
+        label="Tournoi de la semaine"
+        hint="Les tirages comptent pendant cette fenêtre, si le casino est ouvert. Décoché : un tournoi par ouverture."
+        value={settings.tournamentWeekly}
+        fallback={{ day: 3, hour: 18, hours: 30 }}
+        onChange={(tournamentWeekly) => set({ tournamentWeekly })}
+      />
 
       {settings.mode === "scheduled" && (
         <div className="hud-callout hud-tone-violet flex flex-col gap-2 p-3">
@@ -252,5 +255,23 @@ export function CasinoAdmin() {
         </div>
       </div>
     </Card>
+  );
+}
+
+/** 6.7.1 : créneau qui revient chaque semaine (ouverture programmée, tournoi). */
+function WeeklyFields({ label, hint, value, fallback, onChange }: { label: string; hint: string; value: CasinoWeekly | null; fallback: CasinoWeekly; onChange: (v: CasinoWeekly | null) => void }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <Field label={label} hint={hint}>
+        <HudSwitch checked={!!value} onCheckedChange={(on) => onChange(on ? { ...fallback } : null)} label="Chaque semaine" />
+      </Field>
+      {value && (
+        <>
+          <SelectField<string> label="Jour" value={String(value.day)} options={WEEKDAY_OPTIONS} onChange={(d) => onChange({ ...value, day: Number(d) })} />
+          <NumberField label="Heure de départ" min={0} value={value.hour} onChange={(h) => onChange({ ...value, hour: Math.max(0, Math.min(23, Math.floor(h ?? 18))) })} />
+          <NumberField label="Durée (h)" min={1} value={value.hours} onChange={(h) => onChange({ ...value, hours: Math.max(1, Math.min(72, Math.floor(h ?? 30))) })} />
+        </>
+      )}
+    </div>
   );
 }

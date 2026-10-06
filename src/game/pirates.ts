@@ -291,6 +291,9 @@ export const PIRATE_RULES = {
   adaptDown: 0.1,
   adaptMin: 0.9,
   adaptMax: 1.5,
+  /** 6.6 : « Localiser » un repaire : raids repoussés requis et coût en heures de production. */
+  lairLocateMinRepelled: 1,
+  lairLocateCostHours: 12,
 };
 
 export const PIRATE_OWNER_UID = "pirates";
@@ -394,10 +397,14 @@ export function signTreaty(player: PlayerState, factionId: string, kindIn: unkno
 /* ---------- 6.6 (revue AU1, PNJ-3) : localiser un repaire ---------- */
 
 export const LAIR_LOCATE_RULES = {
-  /** Raids repoussés au moins une fois contre la faction. */
-  minRepelled: 1,
+  /** Raids repoussés au moins une fois contre la faction (réglable : Admin → Événements → Factions hostiles). */
+  get minRepelled(): number {
+    return PIRATE_RULES.lairLocateMinRepelled;
+  },
   /** Coût : heures de production commune. */
-  costHours: 12,
+  get costHours(): number {
+    return PIRATE_RULES.lairLocateCostHours;
+  },
 };
 
 /** Ouvre le repaire d'une faction contre de la production, sans attendre les raids. */

@@ -160,6 +160,8 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <NumberField label="Adaptation : − par raid perdu" value={rules.pirates.adaptDown} min={0} step={0.01} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, adaptDown: v ?? 0 } }))} />
         <NumberField label="Adaptation minimale (×)" value={rules.pirates.adaptMin} min={0.1} step={0.05} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, adaptMin: v ?? 1 } }))} />
         <NumberField label="Adaptation maximale (×)" value={rules.pirates.adaptMax} min={1} step={0.05} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, adaptMax: v ?? 1 } }))} />
+        <NumberField label="« Localiser » un repaire : raids repoussés requis" value={rules.pirates.lairLocateMinRepelled} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairLocateMinRepelled: Math.round(v ?? 1) } }))} />
+        <NumberField label="« Localiser » : coût (heures de production)" value={rules.pirates.lairLocateCostHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, pirates: { ...r.pirates, lairLocateCostHours: v ?? 12 } }))} />
         <p className="text-xs text-slate-500 sm:col-span-2">Chaque raid repoussé renforce le suivant de cette faction contre ce joueur, chaque défaite l'affaiblit. Équilibre : environ « − ÷ (+ + −) » de raids repoussés (70 % avec 0,04 et 0,1).</p>
         <p className="text-xs text-slate-500 sm:col-span-2">Les factions elles-mêmes (déclencheur, tribut, raids, repaire, textes) se règlent dans l'onglet « Factions ».</p>
       </Section>

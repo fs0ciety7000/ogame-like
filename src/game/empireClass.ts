@@ -75,6 +75,10 @@ export const EMPIRE_CLASS_RULES = {
   changeAmber: 100,
   /** Jours entre deux changements. */
   changeCooldownDays: 7,
+  /** 6.5 : Récolteur, capacité de recyclage en plus de sa soute (0,25 = +25 %). */
+  harvesterRecycleBonus: 0.25,
+  /** 6.5 : Éclaireur lointain, durée d'expédition en moins (0,15 = −15 %). */
+  scoutExpeditionTime: 0.15,
 };
 
 export interface EmpireClassState {

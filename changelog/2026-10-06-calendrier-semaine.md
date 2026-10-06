@@ -11,7 +11,7 @@ Le week-end était trop chargé, la semaine trop calme. Deux rendez-vous changen
 - Une fois par mois, le **dernier mardi**, tant que le boss mondial vient le week-end.
 - Mêmes récompenses, même nombre de combats.
 
-## Casino orbital : le mercredi
-- Le casino ouvre le **mercredi à 18 h** pour **30 h**, jusqu'au jeudi 23 h 59.
-- Un **tournoi** à chaque ouverture, comme avant : même podium, mêmes jetons, même titre « As du casino ».
-- Le week-end, le casino est fermé : place à l'événement du week-end et au boss mondial.
+## Tournoi du casino : le mercredi
+- Le Casino orbital reste **ouvert en permanence** : tu joues quand tu veux.
+- Le **tournoi** a lieu chaque **mercredi à 18 h** pendant **30 h**, jusqu'au jeudi 23 h 59. Tu es prévenu quand il commence.
+- Même podium, mêmes jetons, même titre « As du casino ».

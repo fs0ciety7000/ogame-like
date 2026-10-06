@@ -26,7 +26,6 @@ import { homeLevels,
   colonyBuildingName,
   colonyDefenseHangar,
   colonyDefensePendingSpace,
-  COLONY_DEFENSE_QUEUE_MAX,
   DEPOSIT_ID,
   depositLevel,
   depositPerSecond,
@@ -562,7 +561,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
   // 6.4 : les lots en construction et en attente réservent déjà leurs places.
   const free = Math.max(0, hangar.capacity - hangar.used - colonyDefensePendingSpace(colony));
   const queue = colony.defenseQueue ?? [];
-  const queueFull = !!colony.defenseJob && queue.length >= COLONY_DEFENSE_QUEUE_MAX;
+  const queueFull = !!colony.defenseJob && queue.length >= COLONY_RULES.defenseQueueMax;
   const picked = defense.unitId ? findUnit(defense.unitId) : undefined;
   const pickedCost = picked ? playerUnitCost(picked, player) : { scrap: 0, energy: 0 };
   const maxQty = picked
@@ -780,7 +779,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                 <div className={cn("flex flex-col gap-2", colony.defenseJob && "mt-3")}>
                   {colony.defenseJob && (
                     <p className="text-[11px] text-slate-500">
-                      Ajoute un lot à la file : <span className="font-mono tabular-nums">{queue.length} / {COLONY_DEFENSE_QUEUE_MAX}</span> en attente, payés tout de suite.
+                      Ajoute un lot à la file : <span className="font-mono tabular-nums">{queue.length} / {COLONY_RULES.defenseQueueMax}</span> en attente, payés tout de suite.
                     </p>
                   )}
                   <div className="grid gap-1.5 @sm:grid-cols-2">
@@ -822,7 +821,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                       size="sm"
                       className="ml-auto"
                       disabled={busy || !picked || defense.qty <= 0 || batchSpace > free || !batchAffordable || queueFull}
-                      title={queueFull ? `File pleine : ${COLONY_DEFENSE_QUEUE_MAX} lots en attente au plus.` : undefined}
+                      title={queueFull ? `File pleine : ${COLONY_RULES.defenseQueueMax} lots en attente au plus.` : undefined}
                       onClick={() => void act(() => buildColonyDefense(colony.id, defense.unitId, defense.qty), colony.defenseJob ? "Lot ajouté à la file." : "Défenses en construction.")}
                     >
                       <Shield className="h-3.5 w-3.5" /> {colony.defenseJob ? "Mettre en file" : "Construire"}

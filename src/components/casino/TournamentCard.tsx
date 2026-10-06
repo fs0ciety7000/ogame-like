@@ -2,7 +2,8 @@ import { Trophy } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { HudChip } from "@/components/ui/hud";
 import { TokenIcon } from "@/components/casino/TokenIcon";
-import { casinoClosesAt, tournamentRanking, type CasinoState } from "@/game/casino";
+import { nextTournamentStart, tournamentEndsAt, tournamentRanking, type CasinoState } from "@/game/casino";
+import { parisWhenLabel } from "@/game/events";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatDuration } from "@/lib/utils";
 
@@ -24,7 +25,8 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
   const s = casino.settings;
   const ranking = tournamentRanking(casino.tournament);
   const mineIdx = ranking.findIndex((r) => r.uid === uid);
-  const closes = casinoClosesAt(s, now);
+  const closes = tournamentEndsAt(s, now);
+  const next = casino.tournament ? null : nextTournamentStart(s, now);
   const last = casino.lastTournament;
   const prizes = s.rewards.tournament;
 
@@ -53,7 +55,7 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
       </p>
 
       {ranking.length === 0 ? (
-        <p className="text-xs text-slate-500">{casino.tournament ? "Personne n'a encore joué : le premier tirage prend la tête." : "Le tournoi commence à la prochaine ouverture."}</p>
+        <p className="text-xs text-slate-500">{casino.tournament ? "Personne n'a encore joué : le premier tirage prend la tête." : next ? `Prochain tournoi : ${parisWhenLabel(next)}.` : "Le tournoi commence à la prochaine ouverture."}</p>
       ) : (
         <ol className="grid gap-1">
           {ranking.slice(0, 5).map((r, i) => (

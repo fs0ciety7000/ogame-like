@@ -22,8 +22,9 @@
 | Cadeaux | 3 jours d'ancienneté ; taxe 20 % hors alliance |
 | Pot commun | alimenté par les taxes et les dons ; concours, casino, mécènes |
 
-Casino orbital : ouvert chaque **mercredi 18 h pour 30 h** par défaut (6.7, rendez-vous de la semaine réglable), un tournoi par ouverture ;
-les week-ends et les créneaux précis restent possibles dans l'admin.
+Casino orbital : **ouvert en permanence** par défaut ; l'admin peut le fermer ou le programmer (créneaux à date précise, ouverture chaque
+semaine, week-ends). **Tournoi de la semaine** : mercredi 18 h pour 30 h (6.7.1, `tournamentWeekly`, réglable ; décoché : un tournoi par
+ouverture), compté seulement si le casino est ouvert.
 | Comptoir de la Ruche | consommables, prestige, offre de la semaine |
 
 ## Code et admin

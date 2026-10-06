@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { HudChip } from "@/components/ui/hud";
-import { casinoClosesAt, casinoOpen, dailyTokenReady, playerCasino, tournamentRanking } from "@/game/casino";
+import { casinoClosesAt, casinoOpen, dailyTokenReady, playerCasino, tournamentEndsAt, tournamentRanking } from "@/game/casino";
 import { useCasino } from "@/services/casinoService";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
@@ -16,6 +16,10 @@ export function CasinoBanner({ player }: { player: PlayerState }) {
   if (!casino || !casinoOpen(casino.settings, now)) return null;
   const closes = casinoClosesAt(casino.settings, now);
   const daily = dailyTokenReady(player, casino.settings, now);
+  // 6.7.1 : casino ouvert en permanence : le bandeau ne s'affiche que pendant le tournoi ou pour le jeton du jour.
+  const tournament = !!casino.tournament;
+  if (closes === null && !tournament && !daily) return null;
+  const ends = tournament ? tournamentEndsAt(casino.settings, now) : null;
   const tokens = playerCasino(player).tokens;
   const rank = tournamentRanking(casino.tournament).findIndex((r) => r.uid === player.uid);
   return (
@@ -23,9 +27,9 @@ export function CasinoBanner({ player }: { player: PlayerState }) {
       <img src={assetUrl("/assets/casino/salle-777.webp")} alt="" aria-hidden className="casino-banner-bg" />
       <TokenIcon size={44} variant="art" className="relative" />
       <div className="relative min-w-0 flex-1">
-        <p className="hud-title text-base text-slate-100">Le Casino orbital est ouvert</p>
+        <p className="hud-title text-base text-slate-100">{tournament ? "Tournoi du Casino orbital" : "Le Casino orbital est ouvert"}</p>
         <p className="text-xs text-slate-300">
-          {closes ? `Ferme dans ${formatDuration(Math.max(0, Math.floor((closes - now) / 1000)))}` : "Ouvert jusqu'à nouvel ordre"} · {tokens} jeton{tokens > 1 ? "s" : ""} en réserve
+          {ends ? `Tournoi : fin dans ${formatDuration(Math.max(0, Math.floor((ends - now) / 1000)))}` : closes ? `Ferme dans ${formatDuration(Math.max(0, Math.floor((closes - now) / 1000)))}` : "Ouvert jusqu'à nouvel ordre"} · {tokens} jeton{tokens > 1 ? "s" : ""} en réserve
           {rank >= 0 ? ` · ${rank + 1}${rank === 0 ? "er" : "e"} au tournoi` : ""}
         </p>
       </div>

@@ -33,8 +33,8 @@ export type SpinOutcome = "jackpot" | "star3" | "planet3" | "bar3" | "cherry3" |
 export type CasinoMode = "open" | "closed" | "scheduled";
 
 export const CASINO_MODES: { id: CasinoMode; label: string }[] = [
-  { id: "scheduled", label: "Programmé (rendez-vous de la semaine, créneaux et/ou week-ends)" },
-  { id: "open", label: "Ouvert" },
+  { id: "open", label: "Ouvert en permanence" },
+  { id: "scheduled", label: "Programmé (créneaux à date précise, chaque semaine, week-ends)" },
   { id: "closed", label: "Fermé" },
 ];
 
@@ -43,7 +43,7 @@ export interface CasinoWindow {
   endMs: number;
 }
 
-/** 6.7 (lot V) : ouverture chaque semaine, heure de Paris (jour 0 = dimanche … 6 = samedi). */
+/** 6.7 (lot V) : créneau qui revient chaque semaine, heure de Paris (jour 0 = dimanche … 6 = samedi). */
 export interface CasinoWeekly {
   day: number;
   hour: number;
@@ -54,8 +54,11 @@ export interface CasinoWeekly {
 export interface CasinoSettings {
   /** Ouvert, fermé, ou ouvert par le système selon le programme. */
   mode: CasinoMode;
-  /** 6.7 (lot V) : rendez-vous de la semaine (null : aucun). */
+  /** 6.7 (lot V) : programme : ouverture chaque semaine (null : aucune). */
   weekly: CasinoWeekly | null;
+  /** 6.7.1 : tournoi de la semaine, indépendant de l'ouverture (il ne compte que si le casino est ouvert).
+   *  null : un tournoi par ouverture (ancien rythme). */
+  tournamentWeekly: CasinoWeekly | null;
   /** Programme : ouvert chaque week-end (samedi et dimanche, heure de Paris). */
   weekends: boolean;
   /** Programme : créneaux précis (24 au plus). */
@@ -98,9 +101,11 @@ export interface CasinoRewards {
 }
 
 export const DEFAULT_CASINO: CasinoSettings = {
-  mode: "scheduled",
-  // 6.7 (lot V, calendrier-semaine.md) : le tournoi passe du week-end au mercredi 18 h, pour 30 h.
-  weekly: { day: 3, hour: 18, hours: 30 },
+  // 6.7.1 : ouvert en permanence par défaut ; l'équipe peut le fermer ou le programmer (créneaux, week-ends, chaque semaine).
+  mode: "open",
+  weekly: null,
+  // 6.7 (lot V, calendrier-semaine.md) : le tournoi a lieu le mercredi 18 h, pour 30 h.
+  tournamentWeekly: { day: 3, hour: 18, hours: 30 },
   weekends: false,
   windows: [],
   dailyTokens: 1,
@@ -217,12 +222,12 @@ export function normalizeCasinoSettings(raw: unknown): CasinoSettings {
     .filter((w) => w.startMs > 0 && w.endMs > w.startMs)
     .sort((a, b) => a.startMs - b.startMs)
     .slice(0, 24);
-  // 6.7 (lot V) : réglages d'avant le rendez-vous de la semaine : le week-end laisse la place au mercredi.
-  const legacyWeekly = r.weekly === undefined;
   return {
     mode,
-    weekly: legacyWeekly ? { ...d.weekly! } : normalizeWeekly(r.weekly),
-    weekends: legacyWeekly ? d.weekends : r.weekends === true,
+    weekly: normalizeWeekly(r.weekly),
+    // 6.7.1 : réglages d'avant le tournoi de la semaine : il passe au mercredi (les réglages d'ouverture ne bougent pas).
+    tournamentWeekly: r.tournamentWeekly === undefined ? { ...d.tournamentWeekly! } : normalizeWeekly(r.tournamentWeekly),
+    weekends: r.weekends === undefined ? d.weekends : r.weekends === true,
     windows,
     dailyTokens: Math.floor(num(r.dailyTokens, d.dailyTokens, 0, 10)),
     maxTokens: Math.floor(num(r.maxTokens, d.maxTokens, 1, 1000)),
@@ -308,8 +313,9 @@ export function validateCasinoSettings(s: CasinoSettings): string[] {
   if (total > 0.9) errors.push(`Les probabilités de gain dépassent 90 % (${Math.round(total * 100)} %).`);
   if (s.odds.jackpot > 0.05) errors.push("Le gros lot ne peut pas sortir plus d'une fois sur 20.");
   if (s.jackpotShare > 0.9) errors.push("Le gros lot ne peut pas vider plus de 90 % du pot.");
-  if (s.mode === "scheduled" && !s.weekly && !s.weekends && s.windows.length === 0) errors.push("Programme vide : choisis un rendez-vous de la semaine, coche les week-ends ou ajoute un créneau.");
-  if (s.weekly && !(s.weekly.hours >= 1 && s.weekly.hours <= 72)) errors.push("Rendez-vous de la semaine : durée entre 1 et 72 h.");
+  if (s.mode === "scheduled" && !s.weekly && !s.weekends && s.windows.length === 0) errors.push("Programme vide : ajoute un créneau, une ouverture chaque semaine ou coche les week-ends.");
+  if (s.weekly && !(s.weekly.hours >= 1 && s.weekly.hours <= 72)) errors.push("Ouverture de la semaine : durée entre 1 et 72 h.");
+  if (s.tournamentWeekly && !(s.tournamentWeekly.hours >= 1 && s.tournamentWeekly.hours <= 72)) errors.push("Tournoi de la semaine : durée entre 1 et 72 h.");
   if (s.rewards.tournament.length === 0) errors.push("Tournoi : au moins une place récompensée.");
   return errors;
 }
@@ -326,7 +332,15 @@ function parisWeekend(now: number): boolean {
 
 /** 6.7 : ouvertures hebdomadaires autour de `now` (semaine précédente, en cours, suivante), dans l'ordre. */
 export function casinoWeeklyWindows(s: Pick<CasinoSettings, "weekly">, now: number): { startMs: number; endMs: number }[] {
-  const w = s.weekly;
+  return weeklyWindowsOf(s.weekly, now);
+}
+
+/** 6.7.1 : fenêtres du tournoi de la semaine autour de `now` (précédente, en cours, suivante). */
+export function tournamentWeeklyWindows(s: Pick<CasinoSettings, "tournamentWeekly">, now: number): { startMs: number; endMs: number }[] {
+  return weeklyWindowsOf(s.tournamentWeekly, now);
+}
+
+function weeklyWindowsOf(w: CasinoWeekly | null | undefined, now: number): { startMs: number; endMs: number }[] {
   if (!w) return [];
   const local = now + parisOffsetMs(now);
   const midnight = Math.floor(local / DAY) * DAY;
@@ -400,11 +414,30 @@ export function casinoClosesAt(s: CasinoSettings, now: number): number | null {
 
 /* ---------- tournoi de chaque ouverture ---------- */
 
-/** Identifiant du tournoi : une ouverture, ou une semaine quand le casino est ouvert sans fin. */
+/** Identifiant du tournoi : 6.7.1, la fenêtre de la semaine (casino ouvert) ; sinon une ouverture, ou une semaine
+ *  quand le casino est ouvert sans fin. */
 export function tournamentId(s: CasinoSettings, now: number): string | null {
   const id = casinoOpeningId(s, now);
   if (!id) return null;
+  if (s.tournamentWeekly) {
+    const t = tournamentWeeklyWindows(s, now).find((x) => now >= x.startMs && now < x.endMs);
+    return t ? `t-${parisDay(t.startMs)}` : null;
+  }
   return id === "open" ? `open-${casinoWeekId(now)}` : id;
+}
+
+/** 6.7.1 : fin du tournoi en cours (null : pas de fin connue) et début du prochain tournoi de la semaine. */
+export function tournamentEndsAt(s: CasinoSettings, now: number): number | null {
+  if (!s.tournamentWeekly) return casinoClosesAt(s, now);
+  const t = tournamentWeeklyWindows(s, now).find((x) => now >= x.startMs && now < x.endMs);
+  if (!t) return null;
+  const closes = casinoClosesAt(s, now);
+  return closes !== null ? Math.min(closes, t.endMs) : t.endMs;
+}
+
+export function nextTournamentStart(s: CasinoSettings, now: number): number | null {
+  if (!s.tournamentWeekly) return nextCasinoOpening(s, now);
+  return tournamentWeeklyWindows(s, now).find((x) => x.startMs > now)?.startMs ?? null;
 }
 
 /** Tournoi terminé à clôturer, et nouveau tournoi pour l'ouverture en cours. */
