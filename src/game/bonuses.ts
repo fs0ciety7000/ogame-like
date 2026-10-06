@@ -31,3 +31,37 @@ export function playerResearchTimeFactor(player: TimePlayer, now: number): numbe
   if (player.testMode) return 0;
   return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
+
+/* 5.31 (lot D, « d'où vient ce chiffre ») : chaque multiplicateur de durée, avec son origine. Le produit des
+   facteurs vaut exactement playerBuildTimeFactor / playerResearchTimeFactor (test). */
+
+export interface FactorLine {
+  label: string;
+  /** Multiplicateur (0,8 = −20 %). */
+  factor: number;
+}
+
+function keep(lines: FactorLine[]): FactorLine[] {
+  return lines.filter((l) => Math.abs(l.factor - 1) > 1e-9);
+}
+
+export function buildTimeBreakdown(player: TimePlayer, now: number): FactorLine[] {
+  if (player.testMode) return [{ label: "Compte de test", factor: 0 }];
+  return keep([
+    { label: "Événement en cours", factor: buildTimeFactor(now) },
+    { label: "Technologies", factor: techReductionFactor(player.techLevels, "building_time") },
+    { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
+    { label: "Ascension", factor: ascensionBuildTimeFactor(player) },
+    { label: "Officiers, reliques, talents, modules", factor: 1 - playerModifiers(player).buildTime },
+  ]);
+}
+
+export function researchTimeBreakdown(player: TimePlayer, now: number): FactorLine[] {
+  if (player.testMode) return [{ label: "Compte de test", factor: 0 }];
+  return keep([
+    { label: "Événement en cours", factor: researchTimeFactor(now) },
+    { label: "Technologies", factor: techReductionFactor(player.techLevels, "research_time") },
+    { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
+    { label: "Officiers, reliques, talents, modules", factor: 1 - playerModifiers(player).researchTime },
+  ]);
+}
