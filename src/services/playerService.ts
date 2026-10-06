@@ -368,6 +368,11 @@ async function act<T = void>(action: GameAction): Promise<T> {
   return res.result;
 }
 
+/** 5.26 : action de jeu brute (Planificateur : étapes d'un modèle déjà vérifiées par l'aperçu). */
+export function performGameAction(action: GameAction) {
+  return act(action);
+}
+
 /** Rattrapage de la production (heartbeat, retour sur l'onglet). */
 export function syncPlayer(_uid: string, playtimeDeltaSeconds = 0): Promise<AwaySummary> {
   return act<AwaySummary>({ type: "sync", playtimeDeltaSeconds });
