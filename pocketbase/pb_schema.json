@@ -2929,5 +2929,46 @@
     "indexes": [
       "CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"
     ]
+  },
+  {
+    "id": "pbc_ce_poll_votes",
+    "name": "poll_votes",
+    "type": "base",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      {
+        "name": "pollId",
+        "type": "text",
+        "required": true,
+        "max": 60,
+        "presentable": false
+      },
+      {
+        "name": "uid",
+        "type": "text",
+        "required": true,
+        "max": 40,
+        "presentable": false
+      },
+      {
+        "name": "choice",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "createdAtMs",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)",
+      "CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"
+    ]
   }
 ]

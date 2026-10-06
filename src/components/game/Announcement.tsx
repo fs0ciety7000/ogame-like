@@ -1,3 +1,4 @@
+import { PollCard } from "@/components/game/PollCard";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -42,6 +43,8 @@ export interface Announcement {
   currency?: { icon: string; name: string; text: string };
   /** v3.9 : emblème affiché à côté du surtitre. */
   emblem?: string;
+  /** 5.26 : sondage communautaire (annonces de l'administration). */
+  poll?: import("@/game/polls").Poll | null;
 }
 
 export const ANNOUNCEMENTS: Announcement[] = [
@@ -395,7 +398,7 @@ export const useAnnouncementPending = create<{ pending: boolean }>(() => ({ pend
 
 /** v4.5 : annonce créée dans l'administration, au format des annonces du code. */
 function fromCustom(c: CustomAnnouncement): Announcement {
-  return { id: c.id, eyebrow: c.eyebrow, title: c.title, text: c.text, factions: [], art: c.art, artMobile: c.artMobile, tone: c.tone, features: c.features, cta: c.cta };
+  return { id: c.id, eyebrow: c.eyebrow, title: c.title, text: c.text, factions: [], art: c.art, artMobile: c.artMobile, tone: c.tone, features: c.features, cta: c.cta, poll: c.poll };
 }
 
 /** Toutes les annonces connues (créées dans l'admin puis celles du code), sans calendrier. */
@@ -521,6 +524,7 @@ export function AnnouncementDialog() {
                 </div>
               </motion.div>
             )}
+            {shown.poll && <PollCard id={shown.id} poll={shown.poll} className="max-w-xl" />}
             {shown.features && (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {shown.features.map((f, i) => (

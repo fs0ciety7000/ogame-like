@@ -202,6 +202,8 @@ export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
 export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
 export { upcomingMaintenance } from "@/game/maintenance";
 export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
+export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
+export { tally, validateVote } from "@/game/polls";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
 export { lootTokensThisWeek } from "@/game/loot";

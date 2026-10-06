@@ -571,6 +571,8 @@ onRecordAuthRequest((e) => {
   require(`${__hooks}/cosmic_db.js`).banAuthGuard(e);
   return e.next();
 }, "users");
+routerAdd("GET", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).pollRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/poll", (e) => require(`${__hooks}/cosmic_db.js`).pollRequest(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/cosmic/ban/me", (e) => require(`${__hooks}/cosmic_db.js`).banMe(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.js`).adminBan(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("POST", "/api/cosmic/admin/ban", (e) => require(`${__hooks}/cosmic_db.js`).adminBan(e), $apis.requireAuth("users", "_superusers"));

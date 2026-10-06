@@ -10,6 +10,8 @@ import { announcementStatus, type AnnouncementSettings, type CustomAnnouncement 
 import { previewAnnouncement, saveAnnouncementSettings, useAnnouncementSettings } from "@/services/announcementService";
 import { ImageField, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { cn } from "@/lib/utils";
+import { POLL_RULES, type PollResults } from "@/game/polls";
+import { fetchPollResults } from "@/services/pollService";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* =====================================================
@@ -171,6 +173,47 @@ export function AnnouncementsPanel() {
                         </Button>
                       )}
                     </div>
+                    {/* 5.26 : sondage communautaire joint à l'annonce */}
+                    <div className="flex flex-col gap-2 border border-cyan-glow/15 p-2 sm:col-span-2">
+                      <label className="flex items-center gap-2 text-xs text-slate-300">
+                        <input
+                          type="checkbox"
+                          className="accent-cyan-glow"
+                          checked={!!custom.poll}
+                          onChange={(e) => setCustom(a.id, { poll: e.target.checked ? { question: "", options: ["", ""], closesAtMs: null, showResults: "after_vote" } : null })}
+                        />
+                        Sondage (2 à {POLL_RULES.maxOptions} choix, un vote par joueur)
+                      </label>
+                      {custom.poll && (
+                        <>
+                          <Input placeholder="Question" maxLength={POLL_RULES.maxQuestion} value={custom.poll.question} onChange={(e) => setCustom(a.id, { poll: { ...custom.poll!, question: e.target.value } })} />
+                          {custom.poll.options.map((o, i) => (
+                            <div key={i} className="flex gap-2">
+                              <Input placeholder={`Choix ${i + 1}`} maxLength={POLL_RULES.maxOption} value={o} onChange={(e) => setCustom(a.id, { poll: { ...custom.poll!, options: custom.poll!.options.map((x, j) => (j === i ? e.target.value : x)) } })} />
+                              <Button size="sm" variant="ghost" title="Retirer" disabled={custom.poll!.options.length <= POLL_RULES.minOptions} onClick={() => setCustom(a.id, { poll: { ...custom.poll!, options: custom.poll!.options.filter((_, j) => j !== i) } })}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {custom.poll.options.length < POLL_RULES.maxOptions && (
+                              <Button size="sm" variant="ghost" onClick={() => setCustom(a.id, { poll: { ...custom.poll!, options: [...custom.poll!.options, ""] } })}>
+                                <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un choix
+                              </Button>
+                            )}
+                            <label className="flex items-center gap-2 text-xs text-slate-400">
+                              Clôture
+                              <Input type="datetime-local" className="h-8 w-52" value={toLocalInput(custom.poll.closesAtMs)} onChange={(e) => setCustom(a.id, { poll: { ...custom.poll!, closesAtMs: fromLocalInput(e.target.value) } })} />
+                            </label>
+                            <PollAdminResults id={a.id} options={custom.poll.options} />
+                            <label className="flex items-center gap-2 text-xs text-slate-400">
+                              <input type="checkbox" className="accent-cyan-glow" checked={custom.poll.showResults === "always"} onChange={(e) => setCustom(a.id, { poll: { ...custom.poll!, showResults: e.target.checked ? "always" : "after_vote" } })} />
+                              Résultats visibles avant de voter
+                            </label>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     <div className="sm:col-span-2">
                       <Button
                         size="sm"
@@ -196,5 +239,22 @@ export function AnnouncementsPanel() {
       })}
       <p className="text-[11px] text-slate-500">L'aperçu ouvre l'annonce telle qu'enregistrée : enregistre d'abord pour voir tes modifications.</p>
     </div>
+  );
+}
+
+/** 5.26 : résultats d'un sondage, lus à la demande (sans voter). */
+function PollAdminResults({ id, options }: { id: string; options: string[] }) {
+  const [res, setRes] = useState<PollResults | null>(null);
+  return (
+    <span className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+      <Button size="sm" variant="ghost" onClick={() => void fetchPollResults(id).then(setRes).catch(() => toast.error("Sondage pas encore enregistré."))}>
+        Résultats
+      </Button>
+      {res && (
+        <span className="font-mono">
+          {options.map((o, i) => `${o || `#${i + 1}`} ${res.counts[i] ?? 0}`).join(" · ")} · {res.total} vote{res.total > 1 ? "s" : ""}
+        </span>
+      )}
+    </span>
   );
 }
