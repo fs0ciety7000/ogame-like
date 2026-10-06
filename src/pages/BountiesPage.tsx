@@ -6,7 +6,7 @@ import { HudPanel, EmptyAction, PagedList } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowLeftRight, ArrowUpToLine, BookOpen, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
+import { ArrowLeftRight, ArrowUpToLine, BookOpen, Eye, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -57,6 +57,9 @@ import {
 import { moduleLabel } from "@/game/modules";
 import { DonateCard } from "@/components/game/DonateCard";
 import { WeeklyStockCard } from "@/components/game/WeeklyStockCard";
+import { PrestigePreview, PREVIEWABLE } from "@/components/game/PrestigePreview";
+import { RewardReveal } from "@/components/game/RewardReveal";
+import { normalizePlanetLook } from "@/game/planetLook";
 import { WEEKLY_OFFERS } from "@/game/weeklyStock";
 import { buyBountyItem, exchangeBountyAmber, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
 import { GameActionError } from "@/services/playerService";
@@ -463,6 +466,9 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   planetFx: Orbit,
 };
 
+/** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, voir docs/prompts-5.27.md). */
+const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {};
+
 function itemStatus(item: ShopItem, st: BountyState, now: number): string | null {
   switch (item.id) {
     case "boost":
@@ -492,6 +498,10 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
   const now = Date.now();
   const building = Object.entries(queues?.buildingUpgrades ?? {}).filter(([, u]) => u && u.endTime > now);
   const [buildingId, setBuildingId] = useState("");
+  // 5.27 : aperçu avant achat et révélation après l'achat d'un objet de prestige.
+  const [preview, setPreview] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const canPreview = PREVIEWABLE.includes(item.id);
   const plans = item.id === "reroll" ? rerollablePlans(player) : [];
   const blocker = shopBlocker(player, item, now, queues ?? undefined);
   const status = itemStatus(item, st, now);
@@ -519,7 +529,9 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
       return;
     setBusy(true);
     try {
-      toast.success((await buyBountyItem(item.id, buildingId || undefined)).message);
+      const out = await buyBountyItem(item.id, buildingId || undefined);
+      if (canPreview) setRevealed(true);
+      else toast.success(out.message);
     } catch (err) {
       toast.error(errorText(err));
     } finally {
@@ -539,6 +551,8 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
               <img key={e.code} src={assetUrl(e.url)} alt="" className="h-6 w-6" />
             ))}
           </span>
+        ) : SHOP_ITEM_ART[item.id] ? (
+          <img src={assetUrl(SHOP_ITEM_ART[item.id]!)} alt="" className="h-12 w-12 shrink-0 object-contain" />
         ) : (
           <span className="grid h-12 w-12 shrink-0 place-items-center border border-gold-glow/30 bg-gold-glow/10 text-gold-glow">
             <Icon className="h-6 w-6" />
@@ -568,6 +582,29 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
         />
       )}
       {item.id === "nameColor" && owns(st, "nameColor") && <NameTonePicker current={st.nameTone} />}
+      {canPreview && !owns(st, item.id) && (
+        <>
+          <Button size="sm" variant="ghost" className="self-start" onClick={() => setPreview((v) => !v)} aria-expanded={preview}>
+            <Eye className="h-3.5 w-3.5" /> {preview ? "Masquer l'aperçu" : "Aperçu"}
+          </Button>
+          {preview && (
+            <div className="border border-white/10 bg-space-950/40 p-3">
+              <PrestigePreview item={item.id} pseudo={player.pseudo} look={normalizePlanetLook(player.profileStyle?.planet)} />
+            </div>
+          )}
+        </>
+      )}
+      {canPreview && (
+        <RewardReveal
+          open={revealed}
+          onClose={() => setRevealed(false)}
+          icon={<Icon />}
+          title={item.name}
+          description="Acquis au Comptoir de la Ruche."
+          items={[{ key: item.id, node: <PrestigePreview item={item.id} pseudo={player.pseudo} look={normalizePlanetLook(player.profileStyle?.planet)} /> }]}
+          closeLabel="Superbe"
+        />
+      )}
       {status && <p className="text-[11px] text-mint-glow">{status}</p>}
       <Button size="sm" variant={blocker ? "outline" : "warn"} className="mt-auto min-w-0 max-w-full" disabled={busy || !!blocker} title={blocker ?? undefined} onClick={() => void buy()}>
         <Amber className="mr-1" /> {item.price}

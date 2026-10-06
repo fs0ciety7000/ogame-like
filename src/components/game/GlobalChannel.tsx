@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { AtSign, CalendarClock, Coins, Crown, Flag, Flame, Globe2, Hash, Loader2, Pin, PinOff, Plus, Rocket, Send, Shield, Skull, SmilePlus, Sparkles, Swords, VolumeX, Volume2, X, type LucideIcon } from "lucide-react";
+import { AtSign, CalendarClock, Flag, Globe2, Loader2, Pin, PinOff, Plus, Send, SmilePlus, VolumeX, Volume2, X } from "lucide-react";
+import { RoomIcon } from "@/components/game/roomIcons";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
@@ -24,14 +25,7 @@ import { cn } from "@/lib/utils";
    (masqué d'office à 3 signalements), masquer un joueur chez soi, filtre de
    grossièretés côté serveur, emotes du jeu. */
 
-/* 5.26.3 : icônes de salon (Bannière de salon) et couleur de pseudo (jetons du thème). */
-const ROOM_ICON: Record<string, LucideIcon> = { swords: Swords, coins: Coins, skull: Skull, rocket: Rocket, shield: Shield, crown: Crown, flame: Flame, sparkles: Sparkles };
-
-function RoomIcon({ icon, className }: { icon?: string; className?: string }) {
-  const Icon = (icon && ROOM_ICON[icon]) || Hash;
-  return <Icon className={className} aria-hidden />;
-}
-
+/* 5.26.3 : couleur de pseudo (jetons du thème). */
 const toneColor = (tone?: string) => (tone && NAME_TONES.some((t) => t.id === tone) ? HUD_TONE[tone as HudTone] : undefined);
 
 function clock(ms: number) {
