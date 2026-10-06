@@ -9,7 +9,25 @@ Le reste est dans `docs/` :
 | `docs/GAME_DESIGN.md` | **GDD** : piliers, boucles, carte des systèmes, **invariants du moteur**, règles de conception, fiches systèmes, grille et journal d'audit |
 | `docs/WORKFLOW.md` | chaîne complète d'une fonctionnalité : brief → benchmark → chiffres → moteur → serveur → UI → audit → livraison ; méthode de level design |
 | `docs/proposals/*.md` | propositions chiffrées en attente de décision (une par système) |
+| `docs/changes/*.md` | **une fiche par lot livré** (fonctionnalité, ajout, rework, ajustement, correctif, refactoring, docs), modèle et index dans `docs/changes/README.md` |
 | `changelog/*.md`, `content/blog/*.md` | notes de version (joueurs) et billets du devblog |
+
+## Règle n° 1 : chaque changement a son .md, et les docs s'auto-alimentent
+
+Valable pour toute la session et tout le projet, à chaque demande :
+
+1. **Avant de coder** un système, de l'équilibre ou ce qui touche les données des joueurs : une proposition `docs/proposals/<système>.md`
+   (plan de `docs/WORKFLOW.md` §2), puis attendre la décision de l'utilisateur.
+2. **Pour chaque lot**, même petit (ajout, rework, ajustement, correctif, refactoring, docs) : une fiche `docs/changes/<version>-<slug>.md`
+   selon le modèle de `docs/changes/README.md`, ajoutée à l'index. Pas de fiche, pas de commit.
+3. **Report dans les documents de référence**, dans le même commit :
+   - règles de jeu → GDD (`docs/GAME_DESIGN.md`) : invariants §4, fiches systèmes §7, journal §8 ;
+   - règles visuelles → `docs/DESIGN.md` ;
+   - méthode → `docs/WORKFLOW.md` ;
+   - règles de travail, pièges, conventions → ce fichier.
+4. **Corriger plutôt qu'empiler** : une règle devenue fausse est réécrite, pas complétée par une exception. Une proposition livrée passe au
+   statut « livrée » et renvoie à sa fiche.
+5. Ces fichiers sont la mémoire du projet : les relire en début de session et avant chaque lot, ne jamais repartir de zéro.
 
 ## Langue et ton
 
@@ -62,6 +80,7 @@ Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hook
 ## Livrer
 
 - Une branche de travail par session ; une PR **par lot terminé** (pas de PR intermédiaire).
+- Chaque lot a sa fiche `docs/changes/` (règle n° 1) ; la PR liste les fiches qu'elle porte.
 - Chaque lot visible par les joueurs a :
   - un fichier `changelog/AAAA-MM-JJ-slug.md` (frontmatter `version`, `iteration`, `date`, `title`) ;
   - pour les lots importants, un billet `content/blog/NN-slug.md`.

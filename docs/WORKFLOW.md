@@ -14,10 +14,13 @@ Une étape sautée se dit dans la PR.
 | 5 | **Recommandation chiffrée** : formules, paliers, courbes (§4) | `docs/proposals/<système>.md` | **l'utilisateur** |
 | 6 | **Implémentation par lots** : moteur + tests → serveur → UI → admin | commits par lot | CI locale (`CLAUDE.md`) |
 | 7 | **Audit** : grille de `GAME_DESIGN.md` §6 + audit DESIGN.md + mobile | cases cochées dans la PR | — |
-| 8 | **Livraison** : changelog, billet devblog si besoin, PR, rappel des hooks | PR | l'utilisateur fusionne |
+| 8 | **Livraison** : fiche `docs/changes/`, report dans GDD / DESIGN / CLAUDE.md, changelog, billet devblog si besoin, PR, rappel des hooks | fiche + PR | l'utilisateur fusionne |
 
 Règle : une proposition qui touche aux données des joueurs (unités, ressources, niveaux) ou à l'équilibre s'arrête à l'étape 5
 et attend la décision.
+
+Petit changement (ajustement, correctif, refactoring) : les étapes 3 à 5 peuvent être sautées, **jamais la fiche de changement** de
+l'étape 8 (modèle dans `docs/changes/README.md`). Elle se remplit pendant le lot, pas après.
 
 ## 2. Écrire une proposition (`docs/proposals/<système>.md`)
 
@@ -95,7 +98,19 @@ File du chantier ─► Hangar (à quai) ─► En vol (mission) ─► Combat
 
 Chaque flèche a : une règle moteur, une notification et un affichage. Une flèche sans l'un des trois est une dette.
 
-## 5. Lots et PR
+## 5. Documents vivants
+
+Chaque lot relit puis met à jour :
+
+- la fiche du lot (`docs/changes/`) et l'index ;
+- le GDD si une règle de jeu, un chiffre ou un invariant change ;
+- `docs/DESIGN.md` si un composant ou une règle visuelle apparaît ;
+- ce fichier si la méthode évolue ;
+- `CLAUDE.md` pour toute règle de travail ou tout piège appris (goja, migrations, schéma…).
+
+Une règle devenue fausse est réécrite, pas contournée.
+
+## 6. Lots et PR
 
 - Lot 0 = correctif sans changement de règle (données, affichage, garde-fous). Il part seul s'il est urgent.
 - Un lot = moteur + tests + serveur + UI d'un même morceau ; pas de lot « tout le moteur » puis « toute l'UI ».

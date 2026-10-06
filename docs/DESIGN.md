@@ -2,6 +2,7 @@
 
 Direction : un cockpit de vaisseau, pas un site. Un centre vivant (planète, galaxie, boss) entouré d'instruments.
 Référence complète : skill `.claude/skills/space-4x-cockpit-ui`.
+Tout lot qui touche le front a sa fiche dans `docs/changes/` (section « Design ») ; un nouveau composant ou une nouvelle règle visuelle est ajouté ici dans le même commit (voir `CLAUDE.md`, règle n° 1).
 
 ## Jetons
 
