@@ -22,4 +22,4 @@
 
 ## État (audit 2026-10-06)
 - Corvées quotidiennes réunies depuis la 5.30 dans **Ordres du jour** (`/game/ordres`, `dailyOrders.ts`) : liste de contrôle, « Tout réclamer » (série, missions, contrats, passe, Chroniques, prise en main), pastille unique, rendez-vous de la semaine. Fusion contrats et missions : en attente de décision (`proposals/journal-de-bord.md`).
-- Trois échelles de « saison » qui se chevauchent (saison XP, passe, Chroniques) avec trois mots différents (audit Q2).
+- Nommage unifié (5.31) : « Saison » = le mois (XP, divisions) ; « Passe » = les 30 paliers ; « Chroniques » = l'histoire du mois. Glossaire dans le Portefeuille ; un test interdit « passe de saison » dans les écrans joueurs.

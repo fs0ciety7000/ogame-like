@@ -27,4 +27,4 @@
 `market.ts`, `auctions.ts`, `tradeContracts.ts`, `serverPot.ts`, `casino.ts`, `contests.ts`, `bounties.ts`, `weeklyStock.ts`, `patrons.ts`.
 
 ## État (audit 2026-10-06)
-- **Trop de monnaies** pour un nouveau joueur ; l'Ambre est la seule « premium » mais sert à tout (audit Q2).
+- Depuis la 5.31, page **Portefeuille** (`wallet.ts`) : solde, origine et usage de chaque monnaie et jauge, plus le glossaire. Une monnaie nouvelle s'ajoute à `walletEntries`.

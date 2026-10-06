@@ -1,4 +1,4 @@
-import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
+import { buildTimeBreakdown, playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useState } from "react";
@@ -102,6 +102,8 @@ export function BuildingsPage() {
 
   const now = Date.now();
   const planFull = buildPlan(queues).length >= planSlots(player);
+  // 5.31 : détail du temps de construction (identique pour tous les bâtiments).
+  const buildFactors = buildTimeBreakdown(player, now);
 
   return (
     <div className="flex flex-col gap-4">
@@ -315,7 +317,7 @@ export function BuildingsPage() {
                       </Button>
                     ) : (
                       <>
-                        <CostPills cost={cost} stock={player.resources} seconds={time} className="mb-2.5" />
+                        <CostPills cost={cost} stock={player.resources} seconds={time} timeFactors={buildFactors} className="mb-2.5" />
                         {(() => {
                           const wait = secondsToAfford(cost, player.resources, rates);
                           return (

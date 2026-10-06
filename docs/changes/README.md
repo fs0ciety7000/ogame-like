@@ -64,7 +64,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | Version | Fiche | Type | Proposition |
 |:--|:--|:--|:--|
 | — | [Outillage : commandes autorisées](outillage-permissions.md) | docs | aucune |
-| 5.31.0 | [Lisibilité (en cours)](5.31.0-lisibilite.md) | fonctionnalité | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md), lot D |
+| 5.31.0 | [Portefeuille et chiffres expliqués](5.31.0-lisibilite.md) | fonctionnalité | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md), lot D |
 | 5.30.0 | [Ordres du jour](5.30.0-ordres-du-jour.md) | fonctionnalité | [journal-de-bord](../proposals/journal-de-bord.md) |
 | 5.29.0 | [Un jeu plus léger](5.29.0-performance.md) | refactoring | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md), lot B |
 | 5.28.1 | [Correctifs de cohérence](5.28.1-correctifs.md) | correctif | [feuille-de-route-2026-q4](../proposals/feuille-de-route-2026-q4.md), lot A |

@@ -96,6 +96,7 @@ Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hook
 - Aucun secret (mot de passe, jeton) dans le dépôt, même temporaire.
 - `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).
   Jamais de règle vers la production ni de push sur `main`.
+- Données de production : lecture seule (GET), extraits gardés hors du dépôt (scratchpad). Seuls des agrégats anonymes entrent dans les docs.
 
 ## Méthode de game design
 

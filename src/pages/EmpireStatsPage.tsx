@@ -639,7 +639,7 @@ export function EmpireStatsPage() {
           <Section title="Progression" icon={Trophy} tone={MINT}>
             <div className="flex flex-wrap justify-around gap-4">
               <Ring label="Succès obtenus" value={st.progression.achievements} max={st.progression.achievementsTotal} tone={MINT} />
-              <Ring label="Passe de saison" value={st.progression.passTier} max={st.progression.passTiers} tone={GOLD} />
+              <Ring label="Passe" value={st.progression.passTier} max={st.progression.passTiers} tone={GOLD} />
             </div>
             <div>
               <Row label="Points de passe">{n(st.progression.passPoints)}</Row>

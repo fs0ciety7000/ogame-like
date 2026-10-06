@@ -1,4 +1,4 @@
-import { playerResearchTimeFactor } from "@/game/bonuses";
+import { playerResearchTimeFactor, researchTimeBreakdown } from "@/game/bonuses";
 import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useEffect, useState } from "react";
@@ -149,6 +149,7 @@ export function LabPage() {
                   cost={getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>}
                   stock={player.resources}
                   seconds={Math.round(getTechTime(selected, currentLevel + 1) * playerResearchTimeFactor(player, Date.now()))}
+                  timeFactors={researchTimeBreakdown(player, Date.now())}
                 />
                 {amberCost > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">

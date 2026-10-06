@@ -292,7 +292,7 @@ function PlannerLocked() {
             </Link>
           </Button>
         </div>
-        {missing > 0 && <p className="text-xs text-slate-500">L'Ambre se gagne en remplissant des primes Kesh'Vaar, à la série de connexion et au passe de saison.</p>}
+        {missing > 0 && <p className="text-xs text-slate-500">L'Ambre se gagne en remplissant des primes Kesh'Vaar, à la série de connexion et au passe du mois.</p>}
       </HudPanel>
     </div>
   );

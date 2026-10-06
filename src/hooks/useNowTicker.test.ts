@@ -10,6 +10,8 @@ afterEach(() => {
 describe("useNowTicker : horloge partagée", () => {
   it("un seul minuteur pour plusieurs abonnés, arrêté au dernier départ", () => {
     vi.useFakeTimers();
+    // Départ à x,500 s : 3 tics en 3,1 s quelle que soit l'heure réelle (l'horloge s'aligne sur la seconde).
+    vi.setSystemTime(Date.UTC(2026, 9, 6, 12, 0, 0, 500));
     const a = vi.fn();
     const b = vi.fn();
     const offA = subscribeNowTicker(a);

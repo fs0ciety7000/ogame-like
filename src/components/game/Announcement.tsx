@@ -238,7 +238,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
   },
   {
     id: "v4.1-saison",
-    eyebrow: "Mise à jour 4.1 · Passe de saison",
+    eyebrow: "Mise à jour 4.1 · Passe",
     title: "Chaque jour de jeu compte",
     text: "Un passe gratuit de 30 paliers qui se remplit avec ton activité, des amis à recruter, des victoires à afficher partout. Et pour les nouveaux venus, Vashka raconte elle-même leurs premiers pas.",
     factions: [],
@@ -258,7 +258,7 @@ export const ANNOUNCEMENTS: Announcement[] = [
       text: "30 paliers ce mois-ci : production, 370 Ambre, Dossiers, capsules, jetons du casino, une relique rare puis épique, bannière et titre de saison.",
     },
     features: [
-      { title: "Passe de saison", text: "Contrats, primes, raids repoussés, victoires, Léviathan, connexion du jour : 40 points par palier.", to: "/game/passe", image: "/assets/relics/couronne_essaim.webp" },
+      { title: "Passe", text: "Contrats, primes, raids repoussés, victoires, Léviathan, connexion du jour : 40 points par palier.", to: "/game/passe", image: "/assets/relics/couronne_essaim.webp" },
       { title: "Parrainage", text: "Ton lien d'invitation : 150 Ambre et la bannière « Recruteur » quand ton filleul atteint Bronze I, 100 Ambre pour lui.", to: "/game/profil", image: "/assets/bounties/emoji-ok.webp" },
       { title: "Carte de victoire", text: "Un combat gagné devient une image à télécharger ou un lien qui s'affiche en aperçu sur Discord et WhatsApp.", to: "/game/combats", image: "/assets/bounties/emoji-top.webp" },
       { title: "Tutoriel raconté", text: "Les dix objectifs de départ deviennent trois chapitres, avec un premier raid de Varan à repousser.", to: "/game", image: "/assets/story/varan.webp" },

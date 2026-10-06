@@ -21,6 +21,7 @@ const ResetPasswordPage = lazyPage(() => import("@/pages/ResetPasswordPage"), "R
 const HallOfFamePage = lazyPage(() => import("@/pages/HallOfFamePage"), "HallOfFamePage");
 const DashboardPage = lazyPage(() => import("@/pages/DashboardPage"), "DashboardPage");
 const OrdersPage = lazyPage(() => import("@/pages/OrdersPage"), "OrdersPage");
+const WalletPage = lazyPage(() => import("@/pages/WalletPage"), "WalletPage");
 const ResourcesPage = lazyPage(() => import("@/pages/ResourcesPage"), "ResourcesPage");
 const BuildingsPage = lazyPage(() => import("@/pages/BuildingsPage"), "BuildingsPage");
 const UnitsPage = lazyPage(() => import("@/pages/UnitsPage"), "UnitsPage");
@@ -111,6 +112,7 @@ export default function App() {
               <Route path="/game" element={<AppShell />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="ordres" element={<OrdersPage />} />
+                <Route path="portefeuille" element={<WalletPage />} />
                 <Route path="ressources" element={<ResourcesPage />} />
                 <Route path="batiments" element={<BuildingsPage />} />
                 <Route path="unites" element={<UnitsPage />} />
