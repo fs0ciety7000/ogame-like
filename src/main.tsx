@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./lib/theme";
+import "./lib/density";
 import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { startContentSync } from "./services/contentService";

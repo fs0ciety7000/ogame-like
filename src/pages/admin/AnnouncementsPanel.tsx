@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Eye, Plus, Save, Trash2 } from "lucide-react";
+import { BarChart3, Eye, Plus, Save, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export function AnnouncementsPanel() {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-slate-100">Annonces plein écran</h2>
-        <span className="text-xs text-slate-500">Une fois par joueur et par appareil, la plus récente d'abord.</span>
+        <span className="text-xs text-slate-500">Une fois par joueur et par appareil, la plus récente d'abord. Un sondage se joint à une annonce créée ici (ouvre-la, case « Sondage »).</span>
         <div className="ml-auto flex flex-wrap gap-2">
           <Button
             size="sm"
@@ -93,6 +93,18 @@ export function AnnouncementsPanel() {
             }}
           >
             <Plus className="mr-1 h-3.5 w-3.5" /> Nouvelle annonce
+          </Button>
+          {/* 5.26.2 : raccourci, le sondage n'était visible qu'en ouvrant une annonce créée ici. */}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              const a = { ...newCustom(Date.now()), eyebrow: "Sondage", title: "Votre avis compte", poll: { question: "", options: ["", ""], closesAtMs: null, showResults: "after_vote" as const } };
+              setCfg((c) => ({ custom: [a, ...c.custom], schedule: { ...c.schedule, [a.id]: { disabled: true } } }));
+              setOpenId(a.id);
+            }}
+          >
+            <BarChart3 className="mr-1 h-3.5 w-3.5" /> Nouveau sondage
           </Button>
           <Button size="sm" disabled={busy} onClick={() => void save()}>
             <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer

@@ -1,16 +1,15 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
-import { bossPhase, isActive, upcomingLeviathanStart, type BossPhase } from "@/game/leviathan";
-import { seasonBossWindow } from "@/game/chronicles";
+import { isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
-import { useSeasonBoss } from "@/services/seasonBossService";
 import { assetUrl } from "@/lib/assets";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
-import { HudChip, HudSwitch, type HudTone } from "@/components/ui/hud";
+import { HudChip, HudSwitch } from "@/components/ui/hud";
+import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
@@ -267,70 +266,6 @@ function Badge({ count }: { count: number }) {
       {count > 9 ? "9+" : count}
     </span>
   );
-}
-
-/* v5.10.2 : les onglets des boss changent selon l'état du combat. */
-const BOSS_NAV: Record<BossPhase, { label: string; chip: string; color: string }> = {
-  active: { label: "En cours", chip: "En cours", color: "var(--color-danger-glow)" },
-  killed: { label: "Abattu", chip: "Abattu", color: "var(--color-mint-glow)" },
-  failed: { label: "Retiré", chip: "Retiré", color: "var(--color-ember-glow)" },
-  dormant: { label: "En sommeil", chip: "Zzz", color: "var(--color-slate-500)" },
-};
-
-const BOSS_TONE: Record<BossPhase, HudTone> = { active: "danger", killed: "mint", failed: "ember", dormant: "neutral" };
-
-/** Minute courante (les fins de combat sont gérées sans attendre le serveur). */
-function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
-/** État du boss d'une page de la navigation (null pour les autres pages). */
-/** 5.26.1 : état du boss dans le menu et heure de son retour.
- *  Abattu (ou retiré) tant que sa fenêtre court ; une fois la fenêtre passée, il dort
- *  et le menu affiche le temps avant son retour. */
-function useBossNavInfo(to: string): { phase: BossPhase; returnMs: number | null; now: number } | null {
-  const leviathan = useLeviathan();
-  const seasonBoss = useSeasonBoss();
-  const now = useMinute();
-  const world = to === "/game/uber";
-  if (!world && to !== "/game/boss") return null;
-  const state = world ? leviathan : seasonBoss;
-  let phase = bossPhase(state, now);
-  if ((phase === "killed" || phase === "failed") && state && now >= state.endMs) phase = "dormant";
-  if (phase === "active") return { phase, returnMs: null, now };
-  let returnMs: number | null;
-  if (world) returnMs = upcomingLeviathanStart(now);
-  else {
-    // Comme la page du boss : la fenêtre en cours est sautée si son combat est déjà joué.
-    const win = seasonBossWindow(now, true);
-    const replayed = !!win && (now >= win.startMs || (!!state && state.id === win.id));
-    returnMs = win ? (replayed ? (seasonBossWindow(win.endMs, true)?.startMs ?? null) : win.startMs) : null;
-  }
-  return { phase, returnMs: returnMs !== null && returnMs > now ? returnMs : null, now };
-}
-
-
-/** « 2j 4h », « 5h12 », « 18 min » (compte à rebours compact du menu). */
-function shortWait(ms: number): string {
-  const m = Math.max(1, Math.ceil(ms / 60_000));
-  const d = Math.floor(m / 1440);
-  const h = Math.floor((m % 1440) / 60);
-  if (d > 0) return `${d}j ${h}h`;
-  if (h > 0) return `${h}h${String(m % 60).padStart(2, "0")}`;
-  return `${m} min`;
-}
-
-/** Libellé court et phrase complète de l'état d'un boss pour le menu. */
-function bossNavText(info: { phase: BossPhase; returnMs: number | null; now: number }): { chip: string; full: string } {
-  const back = info.returnMs !== null ? shortWait(info.returnMs - info.now) : null;
-  if (info.phase === "dormant") return back ? { chip: back, full: `En sommeil, retour dans ${back}` } : { chip: "Zzz", full: "En sommeil" };
-  const base = BOSS_NAV[info.phase];
-  return { chip: base.chip, full: back ? `${base.label}, retour dans ${back}` : base.label };
 }
 
 /** Point d'état posé sur l'icône (pulsant pendant le combat). */

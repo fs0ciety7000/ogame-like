@@ -6,7 +6,7 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge, Sparkles, ListOrdered, Search, UserRound, Palette, LifeBuoy } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge, Rows3, Sparkles, ListOrdered, Search, UserRound, Palette, LifeBuoy } from "lucide-react";
 import { PAGE_SIZES, setPageSize, usePageSize } from "@/lib/pageSize";
 import { setUiFx, useUiFxStore } from "@/lib/fx/uiFx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { RemindersCard } from "@/components/game/RemindersCard";
 import { setTheme, THEMES, useThemeStore } from "@/lib/theme";
 import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
+import { setCompactCards, useCompactCards } from "@/lib/density";
 import { HudSwitch } from "@/components/ui/hud";
 import { GUIDE_STEPS, guideClaimed, guideHidden } from "@/game/advancedGuide";
 import { cn } from "@/lib/utils";
@@ -602,6 +603,7 @@ function ThemeCard() {
   const skin = useSeasonSkinStore((s) => s.enabled);
   const winter = useWinterStore((s) => s.enabled);
   const cockpit = useCockpitView((s) => s.enabled);
+  const compact = useCompactCards((s) => s.enabled);
   const uiFx = useUiFxStore((s) => s.enabled);
   const pageSize = usePageSize();
   const month = chronicleOf(Date.now());
@@ -646,6 +648,15 @@ function ThemeCard() {
             <span className="text-xs text-slate-500">L'accueil devient un poste de commande : verrière avec ta planète et les flottes en approche, écran multifonction (flottes, chantiers, alertes) et console d'actions rapides (touches 1 à 6). Aussi disponible en bas de la barre latérale.</span>
           </span>
           <HudSwitch checked={cockpit} onCheckedChange={setCockpitView} label="Vue cockpit" />
+        </label>
+        <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
+          <span>
+            <span className="flex items-center gap-2 text-slate-200">
+              <Rows3 className="h-3.5 w-3.5 text-cyan-glow" /> Cartes compactes
+            </span>
+            <span className="text-xs text-slate-500">Marges et espacements resserrés dans les pages : plus de lignes à l'écran pour les grandes listes (modules, enchères, succès, marché…).</span>
+          </span>
+          <HudSwitch checked={compact} onCheckedChange={setCompactCards} label="Cartes compactes" />
         </label>
         <label className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3 text-sm">
           <span>
@@ -823,7 +834,7 @@ const SETTINGS_TABS: { id: string; label: string; icon: typeof UserRound; entrie
     label: "Apparence et son",
     icon: Palette,
     entries: [
-      { key: "theme", title: "Apparence", keywords: "thème couleurs cockpit animations éléments par page pagination neige saison habillage", wide: true, render: () => <ThemeCard /> },
+      { key: "theme", title: "Apparence", keywords: "thème couleurs cockpit compact densité cartes animations éléments par page pagination neige saison habillage", wide: true, render: () => <ThemeCard /> },
       { key: "sound", title: "Sons", keywords: "son volume audio musique effets sonores", render: () => <SoundCard /> },
     ],
   },
