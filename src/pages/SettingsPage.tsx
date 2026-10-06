@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/hud";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { setEmailOptOut, setNotifPrefs } from "@/services/mailService";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge, Sparkles, ListOrdered } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, KeyRound, Link2, Pencil, Trash2, Palmtree, Play, ShieldCheck, ShieldAlert, Volume2, VolumeX, Snowflake, Gauge, Sparkles, ListOrdered, Search, UserRound, Palette, LifeBuoy } from "lucide-react";
 import { PAGE_SIZES, setPageSize, usePageSize } from "@/lib/pageSize";
 import { setUiFx, useUiFxStore } from "@/lib/fx/uiFx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -761,59 +764,152 @@ function SoundCard() {
   );
 }
 
-export function SettingsPage() {
+function AccountCard() {
   const user = useAuthStore((s) => s.user);
   const player = usePlayerStore((s) => s.player);
   const recoveryOk = hasRecoveryEmail(user?.email);
+  return (
+  <Card>
+    <CardHeader>
+      <CardTitle>Compte</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-3 text-sm">
+      <div className="flex items-center justify-between">
+        <span className="text-slate-400">Pseudo</span>
+        <span className="text-slate-100">{player?.pseudo ?? "…"}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-slate-400">Email de récupération</span>
+        {recoveryOk ? (
+          <span className="flex items-center gap-1.5 text-mint-glow">
+            <ShieldCheck className="h-4 w-4" />
+            {user?.email}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1.5 text-gold-glow" title="Compte créé avant cette fonctionnalité">
+            <ShieldAlert className="h-4 w-4" />
+            Aucun
+          </span>
+        )}
+      </div>
+      {!recoveryOk && (
+        <p className="text-xs text-slate-500">
+          Ton compte a été créé avant l'ajout de la récupération par email : le mot de passe oublié n'est pas
+          disponible pour l'instant. Change ton mot de passe ci-dessous si tu veux le mettre à jour pendant que tu
+          es connecté.
+        </p>
+      )}
+    </CardContent>
+  </Card>
+  );
+}
+
+/* 5.26 : réglages rangés en onglets, avec une recherche qui fouille tous les onglets à la fois. */
+type SettingsEntry = { key: string; title: string; keywords: string; wide?: boolean; render: () => ReactNode };
+const SETTINGS_TABS: { id: string; label: string; icon: typeof UserRound; entries: SettingsEntry[] }[] = [
+  {
+    id: "compte",
+    label: "Compte",
+    icon: UserRound,
+    entries: [
+      { key: "account", title: "Compte", keywords: "pseudo email récupération adresse", render: () => <AccountCard /> },
+      { key: "signin", title: "Méthodes de connexion", keywords: "passkey clé d'accès google apple oauth lier sécurité", render: () => <SignInMethodsCard /> },
+      { key: "password", title: "Changer le mot de passe", keywords: "mot de passe sécurité", render: () => <ChangePasswordCard /> },
+      { key: "danger", title: "Zone dangereuse", keywords: "supprimer compte effacer", render: () => <DangerZoneCard /> },
+    ],
+  },
+  {
+    id: "apparence",
+    label: "Apparence et son",
+    icon: Palette,
+    entries: [
+      { key: "theme", title: "Apparence", keywords: "thème couleurs cockpit animations éléments par page pagination neige saison habillage", wide: true, render: () => <ThemeCard /> },
+      { key: "sound", title: "Sons", keywords: "son volume audio musique effets sonores", render: () => <SoundCard /> },
+    ],
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    entries: [
+      { key: "browser", title: "Notifications du navigateur", keywords: "alerte raid flotte navigateur", render: () => <BrowserNotificationsCard /> },
+      { key: "reminders", title: "Rappels", keywords: "rappel personnel minuteur", render: () => <RemindersCard /> },
+      { key: "messages", title: "Notifications de messages", keywords: "alliance chat messages", render: () => <AllianceNotifsCard /> },
+      { key: "email", title: "Nouvelles par e-mail", keywords: "email courriel newsletter désabonner", render: () => <EmailNewsCard /> },
+    ],
+  },
+  {
+    id: "jeu",
+    label: "Jeu et aide",
+    icon: LifeBuoy,
+    entries: [
+      { key: "help", title: "Aide et prise en main", keywords: "tutoriel guide bulles aide", render: () => <HelpCard /> },
+      { key: "vacation", title: "Mode vacances", keywords: "vacances absence pause protection", render: () => <VacationCard /> },
+    ],
+  },
+];
+
+const fold = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+function SettingsGrid({ entries }: { entries: SettingsEntry[] }) {
+  return (
+    <div className="grid items-start gap-4 xl:grid-cols-2">
+      {entries.map((e) => (
+        <div key={e.key} className={cn("min-w-0", e.wide && "xl:col-span-2")}>
+          {e.render()}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function SettingsPage() {
+  const [params, setParams] = useSearchParams();
+  const [query, setQuery] = useState("");
+  const tab = SETTINGS_TABS.some((t) => t.id === params.get("onglet")) ? params.get("onglet")! : SETTINGS_TABS[0].id;
+  const q = fold(query.trim());
+  const hits = q
+    ? SETTINGS_TABS.flatMap((t) => t.entries.filter((e) => fold(`${e.title} ${e.keywords} ${t.label}`).includes(q)).map((e) => ({ tab: t, entry: e })))
+    : [];
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Configuration" title="Réglages" description="Compte, sécurité et préférences." />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Compte</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-400">Pseudo</span>
-            <span className="text-slate-100">{player?.pseudo ?? "…"}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-slate-400">Email de récupération</span>
-            {recoveryOk ? (
-              <span className="flex items-center gap-1.5 text-mint-glow">
-                <ShieldCheck className="h-4 w-4" />
-                {user?.email}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5 text-gold-glow" title="Compte créé avant cette fonctionnalité">
-                <ShieldAlert className="h-4 w-4" />
-                Aucun
-              </span>
-            )}
-          </div>
-          {!recoveryOk && (
-            <p className="text-xs text-slate-500">
-              Ton compte a été créé avant l'ajout de la récupération par email : le mot de passe oublié n'est pas
-              disponible pour l'instant. Change ton mot de passe ci-dessous si tu veux le mettre à jour pendant que tu
-              es connecté.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un réglage (thème, vacances, mot de passe…)" aria-label="Chercher un réglage" className="pl-9" />
+      </div>
 
-      <ThemeCard />
-      <SoundCard />
-      <HelpCard />
-      <BrowserNotificationsCard />
-      <RemindersCard />
-      <VacationCard />
-      <AllianceNotifsCard />
-      <EmailNewsCard />
-      <SignInMethodsCard />
-      <ChangePasswordCard />
-      <DangerZoneCard />
+      {q ? (
+        hits.length === 0 ? (
+          <EmptyState icon={<Search className="h-5 w-5" />} title="Aucun réglage trouvé" action={<Button variant="ghost" size="sm" onClick={() => setQuery("")}>Effacer la recherche</Button>}>
+            Rien ne correspond à « {query.trim()} ».
+          </EmptyState>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <p className="hud-eyebrow text-slate-500">
+              <span className="font-mono">{hits.length}</span> résultat{hits.length > 1 ? "s" : ""}
+            </p>
+            <SettingsGrid entries={hits.map((h) => h.entry)} />
+          </div>
+        )
+      ) : (
+        <Tabs value={tab} onValueChange={(v) => setParams((p) => (p.set("onglet", v), p), { replace: true })}>
+          <TabsList>
+            {SETTINGS_TABS.map((t) => (
+              <TabsTrigger key={t.id} value={t.id} className="flex items-center gap-1.5">
+                <t.icon className="h-3.5 w-3.5" aria-hidden /> {t.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {SETTINGS_TABS.map((t) => (
+            <TabsContent key={t.id} value={t.id} className="mt-4">
+              <SettingsGrid entries={t.entries} />
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
     </div>
   );
 }
