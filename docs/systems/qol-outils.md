@@ -19,4 +19,4 @@ seigneurs, e-mails, rétention, signalements, sauvegardes R2, statut et métriqu
 ## État (audit 2026-10-06)
 - QoL riche mais dispersée : plusieurs « hubs » (accueil, file d'actions, objectifs, Chroniques, passe, défis) (audit Q1).
 - `README.md` affirme encore que « toute la logique de jeu tourne côté client » : faux depuis la v2 (audit D1).
-- Performance du bundle principal et recalculs à chaque seconde (`useNowTicker`) sur les pages lourdes (audit P1, P2).
+- Performance (5.29.0) : fenêtres rares chargées à la demande (bundle d'entrée 925 → 880 Ko), horloge de décompte unique (`useNowTicker`), tâches serveur regroupées par cadence. Reste : le moteur entier est dans le bundle d'entrée tant que le contenu de l'admin est appliqué au démarrage.

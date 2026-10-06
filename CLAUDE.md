@@ -41,7 +41,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - `src/game/` : **moteur pur** (TypeScript sans DOM ni réseau). Il est empaqueté pour PocketBase
   (`pocketbase/pb_hooks/cosmic_game.js`) via les exports de `src/server/hooksEntry.ts`. Toute règle de jeu vit ici.
 - `pocketbase/pb_hooks/cosmic_db.js` (écrit à la main) : routes, tâches planifiées (`timedCron`), transactions.
-  `cosmic.pb.js` déclare les routes et les `cronAdd`. Le serveur fait autorité : le client n'applique jamais une règle seul.
+  `cosmic.pb.js` déclare les routes et les `cronAdd`. Une nouvelle tâche à la minute, aux 5 ou aux 10 min devient une étape de `CADENCES`
+  (`cosmic_db.js`), pas un nouveau `cronAdd`. Le serveur fait autorité : le client n'applique jamais une règle seul.
 - `src/services/` : appels au serveur et abonnements temps réel ; `src/store/` : état zustand ; `src/pages/`, `src/components/` : interface.
 - `game_config` (lisible par tous) : `weekly_stock`, `patrons`, `server_pot`, etc.
 
@@ -65,6 +66,7 @@ Valable pour toute la session et tout le projet, à chaque demande :
   `EmptyState`, `Button`. Pas de hex, pas de `text-white`, pas de `rgba(`, pas de `rounded-md/lg/xl`, pas de `shadow-lg`.
 - Nombres en `font-mono tabular-nums` ; capitales seulement en `font-mono` ; confirmations par `askConfirm`.
 - Corps de `useEffect` entre accolades.
+- Un décompte en direct utilise `useNowTicker` (horloge partagée), jamais son propre `setInterval`. Une fenêtre rare montée dans `AppShell` se charge en `lazyPage`.
 - Ne pas lancer prettier sur le dépôt.
 - Chaque lot front se termine par un audit DESIGN.md des fichiers touchés, plus une vérification mobile (largeur 375 px, sans défilement horizontal).
 

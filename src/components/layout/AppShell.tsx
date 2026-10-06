@@ -44,14 +44,8 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useCombatModalStore } from "@/store/combatModalStore";
 import { lazyPage } from "@/lib/lazyPage";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
-import { RankUpCelebration } from "@/components/game/RankUpCelebration";
 import { FxLayer } from "@/components/game/FxLayer";
-import { AwaySummaryModal } from "@/components/game/AwaySummaryModal";
-import { SeasonReport } from "@/components/game/SeasonReport";
 import { UltimatumDialog } from "@/components/game/PirateUltimatum";
-import { AnnouncementDialog } from "@/components/game/Announcement";
-import { CommandPalette } from "@/components/layout/CommandPalette";
-import { ShortcutsDialog } from "@/components/layout/ShortcutsDialog";
 import { toggleCommandPalette } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
 import { playClick } from "@/lib/sfx";
@@ -131,6 +125,13 @@ const EXTRA_LABELS: Record<string, string> = { "/game/admin": "Administration", 
 
 /* 5.23 : rapport de combat (et fenêtre d'attaque qu'il ouvre) chargés au premier combat affiché. */
 const CombatResultModal = lazyPage(() => import("@/components/game/CombatResultModal"), "CombatResultModal");
+// 5.29 (P1) : fenêtres rares chargées après le premier rendu, hors du bundle principal.
+const RankUpCelebration = lazyPage(() => import("@/components/game/RankUpCelebration"), "RankUpCelebration");
+const AwaySummaryModal = lazyPage(() => import("@/components/game/AwaySummaryModal"), "AwaySummaryModal");
+const SeasonReport = lazyPage(() => import("@/components/game/SeasonReport"), "SeasonReport");
+const AnnouncementDialog = lazyPage(() => import("@/components/game/Announcement"), "AnnouncementDialog");
+const CommandPalette = lazyPage(() => import("@/components/layout/CommandPalette"), "CommandPalette");
+const ShortcutsDialog = lazyPage(() => import("@/components/layout/ShortcutsDialog"), "ShortcutsDialog");
 
 function LazyCombatResult() {
   const shown = useCombatModalStore((s) => s.current !== null);
@@ -300,13 +301,15 @@ export function AppShell() {
       <LazyCombatResult />
       <WarpOverlay />
       <RaidAlert />
-      <RankUpCelebration />
-      <AwaySummaryModal />
-      <SeasonReport />
       <UltimatumDialog />
-      <AnnouncementDialog />
-      <CommandPalette />
-      <ShortcutsDialog />
+      <Suspense fallback={null}>
+        <RankUpCelebration />
+        <AwaySummaryModal />
+        <SeasonReport />
+        <AnnouncementDialog />
+        <CommandPalette />
+        <ShortcutsDialog />
+      </Suspense>
       <FxLayer />
       <FleetReturnFx />
     </div>
