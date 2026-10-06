@@ -63,7 +63,7 @@ export function RenameCard({ player }: { player: PlayerState }) {
       <p className="text-xs text-slate-400">
         Ton nouveau pseudo devient aussi ton identifiant de connexion. Les anciens rapports et messages gardent l'ancien nom.
       </p>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 @md:flex-row">
         <Input
           value={value}
           maxLength={RENAME_RULES.maxLength}
@@ -72,7 +72,7 @@ export function RenameCard({ player }: { player: PlayerState }) {
             setValue(ev.target.value);
             setConfirm(false);
           }}
-          className="sm:max-w-xs"
+          className="@md:max-w-xs"
         />
         {confirm ? (
           <div className="flex gap-2">

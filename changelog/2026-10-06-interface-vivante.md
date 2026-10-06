@@ -28,3 +28,8 @@ L'interface du poste de commandement réagit maintenant à chacun de tes gestes,
 
 ## Listes
 - **Éléments par page** au choix dans les Réglages : 10 (par défaut), 15, 20 ou 50.
+
+## Profil
+- **Deux colonnes** : à gauche le dossier (rang, victoires et défaites, échelle des rangs, titres, succès, saisons, progression) ; à droite tout ce que tu modifies (avatar, bannière et devise, pseudo, parrainage).
+- Listes **Bâtiments** et **Unités** côte à côte, repliées aux 8 premières lignes.
+- Sur mobile, un bouton **Personnaliser** mène directement aux réglages du profil.
