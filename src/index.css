@@ -79,6 +79,15 @@
   }
 }
 
+:root {
+  /* 5.26.2 : séries de graphiques (catégorielles), fixes pour tous les thèmes et
+     validées (bande de luminosité, daltonisme) sur le fond sombre. */
+  --chart-1: #01a5b8;
+  --chart-2: #8669d5;
+  --chart-3: #a83a00;
+  --chart-4: #00ae62;
+}
+
 :root,
 :root[data-theme="tactique"] {
   color-scheme: dark;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState } from "@/game/defaults";
-import { contestPhase, contestPrizes, contestPurse, contestScore, normalizeContests, pruneContests, refreshContest, validateContest, type Contest } from "@/game/contests";
+import { contestAmberPurse, contestPhase, contestPrizes, contestPurse, contestScore, normalizeContests, pruneContests, refreshContest, validateContest, type Contest } from "@/game/contests";
 import type { PlayerState } from "@/types/game";
 
 const NOW = Date.UTC(2026, 9, 10, 12);
@@ -54,9 +54,19 @@ describe("concours du pot commun (v5.10.5)", () => {
     const purse = contestPurse(c, { resources: { scrap: 1000, energy: 10 } });
     expect(purse).toEqual({ scrap: 500, energy: 5 });
     expect(contestPrizes(c, purse)).toEqual([
-      { uid: "b", pseudo: "B", rank: 1, score: 5, resources: { scrap: 250, energy: 2 } },
-      { uid: "a", pseudo: "A", rank: 2, score: 3, resources: { scrap: 150, energy: 1 } },
+      { uid: "b", pseudo: "B", rank: 1, score: 5, resources: { scrap: 250, energy: 2 }, amber: 0 },
+      { uid: "a", pseudo: "A", rank: 2, score: 3, resources: { scrap: 150, energy: 1 }, amber: 0 },
     ]);
+  });
+
+  it("5.26.2 : concours en Ambre (réserve du pot), seul ou avec des ressources", () => {
+    const c = base({ potShare: 0, amberShare: 0.5, standings: [{ uid: "b", pseudo: "B", score: 5 }, { uid: "a", pseudo: "A", score: 3 }] });
+    expect(validateContest(c, NOW)).toEqual([]);
+    expect(validateContest(base({ potShare: 0, amberShare: 0 }), NOW)).toHaveLength(1);
+    const amber = contestAmberPurse(c, { amber: 101 });
+    expect(amber).toBe(50);
+    expect(contestPrizes(c, {}, amber).map((p) => p.amber)).toEqual([25, 15]);
+    expect(normalizeContests({ list: [c] }).list[0].amberShare).toBe(0.5);
   });
 
   it("phases, normalisation et ménage", () => {

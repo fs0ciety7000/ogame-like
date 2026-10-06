@@ -1,4 +1,5 @@
 import type { ResourceId } from "@/types/game";
+import { RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
    v5.10 : pot commun « Serveur ». Les taxes du marché (offres et ordres
@@ -29,6 +30,9 @@ export interface ServerPot {
   amber: number;
   /** Ambre reçue depuis la création. */
   amberTotal: number;
+  /** 5.26.2 : entrées par jour (AAAA-MM-JJ, UTC) et par source, en équivalent ressource
+   *  commune (une rare = 50), 30 jours glissants. L'Ambre a sa propre colonne. */
+  daily?: Record<string, Partial<Record<PotSource | "amber", number>>>;
   /** Derniers mouvements (+ entrées, − sorties), 100 au plus. */
   log: { atMs: number; source: PotSource; resources: Partial<Record<ResourceId, number>>; amber?: number; note?: string }[];
   updatedAtMs: number;
@@ -48,6 +52,44 @@ function cleanAmounts(raw: unknown): Partial<Record<ResourceId, number>> {
   return out;
 }
 
+export const POT_DAILY_DAYS = 30;
+/** Valeur d'une ressource rare en ressource commune (taux du comptoir). */
+const RARE_WEIGHT = 50;
+
+const dayOf = (now: number) => new Date(now).toISOString().slice(0, 10);
+
+function normalizeDaily(raw: unknown): NonNullable<ServerPot["daily"]> {
+  const out: NonNullable<ServerPot["daily"]> = {};
+  if (!raw || typeof raw !== "object") return out;
+  const keys = [...Object.keys(POT_SOURCE_LABELS), "amber"];
+  for (const day of Object.keys(raw as object).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-POT_DAILY_DAYS)) {
+    const row = (raw as Record<string, Record<string, unknown>>)[day] ?? {};
+    const clean: Partial<Record<PotSource | "amber", number>> = {};
+    for (const k of keys) {
+      const n = Math.floor(Number(row[k]));
+      if (n > 0) clean[k as PotSource] = n;
+    }
+    out[day] = clean;
+  }
+  return out;
+}
+
+/** Ajoute une entrée à l'agrégat du jour (30 jours gardés). */
+function bumpDaily(pot: ServerPot, key: PotSource | "amber", value: number, now: number): ServerPot["daily"] {
+  if (!(value > 0)) return pot.daily;
+  const day = dayOf(now);
+  const daily = { ...(pot.daily ?? {}) };
+  daily[day] = { ...(daily[day] ?? {}), [key]: (daily[day]?.[key] ?? 0) + Math.floor(value) };
+  const days = Object.keys(daily).sort();
+  for (const d of days.slice(0, Math.max(0, days.length - POT_DAILY_DAYS))) delete daily[d];
+  return daily;
+}
+
+/** Valeur en équivalent ressource commune. */
+export function potValue(amounts: Partial<Record<string, number>>): number {
+  return Object.entries(amounts).reduce((a, [k, v]) => a + Math.max(0, Number(v) || 0) * (RESOURCE_LIST.find((r) => r.id === k)?.rarity === "rare" ? RARE_WEIGHT : 1), 0);
+}
+
 export function normalizeServerPot(raw: unknown): ServerPot {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ServerPot>;
   const totals: ServerPot["totals"] = {};
@@ -59,6 +101,7 @@ export function normalizeServerPot(raw: unknown): ServerPot {
     resources: cleanAmounts(r.resources),
     totals,
     amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    daily: normalizeDaily(r.daily),
     amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
     log: (Array.isArray(r.log) ? r.log : [])
       .filter((l) => l && typeof l === "object" && (l.source as string) in POT_SOURCE_LABELS)
@@ -86,6 +129,7 @@ export function addToPot(pot: ServerPot, source: PotSource, amounts: Partial<Rec
     ...pot,
     resources,
     totals: { ...pot.totals, [source]: total },
+    daily: source === "admin" ? pot.daily : bumpDaily(pot, source, potValue(add), now),
     log: [...pot.log, { atMs: now, source, resources: add, ...(note ? { note } : {}) }].slice(-100),
     updatedAtMs: now,
   };
@@ -125,6 +169,7 @@ export function addAmberToPot(pot: ServerPot, source: PotSource, amount: number,
     ...pot,
     amber: pot.amber + n,
     amberTotal: pot.amberTotal + n,
+    daily: bumpDaily(pot, "amber", n, now),
     log: [...pot.log, { atMs: now, source, resources: {}, amber: n, ...(note ? { note } : {}) }].slice(-100),
     updatedAtMs: now,
   };

@@ -277,6 +277,7 @@ __export(hooksEntry_exports, {
   concludeWar: () => concludeWar,
   consumeBeacon: () => consumeBeacon,
   consumeJammer: () => consumeJammer,
+  contestAmberPurse: () => contestAmberPurse,
   contestPhase: () => contestPhase,
   contestPrizes: () => contestPrizes,
   contestPurse: () => contestPurse,
@@ -17521,6 +17522,41 @@ function cleanAmounts(raw) {
   }
   return out;
 }
+var POT_DAILY_DAYS = 30;
+var RARE_WEIGHT = 50;
+var dayOf = (now) => new Date(now).toISOString().slice(0, 10);
+function normalizeDaily2(raw) {
+  var _a;
+  const out = {};
+  if (!raw || typeof raw !== "object") return out;
+  const keys = [...Object.keys(POT_SOURCE_LABELS), "amber"];
+  for (const day of Object.keys(raw).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().slice(-POT_DAILY_DAYS)) {
+    const row = (_a = raw[day]) != null ? _a : {};
+    const clean3 = {};
+    for (const k of keys) {
+      const n = Math.floor(Number(row[k]));
+      if (n > 0) clean3[k] = n;
+    }
+    out[day] = clean3;
+  }
+  return out;
+}
+function bumpDaily(pot, key, value2, now) {
+  var _a, _b, _c, _d;
+  if (!(value2 > 0)) return pot.daily;
+  const day = dayOf(now);
+  const daily = __spreadValues({}, (_a = pot.daily) != null ? _a : {});
+  daily[day] = __spreadProps(__spreadValues({}, (_b = daily[day]) != null ? _b : {}), { [key]: ((_d = (_c = daily[day]) == null ? void 0 : _c[key]) != null ? _d : 0) + Math.floor(value2) });
+  const days = Object.keys(daily).sort();
+  for (const d of days.slice(0, Math.max(0, days.length - POT_DAILY_DAYS))) delete daily[d];
+  return daily;
+}
+function potValue(amounts) {
+  return Object.entries(amounts).reduce((a, [k, v]) => {
+    var _a;
+    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? RARE_WEIGHT : 1);
+  }, 0);
+}
 function normalizeServerPot(raw) {
   var _a;
   const r = raw && typeof raw === "object" ? raw : {};
@@ -17533,6 +17569,7 @@ function normalizeServerPot(raw) {
     resources: cleanAmounts(r.resources),
     totals,
     amber: Math.max(0, Math.floor(Number(r.amber)) || 0),
+    daily: normalizeDaily2(r.daily),
     amberTotal: Math.max(0, Math.floor(Number(r.amberTotal)) || 0),
     log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l === "object" && l.source in POT_SOURCE_LABELS).map((l) => __spreadValues(__spreadValues({ atMs: Number(l.atMs) || 0, source: l.source, resources: cleanAmounts(l.resources) }, Number(l.amber) ? { amber: Math.floor(Number(l.amber)) } : {}), l.note ? { note: String(l.note).slice(0, 200) } : {})).slice(-100),
     updatedAtMs: Number(r.updatedAtMs) || 0
@@ -17555,6 +17592,7 @@ function addToPot(pot, source, amounts, now, note4) {
   return __spreadProps(__spreadValues({}, pot), {
     resources,
     totals: __spreadProps(__spreadValues({}, pot.totals), { [source]: total2 }),
+    daily: source === "admin" ? pot.daily : bumpDaily(pot, source, potValue(add2), now),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: add2 }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
   });
@@ -17588,6 +17626,7 @@ function addAmberToPot(pot, source, amount3, now, note4) {
   return __spreadProps(__spreadValues({}, pot), {
     amber: pot.amber + n,
     amberTotal: pot.amberTotal + n,
+    daily: bumpDaily(pot, "amber", n, now),
     log: [...pot.log, __spreadValues({ atMs: now, source, resources: {}, amber: n }, note4 ? { note: note4 } : {})].slice(-100),
     updatedAtMs: now
   });
@@ -23108,32 +23147,36 @@ function normalizeContests(raw) {
   return {
     list: list.filter((c) => !!c && typeof c === "object" && typeof c.id === "string" && c.metric in METRICS).map((c) => {
       var _a, _b;
-      return __spreadValues(__spreadValues({
+      return __spreadValues(__spreadValues(__spreadProps(__spreadValues({
         id: c.id,
         title: String((_a = c.title) != null ? _a : "").slice(0, 80),
         description: String((_b = c.description) != null ? _b : "").slice(0, 400),
         metric: c.metric,
         startMs: num6(c.startMs),
         endMs: num6(c.endMs),
-        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare))),
+        potShare: Math.min(CONTEST_RULES.maxPotShare, Math.max(0, num6(c.potShare)))
+      }, num6(c.amberShare) > 0 ? { amberShare: Math.min(CONTEST_RULES.maxPotShare, num6(c.amberShare)) } : {}), {
         places: (Array.isArray(c.places) ? c.places : []).map((p) => Math.max(0, num6(p))).slice(0, 10),
         status: ["scheduled", "running", "done", "cancelled"].includes(c.status) ? c.status : "scheduled",
         baselines: c.baselines && typeof c.baselines === "object" ? c.baselines : {},
         standings: Array.isArray(c.standings) ? c.standings.slice(0, CONTEST_RULES.standingsSize) : [],
         updatedAtMs: num6(c.updatedAtMs)
-      }, Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
+      }), Array.isArray(c.results) ? { results: c.results } : {}), c.createdBy ? { createdBy: String(c.createdBy) } : {});
     })
   };
 }
 function validateContest(c, now) {
-  var _a;
+  var _a, _b;
   const errors = [];
   if (!((_a = c.title) == null ? void 0 : _a.trim())) errors.push("Donne un titre au concours.");
   if (!(c.metric in METRICS)) errors.push("Crit\xE8re inconnu.");
   if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le d\xE9but.");
   if (!(c.endMs > now)) errors.push("La fin doit \xEAtre dans le futur.");
   if (c.endMs - c.startMs > 60 * 24 * 36e5) errors.push("Un concours dure 60 jours au plus.");
-  if (!(c.potShare > 0 && c.potShare <= CONTEST_RULES.maxPotShare)) errors.push(`Part du pot entre 1 % et ${Math.round(CONTEST_RULES.maxPotShare * 100)} %.`);
+  const max = CONTEST_RULES.maxPotShare;
+  const amber = (_b = c.amberShare) != null ? _b : 0;
+  if (!(c.potShare >= 0 && c.potShare <= max) || !(amber >= 0 && amber <= max)) errors.push(`Parts du pot entre 0 et ${Math.round(max * 100)} %.`);
+  else if (!(c.potShare > 0 || amber > 0)) errors.push("Engage une part des ressources ou de l'Ambre du pot.");
   const sum3 = c.places.reduce((a, b) => a + b, 0);
   if (c.places.length === 0 || c.places.some((p) => !(p > 0))) errors.push("Indique au moins une place r\xE9compens\xE9e.");
   if (sum3 > 1.0001) errors.push("La r\xE9partition des places d\xE9passe 100 %.");
@@ -23167,14 +23210,18 @@ function contestPurse(c, pot) {
   }
   return out;
 }
-function contestPrizes(c, purse) {
+function contestAmberPurse(c, pot) {
+  var _a, _b;
+  return Math.max(0, Math.floor(((_a = pot.amber) != null ? _a : 0) * ((_b = c.amberShare) != null ? _b : 0)));
+}
+function contestPrizes(c, purse, amberPurse = 0) {
   return c.standings.slice(0, c.places.length).map((s, i) => {
     const resources = {};
     for (const [k, v] of Object.entries(purse)) {
       const n = Math.floor(v * c.places[i]);
       if (n > 0) resources[k] = n;
     }
-    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources };
+    return { uid: s.uid, pseudo: s.pseudo, rank: i + 1, score: s.score, resources, amber: Math.floor(amberPurse * c.places[i]) };
   });
 }
 function pruneContests(list) {

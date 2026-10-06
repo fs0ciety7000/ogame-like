@@ -5610,24 +5610,38 @@ function contestsTick(now) {
 function finishContest(txApp, game, c, now) {
   const rec = configRecord(txApp, game.SERVER_POT_KEY);
   let pot = game.normalizeServerPot(rec ? toPlain(rec).data : null);
-  const prizes = game.contestPrizes(c, game.contestPurse(c, pot));
+  const prizes = game.contestPrizes(c, game.contestPurse(c, pot), game.contestAmberPurse(c, pot));
   const results = [];
   prizes.forEach((prize) => {
-    if (!findOrNull(txApp, "players", prize.uid) || Object.keys(prize.resources).length === 0) return;
-    const before = pot;
-    pot = game.takeFromPot(pot, prize.resources, now, `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`);
-    if (pot === before) return;
-    const last = pot.log[pot.log.length - 1];
+    if (!findOrNull(txApp, "players", prize.uid)) return;
+    const note = `Concours « ${c.title} » : ${prize.rank === 1 ? "1re" : `${prize.rank}e`} place → ${prize.pseudo}`;
     const given = {};
-    Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+    if (Object.keys(prize.resources).length > 0) {
+      const before = pot;
+      pot = game.takeFromPot(pot, prize.resources, now, note);
+      if (pot !== before) {
+        const last = pot.log[pot.log.length - 1];
+        Object.keys(last.resources).forEach((k) => (given[k] = -last.resources[k]));
+      }
+    }
+    // 5.26.2 : part d'Ambre (réserve du pot), créditée au solde de la Ruche.
+    let amber = 0;
+    if (prize.amber > 0) {
+      const took = game.takeAmberFromPot(pot, prize.amber, now, note);
+      pot = took.pot;
+      amber = took.taken;
+    }
+    if (Object.keys(given).length === 0 && amber === 0) return;
     const owner = loadPlayer(txApp, game, prize.uid);
     const flushed = game.flushPlayer(owner.player, owner.queues, now);
     Object.keys(given).forEach((k) => (flushed.player.resources[k] = (flushed.player.resources[k] || 0) + given[k]));
+    if (amber > 0) game.creditBid(flushed.player, "amber", amber);
     savePlayer(txApp, game, owner, flushed.player, flushed.queues);
+    const parts = [Object.keys(given).length ? game.describeGain(given) : "", amber > 0 ? `${amber} Ambre` : ""].filter(Boolean).join(" et ");
     notify(txApp, prize.uid, flushed.notifications.concat([
-      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${game.describeGain(given)} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given } },
+      { kind: "event", title: `Concours « ${c.title} » : ${prize.rank === 1 ? "victoire" : `${prize.rank}e place`} !`, message: `${parts} versés depuis le pot commun.`, createdAtMs: now, read: false, link: "/game/concours", data: { resources: given, amber } },
     ]));
-    results.push(Object.assign({}, prize, { resources: given }));
+    results.push(Object.assign({}, prize, { resources: given, amber }));
   });
   writeConfig(txApp, game.SERVER_POT_KEY, pot);
   return Object.assign({}, c, { status: "done", results });
@@ -5654,6 +5668,7 @@ function adminContests(e) {
         startMs: Math.max(now, Number(c.startMs) || now),
         endMs: Number(c.endMs) || 0,
         potShare: Number(c.potShare) || 0,
+        amberShare: Number(c.amberShare) || 0,
         places: (Array.isArray(c.places) ? c.places : []).map(Number),
         status: "scheduled",
         baselines: {},
