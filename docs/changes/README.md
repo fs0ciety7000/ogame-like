@@ -72,6 +72,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.7.1 | [Casino ouvert en permanence, réglages admin](6.7.1-casino-reglages.md) | correctif | [calendrier-semaine](../proposals/calendrier-semaine.md) |
 | 6.7.2 | [Tous les réglages de GameRules dans le panel admin](6.7.2-reglages-admin-complets.md) | ajout | — |
 | — | [Revue AU3 : progression](docs-au3-progression.md) | docs | [progression](../proposals/progression.md) |
+| — | [Proposition : passe et Chroniques génératifs](docs-generation-passe-chroniques.md) | docs | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md) |
 | 6.5.0 | [Vaisseaux de classe](6.5.0-vaisseaux-classe.md) | fonctionnalité | [unites-classe](../proposals/unites-classe.md), lot P |
 | 6.4.1 | [Prise en main à jour](6.4.1-prise-en-main.md) | ajout | [feuille-de-route-2026-hiver](../proposals/feuille-de-route-2026-hiver.md), lot T |
 | 6.4.0 | [Colonies, suite](6.4.0-colonies-suite.md) | fonctionnalité | [colonies-suite](../proposals/colonies-suite.md), lot Q |

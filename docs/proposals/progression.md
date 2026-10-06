@@ -1,6 +1,7 @@
 # Proposition : progression, suites de la revue AU3
 
 Statut : **en attente de décision**. Constats : `docs/audit/2026-10-06-au3-progression.md`.
+Les points A et B sont repris et étendus par `docs/proposals/generation-passe-chroniques.md` (passe et Chroniques entièrement génératifs).
 
 ## 1. Le problème vu par le joueur
 « J'ai fini le passe en une semaine, et maintenant il ne sert plus à rien jusqu'au mois prochain. »
