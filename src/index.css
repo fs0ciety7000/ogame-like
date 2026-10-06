@@ -1099,7 +1099,6 @@ main {
     linear-gradient(color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(180deg, var(--color-space-800), var(--color-space-950) 70%);
-  background-attachment: fixed;
 }
 :root[data-theme="constellation"] .glass-panel {
   backdrop-filter: none;

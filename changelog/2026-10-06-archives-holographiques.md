@@ -28,5 +28,6 @@ Un lot visuel : un cylindre holographique en 3D pour parcourir le Codex, exposer
 - Les boutons « Afficher plus » laissent la place à une pagination « Précédent / Suivant » ; un nouveau filtre ou une recherche ramène en page 1.
 
 ## Corrections
+- **Fond qui virait au noir** (Constellation surtout, jusqu'à un rechargement) : le halo de saison n'utilise plus de filtres de flou ni de mode de fusion plein écran, qui épuisaient la mémoire graphique du navigateur.
 - **Thème Constellation** : le fond n'est plus presque noir. Il passe en graphite, avec un halo couleur os, un liseré orange à l'horizon et une trame discrète.
 - **Chargement** : le thème ne force plus de calcul de mise en page avant la fin du chargement (avertissement de Firefox, risque de flash sans style).
