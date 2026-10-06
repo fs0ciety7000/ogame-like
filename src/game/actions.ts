@@ -25,7 +25,7 @@ import {
   withMissingBuildings,
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
-import { canAffordAll, getTradeRate, RESOURCE_LIST } from "@/game/resources";
+import { canAffordAll, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -309,12 +309,14 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (!RESOURCE_IDS.has(sellId) || !RESOURCE_IDS.has(buyId) || sellId === buyId) throw new GameActionError("Échange invalide.");
       const amount = positiveInt(action.amount, "Montant");
       if ((player.resources[sellId] ?? 0) < amount) throw new GameActionError("Pas assez de ressources à échanger.");
-      const gained = Math.floor(amount * getTradeRate(sellId, buyId));
+      // 5.26.1 : taxe sur ce qui est reçu, versée au pot commun par le serveur.
+      const quote = tradeQuote(sellId, buyId, amount);
+      if (quote.net <= 0) throw new GameActionError("Quantité trop faible pour cet échange.");
       player.resources[sellId] -= amount;
-      player.resources[buyId] = (player.resources[buyId] ?? 0) + gained;
+      player.resources[buyId] = (player.resources[buyId] ?? 0) + quote.net;
       bumpStat(player, "traded", amount);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
-      return gained;
+      return { gained: quote.net, tax: quote.tax, taxRes: buyId };
     }
 
     case "claimContract": {
@@ -444,8 +446,11 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     }
 
     // 5.26 : modules de vaisseaux.
-    case "moduleBuild":
-      return buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+    case "moduleBuild": {
+      const built = buildModule(player, action.moduleId, (cost) => pay(player, cost, now));
+      bumpStat(player, "modulesBuilt");
+      return built;
+    }
 
     case "moduleMount":
       mountModule(player, action.moduleId, action.cls, action.slot);

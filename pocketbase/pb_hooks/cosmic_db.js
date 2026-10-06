@@ -8988,8 +8988,9 @@ function auctionsTick(now) {
         if (findOrNull(txApp, "players", receiverId)) {
           const receiver = loadFlushed(txApp, game, receiverId);
           game.giveLot(receiver.player, a.kind, a.item);
-          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
           const won = deal.status === "sold" && receiverId === deal.receiver;
+          if (won) game.recordAuctionStat(receiver.player, "won");
+          savePlayer(txApp, game, receiver.loaded, receiver.player, receiver.queues);
           notify(txApp, receiverId, receiver.notifications.concat([
             won
               ? auctionNote("Enchère remportée", `« ${a.label} » est à toi pour ${auctionAmount(game, a.res, a.bid)}.`, now)
@@ -9000,6 +9001,7 @@ function auctionsTick(now) {
           if (hasReceiver && findOrNull(txApp, "players", a.sellerId)) {
             const seller = loadFlushed(txApp, game, a.sellerId);
             game.creditBid(seller.player, a.res, deal.payout);
+            game.recordAuctionStat(seller.player, "sold");
             savePlayer(txApp, game, seller.loaded, seller.player, seller.queues);
             notify(txApp, a.sellerId, seller.notifications.concat([
               auctionNote("Vente conclue", `${a.bidderPseudo} remporte « ${a.label} » : +${auctionAmount(game, a.res, deal.payout)} (taxe : ${auctionAmount(game, a.res, deal.tax)}).`, now),

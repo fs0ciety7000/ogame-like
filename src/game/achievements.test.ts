@@ -13,6 +13,8 @@ import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { flushState } from "@/game/flush";
 import { performPlayerAction } from "@/game/actions";
 import { bumpStat, parisHour, recordMission } from "@/game/stats";
+import { advanceWorkshop, sendToWorkshop } from "@/game/workshop";
+import { recordAuctionStat } from "@/game/auctions";
 import type { PlayerState } from "@/types/game";
 
 function makePlayer(overrides: Partial<PlayerState> = {}): PlayerState {
@@ -85,5 +87,27 @@ describe("succès (v2.3)", () => {
   it("knows the Paris hour (summer and winter time)", () => {
     expect(parisHour(Date.UTC(2026, 6, 1, 1))).toBe(3);
     expect(parisHour(Date.UTC(2026, 0, 15, 2))).toBe(3);
+  });
+});
+
+describe("5.26.1 : succès des systèmes récents", () => {
+  beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
+
+  it("Atelier, enchères, modules, reliques, primes et Ambre ont leurs succès (même avec un catalogue personnalisé)", () => {
+    setAchievements([]);
+    const ids = new Set(ACHIEVEMENTS.map((a) => a.id));
+    for (const id of ["atelier_1", "enchere_vente_1", "enchere_achat_1", "module_1", "module_full", "relique_5", "prime_1", "ambre_1"]) expect(ids.has(id)).toBe(true);
+    expect(validateAchievements(derivedAchievements())).toEqual([]);
+  });
+
+  it("les compteurs débloquent les succès", () => {
+    const p = makePlayer();
+    sendToWorkshop(p, { chasseur: 60 }, 0, "raid", true);
+    advanceWorkshop(p, 1, true);
+    expect(METRICS.unitsRepaired.value(p)).toBe(60);
+    recordAuctionStat(p, "sold");
+    recordAuctionStat(p, "won");
+    const got = checkNewAchievements(p).map((a) => a.id);
+    expect(got).toEqual(expect.arrayContaining(["atelier_1", "enchere_vente_1", "enchere_achat_1"]));
   });
 });

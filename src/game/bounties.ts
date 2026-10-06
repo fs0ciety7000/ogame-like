@@ -442,13 +442,13 @@ function note(title: string, message: string, now: number): NewNotification {
 
 /* ---------- Comptoir de la Ruche ---------- */
 
-export type ShopItemId = "accelerator" | "boost" | "jammer" | "beacon" | "shield" | "dossier" | "blueprint" | "title" | "frame" | "emblem" | "emojis";
+export type ShopItemId = "accelerator" | "boost" | "jammer" | "beacon" | "shield" | "dossier" | "blueprint" | "planner" | "title" | "frame" | "emblem" | "emojis";
 
 export interface ShopItem {
   id: ShopItemId;
   name: string;
   price: number;
-  group: "consumable" | "unit" | "cosmetic";
+  group: "consumable" | "unit" | "feature" | "cosmetic";
   description: string;
 }
 
@@ -470,6 +470,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le lève." },
   { id: "dossier", name: "Dossier d'entraînement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, même hors poste (page Commandants)." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)." },
+  { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels." },
   { id: "title", name: "Titre « Chasseur de l'Essaim »", price: 120, group: "cosmetic", description: "Un titre à afficher à côté de ton nom." },
   { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambré autour de ta fiche publique." },
   { id: "emblem", name: "Emblème de l'Essaim", price: 150, group: "cosmetic", description: "L'emblème kesh'vaar sur ta fiche publique." },
@@ -480,10 +481,15 @@ export function findShopItem(id: unknown): ShopItem | undefined {
   return SHOP_ITEMS.find((i) => i.id === id);
 }
 
-const ONE_TIME: ShopItemId[] = ["blueprint", "title", "frame", "emblem", "emojis"];
+const ONE_TIME: ShopItemId[] = ["blueprint", "planner", "title", "frame", "emblem", "emojis"];
 
 export function owns(st: Pick<BountyState, "owned">, id: ShopItemId): boolean {
   return st.owned.includes(id);
+}
+
+/** 5.26.1 : la page Planificateur s'achète au Comptoir de la Ruche. */
+export function plannerUnlocked(player: Pick<PlayerState, "bounties"> | null | undefined): boolean {
+  return !!player && owns(bountyState(player), "planner");
 }
 
 /** Pourquoi l'objet ne peut pas être acheté (null s'il peut l'être). */
@@ -543,6 +549,9 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
     case "blueprint":
       player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: player.units[KESH_HUNTER_UNIT.id]?.count ?? 0 };
       message = "Plan du Traqueur Kesh reçu : le vaisseau est disponible au chantier.";
+      break;
+    case "planner":
+      message = "Planificateur débloqué : retrouve-le dans la barre latérale (Empire).";
       break;
     case "title":
       if (!(player.titles ?? []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {

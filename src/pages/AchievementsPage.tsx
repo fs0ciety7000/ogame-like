@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { PagedList } from "@/components/ui/panel";
-import { Lock, Trophy } from "lucide-react";
+import { Lock, Search, Trophy } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { EmptyState, HudChip } from "@/components/ui/hud";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -18,6 +21,17 @@ import { fetchAchievementRates } from "@/services/playerService";
 import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+
+type StatusFilter = "all" | "done" | "progress" | "todo";
+const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
+  { id: "all", label: "Tous" },
+  { id: "done", label: "Obtenus" },
+  { id: "progress", label: "En cours" },
+  { id: "todo", label: "À obtenir" },
+];
+
+/** Minuscules sans accents, pour une recherche tolérante. */
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 const TIER_STYLE: Record<AchievementTier, { text: string; border: string }> = {
   bronze: { text: "text-ember-glow", border: "border-ember-glow/30" },
@@ -81,6 +95,10 @@ function AchievementCard({ a, player, rate }: { a: AchievementDef; player: Playe
 export function AchievementsPage() {
   const player = usePlayerStore((s) => s.player);
   const [tab, setTab] = useState<AchievementCategory | "all">("all");
+  // 5.26.1 : recherche, état et palier.
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [tier, setTier] = useState<AchievementTier | "all">("all");
   const [rates, setRates] = useState<{ players: number; counts: Record<string, number> } | null>(null);
   useEffect(() => {
     void fetchAchievementRates().then(setRates);
@@ -92,9 +110,28 @@ export function AchievementsPage() {
   const done = list.filter((a) => unlocked.has(a.id));
   const xp = done.reduce((s, a) => s + a.rewardXp, 0);
   const categories = Object.keys(CATEGORY_LABELS) as AchievementCategory[];
-  const shown = (tab === "all" ? list : list.filter((a) => a.category === tab)).sort(
-    (x, y) => Number(unlocked.has(y.id)) - Number(unlocked.has(x.id)),
-  );
+  const ratio = (a: AchievementDef) => {
+    const p = achievementProgress(a, player);
+    return p.target > 0 ? p.value / p.target : 0;
+  };
+  const q = fold(query.trim());
+  const shown = list
+    .filter((a) => tab === "all" || a.category === tab)
+    .filter((a) => tier === "all" || a.tier === tier)
+    .filter((a) => {
+      if (status === "all") return true;
+      const got = unlocked.has(a.id);
+      if (status === "done") return got;
+      if (status === "progress") return !got && ratio(a) > 0;
+      return !got;
+    })
+    .filter((a) => {
+      if (!q) return true;
+      // Un succès secret non obtenu ne se trahit pas par la recherche.
+      if (a.secret && !unlocked.has(a.id)) return false;
+      return fold(`${a.name} ${a.description} ${CATEGORY_LABELS[a.category].label} ${TIER_LABELS[a.tier]}`).includes(q);
+    })
+    .sort((x, y) => Number(unlocked.has(y.id)) - Number(unlocked.has(x.id)) || ratio(y) - ratio(x));
   const rate = (id: string) => (rates && rates.players > 0 ? Math.round(((rates.counts[id] ?? 0) / rates.players) * 100) : null);
 
   return (
@@ -117,30 +154,48 @@ export function AchievementsPage() {
           ))}
         </div>
       </Card>
-      <div className="flex flex-wrap gap-1" role="tablist">
+      <div className="flex flex-wrap gap-1" role="tablist" aria-label="Catégories">
         {(["all", ...categories] as const).map((c) => {
           const items = c === "all" ? list : list.filter((a) => a.category === c);
           return (
-            <button
-              key={c}
-              type="button"
-              role="tab"
-              aria-selected={tab === c}
-              onClick={() => setTab(c)}
-              className={cn(
-                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                tab === c ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-400 hover:text-slate-200",
-              )}
-            >
+            <HudChip key={c} role="tab" aria-selected={tab === c} tone={tab === c ? "accent" : "neutral"} onClick={() => setTab(c)}>
               {c === "all" ? "Tous" : `${CATEGORY_LABELS[c].emoji} ${CATEGORY_LABELS[c].label}`}{" "}
-              <span className="text-slate-500">
+              <span className="tabular-nums opacity-70">
                 {items.filter((a) => unlocked.has(a.id)).length}/{items.length}
               </span>
-            </button>
+            </HudChip>
           );
         })}
       </div>
-      <PagedList key={tab} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} />} />
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative min-w-52 flex-1 sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" aria-hidden />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un succès (nom, description)…" aria-label="Rechercher un succès" className="pl-8" />
+        </label>
+        <div className="flex flex-wrap gap-1" role="group" aria-label="État">
+          {STATUS_FILTERS.map((f) => (
+            <HudChip key={f.id} size="sm" tone={status === f.id ? "accent" : "neutral"} aria-pressed={status === f.id} onClick={() => setStatus(f.id)}>
+              {f.label}
+            </HudChip>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Palier">
+          {(["all", ...(Object.keys(TIER_LABELS) as AchievementTier[])] as const).map((t) => (
+            <HudChip key={t} size="sm" tone={tier === t ? "accent" : "neutral"} aria-pressed={tier === t} onClick={() => setTier(t)}>
+              {t === "all" ? "Tous paliers" : TIER_LABELS[t]}
+            </HudChip>
+          ))}
+        </div>
+        <span className="ml-auto font-mono text-[11px] tabular-nums text-slate-500">
+          {shown.length} / {list.length}
+        </span>
+      </div>
+      {shown.length === 0 && (
+        <EmptyState icon="🔎" title="Aucun succès ne correspond" action={<Button size="sm" variant="ghost" onClick={() => (setQuery(""), setStatus("all"), setTier("all"), setTab("all"))}>Effacer les filtres</Button>}>
+          Change la recherche ou les filtres.
+        </EmptyState>
+      )}
+      <PagedList key={`${tab}|${status}|${tier}|${q}`} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} />} />
     </div>
   );
 }

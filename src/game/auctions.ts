@@ -1,3 +1,4 @@
+import { bumpStat } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { findTemplate, rarityInfo, relicLabel, relicsState, type RelicItem } from "@/game/relics";
 import { findModuleTemplate, moduleLabel, modulesState, moduleRarity, type ModuleItem } from "@/game/modules";
@@ -193,6 +194,11 @@ export function settleAuction(a: Pick<Auction, "bid" | "bidderId" | "sellerId">)
 
 export function canCancel(a: Pick<Auction, "status" | "bid">): boolean {
   return a.status === "open" && !(a.bid > 0);
+}
+
+/** 5.26.1 : compteurs des succès (vente conclue côté vendeur, enchère remportée côté gagnant). */
+export function recordAuctionStat(player: PlayerState, side: "sold" | "won"): void {
+  bumpStat(player, side === "sold" ? "auctionsSold" : "auctionsWon");
 }
 
 /** Solde du joueur dans la monnaie de la vente. */

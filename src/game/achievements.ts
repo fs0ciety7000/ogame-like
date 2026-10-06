@@ -18,7 +18,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
 ===================================================== */
 
 export type AchievementTier = "bronze" | "argent" | "or" | "legendaire" | "mythique";
-export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "alliance" | "menaces" | "prestige";
+export type AchievementCategory = "combat" | "construction" | "recherche" | "flotte" | "missions" | "logistique" | "commerce" | "alliance" | "menaces" | "prestige";
 
 export interface AchievementDef {
   id: string;
@@ -62,6 +62,7 @@ export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji
   flotte: { label: "Flotte", emoji: "🚀" },
   missions: { label: "Missions et contrats", emoji: "🧭" },
   logistique: { label: "Renseignement et logistique", emoji: "🛰️" },
+  commerce: { label: "Commerce et Ruche", emoji: "⚖️" },
   alliance: { label: "Alliance", emoji: "🤝" },
   menaces: { label: "Menaces", emoji: "☠️" },
   prestige: { label: "Prestige", emoji: "🏆" },
@@ -150,6 +151,18 @@ export const METRICS = {
   worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
   // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
+  // 5.26.1 : systèmes récents (Atelier, modules, enchères, reliques, primes).
+  unitsRepaired: { label: "Unités réparées à l'Atelier (cumul)", value: (p: PlayerState) => playerStats(p).unitsRepaired ?? 0 },
+  modulesBuilt: { label: "Modules de vaisseaux fabriqués", value: (p: PlayerState) => playerStats(p).modulesBuilt ?? 0 },
+  modulesMounted: {
+    label: "Emplacements de modules occupés",
+    value: (p: PlayerState) => Object.values((p.modules as { slots?: Record<string, (string | null)[]> } | undefined)?.slots ?? {}).reduce((a, list) => a + (Array.isArray(list) ? list.filter(Boolean).length : 0), 0),
+  },
+  auctionsSold: { label: "Ventes conclues à l'Hôtel des enchères", value: (p: PlayerState) => playerStats(p).auctionsSold ?? 0 },
+  auctionsWon: { label: "Enchères remportées", value: (p: PlayerState) => playerStats(p).auctionsWon ?? 0 },
+  relicsOwned: { label: "Reliques en collection", value: (p: PlayerState) => ((p.relics as { items?: unknown[] } | undefined)?.items ?? []).length },
+  bountiesDone: { label: "Primes Kesh'Vaar remplies", value: (p: PlayerState) => playerStats(p).bounties ?? 0 },
+  amberEarned: { label: "Ambre de Ruche gagnée (cumul)", value: (p: PlayerState) => Math.floor(Number((p.bounties as { amberEarned?: number } | undefined)?.amberEarned) || 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -276,6 +289,26 @@ export function derivedAchievements(): AchievementDef[] {
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
     def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
     // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
+    // 5.26.1 : Atelier, modules, enchères, reliques, primes (paliers suivants : générateur procédural).
+    def("atelier_1", "flotte", "bronze", "unitsRepaired", 50, "Mécano", "Faire réparer 50 unités à l'Atelier.", "🔧", { auto: true }),
+    def("atelier_2", "flotte", "argent", "unitsRepaired", 1000, "Chef d'atelier", "Faire réparer 1 000 unités à l'Atelier.", "🛠️", { auto: true }),
+    def("atelier_3", "flotte", "or", "unitsRepaired", 20_000, "Résurrecteur de flottes", "Faire réparer 20 000 unités à l'Atelier.", "⚙️", { auto: true }),
+    def("module_1", "flotte", "bronze", "modulesBuilt", 1, "Premier module", "Fabriquer un module de vaisseau.", "🧩", { auto: true }),
+    def("module_2", "flotte", "argent", "modulesBuilt", 10, "Armurier", "Fabriquer 10 modules de vaisseaux.", "🔩", { auto: true }),
+    def("module_full", "flotte", "or", "modulesMounted", 8, "Flotte sur mesure", "Occuper les 8 emplacements de modules.", "🚀", { auto: true }),
+    def("enchere_vente_1", "commerce", "bronze", "auctionsSold", 1, "Commissaire-priseur", "Conclure une vente à l'Hôtel des enchères.", "🔨", { auto: true }),
+    def("enchere_vente_2", "commerce", "argent", "auctionsSold", 10, "Marchand d'art", "Conclure 10 ventes aux enchères.", "🖼️", { auto: true }),
+    def("enchere_vente_3", "commerce", "or", "auctionsSold", 50, "Maison de ventes", "Conclure 50 ventes aux enchères.", "🏛️", { auto: true }),
+    def("enchere_achat_1", "commerce", "bronze", "auctionsWon", 1, "Adjugé !", "Remporter une enchère.", "🛎️", { auto: true }),
+    def("enchere_achat_2", "commerce", "argent", "auctionsWon", 10, "Collectionneur avisé", "Remporter 10 enchères.", "🏺", { auto: true }),
+    def("enchere_achat_3", "commerce", "or", "auctionsWon", 50, "Grand acquéreur", "Remporter 50 enchères.", "💼", { auto: true }),
+    def("relique_5", "prestige", "argent", "relicsOwned", 5, "Cabinet de curiosités", "Réunir 5 reliques dans ta collection.", "🗿", { auto: true }),
+    def("relique_20", "prestige", "or", "relicsOwned", 20, "Reliquaire", "Réunir 20 reliques dans ta collection.", "⚱️", { auto: true }),
+    def("prime_1", "commerce", "bronze", "bountiesDone", 1, "Première prime", "Remplir une prime Kesh'Vaar.", "🎯", { auto: true }),
+    def("prime_2", "commerce", "argent", "bountiesDone", 25, "Chasseur de la Ruche", "Remplir 25 primes Kesh'Vaar.", "🐝", { auto: true }),
+    def("prime_3", "commerce", "or", "bountiesDone", 150, "Traqueur légendaire", "Remplir 150 primes Kesh'Vaar.", "🏹", { auto: true }),
+    def("ambre_1", "commerce", "argent", "amberEarned", 500, "Goût de l'Ambre", "Gagner 500 Ambre de Ruche.", "🍯", { auto: true }),
+    def("ambre_2", "commerce", "or", "amberEarned", 5000, "Trésor de la Ruche", "Gagner 5 000 Ambre de Ruche.", "👑", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
   ];
 }

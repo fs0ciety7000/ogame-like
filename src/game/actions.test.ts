@@ -47,6 +47,10 @@ describe("performPlayerAction", () => {
     const q = defaultQueues();
     expect(() => performPlayerAction(p, q, { type: "trade", sellId: "scrap", buyId: "energy", amount: -50 }, NOW)).toThrow(GameActionError);
     expect(() => performPlayerAction(p, q, { type: "trade", sellId: "gold" as never, buyId: "energy", amount: 5 }, NOW)).toThrow(/invalide/);
+    // 5.26.1 : 5 % de ce qui est reçu part au pot commun (arrondi au supérieur).
+    p.resources.aiFragment = 10;
+    const out = performPlayerAction(p, q, { type: "trade", sellId: "aiFragment", buyId: "scrap", amount: 3 }, NOW);
+    expect(out.result).toEqual({ gained: 142, tax: 8, taxRes: "scrap" });
     expect(() => performPlayerAction(p, q, { type: "sellUnits", unitId: "chasseur", qty: 5 }, NOW)).toThrow(/pas assez/);
     expect(() => performPlayerAction(p, q, { type: "hack" } as never, NOW)).toThrow(/inconnue/);
   });

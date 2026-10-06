@@ -109,6 +109,10 @@ routerAdd(
       }
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
+      // 5.26.1 : la taxe du comptoir d'échange part au pot commun.
+      if (action && action.type === "trade" && out.result && out.result.tax > 0) {
+        db.addServerPot(txApp, game, "exchange", { [out.result.taxRes]: out.result.tax }, Date.now());
+      }
       response = { result: out.result === undefined ? null : out.result };
     });
 

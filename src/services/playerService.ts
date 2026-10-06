@@ -513,7 +513,7 @@ export function rerollContract(contractId: string) {
 }
 
 export function tradeResources(_uid: string, sellId: ResourceId, buyId: ResourceId, amount: number) {
-  return act<number>({ type: "trade", sellId, buyId, amount });
+  return act<{ gained: number; tax: number; taxRes: ResourceId }>({ type: "trade", sellId, buyId, amount });
 }
 
 /* =====================================================

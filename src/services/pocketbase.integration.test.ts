@@ -170,7 +170,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       ps.startResearch(aId, "tech1"),
       ps.tradeResources(aId, "scrap", "energy", 100),
     ]);
-    expect(results[3]).toBeGreaterThan(0);
+    // 5.26.1 : 5 % de ce qui est reçu part au pot commun.
+    expect(results[3]).toEqual({ gained: 95, tax: 5, taxRes: "energy" });
+    const pot = await admin.collection("game_config").getFirstListItem("key = 'server_pot'");
+    expect(pot.data.totals.exchange.energy).toBeGreaterThanOrEqual(5);
     const p = await snap(aId);
     expect(p?.buildings.reacteur_instable.unlocked).toBe(true);
     expect(p?.playtimeSeconds).toBeGreaterThan(0);

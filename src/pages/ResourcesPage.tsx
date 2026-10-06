@@ -12,7 +12,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
 import { economySnapshot } from "@/game/economy";
 import { HudMeter } from "@/components/ui/hud";
-import { RESOURCE_LIST, getTradeRate } from "@/game/resources";
+import { EXCHANGE_TAX_PCT, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
@@ -33,16 +33,15 @@ export function ResourcesPage() {
   if (!resources || !player) return null;
   const economy = economySnapshot({ ...player, resources }, Date.now());
 
-  const rate = getTradeRate(sellId, buyId);
-  const preview = Math.floor(amount * rate);
+  const quote = tradeQuote(sellId, buyId, amount);
   const buyRes = RESOURCE_LIST.find((r) => r.id === buyId)!;
 
   const handleTrade = async () => {
     if (!uid) return;
     setSubmitting(true);
     try {
-      const gained = await tradeResources(uid, sellId, buyId, amount);
-      toast.success(`Échange effectué : +${formatNumber(gained)} ${buyRes.name}`);
+      const out = await tradeResources(uid, sellId, buyId, amount);
+      toast.success(`Échange effectué : +${formatNumber(out.gained)} ${buyRes.name} (taxe ${formatNumber(out.tax)} au pot commun)`);
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Échange impossible.");
     } finally {
@@ -108,7 +107,8 @@ export function ResourcesPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-xs text-slate-500">
-            Ressources communes → rares : taux 0,01. Rares → communes : taux 50. Aucun échange rare ↔ rare ou commune ↔ commune.
+            Ressources communes → rares : taux 0,01. Rares → communes : taux 50. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
+            <span className="font-mono tabular-nums">{Math.round(EXCHANGE_TAX_PCT * 100)} %</span> sur ce que tu reçois, versée au pot commun du serveur.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-3">
@@ -130,12 +130,19 @@ export function ResourcesPage() {
 
           <div className="flex items-center justify-between border-l-2 border-cyan-glow bg-cyan-glow/[0.06] px-4 py-3 text-sm">
             <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tu recevras</span>
-            <span className="hud-title text-lg text-cyan-glow">
-              {formatNumber(preview)} <ResourceIcon id={buyRes.id} /> {buyRes.name}
+            <span className="flex flex-col items-end gap-0.5">
+              <span className="hud-title text-lg tabular-nums text-cyan-glow">
+                {formatNumber(quote.net)} <ResourceIcon id={buyRes.id} /> {buyRes.name}
+              </span>
+              {quote.tax > 0 && (
+                <span className="font-mono text-[11px] tabular-nums text-slate-500">
+                  brut {formatNumber(quote.gross)} · taxe {formatNumber(quote.tax)} au pot commun
+                </span>
+              )}
             </span>
           </div>
 
-          <Button onClick={() => void handleTrade()} disabled={submitting || sellId === buyId}>
+          <Button onClick={() => void handleTrade()} disabled={submitting || sellId === buyId || quote.net <= 0}>
             {submitting ? "Échange…" : "Échanger"}
           </Button>
         </CardContent>
