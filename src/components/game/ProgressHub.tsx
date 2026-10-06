@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 
 /* 5.21.1 : un seul bloc pour tout ce qui fait progresser et rapporte
-   (missions du jour, contrats, passe, chroniques, défi de la semaine),
+   (objectifs du jour, passe, chroniques, défi de la semaine),
    en onglets au lieu de cinq cartes empilées. Un point signale un onglet
    où une récompense attend. */
 

@@ -1,7 +1,8 @@
 # Prise en main, QoL et outils
 
 ## Joueur
-- Prise en main : 10 objectifs, tutoriel scénarisé (raid de Varan), guide avancé.
+- Prise en main : 10 objectifs, tutoriel scénarisé (raid de Varan), Carnet du commandant (guide avancé) en 4 chapitres depuis la 6.4.1 :
+  Ton empire (objectif du jour, classe), Colonies (dont route logistique), Reliques et commandants, Ascension.
 - Accueil « que faire maintenant », frise des chantiers, carte Atelier, défis.
 - Objectifs personnels (6), modèles d'actions (12 × 20 étapes), file d'actions globale, file planifiée des bâtiments.
 - « Tout réclamer », notifications groupées et par catégorie, rappels personnels.

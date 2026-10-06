@@ -38,7 +38,7 @@ export interface Contract {
 export interface ContractsState {
   day: string;
   items: Contract[];
-  /** Jours consécutifs où les 3 contrats ont été terminés. */
+  /** Jours consécutifs où tous les objectifs du jour ont été terminés. */
   streak: number;
   lastCompletedDay: string | null;
   rerolled: boolean;

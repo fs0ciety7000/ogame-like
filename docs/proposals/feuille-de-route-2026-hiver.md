@@ -104,7 +104,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
-| 1 | T | Prise en main à jour (classes, routes, objectifs du jour) | S | à faire |
+| 1 | T | Prise en main à jour (classes, routes, objectifs du jour) | S | livré 6.4.1 |
 | 2 | U | Santé de l'équilibre, suite (sens des routes, défenses par type, emplacements, courbes) | S | à faire |
 | 3 | AU1 | Revue Menaces PNJ : pirates et factions, seigneurs de guerre, primes et Comptoir | M | à faire |
 | 4 | AU2 | Revue Boss : mondiaux, saison, alliance, Hall of fame | M | à faire |

@@ -50,8 +50,11 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
         <X className="h-4 w-4" />
       </button>
       <div>
-        <p className="hud-eyebrow flex items-center gap-2 text-[10px] text-slate-500">
-          <BookOpenCheck className="h-3.5 w-3.5 text-violet-glow" /> Carnet du commandant · Chapitre {chapterIndex} / {GUIDE_CHAPTERS.length}
+        <p className="hud-eyebrow flex flex-wrap items-center gap-x-2 gap-y-0.5 pr-7 text-[10px] text-slate-500">
+          <BookOpenCheck className="h-3.5 w-3.5 shrink-0 text-violet-glow" /> Carnet du commandant
+          <span className="whitespace-nowrap">
+            · Chapitre <span className="tabular-nums">{chapterIndex} / {GUIDE_CHAPTERS.length}</span>
+          </span>
         </p>
         <h2 className="hud-title text-lg">
           {chapter.emoji} {chapter.label}

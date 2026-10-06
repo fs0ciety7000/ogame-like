@@ -15,7 +15,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    rangée avec celle de la prise en main (`onboarding.advanced`).
 ===================================================== */
 
-export type GuideChapterId = "colonies" | "relics" | "ascension";
+export type GuideChapterId = "empire" | "colonies" | "relics" | "ascension";
 
 export interface GuideStep {
   id: string;
@@ -30,6 +30,8 @@ export interface GuideStep {
 }
 
 export const GUIDE_CHAPTERS: { id: GuideChapterId; label: string; emoji: string }[] = [
+  // 6.4.1 (lot T) : les systèmes de l'hiver 2026 (objectifs du jour, classes, routes) entrent dans le carnet.
+  { id: "empire", label: "Ton empire", emoji: "🏛️" },
   { id: "colonies", label: "Colonies", emoji: "🪐" },
   { id: "relics", label: "Reliques et commandants", emoji: "💠" },
   { id: "ascension", label: "Ascension", emoji: "✨" },
@@ -38,6 +40,25 @@ export const GUIDE_CHAPTERS: { id: GuideChapterId; label: string; emoji: string 
 const colonies = (p: PlayerState) => p.colonies ?? [];
 
 export const GUIDE_STEPS: GuideStep[] = [
+  {
+    id: "dailyGoal",
+    chapter: "empire",
+    label: "Réclamer un objectif du jour",
+    learn: "Chaque jour, 4 objectifs tirés pour toi : ressources rares, XP et jetons. Ils se renouvellent à minuit, heure de Paris, et ta série grimpe si tu fais les 4.",
+    to: "/game/ordres",
+    reward: { scrap: 300_000, energy: 300_000 },
+    done: (p) => (p.contracts?.items ?? []).some((c) => c.claimed) || !!p.contracts?.lastCompletedDay,
+  },
+  {
+    id: "empireClass",
+    chapter: "empire",
+    label: "Choisir une classe d'empire",
+    learn: "Industriel, Seigneur de guerre ou Explorateur : chaque classe renforce une façon de jouer. Le premier choix est gratuit, en changer coûte de l'Ambre.",
+    to: "/game/classe",
+    reward: {},
+    amber: 10,
+    done: (p) => !!p.empireClass?.id,
+  },
   {
     id: "colonyReady",
     chapter: "colonies",
@@ -64,6 +85,15 @@ export const GUIDE_STEPS: GuideStep[] = [
     to: "/game/colonies",
     reward: { syntheticNanites: 200_000, aiFragment: 200_000 },
     done: (p) => colonies(p).some((c) => !!c.spec),
+  },
+  {
+    id: "colonyRoute",
+    chapter: "colonies",
+    label: "Ouvrir une route logistique",
+    learn: "Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta planète mère. 10 % se perdent en route.",
+    to: "/game/colonies",
+    reward: { reinforcedSteel: 200_000, cyberModule: 200_000 },
+    done: (p) => colonies(p).some((c) => !!c.route),
   },
   {
     id: "relicFound",

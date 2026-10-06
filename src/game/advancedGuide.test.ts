@@ -53,4 +53,26 @@ describe("Carnet du commandant", () => {
     claimOnboarding(p, ONBOARDING_STEPS[0].id);
     expect(guideClaimed(p)).toEqual(["colonyReady"]);
   });
+
+  it("6.4.1 : chapitre Empire (objectif du jour, classe) et route logistique", () => {
+    const p = veteran();
+    expect(() => claimGuideStep(p, "dailyGoal")).toThrow(/pas encore/);
+    p.contracts = { day: "2026-10-06", items: [{ id: "x", type: "spy", target: 2, progress: 2, claimed: true }], streak: 0, lastCompletedDay: null, rerolled: false } as never;
+    claimGuideStep(p, "dailyGoal");
+    expect(() => claimGuideStep(p, "empireClass")).toThrow(/pas encore/);
+    p.empireClass = { id: "industriel", chosenAtMs: 1 } as never;
+    claimGuideStep(p, "empireClass");
+    expect(bountyState(p).amber).toBe(10);
+    expect(() => claimGuideStep(p, "colonyRoute")).toThrow(/pas encore/);
+  });
+
+  it("un carnet déjà terminé rouvre seulement les nouvelles étapes, titre conservé", () => {
+    const p = veteran();
+    const old = GUIDE_STEPS.filter((s) => !["dailyGoal", "empireClass", "colonyRoute"].includes(s.id)).map((s) => s.id);
+    p.onboarding = { claimed: [], advanced: old };
+    p.titles = [{ label: GUIDE_TITLE, seasonId: "onboarding", rank: 1 }];
+    expect(guideVisible(p)).toBe(true);
+    expect(guideClaimed(p)).toHaveLength(old.length);
+  });
 });
+
