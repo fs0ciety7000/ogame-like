@@ -316,6 +316,13 @@ routerAdd("POST", "/api/cosmic/alliance", (e) => require(`${__hooks}/cosmic_db.j
 /** POST /api/cosmic/alliance/intel — rapports récents des membres. */
 routerAdd("POST", "/api/cosmic/alliance/intel", (e) => require(`${__hooks}/cosmic_db.js`).allianceIntel(e), $apis.requireAuth("users"));
 
+// 5.27 : rappels du Comptoir (phéromone, voile de chitine bientôt finis), toutes les 10 min.
+cronAdd("cosmic_shop_reminders", "*/10 * * * *", () => {
+  require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_shop_reminders", "*/10 * * * *", () => {
+    require(`${__hooks}/cosmic_db.js`).shopRemindersTick(Date.now());
+  });
+});
+
 // Factions hostiles : inscriptions et ultimatums expirés, toutes les 10 min.
 cronAdd("cosmic_pirates", "*/10 * * * *", () => {
   require(`${__hooks}/cosmic_db.js`).timedCron("cosmic_pirates", "*/10 * * * *", () => {

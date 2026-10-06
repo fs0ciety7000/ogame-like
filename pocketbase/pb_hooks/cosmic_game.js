@@ -127,6 +127,7 @@ __export(hooksEntry_exports, {
   PASSKEY_RULES: () => PASSKEY_RULES,
   PASS_POINTS: () => PASS_POINTS,
   PASS_SEASONS_SECTION: () => PASS_SEASONS_SECTION,
+  PATRONS_KEY: () => PATRONS_KEY,
   PB_SCHEMA: () => PB_SCHEMA,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
   PIRATE_RULES: () => PIRATE_RULES,
@@ -156,6 +157,7 @@ __export(hooksEntry_exports, {
   WARLORD_RULES: () => WARLORD_RULES,
   WAR_CHEST_RULES: () => WAR_CHEST_RULES,
   WAR_RULES: () => WAR_RULES,
+  WEEKLY_STOCK_KEY: () => WEEKLY_STOCK_KEY,
   XP_SOURCE_LABELS: () => XP_SOURCE_LABELS,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
@@ -172,6 +174,7 @@ __export(hooksEntry_exports, {
   addContribution: () => addContribution,
   addOccurrence: () => addOccurrence,
   addPassPoints: () => addPassPoints,
+  addPatronage: () => addPatronage,
   addRelic: () => addRelic,
   addReport: () => addReport,
   addReportComment: () => addReportComment,
@@ -227,6 +230,7 @@ __export(hooksEntry_exports, {
   broadcastTargets: () => broadcastTargets,
   buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
+  buyWeeklyOffer: () => buyWeeklyOffer,
   callAllianceBoss: () => callAllianceBoss,
   campaignsState: () => campaignsState,
   canCancel: () => canCancel,
@@ -578,6 +582,7 @@ __export(hooksEntry_exports, {
   settleCoalition: () => settleCoalition,
   settleVendettas: () => settleVendettas,
   shatterWarlord: () => shatterWarlord,
+  shopReminders: () => shopReminders,
   shortHash: () => shortHash,
   signTreaty: () => signTreaty,
   slugify: () => slugify,
@@ -1771,10 +1776,10 @@ function recycleRelic(player, relicId) {
   return { item, amber: rarityInfo(item.rarity).recycle };
 }
 function aegisWeek(now) {
-  const DAY16 = 864e5;
+  const DAY17 = 864e5;
   const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY16) * DAY16;
-  return new Date(midnight - (day + 6) % 7 * DAY16).toISOString().slice(0, 10);
+  const midnight = Math.floor(now / DAY17) * DAY17;
+  return new Date(midnight - (day + 6) % 7 * DAY17).toISOString().slice(0, 10);
 }
 function consumeAegis(player, now) {
   if (!equippedRelics(player).some((r) => {
@@ -6568,6 +6573,7 @@ var ELITE_FUGITIVES = [
   { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
   { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
 ];
+var SHOP_HISTORY_MAX = 30;
 function emptyBountyState() {
   return {
     amber: 0,
@@ -6591,7 +6597,10 @@ function emptyBountyState() {
     priorityContracts: 0,
     vendettaTokens: 0,
     pheromoneUntilMs: 0,
-    nameTone: ""
+    nameTone: "",
+    history: [],
+    remindedPheromoneMs: 0,
+    remindedShieldMs: 0
   };
 }
 function num2(v) {
@@ -6614,7 +6623,10 @@ function bountyState(player) {
     priorityContracts: Math.max(0, num2(raw.priorityContracts)),
     vendettaTokens: Math.max(0, num2(raw.vendettaTokens)),
     pheromoneUntilMs: num2(raw.pheromoneUntilMs),
-    nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : ""
+    nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : "",
+    history: Array.isArray(raw.history) ? raw.history.filter((h) => h && typeof h.item === "string").map((h) => ({ atMs: num2(h.atMs), item: h.item, amber: num2(h.amber) })).slice(-SHOP_HISTORY_MAX) : [],
+    remindedPheromoneMs: num2(raw.remindedPheromoneMs),
+    remindedShieldMs: num2(raw.remindedShieldMs)
   });
 }
 function bountyRank(reputation) {
@@ -6969,6 +6981,7 @@ function buyShopItem(player, queues, itemId, now, buildingId, random = Math.rand
   }
   if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
   st.amber -= item.price;
+  st.history = [...st.history, { atMs: now, item: item.id, amber: item.price }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   return { message };
 }
@@ -7204,15 +7217,33 @@ function setNameTone(player, tone) {
   player.bounties = st;
   return id;
 }
-function donateAmber(player, amountIn) {
+function donateAmber(player, amountIn, now = 0) {
   const amount3 = Math.floor(Number(amountIn));
   if (!(amount3 >= 1 && amount3 <= 1e4)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
   const st = bountyState(player);
   if (st.amber < amount3) throw new GameActionError("Pas assez d'Ambre.");
   st.amber -= amount3;
+  st.history = [...st.history, { atMs: now, item: "donate", amber: amount3 }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   bumpStat(player, "amberDonated", amount3);
   return amount3;
+}
+var SHOP_REMINDER_LEAD_MS = 36e5;
+function shopReminders(player, now) {
+  const st = bountyState(player);
+  const notifications = [];
+  const soon = (until, reminded) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
+  const left = (until) => `${Math.max(1, Math.round((until - now) / 6e4))} min`;
+  if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
+    notifications.push({ kind: "bounty", title: "Ph\xE9romone bient\xF4t dissip\xE9e", message: `Le bonus d'XP des officiers (+25 %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de 24 h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedPheromoneMs = st.pheromoneUntilMs;
+  }
+  if (soon(st.shieldUntilMs, st.remindedShieldMs)) {
+    notifications.push({ kind: "bounty", title: "Voile de chitine bient\xF4t lev\xE9", message: `Ta protection contre les attaques de joueurs prend fin dans ${left(st.shieldUntilMs)}.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedShieldMs = st.shieldUntilMs;
+  }
+  if (notifications.length) player.bounties = st;
+  return { changed: notifications.length > 0, notifications };
 }
 
 // src/game/seasonPass.ts
@@ -24425,6 +24456,100 @@ function linkedAuctionReasons(a) {
 function cleanDeviceId(raw) {
   const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   return /^[0-9a-f]{16,64}$/.test(s) ? s : "";
+}
+
+// src/game/weeklyStock.ts
+var WEEKLY_OFFERS = [
+  { id: "rareRelic", name: "Relique de l'Essaim", description: "Une relique tir\xE9e au hasard, rare au moins.", price: 250, quantity: 8 },
+  { id: "rarePlan", name: "Plan de module rare", description: "Un plan de module tir\xE9 au hasard, rare au moins.", price: 200, quantity: 10 },
+  { id: "epicPlan", name: "Plan de module \xE9pique", description: "Un plan de module tir\xE9 au hasard, \xE9pique au moins.", price: 450, quantity: 4 },
+  { id: "tokens", name: "Sac de jetons", description: "25 jetons pour la machine \xE0 sous du pot commun.", price: 120, quantity: 15 }
+];
+var WEEKLY_STOCK_KEY = "weekly_stock";
+var DAY16 = 864e5;
+var WEEK = 7 * DAY16;
+function weekStartMs(now) {
+  const midnight = Math.floor(now / DAY16) * DAY16;
+  return midnight - (new Date(now).getUTCDay() + 6) % 7 * DAY16;
+}
+function weekKey(now) {
+  return new Date(weekStartMs(now)).toISOString().slice(0, 10);
+}
+function offerOfWeek(now) {
+  return WEEKLY_OFFERS[Math.floor(weekStartMs(now) / WEEK) % WEEKLY_OFFERS.length];
+}
+function weeklyStock(raw, now) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const week = weekKey(now);
+  const offer = offerOfWeek(now).id;
+  if (r.week !== week) return { week, offer, sold: 0, buyers: [] };
+  return { week, offer, sold: Math.max(0, Math.floor(Number(r.sold) || 0)), buyers: Array.isArray(r.buyers) ? r.buyers.map(String) : [] };
+}
+function weeklyLeft(stock) {
+  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  return Math.max(0, offer.quantity - stock.sold);
+}
+function weeklyBlocker(player, uid, stock) {
+  var _a, _b, _c;
+  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  if (stock.buyers.includes(uid)) return "D\xE9j\xE0 achet\xE9 cette semaine.";
+  if (weeklyLeft(stock) <= 0) return "\xC9puis\xE9 : retour lundi.";
+  if (offer.id === "rareRelic" && ((_c = (_b = (_a = player.relics) == null ? void 0 : _a.items) == null ? void 0 : _b.length) != null ? _c : 0) >= RELIC_RULES.maxItems) return "Inventaire de reliques plein.";
+  if ((offer.id === "rarePlan" || offer.id === "epicPlan") && modulesState(player).items.length >= MODULE_RULES.maxItems) return "Inventaire de modules plein.";
+  if (bountyState(player).amber < offer.price) return "Pas assez d'Ambre.";
+  return null;
+}
+function buyWeeklyOffer(player, uid, rawStock, now, random = Math.random) {
+  const stock = weeklyStock(rawStock, now);
+  const offer = WEEKLY_OFFERS.find((o) => o.id === stock.offer);
+  const blocker = weeklyBlocker(player, uid, stock);
+  if (blocker) throw new GameActionError(blocker);
+  let message;
+  if (offer.id === "rareRelic") {
+    const relic = rollRelic("weekly", now, random, "rare");
+    addRelic(player, relic);
+    message = "Relique de l'Essaim re\xE7ue : retrouve-la dans tes reliques.";
+  } else if (offer.id === "rarePlan" || offer.id === "epicPlan") {
+    addModuleItem(player, rollModulePlan("weekly", now, random, offer.id === "rarePlan" ? "rare" : "epic"));
+    message = `${offer.name} re\xE7u : retrouve-le dans \xC9tat-major \u2192 Modules.`;
+  } else {
+    grantTokens(player, 25);
+    message = "25 jetons ajout\xE9s \xE0 ta r\xE9serve du casino.";
+  }
+  const st = bountyState(player);
+  st.amber -= offer.price;
+  st.history = [...st.history, { atMs: now, item: `weekly:${offer.id}`, amber: offer.price }].slice(-SHOP_HISTORY_MAX);
+  player.bounties = st;
+  return { stock: __spreadProps(__spreadValues({}, stock), { sold: stock.sold + 1, buyers: [...stock.buyers, uid] }), message };
+}
+
+// src/game/patrons.ts
+var PATRONS_KEY = "patrons";
+var PATRONS_TOP = 10;
+var monthKey = (now) => new Date(now).toISOString().slice(0, 7);
+function topPatrons(state, n = PATRONS_TOP) {
+  return Object.entries(state.byUid).map(([uid, v]) => ({ uid, pseudo: v.pseudo, amber: v.amber })).filter((e3) => e3.amber > 0).sort((a, b) => b.amber - a.amber || a.pseudo.localeCompare(b.pseudo)).slice(0, n);
+}
+function patronsState(raw, now) {
+  var _a, _b;
+  const r = raw && typeof raw === "object" ? raw : {};
+  const month2 = monthKey(now);
+  const byUid = {};
+  for (const [uid, v] of Object.entries((_a = r.byUid) != null ? _a : {})) {
+    const amber = Math.max(0, Math.floor(Number(v == null ? void 0 : v.amber) || 0));
+    if (amber > 0) byUid[uid] = { pseudo: String((_b = v == null ? void 0 : v.pseudo) != null ? _b : "").slice(0, 40), amber };
+  }
+  const last = r.last && typeof r.last.month === "string" && Array.isArray(r.last.top) ? { month: r.last.month, top: r.last.top.slice(0, 3) } : null;
+  if (r.month && r.month !== month2) return { month: month2, byUid: {}, last: { month: r.month, top: topPatrons({ month: r.month, byUid, last: null }, 3) } };
+  return { month: month2, byUid, last };
+}
+function addPatronage(raw, uid, pseudo, amber, now) {
+  var _a, _b, _c;
+  const st = patronsState(raw, now);
+  const n = Math.floor(Number(amber) || 0);
+  if (!(n > 0) || !uid) return st;
+  const cur = (_b = (_a = st.byUid[uid]) == null ? void 0 : _a.amber) != null ? _b : 0;
+  return __spreadProps(__spreadValues({}, st), { byUid: __spreadProps(__spreadValues({}, st.byUid), { [uid]: { pseudo: pseudo || ((_c = st.byUid[uid]) == null ? void 0 : _c.pseudo) || "?", amber: cur + n } }) });
 }
 
 // src/server/hooksEntry.ts

@@ -4761,10 +4761,19 @@ function bountyRequest(e) {
         out = { nameTone: game.setNameTone(player, req.tone) };
       } else if (req.action === "donate") {
         // 5.26.3 : don d'Ambre au pot commun (badge « Mécène »).
-        const amber = game.donateAmber(player, req.amount);
+        const amber = game.donateAmber(player, req.amount, now);
         const potRec = configRecord(txApp, game.SERVER_POT_KEY);
         writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "donation", amber, now, player.pseudo));
+        // 5.27 : mécènes du mois.
+        const patrons = configRecord(txApp, game.PATRONS_KEY);
+        writeConfig(txApp, game.PATRONS_KEY, game.addPatronage(patrons ? toPlain(patrons).data : null, uid, player.pseudo, amber, now));
         out = { amber, donated: Number((player.stats || {}).amberDonated) || 0 };
+      } else if (req.action === "weekly") {
+        // 5.27 : stock tournant du Comptoir (quantité limitée pour tout le serveur).
+        const stockRec = configRecord(txApp, game.WEEKLY_STOCK_KEY);
+        const res = game.buyWeeklyOffer(player, uid, stockRec ? toPlain(stockRec).data : null, now);
+        writeConfig(txApp, game.WEEKLY_STOCK_KEY, res.stock);
+        out = { message: res.message };
       } else if (req.action === "beacon") {
         const rec = findOrNull(txApp, "fleets", String(req.fleetId || ""));
         if (!rec) throw new game.GameActionError("Flotte introuvable.");
@@ -4789,6 +4798,24 @@ function bountyRequest(e) {
     notify(txApp, uid, flushed.notifications);
   });
   return e.json(200, out || {});
+}
+
+/** 5.27 : rappels du Comptoir (phéromone, voile de chitine) une heure avant la fin, joueurs actifs depuis 7 jours. */
+function shopRemindersTick(now) {
+  const game = loadGame();
+  let sent = 0;
+  $app.runInTransaction((txApp) => {
+    txApp.findRecordsByFilter("players", "npc = '' && lastActiveMs > {:t}", "", 0, 0, { t: now - 7 * 86400000 }).forEach((rec) => {
+      const player = { bounties: parseJsonField(rec, "bounties", null) };
+      const out = game.shopReminders(player, now);
+      if (!out.changed) return;
+      rec.set("bounties", player.bounties);
+      txApp.save(rec);
+      notify(txApp, rec.id, out.notifications);
+      sent += out.notifications.length;
+    });
+  });
+  return sent;
 }
 
 /** Rappel d'une flotte de prime : le contrat redevient disponible. */
@@ -9330,7 +9357,12 @@ function auctionsTick(now) {
           if (deal.tax > 0) {
             if (a.res === "amber") {
               // 5.26.3 : la taxe payée en Ambre compte pour le badge « Mécène » du vendeur.
-              if (findOrNull(txApp, "players", a.sellerId)) bumpPlayerStat(txApp, a.sellerId, "amberDonated", deal.tax);
+              const seller = findOrNull(txApp, "players", a.sellerId);
+              if (seller) {
+                bumpPlayerStat(txApp, a.sellerId, "amberDonated", deal.tax);
+                const patrons = configRecord(txApp, game.PATRONS_KEY);
+                writeConfig(txApp, game.PATRONS_KEY, game.addPatronage(patrons ? toPlain(patrons).data : null, a.sellerId, seller.getString("pseudo"), deal.tax, now));
+              }
               const potRec = configRecord(txApp, game.SERVER_POT_KEY);
               writeConfig(txApp, game.SERVER_POT_KEY, game.addAmberToPot(game.normalizeServerPot(potRec ? toPlain(potRec).data : null), "auction", deal.tax, now));
             } else addServerPot(txApp, game, "auction", { [a.res]: deal.tax }, now);
@@ -9371,4 +9403,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

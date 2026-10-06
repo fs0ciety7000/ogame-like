@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HullWarning } from "@/components/game/HullWarning";
 import { PveFightEstimate } from "@/components/game/PveFightEstimate";
-import { HudPanel, EmptyAction } from "@/components/ui/panel";
+import { HudPanel, EmptyAction, PagedList } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowLeftRight, ArrowUpToLine, BookOpen, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, HandCoins, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
+import { ArrowLeftRight, ArrowUpToLine, BookOpen, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -41,11 +41,9 @@ import {
   KESH,
   KESH_EMOJIS,
   NAME_TONES,
-  nextPatronTier,
   nextRank,
   nextRefreshMs,
   owns,
-  patronTier,
   rankName,
   rerollablePlans,
   SHOP_ITEMS,
@@ -57,14 +55,17 @@ import {
   type ShopItemId,
 } from "@/game/bounties";
 import { moduleLabel } from "@/game/modules";
-import { buyBountyItem, donateAmberToPot, exchangeBountyAmber, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
+import { DonateCard } from "@/components/game/DonateCard";
+import { WeeklyStockCard } from "@/components/game/WeeklyStockCard";
+import { WEEKLY_OFFERS } from "@/game/weeklyStock";
+import { buyBountyItem, exchangeBountyAmber, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -602,46 +603,6 @@ function NameTonePicker({ current }: { current: string }) {
   );
 }
 
-/** 5.26.3 : don d'Ambre au pot commun, compté pour le badge « Mécène ». */
-function DonateCard({ player, st }: { player: PlayerState; st: BountyState }) {
-  const [amount, setAmount] = useState(10);
-  const [busy, setBusy] = useState(false);
-  const donated = player.stats?.amberDonated ?? 0;
-  const tier = patronTier(donated);
-  const next = nextPatronTier(donated);
-  const donate = async () => {
-    if (!(await askConfirm({ title: `Verser ${amount} Ambre au pot commun ?`, message: "Le don est définitif : l'Ambre rejoint la réserve du pot, redistribuée lors des concours.", confirmLabel: "Verser", tone: "gold" }))) return;
-    setBusy(true);
-    try {
-      await donateAmberToPot(amount);
-      toast.success(`${amount} Ambre versés au pot commun. Merci, mécène !`);
-    } catch (err) {
-      toast.error(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <HudPanel icon={<HandCoins />} title="Don au pot commun" tone="gold" aside={tier ? <HudChip size="sm" tone={tier.tone}>{tier.label}</HudChip> : undefined}>
-      <p className="text-xs text-slate-400">
-        L'Ambre versée au pot (dons, taxe des enchères en Ambre) fait monter le badge « Mécène » de ta fiche publique. Total versé : <AmberAmount value={donated} label={false} className="font-mono tabular-nums text-slate-200" />
-        {next ? (
-          <>
-            {" "}
-            · <span className="font-mono tabular-nums">{next.at - donated}</span> de plus pour « {next.label} ».
-          </>
-        ) : null}
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <NumberInput size="sm" min={1} max={Math.max(1, st.amber)} value={amount} onChange={setAmount} className="w-48" aria-label="Ambre à verser" />
-        <Button size="sm" variant="warn" disabled={busy || amount < 1 || amount > st.amber} onClick={() => void donate()}>
-          Verser
-        </Button>
-      </div>
-    </HudPanel>
-  );
-}
-
 function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) {
   const [amount, setAmount] = useState(10);
   const [busy, setBusy] = useState(false);
@@ -686,6 +647,33 @@ function ExchangeCard({ player, st }: { player: PlayerState; st: BountyState }) 
   );
 }
 
+/** 5.27 : derniers achats et dons au Comptoir. */
+function ShopHistory({ st }: { st: BountyState }) {
+  const list = [...st.history].reverse();
+  return (
+    <HudPanel icon={<History />} title="Mes achats et dons" tone="gold">
+      {list.length === 0 ? (
+        <EmptyState icon="🧾" title="Rien encore" size="sm" className="p-0">
+          Tes achats au Comptoir et tes dons au pot commun s'afficheront ici.
+        </EmptyState>
+      ) : (
+        <PagedList
+          items={list}
+          as="ul"
+          className="flex flex-col divide-y divide-white/5"
+          render={(h, i) => (
+            <li key={`${h.atMs}-${i}`} className="flex items-center gap-2 py-1.5 text-sm">
+              <span className="min-w-0 flex-1 truncate text-slate-200">{h.item === "donate" ? "Don au pot commun" : h.item.startsWith("weekly:") ? `${WEEKLY_OFFERS.find((o) => `weekly:${o.id}` === h.item)?.name ?? "Offre"} (offre de la semaine)` : (SHOP_ITEMS.find((it) => it.id === h.item)?.name ?? h.item)}</span>
+              <AmberAmount value={h.amber} label={false} className="font-mono tabular-nums text-slate-300" />
+              <span className="w-24 text-right font-mono text-[11px] text-slate-500">{h.atMs ? timeAgo(h.atMs) : "—"}</span>
+            </li>
+          )}
+        />
+      )}
+    </HudPanel>
+  );
+}
+
 function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
   const groups: { id: ShopItem["group"]; label: string }[] = [
     { id: "consumable", label: "Fournitures de l'Essaim" },
@@ -698,7 +686,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
       <div className="grid gap-3 lg:grid-cols-[1fr_2fr]">
         <div className="flex flex-col gap-3">
           <ExchangeCard player={player} st={st} />
-          <DonateCard player={player} st={st} />
+          <DonateCard />
         </div>
         <Card className="relative self-start overflow-hidden p-0">
           <img src={assetUrl(KESH.hunters)} alt="Chasseurs kesh'vaar" className="h-full max-h-56 w-full object-cover" />
@@ -708,6 +696,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
           </p>
         </Card>
       </div>
+      <WeeklyStockCard />
       {groups.map((g) => (
         <section key={g.id} className="flex flex-col gap-2">
           <h3 className="hud-eyebrow flex items-center gap-2 text-[11px] text-gold-glow">
@@ -720,6 +709,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
           </div>
         </section>
       ))}
+      <ShopHistory st={st} />
       <p className="text-xs text-slate-500">
         Gelée de la Reine : +{Math.round(BOUNTY_SHOP_RULES.boostPct * 100)} % sur la planète mère. Voile de chitine : protège des nouvelles attaques de joueurs, pas des flottes déjà en route ni des factions.
       </p>

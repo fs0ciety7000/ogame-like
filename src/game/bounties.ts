@@ -153,7 +153,21 @@ export interface BountyState {
   pheromoneUntilMs: number;
   /** Couleur de pseudo choisie (jeton du thème, vide : aucune). */
   nameTone: string;
+  /** 5.27 : derniers achats et dons au Comptoir (30 au plus, du plus ancien au plus récent). */
+  history: ShopHistoryEntry[];
+  /** 5.27 : fin d'effet déjà rappelée (phéromone, voile de chitine), pour ne prévenir qu'une fois. */
+  remindedPheromoneMs: number;
+  remindedShieldMs: number;
 }
+
+export interface ShopHistoryEntry {
+  atMs: number;
+  /** Objet acheté, ou « donate » pour un don au pot commun. */
+  item: string;
+  amber: number;
+}
+
+export const SHOP_HISTORY_MAX = 30;
 
 export function emptyBountyState(): BountyState {
   return {
@@ -179,6 +193,9 @@ export function emptyBountyState(): BountyState {
     vendettaTokens: 0,
     pheromoneUntilMs: 0,
     nameTone: "",
+    history: [],
+    remindedPheromoneMs: 0,
+    remindedShieldMs: 0,
   };
 }
 
@@ -205,6 +222,9 @@ export function bountyState(player: Pick<PlayerState, "bounties">): BountyState 
     vendettaTokens: Math.max(0, num(raw.vendettaTokens)),
     pheromoneUntilMs: num(raw.pheromoneUntilMs),
     nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : "",
+    history: Array.isArray(raw.history) ? raw.history.filter((h) => h && typeof h.item === "string").map((h) => ({ atMs: num(h.atMs), item: h.item, amber: num(h.amber) })).slice(-SHOP_HISTORY_MAX) : [],
+    remindedPheromoneMs: num(raw.remindedPheromoneMs),
+    remindedShieldMs: num(raw.remindedShieldMs),
   };
 }
 
@@ -682,6 +702,7 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
   }
   if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
   st.amber -= item.price;
+  st.history = [...st.history, { atMs: now, item: item.id, amber: item.price }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   return { message };
 }
@@ -1029,14 +1050,35 @@ export function nextPatronTier(amberDonated: number): (typeof PATRON_TIERS)[numb
 }
 
 /** Don d'Ambre au pot commun : débite le joueur et compte pour le badge (le serveur crédite le pot). */
-export function donateAmber(player: PlayerState, amountIn: unknown): number {
+export function donateAmber(player: PlayerState, amountIn: unknown, now = 0): number {
   const amount = Math.floor(Number(amountIn));
   if (!(amount >= 1 && amount <= 10_000)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
   const st = bountyState(player);
   if (st.amber < amount) throw new GameActionError("Pas assez d'Ambre.");
   st.amber -= amount;
+  st.history = [...st.history, { atMs: now, item: "donate", amber: amount }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   bumpStat(player, "amberDonated", amount);
   return amount;
 }
 
+/* 5.27 : rappel une heure avant la fin de la phéromone et du voile de chitine. */
+export const SHOP_REMINDER_LEAD_MS = 3600_000;
+
+/** Notifications de fin prochaine (une seule fois par effet) ; changed : bounties à enregistrer. */
+export function shopReminders(player: Pick<PlayerState, "bounties">, now: number): { changed: boolean; notifications: NewNotification[] } {
+  const st = bountyState(player);
+  const notifications: NewNotification[] = [];
+  const soon = (until: number, reminded: number) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
+  const left = (until: number) => `${Math.max(1, Math.round((until - now) / 60_000))} min`;
+  if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
+    notifications.push({ kind: "bounty", title: "Phéromone bientôt dissipée", message: `Le bonus d'XP des officiers (+25 %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de 24 h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedPheromoneMs = st.pheromoneUntilMs;
+  }
+  if (soon(st.shieldUntilMs, st.remindedShieldMs)) {
+    notifications.push({ kind: "bounty", title: "Voile de chitine bientôt levé", message: `Ta protection contre les attaques de joueurs prend fin dans ${left(st.shieldUntilMs)}.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedShieldMs = st.shieldUntilMs;
+  }
+  if (notifications.length) player.bounties = st;
+  return { changed: notifications.length > 0, notifications };
+}

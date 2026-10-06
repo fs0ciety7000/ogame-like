@@ -78,6 +78,7 @@ export {
   setNameTone,
   nameToneOf,
   ownsShopItem,
+  shopReminders,
 } from "@/game/bounties";
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
 export { anomalyChance, COMMANDER_XP, grantCommanderXp, RARE_OFFICER_RULES, rollRareOfficer, adminGrantOfficer } from "@/game/commanders";
@@ -226,3 +227,5 @@ export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear } from "@/game/workshop";
 export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { buyWeeklyOffer, WEEKLY_STOCK_KEY } from "@/game/weeklyStock";
+export { addPatronage, PATRONS_KEY } from "@/game/patrons";
