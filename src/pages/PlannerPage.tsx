@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, CalendarClock, Copy, FlaskConical, Hammer, ListPlus, Pencil, Play, Plus, Rocket, Trash2, Wand2, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { GoalsPanel } from "@/components/game/GoalsPanel";
 import { UpcomingTimeline } from "@/components/game/UpcomingTimeline";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
 import { HudPanel } from "@/components/ui/panel";
@@ -262,7 +263,7 @@ export function PlannerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader eyebrow="Cosmic Empires / Logistique" title="Planificateur" description="Tout ce qui tourne, ce qui suit, et tes modèles d'actions réutilisables." />
+      <PageHeader eyebrow="Cosmic Empires / Logistique" title="Planificateur" description="Tout ce qui tourne, ce qui suit, tes objectifs et tes modèles d'actions réutilisables." />
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <section className="flex min-w-0 flex-col gap-4" aria-label="En cours">
           <UpcomingTimeline queues={queues} now={now} />
@@ -272,7 +273,8 @@ export function PlannerPage() {
           </HudPanel>
         </section>
 
-        <section className="flex min-w-0 flex-col gap-4" aria-label="Modèles">
+        <section className="flex min-w-0 flex-col gap-4" aria-label="Objectifs et modèles">
+          {uid && <GoalsPanel uid={uid} player={player} queues={queues} now={now} onTemplate={(name, steps) => setEditing({ name, steps })} />}
           <HudPanel
             icon={<Wand2 />}
             title="Modèles d'actions"
