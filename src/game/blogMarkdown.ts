@@ -336,6 +336,12 @@ function renderBlocks(lines: string[], opts: MarkdownOptions, headings: Markdown
     const fig = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)\s*$/.exec(line);
     if (fig) {
       const caption = fig[3] || fig[1];
+      // 5.24 : une vidéo (.mp4, .webm) s'écrit comme une image ; le texte alternatif sert de libellé.
+      if (/\.(mp4|webm)(\?.*)?$/i.test(fig[2])) {
+        out.push(`<figure><video src="${escapeHtml(safeUrl(fig[2], opts.assetBase))}" controls playsinline preload="metadata" aria-label="${escapeHtml(fig[1])}"></video>${caption ? `<figcaption>${renderInline(caption, opts)}</figcaption>` : ""}</figure>`);
+        i++;
+        continue;
+      }
       out.push(`<figure><img src="${escapeHtml(safeUrl(fig[2], opts.assetBase))}" alt="${escapeHtml(fig[1])}" loading="lazy">${caption ? `<figcaption>${renderInline(caption, opts)}</figcaption>` : ""}</figure>`);
       i++;
       continue;

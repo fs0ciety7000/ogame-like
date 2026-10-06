@@ -26,6 +26,7 @@ import {
 import { pbConfigured } from "@/lib/pocketbase";
 import { REFERRAL_RULES } from "@/game/referral";
 import { BlogLatest } from "@/components/blog/BlogLatest";
+import { TrailerCard } from "@/components/auth/TrailerCard";
 import { AltSignIn } from "@/components/auth/AltSignIn";
 import { BLOG_URL } from "@/services/blogService";
 import { claimPendingSponsor, fetchSponsorName, pendingSponsor } from "@/services/referralService";
@@ -155,7 +156,8 @@ export function LoginPage() {
               </div>
             ))}
           </div>
-          <BlogLatest className="mt-10 max-w-md" />
+          <TrailerCard className="mt-8 max-w-md" />
+          <BlogLatest className="mt-8 max-w-md" />
         </motion.div>
 
         <motion.div
@@ -286,6 +288,7 @@ export function LoginPage() {
             Confidentialité
           </a>
         </div>
+        <TrailerCard className="mt-6 lg:hidden" />
         <BlogLatest className="mt-6 lg:hidden" />
         </motion.div>
       </div>

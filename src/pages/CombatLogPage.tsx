@@ -5,6 +5,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { EmptyState } from "@/components/ui/hud";
+import { Pager, usePaged } from "@/components/ui/panel";
 import { motion } from "framer-motion";
 import { Eye, Sword, Shield, ShieldAlert, Trophy } from "lucide-react";
 import { VictoryCardDialog } from "@/components/game/VictoryCardDialog";
@@ -128,6 +129,16 @@ export function CombatLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid, wantedSpy]);
   const spyList = extraSpy && !spyReports.some((r) => r.id === extraSpy.id) ? [extraSpy, ...spyReports] : spyReports;
+  // 5.24 : 20 rapports par page (combats et espionnage).
+  const battlePage = usePaged(reports);
+  const spyPage = usePaged(spyList);
+  const showSpyIndex = spyPage.showIndex;
+  useEffect(() => {
+    if (!openSpy) return;
+    const i = spyList.findIndex((r) => r.id === openSpy);
+    if (i >= 0) showSpyIndex(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seulement à l'ouverture d'un rapport
+  }, [openSpy]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,7 +149,7 @@ export function CombatLogPage() {
         {reports.length === 0 && (
           <EmptyState icon="⚔️" title="Aucun combat">Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
         )}
-        {reports.map((report, index) => {
+        {battlePage.items.map((report, index) => {
           if (!uid) return null;
           const isAttacker = report.attackerUid === uid;
           const opponent = isAttacker ? <PlayerName uid={report.defenderUid} pseudo={report.defenderPseudo} /> : <PlayerName uid={report.attackerUid} pseudo={report.attackerPseudo} />;
@@ -207,13 +218,14 @@ export function CombatLogPage() {
           );
         })}
       </Card>
+      <Pager {...battlePage.pager} />
 
       <h2 className="hud-title mt-2 flex items-center gap-2 text-base text-slate-100">
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
         {spyList.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport">Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
-        {spyList.map((r) => {
+        {spyPage.items.map((r) => {
           const mine = r.spyUid === uid;
           return (
             <div key={r.id} id={`espion-${r.id}`} className="scroll-mt-24 p-3">
@@ -251,6 +263,7 @@ export function CombatLogPage() {
           );
         })}
       </Card>
+      <Pager {...spyPage.pager} />
     </div>
   );
 }

@@ -19043,6 +19043,11 @@ function renderBlocks(lines, opts, headings) {
     const fig = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)\s*$/.exec(line);
     if (fig) {
       const caption = fig[3] || fig[1];
+      if (/\.(mp4|webm)(\?.*)?$/i.test(fig[2])) {
+        out.push(`<figure><video src="${escapeHtml(safeUrl(fig[2], opts.assetBase))}" controls playsinline preload="metadata" aria-label="${escapeHtml(fig[1])}"></video>${caption ? `<figcaption>${renderInline(caption, opts)}</figcaption>` : ""}</figure>`);
+        i++;
+        continue;
+      }
       out.push(`<figure><img src="${escapeHtml(safeUrl(fig[2], opts.assetBase))}" alt="${escapeHtml(fig[1])}" loading="lazy">${caption ? `<figcaption>${renderInline(caption, opts)}</figcaption>` : ""}</figure>`);
       i++;
       continue;
@@ -19255,7 +19260,8 @@ var PROSE_CSS = `
 .prose blockquote{margin:1.4em 0;padding:.6em 1.2em;border-left:3px solid var(--violet);background:rgba(177,140,255,.06);color:var(--t1);font-style:italic}
 .prose blockquote p:last-child{margin-bottom:0}
 .prose figure{margin:1.8em 0}
-.prose figure img,.prose p>img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid var(--edge);clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.prose figure img,.prose figure video,.prose p>img{display:block;max-width:100%;height:auto;margin:0 auto;border:1px solid var(--edge);clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px)}
+.prose figure video{width:100%;background:var(--bg)}
 .prose figcaption{text-align:center;font-family:var(--f-mono);font-size:.72em;letter-spacing:.08em;color:var(--t4);margin-top:.7em}
 .prose img.emoji{display:inline-block;width:1.45em;height:1.45em;vertical-align:-.35em;margin:0 .05em;border:0;clip-path:none;object-fit:contain}
 .prose .md-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:1.6em 0}

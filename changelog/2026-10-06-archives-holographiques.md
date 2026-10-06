@@ -18,6 +18,14 @@ Un lot visuel : un cylindre holographique en 3D pour parcourir le Codex, exposer
 - **Ambre dans le bandeau du haut** : ton solde d'Ambre s'affiche en permanence, avec son icône et un liseré doré qui la distingue des ressources. Un clic mène aux Primes et au Comptoir.
 - **Accueil** : la barre des chantiers ne suit plus le défilement.
 
+## Bande-annonce et vidéos
+- **Bande-annonce de 20 secondes** du jeu : sur l'écran de connexion (elle ne se télécharge qu'au clic) et dans un billet du devblog.
+- **Vidéos dans les messages** : un lien vers une vidéo (.mp4 ou .webm, du jeu ou en https) se lit directement dans la messagerie, le chat d'alliance et le canal diplomatique. Exemple : `/assets/video/presentation.mp4`.
+- **Devblog** : une vidéo s'insère comme une image (`![légende](lien.mp4)`).
+
+## Listes paginées
+- **20 par page** sur Combats (combats et espionnage), Signalements, Hall of fame des boss, Annonces et Succès ; **15 par page** dans la cloche de notifications et la liste des conversations.
+
 ## Corrections
 - **Thème Constellation** : le fond n'est plus presque noir. Il passe en graphite, avec un halo couleur os, un liseré orange à l'horizon et une trame discrète.
 - **Chargement** : le thème ne force plus de calcul de mise en page avant la fin du chargement (avertissement de Firefox, risque de flash sans style).

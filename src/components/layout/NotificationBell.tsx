@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { groupNotifications, inCategory, NOTIFICATION_CATEGORIES, notificationLink, type NotificationCategory } from "@/lib/notificationCategories";
 import { cn } from "@/lib/utils";
 import { NotificationCard } from "@/components/game/NotificationCard";
+import { Pager, usePaged } from "@/components/ui/panel";
 
 export function NotificationBell() {
   const items = useNotificationStore((s) => s.items);
@@ -49,6 +50,12 @@ export function NotificationBell() {
   }, [open, tab]);
 
   const shown = items.filter((n) => inCategory(n.kind, tab));
+  // 5.24 : 15 groupes par page ; retour à la première page en changeant d'onglet.
+  const notifPage = usePaged(groupNotifications(shown), 15);
+  const toFirstPage = notifPage.pager.onPage;
+  useEffect(() => {
+    toFirstPage(0);
+  }, [tab, toFirstPage]);
   const unreadIn = (cat: NotificationCategory) => items.filter((n) => !n.read && inCategory(n.kind, cat)).length;
 
   return (
@@ -108,7 +115,7 @@ export function NotificationBell() {
         )}
         <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
           {shown.length === 0 && <EmptyState size="sm" icon="🔔" title="Rien ici" className="px-3 py-4">Rien dans cette catégorie pour l'instant.</EmptyState>}
-          {groupNotifications(shown).map((g) => {
+          {notifPage.items.map((g) => {
             const open = expanded.has(g.key);
             const list = open ? [g.head, ...g.rest] : [g.head];
             return (
@@ -144,6 +151,7 @@ export function NotificationBell() {
               </div>
             );
           })}
+          <Pager {...notifPage.pager} />
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
