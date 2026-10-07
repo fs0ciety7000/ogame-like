@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'été 2030
 
-Statut : **en cours** (2026-10-07, clôture d'AU26 : `docs/audit/2026-10-07-au26-printemps-2030.md`). Règle n° 3. Mise en production
+Statut : **close** (2026-10-07, AU27 : `docs/changes/6.14.51-revue-au27.md`), suite dans `feuille-de-route-2030-automne.md` (lots É30-1d, É30-1e, É30-3, É30-5 à É30-7 repris). Ouverte à la clôture d'AU26 : `docs/audit/2026-10-07-au26-printemps-2030.md`). Règle n° 3. Mise en production
 écartée pour l'instant (Q12, 2026-10-07 : « on a encore beaucoup de choses à faire ») : on enrichit le jeu sur la pré-prod.
 Cette feuille de route s'affiche sur `/decisions` (onglet « Feuille de route », 6.14.41) : chaque lot s'y valide ou s'y modifie, et
 une action ajoutée par l'utilisateur devient un lot ici (son identifiant `A…` est cité dans la ligne, ce qui la marque traitée).
@@ -21,5 +21,5 @@ une action ajoutée par l'utilisateur devient un lot ici (son identifiant `A…`
 | 5 | É30-5 | Performance, suite de 6.14.39 : stabilité sur mobile (CLS p75 0,7, `PERF_SHIFTS=1`), LCP de la Galaxie (8,4 s mobile), images du Codex chargées à la demande (6 à 8 Mo) | M | à faire |
 | 6 | É30-6 | Rythme des succès (PRG-5 : médiane 70 sur 178 en une semaine) : proposition chiffrée de paliers plus étalés, sans retirer un succès gagné | M | à faire |
 | 7 | É30-7 | Reliques qui partagent une image (`sceau_sentinelle`, `plaque_bastion` et deux autres paires) : prompts propres, lignes sur `/img` | S | à faire |
-| 8 | AU27 | Revue, même grille | M | fin des lots |
+| 8 | AU27 | Revue, même grille | M | livré (6.14.51, sept audits) |
 | — | Z0 | Mise en production | — | écartée pour l'instant (Q12) |
