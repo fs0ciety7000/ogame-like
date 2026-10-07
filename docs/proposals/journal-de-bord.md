@@ -1,6 +1,6 @@
 # Proposition : Ordres du jour (Journal de bord)
 
-Statut : **livrée en partie (5.30.0)**, voir `docs/changes/5.30.0-ordres-du-jour.md`. Option 2 (fusion) **livrée en 6.2.1** (`docs/changes/6.2.1-quotidien-fusion.md`). Q4 (calendrier lissé) en attente de décision.
+Statut : **livrée en partie (5.30.0)**, voir `docs/changes/5.30.0-ordres-du-jour.md`. Option 2 (fusion) **livrée en 6.2.1** (`docs/changes/6.2.1-quotidien-fusion.md`). Q4 (calendrier lissé) **livrée en 6.7.0** (`calendrier-semaine.md`).
 Constats : Q1, Q4 de `docs/audit/2026-10-06-audit-global.md`. Lot C de `docs/proposals/feuille-de-route-2026-q4.md`.
 
 ## 1. Le problème vu par le joueur

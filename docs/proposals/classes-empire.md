@@ -1,7 +1,7 @@
 # Proposition : classes d'empire (lot J)
 
 Statut : **livrée en partie (6.0.0)** : J.1, option B (trois classes, effets + un avantage propre, premier choix gratuit, changement à 100 Ambre
-tous les 7 jours). J.2 (une unité propre par classe) en attente des illustrations. Décision du 2026-10-06 (« Go lot J », sur le même mandat
+tous les 7 jours). J.2 (une unité propre par classe) **livrée en 6.5.0** (`unites-classe.md`). Décision du 2026-10-06 (« Go lot J », sur le même mandat
 que les lots précédents). Fiche : `docs/changes/6.0.0-classes-empire.md`.
 Lot J de `docs/proposals/feuille-de-route-2026-q4.md`.
 

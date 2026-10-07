@@ -1,6 +1,6 @@
 # Proposition : feuille de route de printemps 2028
 
-Statut : **close** (2026-10-07, AU18 : `docs/audit/2026-10-07-au18-printemps-2028.md`) ; suite en attente de Q12, Q15, Q16 (Q17). Ouverte à la clôture d'AU17. Règle n° 3 : les lots s'enchaînent sans attendre ; ceux qui demandent la production,
+Statut : **close** (2026-10-07, AU18 : `docs/audit/2026-10-07-au18-printemps-2028.md`) ; pause levée le même jour (Q17 close), suite dans `feuille-de-route-2028-ete.md`. Ouverte à la clôture d'AU17. Règle n° 3 : les lots s'enchaînent sans attendre ; ceux qui demandent la production,
 `main` ou une PR sont sautés et notés (Q12). Orientation à revoir avec l'utilisateur (Q15).
 
 ## Planning

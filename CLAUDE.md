@@ -56,7 +56,10 @@ Valable pour toute la session et tout le projet, à chaque demande :
 
 - Un lot fini (fiche, validation, commit, push), on enchaîne sur le suivant de la feuille de route (`docs/proposals/feuille-de-route-*.md`),
   sans demander. Une feuille de route terminée : on écrit la suivante et on la commence aussitôt, sans attendre qu'elle soit validée
-  (consigne redonnée le 2026-10-07). Un lot qui demande la production, `main` ou une PR est sauté et noté ; on passe au suivant.
+  (consigne redonnée le 2026-10-07, deux fois). Un lot qui demande la production, `main` ou une PR est sauté et noté ; on passe au suivant.
+- **Jamais de pause** : quand la suite dépend d'une question ouverte (orientation, ergonomie, équilibre), on prend l'option recommandée,
+  on la note et on avance. Une feuille de route sans lot faisable seul se remplit en tranchant ces questions, pas en s'arrêtant
+  (pause d'AU18 annulée le 2026-10-07, Q17).
 - Une question, un doute, un choix de conception ou d'équilibre que l'utilisateur pourrait vouloir trancher : on prend l'option
   recommandée (la plus prudente pour les données des joueurs), on l'écrit dans `docs/QUESTIONS.md` (date, lot, question, choix fait,
   comment revenir en arrière) et on continue. La fiche du lot renvoie à l'entrée.

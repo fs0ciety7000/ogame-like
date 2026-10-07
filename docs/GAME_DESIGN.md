@@ -195,3 +195,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.12 | Revue AU17 : hiver clos (H1 à H3 livrés), aucune page au-dessus de 5 000 px pour un joueur neuf ; printemps 2028 proposé (P1 : joueur avancé) | `docs/audit/2026-10-07-au17-hiver.md` |
 | 2026-10-07 | 6.11.13 | P1 : 42 pages mesurées avec un joueur avancé (aucun débordement ; Bâtiments 6 460 → 6 271 px), raison de bouton grisé en une ligne ; Q16 | `docs/changes/6.11.13-joueur-avance-mobile.md` |
 | 2026-10-07 | 6.11.14 | Revue AU18 : printemps 2028 clos ; plus de lot faisable seul, feuilles de route en pause jusqu'à Q12, Q15 ou Q16 (Q17) | `docs/audit/2026-10-07-au18-printemps-2028.md` |
+| 2026-10-07 | 6.11.15 | Consigne redonnée : pause annulée (Q17), règle n° 3 « jamais de pause », Q15 et Q16 tranchées ; feuille de route d'été 2028 | `docs/changes/6.11.15-reprise-travail-continu.md` |
