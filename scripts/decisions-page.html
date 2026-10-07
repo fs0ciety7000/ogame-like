@@ -1,0 +1,220 @@
+<title>Décisions à valider</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Revue des décisions prises seules (Cosmic Empires, thème Constellation). Une colonne : en-tête à bandes, compteurs, puis une fiche
+   par question avec « Je valide » ou « À changer » et une note. Les réponses vont dans le stockage de la page, Claude les relit. */
+:root {
+  --bg: #0c0d0f;
+  --panel: #141518;
+  --panel-2: #1a1b1f;
+  --line: #2a2b30;
+  --bone: #ece6d6;
+  --muted: #9a958a;
+  --ember: #e0582c;
+  --gold: #f2b33d;
+  --mint: #7fc4a6;
+  --sky: #5b8fd6;
+  --red: #d9452f;
+  --font-title: "Saira Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { background: var(--bg); color: var(--bone); font: 15px/1.5 var(--font-body); padding-inline: 16px; padding-block: 0 48px; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.bands { display: grid; grid-template-columns: repeat(4, 1fr); height: 5px; margin-inline: -16px; }
+.bands span:nth-child(1) { background: var(--red); }
+.bands span:nth-child(2) { background: var(--ember); }
+.bands span:nth-child(3) { background: var(--gold); }
+.bands span:nth-child(4) { background: var(--sky); }
+header { display: flex; flex-direction: column; gap: 6px; padding-top: 18px; }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 32px/1 var(--font-title); letter-spacing: 0.1em; text-transform: uppercase; margin: 0; }
+h2 { font: 700 18px/1.1 var(--font-title); letter-spacing: 0.1em; text-transform: uppercase; margin: 8px 0 0; color: var(--muted); }
+.lede { color: var(--muted); margin: 0; max-width: 62ch; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.count { background: var(--panel); border: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.count b { font: 500 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.count span { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.count.ok b { color: var(--mint); }
+.count.change b { color: var(--ember); }
+.bulk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.notice { border: 1px solid var(--gold); color: var(--gold); padding: 10px 12px; font-size: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.card.ok { border-left-color: var(--mint); }
+.card.change { border-left-color: var(--ember); }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.qid { font: 500 13px/1 var(--font-mono); color: var(--gold); }
+.state { font: 500 11px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 6px; border: 1px solid currentColor; margin-left: auto; }
+.state.todo { color: var(--muted); }
+.state.ok { color: var(--mint); }
+.state.change { color: var(--ember); }
+.dec { margin: 0; }
+.eff { margin: 0; color: var(--muted); font-size: 14px; }
+.reco { margin: 0; font-size: 14px; }
+.reco b { font: 500 11px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--sky); margin-right: 6px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 500 13px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 11px 12px; border: 1px solid var(--bone); background: transparent; color: var(--bone); cursor: pointer; }
+.btn[aria-pressed="true"].ok { background: var(--mint); border-color: var(--mint); color: var(--bg); }
+.btn[aria-pressed="true"].change { background: var(--ember); border-color: var(--ember); color: var(--bg); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn:focus-visible, textarea:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+textarea { width: 100%; min-height: 64px; background: var(--panel-2); color: var(--bone); border: 1px solid var(--line); padding: 8px; font: 14px/1.4 var(--font-body); resize: vertical; }
+.msg { font-size: 13px; color: var(--muted); }
+.msg.err { color: var(--red); }
+</style>
+
+<div class="bands" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Cosmic Empires · règle n° 3</div>
+    <h1>Décisions à valider</h1>
+    <p class="lede">Les choix que Claude a faits seul pour avancer. Pour chacun : « Je valide », ou « À changer » avec une note sur ce que tu veux. Claude relit tes réponses et en fait des lots.</p>
+  </header>
+  <div class="counts" aria-live="polite">
+    <div class="count"><b id="n-todo">0</b><span>À voir</span></div>
+    <div class="count ok"><b id="n-ok">0</b><span>Validées</span></div>
+    <div class="count change"><b id="n-change">0</b><span>À changer</span></div>
+  </div>
+  <div class="bulk" id="bulk" hidden>
+    <button class="btn" type="button" id="all-ok">Valider toutes celles à voir</button>
+    <span class="msg" id="bulk-msg"></span>
+  </div>
+  <div class="notice" id="notice" hidden>Les réponses s'enregistrent quand la page est ouverte dans claude.ai, connecté avec ton compte. Tu peux aussi répondre dans la session (« je valide tout sauf Q9 »).</div>
+  <div id="list"></div>
+</div>
+
+<script id="data" type="application/json">__DECISIONS__</script>
+<script>
+(() => {
+  const DECISIONS = JSON.parse(document.getElementById("data").textContent);
+  let answers = {};
+  let db = null;
+  const msgs = {};
+  const drafts = {};
+  const stateOf = (q) => (answers[q]?.choice === "valide" ? "ok" : answers[q]?.choice === "changer" ? "change" : "todo");
+  const LABEL = { todo: "À voir", ok: "Validée", change: "À changer" };
+
+  async function save(q, patch) {
+    if (!db) return;
+    const next = { ...(answers[q] ?? {}), ...patch, updatedAt: new Date().toISOString() };
+    try {
+      await db.collection("decisions").doc(q).set(next);
+      msgs[q] = { text: patch.choice === "valide" ? "Validée." : patch.choice === "changer" ? "Notée à changer : précise ce que tu veux." : "Note enregistrée." };
+    } catch (e) {
+      msgs[q] = { text: "Pas enregistré : recharge la page et recommence.", err: true };
+    }
+    render();
+  }
+
+  function render() {
+    const c = { todo: 0, ok: 0, change: 0 };
+    for (const d of DECISIONS) c[stateOf(d.q)]++;
+    for (const k of Object.keys(c)) document.getElementById("n-" + k).textContent = c[k];
+    document.getElementById("bulk").hidden = !db || c.todo === 0;
+    const list = document.getElementById("list");
+    list.textContent = "";
+    let group = null;
+    const frag = document.createElement("div");
+    frag.style.cssText = "display:flex;flex-direction:column;gap:10px";
+    for (const d of DECISIONS) {
+      if (d.group !== group) {
+        group = d.group;
+        const h = document.createElement("h2");
+        h.textContent = group;
+        frag.append(h);
+      }
+      const st = stateOf(d.q);
+      const el = document.createElement("article");
+      el.className = "card " + st;
+      const top = document.createElement("div");
+      top.className = "top";
+      const id = document.createElement("span");
+      id.className = "qid";
+      id.textContent = d.q;
+      const state = document.createElement("span");
+      state.className = "state " + st;
+      state.textContent = LABEL[st];
+      top.append(id, state);
+      const dec = document.createElement("p");
+      dec.className = "dec";
+      dec.textContent = d.decision;
+      el.append(top, dec);
+      if (d.effect) {
+        const eff = document.createElement("p");
+        eff.className = "eff";
+        eff.textContent = d.effect;
+        el.append(eff);
+      }
+      const reco = document.createElement("p");
+      reco.className = "reco";
+      const b = document.createElement("b");
+      b.textContent = "Conseil";
+      reco.append(b, document.createTextNode(d.reco));
+      el.append(reco);
+      const actions = document.createElement("div");
+      actions.className = "actions";
+      for (const [choice, label, cls] of [["valide", "Je valide", "ok"], ["changer", "À changer", "change"]]) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn " + cls;
+        btn.textContent = label;
+        btn.disabled = !db;
+        btn.setAttribute("aria-pressed", String(answers[d.q]?.choice === choice));
+        btn.addEventListener("click", () => save(d.q, { choice }));
+        actions.append(btn);
+      }
+      el.append(actions);
+      if (st === "change" || answers[d.q]?.note) {
+        const ta = document.createElement("textarea");
+        ta.id = "note-" + d.q;
+        ta.placeholder = "Ce que tu veux à la place (chiffre, comportement…)";
+        ta.value = drafts[d.q] ?? answers[d.q]?.note ?? "";
+        ta.disabled = !db;
+        ta.addEventListener("input", () => { drafts[d.q] = ta.value; });
+        ta.addEventListener("change", () => { const note = ta.value.trim().slice(0, 1000); delete drafts[d.q]; save(d.q, { note }); });
+        el.append(ta);
+      }
+      if (msgs[d.q]) {
+        const m = document.createElement("div");
+        m.className = "msg" + (msgs[d.q].err ? " err" : "");
+        m.textContent = msgs[d.q].text;
+        el.append(m);
+      }
+      frag.append(el);
+    }
+    list.append(frag);
+  }
+
+  document.getElementById("all-ok").addEventListener("click", async () => {
+    const todo = DECISIONS.filter((d) => stateOf(d.q) === "todo");
+    const out = document.getElementById("bulk-msg");
+    out.textContent = "Enregistrement…";
+    for (const d of todo) {
+      try {
+        await db.collection("decisions").doc(d.q).set({ choice: "valide", updatedAt: new Date().toISOString() });
+      } catch {
+        out.textContent = "Arrêté sur " + d.q + " : recharge la page et recommence.";
+        return;
+      }
+    }
+    out.textContent = todo.length + " décision(s) validée(s).";
+  });
+
+  render();
+  (async () => {
+    const c = window.claude;
+    if (!c?.use) { document.getElementById("notice").hidden = false; return; }
+    db = await c.use("db");
+    if (!db) { document.getElementById("notice").hidden = false; render(); return; }
+    db.collection("decisions").onSnapshot(
+      (snap) => { answers = Object.fromEntries(snap.docs.filter((x) => x.exists).map((x) => [x.id, x.data()])); render(); },
+      () => { document.getElementById("notice").hidden = false; },
+    );
+    render();
+  })();
+})();
+</script>
