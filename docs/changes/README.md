@@ -104,6 +104,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.1 | [Codex : les lunes](6.14.1-codex-lunes.md) | ajout | aucune (H28-2), Q19 |
 | 6.14.2 | [Revue AU21](6.14.2-revue-au21.md) | docs | aucune (AU21) |
 | 6.14.3 | [Succès lunaires](6.14.3-succes-lunaires.md) | ajout | aucune (P29-1), Q20 |
+| 6.14.4 | [Billet « Ta lune grandit »](6.14.4-billet-lunes-2.md) | docs | aucune (P29-2) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
