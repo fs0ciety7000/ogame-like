@@ -131,7 +131,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "bulky cargo hauler with modular containers, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech12",
@@ -215,7 +215,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "interceptor craft with swept wings, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech19",
@@ -227,7 +227,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "colossal spherical battle station, black hull, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech20",
@@ -335,7 +335,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "flying fortress with heavy armor plating, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech29",
@@ -395,7 +395,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, three small translucent spy probes shaped like ghostly beetles, half-transparent shells fading into the dark, faint distortion shimmer around them, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-painkiller",
@@ -407,7 +407,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a glass injector vial filled with glowing amber healing resin, chitin grip and brass needle, a few golden droplets, repair workshop mood, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-reroll",
@@ -419,7 +419,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a holographic starship module blueprint being rewritten by a swarm of tiny golden insects, the schematic lines shifting color from grey to violet, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-priority",
@@ -431,7 +431,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a sealed trade contract scroll made of thin chitin plates, a glowing amber wax seal shaped like an upward arrow, gold ribbon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-pheromone",
@@ -443,7 +443,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, an ornate chitin censer releasing swirling golden pheromone smoke, small glowing motes rising, officers' insignia engraved on the base, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-vendettaToken",
@@ -455,7 +455,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a heavy coin of dark chitin with two crossed blades embossed in ember red, cracked amber inlay, a faint red glow, warlord hunting token, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-nameColor",
@@ -467,7 +467,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a chitin painter's palette with five glowing pigment cells in cyan, mint green, gold, ember orange and violet, a fine insect-leg brush, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-keshReaction",
@@ -479,7 +479,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a small amber badge in the shape of the kesh'vaar swarm emblem, a stylized winged insect with a crown, floating above a holographic chat bubble, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-roomBanner",
@@ -491,7 +491,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a tall hanging banner of woven chitin threads with an empty glowing emblem slot, violet and gold trims, held by an insect-shaped finial, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-planetFx",
@@ -503,7 +503,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a miniature ocean planet circled by a wide shimmering amber ring, a soft green aurora on its pole, presented on a chitin pedestal, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-weekly-rareRelic",
@@ -515,7 +515,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, an ancient relic shard encased in a drop of polished amber, a tiny glowing artifact visible inside, sealed by golden filigree, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-weekly-rarePlan",
@@ -527,7 +527,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a rolled starship module blueprint glowing cyan, held in a chitin tube with an amber cap, small hologram of an armor plate above it, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-weekly-epicPlan",
@@ -539,7 +539,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a starship module blueprint unfolding in violet light, intricate engine schematics floating in layers, chitin frame with amber gems, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-weekly-tokens",
@@ -551,7 +551,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "sci-fi game item icon, a small chitin pouch overflowing with gold casino tokens engraved with a lucky seven, a few coins spilling out, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "annonce-5.7",

@@ -126,6 +126,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.23 | [Page /img de la pré-prod : envoi des illustrations par lot](6.14.23-img-preprod.md) | ajout (outillage) | aucune (demande de l'utilisateur), Q28 |
 | 6.14.24 | [Dossier de mise en production 5.27 → 6.14](6.14.24-dossier-mise-en-production.md) | docs | aucune (H29-1), Q12 |
 | 6.14.25 | [Seigneurs et Boss du Codex dans « Tout réclamer »](6.14.25-codex-serveur-tout-reclamer.md) | correctif | aucune (H29-3), Q27 |
+| 6.14.26 | [Premières illustrations intégrées](6.14.26-premieres-illustrations.md) | ajout | aucune (IMG-2), Q28 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

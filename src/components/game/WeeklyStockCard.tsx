@@ -12,6 +12,7 @@ import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatDuration } from "@/lib/utils";
+import { assetUrl } from "@/lib/assets";
 
 /* 5.27 : offre de la semaine au Comptoir, en quantité limitée pour tout le serveur. */
 
@@ -51,12 +52,16 @@ export function WeeklyStockCard() {
       }
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* 6.14.26 : illustration de l'offre (public/assets/bounties/items/weekly-<id>.webp). */}
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <img src={assetUrl(`/assets/bounties/items/weekly-${offer.id}.webp`)} alt="" className="h-12 w-12 shrink-0 object-contain" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm text-slate-100">{offer.name}</p>
           <p className="text-xs text-slate-400">{offer.description} Un exemplaire par joueur, pour tout le serveur.</p>
           <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
             <CalendarClock className="h-3 w-3" aria-hidden /> Nouvelle offre dans <span className="font-mono tabular-nums">{formatDuration(Math.floor((nextRestockMs(now) - now) / 1000))}</span>
           </p>
+        </div>
         </div>
         <div className="flex flex-col items-start gap-1.5 sm:items-end">
           <div className="flex items-center gap-2">

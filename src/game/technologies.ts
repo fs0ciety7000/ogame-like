@@ -70,6 +70,15 @@ export interface TechDef {
 /** 6.14.12 : image provisoire des technos dans le Codex (rendus : docs/prompts-6.14.md, /assets/technologies/<id>.webp). */
 export const TECH_CODEX_IMAGE = "/assets/buildings/archives_fracturees.webp";
 
+/** 6.14.26 : technos qui ont leur illustration définitive (`public/assets/technologies/<id>.webp`, docs/illustrations.md).
+ *  Un id ajouté ici suffit, même sur un contenu personnalisé ; le champ `image` de l'admin reste prioritaire. */
+export const TECH_ART: readonly string[] = ["tech11", "tech18", "tech19", "tech28"];
+
+/** Illustration du Codex d'une techno : image de l'admin, sinon illustration définitive, sinon image provisoire commune. */
+export function techImage(t: Pick<TechDef, "id" | "image">): string {
+  return t.image || (TECH_ART.includes(t.id) ? `/assets/technologies/${t.id}.webp` : TECH_CODEX_IMAGE);
+}
+
 /** v3.6 : technologies de fin de partie (déclencheur « singularité » du Chœur Silencieux). */
 export const ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];
 

@@ -464,8 +464,19 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   planetFx: Orbit,
 };
 
-/** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, voir docs/prompts-5.27.md). */
-const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {};
+/** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, docs/illustrations.md) ; 6.14.26 : les 10 premières. */
+const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {
+  phantom: "/assets/bounties/items/phantom.webp",
+  painkiller: "/assets/bounties/items/painkiller.webp",
+  reroll: "/assets/bounties/items/reroll.webp",
+  priority: "/assets/bounties/items/priority.webp",
+  pheromone: "/assets/bounties/items/pheromone.webp",
+  vendettaToken: "/assets/bounties/items/vendettaToken.webp",
+  nameColor: "/assets/bounties/items/nameColor.webp",
+  keshReaction: "/assets/bounties/items/keshReaction.webp",
+  roomBanner: "/assets/bounties/items/roomBanner.webp",
+  planetFx: "/assets/bounties/items/planetFx.webp",
+};
 
 /** 5.28 : état d'un objet, en pastille (effet actif, réserve, acquis). */
 function itemState(item: ShopItem, st: BountyState, now: number): { label: string; tone: HudTone } | null {

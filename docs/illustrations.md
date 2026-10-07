@@ -10,7 +10,7 @@ Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur gén
 | `scripts/illustrations.json` | **source unique** : une ligne par image (`id`, `group`, `name`, `target`, `width`, `height` (0 = proportions gardées), `cutout` (détourage), `quality`, `prompt`, `done`) |
 | **`https://test.fs0ciety.org/img`** (6.14.23) | page de la pré-prod, réservée aux admins du jeu (`IllustrationsPage.tsx`). Elle liste les images à faire, avec le prompt à copier. Elle lit `illustrations.json` au build : chaque push sur la branche la met à jour. L'envoi se fait **par lot** (toutes les images d'un coup, dans n'importe quel ordre) vers la collection `illustration_uploads` (`fileName`, `status` : `envoyée`, `attribuée`, `intégrée` ou `refusée` ; `slotId`) |
 | `scripts/preprod-illustrations.mjs` | côté Claude : `pull <dossier>` télécharge les envois et reconnaît chaque image d'après son nom de fichier Midjourney (`illustrations-match.mjs` : début du nom comparé au début de chaque prompt). Puis `assign`, `reject`, `integrated` |
-| `scripts/illustrations.py` | traitement : détourage (rembg s'il est installé, sinon fond sombre retiré depuis les bords), recadrage, redimensionnement, WebP, écriture dans `target`, `done` daté |
+| `scripts/illustrations.py` | traitement : détourage (rembg s'il est installé (`pip install "rembg[cpu]"`, modèle `isnet-general-use`, ~180 Mo au premier lancement), sinon fond sombre retiré depuis les bords), recadrage, redimensionnement, WebP, écriture dans `target`, `done` daté |
 | Page « Atelier d'illustrations » (artifact) | secours, si la pré-prod est arrêtée : https://claude.ai/artifact/8Kp43jpwwjxw5sydUUcccX (`--page` pour la régénérer ; envois dans `uploads`, lus par `ArtifactData`) |
 
 ## Côté utilisateur (mobile)
@@ -29,8 +29,9 @@ Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur gén
 2. `python3 scripts/illustrations.py <scratchpad>/illu-in --dry-run`, puis sans `--dry-run`. Regarder chaque image produite, surtout le
    détourage : un fond resté visible, ou un objet rongé, se refait (tolérance, ou rembg).
 3. Brancher dans le code selon le groupe :
-   - **Technologies** : `image: "/assets/technologies/<id>.webp"` dans `DEFAULT_TECHNOLOGIES`. Ajouter aussi une migration de contenu
-     qui pose `image` sur les technos du contenu personnalisé quand le champ est vide (`CONTENT_MIGRATIONS`, `cosmic_db.js`).
+   - **Technologies** : ajouter l'identifiant à `TECH_ART` (`technologies.ts`). Le Codex prend alors `/assets/technologies/<id>.webp`,
+     même sur un contenu personnalisé ; le champ « Image (Codex) » de l'admin reste prioritaire.
+   - **Offres de la semaine** : rien à faire, la carte lit `weekly-<id>.webp`.
    - **Comptoir** : identifiant ajouté à `SHOP_ITEM_ART` (`src/pages/BountiesPage.tsx`).
    - **Annonce, lune, bâtiments** : même nom de fichier ; augmenter `ASSET_VERSION` (`src/lib/assets.ts`) pour vider le cache des
      navigateurs.

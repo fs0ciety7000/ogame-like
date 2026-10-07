@@ -63,12 +63,23 @@ def remove_dark_background(im: Image.Image, tolerance: int = 38) -> Image.Image:
     return im
 
 
-def cutout(im: Image.Image) -> tuple[Image.Image, str]:
-    try:
-        from rembg import remove  # type: ignore
+_SESSION = None
 
-        return remove(im.convert("RGBA")), "rembg"
-    except Exception:
+
+def cutout(im: Image.Image) -> tuple[Image.Image, str]:
+    """rembg avec un modèle léger fait pour les objets (ILLU_MODEL, défaut isnet-general-use ; le modèle par défaut de rembg
+    pèse 1 Go et demande 8 Go de mémoire), session gardée pour tout le lot ; sinon fond sombre retiré depuis les bords."""
+    global _SESSION
+    try:
+        import os
+
+        from rembg import new_session, remove  # type: ignore
+
+        model = os.environ.get("ILLU_MODEL", "isnet-general-use")
+        if _SESSION is None:
+            _SESSION = new_session(model)
+        return remove(im.convert("RGBA"), session=_SESSION), f"rembg ({model})"
+    except ImportError:
         return remove_dark_background(im), "fond sombre retiré"
 
 

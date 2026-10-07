@@ -9,7 +9,7 @@ import { WORLD_BOSSES } from "@/game/worldBosses";
 import { FACTIONS } from "@/game/pirates";
 import { UNITS } from "@/game/units";
 import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/buildings";
-import { describeTechEffect, TECH_CODEX_IMAGE, TECHNOLOGIES, techEffects } from "@/game/technologies";
+import { describeTechEffect, TECHNOLOGIES, techEffects, techImage } from "@/game/technologies";
 import { RESOURCE_LIST } from "@/game/resources";
 import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
 import { COMMANDERS, commandersState } from "@/game/commanders";
@@ -252,7 +252,7 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       category: "technologies",
       name: t.nom,
       subtitle: "Technologie",
-      image: t.image || TECH_CODEX_IMAGE,
+      image: techImage(t),
       text: t.desc,
       unlocked: (player.techLevels?.[t.id] ?? 0) >= 1,
       facts: [{ label: "Niveau max", value: String(t.maxLevel) }, ...effects.slice(0, 2).map((value) => ({ label: "Au niveau 1", value }))],
