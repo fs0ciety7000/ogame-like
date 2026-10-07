@@ -200,6 +200,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.99 | [Audit des 13 thèmes à chaque revue de fin de feuille de route (TH-L7)](6.14.99-audit-themes-en-revue.md) | docs (méthode) | Q237 |
 | 6.14.100 | [Palette Netrunner, couleurs de sens séparées (TH-L5)](6.14.100-palette-netrunner.md) | correctif (interface) | Q233 |
 | 6.14.101 | [L'attention porte une forme dans les thèmes orange (TH-L6)](6.14.101-ember-forme-themes-orange.md) | correctif (interface) | Q234 |
+| 6.14.102 | [Feuille de route d'hiver 2031 proposée (18 nouveautés à valider)](6.14.102-feuille-de-route-2031-proposee.md) | docs (proposition) | Q241 à Q258 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
