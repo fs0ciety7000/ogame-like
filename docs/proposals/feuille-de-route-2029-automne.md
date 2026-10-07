@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'automne 2029
 
-Statut : **en cours** (2026-10-07, clôture d'AU23 : `docs/audit/2026-10-07-au23-ete-2029.md`). Règle n° 3 : jamais de pause ;
+Statut : **close** (2026-10-07, AU24 : `docs/audit/2026-10-07-au24-automne-2029.md`), suite dans `feuille-de-route-2029-hiver.md`. Ouverte à la clôture d'AU23 (`docs/audit/2026-10-07-au23-ete-2029.md`). Règle n° 3 : jamais de pause ;
 production, `main` et PR sautés (Q12).
 
 ## Planning
@@ -19,7 +19,7 @@ production, `main` et PR sautés (Q12).
 | 4 | A29-1 | Inventaire des constats ouverts des revues AU1 à AU23 (`docs/audit/constats-ouverts.md`) : faisable seul, réglé par Z1, attend l'utilisateur ; plus les contenus livrés sans image définitive (CLAUDE.md règle n° 4) | M | livré en 6.14.18 (`docs/audit/constats-ouverts.md`) |
 | 5 | A29-2 | Santé de l'équilibre complétée (premiers constats « faisable seul » de l'inventaire) : casino et pot commun (COM-3), unités d'élite débloquées (PNJ-5), repaires et raids repoussés (PNJ-4), succès par semaine (PRG-5) | M | livré en 6.14.19 |
 | 6 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
-| 7 | AU24 | Revue, même grille ; clôture de l'automne 2029 et feuille de route suivante | M | fin des lots |
+| 7 | AU24 | Revue, même grille ; clôture de l'automne 2029 et feuille de route suivante | M | livré en 6.14.20 |
 
 Révision du 2026-10-07 (après C4, demande de l'utilisateur : « adapte le plan ») : Z1 avance avant l'inventaire, car l'accès à la
 pré-prod est ouvert et ses chiffres règlent une partie des constats ; PP-3 ajouté (constat de la vérification de C2).

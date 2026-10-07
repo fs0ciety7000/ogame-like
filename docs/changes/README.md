@@ -120,6 +120,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.17 | [Codex dans « Tout réclamer »](6.14.17-codex-tout-reclamer.md) | correctif | aucune (Z1-2), Q27 |
 | 6.14.18 | [Inventaire des constats ouverts](6.14.18-constats-ouverts.md) | docs | aucune (A29-1, ET29-3) |
 | 6.14.19 | [Santé de l'équilibre complétée](6.14.19-sante-completee.md) | ajout (admin) | aucune (A29-2) |
+| 6.14.20 | [Revue AU24](6.14.20-revue-au24.md) | docs | aucune (AU24) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
