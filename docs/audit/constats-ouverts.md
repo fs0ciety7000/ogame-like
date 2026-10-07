@@ -23,7 +23,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
 | AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32, AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17 sauf AE-6 et AE-8 (AE-3 et AE-7 : reste le moteur, lot AE-L3), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
-| AU28 thèmes | 6.14.90 (TH-10 et TH-16 fermés en 6.14.96, TH-7 en 6.14.97, TH-8 et TH-9 en 6.14.98) | TH-11 à TH-15 et danger sur `space-600` (`docs/audit/2026-10-07-au28-themes.md`) : palette Netrunner, ember des thèmes orange | TH-L5, TH-L6 |
+| TH-danger | 6.14.96 | Rouge « danger » sous 4,5:1 sur `space-600` dans 7 thèmes (4,1 à 4,45:1 ; 4,5 et plus sur `space-700`) | revue AU28 (avec `theme-audit.mjs`) |
 | É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
 
 
@@ -58,6 +58,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Id | Comment |
 |:--|:--|
+| AU28 thèmes | 6.14.90 et 6.14.96 à 6.14.101 : TH-1 à TH-16 corrigés (lots TH-L1 à TH-L7) ; reste le rouge « danger » sur `space-600` (7 thèmes entre 4,1 et 4,5:1), noté pour la revue AU28 |
 | Images provisoires (lot 2) | 6.14.93 : bannières et emblèmes de 5 factions, 3 boss d'alliance, 12 thèmes du passe, 3 portraits de saison, couvertures des billets 50 à 52, 8 en-têtes ; les 129 emplacements de `/img` sont faits |
 | AJ-7 | 6.14.94 : chiffres des fiches et du GDD remis au code (sauvetage 85 %, 24 unités, 147 succès, 7 modèles de modules, 17 tâches), journal §8 trié ; garde `docsCounts.test.ts` |
 | Images provisoires (lot 1) | 6.14.92 : Cale sèche, lune, phalange, porte de saut, 4 technos (plus d'image commune), annonce 5.7, 14 reliques (plus d'image empruntée ni cassée), 9 objets du Comptoir, monument de prestige ; images générées par API |

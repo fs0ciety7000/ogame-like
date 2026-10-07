@@ -46,6 +46,7 @@ export const HudChip = React.forwardRef<HTMLElement, ChipProps>(function HudChip
     <Comp
       ref={ref}
       className={cn("hud-chip", size === "sm" ? "hud-chip-sm" : "hud-chip-md", (asChild || rest.onClick) && "hud-chip-action hud-hit", className)}
+      data-tone={tone}
       style={{ ["--c" as string]: HUD_TONE[tone], ...style }}
       {...rest}
     >
@@ -68,7 +69,7 @@ export function HudTag({ children, tone = "neutral", className }: { children: Re
  *  gauche de la couleur sémantique, fond teinté très léger. */
 export function HudCallout({ tone = "accent", alert, className, children, ...rest }: React.HTMLAttributes<HTMLDivElement> & { tone?: HudTone; alert?: boolean }) {
   return (
-    <div {...rest} className={cn("hud-callout p-3", alert && "hud-callout-alert", className)} style={{ ["--c" as string]: HUD_TONE[tone], ...rest.style }}>
+    <div {...rest} data-tone={tone} className={cn("hud-callout p-3", alert && "hud-callout-alert", className)} style={{ ["--c" as string]: HUD_TONE[tone], ...rest.style }}>
       {children}
     </div>
   );

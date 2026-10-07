@@ -204,10 +204,10 @@
   --th-title-track: 0.08em;
   --th-cut: 16px;
   --th-accent: #f3e600;
-  --th-accent2: #ff003c;
+  --th-accent2: #c86bff; /* 6.14.100 (TH-L5, Q233) : violet néon, distinct du danger */
   --th-ok: #55ead4;
   --th-danger: #ff003c;
-  --th-gold: #f3e600;
+  --th-gold: #ffb340; /* 6.14.100 : ambre, distinct de l'accent */
   --th-ember: #ff6b2c;
   --th-space-950: #050407;
   --th-space-900: #09080b;
@@ -224,10 +224,11 @@
   --th-ink: #f4f1d0;
   --th-body-glow: #2a0710;
   --th-panel: linear-gradient(180deg, rgba(20, 18, 16, 0.94), rgba(8, 7, 10, 0.96));
-  --th-edge: color-mix(in srgb, var(--th-accent2) 40%, transparent);
+  --th-edge: color-mix(in srgb, var(--th-nr-bar) 40%, transparent);
   --th-edge-strong: color-mix(in srgb, var(--th-accent) 85%, transparent);
   --th-btn-ink: #120f00;
   --th-scan: 0.03;
+  --th-nr-bar: #ff003c; /* 6.14.100 : rouge de décor (barre des panneaux, glitch), plus un sens */
 }
 
 /* Aurora — coucher de soleil orbital : violet profond, rose et ambre. */
@@ -961,11 +962,11 @@ body {
   font-weight: 500;
 }
 :root[data-theme="netrunner"] .glass-panel {
-  border-left: 3px solid var(--th-accent2);
+  border-left: 3px solid var(--th-nr-bar);
 }
 :root[data-theme="netrunner"] h1.hud-title {
   color: var(--th-accent);
-  text-shadow: 3px 3px 0 color-mix(in srgb, var(--th-accent2) 85%, transparent);
+  text-shadow: 3px 3px 0 color-mix(in srgb, var(--th-nr-bar) 85%, transparent);
 }
 :root[data-theme="netrunner"] .hud-title {
   font-weight: 700;
@@ -982,17 +983,17 @@ body {
 :root[data-theme="netrunner"] .hud-btn-primary {
   background: var(--th-accent);
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
-  box-shadow: inset -3px 0 0 var(--th-accent2);
+  box-shadow: inset -3px 0 0 var(--th-nr-bar);
 }
 :root[data-theme="netrunner"] .hud-btn-primary:hover {
   background: color-mix(in srgb, var(--th-accent) 85%, white);
 }
 :root[data-theme="netrunner"] ::selection {
-  background: color-mix(in srgb, var(--th-accent2) 55%, transparent);
+  background: color-mix(in srgb, var(--th-nr-bar) 55%, transparent);
 }
 @keyframes nr-glitch {
-  0% { text-shadow: 2px 0 var(--th-accent2), -2px 0 var(--th-ok); transform: translateX(0); }
-  50% { text-shadow: -3px 0 var(--th-accent2), 3px 0 var(--th-ok); transform: translateX(1px); }
+  0% { text-shadow: 2px 0 var(--th-nr-bar), -2px 0 var(--th-ok); transform: translateX(0); }
+  50% { text-shadow: -3px 0 var(--th-nr-bar), 3px 0 var(--th-ok); transform: translateX(1px); }
   100% { text-shadow: none; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1312,6 +1313,16 @@ main {
 .hud-tone-violet { --c: var(--th-accent2); }
 .hud-tone-neutral { --c: var(--th-text-500); }
 .hud-callout-alert { animation: hud-callout-alert 1.8s ease-in-out infinite; }
+/* 6.14.101 (TH-L6, Q234) : dans les thèmes où l'ember (attention) a la teinte de l'accent, l'attention porte une forme en plus de la
+   couleur : « ! » devant une pastille sans icône, double liseré sur un encadré. */
+:root:is([data-theme="cockpit"], [data-theme="omni"], [data-theme="ishimura"]) .hud-chip[data-tone="ember"]:not(:has(svg))::before {
+  content: "!";
+  font-weight: 700;
+  letter-spacing: 0;
+}
+:root:is([data-theme="cockpit"], [data-theme="omni"], [data-theme="ishimura"]) .hud-callout[data-tone="ember"] {
+  border-left: 4px double var(--c);
+}
 @keyframes hud-callout-alert { 50% { background: color-mix(in srgb, var(--c) 14%, transparent); } }
 :root[data-theme="holo"] .hud-chip,
 :root[data-theme="holo"] .hud-callout { clip-path: none; }

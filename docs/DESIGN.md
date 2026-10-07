@@ -49,6 +49,8 @@ une couleur de sens. L'accent se marque aussi par la forme : soulignement de l'o
 Ne pas décorer avec une couleur sémantique. Un même cas garde la même couleur partout :
 un chantier à l'arrêt (bâtiment, labo, chantier naval, missions) est une **action à mener**, donc `accent`,
 sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **attention** (`ember`). Une info ne passe jamais par la couleur seule (texte ou icône en plus).
+Dans un thème où l'ember se confond avec l'accent (écart < 15 : Cockpit, Omni, Ishimura), l'attention porte une forme : « ! » devant
+une pastille sans icône, double liseré sur un encadré (6.14.101, garde dans `themeTokens.test.ts`).
 Une **catégorie** (type d'unité, classe de combat, tempérament, rubrique de l'agenda) n'a pas d'enjeu : `HudTag` sans ton (neutre,
 c'est son défaut depuis 6.14.82) et une icône. Une valeur ne prend la couleur de son sens que si elle porte un enjeu : « Défaites »
 en `danger` seulement au-dessus de 0, « Victoires » en `mint` seulement au-dessus de 0 ; le tempérament Agressif en `ember`, les

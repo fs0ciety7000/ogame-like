@@ -87,8 +87,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | livré (6.14.98) |
 | 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | livré (6.14.96) |
 | 65d | TH-L4 | Garde des contrastes mesurée sur `space-600` (Q235) | S | livré (6.14.96) |
-| 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q233) | M | à faire |
-| 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q234) | M | à faire |
+| 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q233) | M | livré (6.14.100) |
+| 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q234) | M | livré (6.14.101) |
 | 65g | TH-L7 | `scripts/theme-audit.mjs` à chaque revue de fin de feuille de route (Q237) | S | livré (6.14.99) |
 | 65 | AU28 | Revue, même grille, audit des 13 thèmes (`theme-audit.mjs`, WORKFLOW §5) | M | fin des lots |
 | — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | plus tard |

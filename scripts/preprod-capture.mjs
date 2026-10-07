@@ -2,6 +2,7 @@
 //
 //   node scripts/preprod-capture.mjs /game/codex <dossier de sortie> ["Onglet 1,Onglet 2"] ["Texte 1,Texte 2"]
 //
+// 6.14.100 : variable CAPTURE_THEME (ex. netrunner) pour capturer un autre thème que Constellation.
 // 6.14.93 : le 4e argument (textes séparés par des virgules) fait défiler jusqu'à chaque texte, après le dernier onglet, et
 // ajoute une capture par texte (`<page>-vue-<texte>-<largeur>.png`) : contenu sous la ligne de flottaison.
 //
@@ -75,13 +76,15 @@ const dismiss = async (page) => {
     await page.waitForTimeout(700);
   }
 };
+// 6.14.100 : CAPTURE_THEME=<thème> pour vérifier un autre thème (Constellation par défaut, thème des livrables).
+const CAPTURE_THEME = /^[a-z]+$/.test(process.env.CAPTURE_THEME ?? "") ? process.env.CAPTURE_THEME : "constellation";
 const slug = path.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "accueil";
 for (const [name, viewport] of [["mobile", { width: 375, height: 812 }], ["desktop", { width: 1440, height: 900 }]]) {
   const ctx = await browser.newContext({ viewport });
-  await ctx.addInitScript((s) => {
-    localStorage.setItem("cosmic-empires:theme", "constellation");
+  await ctx.addInitScript(([s, theme]) => {
+    localStorage.setItem("cosmic-empires:theme", theme);
     localStorage.setItem("pocketbase_auth", s);
-  }, stored);
+  }, [stored, CAPTURE_THEME]);
   // Jamais de requête vers la production depuis une capture.
   await ctx.route(/(base|empire)\.fs0ciety\.org/, (r) => r.abort());
   const page = await ctx.newPage();

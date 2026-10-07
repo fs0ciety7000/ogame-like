@@ -96,7 +96,7 @@ const TEXT_500_MIN = 4.5;
 const KNOWN: Record<string, Record<string, number>> = {
   holo: { "accent/accent2": 0, "gold/ember": 7.8 },
   cockpit: { "accent/accent2": 0, "accent/ember": 0, "accent2/ember": 0 },
-  netrunner: { "accent/gold": 0, "accent2/danger": 0 },
+  // netrunner : accent/or et violet/danger levées en 6.14.100 (TH-L5, Q233)
   aurora: { "accent2/ember": 0 }, // 6.14.90 (TH-3) : accent/danger levée (10,1 → 19,5)
   voyageur: { "accent/text-100": 7 },
   omni: { "accent/ember": 7.1, "gold/ember": 11.3 },
@@ -147,6 +147,15 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
       expect(contrast(t["text-400"], bg), n).toBeGreaterThan(contrast(t["text-500"], bg));
       expect(contrast(t["text-500"], bg), n).toBeGreaterThan(contrast(t["text-600"], bg));
     }
+  });
+
+  it("ember proche de l'accent : la forme d'attention couvre le thème (6.14.101, TH-L6)", () => {
+    const css = readFileSync("src/index.css", "utf8");
+    const rule = /:root:is\(([^)]*)\) \.hud-chip\[data-tone="ember"\]/.exec(css);
+    expect(rule, "règle de forme de l'ember introuvable").not.toBeNull();
+    const covered = new Set([...rule![1].matchAll(/data-theme="([a-z]+)"/g)].map((m) => m[1]));
+    const close = Object.entries(THEMES).filter(([, t]) => deltaE(t.accent, t.ember) < SENSE_MIN).map(([n]) => n);
+    expect(close.filter((n) => !covered.has(n))).toEqual([]);
   });
 
   it("Constellation : violet ≠ ember ≠ danger ≠ or, accent ≠ texte (AD-1)", () => {
