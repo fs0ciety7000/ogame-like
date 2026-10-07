@@ -214,7 +214,8 @@ Toujours lire le résultat de l'intégration **avant** de committer.
 ## Livrer
 
 - Une branche de travail par session ; une PR **par lot terminé** (pas de PR intermédiaire).
-- Chaque lot a sa fiche `docs/changes/` (règle n° 1) ; la PR liste les fiches qu'elle porte.
+- Chaque lot a sa fiche `docs/changes/` (règle n° 1) ; la PR liste les fiches qu'elle porte. Tant que la PR de mise en production attend, `python3 scripts/pr-text.py`
+  régénère son texte (`docs/release/pr-5.27-6.14.md`) après chaque lot.
 - Chaque lot visible par les joueurs a un fichier `changelog/AAAA-MM-JJ-slug.md` (frontmatter `version`, `iteration`, `date`, `title`).
 - > **Instructions (2026-10-07) : à chaque grosse mise à jour -> nouveau billet devblog. Mise à jour du billet devblog « la grande mise
   > à jour » et autres en fonction des ajustements / nouveautés etc. Plusieurs billets créés si grosse maj (changelog).**

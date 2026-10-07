@@ -2,18 +2,19 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.30 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.34 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 97 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 101 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
-- **Billet pour les joueurs** : `content/blog/49-grande-mise-a-jour.md`, à importer en brouillon puis à publier après le déploiement.
+- **Billets pour les joueurs** : récapitulatif `content/blog/49-grande-mise-a-jour.md` et billets 50 à 52, à importer en brouillon puis à
+  publier après le déploiement ; l'annonce `v6.14-grande-maj` s'affiche une fois par joueur.
 
 ## Données
 
@@ -26,12 +27,12 @@ production : migrations appliquées, services ok, joueurs intacts.
 
 ## Vérifications
 
-- [ ] CI verte : lint, tests (1 144), build, intégration PocketBase (80).
+- [ ] CI verte : lint, tests (1 147), build, intégration PocketBase (81).
 - [ ] Après la fusion, le workflow « Déploiement serveur » fait la sauvegarde complète, puis pose le schéma et les hooks.
 - [ ] `GET /api/cosmic/version` → `6.14.26` ; `GET /api/cosmic/status` → services ok.
 - [ ] `content_migrations` : les 8 migrations ci-dessus.
 - [ ] Une connexion et une action de jeu réussies ; Comptoir et Codex illustrés ; `/img` (admin) affiche la liste.
-- [ ] Billet importé et publié.
+- [ ] Billets 49 à 52 importés et publiés ; annonce vue une fois (revoir sur `/game/annonces`).
 
 ## Fiches portées
 
@@ -132,6 +133,10 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.28 : Synthèse des décisions à valider (`docs/changes/6.14.28-decisions-a-valider.md`)
 - 6.14.29 : Revue AU25 (`docs/changes/6.14.29-revue-au25.md`)
 - 6.14.30 : Billet « la grande mise à jour » (`docs/changes/6.14.30-billet-grande-mise-a-jour.md`)
+- 6.14.31 : Texte de la PR prêt à coller (`docs/changes/6.14.31-texte-pr.md`)
+- 6.14.32 : Page /decisions dans le jeu (`docs/changes/6.14.32-page-decisions.md`)
+- 6.14.33 : Billets de la grande mise à jour et annonce (`docs/changes/6.14.33-billets-et-annonce.md`)
+- 6.14.34 : Intégration : arrivées forcées sans course (`docs/changes/6.14.34-integration-arrivees-forcees.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
