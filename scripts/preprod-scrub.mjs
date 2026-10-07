@@ -11,7 +11,8 @@
 // 2. connexion Google / Apple coupée (les redirections pointent vers la prod) ;
 // 3. comptes : e-mails remplacés par <id>@test.invalid (connexion par pseudo et mot de passe inchangée),
 //    sauf PREPROD_KEEP_EMAILS ; jetons de désinscription vidés ; passkeys supprimées (liées au domaine de la prod) ;
-// 4. messages privés supprimés (rien de privé n'est utile aux essais).
+// 4. messages privés supprimés (rien de privé n'est utile aux essais) ;
+// 5. adresses de la prod (fichiers, liens) réécrites vers le serveur de test dans la configuration et les billets.
 // Garde : refuse de tourner sur une adresse qui n'est pas un serveur de test ou local.
 import PocketBase from "pocketbase";
 
@@ -104,5 +105,30 @@ const purge = async (collection) => {
 await purge("passkeys");
 // 4. Messages privés.
 await purge("private_messages");
+
+// 5. 6.14.15 (PP-3) : adresses absolues de la prod dans le contenu actif (illustrations envoyées dans l'admin, liens).
+// Les fichiers sont dans la sauvegarde restaurée : seule l'adresse change. Les historiques (admin_logs, reports) restent tels quels.
+const PROD_HOSTS = /https?:\/\/(?:base|empire)\.fs0ciety\.org/g;
+const target = PREPROD_GAME_URL.replace(/\/+$/, "");
+for (const collection of ["game_config", "blog_posts"]) {
+  let n = 0;
+  for (const r of await pb.collection(collection).getFullList({ batch: 500 })) {
+    const patch = {};
+    for (const [field, value] of Object.entries(r)) {
+      if (["id", "collectionId", "collectionName", "created", "updated"].includes(field) || value == null) continue;
+      const raw = typeof value === "string" ? value : JSON.stringify(value);
+      if (!PROD_HOSTS.test(raw)) continue;
+      PROD_HOSTS.lastIndex = 0;
+      const next = raw.replace(PROD_HOSTS, target);
+      patch[field] = typeof value === "string" ? next : JSON.parse(next);
+    }
+    PROD_HOSTS.lastIndex = 0;
+    if (Object.keys(patch).length) {
+      await pb.collection(collection).update(r.id, patch);
+      n++;
+    }
+  }
+  console.log(`${collection} : ${n} enregistrement(s) repointé(s) vers ${target}.`);
+}
 
 console.log("Serveur de test prêt. Étapes suivantes : docs/preprod.md §6.");

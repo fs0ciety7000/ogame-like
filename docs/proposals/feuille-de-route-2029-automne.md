@@ -13,8 +13,13 @@ production, `main` et PR sautés (Q12).
 | 0d | C2 | Codex : entrées automatiques des 13 bâtiments et des 30 technos (débloquées par le joueur), garde `contentChain.test.ts` mise à jour | M | livré en 6.14.12 (Q24) |
 | 0e | C3 | Préréglages d'effet pour les 10 unités qui n'en ont pas (`effectCatalog.ts`) | S | livré en 6.14.13 (Q25) |
 | 0f | C4 | Mesure « boss d'alliance affrontés » et succès d'entrée | S | livré en 6.14.14 (Q26) : garde sans manque connu |
-| 1 | A29-1 | Inventaire des constats ouverts des revues AU1 à AU23 (`docs/audit/constats-ouverts.md`) : faisable seul, attend Z1 (pré-prod), attend l'utilisateur (ET29-3) ; plus la liste des contenus déjà livrés sans succès, entrée de Codex ou image définitive (CLAUDE.md règle n° 4) | M | à faire |
-| 2 | A29-2 | Premier constat « faisable seul » de l'inventaire | selon le constat | à faire |
-| 3 | Z1 | Mesures réelles **sur la pré-prod** (copie de la prod) : PRG-1, BOSS-2, commerce, bases, paliers bonus, lunes ; réponses à Q2, Q18, Q21 | M | accès ouvert et copie nettoyée (6.14.11) : à faire après C4 |
-| 4 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
-| 5 | AU24 | Revue, même grille | M | fin des lots |
+| 1 | PP-3 | Pré-prod : adresses absolues des fichiers de la prod (`base.fs0ciety.org/api/files/…`) réécrites vers la pré-prod dans la configuration copiée (les fichiers sont dans la sauvegarde) ; étape ajoutée à `preprod-scrub.mjs` (constat 6.14.14) | S | livré en 6.14.15 |
+| 2 | Z1 | Mesures réelles **sur la pré-prod** (copie de la prod, agrégats anonymes) : PRG-1 (points du passe), BOSS-2 (boss abattus), commerce, bases avancées, paliers bonus, lunes, Codex ; réponses à Q2, Q3, Q18, Q21 ; rapport `docs/audit/2026-10-07-z1-mesures.md` ; script réutilisable `scripts/preprod-measure.mjs` | M | à faire |
+| 3 | Z1-2 | Ajustements tirés des mesures (lots prudents, réglages de l'admin d'abord) ; une ligne par décision dans `QUESTIONS.md` | selon Z1 | à faire |
+| 4 | A29-1 | Inventaire des constats ouverts des revues AU1 à AU23 (`docs/audit/constats-ouverts.md`) : faisable seul, réglé par Z1, attend l'utilisateur ; plus les contenus livrés sans image définitive (CLAUDE.md règle n° 4) | M | à faire |
+| 5 | A29-2 | Premier constat « faisable seul » de l'inventaire | selon le constat | à faire |
+| 6 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
+| 7 | AU24 | Revue, même grille ; clôture de l'automne 2029 et feuille de route suivante | M | fin des lots |
+
+Révision du 2026-10-07 (après C4, demande de l'utilisateur : « adapte le plan ») : Z1 avance avant l'inventaire, car l'accès à la
+pré-prod est ouvert et ses chiffres règlent une partie des constats ; PP-3 ajouté (constat de la vérification de C2).

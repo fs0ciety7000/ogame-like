@@ -79,6 +79,10 @@ Une fois l'accès donné (§6), Claude peut le lancer.
 - coupe les e-mails (SMTP), les sauvegardes automatiques et leur copie S3, la connexion Google / Apple ;
 - remplace les e-mails des comptes par `<id>@test.invalid`, sauf `PREPROD_KEEP_EMAILS`. La connexion par pseudo et mot de passe reste possible ;
 - vide les jetons de désinscription et supprime les passkeys (liées au domaine de la prod) ainsi que les messages privés.
+- réécrit vers la pré-prod les adresses de la prod (`base.` et `empire.fs0ciety.org`) dans la configuration du jeu et les billets :
+  les illustrations envoyées dans l'admin sont dans la sauvegarde, seule l'adresse change. Les historiques (`admin_logs`, `reports`) restent tels quels.
+
+Captures d'écran d'une page (375 px et bureau, thème Constellation) : `node scripts/preprod-capture.mjs /game/codex <dossier> "Bâtiments,Technologies"`.
 
 Si les fichiers (avatars, illustrations) sont rangés sur S3 (Settings → Files storage), donner à la pré-prod **un autre bucket** : le
 script le signale.
