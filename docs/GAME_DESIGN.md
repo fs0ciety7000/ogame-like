@@ -210,3 +210,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.4 | P29-2 : billet de devblog « Ta lune grandit » (niveaux, Codex, succès) | `docs/changes/6.14.4-billet-lunes-2.md` |
 | 2026-10-07 | 6.14.5 | Revue AU22 : printemps 2029 clos (succès lunaires, billet), BOSS-4 clos ; été 2029 proposé (mesure BOSS-2) | `docs/audit/2026-10-07-au22-printemps-2029.md` |
 | 2026-10-07 | 6.14.6 | E29-1 : mesure BOSS-2, boss abattus par type sur 56 jours dans la santé de l'équilibre (Hall of fame), Q21 | `docs/changes/6.14.6-mesure-boss.md` |
+| 2026-10-07 | 6.14.7 | Revue AU23 : été 2029 clos (mesure BOSS-2) ; automne 2029 proposé (inventaire des constats ouverts) | `docs/audit/2026-10-07-au23-ete-2029.md` |

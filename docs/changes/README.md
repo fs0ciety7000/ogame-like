@@ -107,6 +107,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.4 | [Billet « Ta lune grandit »](6.14.4-billet-lunes-2.md) | docs | aucune (P29-2) |
 | 6.14.5 | [Revue AU22](6.14.5-revue-au22.md) | docs | aucune (AU22) |
 | 6.14.6 | [Mesure BOSS-2 : boss abattus](6.14.6-mesure-boss.md) | ajout (admin) | aucune (E29-1), Q21 |
+| 6.14.7 | [Revue AU23](6.14.7-revue-au23.md) | docs | aucune (AU23) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
