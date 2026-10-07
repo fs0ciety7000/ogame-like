@@ -2163,6 +2163,69 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await admin.collection("players").update(bId, { emailOptOut: false, mailToken: "" });
   });
 
+  it("6.14.52 (AC-1) campagne e-mail : une fiche modifiée pendant l'envoi n'est pas écrasée par la lecture du départ", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const user = await admin.collection("users").getOne(bId);
+    const before = await snap(bId);
+    try {
+      // B est destinataire (compte vérifié, nouvelles acceptées) et n'a pas encore de jeton : la campagne doit le créer.
+      await admin.collection("users").update(bId, { verified: true });
+      await admin.collection("players").update(bId, { emailOptOut: false, mailToken: "", resources: RICH });
+      const traded0 = Number((await snap(bId)).stats?.traded ?? 0);
+      // Envoi « à blanc » : destinataires lus, 2,5 s de pause (durée simulée de l'envoi), puis jetons. Rien n'est envoyé.
+      const campaign = admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "send", confirm: "ENVOYER", dryRun: true, holdMs: 2500, subject: "x", html: "<p>x</p>", apiUrl: PB_TEST_URL } });
+      await wait(600);
+      // Pendant la campagne, B joue : 1 000 ferraille échangées.
+      expect((await ps.tradeResources(bId, "scrap", "energy", 1000)).gained).toBeGreaterThan(0);
+      const played = await snap(bId);
+      const out = await campaign;
+      expect(out.dryRun).toBe(true);
+      expect(out.tokens).toBeGreaterThanOrEqual(1);
+      const after = await snap(bId);
+      // Le jeton est posé, et la partie jouée entre-temps est intacte (l'ancienne fiche n'a pas été réécrite).
+      expect(after.mailToken).toMatch(/^.{32}$/);
+      expect(Number(after.stats?.traded ?? 0)).toBe(Number(played.stats?.traded ?? 0));
+      expect(Number(after.stats?.traded ?? 0)).toBeGreaterThan(traded0);
+      expect(Math.floor(after.resources.scrap)).toBe(Math.floor(played.resources.scrap));
+      expect(after.resources.scrap).toBeLessThan(RICH.scrap);
+      // Deuxième passage : le jeton existant est gardé.
+      await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "send", confirm: "ENVOYER", dryRun: true, subject: "x", html: "<p>x</p>", apiUrl: PB_TEST_URL } });
+      expect((await snap(bId)).mailToken).toBe(after.mailToken);
+    } finally {
+      await admin.collection("users").update(bId, { verified: user.verified });
+      await admin.collection("players").update(bId, { emailOptOut: false, mailToken: "", resources: before.resources });
+    }
+  }, 30_000);
+
+  it("6.14.52 (AC-13) le raid du tutoriel part à l'instant de la réclamation", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const purge = async () => {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` })) await admin.collection("fleets").delete(f.id);
+    };
+    try {
+      await purge();
+      await admin.collection("players").update(bId, {
+        onboarding: { claimed: ["scrap3", "reactor3", "research", "drones5", "mission", "storage2"] },
+        units: { ...before.units, roquette: { level: 1, count: 10 } },
+        allianceId: "",
+      });
+      const t0 = Date.now();
+      await ps.claimOnboarding("rockets10");
+      const raids = (await admin.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` })).sort((x, y) => x.arriveAtMs - y.arriveAtMs);
+      expect(raids).toHaveLength(1);
+      // Départ = l'instant de la réclamation (la barre de progression part de zéro), arrivée 2 min plus tard.
+      expect(raids[0].departAtMs).toBeGreaterThanOrEqual(t0 - 5000);
+      expect(raids[0].departAtMs).toBeLessThanOrEqual(Date.now());
+      expect(raids[0].arriveAtMs - raids[0].departAtMs).toBeGreaterThan(60_000);
+    } finally {
+      await purge();
+      await admin.collection("players").update(bId, { units: before.units, onboarding: before.onboarding ?? null, allianceId: before.allianceId ?? "", resources: before.resources, bounties: before.bounties ?? {} });
+    }
+  });
+
   it("v4.0 command: commanders, synthesis capsules (decoy hidden from the target) and relics", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
@@ -2739,7 +2802,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { bounties: { ...bountyState(bBefore), amber: 25 } });
       await expect(ps.renamePlayer(A.pseudo.toUpperCase())).rejects.toThrow(/déjà pris/);
       await expect(ps.renamePlayer("!!")).rejects.toThrow(/3 caractères/);
+      // 6.14.52 (AC-4) : un chantier fini au rattrapage du changement de pseudo arrive au Journal.
+      await admin.collection("queues").update(bId, { buildingUpgrades: { extracteur_ferraille: { endTime: Date.now() - 1000 } } });
+      const t0 = Date.now();
       expect(await ps.renamePlayer(fresh)).toEqual({ pseudo: fresh });
+      const done = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Construction terminée" && createdAtMs >= ${t0 - 1000}` });
+      expect(done.length).toBe(1);
       const b = await snap(bId);
       expect(b.pseudo).toBe(fresh);
       expect(b.renamed).toMatchObject({ fromPseudo: B.pseudo });
@@ -2750,7 +2818,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await loginPlayer(fresh, B.pw);
       expect(pb.authStore.record?.id).toBe(bId);
     } finally {
-      await admin.collection("players").update(bId, { bounties: bBefore.bounties ?? {} });
+      await admin.collection("players").update(bId, { bounties: bBefore.bounties ?? {}, buildings: bBefore.buildings });
     }
   }, 30_000);
 

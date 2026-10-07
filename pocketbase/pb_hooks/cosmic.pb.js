@@ -107,7 +107,7 @@ routerAdd(
       if (ob.tutorialRaid === "due") {
         const now = Date.now();
         const R = game.TUTORIAL_RAID;
-        db.createPirateRaid(txApp, game, out.player, { factionId: R.factionId, power: game.tutorialRaidPower(out.player), arriveAtMs: now + R.delayMinutes * 60000 });
+        db.createPirateRaid(txApp, game, out.player, { factionId: R.factionId, power: game.tutorialRaidPower(out.player), arriveAtMs: now + R.delayMinutes * 60000 }, now); // 6.14.52 (AC-13) : date de départ du raid
         out.player.onboarding = Object.assign({}, ob, { tutorialRaid: "sent" });
       }
       db.savePlayer(txApp, game, loaded, out.player, out.queues);

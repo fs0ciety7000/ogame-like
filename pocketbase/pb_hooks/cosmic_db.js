@@ -1120,6 +1120,7 @@ function tradeContractRequest(e) {
         rec.load(Object.assign({ clientUid: uid, clientPseudo: me.player.pseudo, status: "open", createdAtMs: now, supplierUid: "", supplierPseudo: "", deposit: 0, acceptedAtMs: 0, deadlineMs: 0, fleetId: "", closedAtMs: 0 }, c));
         txApp.save(rec);
         savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        notify(txApp, uid, me.notifications); // 6.14.52 (AC-4) : notifications du rattrapage
         if (c.targetUid) {
           notify(txApp, c.targetUid, [
             { kind: "gift", title: "Contrat proposé", message: `${me.player.pseudo} te propose un contrat : livre ${game.describeAmount(c.wantRes, c.wantAmount)} contre ${game.describeAmount(c.payRes, c.payAmount)} (Commerce → Contrats).`, link: "/game/commerce?onglet=contrats", createdAtMs: now, read: false },
@@ -1134,6 +1135,7 @@ function tradeContractRequest(e) {
       if (action === "accept") {
         const res = game.acceptTradeContract(c, me.player, activeTradeContracts(txApp, uid), now);
         savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        notify(txApp, uid, me.notifications); // 6.14.52 (AC-4) : notifications du rattrapage
         rec.set("status", "accepted");
         rec.set("supplierUid", uid);
         rec.set("supplierPseudo", me.player.pseudo);
@@ -1148,6 +1150,7 @@ function tradeContractRequest(e) {
         if (c.clientUid !== uid) throw new NotFoundError("Contrat introuvable.");
         game.cancelTradeContract(c, me.player);
         savePlayer(txApp, game, me.loaded, me.player, me.queues);
+        notify(txApp, uid, me.notifications); // 6.14.52 (AC-4) : notifications du rattrapage
         rec.set("status", "cancelled");
         rec.set("closedAtMs", now);
         txApp.save(rec);
@@ -1245,7 +1248,7 @@ function createPirateRaid(txApp, game, player, raid, now) {
     mission: "pirate",
     units: {},
     power: raid.power,
-    departAtMs: now,
+    departAtMs: typeof now === "number" && now > 0 ? now : Date.now(), // 6.14.52 (AC-13) : jamais de départ vide
     arriveAtMs: raid.arriveAtMs,
     returnAtMs: null,
     status: "outbound",
@@ -4565,7 +4568,8 @@ function messageSend(e) {
   const rec = new Record($app.findCollectionByNameOrId("private_messages"));
   rec.load({ fromUid: uid, fromPseudo: sender.getString("pseudo"), toUid: to, toPseudo: target.getString("pseudo"), text, createdAtMs: now, readAtMs: 0 });
   $app.save(rec);
-  bumpPlayerStat($app, uid, "privateMessages", 1);
+  // 6.14.52 (AC-9) : relecture et écriture de la fiche dans une même transaction (plus d'écriture depuis une lecture ancienne).
+  $app.runInTransaction((txApp) => bumpPlayerStat(txApp, uid, "privateMessages", 1));
   // v4.2 : un seigneur de guerre répond par une réplique toute faite (une fois par jour).
   if (target.getString("npc")) {
     try {
@@ -5770,6 +5774,8 @@ function catchupTick(now) {
       const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
       flushed.player.bonuses = Object.assign({}, flushed.player.bonuses || {}, { catchup: next });
       savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+      // 6.14.52 (AC-4) : ce qui finit au rattrapage de la nuit (files, succès) arrive au Journal comme à une action.
+      notify(txApp, p.uid, flushed.notifications);
       if (next) out.boosted++;
     });
     writeConfig(txApp, "catchup", { median: res.median, atMs: now, boosted: out.boosted });
@@ -6513,6 +6519,7 @@ function renameRequest(e) {
       if (sameLogin.length > 0 || samePseudo.length > 0) throw new game.GameActionError("Ce pseudo est déjà pris.");
       me.loaded.rec.set("pseudo", out.pseudo);
       savePlayer(txApp, game, me.loaded, me.player, me.queues);
+      notify(txApp, uid, me.notifications); // 6.14.52 (AC-4) : notifications du rattrapage
       const user = txApp.findRecordById("users", uid);
       user.set("username", out.login);
       user.set("name", out.pseudo);
@@ -6557,18 +6564,42 @@ function mailRecipients(app, segment, now) {
   return { list: out, optedOut };
 }
 
-function unsubscribeUrl(player, apiUrl) {
-  return `${apiUrl}/api/cosmic/unsubscribe?u=${encodeURIComponent(player.id)}&t=${encodeURIComponent(mailToken(player))}`;
+function unsubscribeUrl(uid, token, apiUrl) {
+  return `${apiUrl}/api/cosmic/unsubscribe?u=${encodeURIComponent(uid)}&t=${encodeURIComponent(token)}`;
 }
 
-function mailToken(player) {
-  let token = player.getString("mailToken");
-  if (!token) {
-    token = $security.randomString(32);
-    player.set("mailToken", token);
-    $app.save(player);
-  }
-  return token;
+/**
+ * 6.14.52 (AC-1) : jetons de désinscription créés **avant** l'envoi, chacun dans sa transaction qui relit la fiche et ne pose
+ * que `mailToken`. La liste des destinataires est une lecture ancienne (l'envoi dure 600 ms par adresse) : on ne sauve jamais
+ * ces enregistrements, sinon ressources, unités et files d'avant la campagne réécraseraient la partie jouée entre-temps.
+ * Rend { uid: jeton } ; un joueur supprimé entre-temps est absent (il ne reçoit rien).
+ */
+function ensureMailTokens(list) {
+  const tokens = {};
+  list.forEach((r) => {
+    const uid = r.player.id;
+    const known = r.player.getString("mailToken");
+    if (known) {
+      tokens[uid] = known;
+      return;
+    }
+    try {
+      $app.runInTransaction((txApp) => {
+        const fresh = findOrNull(txApp, "players", uid);
+        if (!fresh) return;
+        let token = fresh.getString("mailToken");
+        if (!token) {
+          token = $security.randomString(32);
+          fresh.set("mailToken", token);
+          txApp.save(fresh);
+        }
+        tokens[uid] = token;
+      });
+    } catch (err) {
+      console.log(`[cosmic] campagne : jeton impossible pour ${uid} : ${err}`);
+    }
+  });
+  return tokens;
 }
 
 /** 5.16 : signature d'un lien de suivi (campagne, joueur, adresse) : empêche les redirections forgées. */
@@ -6594,16 +6625,18 @@ function sendCampaign(c, actor) {
   const game = loadGame();
   const now = Date.now();
   const recipients = mailRecipients($app, c.segment, now);
+  const tokens = ensureMailTokens(recipients.list);
   const campaignId = `m${now.toString(36)}${$security.randomString(4)}`;
   const from = mailFrom(c.fromName);
   let sent = 0;
   const failed = [];
   recipients.list.forEach((r, i) => {
-    const player = r.player;
+    const player = r.player; // lecture seule : jamais sauvé (AC-1)
     const pseudo = player.getString("pseudo");
     try {
-      const token = mailToken(player);
-      const url = unsubscribeUrl(player, c.apiUrl);
+      const token = tokens[player.id];
+      if (!token) throw new Error("joueur introuvable ou jeton manquant");
+      const url = unsubscribeUrl(player.id, token, c.apiUrl);
       const base = `${c.apiUrl}/api/cosmic/mail`;
       const pixel = `${base}/o?c=${campaignId}&u=${encodeURIComponent(player.id)}&s=${mailSig(campaignId, player.id, token, "")}`;
       const track = (link) => `${base}/c?c=${campaignId}&u=${encodeURIComponent(player.id)}&l=${encodeURIComponent(link)}&s=${mailSig(campaignId, player.id, token, link)}`;
@@ -6723,7 +6756,15 @@ function adminMail(e) {
 
   if (action !== "send") throw new BadRequestError("Action inconnue.");
   if (req.confirm !== "ENVOYER") throw new BadRequestError("Confirmation manquante.");
-  if (req.dryRun) return e.json(200, { sent: 0, failed: 0, recipients: mailRecipients($app, segment).list.length, dryRun: true });
+  if (req.dryRun) {
+    // 6.14.52 (AC-1) : l'envoi à blanc déroule la vraie préparation (destinataires lus, jetons de désinscription créés sans
+    // réécrire les fiches), sans rien envoyer. `holdMs` (5 s au plus) simule la durée d'un envoi entre la lecture et les jetons.
+    const recipients = mailRecipients($app, segment);
+    const holdMs = Math.max(0, Math.min(5000, Math.floor(Number(req.holdMs) || 0)));
+    if (holdMs > 0) sleep(holdMs);
+    const tokens = ensureMailTokens(recipients.list);
+    return e.json(200, { sent: 0, failed: 0, recipients: recipients.list.length, tokens: Object.keys(tokens).length, dryRun: true });
+  }
   if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
   return e.json(200, sendCampaign({ subject, html, text, fromName: req.fromName, apiUrl, segment }, actor));
 }
@@ -6781,11 +6822,17 @@ function unsubscribe(e) {
   const uid = String(q.u || "");
   const token = String(q.t || "");
   const demo = String(q.demo || "") === "1";
-  const player = uid ? findOrNull($app, "players", uid) : null;
-  const ok = !!player && token.length >= 16 && player.getString("mailToken") === token;
-  if (ok && !player.getBool("emailOptOut")) {
-    player.set("emailOptOut", true);
-    $app.save(player);
+  let ok = false;
+  // 6.14.52 (AC-9) : la fiche est relue et réécrite dans la transaction (aucune partie jouée en même temps n'est effacée).
+  if (uid && token.length >= 16) {
+    $app.runInTransaction((txApp) => {
+      const player = findOrNull(txApp, "players", uid);
+      ok = !!player && player.getString("mailToken") === token;
+      if (ok && !player.getBool("emailOptOut")) {
+        player.set("emailOptOut", true);
+        txApp.save(player);
+      }
+    });
   }
   const appUrl = String($app.settings().meta.appURL || "").replace(/\/+$/, "");
   const page =
@@ -9359,8 +9406,13 @@ function adminDeletePlayer(e) {
       const bidderId = a.getString("bidderId");
       if (bidderId && findOrNull(txApp, "players", bidderId)) {
         const b = loadFlushed(txApp, game, bidderId);
-        game.creditBid(b.player, a.getString("res"), a.getFloat("bid"));
+        const bid = a.getFloat("bid");
+        game.creditBid(b.player, a.getString("res"), bid);
         savePlayer(txApp, game, b.loaded, b.player, b.queues);
+        // 6.14.52 (AC-4) : rattrapage et remboursement notifiés, comme quand l'enchérisseur est dépassé.
+        notify(txApp, bidderId, b.notifications.concat([
+          auctionNote("Enchère annulée", `La vente « ${a.getString("label")} » a été retirée : ta mise de ${auctionAmount(game, a.getString("res"), bid)} t'est rendue.`, Date.now()),
+        ]));
       }
       a.set("status", "cancelled");
       a.set("closedAtMs", Date.now());

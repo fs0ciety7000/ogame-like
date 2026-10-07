@@ -58,6 +58,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q104 | Campagne d'e-mails : comment protéger la fiche du joueur ? : Jetons de désinscription créés avant l'envoi (transaction, seul champ écrit) ; aucune migration des jetons sur la production | Valider (option prudente) |
+| Q105 | Envoi « à blanc » de l'admin : Il crée les jetons manquants (seul champ touché) et en rend le nombre ; pause `holdMs` (5 s au plus, admin) pour les tests | Valider (option prudente) |
+| Q106 | Destinataire supprimé pendant une campagne : Il ne reçoit rien et compte comme un échec | Valider (option prudente) |
+| Q107 | Livreur qui abandonne un contrat de commerce : Son rattrapage n'est pas sauvé, donc pas notifié (sinon notifié deux fois au rattrapage suivant) | Valider (option prudente) |
+| Q108 | Texte « Enchère annulée » (vendeur supprimé par l'admin) : Sur le modèle d'« Enchère dépassée » | Valider (option prudente) |
 | Q64 | La règle n° 4 exige-t-elle un succès **propre** à chaque unité et bâtiment, ou une mesure de type suffit-elle ? : Propre : succès dérivés générés (comme `derivedAchievements`), activables par contenu dans l'admin ; la garde exige « propre ou dérogation notée » | Valider (option recommandée par l'audit) |
 | Q65 | Un porteur d'effet par unité : relique ou plan de module ? : Plan de module « signature » (une famille par unité, rare et plus) : le système de modules vise déjà les classes, et un plan dilue moins que 24 reliques de plus | Valider (option recommandée par l'audit) |
 | Q66 | Objectifs liés à un contenu dans le passe et les Chroniques ? : Oui, poids 0 par défaut, activés par le thème du mois (« chantiers » → `build:*`, « colonies » → route) et pour le contenu nouveau du mois | Valider (option recommandée par l'audit) |

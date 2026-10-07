@@ -1,17 +1,19 @@
 # Prise en main, QoL et outils
 
 ## Joueur
-- Prise en main : 10 objectifs, tutoriel scénarisé (raid de Varan), Carnet du commandant (guide avancé) en 4 chapitres depuis la 6.4.1 :
+- Prise en main : 10 objectifs, tutoriel scénarisé (raid de Varan, parti à l'instant de la réclamation des roquettes, 2 min de trajet : 6.14.52), Carnet du commandant (guide avancé) en 4 chapitres depuis la 6.4.1 :
   Ton empire (objectif du jour, classe), Colonies (dont route logistique), Reliques et commandants, Ascension.
 - Accueil « que faire maintenant », frise des chantiers, carte Atelier, défis.
 - Objectifs personnels (6), modèles d'actions (12 × 20 étapes), file d'actions globale, file planifiée des bâtiments.
 - « Tout réclamer », notifications groupées et par catégorie, rappels personnels.
+- Journal : tout ce qui se termine au rattrapage arrive au Journal, quel que soit le chemin (action, combat, tâche de la nuit, contrat,
+  changement de pseudo, remboursement d'enchère) : invariant I24 (6.14.52).
 - Ctrl+K (actions, onglets), raccourcis clavier, mode compact, vue cockpit, 13 thèmes.
 - Page Formules (calculs expliqués avec les chiffres du joueur), simulateur de combat, Statistiques de l'empire.
 
 ## Admin
 64 panneaux : contenu éditable, règles, équilibrage (diagnostic, historique, simulateur « et si »), planificateur d'événements, boss,
-seigneurs, e-mails, rétention, signalements, sauvegardes R2, statut et métriques.
+seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription manquants sans rien envoyer, 6.14.52), rétention, signalements, sauvegardes R2, statut et métriques.
 
 ## Technique
 - 30 tâches planifiées côté serveur (dont 3 chaque minute : flottes, maintenance, enchères).
@@ -21,3 +23,6 @@ seigneurs, e-mails, rétention, signalements, sauvegardes R2, statut et métriqu
 - 5.30 : Ordres du jour réunit les corvées quotidiennes, avec une seule pastille dans la barre latérale (= `pendingClaims`) ; 6.14.17 : le Codex y entre, sa pastille propre disparaît. Reste dispersé : file d'actions, objectifs personnels.
 - `README.md` affirme encore que « toute la logique de jeu tourne côté client » : faux depuis la v2 (audit D1).
 - Performance (5.29.0) : fenêtres rares chargées à la demande (bundle d'entrée 925 → 880 Ko), horloge de décompte unique (`useNowTicker`), tâches serveur regroupées par cadence. Reste : le moteur entier est dans le bundle d'entrée tant que le contenu de l'admin est appliqué au démarrage.
+- 6.14.52 (AC-A, revue AU27) : aucune fiche joueur réécrite depuis une lecture ancienne (campagne d'e-mails : jetons créés avant l'envoi,
+  `ensureMailTokens` ; message privé et désinscription en transaction) ; notifications des rattrapages muets écrites. Restent AC-B (éditeur
+  de fiche de l'admin) et AC-C (suppression de compte côté serveur) : `proposals/chaine-actions.md`.

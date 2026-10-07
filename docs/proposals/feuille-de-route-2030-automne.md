@@ -9,7 +9,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
-| 1 | AC-A | Écritures sûres : campagne d'e-mails sans réécriture de la fiche, statistiques en transaction, notifications des 4 chemins de rattrapage, raid du tutoriel (AC-1, AC-4, AC-9, AC-13) | S | en cours (6.14.52) |
+| 1 | AC-A | Écritures sûres : campagne d'e-mails sans réécriture de la fiche, statistiques en transaction, notifications des 4 chemins de rattrapage, raid du tutoriel (AC-1, AC-4, AC-9, AC-13) | S | livré (6.14.52) |
 | 2 | AP-L1 | Succès par défaut toujours présents (le générateur n'écrit plus la liste entière ; 4 succès manquent sur la pré-prod) | S | à faire |
 | 3 | AP-L2 | Brouillons et chapitres écrits par un ancien générateur régénérés (brouillon de novembre à l'ancien format) | S | à faire |
 | 4 | AP-L3 | Passe et Chroniques faisables : planchers bornés par la médiane du serveur, garde avant publication d'office (fin au jour 35 pour le joueur médian) | M | à faire |

@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.38 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.52 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 105 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 118 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -141,6 +141,19 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.36 : Une annonce attend son illustration (`docs/changes/6.14.36-annonce-apres-image.md`)
 - 6.14.37 : /decisions : liens vers les documents (`docs/changes/6.14.37-decisions-liens.md`)
 - 6.14.38 : Revue AU26 (`docs/changes/6.14.38-revue-au26.md`)
+- 6.14.39 : Performance mesurée, décor 3D de l'accueil allégé (`docs/changes/6.14.39-performance-preprod.md`)
+- 6.14.40 : Illustrations, deuxième lot (technos 1 à 7) (`docs/changes/6.14.40-illustrations-lot-2.md`)
+- 6.14.41 : Feuille de route sur /decisions, Q12 écartée, Q31 validée (`docs/changes/6.14.41-feuille-de-route-decisions.md`)
+- 6.14.42 : Documents en direct pour /decisions et /img (`docs/changes/6.14.42-documents-en-direct.md`)
+- 6.14.43 : Proposition phalange et porte de saut (`docs/changes/6.14.43-proposition-phalange.md`)
+- 6.14.44 : Phalange, porte de saut et pitié lunaire (moteur) (`docs/changes/6.14.44-phalange-moteur.md`)
+- 6.14.45 : Réponses Q32 à Q41 reportées (`docs/changes/6.14.45-reponses-q32-q41.md`)
+- 6.14.47 : Illustrations, troisième lot (technos 8 à 10, 12 et 13) (`docs/changes/6.14.47-illustrations-lot-3.md`)
+- 6.14.48 : Phalange et porte de saut (serveur) (`docs/changes/6.14.48-phalange-serveur.md`)
+- 6.14.49 : Phalange et porte de saut (interface) (`docs/changes/6.14.49-phalange-interface.md`)
+- 6.14.50 : Audit des illustrations, 79 nouvelles images sur /img (`docs/changes/6.14.50-illustrations-audit-79.md`)
+- 6.14.51 : Revue AU27 (audits complets) (`docs/changes/6.14.51-revue-au27.md`)
+- 6.14.52 : Écritures sûres de la fiche joueur (`docs/changes/6.14.52-ecritures-sures.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

@@ -201,6 +201,9 @@ Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seu
   Dès novembre 2026 les chapitres sont générés ; un chapitre écrit à la main va dans `chronicles.library` et n'entre dans un mois que par
   `applyLibraryChapter` (invariant I17). Un seul passe par mois (`activePass`).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
+- Fiche joueur côté serveur (invariant I24, 6.14.52) : jamais de `$app.save` d'un joueur lu hors transaction (une campagne d'e-mails de
+  10 min réécrivait la fiche d'avant : unités dupliquées) ; relire **dans** `runInTransaction` et n'écrire que là. Tout `loadFlushed` ou
+  `flushPlayer` sauvé écrit aussi ses `notifications` (`notify`), sinon ce qui finit au rattrapage disparaît du Journal. Garde : `ecrituresSures.test.ts`.
 - Un identifiant d'enregistrement PocketBase tient en 15 caractères `[a-z0-9]` : un identifiant de colonie (`<uid>-c<n>`, 18) ne sert jamais
   de clé tel quel. Dériver une clé (`debrisKey`, 6.11.4) et garder l'emplacement dans un champ à part (`locationId`).
 - Un succès dont le palier dépend d'une règle (niveau maximal…) lit la règle **dans sa mesure** (`moonMaxed`, 0/1) : `setAchievements` passe

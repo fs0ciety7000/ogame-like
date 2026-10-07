@@ -151,6 +151,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.49 | [Phalange et porte de saut (interface)](6.14.49-phalange-interface.md) | fonctionnalité (interface) | `phalange-porte-de-saut.md`, Q33 à Q55 |
 | 6.14.50 | [Audit des illustrations, 79 nouvelles images sur /img](6.14.50-illustrations-audit-79.md) | docs | aucune (AU27) |
 | 6.14.51 | [Revue AU27 (audits complets)](6.14.51-revue-au27.md) | docs | aucune (AU27) |
+| 6.14.52 | [Écritures sûres de la fiche joueur](6.14.52-ecritures-sures.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-A |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
