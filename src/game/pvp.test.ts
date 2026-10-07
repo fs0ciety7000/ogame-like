@@ -64,9 +64,10 @@ describe("checkAttackAllowed", () => {
     expect(checkAttackAllowed({ ...newbie, defenderHasAttacked: true }).allowed).toBe(true);
   });
 
-  it("shields a defender for 1h after a defeat", () => {
+  it("shields a defender for 3h after a defeat (6.14.72, AE-7 : 1 h avant)", () => {
     expect(checkAttackAllowed({ ...base, lastDefenderDefeatMs: NOW - 30 * 60 * 1000 }).reason).toBe("shield");
-    expect(checkAttackAllowed({ ...base, lastDefenderDefeatMs: NOW - 61 * 60 * 1000 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...base, lastDefenderDefeatMs: NOW - 179 * 60 * 1000 }).reason).toBe("shield");
+    expect(checkAttackAllowed({ ...base, lastDefenderDefeatMs: NOW - 181 * 60 * 1000 }).allowed).toBe(true);
   });
 
   it("enforces a 2h cooldown per attacker/target pair", () => {
@@ -90,8 +91,12 @@ describe("checkAttackAllowed", () => {
     expect(checkAttackAllowed({ ...base, attackerXp: 400_000, defenderXp: 9000, defenderIsWarlord: true, lastAttackOnTargetMs: NOW - 60_000 }).reason).toBe("cooldown");
   });
 
-  it("5.23 : cible faible attaquable avec butin et XP dégressifs, refusée au-delà de ×12", () => {
+  it("5.23 : cible faible attaquable avec butin et XP dégressifs, refusée au-delà de ×10 (6.14.72, AE-8 : ×12 avant)", () => {
     expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 900 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 300 }).allowed).toBe(true);
+    expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 280 }).reason).toBe("too_weak");
+    // Production du 2026-10-07 (Z1) : la médiane d'XP (19 539) ne peut plus attaquer le premier quartile (1 730, ×11,3).
+    expect(checkAttackAllowed({ ...base, attackerXp: 19_539, defenderXp: 1_730 }).reason).toBe("too_weak");
     expect(checkAttackAllowed({ ...base, attackerXp: 3000, defenderXp: 240 }).reason).toBe("too_weak");
     expect(checkAttackAllowed({ ...base, attackerXp: 400, defenderXp: 0 }).allowed).toBe(true);
     expect(weakTargetFactor(3000, 1000)).toBe(1);

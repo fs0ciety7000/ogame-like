@@ -23,8 +23,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
 | 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | livré (6.14.69) |
 | 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | à faire |
-| 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | à faire |
-| 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | à faire |
+| 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | livré (6.14.71) |
+| 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | livré (6.14.72 ; essai sur la pré-prod au prochain push) |
 | 17 | UX-4 | Écran mobile : ressources sur une ligne, bandeaux fusionnés, contenu visible plus haut | M | livré (6.14.62) |
 | 18 | UX-5 | Accueil du joueur : Prise en main en tête, redondances retirées | M | livré (6.14.63) |
 | 19 | UX-8 | Navigation mobile : onglets par défaut, pastille « Plus » neutre | S | livré (6.14.64) |
@@ -59,7 +59,12 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | à faire |
 | 49 | AJ27-9 | Codex : officiers, Doctrines, Arsenal | M | à faire |
 | 50 | AJ27-10 | Reliques par source, porteurs « signature » par unité | M | à faire |
-| 51 | AE-L5 | Ouverture progressive du menu par rang (nouveaux comptes) | M | à faire |
+| 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | à faire |
+| 51b | DP-L2 | Déblocage progressif : interface (menu, mobile, Ctrl+K, « Prochaine ouverture », « Tout afficher ») | M | à faire |
+| 51c | DP-L3 | Déblocage progressif : Prise en main, Carnet, panneau Lune, passe | S | à faire |
+| 51d | DP-L4 | Déblocage progressif : serveur (objectifs du jour filtrés, danger qui ouvre sa page) | S | à faire |
+| 51e | DP-L5 | Déblocage progressif : éditeur dans l'admin | S | à faire |
+| 51f | DP-L6 | Déblocage progressif : chaîne de contenu et livraison | S | à faire |
 | 52 | AP-L9 | Mutateurs en contenu, anti-répétition | M | à faire |
 | 53 | AP-L10 | Variété narrative (banques de textes réglables) | M | à faire |
 | 54 | AP-L11 | Illustrations de saison (thèmes, portraits, second boss par archétype) | M | à faire |

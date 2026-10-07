@@ -22,7 +22,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32, AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17, AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
+| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32, AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17 sauf AE-6 et AE-8 (AE-3 et AE-7 : reste le moteur, lot AE-L3), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
 | É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
 
 
@@ -32,7 +32,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 |:--|:--|:--|:--|
 | PRG-1 (suite) | AU3, Z1 | Rythme du passe avec le barème actuel (missions à 0) | un mois complet en production, `bySource` (6.8.0) |
 | BOSS-2, ET29-2 | AU2, AU23, Q21 | Cible de taux de boss abattus | 8 semaines en production (3 combats dans la copie) |
-| Z1-c | Z1 | 86 % des joueurs pillables, l'attaquant gagne 74 % des combats JcJ | E1 et E2 (5.32, 6.2), lune et bunker en production |
+| Z1-c | Z1 | 86 % des joueurs pillables, l'attaquant gagne 74 % des combats JcJ | E1 et E2 (5.32, 6.2), lune et bunker, défense à domicile d'AE-L1 (6.14.72 : seuil ×0,75 → ×0,90 en simulation) en production, 30 jours de mesure |
 | PRG-5, Z1-a | AU3, Z1 | Succès débloqués vite (médiane 70 sur 178 en une semaine) | rythme hebdomadaire (relevé A29-2) |
 | AU28-4, HV28-6, PR29-5, ET29-4 | AU20 à AU23 | Chiffres provisoires : lunes (Q18), paliers bonus du passe, base avancée | ces systèmes en production |
 
@@ -61,6 +61,10 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Id | Comment |
 |:--|:--|
+| AE-6 | 6.14.72 : vaisseaux à quai 75 %, défense à domicile +25 % ; seuil JcJ ×0,75 → ×0,90 (simulation `pvpBudget.ts`) ; l'effet en production se suit avec Z1-c |
+| AE-8 | 6.14.72 : `pvp.hardXpRatio` 12 → 10 (Q100), le premier quartile d'XP hors de portée de la médiane |
+| AE-3 (bornes) | 6.14.72 : coffre du 7e jour 2 M à 12 M (465 h → 20 h de production du joueur quotidien) ; l'indexation reste au lot AE-L3 |
+| AE-7 (bouclier) | 6.14.72 : bouclier de 3 h après une défaite ; le plafond de défaites par 24 h reste au lot AE-L3 |
 | PRG-1 (octobre) | Z1, 6.14.16 : missions à +2 au lancement du passe (Q3 close) |
 | Z1-b | 6.14.17 : Codex dans « Tout réclamer » (Q27) |
 | Z1-d | Pas de route logistique en prod, car les routes (5.33) ne sont pas sur `main` (5.27.0) : ce n'est pas un signal |

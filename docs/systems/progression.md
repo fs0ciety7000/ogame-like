@@ -10,9 +10,9 @@
 | Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque ; récompenses d'épisode sous budget de 10 h × difficulté (0,7 à 1,4) ; faction du thème du passe |
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 |
-| Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e |
+| Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons, **2 M à 12 M** de chaque ressource commune depuis la 6.14.72, 45 M à 280 M avant ; indexation sur la production au lot AE-L3) |
 | Succès | continu | 76 (dont dérivés des catalogues ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
-| Ascension | ≥ 7 jours | 5 au plus ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent |
+| Ascension | ≥ 7 jours | 5 au plus ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent. 1re Ascension possible (simulateur, 6.14.72) : J10 (actif), J19 (moyen), J46 (occasionnel), J32 (quotidien) ; cible du GDD §2 : J35–50, J60–90, > J120 (lot AE-L2) |
 | Codex, titres, bannières | collection | 10 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché) ; récompense par catégorie complète (Unités, Bâtiments, Technologies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
 
 ## Code et admin
@@ -67,3 +67,11 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
 - Simulation (méthode AU27, scripts hors dépôt) : novembre sur l'activité de la pré-prod, médian au dernier palier jour 35 → 27 (points
   par palier 60 → 55), plus actif jour 13 → 10 ; 200 serveurs bruités : médian après le jour 31, 77 → 12 (limite : 25 points par palier
   au minimum) ; ancien brouillon de novembre : jamais fini → régénéré.
+
+## 6.14.71 et 6.14.72 (revue AU27, lots AE-L0 et AE-L1)
+- **Simulateur de progression** dans le dépôt (`src/game/balance/progressionSim.ts`, invariant I29) : joueur glouton par profil (actif,
+  moyen, occasionnel, quotidien) sur 90 jours, règles en vigueur ; repères : 1re Ascension, arbre complet, premier mur, production perdue,
+  origine des gains, coffre du 7e jour. Avant / après un jeu de réglages : `node scripts/progression-sim.mjs [préréglage | fichier.json]
+  [--base …]` (préréglages `avant-ae-l1`, `ae-l2`). Garde : `progressionSim.test.ts` (bornes d'Ascension par profil).
+- **Coffre du 7e jour** ramené à 2 M à 12 M par ressource commune (AE-3, Q99) : 465 h → 20 h de production du joueur quotidien, production
+  perdue à J14 96 % → 67 %. Proposition : `docs/proposals/equilibrage-au27.md`.

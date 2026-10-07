@@ -29,3 +29,11 @@ I6 (butin et livraisons arrivent même entrepôt plein ; le stock au-delà de la
 
 ## Revue AU11 (2026-10-07)
 Recherches en parallèle réglables (`research.maxConcurrent`, 6.9.7).
+
+## Revue AU27 (2026-10-07), lots AE-L0 et AE-L1
+- Production perdue (entrepôt plein), mesurée par le simulateur de progression (`progressionSim.ts`, I29) : à J90, 70 % (actif), 60 %
+  (moyen), 41 % (occasionnel), 55 % (quotidien), cible < 20 %. Cause : fin de partie atteinte en deux semaines (AE-1), rien à acheter
+  ensuite (AE-5). Suite : second palier ×4, comptoir à 1 rare pour 250, missions à 0,75 × la durée (lot AE-L2, mesure : 22 à 44 % à J90
+  pour l'actif et le moyen), puits de dépense (AE-L6).
+- Coffre du 7e jour : 2 M à 12 M par ressource commune (6.14.72) ; l'ancien coffre (650 M) dépassait l'entrepôt d'un joueur de la première
+  semaine et arrêtait sa production (I6). Proposition : `docs/proposals/equilibrage-au27.md`.

@@ -21,8 +21,10 @@ export const STREAK_RULES = {
   dailyTokens: 2,
   /** Ambre du 6e jour du cycle. */
   amberDay6: 35,
-  /** Coffre du 7e jour : bornes des tirages (chaque ressource commune tirée à part). */
-  chest: { amber: [50, 300] as [number, number], tokens: [1, 25] as [number, number], common: [45_000_000, 280_000_000] as [number, number] },
+  /** Coffre du 7e jour : bornes des tirages (chaque ressource commune tirée à part).
+   *  6.14.72 (AU27, AE-3) : ressources communes [45 M, 280 M] → [2 M, 12 M], soit ≈ 28 M en moyenne (20 h de production d'un
+   *  joueur quotidien au 7e jour) au lieu de 650 M (465 h) : l'ancien coffre gelait la production et s'offrait au pillage. */
+  chest: { amber: [50, 300] as [number, number], tokens: [1, 25] as [number, number], common: [2_000_000, 12_000_000] as [number, number] },
   /** Plancher par ressource commune (petits empires). */
   floor: 2_000,
 };

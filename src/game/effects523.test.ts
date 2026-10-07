@@ -128,7 +128,8 @@ describe("5.23 pillage sur match nul", () => {
       attackerTechLevels: {},
       attackerRepairPct: 0,
       fleet: { fregate: 20, cargo: 20 },
-      defenderUnits: { bastion: { level: 1, count: 5 } },
+      // 6.14.72 (AE-6) : vaisseaux à quai engagés à 75 % (50 % avant) : 3 bastions pour un match nul (5 avant).
+      defenderUnits: { bastion: { level: 1, count: 3 } },
       defenderTechLevels: {},
       defenderRepairPct: 0,
       defenderResources: { scrap: 100_000 },

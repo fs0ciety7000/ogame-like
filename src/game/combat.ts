@@ -24,15 +24,17 @@ export const COMBAT_RULES = {
   repairCap: 0.85,
   /** 5.23 : part du butin emportée sur un match nul. */
   drawLootShare: 0.3,
-  /** Bonus de puissance du défenseur, qui se bat chez lui. */
-  homeDefenseBonus: 0.15,
+  /** Bonus de puissance du défenseur, qui se bat chez lui.
+   *  6.14.72 (AU27, AE-6) : 0,15 → 0,25. */
+  homeDefenseBonus: 0.25,
   /** Bouclier du Hangar de défense : part de la puissance d'attaque absorbée par niveau… */
   shieldPerLevel: 0.0075,
   /** …plafonnée à cette valeur. */
   shieldMax: 0.15,
   /** Vaisseaux à quai : part engagée en défense (et exposée aux tirs).
-   *  5.18 : 50 % par défaut (Riposte 100 %, Bunker 0 %). */
-  homeFleetDefenseFactor: 0.5,
+   *  5.18 : 50 % par défaut (Riposte 100 %, Bunker 0 %). 6.14.72 (AU27, AE-6) : 75 %, le défenseur mixte
+   *  ne perd plus dès que l'attaquant dépense 0,75 fois ce qu'il a investi (seuil ×0,90). */
+  homeFleetDefenseFactor: 0.75,
   /** Part des défenses détruites reconstruites gratuitement après le combat. */
   defenseRebuildPct: 0.6,
   /* v3.0 — formations d'attaque (choisies au lancement). */

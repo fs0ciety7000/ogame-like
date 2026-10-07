@@ -174,7 +174,7 @@ L'XP vient surtout des **missions (60 XP par heure de mission, quelle que soit l
 | 4 | 2 h 30 | 2 jetons |
 | 5 | 3 h | 2 jetons |
 | 6 | 3 h 30 | 2 jetons + 35 Ambre |
-| 7 | 5 h | 2 jetons + **coffre** (50 à 300 Ambre, 1 à 25 jetons, 45 à 280 M de chaque ressource commune) |
+| 7 | 5 h | 2 jetons + **coffre** (50 à 300 Ambre, 1 à 25 jetons, 2 à 12 M de chaque ressource commune (6.14.72)) |
 
 Chaque jour rapporte au moins 2 000 de chaque ressource commune, même pour un tout petit empire.
 

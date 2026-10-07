@@ -147,7 +147,7 @@ describe("resolveCombat", () => {
 });
 
 describe("v1.6 combat balance", () => {
-  it("adds the home bonus and lets half of the ships at home support the defense", () => {
+  it("adds the home bonus and lets the ships at home support the defense (6.14.72 : +25 %, 75 % des vaisseaux)", () => {
     const params = baseCombatParams();
     params.defenderUnits = unitsWith({ roquette: { level: 1, count: 10 } });
     const without = resolveCombat(params);
@@ -156,8 +156,10 @@ describe("v1.6 combat balance", () => {
     // Puissance affichée : attaque + résistance, bonus à domicile compris.
     const roq = UNIT_BASE_STATS.roquette;
     const ch = UNIT_BASE_STATS.chasseur;
-    expect(without.defenderPower).toBeCloseTo(10 * (roq.attack + roq.defense) * 1.15);
-    expect(withShips.defenderPower).toBeCloseTo((10 * (roq.attack + roq.defense) + 100 * 0.5 * (ch.attack + ch.defense)) * 1.15);
+    expect(COMBAT_RULES.homeDefenseBonus).toBe(0.25);
+    expect(COMBAT_RULES.homeFleetDefenseFactor).toBe(0.75);
+    expect(without.defenderPower).toBeCloseTo(10 * (roq.attack + roq.defense) * 1.25);
+    expect(withShips.defenderPower).toBeCloseTo((10 * (roq.attack + roq.defense) + 100 * 0.75 * (ch.attack + ch.defense)) * 1.25);
   });
 
   it("shield reduces the damage the defense takes", () => {

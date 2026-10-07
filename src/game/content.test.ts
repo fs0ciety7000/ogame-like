@@ -53,7 +53,8 @@ describe("game content", () => {
     expect(Object.keys(MISSIONS)).toEqual(["nouvelle"]);
     expect(PVP_RULES.shieldAfterDefeatMs).toBe(5);
     applyGameContent({});
-    expect(PVP_RULES.shieldAfterDefeatMs).toBe(3600000);
+    // 6.14.72 (AU27, AE-7) : bouclier de 3 h par défaut.
+    expect(PVP_RULES.shieldAfterDefeatMs).toBe(10_800_000);
     expect(Object.keys(MISSIONS).length).toBeGreaterThan(1);
   });
 

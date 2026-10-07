@@ -74,3 +74,41 @@ describe("AJ27-3 : migrations des contenus ajoutés après coup", () => {
     expect(unknown).toEqual([]);
   });
 });
+
+/* 6.14.72 (AU27, lot AE-L1) : nouveaux défauts des réglages sûrs. L'admin enregistre toutes les règles d'un bloc :
+   la migration ne touche qu'un champ qui vaut encore l'ancien défaut, jamais un champ réglé à la main. */
+function rulesMigration(id: string): { run: (data: unknown, changes: string[]) => boolean } {
+  const db = readFileSync("pocketbase/pb_hooks/cosmic_db.js", "utf8");
+  const start = db.lastIndexOf("{", db.indexOf(`id: "${id}"`));
+  const end = db.indexOf("\n  },", start) + "\n  }".length;
+  return new Function(`return (${db.slice(start, end)});`)();
+}
+
+describe("AE-L1 : migration rules-6.14.72", () => {
+  it("prend les nouveaux défauts quand les règles enregistrées ont encore les anciens", () => {
+    const data = {
+      combat: { homeFleetDefenseFactor: 0.5, homeDefenseBonus: 0.15, lootPercent: 0.08 },
+      pvp: { shieldAfterDefeatMs: 3_600_000, hardXpRatio: 12 },
+      streak: { chest: { amber: [50, 300], common: [45_000_000, 280_000_000] } },
+    };
+    const changes: string[] = [];
+    expect(rulesMigration("rules-6.14.72").run(data, changes)).toBe(true);
+    expect(data.combat).toEqual({ homeFleetDefenseFactor: 0.75, homeDefenseBonus: 0.25, lootPercent: 0.08 });
+    expect(data.pvp).toEqual({ shieldAfterDefeatMs: 10_800_000, hardXpRatio: 10 });
+    expect(data.streak.chest).toEqual({ amber: [50, 300], common: [2_000_000, 12_000_000] });
+    expect(changes).toHaveLength(5);
+    // Les nouveaux défauts sont bien ceux du code.
+    const d = defaultGameContent().rules;
+    expect([d.combat.homeFleetDefenseFactor, d.combat.homeDefenseBonus, d.pvp.shieldAfterDefeatMs, d.pvp.hardXpRatio]).toEqual([0.75, 0.25, 10_800_000, 10]);
+    expect(d.streak.chest.common).toEqual([2_000_000, 12_000_000]);
+  });
+
+  it("garde un réglage modifié dans l'admin et ne crée rien", () => {
+    const data = { combat: { homeFleetDefenseFactor: 0.6, homeDefenseBonus: 0.15 }, pvp: { hardXpRatio: 8 }, streak: { chest: { common: [10_000_000, 50_000_000] } } };
+    const changes: string[] = [];
+    expect(rulesMigration("rules-6.14.72").run(data, changes)).toBe(true);
+    expect(data).toEqual({ combat: { homeFleetDefenseFactor: 0.6, homeDefenseBonus: 0.25 }, pvp: { hardXpRatio: 8 }, streak: { chest: { common: [10_000_000, 50_000_000] } } });
+    expect(rulesMigration("rules-6.14.72").run({}, [])).toBe(false);
+    expect(rulesMigration("rules-6.14.72").run(null, [])).toBe(false);
+  });
+});

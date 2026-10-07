@@ -77,6 +77,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I26 | Contenu de l'admin : une section de `CONTENT_SECTIONS` écrite par une requête (`game_config`) n'apporte aucune erreur nouvelle de `validateGameContent` ; chaque valeur garde la forme de son défaut, à toute profondeur (nombre fini, jamais `null` sauf défaut `null`, pas de négatif si tous les défauts sont positifs, champ chiffré présent dans tous les éléments par défaut d'une liste obligatoire) ; un écart de plus de ×2 au défaut est seulement averti (Q75) | `contentShape.ts`, `content.ts` (`contentSectionErrors`, `validateRules`, `validateGameContent`), `cosmic_db.js` (`guardContentConfig`) | `gardeFous.test.ts`, intégration « 6.14.59 garde-fous » |
 | I27 | Tout identifiant par défaut d'unité, de bâtiment, de techno ou de relique ajouté après la première liste a une entrée `appendFromDefaults` dans `CONTENT_MIGRATIONS`, ou est ajouté d'office (`withFixedUnits`, `withFixedBuildings`) | `cosmic_db.js` (`CONTENT_MIGRATIONS`) | `contentMigrations.test.ts` |
 | I28 | L'état de jeu d'un joueur ne s'écrit et ne s'efface que par le serveur : l'éditeur de l'admin envoie des **différences**, appliquées sur la fiche relue et rattrapée dans la transaction, sous les plafonds (niveaux maximaux, entrepôt des ressources communes, hangars par `hangarLoad`), motif et journal obligatoires ; la suppression d'un compte (admin ou joueur) passe par `purgePlayer`, qui rend aux autres joueurs ce qui leur revient (mises, cautions, garnisons, rôle de fondateur) ; les règles d'API réservent la suppression de `players` et `queues` aux admins et refusent l'écriture directe de l'état de jeu, y compris aux admins du jeu | `adminEdit.ts` (`adminEditDiff`, `applyAdminEdit`), `cosmic_db.js` (`adminPlayerAction`, `purgePlayer`, `accountDelete`, `guardUserDelete`, `SCHEMA_RULE_SYNC`), `pb_schema.json` | `adminEdit.test.ts`, `compteServeur.test.ts`, intégration « 6.14.65 (AC-B) », « 6.14.66 (AC-C) » |
+| I29 | Équilibre gardé par simulation : avec les règles par défaut, le simulateur de progression (déterministe, 4 profils sur 90 jours) garde la 1re Ascension de chaque profil dans ses bornes (actif J8–13, moyen J15–23, occasionnel J38–56, quotidien J26–40 en 6.14.72 ; le lot AE-L2 les déplace vers les cibles du §2) ; à budget égal, un défenseur moitié défenses, moitié vaisseaux à quai tient jusqu'à ×0,85 au moins de sa dépense, des défenses seules jusqu'à ×2 ; le coffre du 7e jour du joueur quotidien reste sous 24 h de sa production. Un réglage qui sort de ces bornes passe par une proposition et change les bornes dans le même commit | `balance/progressionSim.ts`, `balance/pvpBudget.ts` (`node scripts/progression-sim.mjs`) | `progressionSim.test.ts` |
 
 ## 5. Règles de conception
 
@@ -187,6 +188,28 @@ Effet mesuré (simulation, méthode AU27) : passe de novembre sur l'activité de
 200 serveurs bruités, médian après le jour 31 : **77 → 12** (tous limités par le minimum de 25 points par palier, joueur médian sous
 27 points par jour). Revers : le plus actif finit plus tôt (avant le jour 15 sur 181 serveurs sur 200 au lieu de 162) ; les paliers de
 prestige restent l'outil prévu (AP-11).
+
+### 7.6 Équilibrage : simulateur de progression et défense à domicile (6.14.71 et 6.14.72, `balance/progressionSim.ts`, `combat.ts`, `pvp.ts`, `streak.ts`)
+
+Lots AE-L0 et AE-L1 de la revue AU27 (`docs/audit/2026-10-07-au27-equilibrage.md`, proposition `docs/proposals/equilibrage-au27.md`).
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Vaisseaux à quai engagés en défense (posture standard) | **75 %** (50 % avant 6.14.72) ; Riposte 100 %, Bunker 0 % | `combat.homeFleetDefenseFactor` (Règles → Combat) |
+| Bonus de puissance du défenseur chez lui | **+25 %** (+15 % avant) | `combat.homeDefenseBonus` |
+| Bouclier après une défaite en défense | **3 h** (1 h avant), plus long que le délai de 2 h entre deux attaques d'un même joueur | `pvp.shieldAfterDefeatMs` (Règles → Protections) |
+| Attaque refusée contre un joueur moins expérimenté | au-delà de **×10** d'écart d'XP (×12 avant), dès 500 XP | `pvp.hardXpRatio` |
+| Coffre du 7e jour, chaque ressource commune | **2 M à 12 M** (45 M à 280 M avant) ; Ambre et jetons inchangés | `streak.chest.common` (Règles → Série de connexion, et Récompenses) |
+| Règles enregistrées avant 6.14.72 | migration `rules-6.14.72` : seul un champ qui vaut encore l'ancien défaut prend le nouveau | `CONTENT_MIGRATIONS` (`cosmic_db.js`) |
+
+Effet mesuré (`node scripts/progression-sim.mjs --base avant-ae-l1`) : seuil de victoire contre un défenseur mixte ×0,75 → **×0,90**,
+pertes à dépense égale 23 % / 93 % → **34 % / 85 %** (attaquant / défenseur) ; coffre du joueur quotidien 465 h → **20 h** de production,
+production perdue à J14 96 % → 67 % ; 1re Ascension presque inchangée (actif J10,3, moyen J18 → J18,8). La fin de partie trop rapide
+(AE-1) reste au lot AE-L2.
+
+Simulateur (`progressionSim.ts`) : joueur glouton par profil (actif 8 sessions par jour, moyen 3, occasionnel 1 un jour sur 3 manqué,
+quotidien 1 sans manquer), règles en vigueur lues dans le moteur ; hors modèle : unités, combats, événements, reliques, alliance.
+Il donne des ordres de grandeur. Garde : I29.
 
 ## 8. Journal des audits
 
@@ -299,3 +322,5 @@ prestige restent l'outil prévu (AP-11).
 | 2026-10-07 | 6.14.65 | Lot AC-B (AU27) : édition admin d'un joueur par le serveur (différences sur la fiche rattrapée, plafonds entrepôt, hangars et niveaux, motif et journal), remise à zéro de l'XP en une transaction, plus d'écriture directe de la fiche par l'admin du jeu ; invariant I28 | `docs/changes/6.14.65-edition-admin-serveur.md`, `proposals/chaine-actions.md` |
 | 2026-10-07 | 6.14.66 | Lot AC-C (AU27, Q78) : suppression de compte par le serveur (mot de passe revérifié), ménage commun avec l'admin (`purgePlayer` : alliance, flottes, garnisons, offres, enchères, contrats), suppression par l'API des collections fermée ; invariant I28 | `docs/changes/6.14.66-suppression-compte-serveur.md` |
 | 2026-10-07 | 6.14.69 | É30-1d : sections Lunes de l'admin (pitié, phalange, porte de saut), santé des lunes, reliques Lentille de Séléné et Clé du seuil, 5 succès, titre « Gardien du seuil », 2 fiches de Codex, défi d'alliance « Les vigies », étape du Carnet, recharges dans « Prochaines fins », changelog, billet 53 et annonce | `docs/changes/6.14.69-phalange-chaine.md` |
+| 2026-10-07 | 6.14.71 | Lot AE-L0 (AU27) : proposition d'équilibrage chiffrée, simulateur de progression (4 profils, 90 jours) et combats à budget égal dans le dépôt, script `progression-sim.mjs` ; invariant I29 | `docs/changes/6.14.71-proposition-equilibrage.md`, `proposals/equilibrage-au27.md` |
+| 2026-10-07 | 6.14.72 | Lot AE-L1 (AU27) : réglages sûrs (vaisseaux à quai 75 %, défense à domicile +25 %, bouclier 3 h, écart d'XP ×10, coffre du 7e jour 2 M à 12 M), migration des règles enregistrées ; seuil JcJ ×0,75 → ×0,90, coffre 465 h → 20 h de production | `docs/changes/6.14.72-reglages-surs.md` |

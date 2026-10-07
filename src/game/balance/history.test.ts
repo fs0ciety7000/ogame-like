@@ -70,7 +70,8 @@ describe("v5.5 historique d'équilibrage", () => {
     const h = Array.from({ length: 10 }, (_, i) => snap(i, 7, 10));
     expect(rollingPvpWinPct(h)).toEqual({ pct: 70, battles: 70 });
     const p = allProposals(live({ history: h })).find((x) => x.id === "pvp-attack");
-    expect(p?.proposal).toBe("Bonus à domicile 0,15 → 0,20.");
+    // 6.14.72 (AU27, AE-6) : bonus à domicile 0,25 par défaut.
+    expect(p?.proposal).toBe("Bonus à domicile 0,25 → 0,30.");
     expect(allProposals(live({ history: Array.from({ length: 10 }, (_, i) => snap(i, 6, 10)) })).some((x) => x.id === "pvp-attack")).toBe(false);
   });
 

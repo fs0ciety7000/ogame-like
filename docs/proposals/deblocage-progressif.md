@@ -260,7 +260,7 @@ Retour en arrière : `navUnlock.enabled` à faux, ou `newAccountsFrom` à `null`
   Combats, Menaces ou Seigneurs, avec la notification « Nouveau : Combats — ta base a été attaquée, voici le rapport ».
 - La fin des 72 h de protection ouvre Combats et Menaces même sans attaque, avec la notification « Ta protection de débutant est finie ».
 - La défense (Unités, roquettes, posture) est au palier 0 : un joueur peut toujours se défendre.
-- Garde-fou : un test parcourt chaque type de notification de danger et vérifie que sa page cible est ouverte après l'événement (§6, I29).
+- Garde-fou : un test parcourt chaque type de notification de danger et vérifie que sa page cible est ouverte après l'événement (§6, I30).
 
 ### 5.7 Annonces, Prise en main et Carnet
 
@@ -301,8 +301,8 @@ ressources pendant que tu construis. » ; « Prochaine ouverture : Colonies · 8
 
 | # | Invariant | Où | Test |
 |:--|:--|:--|:--|
-| **I29** (nouveau) | Menu progressif : il **masque** sans bloquer (aucune route ni action refusée) ; une page ouverte ne se referme jamais ; une page s'ouvre au plus tard à son rang plafond ; un signal `danger` ouvre Combats, Menaces ou Seigneurs avant que la notification soit lue ; un compte créé avant `newAccountsFrom` au-delà de `veteranRank`, ou un admin, voit tout ; `enabled` à faux rend l'ancien menu | `navUnlock.ts`, `NavBar.tsx` (`useHiddenRoutes`) | `navUnlock.test.ts` |
-| **I30** (nouveau) | Un objectif du jour d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur ; le tirage du jour en cours n'est jamais refait | `contracts.ts` (`ensureContracts`) | `contracts.test.ts`, intégration « DP-L4 » |
+| **I30** (nouveau) | Menu progressif : il **masque** sans bloquer (aucune route ni action refusée) ; une page ouverte ne se referme jamais ; une page s'ouvre au plus tard à son rang plafond ; un signal `danger` ouvre Combats, Menaces ou Seigneurs avant que la notification soit lue ; un compte créé avant `newAccountsFrom` au-delà de `veteranRank`, ou un admin, voit tout ; `enabled` à faux rend l'ancien menu | `navUnlock.ts`, `NavBar.tsx` (`useHiddenRoutes`) | `navUnlock.test.ts` |
+| **I30* (nouveau) | Un objectif du jour d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur ; le tirage du jour en cours n'est jamais refait | `contracts.ts` (`ensureContracts`) | `contracts.test.ts`, intégration « DP-L4 » |
 
 Gardes ajoutées :
 - chaque entrée de `NAV_GROUPS` a une règle dans `NAV_UNLOCK_RULES.pages` ou figure dans la liste « toujours visible » (une nouvelle page
@@ -319,12 +319,12 @@ Gardes ajoutées :
 | Lot | Contenu | Fichiers | Taille | Prérequis |
 |:--|:--|:--|:--|:--|
 | **DP-L0** | Cette proposition ; questions DP-Q1 à DP-Q7 dans `QUESTIONS.md` et `decisions-a-valider.md` ; ligne AE-L5 de la feuille de route renvoyée ici | docs | S | — |
-| **DP-L1** | Moteur : `navUnlock.ts` (règles, `NAV_SIGNALS`, `navOpenPages`, `nextNavOpening`), registre, fusion, export `hooksEntry.ts` ; simulateur : XP par source et jour de chaque rang et palier (instrumentation du §2.2 versée dans le dépôt) ; tests I29 | `src/game/navUnlock.ts`, `ruleRegistry.ts`, `content.ts`, `server/hooksEntry.ts`, `balance/progressionSim.ts`, tests | M | — |
+| **DP-L1** | Moteur : `navUnlock.ts` (règles, `NAV_SIGNALS`, `navOpenPages`, `nextNavOpening`), registre, fusion, export `hooksEntry.ts` ; simulateur : XP par source et jour de chaque rang et palier (instrumentation du §2.2 versée dans le dépôt) ; tests I30 | `src/game/navUnlock.ts`, `ruleRegistry.ts`, `content.ts`, `server/hooksEntry.ts`, `balance/progressionSim.ts`, tests | M | — |
 | **DP-L2** | Interface : `useHiddenRoutes` lit `navOpenPages` ; marque `nav:<page>` (action `seenAnnouncements`) ; pastille « Nouveau », notification, ligne « Prochaine ouverture », groupes vides cachés ; Ctrl+K grisé ; cartes de l'accueil, barre mobile par défaut, monnaies du HUD ; option « Tout afficher » (Réglages) ; astuces manquantes (`PAGE_TIPS`) ; `newAccountsFrom` = date du déploiement. Audit DESIGN.md, 375 px | `NavBar.tsx`, `CommandPalette.tsx`, `mobileTabs.ts`, `DashboardPage.tsx`, `ResourceHud.tsx`, `PageTip.tsx`, `SettingsPage` | M | DP-L1 |
 | **DP-L3** | Fil du tutoriel : étapes de la Prise en main et du Carnet → ouverture (`step`), « Débloque : … » sur la carte ; panneau Lune seulement avec lune, pitié ou chapitre ; « Ouvre : … » et intention sur les défis du passe, des Chroniques et les succès « À découvrir » | `OnboardingChecklist.tsx`, `CommanderGuideCard.tsx`, `EmpireStatsPage.tsx`, `SeasonPassPage`, `ChroniclesPage`, `AchievementsPage` | S-M | DP-L2 |
-| **DP-L4** | Serveur : objectifs du jour filtrés (I30), notification « Nouveau : … » au signal `danger` et à la fin des 72 h ; intégration PocketBase | `contracts.ts`, `cosmic_db.js`, `itest` | S | DP-L1 |
+| **DP-L4** | Serveur : objectifs du jour filtrés (I31), notification « Nouveau : … » au signal `danger` et à la fin des 72 h ; intégration PocketBase | `contracts.ts`, `cosmic_db.js`, `itest` | S | DP-L1 |
 | **DP-L5** | Admin : section « Ouverture du menu » (tableau par page, aperçu par profil) | `panels.tsx` (Règles) | S | DP-L1 |
-| **DP-L6** | Chaîne et livraison : changelog, pré-prod avec un compte neuf (captures Constellation, J0 et après chaque palier), succès « Tout l'empire » (toutes les pages ouvertes, bronze) et sa ligne de Codex ; GDD (I29, I30, fiche système), `CLAUDE.md` (« une nouvelle page du menu a sa règle `navUnlock` ») | `changelog/`, `achievements.ts`, `codex.ts`, docs | S | DP-L2 à DP-L5 |
+| **DP-L6** | Chaîne et livraison : changelog, pré-prod avec un compte neuf (captures Constellation, J0 et après chaque palier), succès « Tout l'empire » (toutes les pages ouvertes, bronze) et sa ligne de Codex ; GDD (I30, I31, fiche système), `CLAUDE.md` (« une nouvelle page du menu a sa règle `navUnlock` ») | `changelog/`, `achievements.ts`, `codex.ts`, docs | S | DP-L2 à DP-L5 |
 | DP-L7 | Mesure, 4 semaines après : jour d'ouverture de chaque page par cohorte, rétention J1/J3/J7 des comptes neufs avant et après (AE-L4) ; ajustement des rangs dans l'admin | `serverMetrics.ts`, rapport | S | DP-L6 + production |
 
 Pas de lot 0 d'urgence : rien n'est cassé, la charge cognitive est un constat de gravité moyenne.

@@ -37,13 +37,14 @@ describe("v5.3 série de connexion", () => {
     const seventh = claimStreak(p, T0 + 6 * DAY, () => 0);
     expect(seventh.count).toBe(7);
     expect(seventh.chest).toMatchObject({ amber: 50, tokens: 1 });
-    expect(seventh.chest?.resources.scrap).toBe(45_000_000);
-    expect(p.resources.scrap).toBeGreaterThanOrEqual(scrap + 45_000_000);
+    // 6.14.72 (AU27, AE-3) : bornes [45 M, 280 M] → [2 M, 12 M].
+    expect(seventh.chest?.resources.scrap).toBe(2_000_000);
+    expect(p.resources.scrap).toBeGreaterThanOrEqual(scrap + 2_000_000);
     expect(p.bounties?.amber).toBe(35 + 50);
     expect(p.casino?.tokens).toBe(7 * 2 + 1);
     const top = rollStreakChest(() => 0.999999);
     expect(top).toMatchObject({ amber: 300, tokens: 25 });
-    expect(top.resources.data).toBe(280_000_000);
+    expect(top.resources.data).toBe(12_000_000);
     expect(claimStreak(p, T0 + 9 * DAY).count).toBe(1);
     expect(p.streak?.best).toBe(7);
   });

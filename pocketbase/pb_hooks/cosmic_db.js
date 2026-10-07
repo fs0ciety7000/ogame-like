@@ -5492,6 +5492,34 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 6.14.72 (AU27, lot AE-L1) : réglages sûrs. L'admin enregistre toutes les règles d'un bloc : un champ qui vaut encore
+  // l'ancien défaut prend le nouveau, un champ réglé à la main dans l'admin garde sa valeur.
+  {
+    id: "rules-6.14.72",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      let touched = false;
+      const set = (group, field, from, to, label) => {
+        const g = data && data[group];
+        if (!g || typeof g !== "object" || g[field] !== from) return;
+        g[field] = to;
+        touched = true;
+        changes.push(label);
+      };
+      set("combat", "homeFleetDefenseFactor", 0.5, 0.75, "combat : vaisseaux à quai engagés à 75 %");
+      set("combat", "homeDefenseBonus", 0.15, 0.25, "combat : bonus de défense à domicile +25 %");
+      set("pvp", "shieldAfterDefeatMs", 3600000, 10800000, "JcJ : bouclier de 3 h après une défaite");
+      set("pvp", "hardXpRatio", 12, 10, "JcJ : écart d'XP maximal ×10");
+      const chest = data && data.streak && data.streak.chest;
+      if (chest && Array.isArray(chest.common) && chest.common[0] === 45000000 && chest.common[1] === 280000000) {
+        chest.common = [2000000, 12000000];
+        touched = true;
+        changes.push("série : coffre du 7e jour, 2 M à 12 M par ressource commune");
+      }
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

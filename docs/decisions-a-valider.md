@@ -18,6 +18,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q159 | Lune trop bon marché (AE-9) : dans quel lot ? : Avec AE-L2 et son annonce (c'est un coût futur), pas dans les réglages sûrs | Équilibrage (progression, défense) | Valider (option prudente) |
+| Q160 | Rattrapage des nouveaux joueurs (AE-15) : dans quel lot ? : AE-L3, après vérification des plafonds de bonus (I14) | Équilibrage (progression, défense) | Valider (option prudente) |
+| Q161 | Migration des réglages par défaut (`rules-6.14.72`) : Ne remplace qu'une valeur égale à l'ancien défaut : un réglage de l'admin est gardé | Équilibrage (progression, défense) | Valider (option prudente) |
+| Q162 | Coffre dans le simulateur : Compté à sa valeur moyenne (simulation déterministe) ; gains depuis J14 en production brute | Équilibrage (progression, défense) | Valider (option prudente) |
+| Q163 | Bornes de la garde I29 (simulateur de progression) : Posées sur la mesure actuelle (environ ±20 %), à déplacer avec AE-L2 | Équilibrage (progression, défense) | Valider (option prudente) |
 | Q152 | Déclencheur : rang seul (AE-13) ou premier de signal, étape, rang ? : **Premier des trois** : les contradictions du §2.3 disparaissent, le rang reste un plafond | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
 | Q153 | Page fermée : cachée ou grisée avec cadenas (comme le Planificateur) ? : **Cachée**, avec une seule ligne « Prochaine ouverture » ; grisée dans Ctrl+K | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
 | Q154 | Paliers et rangs du §5.2 (Casino, boss et seigneurs à Argent III ; Colonies 20 niveaux avant le seuil) : **Ceux du §5.2** | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |

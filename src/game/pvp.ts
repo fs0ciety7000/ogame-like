@@ -11,8 +11,9 @@ import type { CombatOutcome } from "@/types/game";
 export const PVP_RULES = {
   /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
   attackCooldownMs: 2 * 60 * 60 * 1000,
-  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense. */
-  shieldAfterDefeatMs: 60 * 60 * 1000,
+  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense.
+   *  6.14.72 (AU27, AE-7) : 1 h → 3 h, plus long que le délai entre deux attaques d'un même joueur (2 h). */
+  shieldAfterDefeatMs: 3 * 60 * 60 * 1000,
   /** Protection débutant (levée dès que le joueur attaque lui-même). */
   newbieProtectionMs: 72 * 60 * 60 * 1000,
   /** v3.4 : bouclier après une ascension. */
@@ -21,8 +22,9 @@ export const PVP_RULES = {
   maxXpRatio: 3,
   /** …jusqu'à ce plancher (part gardée du butin et de l'XP)… */
   weakTargetFloor: 0.25,
-  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes). */
-  hardXpRatio: 12,
+  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes).
+   *  6.14.72 (AU27, AE-8, Q100) : 12 → 10, le premier quartile d'XP hors de portée de la médiane. */
+  hardXpRatio: 10,
   /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
    *  bloquerait mutuellement en début de partie). */
   xpGapFloor: 500,

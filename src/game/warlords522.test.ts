@@ -64,10 +64,12 @@ describe("5.22 rangs des seigneurs", () => {
 
   it("combat : annuler l'avantage de classe du défenseur réduit les pertes de l'attaquant", () => {
     const base = {
-      attackerUnits: { chasseur: { level: 1, count: 300 } },
+      // 6.14.72 (AE-6, défense à domicile +25 %) : 300 → 500 chasseurs. À 300, l'attaquant décroche et ses pertes
+      // dépendent du tour de la retraite, pas de l'avantage de classe ; à 500, il gagne et la comparaison est franche.
+      attackerUnits: { chasseur: { level: 1, count: 500 } },
       attackerTechLevels: {},
       attackerRepairPct: 0,
-      fleet: { chasseur: 300 },
+      fleet: { chasseur: 500 },
       defenderUnits: { etoile_noire: { level: 1, count: 3 } },
       defenderTechLevels: {},
       defenderRepairPct: 0,
