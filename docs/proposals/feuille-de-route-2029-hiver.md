@@ -7,7 +7,7 @@ production, `main` et PR sautés (Q12), mais préparés.
 
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
-| 1 | H29-1 | Dossier de mise en production (`docs/release/5.27-a-6.14.md`) : lots depuis 5.27.0, migrations et données touchées, risques, ordre de déploiement (hooks, schéma, front), vérifications après déploiement, retour arrière ; essai de la migration complète sur la pré-prod (copie de la prod) | M | à faire |
+| 1 | H29-1 | Dossier de mise en production (`docs/release/5.27-a-6.14.md`) : lots depuis 5.27.0, migrations et données touchées, risques, ordre de déploiement (hooks, schéma, front), vérifications après déploiement, retour arrière ; essai de la migration complète sur la pré-prod (copie de la prod) | M | livré en 6.14.24 |
 | 2 | H29-2 | Tests d'intégration : lectures sans tri (AU29-3) triées ou cherchées par critère | S | livré en 6.14.21 |
 | 3 | H29-3 | Codex : Seigneurs et Boss dans « Tout réclamer » côté serveur (données des seigneurs affrontés et du Hall of fame), pastille unique tenue (AU29-4, Q27) | M | à faire |
 | 4 | H29-4 | Synthèse des décisions à valider (`docs/decisions-a-valider.md`) : une ligne par question ouverte, choix appliqué, conséquence, option recommandée (AU29-5) | S | à faire |
