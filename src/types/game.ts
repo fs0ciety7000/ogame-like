@@ -144,6 +144,8 @@ export interface PlayerState {
   empireClass?: import("@/game/empireClass").EmpireClassState | null;
   /** 6.13.0 : lune née d'un gros combat sur la planète mère (proposals/lunes.md). */
   moon?: import("@/game/moon").MoonState | null;
+  /** 6.14.44 : réserve de pitié lunaire (0 à 1), remplie par les combats subis sur la planète mère sans lune (absent = 0). */
+  moonPity?: number;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

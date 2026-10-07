@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { performAttack } from "@/game/attack";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { playerModifiers } from "@/game/modifiers";
-import { MOON_RULES, moonChance, moonEffects, moonLevel, moonShield, moonUpgradeCost, playerMoon, rollMoon } from "@/game/moon";
+import { addMoonPity, MOON_RULES, moonBirthChance, moonChance, moonEffects, moonLevel, moonPity, moonPityText, moonShield, moonUpgradeCost, playerMoon, rollMoon } from "@/game/moon";
+import { applyGameContent } from "@/game/content";
 import { performPlayerAction } from "@/game/actions";
 import type { PlayerState } from "@/types/game";
 
@@ -121,5 +122,91 @@ describe("6.14.3 : succès lunaires", () => {
     } finally {
       MOON_RULES.maxLevel = saved;
     }
+  });
+});
+
+describe("6.14.44 : pitié lunaire (I21 modifié, Q36)", () => {
+  it("+5 % par combat subi sur la planète mère sans lune ; garantie au 20e combat", () => {
+    const d: Partial<PlayerState> = {};
+    for (let i = 1; i <= 19; i++) addMoonPity(d, { onColony: false });
+    expect(d.moonPity).toBeCloseTo(0.95);
+    // Tirage le plus défavorable (rand juste sous 1) : rien au 19e combat, la lune au 20e.
+    const worst = () => 0.999999;
+    expect(rollMoon(d, 0, { now: NOW, onColony: false, rand: worst })).toBeNull();
+    addMoonPity(d, { onColony: false });
+    expect(d.moonPity).toBe(1);
+    expect(moonBirthChance(d, 0)).toBe(1);
+    expect(rollMoon(d, 0, { now: NOW, onColony: false, rand: worst })).not.toBeNull();
+    addMoonPity(d, { onColony: false });
+    expect(d.moonPity).toBe(1);
+  });
+
+  it("chance = min(1, moonChance(débris) + moonPity) ; moonChance reste sous maxChance", () => {
+    expect(moonBirthChance({ moonPity: 0.3 }, 1_000_000)).toBeCloseTo(0.4);
+    expect(moonBirthChance({ moonPity: 0.95 }, 50_000_000)).toBe(1);
+    expect(moonChance(1e12)).toBeLessThanOrEqual(MOON_RULES.maxChance);
+    expect(rollMoon({ moonPity: 0.3 }, 0, { now: NOW, onColony: false, rand: () => 0.29 })).not.toBeNull();
+    expect(rollMoon({ moonPity: 0.3 }, 0, { now: NOW, onColony: false, rand: () => 0.31 })).toBeNull();
+    expect(moonPityText({ moonPity: 0.3 })).toBe("Les débris s'accumulent en orbite : 35 % de chance de lune au prochain combat.");
+  });
+
+  it("jamais sur une colonie, pour un PNJ, ni avec une lune ; colonie et PNJ exclus du tirage même à 100 %", () => {
+    const moon = { name: "Io", bornAtMs: NOW - 1, fromDebris: 1 };
+    const col: Partial<PlayerState> = {};
+    addMoonPity(col, { onColony: true });
+    expect(col.moonPity).toBeUndefined();
+    const npc = { npc: "brannoc" } as Partial<PlayerState>;
+    addMoonPity(npc, { onColony: false });
+    expect(npc.moonPity).toBeUndefined();
+    const owner: Partial<PlayerState> = { moon };
+    addMoonPity(owner, { onColony: false });
+    expect(owner.moonPity).toBeUndefined();
+    expect(rollMoon({ moonPity: 1 }, 0, { now: NOW, onColony: true, rand: () => 0 })).toBeNull();
+    expect(rollMoon({ moonPity: 1, npc: "brannoc" } as never, 0, { now: NOW, onColony: false, rand: () => 0 })).toBeNull();
+  });
+
+  it("pityPerDefense = 0 : rien ne s'ajoute, la réserve en base reste sans effet", () => {
+    applyGameContent({ rules: { moon: { pityPerDefense: 0 } } } as never);
+    try {
+      const d: Partial<PlayerState> = { moonPity: 0.8 };
+      addMoonPity(d, { onColony: false });
+      expect(d.moonPity).toBe(0.8);
+      expect(moonPity(d)).toBe(0);
+      expect(moonBirthChance(d, 0)).toBe(0);
+      expect(moonPityText(d)).toBeNull();
+    } finally {
+      applyGameContent({});
+    }
+    expect(MOON_RULES.pityPerDefense).toBe(0.05);
+  });
+
+  it("au combat : un petit pillage remplit la réserve ; la naissance la remet à 0", () => {
+    const attack = (moonPity: number) => {
+      const attacker = player("att", { units: { ...defaultPlayerState("att", "ATT").units, fregate: { level: 1, count: 5 } } });
+      const defender = player("def", { moonPity });
+      const out = performAttack({
+        now: NOW,
+        attackerUid: "att",
+        attacker,
+        attackerQueues: defaultQueues(),
+        defenderUid: "def",
+        defender,
+        defenderQueues: defaultQueues(),
+        fleet: { fregate: 5 },
+        lastAttackOnTargetMs: null,
+        defenderXpLostLast24h: 0,
+        inFlight: true,
+        rand: () => 0.999999,
+      });
+      if (!out.ok) throw new Error(out.message);
+      expect(out.debris.scrap + out.debris.energy).toBeLessThan(MOON_RULES.debrisPerPercent);
+      return out.defender;
+    };
+    const first = attack(0);
+    expect(first.moonPity).toBeCloseTo(0.05);
+    expect(playerMoon(first)).toBeNull();
+    const twentieth = attack(0.95);
+    expect(playerMoon(twentieth)).not.toBeNull();
+    expect(twentieth.moonPity).toBe(0);
   });
 });

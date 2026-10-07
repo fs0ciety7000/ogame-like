@@ -1,4 +1,4 @@
-import { MOON_RULES, rollMoon } from "@/game/moon";
+import { addMoonPity, MOON_RULES, rollMoon } from "@/game/moon";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { applyHull, sendToWorkshop, workshopState } from "@/game/workshop";
 import { describeGain } from "@/game/format";
@@ -337,9 +337,13 @@ export function performAttack(input: AttackInput): AttackOutput {
 
   // 6.13.0 (proposals/lunes.md, I21) : un gros combat sur la planète mère d'un joueur peut faire naître une lune.
   const debris = debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(combat.garrisonLosses ?? [])], eventDebrisPercent(now) ?? DEBRIS_RULES.percent);
+  // 6.14.44 (É30-1a, I21) : pitié lunaire, remplie avant le tirage (garantie au 20e combat). Combat entre joueurs seulement.
+  if (!attacker.npc) addMoonPity(owner, { onColony: !!colony });
   const moon = rollMoon(owner, debrisTotal(debris), { now, onColony: !!colony, rand: input.rand });
   if (moon) {
     owner.moon = moon;
+    // Une naissance remet la réserve à 0.
+    if (owner.moonPity) owner.moonPity = 0;
     defenderNotifications.push({
       kind: "event",
       title: `Une lune est née : ${moon.name}`,

@@ -49,13 +49,16 @@ export interface Modifiers {
   /** 5.28.1 : réductions d'entretien de la flotte et de coût des bâtiments (couche empire). */
   fleetUpkeep: number;
   buildingDiscount: number;
+  /** 6.14.44 : portée de la phalange (+ %) et recharge de la porte de saut (− %), couche empire. */
+  phalanxRange: number;
+  jumpGateCooldown: number;
 }
 
 type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass" | "moon">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0, fleetUpkeep: 0, buildingDiscount: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0, fleetUpkeep: 0, buildingDiscount: 0, phalanxRange: 0, jumpGateCooldown: 0 };
 }
 
 /** v5.14 : tous les effets de la couche empire (officiers, reliques, talents,
@@ -114,6 +117,8 @@ export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScop
   m.tradeTax = sum("tradeTax");
   m.fleetUpkeep = sum("fleetUpkeep");
   m.buildingDiscount = sum("buildingDiscount");
+  m.phalanxRange = sum("phalanxRange");
+  m.jumpGateCooldown = sum("jumpGateCooldown");
   for (const g of grants) {
     if (g.layer !== "empire" || g.stat !== "production" || !g.target || m.production[g.target as ResourceId] !== undefined) continue;
     m.production[g.target as ResourceId] = rawEffectTotal(grants, "empire", "production", { target: g.target, scope });

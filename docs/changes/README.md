@@ -144,6 +144,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.41 | [Feuille de route sur /decisions, Q12 écartée, Q31 validée](6.14.41-feuille-de-route-decisions.md) | ajout (outillage) | Q12, Q31 |
 | 6.14.42 | [Documents en direct pour /decisions et /img](6.14.42-documents-en-direct.md) | ajout (outillage) | aucune (consigne) |
 | 6.14.43 | [Proposition phalange et porte de saut](6.14.43-proposition-phalange.md) | docs | Q33 à Q41 |
+| 6.14.44 | [Phalange, porte de saut et pitié lunaire (moteur)](6.14.44-phalange-moteur.md) | fonctionnalité (moteur) | `phalange-porte-de-saut.md`, Q33 à Q41 |
 | 6.14.45 | [Réponses Q32 à Q41 reportées](6.14.45-reponses-q32-q41.md) | docs | Q32 à Q41 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |

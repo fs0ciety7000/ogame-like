@@ -18,6 +18,14 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q42 | Pitié lunaire : les combats lancés par un PNJ (seigneur) remplissent-ils la réserve ? : Non, seulement les combats lancés par un joueur | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q43 | Pitié : la réserve se remplit avant ou après le tirage de la lune ? : Avant (arrondi au millionième) : la garantie tombe bien au 20e combat | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q44 | Pitié « farmable » : un allié peut attaquer 20 fois avec un seul vaisseau pour garantir une lune. Exiger un seuil ? : Pas de seuil (la proposition vise aussi les petits pillages) | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q45 | Notifier la progression de la pitié à chaque combat ? : Non : le texte s'affiche sur l'écran Lune (É30-1c), pas de notification | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q46 | Missions que la porte peut rapatrier : réglables librement ? : Intersection du réglage et d'une liste sûre (patrouille, garnison, base avancée) ; jamais attaque, transport ou cargaison | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q47 | Plancher de recharge de la porte (6 h) : avant ou après les réductions d'effets ? : Après : la recharge ne descend jamais sous 6 h | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q48 | Puissance d'une flotte leurrée une fois percée : qui la calcule ? : Le serveur la fournit ; sinon `threatEstimate` la recalcule avec les niveaux du défenseur (stimulant compris) | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
+| Q49 | Qui est un « agresseur » balayable ? : Un joueur dont une flotte d'attaque vient vers toi ou un allié couvert (départs programmés compris) ; le rapport compte ses vaisseaux d'attaque à quai | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
 
 ## 3. Récit
 

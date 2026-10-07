@@ -22,6 +22,8 @@ import { GAZETTE_RULES } from "@/game/gazette";
 import { EXCHANGE_RULES } from "@/game/resources";
 import { COLONY_BASE_RULES } from "@/game/fleets";
 import { MOON_RULES } from "@/game/moon";
+import { PHALANX_RULES } from "@/game/phalanx";
+import { JUMP_GATE_RULES } from "@/game/jumpGate";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
 import { GOAL_RULES } from "@/game/goals";
@@ -90,7 +92,10 @@ export const REGISTERED_RULES = {
   colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
   colonySpec: { label: "Colonies : spécialisation", target: () => COLONY_SPEC_RULES },
   colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
-  moon: { label: "Lunes : naissance et bonus", target: () => MOON_RULES },
+  moon: { label: "Lunes : naissance, bonus et pitié", target: () => MOON_RULES },
+  // 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md §5.4).
+  phalanx: { label: "Lunes : phalange", target: () => PHALANX_RULES },
+  jumpGate: { label: "Lunes : porte de saut", target: () => JUMP_GATE_RULES },
   passRewards: { label: "Passe généré : dernier palier et effort", target: () => PASS_REWARD_RULES },
   achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES },

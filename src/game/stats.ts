@@ -96,6 +96,10 @@ export interface PlayerStats {
   auctionsWon?: number;
   /** 5.22 : vendettas gagnées par personnalité de seigneur (déblocage des unités d'élite). */
   vendettaWins?: Record<string, number>;
+  /** 6.14.44 (É30-1a) : balayages de phalange, sauts de la porte, et attaques repoussées par une flotte rapatriée par la porte. */
+  phalanxScans?: number;
+  gateJumps?: number;
+  gateSaves?: number;
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];

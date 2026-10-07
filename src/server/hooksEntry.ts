@@ -234,3 +234,7 @@ export { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
 export { buyWeeklyOffer, WEEKLY_STOCK_KEY } from "@/game/weeklyStock";
 export { addPatronage, PATRONS_KEY } from "@/game/patrons";
+// 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md) : phalange, porte de saut et pitié lunaire (routes au lot É30-1b).
+export { addMoonPity, moonPity, playerMoon, moonLevel, MOON_RULES } from "@/game/moon";
+export { alliesCovered, buildScanReport, checkScan, isAggressor, markScan, PHALANX_RULES, phalanxFeatures, phalanxLevel, phalanxRange, piercedText, radarRecipients, radarText, revealIncoming, scanCost, scanReportText } from "@/game/phalanx";
+export { allyJumpAllowed, checkJump, gateCooldownMs, gateReadyAtMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markJump } from "@/game/jumpGate";

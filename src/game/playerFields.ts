@@ -37,6 +37,7 @@ export const GAME_FIELDS = [
   "modules",
   "empireClass",
   "moon",
+  "moonPity",
   "synthesis",
   "profileStyle",
   "renamed",

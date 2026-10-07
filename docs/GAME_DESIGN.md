@@ -69,7 +69,9 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I18 | Passe généré : paliers 1 à 29 dans ±5 % du budget (`passGen.budgetHours`), plafonds du mois respectés (Ambre, jetons, dossiers, capsules), dernier palier hors budget ; points par palier entre `pointsMin` et `pointsMax`, même graine → même passe | `passGen.ts`, `passSeasons.ts` (`generatePassSeason`) | `progression681.test.ts` |
 | I19 | Chapitre généré : 4 épisodes, objectifs pris parmi les actions autorisées (`chronicleGen.objectiveWeights` > 0), difficulté dans ses bornes ; faction du thème du passe sauf si elle était là le mois précédent ; les récompenses par budget ne changent pas le reste du tirage | `procedural.ts` (`generateChapter`), `chronicleGen.ts` | `progression682.test.ts` |
 | I20 | Base avancée : une attaque partie d'une base ne prend jamais plus de vaisseaux que la base n'en contient et ne touche pas aux vaisseaux à quai de la planète mère ; les vaisseaux basés restent comptés dans le hangar de la planète mère (`unitsAwayOf`) | `fleets.ts` (`takeFromBase`, `baseReturnUnits`) | `flotteBasee.test.ts` |
-| I21 | Lune : un joueur en a au plus une ; elle ne naît que d'un combat sur sa planète mère (jamais sur une colonie ni pour un PNJ), chance 1 % par tranche de `debrisPerPercent` débris, `maxChance` au plus ; ses effets passent par la couche empire et ses plafonds ; son bouclier au niveau maximal reste sous le plafond (15 %) | `moon.ts` (`rollMoon`, `moonEffects`), `attack.ts` | `lunes.test.ts`, `derived.test.ts` |
+| I21 | Lune : un joueur en a au plus une ; elle ne naît que d'un combat sur sa planète mère (jamais sur une colonie ni pour un PNJ) ; chance = `min(1, moonChance(débris) + moonPity)`, `moonChance` = 1 % par tranche de `debrisPerPercent`, `maxChance` au plus ; 6.14.44 : chaque combat subi sur la planète mère sans lune (attaquant joueur) ajoute `pityPerDefense` à la réserve **avant** le tirage (lune garantie au 20e à 5 %), une naissance la remet à 0, `pityPerDefense = 0` la rend inerte ; ses effets passent par la couche empire et ses plafonds ; son bouclier au niveau maximal reste sous le plafond (15 %) | `moon.ts` (`addMoonPity`, `rollMoon`, `moonEffects`), `attack.ts` | `lunes.test.ts`, `derived.test.ts` |
+| I22 | Phalange : rend une flotte cachée (`trueUnits` au niveau `revealDecoyLevel`, `boosts` au niveau `revealBoostLevel`) seulement à sa cible (planète mère ou colonie), jamais à un allié ni à un tiers, sans rien écrire dans la flotte ; le radar ne signale une attaque de joueur qu'aux alliés de la cible (même alliance, lune, portée couvrant la planète visée), ni la cible ni l'attaquant, `radarMaxNotified` au plus ; un balayage ne vise qu'un agresseur (flotte d'attaque en approche vers soi, une de ses colonies ou un allié couvert), respecte sa recharge et son coût, et ne montre que la composition affichée (jamais `trueUnits`) | `phalanx.ts` (`revealIncoming`, `radarRecipients`, `isAggressor`, `scanRefusal`, `buildScanReport`) | `phalange.test.ts` |
+| I23 | Porte de saut : ne fait que rapatrier une flotte du joueur vers sa planète mère, pour les missions permises (patrouille, garnison, base avancée : le réglage peut en retirer, jamais en ajouter), hors statut « done » ou « decision », sans cargaison, une fois par recharge ; unités conservées (I1), aucune ressource créée | `jumpGate.ts` (`jumpRefusal`, `jumpedFleet`, `markJump`) | `porteSaut.test.ts`, `attack.test.ts` (I1) |
 
 ## 5. Règles de conception
 
@@ -131,6 +133,24 @@ systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres
 | 20 · Cale orbitale | +5 points de vaisseaux sauvés |
 
 Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche (niv. 0), l'Atelier se comporte comme en 5.20.
+
+### 7.4 Lunes : phalange, porte de saut, pitié (6.14.44, `moon.ts`, `phalanx.ts`, `jumpGate.ts`)
+
+Moteur livré en 6.14.44 (lot É30-1a) ; routes serveur et interface aux lots É30-1b et É30-1c (`proposals/phalange-porte-de-saut.md`).
+
+| Niveau de lune | Phalange (`PHALANX_RULES`) | Porte de saut (`JUMP_GATE_RULES`) |
+|:--|:--|:--|
+| 1 | radar d'alliance, portée 15 ; balayage de l'agresseur, recharge 30 min | — |
+| 2 | portée 30 ; perce-brouillard (vraie composition) ; recharge 25 min | — |
+| 3 | portée 45 ; recharge 20 min | rapatriement instantané, recharge 24 h |
+| 4 | portée 60 ; capsules révélées (stimulant) ; recharge 15 min | recharge 22 h |
+| 5 | portée 75 ; recharge 10 min | recharge 20 h ; saut d'allié (J3) désactivé |
+
+- Portée = 15 × niveau × (1 + `phalanxRange`, plafond empire 50 %), en unités de carte, de la planète mère à la planète visée.
+- Balayage : agresseur seulement (I22) ; coût 30 min de production d'énergie, 1 000 au moins ; recharge 30 − 5 × (niveau − 1) min, 5 au moins.
+- Porte : patrouille, garnison, base avancée ; recharge 24 − 2 × (niveau − 3) h × (1 − `jumpGateCooldown`, plafond empire 30 %), 6 h au moins ; gratuite.
+- Pitié : +5 % par combat subi sur la planète mère sans lune (attaquant joueur), lune garantie au 20e ; champ `players.moonPity`.
+- Désactiver : `phalanx.enabled`, `jumpGate.enabled` à faux, `moon.pityPerDefense` à 0 (Admin → Règles → Tous les réglages).
 
 ## 8. Journal des audits
 
@@ -228,5 +248,6 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.24 | H29-1 : dossier de mise en production 5.27 → 6.14, répétition sur la pré-prod | `docs/release/5.27-a-6.14.md` |
 | 2026-10-07 | 6.14.29 | Revue AU25 : hiver 2029 clos (dossier de mise en production, `/img`, décisions à valider) ; printemps 2030 ouvert | `docs/audit/2026-10-07-au25-hiver-2029.md` |
 | 2026-10-07 | 6.14.35 | Réponses de l'utilisateur sur `/decisions` : 22 décisions validées, Q11 close, Q12 en attente, prochain système à choisir (Q31) | `docs/proposals/prochain-systeme.md` |
+| 2026-10-07 | 6.14.44 | É30-1a : phalange, porte de saut et pitié lunaire dans le moteur (règles, stats `phalanxRange` et `jumpGateCooldown`, champ `moonPity`) ; invariant I21 modifié, I22 et I23 | `docs/changes/6.14.44-phalange-moteur.md` |
 | 2026-10-07 | 6.14.38 | Revue AU26 : printemps 2030 clos (`/decisions`, billets, annonce, intégration fiable) ; été 2030 ouvert (Z6 sur la pré-prod, système Q31) | `docs/audit/2026-10-07-au26-printemps-2030.md` |
 | 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |

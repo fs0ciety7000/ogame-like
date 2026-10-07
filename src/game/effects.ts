@@ -42,10 +42,14 @@ export type EffectStat =
   | "fleetUpkeep"
   | "hangarCapacity"
   | "dockCapacity"
+  // 6.14.44 : porte de saut lunaire (réduction de la recharge)
+  | "jumpGateCooldown"
   // Renseignement
   | "spyLevel"
   | "detection"
-  | "counterSpy";
+  | "counterSpy"
+  // 6.14.44 : portée de la phalange lunaire
+  | "phalanxRange";
 
 /** Couche de calcul. Les technologies s'appliquent unité par unité ou dans
  *  les formules de base ; la couche « empire » (officiers, reliques, talents,
@@ -149,9 +153,12 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_COST_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacité des hangars", unit: "pct", group: "flottes" },
   dockCapacity: { label: "Postes de la Cale sèche", unit: "pct", group: "flottes" },
+  // 6.14.44 (proposals/phalange-porte-de-saut.md §5.4) : couche empire seulement, plafonds réglables (effectCaps).
+  jumpGateCooldown: { label: "Recharge de la porte de saut", unit: "pct", reduction: true, group: "flottes", cap: { tech: 0.3, empire: 0.3 }, floor: 0 },
   spyLevel: { label: "Niveau d'espionnage", unit: "level", group: "renseignement" },
   detection: { label: "Détection de l'espionnage", unit: "pct", group: "renseignement" },
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" },
+  phalanxRange: { label: "Portée de la phalange", unit: "pct", group: "renseignement", cap: { tech: 0.5, empire: 0.5 }, floor: 0 },
 };
 
 /** 6.9.5 (AU8) : plafonds de chaque grandeur par couche, réglables (registre « effectCaps »). Attaque et défense des

@@ -293,6 +293,12 @@
         "maxSize": 2000
       },
       {
+        "name": "moonPity",
+        "type": "number",
+        "required": false,
+        "onlyInt": false
+      },
+      {
         "name": "synthesis",
         "type": "json",
         "required": false,
