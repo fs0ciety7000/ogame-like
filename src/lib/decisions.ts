@@ -65,3 +65,31 @@ export function parseAdvice(md: string): Record<string, DecisionAdvice> {
 
 /** Numéro d'une question (« Q12 » → 12), pour l'ordre d'affichage. */
 export const questionNumber = (id: string): number => Number(id.replace(/\D/g, "")) || 0;
+
+/** 6.14.37 : dépôt et branche où lire les documents (pré-prod : branche de travail ; production : main). */
+export const DOCS_REPO = "https://github.com/fs0ciety7000/ogame-like/blob";
+
+/** Fiches de changement de l'index docs/changes/README.md : version → fichier. */
+export function parseChangeIndex(md: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const line of md.split("\n")) {
+    const m = /^\| (\d+\.\d+\.\d+) \| \[[^\]]*\]\(([^)]+\.md)\)/.exec(line);
+    if (m) out[m[1]] = `docs/changes/${m[2]}`;
+  }
+  return out;
+}
+
+/** Documents qui présentent une décision : fichiers `docs/…md` cités dans sa ligne, puis la fiche de chaque version du lot. */
+export function decisionDocs(q: DecisionQuestion, changes: Record<string, string>): string[] {
+  const text = [q.lot, q.question, q.choice, q.revert, q.status].join(" ");
+  const out: string[] = [];
+  const re = /(docs\/[0-9A-Za-z_./-]+\.md)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) if (!out.includes(m[1])) out.push(m[1]);
+  const vre = /\b(\d+\.\d+\.\d+)\b/g;
+  while ((m = vre.exec(q.lot))) {
+    const f = changes[m[1]];
+    if (f && !out.includes(f)) out.push(f);
+  }
+  return out;
+}

@@ -8,9 +8,10 @@ import { pb } from "@/lib/pocketbase";
 import { useAdminStatus } from "@/services/adminService";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
-import { parseAdvice, parseQuestions, plainText, questionNumber } from "@/lib/decisions";
+import { decisionDocs, DOCS_REPO, parseAdvice, parseChangeIndex, parseQuestions, plainText, questionNumber } from "@/lib/decisions";
 import questionsRaw from "../../docs/QUESTIONS.md?raw";
 import adviceRaw from "../../docs/decisions-a-valider.md?raw";
+import changesRaw from "../../docs/changes/README.md?raw";
 
 /* 6.14.32 : décisions prises seules par Claude (règle n° 3), à valider par l'administrateur (/decisions, pré-prod et production).
    Les questions viennent de docs/QUESTIONS.md au build (à jour à chaque déploiement) ; les réponses vont dans la collection
@@ -20,6 +21,9 @@ const QUESTIONS = parseQuestions(questionsRaw)
   .filter((q) => q.open)
   .sort((a, b) => questionNumber(a.id) - questionNumber(b.id));
 const ADVICE = parseAdvice(adviceRaw);
+const CHANGES = parseChangeIndex(changesRaw);
+/** 6.14.37 : documents lus sur la branche déployée (pré-prod : branche de travail ; production : main). */
+const DOCS_BRANCH = (import.meta.env.VITE_SERVER_LABEL ?? "").trim() ? "claude/hiver-k-s" : "main";
 const GROUP_ORDER = ["Bloquante", "Joueurs et équilibre", "Récit", "Outillage et méthode", "Autres"];
 const COLLECTION = "decision_answers";
 
@@ -200,6 +204,15 @@ export function DecisionsPage() {
                         <p className="text-xs text-slate-500">
                           Revenir en arrière : {plainText(q.revert)} · lot {plainText(q.lot)}
                         </p>
+                        {/* 6.14.37 : documents qui présentent le choix (proposition, fiche du lot). */}
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="hud-eyebrow text-[10px] text-slate-500">Documents</span>
+                          {decisionDocs(q, CHANGES).map((d) => (
+                            <a key={d} href={`${DOCS_REPO}/${DOCS_BRANCH}/${d}`} target="_blank" rel="noreferrer" className="break-all font-mono text-cyan-glow underline-offset-2 hover:underline">
+                              {d.replace(/^docs\//, "")}
+                            </a>
+                          ))}
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant={a?.choice === "valide" ? "primary" : "secondary"} aria-pressed={a?.choice === "valide"} disabled={busy === q.id} onClick={() => void answer(q.id, { choice: "valide" })}>
                             <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />

@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseAdvice, parseQuestions, plainText } from "@/lib/decisions";
+import { decisionDocs, parseAdvice, parseChangeIndex, parseQuestions, plainText } from "@/lib/decisions";
 
 /* 6.14.32 : la page /decisions lit QUESTIONS.md et decisions-a-valider.md au build. */
 
@@ -29,5 +29,17 @@ describe("6.14.32 : décisions à valider", () => {
     expect(advice.Q12).toEqual({ group: "Bloquante", effect: "e", reco: "**Donner** le feu vert" });
     expect(advice.Q8).toEqual({ group: "Outillage", effect: "", reco: "valider" });
     expect(plainText("**Donner** le `feu`")).toBe("Donner le feu");
+  });
+
+  it("6.14.37 : liens vers les documents de chaque décision ouverte", () => {
+    const changes = parseChangeIndex(readFileSync("docs/changes/README.md", "utf8"));
+    expect(changes["6.14.32"]).toBe("docs/changes/6.14.32-page-decisions.md");
+    for (const f of Object.values(changes)) expect(existsSync(f), f).toBe(true);
+    const open = parseQuestions(readFileSync("docs/QUESTIONS.md", "utf8")).filter((q) => q.open);
+    for (const q of open) {
+      const docs = decisionDocs(q, changes);
+      expect(docs.length, q.id).toBeGreaterThan(0);
+      for (const d of docs) expect(existsSync(d), `${q.id} : ${d}`).toBe(true);
+    }
   });
 });

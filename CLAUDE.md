@@ -69,6 +69,14 @@ Valable pour toute la session et tout le projet, à chaque demande :
   `node scripts/decisions.mjs` en début de session et à chaque passage de la routine horaire : « valide » → statut « validée » ;
   « changer » → lot de changement et règle réécrite (instructions, GDD, WORKFLOW) ; un « changer » sans note se précise d'abord avec
   l'utilisateur (6.14.35). Une question traitée quitte la page.
+- > **Instructions (2026-10-07) : dans la page décisions, quand tu présentes un choix appliqué, mets un lien vers le .md concerné qui
+  > présente le choix.** — **Mets à jour automatiquement img et décision lorsque tu push des nouvelles décisions et quand tu as besoin
+  > d'illustrations.**
+
+  Une question ouverte cite son document (`docs/…md` dans sa ligne, ou une version du lot présente dans l'index des fiches) : la page
+  affiche les liens, et `decisions.test.ts` échoue sans document. `/decisions` et `/img` se construisent depuis le dépôt : une question,
+  avec sa ligne dans `decisions-a-valider.md`, et une image, avec sa ligne dans `illustrations.json`, s'ajoutent **dans le push même
+  qui les crée**. Le déploiement de la pré-prod met les deux pages à jour, sans autre étape.
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 
