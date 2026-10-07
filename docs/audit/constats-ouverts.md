@@ -30,7 +30,6 @@ Aucun (6.14.19). Le prochain inventaire (AU24) reprend cette section.
 | PRG-1 (suite) | AU3, Z1 | Rythme du passe avec le barème actuel (missions à 0) | un mois complet en production, `bySource` (6.8.0) |
 | BOSS-2, ET29-2 | AU2, AU23, Q21 | Cible de taux de boss abattus | 8 semaines en production (3 combats dans la copie) |
 | Z1-c | Z1 | 86 % des joueurs pillables, l'attaquant gagne 74 % des combats JcJ | E1 et E2 (5.32, 6.2), lune et bunker en production |
-| PNJ-4 | AU1 | Raids repoussés à 96 % | 3 raids par jour (PNJ-3, 6.6.0) en production |
 | PRG-5, Z1-a | AU3, Z1 | Succès débloqués vite (médiane 70 sur 178 en une semaine) | rythme hebdomadaire (relevé A29-2) |
 | AU28-4, HV28-6, PR29-5, ET29-4 | AU20 à AU23 | Chiffres provisoires : lunes (Q18), paliers bonus du passe, base avancée | ces systèmes en production |
 
@@ -65,7 +64,8 @@ Aucun (6.14.19). Le prochain inventaire (AU24) reprend cette section.
 | ET29-3 | Cette page (6.14.18) |
 | COM-3 (reste) | 6.14.19 : casino de la semaine et pot commun (solde, entrées par source) dans la santé |
 | PNJ-5 | 6.14.19 : unités d'élite débloquées dans la santé (jugement avec les mesures) |
-| PNJ-4 (relevé), PRG-5 (relevé) | 6.14.19 : raids repoussés et repaires pris (7 j), points de succès gagnés en 7 jours ; le jugement reste dans « Attend des mesures » |
+| PNJ-4 | 6.14.19 : 79 % de raids repoussés sur 81 en 7 jours dans la copie de la prod, dans la cible (60 à 80 %) |
+| PRG-5 (relevé) | 6.14.19 : points de succès gagnés en 7 jours ; le jugement reste dans « Attend des mesures » |
 | C2 à C4 (chaîne de contenu) | 6.14.12 à 6.14.14 : garde `contentChain.test.ts` sans manque connu |
 
 Tous les autres constats des rapports AU1 à AU23 et de l'audit global sont fermés, avec leur preuve dans `docs/changes/` ou la
