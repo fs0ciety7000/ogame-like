@@ -173,3 +173,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.9.6 | Revues AU9 (unités) et AU10 (flottes) : invariants tenus, texte d'annulation calculé | `docs/audit/2026-10-07-au9-au10-unites-flottes.md` |
 | 2026-10-07 | 6.9.7 | Revue AU11 (économie) : taux et taxe du comptoir d'échange, recherches en parallèle réglables | `docs/audit/2026-10-07-au11-economie.md`, `docs/changes/6.9.7-economie.md` |
 | 2026-10-07 | 6.9.8 | Revue AU12 (colonies) : délai de spécialisation calculé, constante morte retirée | `docs/audit/2026-10-07-au12-colonies.md` |
+| 2026-10-07 | 6.9.9 | Fenêtre d'attaque : puissance détaillée par vaisseau (`fleetPowerBreakdown`) | `docs/changes/6.9.9-puissance-flotte.md` |

@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS as ALL_OFFENSIVE, findUnit, isEliteUnit } from "@/game/units";
-import { COMBAT_RULES, computeFleetPower, pveAttackFactor } from "@/game/combat";
+import { COMBAT_RULES, computeFleetPower, fleetPowerBreakdown, pveAttackFactor } from "@/game/combat";
 import { formationEffects } from "@/game/formations";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
 import { formatDuration, formatNumber } from "@/lib/utils";
@@ -259,15 +259,62 @@ export function AttackModal({
                     bonus > 0 && `officiers, reliques et capsule +${Math.round(bonus * 100)} %`,
                     pve > 1 && `Traqueurs Kesh contre un PNJ +${Math.round((pve - 1) * 100)} %`,
                   ].filter(Boolean);
+                  // 6.9.9 : détail par type de vaisseau, puis les multiplicateurs (dépliable, lisible au doigt).
+                  const rows = hasShips ? fleetPowerBreakdown(player.units, player.techLevels, selected) : [];
                   return (
-                    <p className="flex items-start gap-1.5">
-                      <Swords className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-glow" />
-                      <span>
-                        Puissance d'attaque : <strong className="tabular-mono text-slate-200">{formatNumber(total)}</strong>
-                        {hasShips && parts.length > 0 ? <span className="text-slate-500"> (base {formatNumber(Math.round(base))} · {parts.join(" · ")})</span> : null}
-                        {!hasShips && <span className="text-slate-500"> — choisis tes vaisseaux.</span>}
-                      </span>
-                    </p>
+                    <div>
+                      <p className="flex items-start gap-1.5">
+                        <Swords className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-glow" />
+                        <span>
+                          Puissance d'attaque : <strong className="tabular-mono text-slate-200">{formatNumber(total)}</strong>
+                          {hasShips && parts.length > 0 ? <span className="text-slate-500"> (base {formatNumber(Math.round(base))} · {parts.join(" · ")})</span> : null}
+                          {!hasShips && <span className="text-slate-500"> — choisis tes vaisseaux.</span>}
+                        </span>
+                      </p>
+                      {rows.length > 0 && base > 0 && (
+                        <details className="ml-5 mt-1">
+                          <summary className="cursor-pointer py-1 text-slate-400 hover:text-slate-200">Détail par vaisseau</summary>
+                          <ul className="mt-1 space-y-0.5">
+                            {rows.map((r) => (
+                              <li key={r.id} className="flex items-baseline justify-between gap-2">
+                                <span className="min-w-0 truncate">
+                                  {findUnit(r.id)?.name ?? r.id} <span className="font-mono tabular-nums text-slate-500">×{formatNumber(r.count)}</span>
+                                </span>
+                                <span className="shrink-0 font-mono tabular-nums text-slate-200">
+                                  {formatNumber(Math.round(r.power))} <span className="text-slate-500">· {Math.round((r.power / base) * 100)} %</span>
+                                </span>
+                              </li>
+                            ))}
+                            <li className="flex items-baseline justify-between gap-2 border-t border-white/10 pt-0.5 text-slate-400">
+                              <span>Base</span>
+                              <span className="font-mono tabular-nums">{formatNumber(Math.round(base))}</span>
+                            </li>
+                            {formationEffects(formation).attackFactor !== 1 && (
+                              <li className="flex items-baseline justify-between gap-2 text-slate-400">
+                                <span>Formation</span>
+                                <span className="font-mono tabular-nums">×{formationEffects(formation).attackFactor.toFixed(2)}</span>
+                              </li>
+                            )}
+                            {bonus > 0 && (
+                              <li className="flex items-baseline justify-between gap-2 text-slate-400">
+                                <span>Officiers, reliques et capsule</span>
+                                <span className="font-mono tabular-nums">+{Math.round(bonus * 100)} %</span>
+                              </li>
+                            )}
+                            {pve > 1 && (
+                              <li className="flex items-baseline justify-between gap-2 text-slate-400">
+                                <span>Traqueurs Kesh contre un PNJ</span>
+                                <span className="font-mono tabular-nums">+{Math.round((pve - 1) * 100)} %</span>
+                              </li>
+                            )}
+                            <li className="flex items-baseline justify-between gap-2 border-t border-white/10 pt-0.5">
+                              <span>Total</span>
+                              <span className="font-mono tabular-nums text-slate-200">{formatNumber(total)}</span>
+                            </li>
+                          </ul>
+                        </details>
+                      )}
+                    </div>
                   );
                 })()}
                 <p>

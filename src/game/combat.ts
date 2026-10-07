@@ -150,6 +150,23 @@ export function computeFleetPower(
   return total;
 }
 
+/** 6.9.9 : contribution de chaque type de vaisseau à la puissance d'une flotte (décroissant).
+ *  La somme des `power` vaut computeFleetPower(units, techLevels, fleet, stats). */
+export function fleetPowerBreakdown(
+  units: Units,
+  techLevels: TechLevels,
+  fleet: Record<string, number>,
+  stats: ("attack" | "defense")[] = ["attack"],
+): { id: string; count: number; power: number }[] {
+  const rows: { id: string; count: number; power: number }[] = [];
+  for (const id in fleet) {
+    const count = fleet[id];
+    if (!(count > 0)) continue;
+    rows.push({ id, count, power: computeFleetPower(units, techLevels, { [id]: count }, stats) });
+  }
+  return rows.sort((a, b) => b.power - a.power || (a.id < b.id ? -1 : 1));
+}
+
 /** v3.9 : multiplicateur d'attaque d'une flotte contre des PNJ (Traqueurs Kesh). */
 export function pveAttackFactor(units: Units, techLevels: TechLevels, fleet: Record<string, number>): number {
   const hunters = fleet[KESH_HUNTER_UNIT.id] ?? 0;
