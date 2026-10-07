@@ -46,7 +46,7 @@ export function CostPills({ cost, stock, seconds, perUnit, timeFactors, classNam
     seconds !== undefined ? (
       <CostPill>
         <Clock className="h-3 w-3" /> {formatDuration(seconds)}
-        {perUnit && <em className="text-[11px] not-italic opacity-60">/ unité</em>}
+        {perUnit && <em className="text-[11px] not-italic text-slate-500">/ unité</em>}
       </CostPill>
     ) : null;
   return (

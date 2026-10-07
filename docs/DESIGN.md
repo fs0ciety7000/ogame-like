@@ -25,6 +25,8 @@ libellés d'un dessin SVG (`<text>`, en unités du dessin) y échappent (6.14.83
 garde une encre lisible (`--th-btn-ink` sur un fond clair ou saturé, jamais `--th-text-100` sur l'orange ou le magenta) (6.14.90).
 Audit des 13 thèmes : `scripts/theme-audit.mjs` (captures et mesures, revue AU28).
 Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, danger lisible, écart entre couleurs de sens).
+Un état (verrouillé, réclamé, en attente, manque) se marque par l'icône, la bordure (pointillés pour « pas encore ») et la couleur
+du texte, **jamais par l'opacité d'un bloc qui porte du texte** (6.14.97, TH-L1 : 3,9:1 à 75 %). Garde : `verrousSansOpacite.test.ts`.
 
 ## Couleurs = sens
 

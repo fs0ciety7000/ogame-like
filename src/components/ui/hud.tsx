@@ -112,7 +112,7 @@ export function CostPill({ children, missing, ok, className }: { children: React
       )}
     >
       {children}
-      {missing && <em className="text-[11px] not-italic opacity-75">{missing}</em>}
+      {missing && <em className="text-[11px] not-italic">{missing}</em>}
     </span>
   );
 }

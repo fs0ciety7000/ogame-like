@@ -190,8 +190,9 @@ export function SeasonPassPage() {
                 "flex flex-col gap-2 p-3",
                 big && "border-gold-glow/50",
                 reached && !claimed && "ring-1 ring-mint-glow/70",
-                claimed && "opacity-60",
-                !reached && "opacity-75",
+                // 6.14.97 (TH-L1) : un état se marque par l'icône, la bordure et la couleur du texte, jamais par l'opacité d'un bloc de texte.
+                claimed && "border-mint-glow/30",
+                !reached && "border-dashed",
               )}
             >
               <div className="flex items-center justify-between">
@@ -199,7 +200,7 @@ export function SeasonPassPage() {
                 {claimed ? <Check className="h-4 w-4 text-mint-glow" /> : !reached ? <Lock className="h-3.5 w-3.5 text-slate-600" /> : null}
               </div>
               {req && (
-                <div className={cn("flex flex-col gap-1", req.status === "waiting" && "opacity-70")} title={isCumulativePass(st.seasonId) ? "Défi du palier : totaux du mois" : "Défi du palier : un palier à la fois"}>
+                <div className="flex flex-col gap-1" title={isCumulativePass(st.seasonId) ? "Défi du palier : totaux du mois" : "Défi du palier : un palier à la fois"}>
                   {req.reqs.map((r) => (
                     <HudChip key={r.key} size="sm" tone={r.met ? "mint" : current ? "accent" : "neutral"} className="max-w-full whitespace-normal normal-case tracking-normal">
                       {r.met ? <Check /> : <Lock />} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}

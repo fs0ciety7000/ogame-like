@@ -83,7 +83,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition) | L | à faire |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
-| 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | à faire |
+| 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | livré (6.14.97) |
 | 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | à faire |
 | 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | livré (6.14.96) |
 | 65d | TH-L4 | Garde des contrastes mesurée sur `space-600` (Q235) | S | livré (6.14.96) |

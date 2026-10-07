@@ -210,7 +210,7 @@ export function BuildingsPage() {
                 type="button"
                 aria-expanded={false}
                 onClick={() => setOpenIds((o) => [...o, building.id])}
-                className={cn("flex w-full items-center gap-3 border border-white/10 bg-space-900/60 p-2 text-left transition-colors hover:border-cyan-glow/40", isLocked && "opacity-70")}
+                className={cn("flex w-full items-center gap-3 border border-white/10 bg-space-900/60 p-2 text-left transition-colors hover:border-cyan-glow/40", isLocked && "border-dashed")}
               >
                 <img src={assetUrl(buildingImage(building, level))} alt="" className="hud-cut h-10 w-10 shrink-0 object-cover" />
                 <span className="min-w-0 flex-1">
