@@ -1,6 +1,7 @@
 # Proposition : feuille de route d'hiver 2031 (nouveautés, références Clash of Clans, OGame et jeux mobiles)
 
-Statut : **proposée** (2026-10-07), **en attente de ta validation**. Rien n'est lancé : chaque lot a sa question (Q241 à Q258) sur
+Statut : **validée** (2026-10-07, les 18 lots validés sur `/decisions`, Q241 à Q258) ; elle prend la suite de la feuille d'automne
+2030 quand celle-ci est finie (les lots L auront d'abord leur proposition détaillée). Avant validation : chaque lot a sa question (Q241 à Q258) sur
 `/decisions`, avec « valide », « changer » ou une note pour demander des détails. Un lot validé entre dans la feuille de route suivante,
 après celle d'automne 2030, qui continue d'ici là. Un lot pour lequel tu demandes des détails reçoit sa propre proposition chiffrée
 (`docs/proposals/<système>.md`, plan de `docs/WORKFLOW.md` §2) avant tout code.
@@ -153,24 +154,24 @@ calendrier. *Risque* : faible si limité aux bas niveaux (n'avance pas la 1re As
 
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
-| 1 | H31-1 | Aide d'alliance | S | proposé (Q241) |
-| 2 | H31-7 | Revanche | S | proposé (Q247) |
-| 3 | H31-13 | Apprenti constructeur | S | proposé (Q253) |
-| 4 | H31-17 | Notifications hors du jeu (PWA) | M | proposé (Q257) |
-| 5 | H31-4 | Opérations d'alliance du week-end | L | proposé (Q244) |
-| 6 | H31-2 | Demande de renforts | S | proposé (Q242) |
-| 7 | H31-14 | Marchand ambulant | S | proposé (Q254) |
-| 8 | H31-8 | Rediffusion du combat | M | proposé (Q248) |
-| 9 | H31-3 | Ligue des alliances | M | proposé (Q243) |
-| 10 | H31-16 | Équipement des officiers | L | proposé (Q256) |
-| 11 | H31-5 | Annuaire des alliances | S | proposé (Q245) |
-| 12 | H31-9 | Plans de défense enregistrés | S | proposé (Q249) |
-| 13 | H31-11 | Porte de saut de lune à lune | S | proposé (Q251) |
-| 14 | H31-6 | Comptoir d'alliance | M | proposé (Q246) |
-| 15 | H31-15 | Position des planètes | M | proposé (Q255) |
-| 16 | H31-18 | Semaine éclair | S | proposé (Q258) |
-| 17 | H31-10 | Missiles interplanétaires et anti-missiles | L | proposé (Q250) |
-| 18 | H31-12 | Lune hors service (variante douce) | M | proposé (Q252), après mesures en production |
+| 1 | H31-1 | Aide d'alliance | S | validé (Q241) |
+| 2 | H31-7 | Revanche | S | validé (Q247) |
+| 3 | H31-13 | Apprenti constructeur | S | validé (Q253) |
+| 4 | H31-17 | Notifications hors du jeu (PWA) | M | validé (Q257) |
+| 5 | H31-4 | Opérations d'alliance du week-end | L | validé (Q244) |
+| 6 | H31-2 | Demande de renforts | S | validé (Q242) |
+| 7 | H31-14 | Marchand ambulant | S | validé (Q254) |
+| 8 | H31-8 | Rediffusion du combat | M | validé (Q248) |
+| 9 | H31-3 | Ligue des alliances | M | validé (Q243) |
+| 10 | H31-16 | Équipement des officiers | L | validé (Q256) |
+| 11 | H31-5 | Annuaire des alliances | S | validé (Q245) |
+| 12 | H31-9 | Plans de défense enregistrés | S | validé (Q249) |
+| 13 | H31-11 | Porte de saut de lune à lune | S | validé (Q251) |
+| 14 | H31-6 | Comptoir d'alliance | M | validé (Q246) |
+| 15 | H31-15 | Position des planètes | M | validé (Q255) |
+| 16 | H31-18 | Semaine éclair | S | validé (Q258) |
+| 17 | H31-10 | Missiles interplanétaires et anti-missiles | L | validé (Q250) |
+| 18 | H31-12 | Lune hors service (variante douce) | M | validé (Q252), après mesures en production |
 
 Logique : d'abord ce qui répond aux mesures (entraide, défense, attente des chantiers, rappel hors du jeu), en petits lots ; puis les
 grands systèmes partagés (opérations, ligue) ; enfin ce qui touche l'équilibre du combat, après une proposition chiffrée et des mesures.
