@@ -121,6 +121,12 @@ Chaque lot relit puis met à jour :
 
 Une règle devenue fausse est réécrite, pas contournée.
 
+**Revue de fin de feuille de route (AU)**, en plus de la grille du GDD §6 (6.14.99, TH-L7, Q237) :
+- audit visuel des 13 thèmes avec `scripts/theme-audit.mjs` (montage isolé décrit en tête du script, jamais la production) ; on compare
+  la part de textes sous 4,5:1 et les éléments coupés à `measures.json` de la revue précédente : toute hausse devient un constat ;
+- balayage des opacités d'état sur du texte (règle DESIGN.md de 6.14.97) hors des fichiers déjà gardés par `verrousSansOpacite.test.ts` ;
+- les captures livrées restent en thème Constellation ; les 13 thèmes servent à l'audit.
+
 ## 6. Lots et PR
 
 - Lot 0 = correctif sans changement de règle (données, affichage, garde-fous). Il part seul s'il est urgent.

@@ -25279,10 +25279,10 @@ Le premier vrai article arrive bient\xF4t : le r\xE9capitulatif de tout ce qui a
 \u2014 L'\xE9quipe Cosmic Empires`
 };
 
-// node_modules/@noble/hashes/esm/crypto.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/crypto.js
 var crypto = typeof globalThis === "object" && "crypto" in globalThis ? globalThis.crypto : void 0;
 
-// node_modules/@noble/hashes/esm/utils.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/utils.js
 function isBytes(a) {
   return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
 }
@@ -25418,7 +25418,7 @@ function randomBytes(bytesLength = 32) {
   throw new Error("crypto.getRandomValues must be defined");
 }
 
-// node_modules/@noble/curves/esm/utils.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/utils.js
 var _0n = /* @__PURE__ */ BigInt(0);
 var _1n = /* @__PURE__ */ BigInt(1);
 function _abool2(value2, title = "") {
@@ -25571,7 +25571,7 @@ function memoized(fn) {
   };
 }
 
-// node_modules/@noble/curves/esm/abstract/modular.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/modular.js
 var _0n2 = BigInt(0);
 var _1n2 = BigInt(1);
 var _2n = /* @__PURE__ */ BigInt(2);
@@ -25908,7 +25908,7 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
-// node_modules/@noble/hashes/esm/_md.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/_md.js
 function setBigUint64(view, byteOffset, value2, isLE) {
   if (typeof view.setBigUint64 === "function")
     return view.setBigUint64(byteOffset, value2, isLE);
@@ -26064,7 +26064,7 @@ var SHA512_IV = /* @__PURE__ */ Uint32Array.from([
   327033209
 ]);
 
-// node_modules/@noble/hashes/esm/_u64.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/_u64.js
 var U32_MASK64 = /* @__PURE__ */ BigInt(2 ** 32 - 1);
 var _32n = /* @__PURE__ */ BigInt(32);
 function fromBig(n, le = false) {
@@ -26099,7 +26099,7 @@ var add4H = (low, Ah, Bh, Ch, Dh) => Ah + Bh + Ch + Dh + (low / 2 ** 32 | 0) | 0
 var add5L = (Al, Bl, Cl, Dl, El) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0) + (El >>> 0);
 var add5H = (low, Ah, Bh, Ch, Dh, Eh) => Ah + Bh + Ch + Dh + Eh + (low / 2 ** 32 | 0) | 0;
 
-// node_modules/@noble/hashes/esm/sha2.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/sha2.js
 var SHA256_K = /* @__PURE__ */ Uint32Array.from([
   1116352408,
   1899447441,
@@ -26459,7 +26459,7 @@ var sha256 = /* @__PURE__ */ createHasher(() => new SHA256());
 var sha512 = /* @__PURE__ */ createHasher(() => new SHA512());
 var sha384 = /* @__PURE__ */ createHasher(() => new SHA384());
 
-// node_modules/@noble/hashes/esm/hmac.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/hmac.js
 var HMAC = class extends Hash {
   constructor(hash3, _key) {
     super();
@@ -26527,7 +26527,7 @@ var HMAC = class extends Hash {
 var hmac = (hash3, key, message) => new HMAC(hash3, key).update(message).digest();
 hmac.create = (hash3, key) => new HMAC(hash3, key);
 
-// node_modules/@noble/curves/esm/abstract/curve.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/curve.js
 var _0n3 = BigInt(0);
 var _1n3 = BigInt(1);
 function negateCt(condition, item) {
@@ -26805,7 +26805,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
   return { CURVE, Fp, Fn };
 }
 
-// node_modules/@noble/curves/esm/abstract/weierstrass.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/weierstrass.js
 var divNearest = (num11, den) => (num11 + (num11 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
@@ -27819,13 +27819,13 @@ function weierstrass(c) {
   return _ecdsa_new_output_to_legacy(c, signs);
 }
 
-// node_modules/@noble/curves/esm/_shortw_utils.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/_shortw_utils.js
 function createCurve(curveDef, defHash) {
   const create = (hash3) => weierstrass(__spreadProps(__spreadValues({}, curveDef), { hash: hash3 }));
   return __spreadProps(__spreadValues({}, create(defHash)), { create });
 }
 
-// node_modules/@noble/curves/esm/nist.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/nist.js
 var p256_CURVE = {
   p: BigInt("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff"),
   n: BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551"),
@@ -27860,10 +27860,10 @@ var p256 = createCurve(__spreadProps(__spreadValues({}, p256_CURVE), { Fp: Fp256
 var p384 = createCurve(__spreadProps(__spreadValues({}, p384_CURVE), { Fp: Fp384, lowS: false }), sha384);
 var p521 = createCurve(__spreadProps(__spreadValues({}, p521_CURVE), { Fp: Fp521, lowS: false, allowedPrivateKeyLengths: [130, 131, 132] }), sha512);
 
-// node_modules/@noble/curves/esm/p256.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/p256.js
 var p2562 = p256;
 
-// node_modules/@noble/hashes/esm/sha256.js
+// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/sha256.js
 var sha2562 = sha256;
 
 // src/game/base64url.ts

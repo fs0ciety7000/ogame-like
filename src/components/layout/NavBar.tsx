@@ -1,6 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
@@ -850,8 +850,18 @@ function TabLink({ item }: { item: NavItem }) {
         <Badge count={badge} tone={badgeTone(item.to)} />
         {!badge && <BossDot phase={phase} />}
       </span>
-      {item.label}
+      <TileLabel>{item.label}</TileLabel>
     </ItemLink>
+  );
+}
+
+/** 6.14.98 (TH-L2, TH-9) : libellé de tuile du menu « Plus » ; un mot long (« COMMUNICATIONS » en Inter) se coupe dans la tuile au
+ *  lieu de déborder sur la voisine. */
+function TileLabel({ children }: { children: ReactNode }) {
+  return (
+    <span lang="fr" className="max-w-full text-center [hyphens:auto] [overflow-wrap:break-word]">
+      {children}
+    </span>
   );
 }
 
@@ -902,12 +912,12 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
                       type="button"
                       onClick={() => toggle(item.to)}
                       className={cn(
-                        "hud-cut relative flex flex-col items-center gap-1.5 border px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.08em]",
+                        "hud-cut relative flex flex-col items-center gap-1.5 border px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.04em]",
                         tabs.includes(item.to) ? "border-gold-glow/60 bg-gold-glow/10 text-gold-glow" : "border-white/10 bg-white/[0.02] text-slate-400",
                       )}
                     >
                       <item.icon className="h-5 w-5" />
-                      {item.label}
+                      <TileLabel>{item.label}</TileLabel>
                       {tabs.includes(item.to) && <Pin className="absolute right-1.5 top-1.5 h-3 w-3" />}
                     </button>
                   ) : (
@@ -939,7 +949,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
       onClick={onClick}
       className={({ isActive }) =>
         cn(
-          "hud-cut flex flex-col items-center gap-1.5 border px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.08em]",
+          "hud-cut flex flex-col items-center gap-1.5 border px-2 py-3 text-[11px] font-semibold uppercase tracking-[0.04em]",
           isActive ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-cyan-glow/10 bg-white/[0.02] text-slate-300",
         )
       }
@@ -949,7 +959,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
         <Badge count={badge} tone={badgeTone(item.to)} />
         {!badge && <BossDot phase={phase} />}
       </span>
-      {item.label}
+      <TileLabel>{item.label}</TileLabel>
       {fresh && !badge && (
         <HudChip size="sm" tone="accent" className="-mt-1 px-1 py-px text-[11px] tracking-[0.08em]">
           Nouveau

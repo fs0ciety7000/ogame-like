@@ -10,4 +10,5 @@ Les textes secondaires sont plus lisibles dans 12 thèmes sur 13 : ils atteignen
 - Le bouton principal survolé est plus lisible dans Constellation et Signal.
 - Les paliers verrouillés du Passe, les bâtiments verrouillés et les ressources qui te manquent ne sont plus grisés : un cadenas ou
   un cadre en pointillés les signale, et le texte reste lisible.
+- Les noms de bâtiments longs ne se coupent plus au milieu d'un mot, et les libellés du menu « Plus » restent dans leur tuile.
 - Dans les Bâtiments, la catégorie « Production » n'est plus en orange : cette couleur reste pour ce qui demande ton attention.

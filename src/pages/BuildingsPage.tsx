@@ -60,6 +60,12 @@ function readBuildingsView(): "cards" | "list" | null {
   }
 }
 
+/** 6.14.98 (TH-L2, TH-8) : un mot de plus de 12 lettres (« NANOCOMPOSANTS ») se coupait au milieu dans les thèmes à police large ;
+ *  le titre passe alors à 15 px avec un espacement plafonné. */
+function longTitleWord(name: string): boolean {
+  return name.split(/\s+/).some((w) => w.length > 12);
+}
+
 export function BuildingsPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
@@ -265,7 +271,7 @@ export function BuildingsPage() {
                       <HudTag tone={productionResource ? "neutral" : "accent"} className="max-w-full whitespace-normal">{categoryLabel(building)}</HudTag>
                       {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
                     </span>
-                    <h3 className="hud-title mt-2 text-[17px] text-slate-100 [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
+                    <h3 className={cn("hud-title mt-2 text-slate-100 [hyphens:auto] [overflow-wrap:anywhere]", longTitleWord(building.name) ? "text-[15px] tracking-[0.06em]" : "text-[17px]")} lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className={cn("mt-1 flex cursor-help items-baseline gap-1.5", isLocked && "max-sm:hidden")}>

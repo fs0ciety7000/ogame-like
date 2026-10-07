@@ -196,6 +196,8 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.94 | [Docs remises au code et garde de comptage (AJ27-1)](6.14.94-docs-remises-au-code.md) | docs + test | aucune (constat AJ-7) |
 | 6.14.96 | [Texte secondaire lisible sur le fond des panneaux, « Production » en neutre (TH-L3, TH-L4)](6.14.96-themes-contraste-production.md) | correctif (interface) | Q235 |
 | 6.14.97 | [Verrous et manques sans opacité (TH-L1)](6.14.97-verrous-sans-opacite.md) | correctif (interface) | aucune (AU28 thèmes) |
+| 6.14.98 | [Titres longs des bâtiments et libellés du menu « Plus » (TH-L2)](6.14.98-titres-longs-menu-plus.md) | correctif (interface) | aucune (AU28 thèmes) |
+| 6.14.99 | [Audit des 13 thèmes à chaque revue de fin de feuille de route (TH-L7)](6.14.99-audit-themes-en-revue.md) | docs (méthode) | Q237 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
