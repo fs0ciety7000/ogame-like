@@ -81,7 +81,7 @@ export function effectImpactReport(): ImpactRow[] {
     for (const e of c.effects) add(e.stat, e.target, "empire", { kind: "class", label: c.name, max: e.value, note: "une classe à la fois" });
   }
   // 6.13.0 : lune (une par joueur).
-  add("shield", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.shieldBonus, note: "une lune" });
+  add("shield", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.shieldBonus + Math.max(0, MOON_RULES.shieldPerLevel) * Math.max(0, MOON_RULES.maxLevel - 1), note: `niveau ${MOON_RULES.maxLevel}` });
   add("protectedStorage", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.protectedStorageBonus, note: "une lune" });
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });

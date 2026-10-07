@@ -69,7 +69,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I18 | Passe généré : paliers 1 à 29 dans ±5 % du budget (`passGen.budgetHours`), plafonds du mois respectés (Ambre, jetons, dossiers, capsules), dernier palier hors budget ; points par palier entre `pointsMin` et `pointsMax`, même graine → même passe | `passGen.ts`, `passSeasons.ts` (`generatePassSeason`) | `progression681.test.ts` |
 | I19 | Chapitre généré : 4 épisodes, objectifs pris parmi les actions autorisées (`chronicleGen.objectiveWeights` > 0), difficulté dans ses bornes ; faction du thème du passe sauf si elle était là le mois précédent ; les récompenses par budget ne changent pas le reste du tirage | `procedural.ts` (`generateChapter`), `chronicleGen.ts` | `progression682.test.ts` |
 | I20 | Base avancée : une attaque partie d'une base ne prend jamais plus de vaisseaux que la base n'en contient et ne touche pas aux vaisseaux à quai de la planète mère ; les vaisseaux basés restent comptés dans le hangar de la planète mère (`unitsAwayOf`) | `fleets.ts` (`takeFromBase`, `baseReturnUnits`) | `flotteBasee.test.ts` |
-| I21 | Lune : un joueur en a au plus une ; elle ne naît que d'un combat sur sa planète mère (jamais sur une colonie ni pour un PNJ), chance 1 % par tranche de `debrisPerPercent` débris, `maxChance` au plus ; ses effets passent par la couche empire et ses plafonds | `moon.ts` (`rollMoon`, `moonEffects`), `attack.ts` | `lunes.test.ts`, `derived.test.ts` |
+| I21 | Lune : un joueur en a au plus une ; elle ne naît que d'un combat sur sa planète mère (jamais sur une colonie ni pour un PNJ), chance 1 % par tranche de `debrisPerPercent` débris, `maxChance` au plus ; ses effets passent par la couche empire et ses plafonds ; son bouclier au niveau maximal reste sous le plafond (15 %) | `moon.ts` (`rollMoon`, `moonEffects`), `attack.ts` | `lunes.test.ts`, `derived.test.ts` |
 
 ## 5. Règles de conception
 
@@ -203,3 +203,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.13.2 | A28-1 : billet 47 « Les lunes » | `content/blog/47-lunes.md` |
 | 2026-10-07 | 6.13.3 | A28-2 : nom de la lune public (fiche joueur, astre sur la Galaxie), champ `moonName` des profils | `docs/changes/6.13.3-lune-publique.md` |
 | 2026-10-07 | 6.13.4 | Revue AU20 : automne 2028 clos (billet, lune publique) ; hiver 2028 proposé (améliorer sa lune, Codex) | `docs/audit/2026-10-07-au20-automne-2028.md` |
+| 2026-10-07 | 6.14.0 | H28-1 : améliorer sa lune (niveaux 1 à 5, +2 % de bouclier par niveau, sous le plafond de 15 %), Q18 | `docs/changes/6.14.0-ameliorer-sa-lune.md` |

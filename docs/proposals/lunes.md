@@ -45,3 +45,20 @@ Statut : **livrée** en 6.13.0, voir `docs/changes/6.13.0-lunes.md` (recommandat
 ## 7. Plan de lots
 1. R4 : moteur (`moon.ts`, naissance dans `performAttack`, source d'effets, réglages, registre, tests).
 2. R5 : serveur (champ, notification), interface (Accueil / Statistiques / fiche d'effets), admin, changelog, intégration.
+
+## 8. Complément (lot H28-1, option C) : améliorer sa lune
+
+Statut : **livrée** en 6.14.0 (`docs/changes/6.14.0-ameliorer-sa-lune.md`), recommandation appliquée seule (règle n° 3 ; Q18).
+
+- Constat (rapport d'impact, 6.13.0) : `shield` empire 3 % sur un plafond de 15 % (12 points de marge) ; `protectedStorage` empire déjà à
+  25 % sur 25 % (officière Ysolde Grey 20 % + lune 5 %) : aucune marge.
+- Benchmark : OGame monte les bâtiments lunaires un par un, payés en métal, cristal et deutérium, sans autre bonus passif.
+
+| | Option | Pour | Contre |
+|:--|:--|:--|:--|
+| C1 | **Niveaux 1 à 5, +2 % de bouclier par niveau** (3 % → 11 %), payés en ferraille et énergie, coût ×2 par niveau | une dépense de fin de partie, reste sous le plafond | bonus modeste |
+| C2 | Niveaux qui montent aussi l'entrepôt à l'abri | plus fort | dépasse le plafond (25 %) : interdit par `derived.test.ts` |
+
+**Recommandation : C1.** Coût du passage au niveau n+1 : 500 000 ferraille et 250 000 énergie × 2^(n−1) (niveau 5 : 7,5 M de ferraille au
+total). Achat immédiat, sans file. Réglages dans `MOON_RULES` (niveau maximal, bonus par niveau, coût de base, croissance).
+Une lune déjà née est au niveau 1 (champ `level` absent = 1) : rien ne change pour elle.

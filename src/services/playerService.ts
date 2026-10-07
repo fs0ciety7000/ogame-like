@@ -914,3 +914,8 @@ export function fetchPublicPlanet(uid: string): Promise<import("@/game/planetLoo
   }
   return p;
 }
+
+/** 6.14.0 : améliorer sa lune (achat immédiat). */
+export function upgradeMoon() {
+  return act({ type: "moonUpgrade" });
+}

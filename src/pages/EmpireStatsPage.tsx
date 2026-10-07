@@ -12,7 +12,8 @@ import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 import { empireStats, ratio } from "@/game/empireStats";
-import { MOON_RULES, playerMoon } from "@/game/moon";
+import { playerMoon } from "@/game/moon";
+import { MoonLine } from "@/components/game/MoonLine";
 import { FLEET_MISSION_LABELS, type FleetMission } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -371,12 +372,7 @@ export function EmpireStatsPage() {
                     <span className="hud-title min-w-0 truncate text-sm text-slate-100">{p.name}</span>
                     {home ? <HudTag tone="gold">Mère</HudTag> : <HudTag tone="accent">Colonie</HudTag>}
                   </div>
-                  {home && moon && (
-                    <p className="relative mt-0.5 text-[11px] text-slate-400" title={`Née le ${new Date(moon.bornAtMs).toLocaleDateString("fr-FR")} d'un combat de ${formatCompact(moon.fromDebris)} débris.`}>
-                      Lune <span className="text-violet-glow">{moon.name}</span> : bouclier <span className="font-mono tabular-nums">+{Math.round(MOON_RULES.shieldBonus * 100)} %</span>, entrepôt à l'abri{" "}
-                      <span className="font-mono tabular-nums">+{Math.round(MOON_RULES.protectedStorageBonus * 100)} %</span>
-                    </p>
-                  )}
+                  {home && moon && player && <MoonLine moon={moon} player={player} />}
                   {!home && p.biome && (
                     <p className="relative mt-0.5 text-[11px] text-slate-500">
                       gisement {p.biome} niv. {p.depositLevel}

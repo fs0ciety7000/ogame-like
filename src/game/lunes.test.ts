@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { performAttack } from "@/game/attack";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { playerModifiers } from "@/game/modifiers";
-import { MOON_RULES, moonChance, moonEffects, playerMoon, rollMoon } from "@/game/moon";
+import { MOON_RULES, moonChance, moonEffects, moonLevel, moonShield, moonUpgradeCost, playerMoon, rollMoon } from "@/game/moon";
+import { performPlayerAction } from "@/game/actions";
 import type { PlayerState } from "@/types/game";
 
 /* 6.13.0 (proposals/lunes.md) : invariant I21. */
@@ -62,5 +63,30 @@ describe("lunes (I21)", () => {
     expect(playerMoon(out.defender)?.fromDebris).toBe(total);
     expect(playerMoon(out.attacker)).toBeNull();
     expect(out.defenderNotifications.some((n) => /lune est née/.test(n.title))).toBe(true);
+  });
+
+  it("6.14.0 : amélioration, coût ×2 par niveau, bouclier +2 % par niveau, plafond de niveau", () => {
+    expect(moonUpgradeCost(1)).toEqual({ scrap: 500_000, energy: 250_000 });
+    expect(moonUpgradeCost(4)).toEqual({ scrap: 4_000_000, energy: 2_000_000 });
+    expect(moonShield({})).toBeCloseTo(0.03);
+    expect(moonShield({ level: 5 })).toBeCloseTo(0.11);
+    expect(moonLevel({ level: 99 })).toBe(MOON_RULES.maxLevel);
+    expect(MOON_RULES.shieldBonus + MOON_RULES.shieldPerLevel * (MOON_RULES.maxLevel - 1)).toBeLessThanOrEqual(0.15);
+
+    const rich = { ...defaultPlayerState("x", "X").resources, scrap: 1e9, energy: 1e9 };
+    const base = player("x", { moon: { name: "Io", bornAtMs: NOW - 1, fromDebris: 1 }, resources: rich });
+    let p = base;
+    for (let lvl = 2; lvl <= MOON_RULES.maxLevel; lvl++) {
+      const out = performPlayerAction(p, defaultQueues(), { type: "moonUpgrade" }, NOW);
+      p = out.player;
+      expect(moonLevel(p.moon)).toBe(lvl);
+    }
+    expect(p.resources.scrap).toBeLessThan(1e9 - 7_000_000);
+    expect(() => performPlayerAction(p, defaultQueues(), { type: "moonUpgrade" }, NOW)).toThrow(/maximal/);
+    expect(moonEffects(p).find((e) => e.stat === "shield")?.value).toBeCloseTo(0.11);
+
+    const poor = player("y", { moon: { name: "Io", bornAtMs: NOW - 1, fromDebris: 1 } });
+    expect(() => performPlayerAction(poor, defaultQueues(), { type: "moonUpgrade" }, NOW)).toThrow(/insuffisantes/);
+    expect(() => performPlayerAction(player("z"), defaultQueues(), { type: "moonUpgrade" }, NOW)).toThrow(/pas encore de lune/);
   });
 });

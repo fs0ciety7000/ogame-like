@@ -1,4 +1,5 @@
 import { chooseEmpireClass } from "@/game/empireClassChoose";
+import { upgradeMoon } from "@/game/moonUpgrade";
 import { assertEliteBuildable } from "@/game/eliteUnits";
 import { assertClassUnitBuildable } from "@/game/classUnits";
 import { playerModifiers } from "@/game/modifiers";
@@ -96,6 +97,7 @@ export type GameAction =
   | { type: "colonyRename"; colonyId: string; name: string }
   | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "empireClass"; classId: string }
+  | { type: "moonUpgrade" }
   | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number; direction?: "collect" | "supply" }
   | { type: "locateLair"; factionId: string }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
@@ -423,6 +425,10 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "empireClass":
       return chooseEmpireClass(player, action.classId, now);
+
+    // 6.14.0 : améliorer sa lune.
+    case "moonUpgrade":
+      return upgradeMoon(player);
 
     case "colonySpec":
       setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);

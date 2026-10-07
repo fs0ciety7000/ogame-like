@@ -1396,6 +1396,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(a.moon.fromDebris).toBeGreaterThan(0);
       // 6.13.3 : le nom de la lune est public (fiche joueur, Galaxie).
       expect((await admin.collection("profiles").getOne(aId)).moonName).toBe(a.moon.name);
+      // 6.14.0 : A améliore sa lune (achat immédiat en ressources).
+      await admin.collection("players").update(aId, { resources: { ...RICH, scrap: 5_000_000, energy: 5_000_000 }, resourcesUpdatedAtMs: Date.now() });
+      await loginPlayer(A.email, A.pw);
+      await ps.upgradeMoon();
+      expect((await snap(aId)).moon.level).toBe(2);
       expect((await snap(bId)).moon ?? null).toBeNull();
     } finally {
       await admin.collection("players").update(aId, { moon: null });
