@@ -22,7 +22,6 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| AU30-3 | AU25 | Échec isolé de « v3.9 bounties » (intégration) | P30-3 |
 
 
 ### Attend des mesures (après la mise en production, puis une nouvelle copie sur la pré-prod)
@@ -66,6 +65,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | ET-2 | La base avancée (6.10.0) n'est pas sur `main` : aucune attaque de colonie bloquée en production, rien à dédommager |
 | ET29-3 | Cette page (6.14.18) ; reprise par AU24 (6.14.20) |
 | AU29-2 | 6.14.24 : dossier de mise en production prêt (`docs/release/5.27-a-6.14.md`) ; la PR attend le feu vert (Q12) |
+| AU30-3 | 6.14.34 : arrivées forcées sans course avec la tâche « à la minute » (5 × 81/81) |
 | AU30-4 | 6.14.30 : billet `content/blog/49-grande-mise-a-jour.md`, à publier au jour J |
 | AU29-5 | 6.14.28 : synthèse `docs/decisions-a-valider.md` et page à cocher ; les réponses de l'utilisateur restent à reporter |
 | AU29-4 | 6.14.25 : Seigneurs et Boss dans « Tout réclamer » côté serveur |

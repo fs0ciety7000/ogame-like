@@ -126,6 +126,15 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   let aId = "", bId = "", allianceId = "";
   /** 6.11.10 (H2) : un test lancé seul (`-t`) crée A et B s'ils n'existent pas encore (sinon il lisait un profil nul). */
+  /** 6.14.34 (P30-3) : arrivée forcée d'une flotte. Départ et arrivée sont décalés ensemble pour garder la durée du trajet :
+   *  avec l'arrivée seule dans le passé, la durée devenait négative (ramenée à 0) et le retour était dû aussitôt ; la tâche
+   *  « à la minute » du serveur pouvait alors faire rentrer la flotte avant la lecture du test (échecs aléatoires v3.5, v3.9). */
+  const forceArrival = async (id: string) => {
+    const f = await admin.collection("fleets").getOne(id);
+    const trip = Math.max(60_000, Number(f.arriveAtMs) - Number(f.departAtMs));
+    await admin.collection("fleets").update(id, { arriveAtMs: Date.now() - 1000, departAtMs: Date.now() - 1000 - trip });
+  };
+
   const ensureAB = async () => {
     if (!aId) {
       aId = (await registerPlayer(A.pseudo, A.email, A.pw)).id;
@@ -1122,7 +1131,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const sent = await ps.sendFleet("", { chasseur: 10 }, "leviathan");
       fleets.push(sent.id);
       await expect(ps.sendFleet("", { chasseur: 10 }, "leviathan")).rejects.toThrow(/min/);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await pb.collection("fleets").getOne(sent.id);
       expect(landed.status).toBe("returning");
@@ -1164,7 +1173,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } });
       const sent = await ps.sendFleet("", { chasseur: 100 }, "leviathan");
       fleets.push(sent.id);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await pb.collection("fleets").getOne(sent.id);
       const survivors = landed.units.chasseur ?? 0;
@@ -1284,7 +1293,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       fleets.push(sent.id);
       expect((await snap(bId)).resources[rare]).toBe(200_000_000 - 1_000_000 - 1000);
       await expect(ps.sendTransport(colony.id, "deliver", { cargo: 1 }, { scrap: 10_000_000 })).rejects.toThrow(/soute/);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       me = await snap(bId);
       expect(me.colonies[0].resources[rare]).toBe(1000);
@@ -1293,7 +1302,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Rapatriement : chargé à l'arrivée, crédité au retour.
       const back = await ps.sendTransport(colony.id, "collect", { cargo: 20 }, { [rare]: 400 });
       fleets.push(back.id);
-      await admin.collection("fleets").update(back.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(back.id);
       await ps.syncPlayer("");
       const loaded = await pb.collection("fleets").getOne(back.id);
       expect(loaded.loot).toEqual({ [rare]: 400 });
@@ -1329,7 +1338,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Espionnage : le rapport décrit la colonie.
       const probes = await ps.sendFleet(colonyId, { sonde_espionnage: 2 }, "spy");
       fleets.push(probes.id);
-      await admin.collection("fleets").update(probes.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(probes.id);
       await ps.syncPlayer("");
       const spyRep = await pb.collection("spy_reports").getFirstListItem(`targetUid="${colonyId}"`, { sort: "-timestamp" });
       expect(spyRep.targetPseudo).toMatch(/Bastion-Nord/);
@@ -1338,7 +1347,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const sent = await ps.sendFleet(colonyId, { chasseur: 30 }, "attack");
       fleets.push(sent.id);
       expect((await aClient.collection("fleets").getOne(sent.id)).targetOwnerUid).toBe(aId);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await admin.collection("fleets").getOne(sent.id);
       expect(landed.outcome).toBe("attacker_win");
@@ -1376,7 +1385,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(base).toMatchObject({ mission: "colonybase", targetUid: colonyId, status: "outbound" });
       expect((await snap(bId)).units.chasseur.count).toBe(20);
       await expect(ps.launchFleet({ mission: "colonybase", colonyId, targetUid: colonyId, fleet: { chasseur: 1 } })).rejects.toThrow(/déjà une base/);
-      await admin.collection("fleets").update(base.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(base.id);
       await ps.syncPlayer("");
       const stationed = await admin.collection("fleets").getOne(base.id);
       expect(stationed.status).toBe("stationed");
@@ -1389,7 +1398,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect((await admin.collection("fleets").getOne(base.id)).units).toEqual({ chasseur: 10 });
       expect((await snap(bId)).units.chasseur.count).toBe(20);
       expect((await admin.collection("fleets").getOne(sent.id)).base).toEqual({ colonyId, fromBaseId: base.id });
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const fought = await admin.collection("fleets").getOne(sent.id);
       expect(fought.status).toBe("returning");
@@ -1432,7 +1441,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await loginPlayer(B.email, B.pw);
       const sent = await ps.sendFleet(aId, { fregate: 40 }, "attack");
       fleets.push(sent.id);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const a = await snap(aId);
       expect(a.moon?.name, "lune du défenseur").toBeTruthy();
@@ -1484,7 +1493,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       fleets.push(base.id);
       const sent = await ps.sendFleet(colonyId, { chasseur: 30 }, "attack");
       fleets.push(sent.id);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await admin.collection("fleets").getOne(sent.id);
       const report = await admin.collection("battle_reports").getOne(landed.reportId);
@@ -1874,7 +1883,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       fleets.push(sent.id);
       expect(sent).toMatchObject({ mission: "bounty", targetUid: `bounty_${contract.id}` });
       await expect(bs.sendBountyHunt(contract.id, { chasseur: 1 }, "balanced")).rejects.toThrow(/déjà/);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await pb.collection("fleets").getOne(sent.id);
       expect(landed.status).toBe("returning");
@@ -1921,7 +1930,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { bounties: { ...bountyState(me), reputation: 10 } });
       const assault = await bs.sendEliteAssault({ chasseur: 50 }, "balanced");
       fleets.push(assault.id);
-      await admin.collection("fleets").update(assault.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(assault.id);
       await ps.syncPlayer("");
       const cfg = await pb.collection("game_config").getFirstListItem('key="bounty_elite"');
       expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
@@ -2035,7 +2044,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(seen.boosts).toBeUndefined();
       expect(Object.values(seen.units as Record<string, number>).reduce((x, y) => x + y, 0)).toBeGreaterThan(0);
       await loginPlayer(B.email, B.pw);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await admin.collection("fleets").getOne(sent.id);
       expect(landed.reportId).not.toBe("");
@@ -2178,7 +2187,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       let st = await stateRec();
       await admin.collection("game_config").update(st.id, { data: { ...st.data, vendettas: st.data.vendettas.map((x: { warlordId: string }) => (x.warlordId === "ossaya" ? { ...x, goal: 1 } : x)) } });
       const sent = await ps.sendFleet("npcossaya000000", { chasseur: 80 }, "attack");
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const landed = await admin.collection("fleets").getOne(sent.id);
       expect(landed.outcome).toBe("attacker_win");
@@ -2273,7 +2282,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
         const sent = await sbs.sendSeasonBossAssault({ chasseur: 50 }, "balanced");
         await expect(sbs.sendSeasonBossAssault({ chasseur: 1 }, "balanced")).rejects.toThrow(/Prochain assaut/);
-        await admin.collection("fleets").update((sent as { id: string }).id, { arriveAtMs: Date.now() - 1000 });
+        await forceArrival((sent as { id: string }).id);
         await ps.syncPlayer("");
         const state = (await bossRec())!.data;
         expect(state.contributions[bId].damage).toBeGreaterThan(0);
@@ -2341,7 +2350,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const sent = await ps.callGame<{ id: string; arriveAtMs: number; departAtMs: number }>("fleet/send", { targetUid: "allianceboss", fleet: { chasseur: 50 }, mission: "allianceboss", formation: "balanced" });
       expect(sent.arriveAtMs - sent.departAtMs).toBe(20 * 60_000);
       await expect(ps.callGame("fleet/send", { targetUid: "allianceboss", fleet: { chasseur: 1 }, mission: "allianceboss" })).rejects.toThrow(/Prochain assaut/);
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       alliance = await admin.collection("alliances").getOne(allianceBossId);
       expect(alliance.boss.status).toBe("killed");
@@ -2414,7 +2423,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { units: { ...bBefore.units, chasseur: { level: 1, count: 80 } }, seasonPass: null, relics: null });
       for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
       const sent = await ps.sendFleet(brannoc, { chasseur: 80 }, "attack");
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const after = await snap(bId);
       expect(after.titles.map((t: { label: string }) => t.label)).toContain("Briseur de Brannoc Demi-Barbe");
@@ -2528,7 +2537,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(tcs.sendDelivery(c.id, { cargo: 200 })).rejects.toThrow(/déjà en route/);
       const aNano = (await snap(aId)).resources.nano;
       const bScrap = (await snap(bId)).resources.scrap;
-      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await forceArrival(sent.id);
       await ps.syncPlayer("");
       const done = await admin.collection("trade_contracts").getOne(c.id);
       expect(done.status).toBe("delivered");

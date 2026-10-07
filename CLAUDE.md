@@ -206,6 +206,9 @@ téléchargé au premier lancement ; `-t "<nom>"` pour un seul test).
 Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hooks` a été oublié.
 Un test d'intégration qui lit les joueurs A ou B appelle d'abord `ensureAB()` : il doit pouvoir tourner seul (`-t "<nom>"`) pour qu'on l'étudie.
 Un test qui se connecte en A rend la main à B avant de finir (`loginPlayer(B…)`) : les tests suivants agissent en B (6.14.0 : deux échecs en cascade).
+Une arrivée de flotte se force par `forceArrival(id)`, jamais en mettant seulement `arriveAtMs` dans le passé : le retour serait dû
+aussitôt et la tâche « à la minute » pourrait le traiter avant l'assertion (6.14.34 : échecs aléatoires v3.5 et v3.9). Une liste lue
+par `[0]` a un `sort` (6.14.21).
 Toujours lire le résultat de l'intégration **avant** de committer.
 
 ## Livrer
