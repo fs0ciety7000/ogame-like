@@ -22,7 +22,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 11 | UX-3 | Textes de règle justes (astuces, toasts) et nombres lisibles | S | livré (6.14.54) |
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
 | 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | livré (6.14.69) |
-| 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | à faire |
+| 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | livré (6.14.70) |
 | 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | livré (6.14.71) |
 | 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | livré (6.14.72 ; essai sur la pré-prod au prochain push) |
 | 17 | UX-4 | Écran mobile : ressources sur une ligne, bandeaux fusionnés, contenu visible plus haut | M | livré (6.14.62) |
@@ -32,7 +32,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 21 | AA2 | Libellés, unités, bornes et aide pour chaque réglage de l'admin | M | à faire |
 | 22 | AA3 | Chiffres en dur rendus réglables (Comptoir, talents, spécialisations, modules, sac…), valeurs inchangées | M | à faire |
 | 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | à faire |
-| 24 | AE-L2 | Progression : second palier des bâtiments ×4 et rareté (après Q99 et Q100) | M | à faire |
+| 24 | AE-L2 | Progression : second palier des bâtiments ×4 et rareté (après Q99 et Q100) | M | en attente de l'étude du rythme long terme (`docs/proposals/rythme-long-terme.md`) : J42 seulement pour l'actif, avec 43 % de sessions sans rien à lancer |
 | 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | à faire |
 | 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | à faire |
 | 27 | AP-L4 | Succès procéduraux bridés (détenteurs minimum, un palier par mois) | S | à faire |
