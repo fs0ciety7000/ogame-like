@@ -1284,6 +1284,12 @@
         "maxSize": 200000
       },
       {
+        "name": "base",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000
+      },
+      {
         "name": "targetOwnerUid",
         "type": "text",
         "required": false,

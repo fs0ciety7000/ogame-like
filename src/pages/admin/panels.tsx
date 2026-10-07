@@ -21,7 +21,8 @@ import {
   adminUpdatePlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { COLONY_BASE_RULES } from "@/game/fleets";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { PassGenFields } from "@/pages/admin/PassGenFields";
@@ -41,6 +42,9 @@ const MIN = 60 * 1000;
 
 /* ---------------- Règles ---------------- */
 
+
+/** 6.10.0 : base avancée (groupe du registre, typé par ses valeurs par défaut). */
+const colonyBaseRules = (r: GameRules) => ({ ...COLONY_BASE_RULES, ...(r.colonyBase as Partial<typeof COLONY_BASE_RULES>) });
 export function RulesPanel() {
   const customized = useContentStore((s) => s.customized.includes("rules"));
   const [rules, setRules] = useState<GameRules>(() => currentGameContent().rules);
@@ -732,6 +736,9 @@ export function RulesPanel() {
           <NumberField label="Routes : réserve par défaut de la colonie" value={rules.colonyRoutes.defaultKeepPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, defaultKeepPct: v ?? 0 } }))} />
           <NumberField label="Routes : réserve maximale" value={rules.colonyRoutes.maxKeepPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, maxKeepPct: v ?? 0 } }))} />
           <NumberField label="Ravitaillement : la planète mère garde (0,3 = 30 %)" value={rules.colonyRoutes.supplyHomeReservePct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, supplyHomeReservePct: v ?? 0 } }))} />
+          <CheckboxField label="Base avancée ouverte (6.10)" checked={colonyBaseRules(rules).enabled} hint="Décoché : plus de nouvelle base ; les bases en place vont à leur terme." onChange={(v: boolean) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), enabled: v } }))} />
+          <NumberField label="Base avancée : durée maximale (jours)" value={colonyBaseRules(rules).maxDays} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), maxDays: Math.max(1, Math.round(v ?? 14)) } }))} />
+          <NumberField label="Base avancée : bases par colonie" value={colonyBaseRules(rules).perColony} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), perColony: Math.max(1, Math.round(v ?? 1)) } }))} />
         </Section>
         <Section title="Espionnage">
           <NumberField

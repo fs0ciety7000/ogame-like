@@ -119,7 +119,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   `EmptyState`, `Button`. Pas de hex, pas de `text-white`, pas de `rgba(`, pas de `rounded-md/lg/xl`, pas de `shadow-lg`.
 - Nombres en `font-mono tabular-nums` ; capitales seulement en `font-mono` ; confirmations par `askConfirm`.
 - Corps de `useEffect` entre accolades.
-- Un décompte en direct utilise `useNowTicker` (horloge partagée), jamais son propre `setInterval`. Une fenêtre rare montée dans `AppShell` se charge en `lazyPage`.
+- Un décompte en direct utilise `useNowTicker` (horloge partagée), jamais son propre `setInterval`. Il renvoie un compteur de ticks, pas l'heure :
+  appeler `useNowTicker()` pour le rafraîchissement, puis lire `Date.now()` (6.10.0 : « 20746 j » affiché). Une fenêtre rare montée dans `AppShell` se charge en `lazyPage`.
 - `manualChunks` (`vite.config.ts`) ne force que des paquets tiers chargés dès l'entrée (bloc `ui`, `vendor`) : jamais `src/game` ni `lucide-react`,
   sinon le code des pages paresseuses remonte dans un bloc chargé au démarrage.
 - Ne pas lancer prettier sur le dépôt.

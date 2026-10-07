@@ -1303,6 +1303,63 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.10.0 base avancée : baser, attaquer depuis la base, revenir à la base, rapatrier", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const colonyId = `${bId}-c1`;
+    const colony = {
+      id: colonyId, slot: 1, name: "Avant-Poste", foundedAtMs: Date.now() - 86400000, updatedAtMs: Date.now(),
+      buildings: { extracteur_ferraille: { level: 1, unlocked: true }, entrepot: { level: 1, unlocked: true }, hangar_defense: { level: 1, unlocked: true } },
+      resources: { ...RICH }, building: null, defenses: {}, defenseJob: null,
+    };
+    const fleets: string[] = [];
+    try {
+      await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, xp: (await snap(bId)).xp, units: {} });
+      await admin.collection("players").update(bId, { allianceId: "", colonies: [colony], units: { chasseur: { level: 1, count: 40 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0 });
+      const base = await ps.launchFleet({ mission: "colonybase", colonyId, targetUid: colonyId, fleet: { chasseur: 20 } });
+      fleets.push(base.id);
+      expect(base).toMatchObject({ mission: "colonybase", targetUid: colonyId, status: "outbound" });
+      expect((await snap(bId)).units.chasseur.count).toBe(20);
+      await expect(ps.launchFleet({ mission: "colonybase", colonyId, targetUid: colonyId, fleet: { chasseur: 1 } })).rejects.toThrow(/déjà une base/);
+      await admin.collection("fleets").update(base.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const stationed = await admin.collection("fleets").getOne(base.id);
+      expect(stationed.status).toBe("stationed");
+      expect(stationed.stationedUntilMs).toBeGreaterThan(Date.now() + 13 * 86400000);
+
+      // Attaque depuis la base : vaisseaux pris dans la base, pas à quai.
+      await expect(ps.sendFleet(aId, { chasseur: 21 }, "attack", { fromBaseId: base.id })).rejects.toThrow(/plus assez/);
+      const sent = await ps.sendFleet(aId, { chasseur: 10 }, "attack", { fromBaseId: base.id });
+      fleets.push(sent.id);
+      expect((await admin.collection("fleets").getOne(base.id)).units).toEqual({ chasseur: 10 });
+      expect((await snap(bId)).units.chasseur.count).toBe(20);
+      expect((await admin.collection("fleets").getOne(sent.id)).base).toEqual({ colonyId, fromBaseId: base.id });
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const fought = await admin.collection("fleets").getOne(sent.id);
+      expect(fought.status).toBe("returning");
+      const survivors = (fought.units as Record<string, number>).chasseur ?? 0;
+      await admin.collection("fleets").update(sent.id, { returnAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      // Retour : les survivants rejoignent la base, la planète mère ne bouge pas.
+      expect((await admin.collection("fleets").getOne(base.id)).units).toEqual({ chasseur: 10 + survivors });
+      expect((await snap(bId)).units.chasseur.count).toBe(20);
+
+      // Rapatrier : la base rentre à la planète mère.
+      await ps.recallFleet(base.id);
+      await admin.collection("fleets").update(base.id, { returnAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      expect((await snap(bId)).units.chasseur.count).toBe(30 + survivors);
+      expect((await admin.collection("fleets").getOne(base.id)).status).toBe("done");
+    } finally {
+      // Le rapport de combat ouvrirait le délai d'attaque de B sur A pour les tests suivants.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}" && timestamp >= ${Date.now() - 600_000}` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { resources: aBefore!.resources, lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0, xp: aBefore!.xp, units: aBefore!.units });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId, units: bBefore!.units, colonies: [] });
+    }
+  }, 60_000);
+
   it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
     const before = await snap(bId);
     const now = Date.now();

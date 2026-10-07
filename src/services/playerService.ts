@@ -574,7 +574,7 @@ export async function sendFleet(
   targetUid: string,
   fleet: Record<string, number>,
   mission: FleetMission = "attack",
-  options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number } = {},
+  options: { minutes?: number; hours?: number; formation?: string; targetPriority?: "defenses" | "ships"; capsules?: { assault?: number | true; decoy?: number | true }; delayMinutes?: number; fromBaseId?: string } = {},
 ): Promise<Fleet> {
   return launchFleet<Fleet>({ targetUid, fleet, mission, ...options });
 }

@@ -68,6 +68,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I17 | Un seul passe par mois : dès novembre 2026, le passe du chapitre n'est plus lu ; un chapitre écrit à la main ne remplace un mois généré que par choix de l'admin (bibliothèque), et un mois déjà commencé n'est jamais déplacé | `seasonPass.ts` (`activePass`), `chronicles.ts` (`moveWrittenToLibrary`, `applyLibraryChapter`) | `progression680.test.ts` |
 | I18 | Passe généré : paliers 1 à 29 dans ±5 % du budget (`passGen.budgetHours`), plafonds du mois respectés (Ambre, jetons, dossiers, capsules), dernier palier hors budget ; points par palier entre `pointsMin` et `pointsMax`, même graine → même passe | `passGen.ts`, `passSeasons.ts` (`generatePassSeason`) | `progression681.test.ts` |
 | I19 | Chapitre généré : 4 épisodes, objectifs pris parmi les actions autorisées (`chronicleGen.objectiveWeights` > 0), difficulté dans ses bornes ; faction du thème du passe sauf si elle était là le mois précédent ; les récompenses par budget ne changent pas le reste du tirage | `procedural.ts` (`generateChapter`), `chronicleGen.ts` | `progression682.test.ts` |
+| I20 | Base avancée : une attaque partie d'une base ne prend jamais plus de vaisseaux que la base n'en contient et ne touche pas aux vaisseaux à quai de la planète mère ; les vaisseaux basés restent comptés dans le hangar de la planète mère (`unitsAwayOf`) | `fleets.ts` (`takeFromBase`, `baseReturnUnits`) | `flotteBasee.test.ts` |
 
 ## 5. Règles de conception
 
@@ -175,3 +176,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.9.8 | Revue AU12 (colonies) : délai de spécialisation calculé, constante morte retirée | `docs/audit/2026-10-07-au12-colonies.md` |
 | 2026-10-07 | 6.9.9 | Fenêtre d'attaque : puissance détaillée par vaisseau (`fleetPowerBreakdown`) | `docs/changes/6.9.9-puissance-flotte.md` |
 | 2026-10-07 | 6.9.10 | Performance : bloc de démarrage mesuré (276 Ko gzip, moteur ≈ 60 %) ; chargement à la demande du contenu reporté (Q8) | `docs/changes/6.9.10-mesure-bloc-demarrage.md` |
+| 2026-10-07 | 6.10.0 | Lot Y : base avancée sur une colonie (stationnement 14 j, attaque depuis la base et retour à la base, rapatriement) ; invariant I20 | `docs/changes/6.10.0-flotte-basee.md` |

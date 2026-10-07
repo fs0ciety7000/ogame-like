@@ -120,7 +120,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 14 | AU10 | Revue Flottes : missions, expéditions, emplacements, « Relancer » | M | livré : même rapport que AU9 |
 | 15 | AU11 | Revue Économie : ressources, bâtiments, Labo, planificateur, portefeuille | M | livré : rapport (`2026-10-07-au11-economie.md`) + 6.9.7 |
 | 16 | AU12 | Revue Colonies : routes, spécialisations, file de défense | S | livré : rapport (`2026-10-07-au12-colonies.md`) + 6.9.8 |
-| 17 | Y | Flotte basée sur une colonie (Q.3) : proposition, puis implémentation | L | à faire |
+| 17 | Y | Flotte basée sur une colonie (Q.3) : proposition, puis implémentation | L | livrée (6.10.0, `flotte-basee.md`) |
 | 18 | W | Lisibilité : puissance d'une flotte entière détaillée dans la fenêtre d'attaque | S | livrée (6.9.9) |
 | 19 | X | Performance : contenu (succès, saisons, Chroniques) chargé à la demande | M | mesuré, reporté (6.9.10, Q8) |
 | 20 | AU13 | Revue transverse et clôture : admin, sécurité serveur, tâches planifiées, accessibilité, blog, statut ; synthèse et feuille de route suivante | M | à faire |

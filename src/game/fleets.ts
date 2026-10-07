@@ -79,7 +79,7 @@ export const PATROL_RULES = {
 export type FleetStatus = "outbound" | "stationed" | "returning" | "done" | "decision";
 /** attack : combat ; spy : sondes ; recycle : champ de débris ;
  *  patrol : mode fuite (la flotte quitte la base puis revient). */
-export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss" | "allianceboss" | "delivery";
+export type FleetMission = "attack" | "spy" | "recycle" | "patrol" | "garrison" | "pirate" | "lair" | "expedition" | "leviathan" | "transport" | "bounty" | "elite" | "seasonboss" | "allianceboss" | "delivery" | "colonybase";
 
 export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   attack: "Attaque",
@@ -97,6 +97,17 @@ export const FLEET_MISSION_LABELS: Record<FleetMission, string> = {
   seasonboss: "Assaut du boss de saison",
   allianceboss: "Assaut du boss d'alliance",
   delivery: "Livraison de contrat",
+  colonybase: "Base avancée",
+};
+
+/** 6.10.0 : flotte basée sur une colonie (proposals/flotte-basee.md). GameRules.colonyBase. */
+export const COLONY_BASE_RULES = {
+  /** false : plus de nouvelle base (les bases en place vont à leur terme). */
+  enabled: true,
+  /** Durée maximale du stationnement, en jours ; la base rentre seule ensuite. */
+  maxDays: 14,
+  /** Bases à la fois sur une même colonie. */
+  perColony: 1,
 };
 
 export interface Fleet {
@@ -133,6 +144,8 @@ export interface Fleet {
   anomaly?: boolean;
   /** v4.0 (affichage) : flotte leurrée par son propriétaire. */
   decoyed?: boolean;
+  /** 6.10.0 : base avancée (colonie) ; une attaque partie d'une base garde l'identifiant de sa base pour y revenir. */
+  base?: { colonyId: string; fromBaseId?: string } | null;
 }
 
 /** v3.5 : la flotte vise ce joueur (planète mère ou une de ses colonies). */
@@ -214,6 +227,8 @@ export interface LaunchInput {
   /** Dernier départ (ou combat) de cet attaquant vers cette cible. */
   lastAttackOnTargetMs: number | null;
   atWar?: boolean;
+  /** 6.10.0 : point de départ (colonie d'une base avancée) ; absent = planète mère. */
+  originId?: string;
 }
 
 export interface LaunchOutput {
@@ -256,7 +271,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
   if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
 
   const speed = fleetSpeed(attacker.units, units);
-  const arriveAtMs = now + attackTravelSeconds(distanceBetween(attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels, attacker)) * 1000;
+  const arriveAtMs = now + attackTravelSeconds(distanceBetween(input.originId ?? attacker.uid, defender.uid), speed, allianceFlightFactor(attacker.allianceResearch, attacker.techLevels, attacker)) * 1000;
   for (const [unitId, qty] of Object.entries(units)) attacker.units[unitId].count -= qty;
   // Attaquer lève sa propre protection débutant, dès le décollage (et le Voile de chitine).
   attacker.lastAttackAtMs = now;
@@ -333,6 +348,8 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
 
 function returnMessage(fleet: Fleet, lootTotal: number): { title: string; message: string } {
   switch (fleet.mission) {
+    case "colonybase":
+      return { title: "Base avancée levée", message: `Ta flotte basée sur ${fleet.targetPseudo} est rentrée à la planète mère.` };
     case "patrol":
       return { title: "Patrouille terminée", message: "Ta flotte en patrouille est rentrée à la base." };
     case "expedition":
@@ -420,9 +437,14 @@ export interface LaunchRequest {
   delivery?: { id: string; status: string; supplierUid: string; deadlineMs: number; fleetId: string; wantRes: ResourceId; wantAmount: number };
   random?: () => number;
   eliteName?: string;
+  /** 6.10.0 : colonie visée par une base avancée, et bases déjà sur cette colonie. */
+  baseColonyId?: string;
+  basesAtColony?: number;
+  /** 6.10.0 : attaque depuis cette base avancée (lue par le serveur). */
+  fromBase?: Fleet | null;
 }
 
-export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: LaunchCapsules | null; attackerQueues: QueuesState; attackerNotifications: NewNotification[] } {
+export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: LaunchCapsules | null; attackerQueues: QueuesState; attackerNotifications: NewNotification[]; baseUnitsLeft?: Record<string, number> | null } {
   const mission = req.mission ?? "attack";
   const { now, target } = req;
   if ((mission === "attack" || mission === "spy") && !target) throw new GameActionError("Ce joueur est introuvable.");
@@ -444,7 +466,18 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
   const slotBlocker = fleetSlotBlocker(owner, mission, req.fleetsActive);
   if (slotBlocker) throw new GameActionError(slotBlocker);
   let out: LaunchOutput;
-  if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
+  let baseUnitsLeft: Record<string, number> | null = null;
+  if (mission === "attack" && req.fromBase) {
+    // 6.10.0 : les vaisseaux viennent de la base ; prêtés à la planète le temps du décollage (solde nul à quai).
+    const base = req.fromBase;
+    const taken = takeFromBase(owner, base, req.fleet, now);
+    for (const [id, qty] of Object.entries(taken)) owner.units[id] = { ...(owner.units[id] ?? { level: 1, count: 0 }), count: (owner.units[id]?.count ?? 0) + qty };
+    out = launchFleet({ now, attacker: owner, defender: planet!, fleet: taken, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar, originId: base.base!.colonyId });
+    out.fleet.base = { colonyId: base.base!.colonyId, fromBaseId: base.id };
+    baseUnitsLeft = {};
+    for (const [id, n] of Object.entries(base.units ?? {})) if (n - (taken[id] ?? 0) > 0) baseUnitsLeft[id] = n - (taken[id] ?? 0);
+  } else if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
+  else if (mission === "colonybase") out = launchColonyBase(owner, req.fleet, req.baseColonyId ?? "", req.basesAtColony ?? 0, now);
   else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);
   else if (mission === "patrol") out = launchPatrol(owner, req.fleet, req.patrolMinutes ?? 0, now);
@@ -508,7 +541,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
   if (mission === "spy") recordChronicle(out.attacker, "spy", now);
   const counter = ({ spy: "spies", patrol: "patrols", garrison: "garrisons" } as const)[mission as "spy" | "patrol" | "garrison"];
   if (counter) bumpStat(out.attacker, counter);
-  return { ...out, capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications };
+  return { ...out, capsules, attackerQueues: flushed.queues, attackerNotifications: flushed.notifications, baseUnitsLeft };
 }
 
 /** Puissance d'attaque d'une flotte (bonus de l'attaquant et formation compris), pour l'alerte du défenseur. */
@@ -730,6 +763,52 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
       },
     ],
   };
+}
+
+/* ---------- 6.10.0 : base avancée sur une colonie (proposals/flotte-basee.md) ---------- */
+
+/** La flotte vole jusqu'à sa colonie et y stationne au plus `maxDays` jours. */
+export function launchColonyBase(owner: PlayerState, raw: Record<string, unknown>, colonyId: string, basesAtColony: number, now: number): LaunchOutput {
+  const r = COLONY_BASE_RULES;
+  if (!r.enabled) throw new GameActionError("Les bases avancées sont fermées pour le moment.");
+  const colony = colonyOf(owner, colonyId);
+  if (!colony) throw new GameActionError("Colonie introuvable.");
+  if (basesAtColony >= Math.max(1, Math.floor(r.perColony))) throw new GameActionError(`${colony.name} accueille déjà une base avancée.`);
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent former une base.");
+  const speed = fleetSpeed(owner.units, units);
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
+  const fleet = { ...newFleet(owner, { uid: colony.id, pseudo: colony.name }, "colonybase", units, now, arriveAtMs), durationMs: Math.max(1, r.maxDays) * 86_400_000, stationedUntilMs: null, base: { colonyId: colony.id } };
+  return { attacker: owner, fleet, defenderNotifications: [] };
+}
+
+/** Base avancée en place (stationnée, à ce joueur). */
+export function isActiveBase(f: Pick<Fleet, "mission" | "status" | "ownerUid" | "stationedUntilMs">, uid: string, now: number): boolean {
+  return f.mission === "colonybase" && f.status === "stationed" && f.ownerUid === uid && (f.stationedUntilMs ?? 0) > now;
+}
+
+/** Vaisseaux pris dans la base pour une attaque (jamais plus qu'elle n'en contient : invariant I20). */
+export function takeFromBase(owner: PlayerState, base: Fleet, raw: Record<string, unknown>, now: number): Record<string, number> {
+  if (!isActiveBase(base, owner.uid, now) || !base.base?.colonyId) throw new GameActionError("Cette base avancée n'est plus en place.");
+  if (!colonyOf(owner, base.base.colonyId)) throw new GameActionError("Colonie introuvable.");
+  const units: Record<string, number> = {};
+  for (const [id, value] of Object.entries(raw ?? {})) {
+    const qty = Math.floor(Number(value));
+    if (!(qty > 0)) continue;
+    if (!OFFENSIVE_UNITS.includes(id)) throw new GameActionError("Seules les unités d'attaque peuvent être envoyées.");
+    if ((base.units?.[id] ?? 0) < qty) throw new GameActionError("La base n'a plus assez de vaisseaux pour cette flotte.");
+    units[id] = qty;
+  }
+  if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
+  return units;
+}
+
+/** Retour d'une attaque partie d'une base : les survivants rejoignent la base si elle est encore en place. */
+export function baseReturnUnits(fleet: Pick<Fleet, "units" | "base" | "ownerUid">, base: Fleet | null, now: number): Record<string, number> | null {
+  if (!fleet.base?.fromBaseId || !base || base.id !== fleet.base.fromBaseId || !isActiveBase(base, fleet.ownerUid, now)) return null;
+  const merged: Record<string, number> = { ...(base.units ?? {}) };
+  for (const [id, n] of Object.entries(fleet.units ?? {})) if (n > 0) merged[id] = (merged[id] ?? 0) + n;
+  return merged;
 }
 
 /** Assaut du repaire d'une faction (PvE) : sa puissance est fixée au départ. */

@@ -20,6 +20,7 @@ import { EFFECT_CAP_RULES } from "@/game/effects";
 import { BOSS_REMINDERS } from "@/game/events";
 import { GAZETTE_RULES } from "@/game/gazette";
 import { EXCHANGE_RULES } from "@/game/resources";
+import { COLONY_BASE_RULES } from "@/game/fleets";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
 import { GOAL_RULES } from "@/game/goals";
@@ -85,6 +86,7 @@ export const REGISTERED_RULES = {
   coalition: { label: "Coalitions de seigneurs", target: () => COALITION_RULES },
   colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
   colonySpec: { label: "Colonies : spécialisation", target: () => COLONY_SPEC_RULES },
+  colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
   dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },
   dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },

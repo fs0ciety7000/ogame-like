@@ -26,7 +26,8 @@ import { RadarScan } from "@/components/game/RadarScan";
 import { OFFENSIVE_UNITS as ALL_OFFENSIVE, findUnit, isEliteUnit } from "@/game/units";
 import { COMBAT_RULES, computeFleetPower, fleetPowerBreakdown, pveAttackFactor } from "@/game/combat";
 import { formationEffects } from "@/game/formations";
-import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, slowestUnits, travelSeconds } from "@/game/fleets";
+import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetSpeed, isActiveBase, slowestUnits, travelSeconds } from "@/game/fleets";
+import { useFleetStore } from "@/store/fleetStore";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
@@ -83,7 +84,13 @@ export function AttackModal({
   const [presetName, setPresetName] = useState("");
   // 5.22 : unités d'élite proposées contre les seigneurs de guerre seulement.
   const OFFENSIVE_UNITS = ALL_OFFENSIVE.filter((id) => !isEliteUnit(id) || isWarlordUid(target?.uid));
-  const owned = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, player?.units[id]?.count ?? 0]));
+  // 6.10.0 : départ depuis une base avancée (colonie) ; "" = planète mère.
+  const allFleets = useFleetStore((st) => st.fleets);
+  const bases = useMemo(() => (uid ? allFleets.filter((f) => isActiveBase(f, uid, Date.now())) : []), [allFleets, uid]);
+  const [origin, setOrigin] = useState("");
+  const base = bases.find((b) => b.id === origin) ?? null;
+  const stockOf = (id: string) => (base ? (base.units[id] ?? 0) : (player?.units[id]?.count ?? 0));
+  const owned = Object.fromEntries(OFFENSIVE_UNITS.map((id) => [id, stockOf(id)]));
 
   const setQty = (id: string, owned: number, value: number) => {
     const clamped = Math.max(0, Math.min(owned, value));
@@ -92,7 +99,7 @@ export function AttackModal({
 
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, v]) => v > 0));
   const hasShips = Object.keys(selected).length > 0;
-  const distance = uid && target ? distanceBetween(uid, target.uid) : 0;
+  const distance = uid && target ? distanceBetween(base?.base?.colonyId ?? uid, target.uid) : 0;
   const factor = player ? allianceFlightFactor(player.allianceResearch, player.techLevels, player) : 1;
   const flight = player && hasShips ? attackTravelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
   const uncapped = player && hasShips ? travelSeconds(distance, fleetSpeed(player.units, selected), factor) : null;
@@ -134,7 +141,7 @@ export function AttackModal({
     setSubmitting(true);
     try {
       const capsules = { ...(assault ? { assault } : {}), ...(decoy ? { decoy } : {}) };
-      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(priority ? { targetPriority: priority } : {}), ...(assault || decoy ? { capsules } : {}), ...(delay > 0 ? { delayMinutes: delay } : {}) });
+      const sent = await sendFleet(target.uid, selected, "attack", { formation, ...(priority ? { targetPriority: priority } : {}), ...(assault || decoy ? { capsules } : {}), ...(delay > 0 ? { delayMinutes: delay } : {}), ...(base ? { fromBaseId: base.id } : {}) });
       setDelay(0);
       setAssault(0);
       setDecoy(0);
@@ -171,6 +178,26 @@ export function AttackModal({
             submitting ? <RadarScan label="Décollage de la flotte…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <>
+              {bases.length > 0 && (
+                <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="font-mono uppercase tracking-wider text-slate-500">Départ</span>
+                  {[{ id: "", label: "Planète mère" }, ...bases.map((b) => ({ id: b.id, label: `Base : ${b.targetPseudo}` }))].map((o) => (
+                    <button
+                      key={o.id || "home"}
+                      type="button"
+                      aria-pressed={origin === o.id}
+                      className={origin === o.id ? "border border-cyan-glow/60 bg-cyan-glow/10 px-2 py-1 text-cyan-glow" : "border border-white/10 px-2 py-1 text-slate-400 hover:text-slate-100"}
+                      onClick={() => {
+                        setOrigin(o.id);
+                        setFleet({});
+                      }}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* v3.8 : compositions enregistrées */}
               <div className="mt-4 flex flex-wrap items-center gap-1.5">
                 <Bookmark className="h-3.5 w-3.5 text-slate-500" aria-hidden />
@@ -195,13 +222,13 @@ export function AttackModal({
               <div className="mt-3 space-y-2">
                 {OFFENSIVE_UNITS.map((unitId) => {
                   const unit = findUnit(unitId);
-                  const owned = player.units[unitId]?.count ?? 0;
+                  const owned = stockOf(unitId);
                   if (!unit) return null;
                   return (
                     <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                       <span className="flex-1 text-slate-200">{unit.name}</span>
                       <span className="text-xs text-slate-500">VIT {unit.stats.vitesse * Math.max(1, player.units[unitId]?.level ?? 1)}</span>
-                      <span className="text-xs text-slate-500">Possédés : {owned}</span>
+                      <span className="text-xs text-slate-500">{base ? "À la base" : "Possédés"} : {owned}</span>
                       <NumberInput
                         size="sm"
                         max={owned}

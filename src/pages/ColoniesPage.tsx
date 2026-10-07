@@ -5,6 +5,7 @@ import { playerUnitCost } from "@/game/effectTargets";
 import { EmptyAction } from "@/components/ui/panel";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
+import { ColonyBasePanel } from "@/components/game/ColonyBasePanel";
 import { toast } from "sonner";
 import { Check, Clock, Globe2, Hammer, Lock, Package, Pencil, Rocket, Shield, Sparkles, TrendingUp, Truck, Warehouse, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -642,6 +643,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
           </div>
           <ColonySpecPicker colony={colony} busy={busy} onPick={(id) => void act(() => setColonySpec(colony.id, id), "Spécialisation enregistrée.")} />
           <ColonyRoutePanel colony={colony} player={player} busy={busy} onSet={(every, keep, dir) => void act(() => setColonyRoute(colony.id, every, keep, dir), every ? "Route enregistrée." : "Route arrêtée.")} />
+          <ColonyBasePanel colony={colony} player={player} />
         </div>
         <div className="relative flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setTransport("deliver")}>

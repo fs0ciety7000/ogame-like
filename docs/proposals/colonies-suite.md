@@ -1,6 +1,6 @@
 # Proposition : colonies, suite (lot Q)
 
-Statut : **livrée** en 6.4.0 (Q.1 et Q.2), voir `docs/changes/6.4.0-colonies-suite.md`. Q.3 (flotte basée) reste à décider.
+Statut : **livrée** en 6.4.0 (Q.1 et Q.2), voir `docs/changes/6.4.0-colonies-suite.md`. Q.3 (flotte basée) livrée en 6.10.0 (`flotte-basee.md`).
 Lot Q de `docs/proposals/feuille-de-route-2026-hiver.md` ; suite de `routes-logistiques.md` (I.2).
 
 ## 1. Le problème vu par le joueur

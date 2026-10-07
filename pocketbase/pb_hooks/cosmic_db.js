@@ -383,6 +383,7 @@ function fleetFromRecord(rec, publicView) {
   f.loot = f.loot || null;
   f.returnAtMs = f.returnAtMs || null;
   f.transport = f.transport || null;
+  f.base = f.base || null;
   return f;
 }
 
@@ -429,7 +430,7 @@ function resolveFleetArrival(txApp, game, rec, now) {
   if (mission === "delivery") return deliveryArrival(txApp, game, rec, now);
   if (mission === "bounty") return bountyArrival(txApp, game, rec, now);
   if (mission === "elite") return eliteArrival(txApp, game, rec, now);
-  if (mission === "garrison") {
+  if (mission === "garrison" || mission === "colonybase") {
     const stationed = game.stationGarrison(fleetFromRecord(rec));
     rec.set("status", stationed.status);
     rec.set("stationedUntilMs", stationed.stationedUntilMs);
@@ -1558,6 +1559,16 @@ function dockAutoOnReturn(txApp, game, uid, player, queues, rec, now) {
 function resolveFleetReturn(txApp, game, rec, now) {
   if (rec.getString("mission") === "expedition") return expeditionStep(txApp, game, rec, now, 2);
   const fleet = fleetFromRecord(rec);
+  // 6.10.0 : partie d'une base encore en place, la flotte y revient ; le butin va à la planète mère.
+  if (fleet.base && fleet.base.fromBaseId) {
+    const baseRec = findOrNull(txApp, "fleets", fleet.base.fromBaseId);
+    const merged = baseRec ? game.baseReturnUnits(fleet, fleetFromRecord(baseRec), now) : null;
+    if (merged) {
+      baseRec.set("units", merged);
+      txApp.save(baseRec);
+      fleet.units = {};
+    }
+  }
   if (findOrNull(txApp, "players", fleet.ownerUid)) {
     const owner = loadPlayer(txApp, game, fleet.ownerUid);
     const out = game.performFleetReturn(owner.player, owner.queues, fleet, now);
@@ -1668,7 +1679,7 @@ function launchFleetRequest(e) {
         ? "seasonboss"
         : mission === "allianceboss"
         ? "allianceboss"
-        : mission === "transport"
+        : mission === "transport" || mission === "colonybase"
           ? String(body.colonyId || "")
           : mission === "delivery"
           ? `contract:${String(body.contractId || "")}`
@@ -1680,7 +1691,7 @@ function launchFleetRequest(e) {
               ? "bounty_elite"
               : String(body.targetUid || "");
   if (!targetUid) throw new BadRequestError("Cible manquante.");
-  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss", "delivery"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
+  if (["attack", "spy", "recycle", "patrol", "garrison", "lair", "expedition", "leviathan", "transport", "bounty", "elite", "seasonboss", "allianceboss", "delivery", "colonybase"].indexOf(mission) < 0) throw new BadRequestError("Mission inconnue.");
   let response = null;
 
   $app.runInTransaction((txApp) => {
@@ -1703,6 +1714,16 @@ function launchFleetRequest(e) {
       target = db.loadPlayer(txApp, game, colonyOwner || targetUid, "Ce joueur est introuvable.").player;
     } else if (mission === "recycle") {
       debris = loadDebris(txApp, targetUid).field;
+    }
+    // 6.10.0 : base avancée (bases déjà sur la colonie) ou attaque depuis une base (fiche de la base, à ce joueur).
+    let basesAtColony = 0;
+    if (mission === "colonybase") {
+      basesAtColony = txApp.findRecordsByFilter("fleets", 'targetUid = {:c} && ownerUid = {:u} && mission = "colonybase" && (status = "outbound" || status = "stationed")', "", 10, 0, { c: targetUid, u: attackerUid }).length;
+    }
+    let baseRec = null;
+    if (mission === "attack" && body.fromBaseId) {
+      baseRec = db.findOrNull(txApp, "fleets", String(body.fromBaseId));
+      if (!baseRec || baseRec.getString("ownerUid") !== attackerUid || baseRec.getString("mission") !== "colonybase") throw new NotFoundError("Base avancée introuvable.");
     }
     // v5.1 : livraison d'un contrat — le client est la cible.
     let contractRec = null;
@@ -1783,6 +1804,9 @@ function launchFleetRequest(e) {
         eliteName: elite ? game.describeElite(elite).name : seasonBoss ? (game.bossMonthOf(seasonBoss) || { boss: { name: "Boss de saison" } }).boss.name : allianceBoss ? game.allianceBossDef(allianceBoss).name : undefined,
         capsules: mission === "attack" ? body.capsules : undefined,
         delivery: contractRec ? db.toPlain(contractRec) : undefined,
+        baseColonyId: mission === "colonybase" ? targetUid : undefined,
+        basesAtColony,
+        fromBase: baseRec ? fleetFromRecord(baseRec) : null,
       });
     } catch (err) {
       throw db.asHttpError(game, err);
@@ -1794,6 +1818,12 @@ function launchFleetRequest(e) {
       out.fleet.arriveAtMs += delayMs;
     }
     db.savePlayer(txApp, game, attacker, out.attacker, out.attackerQueues);
+    // 6.10.0 : la base garde les vaisseaux restants ; vide, elle est levée.
+    if (baseRec && out.baseUnitsLeft) {
+      baseRec.set("units", out.baseUnitsLeft);
+      if (Object.keys(out.baseUnitsLeft).length === 0) baseRec.set("status", "done");
+      txApp.save(baseRec);
+    }
     db.notify(txApp, attackerUid, out.attackerNotifications);
     if (out.defenderNotifications.length > 0) db.notify(txApp, target ? target.uid : targetUid, out.defenderNotifications);
     const rec = new Record(txApp.findCollectionByNameOrId("fleets"));
