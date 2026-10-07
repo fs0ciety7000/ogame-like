@@ -116,6 +116,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
 - Un identifiant d'enregistrement PocketBase tient en 15 caractères `[a-z0-9]` : un identifiant de colonie (`<uid>-c<n>`, 18) ne sert jamais
   de clé tel quel. Dériver une clé (`debrisKey`, 6.11.4) et garder l'emplacement dans un champ à part (`locationId`).
+- Un succès dont le palier dépend d'une règle (niveau maximal…) lit la règle **dans sa mesure** (`moonMaxed`, 0/1) : `setAchievements` passe
+  avant les règles dans `applyGameContent`, un palier calculé à la génération garderait la valeur par défaut (6.14.3).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.
 - Une migration ponctuelle (`onBootstrap`) qui rend ou retire des unités, des ressources ou des niveaux **respecte les plafonds**
   (hangar, entrepôt) ou documente pourquoi elle les dépasse. Voir l'incident 5.22 dans `docs/proposals/cale-seche.md`.

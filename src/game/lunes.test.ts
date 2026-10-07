@@ -101,3 +101,25 @@ describe("6.14.1 : Codex des lunes", () => {
     expect(withMoon?.name).toBe("Lune Nyx");
   });
 });
+
+describe("6.14.3 : succès lunaires", () => {
+  it("« Clair de lune » à la naissance, « Lune pleine » au niveau maximal (lu à l'usage)", async () => {
+    const { ACHIEVEMENTS, checkNewAchievements } = await import("@/game/achievements");
+    expect(ACHIEVEMENTS.map((a) => a.id)).toEqual(expect.arrayContaining(["lune_1", "lune_max"]));
+    const ids = (p: PlayerState) => checkNewAchievements(p).map((a) => a.id);
+    expect(ids(player("s"))).not.toContain("lune_1");
+    const born = player("s", { moon: { name: "Io", bornAtMs: NOW - 1, fromDebris: 1 } });
+    expect(ids(born)).toContain("lune_1");
+    expect(ids(born)).not.toContain("lune_max");
+    const full = player("s", { moon: { name: "Io", bornAtMs: NOW - 1, fromDebris: 1, level: MOON_RULES.maxLevel } });
+    expect(ids(full)).toContain("lune_max");
+    const saved = MOON_RULES.maxLevel;
+    try {
+      // Sans amélioration possible (niveau maximal 1), « Lune pleine » ne se donne pas d'office.
+      MOON_RULES.maxLevel = 1;
+      expect(ids(born)).not.toContain("lune_max");
+    } finally {
+      MOON_RULES.maxLevel = saved;
+    }
+  });
+});

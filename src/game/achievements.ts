@@ -10,6 +10,7 @@ import { factionStates, findFaction } from "@/game/pirates";
 import { playerStats } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { normalizePlanetLook } from "@/game/planetLook";
+import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -188,6 +189,15 @@ export const METRICS = {
   },
   streakBest: { label: "Meilleure série de connexion (jours)", value: (p: PlayerState) => Math.floor(Number((p.streak as { best?: number } | undefined)?.best) || 0) },
   ascensionsDone: { label: "Ascensions accomplies", value: (p: PlayerState) => Math.floor(Number(p.ascensions) || 0) },
+  // 6.14.3 : lunes (le niveau maximal se lit à l'usage : il est réglable).
+  moonLevel: { label: "Niveau de la lune (0 sans lune)", value: (p: PlayerState) => (playerMoon(p) ? moonLevel(playerMoon(p)) : 0) },
+  moonMaxed: {
+    label: "Lune au niveau maximal (0/1)",
+    value: (p: PlayerState) => {
+      const m = playerMoon(p);
+      return m && MOON_RULES.maxLevel > 1 && moonLevel(m) >= MOON_RULES.maxLevel ? 1 : 0;
+    },
+  },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -343,6 +353,9 @@ export function derivedAchievements(): AchievementDef[] {
     def("ruche_rep_2", "commerce", "or", "bountyReputation", 250, "Élu de la Reine", "Atteindre 250 de réputation auprès des Kesh'Vaar.", "👑", { auto: true }),
     def("vendetta_1", "combat", "argent", "vendettaWins", 1, "Vendetta", "Gagner une vendetta contre un seigneur de guerre.", "🗡️", { auto: true }),
     def("vendetta_2", "combat", "or", "vendettaWins", 10, "Tueur de seigneurs", "Gagner 10 vendettas.", "⚔️", { auto: true }),
+    // 6.14.3 (P29-1, Q20) : lunes.
+    def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir naître une lune au-dessus de ta planète mère.", "🌙", { auto: true, secret: true }),
+    def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "🌕", { auto: true }),
     def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs différents en vendetta.", "💀", { auto: true }),
     def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitué du casino", "Jouer 10 tours au Casino orbital.", "🎰", { auto: true }),
     def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "🍀", { auto: true }),
@@ -392,6 +405,7 @@ const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {
   rareOfficers: "L'état-major complet réunit ceux qu'on ne croise qu'une fois.",
   seasonCommanders: "Chaque saison offre un visage ; il faudra tous les réunir.",
   casinoJackpots: "Trois fois le même chiffre, et le pot commun change de mains.",
+  moonLevel: "Un champ de débris assez lourd finit parfois par tourner autour de ceux qui ont tenu bon.",
 };
 
 /** Indice d'un succès (piste de la mesure, sinon la catégorie). */

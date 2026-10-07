@@ -14,7 +14,7 @@ Résout attaques entre joueurs, raids PNJ, boss. Moteur en tours (5.18), dégât
 | Pertes | défenses reconstruites à 60 % ; vaisseaux sauvés par l'Atelier (jusqu'à 85 % avec bonus depuis la 6.2, 95 % avant) ; débris 30 % du coût, 48 h |
 | Protections | 2 h entre deux attaques sur la même cible ; bouclier 1 h après une défaite ; débutant 72 h (levée si on attaque) ; écart d'XP : butin et XP dégressifs dès ×3, attaque refusée à ×12 |
 | XP | perte en défense plafonnée à 60 par 24 h |
-| Lune (6.13) | un combat sur la planète mère laissant au moins 100 000 de débris : 1 % de chance par tranche de 100 000, 20 % au plus ; une lune par joueur, permanente : +3 % de bouclier, +5 % d'entrepôt à l'abri (couche empire) ; 6.14 : niveaux 1 à 5, +2 % de bouclier par niveau (11 % au niveau 5), 500 k ferraille + 250 k énergie ×2 par niveau |
+| Lune (6.13) | un combat sur la planète mère laissant au moins 100 000 de débris : 1 % de chance par tranche de 100 000, 20 % au plus ; une lune par joueur, permanente : +3 % de bouclier, +5 % d'entrepôt à l'abri (couche empire) ; 6.14 : niveaux 1 à 5, +2 % de bouclier par niveau (11 % au niveau 5), 500 k ferraille + 250 k énergie ×2 par niveau ; 6.14.3 : succès « Clair de lune » et « Lune pleine » |
 
 ## Code et admin
 `combat.ts`, `attack.ts`, `pvp.ts`, `formations.ts`, `debris.ts`, `moon.ts`. Admin : Règles → Combat, JcJ, Lunes ; simulateur « et si ».
