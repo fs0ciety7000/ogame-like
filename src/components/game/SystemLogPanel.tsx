@@ -1,10 +1,11 @@
+import { formatDateTime } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusDot } from "@/components/ui/status-dot";
 import { useNotificationStore } from "@/store/notificationStore";
 import { systemLogStyle } from "@/lib/systemLog";
 
 function timeLabel(ms: number): string {
-  return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return formatDateTime(ms, "timeSec");
 }
 
 /** Flux d'activité en direct façon console de bord — complète les toasts
@@ -27,7 +28,7 @@ export function SystemLogPanel() {
               const style = systemLogStyle(n);
               return (
                 <li key={n.id} className="flex gap-2 text-slate-400">
-                  <span className="shrink-0 text-slate-600">[{timeLabel(n.createdAtMs)}]</span>
+                  <span className="shrink-0 text-slate-500">[{timeLabel(n.createdAtMs)}]</span>
                   <span className={`shrink-0 font-medium ${style.className}`}>{style.level}</span>
                   <span className="truncate text-slate-300">{n.title}</span>
                 </li>

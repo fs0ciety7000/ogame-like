@@ -1,7 +1,11 @@
 # Proposition : ouverture progressive des systèmes (AE-13, AE-L5)
 
-Statut : **en cours** (2026-10-07) : validée (Q152 à Q158) ; DP-L1 à DP-L3 livrés en 6.14.74 à 6.14.76
-(`docs/changes/6.14.74-deblocage-moteur.md`, `6.14.75-deblocage-interface.md`, `6.14.76-deblocage-prise-en-main.md`) ; DP-L4 à DP-L7 à faire.
+Statut : **en cours** (2026-10-07) : validée (Q152 à Q158) ; DP-L1 à DP-L6 livrés en 6.14.74 à 6.14.76 et 6.14.79 à 6.14.81
+(`docs/changes/6.14.74-deblocage-moteur.md`, `6.14.75-deblocage-interface.md`, `6.14.76-deblocage-prise-en-main.md`,
+`6.14.79-deblocage-serveur.md`, `6.14.80-deblocage-admin.md`, `6.14.81-deblocage-chaine.md`). Restent : DP-L7 (mesures, 4 semaines
+après la mise en production), l'essai d'un compte neuf sur la pré-prod (au prochain push), le jour de chaque palier dans le simulateur
+(`progressionSim.ts`, tenu par une autre tâche) et le succès « Tout l'empire » (non fait, voir la fiche 6.14.81). Statut « livrée »
+quand ces trois derniers points sont faits ou abandonnés.
 Invariants renumérotés : **I30** (menu) et **I31** (objectifs du jour, DP-L4), I29 étant pris.
 Sources : constat AE-13 et lot AE-L5 de `docs/audit/2026-10-07-au27-equilibrage.md`, Q103 (AE-Q7, **validée** : « tout compte existant
 au-delà de Fer II, et tout compte qui a déjà ouvert la page, voit tout ; seuls les nouveaux comptes ont l'ouverture par rang »),

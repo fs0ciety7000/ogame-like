@@ -117,6 +117,8 @@ routerAdd(
         db.createPirateRaid(txApp, game, out.player, { factionId: R.factionId, power: game.tutorialRaidPower(out.player), arriveAtMs: now + R.delayMinutes * 60000 }, now); // 6.14.52 (AC-13) : date de départ du raid
         out.player.onboarding = Object.assign({}, ob, { tutorialRaid: "sent" });
       }
+      // 6.14.79 (DP-L4) : « Nouveau : … » quand le menu progressif ouvre des pages (avant l'enregistrement : même transaction).
+      db.navOpeningNotice(e, game, out.player, out.notifications, Date.now());
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
       // 5.26.1 : la taxe du comptoir d'échange part au pot commun.

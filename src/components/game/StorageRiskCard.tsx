@@ -4,7 +4,7 @@ import { HudCallout } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { ECONOMY_RULES, exposureView } from "@/game/economy";
 import { RESOURCE_LIST } from "@/game/resources";
-import { formatCompact } from "@/lib/utils";
+import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
 /* 5.32 (proposals/entrepot-pillage.md, option C) : « ce que tu risques ». Stock à l'abri et stock pillable,
@@ -16,7 +16,7 @@ const nameOf = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? i
 export function StorageRiskCard({ player, now }: { player: PlayerState; now: number }) {
   const view = exposureView(player, now);
   const soonChanges = !view.active && view.lines.some((l) => l.protectedSoon < l.protectedNow);
-  const date = new Date(view.activeFromMs).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const date = formatDateTime(view.activeFromMs, "weekday", "server");
   return (
     <HudPanel icon={<ShieldAlert />} title="Ce que tu risques" tone="ember">
       {soonChanges && (

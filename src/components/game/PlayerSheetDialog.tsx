@@ -28,7 +28,7 @@ import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import { seasonLabel } from "@/game/seasons";
-import { cn, formatNumber, alpha, timeAgo } from "@/lib/utils";
+import { cn, formatNumber, alpha, timeAgo, formatDateTime } from "@/lib/utils";
 import { findCommander } from "@/game/commanders";
 import { describeRelic, findTemplate, rarityInfo } from "@/game/relics";
 import { ACHIEVEMENTS, TIER_LABELS as ACH_TIER_LABELS } from "@/game/achievements";
@@ -47,7 +47,7 @@ const ACH_TIER_STYLE: Record<string, string> = {
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="border border-cyan-glow/15 bg-white/[0.02] px-2.5 py-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</p>
       <p className="mt-0.5 text-sm font-semibold tabular-nums text-slate-100">{value}</p>
     </div>
   );
@@ -55,7 +55,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
 
 function sinceLabel(ms?: number) {
   if (!ms) return null;
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return formatDateTime(ms, "date");
 }
 
 export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid: string; pseudo: string } | null; onClose: () => void; actions?: ReactNode }) {
@@ -201,7 +201,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
                       <div key={id} title={a.description} className={cn("hud-cut-sm flex flex-col items-center gap-1 border px-2 py-2.5 text-center", ACH_TIER_STYLE[a.tier])}>
                         <span className="text-2xl leading-none">{a.emoji}</span>
                         <span className="text-xs font-semibold text-slate-100">{a.name}</span>
-                        <span className="font-mono text-[9px] uppercase tracking-[0.14em] opacity-80">{ACH_TIER_LABELS[a.tier]}</span>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] opacity-80">{ACH_TIER_LABELS[a.tier]}</span>
                       </div>
                     );
                   })}
@@ -326,10 +326,10 @@ function PresenceLine({ uid }: { uid: string }) {
   const online = useIsOnline(uid);
   const last = useDirectoryStore((s) => s.lastActiveOf[uid]);
   return online ? (
-    <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-mint-glow">
+    <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-mint-glow">
       <OnlineDot uid={uid} /> En ligne
     </p>
   ) : last ? (
-    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Vu {timeAgo(last)}</p>
+    <p className="mt-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Vu {timeAgo(last)}</p>
   ) : null;
 }

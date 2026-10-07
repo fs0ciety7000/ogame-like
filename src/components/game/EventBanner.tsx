@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { CalendarClock, Trophy } from "lucide-react";
+import { CalendarClock, PartyPopper, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { currentOrNextEvent, eventAt } from "@/game/events";
@@ -10,7 +10,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { showBrowserNotification } from "@/store/browserNotifyStore";
 import { formatDuration } from "@/lib/utils";
 import { EmojiIcon } from "@/components/ui/game-icon";
-import { HudChip } from "@/components/ui/hud";
+import { HudChip, EmptyState } from "@/components/ui/hud";
 
 const SEEN_KEY = "cosmic-empires:last-event";
 
@@ -28,8 +28,8 @@ function useEventAnnouncer(key: string | undefined, title: string, body: string)
     } catch {
       /* stockage indisponible : annonce à chaque chargement, tant pis */
     }
-    toast(title, { description: body, icon: "🎉", duration: 8000 });
-    showBrowserNotification(`🎉 ${title}`, body, key);
+    toast(title, { description: body, icon: <PartyPopper className="h-4 w-4" />, duration: 8000 });
+    showBrowserNotification(title, body, key);
   }, [key, title, body]);
 }
 
@@ -64,7 +64,7 @@ export function EventCard() {
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center gap-2">
         <CalendarClock className="h-4 w-4 text-gold-glow" />
-        <h3 className="font-display text-sm text-slate-100">Événements et saison</h3>
+        <h3 className="hud-title text-sm text-slate-100">Événements et saison</h3>
       </div>
       {event ? (
         <div className={active ? "hud-callout hud-tone-gold p-3" : "hud-cut-sm bg-black/20 p-3"}>
@@ -77,7 +77,7 @@ export function EventCard() {
           <p className="mt-1 text-xs text-slate-400">{event.type.description}</p>
         </div>
       ) : (
-        <p className="text-xs text-slate-500">Aucun événement programmé.</p>
+        <EmptyState size="sm" icon={<CalendarClock />} title="Aucun événement programmé" />
       )}
       <Link to="/game/palmares" className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200">
         <Trophy className="h-3.5 w-3.5 text-gold-glow" />

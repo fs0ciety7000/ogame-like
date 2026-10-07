@@ -397,7 +397,7 @@ export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, on
       {interactive && current && (
         <div id={`holo-${current.id}`} className="pointer-events-none absolute inset-x-0 bottom-3 flex flex-col items-center gap-0.5 text-center">
           <span className={cn("font-display text-sm", current.locked ? "text-slate-500" : "text-slate-100")}>{current.locked ? "???" : current.label}</span>
-          {current.sub && <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{current.sub}</span>}
+          {current.sub && <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{current.sub}</span>}
         </div>
       )}
     </div>

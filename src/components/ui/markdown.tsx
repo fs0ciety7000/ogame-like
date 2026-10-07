@@ -16,7 +16,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
     const token = m[0];
     const key = `${keyPrefix}-${i++}`;
     if (token.startsWith("**")) out.push(<strong key={key} className="text-slate-100">{token.slice(2, -2)}</strong>);
-    else if (token.startsWith("`")) out.push(<code key={key} className="rounded bg-space-800 px-1 font-mono text-[0.85em] text-cyan-glow">{token.slice(1, -1)}</code>);
+    else if (token.startsWith("`")) out.push(<code key={key} className="bg-space-800 px-1 font-mono text-[0.85em] text-cyan-glow">{token.slice(1, -1)}</code>);
     else {
       const [, label, href] = token.match(/\[([^\]]+)\]\(([^)]+)\)/)!;
       const safe = /^(https?:\/\/|\/)/.test(href) ? href : "#";
@@ -36,7 +36,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
 export function ChangelogBadgePill({ badge, className = "" }: { badge: ChangelogBadge; className?: string }) {
   return (
     <span
-      className={`mr-1.5 inline-flex items-center border px-1.5 py-px align-[1px] font-mono text-[10px] font-semibold uppercase tracking-wider ${className}`}
+      className={`mr-1.5 inline-flex items-center border px-1.5 py-px align-[1px] font-mono text-[11px] font-semibold uppercase tracking-wider ${className}`}
       style={{ color: badge.color, borderColor: `${alpha(badge.color, 40)}`, background: `${alpha(badge.color, 8)}` }}
     >
       {badge.label}

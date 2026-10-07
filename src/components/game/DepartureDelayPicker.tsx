@@ -1,5 +1,5 @@
 import { Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* 5.23 : planificateur de flottes : décollage immédiat ou programmé.
    Les unités quittent la base tout de suite ; départ et arrivée sont décalés. */
@@ -15,7 +15,7 @@ export function DepartureDelayPicker({ value, onChange, className }: { value: nu
   const departAt = value > 0 ? new Date(Date.now() + value * 60_000) : null;
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">
+      <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">
         <Clock className="h-3.5 w-3.5" /> Décollage
       </span>
       <div className="flex flex-wrap gap-1">
@@ -35,7 +35,7 @@ export function DepartureDelayPicker({ value, onChange, className }: { value: nu
       </div>
       {departAt && (
         <p className="text-[11px] text-slate-500">
-          Départ à <span className="font-mono text-slate-300">{departAt.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span> : les unités sont engagées dès maintenant, la flotte reste rappelable jusqu'à l'impact.
+          Départ à <span className="font-mono text-slate-300">{formatDateTime(departAt, "time")}</span> : les unités sont engagées dès maintenant, la flotte reste rappelable jusqu'à l'impact.
         </p>
       )}
     </div>

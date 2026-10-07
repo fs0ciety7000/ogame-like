@@ -165,7 +165,7 @@ const LaneNode = memo(function LaneNode({ data, width, height }: NodeProps<LaneF
       className="hud-cut relative border border-white/5 bg-white/[0.015]"
       style={{ width, height }}
     >
-      <span className="absolute left-3 top-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
+      <span className="absolute left-3 top-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">
         {data.label}
       </span>
     </div>

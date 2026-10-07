@@ -214,7 +214,7 @@ export function MoonPanel({ player }: { player: PlayerState }) {
           <div>
             <p className="text-xs text-slate-300">{text}</p>
             <HudMeter className="mt-1.5" percent={moonPity(player) * 100} tone="var(--color-violet-glow)" />
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+            <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
               Réserve <span className="tabular-nums">{Math.round(moonPity(player) * 100)} %</span> · +<span className="tabular-nums">{Math.round((Number(MOON_RULES.pityPerDefense) || 0) * 100)} %</span> par combat subi
             </p>
           </div>
@@ -289,9 +289,9 @@ export function MoonPanel({ player }: { player: PlayerState }) {
 
       {level > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="hud-eyebrow text-[10px] text-slate-500">Flottes qui te visent</p>
+          <p className="hud-eyebrow text-[11px] text-slate-500">Flottes qui te visent</p>
           {incoming.length === 0 ? (
-            <p className="text-xs text-slate-500">Aucune attaque en approche.</p>
+            <EmptyState size="sm" icon={<Radar />} title="Aucune attaque en approche" />
           ) : (
             <ul className="flex flex-col gap-1.5">
               {incoming.map((l) => (
@@ -325,7 +325,7 @@ export function AlliedThreatsPanel() {
   const now = Date.now();
   const allies = (data?.allies ?? []).filter((a) => a.arriveAtMs > now);
   return (
-    <HudPanel icon={<Radar />} title="Alliés menacés" tone={allies.length > 0 ? "danger" : "muted"} aside={<span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">portée <span className="tabular-nums">{formatDecimal(phalanxRange(player), 0)}</span></span>}>
+    <HudPanel icon={<Radar />} title="Alliés menacés" tone={allies.length > 0 ? "danger" : "muted"} aside={<span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">portée <span className="tabular-nums">{formatDecimal(phalanxRange(player), 0)}</span></span>}>
       {allies.length === 0 ? (
         <EmptyState size="sm" icon={<Radar />} title="Aucun allié menacé">
           Ta phalange te signale toute attaque de joueur sur un allié dans ta portée.

@@ -67,6 +67,54 @@ export function formatClock(totalSeconds: number): string {
   return `${m}:${r.toString().padStart(2, "0")}`;
 }
 
+/** 6.14.83 (AD-29) : formats de date et d'heure du jeu, en un seul endroit (jamais `toLocale*String` dans un composant). */
+const HM = { hour: "2-digit", minute: "2-digit" } as const;
+const DATE_STYLES = {
+  /** 14:05 */
+  time: HM,
+  /** 14:05:09 */
+  timeSec: { ...HM, second: "2-digit" },
+  /** 7 oct. */
+  dayShort: { day: "numeric", month: "short" },
+  /** 7 octobre */
+  day: { day: "numeric", month: "long" },
+  /** 7 octobre 2026 */
+  date: { day: "numeric", month: "long", year: "numeric" },
+  /** 07/10/2026 */
+  numeric: { day: "2-digit", month: "2-digit", year: "numeric" },
+  /** mercredi 7 */
+  weekdayNum: { weekday: "long", day: "numeric" },
+  /** mercredi 7 octobre */
+  weekday: { weekday: "long", day: "numeric", month: "long" },
+  /** 7 oct. 14:05 */
+  dayShortTime: { day: "numeric", month: "short", ...HM },
+  /** 7 octobre à 14:05 */
+  dayTime: { day: "numeric", month: "long", ...HM },
+  /** mer. 7 oct., 14:05 */
+  short: { weekday: "short", day: "numeric", month: "short", ...HM },
+  /** mercredi 7 octobre à 14:05 */
+  long: { weekday: "long", day: "numeric", month: "long", ...HM },
+  /** mercredi à 14:05 */
+  weekdayTime: { weekday: "long", ...HM },
+  /** mercredi 7 octobre 2026 à 14:05 */
+  full: { dateStyle: "full", timeStyle: "short" },
+} as const satisfies Record<string, Intl.DateTimeFormatOptions>;
+
+export type DateTimeStyle = keyof typeof DATE_STYLES;
+
+/** Fuseau des rendez-vous du serveur (boss, maintenance, casino, Chroniques, agenda) : l'heure de Paris, la même pour tous. */
+export const SERVER_TIME_ZONE = "Europe/Paris";
+
+/**
+ * Date ou heure en français. `zone` : `"local"` (défaut) pour un moment propre au joueur (arrivée d'une flotte,
+ * message, journal) ; `"server"` pour un rendez-vous fixé par le serveur, affiché à l'heure de Paris partout.
+ */
+export function formatDateTime(at: number | Date, style: DateTimeStyle = "long", zone: "local" | "server" = "local"): string {
+  const d = typeof at === "number" ? new Date(at) : at;
+  const opts: Intl.DateTimeFormatOptions = zone === "server" ? { ...DATE_STYLES[style], timeZone: SERVER_TIME_ZONE } : DATE_STYLES[style];
+  return withNbsp(new Intl.DateTimeFormat("fr-FR", opts).format(d));
+}
+
 export function timeAgo(ms: number): string {
   const diff = Math.max(0, Date.now() - ms);
   const s = Math.floor(diff / 1000);

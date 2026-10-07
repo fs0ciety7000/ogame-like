@@ -39,7 +39,7 @@ export function BlogLatest({ limit = 3, className = "" }: { limit?: number; clas
         <span className="hud-eyebrow flex items-center gap-2 text-cyan-glow">
           <Newspaper className="h-3.5 w-3.5" /> Devblog
         </span>
-        <a href={BLOG_URL} target="_blank" rel="noopener" className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500 transition hover:text-cyan-glow">
+        <a href={BLOG_URL} target="_blank" rel="noopener" className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500 transition hover:text-cyan-glow">
           Tout lire <ArrowUpRight className="h-3 w-3" />
         </a>
       </header>
@@ -57,9 +57,9 @@ export function BlogLatest({ limit = 3, className = "" }: { limit?: number; clas
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: cat.color }}>
+                  <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: cat.color }}>
                     {cat.label}
-                    <span className="text-slate-600">· {blogDate(Date.parse(p.publishedAt))}</span>
+                    <span className="text-slate-500">· {blogDate(Date.parse(p.publishedAt))}</span>
                   </span>
                   <span className="mt-0.5 block truncate text-sm font-semibold text-slate-100 group-hover:text-cyan-glow">{p.title}</span>
                   {p.excerpt && <span className="line-clamp-1 text-xs text-slate-400">{p.excerpt}</span>}

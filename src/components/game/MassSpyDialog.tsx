@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Radar, RefreshCw } from "lucide-react";
+import { Radar, RefreshCw, Satellite } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -116,18 +116,18 @@ export function MassSpyDialog({ open, onClose, candidates }: { open: boolean; on
         {need > owned && picked.length > 0 && <p className="text-xs text-ember-glow">Pas assez de sondes à quai pour toutes les cibles.</p>}
 
         <div className="mt-4 flex items-center gap-2">
-          <h3 className="font-display text-sm text-slate-100">Comparatif des derniers rapports</h3>
+          <h3 className="hud-title text-sm text-slate-100">Comparatif des derniers rapports</h3>
           <Button variant="ghost" size="sm" className="ml-auto" disabled={picked.length === 0} onClick={() => void refresh()}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
           </Button>
         </div>
         {picked.length === 0 ? (
-          <EmptyState size="sm" icon="🛰️" title="Aucune cible">Choisis jusqu'à {MASS_SPY_MAX} joueurs ci-dessus.</EmptyState>
+          <EmptyState size="sm" icon={<Satellite />} title="Aucune cible">Choisis jusqu'à {MASS_SPY_MAX} joueurs ci-dessus.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-xs">
               <thead>
-                <tr className="text-left font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                <tr className="text-left font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500">
                   <th className="py-1 pr-2">Joueur</th>
                   <th className="py-1 pr-2">Rapport</th>
                   <th className="py-1 pr-2 text-right">Ressources</th>

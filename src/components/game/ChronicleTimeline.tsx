@@ -7,13 +7,13 @@ import { TokenIcon } from "@/components/casino/TokenIcon";
 import { AmberAmount } from "@/components/ui/amber";
 import { episodeUnlockMs, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective } from "@/game/chronicles";
 import { describePassReward, PASS_POINTS } from "@/game/seasonPass";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* 5.15.11 : les quatre épisodes du mois en frise (1, 8, 15 et 22), avec ce que
    rapporte chacun : points de passe, bonus (jetons, Ambre) et récompense propre.
    Sert à la page Chroniques et à l'aperçu de l'administration (sans joueur). */
 
-const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" });
+const fmtDay = (ms: number) => formatDateTime(ms, "dayShort", "server");
 
 export interface EpisodeView {
   progress: number;
@@ -68,7 +68,7 @@ export function ChronicleTimeline({
                 className={cn("grid h-6 w-6 rotate-45 place-items-center border", locked ? "border-white/15 bg-space-950" : done ? "border-transparent" : "bg-space-950")}
                 style={done ? { background: accent } : locked ? undefined : { borderColor: accent }}
               >
-                <span className="-rotate-45 font-mono text-[10px] font-bold text-slate-100">{done ? <Check className="h-3 w-3 text-space-950" /> : i + 1}</span>
+                <span className="-rotate-45 font-mono text-[11px] font-bold text-slate-100">{done ? <Check className="h-3 w-3 text-space-950" /> : i + 1}</span>
               </span>
             </span>
           );
@@ -92,7 +92,7 @@ export function ChronicleTimeline({
               className={cn("hud-cut-sm flex flex-col gap-2 border bg-white/[0.02] p-3", done ? "border-mint-glow/30" : ready ? "border-gold-glow/60" : "border-white/10", locked && "opacity-60")}
             >
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
                   Épisode {i + 1} · {fmtDay(unlock)}
                 </span>
                 {done && <Check className="h-3.5 w-3.5 text-mint-glow" />}

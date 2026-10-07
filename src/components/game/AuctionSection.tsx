@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Gavel, Gem, History, Puzzle, Tag, Timer, Trophy, X } from "lucide-react";
+import { Gavel, Gem, History, Puzzle, Tag, Timer, Trophy, X, Amphora } from "lucide-react";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudCallout, HudChip, StatTile } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ function CurrencySelect({ value, onChange }: { value: AuctionCurrency; onChange:
     value: c,
     label: currencyLabel(c),
     icon: <CurrencyIcon res={c} />,
-    hint: <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{CURRENCY_GROUPS[currencyKind(c)]}</span>,
+    hint: <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">{CURRENCY_GROUPS[currencyKind(c)]}</span>,
   }));
   return <IconSelect value={value} onChange={onChange} options={options} size="sm" ariaLabel="Monnaie de la vente" />;
 }
@@ -105,7 +105,7 @@ function SellPanel() {
   return (
     <HudPanel icon={<Tag />} title="Mettre en vente" tone="gold">
       {lots.length === 0 ? (
-        <EmptyState icon="🏺" title="Rien à vendre" action={<EmptyAction to="/game/etat-major?onglet=modules">Voir mes modules</EmptyAction>} className="p-0">
+        <EmptyState icon={<Amphora />} title="Rien à vendre" action={<EmptyAction to="/game/etat-major?onglet=modules">Voir mes modules</EmptyAction>} className="p-0">
           Les reliques non équipées (sauf mythiques) et les plans de modules pas encore fabriqués se vendent ici.
         </EmptyState>
       ) : (
@@ -129,19 +129,19 @@ function SellPanel() {
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Monnaie</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Monnaie</span>
               <CurrencySelect value={res} onChange={(v) => {
                   setRes(v);
                   setPrice((p) => Math.max(p, minStartFor(v)));
                 }} />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Mise à prix</span>
+              <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Mise à prix</span>
               <NumberInput size="sm" quick={false} min={minStartFor(res)} step={currencyKind(res) === "common" ? resourceStep(Math.max(1000, price * 10)) : 1} value={price} onChange={setPrice} aria-label="Mise à prix" />
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Durée</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Durée</span>
             {AUCTION_RULES.durationsH.map((h) => (
               <HudChip key={h} size="sm" tone={hours === h ? "gold" : "neutral"} asChild>
                 <button type="button" onClick={() => setHours(h)} aria-pressed={hours === h}>
@@ -308,7 +308,7 @@ export function AuctionSection() {
           }
         >
           {loaded && visible.length === 0 && (
-            <EmptyState icon="🔨" title="Aucune vente" className="p-0">
+            <EmptyState icon={<Gavel />} title="Aucune vente" className="p-0">
               {filter === "all" ? "Personne ne vend pour l'instant : sois le premier à mettre une relique ou un plan aux enchères." : "Rien dans ce filtre."}
             </EmptyState>
           )}
@@ -325,7 +325,7 @@ export function AuctionSection() {
           <PriceHistoryPanel history={history} />
           <HudPanel icon={<History />} title="Mes ventes et mises closes" tone="muted">
             {closed.length === 0 ? (
-              <p className="text-sm text-slate-500">Rien de clos pour l'instant.</p>
+              <EmptyState size="sm" icon={<Gavel />} title="Rien de clos pour l'instant" />
             ) : (
               <ul className="flex flex-col divide-y divide-white/5">
                 {closed.map((a) => {

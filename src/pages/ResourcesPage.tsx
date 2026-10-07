@@ -78,13 +78,13 @@ export function ResourcesPage() {
                   <ResourceIcon id={res.id} className="h-8 w-8" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
-                  <AnimatedNumber value={resources[res.id]} format={formatNumber} className="hud-title block text-xl tabular-nums text-slate-100" />
+                  <p className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
+                  <AnimatedNumber value={resources[res.id]} format={formatNumber} className="font-mono font-bold tabular-nums block text-xl text-slate-100" />
                 </div>
               </div>
               {res.rarity === "common" && Number.isFinite(economy.capacity) && (
                 <div className="relative mt-3">
-                  <div className="flex justify-between font-mono text-[10px] text-slate-500">
+                  <div className="flex justify-between font-mono text-[11px] text-slate-500">
                     <ProductionWhy player={player} res={res.id}>
                       <span className={(rates[res.id] ?? 0) > 0 ? "text-mint-glow" : (rates[res.id] ?? 0) < 0 ? "text-danger-glow" : ""}>
                         {(rates[res.id] ?? 0) > 0 ? "+" : ""}
@@ -100,7 +100,7 @@ export function ResourcesPage() {
                   />
                 </div>
               )}
-              {res.rarity === "rare" && <p className="relative mt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-gold-glow/70">Ressource rare</p>}
+              {res.rarity === "rare" && <p className="relative mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-gold-glow/70">Ressource rare</p>}
             </Card>
           </motion.div>
         ))}
@@ -121,23 +121,23 @@ export function ResourcesPage() {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Je vends</label>
+              <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">Je vends</label>
               <ResourceSelect value={sellId} onChange={setSellId} ariaLabel="Ressource vendue" className="w-full" />
             </div>
 
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Je reçois</label>
+              <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">Je reçois</label>
               <ResourceSelect value={buyId} onChange={setBuyId} ariaLabel="Ressource reçue" className="w-full" />
             </div>
 
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Quantité</label>
+              <label className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">Quantité</label>
               <NumberInput min={1} max={Math.max(1, Math.floor(resources[sellId] ?? 0))} value={amount} onChange={setAmount} aria-label="Quantité vendue" className="w-full" />
             </div>
           </div>
 
           <HudCallout tone="accent" className="flex items-center justify-between px-4 py-3 text-sm">
-            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tu recevras</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-400">Tu recevras</span>
             <span className="flex flex-col items-end gap-0.5">
               <span className="flex items-center gap-1.5 text-lg text-cyan-glow">
                 <span className="font-mono tabular-nums">{formatNumber(quote.net)}</span> <ResourceIcon id={buyRes.id} /> <span className="font-display">{buyRes.name}</span>

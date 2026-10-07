@@ -32,7 +32,7 @@ export function AscensionStars({ count, full, className }: { count?: number; ful
           ),
         )}
       </span>
-      {full && <span className="font-mono text-[10px] uppercase tracking-[0.16em]">{label}</span>}
+      {full && <span className="font-mono text-[11px] uppercase tracking-[0.16em]">{label}</span>}
     </span>
   );
 }

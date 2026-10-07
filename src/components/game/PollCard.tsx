@@ -40,7 +40,7 @@ export function PollCard({ id, poll, className }: { id: string; poll: Poll; clas
 
   return (
     <div className={cn("hud-cut-sm flex flex-col gap-2 border border-cyan-glow/25 bg-space-950/80 p-3 backdrop-blur-sm", className)} onClick={(e) => e.stopPropagation()}>
-      <p className="hud-eyebrow flex items-center gap-2 text-[10px] text-cyan-glow">
+      <p className="hud-eyebrow flex items-center gap-2 text-[11px] text-cyan-glow">
         <BarChart3 className="h-3.5 w-3.5" aria-hidden /> Sondage
         <span className="ml-auto font-mono normal-case tracking-normal text-slate-500">
           {open ? (poll.closesAtMs ? `clôture dans ${formatDuration(Math.max(0, poll.closesAtMs - Date.now()) / 1000)}` : "ouvert") : "clos"}

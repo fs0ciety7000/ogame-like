@@ -150,7 +150,7 @@ export function SeasonPassPage() {
 
       {challenge && (
         <Card className="flex flex-col gap-2 p-4" style={season ? { borderLeft: `2px solid ${season.theme.accent}` } : undefined}>
-          <p className="hud-eyebrow text-[10px] text-slate-400">Défi en cours · palier {challengeTier}</p>
+          <p className="hud-eyebrow text-[11px] text-slate-400">Défi en cours · palier {challengeTier}</p>
           <div className="flex flex-wrap gap-1.5">
             {challenge.reqs.map((r) => (
               <HudChip key={r.key} size="md" tone={r.met ? "mint" : "accent"} className="max-w-full whitespace-normal normal-case tracking-normal">
@@ -264,7 +264,7 @@ export function SeasonPassPage() {
 function SeasonStory({ season, tier }: { season: PassSeason; tier: number }) {
   return (
     <Card className="flex flex-col gap-3 p-4" style={{ borderTop: `2px solid ${season.theme.accent}` }}>
-      <p className="hud-eyebrow text-[10px]" style={{ color: season.theme.accent }}>
+      <p className="hud-eyebrow text-[11px]" style={{ color: season.theme.accent }}>
         Scénario de la saison
       </p>
       <p className="text-sm text-slate-300">{season.scenario.synopsis}</p>
@@ -273,7 +273,7 @@ function SeasonStory({ season, tier }: { season: PassSeason; tier: number }) {
           const open = tier >= m.tier;
           return (
             <div key={m.tier} className={cn("hud-cut-sm flex flex-col gap-2 border p-3", open ? "border-white/10 bg-white/[0.03]" : "border-dashed border-white/10")}>
-              <p className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              <p className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 {m.title} {m.tier > 0 && <span>palier {m.tier}</span>}
               </p>
               {open ? (
@@ -309,7 +309,7 @@ function FinalReward({ season, def, reached, claimed }: { season: PassSeason; de
       <div className="flex min-w-0 flex-1 items-start gap-4">
         <img src={assetUrl(def.portrait)} alt="" className="hud-cut h-28 w-24 shrink-0 border object-cover" style={{ borderColor: season.theme.accent }} />
         <div className="min-w-0 flex-1">
-          <p className="hud-eyebrow text-[10px] text-gold-glow">Dernier palier · commandant de saison</p>
+          <p className="hud-eyebrow text-[11px] text-gold-glow">Dernier palier · commandant de saison</p>
           <h3 className="hud-title mt-1 text-lg text-slate-100">
             {def.title} {def.name}
           </h3>

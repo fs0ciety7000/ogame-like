@@ -122,7 +122,7 @@ export function ProgressHub({ now }: { now: number }) {
             className={cn("hud-cut-sm relative border bg-space-900/50 px-3 py-2 text-left transition-colors hover:border-cyan-glow/40", detail && tab === s.tab ? "border-cyan-glow/30" : "border-white/10")}
           >
             <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: HUD_TONE[s.tone] }} />
-            <span className="block font-mono text-[10px] uppercase tracking-wider text-slate-500">{s.label}</span>
+            <span className="block font-mono text-[11px] uppercase tracking-wider text-slate-500">{s.label}</span>
             <span className="block font-mono text-lg text-slate-100">{s.value}</span>
             <span className={cn("block text-[11px]", s.ready ? "text-mint-glow" : "text-slate-500")}>{s.sub}</span>
           </button>

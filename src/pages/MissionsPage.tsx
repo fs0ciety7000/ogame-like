@@ -105,7 +105,7 @@ export function MissionsPage() {
                       .filter(([k]) => k !== "xp")
                       .map(([res, amount]) => (
                         <span key={res} className="flex items-baseline gap-1">
-                          <b className="hud-title text-xl text-slate-100">+{formatNumber(amount)}</b>
+                          <b className="font-mono font-bold tabular-nums text-xl text-slate-100">+{formatNumber(amount)}</b>
                           <ResourceIcon id={res} className="h-6 w-6 self-center" />
                         </span>
                       ))}

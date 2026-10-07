@@ -46,6 +46,9 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 ## Plus clair, plus court
 
 - Pages plus courtes sur téléphone, bâtiments en liste au-delà de 10.
+- **Nouveaux commandants** : le menu commence par **13 entrées** et s'ouvre au fil de la progression (Galaxie et Alliance à
+  Fer III, Colonies à Or III au plus tard), avec une notification « Nouveau : … » à chaque ouverture et des objectifs du jour tirés
+  parmi les pages ouvertes. Les comptes existants arrivés à **Fer II** voient tout, comme avant.
 - **Portefeuille** : chaque chiffre expliqué, d'où il vient.
 - Confirmations avant les départs et les demi-tours irréversibles.
 - **Journal complet** : ce qui se termine pendant le rattrapage de la nuit, un changement de pseudo ou un contrat de commerce arrive au

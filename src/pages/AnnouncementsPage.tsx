@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { PagedList } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
-import { Play } from "lucide-react";
+import { Play, Megaphone } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -28,7 +28,7 @@ export function AnnouncementsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Annonces" description="Toutes les annonces des mises à jour, de la plus récente à la plus ancienne. Clique pour la revoir en plein écran." />
-      {list.length === 0 && <EmptyState icon="📣" title="Aucune annonce">Les messages de l'équipe s'afficheront ici.</EmptyState>}
+      {list.length === 0 && <EmptyState icon={<Megaphone />} title="Aucune annonce">Les messages de l'équipe s'afficheront ici.</EmptyState>}
       <PagedList items={list} className="grid gap-3 md:grid-cols-2" render={(a, i) => {
           const gold = a.tone === "gold";
           const art = a.art ?? a.artMobile ?? a.spotlight?.image;
@@ -52,7 +52,7 @@ export function AnnouncementsPage() {
                     )}
                   </div>
                   <div className="flex flex-1 flex-col gap-1.5 p-4">
-                    <p className={cn("hud-eyebrow flex items-center gap-2 text-[10px]", gold ? "text-gold-glow" : "text-danger-glow")}>
+                    <p className={cn("hud-eyebrow flex items-center gap-2 text-[11px]", gold ? "text-gold-glow" : "text-danger-glow")}>
                       {a.emblem && <img src={assetUrl(a.emblem)} alt="" className="h-5 w-5" />}
                       {a.eyebrow}
                     </p>

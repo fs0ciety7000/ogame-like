@@ -68,16 +68,16 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | livré (6.14.74, `docs/changes/6.14.74-deblocage-moteur.md`) |
 | 51b | DP-L2 | Déblocage progressif : interface (menu, mobile, Ctrl+K, « Prochaine ouverture », « Tout afficher ») | M | livré (6.14.75, `docs/changes/6.14.75-deblocage-interface.md`) |
 | 51c | DP-L3 | Déblocage progressif : Prise en main, Carnet, panneau Lune, passe | S | livré (6.14.76, `docs/changes/6.14.76-deblocage-prise-en-main.md`) |
-| 51d | DP-L4 | Déblocage progressif : serveur (objectifs du jour filtrés, danger qui ouvre sa page) | S | à faire |
-| 51e | DP-L5 | Déblocage progressif : éditeur dans l'admin | S | à faire |
-| 51f | DP-L6 | Déblocage progressif : chaîne de contenu et livraison | S | à faire |
+| 51d | DP-L4 | Déblocage progressif : serveur (objectifs du jour filtrés, danger qui ouvre sa page) | S | livré (6.14.79, `docs/changes/6.14.79-deblocage-serveur.md`) |
+| 51e | DP-L5 | Déblocage progressif : éditeur dans l'admin | S | livré (6.14.80, `docs/changes/6.14.80-deblocage-admin.md`) |
+| 51f | DP-L6 | Déblocage progressif : chaîne de contenu et livraison | S | livré (6.14.81, `docs/changes/6.14.81-deblocage-chaine.md`) ; essai pré-prod d'un compte neuf au prochain push |
 | 52 | AP-L9 | Mutateurs en contenu, anti-répétition | M | à faire |
 | 53 | AP-L10 | Variété narrative (banques de textes réglables) | M | à faire |
 | 54 | AP-L11 | Illustrations de saison (thèmes, portraits, second boss par archétype) | M | à faire |
 | 55 | AP-L12 | Catalogue des saisons au-delà de 36 mois | M | à faire |
 | 56 | AP-L14 | Outil `procedural-sim.mjs` dans le dépôt | S | à faire |
-| 57 | UX-9 | Cohérence visuelle (couleurs de décor, titres, icônes à la place des emoji) | M | à faire |
-| 58 | UX-10 | Hygiène et gardes du design system | M | à faire |
+| 57 | UX-9 | Cohérence visuelle (couleurs de décor, titres, icônes à la place des emoji) | M | livré (6.14.82, `docs/changes/6.14.82-coherence-visuelle.md`) ; Réglages mobile (AD-22) et pastilles du menu reportés (fichiers d'une autre tâche) |
+| 58 | UX-10 | Hygiène et gardes du design system | M | livré (6.14.83, `docs/changes/6.14.83-hygiene-design.md`) ; exceptions comptées (admin, menu, en-tête, accueil, cockpit, Succès, Réglages) à reprendre |
 | 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | à faire |
 | 60 | AC-H | Ménage, boutons « Lancer maintenant », test « tour des actions » | M | à faire |
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |

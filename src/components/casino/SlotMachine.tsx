@@ -133,7 +133,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
       <div className="slot-marquee">
         <p className="slot-title">Casino orbital</p>
         <div className="slot-jackpot">
-          <span className="hud-eyebrow text-[10px] text-slate-400">Gros lot 7 · 7 · 7</span>
+          <span className="hud-eyebrow text-[11px] text-slate-400">Gros lot 7 · 7 · 7</span>
           <span className="slot-led">{jackpotLabel}</span>
         </div>
       </div>
@@ -156,7 +156,7 @@ export function SlotMachine({ reels, spinKey, spinning, win, tokens, jackpotLabe
 
       <div className="slot-console">
         <div className="slot-credits">
-          <span className="hud-eyebrow text-[10px] text-slate-400">Jetons</span>
+          <span className="hud-eyebrow text-[11px] text-slate-400">Jetons</span>
           <span className="slot-led">
             <TokenIcon size={18} />
             {String(tokens).padStart(2, "0")}

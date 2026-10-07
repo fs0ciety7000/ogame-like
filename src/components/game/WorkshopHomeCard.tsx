@@ -42,7 +42,7 @@ export function WorkshopHomeCard() {
             <Link to="/game/batiments?onglet=atelier">Prêts : {formatNumber(ready)}</Link>
           </HudChip>
         )}
-        <Link to="/game/batiments?onglet=atelier" className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
+        <Link to="/game/batiments?onglet=atelier" className="ml-auto font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
           Atelier →
         </Link>
       </div>
@@ -56,7 +56,7 @@ export function WorkshopHomeCard() {
               {formatNumber(next.job.count)} × {findUnit(next.job.unitId)?.name ?? next.job.unitId}
             </p>
             <HudMeter percent={next.progress * 100} className="mt-2 h-1.5" />
-            <p className="mt-1 font-mono text-[10px] text-slate-500">prêtes dans {left(next.endsAtMs)}</p>
+            <p className="mt-1 font-mono text-[11px] text-slate-500">prêtes dans {left(next.endsAtMs)}</p>
           </div>
         ) : null}
         {worst ? (
@@ -69,7 +69,7 @@ export function WorkshopHomeCard() {
               </span>
             </p>
             <HudMeter percent={worst.percent * 100} tone={HUD_TONE[tone]} className="mt-2 h-1.5" />
-            <p className="mt-1 font-mono text-[10px] text-slate-500">tout réparé dans {left(view.doneAtMs)}</p>
+            <p className="mt-1 font-mono text-[11px] text-slate-500">tout réparé dans {left(view.doneAtMs)}</p>
           </div>
         ) : null}
       </div>

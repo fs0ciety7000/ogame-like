@@ -292,7 +292,7 @@ function TreatyRow({ faction, player, busyThreat }: { faction: FactionDef; playe
               <div key={kind} className="hud-cut-sm flex flex-col gap-1.5 border border-white/10 bg-white/[0.02] p-2.5">
                 <p className="text-xs font-semibold text-slate-100">{TREATY_LABELS[kind].name}</p>
                 <p className="flex-1 text-[11px] leading-snug text-slate-400">{TREATY_LABELS[kind].effect}</p>
-                <p className="font-mono text-[10px] text-slate-500">
+                <p className="font-mono text-[11px] text-slate-500">
                   {cost} · {TREATY_RULES.durationDays} j{kind !== "embargo" ? ` · notoriété ≤ ${TREATY_RULES.maxNotoriety[kind]}` : ""}
                 </p>
                 <Button size="sm" variant={kind === "embargo" ? "danger" : "secondary"} disabled={busy !== null || busyThreat || blocked} onClick={() => void sign(kind)} title={blocked ? `Notoriété trop haute (${st.notoriety})` : busyThreat ? "Règle d'abord la menace en cours" : undefined}>
@@ -324,7 +324,7 @@ export function ThreatsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Menaces" title="Menaces" description="Les factions qui rôdent aux confins de la galaxie. Une seule à la fois peut te viser." />
-      {factions.length === 0 && <Card><EmptyState icon="☠️" title="Calme plat" action={<EmptyAction to="/game/unites?onglet=defense">Renforcer les défenses</EmptyAction>}>Aucune faction hostile active pour l'instant.</EmptyState></Card>}
+      {factions.length === 0 && <Card><EmptyState icon={<Skull />} title="Calme plat" action={<EmptyAction to="/game/unites?onglet=defense">Renforcer les défenses</EmptyAction>}>Aucune faction hostile active pour l'instant.</EmptyState></Card>}
       {factions.length > 1 ? (
         <Tabs value={current} onValueChange={setTab}>
           <TabsList>

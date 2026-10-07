@@ -197,7 +197,7 @@ export function BuildingsPage() {
           const planButton =
             // Utile quand le chantier est occupé ou que les ressources manquent ; sinon, « Améliorer » suffit.
             !isLocked && !planFull && plannable <= building.maxLevel && (activeUpgrade || !Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0))) ? (
-              <button type="button" disabled={pending === building.id} onClick={() => void handlePlan(building.id)} className="mt-1.5 w-full font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow/80 hover:text-cyan-glow hover:underline">
+              <button type="button" disabled={pending === building.id} onClick={() => void handlePlan(building.id)} className="mt-1.5 w-full font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow/80 hover:text-cyan-glow hover:underline">
                 + Programmer niv. {plannable}
               </button>
             ) : null;
@@ -269,7 +269,7 @@ export function BuildingsPage() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className={cn("mt-1 flex cursor-help items-baseline gap-1.5", isLocked && "max-sm:hidden")}>
-                          <b className="hud-title text-3xl leading-none text-slate-100">{level}</b>
+                          <b className="font-mono font-bold tabular-nums text-3xl leading-none text-slate-100">{level}</b>
                           <span className="font-mono text-xs text-slate-500">/ {building.maxLevel}</span>
                         </div>
                       </TooltipTrigger>
@@ -421,7 +421,7 @@ export function BuildingsPage() {
                 </div>
               </Card>
               {listMode && (
-                <button type="button" aria-expanded onClick={() => setOpenIds((o) => o.filter((id) => id !== building.id))} className="mt-1 flex w-full items-center justify-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500 hover:text-slate-200">
+                <button type="button" aria-expanded onClick={() => setOpenIds((o) => o.filter((id) => id !== building.id))} className="mt-1 flex w-full items-center justify-center gap-1 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500 hover:text-slate-200">
                   <ChevronUp className="h-3.5 w-3.5" /> Replier
                 </button>
               )}
@@ -503,7 +503,7 @@ function TierBadge({ level }: { level: number }) {
   if (!tier) return null;
   const { label, className } = TIER_LABEL[tier];
   return (
-    <span className={cn("absolute left-1.5 top-1.5 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em]", className)}>
+    <span className={cn("absolute left-1.5 top-1.5 px-1.5 py-0.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em]", className)}>
       Palier {label}
     </span>
   );

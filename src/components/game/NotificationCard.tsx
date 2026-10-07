@@ -148,11 +148,11 @@ export function NotificationCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[9px] uppercase tracking-[0.18em]" style={{ color: s.color }}>
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: s.color }}>
             {s.label}
           </span>
           {fresh && <span className="h-1.5 w-1.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }} aria-label="Nouveau" />}
-          <span className="ml-auto shrink-0 font-mono text-[10px] text-slate-500">{time ?? timeAgo(n.createdAtMs)}</span>
+          <span className="ml-auto shrink-0 font-mono text-[11px] text-slate-500">{time ?? timeAgo(n.createdAtMs)}</span>
         </div>
         <p className={cn("mt-0.5 font-semibold leading-snug", compact ? "text-[13px]" : "text-sm", fresh ? "text-slate-100" : "text-slate-200")}>{n.title}</p>
         <p className="mt-0.5 break-words text-xs leading-relaxed text-slate-400">{n.message}</p>

@@ -13,7 +13,7 @@ export function ServerPotCard() {
   const list = RESOURCE_LIST.map((r) => [r.id, pot.resources[r.id] ?? 0] as [ResourceId, number]).filter(([, v]) => v > 0);
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-gold-glow/25 bg-gold-glow/[0.04] px-3 py-2 text-xs text-slate-300">
-      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-gold-glow">
+      <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-gold-glow">
         <Coins className="h-3.5 w-3.5" /> Pot commun du serveur
       </span>
       {list.length === 0 && !(pot.amber > 0) ? (

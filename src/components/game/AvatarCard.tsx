@@ -115,7 +115,7 @@ function PresetGroup({ label, presets, busy, onPick }: { label: string; presets:
             className={cn("group relative aspect-square overflow-hidden border border-white/10 bg-space-950 transition hover:border-cyan-glow/60 disabled:opacity-50")}
           >
             <img src={p.src} alt={p.label} loading="lazy" className="h-full w-full object-cover object-top transition group-hover:scale-105" onError={() => setMissing((m) => ({ ...m, [p.id]: true }))} />
-            <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4 text-left text-[10px] text-slate-200">{p.label}</span>
+            <span className="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/90 to-transparent px-1.5 pb-1 pt-4 text-left text-[11px] text-slate-200">{p.label}</span>
             <Check className="absolute right-1 top-1 h-4 w-4 text-cyan-glow opacity-0 transition group-hover:opacity-100" />
           </button>
         ))}

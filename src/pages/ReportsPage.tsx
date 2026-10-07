@@ -4,7 +4,7 @@ import { SkeletonList } from "@/components/ui/skeleton";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bug, ChevronDown, ImagePlus, Send, X } from "lucide-react";
+import { Bug, ChevronDown, ImagePlus, Send, X, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +40,7 @@ export function ReportThread({ history }: { history: ReportEntry[] }) {
             aria-hidden
             className={cn("absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-space-900", h.staff ? "bg-cyan-glow" : "bg-slate-500")}
           />
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
             <span className={h.staff ? "text-cyan-glow" : "text-slate-300"}>{h.staff ? `Équipe · ${h.byName}` : h.byName || "Joueur"}</span> · {timeAgo(h.atMs)}
           </p>
           {h.kind === "created" && <p className="text-sm text-slate-400">Signalement envoyé.</p>}
@@ -73,7 +73,9 @@ function NewReportForm({ uid, onSent }: { uid: string; onSent: (r: GameReport) =
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
-  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
+  useEffect(() => {
+    return () => void (preview && URL.revokeObjectURL(preview));
+  }, [preview]);
 
   const submit = async () => {
     setBusy(true);
@@ -109,18 +111,18 @@ function NewReportForm({ uid, onSent }: { uid: string; onSent: (r: GameReport) =
             )}
           >
             <span className="block font-display text-xs font-semibold uppercase tracking-[0.1em]">{c.label}</span>
-            <span className="block truncate text-[10px] text-slate-500">{c.hint}</span>
+            <span className="block truncate text-[11px] text-slate-500">{c.hint}</span>
           </button>
         ))}
       </div>
       <label className="flex flex-col gap-1">
-        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">Titre</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">Titre</span>
         <Input value={title} maxLength={REPORT_RULES.titleMax} placeholder="Ex. : le menu ne se ferme pas sur mobile" onChange={(e) => setTitle(e.target.value)} />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="flex justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">
+        <span className="flex justify-between font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">
           Description
-          <span className="normal-case tracking-normal text-slate-600">
+          <span className="normal-case tracking-normal text-slate-500">
             {description.length} / {REPORT_RULES.descriptionMax}
           </span>
         </span>
@@ -130,7 +132,7 @@ function NewReportForm({ uid, onSent }: { uid: string; onSent: (r: GameReport) =
           maxLength={REPORT_RULES.descriptionMax}
           placeholder="Ce que tu faisais, ce qui s'est passé, ce que tu attendais…"
           onChange={(e) => setDescription(e.target.value)}
-          className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-glow/60"
+          className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-glow/60"
         />
       </label>
       <div className="flex flex-wrap items-center gap-3">
@@ -199,10 +201,10 @@ function ReportCard({ report, open, onToggle }: { report: GameReport; open: bool
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <ReportStatusTag status={report.status} />
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
               {category} · {timeAgo(report.updatedAtMs)}
             </span>
-            {unread > 0 && <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold text-space-950">{unread} réponse(s)</span>}
+            {unread > 0 && <span className="bg-danger-glow px-1.5 font-mono text-[11px] font-bold text-space-950">{unread} réponse(s)</span>}
           </div>
           <p className="mt-1 truncate font-semibold text-slate-100">{report.title}</p>
         </div>
@@ -220,7 +222,7 @@ function ReportCard({ report, open, onToggle }: { report: GameReport; open: bool
               )}
               {report.resolution && (
                 <div className="border-l-2 border-mint-glow bg-mint-glow/[0.06] px-3 py-2">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-mint-glow">Résolution</p>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-mint-glow">Résolution</p>
                   <p className="whitespace-pre-line text-sm text-slate-200">{report.resolution}</p>
                 </div>
               )}
@@ -232,7 +234,7 @@ function ReportCard({ report, open, onToggle }: { report: GameReport; open: bool
                   maxLength={REPORT_RULES.commentMax}
                   placeholder={report.status === "resolved" || report.status === "rejected" ? "Le problème revient ? Écris ici pour rouvrir le signalement." : "Ajouter une précision…"}
                   onChange={(e) => setReply(e.target.value)}
-                  className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-glow/60"
+                  className="hud-cut-sm border border-cyan-glow/15 bg-space-900/80 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-glow/60"
                 />
                 <Button variant="secondary" size="sm" className="self-end" disabled={busy || !reply.trim()} onClick={() => void send()}>
                   <Send className="h-4 w-4" /> Envoyer
@@ -267,12 +269,12 @@ export function ReportsPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <NewReportForm uid={uid} onSent={(r) => setParams({ id: r.id }, { replace: true })} />
         <div className="flex flex-col gap-3">
-          <h2 className="hud-eyebrow text-[10px] text-slate-500">Mes signalements</h2>
+          <h2 className="hud-eyebrow text-[11px] text-slate-500">Mes signalements</h2>
           {reports === null ? (
             <SkeletonList rows={3} />
           ) : reports.length === 0 ? (
             <Card>
-              <EmptyState icon="🔧" title="Aucun signalement">Tout fonctionne ? Parfait. Sinon, décris le problème à gauche.</EmptyState>
+              <EmptyState icon={<Wrench />} title="Aucun signalement">Tout fonctionne ? Parfait. Sinon, décris le problème à gauche.</EmptyState>
             </Card>
           ) : (
             <PagedList items={reports} className="flex flex-col gap-3" render={(r) => <ReportCard key={r.id} report={r} open={openId === r.id} onToggle={() => toggle(r.id)} />} />

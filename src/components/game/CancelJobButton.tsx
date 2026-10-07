@@ -47,7 +47,7 @@ export function CancelJobButton({ target, className, compact }: { target: Cancel
         size="sm"
         variant="ghost"
         title="Annuler et récupérer une partie des ressources"
-        className={cn("text-slate-400 hover:text-danger-glow", compact ? "h-6 px-1.5 text-[10px]" : "h-7 px-2 text-xs", className)}
+        className={cn("text-slate-400 hover:text-danger-glow", compact ? "h-6 px-1.5 text-[11px]" : "h-7 px-2 text-xs", className)}
         onClick={() => {
           setNow(Date.now());
           setOpen(true);

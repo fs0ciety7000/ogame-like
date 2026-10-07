@@ -39,7 +39,7 @@ export function UpgradeCompare({ building, level, cost, seconds, children }: { b
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent className="w-64">
-        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">
+        <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">
           Niv. {level} → niv. {level + 1}
         </p>
         <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 gap-y-1 text-xs">
@@ -49,7 +49,7 @@ export function UpgradeCompare({ building, level, cost, seconds, children }: { b
               <span className="text-right font-mono tabular-nums text-slate-500">{r.before}</span>
               <span className={cn("text-right font-mono tabular-nums", r.before ? "text-mint-glow" : "text-slate-200")}>
                 {r.after}
-                {r.delta && <span className="ml-1 text-[10px] text-mint-glow/80">{r.delta}</span>}
+                {r.delta && <span className="ml-1 text-[11px] text-mint-glow/80">{r.delta}</span>}
               </span>
             </div>
           ))}

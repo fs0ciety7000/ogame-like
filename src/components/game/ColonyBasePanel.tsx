@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Anchor, Undo2 } from "lucide-react";
+import { Anchor, Undo2, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, HudChip } from "@/components/ui/hud";
@@ -55,7 +55,7 @@ export function ColonyBasePanel({ colony, player }: { colony: Colony; player: Pl
 
   return (
     <div className="mt-3">
-      <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+      <p className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
         Base avancée
         {!base && <HudChip size="sm" tone="neutral">aucune</HudChip>}
         {base?.status === "outbound" && <HudChip size="sm" tone="accent">en route</HudChip>}
@@ -129,7 +129,7 @@ function BaseDialog({ colony, player, onClose }: { colony: Colony; player: Playe
         </DialogDescription>
         <div className="mt-2 flex flex-col gap-1.5">
           {ids.length === 0 && (
-            <EmptyState size="sm" icon="🚀" title="Aucun vaisseau à quai">
+            <EmptyState size="sm" icon={<Rocket />} title="Aucun vaisseau à quai">
               Construis des vaisseaux d'attaque pour former une base.
             </EmptyState>
           )}
@@ -139,7 +139,7 @@ function BaseDialog({ colony, player, onClose }: { colony: Colony; player: Playe
               <div key={id} className="flex items-center gap-2 text-sm">
                 <span className="min-w-0 flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-12 shrink-0 text-right font-mono text-[10px] tabular-nums text-slate-500">/{formatNumber(owned)}</span>
+                <span className="w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-slate-500">/{formatNumber(owned)}</span>
               </div>
             );
           })}

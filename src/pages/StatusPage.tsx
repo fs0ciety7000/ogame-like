@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, CalendarClock, CheckCircle2, LogIn, RefreshCw, Rocket, Server, TriangleAlert, Wrench, XCircle } from "lucide-react";
+import { Activity, CalendarClock, CheckCircle2, LogIn, RefreshCw, Rocket, Server, TriangleAlert, Wrench, XCircle, CalendarCheck } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
-import { HUD_TONE, HudChip, type HudTone } from "@/components/ui/hud";
+import { HUD_TONE, HudChip, type HudTone, EmptyState } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { pb } from "@/lib/pocketbase";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { useAuthStore } from "@/store/authStore";
-import { cn, formatDuration, timeAgo } from "@/lib/utils";
+import { cn, formatDuration, timeAgo, formatDateTime } from "@/lib/utils";
 
 /* 5.26 : page de statut publique (/statut), lisible sans compte : état du
    jeu, des services et maintenance programmée. Relue toutes les 30 s. */
@@ -36,7 +36,7 @@ const SERVICES: { id: keyof PublicStatus["services"]; label: string; detail: str
 ];
 
 function fmtDate(ms: number) {
-  return new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(ms, "long", "server");
 }
 
 export function StatusPage() {
@@ -79,7 +79,7 @@ export function StatusPage() {
         <header className="flex flex-wrap items-center gap-3">
           <img src="/assets/logo/favicon-32.png?v=2.4" alt="" className="h-8 w-8" />
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-cyan-glow">Cosmic Empires · Statut</p>
+            <p className="hud-eyebrow text-[11px] text-cyan-glow">Cosmic Empires · Statut</p>
             <h1 className="hud-title text-2xl text-slate-100 sm:text-3xl">État des services</h1>
           </div>
           <Link to={user ? "/game" : "/"} className="flex items-center gap-1 border border-cyan-glow/40 px-2.5 py-1 text-xs text-cyan-glow hover:border-cyan-glow">
@@ -141,13 +141,13 @@ export function StatusPage() {
             <div className={cn("flex flex-col gap-1 text-sm")}>
               <p className="text-slate-100">
                 {fmtDate(status.scheduled.startAtMs)}
-                {status.scheduled.endsAtMs && ` → ${new Date(status.scheduled.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`}
+                {status.scheduled.endsAtMs && ` → ${formatDateTime(status.scheduled.endsAtMs, "time", "server")}`}
               </p>
               <p className="font-mono text-xs text-gold-glow">dans {formatDuration(Math.max(0, status.scheduled.startAtMs - now) / 1000)}</p>
               {status.scheduled.message && <p className="whitespace-pre-line text-xs text-slate-400">{status.scheduled.message}</p>}
             </div>
           ) : (
-            <p className="text-sm text-slate-500">Aucune maintenance prévue.</p>
+            <EmptyState size="sm" icon={<CalendarCheck />} title="Aucune maintenance prévue" />
           )}
         </HudPanel>
 

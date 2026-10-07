@@ -26,11 +26,11 @@ function EntryRow({ entry }: { entry: WalletEntry }) {
         </span>
         <span className="grid min-w-0 flex-1 grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
           <span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-mint-glow">D'où ça vient</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-mint-glow">D'où ça vient</span>
             <span className="block text-slate-300">{entry.earn}</span>
           </span>
           <span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-gold-glow">À quoi ça sert</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-gold-glow">À quoi ça sert</span>
             <span className="block text-slate-300">{entry.spend}</span>
           </span>
         </span>

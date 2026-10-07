@@ -133,7 +133,7 @@ export function SceneDialog({ title, lines, pseudo, onClose, onSkipAll, doneLabe
             />
           </AnimatePresence>
           <div className="flex flex-1 flex-col gap-3 p-5">
-            <p className="hud-eyebrow text-[10px] text-slate-500">{title}</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">{title}</p>
             <DialogTitle className="text-lg" style={{ color: sp.color }}>
               {sp.name}
             </DialogTitle>

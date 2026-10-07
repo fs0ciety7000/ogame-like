@@ -11,19 +11,7 @@ import { AscensionStars } from "@/components/game/AscensionCard";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { RankChip } from "@/components/game/LeaderboardPodium";
-import {
-  Sword,
-  Eye,
-  Search,
-  Gift,
-  Flag,
-  ShieldCheck,
-  ShieldPlus,
-  Mail,
-  Crosshair,
-  Radar,
-  Scale,
-} from "lucide-react";
+import { Sword, Eye, Search, Gift, Flag, ShieldCheck, ShieldPlus, Mail, Crosshair, Radar, Scale, Telescope } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +81,9 @@ export function PlayersPage() {
     Record<string, number>
   >({});
 
-  useEffect(() => subscribeLeaderboard(setPlayers), []);
+  useEffect(() => {
+    return subscribeLeaderboard(setPlayers);
+  }, []);
   // v3.8 : ouverture depuis la recherche globale (?fiche=uid, ?mode=alliances).
   useEffect(() => {
     const fiche = params.get("fiche");
@@ -117,7 +107,9 @@ export function PlayersPage() {
       .then(setMyRecentAttacks)
       .catch(() => {});
   }, [uid, attackTarget]);
-  useEffect(() => subscribeAlliances(setAlliances), []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
 
   const season = useMemo(() => currentSeasonId(), []);
   // 5.15 : divisions (onglet Saison) — par défaut, celle du joueur.
@@ -274,7 +266,7 @@ export function PlayersPage() {
               transition={{ duration: 0.25, delay: reduced ? 0 : Math.min(i, 15) * 0.035 }}
               className="flex items-center gap-3 p-3"
             >
-              <span className={cn("hud-title w-8 text-center text-lg tabular-nums", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600")}>
+              <span className={cn("font-mono font-bold tabular-nums w-8 text-center text-lg", a.rank === 1 ? "text-gold-glow" : a.rank === 2 ? "text-slate-200" : a.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-500")}>
                 {String(a.rank).padStart(2, "0")}
               </span>
               <Flag className="h-4 w-4 shrink-0 text-gold-glow" />
@@ -304,7 +296,7 @@ export function PlayersPage() {
         <>
         <Card key={`list-${mode}-${division}`} className="flex flex-col gap-2 p-3">
           {players.length === 0 && (
-            <EmptyState icon="🔭" title="Aucun joueur trouvé">Essaie un autre nom ou un autre filtre.</EmptyState>
+            <EmptyState icon={<Telescope />} title="Aucun joueur trouvé">Essaie un autre nom ou un autre filtre.</EmptyState>
           )}
           {players.length > 0 && filtered.length === 0 && (
             <p className="p-4 text-sm text-slate-500">
@@ -352,8 +344,8 @@ export function PlayersPage() {
               >
                 <span
                   className={cn(
-                    "hud-title text-center text-2xl tabular-nums max-sm:text-xl",
-                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-600",
+                    "font-mono font-bold tabular-nums text-center text-2xl max-sm:text-xl",
+                    p.rank === 1 ? "text-gold-glow [text-shadow:0_0_10px_color-mix(in_srgb,var(--color-gold-glow)_60%,transparent)]" : p.rank === 2 ? "text-slate-200" : p.rank === 3 ? "text-[var(--th-medal-bronze)]" : "text-slate-500",
                   )}
                 >
                   {String(p.rank).padStart(2, "0")}
@@ -378,7 +370,7 @@ export function PlayersPage() {
                     )}
                     {/* 5.22 : raison visible quand l'attaque est impossible (écart d'XP, délai entre deux attaques). */}
                     {!isSelf && !(me?.allianceId && p.allianceId === me.allianceId) && (attackCheck?.reason === "too_weak" || attackCheck?.reason === "cooldown") && (
-                      <span title={attackCheck.message} className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                      <span title={attackCheck.message} className="font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500">
                         {attackCheck.reason === "too_weak" ? "hors de portée" : "attaqué récemment"}
                       </span>
                     )}

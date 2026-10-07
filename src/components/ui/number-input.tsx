@@ -103,7 +103,9 @@ export function NumberInput(props: NumberInputProps) {
     clearInterval(timers.current.i);
     timers.current = {};
   };
-  useEffect(() => () => stop(), []);
+  useEffect(() => {
+    return () => stop();
+  }, []);
 
   const stepBy = (delta: number) => {
     const base = current.current ?? min;
@@ -185,8 +187,7 @@ export function NumberInput(props: NumberInputProps) {
     sm ? "w-7" : "w-9",
   );
   const chip = cn(
-    "shrink-0 px-1.5 font-mono tracking-[0.12em] transition-colors select-none hover:bg-cyan-glow/10 hover:text-cyan-glow disabled:pointer-events-none disabled:opacity-30",
-    sm ? "text-[9px]" : "text-[10px]",
+    "shrink-0 px-1.5 font-mono tracking-[0.12em] transition-colors select-none hover:bg-cyan-glow/10 hover:text-cyan-glow disabled:pointer-events-none disabled:opacity-30 text-[11px]",
   );
 
   // MIN seulement si le champ est assez large pour garder le chiffre lisible.
@@ -249,13 +250,13 @@ export function NumberInput(props: NumberInputProps) {
           onChange={(e) => onText(e.target.value)}
           onKeyDown={onKey}
           className={cn(
-            "min-w-0 flex-1 bg-transparent px-1.5 text-center font-mono tabular-nums text-slate-100 outline-none placeholder:text-slate-600",
+            "min-w-0 flex-1 bg-transparent px-1.5 text-center font-mono tabular-nums text-slate-100 outline-none placeholder:text-slate-500",
             // Longs nombres : un cran plus petit pour rester entiers dans les cases étroites.
             text.length > 8 ? (sm ? "text-[11px] tracking-tight" : "text-xs tracking-tight") : sm ? "text-xs" : "text-sm",
             atMax && meter && !disabled && "text-gold-glow",
           )}
         />
-        {suffix && <span className={cn("flex shrink-0 items-center pr-2 font-mono text-slate-500", sm ? "text-[10px]" : "text-xs")}>{suffix}</span>}
+        {suffix && <span className={cn("flex shrink-0 items-center pr-2 font-mono text-slate-500", sm ? "text-[11px]" : "text-xs")}>{suffix}</span>}
         {stepper && (
           <button
             type="button"
@@ -305,7 +306,7 @@ export function NumberInput(props: NumberInputProps) {
                 disabled={disabled}
                 onClick={() => put(v)}
                 className={cn(
-                  "border px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] transition-colors disabled:opacity-40",
+                  "border px-2 py-0.5 font-mono text-[11px] tracking-[0.1em] transition-colors disabled:opacity-40",
                   shown === v ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-cyan-glow/15 text-slate-400 hover:border-cyan-glow/50 hover:text-cyan-glow",
                 )}
               >

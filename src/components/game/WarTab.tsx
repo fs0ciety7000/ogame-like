@@ -109,8 +109,12 @@ export function WarTab({ alliance, canLead }: { alliance: Alliance; canLead: boo
   const [alliances, setAlliances] = useState<Alliance[]>([]);
   const [target, setTarget] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => subscribeWars(alliance.id, setWars), [alliance.id]);
-  useEffect(() => subscribeAlliances(setAlliances), []);
+  useEffect(() => {
+    return subscribeWars(alliance.id, setWars);
+  }, [alliance.id]);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
   const now = Date.now();
   const current = wars.find((w) => warStatusAt(w, now) !== "ended");
   const past = wars.filter((w) => w !== current);
@@ -244,7 +248,7 @@ function WarChestCard({ alliance, canLead }: { alliance: Alliance; canLead: bool
           {entries.map(([res, n]) => (
             <span key={res} className="inline-flex items-center gap-1.5 border border-gold-glow/25 bg-gold-glow/[0.05] px-2 py-1 font-mono text-xs text-slate-200" title={`Plafond : ${formatCompact(chest.cap[res] ?? 0)}`}>
               <ResourceIcon id={res} className="h-4 w-4" /> {formatCompact(n)}
-              <span className="text-[10px] text-slate-500">/ {formatCompact(chest.cap[res] ?? 0)}</span>
+              <span className="text-[11px] text-slate-500">/ {formatCompact(chest.cap[res] ?? 0)}</span>
             </span>
           ))}
         </div>
@@ -287,7 +291,7 @@ function SeasonWarCard({ allianceId }: { allianceId: string }) {
       {rows === null ? (
         <SkeletonList rows={4} />
       ) : rows.length === 0 ? (
-        <EmptyState size="sm" icon="⚔️" title="Aucune alliance classée">Le classement apparaîtra après les premières batailles.</EmptyState>
+        <EmptyState size="sm" icon={<Swords />} title="Aucune alliance classée">Le classement apparaîtra après les premières batailles.</EmptyState>
       ) : (
         <div className="flex flex-col divide-y divide-white/5 text-sm">
           {rows.map((r) => (

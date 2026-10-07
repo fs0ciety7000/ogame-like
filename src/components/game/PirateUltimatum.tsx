@@ -75,7 +75,7 @@ export function UltimatumDialog() {
     try {
       await answerPirateUltimatum(choice);
       if (choice === "pay") toast.success(`${active.faction.leader} te laisse en paix… pour l'instant.`);
-      else toast(`Tu as refusé : ${active.faction.enforcer} arrive !`, { icon: "☠️", description: "Prépare tes défenses, appelle tes alliés ou mets ta flotte à l'abri." });
+      else toast(`Tu as refusé : ${active.faction.enforcer} arrive !`, { icon: <Skull className="h-4 w-4" />, description: "Prépare tes défenses, appelle tes alliés ou mets ta flotte à l'abri." });
       close();
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Réponse impossible.");

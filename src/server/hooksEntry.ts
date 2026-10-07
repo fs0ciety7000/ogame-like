@@ -92,6 +92,8 @@ export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";
 export { TUTORIAL_RAID } from "@/game/story";
+// 6.14.79 (DP-L4) : notification « Nouveau : … » du menu progressif (route des actions, dans la transaction : I24).
+export { navOpeningNotice, navOpenPages } from "@/game/navUnlock";
 
 /** v4.1 : puissance du raid scripté de Varan (un quart de la défense, gagné à coup sûr). */
 export function tutorialRaidPower(player: PlayerState): number {

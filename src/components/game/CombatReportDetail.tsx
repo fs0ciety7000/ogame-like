@@ -65,14 +65,14 @@ function UnitRow({ u, round, tone, enemyName, maxDealt }: { u: CombatLogUnit; ro
         <div className="flex items-baseline justify-between gap-2 text-xs">
           <span className="flex min-w-0 items-center gap-1.5 truncate text-slate-200">
             {virtual ? enemyName : (def?.name ?? u.id)}
-            {u.cls && <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">{UNIT_CLASS_LABELS[u.cls]}</span>}
+            {u.cls && <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">{UNIT_CLASS_LABELS[u.cls]}</span>}
           </span>
           <span className="shrink-0 font-mono text-[11px] text-slate-300">{virtual ? pct(alive) : `${formatNumber(Math.round(left))} / ${formatNumber(Math.round(u.start))}`}</span>
         </div>
         <div className="relative mt-1 h-1.5 overflow-hidden bg-white/[0.06]">
           <motion.i className="absolute inset-y-0 left-0 block" style={{ background: HUD_TONE[tone] }} initial={false} animate={{ width: pct(alive) }} transition={{ duration: 0.35, ease: "easeOut" }} />
         </div>
-        <div className="mt-0.5 flex flex-wrap justify-between gap-x-2 font-mono text-[10px] text-slate-500">
+        <div className="mt-0.5 flex flex-wrap justify-between gap-x-2 font-mono text-[11px] text-slate-500">
           <span>
             {lostNow >= 0.5 ? (
               <span className="text-danger-glow" title="Hors de combat pendant la bataille. Après le combat, une partie de ces PV perdus reste en dégâts sur les coques au lieu de détruire des unités (voir le bilan).">
@@ -98,7 +98,7 @@ function SideColumn({ units, round, tone, title, enemyName }: { units: CombatLog
   const maxDealt = Math.max(1, ...units.map((u) => u.dealt));
   return (
     <div className="min-w-0">
-      <h4 className="hud-eyebrow mb-1.5 text-[10px]" style={{ color: HUD_TONE[tone] }}>
+      <h4 className="hud-eyebrow mb-1.5 text-[11px]" style={{ color: HUD_TONE[tone] }}>
         {title}
       </h4>
       {units.length === 0 ? (
@@ -106,7 +106,7 @@ function SideColumn({ units, round, tone, title, enemyName }: { units: CombatLog
       ) : (
         groups.map((g) => (
           <div key={g} className="mb-2">
-            {groups.length > 1 && <p className="mb-1 font-mono text-[9px] uppercase tracking-wider text-slate-500">{GROUP_LABEL[g]}</p>}
+            {groups.length > 1 && <p className="mb-1 font-mono text-[11px] uppercase tracking-wider text-slate-500">{GROUP_LABEL[g]}</p>}
             <ul className="flex flex-col gap-2">
               {units
                 .filter((u) => u.group === g)
@@ -232,7 +232,7 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
                   requestRound(log, k);
                 }}
                 className={cn(
-                  "h-7 min-w-0 flex-1 border font-mono text-[10px] transition-colors",
+                  "h-7 min-w-0 flex-1 border font-mono text-[11px] transition-colors",
                   round === k ? "border-cyan-glow/70 bg-cyan-glow/15 text-cyan-glow" : k < round ? "border-cyan-glow/20 bg-cyan-glow/[0.05] text-slate-400" : "border-white/10 text-slate-500 hover:border-cyan-glow/40",
                 )}
               >
@@ -243,29 +243,29 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
         </div>
         <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div>
-            <p className="flex justify-between font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            <p className="flex justify-between font-mono text-[11px] uppercase tracking-wider text-slate-500">
               <span>Toi</span>
               <span style={{ color: HUD_TONE.accent }}>{pct(myHp)} PV</span>
             </p>
             <div className="relative mt-0.5 h-2 overflow-hidden bg-white/[0.06]">
               <motion.i className="absolute inset-y-0 left-0 block" style={{ background: HUD_TONE.accent }} initial={false} animate={{ width: pct(myHp) }} transition={{ duration: 0.35 }} />
             </div>
-            {r && <p className="mt-0.5 font-mono text-[10px] text-slate-500">tirs : {formatCompact(myDmg)}</p>}
+            {r && <p className="mt-0.5 font-mono text-[11px] text-slate-500">tirs : {formatCompact(myDmg)}</p>}
           </div>
           <span className="font-display text-sm font-semibold text-slate-400">{round === 0 ? "—" : `${round}/${n}`}</span>
           <div className="text-right">
-            <p className="flex justify-between font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            <p className="flex justify-between font-mono text-[11px] uppercase tracking-wider text-slate-500">
               <span style={{ color: HUD_TONE.danger }}>{pct(theirHp)} PV</span>
               <span>Adversaire</span>
             </p>
             <div className="relative mt-0.5 h-2 overflow-hidden bg-white/[0.06]">
               <motion.i className="absolute inset-y-0 right-0 block" style={{ background: HUD_TONE.danger }} initial={false} animate={{ width: pct(theirHp) }} transition={{ duration: 0.35 }} />
             </div>
-            {r && <p className="mt-0.5 font-mono text-[10px] text-slate-500">tirs : {formatCompact(theirDmg)}</p>}
+            {r && <p className="mt-0.5 font-mono text-[11px] text-slate-500">tirs : {formatCompact(theirDmg)}</p>}
           </div>
         </div>
         <HpChart log={log} mine={mine} round={round} />
-        <p className="font-mono text-[10px] text-slate-500">
+        <p className="font-mono text-[11px] text-slate-500">
           « Hors de combat » : unités neutralisées pendant la bataille ; après coup, une partie redevient des coques abîmées (le bilan ne compte que les détruites). Pointillés : sous <span className="text-slate-300">{Math.round(COMBAT_RULES.attackerWinBelow * 100)} %</span> de PV, le défenseur tombe. L'attaquant décroche après{" "}
           <span className="text-slate-300">{Math.round(COMBAT_RULES.retreatAt * 100)} %</span> de PV perdus.
         </p>
@@ -281,7 +281,7 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
 
       {facts.length > 0 && (
         <section className="flex flex-col gap-1.5">
-          <h4 className="hud-eyebrow text-[10px] text-slate-500">Faits marquants</h4>
+          <h4 className="hud-eyebrow text-[11px] text-slate-500">Faits marquants</h4>
           {facts.map((f, i) => (
             <p key={i} className="flex items-start gap-2 text-xs text-slate-300">
               <f.icon className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: HUD_TONE[f.tone] }} aria-hidden />
@@ -299,14 +299,14 @@ export function CombatLossTable({ title, losses, recovered, units, tone }: { tit
   const ids = [...new Set([...Object.keys(losses).filter((k) => (losses[k] ?? 0) + (recovered[k] ?? 0) > 0), ...(units ?? []).filter((u) => u.id).map((u) => u.id)])];
   return (
     <div className="min-w-0">
-      <h4 className="hud-eyebrow mb-1.5 text-[10px]" style={{ color: HUD_TONE[tone] }}>
+      <h4 className="hud-eyebrow mb-1.5 text-[11px]" style={{ color: HUD_TONE[tone] }}>
         {title}
       </h4>
       {ids.length === 0 ? (
         <p className="text-sm text-slate-500">{units?.some((u) => !u.id) ? "Forces PNJ : pas d'unités réelles (voir leurs PV ci-dessus)." : "Aucune perte"}</p>
       ) : (
         <table className="w-full text-left text-xs">
-          <thead className="font-mono text-[9px] uppercase tracking-wider text-slate-500">
+          <thead className="font-mono text-[11px] uppercase tracking-wider text-slate-500">
             <tr>
               <th className="py-1 font-normal">Unité</th>
               {units && <th className="pl-2 text-right font-normal">Engagées</th>}
@@ -323,7 +323,7 @@ export function CombatLossTable({ title, losses, recovered, units, tone }: { tit
                   <td className="py-1 text-slate-200">
                     {findUnit(id)?.name ?? id}
                     {u?.[0]?.hullAfter !== undefined && u[0].hullAfter < 0.995 && (
-                      <span className="block font-mono text-[10px]" style={{ color: HUD_TONE.ember }}>
+                      <span className="block font-mono text-[11px]" style={{ color: HUD_TONE.ember }}>
                         coque {pct(u[0].hullAfter)}
                       </span>
                     )}

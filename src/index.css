@@ -1286,8 +1286,8 @@ main {
   clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
 }
 .hud-chip svg { width: 13px; height: 13px; flex: none; }
-.hud-chip-sm { padding: 4px 8px; font-size: 10px; letter-spacing: 0.18em; }
-.hud-chip-md { padding: 5px 9px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; }
+.hud-chip-sm { padding: 4px 8px; font-size: 11px; letter-spacing: 0.14em; }
+.hud-chip-md { padding: 5px 9px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; }
 .hud-chip-action { cursor: pointer; transition: background-color 0.12s, border-color 0.12s, color 0.12s; }
 .hud-chip-action:hover { background: color-mix(in srgb, var(--c) 18%, transparent); border-color: var(--c); }
 .hud-chip-action:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
@@ -1771,7 +1771,7 @@ main {
 .slot-console { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .slot-credits { display: grid; gap: 4px; }
 .slot-spin { flex: 1; min-width: 160px; height: auto !important; padding-block: 8px !important; flex-direction: column; gap: 1px !important; }
-.slot-spin small { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em; font-weight: 600; opacity: 0.75; }
+.slot-spin small { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; font-weight: 600; opacity: 0.75; }
 /* Pièces du gros lot : jetons à coins coupés, couleur récompense. */
 .slot-coin {
   position: absolute;
@@ -1828,7 +1828,7 @@ main {
   align-self: center;
   padding: 5px 10px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;

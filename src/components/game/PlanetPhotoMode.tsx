@@ -115,11 +115,11 @@ export function PlanetPhotoMode({ buildings, life, look, caption }: { buildings:
             {showCaption && (
               <div className="pointer-events-none mt-2 text-center">
                 <p className="hud-title text-2xl text-slate-100">{caption}</p>
-                <p className="font-mono text-[10px] tracking-[0.3em] text-cyan-glow">COSMIC EMPIRES</p>
+                <p className="font-mono text-[11px] tracking-[0.3em] text-cyan-glow">COSMIC EMPIRES</p>
               </div>
             )}
             <div className="hud-cut-sm absolute bottom-5 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 border border-white/10 bg-space-900/80 px-3 py-2">
-              <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">
+              <label className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">
                 Cadrage
                 <input type="range" min={0.6} max={1.6} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-28 accent-cyan-glow" aria-label="Cadrage" />
               </label>

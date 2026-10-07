@@ -29,6 +29,7 @@ import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { PassGenFields } from "@/pages/admin/PassGenFields";
 import { MoonRulesFields } from "@/pages/admin/MoonRulesFields";
+import { NavUnlockRulesFields } from "@/pages/admin/NavUnlockRulesFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
 import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
@@ -122,6 +123,8 @@ export function RulesPanel() {
         </HudCallout>
       )}
       <Card className="flex flex-col gap-3 p-4">
+        {/* 6.14.80 (DP-L5) : ouverture progressive du menu pour les comptes neufs, avec l'aperçu par rang. */}
+        <NavUnlockRulesFields rules={rules} setRules={setRules} />
         <Section title="Protections">
           <NumberField label="Délai entre 2 attaques sur une même cible (h)" value={pvp.attackCooldownMs / HOUR} min={0} step={0.25} onChange={(v) => setPvp({ attackCooldownMs: (v ?? 0) * HOUR })} />
           <NumberField label="Bouclier après une défaite (min)" value={pvp.shieldAfterDefeatMs / MIN} min={0} step={5} onChange={(v) => setPvp({ shieldAfterDefeatMs: (v ?? 0) * MIN })} />

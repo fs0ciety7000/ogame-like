@@ -11,14 +11,14 @@ import { SpyReportView } from "@/components/game/SpyModal";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { fetchSharedReport, type SharedReport } from "@/services/sharedReportService";
 import { combatDisplayFromReportForViewer, showCombatResult } from "@/store/combatModalStore";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatNumber, formatDateTime } from "@/lib/utils";
 import type { BattleReport, SpyReport } from "@/types/game";
 
 /* Rapport partagé (v3.8) : vu par n'importe quel joueur qui a le lien,
    du point de vue de l'attaquant (combat) ou de l'espion. */
 
 function when(ms: number) {
-  return new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(ms, "dayTime");
 }
 
 function BattleView({ report }: { report: BattleReport }) {

@@ -6,12 +6,14 @@ import { useNavigate } from "react-router-dom";
 import { NotificationCard } from "@/components/game/NotificationCard";
 import { Building2, Gift, Loader2, ScrollText, Shield, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useAuthStore } from "@/store/authStore";
 import { fetchNotificationHistory } from "@/services/playerService";
 import { inCategory, NOTIFICATION_CATEGORIES, notificationLink, summarizeKinds, type NotificationCategory } from "@/lib/notificationCategories";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import type { GameNotification } from "@/types/game";
 
 /* =====================================================
@@ -50,11 +52,11 @@ function dayLabel(ms: number): string {
   const yesterday = new Date(today.getTime() - 86_400_000);
   if (d.toDateString() === today.toDateString()) return "Aujourd'hui";
   if (d.toDateString() === yesterday.toDateString()) return "Hier";
-  return d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  return formatDateTime(d, "weekday");
 }
 
 function hourLabel(ms: number): string {
-  return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(ms, "time");
 }
 
 export function JournalPage() {
@@ -119,7 +121,7 @@ export function JournalPage() {
         <Card className="flex flex-col gap-2 p-4">
           <p className="hud-eyebrow text-cyan-glow/80">Pendant ton absence</p>
           {sinceLastVisit.length === 0 ? (
-            <p className="text-sm text-slate-400">Rien de nouveau depuis ta dernière visite du journal.</p>
+            <EmptyState size="sm" icon={<ScrollText />} title="Rien de nouveau depuis ta dernière visite" />
           ) : (
             <>
               <TypedLine className="text-sm text-slate-200" text={`${summarizeKinds(sinceLastVisit.map((n) => n.kind))}.`} />
@@ -147,29 +149,21 @@ export function JournalPage() {
         </Card>
       )}
 
-      <div className="flex flex-wrap gap-1" role="tablist">
-        {NOTIFICATION_CATEGORIES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === c.id}
-            onClick={() => setTab(c.id)}
-            className={cn(
-              "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
-              tab === c.id ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-400 hover:text-slate-200",
-            )}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      {/* 6.14.82 (AD-21) : onglets du système (Tabs), comme Réglages et Codex. */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as NotificationCategory)}>
+        <TabsList aria-label="Catégories du Journal">
+          {NOTIFICATION_CATEGORIES.map((c) => (
+            <TabsTrigger key={c.id} value={c.id}>
+              {c.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {error && <p className="text-sm text-danger-glow">{error}</p>}
       {!loading && shown.length === 0 && !error && (
-        <Card className="flex items-center gap-3 p-6 text-sm text-slate-400">
-          <ScrollText className="h-5 w-5 text-slate-500" />
-          Rien dans cette catégorie pour l'instant.
+        <Card className="p-6">
+          <EmptyState size="sm" icon={<ScrollText />} title="Rien dans cette catégorie pour l'instant" />
         </Card>
       )}
 

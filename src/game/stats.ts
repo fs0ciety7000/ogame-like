@@ -46,6 +46,8 @@ export interface PlayerStats {
   ultimatums?: number;
   /** Factions qui ont déjà adressé un ultimatum au joueur. */
   threatenedBy?: string[];
+  /** 6.14.79 (DP-L4) : pages du menu progressif déjà annoncées (« Nouveau : … ») ou déjà ouvertes ; elles restent ouvertes (I30). */
+  navAnnounced?: string[];
   /** v5.14 : boss mondiaux abattus (identifiants, une fois chacun). */
   worldBossKilled?: string[];
   /** 6.14.14 (C4) : boss d'alliance abattus avec une part suffisante des dégâts (identifiants, une fois chacun). */

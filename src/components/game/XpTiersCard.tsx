@@ -21,7 +21,7 @@ export function XpTiersCard({ player, compact = false, fold = false }: { player:
   const total = Object.values(today.applied).reduce((s, n) => s + (n ?? 0), 0);
   const shown = compact ? rows.filter((r) => r.gross > 0 || r.source === "mission") : rows;
   const aside = (
-    <span className="font-mono text-[10px] text-slate-500">
+    <span className="font-mono text-[11px] text-slate-500">
       aujourd'hui <span className="text-slate-200">+{formatNumber(Math.round(total))} XP</span> · remise à zéro à minuit
     </span>
   );

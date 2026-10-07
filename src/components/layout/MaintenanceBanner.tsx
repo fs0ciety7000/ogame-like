@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn, formatDuration, formatDateTime } from "@/lib/utils";
 import { maintenanceRemainingMs, upcomingMaintenance } from "@/game/maintenance";
 import { useMaintenance } from "@/services/maintenanceService";
 
@@ -33,7 +33,7 @@ export function UpcomingMaintenanceNotice({ className }: { className?: string })
   const up = upcomingMaintenance(m, Date.now());
   if (!up) return null;
   const soon = up.inMs <= 3600_000;
-  const at = new Date(up.startAtMs).toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" });
+  const at = formatDateTime(up.startAtMs, "weekdayTime", "server");
   const length = up.endsAtMs ? formatDuration((up.endsAtMs - up.startAtMs) / 1000) : null;
   return (
     <div data-strip role="status" className={cn("relative z-30 flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5 text-xs sm:px-6", soon ? "border-ember-glow/50 bg-ember-glow/10" : "border-gold-glow/30 bg-space-950", className)}>

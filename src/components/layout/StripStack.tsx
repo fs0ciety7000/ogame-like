@@ -27,7 +27,7 @@ export function StripStack({ children }: { children: ReactNode }) {
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className="flex w-full items-center justify-end gap-1 border-b border-cyan-glow/10 bg-space-950 px-4 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-400 hover:text-slate-100 md:hidden"
+          className="flex w-full items-center justify-end gap-1 border-b border-cyan-glow/10 bg-space-950 px-4 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:text-slate-100 md:hidden"
         >
           {open ? "Réduire" : <span className="tabular-nums">{`+${extra} bandeau${extra > 1 ? "x" : ""}`}</span>}
           <ChevronDown aria-hidden className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />

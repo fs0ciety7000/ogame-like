@@ -38,7 +38,9 @@ export function BlogEditorPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   // 5.21.2 : 20 articles par page.
   const [page, setPage] = useState(0);
-  useEffect(() => setPage(0), [filter, q]);
+  useEffect(() => {
+    setPage(0);
+  }, [filter, q]);
 
   const load = useCallback(async () => {
     try {
@@ -138,7 +140,7 @@ export function BlogEditorPage() {
         <Card className="flex min-w-0 flex-col gap-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
             {(["all", "published", "scheduled", "draft"] as const).map((f) => (
-              <button key={f} type="button" onClick={() => setFilter(f)} className={cn("border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.14em]", filter === f ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-500 hover:text-slate-300")}>
+              <button key={f} type="button" onClick={() => setFilter(f)} className={cn("border px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em]", filter === f ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-500 hover:text-slate-300")}>
                 {{ all: "Tous", published: "En ligne", scheduled: "Programmés", draft: "Brouillons" }[f]} · {count(f)}
               </button>
             ))}
@@ -183,7 +185,7 @@ export function BlogEditorPage() {
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-2">
                           <HudTag tone={st.tone}>{st.label}</HudTag>
-                          <span className="font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: cat.color }}>
+                          <span className="font-mono text-[11px] uppercase tracking-[0.14em]" style={{ color: cat.color }}>
                             <BlogCategoryIcon category={cat.id} className="h-3.5 w-3.5" /> {cat.label}
                           </span>
                           {p.pinned && <Pin className="h-3 w-3 text-gold-glow" />}
@@ -216,7 +218,7 @@ export function BlogEditorPage() {
           <ReadyDraftsCard existing={posts?.map((x) => x.post.slug) ?? null} pseudo={pseudo} onImported={() => void load()} />
           {me && <AuthorProfileCard me={me} onSaved={() => void load()} />}
           <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
-            <p className="hud-eyebrow text-[10px] text-slate-500">Catégories</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">Catégories</p>
             {BLOG_CATEGORIES.map((c) => (
               <p key={c.id} className="flex gap-2 text-xs">
                 <BlogCategoryIcon category={c.id} />
@@ -285,7 +287,7 @@ function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] 
   return (
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="hud-eyebrow flex items-center gap-1.5 text-[10px] text-slate-500">
+        <p className="hud-eyebrow flex items-center gap-1.5 text-[11px] text-slate-500">
           <FileText className="h-3.5 w-3.5" /> Articles prêts ({pending.length} / {drafts.length})
         </p>
         {pending.length > 1 && (
@@ -304,7 +306,7 @@ function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] 
               <BlogCategoryIcon category={d.category} className="h-5 w-5" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs text-slate-200" title={d.title}>{d.title}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em]" style={{ color: cat.color }}>
+                <span className="font-mono text-[11px] uppercase tracking-[0.12em]" style={{ color: cat.color }}>
                   {cat.label}
                   {d.pinned ? " · épinglé" : ""}
                 </span>
@@ -352,7 +354,7 @@ function AuthorProfileCard({ me, onSaved }: { me: BlogAuthor; onSaved: () => voi
   const avatar = authorAvatarUrl(me);
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <p className="hud-eyebrow text-[10px] text-slate-500">Mon profil d'auteur</p>
+      <p className="hud-eyebrow text-[11px] text-slate-500">Mon profil d'auteur</p>
       <div className="flex items-center gap-3">
         <span className="h-12 w-12 shrink-0 border border-white/10 bg-space-900 bg-cover bg-center" style={avatar ? { backgroundImage: `url('${avatar}')` } : undefined} />
         <div className="min-w-0">
@@ -390,7 +392,7 @@ function AuthorsCard({ authors, onChange }: { authors: BlogAuthor[]; onChange: (
   };
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <p className="hud-eyebrow flex items-center gap-1.5 text-[10px] text-slate-500">
+      <p className="hud-eyebrow flex items-center gap-1.5 text-[11px] text-slate-500">
         <Users className="h-3.5 w-3.5" /> Auteurs ({authors.length}) · administrateurs
       </p>
       <ul className="flex flex-col gap-1.5">

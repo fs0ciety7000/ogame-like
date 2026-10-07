@@ -62,7 +62,7 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
             <li key={r.uid} className={cn("flex items-center gap-2 px-1 py-0.5 text-xs", r.uid === uid && "hud-callout hud-tone-accent")}>
               <Rank i={i} />
               <span className="min-w-0 flex-1 truncate text-slate-200">{r.pseudo}</span>
-              <span className="font-mono text-[10px] text-slate-500">{r.spins} tir.</span>
+              <span className="font-mono text-[11px] text-slate-500">{r.spins} tir.</span>
               <span className="w-14 text-right font-mono font-bold tabular-nums text-slate-100">{r.points} pts</span>
             </li>
           ))}
@@ -78,7 +78,7 @@ export function TournamentCard({ casino, uid }: { casino: CasinoState; uid: stri
 
       {last && last.podium.length > 0 && (
         <div className="border-t border-white/5 pt-2">
-          <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">Tournoi précédent · {last.participants} joueur{last.participants > 1 ? "s" : ""}</p>
+          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">Tournoi précédent · {last.participants} joueur{last.participants > 1 ? "s" : ""}</p>
           <ol className="grid gap-1">
             {last.podium.slice(0, 3).map((p, i) => (
               <li key={p.uid} className="flex items-center gap-2 text-xs">

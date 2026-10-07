@@ -3,7 +3,7 @@ import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { playerCargoCapacity } from "@/game/modifiers";
 import { toast } from "sonner";
-import { ArrowRight, ArrowUpToLine, Clock, FileSignature, Handshake, Send, Truck } from "lucide-react";
+import { ArrowRight, ArrowUpToLine, Clock, FileSignature, Handshake, Send, Truck, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
@@ -87,7 +87,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
         </DialogDescription>
         <div className="mt-2 flex flex-col gap-1.5">
           {ids.length === 0 && (
-            <EmptyState size="sm" icon="📦" title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
+            <EmptyState size="sm" icon={<Package />} title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
               Il faut un vaisseau avec une soute pour livrer.
             </EmptyState>
           )}
@@ -98,7 +98,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -134,7 +134,9 @@ export function TradeContractsPanel() {
   const [busy, setBusy] = useState<string | null>(null);
   const [delivering, setDelivering] = useState<TradeContract | null>(null);
 
-  useEffect(() => subscribeTradeContracts(setData), []);
+  useEffect(() => {
+    return subscribeTradeContracts(setData);
+  }, []);
   useEffect(() => {
     listAllPlayers()
       .then((list) => setPlayers(list.filter((p) => p.uid !== uid && !p.npc).map((p) => ({ uid: p.uid, pseudo: p.pseudo }))))
@@ -166,18 +168,18 @@ export function TradeContractsPanel() {
         <h2 className="hud-title flex items-center gap-2 text-sm">
           <FileSignature className="h-4 w-4 text-cyan-glow" /> Proposer un contrat
         </h2>
-        <p className="hud-eyebrow text-[10px] text-slate-500">Livre-moi</p>
+        <p className="hud-eyebrow text-[11px] text-slate-500">Livre-moi</p>
         <div className="flex gap-2">
           <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource à livrer" className="min-w-0 flex-1" size="sm" />
           <NumberInput size="sm" quick={false} step={resourceStep(Math.max(100, wantAmount * 10))} value={wantAmount} onChange={setWantAmount} className="w-40" aria-label="Quantité à livrer" />
         </div>
-        <p className="hud-eyebrow text-[10px] text-slate-500">Contre (bloqué dès la publication)</p>
+        <p className="hud-eyebrow text-[11px] text-slate-500">Contre (bloqué dès la publication)</p>
         <div className="flex gap-2">
           <ResourceSelect value={payRes} onChange={setPayRes} ariaLabel="Ressource payée" className="min-w-0 flex-1" size="sm" />
           <NumberInput size="sm" quick={false} step={resourceStep(Math.max(100, payAmount * 10))} value={payAmount} onChange={setPayAmount} className="w-40" aria-label="Paiement" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="hud-eyebrow text-[10px] text-slate-500">Délai de livraison</span>
+          <span className="hud-eyebrow text-[11px] text-slate-500">Délai de livraison</span>
           {HOURS.map((h) => (
             <button key={h} type="button" onClick={() => setHours(h)} className={cn("border px-2 py-0.5 font-mono text-[11px]", hours === h ? "border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow" : "border-white/10 text-slate-400 hover:border-cyan-glow/40")}>
               {h} h
@@ -252,13 +254,13 @@ export function TradeContractsPanel() {
                       )}
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase text-slate-500">livre</span>
+                      <span className="text-[11px] font-mono uppercase text-slate-500">livre</span>
                       <Amount res={c.wantRes} n={c.wantAmount} />
-                      <span className="text-[10px] font-mono uppercase text-slate-500">sous {c.hours} h, reçois</span>
+                      <span className="text-[11px] font-mono uppercase text-slate-500">sous {c.hours} h, reçois</span>
                       <Amount res={c.payRes} n={c.payAmount} className="text-mint-glow" />
                     </span>
                     <span className="ml-auto flex items-center gap-2">
-                      <span className="font-mono text-[10px] text-slate-500" title="Caution rendue à la livraison">
+                      <span className="font-mono text-[11px] text-slate-500" title="Caution rendue à la livraison">
                         caution <Amount res={c.payRes} n={deposit} />
                       </span>
                       <Button size="sm" disabled={busy !== null || !canDeposit || active >= TRADE_CONTRACT_RULES.maxActive} onClick={() => void run(c.id, () => tradeContractAction("accept", c.id), "Contrat accepté : envoie ta livraison avant l'échéance.")}>
@@ -275,7 +277,7 @@ export function TradeContractsPanel() {
         <Card className="flex flex-col gap-3 p-4">
           <h2 className="hud-title text-sm">Mes contrats</h2>
           {data.mine.length === 0 ? (
-            <EmptyState size="sm" icon="🤝" title="Aucun contrat">Propose un contrat de livraison à un autre joueur.</EmptyState>
+            <EmptyState size="sm" icon={<Handshake />} title="Aucun contrat">Propose un contrat de livraison à un autre joueur.</EmptyState>
           ) : (
             <div className="flex flex-col divide-y divide-white/5">
               {data.mine.map((c) => {

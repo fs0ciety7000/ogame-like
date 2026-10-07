@@ -13,7 +13,7 @@ import { lootFactor } from "@/game/events";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { fetchLatestSpyReport } from "@/services/playerService";
 import { ResourceIcon } from "@/components/ui/game-icon";
-import { timeAgo, formatCompact } from "@/lib/utils";
+import { timeAgo, formatCompact, formatDateTime } from "@/lib/utils";
 import type { SpyReport } from "@/types/game";
 import { toast } from "sonner";
 import { Bookmark, Clock, Rocket, Snail, Swords, X } from "lucide-react";
@@ -255,7 +255,7 @@ export function AttackModal({
                   {flight !== null ? (
                     <span>
                       Temps de vol : <strong className="tabular-mono text-slate-200">{formatDuration(flight)}</strong> (arrivée vers{" "}
-                      {new Date(Date.now() + flight * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })})
+                      {formatDateTime(Date.now() + flight * 1000, "time")})
                       {uncapped !== null && uncapped > flight && <> — plafonné à {FLEET_RULES.maxAttackMinutes} min</>}.
                     </span>
                   ) : (
@@ -446,7 +446,7 @@ export function AttackModal({
                     return (
                       <div className="flex flex-col gap-1">
                         <p className="flex flex-wrap items-baseline gap-x-2">
-                          <span className="hud-eyebrow text-[10px] text-slate-500">Estimation</span>
+                          <span className="hud-eyebrow text-[11px] text-slate-500">Estimation</span>
                           <strong className={win ? "text-mint-glow" : draw ? "text-gold-glow" : "text-danger-glow"}>
                             {win ? "Victoire probable" : draw ? "Égalité probable" : "Défaite probable"}
                           </strong>
@@ -475,7 +475,7 @@ export function AttackModal({
                             ))}
                           </p>
                         )}
-                        {estimate.notes.length > 0 && <p className="text-[10px] text-slate-500">{estimate.notes.join(" · ")}</p>}
+                        {estimate.notes.length > 0 && <p className="text-[11px] text-slate-500">{estimate.notes.join(" · ")}</p>}
                       </div>
                     );
                   })()

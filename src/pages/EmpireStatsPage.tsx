@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
-import { BarChart3, ChevronDown, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap } from "lucide-react";
+import { BarChart3, ChevronDown, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap, Amphora, Bird, Medal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { HudTag, EmptyState } from "@/components/ui/hud";
+import { HudTag, EmptyState, HudMeter, StatTile, type HudTone } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { RadialGauge } from "@/components/ui/radial-gauge";
@@ -44,23 +44,6 @@ const stagger: Variants = { hidden: {}, show: { transition: { staggerChildren: 0
 /** Nombre qui compte depuis 0 à l'apparition, au format compact. */
 function Num({ value, className }: { value: number; className?: string }) {
   return <AnimatedNumber value={Math.round(value)} format={(v) => formatCompact(Math.round(v))} countUp className={cn("tabular-nums", className)} />;
-}
-
-/** Barre qui se remplit à l'apparition. */
-function Bar({ value, tone = CYAN, className }: { value: number; tone?: string; className?: string }) {
-  const w = Math.min(100, Math.max(0, value * 100));
-  return (
-    <div className={cn("relative h-1.5 overflow-hidden bg-white/[0.06]", className)}>
-      <motion.i
-        className="absolute inset-y-0 left-0 block"
-        style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${tone} 55%, transparent), ${tone})`, boxShadow: `0 0 10px color-mix(in srgb, ${tone} 60%, transparent)` }}
-        initial={{ width: 0 }}
-        whileInView={{ width: `${w}%` }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.9, ease: "easeOut" }}
-      />
-    </div>
-  );
 }
 
 /* 6.11.6 (A2) : `folded` replie la section au chargement sur téléphone (6 665 px à 375 px quand tout était ouvert) ;
@@ -108,22 +91,19 @@ function Section({ title, icon: Icon, tone = CYAN, aside, className, folded = fa
 
 function SectionLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="font-mono text-[10px] uppercase tracking-[0.18em] text-cyan-glow/80 transition-colors hover:text-cyan-glow">
+    <Link to={to} className="font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-glow/80 transition-colors hover:text-cyan-glow">
       {children} →
     </Link>
   );
 }
 
-function HeroTile({ label, value, display, sub, icon: Icon, tone }: { label: string; value?: number; display?: ReactNode; sub: ReactNode; icon: typeof Factory; tone: string }) {
+/* 6.14.83 (UX-10, AD-27) : la tuile de tête passe par StatTile (système), dans un conteneur animé.
+   6.14.82 (UX-9, AD-15) : couleur = sens. Le rang reste or (prestige) ; puissance, production et combats sont des
+   informations sans enjeu (neutre). */
+function HeroTile({ label, value, display, sub, icon: Icon, tone = "neutral" }: { label: string; value?: number; display?: ReactNode; sub: ReactNode; icon: typeof Factory; tone?: HudTone }) {
   return (
-    <motion.div variants={rise} whileHover={{ y: -3 }} className="glass-panel group relative min-w-0 overflow-hidden p-4">
-      <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 14px ${tone}` }} />
-      <Icon aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-20 w-20 opacity-[0.06] transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110" style={{ color: tone }} />
-      <p className="relative font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">{label}</p>
-      <p className="hud-title relative mt-1.5 text-3xl normal-case" style={{ color: tone, textShadow: `0 0 18px color-mix(in srgb, ${tone} 45%, transparent)` }}>
-        {display ?? <Num value={value ?? 0} />}
-      </p>
-      <div className="relative mt-1 text-xs text-slate-500">{sub}</div>
+    <motion.div variants={rise} className="min-w-0">
+      <StatTile label={label} value={display ?? <Num value={value ?? 0} />} sub={sub} icon={<Icon aria-hidden className="h-4 w-4" />} tone={tone} className="h-full" />
     </motion.div>
   );
 }
@@ -166,7 +146,7 @@ function Places({ label, used, capacity }: { label?: string; used: number; capac
           {n(used)} / {n(capacity)}
         </span>
       </div>
-      <Bar value={r} tone={r >= 0.9 ? EMBER : CYAN} />
+      <HudMeter percent={(r) * 100} tone={r >= 0.9 ? EMBER : CYAN} className="h-1.5" />
     </div>
   );
 }
@@ -174,7 +154,7 @@ function Places({ label, used, capacity }: { label?: string; used: number; capac
 function Mini({ label, value, tone }: { label: string; value: ReactNode; tone?: string }) {
   return (
     <div className="min-w-0">
-      <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <p className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className="truncate font-mono text-sm text-slate-100" style={tone ? { color: tone } : undefined}>
         {value}
       </p>
@@ -253,37 +233,35 @@ export function EmpireStatsPage() {
         />
 
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <HeroTile label="Rang" display={o.rank} sub={`${n(o.xp)} XP · ${n(o.seasonXp)} cette saison`} icon={Crown} tone={GOLD} />
-          <HeroTile label="Production / h" value={st.economy.totalPerHour} sub={`ressources communes, ${st.planets.length} planète(s)`} icon={Factory} tone={CYAN} />
+          <HeroTile label="Rang" display={o.rank} sub={`${n(o.xp)} XP · ${n(o.seasonXp)} cette saison`} icon={Crown} tone="gold" />
+          <HeroTile label="Production / h" value={st.economy.totalPerHour} sub={`ressources communes, ${st.planets.length} planète(s)`} icon={Factory} />
           <HeroTile
             label="Attaque (bonus compris)"
             value={m.modifiedAttack}
             sub={m.hullPct < 0.995 ? `réelle ${n(m.effectiveAttack)} (coques à ${pct(m.hullPct)}) · ${n(m.attackAway)} en vol` : `${n(m.attackHome)} à quai · ${n(m.attackAway)} en vol`}
             icon={Swords}
-            tone={EMBER}
           />
-          <HeroTile label="Défense planète mère" value={m.modifiedDefense} sub={`bouclier ${pct(m.shieldPct, 1)} · colonies ${n(m.coloniesDefense)}`} icon={Shield} tone={MINT} />
+          <HeroTile label="Défense planète mère" value={m.modifiedDefense} sub={`bouclier ${pct(m.shieldPct, 1)} · colonies ${n(m.coloniesDefense)}`} icon={Shield} />
           <HeroTile
             label="Combats"
             display={
               <>
-                <span className="text-mint-glow">{o.victories}</span>
-                <span className="mx-1 text-slate-600">/</span>
-                <span className="text-danger-glow">{o.defeats}</span>
+                <span className={o.victories > 0 ? "text-mint-glow" : "text-slate-300"}>{o.victories}</span>
+                <span className="mx-1 text-slate-500">/</span>
+                <span className={o.defeats > 0 ? "text-danger-glow" : "text-slate-300"}>{o.defeats}</span>
               </>
             }
             sub={
               <span className="flex flex-col gap-1.5">
                 <span>{o.winPct} % de victoires</span>
-                <Bar value={o.winPct / 100} tone={VIOLET} />
+                <HudMeter percent={(o.winPct / 100) * 100} tone={VIOLET} className="h-1.5" />
               </span>
             }
             icon={Trophy}
-            tone={VIOLET}
           />
         </motion.div>
 
-        <Section title="Ressources" icon={Coins} tone={CYAN} aside={<span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">par heure, bonus compris</span>}>
+        <Section title="Ressources" icon={Coins} tone={CYAN} aside={<span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">par heure, bonus compris</span>}>
           <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {commons.map((r) => {
               const total = r.perHourHome + r.perHourColonies;
@@ -309,18 +287,18 @@ export function EmpireStatsPage() {
                     <motion.i className="block h-full bg-cyan-glow" initial={{ width: 0 }} whileInView={{ width: `${homeShare * 100}%` }} viewport={{ once: true }} transition={{ duration: 0.9, ease: "easeOut" }} />
                     <motion.i className="block h-full bg-violet-glow" initial={{ width: 0 }} whileInView={{ width: `${(1 - homeShare) * 100}%` }} viewport={{ once: true }} transition={{ duration: 0.9, delay: 0.2, ease: "easeOut" }} />
                   </div>
-                  <div className="mt-1 flex justify-between gap-2 font-mono text-[10px]">
+                  <div className="mt-1 flex justify-between gap-2 font-mono text-[11px]">
                     <span className="text-cyan-glow/80">mère {n(r.perHourHome)}</span>
                     <span className="text-violet-glow/80">colonies {n(r.perHourColonies)}</span>
                   </div>
                   <div className="mt-3 flex items-baseline justify-between text-[11px]">
                     <span className="text-slate-500">Stock mère</span>
                     <span className="font-mono text-slate-300">
-                      {n(r.stock)} <span className="text-slate-600">/ {n(st.economy.capacity)}</span>
+                      {n(r.stock)} <span className="text-slate-500">/ {n(st.economy.capacity)}</span>
                     </span>
                   </div>
-                  <Bar value={fill} tone={fill >= 0.95 ? GOLD : MINT} className="mt-1 h-1" />
-                  {r.stockColonies > 0 && <p className="mt-1 text-right font-mono text-[10px] text-slate-500">+ {n(r.stockColonies)} dans les colonies</p>}
+                  <HudMeter percent={(fill) * 100} tone={fill >= 0.95 ? GOLD : MINT} className="h-1.5 mt-1 h-1" />
+                  {r.stockColonies > 0 && <p className="mt-1 text-right font-mono text-[11px] text-slate-500">+ {n(r.stockColonies)} dans les colonies</p>}
                 </motion.div>
               );
             })}
@@ -333,7 +311,7 @@ export function EmpireStatsPage() {
                   <ResourceIcon id={r.id} className="h-6 w-6 text-lg" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs text-slate-300">{r.name}</p>
-                    <p className="font-mono text-[10px] text-slate-500">{n(r.perHourHome + r.perHourColonies)} / h</p>
+                    <p className="font-mono text-[11px] text-slate-500">{n(r.perHourHome + r.perHourColonies)} / h</p>
                   </div>
                   <span className="font-mono text-sm text-violet-glow">{n(r.stock + r.stockColonies)}</span>
                 </div>
@@ -397,7 +375,7 @@ export function EmpireStatsPage() {
                       <span className="text-slate-500">Production / h</span>
                       <span className="font-mono text-slate-200">{n(prod)}</span>
                     </div>
-                    <Bar value={prod / maxPlanetProd} tone={tone} className="mt-1" />
+                    <HudMeter percent={(prod / maxPlanetProd) * 100} tone={tone} className="h-1.5 mt-1" />
                   </div>
                   <div className="relative mt-3">
                     <p className="mb-1 text-[11px] text-slate-500">Places de défense</p>
@@ -439,11 +417,11 @@ export function EmpireStatsPage() {
           </div>
 
           {m.units.length === 0 ? (
-            <EmptyState size="sm" icon="🚀" title="Aucune unité" action={<EmptyAction to="/game/unites">Construire une flotte</EmptyAction>} />
+            <EmptyState size="sm" icon={<Rocket />} title="Aucune unité" action={<EmptyAction to="/game/unites">Construire une flotte</EmptyAction>} />
           ) : (
             <div className="w-full max-w-full overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-xs">
-                <thead className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                <thead className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
                   <tr>
                     <th className="py-2 pr-3 font-normal">Unité</th>
                     <th className="py-2 pr-3 text-right font-normal">Niv.</th>
@@ -473,7 +451,7 @@ export function EmpireStatsPage() {
                           <span className="flex items-center gap-2 text-slate-200">
                             <span aria-hidden className="h-2 w-2 shrink-0 rotate-45" style={{ background: tone, boxShadow: `0 0 6px ${tone}` }} />
                             {u.name}
-                            <span className="text-[10px] text-slate-500">{u.category === "defense" ? "défense" : "flotte"}</span>
+                            <span className="text-[11px] text-slate-500">{u.category === "defense" ? "défense" : "flotte"}</span>
                           </span>
                         </td>
                         <td className="py-2 pr-3 text-right font-mono text-slate-400">{u.level}</td>
@@ -493,7 +471,7 @@ export function EmpireStatsPage() {
                         </td>
                         <td className="py-2 pr-3">
                           <div className="flex items-center gap-2">
-                            <Bar value={u.power / maxUnitPower} tone={tone} className="flex-1" />
+                            <HudMeter percent={(u.power / maxUnitPower) * 100} tone={tone} className="h-1.5 flex-1" />
                             <span className="w-12 text-right font-mono text-slate-200">{n(u.power)}</span>
                           </div>
                         </td>
@@ -565,7 +543,7 @@ export function EmpireStatsPage() {
         <Section title="État-major et bonus" folded icon={Sparkles} tone={GOLD} aside={<SectionLink to="/game/etat-major">État-major</SectionLink>}>
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 Officiers en poste {st.command.active.length} / {st.command.slots}
               </p>
               <div className="flex gap-1">
@@ -574,7 +552,7 @@ export function EmpireStatsPage() {
                 ))}
               </div>
               {st.command.active.length === 0 ? (
-                <EmptyState size="sm" icon="🎖️" title="Aucun officier en poste" action={<EmptyAction to="/game/etat-major">Nommer un officier</EmptyAction>} />
+                <EmptyState size="sm" icon={<Medal />} title="Aucun officier en poste" action={<EmptyAction to="/game/etat-major">Nommer un officier</EmptyAction>} />
               ) : (
                 st.command.active.map((c) => (
                   <motion.div key={c.id} whileHover={{ x: 3 }} className="flex items-center gap-3 border border-gold-glow/15 bg-gold-glow/[0.04] px-3 py-2">
@@ -596,17 +574,17 @@ export function EmpireStatsPage() {
                     {st.command.talents.spent} / {st.command.talents.total}
                   </span>
                 </div>
-                <Bar value={ratio(st.command.talents.spent, st.command.talents.total)} tone={VIOLET} className="mt-1" />
+                <HudMeter percent={(ratio(st.command.talents.spent, st.command.talents.total)) * 100} tone={VIOLET} className="h-1.5 mt-1" />
                 {st.command.talents.free > 0 && <p className="mt-1 text-[11px] text-violet-glow">{st.command.talents.free} point(s) à dépenser</p>}
               </div>
             </div>
 
             <div className="flex min-w-0 flex-col gap-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 Reliques équipées ({st.command.relicsEquipped.length}) · {st.command.relicsOwned} en collection
               </p>
               {st.command.relicsEquipped.length === 0 ? (
-                <EmptyState size="sm" icon="🏺" title="Aucune relique équipée" action={<EmptyAction to="/game/etat-major">Équiper une relique</EmptyAction>} />
+                <EmptyState size="sm" icon={<Amphora />} title="Aucune relique équipée" action={<EmptyAction to="/game/etat-major">Équiper une relique</EmptyAction>} />
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {st.command.relicsEquipped.map((r, i) => (
@@ -619,9 +597,9 @@ export function EmpireStatsPage() {
             </div>
 
             <div className="flex min-w-0 flex-col gap-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Bonus actifs (officiers, reliques, talents, secteurs)</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">Bonus actifs (officiers, reliques, talents, secteurs)</p>
               {bonusRows.length === 0 && st.command.modifiers.spyLevel <= 0 ? (
-                <EmptyState size="sm" icon="✨" title="Aucun bonus actif" action={<EmptyAction to="/game/labo">Ouvrir le Labo</EmptyAction>} />
+                <EmptyState size="sm" icon={<Sparkles />} title="Aucun bonus actif" action={<EmptyAction to="/game/labo">Ouvrir le Labo</EmptyAction>} />
               ) : (
                 <>
                   {bonusRows.map((b) => (
@@ -633,7 +611,7 @@ export function EmpireStatsPage() {
                           {pct(b.value, 1)}
                         </span>
                       </div>
-                      <Bar value={b.value / bonusMax} tone={b.sign === "−" ? CYAN : MINT} className="h-1" />
+                      <HudMeter percent={(b.value / bonusMax) * 100} tone={b.sign === "−" ? CYAN : MINT} className="h-1.5 h-1" />
                     </div>
                   ))}
                   {st.command.modifiers.spyLevel > 0 && (
@@ -650,7 +628,7 @@ export function EmpireStatsPage() {
         <div className="grid gap-5 lg:grid-cols-2">
           <Section title="Menaces" folded icon={Skull} tone={DANGER} aside={<SectionLink to="/game/menaces">Menaces</SectionLink>}>
             {st.threats.length === 0 ? (
-              <EmptyState size="sm" icon="☮️" title="Aucune faction active">Le secteur est calme pour l'instant.</EmptyState>
+              <EmptyState size="sm" icon={<Bird />} title="Aucune faction active">Le secteur est calme pour l'instant.</EmptyState>
             ) : (
               <div className="flex flex-col gap-3">
                 {st.threats.map((t) => {
@@ -664,7 +642,7 @@ export function EmpireStatsPage() {
                           notoriété {t.notoriety} / {t.maxNotoriety}
                         </span>
                       </div>
-                      <Bar value={r} tone={tone} className="mt-1.5 h-1" />
+                      <HudMeter percent={(r) * 100} tone={tone} className="h-1.5 mt-1.5 h-1" />
                       <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 font-mono text-[11px]">
                         <span className="text-mint-glow">{t.raidsWon} repoussé(s)</span>
                         <span className="text-danger-glow">{t.raidsLost} perdu(s)</span>

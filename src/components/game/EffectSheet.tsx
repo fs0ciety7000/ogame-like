@@ -39,7 +39,7 @@ function Line({ line }: { line: EffectSheetLine }) {
       <div className="min-w-0">
         <p className="text-sm text-slate-100">
           {effectStatLabel(line.stat, line.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}
-          <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-slate-500">{line.layer === "tech" ? "technologies" : "empire"}</span>
+          <span className="ml-2 font-mono text-[11px] uppercase tracking-wider text-slate-500">{line.layer === "tech" ? "technologies" : "empire"}</span>
         </p>
         <div className="mt-1 flex flex-wrap gap-1">
           {line.sources.map((s) => (

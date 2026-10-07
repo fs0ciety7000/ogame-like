@@ -50,7 +50,7 @@ export function HudPanel({
   return (
     <Card className={cn("hud-panel flex flex-col gap-3 p-4", accent && "border-t-2 border-t-gold-glow", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className={cn("hud-panel-title hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
+        <h2 className={cn("hud-panel-title hud-eyebrow flex min-w-0 items-center gap-2 text-[11px] [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0", TITLE_TONE[tone])}>
           {icon}
           {typeof title === "string" ? (
             <span ref={titleRef} key={title} className="min-w-0">
@@ -110,7 +110,7 @@ export function FoldSection({
   return (
     <section className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center gap-2 border-b border-white/5 pb-1.5">
-        <button type="button" onClick={toggle} aria-expanded={open} className={cn("hud-hit hud-eyebrow flex min-w-0 items-center gap-2 text-[10px] transition-colors hover:text-cyan-glow", TITLE_TONE[tone])}>
+        <button type="button" onClick={toggle} aria-expanded={open} className={cn("hud-hit hud-eyebrow flex min-w-0 items-center gap-2 text-[11px] transition-colors hover:text-cyan-glow", TITLE_TONE[tone])}>
           <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", !open && "-rotate-90")} aria-hidden />
           <span className="flex min-w-0 items-center gap-2 text-left [&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0">{title}</span>
         </button>
@@ -137,7 +137,7 @@ export function ShowMoreButton({ more, step, onClick }: { more: number; step: nu
   if (more <= 0) return null;
   return (
     <Button variant="ghost" size="sm" className="self-center" onClick={onClick}>
-      Afficher {Math.min(more, step)} de plus <span className="font-mono text-[10px] text-slate-500">({more} restant{more > 1 ? "s" : ""})</span>
+      Afficher {Math.min(more, step)} de plus <span className="font-mono text-[11px] text-slate-500">({more} restant{more > 1 ? "s" : ""})</span>
     </Button>
   );
 }

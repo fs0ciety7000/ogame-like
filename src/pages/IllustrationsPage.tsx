@@ -142,7 +142,7 @@ export function IllustrationsPage() {
         <header className="flex flex-wrap items-center gap-3">
           <Images className="h-7 w-7 shrink-0 text-cyan-glow" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-cyan-glow">Cosmic Empires · {LABEL || "Serveur de test"}</p>
+            <p className="hud-eyebrow text-[11px] text-cyan-glow">Cosmic Empires · {LABEL || "Serveur de test"}</p>
             <h1 className="hud-title text-2xl text-slate-100 sm:text-3xl">Atelier d'illustrations</h1>
           </div>
           <Link to="/game" className="border border-cyan-glow/40 px-2.5 py-1 text-xs text-cyan-glow hover:border-cyan-glow">

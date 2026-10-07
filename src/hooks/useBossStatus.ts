@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useNowEvery } from "@/hooks/useNowTicker";
 import { bossPhase, upcomingLeviathanStart, type BossPhase } from "@/game/leviathan";
 import { seasonBossWindow } from "@/game/chronicles";
 import { useLeviathan } from "@/services/leviathanService";
@@ -22,12 +22,7 @@ export const BOSS_TONE: Record<BossPhase, HudTone> = { active: "danger", killed:
 
 /** Minute courante (les fins de combat sont gérées sans attendre le serveur). */
 function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
+  return useNowEvery(30_000);
 }
 
 /** État du boss d'une page de la navigation (null pour les autres pages). */

@@ -17,7 +17,10 @@ Médailles : `--th-medal-gold|silver|bronze`. Raretés : `--th-rarity-common|rar
 Transparence d'une couleur (hex ou jeton) : `alpha(couleur, 30)` de `@/lib/utils` (jamais `${couleur}55`).
 Les couleurs choisies et enregistrées par les joueurs (rangs d'alliance…) restent des données hex, rangées dans `src/game`.
 Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--th-space-700` (fond clair des panneaux) dans chaque thème ;
-`text-slate-600` est réservé au décor (filets, séparateurs, icônes inactives), jamais à un texte qui porte une information (6.14.55).
+`text-slate-600` est réservé au décor (filets, séparateurs, icônes inactives), jamais à un texte qui porte une information (6.14.55) ;
+un texte, un `placeholder`, une heure ou un rang en gris passe en `text-slate-500` (garde, 6.14.83).
+**Plancher de 11 px** : aucun texte sous 11 px hors admin (`text-[11px]` au plus petit, pastilles `hud-chip` comprises) ; seuls les
+libellés d'un dessin SVG (`<text>`, en unités du dessin) y échappent (6.14.83).
 Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, écart entre couleurs de sens).
 
 ## Couleurs = sens
@@ -41,6 +44,11 @@ une couleur de sens. L'accent se marque aussi par la forme : soulignement de l'o
 Ne pas décorer avec une couleur sémantique. Un même cas garde la même couleur partout :
 un chantier à l'arrêt (bâtiment, labo, chantier naval, missions) est une **action à mener**, donc `accent`,
 sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **attention** (`ember`). Une info ne passe jamais par la couleur seule (texte ou icône en plus).
+Une **catégorie** (type d'unité, classe de combat, tempérament, rubrique de l'agenda) n'a pas d'enjeu : `HudTag` sans ton (neutre,
+c'est son défaut depuis 6.14.82) et une icône. Une valeur ne prend la couleur de son sens que si elle porte un enjeu : « Défaites »
+en `danger` seulement au-dessus de 0, « Victoires » en `mint` seulement au-dessus de 0 ; le tempérament Agressif en `ember`, les
+autres en neutre. L'agenda est tout en `violet` (événements) et chaque rubrique a son icône (`agendaStyle.tsx`). Une puissance, une
+production, un compteur restent neutres ; le rang garde l'or (prestige).
 
 ## Composants (`src/components/ui/hud.tsx`)
 
@@ -83,7 +91,10 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   grisée `text-slate-500` « Prochaine ouverture : … · 40 / 100 XP » (trois noms au plus, le reste dans le `title`). Dans Ctrl+K, une
   page fermée reste trouvable : icône et libellé `text-slate-500`, sa condition à la place de « Navigation ». Un lien vers une page
   fermée (défi du passe, des Chroniques) dit « Ouvre : … » (`ObjectiveGoLink`, `HudChip asChild`) ; une étape du tutoriel dit
-  « Débloque : … ».
+  « Débloque : … ». Tout ce qui pousse vers une page (carte, raccourci, rappel, suggestion, monnaie de la barre des ressources) suit le
+  menu : lire `useHiddenRoutes()` ou `useNavUnlock().closed`, jamais une liste à part (6.14.81). Une monnaie déjà possédée reste
+  affichée. Un succès d'une page fermée dit « À découvrir : Galaxie. S'ouvre à … » (cadenas `text-slate-500`, sans barre ni
+  compteur). L'ouverture est annoncée par une notification de genre `system` (« Nouveau : … »), jamais par une nouvelle pastille.
 - **Hiérarchie d'une page (6.14.67)** : l'action principale de la page vient juste sous l'en-tête (la grille des Missions, les
   paliers du Passe, « Rejoindre » pour un joueur sans alliance) ; l'explication et les compteurs secondaires passent dessous ou
   se replient (`FoldSection`). Une carte n'a qu'un bouton plein (`primary`) : le premier pas sûr (Espionner un seigneur) ; une
@@ -98,6 +109,15 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   un bouton grisé dit pourquoi en texte visible (une ligne sous le bouton, ou une fois en tête de page si la raison vaut pour
   toutes les cartes), le `title` ne fait que doubler. Garde : `src/lib/accessibilite.test.ts`.
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
+  Pas de tuile, de barre ou de pastille de coût refaite dans une page (`HeroTile`, `Bar`, `CostChips` sont devenus `StatTile`,
+  `HudMeter`, `CostPills` en 6.14.83). Un état vide de section (« Aucun… », « Pas encore… ») est un `EmptyState size="sm"` avec une
+  icône lucide ; une valeur absente dans une ligne (« Aucune perte ») reste du texte.
+- **Titres** : un titre de panneau est `HudPanel` (eyebrow mono) ou `hud-title` (`CardTitle`, `h2/h3 className="hud-title text-sm"`),
+  jamais `font-display` en casse mixte ; le nom d'un objet (unité, annonce, chapitre) reste en `font-display`.
+- **Onglets** : `Tabs` / `TabsList` / `TabsTrigger` (Journal 6.14.82, Réglages, Codex), jamais de boutons `role="tab"` faits main.
+- **Icônes** : lucide ou `GameIcon`, jamais un emoji écrit dans un `.tsx` (rendu différent selon le système, hors thème). Les emoji
+  saisis par l'admin (titres, bannières, événements) ou envoyés par le serveur restent des données (Q-AD-6). ★ et ↔ sont des signes
+  typographiques, permis.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
   (fondue vers la gauche et le bas, opacité réduite) : à réserver aux pages « lieu » (Casino…), le texte reste prioritaire.
@@ -134,7 +154,8 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
 
 ## À faire / à éviter
 
-- Faire : nombres en `font-mono` tabulaire, formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`), jamais
+- Faire : nombres en `font-mono` tabulaire (gros chiffres compris : `StatTile`, niveaux, compteurs, gains, rangs, décomptes ;
+  `font-mono font-bold tabular-nums`, jamais `hud-title` qui impose la police de titre), formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`), jamais
   `toLocaleString` sur un nombre ; trois niveaux de texte maximum par panneau ; coins coupés ou droits. Ces fonctions séparent les
   milliers par une espace insécable U+00A0 : l'espace fine U+202F de fr-FR manque à toutes les polices de titre (6.14.54).
 - Faire : un texte qui cite un chiffre de règle (astuce, toast, aide) le lit dans la règle en vigueur (`ALLIANCE_RULES.maxMembers`,
@@ -149,5 +170,13 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
 - Éviter : encadrés `rounded-lg border bg-x/10 p-3` → `HudCallout`.
 - Éviter : gros arrondis, ombres douces, pilules, plusieurs glows forts dans une même vue. Les cercles restent pour ce qui est
   rond par nature (planètes, radar, halos, points d'état, particules).
-- Garde-fous (`src/lib/designSystem.test.ts`) : couleurs hex, pastilles arrondies, `rounded-2xl/3xl`, `shadow-lg/xl/2xl`,
-  pilules `rounded-full` + `px-*`, capitales hors mono, `toLocaleString` sur un nombre, boîtes natives du navigateur.
+- Faire : une date ou une heure par `formatDateTime(ms, style, zone)` (`@/lib/utils`), jamais `toLocale*String` dans un composant.
+  `zone = "server"` (heure de Paris) pour un rendez-vous fixé par le serveur (boss, maintenance, casino, Chroniques, Gazette,
+  agenda, guerre de territoire) ; `"local"` (défaut) pour un moment propre au joueur (arrivée de flotte, message, journal, historique).
+- Faire : un décompte en direct lit `useNowTicker()` ; un état qui change à la minute lit `useNowEvery(30_000)` (même horloge,
+  rendu seulement au changement de pas). Un `setInterval` reste permis pour recharger des données (classement, statut).
+- Garde-fous (`src/lib/designSystem.test.ts`) : couleurs hex, pastilles arrondies, `rounded-2xl/3xl` et (6.14.83) `rounded-md/lg/xl`,
+  `shadow-lg/xl/2xl`, pilules `rounded-full` + `px-*`, capitales hors mono, `toLocaleString` sur un nombre, boîtes natives du
+  navigateur ; (6.14.82-83) emoji dans un `.tsx`, texte sous 11 px hors admin, `text-slate-600` sur un texte, `toLocale*String`
+  hors `formatDateTime`, `setInterval(() => setNow(…))`, `useEffect` sans accolades (aussi la règle eslint `no-restricted-syntax`).
+  Les fichiers qu'une autre tâche modifiait pendant le lot sont des exceptions comptées (cliquet : le compte ne peut que baisser).

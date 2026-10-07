@@ -91,7 +91,7 @@ export function LeaderboardPodium({ top, onOpen, suffix = "" }: { top: PodiumEnt
                     transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                   />
                   <div className="min-w-0">
-                    <p className={cn("truncate font-mono text-[9px] uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.16em]", s.text)}>{getRankLabel(p.xp)}</p>
+                    <p className={cn("truncate font-mono text-[11px] uppercase tracking-[0.12em] sm:tracking-[0.16em]", s.text)}>{getRankLabel(p.xp)}</p>
                     <p className="tabular-mono truncate text-xs text-slate-200 sm:text-sm">
                       <AnimatedNumber value={p.xp} countUp={!reduced} format={(v) => formatNumber(Math.floor(v))} /> XP{suffix}
                     </p>
@@ -113,7 +113,7 @@ export function RankChip({ xp, suffix = "", showProgress = true, className }: { 
     <div className={cn("flex items-center gap-2.5", className)} title={progress.next ? `${progress.percent} % vers ${progress.next}` : progress.current}>
       <img src={getRankIcon(xp)} alt="" className="h-11 w-11 shrink-0 object-contain drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-glow)_45%,transparent)] max-sm:h-9 max-sm:w-9" />
       <div className="min-w-0">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">{progress.current}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-cyan-glow">{progress.current}</p>
         <p className="tabular-mono text-sm leading-tight text-slate-100">
           {formatNumber(xp)} <span className="text-[11px] text-slate-500">XP{suffix}</span>
         </p>

@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { Share2 } from "lucide-react";
+import { Share2, Satellite, Swords } from "lucide-react";
 import { shareReport } from "@/services/sharedReportService";
 import { PlayerName } from "@/components/ui/player-name";
 import { useEffect, useState } from "react";
@@ -153,7 +153,7 @@ export function CombatLogPage() {
       </h2>
       <Card className="divide-y divide-white/5">
         {reports.length === 0 && (
-          <EmptyState icon="⚔️" title="Aucun combat" action={<EmptyAction to="/game/joueurs">Trouver une cible</EmptyAction>}>Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
+          <EmptyState icon={<Swords />} title="Aucun combat" action={<EmptyAction to="/game/joueurs">Trouver une cible</EmptyAction>}>Tes attaques lancées et reçues apparaîtront ici.</EmptyState>
         )}
         {battlePage.items.map((report, index) => {
           if (!uid) return null;
@@ -232,7 +232,7 @@ export function CombatLogPage() {
         <Eye className="h-4 w-4 text-cyan-glow" /> Espionnage
       </h2>
       <Card className="divide-y divide-white/5">
-        {spyList.length === 0 && <EmptyState icon="🛰️" title="Aucun rapport" action={<EmptyAction to="/game/galaxie">Ouvrir la carte</EmptyAction>}>Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
+        {spyList.length === 0 && <EmptyState icon={<Satellite />} title="Aucun rapport" action={<EmptyAction to="/game/galaxie">Ouvrir la carte</EmptyAction>}>Envoie des sondes depuis la carte ou la liste des joueurs.</EmptyState>}
         {spyPage.items.map((r) => {
           const mine = r.spyUid === uid;
           return (

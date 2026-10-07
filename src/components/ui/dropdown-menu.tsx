@@ -25,7 +25,7 @@ export function DropdownMenuItem({ className, ...props }: React.ComponentProps<t
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-200 outline-none transition-colors data-[highlighted]:bg-white/5",
+        "cursor-pointer px-3 py-2 text-sm text-slate-200 outline-none transition-colors data-[highlighted]:bg-white/5",
         className,
       )}
       {...props}
@@ -34,5 +34,5 @@ export function DropdownMenuItem({ className, ...props }: React.ComponentProps<t
 }
 
 export function DropdownMenuLabel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-3 py-1.5 text-xs uppercase tracking-wide text-slate-500", className)} {...props} />;
+  return <div className={cn("px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500", className)} {...props} />;
 }

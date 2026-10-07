@@ -4,7 +4,7 @@ import type { EmpireStats } from "@/game/empireStats";
 import { publicShowcase } from "@/game/profile";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
 import type { EmpireCardInput } from "@/lib/empireCard";
-import { formatCompact } from "@/lib/utils";
+import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
 /** v5.7 : carte d'empire (page Statistiques) ou de profil, à partir du joueur. */
@@ -17,7 +17,7 @@ export function empireCardFromPlayer(
   const o = st.overview;
   const m = st.military;
   const titles = [...(player.titles ?? [])].reverse().map((t) => t.label);
-  const date = new Date(opts.now).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const date = formatDateTime(opts.now, "date");
   const empire = [
     { label: "Production / h", value: formatCompact(Math.round(st.economy.totalPerHour)) },
     { label: "Attaque", value: formatCompact(Math.round(m.modifiedAttack)), tone: "#ff8a4c" },

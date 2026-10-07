@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Crown, Scroll } from "lucide-react";
+import { Crown, Scroll, ChartColumn } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { HudTag } from "@/components/ui/hud";
+import { HudTag, EmptyState } from "@/components/ui/hud";
 import { pb } from "@/lib/pocketbase";
 import { assetUrl } from "@/lib/assets";
 import { ALLIANCE_SAGA_KEY, ALLIANCE_SAGA_RULES, readAllianceSaga, sagaMonthId, sagaObjectiveLabel, sagaOf, type AllianceSagaState } from "@/game/allianceSaga";
@@ -56,7 +56,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
           <img src={assetUrl(saga.image)} alt="" className="h-28 w-full object-cover opacity-60 sm:h-36" />
           <div className="absolute inset-0 bg-gradient-to-t from-space-950 via-space-950/60 to-transparent" />
           <div className="absolute bottom-3 left-4 right-4">
-            <p className="hud-eyebrow flex items-center gap-1.5 text-[10px]" style={{ color: saga.accent }}>
+            <p className="hud-eyebrow flex items-center gap-1.5 text-[11px]" style={{ color: saga.accent }}>
               <Scroll className="h-3.5 w-3.5" /> Saga d'alliance
             </p>
             <h2 className="hud-title text-xl text-slate-100">{saga.title}</h2>
@@ -93,7 +93,7 @@ export function AllianceSagaTab({ allianceId }: { allianceId: string }) {
           {state.standing && <span className="ml-auto text-[11px] text-slate-500">classement mis à jour chaque heure · ta progression en direct</span>}
         </div>
         {top.length === 0 ? (
-          <p className="text-sm text-slate-400">Pas encore de classement : il se calcule chaque heure.</p>
+          <EmptyState size="sm" icon={<ChartColumn />} title="Pas encore de classement">Il se calcule chaque heure.</EmptyState>
         ) : (
           top.map((r) => (
             <div key={r.allianceId} className={cn("flex items-center gap-3 border-t border-white/5 pt-2 text-sm", r.allianceId === allianceId && "text-cyan-glow")}>

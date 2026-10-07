@@ -56,7 +56,7 @@ export const HudChip = React.forwardRef<HTMLElement, ChipProps>(function HudChip
 });
 
 /** Étiquette statique (rétrocompatible) : HudChip en petite taille. */
-export function HudTag({ children, tone = "accent", className }: { children: ReactNode; tone?: "accent" | "ember" | "gold" | "mint" | "danger" | "violet"; className?: string }) {
+export function HudTag({ children, tone = "neutral", className }: { children: ReactNode; tone?: HudTone; className?: string }) {
   return (
     <HudChip size="sm" tone={tone} className={className}>
       {children}
@@ -88,7 +88,7 @@ export function StatBar({ label, value, max, color, display }: { label: string; 
   const on = max > 0 ? Math.max(value > 0 ? 1 : 0, Math.round((Math.min(value, max) / max) * 12)) : 0;
   return (
     <div>
-      <div className="flex items-baseline justify-between font-mono text-[10px] tracking-[0.2em] text-slate-400">
+      <div className="flex items-baseline justify-between font-mono text-[11px] tracking-[0.2em] text-slate-400">
         {label}
         <b className="text-xs tracking-normal text-slate-100">{display ?? value}</b>
       </div>
@@ -112,7 +112,7 @@ export function CostPill({ children, missing, ok, className }: { children: React
       )}
     >
       {children}
-      {missing && <em className="text-[10px] not-italic opacity-75">{missing}</em>}
+      {missing && <em className="text-[11px] not-italic opacity-75">{missing}</em>}
     </span>
   );
 }
@@ -164,20 +164,21 @@ export function EmptyState({ icon, title, children, action, size = "md", classNa
 }
 
 /** Tuile de chiffre clé : libellé, grande valeur, liseré coloré. */
-export function StatTile({ label, value, sub, tone: toneIn = "accent", icon, size = "md" }: { label: string; value: ReactNode; sub?: ReactNode; tone?: HudTone; icon?: ReactNode; size?: "sm" | "md" }) {
+export function StatTile({ label, value, sub, tone: toneIn = "accent", icon, size = "md", className }: { label: string; value: ReactNode; sub?: ReactNode; tone?: HudTone; icon?: ReactNode; size?: "sm" | "md"; className?: string }) {
   const tone = HUD_TONE[toneIn];
   const sm = size === "sm";
   return (
-    <div className={cn("glass-panel relative overflow-hidden", sm ? "px-2.5 py-2" : "p-4")}>
+    <div className={cn("glass-panel relative overflow-hidden", sm ? "px-2.5 py-2" : "p-4", className)}>
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: tone, boxShadow: `0 0 12px ${tone}` }} />
       <div className="relative flex items-start justify-between gap-2">
-        <p className={cn("font-mono uppercase text-slate-500", sm ? "text-[9px] tracking-[0.14em]" : "text-[10px] tracking-[0.2em]")}>{label}</p>
+        <p className={cn("font-mono uppercase text-slate-500", sm ? "text-[11px] tracking-[0.14em]" : "text-[11px] tracking-[0.2em]")}>{label}</p>
         {icon && <span className="text-slate-500">{icon}</span>}
       </div>
-      <p className={cn("hud-title relative normal-case tabular-nums", sm ? "mt-0.5 text-xl" : "mt-1.5 text-3xl")} style={{ color: tone }}>
+      {/* 6.14.82 (UX-9, AD-5) : un chiffre clé en mono tabulaire (les chiffres ne dansent plus d'une tuile à l'autre). */}
+      <p className={cn("relative font-mono font-bold tabular-nums [overflow-wrap:anywhere]", sm ? "mt-0.5 text-xl" : "mt-1.5 text-2xl sm:text-3xl")} style={{ color: tone }}>
         {value}
       </p>
-      {sub && <p className={cn("relative text-slate-500", sm ? "text-[10px]" : "mt-1 text-xs")}>{sub}</p>}
+      {sub && <div className={cn("relative text-slate-500", sm ? "text-[11px]" : "mt-1 text-xs")}>{sub}</div>}
     </div>
   );
 }

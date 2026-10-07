@@ -9,7 +9,7 @@ export function NpcBadge({ className }: { className?: string }) {
     <span
       title="Seigneur de guerre tenu par le jeu (PNJ) : pas de récompense de classement, mais pillable et prêt à riposter."
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 border border-ember-glow/60 bg-ember-glow/15 px-1.5 py-px font-mono text-[9px] font-bold uppercase leading-[1.5] tracking-[0.14em] text-ember-glow",
+        "inline-flex shrink-0 items-center gap-1 border border-ember-glow/60 bg-ember-glow/15 px-1.5 py-px font-mono text-[11px] font-bold uppercase leading-[1.5] tracking-[0.14em] text-ember-glow",
         CLIP,
         className,
       )}
@@ -26,7 +26,7 @@ export function VacationBadge({ untilMs, className }: { untilMs: number; classNa
   return (
     <span
       title={`En vacances encore ${days} jour${days > 1 ? "s" : ""} : impossible de l'attaquer.`}
-      className={cn("inline-flex shrink-0 items-center gap-1 border border-cyan-glow/50 bg-cyan-glow/10 px-1.5 py-px font-mono text-[9px] font-bold uppercase leading-[1.5] tracking-[0.14em] text-cyan-glow", CLIP, className)}
+      className={cn("inline-flex shrink-0 items-center gap-1 border border-cyan-glow/50 bg-cyan-glow/10 px-1.5 py-px font-mono text-[11px] font-bold uppercase leading-[1.5] tracking-[0.14em] text-cyan-glow", CLIP, className)}
     >
       <Palmtree className="h-3 w-3" />
       Vacances

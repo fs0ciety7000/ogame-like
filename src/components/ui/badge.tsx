@@ -17,7 +17,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "hud-eyebrow hud-cut-sm inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] tracking-[0.16em]",
+        "hud-eyebrow hud-cut-sm inline-flex items-center gap-1 border px-2 py-0.5 text-[11px] tracking-[0.16em]",
         styles,
         className,
       )}

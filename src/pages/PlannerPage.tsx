@@ -107,7 +107,7 @@ function TemplateEditor({ player, initial, onClose }: { player: PlayerState; ini
         <DialogTitle>{initial?.id ? "Modifier le modèle" : "Nouveau modèle"}</DialogTitle>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex. Éco du matin)" maxLength={32} aria-label="Nom du modèle" />
         <div className="flex flex-col gap-2 border border-cyan-glow/15 bg-cyan-glow/[0.03] p-3">
-          <p className="hud-eyebrow text-[10px] text-slate-500">Ajouter une étape</p>
+          <p className="hud-eyebrow text-[11px] text-slate-500">Ajouter une étape</p>
           <div className="flex flex-wrap gap-1" role="group" aria-label="Type d'étape">
             {(Object.keys(KIND_LABEL) as ActionStep["kind"][]).map((k) => (
               <Button key={k} size="sm" variant={kind === k ? "secondary" : "ghost"} aria-pressed={kind === k} onClick={() => setKind(k)}>

@@ -6,7 +6,7 @@ import { HudTag } from "@/components/ui/hud";
 import { assetUrl } from "@/lib/assets";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { maintenanceProgress, maintenanceRemainingMs, DEFAULT_MAINTENANCE_MESSAGE, type MaintenanceState } from "@/game/maintenance";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* Page affichée aux joueurs pendant la maintenance (v2.5) : illustration
    de l'opérateur en fond, compte à rebours, journal technique animé. */
@@ -49,7 +49,7 @@ function RollingDigits({ value, label }: { value: string; label: string }) {
         ))}
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-black/50" />
       </div>
-      <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-slate-500">{label}</span>
+      <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-slate-500">{label}</span>
     </div>
   );
 }
@@ -129,7 +129,7 @@ function TerminalLog() {
       <div className="mb-2 flex items-center gap-2 border-b border-white/[0.06] pb-2">
         <img src={assetUrl("/assets/maintenance/operator-avatar.webp")} alt="" className="h-8 w-8 rounded-full border border-cyan-glow/40 object-cover shadow-[0_0_10px_-2px_var(--color-cyan-glow)]" />
         <span className="font-mono uppercase tracking-[0.16em] text-slate-300">Opérateur K-7</span>
-        <span className="ml-auto flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.16em] text-mint-glow">
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-mint-glow">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint-glow" /> en intervention
         </span>
       </div>
@@ -188,7 +188,7 @@ export function MaintenancePage({
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  const reopen = state.endsAtMs ? new Date(state.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : null;
+  const reopen = state.endsAtMs ? formatDateTime(state.endsAtMs, "time", "server") : null;
   const overdue = remaining === 0;
 
   return (
@@ -230,7 +230,7 @@ export function MaintenancePage({
           <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
           <div className="leading-none">
             <p className="font-display text-base font-bold uppercase tracking-[0.16em] text-slate-100">Cosmic</p>
-            <p className="font-display text-[10px] font-semibold uppercase tracking-[0.42em] text-cyan-glow">Empires</p>
+            <p className="font-display text-[11px] font-semibold uppercase tracking-[0.42em] text-cyan-glow">Empires</p>
           </div>
         </motion.header>
 
@@ -263,7 +263,7 @@ export function MaintenancePage({
           <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="flex flex-wrap items-center gap-5 sm:gap-7">
             <ProgressRing progress={overdue ? 1 : progress} />
             <div>
-              <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-cyan-glow/80">
+              <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.3em] text-cyan-glow/80">
                 {remaining === null ? "En cours depuis" : overdue ? "Finalisation en cours" : "Réouverture dans"}
               </p>
               <div className={cn("flex items-start gap-1.5 sm:gap-2.5", overdue && "animate-pulse")}>

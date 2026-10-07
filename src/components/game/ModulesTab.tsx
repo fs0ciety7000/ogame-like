@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Boxes, Combine, EyeOff, Gavel, Hammer, Package, Recycle, Rocket, Save, Shield, Swords, X } from "lucide-react";
+import { Boxes, Combine, EyeOff, Gavel, Hammer, Package, Recycle, Rocket, Save, Shield, Swords, X, Puzzle } from "lucide-react";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { EmptyState, HUD_TONE, HudCallout, HudChip, HudTag } from "@/components/ui/hud";
 import { Input } from "@/components/ui/input";
@@ -190,7 +190,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
           );
         })}
         {sorted.length === 0 && (
-          <EmptyState icon="🧩" title="Aucun plan de module" action={<EmptyAction to="/game/uber">Affronter le boss mondial</EmptyAction>} className="p-0">
+          <EmptyState icon={<Puzzle />} title="Aucun plan de module" action={<EmptyAction to="/game/uber">Affronter le boss mondial</EmptyAction>} className="p-0">
             Les boss donnent les meilleurs plans (rare au minimum) ; seigneurs, menaces, expéditions et attaques gagnées en laissent parfois.
           </EmptyState>
         )}

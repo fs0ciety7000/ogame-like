@@ -67,7 +67,7 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
         aria-label={`Déplier la Prise en main : ${claimedCount} objectifs sur ${steps.length}`}
         className="glass-panel hud-cut-sm flex min-h-11 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:border-cyan-glow/40"
       >
-        <span className="hud-eyebrow shrink-0 text-[10px] text-slate-400">Prise en main</span>
+        <span className="hud-eyebrow shrink-0 text-[11px] text-slate-400">Prise en main</span>
         <HudMeter percent={(claimedCount / steps.length) * 100} className="min-w-12 flex-1" />
         <span className="shrink-0 font-mono text-xs tabular-nums text-slate-300">
           {claimedCount} / {steps.length}
@@ -98,7 +98,7 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
             <ChevronUp className="h-4 w-4" />
           </button>
           <div>
-            <p className="hud-eyebrow pr-7 text-[10px] text-slate-500">{chapter ? `Prise en main · Chapitre ${chapter.id} / ${STORY_CHAPTERS.length}` : "Prise en main"}</p>
+            <p className="hud-eyebrow pr-7 text-[11px] text-slate-500">{chapter ? `Prise en main · Chapitre ${chapter.id} / ${STORY_CHAPTERS.length}` : "Prise en main"}</p>
             <h2 className="hud-title pr-7 text-lg">{chapter ? chapter.title : "Premiers pas du commandant"}</h2>
             <div className="mt-2 flex items-center gap-3">
               <HudMeter percent={(claimedCount / steps.length) * 100} className="flex-1" />
@@ -166,7 +166,7 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
                     {step.label}
                   </Link>
                   {done && !claimed && step.id !== next?.step.id && (
-                    <button type="button" disabled={busy !== null} onClick={() => void claim(step.id)} className="ml-auto shrink-0 font-mono text-[10px] uppercase text-gold-glow hover:underline">
+                    <button type="button" disabled={busy !== null} onClick={() => void claim(step.id)} className="ml-auto shrink-0 font-mono text-[11px] uppercase text-gold-glow hover:underline">
                       Réclamer
                     </button>
                   )}

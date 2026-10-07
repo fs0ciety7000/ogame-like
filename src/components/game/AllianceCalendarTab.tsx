@@ -9,7 +9,7 @@ import type { AllianceWar } from "@/game/wars";
 import { subscribeWars } from "@/services/warService";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { useLeviathan } from "@/services/leviathanService";
-import { cn, formatDuration } from "@/lib/utils";
+import { cn, formatDuration, formatDateTime } from "@/lib/utils";
 import type { Alliance } from "@/types/game";
 
 /* v4.9 : calendrier commun de l'alliance (lecture seule). */
@@ -26,12 +26,14 @@ const TONE: Record<CalendarKind, string> = {
 };
 
 function when(ms: number): string {
-  return new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(ms, "short");
 }
 
 export function AllianceCalendarTab({ alliance }: { alliance: Alliance }) {
   const [wars, setWars] = useState<AllianceWar[]>([]);
-  useEffect(() => subscribeWars(alliance.id, setWars), [alliance.id]);
+  useEffect(() => {
+    return subscribeWars(alliance.id, setWars);
+  }, [alliance.id]);
   useEffect(() => {
     void loadWarlords().catch(() => undefined);
   }, []);
@@ -77,7 +79,7 @@ export function AllianceCalendarTab({ alliance }: { alliance: Alliance }) {
                   ) : (
                     <>
                       {when(e.startMs)}
-                      <span className="block text-slate-600">dans {formatDuration((e.startMs - now) / 1000)}</span>
+                      <span className="block text-slate-500">dans {formatDuration((e.startMs - now) / 1000)}</span>
                     </>
                   )}
                 </span>

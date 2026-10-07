@@ -158,7 +158,7 @@ export function LoginPage() {
               { value: "24/7", label: "Temps réel" },
             ].map((stat) => (
               <div key={stat.label}>
-                <span className="block font-display text-xl text-slate-100">{stat.value}</span>
+                <span className="font-mono font-bold tabular-nums block text-xl text-slate-100">{stat.value}</span>
                 <span className="hud-eyebrow text-slate-500">{stat.label}</span>
               </div>
             ))}
@@ -299,7 +299,7 @@ export function LoginPage() {
             </button>
           )}
         </form>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[11px] uppercase tracking-[0.25em] text-slate-500">
           <a href="/bible/index.html" className="transition hover:text-cyan-glow">
             Bible visuelle du jeu
           </a>

@@ -6,6 +6,9 @@ import { onboardingEligible } from "@/game/onboarding";
 import { usePlayerStore } from "@/store/playerStore";
 import { ALLIANCE_RULES, findAllianceResearch } from "@/game/alliances";
 import { PVP_RULES } from "@/game/pvp";
+import { COLONY_RULES } from "@/game/colonies";
+import { NAV_UNLOCK_RULES, navStatus } from "@/game/navUnlock";
+import { useIsAdmin } from "@/services/adminService";
 import { HudCallout } from "@/components/ui/hud";
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { cn } from "@/lib/utils";
@@ -38,6 +41,28 @@ export const PAGE_TIPS: Record<string, string> = {
     const extra = Math.max(0, ALLIANCE_RULES.membersPerQuarter);
     return `Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. ${base} commandants au départ${extra ? `, +${extra} par niveau de ${findAllianceResearch("quartiers")?.name ?? "Quartiers fédérés"}` : ""}.`;
   },
+  // 6.14.81 (DP-L6) : une astuce pour chaque page qui s'ouvre au fil de la progression (menu progressif, I30).
+  "/game/succes": "Chaque succès rapporte de l'XP et parfois un titre. Les succès secrets se révèlent en jouant : la liste « À découvrir » te dit où chercher.",
+  "/game/passe": "Le passe est gratuit : tes actions de chaque jour remplissent ses paliers. Chaque défi dit où agir ; un palier atteint se réclame ici. Il repart à zéro au début du mois.",
+  "/game/primes": "Les Kesh'Vaar paient en Ambre la capture des pillards de l'Essaim. L'Ambre se dépense au Comptoir : accélérateurs, boucliers, Planificateur et autres outils.",
+  "/game/classe": "La classe d'empire donne des bonus permanents et un avantage propre. Ton premier choix est gratuit ; en changer coûte ensuite de l'Ambre et demande d'attendre.",
+  "/game/journal": "Tout ce qui est arrivé à ton empire, jour après jour : chantiers, combats, récompenses. À ton retour, « Pendant ton absence » résume l'essentiel.",
+  "/game/codex": "Chaque rencontre ajoute une fiche : factions, seigneurs, boss, unités, technologies. Une catégorie complète se réclame contre une récompense.",
+  "/game/chroniques": "Un chapitre par mois, en quatre épisodes. Chaque épisode fixe des objectifs communs à tout le serveur ; « J'y vais » t'emmène là où agir.",
+  "/game/gazette": "Chaque semaine, les grands faits du secteur : combats marquants, records, alliances qui montent. Ton nom peut y paraître.",
+  "/game/statistiques": "Tout ton empire en chiffres : production, armée à quai et en vol, bonus et carrière. Le panneau Lune apparaît quand ta planète en a une, ou quand une lune peut naître.",
+  "/game/portefeuille": "Tout ce que tu possèdes, hors ressources : Ambre, jetons, plans et autres monnaies. Chaque ligne dit d'où elle vient et à quoi elle sert.",
+  "/game/etat-major": "Officiers, reliques et modules donnent des bonus permanents. Ton premier officier est offert ; les reliques, trouvées en expédition, sur les boss ou au passe, s'équipent ici.",
+  "/game/seigneurs": "Dix empires tenus par le jeu. Ils grandissent avec le secteur et répondent à qui les provoque : espionne-les avant de piller, et pèse bien une vendetta.",
+  "/game/uber": "Le boss mondial revient à dates fixes (l'agenda de l'accueil les donne). Tout le serveur l'attaque ensemble : chaque assaut compte pour ta part de la récompense, même petit.",
+  "/game/boss": "Le boss de saison suit le chapitre des Chroniques. Envoie ta flotte pendant sa fenêtre : les dégâts de tous s'additionnent, les récompenses suivent ta part.",
+  "/game/hall-of-fame": "Chaque boss affronté par le serveur, ses chiffres et ses champions. Les records se calculent sur le boss mondial et les boss de saison.",
+  "/game/casino": "Un jeton, un tirage : les objectifs du jour donnent des jetons, et le gros lot est le pot commun du serveur.",
+  get "/game/colonies"() {
+    const levels = Math.max(0, Math.round(Number(COLONY_RULES.levelsRequired?.[0]) || 0));
+    return `Une colonie ajoute une planète avec ses bâtiments, ses stocks et ses défenses. La première demande ${levels} niveaux de bâtiments cumulés sur ta planète mère.`;
+  },
+  "/game/guerre-territoire": "Les alliances se disputent les secteurs de la galaxie. Chaque secteur a son tableau de points ; à la fin, il revient à l'alliance en tête. Ton alliance doit s'y engager.",
 };
 
 /* 6.14.62 (AD-6, Q93) : la vue d'une astuce est gardée sur le compte, dans la liste des annonces vues (`announcementsSeen`,
@@ -104,7 +129,11 @@ export function PageTip() {
   const [clamped, setClamped] = useState(false);
   const textRef = useRef<HTMLParagraphElement>(null);
   const tip = PAGE_TIPS[pathname];
-  const eligible = !!player && onboardingEligible(player);
+  const admin = useIsAdmin();
+  // 6.14.81 (DP-L6) : une page qui s'ouvre au fil de la progression (menu progressif) montre son astuce à l'arrivée, même après
+  // la Prise en main ; les autres astuces restent réservées aux débutants.
+  const progressivePage = !!player && !!NAV_UNLOCK_RULES.pages[pathname] && navStatus(player, { admin }) === "progressive";
+  const eligible = !!player && (onboardingEligible(player) || progressivePage);
   const visible = !!tip && eligible && closed !== pathname && tipsEnabled() && !tipSeen(pathname, accountSeen);
 
   useEffect(() => {

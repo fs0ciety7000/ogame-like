@@ -5,7 +5,7 @@ import { BossRewardsAdmin } from "@/components/game/BossRewardsAdmin";
 import { useEffect, useState } from "react";
 import { markLeviathanSeen } from "@/store/leviathanSeenStore";
 import { toast } from "sonner";
-import { Crosshair, Skull, Trophy } from "lucide-react";
+import { Crosshair, Skull, Trophy, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -75,7 +75,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -88,14 +88,14 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
         <FormationPicker value={formation} onChange={setFormation} className="mt-3" />
         {power > 0 && (
           <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0.5 border border-white/[0.06] bg-white/[0.02] p-2 text-xs" aria-label="Comparateur de formations">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Formation</span>
-            <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Dégâts</span>
-            <span className="text-right font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Pertes</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Formation</span>
+            <span className="text-right font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Dégâts</span>
+            <span className="text-right font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Pertes</span>
             {estimates.map((e) => (
               <button key={e.f.id} type="button" onClick={() => setFormation(e.f.id)} className={cn("contents text-left", e.f.id === formation ? "text-cyan-glow" : "text-slate-300")}>
                 <span>
                   {e.f.name}
-                  {e.f.id === best.f.id && <span className="ml-1 text-[10px] text-gold-glow">★ max</span>}
+                  {e.f.id === best.f.id && <span className="ml-1 text-[11px] text-gold-glow">★ max</span>}
                 </span>
                 <span className="text-right font-mono tabular-nums">{formatCompact(e.power)}</span>
                 <span className="text-right font-mono tabular-nums">{Math.round(e.lossPct * 1000) / 10} %</span>
@@ -116,7 +116,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
 
 export function Ranking({ state, uid }: { state: LeviathanState; uid: string }) {
   const ranking = leviathanRanking(state);
-  if (ranking.length === 0) return <EmptyState size="sm" icon="⚔️" title="Personne n'a encore frappé">Le premier assaut ouvrira le classement.</EmptyState>;
+  if (ranking.length === 0) return <EmptyState size="sm" icon={<Swords />} title="Personne n'a encore frappé">Le premier assaut ouvrira le classement.</EmptyState>;
   const top = ranking[0].damage;
   return (
     <PagedList as="ol" items={ranking} className="flex flex-col gap-1.5" render={(c, i) => (

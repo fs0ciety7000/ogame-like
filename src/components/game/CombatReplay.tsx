@@ -300,7 +300,7 @@ export function CombatReplay({
           const steps = b.hp ? ["100%", ...b.hp.map((h) => `${Math.max(0, Math.round(h * 100))}%`)] : null;
           return (
             <div key={b.label}>
-              <div className="flex justify-between font-mono text-[9px] uppercase tracking-wider text-slate-500">
+              <div className="flex justify-between font-mono text-[11px] uppercase tracking-wider text-slate-500">
                 <span>Intégrité</span>
                 <span style={{ color: b.color }}>{b.hp ? Math.max(0, Math.round((b.hp[b.hp.length - 1] ?? 1) * 100)) : left} %</span>
               </div>
@@ -322,7 +322,7 @@ export function CombatReplay({
           );
         })}
       </div>
-      <div className="absolute inset-x-2 top-1.5 flex justify-between text-[10px] font-mono uppercase tracking-wider text-slate-500">
+      <div className="absolute inset-x-2 top-1.5 flex justify-between text-[11px] font-mono uppercase tracking-wider text-slate-500">
         <span className="text-cyan-glow/80">Toi</span>
         <span className="text-danger-glow/80">Adversaire</span>
       </div>
@@ -330,7 +330,7 @@ export function CombatReplay({
         <button
           type="button"
           onClick={() => setRun((n) => n + 1)}
-          className="absolute bottom-9 right-2 flex items-center gap-1 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-400 hover:bg-white/5 hover:text-slate-200"
+          className="absolute bottom-9 right-2 flex items-center gap-1 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-slate-400 hover:bg-white/5 hover:text-slate-200"
         >
           <RotateCcw className="h-3 w-3" /> Rejouer
         </button>

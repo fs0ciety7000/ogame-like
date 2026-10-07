@@ -70,7 +70,7 @@ export function NotificationBell() {
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center bg-danger-glow px-0.5 font-mono text-[9px] font-bold text-space-950">
+            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-danger-glow px-0.5 font-mono text-[11px] font-bold leading-none text-space-950">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -94,7 +94,7 @@ export function NotificationBell() {
                 aria-selected={tab === c.id}
                 onClick={() => setTab(c.id)}
                 className={cn(
-                  "hud-cut-sm flex items-center gap-1.5 border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.12em] transition-colors",
+                  "hud-cut-sm flex items-center gap-1.5 border px-2 py-1 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors",
                   tab === c.id ? "border-cyan-glow/50 bg-cyan-glow/15 text-cyan-glow" : "border-transparent text-slate-400 hover:text-slate-200",
                 )}
               >
@@ -108,13 +108,13 @@ export function NotificationBell() {
           <button
             type="button"
             onClick={() => markRead(tab)}
-            className="hud-cut-sm mx-1 mb-2 self-end border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
+            className="hud-cut-sm mx-1 mb-2 self-end border border-white/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
           >
             {tab === "all" ? "Tout marquer lu" : `Marquer « ${NOTIFICATION_CATEGORIES.find((c) => c.id === tab)?.label ?? ""} » lu`} ({unreadIn(tab)})
           </button>
         )}
         <div className="flex flex-col gap-1.5 overflow-y-auto px-1 pb-1">
-          {shown.length === 0 && <EmptyState size="sm" icon="🔔" title="Rien ici" className="px-3 py-4">Rien dans cette catégorie pour l'instant.</EmptyState>}
+          {shown.length === 0 && <EmptyState size="sm" icon={<Bell />} title="Rien ici" className="px-3 py-4">Rien dans cette catégorie pour l'instant.</EmptyState>}
           {notifPage.items.map((g) => {
             const open = expanded.has(g.key);
             const list = open ? [g.head, ...g.rest] : [g.head];
@@ -143,7 +143,7 @@ export function NotificationBell() {
                   <button
                     type="button"
                     onClick={() => setExpanded((s) => (s.has(g.key) ? new Set([...s].filter((k) => k !== g.key)) : new Set([...s, g.key])))}
-                    className="hud-cut-sm self-start border border-white/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
+                    className="hud-cut-sm self-start border border-white/10 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400 hover:border-cyan-glow/40 hover:text-cyan-glow"
                   >
                     {open ? "Replier" : `+ ${g.rest.length} similaire${g.rest.length > 1 ? "s" : ""}`}
                   </button>

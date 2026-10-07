@@ -239,7 +239,7 @@ export function CommandPalette() {
                       {item.sublabel}
                     </span>
                   ) : (
-                    item.sublabel && <span className="hud-eyebrow shrink-0 text-slate-600">{item.sublabel}</span>
+                    item.sublabel && <span className="hud-eyebrow shrink-0 text-slate-500">{item.sublabel}</span>
                   )}
                 </button>
               ))

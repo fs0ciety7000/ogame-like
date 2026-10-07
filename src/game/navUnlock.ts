@@ -2,12 +2,14 @@ import { guideClaimed, guideCurrent, GUIDE_STEPS } from "@/game/advancedGuide";
 import { bountyState, findShopItem, plannerUnlocked } from "@/game/bounties";
 import { COLONY_RULES, homeLevels } from "@/game/colonies";
 import { commandersState } from "@/game/commanders";
+import { defaultPlayerState } from "@/game/defaults";
 import { playerMoon } from "@/game/moon";
 import { onboardingEligible, onboardingState, ONBOARDING_STEPS } from "@/game/onboarding";
 import { PVP_RULES } from "@/game/pvp";
 import { RANKS } from "@/game/ranks";
 import { relicsState } from "@/game/relics";
 import type { ChronicleObjective } from "@/game/chronicles";
+import type { NewNotification } from "@/game/flush";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -155,6 +157,42 @@ export const NAV_ALWAYS_VISIBLE = [
   "/game/concours",
 ] as const;
 
+/** Libellés des pages réglées (mêmes noms que le menu, `NavBar.tsx` ; un test les compare) : notification « Nouveau : … », admin. */
+export const NAV_PAGE_LABELS: Record<string, string> = {
+  "/game/galaxie": "Galaxie",
+  "/game/alliance": "Alliance",
+  "/game/missions": "Missions",
+  "/game/combats": "Combats",
+  "/game/menaces": "Menaces",
+  "/game/joueurs": "Classement",
+  "/game/succes": "Succès",
+  "/game/passe": "Passe",
+  "/game/primes": "Primes",
+  "/game/classe": "Classe d'empire",
+  "/game/journal": "Journal",
+  "/game/commerce": "Commerce",
+  "/game/codex": "Codex",
+  "/game/chroniques": "Chroniques",
+  "/game/gazette": "Gazette",
+  "/game/statistiques": "Statistiques",
+  "/game/portefeuille": "Portefeuille",
+  "/game/simulateur": "Simulateur",
+  "/game/planificateur": "Planificateur",
+  "/game/etat-major": "État-major",
+  "/game/seigneurs": "Seigneurs",
+  "/game/uber": "Boss mondial",
+  "/game/boss": "Boss de saison",
+  "/game/hall-of-fame": "Hall of fame des boss",
+  "/game/casino": "Casino",
+  "/game/colonies": "Colonies",
+  "/game/guerre-territoire": "Guerre de territoire",
+};
+
+/** Nom d'une page réglée (le chemin s'il n'a pas de libellé : page ajoutée dans l'admin). */
+export function navPageLabel(page: string): string {
+  return NAV_PAGE_LABELS[navPath(page)] ?? navPath(page);
+}
+
 /** Marques de l'option « Tout afficher » (Réglages, Q156) dans `announcementsSeen` : la dernière posée l'emporte. */
 export const NAV_SHOW_ALL_ON = "nav:all";
 export const NAV_SHOW_ALL_OFF = "nav:progressif";
@@ -276,6 +314,12 @@ export function navStepReached(p: PlayerState, step: string): boolean {
   return false;
 }
 
+/** 6.14.79 (DP-L4) : pages déjà annoncées par la notification « Nouveau : … » (`stats.navAnnounced`, écrit par le serveur). */
+export function navAnnounced(p: Pick<PlayerState, "stats"> | null | undefined): string[] {
+  const list = p?.stats?.navAnnounced;
+  return Array.isArray(list) ? list : [];
+}
+
 /** Marque de visite ou astuce vue : la page a déjà été ouverte (Q155). */
 export function navPageMarked(p: Pick<PlayerState, "announcementsSeen">, page: string): boolean {
   const seen = p.announcementsSeen ?? [];
@@ -287,10 +331,13 @@ export function navOpenReason(p: PlayerState, page: string, ctx: NavContext, sig
   const rule = NAV_UNLOCK_RULES.pages[navPath(page)];
   if (!rule) return "always";
   if (navPageMarked(p, page)) return "mark";
-  if ((rule.requires ?? []).some((s) => !signals.has(s as NavSignal))) return null;
-  if ((rule.signals ?? []).some((s) => signals.has(s as NavSignal))) return "signal";
-  if (rule.step && navStepReached(p, rule.step)) return "step";
-  if (rule.rank && (Number(p.xp) || 0) >= rankXp(rule.rank)) return "rank";
+  if (!(rule.requires ?? []).some((s) => !signals.has(s as NavSignal))) {
+    if ((rule.signals ?? []).some((s) => signals.has(s as NavSignal))) return "signal";
+    if (rule.step && navStepReached(p, rule.step)) return "step";
+    if (rule.rank && (Number(p.xp) || 0) >= rankXp(rule.rank)) return "rank";
+  }
+  // 6.14.79 (DP-L4) : page déjà annoncée par le serveur (« Nouveau : … ») : elle reste ouverte, même si son déclencheur disparaît.
+  if (navAnnounced(p).includes(navPath(page))) return "mark";
   return null;
 }
 
@@ -374,6 +421,70 @@ export const OBJECTIVE_PAGES: Record<ChronicleObjective, string> = {
   warlordWin: "/game/seigneurs",
 };
 
+/** 6.14.81 (DP-L6, proposition §5.8) : page du système de chaque mesure de succès (identifiants de `METRICS`, `achievements.ts`).
+ *  Un succès dont la page est fermée s'affiche « À découvrir » avec la condition d'ouverture, sans son chiffre de progression.
+ *  Une mesure absente se fait sur une page toujours visible (bâtiments, Labo, unités…) ou hors du menu (Ascension). */
+export const ACHIEVEMENT_PAGES: Record<string, string> = {
+  victories: "/game/galaxie",
+  loot: "/game/galaxie",
+  spies: "/game/galaxie",
+  recycled: "/game/galaxie",
+  patrols: "/game/galaxie",
+  defeats: "/game/combats",
+  phoenix: "/game/combats",
+  missions: "/game/missions",
+  bestMissionDay: "/game/missions",
+  expeditions: "/game/missions",
+  inAlliance: "/game/alliance",
+  allianceFounded: "/game/alliance",
+  garrisons: "/game/alliance",
+  donated: "/game/alliance",
+  allianceBossTypes: "/game/alliance",
+  allianceBossAll: "/game/alliance",
+  ultimatums: "/game/menaces",
+  factionsThreatened: "/game/menaces",
+  tributesPaid: "/game/menaces",
+  raidsRepelled: "/game/menaces",
+  lairsTaken: "/game/menaces",
+  lairFactions: "/game/menaces",
+  maxNotoriety: "/game/menaces",
+  evasions: "/game/menaces",
+  passesCompleted: "/game/passe",
+  chaptersCompleted: "/game/chroniques",
+  bossSeals: "/game/boss",
+  leviathanKills: "/game/uber",
+  worldBossTypes: "/game/uber",
+  rareOfficers: "/game/etat-major",
+  seasonCommanders: "/game/etat-major",
+  modulesBuilt: "/game/etat-major",
+  modulesMounted: "/game/etat-major",
+  relicsOwned: "/game/etat-major",
+  casinoJackpots: "/game/casino",
+  casinoSpins: "/game/casino",
+  casinoWins: "/game/casino",
+  auctionsSold: "/game/commerce",
+  auctionsWon: "/game/commerce",
+  marketTrades: "/game/commerce",
+  contractsDelivered: "/game/commerce",
+  bountiesDone: "/game/primes",
+  amberEarned: "/game/primes",
+  bountyReputation: "/game/primes",
+  vendettaWins: "/game/seigneurs",
+  warlordsBeaten: "/game/seigneurs",
+  codexChapters: "/game/codex",
+  moonLevel: "/game/statistiques",
+  moonMaxed: "/game/statistiques",
+  phalanxScans: "/game/statistiques",
+  gateJumps: "/game/statistiques",
+  gateSaves: "/game/statistiques",
+};
+
+/** Page fermée du système d'un succès (ou null : page ouverte, toujours visible, ou hors du mode progressif). */
+export function achievementClosedPage(metric: string, closed: ReadonlySet<string>): string | null {
+  const page = ACHIEVEMENT_PAGES[metric];
+  return page && closed.has(page) ? page : null;
+}
+
 /** Pages qu'une étape du tutoriel ouvre (réglage `step`) et que rien d'autre n'a encore ouvertes : « Débloque : … » sur sa carte. */
 export function navPagesOpenedByStep(p: PlayerState, step: string, ctx: NavContext): string[] {
   if (navStatus(p, ctx) !== "progressive") return [];
@@ -381,4 +492,143 @@ export function navPagesOpenedByStep(p: PlayerState, step: string, ctx: NavConte
   return Object.entries(NAV_UNLOCK_RULES.pages)
     .filter(([page, rule]) => rule.step === step && navOpenReason(p, page, ctx, signals) === "step")
     .map(([page]) => page);
+}
+
+/* =====================================================
+   6.14.79 (DP-L4, proposition §5.4 et §5.6) : notification « Nouveau : … »
+   quand des pages s'ouvrent. Appelée par le serveur après une action du
+   joueur (`/api/cosmic/action`, dans la transaction : I24), jamais par le
+   client. Une notification par ouverture (un palier, un danger, une étape),
+   qui cite toutes les pages ouvertes ensemble ; aucune pastille nouvelle.
+   Mémoire : `stats.navAnnounced` (pages déjà annoncées ou déjà ouvertes),
+   qui garde aussi la page ouverte (`navOpenReason`, I30).
+===================================================== */
+
+/** « Galaxie », « Galaxie et Alliance », « Missions, Combats et Menaces ». */
+export function navPageList(pages: string[]): string {
+  const labels = pages.map(navPageLabel);
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} et ${labels[labels.length - 1]}`;
+}
+
+/**
+ * Pages ouvertes depuis la dernière annonce : met à jour `stats.navAnnounced` et rend la notification (ou null).
+ * - Hors du mode progressif (ancien compte, admin, menu désactivé) : rien n'est écrit, rien n'est annoncé.
+ * - « Tout afficher » : la mémoire suit en silence (rien à annoncer, tout est déjà au menu).
+ * - Première lecture (mémoire absente : compte d'avant ce lot) : les pages déjà ouvertes sont notées en silence.
+ * - Page ouverte par une visite (marque `nav:` ou astuce) : notée en silence (le joueur la connaît).
+ */
+export function navOpeningNotice(p: PlayerState, ctx: NavContext): NewNotification | null {
+  const status = navStatus(p, ctx);
+  if (status !== "progressive" && status !== "showAll") return null;
+  const signals = navSignals(p, ctx);
+  const known = p.stats?.navAnnounced;
+  const announced = new Set(Array.isArray(known) ? known : []);
+  const silent: string[] = [];
+  const fresh: { page: string; reason: "signal" | "step" | "rank" }[] = [];
+  for (const page of Object.keys(NAV_UNLOCK_RULES.pages)) {
+    if (announced.has(page)) continue;
+    const reason = navOpenReason(p, page, ctx, signals);
+    if (reason === null || reason === "always") continue;
+    if (reason === "mark" || status === "showAll" || !Array.isArray(known)) silent.push(page);
+    else fresh.push({ page, reason });
+  }
+  if (silent.length === 0 && fresh.length === 0 && Array.isArray(known)) return null;
+  p.stats = { ...(p.stats ?? {}), navAnnounced: [...announced, ...silent, ...fresh.map((f) => f.page)] };
+  if (fresh.length === 0) return null;
+  const pages = fresh.map((f) => f.page);
+  return {
+    kind: "system",
+    title: `Nouveau : ${navPageList(pages)}`,
+    message: navOpeningMessage(p, fresh, signals),
+    createdAtMs: ctx.now,
+    read: false,
+    link: pages[0],
+  };
+}
+
+/** Texte de la notification : pourquoi ces pages s'ouvrent (danger d'abord, puis fin de protection, étape, rang, usage). */
+function navOpeningMessage(p: PlayerState, fresh: { page: string; reason: "signal" | "step" | "rank" }[], signals: Set<NavSignal>): string {
+  const pages = fresh.map((f) => f.page);
+  const many = pages.length > 1;
+  const where = many ? "Elles sont maintenant dans ton menu." : "Elle est maintenant dans ton menu.";
+  const bySignal = (s: NavSignal) => fresh.some((f) => f.reason === "signal" && (NAV_UNLOCK_RULES.pages[f.page]?.signals ?? []).includes(s) && signals.has(s));
+  if (bySignal("danger")) return `Une menace vise ton empire : ${many ? "ces pages t'aident" : "cette page t'aide"} à te défendre. ${where}`;
+  if (bySignal("protectionOver")) return `Ta protection de débutant est finie : les raids peuvent viser ta base. ${where}`;
+  if (fresh.some((f) => f.reason === "rank")) {
+    const rank = rankName(NAV_UNLOCK_RULES.pages[fresh.find((f) => f.reason === "rank")!.page]?.rank);
+    return `Tu as atteint ${rank} : ${many ? "de nouvelles pages s'ouvrent" : "une nouvelle page s'ouvre"}. ${where}`;
+  }
+  if (fresh.some((f) => f.reason === "step")) return `Ta prochaine étape t'y attend. ${where}`;
+  const first = fresh.find((f) => f.reason === "signal");
+  const signal = (NAV_UNLOCK_RULES.pages[first?.page ?? ""]?.signals ?? []).find((s) => signals.has(s as NavSignal)) as NavSignal | undefined;
+  return signal ? `Débloqué avec ${NAV_SIGNAL_LABELS[signal]}. ${where}` : where;
+}
+
+/* =====================================================
+   6.14.80 (DP-L5) : aperçu de l'admin, « ce que voit un compte neuf à tel
+   rang », calculé avec le brouillon des règles (avant l'enregistrement).
+===================================================== */
+
+/** Pages toujours visibles qui ne sont pas des entrées du menu (palette, Ascension avant la 1re, concours des admins). */
+const NAV_NOT_IN_MENU = ["/game/ascension", "/game/formules", "/game/palmares", "/game/concours"];
+
+/** Entrées du menu toujours visibles (palier 0 et pied de barre) : 13. */
+export function navAlwaysMenuCount(): number {
+  return NAV_ALWAYS_VISIBLE.filter((p) => !NAV_NOT_IN_MENU.includes(p)).length;
+}
+
+export interface NavPreviewOptions {
+  /** Rang du compte (identifiant de `RANKS`). */
+  rankId: string;
+  /** Membre d'une alliance. */
+  alliance?: boolean;
+  /** Prise en main terminée (Carnet du commandant ouvert). */
+  onboardingDone?: boolean;
+  /** Une menace est arrivée (flotte hostile, rapport reçu). */
+  danger?: boolean;
+  /** Heures depuis l'inscription (fin de la protection de débutant à 72 h par défaut). */
+  hoursSinceSignup?: number;
+}
+
+export interface NavPreview {
+  status: NavStatus;
+  /** Entrées du menu visibles (barre latérale et pied de barre). */
+  menuEntries: number;
+  open: { page: string; reason: string }[];
+  closed: { page: string; condition: string }[];
+  next: NavNextOpening | null;
+}
+
+/** Aperçu pour un compte neuf (créé après `newAccountsFrom`), avec des règles de brouillon si on en passe (rendues ensuite). */
+export function navPreview(opts: NavPreviewOptions, now: number, draft?: Partial<typeof NAV_UNLOCK_RULES>): NavPreview {
+  const saved = { ...NAV_UNLOCK_RULES };
+  if (draft) Object.assign(NAV_UNLOCK_RULES, draft, { pages: { ...(draft.pages ?? NAV_UNLOCK_RULES.pages) } });
+  try {
+    // Compte créé à l'instant (après la date : jamais « ancien compte »), regardé `hoursSinceSignup` heures plus tard.
+    const created = Math.max(now, Number(NAV_UNLOCK_RULES.newAccountsFrom) || 0);
+    const xp = rankXp(opts.rankId);
+    const p: PlayerState = {
+      ...(defaultPlayerState("apercu", "Aperçu") as PlayerState),
+      createdAtMs: created,
+      resourcesUpdatedAtMs: created,
+      xp: Number.isFinite(xp) ? xp : 0,
+      allianceId: opts.alliance ? "apercu" : "",
+      onboarding: { claimed: opts.onboardingDone ? ONBOARDING_STEPS.map((s) => s.id) : [] },
+    };
+    const ctx: NavContext = { now: created + Math.max(0, Number(opts.hoursSinceSignup) || 0) * 3_600_000, hostileIncoming: !!opts.danger };
+    const status = navStatus(p, ctx);
+    const signals = navSignals(p, ctx);
+    const open: NavPreview["open"] = [];
+    const closed: NavPreview["closed"] = [];
+    for (const page of Object.keys(NAV_UNLOCK_RULES.pages)) {
+      const reason = status === "progressive" ? navOpenReason(p, page, ctx, signals) : "always";
+      if (reason === null) closed.push({ page, condition: navCondition(page) });
+      else open.push({ page, reason });
+    }
+    return { status, menuEntries: navAlwaysMenuCount() + open.length, open, closed, next: status === "progressive" ? nextNavOpening(p, ctx) : null };
+  } finally {
+    for (const key of Object.keys(NAV_UNLOCK_RULES)) delete (NAV_UNLOCK_RULES as Record<string, unknown>)[key];
+    Object.assign(NAV_UNLOCK_RULES, saved);
+  }
 }

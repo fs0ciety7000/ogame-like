@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/utils";
 import type { EmpireStats } from "@/game/empireStats";
 
 /* =====================================================
@@ -110,7 +111,7 @@ export function printEmpireReport(st: EmpireStats, now: number): void {
   const host = document.getElementById("print-root") ?? document.body.appendChild(Object.assign(document.createElement("div"), { id: "print-root" }));
   const sections = new Map<string, Row[]>();
   for (const r of empireStatsRows(st)) sections.set(r[0], [...(sections.get(r[0]) ?? []), r]);
-  const date = new Date(now).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const date = formatDateTime(now, "date");
   const blocks = [...sections.entries()]
     .map(
       ([name, rows]) => `<section class="print-avoid-break" style="border:1px solid #1e2a4a;background:#0b1224;padding:8px 10px;margin-top:8px">

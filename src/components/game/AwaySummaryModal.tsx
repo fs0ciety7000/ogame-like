@@ -1,3 +1,5 @@
+import { EmptyState } from "@/components/ui/hud";
+import { Moon } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { closeAwaySummary, useAwaySummaryStore } from "@/store/awaySummaryStore";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -66,7 +68,7 @@ export function AwaySummaryModal() {
           )}
 
           {Object.keys(current.resourceGains).length === 0 && current.notifications.length === 0 && (
-            <p className="mt-4 text-sm text-slate-500">Rien de notable ne s'est passé.</p>
+            <EmptyState size="sm" icon={<Moon />} title="Rien de notable ne s'est passé" className="mt-4" />
           )}
         </DialogContent>
       )}

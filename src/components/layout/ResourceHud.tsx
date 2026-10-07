@@ -19,6 +19,7 @@ import { ClaimAllChip } from "@/components/game/ClaimAllChip";
 import { Link } from "react-router-dom";
 import { AmberIcon } from "@/components/ui/amber";
 import { bountyState } from "@/game/bounties";
+import { useNavUnlock } from "@/components/layout/NavBar";
 
 /** v5.2 : bonus de production actifs (infobulle). Ils se multiplient entre eux. */
 /** Bonus de production actifs, en section d'infobulle. */
@@ -35,12 +36,15 @@ export function ResourceHud() {
   const resources = useLiveResources(player);
   const rates = useProductionRates(player, resources);
   const pulse = useFxStore((s) => s.hudPulse);
+  const nav = useNavUnlock();
 
   if (!resources || !player) return null;
 
   const history = player.resourceHistory ?? [];
   const economy = economySnapshot({ ...player, resources }, Date.now());
   const amber = bountyState(player).amber;
+  // 6.14.81 (DP-L6, I30) : l'Ambre n'apparaît qu'avec son système (Primes) ouvert, ou dès qu'il y en a (on ne cache jamais un solde).
+  const showAmber = amber > 0 || !nav.closed.has("/game/primes");
 
   const common = RESOURCE_LIST.filter((r) => r.rarity === "common");
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
@@ -140,6 +144,7 @@ export function ResourceHud() {
       </div>
       <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
       {/* 5.24 : Ambre, monnaie premium : liseré doré, coin coupé, à part des ressources. */}
+      {showAmber && (
       <Tooltip>
         <TooltipTrigger asChild>
           <Link
@@ -160,6 +165,7 @@ export function ResourceHud() {
           />
         </TooltipContent>
       </Tooltip>
+      )}
       <HostileFleetAlert />
       <ClaimAllChip />
       <StreakBadge />

@@ -6,7 +6,7 @@ import { HudPanel, EmptyAction, PagedList } from "@/components/ui/panel";
 import { AmberAmount, AmberIcon } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-import { ArrowUpToLine, Loader2, BookOpen, Eye, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap } from "lucide-react";
+import { ArrowUpToLine, Loader2, BookOpen, Eye, History, CalendarClock, Crosshair, Crown, Dices, Flag, Ghost, Hourglass, Lock, Orbit, Palette, Pill, Radar, ShieldHalf, ShoppingBag, Smile, Sparkles, Star, Swords, Timer, Trophy, Users, Zap, Receipt, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -142,7 +142,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
         <p className="text-sm text-slate-400">{target.intro}</p>
         <div className="mt-3 flex flex-col gap-1.5">
           {ids.length === 0 && (
-            <EmptyState size="sm" icon="⚔️" title="Aucun vaisseau de combat à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>}>
+            <EmptyState size="sm" icon={<Swords />} title="Aucun vaisseau de combat à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>}>
               Rappelle ta flotte ou arme de nouveaux chasseurs.
             </EmptyState>
           )}
@@ -153,10 +153,10 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">
                   {findUnit(id)?.name}
-                  {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[10px] text-gold-glow">+50 % PNJ</span>}
+                  {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[11px] text-gold-glow">+50 % PNJ</span>}
                 </span>
                 <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -207,14 +207,14 @@ function KeshHero({ st }: { st: BountyState }) {
         </div>
         <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-1">
           <div className="border border-gold-glow/30 bg-space-950/70 p-3">
-            <p className="hud-eyebrow text-[10px] text-slate-500">Ambre de Ruche</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">Ambre de Ruche</p>
             <p className="flex items-center gap-2 font-display text-3xl text-gold-glow">
               <Amber className="h-8 w-8" /> {formatNumber(st.amber)}
             </p>
             <p className="text-[11px] text-slate-500">{formatNumber(st.amberEarned)} gagnés au total</p>
           </div>
           <div className="border border-white/10 bg-space-950/70 p-3">
-            <p className="hud-eyebrow text-[10px] text-slate-500">Rang dans l'Essaim</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">Rang dans l'Essaim</p>
             <p className="flex items-center gap-1.5 font-display text-lg text-slate-100">
               <Crown className="h-4 w-4 text-gold-glow" /> {rankName(rank)} <span className="text-xs text-slate-500">({rank}/5)</span>
             </p>
@@ -258,7 +258,7 @@ function ContractCard({ contract, player, st, onHunt }: { contract: BountyContra
         <div className="flex items-center gap-2">
           <Stars n={contract.tier} />
           <HudTag tone={contract.tier >= 4 ? "danger" : contract.tier === 3 ? "ember" : "gold"}>{t.label}</HudTag>
-          <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.25em] text-slate-500">Avis de recherche</span>
+          <span className="ml-auto font-mono text-[11px] uppercase tracking-[0.25em] text-slate-500">Avis de recherche</span>
         </div>
         <div>
           <p className="hud-title text-lg leading-tight text-slate-100">{fugitive.name}</p>
@@ -335,7 +335,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
   if (!elite) {
     return (
       <Card>
-        <EmptyState icon="🎯" title="Pas de proie d'élite" action={<EmptyAction to="/game/primes">Voir le tableau des primes</EmptyAction>}>
+        <EmptyState icon={<Target />} title="Pas de proie d'élite" action={<EmptyAction to="/game/primes">Voir le tableau des primes</EmptyAction>}>
           L'Essaim en désigne une chaque lundi.
         </EmptyState>
       </Card>
@@ -417,7 +417,7 @@ function EliteTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
         </div>
       </Card>
       <HudPanel icon={<Trophy />} title="Meute de chasse" tone="gold">
-        {ranking.length === 0 && <EmptyState size="sm" icon="🎯" title="Personne n'a encore frappé">Lance la traque pour ouvrir le classement.</EmptyState>}
+        {ranking.length === 0 && <EmptyState size="sm" icon={<Target />} title="Personne n'a encore frappé">Lance la traque pour ouvrir le classement.</EmptyState>}
         <ol className="flex flex-col gap-1.5">
           {ranking.slice(0, 15).map((c, i) => (
             <li key={c.uid} className={cn("grid grid-cols-[2rem_1fr_auto] items-center gap-2 text-sm", c.uid === player.uid && "text-cyan-glow")}>
@@ -688,7 +688,7 @@ function ShopHistory({ st }: { st: BountyState }) {
   return (
     <HudPanel icon={<History />} title="Mes achats et dons" tone="gold">
       {list.length === 0 ? (
-        <EmptyState icon="🧾" title="Rien encore" size="sm" className="p-0">
+        <EmptyState icon={<Receipt />} title="Rien encore" size="sm" className="p-0">
           Tes achats au Comptoir et tes dons au pot commun s'afficheront ici.
         </EmptyState>
       ) : (
@@ -729,7 +729,7 @@ function ShopSummary({ st }: { st: BountyState }) {
     <HudPanel icon={<ShoppingBag />} title="Comptoir de la Ruche" tone="gold" aside={<span className="text-xs text-slate-400">Solde : <AmberAmount value={st.amber} label={false} className="font-mono tabular-nums text-slate-200" /></span>}>
       <div className="grid gap-5 md:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Effets actifs</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">Effets actifs</p>
           {effects.length === 0 ? (
             <p className="text-xs text-slate-500">Aucun pour l'instant.</p>
           ) : (
@@ -743,7 +743,7 @@ function ShopSummary({ st }: { st: BountyState }) {
           )}
         </div>
         <div className="flex flex-col gap-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Réserves</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">Réserves</p>
           <ul className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
             {reserves.map((r) => (
               <li key={r.label} className={cn("flex items-center gap-1.5", r.n > 0 ? "text-slate-200" : "text-slate-500")}>
@@ -797,7 +797,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
         </HudChip>
       </div>
       {groups.every((g) => g.items.length === 0) ? (
-        <EmptyState icon="🛍️" title="Rien d'achetable pour l'instant" size="sm">
+        <EmptyState icon={<ShoppingBag />} title="Rien d'achetable pour l'instant" size="sm">
           Remplis des primes pour gagner de l'Ambre, ou retire le filtre « Achetables maintenant ».
         </EmptyState>
       ) : (

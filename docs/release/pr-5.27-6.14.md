@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.78 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.83 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 144 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 149 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -180,6 +180,11 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.76 : Déblocage progressif : Prise en main, Carnet, panneau Lune, passe (`docs/changes/6.14.76-deblocage-prise-en-main.md`)
 - 6.14.77 : Suite de l'essai de la lune : une notification par saut, Journal système, victoires avec ou sans lune (`docs/changes/6.14.77-suite-essai-lune.md`)
 - 6.14.78 : Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/changes/6.14.78-rythme-long-terme.md`)
+- 6.14.79 : Déblocage progressif : serveur (objectifs du jour, « Nouveau : … ») (`docs/changes/6.14.79-deblocage-serveur.md`)
+- 6.14.80 : Déblocage progressif : section « Ouverture du menu » de l'admin (`docs/changes/6.14.80-deblocage-admin.md`)
+- 6.14.81 : Déblocage progressif : chaîne et livraison (`docs/changes/6.14.81-deblocage-chaine.md`)
+- 6.14.82 : Cohérence visuelle : couleur = sens, titres, onglets du Journal, icônes au lieu des emoji, gros chiffres en mono (`docs/changes/6.14.82-coherence-visuelle.md`)
+- 6.14.83 : Hygiène du design system : 11 px, gris de décor, formatDateTime, horloge partagée, gardes (`docs/changes/6.14.83-hygiene-design.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

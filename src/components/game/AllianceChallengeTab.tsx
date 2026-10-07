@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { SkeletonCards } from "@/components/ui/skeleton";
-import { Medal, Trophy } from "lucide-react";
+import { Medal, Trophy, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { allianceNextWeekMs } from "@/game/allianceBoss";
@@ -41,7 +41,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
         <div className="flex flex-wrap items-start gap-3">
           <span className="grid h-12 w-12 place-items-center border border-gold-glow/40 bg-gold-glow/10 text-2xl">{challenge.emoji}</span>
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-gold-glow">Défi d'alliance de la semaine</p>
+            <p className="hud-eyebrow text-[11px] text-gold-glow">Défi d'alliance de la semaine</p>
             <p className="hud-title text-lg text-slate-100">{challenge.name}</p>
             <p className="text-xs text-slate-400">{challenge.hint} Le score de l'alliance est la progression cumulée de ses membres depuis lundi.</p>
           </div>
@@ -86,7 +86,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
             <h2 className="hud-title flex items-center gap-2 text-sm">
               <Medal className="h-4 w-4 text-cyan-glow" /> Semaine dernière : {prevChallenge.emoji} {prevChallenge.name}
             </h2>
-            {prev.results.length === 0 && <EmptyState size="sm" icon="🏳️" title="Aucun point marqué" />}
+            {prev.results.length === 0 && <EmptyState size="sm" icon={<Flag />} title="Aucun point marqué" />}
             {prev.results.map((r) => (
               <div key={r.allianceId} className={cn("flex flex-col text-sm", r.allianceId === allianceId && "text-cyan-glow")}>
                 <span>

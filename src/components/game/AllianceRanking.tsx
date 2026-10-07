@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
-import { Trophy } from "lucide-react";
+import { Trophy, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { allianceMaxMembers, ALLIANCE_RULES, allianceStandings, projectState } from "@/game/alliances";
 import { currentSeasonId } from "@/game/seasons";
@@ -18,8 +18,12 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [wars, setWars] = useState<{ winnerId: string; seasonId: string }[]>([]);
   const season = currentSeasonId();
-  useEffect(() => subscribeAlliances(setAlliances), []);
-  useEffect(() => subscribeLeaderboard(setPlayers), []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
+  useEffect(() => {
+    return subscribeLeaderboard(setPlayers);
+  }, []);
   useEffect(() => {
     pb.collection("alliance_wars")
       .getFullList<{ winnerId: string; seasonId: string }>({ filter: "winnerId != ''", fields: "winnerId,seasonId" })
@@ -53,17 +57,17 @@ export function AllianceRanking({ currentId }: { currentId?: string | null }) {
 
   return (
     <Card className="flex flex-col gap-3 p-4">
-      <h3 className="flex items-center gap-2 font-display text-sm text-slate-100">
+      <h3 className="hud-title flex items-center gap-2 text-sm text-slate-100">
         <Trophy className="h-4 w-4 text-gold-glow" /> Classement des alliances
       </h3>
       <p className="text-[11px] text-slate-500">
         Score de saison : somme des {ALLIANCE_RULES.seasonTopMembers} meilleures XP de saison des membres, plus le bonus des guerres gagnées ce mois-ci.
       </p>
-      {rows.length === 0 && <EmptyState size="sm" icon="🚩" title="Aucune alliance" />}
+      {rows.length === 0 && <EmptyState size="sm" icon={<Flag />} title="Aucune alliance" />}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
-            <tr className="text-left text-[10px] font-mono uppercase tracking-[0.12em] text-slate-500">
+            <tr className="text-left text-[11px] font-mono uppercase tracking-[0.12em] text-slate-500">
               <th className="py-1.5 pr-2">#</th>
               <th className="py-1.5 pr-2">Alliance</th>
               <th className="py-1.5 pr-2 text-right">Score saison</th>

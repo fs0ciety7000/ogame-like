@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Bell, BellPlus, ChevronDown, LineChart, X } from "lucide-react";
+import { Bell, BellPlus, ChevronDown, LineChart, X, TrendingUp } from "lucide-react";
 import { HudPanel, PagedList } from "@/components/ui/panel";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export function PriceHistoryPanel({ history }: { history: AuctionHistory }) {
       }
     >
       {lots.length === 0 ? (
-        <EmptyState icon="📈" title="Pas encore de vente conclue" size="sm" className="p-0">
+        <EmptyState icon={<TrendingUp />} title="Pas encore de vente conclue" size="sm" className="p-0">
           Chaque vente conclue s'ajoute ici : prix médian, dernier prix et fourchette, par modèle et par rareté.
         </EmptyState>
       ) : (
@@ -174,7 +174,7 @@ export function WatchPanel({ uid }: { uid: string }) {
       )}
       <div className="flex flex-col gap-2 border-t border-white/5 pt-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="w-16 font-mono text-[10px] uppercase tracking-wider text-slate-500">Lots</span>
+          <span className="w-16 font-mono text-[11px] uppercase tracking-wider text-slate-500">Lots</span>
           {(
             [
               ["module", "Plans"],
@@ -197,7 +197,7 @@ export function WatchPanel({ uid }: { uid: string }) {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="w-16 font-mono text-[10px] uppercase tracking-wider text-slate-500">Dès</span>
+          <span className="w-16 font-mono text-[11px] uppercase tracking-wider text-slate-500">Dès</span>
           {RARITY_CHOICES.map((r) => (
             <HudChip key={r.id} size="sm" tone={minRarity === r.id ? lotRarity("module", r.id).tone : "neutral"} asChild>
               <button type="button" onClick={() => setMinRarity(r.id)} aria-pressed={minRarity === r.id}>

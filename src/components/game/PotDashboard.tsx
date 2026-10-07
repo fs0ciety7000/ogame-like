@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, Table2 } from "lucide-react";
+import { BarChart3, Table2, ChartColumn } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudChip, StatTile } from "@/components/ui/hud";
 import { AmberAmount } from "@/components/ui/amber";
@@ -74,7 +74,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
       </div>
 
       {total === 0 && amber === 0 ? (
-        <EmptyState icon="📊" title="Pas encore d'entrée" size="sm">
+        <EmptyState icon={<ChartColumn />} title="Pas encore d'entrée" size="sm">
           Les taxes du marché, des cadeaux, des enchères et du comptoir d'échange s'afficheront ici jour après jour.
         </EmptyState>
       ) : view === "chart" ? (
@@ -88,7 +88,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
             ))}
           </ul>
           <div className="relative">
-            <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between border-t border-dashed border-white/10 font-mono text-[10px] tabular-nums text-slate-500">
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between border-t border-dashed border-white/10 font-mono text-[11px] tabular-nums text-slate-500">
               <span className="-mt-2 bg-space-900 pr-1">{formatCompact(max)}</span>
             </div>
             <div className="flex h-44 items-end gap-[2px] border-b border-white/15 pt-3" onMouseLeave={() => setHover(null)}>
@@ -113,7 +113,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
                 className="hud-cut-sm pointer-events-none absolute top-0 z-10 w-48 border border-cyan-glow/30 bg-space-800/95 p-2 text-xs backdrop-blur-sm"
                 style={hover! < POT_DAILY_DAYS / 2 ? { left: `${((hover! + 1) / POT_DAILY_DAYS) * 100}%` } : { right: `${((POT_DAILY_DAYS - hover!) / POT_DAILY_DAYS) * 100}%` }}
               >
-                <p className="mb-1 font-mono text-[10px] uppercase tracking-wider text-slate-400">{hovered.day}</p>
+                <p className="mb-1 font-mono text-[11px] uppercase tracking-wider text-slate-400">{hovered.day}</p>
                 {SERIES.map((s) => (
                   <p key={s.id} className="flex items-center justify-between gap-2 text-slate-300">
                     <span className="inline-flex items-center gap-1.5">
@@ -133,7 +133,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
                 )}
               </div>
             )}
-            <div className="mt-1 flex justify-between font-mono text-[10px] tabular-nums text-slate-500">
+            <div className="mt-1 flex justify-between font-mono text-[11px] tabular-nums text-slate-500">
               <span>{shortDay(days[0].day)}</span>
               <span>{shortDay(days[Math.floor(days.length / 2)].day)}</span>
               <span>aujourd'hui</span>
@@ -143,7 +143,7 @@ export function PotDashboard({ pot }: { pot: ServerPot }) {
       ) : (
         <div className="max-h-80 overflow-auto">
           <table className="w-full text-xs">
-            <thead className="sticky top-0 bg-space-900 text-left font-mono text-[10px] uppercase tracking-wider text-slate-500">
+            <thead className="sticky top-0 bg-space-900 text-left font-mono text-[11px] uppercase tracking-wider text-slate-500">
               <tr>
                 <th className="py-1 pr-2 font-normal">Jour</th>
                 {SERIES.map((s) => (

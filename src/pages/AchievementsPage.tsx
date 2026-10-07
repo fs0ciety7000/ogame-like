@@ -30,6 +30,8 @@ import { buyAchievementHint, fetchAchievementRates, GameActionError } from "@/se
 import { assetUrl } from "@/lib/assets";
 import { cn, formatCompact, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { useNavUnlock } from "@/components/layout/NavBar";
+import { achievementClosedPage, navCondition, navPageLabel } from "@/game/navUnlock";
 
 type StatusFilter = "all" | "done" | "progress" | "todo";
 const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
@@ -67,7 +69,7 @@ export function AchievementMedal({ a, unlocked, size = 72 }: { a: AchievementDef
   );
 }
 
-function AchievementCard({ a, player, rate, visibility, before }: { a: AchievementDef; player: PlayerState; rate: number | null; visibility: AchievementVisibility; before: AchievementDef | null }) {
+function AchievementCard({ a, player, rate, visibility, before, closedPage }: { a: AchievementDef; player: PlayerState; rate: number | null; visibility: AchievementVisibility; before: AchievementDef | null; closedPage: string | null }) {
   const unlocked = (player.unlockedAchievements ?? []).includes(a.id);
   const fog = !unlocked && visibility === "fog";
   const hidden = !unlocked && (visibility === "secret" || fog || a.secret);
@@ -106,7 +108,16 @@ function AchievementCard({ a, player, rate, visibility, before }: { a: Achieveme
         </div>
         <p className="text-xs text-slate-400">{hidden ? "Succès secret : à toi de le découvrir." : a.description}</p>
         {hidden && a.secret && <SecretHint a={a} player={player} />}
-        {!unlocked && !hidden && progress.target > 1 && (
+        {/* 6.14.81 (DP-L6, I30) : système pas encore ouvert : la condition d'ouverture, sans le chiffre de progression. */}
+        {!unlocked && !hidden && closedPage && (
+          <p className="flex items-start gap-1.5 text-[11px] text-slate-500">
+            <Lock className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+            <span>
+              À découvrir : {navPageLabel(closedPage)}. {navCondition(closedPage)}.
+            </span>
+          </p>
+        )}
+        {!unlocked && !hidden && !closedPage && progress.target > 1 && (
           <div className="flex items-center gap-2">
             <Progress value={(progress.value / progress.target) * 100} className="h-1.5 flex-1" />
             <span className="tabular-mono text-[10px] text-slate-500">
@@ -173,6 +184,7 @@ export function AchievementsPage() {
     void fetchAchievementRates().then(setRates);
   }, []);
   const list = useMemo(() => ACHIEVEMENTS.filter((a) => a.enabled), []);
+  const nav = useNavUnlock();
   if (!player) return null;
 
   const unlocked = new Set(player.unlockedAchievements ?? []);
@@ -199,7 +211,7 @@ export function AchievementsPage() {
       if (status === "all") return true;
       const got = unlocked.has(a.id);
       if (status === "done") return got;
-      if (status === "progress") return !got && visibility.get(a.id) === "shown" && ratio(a) > 0;
+      if (status === "progress") return !got && visibility.get(a.id) === "shown" && ratio(a) > 0 && !achievementClosedPage(a.metric, nav.closed);
       return !got;
     })
     .filter((a) => {
@@ -294,7 +306,7 @@ export function AchievementsPage() {
           Change la recherche ou les filtres.
         </EmptyState>
       )}
-      <PagedList key={`${tab}|${status}|${tier}|${q}`} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} visibility={visibility.get(a.id) ?? "shown"} before={revealedBefore(a)} />} />
+      <PagedList key={`${tab}|${status}|${tier}|${q}`} items={shown} className="grid gap-2 md:grid-cols-2 xl:grid-cols-3" render={(a) => <AchievementCard key={a.id} a={a} player={player} rate={rate(a.id)} visibility={visibility.get(a.id) ?? "shown"} before={revealedBefore(a)} closedPage={unlocked.has(a.id) ? null : achievementClosedPage(a.metric, nav.closed)} />} />
     </div>
   );
 }

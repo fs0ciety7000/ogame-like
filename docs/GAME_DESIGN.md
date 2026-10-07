@@ -78,7 +78,8 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I27 | Tout identifiant par défaut d'unité, de bâtiment, de techno ou de relique ajouté après la première liste a une entrée `appendFromDefaults` dans `CONTENT_MIGRATIONS`, ou est ajouté d'office (`withFixedUnits`, `withFixedBuildings`) | `cosmic_db.js` (`CONTENT_MIGRATIONS`) | `contentMigrations.test.ts` |
 | I28 | L'état de jeu d'un joueur ne s'écrit et ne s'efface que par le serveur : l'éditeur de l'admin envoie des **différences**, appliquées sur la fiche relue et rattrapée dans la transaction, sous les plafonds (niveaux maximaux, entrepôt des ressources communes, hangars par `hangarLoad`), motif et journal obligatoires ; la suppression d'un compte (admin ou joueur) passe par `purgePlayer`, qui rend aux autres joueurs ce qui leur revient (mises, cautions, garnisons, rôle de fondateur) ; les règles d'API réservent la suppression de `players` et `queues` aux admins et refusent l'écriture directe de l'état de jeu, y compris aux admins du jeu | `adminEdit.ts` (`adminEditDiff`, `applyAdminEdit`), `cosmic_db.js` (`adminPlayerAction`, `purgePlayer`, `accountDelete`, `guardUserDelete`, `SCHEMA_RULE_SYNC`), `pb_schema.json` | `adminEdit.test.ts`, `compteServeur.test.ts`, intégration « 6.14.65 (AC-B) », « 6.14.66 (AC-C) » |
 | I29 | Équilibre gardé par simulation : avec les règles par défaut, le simulateur de progression (déterministe, 4 profils sur 90 jours) garde la 1re Ascension de chaque profil dans ses bornes (actif J8–13, moyen J15–23, occasionnel J38–56, quotidien J26–40 en 6.14.72 ; le lot AE-L2 les déplace vers les cibles du §2) ; à budget égal, un défenseur moitié défenses, moitié vaisseaux à quai tient jusqu'à ×0,85 au moins de sa dépense, des défenses seules jusqu'à ×2 ; le coffre du 7e jour du joueur quotidien reste sous 24 h de sa production. Un réglage qui sort de ces bornes passe par une proposition et change les bornes dans le même commit | `balance/progressionSim.ts`, `balance/pvpBudget.ts` (`node scripts/progression-sim.mjs`) | `progressionSim.test.ts` |
-| I30 | Menu progressif : il **masque** sans bloquer (aucune route ni action ne lit l'ouverture du menu) ; une page s'ouvre au premier de ses déclencheurs (signal d'usage, étape de la Prise en main ou du Carnet atteinte, rang plafond) et au plus tard à son rang plafond ; une page ouverte ne se referme jamais (marque `nav:<page>` à la première visite ou à l'ouverture par un danger passager, astuce `tip:<page>` vue) ; un danger (flotte hostile, rapport reçu, combat subi, ultimatum, raid scripté) ouvre Galaxie, Combats et Menaces, un contact de seigneur ouvre Seigneurs ; l'étape en cours de la Prise en main et du Carnet ne vise jamais une page fermée ; un compte créé avant `newAccountsFrom` et au moins à `veteranRank`, un admin, l'option « Tout afficher » ou `enabled` à faux rendent le menu complet, sans rien écrire sur la fiche ; chaque entrée du menu a une règle `navUnlock.pages` ou figure dans `NAV_ALWAYS_VISIBLE` | `navUnlock.ts` (`navOpenPages`, `navSignals`), `NavBar.tsx` (`useNavUnlock`, `useHiddenRoutes`) | `navUnlock.test.ts` |
+| I30 | Menu progressif : il **masque** sans bloquer (aucune route ni action ne lit l'ouverture du menu) ; une page s'ouvre au premier de ses déclencheurs (signal d'usage, étape de la Prise en main ou du Carnet atteinte, rang plafond) et au plus tard à son rang plafond ; une page ouverte ne se referme jamais (marque `nav:<page>` à la première visite ou à l'ouverture par un danger passager, astuce `tip:<page>` vue, page annoncée `stats.navAnnounced`) ; un danger (flotte hostile, rapport reçu, combat subi, ultimatum, raid scripté) ouvre Galaxie, Combats et Menaces, un contact de seigneur ouvre Seigneurs ; l'étape en cours de la Prise en main et du Carnet ne vise jamais une page fermée ; un compte créé avant `newAccountsFrom` et au moins à `veteranRank`, un admin, l'option « Tout afficher » ou `enabled` à faux rendent le menu complet, sans rien écrire sur la fiche ; chaque entrée du menu a une règle `navUnlock.pages` ou figure dans `NAV_ALWAYS_VISIBLE` | `navUnlock.ts` (`navOpenPages`, `navSignals`), `NavBar.tsx` (`useNavUnlock`, `useHiddenRoutes`) | `navUnlock.test.ts` |
+| I31 | Objectifs du jour du menu progressif : un objectif d'un **nouveau** jour (et une relance) n'est tiré que parmi les types dont la page est ouverte pour le joueur (`CONTRACT_PAGES` : attaque, sondes → Galaxie ; défense → Combats ; missions → Missions ; marché, dons → Commerce ; les autres sur une page toujours visible) ; le tirage du jour en cours n'est jamais refait ; `navUnlock.filterContracts` à faux, « Tout afficher », un ancien compte ou `enabled` à faux tirent parmi tous les types. Le serveur annonce les pages ouvertes par une notification « Nouveau : … » (une par ouverture, dans la transaction de l'action, I24), jamais pour un ancien compte ni un admin | `contracts.ts` (`openContractTypes`, `ensureContracts`, `rerollContract`), `navUnlock.ts` (`navOpeningNotice`), `cosmic.pb.js` (route des actions) | `contracts.test.ts`, `navUnlock.test.ts`, intégration « 6.14.79 (DP-L4) » |
 
 ## 5. Règles de conception
 
@@ -212,17 +213,17 @@ Simulateur (`progressionSim.ts`) : joueur glouton par profil (actif 8 sessions p
 quotidien 1 sans manquer), règles en vigueur lues dans le moteur ; hors modèle : unités, combats, événements, reliques, alliance.
 Il donne des ordres de grandeur. Garde : I29.
 
-### 7.7 Ouverture progressive du menu (6.14.74 à 6.14.76, `navUnlock.ts`, `NavBar.tsx`)
+### 7.7 Ouverture progressive du menu (6.14.74 à 6.14.81, `navUnlock.ts`, `NavBar.tsx`, `contracts.ts`)
 
-Lots DP-L1 à DP-L3 de `docs/proposals/deblocage-progressif.md` (option C+D, Q152 à Q158). Fiche du domaine : `docs/systems/qol-outils.md`.
+Lots DP-L1 à DP-L6 de `docs/proposals/deblocage-progressif.md` (option C+D, Q152 à Q158). Fiche du domaine : `docs/systems/qol-outils.md`.
 
 | Règle | Valeur par défaut | Réglage (admin) |
 |:--|:--|:--|
-| Ouverture progressive | active | `navUnlock.enabled` (Admin → Règles → Tous les réglages → Ouverture du menu ; section dédiée au lot DP-L5) |
+| Ouverture progressive | active | `navUnlock.enabled` (Admin → Règles → **Ouverture du menu**, section dédiée avec aperçu par rang, 6.14.80 ; aussi dans Tous les réglages) |
 | Comptes « existants » (menu complet) | créés avant le **2026-10-08, 0 h** (Paris) **et** au moins **Fer II** | `navUnlock.newAccountsFrom` (ms), `navUnlock.veteranRank` |
 | Page fermée | **cachée** (une ligne « Prochaine ouverture », grisée dans Ctrl+K) | `navUnlock.style` (`hidden` / `locked`) |
 | Colonies | ouvertes **20** niveaux cumulés avant le seuil de la 1re colonie | `navUnlock.colonyLead` |
-| Objectifs du jour tirés parmi les systèmes ouverts | oui (serveur au lot DP-L4) | `navUnlock.filterContracts` |
+| Objectifs du jour tirés parmi les systèmes ouverts | oui, pour un nouveau jour et une relance (I31, 6.14.79) | `navUnlock.filterContracts` |
 | Par page : rang plafond, signaux, étape, conditions | tableau ci-dessous | `navUnlock.pages` (fusion page par page) |
 
 Toujours visibles (palier 0) : Accueil, Ordres du jour, Ressources, Bâtiments, Unités, Labo, Communications et le pied de barre (Profil,
@@ -241,7 +242,24 @@ Signaux (`NAV_SIGNALS`, liste fermée lue par `navSignals`) : `danger`, `protect
 `plannerAmber`, `hasMoon`, `ascended`. Visiter une page fermée (lien, Ctrl+K, défi du passe ou des Chroniques) l'ouvre (intention).
 Option « Tout afficher » (Réglages → Jeu et aide, Q156) : marques `nav:all` / `nav:progressif`, la dernière posée l'emporte.
 Panneau Lune de Statistiques : seulement avec une lune, une réserve de pitié ou l'étape « Ta lune » du Carnet atteinte (`moonPanelVisible`).
-Garde : I30.
+
+Serveur (6.14.79, DP-L4) : après chaque action du joueur (`/api/cosmic/action`, dans la transaction), `navOpeningNotice` compare les
+pages ouvertes à `stats.navAnnounced` et envoie **une** notification « Nouveau : Galaxie, Alliance et … » (genre `system`, lien vers la
+première page) par ouverture : texte du danger, de la fin de protection, du rang atteint, de l'étape ou du signal. Une page visitée (marque
+`nav:`) ou déjà ouverte à la première lecture (compte d'avant le lot) est notée sans message ; « Tout afficher » tient la mémoire en
+silence ; un ancien compte, un admin ou le menu désactivé ne reçoivent rien et rien n'est écrit. Une page annoncée reste ouverte (I30).
+Le danger lu par le serveur vient de la fiche (combat subi, raid scripté, ultimatum) : une flotte hostile en vol ouvre les pages côté
+client (marque `nav:`) avant l'impact.
+
+Objectifs du jour (I31) : à J0, seuls « Lancer une amélioration », « Lancer une recherche », « Construire des unités » et « Dépenser » sont
+tirés (4 types toujours ouverts = 4 objectifs par jour) ; les autres arrivent avec leur page. Une relance sans autre type ouvert est
+refusée et reste disponible.
+
+Chaîne (6.14.81, DP-L6) : une astuce de page (`PAGE_TIPS`) pour chaque page réglée, montrée à l'arrivée même après la Prise en main ;
+l'Ambre de la barre des ressources n'apparaît qu'avec Primes ouvert ou un solde ; un succès dont la page est fermée (`ACHIEVEMENT_PAGES`)
+s'affiche « À découvrir » avec la condition, sans progression ; « Que faire maintenant ? » (`nextActions`), le rappel de la classe
+d'empire, la vue cockpit (actions rapides, agenda) ne proposent que des pages ouvertes.
+Garde : I30, I31.
 
 ## 8. Journal des audits
 
@@ -361,3 +379,6 @@ Garde : I30.
 | 2026-10-07 | 6.14.75 | Lot DP-L2 : menu progressif dans l'interface (barre latérale, mobile, Ctrl+K grisé, « Prochaine ouverture », pastille « Nouveau », marque `nav:<page>`, « Tout afficher », cartes de l'accueil) ; compte neuf 13 entrées, ancien compte 39 | `docs/changes/6.14.75-deblocage-interface.md` |
 | 2026-10-07 | 6.14.76 | Lot DP-L3 : Prise en main et Carnet (« Débloque : … »), panneau Lune conditionnel, liens « Ouvre : … » des défis du passe et des Chroniques ; changelog | `docs/changes/6.14.76-deblocage-prise-en-main.md` |
 | 2026-10-07 | 6.14.77 | É30-1f : suite de l'essai de la lune ; après un saut, une seule notification (« Saut réussi », retour habituel tu) ; Journal système et cartes de notification : un retour de flotte ou un saut réussi en information (cyan), l'alerte rouge reste aux menaces (flotte hostile, raid, ultimatum, garnison au combat) ; rapport de combat JcJ : `defenderMoonLevel` (lune du défenseur avant le combat) et santé « victoires de l'attaquant avec ou sans lune » sur 30 jours | `docs/changes/6.14.77-suite-essai-lune.md` |
+| 2026-10-07 | 6.14.79 | Lot DP-L4 : objectifs du jour d'un nouveau jour tirés parmi les pages ouvertes (relance comprise), notification « Nouveau : … » envoyée par le serveur à chaque ouverture (mémoire `stats.navAnnounced`, qui garde aussi la page ouverte) ; invariant I31 ; intégration « 6.14.79 (DP-L4) » | `docs/changes/6.14.79-deblocage-serveur.md` |
+| 2026-10-07 | 6.14.80 | Lot DP-L5 : Admin → Règles → Ouverture du menu (réglages généraux, une fiche par page, aperçu d'un compte neuf par rang avec le brouillon) | `docs/changes/6.14.80-deblocage-admin.md` |
+| 2026-10-07 | 6.14.81 | Lot DP-L6 : 18 astuces de page, Ambre de la barre des ressources, succès « À découvrir », « Que faire maintenant ? », rappel de classe et vue cockpit sans page fermée ; changelog, ligne au billet 49 | `docs/changes/6.14.81-deblocage-chaine.md` |

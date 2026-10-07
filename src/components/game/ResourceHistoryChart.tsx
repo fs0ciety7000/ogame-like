@@ -72,7 +72,7 @@ export function ResourceHistoryChart({ history }: { history: ResourceHistoryPoin
               <AnimatedNumber
                 value={series[series.length - 1].v}
                 format={formatNumber}
-                className="font-display text-lg tabular-nums text-slate-100"
+                className="font-mono font-bold tabular-nums text-lg text-slate-100"
               />
               <span className="text-xs text-slate-500">maintenant</span>
             </div>

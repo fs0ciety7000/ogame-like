@@ -15,6 +15,12 @@ import {
   navClosedPages,
   navCondition,
   navMarkId,
+  NAV_PAGE_LABELS,
+  ACHIEVEMENT_PAGES,
+  achievementClosedPage,
+  navOpeningNotice,
+  navAlwaysMenuCount,
+  navPreview,
   navOpenPages,
   navPageOpen,
   navPath,
@@ -222,5 +228,137 @@ describe("6.14.74 ouverture progressive du menu (I30)", () => {
   it("masquer sans bloquer : ni les actions ni les routes ne lisent l'ouverture du menu", () => {
     expect(SOURCES["./actions.ts"]).not.toMatch(/navUnlock/);
     expect(Object.values(APP)[0]).not.toMatch(/navUnlock|navPageOpen/);
+  });
+});
+
+describe("6.14.79 (DP-L4) notification « Nouveau : … » et mémoire des pages annoncées", () => {
+  it("libellés : chaque page réglée a le nom de son entrée du menu", () => {
+    const src = Object.values(NAVBAR)[0];
+    for (const page of Object.keys(NAV_UNLOCK_RULES.pages)) {
+      const m = new RegExp(`to: "${page.replace(/[/-]/g, "\\$&")}",[^}]*label: "([^"]+)"`).exec(src);
+      expect(m?.[1], page).toBe(NAV_PAGE_LABELS[page]);
+    }
+  });
+
+  it("première lecture : les pages déjà ouvertes sont notées en silence ; puis une seule notification par palier", () => {
+    const p = fresh({ xp: 120 });
+    // Compte d'avant le lot (mémoire absente) : Galaxie et Alliance, déjà ouvertes à Fer III, ne sont pas annoncées.
+    expect(navOpeningNotice(p, ctx())).toBeNull();
+    expect(p.stats?.navAnnounced).toEqual(["/game/galaxie", "/game/alliance"]);
+    expect(navOpeningNotice(p, ctx())).toBeNull();
+    // Fer II : une notification qui cite toutes les pages du palier, avec un lien vers la première.
+    p.xp = xpOf("fer2");
+    const n = navOpeningNotice(p, ctx());
+    expect(n).toMatchObject({ kind: "system", link: "/game/missions", read: false });
+    expect(n!.title).toBe("Nouveau : Missions, Combats, Menaces, Classement, Succès, Passe, Primes, Classe d'empire et Journal");
+    expect(n!.message).toMatch(/Tu as atteint Fer II/);
+    // Pas deux fois.
+    expect(navOpeningNotice(p, ctx())).toBeNull();
+  });
+
+  it("compte neuf : rien à J0, puis un danger annonce Galaxie, Combats, Menaces et Primes ensemble", () => {
+    const p = fresh();
+    expect(navOpeningNotice(p, ctx())).toBeNull();
+    expect(p.stats?.navAnnounced).toEqual([]);
+    p.onboarding = { claimed: [], tutorialRaid: "sent" };
+    const n = navOpeningNotice(p, ctx());
+    expect(n?.title).toBe("Nouveau : Galaxie, Combats, Menaces et Primes");
+    expect(n?.message).toMatch(/menace/);
+  });
+
+  it("fin de la protection de débutant : Combats et Menaces, avec son texte", () => {
+    const created = FROM + 1;
+    const p = fresh({ createdAtMs: created });
+    expect(navOpeningNotice(p, { now: created + 1000 })).toBeNull();
+    const n = navOpeningNotice(p, { now: created + PVP_RULES.newbieProtectionMs });
+    expect(n?.title).toBe("Nouveau : Combats et Menaces");
+    expect(n?.message).toMatch(/protection de débutant est finie/);
+  });
+
+  it("page visitée (marque nav:) : notée sans notification ; page annoncée : reste ouverte (I30)", () => {
+    const p = fresh({ stats: { navAnnounced: [] }, announcementsSeen: [navMarkId("/game/casino")] });
+    expect(navOpeningNotice(p, ctx())).toBeNull();
+    expect(p.stats?.navAnnounced).toEqual(["/game/casino"]);
+    // Une page annoncée ne se referme pas, même si son déclencheur disparaît (alliance quittée, XP retirée).
+    const q = fresh({ stats: { navAnnounced: ["/game/alliance"] } });
+    expect(navPageOpen(q, "/game/alliance", ctx())).toBe(true);
+  });
+
+  it("ancien compte, admin, menu désactivé : rien n'est écrit ; « Tout afficher » : mémoire en silence", () => {
+    const veteran = fresh({ createdAtMs: FROM - 1, xp: xpOf("or3") });
+    expect(navOpeningNotice(veteran, ctx())).toBeNull();
+    expect(veteran.stats?.navAnnounced).toBeUndefined();
+    const admin = fresh({ xp: xpOf("fer2") });
+    expect(navOpeningNotice(admin, ctx({ admin: true }))).toBeNull();
+    expect(admin.stats?.navAnnounced).toBeUndefined();
+    const all = fresh({ xp: xpOf("fer2"), stats: { navAnnounced: [] }, announcementsSeen: [NAV_SHOW_ALL_ON] });
+    expect(navOpeningNotice(all, ctx())).toBeNull();
+    expect(all.stats?.navAnnounced?.length).toBeGreaterThan(5);
+    applyGameContent({ rules: { navUnlock: { enabled: false } } } as never);
+    const off = fresh({ xp: xpOf("fer2"), stats: { navAnnounced: [] } });
+    expect(navOpeningNotice(off, ctx())).toBeNull();
+    expect(off.stats?.navAnnounced).toEqual([]);
+  });
+
+  it("garde : le serveur appelle la notification dans la transaction de l'action, avant l'enregistrement (I24)", () => {
+    const pb = import.meta.glob("../../pocketbase/pb_hooks/cosmic.pb.js", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+    const route = Object.values(pb)[0];
+    const i = route.indexOf("db.navOpeningNotice(");
+    expect(i).toBeGreaterThan(route.indexOf("game.performPlayerAction("));
+    expect(i).toBeLessThan(route.indexOf("db.savePlayer(txApp, game, loaded, out.player"));
+    const entry = import.meta.glob("../server/hooksEntry.ts", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+    expect(Object.values(entry)[0]).toMatch(/navOpeningNotice/);
+  });
+});
+
+describe("6.14.80 (DP-L5) admin : aperçu d'un compte neuf et section dédiée", () => {
+  const ADMIN = import.meta.glob(["../pages/admin/panels.tsx", "../pages/admin/NavUnlockRulesFields.tsx"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+
+  it("aperçu : 13 entrées à J0, puis le rang, l'alliance et le danger ouvrent leurs pages", () => {
+    expect(navAlwaysMenuCount()).toBe(13);
+    const j0 = navPreview({ rankId: "non_classe" }, FROM);
+    expect(j0.status).toBe("progressive");
+    expect(j0.menuEntries).toBe(13);
+    expect(j0.next?.rankId).toBe("fer3");
+    expect(navPreview({ rankId: "fer2" }, FROM).open.map((o) => o.page)).toEqual(expect.arrayContaining(["/game/galaxie", "/game/missions", "/game/journal"]));
+    const or3 = navPreview({ rankId: "or3" }, FROM);
+    expect(or3.closed.map((c) => c.page)).toEqual(["/game/guerre-territoire"]);
+    expect(or3.closed[0].condition).toMatch(/il faut une alliance/);
+    expect(navPreview({ rankId: "or3", alliance: true }, FROM).closed).toEqual([]);
+    expect(navPreview({ rankId: "non_classe", danger: true }, FROM).open.map((o) => o.page)).toEqual(expect.arrayContaining(["/game/galaxie", "/game/combats", "/game/menaces"]));
+    expect(navPreview({ rankId: "non_classe", hoursSinceSignup: 72 }, FROM).open.map((o) => o.page)).toEqual(["/game/combats", "/game/menaces"]);
+  });
+
+  it("aperçu avec un brouillon : appliqué au calcul, puis les règles en vigueur reviennent intactes", () => {
+    const before = structuredClone(NAV_UNLOCK_RULES);
+    const draft = { ...NAV_UNLOCK_RULES, pages: { ...NAV_UNLOCK_RULES.pages, "/game/casino": { rank: "non_classe" } } };
+    expect(navPreview({ rankId: "non_classe" }, FROM, draft).open.map((o) => o.page)).toEqual(["/game/casino"]);
+    expect(navPreview({ rankId: "non_classe" }, FROM, { ...NAV_UNLOCK_RULES, enabled: false }).status).toBe("disabled");
+    expect(NAV_UNLOCK_RULES).toEqual(before);
+  });
+
+  it("la section « Ouverture du menu » est montée dans Admin → Règles et règle chaque champ du groupe", () => {
+    const panels = ADMIN["../pages/admin/panels.tsx"];
+    const fields = ADMIN["../pages/admin/NavUnlockRulesFields.tsx"];
+    expect(panels).toMatch(/<NavUnlockRulesFields rules=\{rules\} setRules=\{setRules\} \/>/);
+    for (const key of Object.keys(NAV_UNLOCK_RULES).filter((k) => k !== "pages")) expect(fields, key).toMatch(new RegExp(`set\\(\\{ ${key}:`));
+    for (const key of ["rank", "step", "signals", "requires"]) expect(fields, key).toMatch(new RegExp(`setPage\\(page, \\{ ${key}:`));
+  });
+});
+
+describe("6.14.81 (DP-L6) succès d'un système fermé", () => {
+  it("chaque mesure listée existe et vise une page du menu progressif", async () => {
+    const { METRICS } = await import("@/game/achievements");
+    for (const [metric, page] of Object.entries(ACHIEVEMENT_PAGES)) {
+      expect(metric in METRICS, metric).toBe(true);
+      expect(NAV_UNLOCK_RULES.pages[page], `${metric} → ${page}`).toBeTruthy();
+    }
+  });
+
+  it("compte neuf : un succès de combat est « À découvrir » ; un succès de construction garde sa progression", () => {
+    const closed = new Set(navClosedPages(fresh(), ctx()));
+    expect(achievementClosedPage("victories", closed)).toBe("/game/galaxie");
+    expect(achievementClosedPage("buildingLevels", closed)).toBeNull();
+    expect(achievementClosedPage("victories", new Set())).toBeNull();
   });
 });

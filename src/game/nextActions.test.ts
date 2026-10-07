@@ -11,7 +11,17 @@ describe("nextActions", () => {
     p.contracts = { day: "x", items: [{ id: "c1", type: "missions", target: 1, progress: 1, claimed: false }], streak: 0, lastCompletedDay: null, rerolled: false } as never;
     const kinds = nextActions(p, defaultQueues(), [], NOW).map((a) => a.kind);
     expect(kinds[0]).toBe("contracts");
-    expect(kinds).toEqual(expect.arrayContaining(["build", "research", "mission", "units"]));
+    expect(kinds).toEqual(expect.arrayContaining(["build", "research", "units"]));
+    // 6.14.81 (DP-L6, I30) : pas de mission proposée tant que la page Missions n'est pas au menu ; la 1re unité l'ouvre.
+    expect(kinds).not.toContain("mission");
+    p.units = { ...p.units, drone_recuperateur: { level: 1, count: 1 } };
+    expect(nextActions(p, defaultQueues(), [], NOW).map((a) => a.kind)).toContain("mission");
+  });
+
+  it("6.14.81 : ne propose jamais une page fermée du menu progressif", async () => {
+    const { navPageOpen, navPath } = await import("@/game/navUnlock");
+    const p = { ...defaultPlayerState("u", "U"), resourcesUpdatedAtMs: NOW, units: { chasseur: { level: 1, count: 50 } } } as PlayerState;
+    for (const a of nextActions(p, defaultQueues(), [], NOW)) if (a.to.startsWith("/game/")) expect(navPageOpen(p, navPath(a.to), { now: NOW }), a.kind).toBe(true);
   });
 
   it("stays quiet when everything is busy", () => {

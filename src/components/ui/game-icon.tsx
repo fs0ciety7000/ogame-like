@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { CircleHelp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { emojiIcon, iconUrl, isGameIcon, splitEmojiText, type GameIconName } from "@/lib/icons";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -21,7 +22,7 @@ export function GameIcon({ name, className, title }: { name: GameIconName; class
 export function ResourceIcon({ id, className, title }: { id: string; className?: string; title?: string }) {
   const def = RESOURCE_LIST.find((r) => r.id === id);
   if (isGameIcon(id)) return <GameIcon name={id} className={className} title={title ?? def?.name} />;
-  return <span className={className}>{def?.emoji ?? "❔"}</span>;
+  return <span className={className}>{def?.emoji ?? <CircleHelp aria-hidden className="inline h-[1em] w-[1em]" />}</span>;
 }
 
 /** Emoji isolé (souvent issu des données) : illustration si elle existe. */

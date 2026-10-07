@@ -46,7 +46,7 @@ export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compa
         <div className="h-full flex-1 bg-cyan-glow/70" />
       </div>
       {pierced && (
-        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-violet-glow">
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-violet-glow">
           <HudChip size="sm" tone="violet" title="Ta lune voit à travers le brouilleur et les capsules de cette flotte.">
             Percé par la phalange
           </HudChip>
@@ -55,7 +55,7 @@ export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compa
         </p>
       )}
       {!compact && (
-        <p className="mt-1 text-[10px] text-slate-500">
+        <p className="mt-1 text-[11px] text-slate-500">
           Attaque {t.shield > 0 ? `après bouclier (−${Math.round(t.shield * 100)} %)` : ""} contre ta défense sur {t.targetName}
           {fleetOnly ? " (flotte à quai seulement)" : ""}{t.garrison > 0 ? `, garnisons alliées comprises (+${formatCompact(t.garrison)})` : ""}. Estimation{t.estimated ? ", composition évaluée avec tes niveaux" : ""}.
         </p>

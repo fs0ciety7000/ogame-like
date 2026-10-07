@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { assetUrl } from "@/lib/assets";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { BookOpen, Flame, ScrollText, Trophy } from "lucide-react";
@@ -27,7 +27,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
    rapporte chacun (points de passe, jetons, Ambre), la fin du chapitre, le boss
    du mois et les chapitres déjà terminés. */
 
-const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" });
+const fmtDay = (ms: number) => formatDateTime(ms, "weekday", "server");
 
 export function ChroniclesPage() {
   useNowTicker();
@@ -46,7 +46,7 @@ export function ChroniclesPage() {
       <div className="flex flex-col gap-4">
         <PageHeader eyebrow="Cosmic Empires / Progression" title="Chroniques" description="L'histoire du secteur, un chapitre par mois, en quatre épisodes." />
         <Card>
-          <EmptyState icon="📜" title="Pas de chapitre ce mois-ci" action={<EmptyAction to="/game/codex">Relire le Codex</EmptyAction>}>
+          <EmptyState icon={<ScrollText />} title="Pas de chapitre ce mois-ci" action={<EmptyAction to="/game/codex">Relire le Codex</EmptyAction>}>
             Le prochain chapitre s'ouvrira le 1er du mois.
           </EmptyState>
         </Card>
@@ -154,7 +154,7 @@ export function ChroniclesPage() {
 
       <HudPanel icon={<ScrollText />} title="Chapitres terminés">
         {pastChapters.length === 0 ? (
-          <EmptyState size="sm" icon="📜" title="Aucun chapitre passé" action={<EmptyAction to="/game/codex">Ouvrir le Codex</EmptyAction>}>
+          <EmptyState size="sm" icon={<ScrollText />} title="Aucun chapitre passé" action={<EmptyAction to="/game/codex">Ouvrir le Codex</EmptyAction>}>
             Les chapitres que tu termines restent ici, et leurs épisodes dans le Codex.
           </EmptyState>
         ) : (
@@ -163,7 +163,7 @@ export function ChroniclesPage() {
               <li key={m.id} className="hud-cut-sm flex items-center gap-3 border border-white/10 p-2.5" style={{ borderLeft: `2px solid ${m.theme.accent}` }}>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-display text-sm text-slate-100">{m.title}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">{m.id}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500">{m.id}</span>
                 </span>
                 {m.completion?.title && <span className="truncate text-xs text-gold-glow">« {m.completion.title} »</span>}
               </li>

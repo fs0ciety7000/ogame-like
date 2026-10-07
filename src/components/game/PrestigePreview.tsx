@@ -19,7 +19,7 @@ export function PrestigePreview({ item, pseudo, look }: { item: ShopItemId; pseu
         <ul className="flex flex-col gap-1 text-sm" aria-label="Couleurs disponibles">
           {NAME_TONES.map((t) => (
             <li key={t.id} className="flex items-baseline gap-2">
-              <span className="w-14 font-mono text-[10px] uppercase tracking-wider text-slate-500">{t.label}</span>
+              <span className="w-14 font-mono text-[11px] uppercase tracking-wider text-slate-500">{t.label}</span>
               <span className="font-semibold" style={{ color: HUD_TONE[t.id as HudTone] }}>
                 {pseudo}
               </span>
@@ -34,7 +34,7 @@ export function PrestigePreview({ item, pseudo, look }: { item: ShopItemId; pseu
           <span className="truncate">Bien joué pour le boss !</span>
           <span className="inline-flex items-center gap-1 border border-cyan-glow/50 bg-cyan-glow/10 px-1.5 text-xs">
             <img src={assetUrl(KESH.emblem)} alt="" className="h-4 w-4 object-contain" />
-            <span className="font-mono text-[10px] tabular-nums text-slate-300">3</span>
+            <span className="font-mono text-[11px] tabular-nums text-slate-300">3</span>
           </span>
         </div>
       );
@@ -42,7 +42,7 @@ export function PrestigePreview({ item, pseudo, look }: { item: ShopItemId; pseu
       return (
         <div className="flex flex-wrap gap-1.5" aria-label="Icônes de salon">
           {ROOM_ICONS.map((i) => (
-            <span key={i.id} className="inline-flex items-center gap-1 border border-violet-glow/30 bg-violet-glow/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-violet-glow">
+            <span key={i.id} className="inline-flex items-center gap-1 border border-violet-glow/30 bg-violet-glow/10 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-violet-glow">
               <RoomIcon icon={i.id} className="h-3 w-3" /> {i.label}
             </span>
           ))}
@@ -57,7 +57,7 @@ export function PrestigePreview({ item, pseudo, look }: { item: ShopItemId; pseu
           ].map((v) => (
             <figure key={v.label} className="flex flex-col items-center gap-1">
               <HomePlanet buildings={{}} size={72} look={v.look} />
-              <figcaption className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{v.label}</figcaption>
+              <figcaption className="font-mono text-[11px] uppercase tracking-wider text-slate-500">{v.label}</figcaption>
             </figure>
           ))}
         </div>

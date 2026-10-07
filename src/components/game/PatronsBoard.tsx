@@ -1,4 +1,4 @@
-import { Crown } from "lucide-react";
+import { Crown, Landmark } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { AmberAmount } from "@/components/ui/amber";
@@ -21,7 +21,7 @@ export function PatronsBoard() {
   return (
     <HudPanel icon={<Crown />} title={`Mécènes de ${monthLabel(state.month)}`} tone="gold">
       {top.length === 0 ? (
-        <EmptyState icon="🏛️" title="Aucun don ce mois-ci" size="sm" className="p-0">
+        <EmptyState icon={<Landmark />} title="Aucun don ce mois-ci" size="sm" className="p-0">
           Le premier joueur à verser de l'Ambre au pot commun prend la tête du classement.
         </EmptyState>
       ) : (

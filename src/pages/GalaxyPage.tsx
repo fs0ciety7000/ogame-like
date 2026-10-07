@@ -19,7 +19,7 @@ import { formatCoords, galaxyCoords } from "@/game/galaxy";
 import { attackTravelSeconds, distanceBetween, FLEET_RULES, fleetProgress, mapPosition } from "@/game/fleets";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { getRankLabel } from "@/game/ranks";
-import { formatClock, formatCompact, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
+import { formatClock, formatCompact, formatDuration, formatNumber, timeAgo, formatDateTime } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
@@ -115,9 +115,15 @@ export function GalaxyPage() {
   // v4.4 : flotte survolée (info-bulle avec l'heure d'arrivée).
   const [hoverFleet, setHoverFleet] = useState<{ id: string; x: number; y: number } | null>(null);
 
-  useEffect(() => subscribeLeaderboard(setPlayers), []);
-  useEffect(() => subscribeAlliances(setAlliances), []);
-  useEffect(() => subscribeDebrisFields(setDebrisFields), []);
+  useEffect(() => {
+    return subscribeLeaderboard(setPlayers);
+  }, []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
+  useEffect(() => {
+    return subscribeDebrisFields(setDebrisFields);
+  }, []);
 
   const allianceById = useMemo(() => new Map(alliances.map((a) => [a.id, a])), [alliances]);
   const blips = useMemo(() => players.map((p) => ({ ...p, pos: mapPosition(p.uid), coords: galaxyCoords(p.uid) })), [players]);
@@ -504,7 +510,7 @@ export function GalaxyPage() {
                   className="pointer-events-none absolute z-10 max-w-[16rem] border bg-space-950/90 px-2.5 py-1.5 text-xs backdrop-blur"
                   style={{ left: Math.min(hoverFleet.x + 14, (cardRef.current?.clientWidth ?? 400) - 260), top: hoverFleet.y + 14, borderColor: style.color }}
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: style.color }}>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: style.color }}>
                     {style.label} · {FLEET_MISSION_LABELS[f.mission ?? "attack"] ?? f.mission}
                   </p>
                   <p className="text-slate-200">
@@ -513,7 +519,7 @@ export function GalaxyPage() {
                   {isHostile(f, uid ?? undefined) && <ThreatGauge fleet={f} compact className="mt-1 w-56" />}
                   {eta && (
                     <p className="font-mono text-slate-400">
-                      {f.status === "returning" ? "Retour" : "Arrivée"} à {new Date(eta).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })} · dans {formatDuration(Math.max(0, (eta - now) / 1000))}
+                      {f.status === "returning" ? "Retour" : "Arrivée"} à {formatDateTime(eta, "time")} · dans {formatDuration(Math.max(0, (eta - now) / 1000))}
                     </p>
                   )}
                 </div>
@@ -524,10 +530,10 @@ export function GalaxyPage() {
             <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">Aucun empire détecté pour l'instant.</p>
           )}
           {/* 5.26 : légende repliable, pour dégager la carte (surtout sur téléphone). */}
-          <button type="button" onClick={() => setShowLegend((v) => !v)} aria-expanded={showLegend} className="hud-cut-sm absolute bottom-2 left-2 z-10 bg-space-950/80 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 hover:text-cyan-glow">
+          <button type="button" onClick={() => setShowLegend((v) => !v)} aria-expanded={showLegend} className="hud-cut-sm absolute bottom-2 left-2 z-10 bg-space-950/80 px-2 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400 hover:text-cyan-glow">
             {showLegend ? "Masquer la légende" : "Légende"}
           </button>
-          {showLegend && <div className="pointer-events-none absolute bottom-9 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-400 sm:right-auto">
+          {showLegend && <div className="pointer-events-none absolute bottom-9 left-2 right-2 flex flex-wrap gap-x-3 gap-y-1 hud-cut-sm bg-space-950/70 px-2 py-1 text-[11px] text-slate-400 sm:right-auto">
             <span className="flex items-center gap-1">
               <span className="h-2 w-2 rounded-full bg-gold-glow" /> Toi
             </span>
@@ -557,7 +563,7 @@ export function GalaxyPage() {
               </span>
             )}
           </div>}
-          <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500 sm:block">
+          <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[11px] text-slate-500 sm:block">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
           </p>
         </div>

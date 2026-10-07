@@ -24,7 +24,7 @@ import { OnlineDot } from "@/components/ui/online-dot";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
-import { ChevronDown, Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
+import { ChevronDown, Crown, Handshake, Shield, ShieldPlus, UserX, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,9 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
   const [applyTo, setApplyTo] = useState<Alliance | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  useEffect(() => subscribeAlliances(setAlliances), []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
 
   const handleCreate = async () => {
     setSubmitting(true);
@@ -123,7 +125,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
           <CardTitle>Rejoindre une alliance</CardTitle>
         </CardHeader>
         {alliances.length === 0 && (
-          <EmptyState icon="🚩" title="Aucune alliance">
+          <EmptyState icon={<Flag />} title="Aucune alliance">
             Sois le premier à en créer une, juste en dessous.
           </EmptyState>
         )}
@@ -144,7 +146,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
                     <i key={i} className={i < a.members.length ? "h-1.5 w-3 bg-cyan-glow" : "h-1.5 w-3 bg-white/[0.08]"} />
                   ))}
                 </div>
-                <span className="font-mono text-[10px] text-slate-500">
+                <span className="font-mono text-[11px] text-slate-500">
                   {a.members.length}/{allianceMaxMembers(a)}
                 </span>
               </div>
@@ -246,21 +248,24 @@ function AllianceRoom({
     pseudo: string;
   } | null>(null);
 
-  useEffect(() => subscribeAlliance(allianceId, setAlliance), [allianceId]);
+  useEffect(() => {
+    return subscribeAlliance(allianceId, setAlliance);
+  }, [allianceId]);
   // v4.6 : présence, « … écrit » et défilement vers le dernier message.
   const lastActiveOf = useDirectoryStore((s) => s.lastActiveOf);
   const player = usePlayerStore((s) => s.player);
   const [typing, setTyping] = useState<string[]>([]);
-  useEffect(() => subscribeTyping(allianceId, uid, setTyping), [allianceId, uid]);
+  useEffect(() => {
+    return subscribeTyping(allianceId, uid, setTyping);
+  }, [allianceId, uid]);
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
-  useEffect(
-    () => subscribeAllianceMessages(allianceId, setMessages),
-    [allianceId],
-  );
+  useEffect(() => {
+    return subscribeAllianceMessages(allianceId, setMessages);
+  }, [allianceId]);
   useEffect(() => {
     void markAllianceRead(uid);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- marque "lu à l'instant" une fois à l'ouverture, pas à chaque nouveau message reçu pendant que le chat reste ouvert
@@ -364,7 +369,7 @@ function AllianceRoom({
                 className={cn("hud-title inline-flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors", on ? "border-b-2 border-cyan-glow text-slate-100" : "text-slate-400 hover:text-slate-200")}
               >
                 {sec.label}
-                {badge > 0 && <span className="grid h-4 min-w-4 place-items-center bg-ember-glow px-1 font-mono text-[9px] font-bold text-space-950">{badge}</span>}
+                {badge > 0 && <span className="grid h-4 min-w-4 place-items-center bg-ember-glow px-1 font-mono text-[11px] font-bold leading-none text-space-950">{badge}</span>}
                 {sec.id === "operations" && bossActive && <span className="h-1.5 w-1.5 animate-pulse bg-danger-glow" aria-label="Boss en cours" />}
               </button>
             );
@@ -468,7 +473,7 @@ function AllianceRoom({
                       {(() => {
                         const rank = memberRankLabel(alliance, m);
                         return rank ? (
-                          <span className="shrink-0 border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
+                          <span className="shrink-0 border px-1 font-mono text-[11px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
                             {rank.name}
                           </span>
                         ) : null;
@@ -480,7 +485,7 @@ function AllianceRoom({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-6 gap-1 px-1.5 text-[10px] text-cyan-glow"
+                          className="h-6 gap-1 px-1.5 text-[11px] text-cyan-glow"
                           title="Envoyer une garnison"
                           onClick={() => setGarrisonTarget({ uid: m, pseudo: alliance.memberPseudos[m] ?? "?" })}
                         >
@@ -490,7 +495,7 @@ function AllianceRoom({
                           <select
                             value={role}
                             onChange={(e) => void handleRole(m, e.target.value as "officer" | "diplomat" | "member")}
-                            className="h-6 border border-white/10 bg-space-900 px-1 text-[10px] text-slate-300"
+                            className="h-6 border border-white/10 bg-space-900 px-1 text-[11px] text-slate-300"
                             aria-label="Rôle"
                           >
                             <option value="member">Membre</option>
@@ -499,7 +504,7 @@ function AllianceRoom({
                           </select>
                         )}
                         {canKick && role !== "founder" && (
-                          <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[10px] text-danger-glow" onClick={() => void handleKick(m)}>
+                          <Button size="sm" variant="ghost" className="h-6 gap-1 px-1.5 text-[11px] text-danger-glow" onClick={() => void handleKick(m)}>
                             <UserX className="h-3 w-3" /> Exclure
                           </Button>
                         )}
@@ -533,7 +538,7 @@ function AllianceRoom({
               {messages.map((m) => (
                 <div key={m.id} className="text-sm">
                   <span className="text-cyan-glow">{m.authorPseudo}</span> <StaffBadge uid={m.authorUid} compact className="align-middle" />{" "}
-                  <span className="text-xs text-slate-600">
+                  <span className="text-xs text-slate-500">
                     {timeAgo(m.createdAtMs)}
                   </span>
                   <p className="text-slate-200">

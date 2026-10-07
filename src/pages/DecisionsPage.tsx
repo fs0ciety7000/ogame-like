@@ -131,7 +131,7 @@ export function DecisionsPage() {
         <header className="flex flex-wrap items-center gap-3">
           <ClipboardCheck className="h-7 w-7 shrink-0 text-cyan-glow" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-cyan-glow">Cosmic Empires · administration</p>
+            <p className="hud-eyebrow text-[11px] text-cyan-glow">Cosmic Empires · administration</p>
             <h1 className="hud-title text-2xl text-slate-100 sm:text-3xl">Décisions à valider</h1>
           </div>
           <Link to="/game" className="border border-cyan-glow/40 px-2.5 py-1 text-xs text-cyan-glow hover:border-cyan-glow">
@@ -250,13 +250,13 @@ export function DecisionsPage() {
                     >
                       <div className="flex min-w-0 flex-col gap-2 text-sm">
                         <p className="text-slate-200">
-                          <span className="hud-eyebrow mr-1.5 text-[10px] text-slate-500">Choix appliqué</span>
+                          <span className="hud-eyebrow mr-1.5 text-[11px] text-slate-500">Choix appliqué</span>
                           {plainText(q.choice)}
                         </p>
                         {adv?.effect && <p className="text-slate-400">{plainText(adv.effect)}</p>}
                         {adv?.reco && (
                           <p className="text-slate-300">
-                            <span className="hud-eyebrow mr-1.5 text-[10px] text-cyan-glow">Conseil</span>
+                            <span className="hud-eyebrow mr-1.5 text-[11px] text-cyan-glow">Conseil</span>
                             {plainText(adv.reco)}
                           </p>
                         )}
@@ -265,7 +265,7 @@ export function DecisionsPage() {
                         </p>
                         {/* 6.14.37 : documents qui présentent le choix (proposition, fiche du lot). */}
                         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                          <span className="hud-eyebrow text-[10px] text-slate-500">Documents</span>
+                          <span className="hud-eyebrow text-[11px] text-slate-500">Documents</span>
                           {decisionDocs(q, CHANGES).map((d) =>
                             docs[d] !== undefined ? (
                               <button key={d} type="button" onClick={() => setOpenDoc(d)} className="break-all text-left font-mono text-cyan-glow underline-offset-2 hover:underline">

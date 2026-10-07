@@ -53,7 +53,7 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
         <X className="h-4 w-4" />
       </button>
       <div>
-        <p className="hud-eyebrow flex flex-wrap items-center gap-x-2 gap-y-0.5 pr-7 text-[10px] text-slate-500">
+        <p className="hud-eyebrow flex flex-wrap items-center gap-x-2 gap-y-0.5 pr-7 text-[11px] text-slate-500">
           <BookOpenCheck className="h-3.5 w-3.5 shrink-0 text-violet-glow" /> Carnet du commandant
           <span className="whitespace-nowrap">
             · Chapitre <span className="tabular-nums">{chapterIndex} / {GUIDE_CHAPTERS.length}</span>
@@ -111,7 +111,7 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
           const complete = list.every((s) => s.claimed);
           return (
             <div key={c.id} className="min-w-0">
-              <p className="mb-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+              <p className="mb-1 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
                 {c.label}
                 {complete && <HudChip size="sm" tone="mint">Terminé</HudChip>}
               </p>
@@ -123,7 +123,7 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
                       {step.label}
                     </Link>
                     {done && !claimed && step.id !== next?.step.id && (
-                      <button type="button" disabled={busy} onClick={() => void claim(step.id)} className="ml-auto shrink-0 font-mono text-[10px] uppercase text-gold-glow hover:underline">
+                      <button type="button" disabled={busy} onClick={() => void claim(step.id)} className="ml-auto shrink-0 font-mono text-[11px] uppercase text-gold-glow hover:underline">
                         Réclamer
                       </button>
                     )}

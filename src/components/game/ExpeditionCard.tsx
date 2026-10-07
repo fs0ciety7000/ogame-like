@@ -3,7 +3,7 @@ import { HullWarning } from "@/components/game/HullWarning";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
-import { Compass, Swords, Coins, Home } from "lucide-react";
+import { Compass, Swords, Coins, Home, Satellite } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -68,7 +68,7 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
         </p>
         <div className="mt-3 flex flex-col gap-1.5">
           {ids.length === 0 && (
-            <EmptyState size="sm" icon="🛰️" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />
+            <EmptyState size="sm" icon={<Satellite />} title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />
           )}
           {ids.map((id) => {
             const owned = player.units[id]?.count ?? 0;
@@ -77,13 +77,13 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
         </div>
         <div className="mt-3">
-          <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Durée</p>
+          <p className="hud-eyebrow mb-1.5 text-[11px] text-slate-500">Durée</p>
           <div className="flex gap-1.5">
             {EXPEDITION_RULES.durations.map((h) => (
               <button

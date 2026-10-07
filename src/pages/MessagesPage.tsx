@@ -25,7 +25,7 @@ import { useAuthStore } from "@/store/authStore";
 import { blockPlayer, listBlocks, markConversationRead, sendMessageTyping, sendPrivateMessage, subscribeMessageTyping, unblock, useMessagesStore, type MessageBlock } from "@/services/messageService";
 import { listAllPlayers, type LeaderboardEntry } from "@/services/playerService";
 import { groupConversations, MESSAGE_RULES } from "@/game/messages";
-import { cn, timeAgo } from "@/lib/utils";
+import { cn, timeAgo, formatDateTime } from "@/lib/utils";
 
 /* =====================================================
    Messagerie privée (v3.7) : conversations à gauche, fil à droite (un seul
@@ -36,8 +36,8 @@ function timeLabel(ms: number) {
   const d = new Date(ms);
   const sameDay = d.toDateString() === new Date().toDateString();
   return sameDay
-    ? d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    ? formatDateTime(d, "time")
+    : `${formatDateTime(d, "dayShort")} ${formatDateTime(d, "time")}`;
 }
 
 export function MessagesPage() {
@@ -81,7 +81,9 @@ export function MessagesPage() {
     () => messages.filter((m) => (m.fromUid === withUid && m.toUid === uid) || (m.fromUid === uid && m.toUid === withUid)).sort((a, b) => a.createdAtMs - b.createdAtMs),
     [messages, withUid, uid],
   );
-  useEffect(() => (uid ? subscribeMessageTyping(uid, setTyping) : undefined), [uid]);
+  useEffect(() => {
+    return uid ? subscribeMessageTyping(uid, setTyping) : undefined;
+  }, [uid]);
   // Son message est arrivé : un « écrit » d'avant ce message ne compte plus.
   const lastFromOther = thread.length > 0 && thread[thread.length - 1].fromUid === withUid ? thread[thread.length - 1].createdAtMs : 0;
   const otherTyping = !!withUid && (typing[withUid] ?? 0) > lastFromOther;
@@ -158,11 +160,11 @@ export function MessagesPage() {
         <TabsList>
           <TabsTrigger value="global" className="flex items-center gap-1.5">
             <Globe2 className="h-3.5 w-3.5" aria-hidden /> Canal global
-            {globalUnread > 0 && tab !== "global" && <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{globalUnread}</span>}
+            {globalUnread > 0 && tab !== "global" && <span className="bg-danger-glow px-1.5 font-mono text-[11px] font-bold tabular-nums text-space-950">{globalUnread}</span>}
           </TabsTrigger>
           <TabsTrigger value="prives" className="flex items-center gap-1.5">
             <Mail className="h-3.5 w-3.5" aria-hidden /> Messages privés
-            {unreadTotal > 0 && <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{unreadTotal}</span>}
+            {unreadTotal > 0 && <span className="bg-danger-glow px-1.5 font-mono text-[11px] font-bold tabular-nums text-space-950">{unreadTotal}</span>}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="global" className="mt-4">
@@ -189,7 +191,7 @@ export function MessagesPage() {
             <SkeletonList rows={4} className="px-1 py-3" />
           )}
           {loaded && conversations.length === 0 && (
-            <EmptyState size="sm" icon="✉️" title="Aucune conversation" action={<EmptyAction to="/game/joueurs">Trouver un joueur</EmptyAction>} className="px-1 py-3">
+            <EmptyState size="sm" icon={<Mail />} title="Aucune conversation" action={<EmptyAction to="/game/joueurs">Trouver un joueur</EmptyAction>} className="px-1 py-3">
               Cherche un joueur pour lui écrire.
             </EmptyState>
           )}
@@ -223,9 +225,9 @@ export function MessagesPage() {
                 <span className="flex items-center justify-between gap-2">
                   <PlayerName uid={c.uid} pseudo={c.pseudo} className={cn("truncate text-sm", c.unread ? "font-semibold text-slate-100" : "text-slate-300")} />
                   {c.unread > 0 ? (
-                    <span className="bg-danger-glow px-1.5 font-mono text-[10px] font-bold tabular-nums text-space-950">{c.unread}</span>
+                    <span className="bg-danger-glow px-1.5 font-mono text-[11px] font-bold tabular-nums text-space-950">{c.unread}</span>
                   ) : (
-                    <span className="shrink-0 text-[10px] text-slate-500">{timeAgo(c.last.createdAtMs)}</span>
+                    <span className="shrink-0 text-[11px] text-slate-500">{timeAgo(c.last.createdAtMs)}</span>
                   )}
                 </span>
                 <span className="truncate text-xs text-slate-500">
@@ -270,7 +272,7 @@ export function MessagesPage() {
                       <p className="whitespace-pre-wrap break-words">
                         <LinkifiedText text={m.text} jumbo />
                       </p>
-                      <p className={cn("mt-1 flex items-center gap-1 text-[10px] text-slate-500", mine && "justify-end")}>
+                      <p className={cn("mt-1 flex items-center gap-1 text-[11px] text-slate-500", mine && "justify-end")}>
                         {timeLabel(m.createdAtMs)}
                         {mine && (m.readAtMs ? <CheckCheck className="h-3 w-3 text-cyan-glow" aria-label="Lu" /> : <Check className="h-3 w-3" aria-label="Envoyé" />)}
                       </p>
@@ -314,7 +316,7 @@ export function MessagesPage() {
                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
-                <p className="text-right text-[10px] text-slate-600">
+                <p className="text-right text-[11px] text-slate-500">
                   {draft.length}/{MESSAGE_RULES.maxLength}
                 </p>
               </form>

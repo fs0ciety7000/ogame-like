@@ -189,21 +189,21 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
         <Button size="sm" variant="ghost" onClick={() => void (dirty ? askConfirm({ title: "Quitter sans enregistrer ?", message: "Les modifications en cours seront perdues.", confirmLabel: "Quitter", tone: "ember" }) : Promise.resolve(true)).then((ok) => { if (ok) void onBack(); })}>
           <ArrowLeft className="h-4 w-4" /> Articles
         </Button>
-        <span className={cn("font-mono text-[10px] uppercase tracking-[0.16em]", liveNow ? "text-mint-glow" : saved?.status === "published" ? "text-gold-glow" : "text-slate-500")}>
+        <span className={cn("font-mono text-[11px] uppercase tracking-[0.16em]", liveNow ? "text-mint-glow" : saved?.status === "published" ? "text-gold-glow" : "text-slate-500")}>
           {!saved ? "Nouvel article" : liveNow ? "En ligne" : saved.status === "published" ? "Programmé" : "Brouillon"}
           {dirty && " · modifié"}
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="hidden border border-white/10 lg:flex">
             {(["write", "split", "preview"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setView(v)} className={cn("px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em]", view === v ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500 hover:text-slate-300")}>
+              <button key={v} type="button" onClick={() => setView(v)} className={cn("px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em]", view === v ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500 hover:text-slate-300")}>
                 {v === "write" ? "Écrire" : v === "split" ? "Les deux" : "Aperçu"}
               </button>
             ))}
           </div>
           <div className="flex border border-white/10 lg:hidden">
             {(["write", "preview"] as const).map((v) => (
-              <button key={v} type="button" onClick={() => setView(v)} className={cn("px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em]", view === v || (view === "split" && v === "write") ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500")}>
+              <button key={v} type="button" onClick={() => setView(v)} className={cn("px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em]", view === v || (view === "split" && v === "write") ? "bg-cyan-glow/15 text-cyan-glow" : "text-slate-500")}>
                 {v === "write" ? "Écrire" : "Aperçu"}
               </button>
             ))}
@@ -254,7 +254,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                 set({ title: e.target.value.slice(0, BLOG_RULES.titleMax), ...(slugEdited ? {} : { slug: slugify(e.target.value) }) });
               }}
               placeholder="Titre de l'article"
-              className="w-full border-b border-cyan-glow/20 bg-transparent pb-2 font-display text-2xl font-bold text-slate-100 outline-none placeholder:text-slate-600 focus:border-cyan-glow/60 sm:text-3xl"
+              className="w-full border-b border-cyan-glow/20 bg-transparent pb-2 font-display text-2xl font-bold text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-glow/60 sm:text-3xl"
             />
             <label className="flex min-w-0 items-center gap-1 font-mono text-xs text-slate-500">
               <span className="shrink-0">{BLOG_URL.replace(/^https?:\/\//, "")}/p/</span>
@@ -287,7 +287,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
 
             {/* Extrait */}
             <label className="flex flex-col gap-1">
-              <span className="flex justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+              <span className="flex justify-between font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
                 Chapeau (aperçus, réseaux, RSS) <span>{d.excerpt.length} / {BLOG_RULES.excerptMax}</span>
               </span>
               <textarea value={d.excerpt} maxLength={BLOG_RULES.excerptMax} rows={2} onChange={(e) => set({ excerpt: e.target.value })} placeholder="Une ou deux phrases qui donnent envie de lire." className="resize-y border border-cyan-glow/15 bg-space-900/60 p-2.5 text-sm text-slate-100 outline-none focus:border-cyan-glow/50" />
@@ -299,7 +299,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
             {/* Réglages */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Tags ({d.tags.length} / {BLOG_RULES.tagsMax})</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Tags ({d.tags.length} / {BLOG_RULES.tagsMax})</span>
                 <div className="flex flex-wrap gap-1">
                   {d.tags.map((t) => (
                     <span key={t} className="inline-flex items-center gap-1 border border-cyan-glow/25 bg-cyan-glow/[0.06] px-2 py-0.5 font-mono text-[11px] text-cyan-glow">
@@ -314,7 +314,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
               </div>
               <div className="flex flex-col gap-3">
                 <label className="flex flex-col gap-1">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Version du jeu (facultatif)</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Version du jeu (facultatif)</span>
                   <Input value={d.version} onChange={(e) => set({ version: e.target.value.slice(0, 20) })} placeholder="5.8" className="h-9" />
                 </label>
                 <label className="flex items-center gap-2 text-sm text-slate-300">
@@ -326,7 +326,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
 
             {/* Couverture */}
             <div className="flex flex-col gap-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Image de couverture (aperçus Discord, en-tête) · 16:9 conseillé</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Image de couverture (aperçus Discord, en-tête) · 16:9 conseillé</span>
               <div className="flex flex-wrap items-center gap-3">
                 <button type="button" onClick={() => coverInput.current?.click()} className="grid aspect-video w-56 place-items-center overflow-hidden border border-dashed border-cyan-glow/30 bg-space-900/60 bg-cover bg-center text-xs text-slate-500 hover:border-cyan-glow/60" style={coverPreview ? { backgroundImage: `url('${coverPreview}')` } : undefined}>
                   {!coverPreview && (
@@ -356,7 +356,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
 
             {/* Publication */}
             <div className="flex flex-col gap-2 border border-white/10 bg-black/20 p-3">
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Publication</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Publication</span>
               <div className="flex flex-wrap gap-1.5">
                 {([
                   ["draft", "Brouillon"],
@@ -382,7 +382,7 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
             {/* Médiathèque */}
             {images.length > 0 && id && (
               <div className="flex flex-col gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">Images de l'article ({images.length})</span>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Images de l'article ({images.length})</span>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {images.map((name) => (
                     <div key={name} className="group relative aspect-square overflow-hidden border border-white/10 bg-cover bg-center" style={{ backgroundImage: `url('${fileUrl(name)}')` }}>

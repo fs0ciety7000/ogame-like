@@ -22,7 +22,7 @@ function Prize({ prize, prefix }: { prize: SeasonPrize; prefix?: string }) {
 function Row({ tone, label, children }: { tone: HudTone; label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1 border-l-2 py-1.5 pl-3" style={{ borderColor: HUD_TONE[tone] }}>
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: HUD_TONE[tone] }}>
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: HUD_TONE[tone] }}>
         {label}
       </p>
       {children}

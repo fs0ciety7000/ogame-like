@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { HudPanel, PagedList, EmptyAction } from "@/components/ui/panel";
 import { toast } from "sonner";
-import { Building2, Eye, FlaskConical, Hammer, ScrollText, Landmark, ShieldAlert, Swords } from "lucide-react";
+import { Building2, Eye, FlaskConical, Hammer, ScrollText, Landmark, ShieldAlert, Swords, Satellite } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
@@ -43,7 +43,7 @@ function AmountsForm({ value, onChange, max, maxLabel = "dispo" }: { value: Amou
             <p className="flex min-w-0 items-center gap-1.5 text-xs" title={`${r.name} : ${maxLabel} ${formatNumber(top)}`}>
               <ResourceIcon id={r.id} className="h-4 w-4 shrink-0" />
               <span className="truncate text-slate-200">{r.name}</span>
-              <span className="ml-auto shrink-0 font-mono text-[10px] tabular-nums text-slate-500">
+              <span className="ml-auto shrink-0 font-mono text-[11px] tabular-nums text-slate-500">
                 {maxLabel} {formatCompact(top)}
               </span>
             </p>
@@ -95,7 +95,9 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
   const [mode, setMode] = useState<"deposit" | "distribute">("deposit");
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<AllianceLog[]>([]);
-  useEffect(() => subscribeAllianceLogs(alliance.id, setLogs), [alliance.id]);
+  useEffect(() => {
+    return subscribeAllianceLogs(alliance.id, setLogs);
+  }, [alliance.id]);
   const treasury = alliance.treasury ?? {};
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = alliance.distributions?.day === today ? alliance.distributions.count : 0;
@@ -208,7 +210,7 @@ export function TreasuryTab({ alliance, uid, canDistribute }: { alliance: Allian
       </HudPanel>
 
       <HudPanel icon={<ScrollText />} title="Journal du trésor">
-        {logs.length === 0 && <EmptyState size="sm" icon="📜" title="Journal vide">Les dépôts et versements apparaîtront ici.</EmptyState>}
+        {logs.length === 0 && <EmptyState size="sm" icon={<ScrollText />} title="Journal vide">Les dépôts et versements apparaîtront ici.</EmptyState>}
         <PagedList as="ul" items={logs} className="divide-y divide-white/5 text-xs" render={(l) => (
             <li key={l.id} className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 py-1.5">
               <span className="font-mono text-[11px] tabular-nums text-slate-500">{timeAgo(l.createdAtMs).replace(/^il y a /, "")}</span>
@@ -385,7 +387,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
                             <span className="flex items-center gap-1 text-[11px] text-slate-400">
                               <ResourceIcon id={r} className="h-3.5 w-3.5" />
                               <span className={cn("tabular-mono", got >= n ? "text-mint-glow" : "text-slate-300")}>{formatCompact(got)}</span>
-                              <span className="tabular-mono text-slate-600">/ {formatCompact(n)}</span>
+                              <span className="tabular-mono text-slate-500">/ {formatCompact(n)}</span>
                             </span>
                             <i className="mt-0.5 block h-1 bg-white/10">
                               <i className={cn("block h-full", got >= n ? "bg-mint-glow" : "bg-gold-glow")} style={{ width: `${(got / Math.max(1, n)) * 100}%` }} />
@@ -425,7 +427,7 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
         </p>
       </div>
       <HudPanel icon={<Hammer />} title="Bâtisseurs" tone="accent" className="h-fit">
-        {contributors.length === 0 && <EmptyState size="sm" icon="🏗️" title="Aucun bâtisseur">Sois le premier à contribuer à un projet.</EmptyState>}
+        {contributors.length === 0 && <EmptyState size="sm" icon={<Hammer />} title="Aucun bâtisseur">Sois le premier à contribuer à un projet.</EmptyState>}
         <ol className="space-y-1 text-sm">
           {contributors.map(([uid, value], i) => (
             <li key={uid} className="flex justify-between gap-2">
@@ -455,7 +457,7 @@ export function IntelTab() {
   return (
     <Card className="divide-y divide-white/5">
       {items.length === 0 && (
-        <EmptyState icon="🛰️" title="Aucun rapport récent" action={<EmptyAction to="/game/galaxie">Espionner depuis la carte</EmptyAction>}>Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</EmptyState>
+        <EmptyState icon={<Satellite />} title="Aucun rapport récent" action={<EmptyAction to="/game/galaxie">Espionner depuis la carte</EmptyAction>}>Aucun rapport des {ALLIANCE_RULES.sharedReportsDays} derniers jours chez les membres.</EmptyState>
       )}
       {items.map((it) =>
         it.type === "spy" ? (
@@ -478,7 +480,7 @@ export function IntelTab() {
           <div key={it.id} className="flex items-center gap-3 p-3">
             <Swords className="h-4 w-4 shrink-0 text-ember-glow" />
             <span className="flex-1 text-sm text-slate-200">
-              {it.attackerPseudo} ⚔ {it.defenderPseudo}
+              {it.attackerPseudo} <Swords aria-label="contre" className="mx-0.5 inline h-3 w-3 text-slate-500" /> {it.defenderPseudo}
               <span className="ml-2 text-xs text-slate-500">
                 {it.outcome === "attacker_win" ? "victoire de l'attaquant" : it.outcome === "defender_win" ? "attaque repoussée" : "match nul"}
                 {it.garrisons && it.garrisons.length > 0 && ` · ${it.garrisons.length} garnison(s)`}

@@ -49,7 +49,9 @@ export function MarketSection() {
   const [mode, setMode] = useState<"sell" | "buy">("sell");
   const [fillQty, setFillQty] = useState<Record<string, number>>({});
 
-  useEffect(() => subscribeOffers(setData), []);
+  useEffect(() => {
+    return subscribeOffers(setData);
+  }, []);
   // v4.8 : échanges conclus (historique des prix), rechargés quand le marché bouge.
   const [trades, setTrades] = useState<Awaited<ReturnType<typeof fetchMarketTrades>>>([]);
   const filledCount = data.mine.filter((o) => o.status === "filled").length + data.open.length;
@@ -115,15 +117,15 @@ export function MarketSection() {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Je paie (réservé dès l'ordre)" : "Je donne"}</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">{mode === "buy" ? "Je paie (réservé dès l'ordre)" : "Je donne"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={giveRes} onChange={setGiveRes} ariaLabel="Ressource donnée" className="min-w-0 flex-1" size="sm" />
               <NumberInput size="sm" value={giveAmount} max={Math.max(0, Math.floor(have(giveRes)))} step={resourceStep(have(giveRes))} onChange={setGiveAmount} className="w-44" aria-label="Quantité donnée" />
             </div>
-            <button type="button" className="self-end font-mono text-[10px] text-slate-500 hover:text-cyan-glow" onClick={() => setGiveAmount(Math.floor(have(giveRes)))}>
+            <button type="button" className="self-end font-mono text-[11px] text-slate-500 hover:text-cyan-glow" onClick={() => setGiveAmount(Math.floor(have(giveRes)))}>
               Stock : {formatCompact(have(giveRes))}
             </button>
-            <p className="hud-eyebrow text-[10px] text-slate-500">{mode === "buy" ? "Pour acheter" : "Contre"}</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">{mode === "buy" ? "Pour acheter" : "Contre"}</p>
             <div className="flex gap-2">
               <ResourceSelect value={wantRes} onChange={setWantRes} ariaLabel="Ressource demandée" className="min-w-0 flex-1" size="sm" />
               <NumberInput size="sm" quick={false} step={resourceStep(Math.max(100, wantAmount * 10))} value={wantAmount} onChange={setWantAmount} className="w-44" aria-label="Quantité demandée" />
@@ -156,18 +158,18 @@ export function MarketSection() {
 
           {myOpen.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
-              <p className="hud-eyebrow text-[10px] text-slate-500">Mes offres en cours</p>
+              <p className="hud-eyebrow text-[11px] text-slate-500">Mes offres en cours</p>
               {myOpen.map((o) => (
                 <div key={o.id} className="flex flex-wrap items-center gap-2 border border-white/5 px-2 py-1.5 text-xs">
                   {o.kind === "buy" && <HudTag tone="accent">Achat</HudTag>}
                   <Amount res={o.giveRes} n={o.giveAmount} />
                   <ArrowRight className="h-3 w-3 text-slate-500" />
                   <Amount res={o.wantRes} n={o.wantAmount} />
-                  {o.kind === "buy" && (o.filled ?? 0) > 0 && <span className="font-mono text-[10px] text-mint-glow">{Math.round(((o.filled ?? 0) / o.wantAmount) * 100)} % reçu</span>}
+                  {o.kind === "buy" && (o.filled ?? 0) > 0 && <span className="font-mono text-[11px] text-mint-glow">{Math.round(((o.filled ?? 0) / o.wantAmount) * 100)} % reçu</span>}
                   <span className="ml-auto flex items-center gap-1 text-slate-500">
                     <Clock className="h-3 w-3" /> {formatDuration(Math.max(0, Math.floor((o.expiresAtMs - Date.now()) / 1000)))}
                   </span>
-                  <button type="button" disabled={busy !== null} onClick={() => void run(o.id, () => cancelMarketOffer(o.id), "Offre annulée, marchandise rendue.")} className="font-mono text-[10px] uppercase text-danger-glow hover:underline">
+                  <button type="button" disabled={busy !== null} onClick={() => void run(o.id, () => cancelMarketOffer(o.id), "Offre annulée, marchandise rendue.")} className="font-mono text-[11px] uppercase text-danger-glow hover:underline">
                     Annuler
                   </button>
                 </div>
@@ -195,14 +197,14 @@ export function MarketSection() {
                       <span className="flex items-center gap-2">
                         <HudTag tone="accent">Achète</HudTag>
                         <Amount res={o.wantRes} n={o.wantAmount} />
-                        <span className="text-[10px] font-mono uppercase text-slate-500">paie</span>
+                        <span className="text-[11px] font-mono uppercase text-slate-500">paie</span>
                         <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono uppercase text-slate-500">tu reçois</span>
+                        <span className="text-[11px] font-mono uppercase text-slate-500">tu reçois</span>
                         <Amount res={o.giveRes} n={o.giveAmount} className="text-mint-glow" />
-                        <span className="text-[10px] font-mono uppercase text-slate-500">contre</span>
+                        <span className="text-[11px] font-mono uppercase text-slate-500">contre</span>
                         <Amount res={o.wantRes} n={o.wantAmount} />
                       </span>
                     )}
@@ -218,7 +220,7 @@ export function MarketSection() {
                         const pay = buyOrderPaid(o, (o.filled ?? 0) + qty) - buyOrderPaid(o, o.filled ?? 0);
                         return (
                           <span className="ml-auto flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-[10px] text-slate-500">reste {formatCompact(remaining)}</span>
+                            <span className="font-mono text-[11px] text-slate-500">reste {formatCompact(remaining)}</span>
                             <NumberInput size="sm" value={qty} max={remaining} step={resourceStep(remaining)} onChange={(v) => setFillQty((f) => ({ ...f, [o.id]: v }))} className="w-40" aria-label="Quantité livrée" />
                             <Button size="sm" disabled={busy !== null || qty <= 0 || pay <= 0 || have(o.wantRes) < qty} title={`Tu reçois ${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id, qty), `Livré : +${formatNumber(pay)} ${resName(o.giveRes).toLowerCase()}.`)}>
                               Livrer
@@ -228,7 +230,7 @@ export function MarketSection() {
                       })()
                     ) : (
                       <span className="ml-auto flex items-center gap-2">
-                        <span className="text-[10px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
+                        <span className="text-[11px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
                         {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
                         {!affordable && (
                           <span className="text-[11px] text-ember-glow">

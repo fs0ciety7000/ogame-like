@@ -62,6 +62,13 @@ export function useNowTicker(): number {
   return useSyncExternalStore(subscribeNowTicker, snapshot, snapshot);
 }
 
+/** 6.14.83 : heure courante arrondie au pas `stepMs`, sur l'horloge partagée. Le composant ne se rend
+ *  qu'au changement de pas (une minute pour l'état d'un boss), sans intervalle à lui. */
+export function useNowEvery(stepMs: number): number {
+  const slot = () => Math.floor(Date.now() / stepMs);
+  return useSyncExternalStore(subscribeNowTicker, slot, slot) * stepMs;
+}
+
 /** Pour les tests : nombre d'abonnés et état de l'horloge. */
 export function nowTickerDebug(): { listeners: number; running: boolean } {
   return { listeners: listeners.size, running: timer !== null };

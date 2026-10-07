@@ -455,6 +455,8 @@ __export(hooksEntry_exports, {
   moveWrittenToLibrary: () => moveWrittenToLibrary,
   mythicFor: () => mythicFor,
   nameToneOf: () => nameToneOf,
+  navOpenPages: () => navOpenPages,
+  navOpeningNotice: () => navOpeningNotice,
   nearestWarlord: () => nearestWarlord,
   newPlayerProfile: () => newPlayerProfile,
   nextAttackDelayMs: () => nextAttackDelayMs,
@@ -6662,969 +6664,6 @@ function recordWin(state, win) {
   });
 }
 
-// src/game/contracts.ts
-var CONTRACT_RULES = {
-  perDay: 4,
-  streakBonusPerDay: 0.1,
-  streakBonusMax: 0.5,
-  chestEvery: 7,
-  xpPerContract: 15,
-  rarePerContract: 90,
-  /** 6.2 : jetons du casino par objectif, et en plus quand tous sont faits. */
-  tokensPerContract: 1,
-  allDoneTokens: 1,
-  chestRare: 1500,
-  chestXp: 150
-};
-var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
-var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
-var DAY_MS = 24 * 3600 * 1e3;
-function contractDay(now) {
-  return parisDay(now);
-}
-function previousDay(day) {
-  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
-}
-function seededRandom(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return () => {
-    h = Math.imul(h ^ h >>> 15, 2246822507);
-    h = Math.imul(h ^ h >>> 13, 3266489909);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-  };
-}
-function targetFor(type, player) {
-  var _a, _b, _c, _d;
-  switch (type) {
-    case "build_units":
-      return 20;
-    case "missions":
-      return 2;
-    case "spy":
-      return 2;
-    case "spend": {
-      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
-      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
-    }
-    default:
-      return 1;
-  }
-}
-function makeContract(type, player, day, index2) {
-  return { id: `${day}-${index2}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
-}
-function ensureContracts(player, now) {
-  var _a, _b;
-  const day = contractDay(now);
-  const current2 = player.contracts;
-  if (current2 && current2.day === day) {
-    if (current2.items.length < CONTRACT_RULES.perDay) {
-      const used = new Set(current2.items.map((c) => c.type));
-      const rand2 = seededRandom(`${player.uid}:${day}:extra`);
-      const pool2 = ALL_TYPES.filter((t) => !used.has(t));
-      while (current2.items.length < CONTRACT_RULES.perDay && pool2.length > 0) {
-        const type = pool2.splice(Math.floor(rand2() * pool2.length), 1)[0];
-        current2.items.push(makeContract(type, player, day, current2.items.length));
-      }
-    }
-    return current2;
-  }
-  const rand = seededRandom(`${player.uid}:${day}`);
-  const pool = [...ALL_TYPES];
-  const items = [];
-  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
-    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
-    items.push(makeContract(type, player, day, i));
-  }
-  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
-  player.contracts = {
-    day,
-    items,
-    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
-    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
-    rerolled: false
-  };
-  return player.contracts;
-}
-function recordContract(player, type, amount3, now) {
-  if (!(amount3 > 0)) return;
-  const state = ensureContracts(player, now);
-  for (const c of state.items) {
-    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
-  }
-}
-function developmentScale(player) {
-  return rareRewardScale(player);
-}
-function streakBonus(streak) {
-  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
-}
-function contractReward(player, contract) {
-  var _a, _b, _c;
-  const state = player.contracts;
-  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
-  const index2 = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
-  const rare = RARES[(index2 + contract.type.length) % RARES.length];
-  return {
-    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
-    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
-  };
-}
-function chestReward(player) {
-  const scale = developmentScale(player);
-  const out = { xp: CONTRACT_RULES.chestXp };
-  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
-  return out;
-}
-function grant(player, reward, now) {
-  var _a;
-  for (const [res, amount3] of Object.entries(reward)) {
-    if (res === "xp") applyXpDelta(player, amount3, now, "contract");
-    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
-  }
-}
-function claimContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  const contract = state.items.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
-  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
-  const reward = contractReward(player, contract);
-  grant(player, reward, now);
-  contract.claimed = true;
-  let tokens = Math.max(0, Math.floor(CONTRACT_RULES.tokensPerContract));
-  let chest = null;
-  const dayCompleted = state.items.every((c) => c.claimed);
-  if (dayCompleted) {
-    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
-    state.lastCompletedDay = state.day;
-    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
-      chest = chestReward(player);
-      grant(player, chest, now);
-    }
-    tokens += Math.max(0, Math.floor(CONTRACT_RULES.allDoneTokens));
-  }
-  if (tokens > 0) grantTokens(player, tokens);
-  return { reward, dayCompleted, chest, tokens };
-}
-function rerollContract(player, contractId, now) {
-  const state = ensureContracts(player, now);
-  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
-  const index2 = state.items.findIndex((c) => c.id === contractId);
-  if (index2 < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
-  if (state.items[index2].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
-  const used = new Set(state.items.map((c) => c.type));
-  const pool = ALL_TYPES.filter((t) => !used.has(t));
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
-  const type = pool[Math.floor(rand() * pool.length)];
-  const next = makeContract(type, player, state.day, index2);
-  next.id = `${state.day}-${index2}-${type}-r`;
-  state.items[index2] = next;
-  state.rerolled = true;
-  return next;
-}
-
-// src/game/formations.ts
-var pct2 = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
-var FORMATIONS = [
-  { id: "balanced", name: "\xC9quilibr\xE9e", description: () => "Aucun bonus ni malus." },
-  { id: "assault", name: "Assaut", description: () => `Attaque ${pct2(COMBAT_RULES.assaultAttack)}, pertes subies ${pct2(COMBAT_RULES.assaultLosses)}.` },
-  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct2(COMBAT_RULES.cautiousAttack)}, d\xE9g\xE2ts subis ${pct2(COMBAT_RULES.cautiousLosses)}, retraite d\xE8s ${Math.round(COMBAT_RULES.cautiousRetreatAt * 100)} % de pertes.` },
-  { id: "raid", name: "Raid", description: () => `Attaque ${pct2(COMBAT_RULES.raidAttack)}, cargaison ${pct2(COMBAT_RULES.raidCargo)}.` }
-];
-var POSTURES = [
-  { id: "standard", name: "Standard", description: () => `Les vaisseaux \xE0 quai d\xE9fendent \xE0 ${Math.round(COMBAT_RULES.homeFleetDefenseFactor * 100)} %.` },
-  { id: "bunker", name: "Bunker", description: () => `D\xE9fenses ${pct2(COMBAT_RULES.bunkerDefense)}, vaisseaux \xE0 quai \xE0 l'abri (ni engag\xE9s, ni d\xE9truits).` },
-  { id: "riposte", name: "Riposte", description: () => `Vaisseaux \xE0 quai engag\xE9s \xE0 ${Math.round(COMBAT_RULES.riposteHomeFleet * 100)} %.` }
-];
-function isFormation(v) {
-  return FORMATIONS.some((f) => f.id === v);
-}
-function isPosture(v) {
-  return POSTURES.some((p) => p.id === v);
-}
-function formationEffects(id) {
-  const retreatAt = COMBAT_RULES.retreatAt;
-  switch (id) {
-    case "assault":
-      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1, retreatAt };
-    case "cautious":
-      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1, retreatAt: COMBAT_RULES.cautiousRetreatAt };
-    case "raid":
-      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo, retreatAt };
-    default:
-      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1, retreatAt };
-  }
-}
-function postureEffects(id, fleetOnly = false) {
-  if (fleetOnly) return { defenseFactor: 1, homeFleetFactor: 1 };
-  switch (id) {
-    case "bunker":
-      return { defenseFactor: 1 + COMBAT_RULES.bunkerDefense, homeFleetFactor: 0 };
-    case "riposte":
-      return { defenseFactor: 1, homeFleetFactor: COMBAT_RULES.riposteHomeFleet };
-    default:
-      return { defenseFactor: 1, homeFleetFactor: void 0 };
-  }
-}
-function playerPosture(p) {
-  var _a;
-  return isPosture((_a = p.posture) == null ? void 0 : _a.id) ? p.posture.id : "standard";
-}
-function setPosture(player, id, now) {
-  var _a, _b;
-  if (!isPosture(id)) throw new GameActionError("Posture inconnue.");
-  const current2 = playerPosture(player);
-  if (current2 === id) return id;
-  const last = (_b = (_a = player.posture) == null ? void 0 : _a.changedAtMs) != null ? _b : 0;
-  const wait = last > 0 ? last + COMBAT_RULES.postureCooldownHours * 36e5 - now : 0;
-  if (wait > 0) throw new GameActionError(`Changement de posture possible dans ${Math.ceil(wait / 6e4)} min.`);
-  player.posture = { id, changedAtMs: now };
-  return id;
-}
-
-// src/game/bounties.ts
-var BOUNTY_RULES = {
-  dailyLimit: 4,
-  refreshHours: 8,
-  /** Un échec laisse la prime ouverte une fois de plus. */
-  retries: 1,
-  /** +10 % d'Ambre par rang au-delà du premier. */
-  amberPerRank: 0.1,
-  tiers: {
-    1: { label: "Traque", pct: 0.5, minMinutes: 20, maxMinutes: 40, xp: 60, amber: 10, rep: 1, floor: 200, minRank: 1 },
-    2: { label: "Chasse", pct: 0.8, minMinutes: 40, maxMinutes: 60, xp: 120, amber: 25, rep: 2, floor: 500, minRank: 1 },
-    3: { label: "Proie majeure", pct: 1.1, minMinutes: 60, maxMinutes: 90, xp: 250, amber: 60, rep: 4, floor: 1200, minRank: 3 },
-    4: { label: "\xC9lite", pct: 1.25, minMinutes: 75, maxMinutes: 90, xp: 400, amber: 120, rep: 6, floor: 3e3, minRank: 5 }
-  },
-  ranks: [
-    { name: "Larve", at: 0 },
-    { name: "\xC9claireur", at: 10 },
-    { name: "Traqueur", at: 30 },
-    { name: "Lame de l'Essaim", at: 70 },
-    { name: "Main de la Reine", at: 150 }
-  ],
-  exchange: { rarePerAmber: 40, weeklyCap: 100 }
-};
-var KESH = {
-  name: "Kesh'Vaar",
-  full: "L'Essaim de la Traque",
-  leader: "Vashka, Matriarche-Chasseuse",
-  currency: "Ambre de Ruche",
-  art: "/assets/bounties/vashka.webp",
-  hunters: "/assets/bounties/hunters.webp",
-  banner: "/assets/bounties/banner.webp",
-  emblem: "/assets/bounties/emblem.webp",
-  amberIcon: "/assets/bounties/amber.webp",
-  story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
-};
-var FUGITIVES = [
-  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
-  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
-  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
-  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
-  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
-  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
-  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
-  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
-  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
-  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
-  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
-  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
-  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
-  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
-  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
-  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
-  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
-  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
-  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
-  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
-  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
-  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
-];
-var ELITE_FUGITIVES = [
-  { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
-  { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
-  { name: "L'Archiviste P\xE2le", factionId: "inquisition", crime: "d\xE9tient le dernier \u0153uf de la Reine" },
-  { name: "Moloch-7", factionId: "meute", crime: "a d\xE9vor\xE9 trois nids en une nuit" },
-  { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
-  { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
-];
-var SHOP_HISTORY_MAX = 30;
-function emptyBountyState() {
-  return {
-    amber: 0,
-    amberEarned: 0,
-    reputation: 0,
-    board: [],
-    slot: -1,
-    day: "",
-    doneToday: 0,
-    completed: 0,
-    failed: 0,
-    exchangeWeek: "",
-    exchanged: 0,
-    boostUntilMs: 0,
-    jammers: 0,
-    beacons: 0,
-    shieldUntilMs: 0,
-    shieldBoughtAtMs: 0,
-    owned: [],
-    phantoms: 0,
-    priorityContracts: 0,
-    vendettaTokens: 0,
-    pheromoneUntilMs: 0,
-    nameTone: "",
-    history: [],
-    remindedPheromoneMs: 0,
-    remindedShieldMs: 0
-  };
-}
-function num2(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-function bountyState(player) {
-  var _a;
-  const raw = (_a = player.bounties) != null ? _a : {};
-  const base = emptyBountyState();
-  return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
-    amber: Math.max(0, num2(raw.amber)),
-    amberEarned: num2(raw.amberEarned),
-    reputation: num2(raw.reputation),
-    board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
-    slot: raw.slot === void 0 ? -1 : num2(raw.slot),
-    doneToday: num2(raw.doneToday),
-    owned: Array.isArray(raw.owned) ? raw.owned.map(String) : [],
-    phantoms: Math.max(0, num2(raw.phantoms)),
-    priorityContracts: Math.max(0, num2(raw.priorityContracts)),
-    vendettaTokens: Math.max(0, num2(raw.vendettaTokens)),
-    pheromoneUntilMs: num2(raw.pheromoneUntilMs),
-    nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : "",
-    history: Array.isArray(raw.history) ? raw.history.filter((h) => h && typeof h.item === "string").map((h) => ({ atMs: num2(h.atMs), item: h.item, amber: num2(h.amber) })).slice(-SHOP_HISTORY_MAX) : [],
-    remindedPheromoneMs: num2(raw.remindedPheromoneMs),
-    remindedShieldMs: num2(raw.remindedShieldMs)
-  });
-}
-function bountyRank(reputation) {
-  let rank2 = 1;
-  BOUNTY_RULES.ranks.forEach((r, i) => {
-    if (reputation >= r.at) rank2 = i + 1;
-  });
-  return rank2;
-}
-function rankName(rank2) {
-  return BOUNTY_RULES.ranks[Math.max(0, Math.min(BOUNTY_RULES.ranks.length - 1, rank2 - 1))].name;
-}
-function amberFor(tier, rank2) {
-  return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
-}
-var HOUR4 = 36e5;
-var DAY6 = 24 * HOUR4;
-function boardSlot(now) {
-  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR4));
-}
-function boardTiers(rank2) {
-  if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
-  if (rank2 >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
-  return [1, 2, 2];
-}
-function generateBoard(uid, slot, rank2, exclude = []) {
-  const rand = seededRandom(`${uid}:bounty:${slot}`);
-  const used = new Set(exclude);
-  return boardTiers(rank2).map((tier, i) => {
-    let fugitive = Math.floor(rand() * FUGITIVES.length);
-    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
-    used.add(fugitive);
-    const t = BOUNTY_RULES.tiers[tier];
-    const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
-    return { id: `${slot}-${i}`, tier, fugitive, minutes, status: "open", tries: 0 };
-  });
-}
-function refreshBounties(st, uid, now) {
-  const day = contractDay(now);
-  if (st.day !== day) {
-    st.day = day;
-    st.doneToday = 0;
-  }
-  const slot = boardSlot(now);
-  if (st.slot !== slot) {
-    const hunting = st.board.filter((c) => c.status === "hunting");
-    st.board = [...hunting, ...generateBoard(uid, slot, bountyRank(st.reputation), hunting.map((c) => c.fugitive))];
-    st.slot = slot;
-  }
-  return st;
-}
-function hunterPower(player) {
-  var _a, _b;
-  return computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
-}
-function fugitivePower(tier, player) {
-  const t = BOUNTY_RULES.tiers[tier];
-  return Math.round(Math.max(t.floor, hunterPower(player) * t.pct));
-}
-function bountyTarget(contract) {
-  return `bounty_${contract.id}`;
-}
-function startBounty(player, contractId, now) {
-  var _a;
-  const st = refreshBounties(bountyState(player), player.uid, now);
-  const contract = st.board.find((c) => c.id === contractId);
-  if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
-  if (contract.status !== "open") throw new GameActionError("Une flotte traque d\xE9j\xE0 ce fugitif.");
-  if (st.doneToday >= BOUNTY_RULES.dailyLimit) throw new GameActionError(`${BOUNTY_RULES.dailyLimit} primes par jour : l'Essaim te recontactera demain.`);
-  if (bountyRank(st.reputation) < BOUNTY_RULES.tiers[contract.tier].minRank) throw new GameActionError("Ton rang dans l'Essaim est trop bas pour cette prime.");
-  const power = fugitivePower(contract.tier, player);
-  contract.status = "hunting";
-  st.doneToday += 1;
-  player.bounties = st;
-  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
-}
-function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f, _g;
-  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
-  const player = flushed.player;
-  const st = refreshBounties(bountyState(player), player.uid, now);
-  const contract = st.board.find((c) => c.id === contractId);
-  const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
-  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
-  const fx = formationEffects(formation);
-  const pve = playerCombatEffects(player, "pve", now);
-  const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
-    unitBonus: { attacker: pve.units },
-    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
-    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
-    attackerUnits: withFleet(player.units, fleet),
-    attackerHull: workshopState(player).hull,
-    attackerTechLevels: player.techLevels,
-    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
-    fleet,
-    defenderUnits: {},
-    defenderTechLevels: {},
-    defenderRepairPct: 0,
-    defenderResources: {},
-    defenderPowerOverride: power
-  }));
-  applyHull(player, combat.attackerHull);
-  sendToWorkshop(player, combat.attackerRecovered, now, "bounty", false);
-  const survivors = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0) - ((_e = combat.attackerRecovered[id]) != null ? _e : 0));
-  const notifications = [...flushed.notifications];
-  const success = combat.outcome === "attacker_win";
-  const t = BOUNTY_RULES.tiers[tier];
-  let amber = 0;
-  let xp = 0;
-  if (success) {
-    const rankBefore = bountyRank(st.reputation);
-    amber = amberFor(tier, rankBefore);
-    xp = t.xp;
-    st.amber += amber;
-    st.amberEarned += amber;
-    st.reputation += t.rep;
-    st.completed += 1;
-    st.board = st.board.filter((c) => c.id !== contractId);
-    xp = applyXpDelta(player, xp, now, "bounty");
-    bumpStat(player, "bounties");
-    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
-    grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
-    addPassPoints(player, "bounty", now);
-    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
-    notifications.push(note2(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
-    const rankAfter = bountyRank(st.reputation);
-    if (rankAfter > rankBefore) {
-      notifications.push(note2(`Nouveau rang : ${rankName(rankAfter)}`, rankUpMessage(rankAfter), now));
-    }
-  } else {
-    st.failed += 1;
-    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
-    if (contract) {
-      contract.tries += 1;
-      if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
-      else contract.status = "open";
-    }
-    const retry = !!contract && contract.tries <= BOUNTY_RULES.retries;
-    notifications.push(note2(`${fugitive.name} s'est \xE9chapp\xE9`, `Ta flotte n'a pas pu le ma\xEEtriser.${retry ? " La prime reste ouverte une derni\xE8re fois." : " Le contrat est perdu."}`, now));
-  }
-  player.bounties = st;
-  const report = {
-    attackerUid: player.uid,
-    attackerPseudo: player.pseudo,
-    defenderUid: `bounty_${contractId}`,
-    defenderPseudo: fugitive.name,
-    timestamp: now,
-    outcome: combat.outcome,
-    attackerPower: combat.attackerPower,
-    defenderPower: combat.defenderPower,
-    attackerLossPercent: combat.attackerLossPercent,
-    combatLog: combatLogOf(combat),
-    defenderLossPercent: combat.defenderLossPercent,
-    attackerLosses: combat.attackerLosses,
-    attackerRecovered: combat.attackerRecovered,
-    defenderLosses: {},
-    defenderRecovered: {},
-    loot: null,
-    defenderProcessed: true,
-    defenderApplied: true,
-    attackerXpDelta: xp,
-    defenderXpDelta: 0,
-    attackerFleet: fleet
-  };
-  return { player, queues: flushed.queues, combat, survivors, report, notifications, success, amber, xp };
-}
-function releaseBounty(player, contractId) {
-  const st = bountyState(player);
-  const contract = st.board.find((c) => c.id === contractId);
-  if (contract && contract.status === "hunting") contract.status = "open";
-  player.bounties = st;
-}
-function rankUpMessage(rank2) {
-  if (rank2 === BOUNTY_RULES.tiers[3].minRank) return "L'Essaim te confie d\xE9sormais les proies majeures (\u2605\u2605\u2605).";
-  if (rank2 === BOUNTY_RULES.tiers[4].minRank) return "La Reine elle-m\xEAme te reconna\xEEt : les primes d'\xE9lite (\u2605\u2605\u2605\u2605) te sont ouvertes.";
-  return `L'Essaim te verse ${Math.round(BOUNTY_RULES.amberPerRank * (rank2 - 1) * 100)} % d'Ambre en plus par prime.`;
-}
-function note2(title, message, now) {
-  return { kind: "bounty", title, message, createdAtMs: now, read: false, link: "/game/primes" };
-}
-var BOUNTY_SHOP_RULES = {
-  acceleratorMinutes: 60,
-  boostHours: 24,
-  maxCharges: 3,
-  shieldHours: 6,
-  shieldCooldownDays: 7,
-  title: "Chasseur de l'Essaim",
-  /** 5.26.3 */
-  painkillerHours: 2,
-  pheromoneHours: 24
-};
-var NAME_TONES = [
-  { id: "accent", label: "Cyan" },
-  { id: "mint", label: "Menthe" },
-  { id: "gold", label: "Or" },
-  { id: "ember", label: "Braise" },
-  { id: "violet", label: "Violet" }
-];
-var SHOP_ITEMS = [
-  { id: "accelerator", name: "Acc\xE9l\xE9rateur de chantier", price: 30, group: "consumable", description: "Une construction de b\xE2timent en cours se termine 1 h plus t\xF4t." },
-  { id: "boost", name: "Gel\xE9e de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
-  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage re\xE7u \xE9choue : les sondes rentrent sans rapport. 3 en r\xE9serve au plus." },
-  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
-  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
-  { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
-  { id: "phantom", name: "Sondes fant\xF4mes", price: 40, group: "consumable", description: "Ton prochain espionnage passe inaper\xE7u : sondes impossibles \xE0 rep\xE9rer, la cible n'en sait rien. 3 en r\xE9serve au plus." },
-  { id: "painkiller", name: "Analg\xE9sique d'atelier", price: 50, group: "consumable", description: "Les r\xE9parations en cours \xE0 l'Atelier avancent aussit\xF4t de 2 h." },
-  { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de raret\xE9 d'un plan de module commun (une fois par plan)." },
-  { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en t\xEAte des contrats visibles pendant 24 h. 3 en r\xE9serve au plus." },
-  { id: "pheromone", name: "Ph\xE9romone de recrutement", price: 90, group: "consumable", get description() {
-    return `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`;
-  } },
-  { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite apr\xE8s une vendetta : tu peux lui en d\xE9clarer une nouvelle sans attendre son retour. 3 en r\xE9serve au plus." },
-  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
-  { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "D\xE9bloque la page Planificateur : tout ce qui tourne, la file planifi\xE9e, les mod\xE8les d'actions rejouables en un clic et les objectifs personnels." },
-  { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
-  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
-  { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
-  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." },
-  { id: "nameColor", name: "Couleur de pseudo", price: 120, group: "cosmetic", description: "Ton pseudo en couleur dans le canal global et les salons (cyan, menthe, or, braise ou violet, modifiable \xE0 volont\xE9)." },
-  { id: "keshReaction", name: "R\xE9action kesh'vaar", price: 60, group: "cosmetic", description: "Une 7e r\xE9action, l'embl\xE8me de l'Essaim, sous les messages du canal. Visible de tous." },
-  { id: "roomBanner", name: "Banni\xE8re de salon", price: 80, group: "cosmetic", description: "Une ic\xF4ne au choix pour ton salon th\xE9matique, affich\xE9e dans la liste des salons." },
-  { id: "planetFx", name: "Effet de plan\xE8te", price: 200, group: "cosmetic", description: "D\xE9bloque l'anneau d'ambre et l'aurore pour ta plan\xE8te d'accueil (Profil)." }
-];
-function findShopItem(id) {
-  return SHOP_ITEMS.find((i) => i.id === id);
-}
-var ONE_TIME = ["blueprint", "planner", "title", "frame", "emblem", "emojis", "nameColor", "keshReaction", "roomBanner", "planetFx"];
-var CHARGES = {
-  jammer: "jammers",
-  beacon: "beacons",
-  phantom: "phantoms",
-  priority: "priorityContracts",
-  vendettaToken: "vendettaTokens"
-};
-function owns(st, id) {
-  return st.owned.includes(id);
-}
-function shopBlocker(player, item, now, queues) {
-  var _a, _b;
-  const st = bountyState(player);
-  if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "D\xE9j\xE0 acquis.";
-  const charge = CHARGES[item.id];
-  if (charge && st[charge] >= BOUNTY_SHOP_RULES.maxCharges) return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
-  if (item.id === "painkiller") {
-    if (atelierLevel({ buildings: (_a = player.buildings) != null ? _a : {} }) <= 0) return "Construis d'abord l'Atelier de r\xE9paration.";
-    const w = workshopState(player);
-    if (w.jobs.length === 0 && Object.keys(w.hull).length === 0) return "Rien en r\xE9paration \xE0 l'Atelier.";
-  }
-  if (item.id === "reroll" && rerollablePlans(player).length === 0) return "Aucun plan commun \xE0 relancer.";
-  if (item.id === "shield") {
-    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY6;
-    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY6)} j.`;
-  }
-  if (item.id === "accelerator" && queues && !Object.values((_b = queues.buildingUpgrades) != null ? _b : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
-  if (st.amber < item.price) return "Pas assez d'Ambre.";
-  return null;
-}
-function buyShopItem(player, queues, itemId, now, buildingId, random = Math.random) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
-  const item = findShopItem(itemId);
-  if (!item) throw new GameActionError("Objet inconnu.");
-  const blocker = shopBlocker(player, item, now, queues);
-  if (blocker) throw new GameActionError(blocker);
-  const st = bountyState(player);
-  let message = `${item.name} : acquis.`;
-  switch (item.id) {
-    case "accelerator": {
-      const entries = Object.entries((_a = queues.buildingUpgrades) != null ? _a : {}).filter(([, u]) => u && u.endTime > now);
-      const chosen = (_b = entries.find(([id]) => id === buildingId)) != null ? _b : entries.sort((a, b) => a[1].endTime - b[1].endTime)[0];
-      const entry = chosen[1];
-      entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 6e4);
-      message = "Chantier acc\xE9l\xE9r\xE9 d'une heure.";
-      break;
-    }
-    case "boost":
-      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR4;
-      message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
-      break;
-    case "jammer":
-      st.jammers += 1;
-      message = "Brouilleur en place : le prochain espionnage \xE9chouera.";
-      break;
-    case "beacon":
-      st.beacons += 1;
-      message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
-      break;
-    case "shield":
-      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR4;
-      st.shieldBoughtAtMs = now;
-      message = "Voile de chitine actif pendant 6 h.";
-      break;
-    case "dossier":
-      addDossiers(player, 1);
-      message = "Dossier d'entra\xEEnement rang\xE9 : remets-le \xE0 un officier depuis la page Commandants.";
-      break;
-    // 5.26.3
-    case "phantom":
-      st.phantoms += 1;
-      message = "Sondes fant\xF4mes pr\xEAtes : ton prochain espionnage passera inaper\xE7u.";
-      break;
-    case "painkiller": {
-      advanceWorkshop(player, now);
-      const w = workshopState(player);
-      player.workshop = __spreadProps(__spreadValues({}, w), { updatedAtMs: now - BOUNTY_SHOP_RULES.painkillerHours * HOUR4 });
-      const done = advanceWorkshop(player, now);
-      message = done.length ? `Atelier : 2 h de r\xE9parations faites. ${done[0].message}` : "Atelier : 2 h de r\xE9parations faites.";
-      break;
-    }
-    case "reroll": {
-      const plans = rerollablePlans(player);
-      const plan = (_c = plans.find((m) => m.id === buildingId)) != null ? _c : plans[0];
-      const rarity = rollRarity(random);
-      const ms = modulesState(player);
-      ms.items = ms.items.map((m) => m.id === plan.id ? __spreadProps(__spreadValues({}, m), { rarity, rerolled: true }) : m);
-      player.modules = ms;
-      const label3 = (_e = (_d = MODULE_RARITIES.find((r) => r.id === rarity)) == null ? void 0 : _d.label.toLowerCase()) != null ? _e : rarity;
-      message = rarity === "common" ? "Rappel de plan : le plan reste commun." : `Rappel de plan : le plan devient ${label3} !`;
-      break;
-    }
-    case "priority":
-      st.priorityContracts += 1;
-      message = "Contrat prioritaire pr\xEAt : ton prochain contrat passera en t\xEAte pendant 24 h.";
-      break;
-    case "pheromone":
-      st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR4;
-      message = `Ph\xE9romone de recrutement : XP des officiers +${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h.`;
-      break;
-    case "vendettaToken":
-      st.vendettaTokens += 1;
-      message = "Jeton de vendetta pr\xEAt : rappelle un seigneur en fuite depuis la page Seigneurs.";
-      break;
-    case "nameColor":
-      st.nameTone = st.nameTone || "gold";
-      message = "Couleur de pseudo acquise : change-la depuis le Comptoir.";
-      break;
-    case "blueprint":
-      player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_g = (_f = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _f.count) != null ? _g : 0 };
-      message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
-      break;
-    case "planner":
-      message = "Planificateur d\xE9bloqu\xE9 : retrouve-le dans la barre lat\xE9rale (Empire).";
-      break;
-    case "title":
-      if (!((_h = player.titles) != null ? _h : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
-        player.titles = [...(_i = player.titles) != null ? _i : [], { label: BOUNTY_SHOP_RULES.title, seasonId: "kesh", rank: 1 }];
-      }
-      player.activeTitle = BOUNTY_SHOP_RULES.title;
-      break;
-  }
-  if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
-  st.amber -= item.price;
-  st.history = [...st.history, { atMs: now, item: item.id, amber: item.price }].slice(-SHOP_HISTORY_MAX);
-  player.bounties = st;
-  return { message };
-}
-function weekId(now) {
-  const day = new Date(now).getUTCDay();
-  const midnight = Math.floor(now / DAY6) * DAY6;
-  return new Date(midnight - (day + 6) % 7 * DAY6).toISOString().slice(0, 10);
-}
-function exchangeAmber(player, amountIn, now) {
-  var _a;
-  const amount3 = Math.floor(Number(amountIn));
-  if (!(amount3 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
-  const st = bountyState(player);
-  const week = weekId(now);
-  if (st.exchangeWeek !== week) {
-    st.exchangeWeek = week;
-    st.exchanged = 0;
-  }
-  if (amount3 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
-  if (amount3 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
-  const gain = {};
-  for (const r of RESOURCE_LIST) {
-    if (r.rarity !== "rare") continue;
-    gain[r.id] = amount3 * BOUNTY_RULES.exchange.rarePerAmber;
-    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
-  }
-  st.amber -= amount3;
-  st.exchanged += amount3;
-  player.bounties = st;
-  return gain;
-}
-function shieldUntil(player) {
-  var _a;
-  return num2((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
-}
-function dropShield(player, now) {
-  const st = bountyState(player);
-  if (st.shieldUntilMs > now) {
-    st.shieldUntilMs = now;
-    player.bounties = st;
-  }
-}
-function consumeJammer(player) {
-  const st = bountyState(player);
-  if (st.jammers <= 0) return false;
-  st.jammers -= 1;
-  player.bounties = st;
-  return true;
-}
-function consumeBeacon(player) {
-  const st = bountyState(player);
-  if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
-  st.beacons -= 1;
-  player.bounties = st;
-}
-var KESH_EMOJIS = [
-  { code: "kesh_gg", url: "/assets/bounties/emoji-gg.webp" },
-  { code: "kesh_ok", url: "/assets/bounties/emoji-ok.webp" },
-  { code: "kesh_joie", url: "/assets/bounties/emoji-joie.webp" },
-  { code: "kesh_top", url: "/assets/bounties/emoji-top.webp" }
-];
-function assertKeshEmojis(player, text) {
-  if (!/:kesh_[a-z]+:/.test(text)) return;
-  if (KESH_EMOJIS.some((e3) => text.includes(`:${e3.code}:`)) && !owns(bountyState(player), "emojis")) {
-    throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
-  }
-}
-var ELITE_KEY = "bounty_elite";
-var ELITE_RULES = {
-  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs. */
-  hpFactor: 1,
-  minHp: 5e4,
-  /** Un assaut toutes les N heures par joueur. */
-  cooldownHours: 12,
-  flightMinutes: 45,
-  lossPct: 0.1,
-  /** Rang minimal dans l'Essaim. */
-  minRank: 2,
-  /** Part minimale des points de structure pour être récompensé. */
-  minShare: 5e-3,
-  killed: { xp: 300, amber: 150, rep: 8 },
-  failed: { xp: 100, amber: 50, rep: 3 }
-};
-function eliteWindow(now) {
-  const id = weekId(now);
-  const startMs = Date.parse(`${id}T00:00:00Z`);
-  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY6 };
-}
-function normalizeElite(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  if (!r.id || !(num2(r.maxHp) > 0)) return null;
-  return {
-    id: String(r.id),
-    fugitive: num2(r.fugitive),
-    startMs: num2(r.startMs),
-    endMs: num2(r.endMs),
-    maxHp: num2(r.maxHp),
-    hp: num2(r.hp),
-    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
-    endedAtMs: num2(r.endedAtMs),
-    rewarded: !!r.rewarded,
-    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
-  };
-}
-function spawnElite(now, activePlayers) {
-  const w = eliteWindow(now);
-  let h = 0;
-  for (const c of w.id) h = h * 31 + c.charCodeAt(0) >>> 0;
-  const total2 = activePlayers.reduce((sum3, p) => sum3 + hunterPower(p), 0);
-  const maxHp = Math.round(Math.max(ELITE_RULES.minHp, total2 * ELITE_RULES.hpFactor));
-  return { id: w.id, fugitive: h % ELITE_FUGITIVES.length, startMs: w.startMs, endMs: w.endMs, maxHp, hp: maxHp, status: "active", endedAtMs: 0, rewarded: false, contributions: {} };
-}
-function eliteActive(state, now) {
-  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
-}
-function eliteReadyAt(state, uid) {
-  var _a, _b;
-  const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
-  return last ? last + ELITE_RULES.cooldownHours * HOUR4 : 0;
-}
-function checkEliteLaunch(state, player, now) {
-  var _a;
-  if (!state || !eliteActive(state, now)) throw new GameActionError("Aucune proie d'\xE9lite \xE0 traquer en ce moment.");
-  if (bountyRank(bountyState(player).reputation) < ELITE_RULES.minRank) throw new GameActionError(`Il faut le rang ${rankName(ELITE_RULES.minRank)} dans l'Essaim pour traquer la proie d'\xE9lite.`);
-  const ready = eliteReadyAt(state, player.uid);
-  if (ready > now) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil((ready - now) / 6e4)} min.`);
-  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: 0 };
-  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, lastLaunchMs: now }) }) });
-}
-function resolveEliteAssault(state, player, fleet, formation, now) {
-  var _a;
-  const fx = formationEffects(formation);
-  const power = Math.round(
-    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
-  );
-  const active = eliteActive(state, now);
-  const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
-  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
-  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
-  const hp = state.hp - damage;
-  const killed = active && hp <= 0;
-  return {
-    state: __spreadProps(__spreadValues({}, state), {
-      hp: Math.max(0, hp),
-      status: killed ? "killed" : state.status,
-      endedAtMs: killed ? now : state.endedAtMs,
-      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
-    }),
-    damage,
-    survivors,
-    lost,
-    recovered,
-    hull,
-    killed
-  };
-}
-function closeElite(state, now) {
-  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
-  return state;
-}
-function eliteRanking(state) {
-  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => ({ uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })).sort((a, b) => b.damage - a.damage);
-}
-function eliteRewardees(state) {
-  if (state.status === "active") return [];
-  return eliteRanking(state).filter((c) => c.damage >= state.maxHp * ELITE_RULES.minShare).map((c) => c.uid);
-}
-function grantEliteReward(state, player, now, random = Math.random) {
-  if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
-  const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
-  const st = bountyState(player);
-  st.amber += r.amber;
-  st.amberEarned += r.amber;
-  st.reputation += r.rep;
-  player.bounties = st;
-  const xp = applyXpDelta(player, r.xp, now, "bounty");
-  if (state.status === "killed") {
-    const item = rollRelic("elite", now, random, "rare");
-    if (addRelic(player, item)) return { xp, amber: r.amber, relic: relicLabel(item) };
-  }
-  return { xp, amber: r.amber };
-}
-function describeElite(state) {
-  return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
-}
-function eliteNotice(state, reward, now) {
-  const f = describeElite(state);
-  return note2(
-    state.status === "killed" ? `${f.name} est tomb\xE9` : `${f.name} s'est enfui`,
-    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
-    now
-  );
-}
-function adminSetAmber(player, amount3) {
-  const st = bountyState(player);
-  const before = st.amber;
-  const after = Math.max(0, Math.min(1e6, Math.floor(Number(amount3) || 0)));
-  player.bounties = __spreadProps(__spreadValues({}, st), { amber: after });
-  return { before, after };
-}
-function rerollablePlans(player) {
-  return modulesState(player).items.filter((m) => !m.built && m.rarity === "common" && !m.rerolled);
-}
-function rollRarity(random) {
-  const total2 = MODULE_RARITIES.reduce((a, r) => a + r.weight, 0);
-  let roll = random() * total2;
-  for (const r of MODULE_RARITIES) if ((roll -= r.weight) < 0) return r.id;
-  return MODULE_RARITIES[MODULE_RARITIES.length - 1].id;
-}
-function consumeCharge(player, key) {
-  const st = bountyState(player);
-  if (st[key] <= 0) return false;
-  st[key] -= 1;
-  player.bounties = st;
-  return true;
-}
-function nameToneOf(player) {
-  const st = bountyState(player);
-  return owns(st, "nameColor") ? st.nameTone : "";
-}
-function ownsShopItem(player, id) {
-  return owns(bountyState(player), id);
-}
-function setNameTone(player, tone) {
-  const st = bountyState(player);
-  if (!owns(st, "nameColor")) throw new GameActionError("La couleur de pseudo s'obtient au Comptoir de la Ruche.");
-  const id = String(tone != null ? tone : "");
-  if (id && !NAME_TONES.some((t) => t.id === id)) throw new GameActionError("Couleur inconnue.");
-  st.nameTone = id;
-  player.bounties = st;
-  return id;
-}
-function donateAmber(player, amountIn, now = 0) {
-  const amount3 = Math.floor(Number(amountIn));
-  if (!(amount3 >= 1 && amount3 <= 1e4)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
-  const st = bountyState(player);
-  if (st.amber < amount3) throw new GameActionError("Pas assez d'Ambre.");
-  st.amber -= amount3;
-  st.history = [...st.history, { atMs: now, item: "donate", amber: amount3 }].slice(-SHOP_HISTORY_MAX);
-  player.bounties = st;
-  bumpStat(player, "amberDonated", amount3);
-  return amount3;
-}
-var SHOP_REMINDER_LEAD_MS = 36e5;
-function shopReminders(player, now) {
-  const st = bountyState(player);
-  const notifications = [];
-  const soon = (until, reminded) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
-  const left = (until) => `${Math.max(1, Math.round((until - now) / 6e4))} min`;
-  if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
-    notifications.push({ kind: "bounty", title: "Ph\xE9romone bient\xF4t dissip\xE9e", message: `Le bonus d'XP des officiers (+${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de ${BOUNTY_SHOP_RULES.pheromoneHours} h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
-    st.remindedPheromoneMs = st.pheromoneUntilMs;
-  }
-  if (soon(st.shieldUntilMs, st.remindedShieldMs)) {
-    notifications.push({ kind: "bounty", title: "Voile de chitine bient\xF4t lev\xE9", message: `Ta protection contre les attaques de joueurs prend fin dans ${left(st.shieldUntilMs)}.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
-    st.remindedShieldMs = st.shieldUntilMs;
-  }
-  if (notifications.length) player.bounties = st;
-  return { changed: notifications.length > 0, notifications };
-}
-
 // src/game/synthesis.ts
 var CAPSULES = {
   assault: {
@@ -7927,6 +6966,65 @@ function describeLoot(drop) {
   if (drop.module) parts.push(`Plan de module : ${drop.module}`);
   if (drop.tokens) parts.push(`${drop.tokens} jeton${drop.tokens > 1 ? "s" : ""} du casino`);
   return parts.length ? ` Butin : ${parts.join(", ")}.` : "";
+}
+
+// src/game/formations.ts
+var pct2 = (v) => `${v > 0 ? "+" : "\u2212"}${Math.round(Math.abs(v) * 100)} %`;
+var FORMATIONS = [
+  { id: "balanced", name: "\xC9quilibr\xE9e", description: () => "Aucun bonus ni malus." },
+  { id: "assault", name: "Assaut", description: () => `Attaque ${pct2(COMBAT_RULES.assaultAttack)}, pertes subies ${pct2(COMBAT_RULES.assaultLosses)}.` },
+  { id: "cautious", name: "Prudente", description: () => `Attaque ${pct2(COMBAT_RULES.cautiousAttack)}, d\xE9g\xE2ts subis ${pct2(COMBAT_RULES.cautiousLosses)}, retraite d\xE8s ${Math.round(COMBAT_RULES.cautiousRetreatAt * 100)} % de pertes.` },
+  { id: "raid", name: "Raid", description: () => `Attaque ${pct2(COMBAT_RULES.raidAttack)}, cargaison ${pct2(COMBAT_RULES.raidCargo)}.` }
+];
+var POSTURES = [
+  { id: "standard", name: "Standard", description: () => `Les vaisseaux \xE0 quai d\xE9fendent \xE0 ${Math.round(COMBAT_RULES.homeFleetDefenseFactor * 100)} %.` },
+  { id: "bunker", name: "Bunker", description: () => `D\xE9fenses ${pct2(COMBAT_RULES.bunkerDefense)}, vaisseaux \xE0 quai \xE0 l'abri (ni engag\xE9s, ni d\xE9truits).` },
+  { id: "riposte", name: "Riposte", description: () => `Vaisseaux \xE0 quai engag\xE9s \xE0 ${Math.round(COMBAT_RULES.riposteHomeFleet * 100)} %.` }
+];
+function isFormation(v) {
+  return FORMATIONS.some((f) => f.id === v);
+}
+function isPosture(v) {
+  return POSTURES.some((p) => p.id === v);
+}
+function formationEffects(id) {
+  const retreatAt = COMBAT_RULES.retreatAt;
+  switch (id) {
+    case "assault":
+      return { attackFactor: 1 + COMBAT_RULES.assaultAttack, attackerLossFactor: 1 + COMBAT_RULES.assaultLosses, cargoFactor: 1, retreatAt };
+    case "cautious":
+      return { attackFactor: 1 + COMBAT_RULES.cautiousAttack, attackerLossFactor: 1 + COMBAT_RULES.cautiousLosses, cargoFactor: 1, retreatAt: COMBAT_RULES.cautiousRetreatAt };
+    case "raid":
+      return { attackFactor: 1 + COMBAT_RULES.raidAttack, attackerLossFactor: 1, cargoFactor: 1 + COMBAT_RULES.raidCargo, retreatAt };
+    default:
+      return { attackFactor: 1, attackerLossFactor: 1, cargoFactor: 1, retreatAt };
+  }
+}
+function postureEffects(id, fleetOnly = false) {
+  if (fleetOnly) return { defenseFactor: 1, homeFleetFactor: 1 };
+  switch (id) {
+    case "bunker":
+      return { defenseFactor: 1 + COMBAT_RULES.bunkerDefense, homeFleetFactor: 0 };
+    case "riposte":
+      return { defenseFactor: 1, homeFleetFactor: COMBAT_RULES.riposteHomeFleet };
+    default:
+      return { defenseFactor: 1, homeFleetFactor: void 0 };
+  }
+}
+function playerPosture(p) {
+  var _a;
+  return isPosture((_a = p.posture) == null ? void 0 : _a.id) ? p.posture.id : "standard";
+}
+function setPosture(player, id, now) {
+  var _a, _b;
+  if (!isPosture(id)) throw new GameActionError("Posture inconnue.");
+  const current2 = playerPosture(player);
+  if (current2 === id) return id;
+  const last = (_b = (_a = player.posture) == null ? void 0 : _a.changedAtMs) != null ? _b : 0;
+  const wait = last > 0 ? last + COMBAT_RULES.postureCooldownHours * 36e5 - now : 0;
+  if (wait > 0) throw new GameActionError(`Changement de posture possible dans ${Math.ceil(wait / 6e4)} min.`);
+  player.posture = { id, changedAtMs: now };
+  return id;
 }
 
 // src/game/pirates.ts
@@ -8300,7 +7398,7 @@ function tributeFor(faction, player, aggression) {
   const floor = productionHours(player, faction.tribute.minHours);
   return total(fromPlunder) >= total(floor) ? fromPlunder : floor;
 }
-function note3(kind, title, message, now, data) {
+function note2(kind, title, message, now, data) {
   return __spreadValues({ kind, title, message, createdAtMs: now, read: false }, data ? { data } : {});
 }
 function pirateTick(player, now, options = {}) {
@@ -8319,7 +7417,7 @@ function pirateTick(player, now, options = {}) {
       out.raid = launchRaid(player, faction, st, now, random);
       out.changed = true;
       out.notifications.push(
-        note3("fleet", `${faction.enforcer} arrive`, `Tu n'as pas r\xE9pondu \xE0 ${faction.leader} : raid dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min.`, now)
+        note2("fleet", `${faction.enforcer} arrive`, `Tu n'as pas r\xE9pondu \xE0 ${faction.leader} : raid dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min.`, now)
       );
       return out;
     }
@@ -8380,7 +7478,7 @@ function pirateTick(player, now, options = {}) {
     recordThreat(player, faction.id);
     out.changed = true;
     out.notifications.push(
-      note3(
+      note2(
         "fleet",
         faction.ultimatum.title.replace(/[«»"]/g, "").trim(),
         `${faction.leader} exige ${formatInt(total(tribute))} ressources. R\xE9ponds avant ${faction.answerHours} h, ou ${faction.enforcer} viendra se servir.`,
@@ -8417,12 +7515,12 @@ function answerUltimatum(player, answer, now, random = Math.random) {
     st.tributesPaid += 1;
     st.nextListAtMs = now + nextListDelay(faction, random);
     setState(player, faction.id, st);
-    return { raid: null, notifications: [note3("fleet", "Tribut pay\xE9", `${faction.leader} te laisse en paix\u2026 pour l'instant.`, now)] };
+    return { raid: null, notifications: [note2("fleet", "Tribut pay\xE9", `${faction.leader} te laisse en paix\u2026 pour l'instant.`, now)] };
   }
   const raid = launchRaid(player, faction, st, now, random);
   return {
     raid,
-    notifications: [note3("fleet", "Tu as refus\xE9", `${faction.enforcer} est en route : impact dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min. Pr\xE9pare-toi !`, now)]
+    notifications: [note2("fleet", "Tu as refus\xE9", `${faction.enforcer} est en route : impact dans ${Math.max(1, Math.round(faction.raidTravelHours * 60))} min. Pr\xE9pare-toi !`, now)]
   };
 }
 var RARE = RESOURCE_LIST.filter((r) => r.rarity === "rare").map((r) => r.id);
@@ -8488,7 +7586,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     st.notoriety = Math.max(0, st.notoriety - 1);
     st.adapt = Math.max(PIRATE_RULES.adaptMin, st.adapt - PIRATE_RULES.adaptDown);
     player.lastDefeatAtMs = now;
-    notifications.push(note3("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
+    notifications.push(note2("combat-defender", `Victoire de ${faction.name}`, total(loot) > 0 ? `${faction.enforcer} a eu le dessus et emport\xE9 ${describeGain(loot)} (${formatInt(total(loot))} au total).` : `${faction.enforcer} a eu le dessus, mais tes entrep\xF4ts prot\xE9g\xE9s n'ont rien laiss\xE9 \xE0 prendre.`, now));
   } else {
     bounty = productionHours(player, faction.bounty.hours);
     for (const r of RARE) if (faction.bounty.rare > 0) bounty[r] = ((_i = bounty[r]) != null ? _i : 0) + faction.bounty.rare;
@@ -8509,7 +7607,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
     if (lairNow) st.lairOpen = true;
     const raidLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.attackerPower, combat.defenderPower)));
     notifications.push(
-      note3(
+      note2(
         "combat-defender",
         combat.outcome === "draw" ? `${faction.name} repouss\xE9 de justesse` : `${faction.name} repouss\xE9 !`,
         `Prime : ${describeGain(bounty)} (${formatInt(total(bounty))} au total) et +${faction.bounty.xp} XP. Notori\xE9t\xE9 ${st.notoriety}.${raidLoot}`,
@@ -8517,7 +7615,7 @@ function resolvePirateRaid(faction, playerIn, queuesIn, power, garrisons, now, o
         { resources: bounty, xp: faction.bounty.xp || void 0 }
       )
     );
-    if (lairNow) notifications.push(note3("fleet", `${faction.lair.name} localis\xE9`, "Sa position a fuit\xE9 : lance l'assaut depuis la page Menaces !", now));
+    if (lairNow) notifications.push(note2("fleet", `${faction.lair.name} localis\xE9`, "Sa position a fuit\xE9 : lance l'assaut depuis la page Menaces !", now));
   }
   setState(player, faction.id, st);
   const report = {
@@ -8619,7 +7717,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     const lairLoot = describeLoot(rollLoot(player, "threat", now, -1, Math.random, lootDifficulty(combat.defenderPower, combat.attackerPower)));
     player.victories = ((_h = player.victories) != null ? _h : 0) + 1;
     notifications.push(
-      note3(
+      note2(
         "combat-attacker",
         `${faction.lair.name} est tomb\xE9 !`,
         `Butin : ${describeGain(reward)} (${formatInt(total(reward))} au total), +${faction.lair.xp} XP${title ? ` et le titre \xAB ${title} \xBB` : ""}. ${faction.leader} s'est enfui\u2026 la traque continue.${lairLoot}`,
@@ -8628,7 +7726,7 @@ function resolveLairAssault(faction, playerIn, queuesIn, fleet, power, now, form
     );
   } else {
     player.defeats = ((_i = player.defeats) != null ? _i : 0) + 1;
-    notifications.push(note3("combat-attacker", "Assaut repouss\xE9", `Les d\xE9fenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
+    notifications.push(note2("combat-attacker", "Assaut repouss\xE9", `Les d\xE9fenses du ${faction.lair.name} ont tenu. Les survivants rentrent.`, now));
   }
   setState(player, faction.id, st);
   const report = {
@@ -9176,6 +8274,1605 @@ function claimPassTier(player, tierIn, now, random = Math.random) {
   after.claimed = [...st.claimed, tier].sort((a, b) => a - b);
   player.seasonPass = after;
   return gained;
+}
+
+// src/game/bounties.ts
+var BOUNTY_RULES = {
+  dailyLimit: 4,
+  refreshHours: 8,
+  /** Un échec laisse la prime ouverte une fois de plus. */
+  retries: 1,
+  /** +10 % d'Ambre par rang au-delà du premier. */
+  amberPerRank: 0.1,
+  tiers: {
+    1: { label: "Traque", pct: 0.5, minMinutes: 20, maxMinutes: 40, xp: 60, amber: 10, rep: 1, floor: 200, minRank: 1 },
+    2: { label: "Chasse", pct: 0.8, minMinutes: 40, maxMinutes: 60, xp: 120, amber: 25, rep: 2, floor: 500, minRank: 1 },
+    3: { label: "Proie majeure", pct: 1.1, minMinutes: 60, maxMinutes: 90, xp: 250, amber: 60, rep: 4, floor: 1200, minRank: 3 },
+    4: { label: "\xC9lite", pct: 1.25, minMinutes: 75, maxMinutes: 90, xp: 400, amber: 120, rep: 6, floor: 3e3, minRank: 5 }
+  },
+  ranks: [
+    { name: "Larve", at: 0 },
+    { name: "\xC9claireur", at: 10 },
+    { name: "Traqueur", at: 30 },
+    { name: "Lame de l'Essaim", at: 70 },
+    { name: "Main de la Reine", at: 150 }
+  ],
+  exchange: { rarePerAmber: 40, weeklyCap: 100 }
+};
+var KESH = {
+  name: "Kesh'Vaar",
+  full: "L'Essaim de la Traque",
+  leader: "Vashka, Matriarche-Chasseuse",
+  currency: "Ambre de Ruche",
+  art: "/assets/bounties/vashka.webp",
+  hunters: "/assets/bounties/hunters.webp",
+  banner: "/assets/bounties/banner.webp",
+  emblem: "/assets/bounties/emblem.webp",
+  amberIcon: "/assets/bounties/amber.webp",
+  story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
+};
+var FUGITIVES = [
+  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
+  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
+  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
+  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
+  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
+  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
+  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
+  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
+  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
+  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
+  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
+  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
+  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
+  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
+  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
+  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
+  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
+  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
+  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
+  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
+  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
+  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
+];
+var ELITE_FUGITIVES = [
+  { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
+  { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
+  { name: "L'Archiviste P\xE2le", factionId: "inquisition", crime: "d\xE9tient le dernier \u0153uf de la Reine" },
+  { name: "Moloch-7", factionId: "meute", crime: "a d\xE9vor\xE9 trois nids en une nuit" },
+  { name: "Capitaine Draven Hale", factionId: "gravhorn", crime: "a escort\xE9 la cargaison vol\xE9e hors du secteur" },
+  { name: "La Veuve d'Ambre", factionId: "choeur", crime: "fait commerce d'Ambre sacr\xE9e vol\xE9e" }
+];
+var SHOP_HISTORY_MAX = 30;
+function emptyBountyState() {
+  return {
+    amber: 0,
+    amberEarned: 0,
+    reputation: 0,
+    board: [],
+    slot: -1,
+    day: "",
+    doneToday: 0,
+    completed: 0,
+    failed: 0,
+    exchangeWeek: "",
+    exchanged: 0,
+    boostUntilMs: 0,
+    jammers: 0,
+    beacons: 0,
+    shieldUntilMs: 0,
+    shieldBoughtAtMs: 0,
+    owned: [],
+    phantoms: 0,
+    priorityContracts: 0,
+    vendettaTokens: 0,
+    pheromoneUntilMs: 0,
+    nameTone: "",
+    history: [],
+    remindedPheromoneMs: 0,
+    remindedShieldMs: 0
+  };
+}
+function num2(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+function bountyState(player) {
+  var _a;
+  const raw = (_a = player.bounties) != null ? _a : {};
+  const base = emptyBountyState();
+  return __spreadProps(__spreadValues(__spreadValues({}, base), raw), {
+    amber: Math.max(0, num2(raw.amber)),
+    amberEarned: num2(raw.amberEarned),
+    reputation: num2(raw.reputation),
+    board: Array.isArray(raw.board) ? raw.board.filter((c) => c && BOUNTY_RULES.tiers[c.tier]) : [],
+    slot: raw.slot === void 0 ? -1 : num2(raw.slot),
+    doneToday: num2(raw.doneToday),
+    owned: Array.isArray(raw.owned) ? raw.owned.map(String) : [],
+    phantoms: Math.max(0, num2(raw.phantoms)),
+    priorityContracts: Math.max(0, num2(raw.priorityContracts)),
+    vendettaTokens: Math.max(0, num2(raw.vendettaTokens)),
+    pheromoneUntilMs: num2(raw.pheromoneUntilMs),
+    nameTone: NAME_TONES.some((t) => t.id === raw.nameTone) ? String(raw.nameTone) : "",
+    history: Array.isArray(raw.history) ? raw.history.filter((h) => h && typeof h.item === "string").map((h) => ({ atMs: num2(h.atMs), item: h.item, amber: num2(h.amber) })).slice(-SHOP_HISTORY_MAX) : [],
+    remindedPheromoneMs: num2(raw.remindedPheromoneMs),
+    remindedShieldMs: num2(raw.remindedShieldMs)
+  });
+}
+function bountyRank(reputation) {
+  let rank2 = 1;
+  BOUNTY_RULES.ranks.forEach((r, i) => {
+    if (reputation >= r.at) rank2 = i + 1;
+  });
+  return rank2;
+}
+function rankName(rank2) {
+  return BOUNTY_RULES.ranks[Math.max(0, Math.min(BOUNTY_RULES.ranks.length - 1, rank2 - 1))].name;
+}
+function amberFor(tier, rank2) {
+  return Math.round(BOUNTY_RULES.tiers[tier].amber * (1 + BOUNTY_RULES.amberPerRank * (rank2 - 1)));
+}
+var HOUR4 = 36e5;
+var DAY6 = 24 * HOUR4;
+function boardSlot(now) {
+  return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR4));
+}
+function boardTiers(rank2) {
+  if (rank2 >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
+  if (rank2 >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
+  return [1, 2, 2];
+}
+function generateBoard(uid, slot, rank2, exclude = []) {
+  const rand = seededRandom(`${uid}:bounty:${slot}`);
+  const used = new Set(exclude);
+  return boardTiers(rank2).map((tier, i) => {
+    let fugitive = Math.floor(rand() * FUGITIVES.length);
+    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
+    used.add(fugitive);
+    const t = BOUNTY_RULES.tiers[tier];
+    const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
+    return { id: `${slot}-${i}`, tier, fugitive, minutes, status: "open", tries: 0 };
+  });
+}
+function refreshBounties(st, uid, now) {
+  const day = contractDay(now);
+  if (st.day !== day) {
+    st.day = day;
+    st.doneToday = 0;
+  }
+  const slot = boardSlot(now);
+  if (st.slot !== slot) {
+    const hunting = st.board.filter((c) => c.status === "hunting");
+    st.board = [...hunting, ...generateBoard(uid, slot, bountyRank(st.reputation), hunting.map((c) => c.fugitive))];
+    st.slot = slot;
+  }
+  return st;
+}
+function hunterPower(player) {
+  var _a, _b;
+  return computeFullPower((_a = player.units) != null ? _a : {}, (_b = player.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+}
+function fugitivePower(tier, player) {
+  const t = BOUNTY_RULES.tiers[tier];
+  return Math.round(Math.max(t.floor, hunterPower(player) * t.pct));
+}
+function bountyTarget(contract) {
+  return `bounty_${contract.id}`;
+}
+function startBounty(player, contractId, now) {
+  var _a;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
+  if (contract.status !== "open") throw new GameActionError("Une flotte traque d\xE9j\xE0 ce fugitif.");
+  if (st.doneToday >= BOUNTY_RULES.dailyLimit) throw new GameActionError(`${BOUNTY_RULES.dailyLimit} primes par jour : l'Essaim te recontactera demain.`);
+  if (bountyRank(st.reputation) < BOUNTY_RULES.tiers[contract.tier].minRank) throw new GameActionError("Ton rang dans l'Essaim est trop bas pour cette prime.");
+  const power = fugitivePower(contract.tier, player);
+  contract.status = "hunting";
+  st.doneToday += 1;
+  player.bounties = st;
+  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
+}
+function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
+  const player = flushed.player;
+  const st = refreshBounties(bountyState(player), player.uid, now);
+  const contract = st.board.find((c) => c.id === contractId);
+  const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
+  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
+  const fx = formationEffects(formation);
+  const pve = playerCombatEffects(player, "pve", now);
+  const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
+    unitBonus: { attacker: pve.units },
+    attackFactor: fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack),
+    // 5.20 : stock = base + flotte partie, pour répartir les dégâts conservés.
+    attackerUnits: withFleet(player.units, fleet),
+    attackerHull: workshopState(player).hull,
+    attackerTechLevels: player.techLevels,
+    attackerRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
+    fleet,
+    defenderUnits: {},
+    defenderTechLevels: {},
+    defenderRepairPct: 0,
+    defenderResources: {},
+    defenderPowerOverride: power
+  }));
+  applyHull(player, combat.attackerHull);
+  sendToWorkshop(player, combat.attackerRecovered, now, "bounty", false);
+  const survivors = {};
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0) - ((_e = combat.attackerRecovered[id]) != null ? _e : 0));
+  const notifications = [...flushed.notifications];
+  const success = combat.outcome === "attacker_win";
+  const t = BOUNTY_RULES.tiers[tier];
+  let amber = 0;
+  let xp = 0;
+  if (success) {
+    const rankBefore = bountyRank(st.reputation);
+    amber = amberFor(tier, rankBefore);
+    xp = t.xp;
+    st.amber += amber;
+    st.amberEarned += amber;
+    st.reputation += t.rep;
+    st.completed += 1;
+    st.board = st.board.filter((c) => c.id !== contractId);
+    xp = applyXpDelta(player, xp, now, "bounty");
+    bumpStat(player, "bounties");
+    grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
+    grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
+    addPassPoints(player, "bounty", now);
+    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
+    notifications.push(note3(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
+    const rankAfter = bountyRank(st.reputation);
+    if (rankAfter > rankBefore) {
+      notifications.push(note3(`Nouveau rang : ${rankName(rankAfter)}`, rankUpMessage(rankAfter), now));
+    }
+  } else {
+    st.failed += 1;
+    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
+    if (contract) {
+      contract.tries += 1;
+      if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
+      else contract.status = "open";
+    }
+    const retry = !!contract && contract.tries <= BOUNTY_RULES.retries;
+    notifications.push(note3(`${fugitive.name} s'est \xE9chapp\xE9`, `Ta flotte n'a pas pu le ma\xEEtriser.${retry ? " La prime reste ouverte une derni\xE8re fois." : " Le contrat est perdu."}`, now));
+  }
+  player.bounties = st;
+  const report = {
+    attackerUid: player.uid,
+    attackerPseudo: player.pseudo,
+    defenderUid: `bounty_${contractId}`,
+    defenderPseudo: fugitive.name,
+    timestamp: now,
+    outcome: combat.outcome,
+    attackerPower: combat.attackerPower,
+    defenderPower: combat.defenderPower,
+    attackerLossPercent: combat.attackerLossPercent,
+    combatLog: combatLogOf(combat),
+    defenderLossPercent: combat.defenderLossPercent,
+    attackerLosses: combat.attackerLosses,
+    attackerRecovered: combat.attackerRecovered,
+    defenderLosses: {},
+    defenderRecovered: {},
+    loot: null,
+    defenderProcessed: true,
+    defenderApplied: true,
+    attackerXpDelta: xp,
+    defenderXpDelta: 0,
+    attackerFleet: fleet
+  };
+  return { player, queues: flushed.queues, combat, survivors, report, notifications, success, amber, xp };
+}
+function releaseBounty(player, contractId) {
+  const st = bountyState(player);
+  const contract = st.board.find((c) => c.id === contractId);
+  if (contract && contract.status === "hunting") contract.status = "open";
+  player.bounties = st;
+}
+function rankUpMessage(rank2) {
+  if (rank2 === BOUNTY_RULES.tiers[3].minRank) return "L'Essaim te confie d\xE9sormais les proies majeures (\u2605\u2605\u2605).";
+  if (rank2 === BOUNTY_RULES.tiers[4].minRank) return "La Reine elle-m\xEAme te reconna\xEEt : les primes d'\xE9lite (\u2605\u2605\u2605\u2605) te sont ouvertes.";
+  return `L'Essaim te verse ${Math.round(BOUNTY_RULES.amberPerRank * (rank2 - 1) * 100)} % d'Ambre en plus par prime.`;
+}
+function note3(title, message, now) {
+  return { kind: "bounty", title, message, createdAtMs: now, read: false, link: "/game/primes" };
+}
+var BOUNTY_SHOP_RULES = {
+  acceleratorMinutes: 60,
+  boostHours: 24,
+  maxCharges: 3,
+  shieldHours: 6,
+  shieldCooldownDays: 7,
+  title: "Chasseur de l'Essaim",
+  /** 5.26.3 */
+  painkillerHours: 2,
+  pheromoneHours: 24
+};
+var NAME_TONES = [
+  { id: "accent", label: "Cyan" },
+  { id: "mint", label: "Menthe" },
+  { id: "gold", label: "Or" },
+  { id: "ember", label: "Braise" },
+  { id: "violet", label: "Violet" }
+];
+var SHOP_ITEMS = [
+  { id: "accelerator", name: "Acc\xE9l\xE9rateur de chantier", price: 30, group: "consumable", description: "Une construction de b\xE2timent en cours se termine 1 h plus t\xF4t." },
+  { id: "boost", name: "Gel\xE9e de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
+  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage re\xE7u \xE9choue : les sondes rentrent sans rapport. 3 en r\xE9serve au plus." },
+  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ram\xE8ne aussit\xF4t une flotte en vol \xE0 la base, avec sa cargaison. 3 en r\xE9serve au plus." },
+  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le l\xE8ve." },
+  { id: "dossier", name: "Dossier d'entra\xEEnement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, m\xEAme hors poste (page Commandants)." },
+  { id: "phantom", name: "Sondes fant\xF4mes", price: 40, group: "consumable", description: "Ton prochain espionnage passe inaper\xE7u : sondes impossibles \xE0 rep\xE9rer, la cible n'en sait rien. 3 en r\xE9serve au plus." },
+  { id: "painkiller", name: "Analg\xE9sique d'atelier", price: 50, group: "consumable", description: "Les r\xE9parations en cours \xE0 l'Atelier avancent aussit\xF4t de 2 h." },
+  { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de raret\xE9 d'un plan de module commun (une fois par plan)." },
+  { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en t\xEAte des contrats visibles pendant 24 h. 3 en r\xE9serve au plus." },
+  { id: "pheromone", name: "Ph\xE9romone de recrutement", price: 90, group: "consumable", get description() {
+    return `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`;
+  } },
+  { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite apr\xE8s une vendetta : tu peux lui en d\xE9clarer une nouvelle sans attendre son retour. 3 en r\xE9serve au plus." },
+  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
+  { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "D\xE9bloque la page Planificateur : tout ce qui tourne, la file planifi\xE9e, les mod\xE8les d'actions rejouables en un clic et les objectifs personnels." },
+  { id: "title", name: "Titre \xAB Chasseur de l'Essaim \xBB", price: 120, group: "cosmetic", description: "Un titre \xE0 afficher \xE0 c\xF4t\xE9 de ton nom." },
+  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambr\xE9 autour de ta fiche publique." },
+  { id: "emblem", name: "Embl\xE8me de l'Essaim", price: 150, group: "cosmetic", description: "L'embl\xE8me kesh'vaar sur ta fiche publique." },
+  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." },
+  { id: "nameColor", name: "Couleur de pseudo", price: 120, group: "cosmetic", description: "Ton pseudo en couleur dans le canal global et les salons (cyan, menthe, or, braise ou violet, modifiable \xE0 volont\xE9)." },
+  { id: "keshReaction", name: "R\xE9action kesh'vaar", price: 60, group: "cosmetic", description: "Une 7e r\xE9action, l'embl\xE8me de l'Essaim, sous les messages du canal. Visible de tous." },
+  { id: "roomBanner", name: "Banni\xE8re de salon", price: 80, group: "cosmetic", description: "Une ic\xF4ne au choix pour ton salon th\xE9matique, affich\xE9e dans la liste des salons." },
+  { id: "planetFx", name: "Effet de plan\xE8te", price: 200, group: "cosmetic", description: "D\xE9bloque l'anneau d'ambre et l'aurore pour ta plan\xE8te d'accueil (Profil)." }
+];
+function findShopItem(id) {
+  return SHOP_ITEMS.find((i) => i.id === id);
+}
+var ONE_TIME = ["blueprint", "planner", "title", "frame", "emblem", "emojis", "nameColor", "keshReaction", "roomBanner", "planetFx"];
+var CHARGES = {
+  jammer: "jammers",
+  beacon: "beacons",
+  phantom: "phantoms",
+  priority: "priorityContracts",
+  vendettaToken: "vendettaTokens"
+};
+function owns(st, id) {
+  return st.owned.includes(id);
+}
+function plannerUnlocked(player) {
+  return !!player && owns(bountyState(player), "planner");
+}
+function shopBlocker(player, item, now, queues) {
+  var _a, _b;
+  const st = bountyState(player);
+  if (ONE_TIME.includes(item.id) && owns(st, item.id)) return "D\xE9j\xE0 acquis.";
+  const charge = CHARGES[item.id];
+  if (charge && st[charge] >= BOUNTY_SHOP_RULES.maxCharges) return `${BOUNTY_SHOP_RULES.maxCharges} en r\xE9serve au plus.`;
+  if (item.id === "painkiller") {
+    if (atelierLevel({ buildings: (_a = player.buildings) != null ? _a : {} }) <= 0) return "Construis d'abord l'Atelier de r\xE9paration.";
+    const w = workshopState(player);
+    if (w.jobs.length === 0 && Object.keys(w.hull).length === 0) return "Rien en r\xE9paration \xE0 l'Atelier.";
+  }
+  if (item.id === "reroll" && rerollablePlans(player).length === 0) return "Aucun plan commun \xE0 relancer.";
+  if (item.id === "shield") {
+    const ready = st.shieldBoughtAtMs + BOUNTY_SHOP_RULES.shieldCooldownDays * DAY6;
+    if (st.shieldBoughtAtMs && now < ready) return `Disponible \xE0 nouveau dans ${Math.ceil((ready - now) / DAY6)} j.`;
+  }
+  if (item.id === "accelerator" && queues && !Object.values((_b = queues.buildingUpgrades) != null ? _b : {}).some((u) => u && u.endTime > now)) return "Aucune construction en cours.";
+  if (st.amber < item.price) return "Pas assez d'Ambre.";
+  return null;
+}
+function buyShopItem(player, queues, itemId, now, buildingId, random = Math.random) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  const item = findShopItem(itemId);
+  if (!item) throw new GameActionError("Objet inconnu.");
+  const blocker = shopBlocker(player, item, now, queues);
+  if (blocker) throw new GameActionError(blocker);
+  const st = bountyState(player);
+  let message = `${item.name} : acquis.`;
+  switch (item.id) {
+    case "accelerator": {
+      const entries = Object.entries((_a = queues.buildingUpgrades) != null ? _a : {}).filter(([, u]) => u && u.endTime > now);
+      const chosen = (_b = entries.find(([id]) => id === buildingId)) != null ? _b : entries.sort((a, b) => a[1].endTime - b[1].endTime)[0];
+      const entry = chosen[1];
+      entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 6e4);
+      message = "Chantier acc\xE9l\xE9r\xE9 d'une heure.";
+      break;
+    }
+    case "boost":
+      st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR4;
+      message = "Gel\xE9e de la Reine : production +20 % pendant 24 h.";
+      break;
+    case "jammer":
+      st.jammers += 1;
+      message = "Brouilleur en place : le prochain espionnage \xE9chouera.";
+      break;
+    case "beacon":
+      st.beacons += 1;
+      message = "Balise de repli pr\xEAte : utilise-la depuis une flotte en vol.";
+      break;
+    case "shield":
+      st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR4;
+      st.shieldBoughtAtMs = now;
+      message = "Voile de chitine actif pendant 6 h.";
+      break;
+    case "dossier":
+      addDossiers(player, 1);
+      message = "Dossier d'entra\xEEnement rang\xE9 : remets-le \xE0 un officier depuis la page Commandants.";
+      break;
+    // 5.26.3
+    case "phantom":
+      st.phantoms += 1;
+      message = "Sondes fant\xF4mes pr\xEAtes : ton prochain espionnage passera inaper\xE7u.";
+      break;
+    case "painkiller": {
+      advanceWorkshop(player, now);
+      const w = workshopState(player);
+      player.workshop = __spreadProps(__spreadValues({}, w), { updatedAtMs: now - BOUNTY_SHOP_RULES.painkillerHours * HOUR4 });
+      const done = advanceWorkshop(player, now);
+      message = done.length ? `Atelier : 2 h de r\xE9parations faites. ${done[0].message}` : "Atelier : 2 h de r\xE9parations faites.";
+      break;
+    }
+    case "reroll": {
+      const plans = rerollablePlans(player);
+      const plan = (_c = plans.find((m) => m.id === buildingId)) != null ? _c : plans[0];
+      const rarity = rollRarity(random);
+      const ms = modulesState(player);
+      ms.items = ms.items.map((m) => m.id === plan.id ? __spreadProps(__spreadValues({}, m), { rarity, rerolled: true }) : m);
+      player.modules = ms;
+      const label3 = (_e = (_d = MODULE_RARITIES.find((r) => r.id === rarity)) == null ? void 0 : _d.label.toLowerCase()) != null ? _e : rarity;
+      message = rarity === "common" ? "Rappel de plan : le plan reste commun." : `Rappel de plan : le plan devient ${label3} !`;
+      break;
+    }
+    case "priority":
+      st.priorityContracts += 1;
+      message = "Contrat prioritaire pr\xEAt : ton prochain contrat passera en t\xEAte pendant 24 h.";
+      break;
+    case "pheromone":
+      st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR4;
+      message = `Ph\xE9romone de recrutement : XP des officiers +${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h.`;
+      break;
+    case "vendettaToken":
+      st.vendettaTokens += 1;
+      message = "Jeton de vendetta pr\xEAt : rappelle un seigneur en fuite depuis la page Seigneurs.";
+      break;
+    case "nameColor":
+      st.nameTone = st.nameTone || "gold";
+      message = "Couleur de pseudo acquise : change-la depuis le Comptoir.";
+      break;
+    case "blueprint":
+      player.units[KESH_HUNTER_UNIT.id] = { level: 1, count: (_g = (_f = player.units[KESH_HUNTER_UNIT.id]) == null ? void 0 : _f.count) != null ? _g : 0 };
+      message = "Plan du Traqueur Kesh re\xE7u : le vaisseau est disponible au chantier.";
+      break;
+    case "planner":
+      message = "Planificateur d\xE9bloqu\xE9 : retrouve-le dans la barre lat\xE9rale (Empire).";
+      break;
+    case "title":
+      if (!((_h = player.titles) != null ? _h : []).some((t) => t.label === BOUNTY_SHOP_RULES.title)) {
+        player.titles = [...(_i = player.titles) != null ? _i : [], { label: BOUNTY_SHOP_RULES.title, seasonId: "kesh", rank: 1 }];
+      }
+      player.activeTitle = BOUNTY_SHOP_RULES.title;
+      break;
+  }
+  if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
+  st.amber -= item.price;
+  st.history = [...st.history, { atMs: now, item: item.id, amber: item.price }].slice(-SHOP_HISTORY_MAX);
+  player.bounties = st;
+  return { message };
+}
+function weekId(now) {
+  const day = new Date(now).getUTCDay();
+  const midnight = Math.floor(now / DAY6) * DAY6;
+  return new Date(midnight - (day + 6) % 7 * DAY6).toISOString().slice(0, 10);
+}
+function exchangeAmber(player, amountIn, now) {
+  var _a;
+  const amount3 = Math.floor(Number(amountIn));
+  if (!(amount3 > 0)) throw new GameActionError("Quantit\xE9 invalide.");
+  const st = bountyState(player);
+  const week = weekId(now);
+  if (st.exchangeWeek !== week) {
+    st.exchangeWeek = week;
+    st.exchanged = 0;
+  }
+  if (amount3 > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre \xE9chang\xE9s par semaine.`);
+  if (amount3 > st.amber) throw new GameActionError("Pas assez d'Ambre.");
+  const gain = {};
+  for (const r of RESOURCE_LIST) {
+    if (r.rarity !== "rare") continue;
+    gain[r.id] = amount3 * BOUNTY_RULES.exchange.rarePerAmber;
+    player.resources[r.id] = ((_a = player.resources[r.id]) != null ? _a : 0) + gain[r.id];
+  }
+  st.amber -= amount3;
+  st.exchanged += amount3;
+  player.bounties = st;
+  return gain;
+}
+function shieldUntil(player) {
+  var _a;
+  return num2((_a = player.bounties) == null ? void 0 : _a.shieldUntilMs);
+}
+function dropShield(player, now) {
+  const st = bountyState(player);
+  if (st.shieldUntilMs > now) {
+    st.shieldUntilMs = now;
+    player.bounties = st;
+  }
+}
+function consumeJammer(player) {
+  const st = bountyState(player);
+  if (st.jammers <= 0) return false;
+  st.jammers -= 1;
+  player.bounties = st;
+  return true;
+}
+function consumeBeacon(player) {
+  const st = bountyState(player);
+  if (st.beacons <= 0) throw new GameActionError("Aucune balise de repli : ach\xE8te-en au Comptoir de la Ruche.");
+  st.beacons -= 1;
+  player.bounties = st;
+}
+var KESH_EMOJIS = [
+  { code: "kesh_gg", url: "/assets/bounties/emoji-gg.webp" },
+  { code: "kesh_ok", url: "/assets/bounties/emoji-ok.webp" },
+  { code: "kesh_joie", url: "/assets/bounties/emoji-joie.webp" },
+  { code: "kesh_top", url: "/assets/bounties/emoji-top.webp" }
+];
+function assertKeshEmojis(player, text) {
+  if (!/:kesh_[a-z]+:/.test(text)) return;
+  if (KESH_EMOJIS.some((e3) => text.includes(`:${e3.code}:`)) && !owns(bountyState(player), "emojis")) {
+    throw new GameActionError("Les emojis Kesh'Vaar s'obtiennent au Comptoir de la Ruche.");
+  }
+}
+var ELITE_KEY = "bounty_elite";
+var ELITE_RULES = {
+  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs. */
+  hpFactor: 1,
+  minHp: 5e4,
+  /** Un assaut toutes les N heures par joueur. */
+  cooldownHours: 12,
+  flightMinutes: 45,
+  lossPct: 0.1,
+  /** Rang minimal dans l'Essaim. */
+  minRank: 2,
+  /** Part minimale des points de structure pour être récompensé. */
+  minShare: 5e-3,
+  killed: { xp: 300, amber: 150, rep: 8 },
+  failed: { xp: 100, amber: 50, rep: 3 }
+};
+function eliteWindow(now) {
+  const id = weekId(now);
+  const startMs = Date.parse(`${id}T00:00:00Z`);
+  return { id: `elite-${id}`, startMs, endMs: startMs + 7 * DAY6 };
+}
+function normalizeElite(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(num2(r.maxHp) > 0)) return null;
+  return {
+    id: String(r.id),
+    fugitive: num2(r.fugitive),
+    startMs: num2(r.startMs),
+    endMs: num2(r.endMs),
+    maxHp: num2(r.maxHp),
+    hp: num2(r.hp),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    endedAtMs: num2(r.endedAtMs),
+    rewarded: !!r.rewarded,
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {}
+  };
+}
+function spawnElite(now, activePlayers) {
+  const w = eliteWindow(now);
+  let h = 0;
+  for (const c of w.id) h = h * 31 + c.charCodeAt(0) >>> 0;
+  const total2 = activePlayers.reduce((sum3, p) => sum3 + hunterPower(p), 0);
+  const maxHp = Math.round(Math.max(ELITE_RULES.minHp, total2 * ELITE_RULES.hpFactor));
+  return { id: w.id, fugitive: h % ELITE_FUGITIVES.length, startMs: w.startMs, endMs: w.endMs, maxHp, hp: maxHp, status: "active", endedAtMs: 0, rewarded: false, contributions: {} };
+}
+function eliteActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+function eliteReadyAt(state, uid) {
+  var _a, _b;
+  const last = (_b = (_a = state == null ? void 0 : state.contributions[uid]) == null ? void 0 : _a.lastLaunchMs) != null ? _b : 0;
+  return last ? last + ELITE_RULES.cooldownHours * HOUR4 : 0;
+}
+function checkEliteLaunch(state, player, now) {
+  var _a;
+  if (!state || !eliteActive(state, now)) throw new GameActionError("Aucune proie d'\xE9lite \xE0 traquer en ce moment.");
+  if (bountyRank(bountyState(player).reputation) < ELITE_RULES.minRank) throw new GameActionError(`Il faut le rang ${rankName(ELITE_RULES.minRank)} dans l'Essaim pour traquer la proie d'\xE9lite.`);
+  const ready = eliteReadyAt(state, player.uid);
+  if (ready > now) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil((ready - now) / 6e4)} min.`);
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: 0 };
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, lastLaunchMs: now }) }) });
+}
+function resolveEliteAssault(state, player, fleet, formation, now) {
+  var _a;
+  const fx = formationEffects(formation);
+  const power = Math.round(
+    computeFleetPower(player.units, player.techLevels, fleet, ["attack"]) * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + playerModifiers(player).attack) * (1 + playerModifiers(player).bossDamage)
+  );
+  const active = eliteActive(state, now);
+  const damage = active ? Math.min(state.hp, power) : 0;
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
+  const lossPct = Math.min(1, ELITE_RULES.lossPct * fx.attackerLossFactor);
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
+  const hp = state.hp - damage;
+  const killed = active && hp <= 0;
+  return {
+    state: __spreadProps(__spreadValues({}, state), {
+      hp: Math.max(0, hp),
+      status: killed ? "killed" : state.status,
+      endedAtMs: killed ? now : state.endedAtMs,
+      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
+    }),
+    damage,
+    survivors,
+    lost,
+    recovered,
+    hull,
+    killed
+  };
+}
+function closeElite(state, now) {
+  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
+  return state;
+}
+function eliteRanking(state) {
+  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => ({ uid, pseudo: c.pseudo, damage: c.damage, assaults: c.assaults })).sort((a, b) => b.damage - a.damage);
+}
+function eliteRewardees(state) {
+  if (state.status === "active") return [];
+  return eliteRanking(state).filter((c) => c.damage >= state.maxHp * ELITE_RULES.minShare).map((c) => c.uid);
+}
+function grantEliteReward(state, player, now, random = Math.random) {
+  if (!eliteRewardees(state).includes(player.uid)) return { xp: 0, amber: 0 };
+  const r = state.status === "killed" ? ELITE_RULES.killed : ELITE_RULES.failed;
+  const st = bountyState(player);
+  st.amber += r.amber;
+  st.amberEarned += r.amber;
+  st.reputation += r.rep;
+  player.bounties = st;
+  const xp = applyXpDelta(player, r.xp, now, "bounty");
+  if (state.status === "killed") {
+    const item = rollRelic("elite", now, random, "rare");
+    if (addRelic(player, item)) return { xp, amber: r.amber, relic: relicLabel(item) };
+  }
+  return { xp, amber: r.amber };
+}
+function describeElite(state) {
+  return ELITE_FUGITIVES[state.fugitive % ELITE_FUGITIVES.length];
+}
+function eliteNotice(state, reward, now) {
+  const f = describeElite(state);
+  return note3(
+    state.status === "killed" ? `${f.name} est tomb\xE9` : `${f.name} s'est enfui`,
+    reward.amber > 0 ? `Ta part de la traque : +${formatInt(reward.xp)} XP et ${reward.amber} Ambre de Ruche.${reward.relic ? ` Relique : ${reward.relic} !` : ""}` : "Ta part des d\xE9g\xE2ts \xE9tait trop faible pour une r\xE9compense.",
+    now
+  );
+}
+function adminSetAmber(player, amount3) {
+  const st = bountyState(player);
+  const before = st.amber;
+  const after = Math.max(0, Math.min(1e6, Math.floor(Number(amount3) || 0)));
+  player.bounties = __spreadProps(__spreadValues({}, st), { amber: after });
+  return { before, after };
+}
+function rerollablePlans(player) {
+  return modulesState(player).items.filter((m) => !m.built && m.rarity === "common" && !m.rerolled);
+}
+function rollRarity(random) {
+  const total2 = MODULE_RARITIES.reduce((a, r) => a + r.weight, 0);
+  let roll = random() * total2;
+  for (const r of MODULE_RARITIES) if ((roll -= r.weight) < 0) return r.id;
+  return MODULE_RARITIES[MODULE_RARITIES.length - 1].id;
+}
+function consumeCharge(player, key) {
+  const st = bountyState(player);
+  if (st[key] <= 0) return false;
+  st[key] -= 1;
+  player.bounties = st;
+  return true;
+}
+function nameToneOf(player) {
+  const st = bountyState(player);
+  return owns(st, "nameColor") ? st.nameTone : "";
+}
+function ownsShopItem(player, id) {
+  return owns(bountyState(player), id);
+}
+function setNameTone(player, tone) {
+  const st = bountyState(player);
+  if (!owns(st, "nameColor")) throw new GameActionError("La couleur de pseudo s'obtient au Comptoir de la Ruche.");
+  const id = String(tone != null ? tone : "");
+  if (id && !NAME_TONES.some((t) => t.id === id)) throw new GameActionError("Couleur inconnue.");
+  st.nameTone = id;
+  player.bounties = st;
+  return id;
+}
+function donateAmber(player, amountIn, now = 0) {
+  const amount3 = Math.floor(Number(amountIn));
+  if (!(amount3 >= 1 && amount3 <= 1e4)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
+  const st = bountyState(player);
+  if (st.amber < amount3) throw new GameActionError("Pas assez d'Ambre.");
+  st.amber -= amount3;
+  st.history = [...st.history, { atMs: now, item: "donate", amber: amount3 }].slice(-SHOP_HISTORY_MAX);
+  player.bounties = st;
+  bumpStat(player, "amberDonated", amount3);
+  return amount3;
+}
+var SHOP_REMINDER_LEAD_MS = 36e5;
+function shopReminders(player, now) {
+  const st = bountyState(player);
+  const notifications = [];
+  const soon = (until, reminded) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
+  const left = (until) => `${Math.max(1, Math.round((until - now) / 6e4))} min`;
+  if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
+    notifications.push({ kind: "bounty", title: "Ph\xE9romone bient\xF4t dissip\xE9e", message: `Le bonus d'XP des officiers (+${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de ${BOUNTY_SHOP_RULES.pheromoneHours} h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedPheromoneMs = st.pheromoneUntilMs;
+  }
+  if (soon(st.shieldUntilMs, st.remindedShieldMs)) {
+    notifications.push({ kind: "bounty", title: "Voile de chitine bient\xF4t lev\xE9", message: `Ta protection contre les attaques de joueurs prend fin dans ${left(st.shieldUntilMs)}.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    st.remindedShieldMs = st.shieldUntilMs;
+  }
+  if (notifications.length) player.bounties = st;
+  return { changed: notifications.length > 0, notifications };
+}
+
+// src/game/moon.ts
+var MOON_RULES = {
+  enabled: true,
+  /** Débris (ferraille + énergie) pour 1 % de chance. */
+  debrisPerPercent: 1e5,
+  /** Chance maximale d'un combat (fraction). */
+  maxChance: 0.2,
+  /** Bonus de bouclier planétaire (fraction, couche empire). */
+  shieldBonus: 0.03,
+  /** Bonus d'entrepôt à l'abri du pillage (fraction, couche empire). */
+  protectedStorageBonus: 0.05,
+  /** 6.14.0 (option C) : niveau maximal de la lune (1 = pas d'amélioration). */
+  maxLevel: 5,
+  /** Bouclier ajouté par niveau au-delà du premier (fraction). */
+  shieldPerLevel: 0.02,
+  /** Coût du passage au niveau 2 ; ×costGrowth à chaque niveau suivant. */
+  upgradeCost: { scrap: 5e5, energy: 25e4 },
+  costGrowth: 2,
+  /** 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md §5.2, Q36) : pitié lunaire. Chaque combat subi sur la planète mère
+   *  sans lune ajoute cette part à la réserve (`moonPity`), en plus du tirage : lune garantie au 20e combat à 0,05.
+   *  0 = pas de pitié (la réserve reste en base, sans effet). */
+  pityPerDefense: 0.05
+};
+var MOON_NAMES = ["S\xE9l\xE9n\xE9", "Ph\u0153b\xE9", "Nyx", "Callisto", "Io", "Thalassa", "Mimas", "Anank\xE9", "Kallichore", "H\xE9lik\xE8", "M\xE9thone", "Pandore"];
+function moonChance(debris) {
+  if (!MOON_RULES.enabled) return 0;
+  const per = Math.max(1, Number(MOON_RULES.debrisPerPercent) || 1);
+  if (!(debris >= per)) return 0;
+  const pct7 = Math.floor(debris / per) / 100;
+  return Math.max(0, Math.min(Number(MOON_RULES.maxChance) || 0, pct7));
+}
+function playerMoon(player) {
+  const m = player == null ? void 0 : player.moon;
+  return m && typeof m === "object" && m.bornAtMs > 0 ? m : null;
+}
+function moonPity(player) {
+  if (!MOON_RULES.enabled || !(Number(MOON_RULES.pityPerDefense) > 0)) return 0;
+  return Math.max(0, Math.min(1, Number(player == null ? void 0 : player.moonPity) || 0));
+}
+function addMoonPity(defender, opts) {
+  const per = Math.max(0, Number(MOON_RULES.pityPerDefense) || 0);
+  if (!MOON_RULES.enabled || !(per > 0) || opts.onColony || defender.npc || playerMoon(defender)) return moonPity(defender);
+  const next = Math.min(1, Math.round((Math.max(0, Number(defender.moonPity) || 0) + per) * 1e6) / 1e6);
+  defender.moonPity = next;
+  return next;
+}
+function moonBirthChance(defender, debris) {
+  return Math.min(1, moonChance(debris) + moonPity(defender));
+}
+function rollMoon(defender, debris, opts) {
+  var _a;
+  if (opts.onColony || defender.npc || playerMoon(defender)) return null;
+  const chance = moonBirthChance(defender, debris);
+  if (chance <= 0) return null;
+  const rand = (_a = opts.rand) != null ? _a : Math.random;
+  const roll = rand();
+  if (roll >= chance) return null;
+  const name = MOON_NAMES[Math.floor(rand() * MOON_NAMES.length) % MOON_NAMES.length];
+  return __spreadValues({ name, bornAtMs: opts.now, fromDebris: Math.floor(debris) }, roll >= moonChance(debris) ? { byPity: true } : {});
+}
+function moonLevel(m) {
+  const max = Math.max(1, Math.floor(Number(MOON_RULES.maxLevel) || 1));
+  return Math.max(1, Math.min(max, Math.floor(Number(m == null ? void 0 : m.level) || 1)));
+}
+function moonShield(m) {
+  return Math.max(0, MOON_RULES.shieldBonus + Math.max(0, MOON_RULES.shieldPerLevel) * (moonLevel(m) - 1));
+}
+function moonUpgradeCost(level3) {
+  var _a;
+  const k = Math.pow(Math.max(1, Number(MOON_RULES.costGrowth) || 1), Math.max(0, Math.floor(level3) - 1));
+  return Object.fromEntries(Object.entries((_a = MOON_RULES.upgradeCost) != null ? _a : {}).map(([r, n]) => [r, Math.ceil((Number(n) || 0) * k)]));
+}
+function moonEffects(player) {
+  const m = playerMoon(player);
+  if (!m) return [];
+  const source = { kind: "moon", id: "moon", label: `Lune ${m.name}` };
+  const out = [];
+  const shield = moonShield(m);
+  if (shield > 0) out.push({ stat: "shield", value: shield, layer: "empire", source });
+  if (MOON_RULES.protectedStorageBonus > 0) out.push({ stat: "protectedStorage", value: MOON_RULES.protectedStorageBonus, layer: "empire", source });
+  return out;
+}
+
+// src/game/advancedGuide.ts
+var colonies = (p) => {
+  var _a;
+  return (_a = p.colonies) != null ? _a : [];
+};
+var GUIDE_STEPS = [
+  {
+    id: "dailyGoal",
+    chapter: "empire",
+    label: "R\xE9clamer un objectif du jour",
+    learn: "Chaque jour, 4 objectifs tir\xE9s pour toi : ressources rares, XP et jetons. Ils se renouvellent \xE0 minuit, heure de Paris, et ta s\xE9rie grimpe si tu fais les 4.",
+    to: "/game/ordres",
+    reward: { scrap: 3e5, energy: 3e5 },
+    done: (p) => {
+      var _a, _b, _c;
+      return ((_b = (_a = p.contracts) == null ? void 0 : _a.items) != null ? _b : []).some((c) => c.claimed) || !!((_c = p.contracts) == null ? void 0 : _c.lastCompletedDay);
+    }
+  },
+  {
+    id: "empireClass",
+    chapter: "empire",
+    label: "Choisir une classe d'empire",
+    learn: "Industriel, Seigneur de guerre ou Explorateur : chaque classe renforce une fa\xE7on de jouer. Le premier choix est gratuit, en changer co\xFBte de l'Ambre.",
+    to: "/game/classe",
+    reward: {},
+    amber: 10,
+    done: (p) => {
+      var _a;
+      return !!((_a = p.empireClass) == null ? void 0 : _a.id);
+    }
+  },
+  {
+    id: "colonyReady",
+    chapter: "colonies",
+    label: `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de b\xE2timents`,
+    learn: "Une colonie se m\xE9rite : il faut une plan\xE8te m\xE8re d\xE9velopp\xE9e. Chaque niveau de b\xE2timent compte, fin de partie comprise.",
+    to: "/game/batiments",
+    reward: { scrap: 2e6, energy: 2e6 },
+    done: (p) => homeLevels(p) >= COLONY_RULES.levelsRequired[0]
+  },
+  {
+    id: "colonyFound",
+    chapter: "colonies",
+    label: "Fonder une colonie",
+    learn: "Une colonie a son propre stock, ses b\xE2timents et ses d\xE9fenses, et produit 50 % de plus que la plan\xE8te m\xE8re. Ses ressources reviennent par transport.",
+    to: "/game/colonies",
+    reward: { reinforcedSteel: 2e5, cyberModule: 2e5 },
+    done: (p) => colonies(p).length >= 1
+  },
+  {
+    id: "colonySpec",
+    chapter: "colonies",
+    label: "Sp\xE9cialiser une colonie",
+    learn: "Forge, Comptoir minier, Bastion ou D\xE9p\xF4t : chaque sp\xE9cialisation a un bonus et une contrepartie. Le premier choix est libre, puis un changement par semaine.",
+    to: "/game/colonies",
+    reward: { syntheticNanites: 2e5, aiFragment: 2e5 },
+    done: (p) => colonies(p).some((c) => !!c.spec)
+  },
+  {
+    id: "colonyRoute",
+    chapter: "colonies",
+    label: "Ouvrir une route logistique",
+    learn: "Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta plan\xE8te m\xE8re. 10 % se perdent en route.",
+    to: "/game/colonies",
+    reward: { reinforcedSteel: 2e5, cyberModule: 2e5 },
+    done: (p) => colonies(p).some((c) => !!c.route)
+  },
+  {
+    id: "relicFound",
+    chapter: "relics",
+    label: "Obtenir une relique",
+    learn: "Les reliques tombent des exp\xE9ditions longues, des boss et des primes. Plus l'exp\xE9dition est longue, plus la chance est grande.",
+    to: "/game/missions",
+    reward: { scrap: 5e5, energy: 5e5 },
+    done: (p) => relicsState(p).items.length >= 1
+  },
+  {
+    id: "relicEquip",
+    chapter: "relics",
+    label: "\xC9quiper une relique",
+    learn: "Une relique ne compte que si elle est \xE9quip\xE9e. Trois reliques identiques se fusionnent en une raret\xE9 sup\xE9rieure.",
+    to: "/game/etat-major",
+    reward: {},
+    amber: 10,
+    done: (p) => equippedRelics(p).length >= 1
+  },
+  {
+    id: "commander",
+    chapter: "relics",
+    label: "Mettre un commandant en poste",
+    learn: "Chaque commandant donne un bonus (production, combat, construction\u2026) et progresse avec l'usage. Seuls les commandants en poste agissent.",
+    to: "/game/etat-major",
+    reward: { nano: 1e6, data: 1e6 },
+    done: (p) => commandersState(p).active.length >= 1
+  },
+  {
+    id: "ascend",
+    chapter: "ascension",
+    label: "R\xE9aliser une Ascension",
+    learn: "Tous les b\xE2timents au maximum : l'Ascension les remet au niveau 1 contre +10 % de production et \u22125 % de temps de construction, pour toujours, et un point de talent.",
+    to: "/game/profil",
+    reward: {},
+    amber: 25,
+    done: (p) => {
+      var _a;
+      return ((_a = p.ascensions) != null ? _a : 0) >= 1;
+    }
+  },
+  {
+    id: "talent",
+    chapter: "ascension",
+    label: "Apprendre un talent",
+    learn: "Chaque Ascension donne un point de talent \xE0 placer dans l'arbre. On peut redistribuer, mais pas trop souvent.",
+    to: "/game/profil",
+    reward: { reinforcedSteel: 5e5, cyberModule: 5e5, syntheticNanites: 5e5, aiFragment: 5e5 },
+    done: (p) => talentPoints(p).spent >= 1
+  },
+  {
+    // 6.14.69 (É30-1d) : faisable sans lune (une garnison chez un allié, ou un combat subi qui remplit la réserve de pitié).
+    id: "moonWatch",
+    chapter: "moon",
+    label: "Ta lune veille",
+    learn: "Un gros combat chez toi peut faire na\xEEtre une lune. Sa phalange signale les attaques sur tes alli\xE9s proches ; au niveau 3, sa porte de saut ram\xE8ne une flotte d'un coup. Sans lune, envoie une garnison \xE0 un alli\xE9 menac\xE9.",
+    to: "/game/statistiques?onglet=lune",
+    reward: { scrap: 1e6, energy: 1e6 },
+    done: (p) => {
+      var _a;
+      return !!playerMoon(p) || (Number(p.moonPity) || 0) > 0 || ((_a = playerStats(p).garrisons) != null ? _a : 0) >= 1;
+    }
+  }
+];
+var GUIDE_TITLE = "Commandant aguerri";
+function guideClaimed(p) {
+  var _a;
+  return (_a = onboardingState(p).advanced) != null ? _a : [];
+}
+function guideHidden(p) {
+  return onboardingState(p).advancedHidden === true;
+}
+function guideProgress(p) {
+  const claimed = guideClaimed(p);
+  return GUIDE_STEPS.map((step) => ({ step, done: step.done(p), claimed: claimed.includes(step.id) }));
+}
+function guideVisible(p) {
+  if (guideHidden(p) || onboardingEligible(p)) return false;
+  return guideClaimed(p).length < GUIDE_STEPS.length;
+}
+function guideCurrent(p) {
+  var _a;
+  const claimed = guideClaimed(p);
+  return (_a = GUIDE_STEPS.find((s) => !claimed.includes(s.id))) != null ? _a : null;
+}
+function claimGuideStep(player, stepId) {
+  var _a, _b, _c, _d;
+  const step = GUIDE_STEPS.find((s) => s.id === stepId);
+  if (!step) throw new GameActionError("Objectif inconnu.");
+  const claimed = guideClaimed(player);
+  if (claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
+  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
+  for (const [res, n] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (step.amber) {
+    const st = bountyState(player);
+    st.amber += step.amber;
+    player.bounties = st;
+  }
+  const next = [...claimed, step.id];
+  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { advanced: next });
+  if (next.length >= GUIDE_STEPS.length && !((_b = player.titles) != null ? _b : []).some((t) => t.label === GUIDE_TITLE)) {
+    player.titles = [...(_c = player.titles) != null ? _c : [], { label: GUIDE_TITLE, seasonId: "onboarding", rank: 1 }];
+  }
+  return { resources: step.reward, amber: (_d = step.amber) != null ? _d : 0 };
+}
+function setGuideHidden(player, hidden) {
+  const st = onboardingState(player);
+  delete st.advancedHidden;
+  player.onboarding = hidden ? __spreadProps(__spreadValues({}, st), { advancedHidden: true }) : st;
+}
+
+// src/game/pvp.ts
+var PVP_RULES = {
+  /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
+  attackCooldownMs: 2 * 60 * 60 * 1e3,
+  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense.
+   *  6.14.72 (AU27, AE-7) : 1 h → 3 h, plus long que le délai entre deux attaques d'un même joueur (2 h). */
+  shieldAfterDefeatMs: 3 * 60 * 60 * 1e3,
+  /** Protection débutant (levée dès que le joueur attaque lui-même). */
+  newbieProtectionMs: 72 * 60 * 60 * 1e3,
+  /** v3.4 : bouclier après une ascension. */
+  ascensionShieldMs: 72 * 60 * 60 * 1e3,
+  /** 5.23 : contre un joueur N fois moins expérimenté, butin et XP dégressifs… */
+  maxXpRatio: 3,
+  /** …jusqu'à ce plancher (part gardée du butin et de l'XP)… */
+  weakTargetFloor: 0.25,
+  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes).
+   *  6.14.72 (AU27, AE-8, Q100) : 12 → 10, le premier quartile d'XP hors de portée de la médiane. */
+  hardXpRatio: 10,
+  /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
+   *  bloquerait mutuellement en début de partie). */
+  xpGapFloor: 500,
+  /** 5.18 : XP minimale d'une victoire contre un PNJ (seigneur de guerre). */
+  npcWinMinXp: 30,
+  /** Perte d'XP maximale en défense sur 24 h glissantes. */
+  defenseXpLossCapPer24h: 60,
+  defenseXpLossWindowMs: 24 * 60 * 60 * 1e3
+};
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+function computeCombatXp(outcome, attackerPower, defenderPower, defenderIsNpc = false) {
+  const att = Math.max(attackerPower, 0);
+  const def3 = Math.max(defenderPower, 0);
+  if (defenderIsNpc) {
+    const base = computeCombatXp(outcome, attackerPower, defenderPower, false);
+    if (outcome === "attacker_win") return __spreadProps(__spreadValues({}, base), { attackerXp: Math.max(PVP_RULES.npcWinMinXp, base.attackerXp) });
+    if (outcome === "defender_win") return __spreadProps(__spreadValues({}, base), { attackerXp: 0 });
+    return base;
+  }
+  if (outcome === "attacker_win") {
+    const ratio = att > 0 ? def3 / att : 0;
+    return {
+      attackerXp: Math.round(40 * clamp(ratio, 0.1, 2)),
+      defenderXp: -Math.round(clamp(20 * ratio, 5, 20))
+    };
+  }
+  if (outcome === "defender_win") {
+    const ratio = def3 > 0 ? att / def3 : 0;
+    return {
+      attackerXp: -20,
+      defenderXp: Math.round(40 * clamp(ratio, 0.5, 1.5))
+    };
+  }
+  return { attackerXp: 5, defenderXp: 5 };
+}
+function capDefenderXpLoss(defenderXp, alreadyLost) {
+  if (defenderXp >= 0) return defenderXp;
+  const remaining = Math.max(0, PVP_RULES.defenseXpLossCapPer24h - alreadyLost);
+  return -Math.min(-defenderXp, remaining);
+}
+function formatWait(ms) {
+  const minutes = Math.ceil(ms / 6e4);
+  if (minutes < 60) return `${minutes} min`;
+  const hours2 = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
+}
+function checkAttackAllowed(ctx) {
+  var _a;
+  const { now } = ctx;
+  if (ctx.attackerUid === ctx.defenderUid) {
+    return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
+  }
+  const npc = !!ctx.defenderIsWarlord;
+  if (!npc && ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
+    const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "newbie",
+        until,
+        message: `Ce joueur d\xE9bute : il est prot\xE9g\xE9 encore ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (!npc && ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
+    return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
+  }
+  if (!npc && ctx.lastDefenderDefeatMs !== null) {
+    const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "shield",
+        until,
+        message: `Ce joueur vient d'\xEAtre battu : bouclier actif encore ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (!npc && ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
+    const until = ctx.defenderShieldUntilMs;
+    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
+  }
+  if (!npc && ctx.defenderAscendedAtMs) {
+    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
+    if (now < until) {
+      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
+    }
+  }
+  if (ctx.lastAttackOnTargetMs !== null) {
+    const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
+    if (now < until) {
+      return {
+        allowed: false,
+        reason: "cooldown",
+        until,
+        message: `Tu as d\xE9j\xE0 attaqu\xE9 ce joueur r\xE9cemment : r\xE9essaie dans ${formatWait(until - now)}.`
+      };
+    }
+  }
+  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.hardXpRatio < ctx.attackerXp) {
+    return {
+      allowed: false,
+      reason: "too_weak",
+      message: `Ce joueur est bien trop faible pour toi (moins d'un ${PVP_RULES.hardXpRatio}e de ton XP).`
+    };
+  }
+  return { allowed: true };
+}
+function weakTargetFactor(attackerXp, defenderXp, defenderIsNpc = false) {
+  if (defenderIsNpc || attackerXp < PVP_RULES.xpGapFloor || !(attackerXp > 0)) return 1;
+  const k = Math.max(0, defenderXp) * PVP_RULES.maxXpRatio / attackerXp;
+  return k >= 1 ? 1 : Math.max(PVP_RULES.weakTargetFloor, Math.round(k * 100) / 100);
+}
+
+// src/game/navUnlock.ts
+var NAV_SIGNAL_LABELS = {
+  danger: "une premi\xE8re menace (attaque, ultimatum)",
+  protectionOver: "la fin de ta protection de d\xE9butant",
+  report: "un premier rapport de combat ou d'espionnage",
+  firstUnit: "ta premi\xE8re unit\xE9",
+  colonyNear: "les niveaux de b\xE2timents presque suffisants pour une colonie",
+  hasColony: "ta premi\xE8re colonie",
+  inAlliance: "une alliance",
+  allianceAtWar: "une alliance engag\xE9e dans la guerre de territoire",
+  hasRelicOrOfficer: "ta premi\xE8re relique ou ton premier officier",
+  warlordContact: "un contact avec un seigneur de guerre",
+  bossJoined: "ta premi\xE8re participation \xE0 un boss",
+  rareCurrency: "ta premi\xE8re Ambre",
+  marketOffer: "ton premier \xE9change au march\xE9",
+  codexReady: "ta premi\xE8re fiche du Codex",
+  plannerAmber: "le Planificateur d\xE9bloqu\xE9 au Comptoir",
+  hasMoon: "une lune ou une r\xE9serve de piti\xE9",
+  ascended: "ta premi\xE8re Ascension"
+};
+var NAV_UNLOCK_RULES = {
+  /** false : tout le monde voit tout (ancien menu). */
+  enabled: true,
+  /** Comptes créés avant cette date (ms) et au moins au rang `veteranRank` : tout ouvert (Q103). Défaut : 2026-10-08, 0 h (Paris). */
+  newAccountsFrom: 17914104e5,
+  /** Rang à partir duquel un compte créé avant `newAccountsFrom` voit tout (Q103 : Fer II). */
+  veteranRank: "fer2",
+  /** Colonies : la page s'ouvre ce nombre de niveaux cumulés avant le seuil de la 1re colonie. */
+  colonyLead: 20,
+  /** Objectifs du jour tirés parmi les systèmes ouverts (lot DP-L4, serveur). */
+  filterContracts: true,
+  /** Page fermée : « hidden » (cachée, Q153) ou « locked » (grisée avec cadenas). */
+  style: "hidden",
+  /** Une entrée par page du menu à ouverture progressive ; une page absente reste toujours visible. */
+  pages: {
+    // Palier 1 : premiers pas.
+    "/game/galaxie": { rank: "fer3", signals: ["danger"], step: "spy" },
+    "/game/alliance": { rank: "fer3", signals: ["inAlliance"], step: "alliance" },
+    "/game/missions": { rank: "fer2", signals: ["firstUnit"], step: "mission" },
+    "/game/combats": { rank: "fer2", signals: ["danger", "protectionOver", "report"] },
+    "/game/menaces": { rank: "fer2", signals: ["danger", "protectionOver"] },
+    // Palier 2 : commandant (fin de la Prise en main).
+    "/game/joueurs": { rank: "fer2" },
+    "/game/succes": { rank: "fer2" },
+    "/game/passe": { rank: "fer2" },
+    "/game/primes": { rank: "fer2", signals: ["danger"] },
+    "/game/classe": { rank: "fer2", step: "empireClass" },
+    "/game/journal": { rank: "fer2" },
+    // Palier 3 : capitaine.
+    "/game/commerce": { rank: "bronze3", signals: ["marketOffer"] },
+    "/game/codex": { rank: "bronze3", signals: ["codexReady"] },
+    "/game/chroniques": { rank: "bronze3" },
+    "/game/gazette": { rank: "bronze3" },
+    "/game/statistiques": { rank: "bronze3", signals: ["hasMoon"], step: "moonWatch" },
+    "/game/portefeuille": { rank: "bronze3", signals: ["rareCurrency"] },
+    "/game/simulateur": { rank: "bronze3", signals: ["report"] },
+    "/game/planificateur": { rank: "bronze3", signals: ["plannerAmber"] },
+    // Palier 4 : stratège.
+    "/game/etat-major": { rank: "argent3", signals: ["hasRelicOrOfficer"], step: "relicEquip" },
+    "/game/seigneurs": { rank: "argent3", signals: ["warlordContact"] },
+    "/game/uber": { rank: "argent3", signals: ["bossJoined"] },
+    "/game/boss": { rank: "argent3", signals: ["bossJoined"] },
+    "/game/hall-of-fame": { rank: "argent3", signals: ["bossJoined"] },
+    "/game/casino": { rank: "argent3" },
+    // Palier 5 : colonies.
+    "/game/colonies": { rank: "or3", signals: ["colonyNear", "hasColony"], step: "colonyFound" },
+    "/game/guerre-territoire": { rank: "or3", signals: ["allianceAtWar"], requires: ["inAlliance"] }
+  }
+};
+var NAV_PAGE_LABELS = {
+  "/game/galaxie": "Galaxie",
+  "/game/alliance": "Alliance",
+  "/game/missions": "Missions",
+  "/game/combats": "Combats",
+  "/game/menaces": "Menaces",
+  "/game/joueurs": "Classement",
+  "/game/succes": "Succ\xE8s",
+  "/game/passe": "Passe",
+  "/game/primes": "Primes",
+  "/game/classe": "Classe d'empire",
+  "/game/journal": "Journal",
+  "/game/commerce": "Commerce",
+  "/game/codex": "Codex",
+  "/game/chroniques": "Chroniques",
+  "/game/gazette": "Gazette",
+  "/game/statistiques": "Statistiques",
+  "/game/portefeuille": "Portefeuille",
+  "/game/simulateur": "Simulateur",
+  "/game/planificateur": "Planificateur",
+  "/game/etat-major": "\xC9tat-major",
+  "/game/seigneurs": "Seigneurs",
+  "/game/uber": "Boss mondial",
+  "/game/boss": "Boss de saison",
+  "/game/hall-of-fame": "Hall of fame des boss",
+  "/game/casino": "Casino",
+  "/game/colonies": "Colonies",
+  "/game/guerre-territoire": "Guerre de territoire"
+};
+function navPageLabel(page) {
+  var _a;
+  return (_a = NAV_PAGE_LABELS[navPath(page)]) != null ? _a : navPath(page);
+}
+var NAV_SHOW_ALL_ON = "nav:all";
+var NAV_SHOW_ALL_OFF = "nav:progressif";
+function navPath(to) {
+  return to.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+}
+function navMarkId(page) {
+  return `nav:${navPath(page).replace(/^\/game\/?/, "").replace(/[^A-Za-z0-9._-]+/g, "-") || "accueil"}`;
+}
+function tipMarkId(page) {
+  return `tip:${navMarkId(page).slice(4)}`;
+}
+function rankXp(id) {
+  if (!id) return Infinity;
+  const r = RANKS.find((x) => x.id === id);
+  return r ? r.xp : 0;
+}
+function rankName2(id) {
+  var _a, _b;
+  return (_b = (_a = RANKS.find((x) => x.id === id)) == null ? void 0 : _a.name) != null ? _b : String(id != null ? id : "");
+}
+function navShowAll(p) {
+  var _a;
+  const seen = (_a = p == null ? void 0 : p.announcementsSeen) != null ? _a : [];
+  return seen.lastIndexOf(NAV_SHOW_ALL_ON) > seen.lastIndexOf(NAV_SHOW_ALL_OFF);
+}
+function navVeteran(p) {
+  const created = Number(p.createdAtMs) || 0;
+  const from = Number(NAV_UNLOCK_RULES.newAccountsFrom) || 0;
+  return created < from && (Number(p.xp) || 0) >= rankXp(NAV_UNLOCK_RULES.veteranRank);
+}
+function navStatus(p, ctx) {
+  if (!NAV_UNLOCK_RULES.enabled) return "disabled";
+  if (ctx.admin) return "admin";
+  if (navVeteran(p)) return "veteran";
+  if (navShowAll(p)) return "showAll";
+  return "progressive";
+}
+function navSignals(p, ctx) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+  const out = /* @__PURE__ */ new Set();
+  const stats = (_a = p.stats) != null ? _a : {};
+  const combats = (Number(p.victories) || 0) + (Number(p.defeats) || 0);
+  const tutorialRaid = onboardingState(p).tutorialRaid === "sent";
+  if (ctx.hostileIncoming || ctx.reportReceived || tutorialRaid || combats > 0 || (Number(p.lastDefeatAtMs) || 0) > 0 || (Number(stats.ultimatums) || 0) > 0 || ((_c = (_b = stats.threatenedBy) == null ? void 0 : _b.length) != null ? _c : 0) > 0) out.add("danger");
+  const created = Number(p.createdAtMs) || 0;
+  if (created > 0 && ctx.now - created >= PVP_RULES.newbieProtectionMs) out.add("protectionOver");
+  if (ctx.reportReceived || combats > 0 || (Number(stats.spies) || 0) > 0) out.add("report");
+  if (Object.values((_d = p.units) != null ? _d : {}).some((u) => (Number(u == null ? void 0 : u.level) || 0) > 0 || (Number(u == null ? void 0 : u.count) || 0) > 0)) out.add("firstUnit");
+  const firstColony = Number((_e = COLONY_RULES.levelsRequired) == null ? void 0 : _e[0]) || 0;
+  if (homeLevels(p) >= firstColony - (Number(NAV_UNLOCK_RULES.colonyLead) || 0)) out.add("colonyNear");
+  if (((_g = (_f = p.colonies) == null ? void 0 : _f.length) != null ? _g : 0) > 0 || !!p.colonizing) out.add("hasColony");
+  if (p.allianceId) out.add("inAlliance");
+  if (ctx.allianceAtWar || !!p.allianceId && !!p.territory) out.add("allianceAtWar");
+  const commanders = commandersState(p);
+  if (relicsState(p).items.length > 0 || Object.keys(commanders.roster).length > 0) out.add("hasRelicOrOfficer");
+  if (ctx.warlordContact || Object.keys((_h = stats.vendettaWins) != null ? _h : {}).length > 0) out.add("warlordContact");
+  if (ctx.bossJoined || (Number(stats.leviathanKills) || 0) > 0 || ((_j = (_i = stats.worldBossKilled) == null ? void 0 : _i.length) != null ? _j : 0) > 0 || ((_l = (_k = stats.allianceBossKilled) == null ? void 0 : _k.length) != null ? _l : 0) > 0) out.add("bossJoined");
+  const amber = bountyState(p);
+  if (amber.amber > 0 || amber.amberEarned > 0) out.add("rareCurrency");
+  if (ctx.marketOffer || (Number(stats.marketTrades) || 0) > 0 || (Number(stats.contractsDelivered) || 0) > 0) out.add("marketOffer");
+  if (ctx.codexReady || ((_n = (_m = stats.codexClaimed) == null ? void 0 : _m.length) != null ? _n : 0) > 0) out.add("codexReady");
+  if (plannerUnlocked(p) || amber.amber >= ((_p = (_o = findShopItem("planner")) == null ? void 0 : _o.price) != null ? _p : Infinity)) out.add("plannerAmber");
+  if (moonPanelVisible(p)) out.add("hasMoon");
+  if ((Number(p.ascensions) || 0) > 0) out.add("ascended");
+  return out;
+}
+function navStepReached(p, step) {
+  var _a, _b;
+  const onboardingIndex = ONBOARDING_STEPS.findIndex((s) => s.id === step);
+  if (onboardingIndex >= 0) {
+    if (!onboardingEligible(p)) return true;
+    const claimed = onboardingState(p).claimed;
+    if (claimed.includes(step)) return true;
+    return ((_a = ONBOARDING_STEPS.find((s) => !claimed.includes(s.id))) == null ? void 0 : _a.id) === step;
+  }
+  if (GUIDE_STEPS.some((s) => s.id === step)) {
+    if (guideClaimed(p).includes(step)) return true;
+    return !onboardingEligible(p) && ((_b = guideCurrent(p)) == null ? void 0 : _b.id) === step;
+  }
+  return false;
+}
+function navAnnounced(p) {
+  var _a;
+  const list = (_a = p == null ? void 0 : p.stats) == null ? void 0 : _a.navAnnounced;
+  return Array.isArray(list) ? list : [];
+}
+function navPageMarked(p, page) {
+  var _a;
+  const seen = (_a = p.announcementsSeen) != null ? _a : [];
+  return seen.includes(navMarkId(page)) || seen.includes(tipMarkId(page));
+}
+function navOpenReason(p, page, ctx, signals = navSignals(p, ctx)) {
+  var _a, _b;
+  const rule = NAV_UNLOCK_RULES.pages[navPath(page)];
+  if (!rule) return "always";
+  if (navPageMarked(p, page)) return "mark";
+  if (!((_a = rule.requires) != null ? _a : []).some((s) => !signals.has(s))) {
+    if (((_b = rule.signals) != null ? _b : []).some((s) => signals.has(s))) return "signal";
+    if (rule.step && navStepReached(p, rule.step)) return "step";
+    if (rule.rank && (Number(p.xp) || 0) >= rankXp(rule.rank)) return "rank";
+  }
+  if (navAnnounced(p).includes(navPath(page))) return "mark";
+  return null;
+}
+function navPageOpen(p, page, ctx) {
+  if (navStatus(p, ctx) !== "progressive") return true;
+  return navOpenReason(p, page, ctx) !== null;
+}
+function navClosedPages(p, ctx) {
+  if (navStatus(p, ctx) !== "progressive") return [];
+  const signals = navSignals(p, ctx);
+  return Object.keys(NAV_UNLOCK_RULES.pages).filter((page) => navOpenReason(p, page, ctx, signals) === null);
+}
+function navOpenPages(p, ctx) {
+  const closed = new Set(navClosedPages(p, ctx));
+  return new Set(Object.keys(NAV_UNLOCK_RULES.pages).filter((page) => !closed.has(page)));
+}
+function moonPanelVisible(p) {
+  if (!p) return false;
+  if (playerMoon(p) || (Number(p.moonPity) || 0) > 0) return true;
+  const moonStep = GUIDE_STEPS.find((s) => s.chapter === "moon");
+  return !!moonStep && navStepReached(p, moonStep.id);
+}
+function navPageList(pages) {
+  const labels = pages.map(navPageLabel);
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} et ${labels[labels.length - 1]}`;
+}
+function navOpeningNotice(p, ctx) {
+  var _a, _b;
+  const status = navStatus(p, ctx);
+  if (status !== "progressive" && status !== "showAll") return null;
+  const signals = navSignals(p, ctx);
+  const known = (_a = p.stats) == null ? void 0 : _a.navAnnounced;
+  const announced = new Set(Array.isArray(known) ? known : []);
+  const silent = [];
+  const fresh = [];
+  for (const page of Object.keys(NAV_UNLOCK_RULES.pages)) {
+    if (announced.has(page)) continue;
+    const reason = navOpenReason(p, page, ctx, signals);
+    if (reason === null || reason === "always") continue;
+    if (reason === "mark" || status === "showAll" || !Array.isArray(known)) silent.push(page);
+    else fresh.push({ page, reason });
+  }
+  if (silent.length === 0 && fresh.length === 0 && Array.isArray(known)) return null;
+  p.stats = __spreadProps(__spreadValues({}, (_b = p.stats) != null ? _b : {}), { navAnnounced: [...announced, ...silent, ...fresh.map((f) => f.page)] });
+  if (fresh.length === 0) return null;
+  const pages = fresh.map((f) => f.page);
+  return {
+    kind: "system",
+    title: `Nouveau : ${navPageList(pages)}`,
+    message: navOpeningMessage(p, fresh, signals),
+    createdAtMs: ctx.now,
+    read: false,
+    link: pages[0]
+  };
+}
+function navOpeningMessage(p, fresh, signals) {
+  var _a, _b, _c, _d;
+  const pages = fresh.map((f) => f.page);
+  const many = pages.length > 1;
+  const where = many ? "Elles sont maintenant dans ton menu." : "Elle est maintenant dans ton menu.";
+  const bySignal = (s) => fresh.some((f) => {
+    var _a2, _b2;
+    return f.reason === "signal" && ((_b2 = (_a2 = NAV_UNLOCK_RULES.pages[f.page]) == null ? void 0 : _a2.signals) != null ? _b2 : []).includes(s) && signals.has(s);
+  });
+  if (bySignal("danger")) return `Une menace vise ton empire : ${many ? "ces pages t'aident" : "cette page t'aide"} \xE0 te d\xE9fendre. ${where}`;
+  if (bySignal("protectionOver")) return `Ta protection de d\xE9butant est finie : les raids peuvent viser ta base. ${where}`;
+  if (fresh.some((f) => f.reason === "rank")) {
+    const rank2 = rankName2((_a = NAV_UNLOCK_RULES.pages[fresh.find((f) => f.reason === "rank").page]) == null ? void 0 : _a.rank);
+    return `Tu as atteint ${rank2} : ${many ? "de nouvelles pages s'ouvrent" : "une nouvelle page s'ouvre"}. ${where}`;
+  }
+  if (fresh.some((f) => f.reason === "step")) return `Ta prochaine \xE9tape t'y attend. ${where}`;
+  const first = fresh.find((f) => f.reason === "signal");
+  const signal = ((_d = (_c = NAV_UNLOCK_RULES.pages[(_b = first == null ? void 0 : first.page) != null ? _b : ""]) == null ? void 0 : _c.signals) != null ? _d : []).find((s) => signals.has(s));
+  return signal ? `D\xE9bloqu\xE9 avec ${NAV_SIGNAL_LABELS[signal]}. ${where}` : where;
+}
+
+// src/game/contracts.ts
+var CONTRACT_RULES = {
+  perDay: 4,
+  streakBonusPerDay: 0.1,
+  streakBonusMax: 0.5,
+  chestEvery: 7,
+  xpPerContract: 15,
+  rarePerContract: 90,
+  /** 6.2 : jetons du casino par objectif, et en plus quand tous sont faits. */
+  tokensPerContract: 1,
+  allDoneTokens: 1,
+  chestRare: 1500,
+  chestXp: 150
+};
+var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
+var CONTRACT_PAGES = {
+  win_attack: ["/game/galaxie"],
+  win_defense: ["/game/combats"],
+  missions: ["/game/missions"],
+  gift: ["/game/commerce"],
+  spy: ["/game/galaxie"],
+  market: ["/game/commerce"]
+};
+function openContractTypes(player, now) {
+  if (!NAV_UNLOCK_RULES.filterContracts) return [...ALL_TYPES];
+  return ALL_TYPES.filter((t) => {
+    var _a;
+    return ((_a = CONTRACT_PAGES[t]) != null ? _a : []).every((page) => navPageOpen(player, page, { now }));
+  });
+}
+var RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
+var DAY_MS = 24 * 3600 * 1e3;
+function contractDay(now) {
+  return parisDay(now);
+}
+function previousDay(day) {
+  return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
+}
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return () => {
+    h = Math.imul(h ^ h >>> 15, 2246822507);
+    h = Math.imul(h ^ h >>> 13, 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function targetFor(type, player) {
+  var _a, _b, _c, _d;
+  switch (type) {
+    case "build_units":
+      return 20;
+    case "missions":
+      return 2;
+    case "spy":
+      return 2;
+    case "spend": {
+      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+      const perHour = (((_a = rates.scrap) != null ? _a : 0) + ((_b = rates.energy) != null ? _b : 0) + ((_c = rates.nano) != null ? _c : 0) + ((_d = rates.data) != null ? _d : 0)) * 3600;
+      return Math.max(5e3, Math.round(perHour / 1e3) * 1e3);
+    }
+    default:
+      return 1;
+  }
+}
+function makeContract(type, player, day, index2) {
+  return { id: `${day}-${index2}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+}
+function ensureContracts(player, now) {
+  var _a, _b;
+  const day = contractDay(now);
+  const current2 = player.contracts;
+  if (current2 && current2.day === day) {
+    if (current2.items.length < CONTRACT_RULES.perDay) {
+      const used = new Set(current2.items.map((c) => c.type));
+      const rand2 = seededRandom(`${player.uid}:${day}:extra`);
+      const pool2 = openContractTypes(player, now).filter((t) => !used.has(t));
+      while (current2.items.length < CONTRACT_RULES.perDay && pool2.length > 0) {
+        const type = pool2.splice(Math.floor(rand2() * pool2.length), 1)[0];
+        current2.items.push(makeContract(type, player, day, current2.items.length));
+      }
+    }
+    return current2;
+  }
+  const rand = seededRandom(`${player.uid}:${day}`);
+  const pool = openContractTypes(player, now);
+  const items = [];
+  for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
+    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    items.push(makeContract(type, player, day, i));
+  }
+  const keepsStreak = (current2 == null ? void 0 : current2.lastCompletedDay) === previousDay(day);
+  player.contracts = {
+    day,
+    items,
+    streak: keepsStreak ? (_a = current2 == null ? void 0 : current2.streak) != null ? _a : 0 : 0,
+    lastCompletedDay: (_b = current2 == null ? void 0 : current2.lastCompletedDay) != null ? _b : null,
+    rerolled: false
+  };
+  return player.contracts;
+}
+function recordContract(player, type, amount3, now) {
+  if (!(amount3 > 0)) return;
+  const state = ensureContracts(player, now);
+  for (const c of state.items) {
+    if (c.type === type && !c.claimed) c.progress = Math.min(c.target, c.progress + amount3);
+  }
+}
+function developmentScale(player) {
+  return rareRewardScale(player);
+}
+function streakBonus(streak) {
+  return Math.min(CONTRACT_RULES.streakBonusMax, streak * CONTRACT_RULES.streakBonusPerDay);
+}
+function contractReward(player, contract) {
+  var _a, _b, _c;
+  const state = player.contracts;
+  const multiplier = (1 + streakBonus((_a = state == null ? void 0 : state.streak) != null ? _a : 0)) * developmentScale(player);
+  const index2 = Number((_b = contract.id.split("-")[3]) != null ? _b : 0) || 0;
+  const rare = RARES[(index2 + contract.type.length) % RARES.length];
+  return {
+    [rare]: Math.round(CONTRACT_RULES.rarePerContract * multiplier),
+    xp: Math.round(CONTRACT_RULES.xpPerContract * (1 + streakBonus((_c = state == null ? void 0 : state.streak) != null ? _c : 0)))
+  };
+}
+function chestReward(player) {
+  const scale = developmentScale(player);
+  const out = { xp: CONTRACT_RULES.chestXp };
+  for (const r of RARES) out[r] = Math.round(CONTRACT_RULES.chestRare * scale);
+  return out;
+}
+function grant(player, reward, now) {
+  var _a;
+  for (const [res, amount3] of Object.entries(reward)) {
+    if (res === "xp") applyXpDelta(player, amount3, now, "contract");
+    else player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + amount3;
+  }
+}
+function claimContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  const contract = state.items.find((c) => c.id === contractId);
+  if (!contract) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (contract.claimed) throw new GameActionError("R\xE9compense d\xE9j\xE0 r\xE9cup\xE9r\xE9e.");
+  if (contract.progress < contract.target) throw new GameActionError("Contrat pas encore rempli.");
+  const reward = contractReward(player, contract);
+  grant(player, reward, now);
+  contract.claimed = true;
+  let tokens = Math.max(0, Math.floor(CONTRACT_RULES.tokensPerContract));
+  let chest = null;
+  const dayCompleted = state.items.every((c) => c.claimed);
+  if (dayCompleted) {
+    state.streak = state.lastCompletedDay === previousDay(state.day) ? state.streak + 1 : 1;
+    state.lastCompletedDay = state.day;
+    if (state.streak % CONTRACT_RULES.chestEvery === 0) {
+      chest = chestReward(player);
+      grant(player, chest, now);
+    }
+    tokens += Math.max(0, Math.floor(CONTRACT_RULES.allDoneTokens));
+  }
+  if (tokens > 0) grantTokens(player, tokens);
+  return { reward, dayCompleted, chest, tokens };
+}
+function rerollContract(player, contractId, now) {
+  const state = ensureContracts(player, now);
+  if (state.rerolled) throw new GameActionError("Tu as d\xE9j\xE0 relanc\xE9 un contrat aujourd'hui.");
+  const index2 = state.items.findIndex((c) => c.id === contractId);
+  if (index2 < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
+  if (state.items[index2].claimed) throw new GameActionError("Ce contrat est d\xE9j\xE0 termin\xE9.");
+  const used = new Set(state.items.map((c) => c.type));
+  const pool = openContractTypes(player, now).filter((t) => !used.has(t));
+  if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
+  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const type = pool[Math.floor(rand() * pool.length)];
+  const next = makeContract(type, player, state.day, index2);
+  next.id = `${state.day}-${index2}-${type}-r`;
+  state.items[index2] = next;
+  state.rerolled = true;
+  return next;
 }
 
 // src/game/dailyMissions.ts
@@ -9816,89 +10513,6 @@ function unlockedPlanetLook(p, look) {
   var _a;
   const out = __spreadValues({}, look);
   for (const { slot } of PLANET_SLOTS) if (!((_a = OPTIONS[slot].find((o) => o.id === look[slot])) == null ? void 0 : _a.unlocked(p))) out[slot] = DEFAULT_PLANET_LOOK[slot];
-  return out;
-}
-
-// src/game/moon.ts
-var MOON_RULES = {
-  enabled: true,
-  /** Débris (ferraille + énergie) pour 1 % de chance. */
-  debrisPerPercent: 1e5,
-  /** Chance maximale d'un combat (fraction). */
-  maxChance: 0.2,
-  /** Bonus de bouclier planétaire (fraction, couche empire). */
-  shieldBonus: 0.03,
-  /** Bonus d'entrepôt à l'abri du pillage (fraction, couche empire). */
-  protectedStorageBonus: 0.05,
-  /** 6.14.0 (option C) : niveau maximal de la lune (1 = pas d'amélioration). */
-  maxLevel: 5,
-  /** Bouclier ajouté par niveau au-delà du premier (fraction). */
-  shieldPerLevel: 0.02,
-  /** Coût du passage au niveau 2 ; ×costGrowth à chaque niveau suivant. */
-  upgradeCost: { scrap: 5e5, energy: 25e4 },
-  costGrowth: 2,
-  /** 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md §5.2, Q36) : pitié lunaire. Chaque combat subi sur la planète mère
-   *  sans lune ajoute cette part à la réserve (`moonPity`), en plus du tirage : lune garantie au 20e combat à 0,05.
-   *  0 = pas de pitié (la réserve reste en base, sans effet). */
-  pityPerDefense: 0.05
-};
-var MOON_NAMES = ["S\xE9l\xE9n\xE9", "Ph\u0153b\xE9", "Nyx", "Callisto", "Io", "Thalassa", "Mimas", "Anank\xE9", "Kallichore", "H\xE9lik\xE8", "M\xE9thone", "Pandore"];
-function moonChance(debris) {
-  if (!MOON_RULES.enabled) return 0;
-  const per = Math.max(1, Number(MOON_RULES.debrisPerPercent) || 1);
-  if (!(debris >= per)) return 0;
-  const pct7 = Math.floor(debris / per) / 100;
-  return Math.max(0, Math.min(Number(MOON_RULES.maxChance) || 0, pct7));
-}
-function playerMoon(player) {
-  const m = player == null ? void 0 : player.moon;
-  return m && typeof m === "object" && m.bornAtMs > 0 ? m : null;
-}
-function moonPity(player) {
-  if (!MOON_RULES.enabled || !(Number(MOON_RULES.pityPerDefense) > 0)) return 0;
-  return Math.max(0, Math.min(1, Number(player == null ? void 0 : player.moonPity) || 0));
-}
-function addMoonPity(defender, opts) {
-  const per = Math.max(0, Number(MOON_RULES.pityPerDefense) || 0);
-  if (!MOON_RULES.enabled || !(per > 0) || opts.onColony || defender.npc || playerMoon(defender)) return moonPity(defender);
-  const next = Math.min(1, Math.round((Math.max(0, Number(defender.moonPity) || 0) + per) * 1e6) / 1e6);
-  defender.moonPity = next;
-  return next;
-}
-function moonBirthChance(defender, debris) {
-  return Math.min(1, moonChance(debris) + moonPity(defender));
-}
-function rollMoon(defender, debris, opts) {
-  var _a;
-  if (opts.onColony || defender.npc || playerMoon(defender)) return null;
-  const chance = moonBirthChance(defender, debris);
-  if (chance <= 0) return null;
-  const rand = (_a = opts.rand) != null ? _a : Math.random;
-  const roll = rand();
-  if (roll >= chance) return null;
-  const name = MOON_NAMES[Math.floor(rand() * MOON_NAMES.length) % MOON_NAMES.length];
-  return __spreadValues({ name, bornAtMs: opts.now, fromDebris: Math.floor(debris) }, roll >= moonChance(debris) ? { byPity: true } : {});
-}
-function moonLevel(m) {
-  const max = Math.max(1, Math.floor(Number(MOON_RULES.maxLevel) || 1));
-  return Math.max(1, Math.min(max, Math.floor(Number(m == null ? void 0 : m.level) || 1)));
-}
-function moonShield(m) {
-  return Math.max(0, MOON_RULES.shieldBonus + Math.max(0, MOON_RULES.shieldPerLevel) * (moonLevel(m) - 1));
-}
-function moonUpgradeCost(level3) {
-  var _a;
-  const k = Math.pow(Math.max(1, Number(MOON_RULES.costGrowth) || 1), Math.max(0, Math.floor(level3) - 1));
-  return Object.fromEntries(Object.entries((_a = MOON_RULES.upgradeCost) != null ? _a : {}).map(([r, n]) => [r, Math.ceil((Number(n) || 0) * k)]));
-}
-function moonEffects(player) {
-  const m = playerMoon(player);
-  if (!m) return [];
-  const source = { kind: "moon", id: "moon", label: `Lune ${m.name}` };
-  const out = [];
-  const shield = moonShield(m);
-  if (shield > 0) out.push({ stat: "shield", value: shield, layer: "empire", source });
-  if (MOON_RULES.protectedStorageBonus > 0) out.push({ stat: "protectedStorage", value: MOON_RULES.protectedStorageBonus, layer: "empire", source });
   return out;
 }
 
@@ -12115,7 +12729,7 @@ function fleetCargoCapacity(units, fleet, techLevels2) {
   }
   return Math.floor(total2 * (1 + techBonus(techLevels2, "cargo_capacity")));
 }
-function clamp(v, min, max) {
+function clamp2(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 function unitStat(units, techLevels2, unitId, stat3) {
@@ -12453,8 +13067,8 @@ function resolveCombat(params) {
     outcome,
     attackerPower,
     defenderPower,
-    attackerLossPercent: a0 > 0 ? clamp((1 - aLeft) * lossFactor, 0, 1) : 0,
-    defenderLossPercent: d0 > 0 ? clamp(1 - dLeft, 0, 1) : 0,
+    attackerLossPercent: a0 > 0 ? clamp2((1 - aLeft) * lossFactor, 0, 1) : 0,
+    defenderLossPercent: d0 > 0 ? clamp2(1 - dLeft, 0, 1) : 0,
     attackerLosses,
     attackerRecovered,
     defenderLosses,
@@ -13580,141 +14194,6 @@ function warSeasonBonuses(wars, seasonId) {
   const out = {};
   for (const w of wars) if (w.winnerId && w.seasonId === seasonId) out[w.winnerId] = ((_a = out[w.winnerId]) != null ? _a : 0) + WAR_RULES.seasonBonusPct;
   return out;
-}
-
-// src/game/pvp.ts
-var PVP_RULES = {
-  /** Délai minimal entre deux attaques d'un même joueur sur la même cible. */
-  attackCooldownMs: 2 * 60 * 60 * 1e3,
-  /** Bouclier : plus personne ne peut attaquer un joueur battu en défense.
-   *  6.14.72 (AU27, AE-7) : 1 h → 3 h, plus long que le délai entre deux attaques d'un même joueur (2 h). */
-  shieldAfterDefeatMs: 3 * 60 * 60 * 1e3,
-  /** Protection débutant (levée dès que le joueur attaque lui-même). */
-  newbieProtectionMs: 72 * 60 * 60 * 1e3,
-  /** v3.4 : bouclier après une ascension. */
-  ascensionShieldMs: 72 * 60 * 60 * 1e3,
-  /** 5.23 : contre un joueur N fois moins expérimenté, butin et XP dégressifs… */
-  maxXpRatio: 3,
-  /** …jusqu'à ce plancher (part gardée du butin et de l'XP)… */
-  weakTargetFloor: 0.25,
-  /** …et attaque refusée au-delà de cet écart (protège les tout petits comptes).
-   *  6.14.72 (AU27, AE-8, Q100) : 12 → 10, le premier quartile d'XP hors de portée de la médiane. */
-  hardXpRatio: 10,
-  /** …une fois qu'on a soi-même au moins cette XP (sinon tout le monde se
-   *  bloquerait mutuellement en début de partie). */
-  xpGapFloor: 500,
-  /** 5.18 : XP minimale d'une victoire contre un PNJ (seigneur de guerre). */
-  npcWinMinXp: 30,
-  /** Perte d'XP maximale en défense sur 24 h glissantes. */
-  defenseXpLossCapPer24h: 60,
-  defenseXpLossWindowMs: 24 * 60 * 60 * 1e3
-};
-function clamp2(v, min, max) {
-  return Math.max(min, Math.min(max, v));
-}
-function computeCombatXp(outcome, attackerPower, defenderPower, defenderIsNpc = false) {
-  const att = Math.max(attackerPower, 0);
-  const def3 = Math.max(defenderPower, 0);
-  if (defenderIsNpc) {
-    const base = computeCombatXp(outcome, attackerPower, defenderPower, false);
-    if (outcome === "attacker_win") return __spreadProps(__spreadValues({}, base), { attackerXp: Math.max(PVP_RULES.npcWinMinXp, base.attackerXp) });
-    if (outcome === "defender_win") return __spreadProps(__spreadValues({}, base), { attackerXp: 0 });
-    return base;
-  }
-  if (outcome === "attacker_win") {
-    const ratio = att > 0 ? def3 / att : 0;
-    return {
-      attackerXp: Math.round(40 * clamp2(ratio, 0.1, 2)),
-      defenderXp: -Math.round(clamp2(20 * ratio, 5, 20))
-    };
-  }
-  if (outcome === "defender_win") {
-    const ratio = def3 > 0 ? att / def3 : 0;
-    return {
-      attackerXp: -20,
-      defenderXp: Math.round(40 * clamp2(ratio, 0.5, 1.5))
-    };
-  }
-  return { attackerXp: 5, defenderXp: 5 };
-}
-function capDefenderXpLoss(defenderXp, alreadyLost) {
-  if (defenderXp >= 0) return defenderXp;
-  const remaining = Math.max(0, PVP_RULES.defenseXpLossCapPer24h - alreadyLost);
-  return -Math.min(-defenderXp, remaining);
-}
-function formatWait(ms) {
-  const minutes = Math.ceil(ms / 6e4);
-  if (minutes < 60) return `${minutes} min`;
-  const hours2 = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours2} h ${rest} min` : `${hours2} h`;
-}
-function checkAttackAllowed(ctx) {
-  var _a;
-  const { now } = ctx;
-  if (ctx.attackerUid === ctx.defenderUid) {
-    return { allowed: false, reason: "self", message: "Tu ne peux pas t'attaquer toi-m\xEAme !" };
-  }
-  const npc = !!ctx.defenderIsWarlord;
-  if (!npc && ctx.defenderCreatedAtMs && !ctx.defenderHasAttacked) {
-    const until = ctx.defenderCreatedAtMs + PVP_RULES.newbieProtectionMs;
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "newbie",
-        until,
-        message: `Ce joueur d\xE9bute : il est prot\xE9g\xE9 encore ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (!npc && ctx.defenderVacationUntilMs && now < ctx.defenderVacationUntilMs) {
-    return { allowed: false, reason: "shield", until: ctx.defenderVacationUntilMs, message: `Ce joueur est en vacances encore ${formatWait(ctx.defenderVacationUntilMs - now)}.` };
-  }
-  if (!npc && ctx.lastDefenderDefeatMs !== null) {
-    const until = ctx.lastDefenderDefeatMs + PVP_RULES.shieldAfterDefeatMs;
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "shield",
-        until,
-        message: `Ce joueur vient d'\xEAtre battu : bouclier actif encore ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (!npc && ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {
-    const until = ctx.defenderShieldUntilMs;
-    return { allowed: false, reason: "shield", until, message: `Ce joueur est sous un Voile de chitine encore ${formatWait(until - now)}.` };
-  }
-  if (!npc && ctx.defenderAscendedAtMs) {
-    const until = ctx.defenderAscendedAtMs + PVP_RULES.ascensionShieldMs;
-    if (now < until) {
-      return { allowed: false, reason: "shield", until, message: `Ce joueur vient de s'\xE9lever : bouclier d'ascension encore ${formatWait(until - now)}.` };
-    }
-  }
-  if (ctx.lastAttackOnTargetMs !== null) {
-    const until = ctx.lastAttackOnTargetMs + ((_a = ctx.attackCooldownMs) != null ? _a : PVP_RULES.attackCooldownMs);
-    if (now < until) {
-      return {
-        allowed: false,
-        reason: "cooldown",
-        until,
-        message: `Tu as d\xE9j\xE0 attaqu\xE9 ce joueur r\xE9cemment : r\xE9essaie dans ${formatWait(until - now)}.`
-      };
-    }
-  }
-  if (!npc && ctx.attackerXp >= PVP_RULES.xpGapFloor && ctx.defenderXp * PVP_RULES.hardXpRatio < ctx.attackerXp) {
-    return {
-      allowed: false,
-      reason: "too_weak",
-      message: `Ce joueur est bien trop faible pour toi (moins d'un ${PVP_RULES.hardXpRatio}e de ton XP).`
-    };
-  }
-  return { allowed: true };
-}
-function weakTargetFactor(attackerXp, defenderXp, defenderIsNpc = false) {
-  if (defenderIsNpc || attackerXp < PVP_RULES.xpGapFloor || !(attackerXp > 0)) return 1;
-  const k = Math.max(0, defenderXp) * PVP_RULES.maxXpRatio / attackerXp;
-  return k >= 1 ? 1 : Math.max(PVP_RULES.weakTargetFloor, Math.round(k * 100) / 100);
 }
 
 // src/game/market.ts
@@ -16037,179 +16516,6 @@ function claimStreak(player, now, random = Math.random) {
   if (tokens > 0) grantTokens(player, tokens);
   player.streak = { count: count2, lastDay: status.today, best: Math.max(st.best, count2), total: st.total + 1 };
   return { count: count2, resources: reward.resources, amber: reward.amber, tokens: reward.tokens, chest };
-}
-
-// src/game/advancedGuide.ts
-var colonies = (p) => {
-  var _a;
-  return (_a = p.colonies) != null ? _a : [];
-};
-var GUIDE_STEPS = [
-  {
-    id: "dailyGoal",
-    chapter: "empire",
-    label: "R\xE9clamer un objectif du jour",
-    learn: "Chaque jour, 4 objectifs tir\xE9s pour toi : ressources rares, XP et jetons. Ils se renouvellent \xE0 minuit, heure de Paris, et ta s\xE9rie grimpe si tu fais les 4.",
-    to: "/game/ordres",
-    reward: { scrap: 3e5, energy: 3e5 },
-    done: (p) => {
-      var _a, _b, _c;
-      return ((_b = (_a = p.contracts) == null ? void 0 : _a.items) != null ? _b : []).some((c) => c.claimed) || !!((_c = p.contracts) == null ? void 0 : _c.lastCompletedDay);
-    }
-  },
-  {
-    id: "empireClass",
-    chapter: "empire",
-    label: "Choisir une classe d'empire",
-    learn: "Industriel, Seigneur de guerre ou Explorateur : chaque classe renforce une fa\xE7on de jouer. Le premier choix est gratuit, en changer co\xFBte de l'Ambre.",
-    to: "/game/classe",
-    reward: {},
-    amber: 10,
-    done: (p) => {
-      var _a;
-      return !!((_a = p.empireClass) == null ? void 0 : _a.id);
-    }
-  },
-  {
-    id: "colonyReady",
-    chapter: "colonies",
-    label: `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de b\xE2timents`,
-    learn: "Une colonie se m\xE9rite : il faut une plan\xE8te m\xE8re d\xE9velopp\xE9e. Chaque niveau de b\xE2timent compte, fin de partie comprise.",
-    to: "/game/batiments",
-    reward: { scrap: 2e6, energy: 2e6 },
-    done: (p) => homeLevels(p) >= COLONY_RULES.levelsRequired[0]
-  },
-  {
-    id: "colonyFound",
-    chapter: "colonies",
-    label: "Fonder une colonie",
-    learn: "Une colonie a son propre stock, ses b\xE2timents et ses d\xE9fenses, et produit 50 % de plus que la plan\xE8te m\xE8re. Ses ressources reviennent par transport.",
-    to: "/game/colonies",
-    reward: { reinforcedSteel: 2e5, cyberModule: 2e5 },
-    done: (p) => colonies(p).length >= 1
-  },
-  {
-    id: "colonySpec",
-    chapter: "colonies",
-    label: "Sp\xE9cialiser une colonie",
-    learn: "Forge, Comptoir minier, Bastion ou D\xE9p\xF4t : chaque sp\xE9cialisation a un bonus et une contrepartie. Le premier choix est libre, puis un changement par semaine.",
-    to: "/game/colonies",
-    reward: { syntheticNanites: 2e5, aiFragment: 2e5 },
-    done: (p) => colonies(p).some((c) => !!c.spec)
-  },
-  {
-    id: "colonyRoute",
-    chapter: "colonies",
-    label: "Ouvrir une route logistique",
-    learn: "Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta plan\xE8te m\xE8re. 10 % se perdent en route.",
-    to: "/game/colonies",
-    reward: { reinforcedSteel: 2e5, cyberModule: 2e5 },
-    done: (p) => colonies(p).some((c) => !!c.route)
-  },
-  {
-    id: "relicFound",
-    chapter: "relics",
-    label: "Obtenir une relique",
-    learn: "Les reliques tombent des exp\xE9ditions longues, des boss et des primes. Plus l'exp\xE9dition est longue, plus la chance est grande.",
-    to: "/game/missions",
-    reward: { scrap: 5e5, energy: 5e5 },
-    done: (p) => relicsState(p).items.length >= 1
-  },
-  {
-    id: "relicEquip",
-    chapter: "relics",
-    label: "\xC9quiper une relique",
-    learn: "Une relique ne compte que si elle est \xE9quip\xE9e. Trois reliques identiques se fusionnent en une raret\xE9 sup\xE9rieure.",
-    to: "/game/etat-major",
-    reward: {},
-    amber: 10,
-    done: (p) => equippedRelics(p).length >= 1
-  },
-  {
-    id: "commander",
-    chapter: "relics",
-    label: "Mettre un commandant en poste",
-    learn: "Chaque commandant donne un bonus (production, combat, construction\u2026) et progresse avec l'usage. Seuls les commandants en poste agissent.",
-    to: "/game/etat-major",
-    reward: { nano: 1e6, data: 1e6 },
-    done: (p) => commandersState(p).active.length >= 1
-  },
-  {
-    id: "ascend",
-    chapter: "ascension",
-    label: "R\xE9aliser une Ascension",
-    learn: "Tous les b\xE2timents au maximum : l'Ascension les remet au niveau 1 contre +10 % de production et \u22125 % de temps de construction, pour toujours, et un point de talent.",
-    to: "/game/profil",
-    reward: {},
-    amber: 25,
-    done: (p) => {
-      var _a;
-      return ((_a = p.ascensions) != null ? _a : 0) >= 1;
-    }
-  },
-  {
-    id: "talent",
-    chapter: "ascension",
-    label: "Apprendre un talent",
-    learn: "Chaque Ascension donne un point de talent \xE0 placer dans l'arbre. On peut redistribuer, mais pas trop souvent.",
-    to: "/game/profil",
-    reward: { reinforcedSteel: 5e5, cyberModule: 5e5, syntheticNanites: 5e5, aiFragment: 5e5 },
-    done: (p) => talentPoints(p).spent >= 1
-  },
-  {
-    // 6.14.69 (É30-1d) : faisable sans lune (une garnison chez un allié, ou un combat subi qui remplit la réserve de pitié).
-    id: "moonWatch",
-    chapter: "moon",
-    label: "Ta lune veille",
-    learn: "Un gros combat chez toi peut faire na\xEEtre une lune. Sa phalange signale les attaques sur tes alli\xE9s proches ; au niveau 3, sa porte de saut ram\xE8ne une flotte d'un coup. Sans lune, envoie une garnison \xE0 un alli\xE9 menac\xE9.",
-    to: "/game/statistiques?onglet=lune",
-    reward: { scrap: 1e6, energy: 1e6 },
-    done: (p) => {
-      var _a;
-      return !!playerMoon(p) || (Number(p.moonPity) || 0) > 0 || ((_a = playerStats(p).garrisons) != null ? _a : 0) >= 1;
-    }
-  }
-];
-var GUIDE_TITLE = "Commandant aguerri";
-function guideClaimed(p) {
-  var _a;
-  return (_a = onboardingState(p).advanced) != null ? _a : [];
-}
-function guideHidden(p) {
-  return onboardingState(p).advancedHidden === true;
-}
-function guideProgress(p) {
-  const claimed = guideClaimed(p);
-  return GUIDE_STEPS.map((step) => ({ step, done: step.done(p), claimed: claimed.includes(step.id) }));
-}
-function guideVisible(p) {
-  if (guideHidden(p) || onboardingEligible(p)) return false;
-  return guideClaimed(p).length < GUIDE_STEPS.length;
-}
-function claimGuideStep(player, stepId) {
-  var _a, _b, _c, _d;
-  const step = GUIDE_STEPS.find((s) => s.id === stepId);
-  if (!step) throw new GameActionError("Objectif inconnu.");
-  const claimed = guideClaimed(player);
-  if (claimed.includes(step.id)) throw new GameActionError("R\xE9compense d\xE9j\xE0 re\xE7ue.");
-  if (!step.done(player)) throw new GameActionError("Objectif pas encore atteint.");
-  for (const [res, n] of Object.entries(step.reward)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
-  if (step.amber) {
-    const st = bountyState(player);
-    st.amber += step.amber;
-    player.bounties = st;
-  }
-  const next = [...claimed, step.id];
-  player.onboarding = __spreadProps(__spreadValues({}, onboardingState(player)), { advanced: next });
-  if (next.length >= GUIDE_STEPS.length && !((_b = player.titles) != null ? _b : []).some((t) => t.label === GUIDE_TITLE)) {
-    player.titles = [...(_c = player.titles) != null ? _c : [], { label: GUIDE_TITLE, seasonId: "onboarding", rank: 1 }];
-  }
-  return { resources: step.reward, amber: (_d = step.amber) != null ? _d : 0 };
-}
-function setGuideHidden(player, hidden) {
-  const st = onboardingState(player);
-  delete st.advancedHidden;
-  player.onboarding = hidden ? __spreadProps(__spreadValues({}, st), { advancedHidden: true }) : st;
 }
 
 // src/game/phalanx.ts
@@ -21340,57 +21646,6 @@ function publishGazette(state, issue, players, warlords = []) {
     powerSnapshot: Object.fromEntries(warlords.map((w) => [w.name, Math.round(w.power)]))
   };
 }
-
-// src/game/navUnlock.ts
-var NAV_UNLOCK_RULES = {
-  /** false : tout le monde voit tout (ancien menu). */
-  enabled: true,
-  /** Comptes créés avant cette date (ms) et au moins au rang `veteranRank` : tout ouvert (Q103). Défaut : 2026-10-08, 0 h (Paris). */
-  newAccountsFrom: 17914104e5,
-  /** Rang à partir duquel un compte créé avant `newAccountsFrom` voit tout (Q103 : Fer II). */
-  veteranRank: "fer2",
-  /** Colonies : la page s'ouvre ce nombre de niveaux cumulés avant le seuil de la 1re colonie. */
-  colonyLead: 20,
-  /** Objectifs du jour tirés parmi les systèmes ouverts (lot DP-L4, serveur). */
-  filterContracts: true,
-  /** Page fermée : « hidden » (cachée, Q153) ou « locked » (grisée avec cadenas). */
-  style: "hidden",
-  /** Une entrée par page du menu à ouverture progressive ; une page absente reste toujours visible. */
-  pages: {
-    // Palier 1 : premiers pas.
-    "/game/galaxie": { rank: "fer3", signals: ["danger"], step: "spy" },
-    "/game/alliance": { rank: "fer3", signals: ["inAlliance"], step: "alliance" },
-    "/game/missions": { rank: "fer2", signals: ["firstUnit"], step: "mission" },
-    "/game/combats": { rank: "fer2", signals: ["danger", "protectionOver", "report"] },
-    "/game/menaces": { rank: "fer2", signals: ["danger", "protectionOver"] },
-    // Palier 2 : commandant (fin de la Prise en main).
-    "/game/joueurs": { rank: "fer2" },
-    "/game/succes": { rank: "fer2" },
-    "/game/passe": { rank: "fer2" },
-    "/game/primes": { rank: "fer2", signals: ["danger"] },
-    "/game/classe": { rank: "fer2", step: "empireClass" },
-    "/game/journal": { rank: "fer2" },
-    // Palier 3 : capitaine.
-    "/game/commerce": { rank: "bronze3", signals: ["marketOffer"] },
-    "/game/codex": { rank: "bronze3", signals: ["codexReady"] },
-    "/game/chroniques": { rank: "bronze3" },
-    "/game/gazette": { rank: "bronze3" },
-    "/game/statistiques": { rank: "bronze3", signals: ["hasMoon"], step: "moonWatch" },
-    "/game/portefeuille": { rank: "bronze3", signals: ["rareCurrency"] },
-    "/game/simulateur": { rank: "bronze3", signals: ["report"] },
-    "/game/planificateur": { rank: "bronze3", signals: ["plannerAmber"] },
-    // Palier 4 : stratège.
-    "/game/etat-major": { rank: "argent3", signals: ["hasRelicOrOfficer"], step: "relicEquip" },
-    "/game/seigneurs": { rank: "argent3", signals: ["warlordContact"] },
-    "/game/uber": { rank: "argent3", signals: ["bossJoined"] },
-    "/game/boss": { rank: "argent3", signals: ["bossJoined"] },
-    "/game/hall-of-fame": { rank: "argent3", signals: ["bossJoined"] },
-    "/game/casino": { rank: "argent3" },
-    // Palier 5 : colonies.
-    "/game/colonies": { rank: "or3", signals: ["colonyNear", "hasColony"], step: "colonyFound" },
-    "/game/guerre-territoire": { rank: "or3", signals: ["allianceAtWar"], requires: ["inAlliance"] }
-  }
-};
 
 // src/game/globalChat.ts
 var GLOBAL_CHAT_RULES = {
@@ -27660,7 +27915,7 @@ function validateBroadcast(b) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "6.14.76" : "dev";
+var LOGIC_VERSION = true ? "6.14.83" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"moon","type":"json","required":false,"maxSize":2000},{"name":"moonPity","type":"number","required":false,"onlyInt":false},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000},{"name":"defenderMoonLevel","type":"json","required":false,"maxSize":100}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"base","type":"json","required":false,"maxSize":2000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"moonName","type":"text","required":false,"max":40,"presentable":false},{"name":"moonLevel","type":"number","required":false,"onlyInt":true},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"locationId","type":"text","required":false,"max":40,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]},{"id":"pbc_ce_illu_uploads","name":"illustration_uploads","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":20971520,"mimeTypes":["image/png","image/jpeg","image/webp"],"thumbs":["240x240"],"protected":false},{"name":"fileName","type":"text","required":false,"max":300,"presentable":false},{"name":"uploadedAtMs","type":"number","required":false,"presentable":false},{"name":"uploaderUid","type":"text","required":false,"max":30,"presentable":false},{"name":"slotId","type":"text","required":false,"max":80,"presentable":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false}]},{"id":"pbc_ce_decision_ans","name":"decision_answers","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"qid","type":"text","required":true,"max":10,"presentable":false},{"name":"choice","type":"text","required":false,"max":20,"presentable":false},{"name":"note","type":"text","required":false,"max":2000,"presentable":false},{"name":"answeredAtMs","type":"number","required":false,"presentable":false},{"name":"answeredBy","type":"text","required":false,"max":30,"presentable":false}]},{"id":"pbc_ce_live_docs","name":"live_docs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"path","type":"text","required":true,"max":200,"presentable":false},{"name":"content","type":"text","required":false,"max":1000000,"presentable":false},{"name":"updatedAtMs","type":"number","required":false,"presentable":false},{"name":"source","type":"text","required":false,"max":80,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_live_docs_path ON live_docs (path)"]}]' : "[]";
 
 // src/game/serverMetrics.ts

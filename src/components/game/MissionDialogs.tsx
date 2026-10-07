@@ -5,7 +5,7 @@ import { EmptyAction } from "@/components/ui/panel";
 import { EmptyState } from "@/components/ui/hud";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Clock, Recycle, ShieldPlus, Wind } from "lucide-react";
+import { Clock, Recycle, ShieldPlus, Wind, Rocket } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -14,7 +14,7 @@ import { distanceBetween, fleetSpeed, PATROL_RULES, patrolEnergyCost, travelSeco
 import { playerModifiers } from "@/game/modifiers";
 import { DEBRIS_RULES, debrisLocation, recyclerCapacity, type DebrisField } from "@/game/debris";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
-import { formatDuration, formatNumber } from "@/lib/utils";
+import { formatDuration, formatNumber, formatDateTime } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { GameActionError, sendFleet } from "@/services/playerService";
@@ -22,7 +22,7 @@ import { triggerWarpEffect } from "@/store/warpEffectStore";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 
 function clockAt(seconds: number) {
-  return new Date(Date.now() + seconds * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(Date.now() + seconds * 1000, "time");
 }
 
 /** Mode fuite : la flotte part en patrouille et ne peut pas être prise
@@ -77,7 +77,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
           ) : (
             <div className="mt-3 space-y-3">
               <div className="space-y-2">
-                {Object.keys(all).length === 0 && <EmptyState size="sm" icon="🚀" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
+                {Object.keys(all).length === 0 && <EmptyState size="sm" icon={<Rocket />} title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
                 {Object.entries(all).map(([unitId, owned]) => (
                   <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                     <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
@@ -105,7 +105,7 @@ export function PatrolDialog({ open, onClose }: { open: boolean; onClose: () => 
                   onChange={(e) => setMinutes(parseInt(e.target.value))}
                 />
               </label>
-              <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+              <div className="hud-cut-sm space-y-1 bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p>
                   <Clock className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-cyan-glow" />
                   Retour vers <strong className="text-slate-200">{clockAt(minutes * 60)}</strong>. Rappel possible
@@ -188,7 +188,7 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
                   <NumberInput size="sm" min={0} max={ownedOf(id)} disabled={ownedOf(id) === 0} value={fleet[id] ?? 0} onChange={(v) => setPicked((p) => ({ ...p, [id]: v }))} aria-label={`Nombre : ${findUnit(id)?.name ?? id}`} className="w-40" />
                 </div>
               ))}
-              <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+              <div className="hud-cut-sm space-y-1 bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p>
                   <GameIcon name="recycle" /> Capacité : <strong className="tabular-mono text-slate-200">{formatNumber(capacity)}</strong>
                   {capacity >= total ? " : tout le champ." : ` sur ${formatNumber(total)}.`}
@@ -268,7 +268,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
             submitting ? <RadarScan label="Décollage…" /> : <SkeletonList rows={4} className="py-2" />
           ) : (
             <div className="mt-3 space-y-3">
-              {Object.keys(available).length === 0 && <EmptyState size="sm" icon="🚀" title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
+              {Object.keys(available).length === 0 && <EmptyState size="sm" icon={<Rocket />} title="Aucun vaisseau à quai" action={<EmptyAction to="/game/unites">Construire des vaisseaux</EmptyAction>} />}
               {Object.entries(available).map(([unitId, owned]) => (
                 <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                   <span className="flex-1 text-slate-200">{findUnit(unitId)?.name ?? unitId}</span>
@@ -295,7 +295,7 @@ export function GarrisonDialog({ target, onClose }: { target: { uid: string; pse
                   onChange={(e) => setHours(parseInt(e.target.value))}
                 />
               </label>
-              <div className="space-y-1 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+              <div className="hud-cut-sm space-y-1 bg-black/20 px-3 py-2 text-xs text-slate-400">
                 {flight !== null && (
                   <p>
                     <Clock className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-cyan-glow" />

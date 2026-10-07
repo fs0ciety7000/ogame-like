@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { chestReward, claimContract, contractDay, ensureContracts, recordContract, rerollContract, streakBonus } from "@/game/contracts";
+import { chestReward, claimContract, CONTRACT_PAGES, contractDay, ensureContracts, openContractTypes, recordContract, rerollContract, streakBonus } from "@/game/contracts";
+import { applyGameContent } from "@/game/content";
+import { NAV_SHOW_ALL_ON, NAV_UNLOCK_RULES, navMarkId, navPageOpen } from "@/game/navUnlock";
+import { RANKS } from "@/game/ranks";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { performPlayerAction } from "@/game/actions";
 import { ECONOMY_RULES, missionRewards, rareRewardScale } from "@/game/economy";
@@ -116,5 +119,56 @@ describe("rare rewards indexed on production", () => {
     } finally {
       ECONOMY_RULES.missionRareProductionRef = ref;
     }
+  });
+});
+
+describe("6.14.79 (DP-L4) objectifs du jour parmi les systèmes ouverts (I31)", () => {
+  const FROM = NAV_UNLOCK_RULES.newAccountsFrom;
+  const recruit = (patch: Partial<PlayerState> = {}) => player({ createdAtMs: FROM + 1000, resourcesUpdatedAtMs: FROM + 2000, ...patch });
+  const always = ["upgrade_building", "research", "build_units", "spend"];
+
+  it("compte neuf : les 4 objectifs d'un nouveau jour sont tirés parmi les pages ouvertes, sur 30 joueurs", () => {
+    for (let i = 0; i < 30; i++) {
+      const p = recruit({ uid: `n${i}` });
+      const state = ensureContracts(p, FROM + 2000);
+      expect(state.items).toHaveLength(4);
+      for (const c of state.items) {
+        expect(always, c.type).toContain(c.type);
+        for (const page of CONTRACT_PAGES[c.type] ?? []) expect(navPageOpen(p, page, { now: FROM + 2000 })).toBe(true);
+      }
+    }
+  });
+
+  it("chaque type lié à une page vise une page du menu progressif", () => {
+    for (const pages of Object.values(CONTRACT_PAGES)) for (const page of pages ?? []) expect(NAV_UNLOCK_RULES.pages[page], page).toBeTruthy();
+  });
+
+  it("le jour en cours n'est jamais refait ; le jour suivant suit les pages ouvertes", () => {
+    const p = recruit();
+    const today = ensureContracts(p, FROM + 2000).items.map((c) => c.id);
+    // Le joueur atteint Or III dans la journée : rien ne change aujourd'hui.
+    p.xp = RANKS.find((r) => r.id === "or3")!.xp;
+    expect(ensureContracts(p, FROM + 3000).items.map((c) => c.id)).toEqual(today);
+    expect(openContractTypes(p, FROM + 3000)).toHaveLength(10);
+  });
+
+  it("page visitée, « Tout afficher » et réglage `filterContracts` à faux ouvrent les objectifs", () => {
+    expect(openContractTypes(recruit({ announcementsSeen: [navMarkId("/game/missions")] }), FROM + 2000)).toContain("missions");
+    expect(openContractTypes(recruit({ announcementsSeen: [NAV_SHOW_ALL_ON] }), FROM + 2000)).toHaveLength(10);
+    try {
+      applyGameContent({ rules: { navUnlock: { filterContracts: false } } } as never);
+      expect(openContractTypes(recruit(), FROM + 2000)).toHaveLength(10);
+    } finally {
+      applyGameContent({});
+    }
+  });
+
+  it("relance : seulement vers un objectif ouvert ; sans autre objectif ouvert, la relance reste disponible", () => {
+    const p = recruit();
+    const [c] = ensureContracts(p, FROM + 2000).items;
+    expect(() => rerollContract(p, c.id, FROM + 2000)).toThrow(/Aucun autre objectif/);
+    expect(p.contracts!.rerolled).toBe(false);
+    p.announcementsSeen = [navMarkId("/game/missions")];
+    expect(rerollContract(p, c.id, FROM + 2000).type).toBe("missions");
   });
 });

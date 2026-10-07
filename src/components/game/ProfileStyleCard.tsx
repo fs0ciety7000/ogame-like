@@ -32,7 +32,7 @@ function Option({ option, selected, onPick, children }: { option: CosmeticOption
       )}
     >
       {children}
-      <span className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 text-[10px] text-slate-200">
+      <span className="absolute inset-x-0 bottom-0 flex items-center gap-1 bg-black/60 px-1.5 py-0.5 text-[11px] text-slate-200">
         {!option.unlocked && <Lock className="h-3 w-3" />}
         {selected && <Check className="h-3 w-3 text-cyan-glow" />}
         <span className="truncate">{option.unlocked ? option.label : option.hint}</span>
@@ -124,7 +124,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
             <div className="flex min-w-0 flex-1 flex-col gap-2.5">
               {PLANET_SLOTS.map(({ slot, label }) => (
                 <div key={slot} className="flex flex-col gap-1">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{label}</span>
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{label}</span>
                   <div className="flex flex-wrap gap-1.5">
                     {planetLookOptions(player, slot).map((o) => {
                       const on = planet[slot] === o.id;
@@ -145,7 +145,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
                           {!o.unlocked && <Lock className="h-3 w-3" />}
                           {on && <Check className="h-3 w-3" />}
                           {o.label}
-                          {!o.unlocked && <span className="text-[10px] text-slate-500">· {o.hint}</span>}
+                          {!o.unlocked && <span className="text-[11px] text-slate-500">· {o.hint}</span>}
                         </button>
                       );
                     })}
@@ -184,7 +184,7 @@ export function ProfileStyleCard({ player }: { player: PlayerState }) {
                     )}
                   >
                     <span>{a.emoji}</span> {a.name}
-                    <span className="font-mono text-[9px] uppercase opacity-60">{TIER_LABELS[a.tier]}</span>
+                    <span className="font-mono text-[11px] uppercase opacity-60">{TIER_LABELS[a.tier]}</span>
                   </button>
                 );
               })}

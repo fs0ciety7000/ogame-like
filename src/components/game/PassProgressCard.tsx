@@ -58,7 +58,7 @@ export function PassProgressCard({ now }: { now: number }) {
       )}
       {challenge && (
         <div className="flex flex-col gap-1.5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
             Défi du palier {challengeTier}
             {isCumulativePass(st.seasonId) ? " · totaux du mois" : ""}
           </p>

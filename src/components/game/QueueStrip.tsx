@@ -5,6 +5,7 @@ import { useFleetStore } from "@/store/fleetStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn, formatDuration } from "@/lib/utils";
 import type { QueuesState } from "@/types/game";
+import { useHiddenRoutes } from "@/components/layout/NavBar";
 
 /* =====================================================
    v4.5 : file de chantier toujours visible en haut de l'accueil
@@ -26,7 +27,9 @@ export function QueueStrip({ queues, now }: { queues: QueuesState | null; now: n
   const player = usePlayerStore((s) => s.player);
   const events = upcomingEvents(queues, now, fleets, undefined, player);
   // v4.9.3 : case « Colonies » dès qu'une colonie existe ou est en route.
-  const slots = (player?.colonies?.length ?? 0) > 0 || player?.colonizing ? [...SLOTS, COLONY_SLOT] : SLOTS;
+  // 6.14.81 (DP-L6, I30) : pas de case pour une page que le menu progressif n'a pas encore ouverte (Missions à J0).
+  const hidden = useHiddenRoutes();
+  const slots = ((player?.colonies?.length ?? 0) > 0 || player?.colonizing ? [...SLOTS, COLONY_SLOT] : SLOTS).filter((s) => !hidden.has(s.to));
   return (
     <div className="-mx-1 grid grid-cols-2 gap-1.5 border-b border-white/5 bg-space-950/80 px-1 py-1.5 backdrop-blur-md sm:flex">
       {slots.map((slot) => {

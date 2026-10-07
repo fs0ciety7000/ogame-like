@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { NumberInput, resourceStep } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { EmptyState, HudChip, HudTag } from "@/components/ui/hud";
+import { EmptyState, HudChip, HudMeter, HudTag, StatTile } from "@/components/ui/hud";
+import { CostPills } from "@/components/ui/afford";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { findBuilding } from "@/game/buildings";
@@ -66,7 +67,7 @@ import {
 import { useFleetStore } from "@/store/fleetStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
-import { cn, formatClock, formatCompact, formatDuration, formatPerSecond } from "@/lib/utils";
+import { cn, formatClock, formatCompact, formatDuration, formatPerSecond, formatDateTime } from "@/lib/utils";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
@@ -136,10 +137,10 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
             ? "Les ressources quittent ta planète mère au départ et arrivent dans le stock de la colonie."
             : "Les vaisseaux chargent à l'arrivée (ce que tu demandes, ou tout ce que la soute peut prendre) et rapportent la cargaison sur ta planète mère."}
         </DialogDescription>
-        <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">Vaisseaux (planète mère)</p>
+        <p className="hud-eyebrow mt-2 text-[11px] text-slate-500">Vaisseaux (planète mère)</p>
         <div className="flex flex-col gap-1.5">
           {ids.length === 0 && (
-            <EmptyState size="sm" icon="📦" title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
+            <EmptyState size="sm" icon={<Package />} title="Aucun cargo à quai" action={<EmptyAction to="/game/unites">Construire des cargos</EmptyAction>}>
               Il faut un vaisseau avec une soute pour transporter.
             </EmptyState>
           )}
@@ -150,7 +151,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">{findUnit(id)?.name}</span>
                 <NumberInput size="sm" value={ships[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setShips((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
+                <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
               </div>
             );
           })}
@@ -158,7 +159,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
         <p className="mt-2 font-mono text-xs text-slate-400">
           Soute : {formatCompact(loaded)} / {formatCompact(capacity)}
         </p>
-        <p className="hud-eyebrow mt-2 text-[10px] text-slate-500">{direction === "deliver" ? "Chargement" : "À rapatrier (vide = au maximum)"}</p>
+        <p className="hud-eyebrow mt-2 text-[11px] text-slate-500">{direction === "deliver" ? "Chargement" : "À rapatrier (vide = au maximum)"}</p>
         <div className="grid grid-cols-2 gap-2">
           {RESOURCE_LIST.map((r) => (
             <label key={r.id} className="flex flex-col gap-1 text-[11px] text-slate-400">
@@ -208,32 +209,6 @@ function PlanetOrb({ tone = "var(--color-mint-glow)", size = 64, dim = false, sp
   );
 }
 
-/** Coût avec icônes : chaque montant manquant passe en orange (survol : stock disponible). */
-function CostChips({ cost, stock, className }: { cost: Amounts; stock: Amounts; className?: string }) {
-  return (
-    <span className={cn("inline-flex flex-wrap items-center gap-1", className)}>
-      {Object.entries(cost)
-        .filter(([, n]) => (n ?? 0) > 0)
-        .map(([r, n]) => {
-          const have = Math.floor(stock[r as ResourceId] ?? 0);
-          const short = have < (n ?? 0);
-          return (
-            <span
-              key={r}
-              title={short ? `Il manque ${formatCompact((n ?? 0) - have)} (stock : ${formatCompact(have)})` : `Stock : ${formatCompact(have)}`}
-              className={cn(
-                "inline-flex items-center gap-1 border px-1.5 py-0.5 font-mono text-[11px] tabular-nums",
-                short ? "border-ember-glow/40 bg-ember-glow/[0.08] text-ember-glow" : "border-white/[0.07] bg-white/[0.03] text-slate-300",
-              )}
-            >
-              <ResourceIcon id={r} className="h-3.5 w-3.5" /> {formatCompact(n ?? 0)}
-            </span>
-          );
-        })}
-    </span>
-  );
-}
-
 /** Segments de niveau (un par niveau possible). */
 function LevelPips({ level, max, running }: { level: number; max: number; running?: boolean }) {
   return (
@@ -255,7 +230,7 @@ function SectionTitle({ icon: Icon, children, aside }: { icon: typeof Hammer; ch
   return (
     <div className="mb-2.5 flex items-center gap-2">
       <Icon className="h-3.5 w-3.5 text-mint-glow" />
-      <p className="hud-eyebrow text-[10px] text-slate-400">{children}</p>
+      <p className="hud-eyebrow text-[11px] text-slate-400">{children}</p>
       <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-mint-glow/25 to-transparent" />
       {aside && <span className="hidden sm:inline">{aside}</span>}
     </div>
@@ -272,7 +247,7 @@ function ColonySpecPicker({ colony, busy, onPick }: { colony: Colony; busy: bool
   const current = findColonySpec(colony.spec);
   return (
     <div className="mt-3">
-      <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+      <p className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
         Spécialisation
         {current ? <HudChip size="sm" tone="mint">{current.emoji} {current.name}</HudChip> : <HudChip size="sm" tone="ember" alert>À choisir</HudChip>}
         {locked && <span className="normal-case tracking-normal">changement possible dans {formatClock(Math.ceil((ready - now) / 1000))}</span>}
@@ -341,7 +316,7 @@ function ColonyRoutePanel({ colony, player, busy, onSet }: { colony: Colony; pla
     cn("hud-cut-sm border px-2 py-1 font-mono text-[11px] tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-50", active ? "border-mint-glow/60 bg-mint-glow/10 text-mint-glow" : "border-white/10 bg-white/[0.02] text-slate-300 enabled:hover:border-cyan-glow/50");
   return (
     <div className="mt-3">
-      <p className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+      <p className="flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
         Route logistique
         {route ? <HudChip size="sm" tone="mint">toutes les {route.everyHours} h</HudChip> : <HudChip size="sm" tone="neutral">arrêtée</HudChip>}
         {route && <HudChip size="sm" tone="accent">{supply ? "vers la colonie" : "vers la planète mère"}</HudChip>}
@@ -429,6 +404,7 @@ function effectLine(colony: Colony, player: PlayerState, id: string, level: numb
   return null;
 }
 
+/* 6.14.83 (UX-10, AD-27) : tuile de stock sur StatTile + HudMeter (système). Plein = attention (ember, DESIGN.md). */
 function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: number; storage: number; rate: number }) {
   const def = RESOURCE_LIST.find((r) => r.id === id)!;
   const common = def.rarity === "common";
@@ -436,28 +412,26 @@ function ResourceTile({ id, stock, storage, rate }: { id: ResourceId; stock: num
   const full = common && stock >= storage;
   const hoursToFull = common && rate > 0 && !full ? (storage - stock) / rate : null;
   return (
-    <div className={cn("hud-cut-sm relative overflow-hidden border bg-space-950/40 px-2.5 py-2", full ? "border-ember-glow/50" : "border-white/[0.06]")}>
-      <div className="flex items-center gap-2">
-        <ResourceIcon id={id} className="h-6 w-6 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <p className="tabular-mono truncate text-sm font-semibold text-slate-100">{formatCompact(stock)}</p>
-          <p className="truncate text-[10px] font-mono uppercase tracking-[0.08em] text-slate-500">{def.name}</p>
-        </div>
-      </div>
-      {common ? (
-        <>
-          <div className="mt-1.5 h-1 bg-white/[0.06]">
-            <div className={cn("h-full transition-[width] duration-700", full ? "bg-ember-glow" : pct > 85 ? "bg-gold-glow" : "bg-mint-glow/80")} style={{ width: `${pct}%` }} />
-          </div>
-          <p className="mt-1 flex flex-wrap justify-between gap-x-2 font-mono text-[9px] text-slate-500">
-            <span className={full ? "text-ember-glow" : "text-mint-glow"}>{full ? "PLEIN" : `+${formatPerSecond(rate)}`}</span>
-            <span>{full ? "rapatrie ou agrandis" : hoursToFull !== null ? `plein dans ${hoursToFull >= 48 ? `${Math.round(hoursToFull / 24)} j` : formatDuration(Math.floor(hoursToFull * 3600))}` : "—"}</span>
-          </p>
-        </>
-      ) : (
-        <p className="mt-1.5 font-mono text-[9px] text-slate-500">{rate > 0 ? <span className="text-violet-glow">+{formatPerSecond(rate)} · gisement</span> : "non plafonnée"}</p>
-      )}
-    </div>
+    <StatTile
+      size="sm"
+      label={def.name}
+      value={formatCompact(stock)}
+      icon={<ResourceIcon id={id} className="h-5 w-5" />}
+      tone={full ? "ember" : "neutral"}
+      sub={
+        common ? (
+          <>
+            <HudMeter percent={pct} tone={pct > 85 ? "var(--color-ember-glow)" : "var(--color-mint-glow)"} className="mt-1.5" />
+            <p className="mt-1 flex flex-wrap justify-between gap-x-2 font-mono">
+              <span className={full ? "text-ember-glow" : "text-mint-glow"}>{full ? "PLEIN" : `+${formatPerSecond(rate)}`}</span>
+              <span>{full ? "rapatrie ou agrandis" : hoursToFull !== null ? `plein dans ${hoursToFull >= 48 ? `${Math.round(hoursToFull / 24)} j` : formatDuration(Math.floor(hoursToFull * 3600))}` : "—"}</span>
+            </p>
+          </>
+        ) : (
+          <p className="mt-1.5 font-mono">{rate > 0 ? <span className="text-violet-glow">+{formatPerSecond(rate)} · gisement</span> : "non plafonnée"}</p>
+        )
+      }
+    />
   );
 }
 
@@ -489,7 +463,7 @@ function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Co
           className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
           onError={deposit ? (e) => { const fallback = iconUrl(colonyBiome(colony) as GameIconName); if (!e.currentTarget.src.endsWith(fallback)) e.currentTarget.src = fallback; } : undefined}
         />
-        <span className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap border px-1.5 font-mono text-[10px] font-bold", maxed ? "border-gold-glow/60 bg-space-950 text-gold-glow" : "border-mint-glow/40 bg-space-950 text-mint-glow")}>
+        <span className={cn("absolute -bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap border px-1.5 font-mono text-[11px] font-bold", maxed ? "border-gold-glow/60 bg-space-950 text-gold-glow" : "border-mint-glow/40 bg-space-950 text-mint-glow")}>
           {maxed ? "MAX" : `NIV ${level}`}
         </span>
       </div>
@@ -526,7 +500,7 @@ function BuildingTile({ colony, player, id, busy, onUpgrade, now }: { colony: Co
         ) : (
           <div className="mt-auto flex flex-wrap items-end gap-2">
             <div className="flex flex-1 flex-wrap items-center gap-1">
-              <CostChips cost={cost} stock={colony.resources} />
+              <CostPills cost={cost} stock={colony.resources} />
               <span className="inline-flex items-center gap-1 px-1 font-mono text-[11px] text-slate-400" title="Temps de construction">
                 <Clock className="h-3 w-3" /> {formatDuration(colonyUpgradeSeconds(player, id, level + 1, now))}
               </span>
@@ -600,7 +574,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         <span aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_8%_50%,color-mix(in_srgb,var(--color-mint-glow)_12%,transparent),transparent_45%)]" />
         <PlanetOrb size={72} tone={colony.slot === 2 ? "var(--color-violet-glow)" : "var(--color-mint-glow)"} />
         <div className="relative min-w-0 flex-1">
-          <p className="hud-eyebrow text-[10px] text-mint-glow">Colonie {colony.slot} · fondée {new Date(colony.foundedAtMs).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</p>
+          <p className="hud-eyebrow text-[11px] text-mint-glow">Colonie {colony.slot} · fondée {formatDateTime(colony.foundedAtMs, "dayShort")}</p>
           <p className="hud-chip hud-chip-sm mt-0.5" style={{ ["--c" as string]: biome.tone }} title={biome.lore}>
             <img src={iconUrl(colonyBiome(colony) as GameIconName)} alt="" className="h-3.5 w-3.5" /> Biome : {biome.name}
           </p>
@@ -684,7 +658,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
               icon={Hammer}
               aside={
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[10px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>
+                  <span className="font-mono text-[11px] text-slate-500">niv. {COLONY_RULES.maxLevel} max · production +{Math.round(COLONY_RULES.productionBonus * 100)} % · un chantier à la fois</span>
                   <SortableGridToggle page="colonie-batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
                 </span>
               }
@@ -704,7 +678,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
 
           <div className="@container flex min-w-0 flex-col gap-5">
             <div>
-              <SectionTitle icon={Package} aside={<span className="font-mono text-[10px] text-slate-500">entrepôt {formatCompact(storage)} / ressource commune</span>}>
+              <SectionTitle icon={Package} aside={<span className="font-mono text-[11px] text-slate-500">entrepôt {formatCompact(storage)} / ressource commune</span>}>
                 Stocks de la colonie
               </SectionTitle>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-2">
@@ -715,7 +689,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
             </div>
 
             <div>
-              <SectionTitle icon={Shield} aside={<span className="font-mono text-[10px] text-slate-500">{formatCompact(free)} places libres</span>}>
+              <SectionTitle icon={Shield} aside={<span className="font-mono text-[11px] text-slate-500">{formatCompact(free)} places libres</span>}>
                 Défenses de la colonie
               </SectionTitle>
               <div className="mb-3">
@@ -725,7 +699,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                 {hangar.capacity === 0 && <p className="mt-1 text-[11px] text-ember-glow">Construis le hangar de défense de la colonie pour y placer des défenses.</p>}
               </div>
               {placed.length === 0 ? (
-                <EmptyState size="sm" icon="🛡️" title="Aucune défense" className="mb-3">Construis des défenses ci-dessous pour protéger la colonie.</EmptyState>
+                <EmptyState size="sm" icon={<Shield />} title="Aucune défense" className="mb-3">Construis des défenses ci-dessous pour protéger la colonie.</EmptyState>
               ) : (
                 <div className="mb-3 flex flex-wrap gap-2">
                   {placed.map(([id, st]) => (
@@ -733,7 +707,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                       <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-8 w-8 object-contain" />
                       <span className="flex flex-col leading-tight">
                         <span className="tabular-mono text-sm font-semibold text-slate-100">{formatCompact(st.count)}</span>
-                        <span className="text-[10px] text-slate-500">{findUnit(id)?.name ?? id}</span>
+                        <span className="text-[11px] text-slate-500">{findUnit(id)?.name ?? id}</span>
                       </span>
                     </span>
                   ))}
@@ -799,8 +773,8 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                         <img src={assetUrl(u.image)} alt="" className="h-9 w-9 object-contain" />
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span className="truncate font-semibold">{u.name}</span>
-                          <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[10px] text-slate-500" />
-                          <span className="font-mono text-[10px] text-slate-500">
+                          <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[11px] text-slate-500" />
+                          <span className="font-mono text-[11px] text-slate-500">
                             {formatDuration(getUnitBuildTime(u, player.techLevels, player))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
                           </span>
                         </span>
@@ -811,7 +785,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                     <NumberInput size="sm" value={defense.qty} max={picked ? maxQty : 0} disabled={!picked} onChange={(v) => setDefense((d) => ({ ...d, qty: v }))} aria-label="Quantité" title="Maximum : place et stock" className="w-44" />
                     {picked && defense.qty > 0 && (
                       <span className="flex flex-1 flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
-                        <CostChips cost={batchCost} stock={colony.resources} />
+                        <CostPills cost={batchCost} stock={colony.resources} />
                         <span className="inline-flex items-center gap-1 font-mono" title="Temps de construction">
                           <Clock className="h-3 w-3" /> {formatDuration(colonyDefenseSeconds(player, picked.id, defense.qty, colony))}
                         </span>
@@ -882,7 +856,7 @@ function FoundColony({ player }: { player: PlayerState }) {
       <div className="relative flex flex-wrap items-center gap-4 border-b border-cyan-glow/15 bg-gradient-to-r from-cyan-glow/[0.08] to-transparent p-4">
         <PlanetOrb size={64} tone="var(--color-cyan-glow)" dim={!ready || !affordable} />
         <div className="min-w-0 flex-1">
-          <p className="hud-eyebrow text-[10px] text-cyan-glow">Expansion · emplacement {next.slot} / {COLONY_RULES.maxColonies}</p>
+          <p className="hud-eyebrow text-[11px] text-cyan-glow">Expansion · emplacement {next.slot} / {COLONY_RULES.maxColonies}</p>
           <h2 className="font-display text-xl font-bold tracking-[0.04em] text-slate-100">Fonder la colonie {next.slot}</h2>
           <p className="mt-1 max-w-2xl text-xs text-slate-400">
             Un vaisseau colonial part de ta planète mère et fonde la colonie en {COLONY_RULES.foundHours} h. Elle démarre avec {formatCompact(COLONY_RULES.startStock)} de chaque ressource commune. Ses
@@ -900,14 +874,14 @@ function FoundColony({ player }: { player: PlayerState }) {
           detail={
             <>
               {ready ? "Prérequis atteint." : `Encore ${next.levels - levels} niveau${next.levels - levels > 1 ? "x" : ""} de bâtiments sur ta planète mère.`}
-              <span className="block text-[10px] text-slate-500">Tous les bâtiments comptent, fin de partie comprise.</span>
+              <span className="block text-[11px] text-slate-500">Tous les bâtiments comptent, fin de partie comprise.</span>
             </>
           }
         />
         <Requirement
           ok={affordable}
           label={affordable ? "Vaisseau colonial finançable" : `Vaisseau colonial : ${missingRes} ressource${missingRes > 1 ? "s" : ""} manquante${missingRes > 1 ? "s" : ""}`}
-          detail={<CostChips cost={cost} stock={player.resources} className="mt-1" />}
+          detail={<CostPills cost={cost} stock={player.resources} className="mt-1" />}
         />
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-white/5 p-4">
@@ -942,9 +916,9 @@ function SlotStrip({ player }: { player: PlayerState }) {
       <div className="hud-cut flex items-center gap-3 border border-cyan-glow/25 bg-cyan-glow/[0.04] p-3">
         <PlanetOrb size={44} tone="var(--color-cyan-glow)" />
         <div className="min-w-0">
-          <p className="hud-eyebrow text-[9px] text-cyan-glow">Planète mère</p>
+          <p className="hud-eyebrow text-[11px] text-cyan-glow">Planète mère</p>
           <p className="truncate font-display text-sm font-semibold text-slate-100">{player.pseudo}</p>
-          <p className="font-mono text-[10px] text-slate-500">{levels} niveaux de bâtiments</p>
+          <p className="font-mono text-[11px] text-slate-500">{levels} niveaux de bâtiments</p>
         </div>
       </div>
       {slots.map((slot) => {
@@ -959,24 +933,24 @@ function SlotStrip({ player }: { player: PlayerState }) {
           >
             <PlanetOrb size={44} tone={tone} dim={!colony} spin={!!colony} />
             <div className="min-w-0 flex-1">
-              <p className="hud-eyebrow text-[9px] text-slate-500">Emplacement {slot}</p>
+              <p className="hud-eyebrow text-[11px] text-slate-500">Emplacement {slot}</p>
               {colony ? (
                 <>
                   <p className="truncate font-display text-sm font-semibold text-slate-100">{colony.name}</p>
-                  <p className="font-mono text-[10px] text-mint-glow">opérationnelle</p>
+                  <p className="font-mono text-[11px] text-mint-glow">opérationnelle</p>
                 </>
               ) : flying ? (
                 <>
                   <p className="truncate font-display text-sm font-semibold text-cyan-glow">{flying.name}</p>
                   <Progress value={100 - ((flying.endTime - now) / (COLONY_RULES.foundHours * 3600_000)) * 100} className="mt-1" />
-                  <p className="mt-0.5 font-mono text-[10px] text-cyan-glow">arrivée dans {formatDuration(Math.max(0, Math.floor((flying.endTime - now) / 1000)))}</p>
+                  <p className="mt-0.5 font-mono text-[11px] text-cyan-glow">arrivée dans {formatDuration(Math.max(0, Math.floor((flying.endTime - now) / 1000)))}</p>
                 </>
               ) : (
                 <>
                   <p className="flex items-center gap-1 font-display text-sm font-semibold text-slate-400">
                     {levels >= need ? <Rocket className="h-3.5 w-3.5 text-mint-glow" /> : <Lock className="h-3.5 w-3.5" />} {levels >= need ? "Disponible" : "Verrouillé"}
                   </p>
-                  <p className="font-mono text-[10px] text-slate-500">
+                  <p className="font-mono text-[11px] text-slate-500">
                     {Math.min(levels, need)} / {need} niveaux
                   </p>
                 </>

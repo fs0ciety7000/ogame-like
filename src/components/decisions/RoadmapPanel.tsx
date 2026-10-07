@@ -172,7 +172,7 @@ export function RoadmapPanel({ current, past, plans, answers, busy, onOpenDoc, a
                     {isHandled(a.qid, texts) ? "Ajoutée" : "Envoyée"}
                   </HudChip>
                   <span className="min-w-0 flex-1 break-words text-slate-300">{a.note}</span>
-                  <span className="font-mono text-[10px] text-slate-500">{a.qid}</span>
+                  <span className="font-mono text-[11px] text-slate-500">{a.qid}</span>
                 </li>
               ))}
             </ul>

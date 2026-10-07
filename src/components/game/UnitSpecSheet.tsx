@@ -57,14 +57,14 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline gap-2 border-b border-white/10 pb-2">
-        <span className="font-mono text-[10px] tracking-[0.2em] text-cyan-glow">{unitDesignation(unit)}</span>
+        <span className="font-mono text-[11px] tracking-[0.2em] text-cyan-glow">{unitDesignation(unit)}</span>
         <DialogTitle className="hud-title text-xl text-slate-100">{unit.name}</DialogTitle>
         <span className="ml-auto flex flex-wrap gap-1.5">
-          <HudChip size="sm" tone={unit.category === "attack" ? "danger" : "accent"}>
+          <HudChip size="sm" tone="neutral">
             {unit.category === "attack" ? "Vaisseau" : "Défense"}
           </HudChip>
           {cls && (
-            <HudChip size="sm" tone={cls === "heavy" ? "gold" : cls === "medium" ? "accent" : cls === "light" ? "mint" : "neutral"}>
+            <HudChip size="sm" tone="neutral">
               Classe {UNIT_CLASS_LABELS[cls]}
             </HudChip>
           )}
@@ -79,9 +79,9 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
         {/* Silhouette sur trame de plan, avec cotes */}
         <div className="spec-blueprint hud-cut-sm relative grid min-h-52 place-items-center overflow-hidden border border-cyan-glow/20">
           <img src={assetUrl(unit.image)} alt={unit.name} className="relative max-h-44 w-[80%] object-contain" />
-          <span className="absolute left-2 top-2 font-mono text-[9px] tracking-[0.2em] text-cyan-glow/70">VUE DE PROFIL · ÉCH. 1:200</span>
-          <span className="absolute bottom-2 left-2 font-mono text-[9px] tracking-[0.2em] text-slate-500">HANGAR {unit.hangarSpace} PL.</span>
-          <span className="absolute bottom-2 right-2 font-mono text-[9px] tracking-[0.2em] text-slate-500">{unit.id.toUpperCase()}</span>
+          <span className="absolute left-2 top-2 font-mono text-[11px] tracking-[0.2em] text-cyan-glow/70">VUE DE PROFIL · ÉCH. 1:200</span>
+          <span className="absolute bottom-2 left-2 font-mono text-[11px] tracking-[0.2em] text-slate-500">HANGAR {unit.hangarSpace} PL.</span>
+          <span className="absolute bottom-2 right-2 font-mono text-[11px] tracking-[0.2em] text-slate-500">{unit.id.toUpperCase()}</span>
         </div>
 
         {/* Caractéristiques */}
@@ -89,7 +89,7 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
           {SPEC_STATS.map(({ id, label, short }) => (
             <div key={id} className="grid grid-cols-[1fr_auto] items-end gap-3">
               <StatBar label={short} value={now[id]} max={scale[id]} color={STAT_COLOR[id]} display={formatNumber(now[id])} />
-              <span className="pb-0.5 text-right font-mono text-[10px] tabular-nums text-slate-500" title={`${label} : rang ${ranks[id].rank} sur ${ranks[id].of} (valeur de base)`}>
+              <span className="pb-0.5 text-right font-mono text-[11px] tabular-nums text-slate-500" title={`${label} : rang ${ranks[id].rank} sur ${ranks[id].of} (valeur de base)`}>
                 max {formatNumber(max[id])} · #{ranks[id].rank}/{ranks[id].of}
               </span>
             </div>
@@ -134,7 +134,7 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
       <div className="overflow-x-auto">
         <table className="w-full min-w-[420px] font-mono text-[11px] tabular-nums">
           <thead>
-            <tr className="text-left font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">
+            <tr className="text-left font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
               <th className="py-1 pr-2 font-normal">Niv.</th>
               {SPEC_STATS.map((s) => (
                 <th key={s.id} className="py-1 pr-2 text-right font-normal">

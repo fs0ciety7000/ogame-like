@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { usePlayerStore } from "@/store/playerStore";
 
 /* 5.15.12 : l'épisode des Chroniques en cours, sur l'accueil (objectif, avancement, lien). */
 
-const fmtDay = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" });
+const fmtDay = (ms: number) => formatDateTime(ms, "weekday", "server");
 
 export function ChronicleHomeCard({ now }: { now: number }) {
   const player = usePlayerStore((s) => s.player);

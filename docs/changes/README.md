@@ -178,6 +178,11 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.76 | [Déblocage progressif : Prise en main, Carnet, panneau Lune, passe](6.14.76-deblocage-prise-en-main.md) | ajout (interface) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L3 |
 | 6.14.78 | [Rythme sur des mois : proposition et simulateur sur 365 jours](6.14.78-rythme-long-terme.md) | docs | Q164 à Q171 |
 | 6.14.77 | [Suite de l'essai de la lune : une notification par saut, Journal système, victoires avec ou sans lune](6.14.77-suite-essai-lune.md) | correctif + ajout (mesure) | [phalange-porte-de-saut](../proposals/phalange-porte-de-saut.md), lot É30-1f |
+| 6.14.79 | [Déblocage progressif : serveur (objectifs du jour, « Nouveau : … »)](6.14.79-deblocage-serveur.md) | fonctionnalité (moteur, serveur) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L4, Q158 |
+| 6.14.80 | [Déblocage progressif : section « Ouverture du menu » de l'admin](6.14.80-deblocage-admin.md) | ajout (admin) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L5 |
+| 6.14.81 | [Déblocage progressif : chaîne et livraison](6.14.81-deblocage-chaine.md) | ajout (interface) + docs | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L6, Q157, Q180 |
+| 6.14.82 | [Cohérence visuelle : couleur = sens, titres, onglets du Journal, icônes au lieu des emoji, gros chiffres en mono](6.14.82-coherence-visuelle.md) | correctif (interface) | aucune (AU27, lot UX-9, AD-5, AD-15, AD-16, AD-20, AD-21) |
+| 6.14.83 | [Hygiène du design system : 11 px, gris de décor, formatDateTime, horloge partagée, gardes](6.14.83-hygiene-design.md) | refactoring (interface) + tests | aucune (AU27, lot UX-10, AD-12, AD-27, AD-28, AD-29) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

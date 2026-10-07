@@ -4,10 +4,10 @@ import { EmptyAction, FoldSection, HudPanel } from "@/components/ui/panel";
 import { relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
-import { Anchor, BookOpen, Boxes, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap } from "lucide-react";
+import { Anchor, BookOpen, Boxes, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap, Amphora } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
+import { HudTag, StatTile, EmptyState, HudMeter } from "@/components/ui/hud";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -141,14 +141,6 @@ function Portrait({ def, className }: { def: CommanderDef; className?: string })
   );
 }
 
-function Bar({ value, tone }: { value: number; tone: string }) {
-  return (
-    <div className="h-1.5 w-full overflow-hidden bg-white/5">
-      <div className="h-full transition-all" style={{ width: `${Math.max(0, Math.min(100, value * 100))}%`, background: tone, boxShadow: `0 0 8px ${tone}` }} />
-    </div>
-  );
-}
-
 function CostLine({ cost }: { cost: Partial<Record<ResourceId, number>> }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -212,7 +204,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="hud-eyebrow text-[10px]" style={{ color: tone }}>
+          <p className="hud-eyebrow text-[11px]" style={{ color: tone }}>
             {def.title}
           </p>
           <h3 className="font-display text-lg font-semibold text-slate-100">{fogged ? "???" : def.name}</h3>
@@ -252,7 +244,7 @@ function CommanderCard({ def, player, now }: { def: CommanderDef; player: Player
       </div>
       {entry && (
         <div className="flex flex-col gap-1">
-          <Bar value={maxed ? 1 : (xp - floor) / Math.max(1, ceil - floor)} tone={tone} />
+          <HudMeter percent={(maxed ? 1 : (xp - floor) / Math.max(1, ceil - floor)) * 100} tone={tone} className="h-1.5 w-full" />
           <p className="font-mono text-[11px] text-slate-500">{maxed ? "Niveau maximal" : `${xp - floor} / ${ceil - floor} XP vers le niveau ${level + 1}`}</p>
         </div>
       )}
@@ -492,7 +484,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
             </p>
           </div>
           {sorted.length === 0 && (
-            <EmptyState icon="🏺" title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
+            <EmptyState icon={<Amphora />} title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
               Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.
             </EmptyState>
           )}

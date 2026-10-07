@@ -1,3 +1,4 @@
+import { CircleCheck, CircleX } from "lucide-react";
 import { playerResearchTimeFactor, researchTimeBreakdown } from "@/game/bonuses";
 import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
@@ -168,14 +169,19 @@ export function LabPage() {
                       <p className="mb-1 font-semibold font-mono uppercase tracking-wide text-cyan-glow">Prérequis</p>
                       {check.list.map((r) => (
                         <p key={r.id} className={r.valide ? "text-mint-glow" : "text-danger-glow"}>
-                          {r.valide ? "✅" : "❌"} {r.nom}{" "}
+                          {r.valide ? <CircleCheck aria-label="acquis" className="mr-1 inline h-3.5 w-3.5" /> : <CircleX aria-label="manquant" className="mr-1 inline h-3.5 w-3.5" />}
+                          {r.nom}{" "}
                           {r.kind === "plan" ? (r.valide ? "(acquis)" : "(à acheter au Comptoir Kesh'Vaar)") : `(Niv. ${r.actuel} / ${r.requis})`}
                         </p>
                       ))}
                     </div>
                   );
                 }
-                return <p className="mt-3 text-xs text-mint-glow">✅ Aucun prérequis</p>;
+                return (
+                  <p className="mt-3 flex items-center gap-1 text-xs text-mint-glow">
+                    <CircleCheck aria-hidden className="h-3.5 w-3.5" /> Aucun prérequis
+                  </p>
+                );
               })()}
 
               {(() => {

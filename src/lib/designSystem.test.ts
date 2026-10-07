@@ -5,11 +5,29 @@ import { describe, expect, it } from "vitest";
 /* Design system (docs/DESIGN.md) : les pastilles et encadrés passent par
    HudChip / HudCallout (coins coupés, capitales mono, ton sémantique).
    Garde-fou contre les pilules arrondies écrites à la main. */
-function files(dir: string): string[] {
+function files(dir: string, ext: RegExp = /\.tsx$/): string[] {
   return readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
-    return statSync(path).isDirectory() ? files(path) : name.endsWith(".tsx") ? [path] : [];
+    return statSync(path).isDirectory() ? files(path, ext) : ext.test(name) ? [path] : [];
   });
+}
+
+/** Lignes fautives regroupées par fichier : `{ fichier: nombre }`. */
+function byFile(offenders: string[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const o of offenders) {
+    const f = o.slice(0, o.lastIndexOf(":"));
+    out[f] = (out[f] ?? 0) + 1;
+  }
+  return out;
+}
+
+/** Cliquet (6.14.83) : un fichier en attente garde au plus son compte d'écarts ; tout autre fichier n'en a aucun.
+ *  Une fois le fichier repris, on retire sa ligne (le compte ne peut que baisser). */
+function expectRatchet(offenders: string[], pending: Record<string, number>) {
+  const found = byFile(offenders);
+  const over = Object.entries(found).filter(([f, n]) => n > (pending[f] ?? 0)).map(([f, n]) => `${f} : ${n} (permis ${pending[f] ?? 0})`);
+  expect(over).toEqual([]);
 }
 
 describe("design system", () => {
@@ -107,4 +125,125 @@ describe("design system", () => {
     // Scènes dessinées (neige, vue cockpit) et rapport imprimé : couleurs d'illustration.
     expect(scan((l) => /rgba\(\s*\d/.test(l), /(StatsPrintReport|Snowfall|CockpitViewport)\.tsx$/)).toEqual([]);
   });
+
+  /* 6.14.83 (UX-10) : fichiers modifiés par une autre tâche pendant le lot (admin, menu, en-tête, accueil, vue
+     cockpit, astuces, succès, réglages, prochaines actions) : écarts comptés, à reprendre quand ils seront libres. */
+
+  it("6.14.83 : arrondis md/lg/xl interdits (coins coupés : hud-cut, hud-cut-sm)", () => {
+    const offenders = scan((l) => /\brounded-(?:md|lg|xl)\b/.test(l));
+    expectRatchet(offenders, PENDING_ROUNDED);
+  });
+
+  it("6.14.82 : pas d'emoji dans le code de l'interface (icônes lucide ou GameIcon ; Q-AD-6 : les données en gardent)", () => {
+    // ★ ☆ ↔ sont des signes typographiques (police du texte), pas des emoji.
+    const emoji = /(?![★☆↔])\p{Extended_Pictographic}/u;
+    const offenders = scan((l) => emoji.test(l));
+    expectRatchet(offenders, PENDING_EMOJI);
+  });
+
+  it("6.14.83 : plancher de 11 px pour le texte, hors admin (dessins SVG en unités du dessin exceptés)", () => {
+    const small = /\btext-\[(?:[0-9]|10)(?:\.\d+)?px\]/;
+    const offenders = scan((l) => small.test(l) && !/<text\b|fill-slate/.test(l), /src\/pages\/admin\/|src\/pages\/AdminPage\.tsx$/);
+    expectRatchet(offenders, PENDING_SMALL_TEXT);
+  });
+
+  it("6.14.83 : text-slate-600 réservé au décor (icône, filet, séparateur), jamais un texte qui porte une information", () => {
+    const decor = (l: string) =>
+      /<line\b/.test(l) || /<[A-Z]\w*\s[^>]*className=[^>]*\bh-[\d.]+\b[^>]*\bw-[\d.]+/.test(l) || /<[A-Z]\w*\s+className=\{cn\("h-/.test(l) || /"text-slate-600">(?:\/\/?|—)<\/span>/.test(l);
+    const offenders = scan((l) => /(?<![\w-])(?:placeholder:)?text-slate-600\b/.test(l) && !decor(l), /src\/pages\/admin\/|src\/pages\/AdminPage\.tsx$/);
+    expectRatchet(offenders, PENDING_SLATE_600);
+  });
+
+  it("6.14.83 : dates par formatDateTime (@/lib/utils), jamais toLocale*String dans un composant", () => {
+    const offenders: string[] = [];
+    for (const file of [...files("src/components", /\.tsx?$/), ...files("src/pages", /\.tsx?$/), ...files("src/lib", /\.tsx?$/), ...files("src/hooks", /\.tsx?$/), ...files("src/services", /\.tsx?$/)]) {
+      if (file.includes(".test.") || /src\/lib\/utils\.ts$/.test(file)) continue;
+      readFileSync(file, "utf8")
+        .split("\n")
+        .forEach((line, i) => {
+          if (/\.toLocale(?:Date|Time)?String\(/.test(line)) offenders.push(`${file}:${i + 1}`);
+        });
+    }
+    expectRatchet(offenders, PENDING_DATES);
+  });
+
+  it("6.14.83 : un décompte passe par useNowTicker / useNowEvery, jamais setInterval(() => setNow(…))", () => {
+    // Les intervalles de rafraîchissement de données (rechargement d'un classement…) restent permis.
+    const offenders = [...files("src", /\.tsx?$/)].flatMap((file) =>
+      file.includes(".test.") || file.includes("src/game/")
+        ? []
+        : readFileSync(file, "utf8")
+            .split("\n")
+            .flatMap((line, i) => (/setInterval\(\s*\(\)\s*=>\s*set(?:Now|Tick|Time)\(/.test(line) ? [`${file}:${i + 1}`] : [])),
+    );
+    // GalaxyPage : animation des flottes à 250 ms, reprise au lot UX-11 (après la phalange).
+    expectRatchet(offenders, { "src/pages/GalaxyPage.tsx": 1 });
+  });
+
+  it("6.14.83 : corps de useEffect entre accolades (doublé par la règle eslint no-restricted-syntax)", () => {
+    const offenders = [...files("src", /\.tsx?$/)].flatMap((file) =>
+      file.includes(".test.")
+        ? []
+        : readFileSync(file, "utf8")
+            .split("\n")
+            .flatMap((line, i) => (/\buseEffect\(\s*\(\)\s*=>\s*(?![\s{])/.test(line) ? [`${file}:${i + 1}`] : [])),
+    );
+    expectRatchet(offenders, PENDING_EFFECTS);
+  });
 });
+
+const PENDING_ROUNDED: Record<string, number> = {
+  "src/pages/admin/ContentEditor.tsx": 1,
+  "src/pages/admin/LogsPanel.tsx": 2,
+  "src/pages/admin/fields.tsx": 1,
+};
+const PENDING_EMOJI: Record<string, number> = {
+  "src/components/cockpit/CockpitHub.tsx": 2,
+  "src/pages/AchievementsPage.tsx": 1,
+  "src/pages/SettingsPage.tsx": 1,
+  "src/pages/admin/AchievementForm.tsx": 1,
+  "src/pages/admin/BannersPanel.tsx": 2,
+  "src/pages/admin/ContentHistoryPanel.tsx": 1,
+  "src/pages/admin/PlannerPanel.tsx": 2,
+  "src/pages/admin/ReportsPanel.tsx": 2,
+  "src/pages/admin/TitleForm.tsx": 1,
+  "src/pages/admin/WorldBossRulesCard.tsx": 1,
+};
+const PENDING_SMALL_TEXT: Record<string, number> = {
+  "src/components/cockpit/CockpitHub.tsx": 4,
+  "src/components/layout/NavBar.tsx": 17,
+  "src/components/layout/ResourceHud.tsx": 6,
+  "src/pages/AchievementsPage.tsx": 3,
+  "src/pages/DashboardPage.tsx": 2,
+  "src/pages/SettingsPage.tsx": 3,
+};
+const PENDING_SLATE_600: Record<string, number> = {
+  "src/components/layout/NavBar.tsx": 3,
+  "src/pages/AchievementsPage.tsx": 1,
+};
+const PENDING_DATES: Record<string, number> = {
+  "src/pages/SettingsPage.tsx": 2,
+  "src/pages/admin/ActivityPanel.tsx": 4,
+  "src/pages/admin/BackupsCard.tsx": 1,
+  "src/pages/admin/CasinoAdmin.tsx": 1,
+  "src/pages/admin/ChroniclesPanel.tsx": 1,
+  "src/pages/admin/ContentHistoryPanel.tsx": 1,
+  "src/pages/admin/ContestsAdmin.tsx": 1,
+  "src/pages/admin/LogsPanel.tsx": 1,
+  "src/pages/admin/MailPanel.tsx": 3,
+  "src/pages/admin/MaintenancePanel.tsx": 4,
+  "src/pages/admin/PlannerPanel.tsx": 1,
+  "src/pages/admin/ProceduralPanel.tsx": 1,
+  "src/pages/admin/SeasonBossPanel.tsx": 1,
+  "src/pages/admin/StatsPanel.tsx": 2,
+  "src/pages/admin/StatsPrintReport.tsx": 1,
+  "src/pages/admin/TerritoryWarSection.tsx": 1,
+  "src/pages/admin/WarlordsPanel.tsx": 1,
+  "src/pages/admin/applyBossDuration.ts": 1,
+  "src/pages/admin/bossFields.tsx": 1,
+};
+const PENDING_EFFECTS: Record<string, number> = {
+  "src/pages/admin/ReportsPanel.tsx": 2,
+  "src/pages/admin/MailPanel.tsx": 1,
+  "src/pages/admin/EmojisPanel.tsx": 1,
+};

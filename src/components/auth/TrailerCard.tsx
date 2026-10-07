@@ -27,7 +27,7 @@ export function TrailerCard({ className }: { className?: string }) {
           </button>
         )}
       </div>
-      <figcaption className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Cosmic Empires en 20 s · avec le son</figcaption>
+      <figcaption className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">Cosmic Empires en 20 s · avec le son</figcaption>
     </figure>
   );
 }

@@ -7,6 +7,8 @@ import { ignoreShortcut } from "@/lib/shortcuts";
 import { HudChip, EmptyState } from "@/components/ui/hud";
 import { CockpitViewport, type ViewportFleet } from "@/components/cockpit/CockpitViewport";
 import { useAgenda } from "@/components/game/AgendaCard";
+import { useHiddenRoutes } from "@/components/layout/NavBar";
+import { navPath } from "@/game/navUnlock";
 import { isHostile } from "@/components/game/FleetsPanel";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -107,7 +109,12 @@ export function CockpitHub() {
   const uid = useAuthStore((s) => s.user?.uid);
   const resources = useLiveResources(player);
   const now = Date.now();
-  const agenda = useAgenda(now, 7);
+  const agendaAll = useAgenda(now, 7);
+  // 6.14.81 (DP-L6, I30) : la vue cockpit suit le menu progressif ; une page pas encore ouverte n'a ni raccourci ni rappel d'agenda.
+  const hidden = useHiddenRoutes();
+  const quick = useMemo(() => QUICK.filter((q) => !hidden.has(q.to)), [hidden]);
+  const agenda = agendaAll.filter((a) => !a.link || !hidden.has(navPath(a.link)));
+  const galaxyOpen = !hidden.has("/game/galaxie");
   const [tab, setTab] = useState<"fleets" | "queue" | "alerts">("fleets");
   // Écran tactile sans clavier : pas de rappel des touches 1 à 6.
   const [coarse] = useState(() => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches);
@@ -135,12 +142,12 @@ export function CockpitHub() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (ignoreShortcut(e)) return;
-      const q = QUICK.find((x) => x.key === e.key);
+      const q = quick.find((x) => x.key === e.key);
       if (q) navigate(q.to);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
+  }, [navigate, quick]);
 
   const mine = useMemo(() => fleets.filter((f) => f.ownerUid === uid && f.status !== "done").sort((a, b) => fleetEnd(a) - fleetEnd(b)), [fleets, uid]);
   const hostile = useMemo(() => fleets.filter((f) => isHostile(f, uid)).sort((a, b) => a.arriveAtMs - b.arriveAtMs), [fleets, uid]);
@@ -309,7 +316,7 @@ export function CockpitHub() {
           <div className="ck-pane" role="tabpanel" key={tab}>
             {tab === "fleets" &&
               (mine.length === 0 ? (
-                <EmptyState size="sm" icon="🛸" title="Aucune flotte en vol" action={<EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction>} />
+                <EmptyState size="sm" icon="🛸" title="Aucune flotte en vol" action={galaxyOpen ? <EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction> : undefined} />
               ) : (
                 mine.slice(0, 6).map((f) => {
                   const back = f.status === "returning";
@@ -343,7 +350,7 @@ export function CockpitHub() {
                 <span className="ck-eta">{eta(f.arriveAtMs, now)}</span>
               </Link>
             ))}
-            {tab === "fleets" && (
+            {tab === "fleets" && galaxyOpen && (
               <Button asChild variant="primary" size="sm" className="mt-1 justify-self-start">
                 <Link to="/game/galaxie">Envoyer une flotte</Link>
               </Button>
@@ -395,9 +402,9 @@ export function CockpitHub() {
 
         {/* Console */}
         <div className="ck-con">
-          <Panel title="Actions rapides" code={coarse ? undefined : "[ TOUCHES 1-6 ]"}>
+          <Panel title="Actions rapides" code={coarse ? undefined : quick.length === QUICK.length ? "[ TOUCHES 1-6 ]" : `[ TOUCHES ${quick.map((q) => q.key).join(" ")} ]`}>
             <div className="grid grid-cols-3 gap-2">
-              {QUICK.map((q) => (
+              {quick.map((q) => (
                 <Link key={q.key} to={q.to} className="ck-qbtn">
                   <q.icon className="h-5 w-5 text-cyan-glow" />
                   {q.label}

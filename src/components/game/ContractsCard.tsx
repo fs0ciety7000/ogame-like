@@ -72,7 +72,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
       <AnimatePresence>{celebrate > 0 && <ParticleBurst key={celebrate} count={40} colorVar="var(--color-gold-glow)" />}</AnimatePresence>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <ScrollText className="h-4 w-4 text-gold-glow" />
-        <h3 className="font-display text-sm text-slate-100">Objectifs du jour</h3>
+        <h3 className="hud-title text-sm text-slate-100">Objectifs du jour</h3>
         <span
           className={`hud-chip hud-chip-sm ${streak > 0 ? "hud-tone-gold" : "hud-tone-neutral"}`}
           title={`Jours consécutifs où les ${CONTRACT_RULES.perDay} objectifs ont été terminés`}
@@ -108,7 +108,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
                   {c.claimed && <CheckCircle2 className="h-4 w-4 shrink-0 text-mint-glow" />}
                 </div>
                 <Progress value={(c.progress / c.target) * 100} />
-                <p className="text-[10px] text-slate-500"><EmojiText text={getRewardText(contractReward(player, c)).join(" · ")} /></p>
+                <p className="text-[11px] text-slate-500"><EmojiText text={getRewardText(contractReward(player, c)).join(" · ")} /></p>
                 {!c.claimed && (
                   <div className="flex gap-1.5">
                     <Button size="sm" className="h-7 flex-1 text-xs" disabled={!done || pending === c.id} onClick={() => void claim(c)}>

@@ -6,7 +6,7 @@ export function FormationPicker({ value, onChange, className }: { value: Formati
   const current = FORMATIONS.find((f) => f.id === value) ?? FORMATIONS[0];
   return (
     <div className={className}>
-      <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Formation</p>
+      <p className="hud-eyebrow mb-1.5 text-[11px] text-slate-500">Formation</p>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4" role="radiogroup" aria-label="Formation">
         {FORMATIONS.map((f) => (
           <button
@@ -72,7 +72,7 @@ export function TargetPriorityPicker({ value, onChange, className }: { value: Ta
   const current = PRIORITIES.find((p) => p.id === value) ?? PRIORITIES[0];
   return (
     <div className={className}>
-      <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Cible prioritaire</p>
+      <p className="hud-eyebrow mb-1.5 text-[11px] text-slate-500">Cible prioritaire</p>
       <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Cible prioritaire">
         {PRIORITIES.map((p) => (
           <button

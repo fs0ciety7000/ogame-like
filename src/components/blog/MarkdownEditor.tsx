@@ -249,7 +249,7 @@ export function MarkdownEditor({
         </B>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" title="Encadré" className="flex h-8 shrink-0 items-center gap-0.5 px-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-400 hover:bg-cyan-glow/10 hover:text-cyan-glow">
+            <button type="button" title="Encadré" className="flex h-8 shrink-0 items-center gap-0.5 px-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:bg-cyan-glow/10 hover:text-cyan-glow">
               Encadré <ChevronDown className="h-3 w-3" />
             </button>
           </DropdownMenuTrigger>
@@ -273,7 +273,7 @@ export function MarkdownEditor({
         </B>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" title="Route de l'API" className="flex h-8 shrink-0 items-center gap-1 px-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-400 hover:bg-cyan-glow/10 hover:text-cyan-glow">
+            <button type="button" title="Route de l'API" className="flex h-8 shrink-0 items-center gap-1 px-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:bg-cyan-glow/10 hover:text-cyan-glow">
               <Webhook className="h-4 w-4" /> API <ChevronDown className="h-3 w-3" />
             </button>
           </DropdownMenuTrigger>
@@ -305,10 +305,10 @@ export function MarkdownEditor({
         spellCheck
         lang="fr"
         placeholder={"Écris ton article en markdown…\n\n## Un titre de section\n\nDu **gras**, une [image] collée directement, :varan:, > [!TIP] un encadré…"}
-        className={cn("w-full resize-y bg-transparent p-4 font-mono text-[13.5px] leading-relaxed text-slate-100 outline-none placeholder:text-slate-600")}
+        className={cn("w-full resize-y bg-transparent p-4 font-mono text-[13.5px] leading-relaxed text-slate-100 outline-none placeholder:text-slate-500")}
         style={{ minHeight }}
       />
-      <div className="flex items-center gap-3 border-t border-white/5 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+      <div className="flex items-center gap-3 border-t border-white/5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500">
         <span>{words} mots</span>
         <span>{Math.max(1, Math.round(words / 220))} min de lecture</span>
         {uploading > 0 && <span className="text-cyan-glow">Envoi de {uploading} image(s)…</span>}

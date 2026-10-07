@@ -28,7 +28,9 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
-  useEffect(() => subscribePactMessages(pact.id, setMessages), [pact.id]);
+  useEffect(() => {
+    return subscribePactMessages(pact.id, setMessages);
+  }, [pact.id]);
   // Canal ouvert : tout ce qui s'y affiche est lu.
   useEffect(() => {
     markPactRead(uid, pact.id);
@@ -59,7 +61,7 @@ function PactChannel({ pact, uid }: { pact: AlliancePact; uid: string }) {
         {messages.map((m) => (
           <p key={m.id} className="text-sm">
             <span className={cn("font-mono text-[11px]", m.authorUid === uid ? "text-cyan-glow" : "text-gold-glow")}>[{m.authorTag}]</span>{" "}
-            <span className="text-slate-300">{m.authorPseudo}</span> <span className="text-[10px] text-slate-600">{timeAgo(m.createdAtMs)}</span>
+            <span className="text-slate-300">{m.authorPseudo}</span> <span className="text-[11px] text-slate-500">{timeAgo(m.createdAtMs)}</span>
             <br />
             <span className="whitespace-pre-wrap break-words text-slate-200">
               <LinkifiedText text={m.text} jumbo />
@@ -147,7 +149,7 @@ function PactCard({ pact, own, uid, canLead, initiallyOpen = false }: { pact: Al
           )}
           <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
             <MessagesSquare className="h-3.5 w-3.5" /> Canal
-            {unread > 0 && !open && <span className="ml-1 min-w-4 bg-ember-glow px-1 font-mono text-[10px] font-bold leading-4 tabular-nums text-space-950">{unread}</span>}
+            {unread > 0 && !open && <span className="ml-1 min-w-4 bg-ember-glow px-1 font-mono text-[11px] font-bold leading-4 tabular-nums text-space-950">{unread}</span>}
           </Button>
         </div>
       </div>
@@ -172,8 +174,12 @@ export function DiplomacyTab({ alliance, uid, canLead }: { alliance: Alliance; u
   // Lien d'une notification : ouvre directement le canal de ce pacte.
   const [params] = useSearchParams();
   const focusPact = params.get("pacte");
-  useEffect(() => subscribePacts(setPacts), []);
-  useEffect(() => subscribeAlliances(setAlliances), []);
+  useEffect(() => {
+    return subscribePacts(setPacts);
+  }, []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
   const now = Date.now();
 
   const mine = useMemo(() => pacts.filter((p) => involves(p, alliance.id) && pactOpen(p, now)), [pacts, alliance.id, now]);

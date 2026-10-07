@@ -62,7 +62,7 @@ export function PageHeader({
           </h1>
           {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
         </div>
-        {right && <div className="relative shrink-0">{right}</div>}
+        {right && <div className="relative max-w-full shrink-0">{right}</div>}
       </motion.div>
       <PageTip />
     </>

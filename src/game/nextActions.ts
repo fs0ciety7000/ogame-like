@@ -7,6 +7,7 @@ import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
+import { navPageOpen, navPath } from "@/game/navUnlock";
 import type { PlayerState, QueuesState } from "@/types/game";
 
 /* =====================================================
@@ -103,5 +104,7 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
     }
   }
 
-  return out.sort((a, b) => a.priority - b.priority);
+  // 6.14.81 (DP-L6, I30) : « Que faire maintenant ? » ne propose pas une page que le menu progressif n'a pas encore ouverte.
+  const hostileIncoming = fleets.some((f) => f.targetUid === player.uid && f.ownerUid !== player.uid && f.status === "outbound" && ((f.mission ?? "attack") === "attack" || f.mission === "pirate"));
+  return out.filter((a) => !a.to.startsWith("/game/") || navPageOpen(player, navPath(a.to), { now, hostileIncoming })).sort((a, b) => a.priority - b.priority);
 }

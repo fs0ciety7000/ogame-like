@@ -1,6 +1,6 @@
 import { publicShowcase } from "@/game/profile";
 import { getRankIcon, getRankLabel } from "@/game/ranks";
-import { formatCompact } from "@/lib/utils";
+import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { VictoryCardInput } from "@/lib/victoryCard";
 import type { BattleReport, PlayerState } from "@/types/game";
 
@@ -29,6 +29,6 @@ export function victoryCardFromReport(report: BattleReport, player: PlayerState,
       attacker ? { label: "Butin", value: formatCompact(loot) } : { label: "Puissance", value: formatCompact(report.defenderPower) },
       { label: "XP", value: `${(xp ?? 0) >= 0 ? "+" : ""}${xp ?? 0}` },
     ],
-    footer: `${new Date(report.timestamp).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} · empire.fs0ciety.org`,
+    footer: `${formatDateTime(report.timestamp, "date")} · empire.fs0ciety.org`,
   };
 }

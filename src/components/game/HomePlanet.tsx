@@ -468,7 +468,7 @@ export function HomePlanetLegend({ buildings }: { buildings: Buildings }) {
   return (
     <ul className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
       {items.map((it) => (
-        <li key={it.label} className={it.on ? "flex items-center gap-2 text-slate-300" : "flex items-center gap-2 text-slate-600"} title={it.from}>
+        <li key={it.label} className={it.on ? "flex items-center gap-2 text-slate-300" : "flex items-center gap-2 text-slate-500"} title={it.from}>
           <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: it.on ? it.color : "#334155" }} />
           {it.on ? it.label : `${it.from} : à développer`}
         </li>

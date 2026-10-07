@@ -289,11 +289,11 @@ export function UnitsPage() {
                 <HudBrackets />
                 <div className="relative px-4 pt-4">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <HudTag tone={unit.category === "attack" ? "danger" : "accent"}>
+                    <HudTag tone="neutral">
                       {unit.category === "attack" ? "Vaisseau" : "Défense"} · {unit.hangarSpace} place{unit.hangarSpace > 1 ? "s" : ""}
                     </HudTag>
                     <span title={classes[unit.id] && classes[unit.id] !== "support" ? `Bat la classe ${UNIT_CLASS_LABELS[CLASS_BEATS[classes[unit.id] as "light"]]}, craint la classe ${UNIT_CLASS_LABELS[(Object.keys(CLASS_BEATS) as ("light" | "medium" | "heavy")[]).find((k) => CLASS_BEATS[k] === classes[unit.id])!]}.` : "Ne combat pas."}>
-                      <HudTag tone={classes[unit.id] === "heavy" ? "gold" : classes[unit.id] === "medium" ? "accent" : "mint"}>{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
+                      <HudTag tone="neutral">{UNIT_CLASS_LABELS[classes[unit.id] ?? "light"]}</HudTag>
                     </span>
                     {/* 5.20 : coque abîmée et unités immobilisées à l'Atelier. */}
                     {(() => {
@@ -322,8 +322,8 @@ export function UnitsPage() {
                   <LevelUpBurst level={data.level} colorVar="var(--color-cyan-glow)" />
                   {!isLocked && (
                     <div className="absolute right-4 top-1 z-[2] text-right">
-                      <b className="hud-title block text-3xl leading-none text-slate-100">{formatNumber(data.count)}</b>
-                      <span className="font-mono text-[9px] tracking-[0.25em] text-slate-500">EN HANGAR</span>
+                      <b className="font-mono font-bold tabular-nums block text-3xl leading-none text-slate-100">{formatNumber(data.count)}</b>
+                      <span className="font-mono text-[11px] tracking-[0.25em] text-slate-500">EN HANGAR</span>
                     </div>
                   )}
                   <img

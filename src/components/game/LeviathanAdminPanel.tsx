@@ -12,7 +12,7 @@ import { WORLD_BOSSES } from "@/game/worldBosses";
 import { seasonBossSchedule } from "@/game/chronicles";
 import { adminLeviathan } from "@/services/leviathanService";
 import { adminSeasonBoss } from "@/services/seasonBossService";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatNumber, formatDateTime } from "@/lib/utils";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /** Courbe des points de structure relevés chaque heure. */
@@ -60,7 +60,7 @@ export function LeviathanAdminPanel({ state, kind = "leviathan" }: { state: Levi
 
   const run = async (action: "start" | "stop" | "resize" | "reschedule", value?: number) => {
     if (action === "resize" && !(await askConfirm({ title: `Passer la structure maximale à ${formatNumber(value ?? 0)} ?`, tone: "ember" }))) return;
-    if (action === "reschedule" && !(await askConfirm({ title: "Déplacer la fin du combat ?", message: `Nouvelle fin : ${new Date(value ?? 0).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })}.`, confirmLabel: "Déplacer", tone: "ember" }))) return;
+    if (action === "reschedule" && !(await askConfirm({ title: "Déplacer la fin du combat ?", message: `Nouvelle fin : ${formatDateTime(value ?? 0, "full", "server")}.`, confirmLabel: "Déplacer", tone: "ember" }))) return;
     setBusy(true);
     try {
       if (kind === "leviathan") await adminLeviathan(action, action === "resize" ? value : undefined, action === "reschedule" ? value : undefined, action === "start" && bossId ? bossId : undefined);
@@ -153,7 +153,7 @@ export function LeviathanAdminPanel({ state, kind = "leviathan" }: { state: Levi
         {upcoming.length > 0 && (
           <p>
             <span className="text-slate-300">Prochaines apparitions :</span>{" "}
-            {upcoming.map((w) => `${new Date(w.startMs).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}${kind === "leviathan" ? ` (${worldBossForStart(w.startMs).name})` : ""}`).join(" · ")}
+            {upcoming.map((w) => `${formatDateTime(w.startMs, "short", "server")}${kind === "leviathan" ? ` (${worldBossForStart(w.startMs).name})` : ""}`).join(" · ")}
           </p>
         )}
       </div>

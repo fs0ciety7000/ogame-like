@@ -77,7 +77,7 @@ export function CombatIntro({
           >
             {verdict}
           </motion.p>
-          <span className="absolute bottom-3 text-[10px] font-mono uppercase tracking-[0.2em] text-slate-600">Toucher pour passer</span>
+          <span className="absolute bottom-3 text-[11px] font-mono uppercase tracking-[0.2em] text-slate-500">Toucher pour passer</span>
         </motion.button>
       )}
     </AnimatePresence>

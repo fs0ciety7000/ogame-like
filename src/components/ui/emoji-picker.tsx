@@ -13,7 +13,7 @@ const CELL = "grid h-8 w-8 place-items-center text-lg transition-transform hover
 function ImageSection({ label, emojis, onPick }: { label: string; emojis: CustomEmoji[]; onPick: (text: string) => void }) {
   return (
     <div className="mb-2">
-      <p className="hud-eyebrow px-1 pb-1 text-[9px] text-gold-glow/80">{label}</p>
+      <p className="hud-eyebrow px-1 pb-1 text-[11px] text-gold-glow/80">{label}</p>
       <div className="grid grid-cols-8">
         {emojis.map((e) => (
           <PopoverPrimitive.Item key={e.code} className={CELL} title={e.label ? `${e.label} · :${e.code}:` : `:${e.code}:`} onSelect={() => onPick(`:${e.code}: `)}>
@@ -54,7 +54,7 @@ export function EmojiPicker({ onPick, className }: { onPick: (text: string) => v
           ))}
           {EMOJI_GROUPS.map((g) => (
             <div key={g.label} className="mb-2 last:mb-0">
-              <p className="hud-eyebrow px-1 pb-1 text-[9px] text-slate-500">{g.label}</p>
+              <p className="hud-eyebrow px-1 pb-1 text-[11px] text-slate-500">{g.label}</p>
               <div className="grid grid-cols-8">
                 {g.emojis.map((e) => (
                   <PopoverPrimitive.Item key={e} className={CELL} onSelect={() => onPick(e)}>

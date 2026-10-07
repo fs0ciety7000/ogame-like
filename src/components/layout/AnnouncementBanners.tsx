@@ -52,7 +52,7 @@ export function BannerStrip({ banner, onDismiss }: { banner: Banner; onDismiss?:
       <span aria-hidden className="banner-scan pointer-events-none absolute inset-y-0 left-0 w-1/3" />
       <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--banner-color)] to-transparent opacity-60" />
       {/* Étiquette du type, coin coupé */}
-      <span className="relative flex shrink-0 items-center gap-1.5 bg-[var(--banner-color)] py-1.5 pl-3 pr-5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-space-950 [clip-path:polygon(0_0,100%_0,calc(100%-10px)_100%,0_100%)] sm:pl-4">
+      <span className="relative flex shrink-0 items-center gap-1.5 bg-[var(--banner-color)] py-1.5 pl-3 pr-5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-space-950 [clip-path:polygon(0_0,100%_0,calc(100%-10px)_100%,0_100%)] sm:pl-4">
         <Icon className={cn("h-3.5 w-3.5", banner.kind === "critical" && "animate-pulse")} />
         <span className="max-sm:hidden">{BANNER_KINDS[banner.kind].label}</span>
       </span>

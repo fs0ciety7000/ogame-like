@@ -37,14 +37,14 @@ function DivisionHistory({ state, uid }: { state: LeagueState; uid: string }) {
   if (list.length === 0) return null;
   return (
     <div className="glass-panel hud-cut-sm flex flex-col gap-2 p-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400">Tes {list.length} dernière{list.length > 1 ? "s" : ""} semaine{list.length > 1 ? "s" : ""}</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-400">Tes {list.length} dernière{list.length > 1 ? "s" : ""} semaine{list.length > 1 ? "s" : ""}</p>
       <ol className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 lg:grid-cols-8">
         {list.map((h) => {
           const t = leagueInfo(h.tier);
           const Move = h.move === "up" ? ArrowUp : h.move === "down" ? ArrowDown : Minus;
           return (
             <li key={h.weekId} className="hud-cut-sm flex flex-col gap-0.5 border-l-2 bg-white/[0.02] px-2 py-1.5" style={{ borderColor: t.color }} title={`${leagueWeekLabel(h.weekId)} : ${t.label}, ${ordinal(h.rank)}, ${formatNumber(h.score)} XP`}>
-              <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-500">{leagueWeekLabel(h.weekId)}</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-slate-500">{leagueWeekLabel(h.weekId)}</span>
               <span className="flex items-center gap-1 text-xs" style={{ color: t.color }}>
                 {t.label}
                 <Move aria-label={h.move === "up" ? "montée" : h.move === "down" ? "descente" : "maintien"} className={cn("h-3 w-3", h.move === "up" ? "text-mint-glow" : h.move === "down" ? "text-ember-glow" : "text-slate-500")} />

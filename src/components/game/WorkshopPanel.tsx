@@ -192,7 +192,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                         <span className="text-sm text-slate-100">
                           <span className="font-mono">{formatNumber(job.count)}</span> × {unit?.name ?? job.unitId}
                         </span>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{WORKSHOP_SOURCE_LABELS[job.source] ?? job.source}</span>
+                        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{WORKSHOP_SOURCE_LABELS[job.source] ?? job.source}</span>
                         {(view.dock.jobs[job.id] ?? 0) > 0 && <HudChip size="sm" tone="neutral">{(view.dock.jobs[job.id] ?? 0) >= job.count ? "En cale" : `${formatNumber(view.dock.jobs[job.id] ?? 0)} en cale`}</HudChip>}
                         {i === 0 ? (
                           <HudChip tone="accent" size="sm" alert>
@@ -203,7 +203,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                         )}
                       </div>
                       <HudMeter percent={progress * 100} className="mt-2 h-1.5" />
-                      <p className="mt-1 flex justify-between font-mono text-[10px] text-slate-500">
+                      <p className="mt-1 flex justify-between font-mono text-[11px] text-slate-500">
                         <span>
                           {formatCompact(job.hpTotal - job.hpLeft)} / {formatCompact(job.hpTotal)} PV
                         </span>
@@ -255,7 +255,7 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
                         transition={{ duration: 0.6, ease: "easeOut" }}
                       />
                     </div>
-                    <p className="mt-1 font-mono text-[10px] text-slate-500">
+                    <p className="mt-1 font-mono text-[11px] text-slate-500">
                       {formatNumber(h.count)} unités · {formatCompact(h.missing)} PV à rendre
                     </p>
                   </div>

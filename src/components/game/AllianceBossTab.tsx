@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Crosshair, Flame, Megaphone, Trophy } from "lucide-react";
+import { Crosshair, Flame, Megaphone, Trophy, Swords } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { HudTag, StatTile } from "@/components/ui/hud";
+import { HudTag, StatTile, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { AssaultDialog, Ranking } from "@/pages/LeviathanPage";
 import { BossRecapPanel } from "@/components/game/BossRecap";
@@ -22,7 +22,7 @@ import { leviathanRanking } from "@/game/leviathan";
 import { AllianceError, callAllianceBoss } from "@/services/allianceService";
 import { launchFleet } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { cn, formatCompact, formatDuration } from "@/lib/utils";
+import { cn, formatCompact, formatDuration, formatDateTime } from "@/lib/utils";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
@@ -72,7 +72,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="hud-eyebrow text-[10px] text-ember-glow">Boss d'alliance · semaine du {new Date(`${allianceWeekId(now)}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</p>
+      <p className="hud-eyebrow text-[11px] text-ember-glow">Boss d'alliance · semaine du {formatDateTime(new Date(`${allianceWeekId(now)}T12:00:00Z`), "day")}</p>
       {/* v5.10.5 : même mise en scène que le Léviathan et le boss de saison, selon l'état du combat. */}
       <BossHero art={art} phase={phase} state={shown} now={now} next={ended ? nextWeek : null} nextLabel={phase === "dormant" ? (canCall ? "Prêt à être appelé" : "En attente d'un officier") : ended ? "Nouvel appel dans" : undefined} />
 
@@ -139,7 +139,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> {ended ? "Classement final de l'alliance" : "Dégâts de l'alliance"}
           </h2>
-          {shown ? <Ranking state={shown} uid={player.uid} /> : <p className="text-xs text-slate-500">Pas encore de combat cette semaine.</p>}
+          {shown ? <Ranking state={shown} uid={player.uid} /> : <EmptyState size="sm" icon={<Swords />} title="Pas encore de combat cette semaine" />}
         </Card>
         <Card className="flex flex-col gap-2 p-4 text-sm text-slate-300">
           <h2 className="hud-title text-sm">Récompenses</h2>

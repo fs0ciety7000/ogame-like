@@ -26,7 +26,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { gazetteNumber, gazettePublishAt, gazetteTrend, type GazetteSectionKind, type GazetteStats } from "@/game/gazette";
 import { adminPublishGazette, useGazetteStore } from "@/services/gazetteService";
 import { useAdminStatus } from "@/services/maintenanceService";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v4.6 : la Gazette du secteur, chaque lundi à 9 h.
@@ -58,7 +58,7 @@ const STATS: { key: keyof GazetteStats; label: string; tone: HudTone; icon: Luci
 ];
 
 const TREND_CLASS = { up: "text-mint-glow", down: "text-danger-glow", flat: "text-slate-500" };
-const day = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", timeZone: "Europe/Paris" });
+const day = (ms: number) => formatDateTime(ms, "day", "server");
 
 export function GazettePage() {
   const { issues } = useGazetteStore();
@@ -70,7 +70,7 @@ export function GazettePage() {
   const previous = issues[index + 1];
   const now = Date.now();
   const next = gazettePublishAt(now) > now ? gazettePublishAt(now) : gazettePublishAt(now + 7 * 86400_000);
-  const nextLabel = new Date(next).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+  const nextLabel = formatDateTime(next, "long", "server");
 
   const publish = async () => {
     if (!(await askConfirm({ title: "Publier un numéro maintenant ?", message: "Il couvrira la période depuis le numéro précédent. Tous les joueurs seront notifiés.", confirmLabel: "Publier" }))) return;
@@ -112,7 +112,7 @@ export function GazettePage() {
               </span>
             </div>
             <h2 className="hud-title text-2xl leading-tight text-slate-100 normal-case sm:text-4xl">{issue.headline}</h2>
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-slate-500">
               {issue.sections.filter((s) => s.kind !== "agenda").length} rubrique{issue.sections.length > 1 ? "s" : ""} · prochain numéro {nextLabel}
             </p>
           </Card>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarRange, Flame, HandCoins, Trophy } from "lucide-react";
+import { CalendarRange, Flame, HandCoins, Trophy, Landmark, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState, HudMeter } from "@/components/ui/hud";
 import { HudPanel } from "@/components/ui/panel";
@@ -34,7 +34,9 @@ export function AllianceWeekTab({ alliance, onOpen }: { alliance: Alliance; onOp
       alive = false;
     };
   }, []);
-  useEffect(() => subscribeAllianceLogs(alliance.id, setLogs), [alliance.id]);
+  useEffect(() => {
+    return subscribeAllianceLogs(alliance.id, setLogs);
+  }, [alliance.id]);
   const now = Date.now();
   const since = weekStartMs(now);
 
@@ -68,7 +70,7 @@ export function AllianceWeekTab({ alliance, onOpen }: { alliance: Alliance; onOp
         ) : (
           <>
             <p className="text-xs text-slate-400">{def.hint}</p>
-            <p className="font-display text-2xl tabular-nums text-slate-100">{mine ? `${rank + 1}e` : "pas encore classée"}</p>
+            <p className="font-mono font-bold tabular-nums text-2xl text-slate-100">{mine ? `${rank + 1}e` : "pas encore classée"}</p>
             {mine && (
               <p className="font-mono text-xs text-slate-400">
                 {formatNumber(mine.score)} points · {mine.contributors} membre{mine.contributors > 1 ? "s" : ""} ont progressé
@@ -91,7 +93,7 @@ export function AllianceWeekTab({ alliance, onOpen }: { alliance: Alliance; onOp
             </p>
           </>
         ) : (
-          <p className="text-sm text-slate-400">Pas encore de boss cette semaine : un officier peut le lancer.</p>
+          <EmptyState size="sm" icon={<Skull />} title="Pas encore de boss cette semaine">Un officier peut le lancer.</EmptyState>
         )}
         <Button size="sm" variant="ghost" className="self-start" onClick={() => onOpen("boss")}>
           Ouvrir le boss
@@ -102,7 +104,7 @@ export function AllianceWeekTab({ alliance, onOpen }: { alliance: Alliance; onOp
         {logs === null ? (
           <SkeletonList rows={3} />
         ) : ranking.length === 0 ? (
-          <EmptyState size="sm" icon="🏦" title="Aucun don cette semaine" action={<Button size="sm" variant="ghost" onClick={() => onOpen("tresor")}>Déposer au trésor</Button>}>
+          <EmptyState size="sm" icon={<Landmark />} title="Aucun don cette semaine" action={<Button size="sm" variant="ghost" onClick={() => onOpen("tresor")}>Déposer au trésor</Button>}>
             Les dépôts au trésor et aux projets depuis lundi s'affichent ici.
           </EmptyState>
         ) : (

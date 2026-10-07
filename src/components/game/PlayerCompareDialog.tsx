@@ -123,11 +123,11 @@ export function PlayerCompareDialog({ pair, players, onClose }: { pair: { a: str
                   </div>
                 );
               })}
-              <span className="order-2 font-mono text-xs text-slate-600">VS</span>
+              <span className="order-2 font-mono text-xs text-slate-500">VS</span>
             </div>
             {GROUPS.map((g) => (
               <div key={g.id}>
-                <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">{g.label}</p>
+                <p className="hud-eyebrow mb-1.5 text-[11px] text-slate-500">{g.label}</p>
                 <div className="flex flex-col divide-y divide-white/5 border border-white/5">
                   {rows
                     .filter((r) => r.group === g.id)

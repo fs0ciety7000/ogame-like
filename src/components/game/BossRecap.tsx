@@ -32,7 +32,7 @@ function seenKey(id: string) {
 function Stat({ icon: Icon, label, value, tone }: { icon: typeof Clock; label: string; value: string; tone: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5 border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-      <span className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">
+      <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">
         <Icon className="h-3 w-3" style={{ color: tone }} /> {label}
       </span>
       <span className="truncate font-display text-base tabular-nums text-slate-100">{value}</span>
@@ -151,7 +151,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "var(--color-e
             {recap.won ? <Trophy className="h-6 w-6" /> : <Flag className="h-6 w-6" />}
           </span>
           <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: tone }}>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: tone }}>
               {recap.won ? "Victoire" : "Il s'est retiré"}
             </p>
             <p className="hud-title truncate text-lg text-slate-100">{recap.won ? `${name} est tombé` : `${name} a survécu`}</p>
@@ -192,11 +192,11 @@ export function BossRecapBody({ state, uid, name, image, accent = "var(--color-e
       </div>
 
       <div className="flex flex-col gap-2 border border-white/[0.06] bg-white/[0.02] p-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Ton bilan</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">Ton bilan</p>
         {recap.mine ? (
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-slate-300">
             <span>
-              Rang <strong className="font-display text-lg text-slate-100">#{recap.mine.rank}</strong>
+              Rang <strong className="font-mono font-bold tabular-nums text-lg text-slate-100">#{recap.mine.rank}</strong>
               <span className="text-slate-500"> / {recap.participants}</span>
             </span>
             <span>
@@ -212,7 +212,7 @@ export function BossRecapBody({ state, uid, name, image, accent = "var(--color-e
 
       {recap.top.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Meilleurs dégâts</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">Meilleurs dégâts</p>
           <ol className="flex flex-col gap-1.5">
             {recap.top.map((c, i) => (
               <motion.li key={c.uid} {...item(4 + i)} className={cn("grid grid-cols-[1.75rem_1fr_auto] items-center gap-2 text-sm", c.uid === uid && "text-cyan-glow")}>

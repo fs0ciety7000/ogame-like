@@ -1750,6 +1750,47 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.14.79 (DP-L4) compte neuf : objectifs du jour parmi les pages ouvertes (I31), une notification « Nouveau » par palier", async () => {
+    await ensureAB();
+    const N = { pseudo: `Neuf_${suffix}`, email: `neuf${suffix}@test.dev`, pw: "motdepasse5" };
+    const rules = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const rulesBefore = rules.data;
+    logout();
+    const nId = (await registerPlayer(N.pseudo, N.email, N.pw)).id;
+    try {
+      // Tout compte de test est « neuf » (avant la date, il serait ancien dès Fer II).
+      await admin.collection("game_config").update(rules.id, { data: { ...(rulesBefore as object), navUnlock: { newAccountsFrom: 1 } } });
+      // Nouveau jour : les objectifs sont tirés à la prochaine action, parmi les systèmes ouverts (J0 : Bâtiments, Labo, Unités, Ressources).
+      await admin.collection("players").update(nId, { contracts: null, stats: {} });
+      await ps.syncPlayer(nId);
+      const day = await snap(nId);
+      expect(day.contracts.items).toHaveLength(CONTRACT_RULES.perDay);
+      for (const c of day.contracts.items) expect(["upgrade_building", "research", "build_units", "spend"], c.type).toContain(c.type);
+      expect(day.stats.navAnnounced).toEqual([]);
+      // Fer II d'un coup (Fer III compris) : une seule notification qui cite les pages ouvertes, même après plusieurs actions.
+      await admin.collection("players").update(nId, { xp: 250 });
+      await ps.syncPlayer(nId);
+      await ps.syncPlayer(nId);
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${nId}" && title ~ "Nouveau :"` });
+      expect(notes).toHaveLength(1);
+      expect(notes[0].title).toMatch(/^Nouveau : Galaxie, Alliance, Missions, Combats/);
+      expect(notes[0].link).toBe("/game/galaxie");
+      expect(notes[0].kind).toBe("system");
+      const after = await snap(nId);
+      expect(after.stats.navAnnounced).toEqual(expect.arrayContaining(["/game/missions", "/game/succes", "/game/journal"]));
+      // Le tirage du jour en cours n'est pas refait (I31).
+      expect(after.contracts.items.map((c: { id: string }) => c.id)).toEqual(day.contracts.items.map((c: { id: string }) => c.id));
+    } finally {
+      await admin.collection("game_config").update(rules.id, { data: rulesBefore });
+      pb.authStore.clear();
+      for (const n of await admin.collection("notifications").getFullList({ filter: `player_id="${nId}"` })) await admin.collection("notifications").delete(n.id).catch(() => undefined);
+      await admin.collection("players").delete(nId).catch(() => {});
+      await admin.collection("queues").delete(nId).catch(() => {});
+      await admin.collection("users").delete(nId).catch(() => {});
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
   it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);

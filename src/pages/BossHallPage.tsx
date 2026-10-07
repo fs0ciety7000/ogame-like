@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { HudPanel, PagedList } from "@/components/ui/panel";
 import { motion, useReducedMotion } from "framer-motion";
-import { ChevronRight, Crown, Flag, History, Hourglass, Medal, Skull, Swords, Trophy, Zap } from "lucide-react";
+import { ChevronRight, Crown, Flag, History, Hourglass, Medal, Skull, Swords, Trophy, Zap, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,7 +16,7 @@ import { useSeasonBoss } from "@/services/seasonBossService";
 import { useBossHistory } from "@/services/bossHistoryService";
 import { usePlayerStore } from "@/store/playerStore";
 import { assetUrl } from "@/lib/assets";
-import { formatCompact, formatDuration, alpha } from "@/lib/utils";
+import { formatCompact, formatDuration, alpha, formatDateTime } from "@/lib/utils";
 
 /* v5.10 : Hall of fame des boss (différent du Palmarès des saisons) — records, champions et historique des combats. */
 
@@ -24,16 +24,16 @@ const MEDALS = ["var(--th-medal-gold)", "var(--th-medal-silver)", "var(--th-meda
 type Filter = "all" | "mine" | BossKind;
 
 function dateLabel(ms: number) {
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return formatDateTime(ms, "date");
 }
 
 function Record({ icon: Icon, label, value, sub, color }: { icon: typeof Trophy; label: string; value: string; sub?: React.ReactNode; color: string }) {
   return (
     <Card className="flex flex-col gap-1 p-4">
-      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">
+      <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">
         <Icon className="h-3.5 w-3.5" style={{ color }} /> {label}
       </span>
-      <span className="font-display text-xl tabular-nums text-slate-100">{value}</span>
+      <span className="font-mono font-bold tabular-nums text-xl text-slate-100">{value}</span>
       {sub && <span className="text-xs text-slate-400">{sub}</span>}
     </Card>
   );
@@ -43,7 +43,7 @@ function Leaders({ title, icon: Icon, list, unit }: { title: string; icon: typeo
   return (
     <HudPanel icon={<Icon />} title={title} tone="gold">
       {list.length === 0 ? (
-        <EmptyState size="sm" icon="🏆" title="Personne pour l'instant">Le premier boss abattu ouvrira ce classement.</EmptyState>
+        <EmptyState size="sm" icon={<Trophy />} title="Personne pour l'instant">Le premier boss abattu ouvrira ce classement.</EmptyState>
       ) : (
         <ol className="flex flex-col gap-1.5">
           {list.map((p, i) => (
@@ -192,7 +192,7 @@ export function BossHallPage() {
               </HudChip>
             ))}
           >
-            {shown.length === 0 ? <EmptyState size="sm" icon="🔎" title="Rien dans cette catégorie">Essaie un autre filtre.</EmptyState> : <PagedList key={filter} items={shown} className="flex flex-col gap-2" render={(e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />} />}
+            {shown.length === 0 ? <EmptyState size="sm" icon={<Search />} title="Rien dans cette catégorie">Essaie un autre filtre.</EmptyState> : <PagedList key={filter} items={shown} className="flex flex-col gap-2" render={(e, i) => <FightRow key={e.id} e={e} index={i} uid={uid} onOpen={() => setOpened(e)} />} />}
           </HudPanel>
         </>
       )}
@@ -208,7 +208,7 @@ function MyRecords({ stats }: { stats: ReturnType<typeof myBossStats> }) {
       <div className="grid gap-2 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.kind} className="flex flex-col gap-0.5 border border-white/[0.06] bg-white/[0.02] p-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">{BOSS_KIND_LABELS[s.kind]}</span>
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{BOSS_KIND_LABELS[s.kind]}</span>
             <span className="font-display text-xl text-slate-100">
               <span style={{ color: MEDALS[s.bestRank - 1] ?? "var(--color-cyan-glow)" }}>#{s.bestRank}</span>
               <span className="ml-1.5 text-xs text-slate-400">meilleur rang</span>

@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/utils";
 import { useState } from "react";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ export function RenameCard({ player }: { player: PlayerState }) {
     return (
       <Card className="flex items-center gap-3 p-4 text-sm text-slate-400">
         <PenLine className="h-4 w-4 shrink-0 text-slate-500" />
-        Pseudo changé le {new Date(player.renamed.atMs).toLocaleDateString("fr-FR")} (anciennement « {player.renamed.fromPseudo} »). Le changement est définitif.
+        Pseudo changé le {formatDateTime(player.renamed.atMs, "numeric")} (anciennement « {player.renamed.fromPseudo} »). Le changement est définitif.
       </Card>
     );
   }

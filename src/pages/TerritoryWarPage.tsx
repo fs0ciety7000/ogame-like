@@ -6,7 +6,7 @@ import { EmptyState, HudChip, StatTile } from "@/components/ui/hud";
 import { HudPanel } from "@/components/ui/panel";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { formatDuration, formatNumber, timeAgo } from "@/lib/utils";
+import { formatDuration, formatNumber, timeAgo, formatDateTime } from "@/lib/utils";
 import { SECTOR_COUNT, sectorLabel, TERRITORY_RULES } from "@/game/territories";
 import { isTerritoryWarActive, nextTerritoryWar, sectorLeaders, TERRITORY_WAR_RULES, territoryWarRewards, territoryWarStandings } from "@/game/territoryWar";
 import { allianceHue, useTerritories } from "@/services/territoryService";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 const allianceColor = (id: string) => `hsl(${allianceHue(id)} 80% 62%)`;
 
 function parisDate(ms: number): string {
-  return new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+  return formatDateTime(ms, "long", "server");
 }
 
 export function TerritoryWarPage() {
@@ -79,7 +79,7 @@ export function TerritoryWarPage() {
           icon={<MapIcon />}
           title={active ? "Carte en direct" : war?.status === "closed" ? "Carte finale de la dernière guerre" : "Carte"}
           tone={active ? "danger" : "muted"}
-          aside={active ? <span className="font-mono text-[10px] text-slate-500">mise à jour en temps réel</span> : undefined}
+          aside={active ? <span className="font-mono text-[11px] text-slate-500">mise à jour en temps réel</span> : undefined}
         >
           {!war ? (
             <EmptyState icon={<MapIcon />} title="Aucune guerre jouée pour l'instant" size="sm">
@@ -100,25 +100,25 @@ export function TerritoryWarPage() {
                     title={`${sectorLabel(l.sector)}${control?.tag ? ` · contrôlé par [${control.tag}]` : ""}`}
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <span className="font-mono text-[10px] text-slate-500">{sectorLabel(l.sector)}</span>
+                      <span className="font-mono text-[11px] text-slate-500">{sectorLabel(l.sector)}</span>
                       {control?.allianceId && <span aria-label="contrôle horaire" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: allianceColor(control.allianceId) }} />}
                     </div>
                     {l.allianceId ? (
-                      <span className="truncate font-mono text-[10px] font-bold sm:text-sm" style={{ color: allianceColor(l.allianceId) }}>
+                      <span className="truncate font-mono text-[11px] font-bold sm:text-sm" style={{ color: allianceColor(l.allianceId) }}>
                         <span className="hidden sm:inline">[</span>
                         {l.tag || "?"}
                         <span className="hidden sm:inline">]</span>
                       </span>
                     ) : (
-                      <span className="truncate font-mono text-[10px] text-slate-600 sm:text-xs">{l.points > 0 ? "égalité" : "libre"}</span>
+                      <span className="truncate font-mono text-[11px] text-slate-500 sm:text-xs">{l.points > 0 ? "égalité" : "libre"}</span>
                     )}
-                    <span className="font-mono text-[10px] text-slate-300 sm:text-xs">{formatNumber(l.points)}</span>
+                    <span className="font-mono text-[11px] text-slate-300 sm:text-xs">{formatNumber(l.points)}</span>
                     {l.points > 0 && (
                       <div className="mt-auto h-1 w-full overflow-hidden bg-slate-800">
                         <div className="h-full" style={{ width: `${share}%`, background: l.allianceId ? allianceColor(l.allianceId) : "var(--color-slate-500)" }} />
                       </div>
                     )}
-                    {myPts > 0 && !mine && <span className="font-mono text-[9px] text-mint-glow">moi {formatNumber(myPts)}</span>}
+                    {myPts > 0 && !mine && <span className="font-mono text-[11px] text-mint-glow">moi {formatNumber(myPts)}</span>}
                   </div>
                 );
               })}
@@ -131,7 +131,7 @@ export function TerritoryWarPage() {
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <HudPanel icon={<Trophy />} title="Classement des alliances" tone="gold" aside={<span className="font-mono text-[10px] text-slate-500">secteurs, puis points</span>}>
+        <HudPanel icon={<Trophy />} title="Classement des alliances" tone="gold" aside={<span className="font-mono text-[11px] text-slate-500">secteurs, puis points</span>}>
           {standings.length === 0 ? (
             <EmptyState icon={<Trophy />} title="Personne n'a encore marqué" size="sm">
               Attaques, défenses et contrôle horaire font entrer ton alliance au classement.
@@ -171,7 +171,7 @@ export function TerritoryWarPage() {
             <ul className="flex max-h-[360px] flex-col gap-1 overflow-y-auto">
               {[...war.feed].reverse().slice(0, 25).map((f, i) => (
                 <li key={`${f.t}-${i}`} className="flex items-baseline gap-2 text-xs">
-                  <span className="shrink-0 whitespace-nowrap font-mono text-[10px] text-slate-500">{timeAgo(f.t)}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-slate-500">{timeAgo(f.t)}</span>
                   <span className="min-w-0 flex-1 text-slate-300">{f.text}</span>
                   <span className="shrink-0 font-mono" style={{ color: allianceColor(f.allianceId) }}>
                     +{f.pts}

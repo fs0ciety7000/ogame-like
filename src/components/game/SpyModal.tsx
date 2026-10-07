@@ -4,7 +4,7 @@ import { bountyState } from "@/game/bounties";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Clock, Ghost, Radar, ShieldAlert } from "lucide-react";
+import { Clock, FlaskConical, Ghost, Radar, ShieldAlert, Satellite } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
@@ -52,7 +52,7 @@ export function SpyReportView({ report }: { report: SpyReport }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className={cn("rounded px-1.5 py-0.5 font-semibold", tier >= 3 ? "bg-mint-glow/15 text-mint-glow" : tier >= 1 ? "bg-cyan-glow/15 text-cyan-glow" : "bg-danger-glow/15 text-danger-glow")}>
+        <span className={cn("hud-cut-sm px-1.5 py-0.5 font-semibold", tier >= 3 ? "bg-mint-glow/15 text-mint-glow" : tier >= 1 ? "bg-cyan-glow/15 text-cyan-glow" : "bg-danger-glow/15 text-danger-glow")}>
           {SPY_TIER_LABELS[tier]}
         </span>
         <span className="text-slate-500">
@@ -63,7 +63,11 @@ export function SpyReportView({ report }: { report: SpyReport }) {
             <ShieldAlert className="h-3.5 w-3.5" /> sondes abattues
           </span>
         )}
-        {report.anomaly && <span className="font-semibold text-violet-glow">⚗ anomalie chimique : flotte et défenses peut-être faussées</span>}
+        {report.anomaly && (
+          <span className="inline-flex items-center gap-1 font-semibold text-violet-glow">
+            <FlaskConical aria-hidden className="h-3.5 w-3.5" /> anomalie chimique : flotte et défenses peut-être faussées
+          </span>
+        )}
       </div>
       {tier === 0 && <p className="text-xs text-slate-500">Brouillage trop fort : envoie plus de sondes ou monte ta techno Espionnage.</p>}
       {/* 5.22 : rapport enregistré sans son contenu (schéma du serveur pas encore à jour). */}
@@ -245,7 +249,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
                   </span>
                 </HudCallout>
               )}
-              <div className="space-y-1.5 rounded-lg bg-black/20 px-3 py-2 text-xs text-slate-400">
+              <div className="hud-cut-sm space-y-1.5 bg-black/20 px-3 py-2 text-xs text-slate-400">
                 <p className="flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 shrink-0 text-cyan-glow" />
                   {flight !== null ? (
@@ -278,13 +282,13 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
           )}
 
           <div className="mt-4 border-t border-white/5 pt-3">
-            <h3 className="mb-2 font-display text-sm text-slate-100">Dernier rapport</h3>
+            <h3 className="hud-title mb-2 text-sm text-slate-100">Dernier rapport</h3>
             {loadingReport && !report ? (
               <SkeletonList rows={2} />
             ) : report ? (
               <SpyReportView report={report} />
             ) : (
-              <EmptyState size="sm" icon="🛰️" title="Aucun rapport">Lance des sondes pour connaître ses forces.</EmptyState>
+              <EmptyState size="sm" icon={<Satellite />} title="Aucun rapport">Lance des sondes pour connaître ses forces.</EmptyState>
             )}
           </div>
         </DialogContent>

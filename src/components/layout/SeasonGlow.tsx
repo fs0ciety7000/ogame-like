@@ -1,5 +1,5 @@
 import { alpha } from "@/lib/utils";
-import { useEffect, useState } from "react";
+import { useNowEvery } from "@/hooks/useNowTicker";
 import { Link, useLocation } from "react-router-dom";
 import { Swords } from "lucide-react";
 import { useSeasonAccent } from "@/lib/seasonSkin";
@@ -11,12 +11,7 @@ import { assetUrl } from "@/lib/assets";
 
 /** Minute courante (le thème suit le début et la fin du combat). */
 function useMinute(): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
+  return useNowEvery(30_000);
 }
 
 /**

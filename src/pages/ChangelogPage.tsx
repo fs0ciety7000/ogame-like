@@ -1,3 +1,5 @@
+import { Newspaper } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import { assetUrl } from "@/lib/assets";
 import { EmptyState } from "@/components/ui/hud";
 import { useEffect, useState } from "react";
@@ -15,7 +17,7 @@ const STEP = 10;
 
 function formatDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return Number.isNaN(d.getTime()) ? iso : formatDateTime(d, "date");
 }
 
 export function ChangelogPage() {
@@ -31,7 +33,7 @@ export function ChangelogPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description={CURRENT_VERSION ? `Les dernières mises à jour du jeu — version actuelle : v${CURRENT_VERSION}.` : "Les dernières mises à jour du jeu."} />
-      {CHANGELOG.length === 0 && <EmptyState icon="📰" title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
+      {CHANGELOG.length === 0 && <EmptyState icon={<Newspaper />} title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
       <div className="flex flex-col gap-3">
         {CHANGELOG.slice(0, shown).map((entry, i) => (
           <motion.div

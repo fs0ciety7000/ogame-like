@@ -176,7 +176,9 @@ export function AppShell() {
   }, [tierUid, tierBuildings]);
   useAllianceUnread(user?.uid ?? null, player);
   const uidForMessages = user?.uid ?? null;
-  useEffect(() => (uidForMessages ? subscribeMyMessages(uidForMessages) : undefined), [uidForMessages]);
+  useEffect(() => {
+    return uidForMessages ? subscribeMyMessages(uidForMessages) : undefined;
+  }, [uidForMessages]);
   // v4.7.1 : lien de parrainage pas encore déclaré (inscription interrompue, autre onglet…).
   useEffect(() => {
     if (uidForMessages && pendingSponsor()) void claimPendingSponsor().then((s) => s && toast.success(`Parrain enregistré : ${s}.`));
@@ -237,7 +239,7 @@ export function AppShell() {
               <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
             </Link>
             <div className="min-w-0">
-              <p className="hud-eyebrow truncate text-[10px] text-cyan-glow/70">
+              <p className="hud-eyebrow truncate text-[11px] text-cyan-glow/70">
                 {player?.pseudo ?? "…"} <span className="text-slate-600">//</span> Secteur {sectorCode}
               </p>
               <PreprodTag />
@@ -274,7 +276,7 @@ export function AppShell() {
                 <HeaderButton title="Administration" asLink={pendingReports > 0 ? "/game/admin?onglet=reports" : "/game/admin"}>
                   <Wrench className="h-4 w-4" />
                   {pendingReports > 0 && (
-                    <span className="absolute right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center bg-danger-glow px-0.5 font-mono text-[9px] font-bold text-space-950">
+                    <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-danger-glow px-0.5 font-mono text-[11px] font-bold leading-none text-space-950">
                       {pendingReports > 9 ? "9+" : pendingReports}
                     </span>
                   )}

@@ -49,7 +49,7 @@ export function ContestCard({ contest: c, player, pot, now, compact = false }: {
             Critère : <span className="text-slate-200">{metric}</span> (progression pendant le concours)
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: tone, borderColor: `${alpha(tone, 40)}` }}>
+        <span className="inline-flex items-center gap-1 border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em]" style={{ color: tone, borderColor: `${alpha(tone, 40)}` }}>
           <Clock className="h-3 w-3" /> {label}
         </span>
       </div>

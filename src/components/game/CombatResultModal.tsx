@@ -79,7 +79,9 @@ export function CombatResultModal() {
   const current = useCombatModalStore((s) => s.current);
   const player = usePlayerStore((s) => s.player);
   const [intro, setIntro] = useState(false);
-  useEffect(() => setIntro(!!current), [current]);
+  useEffect(() => {
+    setIntro(!!current);
+  }, [current]);
   const endIntro = useCallback(() => setIntro(false), []);
   const style = player ? profileStyle(player) : null;
   const myEmblem = !player || !style || style.emblem === "rank" ? getRankIcon(player?.xp ?? 0) : emblemOptions(player).find((e) => e.id === style.emblem)?.image ?? getRankIcon(player.xp);

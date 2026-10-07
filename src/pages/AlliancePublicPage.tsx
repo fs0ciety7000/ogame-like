@@ -1,9 +1,9 @@
-import { alpha } from "@/lib/utils";
+import { alpha, formatDateTime } from "@/lib/utils";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, CalendarDays, Crown, Handshake, Map, Shield, Swords, Trophy, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, Crown, Handshake, Map, Shield, Swords, Trophy, Users, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/hud";
@@ -28,7 +28,9 @@ export function AlliancePublicPage() {
   const [challenge, setChallenge] = useState<AllianceChallengeState | null>(null);
   const [applying, setApplying] = useState(false);
   const territories = useTerritories();
-  useEffect(() => subscribeAlliance(id, setAlliance), [id]);
+  useEffect(() => {
+    return subscribeAlliance(id, setAlliance);
+  }, [id]);
   useEffect(() => {
     void fetchAllianceChallenge().then(setChallenge);
   }, []);
@@ -37,7 +39,7 @@ export function AlliancePublicPage() {
   if (alliance === null)
     return (
       <Card>
-        <EmptyState icon="🚩" title="Alliance introuvable">
+        <EmptyState icon={<Flag />} title="Alliance introuvable">
           Elle a peut-être été dissoute.
         </EmptyState>
       </Card>
@@ -106,7 +108,7 @@ export function AlliancePublicPage() {
             <Trophy className="h-4 w-4 text-gold-glow" /> Palmarès
           </h2>
           <p className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-slate-500" /> Fondée {alliance.createdAtMs ? `le ${new Date(alliance.createdAtMs).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : "il y a longtemps"}
+            <CalendarDays className="h-4 w-4 text-slate-500" /> Fondée {alliance.createdAtMs ? `le ${formatDateTime(alliance.createdAtMs, "date")}` : "il y a longtemps"}
           </p>
           <p className="flex items-center gap-2">
             <Users className="h-4 w-4 text-slate-500" /> {alliance.members.length} / {allianceMaxMembers(alliance)} membres
@@ -141,7 +143,7 @@ export function AlliancePublicPage() {
                 {role === "officer" && <Shield className="h-3.5 w-3.5 text-cyan-glow" aria-label="Officier" />}
                 {role === "diplomat" && <Handshake className="h-3.5 w-3.5 text-mint-glow" aria-label="Diplomate" />}
                 {rank && (
-                  <span className="border px-1 font-mono text-[9px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
+                  <span className="border px-1 font-mono text-[11px] font-bold uppercase" style={{ color: rank.color, borderColor: `${alpha(rank.color, 40)}` }}>
                     {rank.name}
                   </span>
                 )}

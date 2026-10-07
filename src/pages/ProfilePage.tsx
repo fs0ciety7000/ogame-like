@@ -28,7 +28,7 @@ import { ReferralCard } from "@/components/game/ReferralCard";
 import { RenameCard } from "@/components/game/RenameCard";
 import { AvatarCard } from "@/components/game/AvatarCard";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
-import { Palette } from "lucide-react";
+import { Palette, Medal } from "lucide-react";
 
 function usePlaytimeDisplay(baseSeconds: number) {
   useNowTicker();
@@ -111,10 +111,10 @@ export function ProfilePage() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-              <StatTile label="Victoires" value={formatNumber(player.victories)} tone="mint" sub={`${fights > 0 ? Math.round((player.victories / fights) * 100) : 0} % de réussite`} />
-              <StatTile label="Défaites" value={formatNumber(player.defeats)} tone="danger" sub={`${formatNumber(fights)} combats`} />
+              <StatTile label="Victoires" value={formatNumber(player.victories)} tone={player.victories > 0 ? "mint" : "neutral"} sub={`${fights > 0 ? Math.round((player.victories / fights) * 100) : 0} % de réussite`} />
+              <StatTile label="Défaites" value={formatNumber(player.defeats)} tone={player.defeats > 0 ? "danger" : "neutral"} sub={`${formatNumber(fights)} combats`} />
               <div className="col-span-2 sm:col-span-1">
-                <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="accent" />
+                <StatTile label="Temps de jeu" value={`${hours}h ${minutes.toString().padStart(2, "0")}`} tone="neutral" />
               </div>
             </div>
           </Card>
@@ -138,7 +138,7 @@ export function ProfilePage() {
                   .slice(-8)
                   .reverse();
                 return recent.length === 0 ? (
-                  <EmptyState size="sm" icon="🏅" title="Aucun succès" action={<EmptyAction to="/game/succes">Voir les succès</EmptyAction>}>
+                  <EmptyState size="sm" icon={<Medal />} title="Aucun succès" action={<EmptyAction to="/game/succes">Voir les succès</EmptyAction>}>
                     Ta première victoire t'en rapportera un !
                   </EmptyState>
                 ) : (
@@ -146,7 +146,7 @@ export function ProfilePage() {
                     {recent.map((a) => (
                       <div key={a.id} className="flex w-20 flex-col items-center gap-1 text-center" title={a.description}>
                         <AchievementMedal a={a} unlocked size={64} />
-                        <span className="text-[10px] leading-tight text-slate-300">{a.name}</span>
+                        <span className="text-[11px] leading-tight text-slate-300">{a.name}</span>
                       </div>
                     ))}
                   </div>
@@ -199,7 +199,7 @@ function ProgressList({ title, percent, rows }: { title: string; percent: number
           </div>
         ))}
         {rows.length > 8 && (
-          <button type="button" onClick={() => setAll((v) => !v)} className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
+          <button type="button" onClick={() => setAll((v) => !v)} className="font-mono text-[11px] uppercase tracking-[0.14em] text-cyan-glow hover:underline">
             {all ? "Replier" : `Afficher les ${rows.length - 8} autres`}
           </button>
         )}
@@ -217,8 +217,8 @@ function RankLadder({ xp }: { xp: number }) {
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2">
-        <h3 className="font-display text-sm text-slate-100">Échelle des rangs</h3>
-        <span className="text-xs text-slate-500">
+        <h3 className="hud-title text-sm text-slate-100">Échelle des rangs</h3>
+        <span className="font-mono text-xs tabular-nums text-slate-500">
           {current + 1} / {RANKS.length}
         </span>
         <button type="button" className="ml-auto text-xs text-cyan-glow hover:underline" onClick={() => setOpen((o) => !o)}>
@@ -239,7 +239,7 @@ function RankLadder({ xp }: { xp: number }) {
             >
               <img src={assetUrl(r.image)} alt="" className="h-14 w-14 object-contain" loading="lazy" />
               <p className={cn("text-[11px] font-semibold", i === current ? "text-cyan-glow" : "text-slate-200")}>{r.name}</p>
-              <p className="tabular-mono text-[10px] text-slate-500">{formatNumber(r.xp)} XP</p>
+              <p className="tabular-mono text-[11px] text-slate-500">{formatNumber(r.xp)} XP</p>
             </div>
           );
         })}
@@ -307,18 +307,18 @@ function TitlesCard({ titles, active }: { titles: PlayerTitle[]; active: string 
         )}
         {player && toUnlock.length > 0 && (
           <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">À débloquer</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">À débloquer</p>
             {toUnlock.map((t) => {
               const v = titleProgress(t, player);
               const pct = Math.min(100, Math.round((v / t.unlock!.threshold) * 100));
               const color = titleRarity(t.rarity).color;
               return (
                 <div key={t.id} className="flex items-center gap-2 text-xs">
-                  <span className="w-40 shrink-0 truncate opacity-70" style={{ color }}>
+                  <span className="min-w-0 flex-1 truncate opacity-70 sm:w-40 sm:flex-none sm:shrink-0" style={{ color }}>
                     {t.icon} {t.label}
                   </span>
                   <span className="hidden min-w-0 flex-1 truncate text-slate-500 sm:block">{t.description}</span>
-                  <span className="relative h-1.5 w-24 shrink-0 bg-white/5">
+                  <span className="relative h-1.5 w-16 shrink-0 bg-white/5 sm:w-24">
                     <i className="absolute inset-y-0 left-0" style={{ width: `${pct}%`, background: color }} />
                   </span>
                   <span className="w-20 shrink-0 text-right font-mono tabular-nums text-slate-400">

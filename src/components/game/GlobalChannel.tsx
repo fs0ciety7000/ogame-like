@@ -19,7 +19,7 @@ import { assetUrl } from "@/lib/assets";
 import { Input } from "@/components/ui/input";
 import { useIsAdmin } from "@/services/adminService";
 import { closeChatRoom, createChatRoom, markRoomSeen, pinRoomMessage, setChatRoomIcon, setRoomEvent, useRoomUnread, markGlobalSeen, reactGlobalMessage, readPersonalMutes, reportGlobalMessage, sendGlobalMessage, useChatRooms, useGlobalMessages, writePersonalMutes } from "@/services/globalChatService";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* 5.26 : canal global : tout le serveur, en direct. Signaler un message
    (masqué d'office à 3 signalements), masquer un joueur chez soi, filtre de
@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 const toneColor = (tone?: string) => (tone && NAME_TONES.some((t) => t.id === tone) ? HUD_TONE[tone as HudTone] : undefined);
 
 function clock(ms: number) {
-  return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return formatDateTime(ms, "time");
 }
 
 export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer: (p: { uid: string; pseudo: string }) => void }) {
@@ -159,7 +159,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
             <button type="button" onClick={() => setRoom(r.id)} aria-pressed={room === r.id} title={r.topic || r.name}>
               <RoomIcon icon={r.icon} className="h-3 w-3" /> {r.name}
               {(unread[r.id] ?? 0) > 0 && (
-                <span className="ml-0.5 bg-danger-glow px-1 font-mono text-[9px] tabular-nums text-space-950" aria-label={`${unread[r.id]} non lus`}>
+                <span className="ml-0.5 bg-danger-glow px-1 font-mono text-[11px] tabular-nums text-space-950" aria-label={`${unread[r.id]} non lus`}>
                   {unread[r.id]}
                 </span>
               )}
@@ -183,7 +183,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
           <Button type="submit" size="sm" variant="secondary" disabled={roomName.trim().length < CHAT_ROOM_RULES.nameMin}>
             Ouvrir
           </Button>
-          <p className="text-[10px] text-slate-500 sm:hidden">Un salon par joueur ; fermé après {CHAT_ROOM_RULES.idleDays} jours sans message.</p>
+          <p className="text-[11px] text-slate-500 sm:hidden">Un salon par joueur ; fermé après {CHAT_ROOM_RULES.idleDays} jours sans message.</p>
         </form>
       )}
       <div className="flex flex-wrap items-center gap-2 border-b border-cyan-glow/15 px-3 py-2">
@@ -233,7 +233,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
           const forMe = !mine && mentions(m.text, myPseudo);
           return (
             <div key={m.id} className={cn("group flex items-start gap-2 px-2 py-1 text-sm hover:bg-white/[0.03]", isMuted && "opacity-50", forMe && "border-l-2 border-gold-glow/60 bg-gold-glow/[0.05]")}>
-              <span className="w-10 shrink-0 pt-0.5 font-mono text-[10px] tabular-nums text-slate-600">{clock(m.createdAtMs)}</span>
+              <span className="w-10 shrink-0 pt-0.5 font-mono text-[11px] tabular-nums text-slate-500">{clock(m.createdAtMs)}</span>
               <div className="min-w-0 flex-1">
                 <button type="button" onClick={() => onOpenPlayer({ uid: m.uid, pseudo: m.pseudo })} className={cn("mr-1.5 font-semibold hover:underline", mine ? "text-cyan-glow" : "text-slate-200")} style={{ color: toneColor(m.nameTone) }}>
                   {m.allianceTag && <span className="font-mono text-[11px] text-slate-500">[{m.allianceTag}] </span>}
@@ -295,7 +295,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
             {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
-        <p className="flex justify-between text-[10px] text-slate-600">
+        <p className="flex justify-between text-[11px] text-slate-500">
           <span>Entrée pour envoyer. Respect et bonne humeur : les grossièretés sont masquées, les abus signalés.</span>
           <span className="font-mono">
             {draft.length}/{GLOBAL_CHAT_RULES.maxLength}
@@ -306,7 +306,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
   );
 }
 
-const eventWhen = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const eventWhen = (ms: number) => formatDateTime(ms, "short");
 
 /** Valeur par défaut du champ date/heure : dans une heure, à l'heure locale. */
 function inputLocal(ms: number) {
@@ -421,7 +421,7 @@ function Reactions({ reactions, uid, canKesh, onReact }: { reactions: Partial<Re
             className={cn("inline-flex items-center gap-1 border px-1.5 text-xs", mine ? "border-cyan-glow/50 bg-cyan-glow/10" : "border-white/10 bg-white/[0.03] hover:border-cyan-glow/30")}
           >
             <ReactionGlyph emoji={e} />
-            <span className="font-mono text-[10px] tabular-nums text-slate-300">{reactions[e]!.length}</span>
+            <span className="font-mono text-[11px] tabular-nums text-slate-300">{reactions[e]!.length}</span>
           </button>
         );
       })}

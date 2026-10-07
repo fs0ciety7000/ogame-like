@@ -7,7 +7,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { MARKET_HISTORY_RULES, priceHistory, referencePrice } from "@/game/marketHistory";
 import type { MarketOffer } from "@/game/market";
 import type { ResourceId } from "@/types/game";
-import { formatDecimal } from "@/lib/utils";
+import { formatDecimal, formatDateTime } from "@/lib/utils";
 
 /* v4.8 : prix des échanges conclus, par ressource, relatif au comptoir. */
 
@@ -79,11 +79,11 @@ export function MarketPriceChart({ trades, now }: { trades: Trade[]; now: number
             {chart.coords.length > 1 && <polyline points={chart.line} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
             {chart.coords.map((c) => (
               <circle key={c.p.day} cx={c.x} cy={c.y} r={3.5} fill={color}>
-                <title>{`${new Date(c.p.day).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} : ${formatRatio(c.p.median)} (${c.p.trades} échange${c.p.trades > 1 ? "s" : ""})`}</title>
+                <title>{`${formatDateTime(new Date(c.p.day), "dayShort")} : ${formatRatio(c.p.median)} (${c.p.trades} échange${c.p.trades > 1 ? "s" : ""})`}</title>
               </circle>
             ))}
           </svg>
-          <div className="mt-1 flex justify-between text-[10px] text-slate-500">
+          <div className="mt-1 flex justify-between text-[11px] text-slate-500">
             <span>il y a {MARKET_HISTORY_RULES.days} j</span>
             <span>pointillés : prix du comptoir</span>
             <span>aujourd'hui</span>

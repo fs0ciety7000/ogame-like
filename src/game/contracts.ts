@@ -6,6 +6,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
 import { formatInt } from "@/game/format";
 import { grantTokens } from "@/game/casino";
 import { parisDay } from "@/game/retention";
+import { NAV_UNLOCK_RULES, navPageOpen } from "@/game/navUnlock";
 
 /* =====================================================
    Contrats quotidiens : 3 objectifs par jour (minuit UTC), tirés au sort
@@ -74,6 +75,24 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
 };
 
 const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
+/* 6.14.79 (DP-L4, invariant I31, Q158) : un objectif d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur
+   (menu progressif, `navUnlock`). Page(s) où l'objectif se fait ; un type absent se fait sur une page toujours visible
+   (Bâtiments, Labo, Unités, Ressources). Le tirage du jour en cours n'est jamais refait. */
+export const CONTRACT_PAGES: Partial<Record<ContractType, string[]>> = {
+  win_attack: ["/game/galaxie"],
+  win_defense: ["/game/combats"],
+  missions: ["/game/missions"],
+  gift: ["/game/commerce"],
+  spy: ["/game/galaxie"],
+  market: ["/game/commerce"],
+};
+
+/** Types d'objectifs que le joueur peut tirer (tous si `navUnlock.filterContracts` est à faux ou hors du menu progressif). */
+export function openContractTypes(player: PlayerState, now: number): ContractType[] {
+  if (!NAV_UNLOCK_RULES.filterContracts) return [...ALL_TYPES];
+  return ALL_TYPES.filter((t) => (CONTRACT_PAGES[t] ?? []).every((page) => navPageOpen(player, page, { now })));
+}
+
 const RARES: ResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 const DAY_MS = 24 * 3600 * 1000;
 
@@ -130,7 +149,7 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
     if (current.items.length < CONTRACT_RULES.perDay) {
       const used = new Set(current.items.map((c) => c.type));
       const rand = seededRandom(`${player.uid}:${day}:extra`);
-      const pool = ALL_TYPES.filter((t) => !used.has(t));
+      const pool = openContractTypes(player, now).filter((t) => !used.has(t));
       while (current.items.length < CONTRACT_RULES.perDay && pool.length > 0) {
         const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
         current.items.push(makeContract(type, player, day, current.items.length));
@@ -140,7 +159,8 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
   }
 
   const rand = seededRandom(`${player.uid}:${day}`);
-  const pool = [...ALL_TYPES];
+  // I31 : un nouveau jour ne tire que parmi les systèmes ouverts (4 types toujours ouverts : le compte est plein dès J0).
+  const pool = openContractTypes(player, now);
   const items: Contract[] = [];
   for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
     const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
@@ -246,7 +266,9 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
   if (index < 0) throw new GameActionError("Ce contrat n'est plus disponible.");
   if (state.items[index].claimed) throw new GameActionError("Ce contrat est déjà terminé.");
   const used = new Set(state.items.map((c) => c.type));
-  const pool = ALL_TYPES.filter((t) => !used.has(t));
+  // I31 : la relance est un nouveau tirage, parmi les systèmes ouverts ; sans autre objectif ouvert, elle reste disponible.
+  const pool = openContractTypes(player, now).filter((t) => !used.has(t));
+  if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
   const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
   const type = pool[Math.floor(rand() * pool.length)];
   const next = makeContract(type, player, state.day, index);

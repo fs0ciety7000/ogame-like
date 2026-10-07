@@ -2,7 +2,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CornerUpLeft, DoorOpen, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
+import { AlertTriangle, CornerUpLeft, Crosshair, DoorOpen, FlaskConical, Package, Recycle, RotateCcw, Rocket, Satellite, Shield, Skull, Wind, Zap, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Card } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import { PatrolDialog } from "@/components/game/MissionDialogs";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
-import { formatClock, formatCompact } from "@/lib/utils";
+import { formatClock, formatCompact, formatDateTime } from "@/lib/utils";
 import { GameActionError, jumpFleet, recallFleet, launchFleet } from "@/services/playerService";
 import { gateCooldownMs, gateReadyAtMs, gateUnlocked, jumpMissions } from "@/game/jumpGate";
 import { moonLevel, playerMoon } from "@/game/moon";
@@ -40,37 +40,49 @@ export function isHostile(f: Fleet, uid: string | undefined): boolean {
   );
 }
 
-function fleetLabel(f: Fleet, outbound: boolean): string {
+/** 6.14.82 (UX-9, AD-16) : icône lucide par mission (plus d'emoji, qui changeaient de rendu selon le système). */
+const FLEET_LABEL_ICON: Partial<Record<NonNullable<Fleet["mission"]>, LucideIcon>> = {
+  patrol: Wind,
+  spy: Satellite,
+  lair: Skull,
+  garrison: Shield,
+  bounty: Crosshair,
+  elite: Crosshair,
+  delivery: Package,
+  recycle: Recycle,
+};
+
+function fleetLabelText(f: Fleet, outbound: boolean): string {
   switch (f.mission) {
     case "patrol":
-      return outbound ? "🌀 Patrouille (aller)" : "🌀 Patrouille (retour)";
+      return outbound ? "Patrouille (aller)" : "Patrouille (retour)";
     case "spy":
-      return outbound
-        ? `🛰️ Sondes → ${f.targetPseudo}`
-        : `🛰️ ← sondes de ${f.targetPseudo}`;
+      return outbound ? `Sondes → ${f.targetPseudo}` : `← sondes de ${f.targetPseudo}`;
     case "lair":
-      return outbound
-        ? `☠️ Assaut : ${findFaction(f.factionId ?? factionOfLair(f.targetUid))?.lair.name ?? "repaire"}`
-        : "☠️ ← retour du repaire";
+      return outbound ? `Assaut : ${findFaction(f.factionId ?? factionOfLair(f.targetUid))?.lair.name ?? "repaire"}` : "← retour du repaire";
     case "garrison":
-      return f.status === "stationed"
-        ? `🛡️ Garnison chez ${f.targetPseudo}`
-        : outbound
-          ? `🛡️ Garnison → ${f.targetPseudo}`
-          : `🛡️ ← retour de chez ${f.targetPseudo}`;
+      return f.status === "stationed" ? `Garnison chez ${f.targetPseudo}` : outbound ? `Garnison → ${f.targetPseudo}` : `← retour de chez ${f.targetPseudo}`;
     case "bounty":
-      return outbound ? `🐝 Prime : ${f.targetPseudo}` : `🐝 ← retour de la traque de ${f.targetPseudo}`;
+      return outbound ? `Prime : ${f.targetPseudo}` : `← retour de la traque de ${f.targetPseudo}`;
     case "elite":
-      return outbound ? `🐝 Proie d'élite : ${f.targetPseudo}` : "🐝 ← retour de la proie d'élite";
+      return outbound ? `Proie d'élite : ${f.targetPseudo}` : "← retour de la proie d'élite";
     case "delivery":
-      return outbound ? `📦 Livraison → ${f.targetPseudo}` : `📦 ← retour de livraison (${f.targetPseudo})`;
+      return outbound ? `Livraison → ${f.targetPseudo}` : `← retour de livraison (${f.targetPseudo})`;
     case "recycle":
-      return outbound
-        ? `♻️ Débris de ${f.targetPseudo}`
-        : `♻️ ← retour des débris de ${f.targetPseudo}`;
+      return outbound ? `Débris de ${f.targetPseudo}` : `← retour des débris de ${f.targetPseudo}`;
     default:
       return outbound ? `→ ${f.targetPseudo}` : `← retour de ${f.targetPseudo}`;
   }
+}
+
+function FleetLabel({ f, outbound }: { f: Fleet; outbound: boolean }) {
+  const Icon = f.mission ? FLEET_LABEL_ICON[f.mission] : undefined;
+  return (
+    <span className="inline-flex items-center gap-1">
+      {Icon && <Icon aria-hidden className="h-3.5 w-3.5 shrink-0" />}
+      <EmojiText text={fleetLabelText(f, outbound)} />
+    </span>
+  );
 }
 
 function fleetSummary(fleet: Fleet): string {
@@ -200,7 +212,7 @@ export function FleetsPanel({
     <Card className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Rocket className="h-4 w-4 text-cyan-glow" />
-        <h3 className="font-display text-sm text-slate-100">Flottes</h3>
+        <h3 className="hud-title text-sm text-slate-100">Flottes</h3>
         <HudChip size="sm" tone={full ? "ember" : "neutral"} title="Flottes en vol en même temps. Les sondes et les expéditions ne comptent pas.">
           <span className="font-mono tabular-nums">
             {used} / {slots}
@@ -259,7 +271,8 @@ export function FleetsPanel({
             {f.mission === "attack" && <ScanButton targetUid={f.ownerUid} pseudo={f.ownerPseudo} compact className="mt-1.5" />}
             {f.anomaly && (
               <p className="mt-1 text-[11px] font-semibold text-violet-glow">
-                ⚗ Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.
+                <FlaskConical aria-hidden className="mr-1 inline h-3.5 w-3.5" />
+                Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.
               </p>
             )}
             <div className="mt-1.5 flex items-center gap-2">
@@ -311,7 +324,7 @@ export function FleetsPanel({
                     : "font-semibold text-mint-glow"
                 }
               >
-                <EmojiText text={fleetLabel(f, outbound)} />
+                <FleetLabel f={f} outbound={outbound} />
               </span>
               <span className="tabular-mono ml-auto text-slate-400">
                 {decision
@@ -405,7 +418,7 @@ export function FleetsPanel({
                 {" "}
                 ·{" "}
                 {f.status === "stationed"
-                  ? `jusqu'à ${new Date(f.stationedUntilMs ?? 0).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                  ? `jusqu'à ${formatDateTime(f.stationedUntilMs ?? 0, "time")}`
                   : f.status === "outbound"
                     ? `arrive dans ${formatClock(Math.max(0, Math.floor((f.arriveAtMs - now) / 1000)))}`
                     : "repartie"}

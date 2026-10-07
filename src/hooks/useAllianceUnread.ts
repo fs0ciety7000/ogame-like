@@ -25,5 +25,7 @@ export function useAllianceUnread(uid: string | null, player: PlayerState | null
   }, [allianceId, uid, lastReadMs, chatOn]);
 
   // v4.0 : messages du canal diplomatique (pastilles de l'onglet Diplomatie).
-  useEffect(() => (allianceId && uid && pactOn ? subscribePactUnread(uid, allianceId) : undefined), [allianceId, uid, pactOn]);
+  useEffect(() => {
+    return allianceId && uid && pactOn ? subscribePactUnread(uid, allianceId) : undefined;
+  }, [allianceId, uid, pactOn]);
 }

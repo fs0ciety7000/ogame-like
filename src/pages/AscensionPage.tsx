@@ -33,7 +33,7 @@ export function AscensionPage() {
             <StatTile tone="accent" label="Reste à construire" value={formatNumber(Math.max(0, progress.needed - progress.levels))} sub="niveaux de bâtiments de base" />
           </div>
           <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">
+            <div className="flex justify-between font-mono text-[11px] uppercase tracking-[0.2em] text-slate-500">
               <span>Progression vers l'Ascension</span>
               <span className="tabular-nums text-slate-300">{Math.floor(pct)} %</span>
             </div>

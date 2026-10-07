@@ -58,7 +58,9 @@ export function FxLayer() {
   const flights = useFxStore((s) => s.flights);
   const reduced = useReducedMotion() ?? false;
 
-  useEffect(() => trackPointer(), []);
+  useEffect(() => {
+    return trackPointer();
+  }, []);
   useDiscreteGainFlights(!reduced);
 
   return (

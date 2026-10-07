@@ -36,7 +36,7 @@ export function SeasonHistoryCard({ uid, currentXp }: { uid: string; currentXp: 
       </div>
       <p className="mb-2 text-xs text-slate-500">Saison en cours : {formatNumber(currentXp)} XP.</p>
       {list.length === 0 ? (
-        <EmptyState size="sm" icon="🏆" title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs?mode=season">Classement en cours</EmptyAction>}>
+        <EmptyState size="sm" icon={<Trophy />} title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs?mode=season">Classement en cours</EmptyAction>}>
           Ton premier classement apparaîtra ici à la clôture.
         </EmptyState>
       ) : (
@@ -45,7 +45,7 @@ export function SeasonHistoryCard({ uid, currentXp }: { uid: string; currentXp: 
             <div key={s.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
               <span className={cn("w-10 font-display text-lg font-bold", PODIUM[s.rank - 1] ?? "text-slate-400")}>
                 {s.rank}
-                <sup className="text-[10px]">{s.rank === 1 ? "er" : "e"}</sup>
+                <sup className="text-[11px]">{s.rank === 1 ? "er" : "e"}</sup>
               </span>
               <span className="flex-1 text-slate-200 first-letter:uppercase">{seasonLabel(s.seasonId)}</span>
               <span className="font-mono text-xs text-slate-400">{formatNumber(s.seasonXp)} XP</span>

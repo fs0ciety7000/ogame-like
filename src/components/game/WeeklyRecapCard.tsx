@@ -17,8 +17,8 @@ const key = (weekId: string) => `cosmic:week-recap-hidden:${weekId}`;
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col">
-      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <span className="font-display text-lg tabular-nums text-slate-100">{value}</span>
+      <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <span className="font-mono font-bold tabular-nums text-lg text-slate-100">{value}</span>
     </div>
   );
 }

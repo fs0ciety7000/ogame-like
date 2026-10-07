@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Crosshair, Radio, Skull, Trophy, Users } from "lucide-react";
+import { Crosshair, Radio, Skull, Trophy, Users, Swords } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { PlayerName } from "@/components/ui/player-name";
@@ -11,7 +11,7 @@ import { findUnit } from "@/game/units";
 import { reactToBoss, type BossKind } from "@/services/bossReactService";
 import { useDirectoryStore } from "@/store/directoryStore";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatNumber, alpha } from "@/lib/utils";
+import { cn, formatCompact, formatNumber, alpha, formatDateTime } from "@/lib/utils";
 
 /* =====================================================
    v5.10 : mise en scène commune des boss (Léviathan, boss de saison) :
@@ -91,7 +91,7 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
           <p className="hud-title text-lg text-slate-100">{art.name}</p>
           <p className="font-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: st.color }}>
             {st.label}
-            {phase === "killed" && state && <> · le {new Date(state.endedAtMs || state.endMs).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}</>}
+            {phase === "killed" && state && <> · le {formatDateTime(state.endedAtMs || state.endMs, "day")}</>}
             {phase === "failed" && state && <> · structure entamée à {Math.round(100 - hpPct)} %</>}
           </p>
           {phase === "killed" && state?.killedBy ? (
@@ -104,8 +104,8 @@ export function BossHero({ art, phase, state, now, next, nextLabel }: { art: Bos
         </div>
         {/* Revue AU2 : sur mobile, le décompte passe sous le nom (sinon le nom se coupe sur 4 lignes). */}
         <div className="w-full sm:w-auto sm:text-right">
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : nextLabel ?? (next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : "")}</p>
-          <p className="font-display text-xl tabular-nums text-slate-100">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-400">{phase === "active" ? "Repart dans" : nextLabel ?? (next ? (phase === "dormant" ? "Arrive dans" : "Retour dans") : "")}</p>
+          <p className="font-mono font-bold tabular-nums text-xl text-slate-100">{phase === "active" && state ? bossCountdown(state.endMs - now) : next ? bossCountdown(next - now) : nextLabel ? "" : "—"}</p>
         </div>
       </div>
 
@@ -127,7 +127,7 @@ export function BossNextCard({ art, next, now, phase, tip }: { art: BossArt; nex
         <p className="font-display text-sm text-slate-100">{phase === "dormant" ? `${art.name} n'est pas encore là` : `${art.name} reviendra`}</p>
         <p className="text-xs text-slate-400">
           {next
-            ? `Prochaine apparition : ${new Date(next).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} — dans ${bossCountdown(next - now)}.`
+            ? `Prochaine apparition : ${formatDateTime(next, "long", "server")} — dans ${bossCountdown(next - now)}.`
             : "Aucune apparition prévue pour l'instant."}{" "}
           {tip}
         </p>
@@ -164,9 +164,9 @@ export function BossPhasePanel({ state, accent }: { state: LeviathanState; accen
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono uppercase tracking-[0.14em]">
+      <div className="grid grid-cols-3 gap-1.5 text-[11px] font-mono uppercase tracking-[0.14em]">
         {([1, 2, 3] as BossFightPhase[]).map((p) => (
-          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-slate-100" : p < phase ? "border-white/5 text-slate-600 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
+          <span key={p} className={cn("border px-2 py-1 text-center font-mono", p === phase ? "text-slate-100" : p < phase ? "border-white/5 text-slate-500 line-through" : "border-white/10 text-slate-500")} style={p === phase ? { borderColor: `${alpha(tone, 53)}`, background: `${alpha(tone, 9)}`, color: tone } : undefined}>
             {p}. {bossPhaseLabel(state, p).name}
           </span>
         ))}
@@ -230,14 +230,14 @@ export function BossFeed({ state, uid, now, max = 12, boss }: { state: Leviathan
             type="button"
             onClick={() => setAlliesOnly((v) => !v)}
             aria-pressed={alliesOnly}
-            className={cn("hud-cut-sm ml-auto flex items-center gap-1 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.14em] transition-colors", alliesOnly ? "border-violet-glow/50 bg-violet-glow/10 text-violet-glow" : "border-white/10 text-slate-400 hover:text-slate-100")}
+            className={cn("hud-cut-sm ml-auto flex items-center gap-1 border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors", alliesOnly ? "border-violet-glow/50 bg-violet-glow/10 text-violet-glow" : "border-white/10 text-slate-400 hover:text-slate-100")}
           >
             <Users className="h-3 w-3" /> Mon alliance
           </button>
         )}
       </div>
       {feed.length === 0 ? (
-        <EmptyState size="sm" icon="⚔️" title={alliesOnly ? "Aucun allié n'a frappé" : "Aucun assaut"}>
+        <EmptyState size="sm" icon={<Swords />} title={alliesOnly ? "Aucun allié n'a frappé" : "Aucun assaut"}>
           {alliesOnly ? "Les assauts de ton alliance s'afficheront ici." : "Le premier à frapper ouvrira le fil."}
         </EmptyState>
       ) : (
@@ -267,7 +267,7 @@ export function BossFeed({ state, uid, now, max = 12, boss }: { state: Leviathan
                         </span>
                       </>
                     )}
-                    <span className="shrink-0 font-mono text-[10px] text-slate-500">{agoLabel(now - f.t)}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-slate-500">{agoLabel(now - f.t)}</span>
                   </div>
                   {(canReact || shown.length > 0) && (
                     <div className="flex flex-wrap items-center gap-1 pl-5">

@@ -10,11 +10,12 @@ import { DailyMissionsCard } from "@/components/game/DailyMissionsCard";
 import { ContractsCard } from "@/components/game/ContractsCard";
 import { ChallengeCard } from "@/components/game/ChallengeCard";
 import { useAgenda } from "@/components/game/AgendaCard";
-import { AGENDA_COLORS, AGENDA_LABELS, type AgendaItem } from "@/game/agenda";
+import { AGENDA_LABELS, type AgendaItem } from "@/game/agenda";
+import { AgendaIcon } from "@/components/game/agendaStyle";
 import { describeClaims, pendingClaims } from "@/game/claimAll";
 import { dailyOrders, type DailyOrder, type OrderState } from "@/game/dailyOrders";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { claimAllRewards, GameActionError } from "@/services/playerService";
 import { useFleetStore } from "@/store/fleetStore";
 import { usePlayerStore } from "@/store/playerStore";
@@ -46,7 +47,7 @@ function OrderRow({ order }: { order: DailyOrder }) {
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className="text-sm text-slate-100">{order.label}</span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{order.period}</span>
+            <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">{order.period}</span>
           </span>
           <span className="block text-xs text-slate-400">{order.detail}</span>
         </span>
@@ -90,17 +91,14 @@ function WeekAgenda({ now }: { now: number }) {
           return (
             <li key={day} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
               <span className={cn("w-28 shrink-0 font-mono text-[11px] uppercase tracking-wider", isWeekend ? "text-ember-glow" : "text-slate-400")}>
-                {d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric" })}
+                {formatDateTime(d, "weekdayNum")}
               </span>
               <span className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                 {list.map((it: AgendaItem) => (
                   <HudChip key={it.id} asChild size="sm" tone="neutral" className="max-w-full">
                     <Link to={it.link} title={`${AGENDA_LABELS[it.kind]} : ${it.title}`}>
-                      <i aria-hidden className="h-1.5 w-3 shrink-0" style={{ background: AGENDA_COLORS[it.kind] }} />
-                      <span className="truncate">
-                        {it.emoji ? `${it.emoji} ` : ""}
-                        {it.title}
-                      </span>
+                      <AgendaIcon kind={it.kind} className="h-3 w-3 shrink-0 text-violet-glow" />
+                      <span className="truncate">{it.title}</span>
                     </Link>
                   </HudChip>
                 ))}

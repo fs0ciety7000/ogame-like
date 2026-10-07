@@ -16,7 +16,7 @@ export function PublicFormulasPage() {
         <header className="flex flex-wrap items-center gap-3">
           <img src="/assets/logo/favicon-32.png?v=2.4" alt="" className="h-8 w-8" />
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-cyan-glow">Cosmic Empires · Manuel du commandant</p>
+            <p className="hud-eyebrow text-[11px] text-cyan-glow">Cosmic Empires · Manuel du commandant</p>
             <h1 className="hud-title text-2xl text-slate-100 sm:text-3xl">Les formules du jeu</h1>
           </div>
           <a href="/bible/index.html" className="flex items-center gap-1 border border-white/15 px-2.5 py-1 text-xs text-slate-300 hover:border-white/40">

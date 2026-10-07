@@ -57,13 +57,13 @@ function UnitRows({
             <img src={assetUrl(def.image)} alt="" className="h-8 w-8 shrink-0 object-contain" loading="lazy" />
             <span className="min-w-[7rem] flex-1 truncate text-sm text-slate-300">{def.name}</span>
             {withLevel && (
-              <label className="flex items-center gap-1 font-mono text-[10px] text-slate-500">
+              <label className="flex items-center gap-1 font-mono text-[11px] text-slate-500">
                 niv.
                 <NumberInput size="sm" meter={false} min={1} max={def.maxLevel} value={cur.level} onChange={(v) => set(id, { level: v })} className="w-28" aria-label={`Niveau ${def.name}`} />
               </label>
             )}
             <NumberInput size="sm" value={cur.count} max={cap} onChange={(v) => set(id, { count: v })} className="w-44 shrink-0" aria-label={`Quantité ${def.name}`} />
-            {cap !== undefined && <span className="w-10 shrink-0 text-right font-mono text-[10px] text-slate-500">/{formatCompact(cap)}</span>}
+            {cap !== undefined && <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500">/{formatCompact(cap)}</span>}
           </div>
         );
       })}
@@ -77,7 +77,7 @@ function LossList({ title, losses, recovered }: { title: string; losses: Record<
   const rows = Object.entries(losses).filter(([id, n]) => n > 0 || (recovered?.[id] ?? 0) > 0);
   return (
     <div>
-      <p className="hud-eyebrow mb-1 text-[10px] text-slate-500">{title}</p>
+      <p className="hud-eyebrow mb-1 text-[11px] text-slate-500">{title}</p>
       {rows.length === 0 ? (
         <p className="text-xs text-slate-500">Aucune perte</p>
       ) : (
@@ -156,7 +156,7 @@ function ResultPanel({ result, defending }: { result: SimOutcome | null; defendi
 
       {loot.length > 0 && (
         <div>
-          <p className="hud-eyebrow mb-1 text-[10px] text-slate-500">Butin estimé (cale : {formatCompact(combat.cargoCapacity)})</p>
+          <p className="hud-eyebrow mb-1 text-[11px] text-slate-500">Butin estimé (cale : {formatCompact(combat.cargoCapacity)})</p>
           <div className="flex flex-wrap gap-3">
             {loot.map(([res, n]) => (
               <span key={res} className="flex items-center gap-1 font-mono text-xs text-slate-200">
@@ -349,7 +349,7 @@ export function SimulatorPage() {
                 </label>
               </div>
               <div>
-                <p className="hud-eyebrow mb-1.5 text-[10px] text-slate-500">Posture du défenseur</p>
+                <p className="hud-eyebrow mb-1.5 text-[11px] text-slate-500">Posture du défenseur</p>
                 <PosturePicker value={defPosture} onChange={setDefPosture} />
               </div>
               <p className="text-[11px] text-slate-500">Le défenseur du bac à sable n'a ni technologie ni réparation.</p>

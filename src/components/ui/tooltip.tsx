@@ -63,14 +63,14 @@ export function TooltipCard({
     ));
   return (
     <div className={cn("min-w-48 max-w-72", className)}>
-      <p className="mb-1 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
+      <p className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cyan-glow">
         {icon}
         {title}
       </p>
       {list(rows)}
       {sections.map((s, i) => (
         <div key={i} className="mt-1.5 border-t border-white/10 pt-1.5">
-          <p className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{s.title}</p>
+          <p className="mb-0.5 font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">{s.title}</p>
           {s.rows.length ? list(s.rows) : <p className="text-[11px] text-slate-500">{s.empty}</p>}
         </div>
       ))}

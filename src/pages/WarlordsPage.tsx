@@ -9,7 +9,7 @@ import type { Coalition } from "@/game/coalition";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Crosshair, Eye, Loader2, Mail, Skull, Sword, Swords, Timer } from "lucide-react";
+import { Crosshair, Eye, Loader2, Mail, Skull, Sword, Swords, Timer, Crown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -42,12 +42,14 @@ function Portrait({ w, className }: { w: WarlordPublic; className?: string }) {
 const MOBILE_STEP = 4;
 const isNarrow = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
 
-/* 6.14.67 (UX-6, AD-19) : le tempérament est une pastille du HUD (mêmes tons qu'avant). */
-const PERSONALITY_TONE: Record<string, "danger" | "gold" | "accent" | "mint"> = {
-  aggressive: "danger",
-  opportunist: "gold",
-  builder: "accent",
-  merchant: "mint",
+/* 6.14.67 (UX-6, AD-19) : le tempérament est une pastille du HUD.
+   6.14.82 (UX-9, AD-15) : couleur = sens. Seul l'Agressif (80 % de sa force en flotte) porte un enjeu : attention (ember).
+   Les autres tempéraments sont une information, en neutre (l'or promettait une récompense, le mint un bon point). */
+const PERSONALITY_TONE: Record<string, "ember" | "neutral"> = {
+  aggressive: "ember",
+  opportunist: "neutral",
+  builder: "neutral",
+  merchant: "neutral",
 };
 
 export function WarlordsPage() {
@@ -127,7 +129,7 @@ export function WarlordsPage() {
         <Card className="flex flex-wrap items-center gap-4 border-danger-glow/40 p-4">
           <Swords className="h-5 w-5 text-danger-glow" />
           <div className="min-w-0 flex-1">
-            <p className="hud-eyebrow text-[10px] text-danger-glow">Vendetta en cours</p>
+            <p className="hud-eyebrow text-[11px] text-danger-glow">Vendetta en cours</p>
             <p className="text-sm text-slate-200">
               Contre <strong style={{ color: mine.color }}>{mine.name}</strong> : {formatNumber(mine.vendetta.dealt)} / {formatNumber(mine.vendetta.goal)} de puissance détruite.
             </p>
@@ -148,7 +150,7 @@ export function WarlordsPage() {
         </p>
       ) : list.length === 0 ? (
         <Card>
-          <EmptyState icon="👑" title="Secteur calme" action={<EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction>}>
+          <EmptyState icon={<Crown />} title="Secteur calme" action={<EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction>}>
             Aucun seigneur de guerre dans le secteur pour l'instant.
           </EmptyState>
         </Card>
@@ -173,7 +175,7 @@ export function WarlordsPage() {
                     </div>
                     <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{w.originLabel}</p>
                     <div className="flex flex-wrap gap-1.5 text-[11px]">
-                      <HudTag tone={PERSONALITY_TONE[w.personality] ?? "accent"}>{PERSONALITY_LABELS[w.personality]}</HudTag>
+                      <HudTag tone={PERSONALITY_TONE[w.personality] ?? "neutral"}>{PERSONALITY_LABELS[w.personality]}</HudTag>
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">{TIER_LABELS[w.tier]}</span>
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">
                         Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />

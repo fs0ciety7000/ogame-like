@@ -502,19 +502,19 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
   return (
     <div className="relative mt-3 overflow-hidden border border-cyan-glow/15 bg-space-950/60 hud-cut-sm">
       <div ref={host} className="relative h-60 w-full sm:h-72" aria-label="Replay du combat en 3D" role="img" />
-      <span className="pointer-events-none absolute left-3 top-2 font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-glow">Toi</span>
-      <span className="pointer-events-none absolute right-3 top-2 font-mono text-[10px] uppercase tracking-[0.2em] text-danger-glow">Adversaire</span>
+      <span className="pointer-events-none absolute left-3 top-2 font-mono text-[11px] uppercase tracking-[0.2em] text-cyan-glow">Toi</span>
+      <span className="pointer-events-none absolute right-3 top-2 font-mono text-[11px] uppercase tracking-[0.2em] text-danger-glow">Adversaire</span>
       {ended && <p className={cn("hud-title pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-3xl tracking-[0.3em]", bannerTone)}>{banner}</p>}
       <button type="button" onClick={() => {
           seekRound.current = 0;
           setRun((n) => n + 1);
-        }} className="absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1 font-mono text-[10px] uppercase tracking-[0.15em] text-slate-400 hover:text-cyan-glow">
+        }} className="absolute left-1/2 top-2 flex -translate-x-1/2 items-center gap-1 font-mono text-[11px] uppercase tracking-[0.15em] text-slate-400 hover:text-cyan-glow">
         <RotateCcw className="h-3 w-3" /> Rejouer
       </button>
       <div className="grid grid-cols-2 gap-3 px-3 pb-1">
         {([0, 1] as const).map((i) => (
           <div key={i}>
-            <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.15em] text-slate-500">
+            <div className="flex justify-between font-mono text-[11px] uppercase tracking-[0.15em] text-slate-500">
               <span>Intégrité</span>
               <span className={i === 0 ? "text-cyan-glow" : "text-danger-glow"}>{Math.round(hp[i] * 100)} %</span>
             </div>
@@ -525,7 +525,7 @@ export function CombatScene3D({ myPower, opponentPower, myLossPercent, opponentL
         ))}
       </div>
       {/* Crédit exigé par la licence CC-BY du modèle de mastjie. */}
-      <p className="px-3 pb-1.5 text-right text-[9px] text-slate-600">
+      <p className="px-3 pb-1.5 text-right text-[11px] text-slate-500">
         Modèles : Spaceship by Quaternius (CC0) · Spaceship by mastjie [CC-BY] via{" "}
         <a href="https://poly.pizza" target="_blank" rel="noreferrer" className="hover:text-slate-400">
           Poly Pizza

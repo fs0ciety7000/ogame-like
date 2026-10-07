@@ -72,7 +72,9 @@ export function ConfirmHost() {
   }, [current]);
   const view = current ?? shown;
   const [typed, setTyped] = React.useState("");
-  React.useEffect(() => setTyped(""), [current]);
+  React.useEffect(() => {
+    setTyped("");
+  }, [current]);
   const locked = !!view?.requireText && typed.trim() !== view.requireText;
   const tone = view?.tone ?? "accent";
   const Icon = TONE_ICON[tone] ?? HelpCircle;

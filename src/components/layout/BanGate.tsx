@@ -7,7 +7,7 @@ import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 import { clearBanned, useBanStore } from "@/store/banStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, formatDateTime } from "@/lib/utils";
 
 /* 5.26 : un compte suspendu ou banni ne voit plus le jeu : motif, échéance
    (compte à rebours) et déconnexion. Le serveur refuse de toute façon tout. */
@@ -57,7 +57,7 @@ function BanScreen({ message }: { message: string }) {
             <Ban className="h-6 w-6" aria-hidden />
           </span>
           <div>
-            <p className="hud-eyebrow text-[10px] text-danger-glow">Cosmic Empires · Modération</p>
+            <p className="hud-eyebrow text-[11px] text-danger-glow">Cosmic Empires · Modération</p>
             <h1 className="hud-title text-xl text-slate-100">{permanent ? "Compte banni" : "Compte suspendu"}</h1>
           </div>
         </div>
@@ -67,7 +67,7 @@ function BanScreen({ message }: { message: string }) {
         {!permanent && left !== null && (
           <p className="font-mono text-sm text-ember-glow">
             Fin de la suspension dans {formatDuration(Math.max(0, left) / 1000)}
-            <span className="block text-[11px] text-slate-500">{new Date(info!.untilMs!).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</span>
+            <span className="block text-[11px] text-slate-500">{formatDateTime(info!.untilMs!, "long")}</span>
           </p>
         )}
         <p className="text-xs text-slate-500">Une erreur ? Écris à l'équipe depuis le devblog ou la page de statut. Ton empire reste intact pendant une suspension.</p>

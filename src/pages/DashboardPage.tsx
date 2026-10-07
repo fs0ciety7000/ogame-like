@@ -176,8 +176,8 @@ export function DashboardPage() {
         {/* 5.21.1 : raccourcis vers le détail (la légende des bâtiments a quitté l'accueil). */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
           <Link to="/game/batiments" className="hud-hit text-cyan-glow hover:underline">Bâtiments</Link>
-          <Link to="/game/statistiques" className="hud-hit text-cyan-glow hover:underline">Statistiques de l'empire</Link>
-          <Link to="/game/combats" className="hud-hit text-cyan-glow hover:underline">Journal de combat</Link>
+          {!hiddenRoutes.has("/game/statistiques") && <Link to="/game/statistiques" className="hud-hit text-cyan-glow hover:underline">Statistiques de l'empire</Link>}
+          {!hiddenRoutes.has("/game/combats") && <Link to="/game/combats" className="hud-hit text-cyan-glow hover:underline">Journal de combat</Link>}
         </div>
       </Card>
     ),
@@ -258,8 +258,9 @@ export function DashboardPage() {
       <QueueStrip queues={queues} now={now} />
       <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
-      {/* 6.0 : rappel tant qu'aucune classe d'empire n'est choisie (premier choix gratuit). */}
-      {!player.empireClass && !player.npc && (
+      {/* 6.0 : rappel tant qu'aucune classe d'empire n'est choisie (premier choix gratuit).
+          6.14.81 (DP-L6, I30) : seulement quand la page est ouverte (le Carnet du commandant l'ouvre à son étape). */}
+      {!player.empireClass && !player.npc && !hiddenRoutes.has("/game/classe") && (
         <HudCallout tone="gold" className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
           <Compass className="h-4 w-4 shrink-0 text-gold-glow" />
           <span className="min-w-0 flex-1">

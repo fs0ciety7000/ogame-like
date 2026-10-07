@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { Coins, Crown, History, ListOrdered, Percent } from "lucide-react";
+import { Coins, Crown, History, ListOrdered, Percent, Dices } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { assetUrl } from "@/lib/assets";
@@ -25,7 +25,7 @@ import { Link, Navigate } from "react-router-dom";
 import { usePlayerStore } from "@/store/playerStore";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { playJackpot, playSlotPull, playSlotStop, playSlotWin } from "@/lib/sfx";
-import { cn, formatCompact, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatNumber, formatDateTime } from "@/lib/utils";
 import type { ResourceId } from "@/types/game";
 
 /* v5.12 : Casino orbital — machine à sous « 777 » alimentée par le pot commun. */
@@ -351,7 +351,7 @@ export function CasinoPage() {
           {settings && !open && (
             <HudCallout tone="ember" className="mx-auto w-full max-w-[560px] text-sm">
               <b className="text-slate-100">Fermé aux joueurs.</b> Tu le vois parce que tu es administrateur (tirages de test possibles).
-              {nextOpen ? ` Prochaine ouverture programmée : ${new Date(nextOpen).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" })}.` : " Aucune ouverture programmée."}
+              {nextOpen ? ` Prochaine ouverture programmée : ${formatDateTime(nextOpen, "long", "server")}.` : " Aucune ouverture programmée."}
             </HudCallout>
           )}
         </div>
@@ -388,12 +388,12 @@ export function CasinoPage() {
           {/* 5.15.12 : mes derniers tirages. */}
           <HudPanel icon={<History />} title="Mes derniers tirages" aside={<span className="font-mono text-[11px] text-slate-500">{history.length} / 20</span>}>
             {history.length === 0 ? (
-              <EmptyState size="sm" icon="🎰" title="Aucun tirage">Tes 20 derniers tirages s'afficheront ici.</EmptyState>
+              <EmptyState size="sm" icon={<Dices />} title="Aucun tirage">Tes 20 derniers tirages s'afficheront ici.</EmptyState>
             ) : (
               <ul className="grid max-h-72 gap-1 overflow-y-auto pr-1 text-xs">
                 {history.map((h, i) => (
                   <li key={`${h.atMs}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 border-b border-white/5 pb-1 last:border-0">
-                    <span className="w-12 shrink-0 font-mono text-[10px] text-slate-500">{new Date(h.atMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className="w-12 shrink-0 font-mono text-[11px] text-slate-500">{formatDateTime(h.atMs, "time")}</span>
                     <span className={cn("min-w-0 flex-1 truncate", h.outcome === "lose" ? "text-slate-500" : h.outcome === "jackpot" ? "text-gold-glow" : "text-slate-200")}>{OUTCOME_LABELS[h.outcome]}</span>
                     <Gains resources={h.resources} className="flex flex-wrap gap-2 font-mono tabular-nums text-slate-300" />
                   </li>
@@ -439,7 +439,7 @@ export function CasinoPage() {
                     {OUTCOME_LABELS[row.outcome]}
                     {/* v5.14.2 : chance de chaque gain, par tirage. */}
                     {settings && row.outcome in settings.odds && (
-                      <span className="block whitespace-nowrap font-mono text-[10px] text-slate-500">{chanceLabel(settings.odds[row.outcome as keyof typeof settings.odds])}</span>
+                      <span className="block whitespace-nowrap font-mono text-[11px] text-slate-500">{chanceLabel(settings.odds[row.outcome as keyof typeof settings.odds])}</span>
                     )}
                   </span>
                   <span className="shrink-0 text-right font-mono text-[11px] text-slate-100">
@@ -458,14 +458,14 @@ export function CasinoPage() {
 
           <HudPanel icon={<Crown />} title="Gros lots" tone="gold">
             {(casino?.jackpots.length ?? 0) === 0 ? (
-              <EmptyState size="sm" icon="👑" title="Aucun gros lot">Personne n'a encore aligné trois 7. Le premier entrera dans la légende.</EmptyState>
+              <EmptyState size="sm" icon={<Crown />} title="Aucun gros lot">Personne n'a encore aligné trois 7. Le premier entrera dans la légende.</EmptyState>
             ) : (
               <ul className="grid gap-2">
                 {casino!.jackpots.slice(0, 5).map((w) => (
                   <li key={`${w.uid}-${w.atMs}`} className="hud-callout hud-tone-gold p-2 text-xs">
                     <span className="flex items-center justify-between gap-2">
                       <b className="text-slate-100">{w.pseudo}</b>
-                      <span className="font-mono text-[10px] text-slate-500">{new Date(w.atMs).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                      <span className="font-mono text-[11px] text-slate-500">{formatDateTime(w.atMs, "dayShort")}</span>
                     </span>
                     <Gains resources={w.resources} className="mt-1 flex flex-wrap gap-2 font-mono text-slate-200" />
                   </li>
@@ -476,7 +476,7 @@ export function CasinoPage() {
 
           <HudPanel icon={<History />} title="Derniers gains">
             {(casino?.recent.length ?? 0) === 0 ? (
-              <EmptyState size="sm" icon="🎰" title="Aucun gain">Le premier gain s'affichera ici.</EmptyState>
+              <EmptyState size="sm" icon={<Dices />} title="Aucun gain">Le premier gain s'affichera ici.</EmptyState>
             ) : (
               <ul className="grid gap-1">
                 {casino!.recent.slice(0, 10).map((w) => (
@@ -542,7 +542,7 @@ function TokenSourcesCard({ settings }: { settings: CasinoSettings }) {
           <div className="h-1 bg-white/5">
             <div className="meter-fill h-full bg-gold-glow" style={{ width: `${Math.min(100, (lootWeek.used / Math.max(1, lootWeek.cap)) * 100)}%` }} />
           </div>
-          <p className="text-[10px] text-slate-500">Plafond remis à zéro chaque lundi. Le jeton du jour, la série, les défis et le passe n'y comptent pas.</p>
+          <p className="text-[11px] text-slate-500">Plafond remis à zéro chaque lundi. Le jeton du jour, la série, les défis et le passe n'y comptent pas.</p>
         </div>
       )}
     </HudPanel>

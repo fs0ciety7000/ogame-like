@@ -92,7 +92,7 @@ function GoalRow({ plan, onRemove, onTemplate }: { plan: GoalPlan; onRemove: () 
             <ol className="flex max-h-56 flex-col gap-0.5 overflow-y-auto border-l border-cyan-glow/20 pl-3 text-[11px]">
               {plan.steps.map((s, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <span className="w-5 font-mono text-slate-600">{i + 1}.</span>
+                  <span className="w-5 font-mono text-slate-500">{i + 1}.</span>
                   <span className="min-w-0 flex-1 truncate text-slate-300">{s.label}</span>
                   {s.seconds > 0 && <span className="font-mono text-slate-500">{formatDuration(s.seconds)}</span>}
                 </li>

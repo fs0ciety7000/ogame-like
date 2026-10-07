@@ -18,7 +18,7 @@ export function StaffBadge({ uid, compact, className }: { uid: string | null | u
     <span
       title={`${STAFF_LABELS[role]} de Cosmic Empires`}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 border px-1.5 py-px font-mono text-[9px] font-bold uppercase not-italic leading-[1.5] tracking-[0.14em] [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]",
+        "inline-flex shrink-0 items-center gap-1 border px-1.5 py-px font-mono text-[11px] font-bold uppercase not-italic leading-[1.5] tracking-[0.14em] [clip-path:polygon(4px_0,100%_0,100%_calc(100%-4px),calc(100%-4px)_100%,0_100%,0_4px)]",
         s.className,
         className,
       )}

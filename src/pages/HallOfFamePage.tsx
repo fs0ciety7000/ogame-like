@@ -4,7 +4,7 @@ import { HudPanel, EmptyAction } from "@/components/ui/panel";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui/hud";
 import { motion } from "framer-motion";
-import { CalendarDays, Crown, Medal, Timer, Trophy, Users } from "lucide-react";
+import { CalendarDays, Crown, Medal, Timer, Trophy, Users, Flag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchSeasonResults, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
@@ -70,9 +70,13 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
       .then(setResults)
       .catch(() => setResults([]));
   }, []);
-  useEffect(() => subscribeLeaderboard(setPlayers), []);
+  useEffect(() => {
+    return subscribeLeaderboard(setPlayers);
+  }, []);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
-  useEffect(() => subscribeAlliances(setAlliances), []);
+  useEffect(() => {
+    return subscribeAlliances(setAlliances);
+  }, []);
   // v3.2 : bonus des guerres gagnées pendant la saison en cours.
   const [warBonuses, setWarBonuses] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -117,7 +121,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
         }
       >
         {live.length === 0 ? (
-          <EmptyState size="sm" icon="🏁" title="La saison démarre" action={<EmptyAction to="/game/missions">Gagner de l'XP</EmptyAction>}>Personne n'a encore gagné d'XP ce mois-ci.</EmptyState>
+          <EmptyState size="sm" icon={<Flag />} title="La saison démarre" action={<EmptyAction to="/game/missions">Gagner de l'XP</EmptyAction>}>Personne n'a encore gagné d'XP ce mois-ci.</EmptyState>
         ) : (
           <ol className="space-y-1 text-sm">
             {live.map((p, i) => (
@@ -128,7 +132,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
                   p.uid === uid ? "border-cyan-glow bg-cyan-glow/[0.08]" : i < 3 ? "border-gold-glow/60 bg-white/[0.025]" : "border-white/10",
                 )}
               >
-                <span className={cn("hud-title w-8 text-lg tabular-nums", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[var(--th-medal-bronze)]" : "text-slate-600")}>
+                <span className={cn("font-mono font-bold tabular-nums w-8 text-lg", i === 0 ? "text-gold-glow" : i === 1 ? "text-slate-200" : i === 2 ? "text-[var(--th-medal-bronze)]" : "text-slate-500")}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
                 <PlayerName uid={p.uid} pseudo={p.pseudo} allianceId={p.allianceId ?? null} className={cn("font-semibold", p.uid === uid ? "text-cyan-glow" : "text-slate-200")} />
@@ -165,7 +169,7 @@ export function HallOfFamePage({ embedded = false }: { embedded?: boolean } = {}
       {results === null ? (
         <SkeletonList rows={5} />
       ) : bySeason.length === 0 ? (
-        <Card><EmptyState icon="🏆" title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs">Classement en cours</EmptyAction>}>Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
+        <Card><EmptyState icon={<Trophy />} title="Aucune saison terminée" action={<EmptyAction to="/game/joueurs">Classement en cours</EmptyAction>}>Le premier palmarès sera publié au début du mois prochain.</EmptyState></Card>
       ) : (
         bySeason.map(([seasonId, list]) => (
           <HudPanel
