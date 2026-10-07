@@ -72,7 +72,7 @@ export function CancelJobButton({ target, className, compact }: { target: Cancel
                 </p>
               </div>
               <p className="mt-2 text-[11px] text-slate-500">
-                100 % dans la première minute ou pour ce qui n'a pas commencé, sinon {Math.round(CANCEL_RULES.refundPct * 100)} % de la part non écoulée. Le montant exact est
+                100 % dans les {CANCEL_RULES.graceMs >= 60_000 ? `${Math.round(CANCEL_RULES.graceMs / 60_000)} min` : `${Math.round(CANCEL_RULES.graceMs / 1000)} s`} qui suivent le lancement ou pour ce qui n'a pas commencé, sinon {Math.round(CANCEL_RULES.refundPct * 100)} % de la part non écoulée. Le montant exact est
                 recalculé au moment de la confirmation.
               </p>
               <div className="mt-4 flex justify-end gap-2">

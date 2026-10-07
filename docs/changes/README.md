@@ -70,6 +70,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.6.0 | [Menaces PNJ (AU1 : A à D)](6.6.0-menaces-pnj.md) | rework | [menaces-pnj](../proposals/menaces-pnj.md) |
 | 6.7.0 | [Rendez-vous étalés sur la semaine](6.7.0-calendrier-semaine.md) | rework | [calendrier-semaine](../proposals/calendrier-semaine.md) |
 | 6.7.1 | [Casino ouvert en permanence, réglages admin](6.7.1-casino-reglages.md) | correctif | [calendrier-semaine](../proposals/calendrier-semaine.md) |
+| 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
 | 6.9.4 | [Flottes, rappel confirmé et distances réglables](6.9.4-galaxie-flottes.md) | correctif | aucune (AU7) |
 | 6.9.3 | [Communications, confirmations et saisie mobile](6.9.3-communications.md) | correctif | aucune (AU6) |
