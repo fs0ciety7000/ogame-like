@@ -1,6 +1,6 @@
 # Proposition : feuille de route de printemps 2027
 
-Statut : **en cours** (2026-10-07, clôture d'AU13). Ordre provisoire noté en Q11 (`docs/QUESTIONS.md`), modifiable à tout moment.
+Statut : **close** (2026-10-07, revue AU14 : `docs/audit/2026-10-07-au14-printemps.md`) ; suite : `feuille-de-route-2027-ete.md`. Ouverte à la clôture d'AU13. Ordre provisoire noté en Q11 (`docs/QUESTIONS.md`), modifiable à tout moment.
 Règle n° 3 : les lots s'enchaînent sans attendre de validation. Écrire en production, pousser sur `main` et ouvrir une PR restent hors du
 travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dépendent prennent l'option prudente.
 
@@ -20,7 +20,7 @@ travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dé
 | 5 | Z4 | Base avancée, suite (Q9) : la base défend la colonie (combat de colonie avec la flotte basée), proposition puis lot | L | livré 6.11.1 (désactivé par défaut, Q9) |
 | 6 | Z5 | Constantes de règle restantes (Q7) : inventaire final et conversion vers les objets de règles | M | livré 6.10.3 |
 | 7 | Z6 | Performance, si les Web Vitals de production le justifient (Q8) : textes lourds du contenu chargés après le premier affichage | M | Z1 |
-| 8 | AU14 | Revue de printemps : même grille que AU1 à AU13 sur les systèmes touchés ; test d'intégration « v4.2 warlords » intermittent (vu en 6.11.0) | M | fin des lots |
+| 8 | AU14 | Revue de printemps : même grille que AU1 à AU13 sur les systèmes touchés ; test d'intégration « v4.2 warlords » intermittent (vu en 6.11.0) | M | livré 6.11.2 |
 
 ## 3. Recommandation
 Commencer par Z0 et Z1 : plusieurs décisions (Q1, Q3, Q4, Q8, Q9) attendent des chiffres réels. Z2 et Z5 ne dépendent de rien et

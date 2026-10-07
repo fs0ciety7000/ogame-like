@@ -2099,7 +2099,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Tous les autres comptes de test viennent « d'être attaqués » : seul A reste une cible.
       await admin.collection("game_config").update(st.id, { data: { ...st.data, hits: Object.fromEntries(others.map((id) => [id, Date.now()])) } });
       await tick("attack", "brannoc");
-      const raid = await admin.collection("fleets").getFirstListItem(`ownerUid="npcbrannoc00000" && targetUid="${aId}" && status="outbound"`);
+      // AU14 : échec intermittent vu une fois en 6.11.0 (« resource wasn't found ») : on dit ce que Brannoc a lancé.
+      const brannocFleets = await admin.collection("fleets").getFullList({ filter: `ownerUid="npcbrannoc00000" && status="outbound"` });
+      expect(brannocFleets.map((f) => f.targetUid), "raids de Brannoc après l'attaque forcée").toContain(aId);
+      const raid = brannocFleets.find((f) => f.targetUid === aId)!;
       const travel = raid.arriveAtMs - raid.departAtMs;
       expect(travel).toBeGreaterThanOrEqual(3 * 3600000 - 1000);
       expect(travel).toBeLessThanOrEqual(5 * 3600000 + 1000);
