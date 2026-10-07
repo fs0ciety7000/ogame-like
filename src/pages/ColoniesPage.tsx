@@ -621,7 +621,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
               <Button size="sm" type="submit" disabled={busy}>
                 OK
               </Button>
-              <Button size="sm" type="button" variant="ghost" onClick={() => setRename(null)}>
+              <Button size="sm" type="button" variant="ghost" aria-label="Annuler le renommage" onClick={() => setRename(null)}>
                 <X className="h-3.5 w-3.5" />
               </Button>
             </form>
@@ -829,6 +829,8 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                     >
                       <Shield className="h-3.5 w-3.5" /> {colony.defenseJob ? "Mettre en file" : "Construire"}
                     </Button>
+                    {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
+                    {queueFull && <p className="basis-full text-[11px] text-ember-glow">File pleine : {COLONY_RULES.defenseQueueMax} lots en attente au plus.</p>}
                   </div>
                 </div>
               )}

@@ -212,7 +212,7 @@ export function CombatLogPage() {
               {result === "victory" && (
                 <button
                   type="button"
-                  title="Carte de victoire"
+                  title="Carte de victoire" aria-label="Carte de victoire"
                   className="flex shrink-0 items-center gap-1 px-2 py-2 text-xs text-gold-glow transition-colors hover:text-slate-100"
                   onClick={() => player && setCard({ input: victoryCardFromReport(report, player, allianceTag), target: `/game/rapport/${report.id}` })}
                 >

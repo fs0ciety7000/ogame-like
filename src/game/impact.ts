@@ -62,7 +62,10 @@ export function effectImpactReport(): ImpactRow[] {
   const best = (mythic: boolean) => RARITIES.find((r) => r.id === (mythic ? "mythic" : "legendary"))?.pct ?? 0;
   for (const t of RELICS) {
     if (t.disabled) continue;
-    const m = RELIC_EFFECT_STAT[t.effect];
+    // 6.14.69 : une relique composée compte aussi (lune : portée de la phalange, recharge de la porte), sauf si elle vise un mode de
+    // combat (JcJ, PNJ, seigneurs) : ces portées ne se cumulent pas dans un même combat, le rapport ne les distingue pas.
+    const scoped = !!t.custom?.scope && t.custom.scope !== "all";
+    const m = t.effect === "custom" ? (t.custom?.stat && !scoped ? { stat: t.custom.stat, target: t.custom.target, scale: t.custom.scale } : undefined) : RELIC_EFFECT_STAT[t.effect];
     if (m) add(m.stat, m.target, "empire", { kind: "relic", label: t.name, max: best(!!t.mythicOnly) * (m.scale ?? 1), note: t.mythicOnly ? "mythique" : "légendaire" });
   }
   // Talents d'Ascension : rang maximal.

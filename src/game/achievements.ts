@@ -208,6 +208,12 @@ export const METRICS = {
       return m && MOON_RULES.maxLevel > 1 && moonLevel(m) >= MOON_RULES.maxLevel ? 1 : 0;
     },
   },
+  // 6.14.69 (É30-1d) : phalange et porte de saut (compteurs tenus par le serveur : markScan, markJump, markGateSave).
+  phalanxScans: { label: "Balayages de phalange", value: (p: PlayerState) => playerStats(p).phalanxScans ?? 0 },
+  gateJumps: { label: "Sauts par la porte de saut", value: (p: PlayerState) => playerStats(p).gateJumps ?? 0 },
+  gateSaves: { label: "Attaques repoussées juste après un saut (sauvetages)", value: (p: PlayerState) => playerStats(p).gateSaves ?? 0 },
+  /** Défi d'alliance « Les vigies » : garnisons envoyées et balayages (avec ou sans lune, Q40). */
+  vigil: { label: "Garnisons envoyées et balayages de phalange", value: (p: PlayerState) => (playerStats(p).garrisons ?? 0) + (playerStats(p).phalanxScans ?? 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
@@ -366,6 +372,12 @@ export function derivedAchievements(): AchievementDef[] {
     // 6.14.3 (P29-1, Q20) : lunes.
     def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir naître une lune au-dessus de ta planète mère.", "🌙", { auto: true, secret: true }),
     def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "🌕", { auto: true }),
+    // 6.14.69 (É30-1d, proposals/phalange-porte-de-saut.md §7) : phalange et porte de saut (entrée, maîtrise, secret).
+    def("phalange_1", "combat", "bronze", "phalanxScans", 1, "Œil de la lune", "Balayer un agresseur avec la phalange de ta lune.", "🔭", { auto: true }),
+    def("phalange_50", "combat", "argent", "phalanxScans", 50, "Vigie", "Lancer 50 balayages de phalange.", "🛰️", { auto: true }),
+    def("porte_1", "flotte", "bronze", "gateJumps", 1, "Saut de l'ange", "Rapatrier une flotte par la porte de saut.", "🌀", { auto: true }),
+    def("porte_25", "flotte", "or", "gateJumps", 25, "Maître du seuil", "Rapatrier 25 flottes par la porte de saut.", "🗝️", { auto: true, title: "Gardien du seuil", titleId: "gardien_seuil" }),
+    def("porte_sauvetage", "combat", "or", "gateSaves", 1, "Retour fracassant", "Repousser une attaque avec une flotte rentrée par la porte de saut juste avant l'impact.", "💥", { auto: true, secret: true }),
     // 6.14.14 (C4) : boss d'alliance (chaîne de contenu), palier complet lu à l'usage (allianceBossAll).
     def("boss_alliance_1", "alliance", "argent", "allianceBossTypes", 1, "Frappe d'alliance", "Abattre un boss d'alliance en y prenant ta part.", "🛡️", { auto: true }),
     def("boss_alliance_all", "alliance", "or", "allianceBossAll", 1, "Trophées d'alliance", "Abattre chaque boss d'alliance au moins une fois.", "🏆", { auto: true, secret: true }),
@@ -445,6 +457,7 @@ const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {
   seasonCommanders: "Chaque saison offre un visage ; il faudra tous les réunir.",
   casinoJackpots: "Trois fois le même chiffre, et le pot commun change de mains.",
   moonLevel: "Un champ de débris assez lourd finit parfois par tourner autour de ceux qui ont tenu bon.",
+  gateSaves: "Une flotte au loin ne défend rien. Ramène-la d'un coup, juste avant que la tempête ne frappe.",
 };
 
 /** Indice d'un succès (piste de la mesure, sinon la catégorie). */

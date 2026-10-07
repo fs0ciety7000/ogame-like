@@ -1,4 +1,6 @@
 import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
+import { PHALANX_RULES } from "@/game/phalanx";
+import { gateMinLevel, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { chroniclesConfig, chronicleMonthId, codexRewards, episodeUnlockMs } from "@/game/chronicles";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import type { BossHistoryEntry } from "@/game/bossHistory";
@@ -182,6 +184,38 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       { label: "Chance", value: `1 % par ${Math.round(MOON_RULES.debrisPerPercent / 1000)} k de débris, ${Math.round(MOON_RULES.maxChance * 100)} % au plus` },
       { label: "Bonus", value: `bouclier +${Math.round(MOON_RULES.shieldBonus * 100)} % (jusqu'à +${Math.round((MOON_RULES.shieldBonus + MOON_RULES.shieldPerLevel * (MOON_RULES.maxLevel - 1)) * 100)} % au niveau ${MOON_RULES.maxLevel}), entrepôt à l'abri +${Math.round(MOON_RULES.protectedStorageBonus * 100)} %` },
       ...(moon ? [{ label: "Niveau", value: String(moonLevel(moon)) }] : []),
+    ],
+  });
+  // 6.14.69 (É30-1d) : phalange et porte de saut, débloquées au premier usage (balayage, saut).
+  const scans = Math.floor(Number(player.stats?.phalanxScans) || 0);
+  const jumps = Math.floor(Number(player.stats?.gateJumps) || 0);
+  out.push({
+    id: "legend:phalange",
+    category: "legends",
+    name: "La phalange",
+    subtitle: "L'œil de la lune",
+    image: "/assets/moon/lune.webp",
+    text: "Les ingénieurs ont fini par tourner vers le ciel ce que la lune leur offrait : un socle stable, loin des parasites de la planète. Une parabole de coques soudées, un faisceau qui balaie le vide. La phalange ne voit pas tout. Elle voit ce qui vient vers toi et vers les tiens, et elle ne se laisse pas tromper par un leurre.",
+    unlocked: scans > 0,
+    facts: [
+      { label: "Portée", value: `${PHALANX_RULES.rangePerLevel} par niveau de lune` },
+      { label: "Perce les leurres", value: PHALANX_RULES.revealDecoyLevel > 0 ? `dès le niveau ${PHALANX_RULES.revealDecoyLevel}` : "jamais" },
+      { label: "Révèle les capsules", value: PHALANX_RULES.revealBoostLevel > 0 ? `dès le niveau ${PHALANX_RULES.revealBoostLevel}` : "jamais" },
+      ...(scans > 0 ? [{ label: "Tes balayages", value: String(scans) }] : []),
+    ],
+  });
+  out.push({
+    id: "legend:porte_saut",
+    category: "legends",
+    name: "La porte de saut",
+    subtitle: "Le seuil de la lune",
+    image: "/assets/moon/lune.webp",
+    text: "Un anneau ancré dans la roche, une membrane violette qui frémit au moindre signal. Personne ne sait vraiment pourquoi elle ne mène qu'à la planète mère. Les pilotes disent qu'elle reconnaît le chemin de la maison. Elle ne s'ouvre qu'une fois par jour, et jamais pour un pillard.",
+    unlocked: jumps > 0,
+    facts: [
+      { label: "Ouverte", value: `dès le niveau ${gateMinLevel()} de la lune` },
+      { label: "Recharge", value: `${JUMP_GATE_RULES.cooldownHours} h, ${JUMP_GATE_RULES.cooldownMinHours} h au moins` },
+      ...(jumps > 0 ? [{ label: "Tes sauts", value: String(jumps) }] : []),
     ],
   });
   // 5.15.12 : reliques (hors retirées) et officiers de base.

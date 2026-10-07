@@ -27,7 +27,8 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 | Nouveauté | Où | Ce que ça t'apporte |
 |:--|:--|:--|
 | **Classes d'empire** | Empire → Classe d'empire | Industriel (+10 % de production, +1 chantier), Seigneur de guerre (+15 % de butin, +2 emplacements de flotte) ou Explorateur (+1 expédition par jour) ; chacune son vaisseau de classe. Premier choix gratuit |
-| **Lunes** | Statistiques, Galaxie | Un gros combat chez toi peut faire naître une lune : bouclier et abri en plus, jusqu'au niveau 5 |
+| **Lunes** | Statistiques, Galaxie | Un gros combat chez toi peut faire naître une lune : bouclier et abri en plus, jusqu'au niveau 5. Chaque combat subi sans lune ajoute +5 % de chance, lune garantie au 20e |
+| **Phalange et porte de saut** | Statistiques → Lune, Alliance, Flottes | Ta lune signale les attaques sur tes alliés, perce les leurres et balaie l'agresseur ; dès le niveau 3, sa porte ramène une patrouille, une garnison ou une base avancée d'un coup (recharge 24 h) |
 | **Base avancée** | Colonies | Stationne une flotte sur une colonie, jusqu'à 14 jours |
 | **Ordres du jour** | Menu | Toutes tes corvées au même endroit, et **Tout réclamer** en un clic |
 | **Passe et Chroniques** | Passe | Un passe à ton rythme (fini au plus tard le 28 pour un joueur régulier, défis calés sur le serveur), des paliers bonus après le dernier, un chapitre par mois |
@@ -55,6 +56,7 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 - **Piller rapporte, les PNJ se calment** (6.2 et 6.6) : pillage, repaires, Traqueur Kesh, plafond des technologies.
 - **Une semaine rythmée, un passe à ton rythme** (6.7 et 6.8) : calendrier, passe et Chroniques générés.
 - **Un Codex complet, un Comptoir illustré** (6.14) : Codex, « Tout réclamer », succès d'alliance, illustrations.
+- **Ta lune veille** (6.14) : phalange, porte de saut, pitié lunaire, deux reliques, cinq succès et le défi d'alliance « Les vigies ».
 
 Les billets précédents racontent le reste en détail : Cale sèche, Ordres du jour, classes d'empire, vaisseaux de classe, base avancée,
 jeu sur téléphone, lunes.

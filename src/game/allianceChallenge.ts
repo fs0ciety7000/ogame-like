@@ -21,6 +21,8 @@ export const ALLIANCE_CHALLENGES: { id: string; name: string; emoji: string; met
   { id: "ferrailleurs", name: "Les ferrailleurs", emoji: "♻️", metric: "recycled", hint: "Débris recyclés par les membres." },
   { id: "conquerants", name: "Les conquérants", emoji: "⚔️", metric: "victories", hint: "Victoires des membres." },
   { id: "negociants", name: "Les négociants", emoji: "📜", metric: "contracts", hint: "Contrats remplis par les membres." },
+  // 6.14.69 (É30-1d, Q40) : défense mutuelle. Garnisons envoyées (tout le monde) et balayages de phalange (joueurs à lune).
+  { id: "vigies", name: "Les vigies", emoji: "🛰️", metric: "vigil", hint: "Garnisons envoyées et balayages de phalange des membres." },
 ];
 
 /** Heures de production cumulée des membres versées au trésor du podium. */

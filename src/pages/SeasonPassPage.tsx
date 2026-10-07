@@ -1,4 +1,5 @@
-import { ChroniclesCard } from "@/components/game/ChroniclesCard";
+import { ChronicleLine } from "@/components/game/ChronicleLine";
+import { FoldSection } from "@/components/ui/panel";
 import { useState } from "react";
 import { RewardReveal } from "@/components/game/RewardReveal";
 import { toast } from "sonner";
@@ -135,10 +136,16 @@ export function SeasonPassPage() {
         }
       />
 
-      {season && <SeasonStory season={season} tier={tier} />}
-      {season && commander && <FinalReward season={season} def={commander} reached={tier >= tiers} claimed={st.claimed.includes(tiers)} />}
-
-      <ChroniclesCard />
+      {/* 6.14.67 (UX-6, AD-18) : les paliers d'abord (avancée, défi, grille) ; barème des points,
+          Chroniques (une ligne, leur page fait le reste), récit et commandant ensuite. */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : bonusSub(passBonusProgress(st))} icon={<Ticket className="h-4 w-4" />} />
+        <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
+        <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="ember" />
+      </div>
+      <div className="-mt-2 h-2 w-full overflow-hidden bg-white/5" role="progressbar" aria-label="Points du passe" aria-valuemin={0} aria-valuemax={max} aria-valuenow={st.points}>
+        <div className="h-full bg-gradient-to-r from-cyan-glow via-violet-glow to-gold-glow transition-all" style={{ width: `${(st.points / max) * 100}%` }} />
+      </div>
 
       {challenge && (
         <Card className="flex flex-col gap-2 p-4" style={season ? { borderLeft: `2px solid ${season.theme.accent}` } : undefined}>
@@ -157,25 +164,6 @@ export function SeasonPassPage() {
           </p>
         </Card>
       )}
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : bonusSub(passBonusProgress(st))} icon={<Ticket className="h-4 w-4" />} />
-        <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
-        <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="ember" />
-      </div>
-
-      <Card className="p-4">
-        <div className="h-2.5 w-full overflow-hidden bg-white/5">
-          <div className="h-full bg-gradient-to-r from-cyan-glow via-violet-glow to-gold-glow transition-all" style={{ width: `${(st.points / max) * 100}%` }} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-          {SOURCES.map(([k, label]) => (
-            <span key={k}>
-              <strong className="font-mono text-cyan-glow">+{PASS_POINTS[k]}</strong> {label}
-            </span>
-          ))}
-        </div>
-      </Card>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
         {pass.tiers.map((rewards, i) => {
@@ -227,6 +215,19 @@ export function SeasonPassPage() {
           );
         })}
       </div>
+      <FoldSection id="pass-sources" title="Gagner des points" tone="accent" defaultOpen={false}>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+          {SOURCES.map(([k, label]) => (
+            <span key={k}>
+              <strong className="font-mono text-cyan-glow">+{PASS_POINTS[k]}</strong> {label}
+            </span>
+          ))}
+        </div>
+      </FoldSection>
+      <ChronicleLine />
+      {season && commander && <FinalReward season={season} def={commander} reached={tier >= tiers} claimed={st.claimed.includes(tiers)} />}
+      {season && <SeasonStory season={season} tier={tier} />}
+
       <RewardReveal
         open={revealed !== null}
         onClose={() => setRevealed(null)}

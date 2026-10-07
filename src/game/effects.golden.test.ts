@@ -18,7 +18,9 @@ const FAR = Date.UTC(2100, 0, 1);
 const BASE = COMMANDERS.filter((c) => !c.rare);
 // 5.21 : relique, technologies et effet ajoutés après l'instantané (hors du tirage).
 const ADDED_521 = new Set(["cle_soudure", "tech27", "tech28", "tech29", "tech30", "repair_speed", // 5.23 : effets composés
-  "stat", "sceau_sentinelle", "plaque_bastion", "lame_duelliste", "trophee_seigneur", "balise_traque", "compas_tacticien", "enclume_colosses", "navette_mere"]);
+  "stat", "sceau_sentinelle", "plaque_bastion", "lame_duelliste", "trophee_seigneur", "balise_traque", "compas_tacticien", "enclume_colosses", "navette_mere",
+  // 6.14.69 : reliques de la lune.
+  "lentille_selene", "cle_seuil"]);
 const RELICS = DEFAULT_RELICS.filter((t) => !ADDED_521.has(t.id));
 const TECHS = TECHNOLOGIES.filter((t) => !ADDED_521.has(t.id));
 

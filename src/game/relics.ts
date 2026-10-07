@@ -86,6 +86,11 @@ export const DEFAULT_RELICS: RelicTemplate[] = [
   { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi.", image: "/assets/relics/cristal_memoriel.webp" },
   { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martelé les quilles des premiers cuirassés.", image: "/assets/relics/noyau_forge.webp" },
   { id: "navette_mere", name: "Navette-mère", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche.", image: "/assets/relics/noyau_forge.webp" },
+  // 6.14.69 (É30-1d, proposals/phalange-porte-de-saut.md §7) : reliques de la lune. Portée de la phalange (× 2 : +6 % en commune,
+  // +20 % en épique, +30 % en légendaire, plafond 50 %) et recharge de la porte de saut (× 1,5 : −4,5 % en commune, −15 % en épique,
+  // −22,5 % en légendaire, plafond 30 %). Images provisoires (emplacements relic-lentille-selene et relic-cle-seuil sur /img).
+  { id: "lentille_selene", name: "Lentille de Séléné", effect: "custom", custom: { stat: "phalanxRange", scale: 2 }, lore: "Taillée dans le cristal d'une lune morte. Par elle, la phalange voit plus loin que l'horizon.", image: "/assets/relics/oeil_vesper.webp" },
+  { id: "cle_seuil", name: "Clé du seuil", effect: "custom", custom: { stat: "jumpGateCooldown", scale: 1.5 }, lore: "Un anneau d'énergie tient dans son panneton. La porte de saut s'ouvre plus vite pour qui la porte.", image: "/assets/relics/cle_soudure.webp" },
 ];
 
 /** Registre courant (v5.9 : remplacé par le contenu de l'administration). */

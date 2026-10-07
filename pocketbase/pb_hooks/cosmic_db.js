@@ -5456,6 +5456,13 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["sceau_sentinelle", "plaque_bastion", "lame_duelliste", "trophee_seigneur", "balise_traque", "compas_tacticien", "enclume_colosses", "navette_mere"],
   },
+  // 6.14.69 (É30-1d, I27) : reliques de la lune (portée de la phalange, recharge de la porte de saut) ajoutées à une liste personnalisée.
+  {
+    id: "relics-6.14.69",
+    key: "relics",
+    patches: [],
+    appendFromDefaults: ["lentille_selene", "cle_seuil"],
+  },
   // 5.28 : Cale sèche ajoutée aux bâtiments personnalisés (docs/proposals/cale-seche.md).
   {
     id: "cale-seche-5.28",

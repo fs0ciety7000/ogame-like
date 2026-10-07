@@ -312,7 +312,7 @@ function ReadyDraftsCard({ existing, pseudo, onImported }: { existing: string[] 
               {imported ? (
                 <HudTag tone="mint">Importé</HudTag>
               ) : (
-                <Button size="sm" variant="ghost" disabled={busy !== null || existing === null} onClick={() => void run([d])} title="Importer en brouillon">
+                <Button size="sm" variant="ghost" disabled={busy !== null || existing === null} onClick={() => void run([d])} title="Importer en brouillon" aria-label="Importer en brouillon">
                   {busy === d.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 </Button>
               )}
@@ -402,7 +402,7 @@ function AuthorsCard({ authors, onChange }: { authors: BlogAuthor[]; onChange: (
             </span>
             <button
               type="button"
-              title="Retirer"
+              title="Retirer" aria-label="Retirer"
               className="p-1 text-slate-500 hover:text-danger-glow"
               onClick={() => void askConfirm({ title: `Retirer ${a.pseudo} des auteurs ?`, message: "Ses articles restent en ligne.", confirmLabel: "Retirer", tone: "danger" }).then((ok) => { if (ok) void removeBlogAuthor(a.id).then(onChange); })}
             >
@@ -413,7 +413,7 @@ function AuthorsCard({ authors, onChange }: { authors: BlogAuthor[]; onChange: (
       </ul>
       <div className="flex gap-2">
         <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} onKeyDown={(e) => e.key === "Enter" && void add()} placeholder="Pseudo du joueur" className="h-9" />
-        <Button size="sm" disabled={busy || !pseudo.trim()} onClick={() => void add()}>
+        <Button size="sm" disabled={busy || !pseudo.trim()} aria-label="Ajouter cet auteur" onClick={() => void add()}>
           <UserPlus className="h-4 w-4" />
         </Button>
       </div>

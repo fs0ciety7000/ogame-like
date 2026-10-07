@@ -141,7 +141,7 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 
 ### 7.4 Lunes : phalange, porte de saut, pitié (6.14.44, `moon.ts`, `phalanx.ts`, `jumpGate.ts`)
 
-Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar au lancement, `profiles.moonLevel`) ; interface au lot É30-1c (`proposals/phalange-porte-de-saut.md`).
+Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar au lancement, `profiles.moonLevel`), interface en 6.14.49 (É30-1c), admin et chaîne de contenu en 6.14.69 (É30-1d) (`proposals/phalange-porte-de-saut.md`).
 
 | Niveau de lune | Phalange (`PHALANX_RULES`) | Porte de saut (`JUMP_GATE_RULES`) |
 |:--|:--|:--|
@@ -159,7 +159,15 @@ Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `mo
   le saut rapatrie par `resolveFleetReturn` (I8) et prévient l'hôte d'une garnison (Q39) ; « sauvetage » (`gateSaves`) : attaque de joueur
   repoussée sur la planète mère moins de `jumpGate.saveWindowMinutes` (10) après un saut, compté une fois par saut (`moon.lastJumpAtMs`).
 - Niveau de lune public : `profiles.moonLevel` (0 sans lune, Q41).
-- Désactiver : `phalanx.enabled`, `jumpGate.enabled` à faux, `moon.pityPerDefense` à 0 (Admin → Règles → Tous les réglages).
+- Désactiver : `phalanx.enabled`, `jumpGate.enabled` à faux, `moon.pityPerDefense` à 0 (Admin → Règles → Lunes : trois sections dédiées, 6.14.69).
+- Chaîne de contenu (6.14.69) : reliques **Lentille de Séléné** (`phalanxRange`, bonus de rareté × 2 : +6 / +12 / +20 / +30 %) et **Clé du
+  seuil** (`jumpGateCooldown`, × 1,5 : −4,5 / −9 / −15 / −22,5 %), une seule de chaque équipée, sous les plafonds (50 %, 30 %) ; préréglages
+  `phalange_portee`, `porte_recharge` ; succès `phalange_1` (1 balayage), `phalange_50`, `porte_1` (1 saut), `porte_25` (titre « Gardien du
+  seuil »), secret `porte_sauvetage` (`gateSaves` ≥ 1) ; Codex `legend:phalange` et `legend:porte_saut` (premier balayage, premier saut) ;
+  défi d'alliance « Les vigies » (mesure `vigil` = garnisons + balayages, jouable sans lune ; aucun objectif lunaire dans le passe ni les
+  Chroniques, Q40) ; étape « Ta lune veille » du Carnet (lune, réserve de pitié ou une garnison) ; recharges dans « Prochaines fins ».
+- Santé de l'équilibre (`moonHealth`) : part des actifs avec lune (mesure du risque R1 à J+30), niveau médian, lunes nées par pitié
+  (`moon.byPity`), réserves en cours, cumuls de balayages, sauts et sauvetages.
 
 ### 7.5 Passe et Chroniques générés : faisabilité, versions, succès (6.14.56 à 6.14.58, `passGen.ts`, `passSeasons.ts`, `procedural.ts`)
 
@@ -290,3 +298,4 @@ prestige restent l'outil prévu (AP-11).
 | 2026-10-07 | 6.14.61 | Lot AJ27-2 (AU27) : invariant I6 prouvé par 4 tests (butin, rapatriement, livraisons, stock gardé au-delà de la capacité) | `docs/changes/6.14.61-test-i6.md` |
 | 2026-10-07 | 6.14.65 | Lot AC-B (AU27) : édition admin d'un joueur par le serveur (différences sur la fiche rattrapée, plafonds entrepôt, hangars et niveaux, motif et journal), remise à zéro de l'XP en une transaction, plus d'écriture directe de la fiche par l'admin du jeu ; invariant I28 | `docs/changes/6.14.65-edition-admin-serveur.md`, `proposals/chaine-actions.md` |
 | 2026-10-07 | 6.14.66 | Lot AC-C (AU27, Q78) : suppression de compte par le serveur (mot de passe revérifié), ménage commun avec l'admin (`purgePlayer` : alliance, flottes, garnisons, offres, enchères, contrats), suppression par l'API des collections fermée ; invariant I28 | `docs/changes/6.14.66-suppression-compte-serveur.md` |
+| 2026-10-07 | 6.14.69 | É30-1d : sections Lunes de l'admin (pitié, phalange, porte de saut), santé des lunes, reliques Lentille de Séléné et Clé du seuil, 5 succès, titre « Gardien du seuil », 2 fiches de Codex, défi d'alliance « Les vigies », étape du Carnet, recharges dans « Prochaines fins », changelog, billet 53 et annonce | `docs/changes/6.14.69-phalange-chaine.md` |

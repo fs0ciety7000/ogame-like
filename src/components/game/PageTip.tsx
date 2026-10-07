@@ -140,11 +140,11 @@ export function PageTip() {
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                 {(clamped || expanded) && (
-                  <button type="button" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded} className="relative text-xs text-cyan-glow before:absolute before:-inset-2 hover:underline">
+                  <button type="button" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded} className="hud-hit text-xs text-cyan-glow hover:underline">
                     {expanded ? "Réduire" : "Lire la suite"}
                   </button>
                 )}
-                <button type="button" onClick={() => close(true)} aria-label="Masquer toutes les astuces" className="relative font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 before:absolute before:-inset-2 hover:text-slate-100">
+                <button type="button" onClick={() => close(true)} aria-label="Masquer toutes les astuces" className="hud-hit font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:text-slate-100">
                   Tout masquer
                 </button>
               </div>

@@ -139,7 +139,7 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
             onClick={() => setListOpen((o) => !o)}
             aria-expanded={listOpen}
             aria-controls="onboarding-steps"
-            className="-my-1 flex min-h-9 items-center gap-2 self-start font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:text-cyan-glow"
+            className="hud-hit -my-1 flex min-h-9 items-center gap-2 self-start font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 hover:text-cyan-glow"
           >
             <ChevronDown aria-hidden className={cn("h-3.5 w-3.5 transition-transform", !listOpen && "-rotate-90")} />
             Tous les objectifs

@@ -229,6 +229,12 @@ export function MarketSection() {
                     ) : (
                       <span className="ml-auto flex items-center gap-2">
                         <span className="text-[10px] text-slate-500">{timeAgo(o.createdAtMs)}</span>
+                        {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
+                        {!affordable && (
+                          <span className="text-[11px] text-ember-glow">
+                            il manque <span className="font-mono tabular-nums">{formatNumber(o.wantAmount - have(o.wantRes))}</span>
+                          </span>
+                        )}
                         <Button size="sm" disabled={busy !== null || !affordable} title={affordable ? undefined : `Il te manque ${formatNumber(o.wantAmount - have(o.wantRes))} ${resName(o.wantRes).toLowerCase()}`} onClick={() => void run(o.id, () => acceptMarketOffer(o.id), "Échange conclu !")}>
                           Accepter
                         </Button>

@@ -4,6 +4,7 @@ import { findBuilding } from "@/game/buildings";
 import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
+import { playerMoon } from "@/game/moon";
 import type { PlayerState, QueuesState } from "@/types/game";
 import type { Fleet } from "@/game/fleets";
 
@@ -13,7 +14,7 @@ import type { Fleet } from "@/game/fleets";
    date de fin.
 ===================================================== */
 
-export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony" | "repair";
+export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony" | "repair" | "moon";
 
 export interface TimelineEvent {
   id: string;
@@ -30,7 +31,7 @@ export function upcomingEvents(
   fleets: Fleet[] = [],
   uid?: string,
   /** v4.9.3 : chantiers des colonies et vaisseau colonial, sur la même frise. */
-  empire?: Pick<PlayerState, "colonies" | "colonizing"> | null,
+  empire?: Pick<PlayerState, "colonies" | "colonizing"> & Partial<Pick<PlayerState, "moon">> | null,
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   // 5.21 : unités immobilisées à l'Atelier de réparation (retour au hangar).
@@ -45,6 +46,12 @@ export function upcomingEvents(
     if (c.defenseJob) events.push({ id: `cd:${c.id}`, kind: "colony", label: `${c.name} : ${c.defenseJob.qty} ${findUnit(c.defenseJob.unitId)?.name ?? c.defenseJob.unitId}`, endTime: c.defenseJob.endTime, to: "/game/colonies" });
   }
   if (empire?.colonizing) events.push({ id: "colonizing", kind: "colony", label: `Fondation de ${empire.colonizing.name}`, endTime: empire.colonizing.endTime, to: "/game/colonies" });
+  // 6.14.69 (É30-1d) : recharges de la lune (balayage de la phalange, porte de saut), tant qu'elles courent.
+  const moon = playerMoon(empire);
+  if (moon) {
+    if ((moon.scanReadyAtMs ?? 0) > now) events.push({ id: "moon:scan", kind: "moon", label: "Phalange : balayage prêt", endTime: moon.scanReadyAtMs!, to: "/game/statistiques?onglet=lune" });
+    if ((moon.gateReadyAtMs ?? 0) > now) events.push({ id: "moon:gate", kind: "moon", label: "Porte de saut prête", endTime: moon.gateReadyAtMs!, to: "/game/statistiques?onglet=lune" });
+  }
   for (const f of fleets) {
     const mission = f.mission ?? "attack";
     if (f.status === "outbound" && targetsPlayer(f, uid) && f.ownerUid !== uid && (mission === "attack" || mission === "pirate")) {

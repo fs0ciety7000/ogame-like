@@ -3,8 +3,9 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/* 6.14.68 (UX-7) : hud-hit étend la zone sensible à 44 px sur écran tactile (index.css), sans changer la taille visible. */
 const buttonVariants = cva(
-  "hud-cut inline-flex items-center justify-center gap-2 whitespace-nowrap font-display text-sm font-bold uppercase tracking-[0.14em] transition-[filter,background-color,color,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-glow/60 disabled:pointer-events-none disabled:opacity-40 disabled:saturate-50",
+  "hud-cut hud-hit inline-flex items-center justify-center gap-2 whitespace-nowrap font-display text-sm font-bold uppercase tracking-[0.14em] transition-[filter,background-color,color,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-glow/60 disabled:pointer-events-none disabled:opacity-40 disabled:saturate-50",
   {
     variants: {
       variant: {

@@ -24,7 +24,7 @@ import { OnlineDot } from "@/components/ui/online-dot";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
-import { Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
+import { ChevronDown, Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +77,7 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
   const [tag, setTag] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [applyTo, setApplyTo] = useState<Alliance | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => subscribeAlliances(setAlliances), []);
 
@@ -105,41 +106,29 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
     }
   };
 
+  // 6.14.67 (UX-6, AD-23) : rejoindre d'abord. Les alliances ouvertes passent en tête, puis celles
+  // sur candidature ; le formulaire de création se déplie dessous (ouvert d'office s'il n'y en a aucune).
+  const recruitRank = (a: Alliance) => {
+    const profile = normalizeAllianceProfile(a.profile);
+    if (a.members.length >= allianceMaxMembers(a)) return 3;
+    return profile.recruiting === "open" ? 0 : profile.recruiting === "apply" ? 1 : 2;
+  };
+  const sorted = [...alliances].sort((x, y) => recruitRank(x) - recruitRank(y));
+  const createOpen = showCreate || alliances.length === 0;
+
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Créer une alliance</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row">
-          <Input
-            placeholder="Nom de l'alliance"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Tag (2-5 car.)"
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-            className="sm:w-32"
-          />
-          <Button disabled={submitting} onClick={() => void handleCreate()}>
-            Créer
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Alliances existantes</CardTitle>
+          <CardTitle>Rejoindre une alliance</CardTitle>
         </CardHeader>
         {alliances.length === 0 && (
           <EmptyState icon="🚩" title="Aucune alliance">
-            Sois le premier à en créer une !
+            Sois le premier à en créer une, juste en dessous.
           </EmptyState>
         )}
         <div className="relative flex flex-col gap-2 px-3 pb-3">
-        {alliances.map((a) => (
+        {sorted.map((a) => (
           <div
             key={a.id}
             className="grid grid-cols-[auto_1fr_auto] items-center gap-3 border border-cyan-glow/[0.12] bg-gradient-to-r from-white/[0.035] to-transparent px-3 py-2.5 transition-colors [clip-path:polygon(0_0,calc(100%-12px)_0,100%_12px,100%_100%,0_100%)] hover:border-cyan-glow/35"
@@ -167,15 +156,15 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
               const applied = profile.applications.some((x) => x.uid === uid);
               return (
                 <span className="flex flex-wrap items-center justify-end gap-1.5">
-                  <Link to={`/game/alliance/fiche/${a.id}`} className="text-xs text-cyan-glow hover:underline">
+                  <Link to={`/game/alliance/fiche/${a.id}`} className="hud-hit text-xs text-cyan-glow hover:underline">
                     Fiche
                   </Link>
                   {full ? (
-                    <Button size="sm" variant="outline" disabled>
+                    <HudChip size="sm" tone="neutral">
                       Complète
-                    </Button>
+                    </HudChip>
                   ) : profile.recruiting === "open" ? (
-                    <Button size="sm" variant="outline" onClick={() => void handleJoin(a.id)}>
+                    <Button size="sm" onClick={() => void handleJoin(a.id)}>
                       Rejoindre
                     </Button>
                   ) : profile.recruiting === "apply" ? (
@@ -183,9 +172,9 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
                       {applied ? "Candidature envoyée" : "Postuler"}
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" disabled>
+                    <HudChip size="sm" tone="neutral">
                       Fermée
-                    </Button>
+                    </HudChip>
                   )}
                 </span>
               );
@@ -193,6 +182,36 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
           </div>
         ))}
         </div>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>Créer une alliance</CardTitle>
+          {alliances.length > 0 && (
+            <Button size="sm" variant="ghost" aria-expanded={createOpen} onClick={() => setShowCreate((v) => !v)}>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !createOpen && "-rotate-90")} aria-hidden /> {createOpen ? "Replier" : "Fonder la mienne"}
+            </Button>
+          )}
+        </CardHeader>
+        {createOpen && (
+        <CardContent className="flex flex-col gap-3 sm:flex-row">
+          <Input
+            placeholder="Nom de l'alliance"
+            aria-label="Nom de l'alliance"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            placeholder="Tag (2-5 car.)"
+            aria-label="Tag de l'alliance (2 à 5 caractères)"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            className="sm:w-32"
+          />
+          <Button disabled={submitting} onClick={() => void handleCreate()}>
+            Créer
+          </Button>
+        </CardContent>
+        )}
       </Card>
       <ApplyDialog alliance={applyTo} onClose={() => setApplyTo(null)} />
     </div>

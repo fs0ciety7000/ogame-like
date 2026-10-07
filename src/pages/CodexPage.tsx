@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { BookOpen, LayoutGrid, Lock, Orbit } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { bossesFoughtBy, CODEX_CATEGORIES, CODEX_TITLE, codexCategoryState, codexEntries, codexProgress, foughtWarlords, type CodexCategory, type CodexEntry } from "@/game/codex";
@@ -153,54 +152,32 @@ export function CodexPage() {
         )}
       </Card>
 
-      {/* 5.15.11 : avancement par catégorie, et sa récompense une fois complète. */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+      {/* 5.15.11 : avancement par catégorie, et sa récompense une fois complète.
+          6.14.67 (UX-6, AD-17) : les tuiles sont aussi le filtre (aria-pressed) ; la barre d'onglets
+          qui répétait les mêmes catégories est retirée. */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6" role="group" aria-label="Filtrer les fiches par catégorie">
+        <CategoryTile label="Tout" unlocked={progress.unlocked} total={progress.total} selected={tab === "all"} onSelect={() => setTab("all")} />
         {CODEX_CATEGORIES.map((c) => {
           const st = codexCategoryState(player, entries, c.id);
           const paid = st.reward.tokens > 0 || st.reward.amber > 0;
           return (
-            <div key={c.id} className={cn("hud-cut-sm flex flex-col gap-1.5 border bg-white/[0.02] p-2.5", st.complete ? "border-gold-glow/40" : "border-white/10")}>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400">{c.label}</span>
-                <span className="font-mono text-xs tabular-nums text-slate-100">
-                  {st.unlocked}/{st.total}
-                </span>
-              </div>
-              <div className="h-1 bg-white/5">
-                <div className="h-full bg-gold-glow/70 transition-[width] duration-500" style={{ width: `${st.total ? (st.unlocked / st.total) * 100 : 0}%` }} />
-              </div>
+            <CategoryTile key={c.id} label={c.label} unlocked={st.unlocked} total={st.total} complete={st.complete} selected={tab === c.id} onSelect={() => setTab(tab === c.id ? "all" : c.id)}>
               {paid &&
                 (st.claimed ? (
-                  <span className="font-mono text-[10px] text-mint-glow">Récompense reçue</span>
+                  <span className="font-mono text-[11px] text-mint-glow">Récompense reçue</span>
                 ) : st.complete ? (
                   <Button size="sm" disabled={claiming !== null} onClick={() => void claimCategory(c.id)}>
                     Réclamer
                   </Button>
                 ) : (
-                  <span className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                  <span className="flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
                     <TokenIcon size={11} /> {st.reward.tokens} · <AmberAmount value={st.reward.amber} />
                   </span>
                 ))}
-            </div>
+            </CategoryTile>
           );
         })}
       </div>
-
-      <Tabs value={tab} onValueChange={(v) => setTab(v as CodexCategory | "all")}>
-        <div className="-mx-1 overflow-x-auto px-1">
-          <TabsList>
-            <TabsTrigger value="all">Tout</TabsTrigger>
-            {CODEX_CATEGORIES.map((c) => {
-              const list = entries.filter((e) => e.category === c.id);
-              return (
-                <TabsTrigger key={c.id} value={c.id}>
-                  {c.label} <span className="ml-1 font-mono text-[10px] text-slate-500">{list.filter((e) => e.unlocked).length}/{list.length}</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </div>
-      </Tabs>
 
       <div className="flex justify-end gap-1.5">
         <Button size="sm" variant={view === "holo" ? "secondary" : "ghost"} onClick={() => pickView("holo")} aria-pressed={view === "holo"}>
@@ -267,6 +244,31 @@ export function CodexPage() {
           </DialogContent>
         </Dialog>
       )}
+    </div>
+  );
+}
+
+/** 6.14.67 (UX-6) : tuile de catégorie, qui filtre la grille (aria-pressed) et porte sa récompense. */
+function CategoryTile({ label, unlocked, total, complete, selected, onSelect, children }: { label: string; unlocked: number; total: number; complete?: boolean; selected: boolean; onSelect: () => void; children?: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        "hud-cut-sm flex flex-col gap-1.5 border bg-white/[0.02] p-2.5 transition-colors",
+        selected ? "border-cyan-glow/70 bg-cyan-glow/[0.06] shadow-[inset_0_-2px_0_0_var(--color-cyan-glow)]" : complete ? "border-gold-glow/40" : "border-white/10",
+      )}
+    >
+      <button type="button" aria-pressed={selected} onClick={onSelect} className="hud-hit flex flex-col gap-1.5 text-left">
+        <span className="flex w-full items-baseline justify-between gap-2">
+          <span className={cn("font-mono text-[10px] uppercase tracking-[0.14em]", selected ? "text-cyan-glow" : "text-slate-400")}>{label}</span>
+          <span className="font-mono text-xs tabular-nums text-slate-100">
+            {unlocked}/{total}
+          </span>
+        </span>
+        <span className="block h-1 w-full bg-white/5">
+          <span className="block h-full bg-gold-glow/70 transition-[width] duration-500" style={{ width: `${total ? (unlocked / total) * 100 : 0}%` }} />
+        </span>
+      </button>
+      {children}
     </div>
   );
 }

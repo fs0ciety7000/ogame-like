@@ -55,6 +55,27 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS_ALL: Announcement[] = [
   {
+    // 6.14.69 (É30-1d) : phalange, porte de saut et pitié lunaire, avec le billet « Ta lune veille » (content/blog/53).
+    // Publiée seulement une fois son illustration produite et poussée (`announce-phalange` sur /img).
+    id: "v6.14-lune-veille",
+    eyebrow: "Mise à jour 6.14 · Ta lune veille",
+    title: "Ta lune voit venir l'orage",
+    text: "Sa phalange signale les attaques sur tes alliés, perce les leurres et balaie l'agresseur. Dès le niveau 3, sa porte de saut ramène ta flotte d'un coup. Et chaque combat subi rapproche ta première lune.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/story/annonce-phalange.webp",
+    artMobile: "/assets/story/annonce-phalange.webp",
+    artSlot: "announce-phalange",
+    pendingArt: true,
+    features: [
+      { title: "Phalange", text: "Radar d'alliance dès le niveau 1, leurres percés au niveau 2, balayage de l'agresseur (recharge 30 min).", to: "/game/statistiques?onglet=lune", image: "/assets/moon/lune.webp" },
+      { title: "Porte de saut", text: "Au niveau 3, une patrouille, une garnison ou une base avancée rentre à quai d'un coup. Recharge 24 h.", to: "/game/statistiques?onglet=lune", image: "/assets/moon/lune.webp" },
+      { title: "Une lune pour chacun", text: "+5 % de chance par combat subi sans lune. Au 20e, elle est garantie.", to: "/game/statistiques?onglet=lune", image: "/assets/moon/lune.webp" },
+      { title: "Alliés menacés", text: "Envoie une garnison depuis la page Alliance. Défi « Les vigies » : avec ou sans lune.", to: "/game/alliance", image: "/assets/relics/oeil_vesper.webp" },
+    ],
+    cta: { label: "Voir ma lune", to: "/game/statistiques?onglet=lune" },
+  },
+  {
     // 6.14.33 : grande mise à jour (5.27 → 6.14), avec le billet « la grande mise à jour » (content/blog/49).
     // 6.14.36 : publiée seulement une fois son illustration produite et poussée (`annonce-6.14` sur /img).
     id: "v6.14-grande-maj",

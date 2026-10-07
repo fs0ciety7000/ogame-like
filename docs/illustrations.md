@@ -54,6 +54,11 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
    - **Comptoir** : identifiant ajouté à `SHOP_ITEM_ART` (`src/pages/BountiesPage.tsx`).
    - **Annonce, lune, bâtiments** : même nom de fichier ; augmenter `ASSET_VERSION` (`src/lib/assets.ts`) pour vider le cache des
      navigateurs.
+   - **Lune : phalange, porte de saut et leurs reliques** (6.14.69) : images provisoires dans le code. `phalanx` et `jumpgate` : remplacer
+     `image: "/assets/moon/lune.webp"` des fiches `legend:phalange` et `legend:porte_saut` (`codex.ts`) par la cible ;
+     `relic-lentille-selene` et `relic-cle-seuil` : retirer le champ `image` de `lentille_selene` et `cle_seuil` (`DEFAULT_RELICS`), la
+     relique prend alors `/assets/relics/<id>.webp` (liste personnalisée : une migration `patches` de `CONTENT_MIGRATIONS` remplace
+     l'ancien `image` par le nouveau) ; `announce-phalange` : retirer `pendingArt` de l'annonce `v6.14-lune-veille`.
 4. Fiche `docs/changes/`, validation, commit, push. `node scripts/preprod-illustrations.mjs integrated <id> …`. Vérifier sur la pré-prod
    (`scripts/preprod-capture.mjs`).
 

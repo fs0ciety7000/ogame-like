@@ -250,13 +250,13 @@ export function GalaxyPage() {
           />
         </div>
         <div className="flex gap-1">
-          <Button variant="outline" size="icon" title="Zoomer" onClick={() => zoomAt(1.4)}>
+          <Button variant="outline" size="icon" title="Zoomer" aria-label="Zoomer" onClick={() => zoomAt(1.4)}>
             <Plus className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" title="Dézoomer" onClick={() => zoomAt(1 / 1.4)}>
+          <Button variant="outline" size="icon" title="Dézoomer" aria-label="Dézoomer" onClick={() => zoomAt(1 / 1.4)}>
             <Minus className="h-4 w-4" />
           </Button>
-          <Button variant={showSectors ? "secondary" : "outline"} size="icon" title={showSectors ? "Masquer les territoires" : "Afficher les territoires"} onClick={() => setShowSectors((v) => !v)}>
+          <Button variant={showSectors ? "secondary" : "outline"} size="icon" title={showSectors ? "Masquer les territoires" : "Afficher les territoires"} aria-label={showSectors ? "Masquer les territoires" : "Afficher les territoires"} onClick={() => setShowSectors((v) => !v)}>
             <Grid3x3 className="h-4 w-4" />
           </Button>
           {myPos && (
@@ -642,7 +642,7 @@ export function GalaxyPage() {
                       <Sword className="mr-1 h-4 w-4" /> Attaquer la colonie
                     </Button>
                   )}
-                  <Button variant="outline" size="icon" title="Espionner la colonie" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
+                  <Button variant="outline" size="icon" title="Espionner la colonie" aria-label="Espionner la colonie" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
                     <Eye className="h-4 w-4" />
                   </Button>
                 </div>
@@ -661,11 +661,11 @@ export function GalaxyPage() {
                   <Button variant="outline" size="icon" title={`Sondes en 1 clic (${quickProbeCount()})`} aria-label={`Envoyer des sondes à ${selected.pseudo}`} onClick={() => void quickSpy({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Radar className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon" title="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                  <Button variant="outline" size="icon" title="Espionner" aria-label="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Eye className="h-4 w-4" />
                   </Button>
                   {!("npc" in selected && selected.npc) && (
-                    <Button variant="outline" size="icon" title="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo, allianceId: "allianceId" in selected ? (selected.allianceId ?? null) : undefined, createdAtMs: "createdAtMs" in selected ? selected.createdAtMs : undefined })}>
+                    <Button variant="outline" size="icon" title="Envoyer des ressources" aria-label="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo, allianceId: "allianceId" in selected ? (selected.allianceId ?? null) : undefined, createdAtMs: "createdAtMs" in selected ? selected.createdAtMs : undefined })}>
                       <Gift className="h-4 w-4" />
                     </Button>
                   )}

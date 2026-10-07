@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { EmptyState, HudCallout, HudChip } from "@/components/ui/hud";
+import { EmptyState, HudCallout, HudChip, HudTag } from "@/components/ui/hud";
 import { ELITE_COUNTER, RANK_NUMERALS, TRAIT_NAMES, type EliteTarget } from "@/game/warlordRanks";
 import { ELITE_UNITS, findUnit } from "@/game/units";
 import { eliteStatus } from "@/game/eliteUnits";
@@ -42,11 +42,12 @@ function Portrait({ w, className }: { w: WarlordPublic; className?: string }) {
 const MOBILE_STEP = 4;
 const isNarrow = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
 
-const PERSONALITY_TONE: Record<string, string> = {
-  aggressive: "border-danger-glow/50 text-danger-glow",
-  opportunist: "border-gold-glow/50 text-gold-glow",
-  builder: "border-cyan-glow/50 text-cyan-glow",
-  merchant: "border-mint-glow/50 text-mint-glow",
+/* 6.14.67 (UX-6, AD-19) : le tempérament est une pastille du HUD (mêmes tons qu'avant). */
+const PERSONALITY_TONE: Record<string, "danger" | "gold" | "accent" | "mint"> = {
+  aggressive: "danger",
+  opportunist: "gold",
+  builder: "accent",
+  merchant: "mint",
 };
 
 export function WarlordsPage() {
@@ -115,6 +116,13 @@ export function WarlordsPage() {
 
       {coalition && list && <CoalitionCard coalition={coalition} warlords={list} uid={player?.uid ?? ""} />}
 
+      {/* 6.14.68 (UX-7) : la raison des boutons grisés, visible une fois (le title ne s'affiche pas au toucher). */}
+      {away && (
+        <HudCallout tone="ember" className="text-xs text-slate-300">
+          Tu es en vacances : espionnage, attaques et vendettas sont suspendus jusqu'à ton retour.
+        </HudCallout>
+      )}
+
       {mine?.vendetta && (
         <Card className="flex flex-wrap items-center gap-4 border-danger-glow/40 p-4">
           <Swords className="h-5 w-5 text-danger-glow" />
@@ -126,6 +134,7 @@ export function WarlordsPage() {
             <div className="mt-2 h-2 bg-white/5">
               <div className="h-full bg-gradient-to-r from-danger-glow to-gold-glow" style={{ width: `${Math.min(100, (mine.vendetta.dealt / Math.max(1, mine.vendetta.goal)) * 100)}%` }} />
             </div>
+            <p className="mt-1.5 text-[11px] text-slate-400">Une vendetta à la fois : les autres restent grisées jusqu'à la fin de celle-ci.</p>
           </div>
           <span className="flex items-center gap-1 font-mono text-xs text-slate-400">
             <Timer className="h-3.5 w-3.5" /> {formatDuration(Math.max(0, mine.vendetta.endsAtMs - now) / 1000)}
@@ -164,7 +173,7 @@ export function WarlordsPage() {
                     </div>
                     <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500">{w.originLabel}</p>
                     <div className="flex flex-wrap gap-1.5 text-[11px]">
-                      <span className={cn("border px-1.5 py-px", PERSONALITY_TONE[w.personality])}>{PERSONALITY_LABELS[w.personality]}</span>
+                      <HudTag tone={PERSONALITY_TONE[w.personality] ?? "accent"}>{PERSONALITY_LABELS[w.personality]}</HudTag>
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">{TIER_LABELS[w.tier]}</span>
                       <span className="hud-chip hud-chip-sm hud-tone-neutral">
                         Puissance <AnimatedNumber value={w.power} format={formatNumber} countUp />
@@ -216,8 +225,10 @@ export function WarlordsPage() {
                         </div>
                       </div>
                     )}
+                    {/* 6.14.67 (UX-6, AD-19) : Espionner, le premier pas sûr, est l'action principale ; la
+                        vendetta (coûteuse, avec riposte) passe en orange. */}
                     <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
-                      <Button size="sm" variant="secondary" disabled={gone || away} onClick={() => setSpy({ uid: w.uid, pseudo: w.name })}>
+                      <Button size="sm" disabled={gone || away} onClick={() => setSpy({ uid: w.uid, pseudo: w.name })}>
                         <Eye className="h-3.5 w-3.5" /> Espionner
                       </Button>
                       <Button size="sm" variant="secondary" disabled={gone || away} onClick={() => setAttack({ uid: w.uid, pseudo: w.name })}>
@@ -232,14 +243,14 @@ export function WarlordsPage() {
                           <Swords className="h-3.5 w-3.5" /> Le rappeler
                         </Button>
                       )}
-                      <Button size="sm" disabled={gone || away || !!v || !!mine} onClick={() => {
+                      <Button size="sm" variant="warn" disabled={gone || away || !!v || !!mine} onClick={() => {
                           setRecall(false);
                           setVendetta(w);
                           if ((w.rank ?? 1) >= 5) setScope("alliance");
                         }} title={mine ? "Termine d'abord ta vendetta en cours." : undefined}>
                         <Swords className="h-3.5 w-3.5" /> Vendetta
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => navigate(`/game/messages?with=${w.uid}&pseudo=${encodeURIComponent(w.name)}`)}>
+                      <Button size="sm" variant="ghost" aria-label={`Écrire à ${w.name}`} title={`Écrire à ${w.name}`} onClick={() => navigate(`/game/messages?with=${w.uid}&pseudo=${encodeURIComponent(w.name)}`)}>
                         <Mail className="h-3.5 w-3.5" />
                       </Button>
                     </div>

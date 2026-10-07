@@ -244,6 +244,12 @@ function AuctionRow({ a, uid, now, sales }: { a: Auction; uid: string; now: numb
           <Button size="sm" variant="secondary" disabled={busy || left <= 0 || need > stock} title={need > stock ? `Il te manque ${formatNumber(need - stock)} ${currencyLabel(a.res).toLowerCase()}.` : undefined} onClick={() => void bid()}>
             <Gavel className="h-3.5 w-3.5" /> {leading ? "Surenchérir" : "Enchérir"}
           </Button>
+          {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
+          {need > stock && (
+            <p className="basis-full text-[11px] text-ember-glow">
+              Il te manque <span className="font-mono tabular-nums">{formatNumber(need - stock)}</span> {currencyLabel(a.res).toLowerCase()}.
+            </p>
+          )}
         </div>
       )}
     </div>

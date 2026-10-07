@@ -80,6 +80,25 @@ export function BalanceHealthSection({ health, achievementsPace }: { health: Bal
         )}
         {health.casino?.pot && <StatTile size="sm" tone="gold" label="Pot commun" value={formatCompact(health.casino.pot.value)} sub={`ressources (valeur commune) · ${health.casino.pot.amber} Ambre`} />}
         <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub={`dont ${health.colonies.supply ?? 0} en ravitaillement · ${health.colonies.queued ?? 0} files de défense`} />
+        {/* 6.14.69 (É30-1d, risque R1) : lunes chez les actifs, usage de la phalange et de la porte de saut (cumuls). */}
+        {health.moons && (
+          <>
+            <StatTile
+              size="sm"
+              tone="violet"
+              label="Actifs avec une lune"
+              value={`${health.moons.sharePct} %`}
+              sub={`${health.moons.players} lunes · niveau ${String(health.moons.medianLevel).replace(".", ",")} (médiane) · ${health.moons.byPity} nées par pitié · ${health.moons.pityPending} réserves en cours`}
+            />
+            <StatTile
+              size="sm"
+              tone="violet"
+              label="Phalange et porte"
+              value={`${health.moons.scans} balayages`}
+              sub={`${health.moons.scanners} joueurs · ${health.moons.jumps} sauts (${health.moons.jumpers} joueurs) · ${health.moons.saves} sauvetages`}
+            />
+          </>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <span>Alliances ({health.alliances.count}) :</span>

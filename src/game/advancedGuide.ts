@@ -4,6 +4,8 @@ import { commandersState } from "@/game/commanders";
 import { GameActionError } from "@/game/errors";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { equippedRelics, relicsState } from "@/game/relics";
+import { playerMoon } from "@/game/moon";
+import { playerStats } from "@/game/stats";
 import { talentPoints } from "@/game/talents";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -15,7 +17,7 @@ import type { PlayerState, ResourceId } from "@/types/game";
    rangée avec celle de la prise en main (`onboarding.advanced`).
 ===================================================== */
 
-export type GuideChapterId = "empire" | "colonies" | "relics" | "ascension";
+export type GuideChapterId = "empire" | "colonies" | "relics" | "ascension" | "moon";
 
 export interface GuideStep {
   id: string;
@@ -35,6 +37,8 @@ export const GUIDE_CHAPTERS: { id: GuideChapterId; label: string; emoji: string 
   { id: "colonies", label: "Colonies", emoji: "🪐" },
   { id: "relics", label: "Reliques et commandants", emoji: "💠" },
   { id: "ascension", label: "Ascension", emoji: "✨" },
+  // 6.14.69 (É30-1d) : la lune, sa phalange et sa porte de saut (dernier chapitre : il ne bloque aucune autre étape).
+  { id: "moon", label: "Ta lune", emoji: "🌙" },
 ];
 
 const colonies = (p: PlayerState) => p.colonies ?? [];
@@ -141,6 +145,16 @@ export const GUIDE_STEPS: GuideStep[] = [
     to: "/game/profil",
     reward: { reinforcedSteel: 500_000, cyberModule: 500_000, syntheticNanites: 500_000, aiFragment: 500_000 },
     done: (p) => talentPoints(p).spent >= 1,
+  },
+  {
+    // 6.14.69 (É30-1d) : faisable sans lune (une garnison chez un allié, ou un combat subi qui remplit la réserve de pitié).
+    id: "moonWatch",
+    chapter: "moon",
+    label: "Ta lune veille",
+    learn: "Un gros combat chez toi peut faire naître une lune. Sa phalange signale les attaques sur tes alliés proches ; au niveau 3, sa porte de saut ramène une flotte d'un coup. Sans lune, envoie une garnison à un allié menacé.",
+    to: "/game/statistiques?onglet=lune",
+    reward: { scrap: 1_000_000, energy: 1_000_000 },
+    done: (p) => !!playerMoon(p) || (Number(p.moonPity) || 0) > 0 || (playerStats(p).garrisons ?? 0) >= 1,
   },
 ];
 

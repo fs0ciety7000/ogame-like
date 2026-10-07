@@ -119,7 +119,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
                         size="sm"
                         variant="ghost"
                         className="h-7 px-2"
-                        title="Relancer ce contrat (1 fois par jour)"
+                        title="Relancer ce contrat (1 fois par jour)" aria-label="Relancer ce contrat (1 fois par jour)"
                         disabled={pending === c.id}
                         onClick={() => void reroll(c)}
                       >

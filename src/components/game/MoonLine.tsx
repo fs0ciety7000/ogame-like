@@ -57,6 +57,8 @@ export function MoonLine({ moon, player }: { moon: MoonState; player: PlayerStat
         Lune <span className="text-violet-glow">{moon.name}</span> <span className="font-mono tabular-nums">niv. {level}</span> : bouclier{" "}
         <span className="font-mono tabular-nums">+{pct(moonShield(moon))}</span>, entrepôt à l'abri <span className="font-mono tabular-nums">+{pct(MOON_RULES.protectedStorageBonus)}</span>
       </span>
+      {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
+      {!atMax && !affordable && <span className="text-[11px] text-ember-glow">ressources insuffisantes</span>}
       {!atMax && (
         <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" disabled={busy || !affordable} onClick={() => void upgrade()} title={affordable ? undefined : "Ressources insuffisantes"}>
           Améliorer

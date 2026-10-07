@@ -430,7 +430,7 @@ export function PlayersPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      title="Renforcer (garnison)"
+                      title="Renforcer (garnison)" aria-label="Renforcer (garnison)"
                       onClick={() =>
                         setGarrisonTarget({ uid: p.uid, pseudo: p.pseudo })
                       }

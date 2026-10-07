@@ -2310,3 +2310,54 @@ main {
   height: 2rem;
   width: 2rem;
 }
+
+/* ---------- 6.14.68 (UX-7, Q-AD-5) : zone sensible de 44 px sur écran tactile ----------
+   Sur un écran tactile (pointer: coarse), une cible marquée .hud-hit (Button, TabsTrigger,
+   HudChip cliquable) reçoit un pseudo-élément invisible centré d'au moins 44 × 44 px : rien ne
+   bouge à la souris, et la taille visible reste la même sur téléphone. Le coin coupé (clip-path)
+   s'étend autour de la boîte pour que la zone reste touchable : seuls les triangles des coins
+   restent coupés, et rien n'est peint hors de la boîte. Le reflet (.hud-sheen) ne coupe plus
+   par overflow : le clip-path le borne. */
+@layer components {
+  @media (pointer: coarse) {
+    .hud-hit {
+      --hit: min(0px, calc(50% - 22px));
+      --hit-end: max(100%, calc(50% + 22px));
+      position: relative;
+    }
+    .hud-hit::before {
+      content: "";
+      position: absolute;
+      top: var(--hit);
+      bottom: var(--hit);
+      left: var(--hit);
+      right: var(--hit);
+    }
+    .hud-hit.hud-sheen {
+      overflow: visible;
+    }
+    .hud-hit.hud-cut {
+      clip-path: polygon(var(--hit) 8px, 0 8px, 8px 0, 8px var(--hit), var(--hit-end) var(--hit), var(--hit-end) calc(100% - 8px), 100% calc(100% - 8px), calc(100% - 8px) 100%, calc(100% - 8px) var(--hit-end), var(--hit) var(--hit-end));
+    }
+    .hud-hit.hud-cut-sm,
+    .hud-hit.hud-chip {
+      clip-path: polygon(var(--hit) 5px, 0 5px, 5px 0, 5px var(--hit), var(--hit-end) var(--hit), var(--hit-end) var(--hit-end), var(--hit) var(--hit-end));
+    }
+  }
+}
+/* Thèmes aux coins propres (règles hors couche, donc plus fortes) : même extension. */
+@media (pointer: coarse) {
+  :root[data-theme="holo"] .hud-hit.hud-cut,
+  :root[data-theme="holo"] .hud-hit.hud-cut-sm {
+    clip-path: polygon(var(--hit) var(--hit), var(--hit-end) var(--hit), var(--hit-end) var(--hit-end), var(--hit) var(--hit-end));
+  }
+  :root[data-theme="netrunner"] .hud-hit.hud-cut {
+    clip-path: polygon(var(--hit) var(--hit), calc(100% - 14px) var(--hit), calc(100% - 14px) 0, 100% 14px, var(--hit-end) 14px, var(--hit-end) var(--hit-end), var(--hit) var(--hit-end));
+  }
+  :root[data-theme="netrunner"] .hud-hit.hud-cut-sm {
+    clip-path: polygon(var(--hit) var(--hit), calc(100% - 8px) var(--hit), calc(100% - 8px) 0, 100% 8px, var(--hit-end) 8px, var(--hit-end) var(--hit-end), var(--hit) var(--hit-end));
+  }
+  :root[data-theme="netrunner"] .hud-hit.hud-btn-primary {
+    clip-path: polygon(var(--hit) var(--hit), calc(100% - 16px) var(--hit), calc(100% - 16px) 0, 100% 16px, var(--hit-end) 16px, var(--hit-end) var(--hit-end), var(--hit) var(--hit-end));
+  }
+}

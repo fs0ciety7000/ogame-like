@@ -74,6 +74,19 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   `announcementsSeen`).
 - **Pastilles de navigation** : le rouge (`danger`) reste aux menaces ; un compteur de lectures (notes de version, messages, bouton
   « Plus ») est neutre (6.14.64).
+- **Hiérarchie d'une page (6.14.67)** : l'action principale de la page vient juste sous l'en-tête (la grille des Missions, les
+  paliers du Passe, « Rejoindre » pour un joueur sans alliance) ; l'explication et les compteurs secondaires passent dessous ou
+  se replient (`FoldSection`). Une carte n'a qu'un bouton plein (`primary`) : le premier pas sûr (Espionner un seigneur) ; une
+  action coûteuse ou risquée est `warn` (Vendetta). Une page n'a qu'une navigation entre ses sections : des tuiles qui filtrent
+  (`aria-pressed`) **ou** des onglets, jamais les deux. Une autre page résumée tient en une ligne-lien (Chroniques sur le Passe).
+- **Cibles tactiles (6.14.68, Q-AD-5)** : sur écran tactile (`@media (pointer: coarse)`), toute cible fait au moins 44 × 44 px de
+  zone sensible, sans rien changer à la souris. `Button`, `TabsTrigger` et `HudChip` cliquable portent `hud-hit` (pseudo-élément
+  invisible centré, coin coupé étendu autour de la boîte) ; un lien ou un bouton fait main l'ajoute aussi. Dans un conteneur qui
+  défile (`overflow-x-auto`), la zone est coupée au bord : `TabsList` prend 8 px de marge verticale au toucher. Les icônes de
+  l'en-tête passent à 44 px au toucher (`pointer-coarse:h-11`). Jamais `before:-inset-*` pour ça (il agit aussi à la souris).
+- **Noms et raisons** : un bouton ou un onglet à icône seule a un `aria-label` (le `title` seul ne s'affiche pas au toucher) ;
+  un bouton grisé dit pourquoi en texte visible (une ligne sous le bouton, ou une fois en tête de page si la raison vaut pour
+  toutes les cartes), le `title` ne fait que doubler. Garde : `src/lib/accessibilite.test.ts`.
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière

@@ -45,7 +45,7 @@ export const HudChip = React.forwardRef<HTMLElement, ChipProps>(function HudChip
   return (
     <Comp
       ref={ref}
-      className={cn("hud-chip", size === "sm" ? "hud-chip-sm" : "hud-chip-md", (asChild || rest.onClick) && "hud-chip-action", className)}
+      className={cn("hud-chip", size === "sm" ? "hud-chip-sm" : "hud-chip-md", (asChild || rest.onClick) && "hud-chip-action hud-hit", className)}
       style={{ ["--c" as string]: HUD_TONE[tone], ...style }}
       {...rest}
     >

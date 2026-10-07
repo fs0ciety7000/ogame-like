@@ -21,7 +21,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 10 | UX-1 | Accueil public mobile (formulaire et devblog coupés à 375 px) | S | livré (6.14.53) |
 | 11 | UX-3 | Textes de règle justes (astuces, toasts) et nombres lisibles | S | livré (6.14.54) |
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
-| 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | à faire |
+| 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | livré (6.14.69) |
 | 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | à faire |
 | 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | à faire |
 | 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | à faire |
@@ -41,8 +41,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 30 | AC-E | Tâches planifiées : verrou par cadence, e-mails par lots | M | à faire |
 | 31 | AC-F | Erreurs traduites (403, 409, 429, 503) et garde de vacances unique | S | à faire |
 | 32 | AC-G | Réclamations groupées (casino du jour, défi, titre du Codex dans « Tout réclamer ») | M | à faire |
-| 33 | UX-6 | Hiérarchie des pages (Missions, Passe, Alliance, Seigneurs, Codex) | M | à faire |
-| 34 | UX-7 | Tactile et accessibilité (44 px sur écran tactile, `aria-label`, raison des boutons grisés) | M | à faire |
+| 33 | UX-6 | Hiérarchie des pages (Missions, Passe, Alliance, Seigneurs, Codex) | M | livré (6.14.67) |
+| 34 | UX-7 | Tactile et accessibilité (44 px sur écran tactile, `aria-label`, raison des boutons grisés) | M | livré (6.14.68) |
 | 35 | AJ27-4 | Garde de chaîne de contenu par contenu, panneau « Chaîne de contenu » dans l'admin | M | à faire |
 | 36 | AJ27-5 | Colonies dans la chaîne : succès, Codex des biomes, Formules | M | à faire |
 | 37 | É30-5 | Performance : stabilité mobile, LCP de la Galaxie, images du Codex à la demande | M | à faire |

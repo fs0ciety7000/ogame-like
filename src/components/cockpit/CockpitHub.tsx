@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon, Wrench } from "lucide-react";
+import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Moon, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { HudChip, EmptyState } from "@/components/ui/hud";
@@ -48,6 +48,7 @@ const QUEUE_ICON: Record<TimelineKind, { icon: LucideIcon; color: string }> = {
   repair: { icon: Wrench, color: "var(--color-ember-glow)" },
   fleet: { icon: Send, color: "var(--color-cyan-glow)" },
   hostile: { icon: AlertTriangle, color: "var(--color-danger-glow)" },
+  moon: { icon: Moon, color: "var(--color-violet-glow)" },
 };
 
 const BOOT_KEY = "cosmic-empires:cockpit-boot";

@@ -149,10 +149,14 @@ function SecretHint({ a, player }: { a: AchievementDef; player: PlayerState }) {
     }
     setBusy(false);
   };
+  // 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher).
   return (
+    <span className="flex flex-wrap items-center gap-2 self-start">
     <Button size="sm" variant="ghost" className="self-start" disabled={busy || amber < ACHIEVEMENT_HINT_RULES.price} title={amber < ACHIEVEMENT_HINT_RULES.price ? "Pas assez d'Ambre." : undefined} onClick={() => void buy()}>
       <Lightbulb className="h-3.5 w-3.5" /> Indice · <AmberAmount value={ACHIEVEMENT_HINT_RULES.price} label={false} className="font-mono tabular-nums" />
     </Button>
+    {amber < ACHIEVEMENT_HINT_RULES.price && <span className="text-[11px] text-slate-400">Pas assez d'Ambre.</span>}
+    </span>
   );
 }
 

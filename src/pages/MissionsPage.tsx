@@ -50,12 +50,8 @@ export function MissionsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" description="Envoie ta flotte en exploration ou en patrouille." />
-      <XpTiersCard player={player} />
-      <BountiesTeaser />
-
-      <ContractsCard />
-
-      <ExpeditionCard />
+      {/* 6.14.67 (UX-6, AD-10) : la grille des missions d'abord ; contrats, primes et expéditions
+          dessous, les paliers d'XP repliés en bas. */}
       <div className="flex justify-end">
         <SortableGridToggle page="missions" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
@@ -131,6 +127,11 @@ export function MissionsPage() {
             </Card>
           );
         }} />
+
+      <ContractsCard />
+      <BountiesTeaser />
+      <ExpeditionCard />
+      <XpTiersCard player={player} fold />
     </div>
   );
 }

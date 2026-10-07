@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.66 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.69 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 132 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 135 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -168,6 +168,9 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.64 : Navigation mobile : Bâtiments par défaut, pastille « Plus » neutre (`docs/changes/6.14.64-navigation-mobile.md`)
 - 6.14.65 : Édition admin d'un joueur par le serveur (`docs/changes/6.14.65-edition-admin-serveur.md`)
 - 6.14.66 : Suppression de compte par le serveur (`docs/changes/6.14.66-suppression-compte-serveur.md`)
+- 6.14.67 : Hiérarchie des pages : l'action principale d'abord (`docs/changes/6.14.67-hierarchie-pages.md`)
+- 6.14.68 : Tactile et accessibilité : 44 px au toucher, noms et raisons visibles (`docs/changes/6.14.68-tactile-accessibilite.md`)
+- 6.14.69 : Phalange et porte de saut : admin et chaîne de contenu (`docs/changes/6.14.69-phalange-chaine.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

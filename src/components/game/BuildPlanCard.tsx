@@ -63,7 +63,7 @@ export function BuildPlanCard({ player, queues, now }: { player: PlayerState; qu
                   {def?.name ?? p.buildingId} <span className="text-gold-glow">→ niv. {p.level}</span>
                 </span>
                 <span className={p.waitingSinceMs ? "text-ember-glow" : "text-slate-500"}>{status}</span>
-                <button type="button" disabled={busy} onClick={() => void remove(i)} title="Retirer (gratuit)" className="ml-auto p-1 text-slate-500 hover:text-danger-glow">
+                <button type="button" disabled={busy} onClick={() => void remove(i)} title="Retirer (gratuit)" aria-label="Retirer (gratuit)" className="ml-auto p-1 text-slate-500 hover:text-danger-glow">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </li>

@@ -63,7 +63,7 @@ export function NotificationBell() {
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
+            "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow pointer-coarse:h-11 pointer-coarse:w-11",
             hasUrgentUnread && "animate-pulse-alert",
           )}
           aria-label="Notifications"

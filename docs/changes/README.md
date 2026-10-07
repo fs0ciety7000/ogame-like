@@ -166,6 +166,9 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.64 | [Navigation mobile : Bâtiments par défaut, pastille « Plus » neutre](6.14.64-navigation-mobile.md) | correctif (interface) | aucune (AU27, lot UX-8), Q90 |
 | 6.14.65 | [Édition admin d'un joueur par le serveur](6.14.65-edition-admin-serveur.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-B |
 | 6.14.66 | [Suppression de compte par le serveur](6.14.66-suppression-compte-serveur.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-C, Q78 |
+| 6.14.67 | [Hiérarchie des pages : l'action principale d'abord](6.14.67-hierarchie-pages.md) | correctif (interface) | aucune (AU27, lot UX-6) |
+| 6.14.68 | [Tactile et accessibilité : 44 px au toucher, noms et raisons visibles](6.14.68-tactile-accessibilite.md) | correctif (interface) | aucune (AU27, lot UX-7), Q94 |
+| 6.14.69 | [Phalange et porte de saut : admin et chaîne de contenu](6.14.69-phalange-chaine.md) | fonctionnalité (admin, contenu) | [phalange-porte-de-saut](../proposals/phalange-porte-de-saut.md), lot É30-1d |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

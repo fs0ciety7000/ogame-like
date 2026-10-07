@@ -118,6 +118,9 @@ export const EFFECT_PRESETS: EffectPreset[] = [
   p("espion", "Lentilles profondes", "renseignement", { stat: "spyLevel" }, { relic: 10, tech: 0.2, officer: 0.1 }, "Niveau d'espionnage en plus."),
   p("detection", "Réseau d'écoute", "renseignement", { stat: "detection" }, WIDE, "Détecte mieux les sondes adverses."),
   p("contre", "Brouilleurs", "renseignement", { stat: "counterSpy" }, { relic: 20, tech: 0.5, officer: 0.1 }, "Points de contre-espionnage."),
+  // 6.14.69 (É30-1d) : lune. Relique × 2 : +20 % de portée en épique ; × 1,5 : −15 % de recharge en épique (Lentille de Séléné, Clé du seuil).
+  p("phalange_portee", "Lentille lunaire", "renseignement", { stat: "phalanxRange" }, { relic: 2, tech: 0.04, officer: 0.01 }, "+20 % de portée de phalange (radar d'alliance, balayage)."),
+  p("porte_recharge", "Seuil apprivoisé", "renseignement", { stat: "jumpGateCooldown" }, { relic: 1.5, tech: 0.03, officer: 0.0075 }, "−15 % de recharge de la porte de saut."),
 ];
 
 export function findEffectPreset(id: string): EffectPreset | undefined {

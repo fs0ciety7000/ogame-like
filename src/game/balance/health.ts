@@ -7,6 +7,7 @@ import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, ELITE_UNIT_IDS, findUnit } from "@/gam
 import { casinoWeekId, playerCasino } from "@/game/casino";
 import { normalizeServerPot, POT_SOURCE_LABELS, potValue, type PotSource } from "@/game/serverPot";
 import { withRepairBonus } from "@/game/modifiers";
+import { moonLevel, playerMoon } from "@/game/moon";
 import { ACHIEVEMENTS } from "@/game/achievements";
 import { passState, PASS_RULES, activePass } from "@/game/seasonPass";
 import { parisOffsetMs } from "@/game/events";
@@ -129,6 +130,20 @@ export interface BalanceHealth {
     jackpots: number;
     pot: { value: number; amber: number; inflows: { source: string; label: string; value: number; sharePct: number }[] } | null;
   };
+  /** 6.14.69 (É30-1d, risque R1 de proposals/phalange-porte-de-saut.md) : lunes chez les actifs (part, niveau médian, nées par
+   *  pitié, réserve de pitié en cours) et usage de la phalange et de la porte (cumuls des compteurs, joueurs qui s'en servent). */
+  moons: {
+    players: number;
+    sharePct: number;
+    medianLevel: number;
+    byPity: number;
+    pityPending: number;
+    scans: number;
+    scanners: number;
+    jumps: number;
+    jumpers: number;
+    saves: number;
+  };
 }
 
 export function median(xs: number[]): number {
@@ -245,6 +260,28 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
       return { players: who, sharePct: players.length ? Math.round((who / players.length) * 100) : 0, rows: owned(ELITE_UNIT_IDS) };
     })(),
     casino: casinoHealth(players, now, input.serverPot),
+    moons: moonHealth(players),
+  };
+}
+
+/** 6.14.69 (É30-1d) : lunes et usage de la phalange et de la porte de saut chez les joueurs actifs. */
+export function moonHealth(players: Pick<PlayerState, "moon" | "moonPity" | "stats">[]): BalanceHealth["moons"] {
+  const moons = players.map((p) => playerMoon(p)).filter((m): m is NonNullable<typeof m> => !!m);
+  const count = (k: "phalanxScans" | "gateJumps" | "gateSaves") => players.map((p) => Math.max(0, Math.floor(Number(p.stats?.[k]) || 0)));
+  const scans = count("phalanxScans");
+  const jumps = count("gateJumps");
+  const total = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+  return {
+    players: moons.length,
+    sharePct: players.length ? Math.round((moons.length / players.length) * 100) : 0,
+    medianLevel: median(moons.map((m) => moonLevel(m))),
+    byPity: moons.filter((m) => m.byPity === true).length,
+    pityPending: players.filter((p) => !playerMoon(p) && (Number(p.moonPity) || 0) > 0).length,
+    scans: total(scans),
+    scanners: scans.filter((n) => n > 0).length,
+    jumps: total(jumps),
+    jumpers: jumps.filter((n) => n > 0).length,
+    saves: total(count("gateSaves")),
   };
 }
 

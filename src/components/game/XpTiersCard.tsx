@@ -1,6 +1,6 @@
 import { Gauge } from "lucide-react";
 import { HudCallout, HudChip } from "@/components/ui/hud";
-import { HudPanel } from "@/components/ui/panel";
+import { FoldSection, HudPanel } from "@/components/ui/panel";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { XP_SOURCE_LABELS } from "@/game/xpAudit";
 import { XP_TIER_RULES, xpDayState, xpTierStatus } from "@/game/xpTiers";
@@ -11,7 +11,8 @@ import type { PlayerState } from "@/types/game";
 
 const RATE_TONE = (rate: number) => (rate >= 1 ? "mint" : rate >= XP_TIER_RULES.midRate ? "gold" : "danger") as "mint" | "gold" | "danger";
 
-export function XpTiersCard({ player, compact = false }: { player: Pick<PlayerState, "stats" | "testMode">; compact?: boolean }) {
+/** `fold` (6.14.67, UX-6) : section repliable, fermée par défaut (Missions : la grille passe d'abord). */
+export function XpTiersCard({ player, compact = false, fold = false }: { player: Pick<PlayerState, "stats" | "testMode">; compact?: boolean; fold?: boolean }) {
   useNowTicker();
   if (!XP_TIER_RULES.enabled) return null;
   const rows = xpTierStatus(player, Date.now());
@@ -19,17 +20,13 @@ export function XpTiersCard({ player, compact = false }: { player: Pick<PlayerSt
   const today = xpDayState(player, Date.now());
   const total = Object.values(today.applied).reduce((s, n) => s + (n ?? 0), 0);
   const shown = compact ? rows.filter((r) => r.gross > 0 || r.source === "mission") : rows;
-  return (
-    <HudPanel
-      icon={<Gauge />}
-      title="XP du jour par activité"
-      tone="accent"
-      aside={
-        <span className="font-mono text-[10px] text-slate-500">
-          aujourd'hui <span className="text-slate-200">+{formatNumber(Math.round(total))} XP</span> · remise à zéro à minuit
-        </span>
-      }
-    >
+  const aside = (
+    <span className="font-mono text-[10px] text-slate-500">
+      aujourd'hui <span className="text-slate-200">+{formatNumber(Math.round(total))} XP</span> · remise à zéro à minuit
+    </span>
+  );
+  const body = (
+    <>
       {player.testMode && (
         <HudCallout tone="ember" className="text-xs text-slate-300">
           Compte test : les missions se terminent aussitôt et ne rapportent pas d'XP, ce compteur reste donc vide pour elles.
@@ -61,6 +58,18 @@ export function XpTiersCard({ player, compact = false }: { player: Pick<PlayerSt
           );
         })}
       </ul>
+    </>
+  );
+  if (fold) {
+    return (
+      <FoldSection id="missions-xp" title={<><Gauge /> XP du jour par activité</>} tone="accent" defaultOpen={false} aside={aside}>
+        {body}
+      </FoldSection>
+    );
+  }
+  return (
+    <HudPanel icon={<Gauge />} title="XP du jour par activité" tone="accent" aside={aside}>
+      {body}
     </HudPanel>
   );
 }

@@ -387,10 +387,10 @@ export function BlogPostForm({ initial, images: initialImages, authorPseudo, onB
                   {images.map((name) => (
                     <div key={name} className="group relative aspect-square overflow-hidden border border-white/10 bg-cover bg-center" style={{ backgroundImage: `url('${fileUrl(name)}')` }}>
                       <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-black/70 p-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button type="button" title="Copier le markdown" onClick={() => void navigator.clipboard?.writeText(`![](${fileUrl(name)})`).then(() => toast.success("Markdown copié."))} className="p-1 text-slate-300 hover:text-cyan-glow">
+                        <button type="button" title="Copier le markdown" aria-label="Copier le markdown" onClick={() => void navigator.clipboard?.writeText(`![](${fileUrl(name)})`).then(() => toast.success("Markdown copié."))} className="p-1 text-slate-300 hover:text-cyan-glow">
                           <Copy className="h-3.5 w-3.5" />
                         </button>
-                        <button type="button" title="Supprimer l'image" onClick={() => void removeBlogImage(id, name).then(() => setImages((cur) => cur.filter((x) => x !== name)))} className="p-1 text-slate-300 hover:text-danger-glow">
+                        <button type="button" title="Supprimer l'image" aria-label="Supprimer l'image" onClick={() => void removeBlogImage(id, name).then(() => setImages((cur) => cur.filter((x) => x !== name)))} className="p-1 text-slate-300 hover:text-danger-glow">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>

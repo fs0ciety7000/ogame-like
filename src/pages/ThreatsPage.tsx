@@ -298,6 +298,8 @@ function TreatyRow({ faction, player, busyThreat }: { faction: FactionDef; playe
                 <Button size="sm" variant={kind === "embargo" ? "danger" : "secondary"} disabled={busy !== null || busyThreat || blocked} onClick={() => void sign(kind)} title={blocked ? `Notoriété trop haute (${st.notoriety})` : busyThreat ? "Règle d'abord la menace en cours" : undefined}>
                   {kind === "embargo" ? "Décréter" : "Signer"}
                 </Button>
+                {/* 6.14.68 (UX-7) : raison visible (le title ne s'affiche pas au toucher). */}
+                {(blocked || busyThreat) && <p className="text-[11px] text-ember-glow">{blocked ? `Notoriété trop haute (${st.notoriety})` : "Règle d'abord la menace en cours"}</p>}
               </div>
             );
           })}

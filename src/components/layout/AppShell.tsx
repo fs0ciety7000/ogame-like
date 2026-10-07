@@ -55,15 +55,16 @@ import { playClick } from "@/lib/sfx";
 /** Bouton de la barre d'outils du haut. */
 function HeaderButton({ title, onClick, asLink, danger, children }: { title: string; onClick?: () => void; asLink?: string; danger?: boolean; children: ReactNode }) {
   const cls = cn(
-    "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow",
+    // 6.14.68 (UX-7) : 44 px sur écran tactile.
+    "relative grid h-9 w-9 place-items-center text-slate-400 transition-colors hover:bg-cyan-glow/10 hover:text-cyan-glow pointer-coarse:h-11 pointer-coarse:w-11",
     danger && "hover:bg-danger-glow/10 hover:text-danger-glow",
   );
   return asLink ? (
-    <Link to={asLink} title={title} className={cls}>
+    <Link to={asLink} title={title} aria-label={title} className={cls}>
       {children}
     </Link>
   ) : (
-    <button type="button" title={title} onClick={onClick} className={cls}>
+    <button type="button" title={title} aria-label={title} onClick={onClick} className={cls}>
       {children}
     </button>
   );
@@ -232,7 +233,7 @@ export function AppShell() {
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
           <div className="flex items-center gap-3 px-4 pt-2.5 sm:px-6 md:pt-3">
             {/* Mobile : logo ; bureau : titre de la page en cours. */}
-            <Link to="/game" className="shrink-0 md:hidden">
+            <Link to="/game" aria-label="Accueil" className="hud-hit shrink-0 md:hidden">
               <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
             </Link>
             <div className="min-w-0">

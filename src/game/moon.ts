@@ -44,6 +44,8 @@ export interface MoonState {
   gateReadyAtMs?: number;
   /** 6.14.48 : dernier saut de la porte (succès « Retour fracassant », compteur `gateSaves`) ; absent ou 0 = aucun à compter. */
   lastJumpAtMs?: number;
+  /** 6.14.69 (É30-1d) : née grâce à la réserve de pitié (le tirage des débris seul aurait échoué). Santé de l'équilibre seulement. */
+  byPity?: boolean;
 }
 
 /** Noms tirés au sort (affichés tels quels). */
@@ -96,9 +98,11 @@ export function rollMoon(
   const chance = moonBirthChance(defender, debris);
   if (chance <= 0) return null;
   const rand = opts.rand ?? Math.random;
-  if (rand() >= chance) return null;
+  const roll = rand();
+  if (roll >= chance) return null;
   const name = MOON_NAMES[Math.floor(rand() * MOON_NAMES.length) % MOON_NAMES.length];
-  return { name, bornAtMs: opts.now, fromDebris: Math.floor(debris) };
+  // 6.14.69 : une lune que les débris seuls n'auraient pas fait naître est due à la pitié (mesure de la santé de l'équilibre).
+  return { name, bornAtMs: opts.now, fromDebris: Math.floor(debris), ...(roll >= moonChance(debris) ? { byPity: true } : {}) };
 }
 
 /** 6.14.44 : texte joueur de la réserve (chance au prochain combat subi, pitié comprise). */

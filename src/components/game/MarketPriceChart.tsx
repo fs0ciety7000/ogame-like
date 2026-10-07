@@ -52,7 +52,7 @@ export function MarketPriceChart({ trades, now }: { trades: Trade[]; now: number
         <div className="-mx-1 overflow-x-auto px-1">
           <TabsList>
             {RESOURCE_LIST.map((r) => (
-              <TabsTrigger key={r.id} value={r.id} title={r.name}>
+              <TabsTrigger key={r.id} value={r.id} title={r.name} aria-label={r.name}>
                 <ResourceIcon id={r.id} className="h-5 w-5" />
               </TabsTrigger>
             ))}

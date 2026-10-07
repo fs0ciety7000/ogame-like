@@ -172,9 +172,9 @@ export function DashboardPage() {
         </div>
         {/* 5.21.1 : raccourcis vers le détail (la légende des bâtiments a quitté l'accueil). */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-          <Link to="/game/batiments" className="text-cyan-glow hover:underline">Bâtiments</Link>
-          <Link to="/game/statistiques" className="text-cyan-glow hover:underline">Statistiques de l'empire</Link>
-          <Link to="/game/combats" className="text-cyan-glow hover:underline">Journal de combat</Link>
+          <Link to="/game/batiments" className="hud-hit text-cyan-glow hover:underline">Bâtiments</Link>
+          <Link to="/game/statistiques" className="hud-hit text-cyan-glow hover:underline">Statistiques de l'empire</Link>
+          <Link to="/game/combats" className="hud-hit text-cyan-glow hover:underline">Journal de combat</Link>
         </div>
       </Card>
     ),
@@ -331,16 +331,16 @@ function EditableSlot({ id, layout, children }: { id: DashboardSection; layout: 
           <GripVertical className="h-4 w-4" aria-hidden />
         </button>
         <span className="flex-1 truncate font-display text-xs font-semibold uppercase tracking-[0.1em] text-slate-200">{sectionLabel(id)}</span>
-        <button type="button" title="Monter" disabled={i <= 0} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, -1))}>
+        <button type="button" title="Monter" aria-label="Monter" disabled={i <= 0} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, -1))}>
           <ArrowUp className="h-4 w-4" />
         </button>
-        <button type="button" title="Descendre" disabled={i >= list.length - 1} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, 1))}>
+        <button type="button" title="Descendre" aria-label="Descendre" disabled={i >= list.length - 1} className="p-1 text-slate-400 hover:text-cyan-glow disabled:opacity-30" onClick={() => setDashboardLayout(moveSection(layout, id, 1))}>
           <ArrowDown className="h-4 w-4" />
         </button>
-        <button type="button" title={col === "main" ? "Passer dans la colonne latérale" : "Passer dans la colonne principale"} className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(switchColumn(layout, id))}>
+        <button type="button" title={col === "main" ? "Passer dans la colonne latérale" : "Passer dans la colonne principale"} aria-label={col === "main" ? "Passer dans la colonne latérale" : "Passer dans la colonne principale"} className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(switchColumn(layout, id))}>
           <Columns2 className="h-4 w-4" />
         </button>
-        <button type="button" title="Masquer" className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
+        <button type="button" title="Masquer" aria-label="Masquer" className="p-1 text-slate-400 hover:text-cyan-glow" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
           <EyeOff className="h-4 w-4" />
         </button>
       </div>
