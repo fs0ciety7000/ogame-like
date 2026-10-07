@@ -191,7 +191,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "plasma cannon barrel glowing white-hot, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech17",
@@ -203,7 +203,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "flak battery tracking targets in the sky, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech18",
@@ -347,7 +347,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "rapid-fire anti-swarm turret battery, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech30",
@@ -359,7 +359,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "repair ship with mechanical arms servicing docked vessels, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "lune",
@@ -371,7 +371,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a small grey moon made of fused starship wreckage orbiting a dark planet, visible hull plates and broken antennas embedded in the regolith, faint violet rim light, deep space background with sparse stars, cinematic sci-fi concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "cale_seche",
@@ -383,7 +383,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "isometric pixel art sci-fi orbital dry dock, open steel cradles holding three damaged starfighters under repair, robotic welding arms with orange sparks, scaffolding gantries, cyan holographic status panels without text, dark space background, cool cyan and warm amber lighting, highly detailed, game building icon, centered, no text --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-phantom",
@@ -563,7 +563,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "sci-fi strategy game key art, a sprawling interstellar empire seen from high orbit, a glowing home planet on the right connected by luminous trade routes to several distinct colony worlds (rusty iron world, crystalline ice moon, toxic green jungle planet), fleets of tiny ships following the routes, holographic tactical overlay abstract light lines, without text floating in space, calm dark starfield on the left third, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed --ar 16:9 --v 7 --style raw",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "annonce-6.14",
@@ -575,7 +575,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "sci-fi strategy game key art, an interstellar empire waking up at dawn: a home planet with a small grey moon, fleets of different classes leaving orbit in formation, colony worlds lit along luminous trade routes, an amber insectoid trading station glowing in the distance, calm dark starfield on the left third for text, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed, no text --ar 16:9 --v 7 --style raw",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-coeur_leviathan",
@@ -587,7 +587,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a still-beating bioluminescent heart torn from a colossal space leviathan, armored ridges of dark carapace, cyan veins pulsing with light, radiant magenta mythic aura, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-couronne_ambre",
@@ -599,7 +599,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a regal crown carved from a single block of glowing amber, a tiny ancient queen insect trapped in the central gem, golden honeycomb filigree, radiant magenta mythic aura, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-oeil_neant",
@@ -611,7 +611,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a floating black void orb shaped like an eye swallowing the light around it, a thin violet event horizon ring, metal shards dissolving into nothing at its edge, radiant magenta mythic aura, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-egide_stellaire",
@@ -623,7 +623,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a round shield forged from the core of a dying star, white-hot plasma rim cooling to deep crimson, cracked solar plates, radiant magenta mythic aura, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-sceau_sentinelle",
@@ -635,7 +635,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a heavy steel seal engraved with the silhouette of a sentinel escort ship, scorched edges, a steady cyan glowing core, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-plaque_bastion",
@@ -647,7 +647,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a battered fragment of fortress wall plating with rivets and impact craters, a faint blue shield shimmer still clinging to it, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-lame_duelliste",
@@ -659,7 +659,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an elegant curved dueling blade of dark alloy with a single crimson edge, ornate guard engraved with two crossed starships, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-trophee_seigneur",
@@ -671,7 +671,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a jagged chunk of a warlord's armor plate mounted as a trophy on a dark iron stand, ember-red war paint and a broken insignia, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-balise_traque",
@@ -683,7 +683,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a small organic hunting beacon of amber chitin pulsing with a golden tracking light, twin insect antennae sensors, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-compas_tacticien",
@@ -695,7 +695,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an antique brass tactical compass with holographic needles pointing at a glowing weak point, a star map engraved on the dial, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-enclume_colosses",
@@ -707,7 +707,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a massive dark iron anvil glowing orange along the fresh imprint of a dreadnought keel, sparks frozen in the air, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-navette_mere",
@@ -719,7 +719,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a compact mothership shuttle with an open hive-like belly releasing a stream of tiny glowing fighters, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-lentille-selene",
@@ -731,7 +731,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an ancient cracked crystal lens set in a moon-rock frame, faint cyan glow refracting star points, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "relic-cle-seuil",
@@ -743,7 +743,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an ornate key made of warped hull metal with a tiny violet energy ring at its bow, sci-fi game relic icon, floating on a dark neutral background, soft studio light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "phalanx",
@@ -755,7 +755,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a colossal sensor array dish built into a grey moon crater, made of salvaged starship hull plates, faint cyan scanning beam sweeping toward distant fleet silhouettes, dark planet on the horizon, cinematic sci-fi concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "jumpgate",
@@ -767,7 +767,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a massive ring-shaped jump gate anchored on a wreckage moon, violet energy membrane rippling inside the ring, a small fleet emerging in a flash of light, dark planet below, cinematic sci-fi concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "announce-phalange",
@@ -779,7 +779,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a grey wreckage moon orbiting a dark planet, a sensor dish and a glowing violet jump gate on its surface, a defensive fleet emerging from the gate to face incoming attackers, calm dark starfield on the left third for text, cinematic sci-fi key art, wide composition, muted palette, high detail, no text --ar 16:9 --v 7 --style raw",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "annonce-rythme",
@@ -791,7 +791,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "sci-fi strategy game key art, a vast orbital construction site around a home planet seen over many seasons: giant scaffolds on resource extractors, slow-moving cranes, a huge hourglass-shaped stellar monument half built in the foreground, the same planet shown under three successive seasons of light from left to right, a faint golden ascension sigil glowing above it, calm dark starfield on the left third for text, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed, no text --ar 16:9 --v 7 --style raw",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-accelerator",
@@ -803,7 +803,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a chitin hourglass with golden resin sand flowing upward, tiny construction cranes etched on its frame, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-boost",
@@ -815,7 +815,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a jar of glowing royal jelly, thick golden nectar dripping from a honeycomb lid, warm light radiating from inside, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-jammer",
@@ -827,7 +827,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a buzzing chitin jamming device emitting rings of static, broken spy probe silhouettes falling around it, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-beacon",
@@ -839,7 +839,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a homing beacon shaped like a folded beetle, pulsing amber light, a curved ribbon of light looping back toward it, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-shield",
@@ -851,7 +851,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a translucent dome veil made of thin amber chitin plates, hexagonal cells glowing softly over a tiny planet, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-dossier",
@@ -863,7 +863,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a bound training dossier with chitin covers and an officer insignia clasp, glowing tactical diagrams without text spilling from its pages, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-planner",
@@ -875,7 +875,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a hexagonal holographic planning table of amber chitin, small glowing queue markers and timelines without text floating above it, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-title",
@@ -887,7 +887,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a blank engraved amber nameplate on a chitin mount framed by insect wings, a hunter's claw emblem at its center, no letters, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "comptoir-frame",
@@ -899,7 +899,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an ornate square frame of polished amber chitin with honeycomb corners and gold trims around an empty dark center, sci-fi game item icon, insectoid kesh'vaar craftsmanship, amber chitin and golden resin, hexagonal honeycomb details, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-varan-banner",
@@ -923,7 +923,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a rusted iron skull bound by a heavy chain over a torn scroll, ember-orange glow in the eye sockets, circular sci-fi faction emblem, engraved metal insignia, centered on a dark background, soft rim light, painterly concept art, high detail, no text, no letters --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-gravhorn-banner",
@@ -934,7 +934,7 @@
    "height": 0,
    "cutout": false,
    "quality": 80,
-   "prompt": "a fortified mercenary contract hall inside a gold-plated orbital vault station, glowing amber bounty seals, armored guard silhouettes at the gates, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
+   "prompt": "a fortified mercenary stronghold inside a gold-plated orbital vault station, glowing amber hexagonal lights, no signs, no signage, armored guard silhouettes at the gates, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
    "done": null
   },
   {
@@ -1378,7 +1378,7 @@
    "height": 800,
    "cutout": false,
    "quality": 85,
-   "prompt": "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind, sci-fi strategy game character portrait, head and shoulders, a character named Ilka Morrow, centered, facing the viewer, dramatic rim light in #ff5fd2, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
+   "prompt": "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #ff5fd2, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
    "done": null
   },
   {
@@ -1390,7 +1390,7 @@
    "height": 800,
    "cutout": false,
    "quality": 85,
-   "prompt": "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind, sci-fi strategy game character portrait, head and shoulders, a character named Brynja Solvei, centered, facing the viewer, dramatic rim light in #9fd8ff, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
+   "prompt": "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #9fd8ff, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
    "done": null
   },
   {
@@ -1402,7 +1402,7 @@
    "height": 800,
    "cutout": false,
    "quality": 85,
-   "prompt": "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm, sci-fi strategy game character portrait, head and shoulders, a character named Oriane Ferrand, centered, facing the viewer, dramatic rim light in #ffb347, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
+   "prompt": "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #ffb347, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
    "done": null
   },
   {
@@ -1547,7 +1547,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a colossal prestige monument under construction in high orbit above an industrial planet, a slender spire of salvaged hull plates and golden alloy rising from a scaffold ring, tiny construction drones and cranes, warm amber work lights against cold blue starlight, calm dark starfield, cinematic sci-fi concept art, wide composition, muted palette with gold accents, high detail, no text --ar 16:10 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   }
  ]
 }

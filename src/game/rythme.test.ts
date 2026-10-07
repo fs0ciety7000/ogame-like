@@ -8,7 +8,7 @@ import { MOON_RULES } from "@/game/moon";
 import { EXCHANGE_RULES } from "@/game/resources";
 import { applyRhythmSwitch, RHYTHM_PREVIOUS, RHYTHM_RULES, rhythmAnnounceAt, rhythmPhase, rhythmSwitched } from "@/game/rhythm";
 import { getTechTime, RESEARCH_RULES, TECHNOLOGIES } from "@/game/technologies";
-import { ANNOUNCEMENTS_ALL, announcementOpen } from "@/components/game/Announcement";
+import { ANNOUNCEMENTS, ANNOUNCEMENTS_ALL, announcementOpen } from "@/components/game/Announcement";
 import { defaultQueues } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
 
@@ -143,11 +143,12 @@ describe("6.14.88 (RL-3) bascule du rythme", () => {
     expect(canAscend(player, queues, AT + 30 * DAY).ok).toBe(true);
   });
 
-  it("annonce en jeu : datée 7 jours avant, cachée tant que son illustration n'est pas intégrée", () => {
+  it("annonce en jeu : datée 7 jours avant, illustrée (6.14.92)", () => {
     const a = ANNOUNCEMENTS_ALL.find((x) => x.id === "v6.14-rythme")!;
     expect(a).toBeTruthy();
-    expect(a.pendingArt).toBe(true);
+    expect(a.pendingArt).toBeFalsy();
     expect(a.artSlot).toBe("annonce-rythme");
+    expect(ANNOUNCEMENTS.some((x) => x.id === "v6.14-rythme")).toBe(true);
     expect(announcementOpen(a, rhythmAnnounceAt() - 1)).toBe(false);
     expect(announcementOpen(a, rhythmAnnounceAt())).toBe(true);
     expect(a.eyebrow).toContain("1er novembre");

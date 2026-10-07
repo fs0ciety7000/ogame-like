@@ -5490,6 +5490,24 @@ const CONTENT_MIGRATIONS = [
     patches: [],
     appendFromDefaults: ["lentille_selene", "cle_seuil"],
   },
+  // 6.14.92 : les reliques composées et de la lune ont leur propre image ; une liste personnalisée qui garde l'image provisoire
+  // (empruntée à une autre relique) passe à la nouvelle. Une image choisie à la main dans l'administration est conservée.
+  {
+    id: "relics-art-6.14.92",
+    key: "relics",
+    patches: [
+      { id: "sceau_sentinelle", field: "image", from: "/assets/relics/ecaille_leviathan.webp", to: "/assets/relics/sceau_sentinelle.webp" },
+      { id: "plaque_bastion", field: "image", from: "/assets/relics/ecaille_leviathan.webp", to: "/assets/relics/plaque_bastion.webp" },
+      { id: "lame_duelliste", field: "image", from: "/assets/relics/engrenage_varan.webp", to: "/assets/relics/lame_duelliste.webp" },
+      { id: "trophee_seigneur", field: "image", from: "/assets/relics/engrenage_varan.webp", to: "/assets/relics/trophee_seigneur.webp" },
+      { id: "balise_traque", field: "image", from: "/assets/relics/oeil_vesper.webp", to: "/assets/relics/balise_traque.webp" },
+      { id: "compas_tacticien", field: "image", from: "/assets/relics/cristal_memoriel.webp", to: "/assets/relics/compas_tacticien.webp" },
+      { id: "enclume_colosses", field: "image", from: "/assets/relics/noyau_forge.webp", to: "/assets/relics/enclume_colosses.webp" },
+      { id: "navette_mere", field: "image", from: "/assets/relics/noyau_forge.webp", to: "/assets/relics/navette_mere.webp" },
+      { id: "lentille_selene", field: "image", from: "/assets/relics/oeil_vesper.webp", to: "/assets/relics/lentille_selene.webp" },
+      { id: "cle_seuil", field: "image", from: "/assets/relics/cle_soudure.webp", to: "/assets/relics/cle_seuil.webp" },
+    ],
+  },
   // 5.28 : Cale sèche ajoutée aux bâtiments personnalisés (docs/proposals/cale-seche.md).
   {
     id: "cale-seche-5.28",

@@ -21,6 +21,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q225 | Rythme après le 1er novembre : niveau 11 en 36 h, +27 h par niveau, recherche tardive dès le niveau 7 ×25 (`docs/changes/6.14.89-reglage-fin-rythme.md`) | 1re Ascension J91 (actif) à J133 (occasionnel) ; plus de mur de recherche après l'Ascension en simulation | valider |
 | Q226 | Marge du joueur quotidien : 13,3 % de sessions bloquées (cible 15 %) (`docs/proposals/rythme-long-terme.md`) | une session par mois sans action utile au pire mois | valider, mesurer en RL-4 |
 | Q227 | Aucun levier nouveau (Entrepôt gardé à l'Ascension écarté) (`docs/proposals/rythme-long-terme.md`) | l'Ascension remet l'Entrepôt au niveau 1, comme avant | valider |
+| Q229 | Reliques d'une liste personnalisée : image provisoire remplacée par la nouvelle, image choisie à la main gardée (`docs/changes/6.14.92-illustrations-api-lot-1.md`) | Chaque relique a son image, même sur un serveur dont l'admin a modifié la liste | Valider |
+| Q230 | Annonces publiées dès leur image intégrée (grande mise à jour, « Ta lune veille » ; rythme daté) (`docs/changes/6.14.92-illustrations-api-lot-1.md`) | Deux modales de plus au déploiement, une fois par compte | Valider |
 
 ## 3. Récit
 
@@ -31,3 +33,4 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q228 | Rendus détourés : marge mesurée, régénération sous 8 px ; consigne « objet entier, ~65 % du cadre » ajoutée (`docs/changes/6.14.92-illustrations-api-lot-1.md`) | Valider |

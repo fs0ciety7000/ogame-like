@@ -190,6 +190,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.88 | [Bascule du rythme : un jeu au long cours, datée au 1er novembre 2026 (AE-L2 compris)](6.14.88-bascule-rythme.md) | ajustement (équilibre) + fonctionnalité (bascule datée) | [rythme-long-terme](../proposals/rythme-long-terme.md), lot RL-3, Q164 à Q171, Q97, Q98 |
 | 6.14.89 | [Réglage fin du rythme avant la bascule : second palier 36 h + 27 h, recherche tardive dès le niveau 7, ×25](6.14.89-reglage-fin-rythme.md) | ajustement (équilibre) | [rythme-long-terme](../proposals/rythme-long-terme.md), lot RL-5 (avancé), Q224 |
 | 6.14.91 | [Génération des illustrations par API (OpenAI gpt-image-1)](6.14.91-generation-par-api.md) | ajout (outillage) + docs | aucune (IMG, docs/illustrations.md) |
+| 6.14.92 | [Illustrations par API, lot 1 (annonces, technos, reliques, lune, comptoir, prestige)](6.14.92-illustrations-api-lot-1.md) | ajout (illustrations) | aucune (IMG), Q228 à Q230 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
