@@ -90,6 +90,17 @@ La liste complète, avec les fichiers de chaque maillon, est la **chaîne de con
 La fiche du lot coche chaque maillon : fait, sans objet, ou reporté au lot X de la feuille de route. La revue de fin de feuille de route
 vérifie la chaîne pour chaque contenu livré, et l'audit suivant reprend une image provisoire tant que la définitive n'est pas arrivée.
 
+## Reprendre dans une nouvelle session
+
+La mémoire du projet est dans le dépôt, pas dans la conversation. Une nouvelle session sur la branche de travail relit, dans l'ordre :
+1. ce fichier ;
+2. `docs/QUESTIONS.md` (décisions en attente) ;
+3. la feuille de route en cours (`docs/proposals/feuille-de-route-*.md`, statut « en cours ») ;
+4. les dernières fiches de `docs/changes/README.md`.
+
+Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seulement dans le scratchpad : un outil réutilisable va dans
+`scripts/`.
+
 ## Langue et ton
 
 - Tout en **français** : code commenté, textes du jeu, commits, PR, docs.
@@ -171,7 +182,8 @@ npx vitest run
 npm run build
 ```
 
-Puis le test d'intégration PocketBase (script local de la session, il vide la base) quand le serveur est touché.
+Puis le test d'intégration PocketBase quand le serveur est touché : `bash scripts/itest-local.sh` (base vierge dans `.pb/`, PocketBase
+téléchargé au premier lancement ; `-t "<nom>"` pour un seul test).
 `.env.local` peut pointer vers la production : pour tester l'interface en local, lancer Vite avec `VITE_POCKETBASE_URL=http://127.0.0.1:8090`.
 Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hooks` a été oublié.
 Un test d'intégration qui lit les joueurs A ou B appelle d'abord `ensureAB()` : il doit pouvoir tourner seul (`-t "<nom>"`) pour qu'on l'étudie.

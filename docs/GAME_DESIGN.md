@@ -213,3 +213,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.7 | Revue AU23 : été 2029 clos (mesure BOSS-2) ; automne 2029 proposé (inventaire des constats ouverts) | `docs/audit/2026-10-07-au23-ete-2029.md` |
 | 2026-10-07 | 6.14.8 | PP-1 : pré-prod (procédure, nettoyage de la copie, e-mails coupés, bandeau) ; règle n° 4 (contenu complet : succès, Codex, prompts Midjourney), Q22 | `docs/changes/6.14.8-preprod.md` |
 | 2026-10-07 | 6.14.9 | PP-2 : pré-prod en un conteneur Coolify construit depuis la branche (`Dockerfile.preprod`) ; tout passe par la pré-prod ; chaîne de contenu (WORKFLOW §7, règle n° 4) | `docs/changes/6.14.9-preprod-coolify-chaine-contenu.md` |
+| 2026-10-07 | 6.14.10 | Reprise de session sans perte (CLAUDE.md), test d'intégration local dans `scripts/itest-local.sh` | `docs/changes/6.14.10-reprise-session.md` |
