@@ -8,6 +8,9 @@ import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
 import { WORLD_BOSSES } from "@/game/worldBosses";
 import { FACTIONS } from "@/game/pirates";
 import { UNITS } from "@/game/units";
+import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/buildings";
+import { describeTechEffect, TECH_CODEX_IMAGE, TECHNOLOGIES, techEffects } from "@/game/technologies";
+import { RESOURCE_LIST } from "@/game/resources";
 import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
 import { COMMANDERS, commandersState } from "@/game/commanders";
 import { warlordUid, warlordsConfig } from "@/game/warlords";
@@ -27,13 +30,16 @@ import type { PlayerState } from "@/types/game";
 
 export const CODEX_TITLE = "Archiviste";
 
-export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "relics" | "officers" | "chronicles" | "legends";
+export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "buildings" | "technologies" | "relics" | "officers" | "chronicles" | "legends";
 
 export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string }[] = [
   { id: "factions", label: "Factions", hint: "Débloquée au premier ultimatum reçu." },
   { id: "warlords", label: "Seigneurs", hint: "Débloqué au premier combat contre lui." },
   { id: "bosses", label: "Boss", hint: "Abattu avec toi, ou archivé à la fin de son mois." },
   { id: "units", label: "Unités", hint: "Débloquée une fois construite." },
+  // 6.14.12 (C2) : bâtiments construits et technos recherchées.
+  { id: "buildings", label: "Bâtiments", hint: "Débloqué une fois construit." },
+  { id: "technologies", label: "Technologies", hint: "Débloquée une fois recherchée." },
   // 5.15.12 : reliques possédées et officiers recrutés.
   { id: "relics", label: "Reliques", hint: "Débloquée en possédant cette relique." },
   { id: "officers", label: "Officiers", hint: "Débloqué en recrutant cet officier." },
@@ -76,8 +82,9 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 }
 
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
+const resourceName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -222,6 +229,33 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
         { label: "Défense", value: String(u.stats.defense) },
         ...(u.category === "defense" ? [] : [{ label: "Vitesse", value: String(u.stats.vitesse) }, { label: "Soute", value: String(u.stats.cargo) }]),
       ],
+    });
+  }
+  // 6.14.12 (C2) : une fiche par bâtiment et par techno en vigueur.
+  for (const b of BUILDINGS) {
+    const prod = b.production ? RESOURCE_LIST.find((r) => r.id === b.production?.resource)?.name ?? b.production.resource : "";
+    out.push({
+      id: `building:${b.id}`,
+      category: "buildings",
+      name: b.name,
+      subtitle: b.startsUnlocked ? "Bâtiment de départ" : "Bâtiment",
+      image: b.image,
+      text: b.description,
+      unlocked: !!player.buildings && effectiveBuildingLevel(player.buildings, b.id) >= 1,
+      facts: [{ label: "Niveau max", value: String(b.maxLevel) }, ...(prod ? [{ label: "Produit", value: prod }] : [])],
+    });
+  }
+  for (const t of TECHNOLOGIES) {
+    const effects = techEffects(t).map((e) => describeTechEffect(e, 1, { resource: resourceName, unit: unitName, building: (id) => findBuilding(id)?.name ?? id }));
+    out.push({
+      id: `tech:${t.id}`,
+      category: "technologies",
+      name: t.nom,
+      subtitle: "Technologie",
+      image: t.image || TECH_CODEX_IMAGE,
+      text: t.desc,
+      unlocked: (player.techLevels?.[t.id] ?? 0) >= 1,
+      facts: [{ label: "Niveau max", value: String(t.maxLevel) }, ...effects.slice(0, 2).map((value) => ({ label: "Au niveau 1", value }))],
     });
   }
   return out;

@@ -214,3 +214,5 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.8 | PP-1 : pré-prod (procédure, nettoyage de la copie, e-mails coupés, bandeau) ; règle n° 4 (contenu complet : succès, Codex, prompts Midjourney), Q22 | `docs/changes/6.14.8-preprod.md` |
 | 2026-10-07 | 6.14.9 | PP-2 : pré-prod en un conteneur Coolify construit depuis la branche (`Dockerfile.preprod`) ; tout passe par la pré-prod ; chaîne de contenu (WORKFLOW §7, règle n° 4) | `docs/changes/6.14.9-preprod-coolify-chaine-contenu.md` |
 | 2026-10-07 | 6.14.10 | Reprise de session sans perte (CLAUDE.md), test d'intégration local dans `scripts/itest-local.sh` | `docs/changes/6.14.10-reprise-session.md` |
+| 2026-10-07 | 6.14.11 | C1 : garde de la chaîne de contenu (`contentChain.test.ts`), 4 manques connus ; pré-prod nettoyée, Q23 | `docs/changes/6.14.11-garde-chaine-contenu.md` |
+| 2026-10-07 | 6.14.12 | C2 : Codex des 13 bâtiments et 30 technos (deux catégories, 5 jetons + 25 Ambre chacune), Q24 | `docs/changes/6.14.12-codex-batiments-technos.md` |

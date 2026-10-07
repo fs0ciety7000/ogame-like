@@ -95,6 +95,9 @@ export const DEFAULT_CODEX_REWARDS: CodexRewardTable = {
   warlords: { tokens: 8, amber: 40 },
   bosses: { tokens: 10, amber: 50 },
   units: { tokens: 5, amber: 25 },
+  // 6.14.12 (C2, Q24) : barème des Unités.
+  buildings: { tokens: 5, amber: 25 },
+  technologies: { tokens: 5, amber: 25 },
   relics: { tokens: 8, amber: 40 },
   officers: { tokens: 5, amber: 25 },
   chronicles: { tokens: 0, amber: 0 },

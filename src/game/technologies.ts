@@ -63,7 +63,12 @@ export interface TechDef {
   effectValue?: number;
   /** Position dans l'arbre du Labo (sinon placée automatiquement). */
   treePos?: { col: number; row: number };
+  /** 6.14.12 : illustration du Codex (défaut : TECH_CODEX_IMAGE, en attendant le rendu Midjourney). */
+  image?: string;
 }
+
+/** 6.14.12 : image provisoire des technos dans le Codex (rendus : docs/prompts-6.14.md, /assets/technologies/<id>.webp). */
+export const TECH_CODEX_IMAGE = "/assets/buildings/archives_fracturees.webp";
 
 /** v3.6 : technologies de fin de partie (déclencheur « singularité » du Chœur Silencieux). */
 export const ENDGAME_TECH_IDS = ["tech21", "tech22", "tech23", "tech24", "tech25"];

@@ -11,8 +11,6 @@ import { UNITS } from "@/game/units";
  * `*` remplace l'identifiant quand tout un type de contenu manque le maillon (un rattrapage le règle d'un coup).
  */
 const KNOWN_GAPS: Record<string, string> = {
-  "building:*:codex": "C2 : entrées de Codex des bâtiments",
-  "tech:*:codex": "C2 : entrées de Codex des technologies",
   "allianceBoss:*:achievementEntry": "C4 : succès des boss d'alliance (mesure à créer)",
   "unit:sonde_espionnage:effectPreset": "C3 : préréglages des unités",
   "unit:cargo:effectPreset": "C3",

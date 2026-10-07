@@ -2421,6 +2421,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.8: codex title refused below 100 %, filled trades and npc opponents readable", async () => {
+    // 6.14.12 : peut tourner seul (-t), CLAUDE.md.
+    await ensureAB();
     await loginPlayer(B.email, B.pw);
     await expect(pb.send("/api/cosmic/codex/claim", { method: "POST", body: {} })).rejects.toMatchObject({ status: 400 });
     const trades = await fetchMarketTrades();

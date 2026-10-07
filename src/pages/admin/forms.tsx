@@ -486,6 +486,14 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
         <TextField label="Identifiant" value={t.id} disabled={!isNew} hint={isNew ? ID_HINT_NEW : ID_HINT_LOCKED} onChange={(id) => set({ id })} />
         <TextField label="Nom" value={t.nom} onChange={(nom) => set({ nom })} />
         <TextAreaField label="Description" value={t.desc} onChange={(desc) => set({ desc })} />
+        {/* 6.14.12 : illustration du Codex (vide = image provisoire commune). */}
+        <ImageField label="Image (Codex)" value={t.image ?? ""} onChange={(image) => {
+            // JSON pur : un champ vide est retiré, jamais laissé à undefined.
+            const next: TechDef = { ...t, image };
+            if (!image) delete next.image;
+            onChange(next);
+          }}
+        />
       </Section>
 
       <Section title="Niveaux">

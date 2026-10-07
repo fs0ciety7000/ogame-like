@@ -44,8 +44,8 @@ code. Il n'existe pas de succès par contenu ; ce n'est pas un manque (voir opti
   relique, porteur d'effet d'un bâtiment : les effets visent des unités).
 - Garde `contentChain.test.ts` : liste `KNOWN_GAPS`, une clé `<type>:<id|*>:<maillon>` par manque connu avec son lot.
 - Lots de rattrapage (feuille de route d'automne 2029) :
-  - **C2** : entrées de Codex automatiques des bâtiments et des technos (débloquées par le joueur : bâtiment construit, techno
-    recherchée), avec image existante ;
+  - **C2** (livré en 6.14.12, Q24) : entrées de Codex automatiques des bâtiments et des technos (débloquées par le joueur : bâtiment
+    construit, techno recherchée) ; image provisoire commune pour les technos ;
   - **C3** : préréglages d'effet pour les 10 unités sans préréglage (attaque ou points de vie, barème `UNIT` d'`effectCatalog.ts`) ;
   - **C4** : mesure « boss d'alliance affrontés » et succès d'entrée.
 - Plus tard (noté, pas planifié) : le même bilan dans l'admin (onglet Contenu), utile quand l'admin ajoute une unité depuis le panel.
