@@ -20,6 +20,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q32 | Décor 3D de l'accueil réservé aux grands écrans, chargé après la page | Sur mobile, l'accueil répond tout de suite (≈ 155 Ko et ≈ 10 s de processeur en moins) ; le cylindre holographique n'y apparaît plus | Valider : le décor est flouté à 60 %, presque invisible sur un petit écran |
 
 ## 3. Récit
 

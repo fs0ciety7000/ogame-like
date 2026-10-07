@@ -60,6 +60,9 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - **Jamais de pause** : quand la suite dépend d'une question ouverte (orientation, ergonomie, équilibre), on prend l'option recommandée,
   on la note et on avance. Une feuille de route sans lot faisable seul se remplit en tranchant ces questions, pas en s'arrêtant
   (pause d'AU18 annulée le 2026-10-07, Q17).
+- **Tâches longues en parallèle** (consigne du 2026-10-07) : mesures de performance, tests d'intégration, déploiement, détourage… se
+  lancent en arrière-plan, et on avance sur autre chose pendant ce temps (jamais de boucle d'attente). Un message de l'utilisateur arrivé
+  en cours de travail se lit et se traite aussitôt : il peut être important.
 - Une question, un doute, un choix de conception ou d'équilibre que l'utilisateur pourrait vouloir trancher : on prend l'option
   recommandée (la plus prudente pour les données des joueurs), on l'écrit dans `docs/QUESTIONS.md` (date, lot, question, choix fait,
   comment revenir en arrière) et on continue. La fiche du lot renvoie à l'entrée.
@@ -96,6 +99,14 @@ Une routine claude.ai horaire (`trig_01YYCSf7tQdBikosym8habog`, minute 57) réve
 `node scripts/preprod-illustrations.mjs check` et, s'il y a des envois sur `test.fs0ciety.org/img`, déroule `docs/illustrations.md` :
 reconnaissance, détourage, WebP, branchement, validation, push et résumé à l'utilisateur. Une nouvelle session vérifie que la routine
 existe et vise la bonne session (`get_trigger`, sinon la recrée) : sans session vivante, les envois attendent.
+
+> **Instructions (2026-10-07) : pour /img, check toutes les 2 min ; quand tu vois des nouvelles images, lance une tâche parallèle pour
+> process. Pareil pour décision : check toutes les 2 min ou à chaque modification, tâche parallèle et process.**
+
+La routine horaire reste un filet. En session, la veille rapide est `node scripts/preprod-watch.mjs` lancée **en arrière-plan** (tour de
+2 min, état dans `.pb/preprod-watch.json`) : elle se termine dès qu'un envoi `/img` ou une réponse `/decisions` est nouveau et dit
+lequel. On lance alors un agent parallèle (images : `docs/illustrations.md` ; réponses : report dans `QUESTIONS.md` et lot), sans commit
+de sa part (la session committe), puis on **relance la veille aussitôt**. Une nouvelle session la relance au démarrage.
 
 La liste complète, avec les fichiers de chaque maillon, est la **chaîne de contenu** de `docs/WORKFLOW.md` §7. En bref :
 - contenu et migration ;

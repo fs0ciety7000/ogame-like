@@ -119,7 +119,11 @@ Ce que Claude fait ensuite sur la pré-prod :
 - après chaque push, vérification du déploiement (santé, version des hooks, pages clés) ;
 - mesures Z1 (agrégats anonymes seulement dans les docs) ;
 - essais de combats, de crons et de migrations ;
-- nettoyage après import.
+- nettoyage après import ;
+- performance (6.14.39) : `node scripts/preprod-perf.mjs [--runs 3] [/game …]`, chargement à froid en profils mobile (375 px,
+  processeur ×4, 4G lente) et bureau ; `PERF_SHIFTS=1` affiche les éléments qui provoquent des décalages (CLS) ;
+- veille (6.14.39) : `node scripts/preprod-watch.mjs` en arrière-plan, toutes les 2 min, rend la main dès qu'un envoi `/img` ou une
+  réponse `/decisions` arrive (CLAUDE.md, règle n° 3).
 
 Les écritures sont permises sur la pré-prod uniquement ; la production reste en lecture seule.
 

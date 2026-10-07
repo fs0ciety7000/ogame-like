@@ -1,5 +1,5 @@
 import { importWithRetry } from "@/lib/updateReload";
-import { lazy, Suspense, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { useReducedMotion } from "framer-motion";
 import type { HoloCylinderProps } from "@/components/fx/HoloCylinder";
 import { cn } from "@/lib/utils";
@@ -39,4 +39,32 @@ export function HoloCylinderLazy({ fallback = null, ...props }: HoloCylinderProp
       />
     </Suspense>
   );
+}
+
+/** 6.14.39 : décor 3D facultatif (fond de l'accueil) : seulement sur grand écran à souris, sans économie de données, et une fois la page
+ *  chargée et le navigateur au repos. Sur mobile, three.js (≈ 155 Ko compressés) bloquait le processeur une dizaine de secondes. */
+export function useDeferredDecor(query = "(min-width: 1024px) and (pointer: fine)"): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (saveData || !window.matchMedia(query).matches) return;
+    let cancelled = false;
+    let idle = 0;
+    const start = () => {
+      const go = () => {
+        if (!cancelled) setReady(true);
+      };
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(go, { timeout: 3000 });
+      else idle = setTimeout(go, 1500) as unknown as number;
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", start);
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      clearTimeout(idle);
+    };
+  }, [query]);
+  return ready;
 }
