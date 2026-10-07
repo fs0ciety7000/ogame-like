@@ -13,6 +13,11 @@ Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur gén
 | `scripts/illustrations.py` | traitement : détourage (rembg s'il est installé (`pip install "rembg[cpu]"`, modèle `isnet-general-use`, ~180 Mo au premier lancement), sinon fond sombre retiré depuis les bords), recadrage, redimensionnement, WebP, écriture dans `target`, `done` daté |
 | Page « Atelier d'illustrations » (artifact) | secours, si la pré-prod est arrêtée : https://claude.ai/artifact/8Kp43jpwwjxw5sydUUcccX (`--page` pour la régénérer ; envois dans `uploads`, lus par `ArtifactData`) |
 
+## En production
+
+La page `/img` existe aussi en production (admins du jeu) : même liste, mêmes états, mais pas de dépôt. Un bouton renvoie vers
+`test.fs0ciety.org/img`. Les images intégrées arrivent en production avec le front, à la fusion sur `main` (Q29).
+
 ## Côté utilisateur (mobile)
 
 1. Ouvrir `test.fs0ciety.org/img`, connecté avec son compte admin.

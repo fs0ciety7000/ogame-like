@@ -40,6 +40,8 @@ interface Upload {
 const SLOTS: Slot[] = (JSON.parse(slotsRaw) as { slots: Slot[] }).slots;
 const LABEL = (import.meta.env.VITE_SERVER_LABEL ?? "").trim();
 const COLLECTION = "illustration_uploads";
+/** Serveur de test où se déposent les rendus (docs/illustrations.md). */
+const PREPROD_URL = "https://test.fs0ciety.org";
 
 type SlotState = "todo" | "received" | "done";
 const STATE: Record<SlotState, { label: string; tone: HudTone }> = {
@@ -62,7 +64,7 @@ export function IllustrationsPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [progress, setProgress] = useState<{ done: number; total: number; failed: string[] } | null>(null);
   const [group, setGroup] = useState("Toutes");
-  const [onlyTodo, setOnlyTodo] = useState(true);
+  const [view, setView] = useState<SlotState | "all">("todo");
   const [copied, setCopied] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
@@ -72,7 +74,7 @@ export function IllustrationsPage() {
   }, []);
 
   useEffect(() => {
-    if (admin) void load();
+    if (admin && LABEL) void load();
   }, [admin, load]);
 
   const stateOf = useCallback(
@@ -85,7 +87,7 @@ export function IllustrationsPage() {
     return c;
   }, [stateOf]);
   const groups = useMemo(() => ["Toutes", ...new Set(SLOTS.map((s) => s.group))], []);
-  const shown = SLOTS.filter((s) => (group === "Toutes" || s.group === group) && (!onlyTodo || stateOf(s) === "todo"));
+  const shown = SLOTS.filter((s) => (group === "Toutes" || s.group === group) && (view === "all" || stateOf(s) === view));
   const pending = uploads.filter((u) => u.status === "envoyée").length;
 
   async function sendBatch(files: FileList | null) {
@@ -134,13 +136,7 @@ export function IllustrationsPage() {
           </Link>
         </header>
 
-        {!LABEL ? (
-          <HudPanel icon={<Server className="h-4 w-4" />} title="Page du serveur de test">
-            <EmptyState icon={<Server />} title="Disponible sur test.fs0ciety.org/img">
-              Les rendus se déposent sur la pré-prod : Claude les y récupère.
-            </EmptyState>
-          </HudPanel>
-        ) : admin === null ? (
+        {admin === null ? (
           <p className="text-sm text-slate-400">Vérification de ton accès…</p>
         ) : !admin ? (
           <HudPanel icon={<Lock className="h-4 w-4" />} title="Réservé aux administrateurs">
@@ -172,73 +168,107 @@ export function IllustrationsPage() {
               <StatTile size="sm" tone="mint" label="Intégrées" value={<span className="font-mono tabular-nums">{counts.done}</span>} />
             </div>
 
+            {/* 6.14.27 : en production, la liste suit mais les envois restent sur la pré-prod (seul serveur où Claude écrit). */}
+            {!LABEL ? (
+              <HudPanel icon={<Server className="h-4 w-4" />} title="Envoyer un lot" tone="accent">
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-slate-300">
+                    Les rendus se déposent sur le serveur de test : Claude les y récupère, les détoure, les convertit et les intègre au jeu. Ils arrivent ici à la mise en production suivante.
+                  </p>
+                  <Button asChild size="lg">
+                    <a href={`${PREPROD_URL}/img`} target="_blank" rel="noreferrer">
+                      <ImageUp className="mr-2 h-4 w-4" />
+                      Envoyer sur la pré-prod
+                    </a>
+                  </Button>
+                </div>
+              </HudPanel>
+            ) : (
             <HudPanel icon={<ImageUp className="h-4 w-4" />} title="Envoyer un lot" tone="accent">
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-slate-300">
-                  Sélectionne toutes tes images Midjourney d'un coup, dans n'importe quel ordre. Garde si possible le nom de fichier de Midjourney : il sert à reconnaître chaque image. Ensuite, dis « images envoyées » à Claude.
-                </p>
-                <input
-                  ref={input}
-                  id="illustrations-batch"
-                  type="file"
-                  multiple
-                  accept="image/png,image/jpeg,image/webp"
-                  className="sr-only"
-                  onChange={(e) => void sendBatch(e.target.files)}
-                />
-                <Button asChild size="lg" disabled={!!progress && progress.done < progress.total}>
-                  <label htmlFor="illustrations-batch" className="cursor-pointer">
-                    <ImageUp className="mr-2 h-4 w-4" />
-                    {progress && progress.done < progress.total ? `Envoi ${progress.done} / ${progress.total}…` : "Choisir les images"}
-                  </label>
-                </Button>
-                {progress && progress.done === progress.total && (
-                  <HudCallout tone={progress.failed.length ? "ember" : "mint"} className="px-3 py-2 text-sm">
-                    <span className="font-mono tabular-nums">{progress.total - progress.failed.length}</span> image(s) reçue(s).
-                    {progress.failed.length ? ` Échec : ${progress.failed.join(", ")} (20 Mo au plus, PNG, JPEG ou WebP).` : " Dis « images envoyées » à Claude."}
-                  </HudCallout>
-                )}
-                {uploads.length > 0 && (
-                  <ul className="flex flex-col gap-1.5">
-                    {uploads.slice(0, 12).map((u) => {
-                      const st = UPLOAD_STATE[u.status] ?? UPLOAD_STATE.envoyée;
-                      const slot = SLOTS.find((s) => s.id === u.slotId);
-                      return (
-                        <li key={u.id} className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
-                          <HudChip size="sm" tone={st.tone}>
-                            {st.label}
-                          </HudChip>
-                          <span className="min-w-0 flex-1 truncate font-mono text-slate-300" title={u.fileName}>
-                            {slot ? slot.name : u.fileName}
-                          </span>
-                          <span className="text-slate-500">{timeAgo(u.uploadedAtMs)}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </HudPanel>
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-slate-300">
+                    Sélectionne toutes tes images Midjourney d'un coup, dans n'importe quel ordre. Garde si possible le nom de fichier de Midjourney : il sert à reconnaître chaque image. Ensuite, dis « images envoyées » à Claude.
+                  </p>
+                  <input
+                    ref={input}
+                    id="illustrations-batch"
+                    type="file"
+                    multiple
+                    accept="image/png,image/jpeg,image/webp"
+                    className="sr-only"
+                    onChange={(e) => void sendBatch(e.target.files)}
+                  />
+                  <Button asChild size="lg" disabled={!!progress && progress.done < progress.total}>
+                    <label htmlFor="illustrations-batch" className="cursor-pointer">
+                      <ImageUp className="mr-2 h-4 w-4" />
+                      {progress && progress.done < progress.total ? `Envoi ${progress.done} / ${progress.total}…` : "Choisir les images"}
+                    </label>
+                  </Button>
+                  {progress && progress.done === progress.total && (
+                    <HudCallout tone={progress.failed.length ? "ember" : "mint"} className="px-3 py-2 text-sm">
+                      <span className="font-mono tabular-nums">{progress.total - progress.failed.length}</span> image(s) reçue(s).
+                      {progress.failed.length ? ` Échec : ${progress.failed.join(", ")} (20 Mo au plus, PNG, JPEG ou WebP).` : " Dis « images envoyées » à Claude."}
+                    </HudCallout>
+                  )}
+                  {uploads.length > 0 && (
+                    <ul className="flex flex-col gap-1.5">
+                      {uploads.slice(0, 12).map((u) => {
+                        const st = UPLOAD_STATE[u.status] ?? UPLOAD_STATE.envoyée;
+                        const slot = SLOTS.find((s) => s.id === u.slotId);
+                        return (
+                          <li key={u.id} className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                            <HudChip size="sm" tone={st.tone}>
+                              {st.label}
+                            </HudChip>
+                            <span className="min-w-0 flex-1 truncate font-mono text-slate-300" title={u.fileName}>
+                              {slot ? slot.name : u.fileName}
+                            </span>
+                            <span className="text-slate-500">{timeAgo(u.uploadedAtMs)}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </HudPanel>
+            )}
 
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer">
-              <HudChip asChild size="sm" tone={onlyTodo ? "accent" : "neutral"}>
-                <button type="button" aria-pressed={onlyTodo} onClick={() => setOnlyTodo((v) => !v)}>
-                  À faire seulement
-                </button>
-              </HudChip>
-              {groups.map((g) => (
-                <HudChip key={g} asChild size="sm" tone={g === group ? "accent" : "neutral"}>
-                  <button type="button" aria-pressed={g === group} onClick={() => setGroup(g)}>
-                    {g}
-                  </button>
-                </HudChip>
-              ))}
+            {/* 6.14.27 : filtre par état, avec compteurs (l'ancien bouton « À faire seulement » ne montrait pas son effet). */}
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer par état">
+                {(
+                  [
+                    ["todo", "À faire", counts.todo],
+                    ["received", "Reçues", counts.received],
+                    ["done", "Intégrées", counts.done],
+                    ["all", "Toutes", SLOTS.length],
+                  ] as const
+                ).map(([v, label, n]) => (
+                  <HudChip key={v} asChild size="sm" tone={view === v ? "accent" : "neutral"}>
+                    <button type="button" aria-pressed={view === v} onClick={() => setView(v)}>
+                      {label} <span className="ml-1 font-mono tabular-nums">{n}</span>
+                    </button>
+                  </HudChip>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrer par groupe">
+                {groups.map((g) => (
+                  <HudChip key={g} asChild size="sm" tone={g === group ? "accent" : "neutral"}>
+                    <button type="button" aria-pressed={g === group} onClick={() => setGroup(g)}>
+                      {g}
+                    </button>
+                  </HudChip>
+                ))}
+              </div>
+              <p className="text-xs text-slate-400">
+                <span className="font-mono tabular-nums">{shown.length}</span> image{shown.length > 1 ? "s" : ""} affichée{shown.length > 1 ? "s" : ""}
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">
               {shown.length === 0 && (
-                <EmptyState icon={<CheckCircle2 />} title="Rien à faire ici" size="sm">
-                  Toutes les images de ce filtre sont reçues ou intégrées.
+                <EmptyState icon={<CheckCircle2 />} title="Aucune image ici" size="sm">
+                  {view === "todo" ? "Toutes les images de ce groupe sont reçues ou intégrées." : "Aucune image de ce groupe dans cet état."}
                 </EmptyState>
               )}
               {shown.map((s) => {
