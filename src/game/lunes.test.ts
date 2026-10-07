@@ -90,3 +90,14 @@ describe("lunes (I21)", () => {
     expect(() => performPlayerAction(player("z"), defaultQueues(), { type: "moonUpgrade" }, NOW)).toThrow(/pas encore de lune/);
   });
 });
+
+describe("6.14.1 : Codex des lunes", () => {
+  it("l'entrée des Légendes se débloque avec sa propre lune", async () => {
+    const { codexEntries } = await import("@/game/codex");
+    const without = codexEntries(player("c"), new Set(), NOW).find((e) => e.id === "legend:lune");
+    expect(without?.unlocked).toBe(false);
+    const withMoon = codexEntries(player("c", { moon: { name: "Nyx", bornAtMs: NOW - 1, fromDebris: 1, level: 2 } }), new Set(), NOW).find((e) => e.id === "legend:lune");
+    expect(withMoon?.unlocked).toBe(true);
+    expect(withMoon?.name).toBe("Lune Nyx");
+  });
+});

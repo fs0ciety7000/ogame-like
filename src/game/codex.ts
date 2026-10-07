@@ -1,3 +1,4 @@
+import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import { chroniclesConfig, chronicleMonthId, codexRewards, episodeUnlockMs } from "@/game/chronicles";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import type { BossHistoryEntry } from "@/game/bossHistory";
@@ -76,7 +77,7 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -159,6 +160,22 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     image: "/assets/casino/main-or.webp",
     text: "Au fond de la salle des machines, une colonne de sept dorés s'illumine une fois tous les mille tirages, à peine. Celui qui l'aligne rafle l'essentiel du pot commun du secteur, et son nom est gravé sur la plaque de laiton au-dessus des rouleaux. Les croupiers kesh'vaar l'appellent « la Main d'or ». Ils disent qu'elle ne revient jamais deux fois au même pilote. Ils mentent.",
     unlocked: Math.floor(Number((player.casino as { jackpots?: number } | undefined)?.jackpots) || 0) > 0,
+  });
+  // 6.14.1 : les lunes (proposals/lunes.md), débloquée à la naissance de sa propre lune.
+  const moon = playerMoon(player);
+  out.push({
+    id: "legend:lune",
+    category: "legends",
+    name: moon ? `Lune ${moon.name}` : "Les lunes",
+    subtitle: "Née d'un grand combat au-dessus de la planète mère",
+    image: "/assets/moon/lune.webp",
+    text: "Quand deux flottes se brisent l'une contre l'autre en orbite basse, toute la ferraille ne retombe pas. Une partie reste en suspension, s'agrège et finit par tourner, assez lourde pour accrocher la lumière de l'étoile. Les vieux pilotes y voient un présage : une planète qui a encaissé un tel choc mérite qu'on veille sur elle. Les ingénieurs y voient surtout un relais de bouclier gratuit.",
+    unlocked: !!moon,
+    facts: [
+      { label: "Chance", value: `1 % par ${Math.round(MOON_RULES.debrisPerPercent / 1000)} k de débris, ${Math.round(MOON_RULES.maxChance * 100)} % au plus` },
+      { label: "Bonus", value: `bouclier +${Math.round(MOON_RULES.shieldBonus * 100)} % (jusqu'à +${Math.round((MOON_RULES.shieldBonus + MOON_RULES.shieldPerLevel * (MOON_RULES.maxLevel - 1)) * 100)} % au niveau ${MOON_RULES.maxLevel}), entrepôt à l'abri +${Math.round(MOON_RULES.protectedStorageBonus * 100)} %` },
+      ...(moon ? [{ label: "Niveau", value: String(moonLevel(moon)) }] : []),
+    ],
   });
   // 5.15.12 : reliques (hors retirées) et officiers de base.
   const owned = new Set(relicsState({ relics: player.relics }).items.map((r) => r.template));
