@@ -3352,7 +3352,7 @@ function canAffordAll(resources, costs) {
 
 // src/game/technologies.ts
 var TECH_CODEX_IMAGE = "/assets/buildings/archives_fracturees.webp";
-var TECH_ART = ["tech11", "tech18", "tech19", "tech28"];
+var TECH_ART = ["tech1", "tech2", "tech3", "tech4", "tech5", "tech6", "tech7", "tech11", "tech18", "tech19", "tech28"];
 function techImage(t) {
   return t.image || (TECH_ART.includes(t.id) ? `/assets/technologies/${t.id}.webp` : TECH_CODEX_IMAGE);
 }

@@ -16,7 +16,7 @@ describe("6.14.26 : illustrations intégrées", () => {
   it("chaque techno de TECH_ART a son illustration, les autres gardent l'image provisoire", () => {
     for (const id of TECH_ART) expect(existsSync(`public/assets/technologies/${id}.webp`), id).toBe(true);
     expect(techImage({ id: "tech11" })).toBe("/assets/technologies/tech11.webp");
-    expect(techImage({ id: "tech1" })).toBe(TECH_CODEX_IMAGE);
+    expect(techImage({ id: "tech-sans-image" })).toBe(TECH_CODEX_IMAGE);
     expect(techImage({ id: "tech11", image: "/assets/autre.webp" })).toBe("/assets/autre.webp");
   });
 

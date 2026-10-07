@@ -6,7 +6,7 @@ import { pendingClaims } from "@/game/claimAll";
 import { claimCodexCategory, codexCategoryState, codexClaimedCategories, codexEntries } from "@/game/codex";
 import { applyGameContent } from "@/game/content";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
-import { TECH_CODEX_IMAGE, TECHNOLOGIES } from "@/game/technologies";
+import { techImage, TECHNOLOGIES } from "@/game/technologies";
 import type { PlayerState } from "@/types/game";
 
 const NOW = Date.UTC(2026, 9, 20, 12);
@@ -20,7 +20,7 @@ describe("6.14.12 (C2) : Codex des bâtiments et des technologies", () => {
     expect(entries.filter((e) => e.category === "buildings").map((e) => e.id)).toEqual(BUILDINGS.map((b) => `building:${b.id}`));
     expect(entries.filter((e) => e.category === "technologies").map((e) => e.id)).toEqual(TECHNOLOGIES.map((t) => `tech:${t.id}`));
     // Les technos sans illustration prennent l'image provisoire commune.
-    expect(entries.find((e) => e.id === `tech:${TECHNOLOGIES[0].id}`)?.image).toBe(TECHNOLOGIES[0].image || TECH_CODEX_IMAGE);
+    expect(entries.find((e) => e.id === `tech:${TECHNOLOGIES[0].id}`)?.image).toBe(techImage(TECHNOLOGIES[0]));
   });
 
   it("bâtiment débloqué une fois construit, techno une fois recherchée", () => {
