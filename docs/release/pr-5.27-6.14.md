@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.58 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.66 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 124 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 132 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -160,6 +160,14 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.56 : Succès par défaut toujours présents (`docs/changes/6.14.56-succes-par-defaut.md`)
 - 6.14.57 : Générateur versionné, anciens brouillons régénérés (`docs/changes/6.14.57-generateur-versionne.md`)
 - 6.14.58 : Défis du passe et épisodes faisables (`docs/changes/6.14.58-defis-faisables.md`)
+- 6.14.59 : Garde-fous du contenu réglé dans l'admin (`docs/changes/6.14.59-garde-fous-admin.md`)
+- 6.14.60 : Reliques de la 5.23 et migrations des contenus ajoutés (`docs/changes/6.14.60-reliques-5-23.md`)
+- 6.14.61 : Test de l'invariant I6 (entrepôt plein) (`docs/changes/6.14.61-test-i6.md`)
+- 6.14.62 : Chrome mobile : contenu plus haut, astuces sous le titre (`docs/changes/6.14.62-chrome-mobile.md`)
+- 6.14.63 : Accueil du joueur : Prise en main en tête, redondances repliées (`docs/changes/6.14.63-accueil-joueur.md`)
+- 6.14.64 : Navigation mobile : Bâtiments par défaut, pastille « Plus » neutre (`docs/changes/6.14.64-navigation-mobile.md`)
+- 6.14.65 : Édition admin d'un joueur par le serveur (`docs/changes/6.14.65-edition-admin-serveur.md`)
+- 6.14.66 : Suppression de compte par le serveur (`docs/changes/6.14.66-suppression-compte-serveur.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

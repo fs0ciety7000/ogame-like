@@ -164,6 +164,8 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.62 | [Chrome mobile : contenu plus haut, astuces sous le titre](6.14.62-chrome-mobile.md) | correctif (interface) | aucune (AU27, lot UX-4), Q93 |
 | 6.14.63 | [Accueil du joueur : Prise en main en tête, redondances repliées](6.14.63-accueil-joueur.md) | correctif (interface) | aucune (AU27, lot UX-5), Q96 |
 | 6.14.64 | [Navigation mobile : Bâtiments par défaut, pastille « Plus » neutre](6.14.64-navigation-mobile.md) | correctif (interface) | aucune (AU27, lot UX-8), Q90 |
+| 6.14.65 | [Édition admin d'un joueur par le serveur](6.14.65-edition-admin-serveur.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-B |
+| 6.14.66 | [Suppression de compte par le serveur](6.14.66-suppression-compte-serveur.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-C, Q78 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

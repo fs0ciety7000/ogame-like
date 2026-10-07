@@ -1,7 +1,7 @@
 import { ClientResponseError } from "pocketbase";
 import { pb } from "@/lib/pocketbase";
 import { legacyPseudoEmail, sanitizePseudo } from "@/lib/utils";
-import { deletePlayerAccountData, ensurePlayerDoc, setPlayerPseudo } from "@/services/playerService";
+import { ensurePlayerDoc, setPlayerPseudo } from "@/services/playerService";
 
 export { sanitizePseudo };
 
@@ -32,6 +32,8 @@ export function translateAuthError(err: unknown): string {
   if (err.status === 429) return "Trop de tentatives. Réessaie dans quelques minutes.";
   // 5.26 : compte suspendu ou banni : le serveur donne la durée et le motif.
   if (err.status === 403 && (err.response?.data as Record<string, unknown> | undefined)?.banned) return String(err.response?.message ?? "Compte suspendu.");
+  // 6.14.66 : la suppression de compte renvoie un message du serveur (mot de passe, pseudo, droits d'admin).
+  if (err.url?.includes("/api/cosmic/account/delete") && err.response?.message) return String(err.response.message);
 
   const fields = (err.response?.data ?? {}) as Record<string, { code?: string }>;
   if (fields.email?.code === "validation_not_unique") return "Cet email est déjà utilisé.";
@@ -132,14 +134,12 @@ export async function confirmPasswordReset(token: string, newPassword: string) {
   );
 }
 
+/** 6.14.66 (AC-C) : suppression du compte par le serveur (mot de passe revérifié, ménage complet en une transaction :
+ *  alliance, flottes, offres, enchères, contrats, files, fiche). Le client n'efface plus rien lui-même. */
 export async function deleteAccount(currentPassword: string, pseudo: string) {
   const user = pb.authStore.record;
   if (!user) throw new Error("Non connecté.");
-
-  // Vérifie le mot de passe avant toute suppression.
-  await pb.collection("users").authWithPassword(user.email as string, currentPassword);
-  await deletePlayerAccountData(user.id, pseudo);
-  await pb.collection("users").delete(user.id);
+  await pb.send("/api/cosmic/account/delete", { method: "POST", body: { password: currentPassword, confirm: pseudo } });
   logout();
 }
 

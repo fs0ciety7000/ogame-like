@@ -19,10 +19,11 @@ import {
   adminListPlayers,
   adminResetAllXp,
   adminUpdateHooks,
-  adminUpdatePlayer,
+  adminEditPlayer,
   type AdminPlayer,
 } from "@/services/adminService";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { adminEditCount, adminEditDiff } from "@/game/adminEdit";
 import { COLONY_BASE_RULES } from "@/game/fleets";
 import { MOON_RULES } from "@/game/moon";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
@@ -972,9 +973,11 @@ export function PlayersPanel() {
     setReason("");
   }, [selectedId, players]);
   // v3.5.1 : un motif est exigé dès que l'état de jeu du joueur change.
+  // 6.14.65 (AC-B) : seules les différences partent au serveur, appliquées sur la fiche fraîche du joueur.
   const original = players.find((x) => x.id === selectedId);
-  const gameStateChanged =
-    !!draft && !!original && (["xp", "seasonXp", "resources", "buildings", "units", "techLevels"] as const).some((f) => JSON.stringify(draft[f] ?? null) !== JSON.stringify(original[f] ?? null));
+  const changes = useMemo(() => (draft && original ? adminEditDiff(original, draft) : {}), [draft, original]);
+  const changeCount = adminEditCount(changes);
+  const gameStateChanged = changeCount > 0;
   const reasonMissing = gameStateChanged && reason.trim().length < 5;
 
   const filtered = players.filter((p) => !search || p.pseudo?.toLowerCase().includes(search.toLowerCase()));
@@ -984,15 +987,8 @@ export function PlayersPanel() {
     if (!draft) return;
     setBusy(true);
     try {
-      await adminUpdatePlayer(draft.id, {
-        xp: draft.xp,
-        seasonXp: draft.seasonXp,
-        resources: draft.resources,
-        buildings: draft.buildings,
-        units: draft.units,
-        techLevels: draft.techLevels,
-      }, reason.trim());
-      toast.success(`${draft.pseudo} mis à jour.`);
+      await adminEditPlayer(draft.id, changes, reason.trim());
+      toast.success(`${draft.pseudo} mis à jour (${changeCount} changement${changeCount > 1 ? "s" : ""}).`);
       await reload();
     } catch (err) {
       toast.error(`Impossible : ${(err as Error).message}`);
@@ -1047,7 +1043,7 @@ export function PlayersPanel() {
                 >
                   <Trash2 className="mr-1 h-3.5 w-3.5" /> Vider les files
                 </Button>
-                <Button size="sm" disabled={busy || reasonMissing} onClick={() => void save()}>
+                <Button size="sm" disabled={busy || !gameStateChanged || reasonMissing} onClick={() => void save()}>
                   <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer
                 </Button>
               </div>
@@ -1125,8 +1121,9 @@ export function PlayersPanel() {
               ))}
             </Section>
             <p className="text-[11px] text-slate-500">
-              Les bonus de technos (production, attaque…) se recalculent au prochain achèvement de recherche du joueur ; les
-              niveaux d'unités sont pris en compte immédiatement.
+              Seuls les écarts saisis sont envoyés : le serveur les ajoute à la fiche du moment (ce que le joueur a fait depuis
+              l'ouverture est gardé). Plafonds vérifiés : niveaux maximaux, entrepôt, hangars. Les bonus de technos se recalculent
+              au prochain achèvement de recherche du joueur ; les niveaux d'unités sont pris en compte immédiatement.
             </p>
           </>
         )}
@@ -1289,7 +1286,8 @@ export function ToolsPanel() {
             )
               return;
             try {
-              const n = await adminResetAllXp((done, total) => setProgress(`${done} / ${total}`));
+              setProgress("…");
+              const n = await adminResetAllXp();
               toast.success(`XP remise à zéro pour ${n} joueurs.`);
             } catch (err) {
               toast.error(`Interrompu : ${(err as Error).message}`);

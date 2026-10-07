@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import type { PlayerState, QueuesState } from "@/types/game";
 import type { GameStats } from "@/game/analytics";
 import type { StaffRole } from "@/game/staff";
+import type { AdminEditChanges } from "@/game/adminEdit";
 
 /* =====================================================
    Administration du jeu.
@@ -14,7 +15,8 @@ import type { StaffRole } from "@/game/staff";
    PocketBase → collection admins → New record, id = id du compte, ou
    ADMIN_EMAILS dans pocketbase/setup.mjs). Les règles d'accès
    (pocketbase/pb_schema.json) donnent à ces comptes l'écriture sur
-   game_config, game_assets et les profils joueurs.
+   game_config et game_assets, et la lecture des profils joueurs ; l'état
+   de jeu d'un joueur ne se modifie que par les routes du serveur (6.14.65).
 ===================================================== */
 
 export async function checkIsAdmin(uid: string): Promise<boolean> {
@@ -67,11 +69,11 @@ export async function adminListPlayers(): Promise<AdminPlayer[]> {
   return records.map((r) => ({ ...r, uid: r.id }));
 }
 
-/** Modifie un profil joueur (ressources, niveaux, XP…). */
-export async function adminUpdatePlayer(id: string, patch: Partial<PlayerState>, reason = "") {
-  const data: Partial<PlayerState> & { adminReason?: string } = { ...patch, adminReason: reason };
-  delete data.uid;
-  await pb.collection("players").update(id, data);
+/** 6.14.65 (AC-B) : édition d'un joueur par le serveur. Seules les différences saisies dans l'éditeur partent
+ *  (`adminEditDiff`) ; le serveur les applique sur la fiche fraîche, plafonds vérifiés, motif au journal.
+ *  Le client n'écrit plus jamais la fiche `players` lui-même. */
+export function adminEditPlayer(id: string, changes: AdminEditChanges, reason: string): Promise<Record<string, unknown>> {
+  return pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: id, action: "edit", changes, reason } });
 }
 
 export async function adminGetQueues(id: string): Promise<QueuesState | null> {
@@ -92,15 +94,10 @@ export async function adminClearQueues(id: string) {
   });
 }
 
-/** Remet l'XP (totale et de saison) de tous les joueurs à zéro. */
-export async function adminResetAllXp(onProgress?: (done: number, total: number) => void): Promise<number> {
-  const players = await pb.collection("players").getFullList({ fields: "id" });
-  let done = 0;
-  for (const p of players) {
-    await pb.collection("players").update(p.id, { xp: 0, seasonXp: 0, adminReason: "Remise à zéro de l'XP de tous les joueurs" });
-    onProgress?.(++done, players.length);
-  }
-  return players.length;
+/** Remet l'XP (totale et de saison) de tous les joueurs à zéro, en une transaction côté serveur (6.14.65). */
+export async function adminResetAllXp(): Promise<number> {
+  const res = await pb.send<{ players: number }>("/api/cosmic/admin/player-action", { method: "POST", body: { action: "resetAllXp", confirm: "RESET" } });
+  return res.players;
 }
 
 /** Envoie une image dans la collection game_assets et renvoie son URL publique. */

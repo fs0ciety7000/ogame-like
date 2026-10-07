@@ -50,7 +50,10 @@ describe("écritures sûres de la fiche joueur (AC-A)", () => {
     expect(fns.get("catchupTick")).toContain("notify(txApp, p.uid, flushed.notifications)");
     expect(fns.get("renameRequest")).toContain("notify(txApp, uid, me.notifications)");
     expect((fns.get("tradeContractRequest")!.match(/notify\(txApp, uid, me\.notifications\)/g) ?? []).length).toBe(3);
-    expect(fns.get("adminDeletePlayer")).toContain("notify(txApp, bidderId, b.notifications");
+    // 6.14.66 (AC-C) : le ménage de la suppression est partagé par l'admin et le joueur (`purgePlayer`).
+    expect(fns.get("purgePlayer")).toContain("notify(txApp, bidderId, b.notifications");
+    expect(fns.get("adminDeletePlayer")).toContain("purgePlayer(txApp, game, uid");
+    expect(fns.get("accountDelete")).toContain("purgePlayer(txApp, game, uid");
   });
 
   it("AC-1 : la campagne d'e-mails ne sauve jamais une fiche lue avant l'envoi", () => {

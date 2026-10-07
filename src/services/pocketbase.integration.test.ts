@@ -26,7 +26,7 @@ import * as ws from "@/services/warlordService";
 import * as sbs from "@/services/seasonBossService";
 import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
-import { adminUpdatePlayer, checkIsAdmin } from "@/services/adminService";
+import { checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
 import { XP_TIER_RULES } from "@/game/xpTiers";
@@ -430,19 +430,57 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 30_000);
 
-  it("v3.5.1 a game admin needs a reason to edit a player's game state", async () => {
-    await admin.collection("admins").create({ id: bId, note: "test" });
+  it("v3.5.1 / 6.14.65 (AC-B) : l'admin édite un joueur par le serveur (différences sur l'état frais, plafonds, motif)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const edit = (body: Record<string, unknown>) => pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { uid: aId, action: "edit", ...body } });
+    // Joueur ordinaire : refusé.
+    await expect(edit({ changes: { xp: 1 }, reason: "essai refusé" })).rejects.toMatchObject({ status: 403 });
+    await expect(pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { action: "resetAllXp", confirm: "RESET" } })).rejects.toMatchObject({ status: 403 });
     const before = await snap(aId);
+    await admin.collection("players").update(aId, { resources: { ...before.resources, scrap: 1000 }, units: { ...before.units, chasseur: { level: 1, count: 4 } } });
+    await admin.collection("admins").create({ id: bId, note: "test" });
     try {
-      await expect(adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 })).rejects.toMatchObject({ status: 400 });
-      await adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 }, "Compensation de test");
-      expect((await snap(aId)).xp).toBe((before.xp ?? 0) + 1);
-      const log = await admin.collection("admin_logs").getFirstListItem(`recordId="${aId}" && reason != ""`, { sort: "-createdAtMs" });
-      expect(log.reason).toBe("Compensation de test");
-      // Sans changement de l'état de jeu (pseudo inchangé…), pas de motif requis.
-      await adminUpdatePlayer(aId, { xp: (before.xp ?? 0) + 1 });
+      // L'admin du jeu n'écrit plus la fiche directement (règle d'API), même avec un motif.
+      await expect(pb.collection("players").update(aId, { xp: (before.xp ?? 0) + 1, adminReason: "écriture directe" })).rejects.toBeTruthy();
+      // Fiche « ouverte » par l'admin : 1 000 ferraille, 4 chasseurs. Le joueur dépense et construit entre-temps.
+      const opened = await snap(aId);
+      await admin.collection("players").update(aId, { resources: { ...opened.resources, scrap: 600 }, units: { ...opened.units, chasseur: { level: 1, count: 10 } } });
+      // Motif obligatoire.
+      await expect(edit({ changes: { resources: { scrap: 500 } } })).rejects.toMatchObject({ status: 400 });
+      // Différences : +500 ferraille, -1 chasseur, +1 XP, appliqués sur l'état rattrapé (600 et 10), pas sur l'instantané.
+      const out = await edit({ changes: { resources: { scrap: 500 }, units: { chasseur: { count: -1 } }, xp: 1 }, reason: "Compensation de test" });
+      expect(out["resources.scrap"]).toBeTruthy();
+      const after = await snap(aId);
+      expect(after.resources.scrap).toBeGreaterThanOrEqual(1100);
+      expect(after.resources.scrap).toBeLessThan(1400);
+      expect(after.units.chasseur.count).toBe(9);
+      expect(after.xp).toBe((opened.xp ?? 0) + 1);
+      const log = await admin.collection("admin_logs").getFirstListItem(`recordId="${aId}" && reason = "Compensation de test"`, { sort: "-createdAtMs" });
+      expect(log.action).toBe("joueur : édition");
+      expect(Object.keys(log.changes)).toEqual(expect.arrayContaining(["resources.scrap", "units.chasseur", "xp"]));
+      const note = await admin.collection("notifications").getFirstListItem(`player_id="${aId}" && title="Empire ajusté par l'équipe"`);
+      expect(note.message).toContain("Compensation de test");
+      // Plafonds : entrepôt, hangar, niveau maximal ; rien n'est écrit sur un refus.
+      await expect(edit({ changes: { resources: { scrap: 900_000_000_000 } }, reason: "plafond entrepôt" })).rejects.toMatchObject({ status: 400, response: { message: expect.stringMatching(/Entrepôt/) } });
+      await expect(edit({ changes: { units: { chasseur: { count: 900_000_000 } } }, reason: "plafond hangar" })).rejects.toMatchObject({ status: 400, response: { message: expect.stringMatching(/Hangar d'attaque/) } });
+      await expect(edit({ changes: { buildings: { extracteur_ferraille: { level: 10_000 } } }, reason: "plafond niveau" })).rejects.toMatchObject({ status: 400 });
+      await expect(edit({ changes: {}, reason: "rien du tout" })).rejects.toMatchObject({ status: 400 });
+      expect((await snap(aId)).units.chasseur.count).toBe(9);
+
+      // Remise à zéro de l'XP de tous les joueurs : une transaction côté serveur, confirmation exigée.
+      const all = await admin.collection("players").getFullList({ fields: "id,xp,seasonXp" });
+      await expect(pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { action: "resetAllXp", confirm: "non" } })).rejects.toMatchObject({ status: 400 });
+      try {
+        const reset = await pb.send("/api/cosmic/admin/player-action", { method: "POST", body: { action: "resetAllXp", confirm: "RESET" } });
+        expect(reset.players).toBeGreaterThanOrEqual(1);
+        const zero = await admin.collection("players").getFullList({ fields: "id,xp,seasonXp" });
+        expect(zero.every((p) => (p.xp ?? 0) === 0 && (p.seasonXp ?? 0) === 0)).toBe(true);
+      } finally {
+        for (const p of all) if (p.xp || p.seasonXp) await admin.collection("players").update(p.id, { xp: p.xp ?? 0, seasonXp: p.seasonXp ?? 0 });
+      }
     } finally {
-      await admin.collection("players").update(aId, { xp: before.xp });
+      await admin.collection("players").update(aId, { xp: before.xp, resources: before.resources, units: before.units });
       await admin.collection("admins").delete(bId);
     }
   });
@@ -3203,6 +3241,79 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else if (!v && rec) await admin.collection("game_config").delete(rec.id);
       }
       await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+    }
+  });
+
+  it("6.14.66 (AC-C) : le joueur supprime son compte par le serveur (flotte, offre, enchère, alliance, contrat nettoyés)", async () => {
+    await ensureAB();
+    const C = { pseudo: `Charl_${suffix}`, email: `del${suffix}@test.dev`, pw: "motdepasse3" };
+    const D = { pseudo: `Delta_${suffix}`, email: `dd${suffix}@test.dev`, pw: "motdepasse4" };
+    const dId = (await registerPlayer(D.pseudo, D.email, D.pw)).id;
+    logout();
+    const cId = (await registerPlayer(C.pseudo, C.email, C.pw)).id;
+    const now = Date.now();
+    try {
+      // L'API des collections ne permet plus au joueur d'effacer sa fiche, ses files ou son compte (contournement d'AC-3).
+      await expect(pb.collection("players").delete(cId)).rejects.toBeTruthy();
+      await expect(pb.collection("queues").delete(cId)).rejects.toBeTruthy();
+      await expect(pb.collection("users").delete(cId)).rejects.toMatchObject({ status: 403 });
+      expect(await snap(cId)).toBeTruthy();
+
+      // Situation : C fonde une alliance avec D, a une flotte en vol, une offre, une enchère (D en tête), un contrat accepté par D ;
+      // D a une garnison chez C.
+      const tag = `Z${suffix.slice(0, 3)}`.toUpperCase();
+      const al = await admin.collection("alliances").create({ name: `Zeta ${suffix}`, tag, createdBy: cId, createdAtMs: now, members: [cId, dId], memberPseudos: { [cId]: C.pseudo, [dId]: D.pseudo }, roles: {} });
+      await admin.collection("players").update(cId, { allianceId: al.id });
+      await admin.collection("players").update(dId, { allianceId: al.id, resources: { ...RICH, scrap: 5000 } });
+      const fleet = await admin.collection("fleets").create({ ownerUid: cId, ownerPseudo: C.pseudo, targetUid: dId, targetPseudo: D.pseudo, mission: "transport", units: { chasseur: 1 }, departAtMs: now, arriveAtMs: now + 3600_000, status: "outbound" });
+      const garrison = await admin.collection("fleets").create({ ownerUid: dId, ownerPseudo: D.pseudo, targetUid: cId, targetPseudo: C.pseudo, mission: "garrison", units: { chasseur: 2 }, departAtMs: now - 120_000, arriveAtMs: now - 60_000, stationedUntilMs: now + 3600_000, status: "stationed" });
+      const offer = await admin.collection("market_offers").create({ sellerId: cId, sellerPseudo: C.pseudo, giveRes: "scrap", giveAmount: 100, wantRes: "energy", wantAmount: 100, status: "open", createdAtMs: now, expiresAtMs: now + 3600_000 });
+      const auction = await admin.collection("auctions").create({ sellerId: cId, sellerPseudo: C.pseudo, kind: "relic", item: {}, label: "Lot d'essai", res: "scrap", startPrice: 100, bid: 700, bidderId: dId, bidderPseudo: D.pseudo, bids: 1, status: "open", createdAtMs: now, endsAtMs: now + 3600_000 });
+      const contract = await admin.collection("trade_contracts").create({ clientUid: cId, clientPseudo: C.pseudo, targetUid: "", wantRes: "energy", wantAmount: 100, payRes: "scrap", payAmount: 100, hours: 4, status: "accepted", createdAtMs: now, expiresAtMs: now + 3600_000, supplierUid: dId, supplierPseudo: D.pseudo, deposit: 300, acceptedAtMs: now, deadlineMs: now + 3600_000, fleetId: "", closedAtMs: 0 });
+      const dScrap = (await snap(dId)).resources.scrap;
+
+      // Mauvais mot de passe : refusé, rien n'est effacé.
+      await expect(pb.send("/api/cosmic/account/delete", { method: "POST", body: { password: "mauvais", confirm: C.pseudo } })).rejects.toMatchObject({ status: 400 });
+      expect(await snap(cId)).toBeTruthy();
+      const token = pb.authStore.token;
+      const record = pb.authStore.record;
+      const { deleteAccount } = await import("@/services/authService");
+      await deleteAccount(C.pw, C.pseudo);
+      expect(pb.authStore.isValid).toBe(false);
+
+      // Compte, fiche, files, fiche publique : effacés.
+      expect(await snap(cId)).toBeNull();
+      await expect(admin.collection("queues").getOne(cId)).rejects.toMatchObject({ status: 404 });
+      await expect(admin.collection("users").getOne(cId)).rejects.toMatchObject({ status: 404 });
+      await expect(admin.collection("profiles").getOne(cId)).rejects.toMatchObject({ status: 404 });
+      // Flotte en vol supprimée ; garnison de D renvoyée chez elle.
+      await expect(admin.collection("fleets").getOne(fleet.id)).rejects.toMatchObject({ status: 404 });
+      expect((await admin.collection("fleets").getOne(garrison.id)).status).toBe("returning");
+      // Offre retirée ; enchère annulée et D remboursé (700), caution du contrat rendue (300).
+      await expect(admin.collection("market_offers").getOne(offer.id)).rejects.toMatchObject({ status: 404 });
+      expect((await admin.collection("auctions").getOne(auction.id)).status).toBe("cancelled");
+      expect((await admin.collection("trade_contracts").getOne(contract.id)).status).toBe("cancelled");
+      expect((await snap(dId)).resources.scrap).toBeGreaterThanOrEqual(dScrap + 700 + 300);
+      // Alliance : D devient fondateur, C n'est plus membre.
+      const left = await admin.collection("alliances").getOne(al.id);
+      expect(left.members).toEqual([dId]);
+      expect(left.createdBy).toBe(dId);
+      const titles = (await admin.collection("notifications").getFullList({ filter: `player_id="${dId}"` })).map((n) => n.title);
+      expect(titles).toEqual(expect.arrayContaining(["Tu diriges l'alliance", "Garnison rappelée", "Enchère annulée", "Contrat annulé"]));
+      // Journal de l'équipe.
+      const log = await admin.collection("admin_logs").getFirstListItem(`recordId="${cId}"`, { sort: "-createdAtMs" });
+      expect(log.action).toBe("compte : supprimé");
+
+      // Un nouvel « init » avec l'ancien jeton ne recrée rien.
+      pb.authStore.save(token, record);
+      await expect(pb.send("/api/cosmic/init", { method: "POST" })).rejects.toBeTruthy();
+      expect(await snap(cId)).toBeNull();
+      await admin.collection("alliances").delete(al.id).catch(() => {});
+    } finally {
+      pb.authStore.clear();
+      await admin.collection("players").delete(cId).catch(() => {});
+      await admin.collection("users").delete(cId).catch(() => {});
+      await loginPlayer(B.email, B.pw);
     }
   });
 

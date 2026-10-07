@@ -189,6 +189,7 @@ export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason
 export { moveWrittenToLibrary, applyLibraryChapter } from "@/game/chronicles";
 export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, GENERATOR_VERSION, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
+export { applyAdminEdit } from "@/game/adminEdit";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";
 export { defaultGameContent } from "@/game/content";
 export { getProductionRatesPerSecond } from "@/game/production";

@@ -16,8 +16,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 5 | AA1 | Garde-fous du contenu réglé dans l'admin : validation récursive côté serveur, `null` refusé, unités, bâtiments et technos vérifiés | M | livré (6.14.59) |
 | 6 | AJ27-3 | Reliques de la 5.23 : vérification de la pré-prod, migration `appendFromDefaults` et garde | S | livré (6.14.60) |
 | 7 | AJ27-2 | Test de l'invariant I6 (butin et livraisons entrepôt plein) | S | livré (6.14.61) |
-| 8 | AC-B | Édition admin d'un joueur par le serveur (différences sur l'état rattrapé, plafonds, journal) | M | à faire |
-| 9 | AC-C | Suppression de compte côté serveur (ménage complet, règle de suppression réservée aux admins) | M | à faire |
+| 8 | AC-B | Édition admin d'un joueur par le serveur (différences sur l'état rattrapé, plafonds, journal) | M | livré (6.14.65) |
+| 9 | AC-C | Suppression de compte côté serveur (ménage complet, règle de suppression réservée aux admins) | M | livré (6.14.66) |
 | 10 | UX-1 | Accueil public mobile (formulaire et devblog coupés à 375 px) | S | livré (6.14.53) |
 | 11 | UX-3 | Textes de règle justes (astuces, toasts) et nombres lisibles | S | livré (6.14.54) |
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |

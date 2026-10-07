@@ -732,20 +732,6 @@ export function processBattleReportForDefender(_uid: string, reportId: string): 
   });
 }
 
-/* =====================================================
-   Suppression de compte
-===================================================== */
-
-export async function deletePlayerAccountData(uid: string, _pseudo: string) {
-  const notifications = await pb
-    .collection("notifications")
-    .getFullList({ filter: pb.filter("player_id = {:uid}", { uid }), fields: "id" })
-    .catch(() => []);
-  for (const n of notifications) await pb.collection("notifications").delete(n.id).catch(() => {});
-  await pb.collection("queues").delete(uid).catch(() => {});
-  await pb.collection("players").delete(uid).catch(() => {});
-}
-
 /** Part des joueurs ayant obtenu chaque succès (v2.3). */
 export async function fetchAchievementRates(): Promise<{ players: number; counts: Record<string, number> }> {
   try {

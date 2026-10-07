@@ -5509,6 +5509,10 @@ function configRecord(txApp, key) {
  * relevées (JSON, texte). Rien n'est jamais supprimé ni restreint ; règles d'accès et index inchangés.
  * Sans cela, un champ ajouté au schéma (ex. battle_reports.combatLog en 5.19) était ignoré en silence.
  */
+/** 6.14.65-66 : règles d'API recopiées depuis pb_schema.json au démarrage (collection → règles). Écriture de la fiche
+ *  réservée au serveur pour l'admin (AC-B) ; suppression de la fiche et des files réservée aux admins (AC-C). */
+const SCHEMA_RULE_SYNC = { players: ["updateRule", "deleteRule"], queues: ["deleteRule"] };
+
 function ensureSchema(app) {
   const game = loadGame();
   let wanted = [];
@@ -5559,6 +5563,16 @@ function ensureSchema(app) {
         dirty = true;
         changes.push(`${w.name}.${f.name} (longueur)`);
       }
+    });
+    // 6.14.65-66 (AC-B, AC-C) : règles resserrées recopiées sur une base existante (sinon seuls les champs suivaient).
+    // Liste fermée : on ne réécrit jamais une règle qu'aucun lot n'a demandé de resserrer.
+    (SCHEMA_RULE_SYNC[w.name] || []).forEach((r) => {
+      const want = w[r] === undefined ? null : w[r];
+      const have = cur[r] === undefined ? null : cur[r];
+      if (want === have) return;
+      cur[r] = want;
+      dirty = true;
+      changes.push(`${w.name}.${r} (règle)`);
     });
     if (dirty) {
       cur.fields = fields;
@@ -5929,14 +5943,34 @@ function writeAdminLog(txApp, e, action, uid, label, changes, reason) {
   }
 }
 
-const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte", amber: "Ambre modifiée" };
-/** v5.14 : actions qui donnent quelque chose (motif obligatoire). */
-const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule", "amber"];
+const PLAYER_ACTION_LABELS = { testMode: "compte test", finishAll: "tout terminer", officers: "délais officiers", grant: "ressources", officer: "officier offert", relic: "relique offerte", capsule: "capsule offerte", amber: "Ambre modifiée", edit: "édition" };
+/** v5.14 : actions qui donnent quelque chose (motif obligatoire). 6.14.65 (AC-B) : l'édition de la fiche aussi. */
+const PLAYER_GIFT_ACTIONS = ["grant", "officer", "relic", "capsule", "amber", "edit"];
+
+/** 6.14.65 (AC-B) : remise à zéro de l'XP (totale et de saison) de tous les joueurs, en une transaction.
+ *  Chaque fiche est relue dans la transaction et seuls ses deux champs d'XP changent (I24). */
+function adminResetAllXp(e, game, req) {
+  if (String(req.confirm || "") !== "RESET") throw new BadRequestError("Confirmation incorrecte : tape RESET.");
+  const reason = String(req.reason || "").trim() || "Remise à zéro de l'XP de tous les joueurs";
+  let players = 0;
+  $app.runInTransaction((txApp) => {
+    txApp.findRecordsByFilter("players", "id != ''", "", 0, 0).forEach((rec) => {
+      if (rec.getFloat("xp") === 0 && rec.getFloat("seasonXp") === 0) return;
+      rec.set("xp", 0);
+      rec.set("seasonXp", 0);
+      txApp.save(rec);
+      players++;
+    });
+    writeAdminLog(txApp, e, "XP remise à zéro", "", "tous les joueurs", { joueurs: players }, reason);
+  });
+  return e.json(200, { players });
+}
 
 /**
  * POST /api/cosmic/admin/player-action { uid, action, reason?, on?, resources? }
  * testMode (on) · finishAll · officers · grant (resources, motif obligatoire).
  * v5.14 : officer (officerId) · relic (template, rarity) · capsule (capsule, level) — motif obligatoire.
+ * 6.14.65 (AC-B) : edit (changes : différences de l'éditeur, motif obligatoire) · resetAllXp (sans uid, confirm « RESET »).
  */
 function adminPlayerAction(e) {
   if (!e.hasSuperuserAuth() && !isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
@@ -5945,6 +5979,7 @@ function adminPlayerAction(e) {
   const uid = String(req.uid || "");
   const action = String(req.action || "");
   const reason = String(req.reason || "").trim();
+  if (action === "resetAllXp") return adminResetAllXp(e, game, req);
   if (!PLAYER_ACTION_LABELS[action]) throw new BadRequestError("Action inconnue.");
   if (PLAYER_GIFT_ACTIONS.indexOf(action) >= 0 && reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
   let summary = null;
@@ -5961,7 +5996,20 @@ function adminPlayerAction(e) {
       queues = f.queues;
       notes = notes.concat(f.notifications);
     };
-    if (action === "testMode") {
+    if (action === "edit") {
+      // 6.14.65 (AC-B) : différences appliquées sur l'état rattrapé, relu dans cette transaction ; plafonds vérifiés.
+      flush();
+      const away = game.unitsAwayOf(
+        txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => fleetFromRecord(r)),
+        uid,
+      );
+      try {
+        summary = game.applyAdminEdit(player, queues, away, req.changes, now).changes;
+      } catch (err) {
+        throw asHttpError(game, err);
+      }
+      notes.push({ kind: "event", title: "Empire ajusté par l'équipe", message: `Ta fiche a été corrigée : ${reason}.`, createdAtMs: now, read: false });
+    } else if (action === "testMode") {
       const on = req.on === true;
       loaded.rec.set("testMode", on);
       player.testMode = on;
@@ -9468,6 +9516,128 @@ function adminBan(e) {
   return e.json(200, out);
 }
 
+/**
+ * 6.14.66 (AC-C) : ménage complet d'un compte, dans la transaction de l'appelant. Partagé par la suppression par
+ * l'admin (`adminDeletePlayer`) et par le joueur lui-même (`accountDelete`). Rien de ce qui appartient aux AUTRES
+ * joueurs ne se perd : mises rendues, cautions rendues, garnisons renvoyées, chef d'alliance remplacé.
+ * - alliance quittée (rôle de chef transféré par `removeMember`, alliance dissoute si elle se vide), ligne au journal ;
+ * - ses flottes supprimées (en vol, en garnison, bases) ; les garnisons alliées stationnées chez lui rentrent ;
+ * - ses offres ouvertes du marché retirées (la marchandise en dépôt était la sienne) ;
+ * - ses enchères ouvertes annulées, meilleur enchérisseur remboursé ; ses mises en tête retirées (la vente repart) ;
+ * - contrats de commerce : client remboursé si le livreur part, caution rendue au livreur si le client part ;
+ * - notifications, clés d'accès, blocages, alertes d'enchères, files, fiche, fiche publique, compte.
+ * Les messages privés, rapports et dons restent (historique des autres joueurs).
+ */
+function purgePlayer(txApp, game, uid, now) {
+  const summary = { fleets: 0, garrisons: 0, offers: 0, auctions: 0, bids: 0, contracts: 0, notifications: 0, alliance: null };
+  const rec = findOrNull(txApp, "players", uid);
+  const pseudo = rec ? rec.getString("pseudo") : uid;
+  // Alliance : le joueur en sort (l'alliance disparaît si elle se vide ; le chef est remplacé).
+  const allianceId = rec ? rec.getString("allianceId") : "";
+  const a = allianceId ? findOrNull(txApp, "alliances", allianceId) : null;
+  if (a && (toPlain(a).members || []).indexOf(uid) >= 0) {
+    const before = toPlain(a);
+    const next = game.removeMember(before, uid);
+    if (!next) txApp.delete(a);
+    else {
+      a.set("members", next.members);
+      a.set("memberPseudos", next.memberPseudos);
+      a.set("roles", next.roles);
+      a.set("createdBy", next.createdBy);
+      txApp.save(a);
+      const log = new Record(txApp.findCollectionByNameOrId("alliance_logs"));
+      log.load({ allianceId, kind: "leave", actorUid: uid, actorPseudo: pseudo, targetUid: "", targetPseudo: "", text: "(compte supprimé)", resources: null, createdAtMs: now });
+      txApp.save(log);
+      if (next.createdBy !== before.createdBy) {
+        notify(txApp, next.createdBy, [{ kind: "event", title: "Tu diriges l'alliance", message: `${pseudo} a quitté le jeu : tu deviens fondateur de [${before.tag}] ${before.name}.`, createdAtMs: now, read: false, link: "/game/alliance" }]);
+      }
+    }
+    summary.alliance = next ? "quittée" : "dissoute";
+  }
+  txApp.findRecordsByFilter("fleets", "ownerUid = {:u}", "", 0, 0, { u: uid }).forEach((f) => {
+    txApp.delete(f);
+    summary.fleets++;
+  });
+  // Garnisons alliées stationnées chez lui (planète mère ou colonie) : elles rentrent.
+  txApp.findRecordsByFilter("fleets", '(targetUid = {:u} || targetUid ~ {:c}) && mission = "garrison" && status = "stationed"', "", 0, 0, { u: uid, c: `${uid}-c` }).forEach((f) => {
+    const back = game.endGarrison(fleetFromRecord(f), now);
+    f.set("status", back.status);
+    f.set("returnAtMs", back.returnAtMs);
+    txApp.save(f);
+    notify(txApp, f.getString("ownerUid"), [{ kind: "event", title: "Garnison rappelée", message: `${pseudo} a quitté le jeu : ta garnison rentre.`, createdAtMs: now, read: false }]);
+    summary.garrisons++;
+  });
+  txApp.findRecordsByFilter("market_offers", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((o) => {
+    txApp.delete(o);
+    summary.offers++;
+  });
+  // 5.26 : ses ventes aux enchères ouvertes s'annulent, le meilleur enchérisseur est remboursé.
+  txApp.findRecordsByFilter("auctions", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((au) => {
+    const bidderId = au.getString("bidderId");
+    if (bidderId && findOrNull(txApp, "players", bidderId)) {
+      const b = loadFlushed(txApp, game, bidderId);
+      const bid = au.getFloat("bid");
+      game.creditBid(b.player, au.getString("res"), bid);
+      savePlayer(txApp, game, b.loaded, b.player, b.queues);
+      // 6.14.52 (AC-4) : rattrapage et remboursement notifiés, comme quand l'enchérisseur est dépassé.
+      notify(txApp, bidderId, b.notifications.concat([
+        auctionNote("Enchère annulée", `La vente « ${au.getString("label")} » a été retirée : ta mise de ${auctionAmount(game, au.getString("res"), bid)} t'est rendue.`, now),
+      ]));
+    }
+    au.set("status", "cancelled");
+    au.set("closedAtMs", now);
+    txApp.save(au);
+    summary.auctions++;
+  });
+  // Ses mises en tête sur les ventes des autres : retirées, la vente repart de son prix de départ.
+  txApp.findRecordsByFilter("auctions", "bidderId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((au) => {
+    ["bidderId", "bidderPseudo", "bidderIp", "bidderDevice"].forEach((k) => au.set(k, ""));
+    au.set("bid", 0);
+    txApp.save(au);
+    notify(txApp, au.getString("sellerId"), [auctionNote("Enchérisseur parti", `${pseudo} a quitté le jeu : sa mise sur « ${au.getString("label")} » est retirée, la vente repart de son prix de départ.`, now)]);
+    summary.bids++;
+  });
+  // Contrats de commerce encore ouverts ou acceptés.
+  txApp.findRecordsByFilter("trade_contracts", "(clientUid = {:u} || supplierUid = {:u} || targetUid = {:u}) && (status = 'open' || status = 'accepted')", "", 0, 0, { u: uid }).forEach((c) => {
+    const client = c.getString("clientUid");
+    if (client === uid) {
+      // Le client part : son paiement part avec son compte ; la caution du livreur lui est rendue.
+      const supplier = c.getString("supplierUid");
+      if (c.getString("status") === "accepted" && supplier && findOrNull(txApp, "players", supplier)) {
+        const s = loadFlushed(txApp, game, supplier);
+        const res = c.getString("payRes");
+        const deposit = c.getFloat("deposit");
+        s.player.resources[res] = (s.player.resources[res] || 0) + deposit;
+        savePlayer(txApp, game, s.loaded, s.player, s.queues);
+        notify(txApp, supplier, s.notifications.concat([
+          { kind: "gift", title: "Contrat annulé", message: `${pseudo} a quitté le jeu : ta caution de ${game.describeAmount(res, deposit)} t'est rendue.`, createdAtMs: now, read: false },
+        ]));
+      }
+      c.set("status", "cancelled");
+      c.set("closedAtMs", now);
+      txApp.save(c);
+    } else {
+      // Le livreur (ou le destinataire réservé) part : le client est remboursé, caution comprise.
+      failTradeContractRec(txApp, game, c, now, `${pseudo} a quitté le jeu (contrat abandonné)`);
+    }
+    summary.contracts++;
+  });
+  txApp.findRecordsByFilter("notifications", "player_id = {:u}", "", 0, 0, { u: uid }).forEach((n) => {
+    txApp.delete(n);
+    summary.notifications++;
+  });
+  txApp.findRecordsByFilter("passkeys", "user = {:u}", "", 0, 0, { u: uid }).forEach((p) => txApp.delete(p));
+  txApp.findRecordsByFilter("message_blocks", "ownerUid = {:u}", "", 0, 0, { u: uid }).forEach((m) => txApp.delete(m));
+  txApp.findRecordsByFilter("auction_watches", "uid = {:u}", "", 0, 0, { u: uid }).forEach((w) => txApp.delete(w));
+  const q = findOrNull(txApp, "queues", uid);
+  if (q) txApp.delete(q);
+  if (rec) txApp.delete(rec);
+  deleteProfile(txApp, uid);
+  const user = findOrNull(txApp, "users", uid);
+  if (user) txApp.delete(user);
+  return summary;
+}
+
 /** POST /api/cosmic/admin/player/delete { uid, confirm (pseudo), reason } — suppression définitive du compte et de l'empire. */
 function adminDeletePlayer(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
@@ -9476,72 +9646,56 @@ function adminDeletePlayer(e) {
   const uid = String(req.uid || "");
   const reason = String(req.reason || "").trim();
   if (reason.length < 5) throw new BadRequestError("Indique un motif (5 caractères au moins).");
-  const summary = { fleets: 0, offers: 0, notifications: 0, alliance: null };
+  let summary = null;
   let pseudo = uid;
   $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
     const rec = findOrNull(txApp, "players", uid);
     if (!rec) throw new NotFoundError("Joueur introuvable.");
     pseudo = rec.getString("pseudo");
     if (String(req.confirm || "") !== pseudo) throw new BadRequestError("Confirmation incorrecte : tape le pseudo du joueur.");
     if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Retire d'abord ses droits d'administrateur.");
-    // Alliance : le joueur en sort (l'alliance disparaît si elle se vide).
-    const allianceId = rec.getString("allianceId");
-    if (allianceId) {
-      const a = findOrNull(txApp, "alliances", allianceId);
-      if (a) {
-        const next = game.removeMember(toPlain(a), uid);
-        if (!next) txApp.delete(a);
-        else {
-          a.set("members", next.members);
-          a.set("memberPseudos", next.memberPseudos);
-          a.set("roles", next.roles);
-          a.set("createdBy", next.createdBy);
-          txApp.save(a);
-        }
-        summary.alliance = next ? "quittée" : "dissoute";
-      }
-    }
-    txApp.findRecordsByFilter("fleets", "ownerUid = {:u}", "", 0, 0, { u: uid }).forEach((f) => {
-      txApp.delete(f);
-      summary.fleets++;
-    });
-    txApp.findRecordsByFilter("market_offers", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((o) => {
-      txApp.delete(o);
-      summary.offers++;
-    });
-    // 5.26 : ses ventes aux enchères ouvertes s'annulent, le meilleur enchérisseur est remboursé.
-    txApp.findRecordsByFilter("auctions", "sellerId = {:u} && status = 'open'", "", 0, 0, { u: uid }).forEach((a) => {
-      const bidderId = a.getString("bidderId");
-      if (bidderId && findOrNull(txApp, "players", bidderId)) {
-        const b = loadFlushed(txApp, game, bidderId);
-        const bid = a.getFloat("bid");
-        game.creditBid(b.player, a.getString("res"), bid);
-        savePlayer(txApp, game, b.loaded, b.player, b.queues);
-        // 6.14.52 (AC-4) : rattrapage et remboursement notifiés, comme quand l'enchérisseur est dépassé.
-        notify(txApp, bidderId, b.notifications.concat([
-          auctionNote("Enchère annulée", `La vente « ${a.getString("label")} » a été retirée : ta mise de ${auctionAmount(game, a.getString("res"), bid)} t'est rendue.`, Date.now()),
-        ]));
-      }
-      a.set("status", "cancelled");
-      a.set("closedAtMs", Date.now());
-      txApp.save(a);
-    });
-    txApp.findRecordsByFilter("notifications", "player_id = {:u}", "", 0, 0, { u: uid }).forEach((n) => {
-      txApp.delete(n);
-      summary.notifications++;
-    });
-    txApp.findRecordsByFilter("passkeys", "user = {:u}", "", 0, 0, { u: uid }).forEach((p) => txApp.delete(p));
-    const q = findOrNull(txApp, "queues", uid);
-    if (q) txApp.delete(q);
-    txApp.delete(rec);
-    deleteProfile(txApp, uid);
-    const user = findOrNull(txApp, "users", uid);
-    if (user) txApp.delete(user);
+    summary = purgePlayer(txApp, game, uid, Date.now());
     const bans = game.normalizeBans(readModeration(txApp, game.MODERATION_KEYS.bans));
     if (bans[uid]) saveBans(txApp, game, game.unbanPlayer(bans, uid));
     writeAdminLog(txApp, e, "joueur : supprimé", uid, pseudo, summary, reason);
   });
   return e.json(200, Object.assign({ pseudo }, summary));
+}
+
+/**
+ * 6.14.66 (AC-C, Q-AC3 option A) : POST /api/cosmic/account/delete { password, confirm (pseudo) }
+ * Le joueur supprime lui-même son compte : mot de passe revérifié par le serveur, pseudo retapé, puis même ménage
+ * que l'admin (`purgePlayer`), dans une transaction. Un compte sans mot de passe connu (Google, Apple, clé d'accès)
+ * se fait supprimer par l'équipe. Un administrateur du jeu retire d'abord ses droits.
+ */
+function accountDelete(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const req = body(e);
+  const password = String(req.password || "");
+  if (!password) throw new BadRequestError("Indique ton mot de passe.");
+  let summary = null;
+  let pseudo = uid;
+  $app.runInTransaction((txApp) => {
+    applyContent(txApp, game);
+    const user = findOrNull(txApp, "users", uid);
+    if (!user || !user.validatePassword(password)) throw new BadRequestError("Mot de passe incorrect.");
+    const rec = findOrNull(txApp, "players", uid);
+    pseudo = rec ? rec.getString("pseudo") : user.getString("name") || uid;
+    if (rec && String(req.confirm || "") !== pseudo) throw new BadRequestError("Confirmation incorrecte : tape ton pseudo.");
+    if (txApp.findRecordsByFilter("admins", "id = {:id}", "", 1, 0, { id: uid }).length > 0) throw new BadRequestError("Un administrateur du jeu retire d'abord ses droits.");
+    summary = purgePlayer(txApp, game, uid, Date.now());
+    writeAdminLog(txApp, e, "compte : supprimé", uid, pseudo, summary, "Suppression demandée par le joueur");
+  });
+  return e.json(200, Object.assign({ pseudo }, summary));
+}
+
+/** 6.14.66 (AC-C) : un compte (users) ne se supprime pas par l'API des collections, sauf par un admin du jeu.
+ *  Sinon la fiche, l'alliance, les flottes et les enchères resteraient sans ménage. */
+function guardUserDelete(e) {
+  if (e.hasSuperuserAuth() || isGameAdmin(e)) return;
+  throw new ForbiddenError("Supprime ton compte depuis Réglages → Zone dangereuse.");
 }
 
 /* ---------- 5.26 : sondages des annonces ---------- */
@@ -10161,4 +10315,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError, purgePlayer, accountDelete, guardUserDelete };

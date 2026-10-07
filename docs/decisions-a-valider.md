@@ -18,12 +18,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
-| Q122 | Astuces de page gardées sur le compte (Q93) : où les enregistrer ? : Dans la liste `announcementsSeen` déjà partagée, avec des identifiants `tip:<page>` (aucun changement de moteur ni de schéma) | Écran mobile et accueil du joueur | Valider (option prudente) |
-| Q123 | « Réafficher les astuces » (Réglages) : Ne vaut que pour l'appareil (aucune action ne retire une vue du compte) | Écran mobile et accueil du joueur | Valider (option prudente) |
-| Q124 | Prise en main réduite (Q96) : Réutilise le drapeau `hidden` déjà enregistré sur le compte (`hideOnboarding` inchangée) | Écran mobile et accueil du joueur | Valider (option prudente) |
-| Q125 | Plein écran sur téléphone : Retiré de l'en-tête, déplacé dans le menu « Plus » | Écran mobile et accueil du joueur | Valider (option prudente) |
-| Q126 | Libellé « Serveur de test » à 375 px : Tronqué ; l'icône et l'infobulle gardent le sens | Écran mobile et accueil du joueur | Valider (option prudente) |
-| Q127 | Liste des objectifs de la Prise en main : Repliée par défaut, à toutes les largeurs | Écran mobile et accueil du joueur | Valider (option prudente) |
 
 ## 3. Récit
 
@@ -34,3 +28,13 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q128 | Édition admin : niveaux et nombres envoyés en écarts ? : Oui, niveaux compris : une montée faite par le joueur pendant l'édition n'est jamais annulée ; un niveau hors limites est refusé, pas tronqué | Valider (option prudente) |
+| Q129 | Édition admin : ressource commune au-delà de l'entrepôt : Refusée avec la marge restante (« Rendre des ressources » reste pour dépasser) ; un retrait plus grand que le stock s'arrête à 0 | Valider (option prudente) |
+| Q130 | Le joueur est-il prévenu d'une édition admin ? : Oui, notification « Empire ajusté par l'équipe » avec le motif | Valider (option prudente) |
+| Q131 | `players.updateRule` : un admin du jeu peut-il encore écrire la fiche d'un autre joueur par l'API ? : Non (resserré ; tout passe par `admin/player-action`) | Valider (option prudente) |
+| Q132 | Portée de « Remise à zéro de l'XP » : Inchangée : tous les enregistrements `players`, seigneurs compris | Valider (option prudente) |
+| Q133 | Suppression de compte : confirmation : Mot de passe revérifié par le serveur + pseudo ; un compte sans mot de passe connu (Google, Apple, passkey) passe par l'équipe | Valider (option prudente) |
+| Q134 | Mises en tête d'un joueur supprimé sur les ventes des autres : Retirées ; la vente repart de son prix de départ et le vendeur est prévenu | Valider (option prudente) |
+| Q135 | Bannissement et suppression de compte : Un bannissement est gardé quand le joueur se supprime lui-même ; un admin du jeu ne peut pas supprimer son compte tant qu'il a ses droits | Valider (option prudente) |
+| Q136 | Suppression directe d'un compte `users` par l'API : Refusée (403) : le joueur passe par Réglages → Zone dangereuse | Valider (option prudente) |
+| Q137 | « Vider les files » (admin) : Reste une écriture directe sur `queues` (aucune réécriture depuis une lecture ancienne) | Valider (option prudente) |

@@ -62,6 +62,13 @@ routerAdd("POST", "/api/cosmic/passkey/rename", (e) => require(`${__hooks}/cosmi
 routerAdd("POST", "/api/cosmic/passkey/login/options", (e) => require(`${__hooks}/cosmic_db.js`).passkeyLoginOptions(e));
 routerAdd("POST", "/api/cosmic/passkey/login/verify", (e) => require(`${__hooks}/cosmic_db.js`).passkeyLoginVerify(e));
 routerAdd("POST", "/api/cosmic/account/pseudo", (e) => require(`${__hooks}/cosmic_db.js`).accountPseudo(e), $apis.requireAuth("users"));
+// 6.14.66 (AC-C) : suppression du compte par le joueur (mot de passe revérifié, même ménage que l'admin).
+routerAdd("POST", "/api/cosmic/account/delete", (e) => require(`${__hooks}/cosmic_db.js`).accountDelete(e), $apis.requireAuth("users"));
+// Un compte ne se supprime plus par l'API des collections (fiche et alliance resteraient sans ménage).
+onRecordDeleteRequest((e) => {
+  require(`${__hooks}/cosmic_db.js`).guardUserDelete(e);
+  e.next();
+}, "users");
 
 /**
  * POST /api/cosmic/action  { type, ...paramètres }
