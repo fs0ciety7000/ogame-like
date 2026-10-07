@@ -1,6 +1,6 @@
 # Proposition : feuille de route de printemps 2030
 
-Statut : **en cours** (2026-10-07, clôture d'AU25 : `docs/audit/2026-10-07-au25-hiver-2029.md`). Règle n° 3 : jamais de pause ;
+Statut : **close** (2026-10-07, AU26 : `docs/audit/2026-10-07-au26-printemps-2030.md`), suite dans `feuille-de-route-2030-ete.md`. Ouverte à la clôture d'AU25 (`docs/audit/2026-10-07-au25-hiver-2029.md`). Règle n° 3 : jamais de pause ;
 production, `main` et PR sautés (Q12), mais préparés pour le jour J.
 
 ## Planning
@@ -11,6 +11,6 @@ production, `main` et PR sautés (Q12), mais préparés pour le jour J.
 | 2 | P30-1 | Billet de devblog récapitulatif de la mise en production (`content/blog/`), en brouillon jusqu'au jour J (AU30-4) | M | livré en 6.14.30 |
 | 3 | P30-2 | Texte de la PR `claude/hiver-k-s` → `main` prêt à coller (`docs/release/pr-5.27-6.14.md`) : résumé, fiches portées, vérifications (AU30-2) | S | livré en 6.14.31 |
 | 4 | P30-4 | Report des réponses aux décisions à valider (page à cocher) : statut « validée » ou lot de changement | S | livré en 6.14.35 (22 validées, Q11 close, Q12 ouverte, Q15 → Q31) |
-| 4b | P30-5 | Prochain système de jeu, choisi en Q31 (A phalange et porte de saut lunaires recommandé) : lots chiffrés dès la réponse | M à L | attend l'utilisateur (Q31) |
+| 4b | P30-5 | Prochain système de jeu, choisi en Q31 (A phalange et porte de saut lunaires recommandé) : lots chiffrés dès la réponse | M à L | reporté en É30-1 (été 2030) |
 | 5 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
-| 6 | AU26 | Revue, même grille ; inventaire repris | M | fin des lots |
+| 6 | AU26 | Revue, même grille ; inventaire repris | M | livré en 6.14.38 |

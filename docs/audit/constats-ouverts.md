@@ -22,6 +22,7 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
+| AU31-4 | AU26 | Z6 (performance) mesurable sur la pré-prod | É30-2 |
 
 
 ### Attend des mesures (après la mise en production, puis une nouvelle copie sur la pré-prod)
