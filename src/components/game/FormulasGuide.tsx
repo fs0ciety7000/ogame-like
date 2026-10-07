@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
 import { Calculator, Coins, Crosshair, Factory, Gauge, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
@@ -87,7 +87,17 @@ function Row({ label, value, hint }: { label: string; value: ReactNode; hint?: s
   );
 }
 
+/* 6.11.6 (A2) : une section à la fois (8 000 px à 375 px quand tout s'affichait) ; « Tout » garde la lecture d'un bloc. */
+type SectionId = (typeof FORMULA_SECTIONS)[number]["id"];
+const ShownSection = createContext<SectionId | "all">("all");
+const sectionFromHash = (): SectionId | "all" => {
+  const id = typeof window === "undefined" ? "" : window.location.hash.replace(/^#f-/, "");
+  return FORMULA_SECTIONS.some((s) => s.id === id) ? (id as SectionId) : "production";
+};
+
 function Block({ id, title, icon: Icon, intro, children }: { id: string; title: string; icon: typeof Factory; intro: string; children: ReactNode }) {
+  const shown = useContext(ShownSection);
+  if (shown !== "all" && shown !== id) return null;
   return (
     <section id={`f-${id}`} className="scroll-mt-24 border border-white/10 bg-space-900/40 p-4 sm:p-5">
       <h2 className="hud-title mb-1 flex items-center gap-2 text-lg text-slate-100">
@@ -178,6 +188,7 @@ function CombatCalculator({ attack, defense, shield }: { attack: number; defense
 }
 
 export function FormulasGuide({ player }: { player: PlayerState | null }) {
+  const [shown, setShown] = useState<SectionId | "all">(sectionFromHash);
   // Se recalcule quand l'administration change le contenu.
   useContentStore((s) => s.version);
   const now = Date.now();
@@ -204,14 +215,29 @@ export function FormulasGuide({ player }: { player: PlayerState | null }) {
     ];
   });
 
+  const pick = (id: SectionId | "all") => {
+    setShown(id);
+    try {
+      window.history.replaceState(null, "", id === "all" ? window.location.pathname : `#f-${id}`);
+    } catch {
+      /* historique indisponible : la section change quand même */
+    }
+  };
+  const chip = (active: boolean) =>
+    cn("flex shrink-0 items-center gap-1 border px-2 py-1 text-xs", active ? "border-cyan-glow/70 bg-cyan-glow/10 text-slate-100" : "border-white/10 text-slate-300 hover:border-cyan-glow/60 hover:text-slate-100");
+
   return (
+    <ShownSection.Provider value={shown}>
     <div className="flex flex-col gap-4">
-      <nav className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-white/10 bg-space-950/90 px-1 py-2 backdrop-blur">
+      <nav aria-label="Sections des formules" className="sticky top-0 z-10 -mx-1 flex gap-1 overflow-x-auto border-b border-white/10 bg-space-950/90 px-1 py-2 backdrop-blur">
         {FORMULA_SECTIONS.map((s) => (
-          <a key={s.id} href={`#f-${s.id}`} className="flex shrink-0 items-center gap-1 border border-white/10 px-2 py-1 text-xs text-slate-300 hover:border-cyan-glow/60 hover:text-slate-100">
+          <button key={s.id} type="button" aria-pressed={shown === s.id} onClick={() => pick(s.id)} className={chip(shown === s.id)}>
             <s.icon className="h-3.5 w-3.5" /> {s.label}
-          </a>
+          </button>
         ))}
+        <button type="button" aria-pressed={shown === "all"} onClick={() => pick("all")} className={chip(shown === "all")}>
+          Tout
+        </button>
       </nav>
 
       <Block id="production" title="Production" icon={Factory} intro="Chaque extracteur produit en continu, même hors ligne. Le serveur et ton écran font exactement le même calcul.">
@@ -403,5 +429,6 @@ passe du mois : palier +15 % si plus de 40 % ont fini le passe, −15 % si moins
         </Formula>
       </Block>
     </div>
+    </ShownSection.Provider>
   );
 }

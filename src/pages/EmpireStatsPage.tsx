@@ -1,8 +1,8 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { Link } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
-import { BarChart3, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap } from "lucide-react";
+import { BarChart3, ChevronDown, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudTag, EmptyState } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
@@ -59,24 +59,45 @@ function Bar({ value, tone = CYAN, className }: { value: number; tone?: string; 
   );
 }
 
-function Section({ title, icon: Icon, tone = CYAN, aside, className, children }: { title: string; icon: typeof Factory; tone?: string; aside?: ReactNode; className?: string; children: ReactNode }) {
+/* 6.11.6 (A2) : `folded` replie la section au chargement sur téléphone (6 665 px à 375 px quand tout était ouvert) ;
+   sur un écran plus large elle reste ouverte. */
+const isNarrow = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
+
+function Section({ title, icon: Icon, tone = CYAN, aside, className, folded = false, children }: { title: string; icon: typeof Factory; tone?: string; aside?: ReactNode; className?: string; folded?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(() => !(folded && isNarrow()));
+  const head = (
+    <>
+      <span className="hud-cut grid h-9 w-9 place-items-center border" style={{ color: tone, borderColor: `color-mix(in srgb, ${tone} 40%, transparent)`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <h2 className="hud-title text-sm text-slate-100">{title}</h2>
+    </>
+  );
   return (
     <motion.section
       variants={rise}
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, margin: "-40px" }}
-      className={cn("glass-panel relative flex min-w-0 flex-col gap-4 overflow-hidden p-4 sm:p-5", className)}
+      className={cn("glass-panel relative flex min-w-0 flex-col gap-4 overflow-hidden p-4 sm:p-5", !open && "gap-0", className)}
     >
       <div className="relative flex flex-wrap items-center gap-3">
-        <span className="hud-cut grid h-9 w-9 place-items-center border" style={{ color: tone, borderColor: `color-mix(in srgb, ${tone} 40%, transparent)`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <h2 className="hud-title text-sm text-slate-100">{title}</h2>
+        {folded ? (
+          <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex items-center gap-3 text-left">
+            {head}
+            <ChevronDown className={cn("h-4 w-4 text-slate-500 transition-transform", open && "rotate-180")} />
+          </button>
+        ) : (
+          head
+        )}
         <div className="ml-auto">{aside}</div>
       </div>
-      <span aria-hidden className="relative -mt-1 block h-px w-full" style={{ background: `linear-gradient(90deg, ${tone}, transparent 70%)`, opacity: 0.45 }} />
-      <div className="relative flex min-w-0 flex-col gap-4">{children}</div>
+      {open && (
+        <>
+          <span aria-hidden className="relative -mt-1 block h-px w-full" style={{ background: `linear-gradient(90deg, ${tone}, transparent 70%)`, opacity: 0.45 }} />
+          <div className="relative flex min-w-0 flex-col gap-4">{children}</div>
+        </>
+      )}
     </motion.section>
   );
 }
@@ -469,7 +490,7 @@ export function EmpireStatsPage() {
         </Section>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <Section title="Flottes en vol" icon={Gauge} tone={GOLD} aside={<SectionLink to="/game/galaxie">Galaxie</SectionLink>}>
+          <Section title="Flottes en vol" folded icon={Gauge} tone={GOLD} aside={<SectionLink to="/game/galaxie">Galaxie</SectionLink>}>
             {st.fleets.inFlight === 0 ? (
               <div className="flex items-center gap-3 text-sm text-slate-400">
                 <span className="hud-cut-sm grid h-10 w-10 shrink-0 place-items-center border border-dashed border-white/15">
@@ -504,7 +525,7 @@ export function EmpireStatsPage() {
             )}
           </Section>
 
-          <Section title="Développement" icon={BarChart3} tone={CYAN}>
+          <Section title="Développement" folded icon={BarChart3} tone={CYAN}>
             <div className="flex flex-wrap justify-around gap-4">
               <Ring label="Bâtiments débloqués" value={st.development.buildingsUnlocked} max={st.development.buildingsTotal} tone={CYAN} />
               <Ring label="Technologies recherchées" value={st.development.techResearched} max={st.development.techTotal} tone={VIOLET} />
@@ -520,7 +541,7 @@ export function EmpireStatsPage() {
           </Section>
         </div>
 
-        <Section title="État-major et bonus" icon={Sparkles} tone={GOLD} aside={<SectionLink to="/game/etat-major">État-major</SectionLink>}>
+        <Section title="État-major et bonus" folded icon={Sparkles} tone={GOLD} aside={<SectionLink to="/game/etat-major">État-major</SectionLink>}>
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="flex min-w-0 flex-col gap-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">
@@ -606,7 +627,7 @@ export function EmpireStatsPage() {
         </Section>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <Section title="Menaces" icon={Skull} tone={DANGER} aside={<SectionLink to="/game/menaces">Menaces</SectionLink>}>
+          <Section title="Menaces" folded icon={Skull} tone={DANGER} aside={<SectionLink to="/game/menaces">Menaces</SectionLink>}>
             {st.threats.length === 0 ? (
               <EmptyState size="sm" icon="☮️" title="Aucune faction active">Le secteur est calme pour l'instant.</EmptyState>
             ) : (
@@ -636,7 +657,7 @@ export function EmpireStatsPage() {
             )}
           </Section>
 
-          <Section title="Progression" icon={Trophy} tone={MINT}>
+          <Section title="Progression" folded icon={Trophy} tone={MINT}>
             <div className="flex flex-wrap justify-around gap-4">
               <Ring label="Succès obtenus" value={st.progression.achievements} max={st.progression.achievementsTotal} tone={MINT} />
               <Ring label="Passe" value={st.progression.passTier} max={st.progression.passTiers} tone={GOLD} />
@@ -655,7 +676,7 @@ export function EmpireStatsPage() {
           </Section>
         </div>
 
-        <Section title="Carrière" icon={Crown} tone={VIOLET}>
+        <Section title="Carrière" folded icon={Crown} tone={VIOLET}>
           <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {st.career.map((c) => (
               <motion.div key={c.label} variants={rise} whileHover={{ y: -2 }} className="min-w-0 border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">

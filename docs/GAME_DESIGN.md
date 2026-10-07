@@ -186,3 +186,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.3 | E2 : Unités à 375 px de 5 651 à 5 256 px (cartes verrouillées compactées), objectif 5 000 px non atteint (Q14) | `docs/changes/6.11.3-unites-mobile.md` |
 | 2026-10-07 | 6.11.4 | E1 : champ de débris sur les colonies (clé `debrisKey` de 15 caractères, `locationId`) ; une attaque de colonie avec pertes ne bloque plus la résolution (Q13 close) | `docs/changes/6.11.4-debris-colonies.md` |
 | 2026-10-07 | 6.11.5 | Revue AU15 : été clos (E1, E2 livrés ; Z0, Z1, Z6 en attente), cinq pages au-dessus de 5 000 px à 375 px ; automne proposé | `docs/audit/2026-10-07-au15-ete.md` |
+| 2026-10-07 | 6.11.6 | A2 : Formules (8 053 → 1 265 px) une section à la fois, Statistiques (6 665 → 4 215 px) sections secondaires repliées sur téléphone | `docs/changes/6.11.6-formules-statistiques-mobile.md` |
