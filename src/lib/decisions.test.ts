@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { decisionDocs, parseAdvice, parseChangeIndex, parseQuestions, plainText } from "@/lib/decisions";
+import { additionQid, decisionDocs, isAdditionQid, isHandled, lotDone, parseAdvice, parseChangeIndex, parsePlan, parseQuestions, parseRoadmap, plainText, roadmapOrder, roadmapQid, splitRoadmaps } from "@/lib/decisions";
 
 /* 6.14.32 : la page /decisions lit QUESTIONS.md et decisions-a-valider.md au build. */
 
@@ -41,5 +41,32 @@ describe("6.14.32 : décisions à valider", () => {
       expect(docs.length, q.id).toBeGreaterThan(0);
       for (const d of docs) expect(existsSync(d), `${q.id} : ${d}`).toBe(true);
     }
+  });
+
+  it("6.14.41 : feuille de route en cours et plans lus depuis docs/proposals", () => {
+    const files = readdirSync("docs/proposals").filter((f) => f.endsWith(".md"));
+    const roadmaps = files.filter((f) => f.startsWith("feuille-de-route-")).map((f) => parseRoadmap(`docs/proposals/${f}`, readFileSync(`docs/proposals/${f}`, "utf8")));
+    const { current, past } = splitRoadmaps(roadmaps);
+    expect(current?.file).toBe("docs/proposals/feuille-de-route-2030-ete.md");
+    expect(past.length).toBe(roadmaps.length - 1);
+    expect(current!.lots.length).toBeGreaterThan(3);
+    // Chaque lot a un identifiant de réponse distinct qui tient dans le champ `qid` (10 caractères).
+    const qids = current!.lots.map((l) => roadmapQid(l.id));
+    expect(new Set(qids).size).toBe(qids.length);
+    for (const q of qids) expect(q.length).toBeLessThanOrEqual(10);
+    for (const l of current!.lots) expect(l.state.length, l.id).toBeGreaterThan(2);
+    for (const f of files.filter((x) => !x.startsWith("feuille-de-route-"))) expect(parsePlan(f, readFileSync(`docs/proposals/${f}`, "utf8")).title.length, f).toBeGreaterThan(3);
+  });
+
+  it("6.14.41 : ordre des saisons, actions ajoutées, réponses traitées", () => {
+    expect(roadmapOrder("docs/proposals/feuille-de-route-2030-ete.md")).toBeGreaterThan(roadmapOrder("docs/proposals/feuille-de-route-2030-printemps.md"));
+    expect(roadmapOrder("feuille-de-route-2029-hiver.md")).toBeLessThan(roadmapOrder("feuille-de-route-2030-printemps.md"));
+    const q = additionQid(1791380000000);
+    expect(q.length).toBeLessThanOrEqual(10);
+    expect(isAdditionQid(q)).toBe(true);
+    expect(isAdditionQid("Q12")).toBe(false);
+    expect(isHandled(q, [`| 9 | É30-9 | action ${q} | S | à faire |`])).toBe(true);
+    expect(lotDone("livré (6.14.39)")).toBe(true);
+    expect(lotDone("à faire")).toBe(false);
   });
 });

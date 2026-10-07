@@ -13,8 +13,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Effet | Recommandation |
 |:--|:--|:--|:--|
-| Q31 | Prochain système : A phalange et porte de saut lunaires, B comptoirs d'alliance, C expéditions profondes de saison (`docs/proposals/prochain-systeme.md`) | Rien n'est commencé avant ton choix | **Choisir A** : répond aux 74 % de victoires de l'attaquant, s'appuie sur la lune, réglable et désactivable |
-| Q12 | Mise en production et PR hors du travail automatique | 57 commits (5.27.1 → 6.14.27) attendent, dont le plafond des PNJ (+140 % encore actif en prod) ; aucune mesure de rythme possible | **Donner le feu vert** : PR prête à rédiger, dossier `docs/release/5.27-a-6.14.md`, répétition réussie sur la pré-prod |
 
 ## 2. Joueurs et équilibre (chiffres réglables dans l'admin)
 

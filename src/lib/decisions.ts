@@ -93,3 +93,92 @@ export function decisionDocs(q: DecisionQuestion, changes: Record<string, string
   }
   return out;
 }
+
+/* 6.14.41 : feuille de route et plans sur /decisions (onglet « Feuille de route »). L'utilisateur valide ou modifie un lot (réponse
+   `R:<lot>`) et ajoute des actions (réponse `A<horodatage>`) ; une réponse est traitée quand son identifiant est cité dans une
+   feuille de route (scripts/decisions.mjs la signale sinon). */
+
+export interface RoadmapLot {
+  n: string;
+  id: string;
+  content: string;
+  size: string;
+  state: string;
+}
+
+export interface Roadmap {
+  file: string;
+  title: string;
+  status: string;
+  current: boolean;
+  lots: RoadmapLot[];
+}
+
+/** Titre (« # Proposition : X » → « X ») et premier paragraphe « Statut : … » d'une proposition. */
+function titleAndStatus(md: string): { title: string; status: string } {
+  const lines = md.split("\n");
+  const title = (lines.find((l) => l.startsWith("# ")) ?? "").replace(/^# /, "").replace(/^Proposition\s*:\s*/i, "").trim();
+  const at = lines.findIndex((l) => /^Statut\s*:/i.test(l));
+  const para: string[] = [];
+  if (at >= 0) for (let i = at; i < lines.length && lines[i].trim() !== ""; i++) para.push(lines[i].trim());
+  return { title, status: para.join(" ").replace(/^Statut\s*:\s*/i, "") };
+}
+
+/** Feuille de route : titre, statut, lots du tableau « | # | Lot | Contenu | Taille | État | ». */
+export function parseRoadmap(file: string, md: string): Roadmap {
+  const { title, status } = titleAndStatus(md);
+  const lots: RoadmapLot[] = [];
+  let inTable = false;
+  for (const line of md.split("\n")) {
+    if (/^\| # \| Lot \|/.test(line)) {
+      inTable = true;
+      continue;
+    }
+    if (!inTable) continue;
+    if (!line.startsWith("|")) {
+      inTable = false;
+      continue;
+    }
+    if (/^\|[:\s-]+\|/.test(line)) continue;
+    const c = cells(line);
+    if (c.length >= 5) lots.push({ n: c[0], id: c[1], content: c[2], size: c[3], state: c.slice(4).join(" | ") });
+  }
+  return { file, title, status, current: /\*\*en cours\*\*/.test(status), lots };
+}
+
+export interface Plan {
+  file: string;
+  title: string;
+  status: string;
+}
+
+/** Proposition (plan) : titre et statut, coupé à la première phrase. */
+export function parsePlan(file: string, md: string): Plan {
+  const { title, status } = titleAndStatus(md);
+  const first = /^(.+?[.!?])(\s|$)/.exec(status)?.[1] ?? status;
+  return { file, title, status: first.length > 220 ? `${first.slice(0, 217)}…` : first };
+}
+
+/** Identifiant de réponse d'un lot (le champ `qid` tient en 10 caractères). */
+export const roadmapQid = (lotId: string): string => `R:${lotId}`.slice(0, 10);
+/** Identifiant d'une action ajoutée. */
+export const additionQid = (now: number): string => `A${now.toString(36)}`;
+export const isAdditionQid = (qid: string): boolean => /^A[0-9a-z]+$/.test(qid);
+/** Une réponse est traitée quand son identifiant est cité dans un des textes (feuilles de route). */
+export const isHandled = (qid: string, texts: string[]): boolean => texts.some((t) => t.includes(qid));
+/** État lu comme livré ou écarté (lot fini : plus de boutons). */
+export const lotDone = (state: string): boolean => /^(livré|écarté|close|abandonné)/i.test(state.trim());
+
+const SEASONS: Record<string, number> = { printemps: 1, ete: 2, q4: 3, automne: 3, hiver: 4 };
+/** Ordre chronologique d'une feuille de route d'après son nom (`feuille-de-route-2030-ete.md` → 20302). */
+export function roadmapOrder(file: string): number {
+  const m = /feuille-de-route-(\d{4})-([a-z0-9]+)\.md$/.exec(file);
+  return m ? Number(m[1]) * 10 + (SEASONS[m[2]] ?? 0) : 0;
+}
+
+/** Feuilles de route triées, la plus récente d'abord : la courante est la plus récente « en cours ». */
+export function splitRoadmaps(list: Roadmap[]): { current: Roadmap | null; past: Roadmap[] } {
+  const sorted = [...list].sort((a, b) => roadmapOrder(b.file) - roadmapOrder(a.file));
+  const current = sorted.find((r) => r.current) ?? null;
+  return { current, past: sorted.filter((r) => r !== current) };
+}

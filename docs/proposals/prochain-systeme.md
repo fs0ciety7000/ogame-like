@@ -1,7 +1,7 @@
 # Proposition : prochain système de jeu (Q15 → Q31)
 
-Statut : **en attente du choix de l'utilisateur** (2026-10-07). Réponse à Q15 : « Toi d'abord, puis je valide ». Trois systèmes chiffrés,
-à choisir sur `/decisions` (Q31). Rien n'est commencé avant la réponse.
+Statut : **choix fait** (2026-10-07) : l'utilisateur a validé **A** sur `/decisions` (Q31). Suite dans
+`docs/proposals/phalange-porte-de-saut.md` (lot É30-1). B (comptoirs d'alliance) reste la piste suivante.
 
 ## 1. Ce que disent les chiffres (Z1, copie de la production)
 

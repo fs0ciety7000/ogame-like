@@ -124,7 +124,7 @@ for (const profile of PROFILES) {
     for (let i = 0; i < RUNS; i++) runs.push(await measure(browser, profile, path));
     const m = (k) => median(runs.map((x) => x[k]));
     const lcp = m("lcp");
-    rows.push({
+    const row = {
       profil: profile.name,
       page: path,
       "JS (Ko)": Math.round(m("js") / 1024),
@@ -136,7 +136,10 @@ for (const profile of PROFILES) {
       "bloquant (ms)": Math.round(m("tbt")),
       CLS: Math.round(m("cls") * 1000) / 1000,
       LCP: !Number.isFinite(lcp) ? "?" : lcp <= 2500 ? "bon" : lcp <= 4000 ? "à surveiller" : "mauvais",
-    });
+    };
+    rows.push(row);
+    // Ligne affichée aussitôt : une mesure interrompue garde ses résultats.
+    console.error(JSON.stringify(row));
   }
 }
 await browser.close();

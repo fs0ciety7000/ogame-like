@@ -72,6 +72,13 @@ Valable pour toute la session et tout le projet, à chaque demande :
   `node scripts/decisions.mjs` en début de session et à chaque passage de la routine horaire : « valide » → statut « validée » ;
   « changer » → lot de changement et règle réécrite (instructions, GDD, WORKFLOW) ; un « changer » sans note se précise d'abord avec
   l'utilisateur (6.14.35). Une question traitée quitte la page.
+- > **Instructions (2026-10-07) : la liste de tes plans et feuille de route également sur la page décisions pour voir la roadmap et
+  > valider, modifier ou ajouter des actions.**
+
+  Onglet « Feuille de route » de `/decisions` (6.14.41), construit depuis `docs/proposals/` : la feuille de route en cours (la plus
+  récente au statut « **en cours** »), ses lots au format `| # | Lot | Contenu | Taille | État |`, les plans et les feuilles passées.
+  Les réponses `R:<lot>` (valider, modifier) et `A…` (action ajoutée) se traitent en citant leur identifiant dans la feuille de route :
+  « validé (R:É30-5) », ou un nouveau lot chiffré qui cite « A… ». Tant qu'il n'est pas cité, `decisions.mjs` les montre à traiter.
 - > **Instructions (2026-10-07) : dans la page décisions, quand tu présentes un choix appliqué, mets un lien vers le .md concerné qui
   > présente le choix.** — **Mets à jour automatiquement img et décision lorsque tu push des nouvelles décisions et quand tu as besoin
   > d'illustrations.**

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2, ClipboardCheck, Lock, LogIn, PenLine } from "lucide-react";
+import { RoadmapPanel } from "@/components/decisions/RoadmapPanel";
 import { HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudChip, StatTile, type HudTone } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { pb } from "@/lib/pocketbase";
 import { useAdminStatus } from "@/services/adminService";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
-import { decisionDocs, DOCS_REPO, parseAdvice, parseChangeIndex, parseQuestions, plainText, questionNumber } from "@/lib/decisions";
+import { decisionDocs, DOCS_REPO, parseAdvice, parseChangeIndex, parsePlan, parseQuestions, parseRoadmap, plainText, questionNumber, splitRoadmaps } from "@/lib/decisions";
 import questionsRaw from "../../docs/QUESTIONS.md?raw";
 import adviceRaw from "../../docs/decisions-a-valider.md?raw";
 import changesRaw from "../../docs/changes/README.md?raw";
@@ -24,18 +25,32 @@ const ADVICE = parseAdvice(adviceRaw);
 const CHANGES = parseChangeIndex(changesRaw);
 /** 6.14.37 : documents lus sur la branche déployée (pré-prod : branche de travail ; production : main). */
 const DOCS_BRANCH = (import.meta.env.VITE_SERVER_LABEL ?? "").trim() ? "claude/hiver-k-s" : "main";
+/** 6.14.41 : feuilles de route et plans (propositions), lus au build. */
+const PROPOSALS = import.meta.glob("/docs/proposals/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const ROADMAPS = splitRoadmaps(
+  Object.entries(PROPOSALS)
+    .filter(([f]) => f.includes("/feuille-de-route-"))
+    .map(([f, md]) => parseRoadmap(f.replace(/^\//, ""), md)),
+);
+const PLANS = Object.entries(PROPOSALS)
+  .filter(([f]) => !f.includes("/feuille-de-route-"))
+  .map(([f, md]) => parsePlan(f.replace(/^\//, ""), md))
+  .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+const docUrl = (file: string) => `${DOCS_REPO}/${DOCS_BRANCH}/${file}`;
 const GROUP_ORDER = ["Bloquante", "Joueurs et équilibre", "Récit", "Outillage et méthode", "Autres"];
 const COLLECTION = "decision_answers";
 
 interface Answer {
   id: string;
   qid: string;
-  choice: "valide" | "changer" | "";
+  /** « valide », « changer », « ajout » (action ajoutée à la feuille de route) ou vide (note seule). */
+  choice: string;
   note: string;
   answeredAtMs: number;
 }
 
 type View = "todo" | "answered" | "all";
+type Tab = "decisions" | "roadmap";
 const STATE: Record<"todo" | "valide" | "changer", { label: string; tone: HudTone }> = {
   todo: { label: "À voir", tone: "neutral" },
   valide: { label: "Validée", tone: "mint" },
@@ -47,6 +62,7 @@ export function DecisionsPage() {
   const admin = useAdminStatus();
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [view, setView] = useState<View>("todo");
+  const [tab, setTab] = useState<Tab>("decisions");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +71,7 @@ export function DecisionsPage() {
     const list = await pb.collection(COLLECTION).getFullList({ sort: "answeredAtMs", batch: 500 }).catch(() => []);
     const map: Record<string, Answer> = {};
     // La dernière réponse d'une question l'emporte.
-    for (const r of list) map[String(r.qid)] = { id: r.id, qid: String(r.qid), choice: (r.choice as Answer["choice"]) || "", note: String(r.note ?? ""), answeredAtMs: Number(r.answeredAtMs) || 0 };
+    for (const r of list) map[String(r.qid)] = { id: r.id, qid: String(r.qid), choice: String(r.choice ?? ""), note: String(r.note ?? ""), answeredAtMs: Number(r.answeredAtMs) || 0 };
     setAnswers(map);
   }, []);
 
@@ -63,7 +79,7 @@ export function DecisionsPage() {
     if (admin) void load();
   }, [admin, load]);
 
-  async function answer(qid: string, patch: Partial<Pick<Answer, "choice" | "note">>) {
+  async function answer(qid: string, patch: { choice?: string; note?: string }) {
     setBusy(qid);
     setError(null);
     try {
@@ -85,7 +101,10 @@ export function DecisionsPage() {
 
   const counts = useMemo(() => {
     const c = { todo: 0, valide: 0, changer: 0 };
-    for (const q of QUESTIONS) c[answers[q.id]?.choice || "todo"]++;
+    for (const q of QUESTIONS) {
+      const ch = answers[q.id]?.choice;
+      c[ch === "valide" || ch === "changer" ? ch : "todo"]++;
+    }
     return c;
   }, [answers]);
   const shown = QUESTIONS.filter((q) => view === "all" || (view === "todo" ? !answers[q.id]?.choice : !!answers[q.id]?.choice));
@@ -131,6 +150,26 @@ export function DecisionsPage() {
           </HudPanel>
         ) : (
           <>
+            {/* 6.14.41 : décisions, ou feuille de route et plans. */}
+            <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Rubrique">
+              {(
+                [
+                  ["decisions", "Décisions", counts.todo],
+                  ["roadmap", "Feuille de route", ROADMAPS.current?.lots.length ?? 0],
+                ] as const
+              ).map(([t, label, n]) => (
+                <HudChip key={t} asChild tone={tab === t ? "accent" : "neutral"}>
+                  <button type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
+                    {label} <span className="ml-1 font-mono tabular-nums">{n}</span>
+                  </button>
+                </HudChip>
+              ))}
+            </div>
+            {error && <p className="text-sm text-danger-glow">{error}</p>}
+            {tab === "roadmap" ? (
+              <RoadmapPanel current={ROADMAPS.current} past={ROADMAPS.past} plans={PLANS} answers={answers} busy={busy} docUrl={docUrl} answer={answer} />
+            ) : (
+          <>
             <p className="text-sm text-slate-300">
               Les choix que Claude a faits seul pour avancer. Valide-les, ou marque « À changer » avec ce que tu veux à la place. Claude relit tes réponses, met à jour ses instructions et ouvre les lots ; une question traitée quitte cette page au déploiement suivant.
             </p>
@@ -159,7 +198,6 @@ export function DecisionsPage() {
                 </Button>
               )}
             </div>
-            {error && <p className="text-sm text-danger-glow">{error}</p>}
 
             {groups.length === 0 && (
               <EmptyState icon={<CheckCircle2 />} title="Rien ici" size="sm">
@@ -171,7 +209,7 @@ export function DecisionsPage() {
                 <h2 className="hud-eyebrow text-[11px] text-slate-400">{g}</h2>
                 {list.map((q) => {
                   const a = answers[q.id];
-                  const st = STATE[a?.choice || "todo"];
+                  const st = STATE[a?.choice === "valide" || a?.choice === "changer" ? a.choice : "todo"];
                   const adv = ADVICE[q.id];
                   const note = drafts[q.id] ?? a?.note ?? "";
                   return (
@@ -208,7 +246,7 @@ export function DecisionsPage() {
                         <div className="flex flex-wrap items-center gap-1.5 text-xs">
                           <span className="hud-eyebrow text-[10px] text-slate-500">Documents</span>
                           {decisionDocs(q, CHANGES).map((d) => (
-                            <a key={d} href={`${DOCS_REPO}/${DOCS_BRANCH}/${d}`} target="_blank" rel="noreferrer" className="break-all font-mono text-cyan-glow underline-offset-2 hover:underline">
+                            <a key={d} href={docUrl(d)} target="_blank" rel="noreferrer" className="break-all font-mono text-cyan-glow underline-offset-2 hover:underline">
                               {d.replace(/^docs\//, "")}
                             </a>
                           ))}
@@ -246,6 +284,8 @@ export function DecisionsPage() {
                 })}
               </section>
             ))}
+          </>
+            )}
           </>
         )}
       </div>
