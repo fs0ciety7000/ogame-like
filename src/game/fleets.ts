@@ -49,6 +49,10 @@ export const FLEET_RULES = {
   maxAttackMinutes: 90,
   /** 5.33 (proposals/flottes-emplacements.md) : flottes en vol en même temps (hors sondes et expéditions, qui ont leur limite). */
   slotsBase: 10,
+  /** 6.9.4 (AU7) : distance d'un repaire de faction (trajet vers un repaire). */
+  lairDistance: 60,
+  /** 6.9.4 (AU7) : départ différé d'une flotte, au plus (minutes). */
+  delayMaxMinutes: 720,
 };
 
 /** 5.33 : missions qui n'occupent pas d'emplacement de flotte. */
@@ -735,7 +739,7 @@ export function launchLair(owner: PlayerState, target: string, raw: Record<strin
   const power = lairPower(faction!, owner);
   const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id), "Seules les unités d'attaque peuvent être envoyées.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(LAIR_DISTANCE, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  const arriveAtMs = now + travelSeconds(FLEET_RULES.lairDistance, speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   return {
     attacker: owner,
     fleet: { ...newFleet(owner, { uid: lairUid(faction!.id), pseudo: faction!.lair.name }, "lair", units, now, arriveAtMs), power, factionId: faction!.id },
@@ -785,7 +789,6 @@ export function unitsAwayOf(fleets: Pick<Fleet, "ownerUid" | "status" | "units">
 }
 
 /** Distance fixe jusqu'au repaire (aux confins de la carte). */
-export const LAIR_DISTANCE = 60;
 
 /** Arrivée d'une garnison : elle stationne pour la durée prévue. */
 export function stationGarrison(fleet: Fleet): Fleet {
@@ -815,13 +818,12 @@ export function performFleetReturn(
 
 /** 5.23 : missions dont le décollage peut être programmé, et délai maximal. */
 export const SCHEDULABLE_MISSIONS: FleetMission[] = ["attack", "spy", "transport", "recycle", "garrison"];
-export const FLEET_DELAY_MAX_MINUTES = 12 * 60;
 
 /** 5.23 : délai de décollage demandé (minutes entières), borné ; 0 si la mission ne s'y prête pas. */
 export function fleetDelayMs(mission: string, minutes: unknown): number {
   const m = Math.floor(Number(minutes));
   if (!SCHEDULABLE_MISSIONS.includes(mission as FleetMission) || !(m > 0)) return 0;
-  return Math.min(FLEET_DELAY_MAX_MINUTES, m) * 60_000;
+  return Math.min(FLEET_RULES.delayMaxMinutes, m) * 60_000;
 }
 
 /** 5.23 : la flotte attend son décollage programmé. */

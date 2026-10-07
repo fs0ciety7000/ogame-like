@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { awaitingDeparture, FLEET_DELAY_MAX_MINUTES, fleetDelayMs, recallFleet, type Fleet } from "@/game/fleets";
+import { awaitingDeparture, FLEET_RULES, fleetDelayMs, recallFleet, type Fleet } from "@/game/fleets";
 
 const NOW = Date.UTC(2026, 9, 5, 12);
 
 describe("5.23 décollage programmé", () => {
   it("délai borné, seulement pour certaines missions", () => {
     expect(fleetDelayMs("attack", 30)).toBe(30 * 60_000);
-    expect(fleetDelayMs("attack", 99999)).toBe(FLEET_DELAY_MAX_MINUTES * 60_000);
+    expect(fleetDelayMs("attack", 99999)).toBe(FLEET_RULES.delayMaxMinutes * 60_000);
     expect(fleetDelayMs("expedition", 30)).toBe(0);
     expect(fleetDelayMs("spy", -5)).toBe(0);
     expect(fleetDelayMs("spy", "abc")).toBe(0);

@@ -20,7 +20,7 @@ import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
 import { accent, openUltimatum } from "@/components/game/PirateUltimatum";
 import { activeTreaty, activeUltimatum, FACTIONS, LAIR_LOCATE_RULES, lairPower, lairUid, pirateState, productionHours, raidPower, targetPower, TREATY_LABELS, TREATY_RULES, type FactionDef, type TreatyKind } from "@/game/pirates";
-import { fleetSpeed, LAIR_DISTANCE, travelSeconds } from "@/game/fleets";
+import { FLEET_RULES, fleetSpeed, travelSeconds } from "@/game/fleets";
 import { allianceFlightFactor } from "@/game/alliances";
 import { computeFleetPower } from "@/game/combat";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
@@ -41,7 +41,7 @@ function LairDialog({ faction, onClose }: { faction: FactionDef | null; onClose:
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = computeFleetPower(player.units, player.techLevels, selected, ["attack"]);
   const lair = lairPower(faction, player);
-  const flight = Object.keys(selected).length > 0 ? travelSeconds(LAIR_DISTANCE, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
+  const flight = Object.keys(selected).length > 0 ? travelSeconds(FLEET_RULES.lairDistance, fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {
     setBusy(true);

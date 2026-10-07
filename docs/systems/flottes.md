@@ -21,3 +21,6 @@ livraison) : le corps de `fleet/send` est gardé dans le navigateur (`launchFlee
 ## État (audit 2026-10-06)
 - Épave d'expédition : les vaisseaux trouvés vont dans les « prêts » de l'Atelier depuis la 5.28.1 (C1), remis en service selon la place.
 - Emplacements de flotte : 10 depuis la 5.33 (audit E4, `proposals/flottes-emplacements.md`). Production : 11 flottes au plus chez un joueur. Emplacements à débloquer plus tard si l'arbitrage manque.
+
+## Revue AU7 (2026-10-07)
+Rappel confirmé (6.9.4). `fleets.lairDistance` (60) et `fleets.delayMaxMinutes` (720) réglables.

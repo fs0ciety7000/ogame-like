@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CornerUpLeft, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -138,6 +139,9 @@ export function FleetsPanel({
   };
 
   const recall = async (fleet: Fleet) => {
+    // 6.9.4 (AU7, GAL-1) : rappel confirmé, la mission est abandonnée.
+    const mission = FLEET_MISSION_LABELS[fleet.mission] ?? fleet.mission;
+    if (!(await askConfirm({ title: "Rappeler la flotte ?", message: `La mission « ${mission} » est abandonnée : la flotte fait demi-tour et rentre avec sa cargaison.`, confirmLabel: "Rappeler", tone: "danger" }))) return;
     setPending(fleet.id);
     try {
       await recallFleet(fleet.id);
