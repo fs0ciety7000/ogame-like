@@ -13,9 +13,9 @@ Sources :
 |:--|:--|:--|:--|:--|
 | COM-1 | 🟠 | **Règle n° 2 non tenue** : 9 réglages du commerce codés en dur, absents de l'admin : enchères (`AUCTION_RULES` : surenchère, taxe, durées, mises à prix, ventes ouvertes ; alertes et historique), contrats (`TRADE_CONTRACT_RULES`, durée du contrat prioritaire), cadeaux (`GIFT_RULES` : ancienneté, taxe hors alliance), concours (`CONTEST_RULES`), points du tournoi (`OUTCOME_POINTS`), offre de la semaine (prix et exemplaires), mécènes (places) | `grep` des constantes, `content.ts` | **corrigé en 6.9.0** |
 | COM-2 | ℹ️ | Garde-fous des actions en place : pas d'enchère sur sa propre vente, pas de contrat avec soi-même, relique mythique invendable, montants bornés, caution vérifiée, anti-dernière-seconde | `auctions.ts`, `tradeContracts.ts` | rien |
-| COM-3 | ℹ️ | Volumes réels (offres publiées, ventes aux enchères, entrées du pot, tirages) non mesurés : pas d'accès à la production, et la santé de l'équilibre ne relève pas le commerce | Admin → Équilibrage → Santé | à reprendre dans la revue transverse AU13 (relevés commerce) |
+| COM-3 | ℹ️ | Volumes réels (offres publiées, ventes aux enchères, entrées du pot, tirages) non mesurés : pas d'accès à la production, et la santé de l'équilibre ne relève pas le commerce | Admin → Équilibrage → Santé | **corrigé en 6.10.1** (AU13) : tuile « Commerce (7 j) » ; tirages du casino et entrées du pot pas encore relevés |
 | COM-4 | ℹ️ | Valeur des ressources rares dans le tableau de bord du pot (`RARE_WEIGHT` = 50) : sert à l'affichage d'un total, pas à une règle | `serverPot.ts` | rien |
-| COM-5 | ℹ️ | Interface : 5 pages sans défilement horizontal ni erreur à 375 px ; Casino long (3 465 px) mais structuré en cartes | captures | AU13 (longueur des pages) |
+| COM-5 | ℹ️ | Interface : 5 pages sans défilement horizontal ni erreur à 375 px ; Casino long (3 465 px) mais structuré en cartes | captures | AU13 : mesure de 42 pages (UI-3), suite dans la feuille de route de printemps (Z2) |
 
 ## Ce qui va bien
 - Toutes les taxes vont au pot commun, et le pot finance concours, casino et mécènes : la boucle est fermée et visible (bandeau du pot).

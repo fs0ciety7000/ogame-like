@@ -32,6 +32,19 @@ export interface HealthInput {
   /** Chantiers de bâtiments en cours, par joueur. */
   builds: Record<string, number>;
   alliances: { members: string[] }[];
+  /** AU13 (COM-3) : volumes du commerce sur la fenêtre, comptés par le serveur. */
+  commerce?: CommerceCounts;
+}
+
+/** AU13 (COM-3) : volumes du commerce sur la fenêtre (offres du marchand PNJ exclues). */
+export interface CommerceCounts {
+  marketCreated: number;
+  marketFilled: number;
+  auctionsCreated: number;
+  auctionsSold: number;
+  contractsCreated: number;
+  contractsDelivered: number;
+  gifts: number;
 }
 
 export interface BalanceHealth {
@@ -59,6 +72,8 @@ export interface BalanceHealth {
   pass: { finishedPct: number; medianFinishDay: number | null; medianPoints: number; maxPoints: number; bySource: { source: string; total: number; sharePct: number }[] };
   /** 6.8.0 (AU3) : succès obtenus par le joueur médian (sur le catalogue en vigueur). */
   achievements: { total: number; medianUnlocked: number; medianPct: number };
+  /** AU13 (COM-3) : volumes du commerce sur la fenêtre et échanges conclus par joueur actif et par semaine (null : non relevé). */
+  commerce: (CommerceCounts & { dealsPerPlayerWeek: number }) | null;
 }
 
 export function median(xs: number[]): number {
@@ -160,5 +175,13 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
     defenses: owned(DEFENSIVE_UNITS),
     classUnits: owned(CLASS_UNIT_IDS),
     classes: { none: players.filter((p) => !p.empireClass).length, rows },
+    commerce: input.commerce
+      ? {
+          ...input.commerce,
+          dealsPerPlayerWeek: players.length
+            ? round1(((input.commerce.marketFilled + input.commerce.auctionsSold + input.commerce.contractsDelivered) / players.length) * (7 / Math.max(1, windowDays)))
+            : 0,
+        }
+      : null,
   };
 }

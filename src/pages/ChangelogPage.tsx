@@ -1,6 +1,7 @@
 import { assetUrl } from "@/lib/assets";
 import { EmptyState } from "@/components/ui/hud";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ShowMoreButton } from "@/components/ui/panel";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +10,8 @@ import { ChangelogBadgePill, Markdown } from "@/components/ui/markdown";
 import { countBadges } from "@/lib/changelogBadges";
 import { CURRENT_VERSION, isUnread, markChangelogSeen, useChangelogStore } from "@/lib/changelog";
 import { CHANGELOG } from "@/lib/changelogEntries";
+
+const STEP = 10;
 
 function formatDate(iso: string) {
   const d = new Date(`${iso}T12:00:00`);
@@ -19,6 +22,8 @@ export function ChangelogPage() {
   // Photo de l'état « lu » à l'ouverture : les entrées nouvelles gardent leur
   // badge pendant la visite, puis tout est marqué comme lu.
   const seenAtOpen = useChangelogStore.getState().seen;
+  // AU13 : la page affichait toutes les notes d'un bloc (180 000 px à 375 px) ; par tranches de 10, les plus récentes d'abord.
+  const [shown, setShown] = useState(STEP);
   useEffect(() => {
     markChangelogSeen();
   }, []);
@@ -28,7 +33,7 @@ export function ChangelogPage() {
       <PageHeader eyebrow="Cosmic Empires / Journal" title="Nouveautés" description={CURRENT_VERSION ? `Les dernières mises à jour du jeu — version actuelle : v${CURRENT_VERSION}.` : "Les dernières mises à jour du jeu."} />
       {CHANGELOG.length === 0 && <EmptyState icon="📰" title="Aucune mise à jour">Les nouveautés du jeu s'afficheront ici.</EmptyState>}
       <div className="flex flex-col gap-3">
-        {CHANGELOG.map((entry, i) => (
+        {CHANGELOG.slice(0, shown).map((entry, i) => (
           <motion.div
             key={entry.id}
             initial={{ opacity: 0, y: 8 }}
@@ -59,11 +64,12 @@ export function ChangelogPage() {
                   ))}
                 </div>
               )}
-              {entry.image && <img src={assetUrl(entry.image)} alt="" className="mb-3 max-h-80 w-full rounded-lg object-cover object-top" />}
+              {entry.image && <img src={assetUrl(entry.image)} alt="" className="mb-3 max-h-80 w-full object-cover object-top" />}
               <Markdown source={entry.body} />
             </Card>
           </motion.div>
         ))}
+        {CHANGELOG.length > shown && <ShowMoreButton more={CHANGELOG.length - shown} step={STEP} onClick={() => setShown((n) => n + STEP)} />}
       </div>
     </div>
   );

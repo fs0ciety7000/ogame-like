@@ -79,5 +79,12 @@ describe("santé de l'équilibre", () => {
     expect(h.defenses.find((d) => d.id === "intercepteur")).toMatchObject({ total: 5, owners: 1 });
     expect(h.classUnits.find((c) => c.id === "recolteur")).toMatchObject({ total: 7, owners: 1 });
   });
-});
 
+  it("AU13 (COM-3) : volumes du commerce repris tels quels, échanges conclus par joueur et par semaine ; absent = non relevé", () => {
+    const p = defaultPlayerState("a", "A") as PlayerState;
+    const commerce = { marketCreated: 10, marketFilled: 6, auctionsCreated: 4, auctionsSold: 2, contractsCreated: 3, contractsDelivered: 2, gifts: 5 };
+    const h = balanceHealth({ players: [p, { ...p, uid: "b" }], reports: [], fleets: [], builds: {}, alliances: [], commerce }, NOW, 7);
+    expect(h.commerce).toEqual({ ...commerce, dealsPerPlayerWeek: 5 });
+    expect(balanceHealth({ players: [p], reports: [], fleets: [], builds: {}, alliances: [] }, NOW, 7).commerce).toBeNull();
+  });
+});

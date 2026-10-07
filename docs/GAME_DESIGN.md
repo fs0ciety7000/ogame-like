@@ -177,3 +177,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.9.9 | Fenêtre d'attaque : puissance détaillée par vaisseau (`fleetPowerBreakdown`) | `docs/changes/6.9.9-puissance-flotte.md` |
 | 2026-10-07 | 6.9.10 | Performance : bloc de démarrage mesuré (276 Ko gzip, moteur ≈ 60 %) ; chargement à la demande du contenu reporté (Q8) | `docs/changes/6.9.10-mesure-bloc-demarrage.md` |
 | 2026-10-07 | 6.10.0 | Lot Y : base avancée sur une colonie (stationnement 14 j, attaque depuis la base et retour à la base, rapatriement) ; invariant I20 | `docs/changes/6.10.0-flotte-basee.md` |
+| 2026-10-07 | 6.10.1 | Revue AU13 (transverse) : routes admin gardées par un test, commerce dans la santé de l'équilibre, Nouveautés par tranches ; feuille de route d'hiver close, printemps proposé | `docs/audit/2026-10-07-au13-transverse.md` |

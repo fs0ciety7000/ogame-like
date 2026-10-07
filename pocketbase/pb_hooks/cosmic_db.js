@@ -5439,7 +5439,25 @@ function liveBalance(now, withHistory) {
       builds[q.id] = Object.keys(ups).filter((k) => !!ups[k]).length;
     });
     const alliances = $app.findAllRecords("alliances").map((a) => ({ members: toPlain(a).members || [] }));
-    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances }, now, 7);
+    // AU13 (COM-3) : volumes du commerce sur 7 jours (offres du marchand PNJ exclues).
+    const since = now - 7 * 86400000;
+    const count = (col, filter) => {
+      try {
+        return $app.findRecordsByFilter(col, filter, "", 0, 0, { s: since }).length;
+      } catch (_) {
+        return 0;
+      }
+    };
+    const commerce = {
+      marketCreated: count("market_offers", 'createdAtMs >= {:s} && sellerId != "market_maker"'),
+      marketFilled: count("market_offers", 'status = "filled" && filledAtMs >= {:s} && sellerId != "market_maker"'),
+      auctionsCreated: count("auctions", "createdAtMs >= {:s}"),
+      auctionsSold: count("auctions", 'status = "sold" && createdAtMs >= {:s}'),
+      contractsCreated: count("trade_contracts", "createdAtMs >= {:s}"),
+      contractsDelivered: count("trade_contracts", 'status = "delivered" && createdAtMs >= {:s}'),
+      gifts: count("resource_gifts", "timestamp >= {:s}"),
+    };
+    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances, commerce }, now, 7);
   } catch (err) {
     console.log(`[cosmic] santé de l'équilibre : ${err}`);
   }

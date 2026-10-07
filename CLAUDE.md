@@ -74,6 +74,7 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - `pocketbase/pb_hooks/cosmic_db.js` (écrit à la main) : routes, tâches planifiées (`timedCron`), transactions.
   `cosmic.pb.js` déclare les routes et les `cronAdd`. Une nouvelle tâche à la minute, aux 5 ou aux 10 min devient une étape de `CADENCES`
   (`cosmic_db.js`), pas un nouveau `cronAdd`. Le serveur fait autorité : le client n'applique jamais une règle seul.
+  Une route `/api/cosmic/admin/…` vérifie `isGameAdmin` (dans la route ou la fonction appelée) : `adminRoutes.test.ts` échoue sinon.
 - `src/services/` : appels au serveur et abonnements temps réel ; `src/store/` : état zustand ; `src/pages/`, `src/components/` : interface.
 - `game_config` (lisible par tous) : `weekly_stock`, `patrons`, `server_pot`, etc.
 

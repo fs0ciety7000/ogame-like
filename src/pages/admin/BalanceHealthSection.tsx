@@ -43,6 +43,15 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           sub={`${health.pass.medianPoints} / ${health.pass.maxPoints} points (médiane)${health.pass.medianFinishDay ? ` · fini le ${health.pass.medianFinishDay} (médiane)` : ""}`}
         />
         <StatTile size="sm" tone="violet" label="Succès (joueur médian)" value={`${health.achievements.medianPct} %`} sub={`${health.achievements.medianUnlocked} sur ${health.achievements.total}`} />
+        {health.commerce && (
+          <StatTile
+            size="sm"
+            tone="gold"
+            label="Commerce (7 j)"
+            value={`${String(health.commerce.dealsPerPlayerWeek).replace(".", ",")} / joueur`}
+            sub={`marché ${health.commerce.marketFilled}/${health.commerce.marketCreated} · enchères ${health.commerce.auctionsSold}/${health.commerce.auctionsCreated} · contrats ${health.commerce.contractsDelivered}/${health.commerce.contractsCreated} · ${health.commerce.gifts} cadeaux`}
+          />
+        )}
         <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub={`dont ${health.colonies.supply ?? 0} en ravitaillement · ${health.colonies.queued ?? 0} files de défense`} />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
