@@ -3151,6 +3151,61 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.59 garde-fous : le serveur refuse un contenu cassé dans toute section, accepte un contenu correct, le jeu continue", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw); // le pseudo de B change dans un test précédent
+    const d = defaultGameContent();
+    const existing = (key: string) => admin.collection("game_config").getFirstListItem(`key="${key}"`).catch(() => null);
+    const write = async (key: string, data: unknown) => {
+      const rec = await existing(key);
+      return rec ? admin.collection("game_config").update(rec.id, { data }) : admin.collection("game_config").create({ key, data });
+    };
+    const refused = async (key: string, data: unknown): Promise<string> => {
+      const err = await write(key, data).then(
+        () => null,
+        (e: { status?: number; response?: { message?: string } }) => e,
+      );
+      expect(err?.status).toBe(400);
+      return String(err?.response?.message ?? "");
+    };
+    const saved: Record<string, { id: string; data: unknown } | null> = {};
+    for (const key of ["units", "buildings", "technologies", "relics", "rules"]) {
+      const rec = await existing(key);
+      saved[key] = rec ? { id: rec.id, data: rec.data } : null;
+    }
+    try {
+      // Valeurs cassées : refusées avec le champ fautif (unités, bâtiments, technos, reliques, règles imbriquées).
+      expect(await refused("units", d.units.map((u) => (u.id === "fregate" ? { ...u, cost: { scrap: null, energy: 500 } } : u)))).toMatch(/Unité Frégate : « cost\.scrap » doit être un nombre/);
+      expect(await refused("units", { fregate: {} })).toMatch(/doit être une liste/);
+      expect(await refused("buildings", d.buildings.map((b, i) => (i === 0 ? { ...b, maxLevel: "dix" } : b)))).toMatch(/maxLevel/);
+      expect(await refused("technologies", d.technologies.map((t) => (t.id === "tech1" ? { ...t, baseTime: -30 } : t)))).toMatch(/négatif/);
+      expect(await refused("relics", d.relics.map((r, i) => (i === 0 ? { ...r, custom: "x", effect: 3 } : r)))).toMatch(/Relique/);
+      const rules = ((await existing("rules"))?.data ?? {}) as Record<string, unknown>;
+      expect(await refused("rules", { ...rules, alliances: { ...d.rules.alliances, researches: d.rules.alliances.researches.map((r, i) => (i === 0 ? { ...r, perLevel: undefined } : r)) } })).toMatch(/perLevel/);
+      expect(await refused("rules", { ...rules, combat: { ...((rules.combat as object) ?? {}), maxRounds: null } })).toMatch(/maxRounds/);
+      // Rien n'a été écrit.
+      for (const key of ["units", "buildings", "technologies", "relics"]) expect((await existing(key))?.data ?? null).toEqual(saved[key]?.data ?? null);
+
+      // Valeur correcte : enregistrée.
+      const units = d.units.map((u) => (u.id === "fregate" ? { ...u, stats: { ...u.stats, attaque: u.stats.attaque + 1 } } : u));
+      await write("units", units);
+      expect(((await existing("units"))!.data as typeof units).find((u) => u.id === "fregate")!.stats.attaque).toBe(d.units.find((u) => u.id === "fregate")!.stats.attaque + 1);
+
+      // Le jeu continue de tourner : une action du joueur passe.
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 10_000_000, energy: 10_000_000, nano: 10_000_000 } });
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
+      expect((await admin.collection("queues").getOne(bId)).buildingUpgrades.extracteur_ferraille).toBeTruthy();
+    } finally {
+      for (const [key, v] of Object.entries(saved)) {
+        const rec = await existing(key);
+        if (v && rec) await admin.collection("game_config").update(rec.id, { data: v.data });
+        else if (!v && rec) await admin.collection("game_config").delete(rec.id);
+      }
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

@@ -761,11 +761,11 @@ routerAdd("POST", "/api/cosmic/messages/read", (e) => require(`${__hooks}/cosmic
 // v5.14.2 : « … écrit » dans les messages privés.
 routerAdd("POST", "/api/cosmic/messages/typing", (e) => require(`${__hooks}/cosmic_db.js`).messageTyping(e), $apis.requireAuth("users"));
 
-/* ---------- v5.10.5 : règles vérifiées avant enregistrement ---------- */
+/* ---------- v5.10.5 : règles vérifiées avant enregistrement ; 6.14.59 : toutes les sections de contenu ---------- */
 
 onRecordCreateRequest((e) => {
   const db = require(`${__hooks}/cosmic_db.js`);
-  db.guardRulesConfig(e);
+  db.guardContentConfig(e);
   e.next();
   // 5.23 : journal de contenu (la section n'était pas personnalisée).
   db.snapshotContent(e, "create");
@@ -773,7 +773,7 @@ onRecordCreateRequest((e) => {
 
 onRecordUpdateRequest((e) => {
   const db = require(`${__hooks}/cosmic_db.js`);
-  db.guardRulesConfig(e);
+  db.guardContentConfig(e);
   // 5.23 : journal de contenu (état d'avant l'enregistrement).
   db.snapshotContent(e, "update");
   e.next();

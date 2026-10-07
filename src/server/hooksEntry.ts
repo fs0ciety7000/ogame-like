@@ -182,7 +182,7 @@ export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, rea
 export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { balanceHealth } from "@/game/balance/health";
-export { currentGameContent, validateGameContent, validateRules } from "@/game/content";
+export { currentGameContent, validateGameContent, validateRules, contentSectionErrors } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
 export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, outdatedPassDrafts, PASS_SEASONS_SECTION, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";

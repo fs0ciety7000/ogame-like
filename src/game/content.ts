@@ -46,6 +46,7 @@ import { LEVIATHAN_RULES, SEASON_BOSS_TUNING } from "@/game/leviathan";
 import { WAR_RULES } from "@/game/wars";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
+import { driftWarnings, listShapeErrors, shapeErrors } from "@/game/contentShape";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
 import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
 
@@ -234,10 +235,10 @@ function removedDefaultAchievements(rules: Partial<GameRules> | undefined): stri
   return Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : [];
 }
 
-/** Applique un contenu (sections absentes = valeurs par défaut du code). */
-export function applyGameContent(overrides: Partial<GameContent>): GameContent {
+/** 6.14.59 (AA1) : contenu complet fusionné avec les défauts, **sans l'appliquer** (pur : sert aussi à la validation serveur). */
+export function resolveGameContent(overrides: Partial<GameContent>): GameContent {
   const defaults = defaultGameContent();
-  const content: GameContent = {
+  return {
     buildings: withFixedBuildings(overrides.buildings ?? defaults.buildings),
     units: withFixedUnits(overrides.units ?? defaults.units),
     technologies: overrides.technologies ?? defaults.technologies,
@@ -355,6 +356,11 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
       })(),
     },
   };
+}
+
+/** Applique un contenu (sections absentes = valeurs par défaut du code). */
+export function applyGameContent(overrides: Partial<GameContent>): GameContent {
+  const content = resolveGameContent(overrides);
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);
@@ -495,6 +501,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
       } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label} : « ${key} » doit être oui ou non.`);
       else if (typeof d === "string" && typeof v !== "string") errors.push(`${label} : « ${key} » doit être un texte.`);
       else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label} : « ${key} » doit être une liste.`);
+      // 6.14.59 (AA1) : objets imbriqués et listes d'objets vérifiés selon la forme du défaut (types, champs obligatoires, null).
+      else if (d !== null && typeof d === "object") errors.push(...shapeErrors(label, v, d, key));
     }
   }
   const merged = mergeRulesForCheck(rules);
@@ -591,6 +599,16 @@ const ID_PATTERN = /^[A-Za-z0-9_]+$/;
  *  un élément inexistant, valeurs impossibles. Vide = contenu valide. */
 export function validateGameContent(content: GameContent): string[] {
   const errors: string[] = [];
+  // 6.14.59 (AA1) : une section de liste qui n'est pas une liste rend le reste illisible.
+  const LIST_SECTIONS: [keyof GameContent, string][] = [["buildings", "Bâtiments"], ["units", "Unités"], ["technologies", "Technologies"], ["missions", "Missions"], ["relics", "Reliques"]];
+  for (const [key, label] of LIST_SECTIONS) if (content[key] !== undefined && !Array.isArray(content[key])) errors.push(`${label} : la section doit être une liste.`);
+  if (errors.length > 0) return errors;
+  // 6.14.59 (AA1) : chaque définition garde la forme des définitions par défaut (nombres finis, champs chiffrés présents).
+  const defaults = defaultGameContent();
+  errors.push(...listShapeErrors("Bâtiments", "Bâtiment", content.buildings, defaults.buildings));
+  errors.push(...listShapeErrors("Unités", "Unité", content.units, defaults.units));
+  errors.push(...listShapeErrors("Technologies", "Techno", content.technologies, defaults.technologies));
+  if (content.relics !== undefined) errors.push(...listShapeErrors("Reliques", "Relique", content.relics, defaults.relics));
   // v5.10.5 : règles (types, bornes, occurrence des boss).
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id as string));
@@ -702,4 +720,72 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateOfficers(content.officers));
 
   return [...new Set(errors)];
+}
+
+/** 6.14.59 (AA1) : libellés des sections de contenu (messages de refus du serveur). */
+export const CONTENT_SECTION_LABELS: Record<ContentSection, string> = {
+  buildings: "Bâtiments",
+  units: "Unités",
+  technologies: "Technologies",
+  missions: "Missions",
+  factions: "Factions",
+  ranks: "Rangs",
+  achievements: "Succès",
+  rules: "Règles",
+  warlords: "Seigneurs de guerre",
+  seasonPass: "Passe de saison",
+  chronicles: "Chroniques",
+  passSeasons: "Passes générés",
+  relics: "Reliques",
+  relicSettings: "Réglages des reliques",
+  titles: "Titres",
+  worldBosses: "Boss mondiaux",
+  officers: "Officiers",
+};
+
+/**
+ * 6.14.59 (AU27, lot AA1 : garde-fous, constats AA-25 et AA-26) : erreurs **nouvelles** qu'apporterait l'enregistrement
+ * de `data` dans la section `section`, par rapport au contenu enregistré `stored` (game_config, sections brutes).
+ *
+ * - Le contenu est fusionné avec les défauts sans être appliqué (`resolveGameContent`, pur) ; les règles restent brutes
+ *   (`validateRules` vérifie le type de chaque valeur saisie avant toute fusion).
+ * - Seules les erreurs absentes du contenu actuel sont rendues : une erreur ancienne, enregistrée avant ce garde-fou,
+ *   ne bloque pas l'admin qui corrige une autre section (le plus prudent pour un serveur en service).
+ * - Une section illisible (pas une liste, JSON qui fait planter la fusion) est refusée avec son nom.
+ *
+ * Appelée par le serveur (`guardContentConfig`, cosmic_db.js) à chaque création ou modification de `game_config`.
+ */
+export function contentSectionErrors(section: string, data: unknown, stored: Partial<GameContent>): string[] {
+  if (!(CONTENT_SECTIONS as string[]).includes(section)) return [];
+  const label = CONTENT_SECTION_LABELS[section as ContentSection] ?? section;
+  const check = (overrides: Partial<GameContent>): string[] => {
+    try {
+      const content = resolveGameContent(overrides);
+      content.rules = (overrides.rules ?? {}) as GameRules;
+      return validateGameContent(content);
+    } catch (err) {
+      return [`${label} : contenu illisible (${String((err as Error)?.message ?? err)}).`];
+    }
+  };
+  if (data === null || data === undefined || typeof data !== "object") return [`${label} : contenu illisible (une liste ou un objet est attendu).`];
+  const defaultValue = (defaultGameContent() as unknown as Record<string, unknown>)[section];
+  if (Array.isArray(defaultValue) !== Array.isArray(data)) return [`${label} : la section doit être ${Array.isArray(defaultValue) ? "une liste" : "un objet"}.`];
+  const before = check(stored);
+  const after = check({ ...stored, [section]: data } as Partial<GameContent>);
+  return after.filter((e) => !before.includes(e));
+}
+
+/**
+ * 6.14.59 (AA1, Q75) : avertissements **non bloquants** de l'onglet Règles : un nombre qui s'écarte de plus de ×2 (ou ÷2)
+ * de sa valeur par défaut. L'admin peut enregistrer ; il voit seulement ce qui mérite un second regard.
+ */
+export function ruleDriftWarnings(rules: Partial<GameRules> | null | undefined): string[] {
+  if (!rules || typeof rules !== "object") return [];
+  const defaults = defaultGameContent().rules as unknown as Record<string, unknown>;
+  const out: string[] = [];
+  for (const [group, value] of Object.entries(rules as Record<string, unknown>)) {
+    if (!(group in defaults)) continue;
+    out.push(...driftWarnings(RULE_GROUP_LABELS[group] ?? group, value, defaults[group]));
+  }
+  return out;
 }

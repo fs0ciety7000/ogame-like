@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Badge } from "@/components/ui/badge";
-import { currentGameContent, validateGameContent, validateRules, type GameContent, type GameRules } from "@/game/content";
+import { currentGameContent, ruleDriftWarnings, validateGameContent, validateRules, type GameContent, type GameRules } from "@/game/content";
+import { HudCallout } from "@/components/ui/hud";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
@@ -55,6 +56,8 @@ export function RulesPanel() {
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
 
   const ruleErrors = useMemo(() => validateRules(rules), [rules]);
+  // 6.14.59 (AA1, Q75) : écarts de plus de ×2 au défaut, signalés sans bloquer.
+  const ruleWarnings = useMemo(() => ruleDriftWarnings(rules), [rules]);
   const save = async () => {
     if (ruleErrors.length > 0) {
       toast.error(`Enregistrement refusé : ${ruleErrors.slice(0, 3).join(" · ")}`);
@@ -103,6 +106,20 @@ export function RulesPanel() {
             ))}
           </ul>
         </div>
+      )}
+      {ruleWarnings.length > 0 && (
+        <HudCallout tone="gold" className="text-xs">
+          <details>
+            <summary className="cursor-pointer text-gold-glow">
+              À vérifier (non bloquant) : <span className="font-mono tabular-nums">{ruleWarnings.length}</span> réglage{ruleWarnings.length > 1 ? "s" : ""} à plus de ×2 de la valeur par défaut
+            </summary>
+            <ul className="mt-1 list-inside list-disc text-slate-300">
+              {ruleWarnings.slice(0, 30).map((w) => (
+                <li key={w}>{w}</li>
+              ))}
+            </ul>
+          </details>
+        </HudCallout>
       )}
       <Card className="flex flex-col gap-3 p-4">
         <Section title="Protections">

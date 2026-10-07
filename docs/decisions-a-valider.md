@@ -18,11 +18,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
-| Q113 | Seuil d'entrée d'une action dans les défis du passe : 0,25 par semaine (et non « médiane > 0 ») ; réglable | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
-| Q114 | Garde de faisabilité et minimum de points par palier (`pointsMin`) : La garde respecte `pointsMin`, même si le joueur médian finit après le 28e jour (dit dans « Pourquoi ces chiffres ») | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
-| Q115 | Garde avant publication d'office d'un brouillon retouché dans l'admin : Elle ne change que les défis et les points par palier | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
-| Q116 | Brouillons existants dont on ne sait pas s'ils ont été retouchés : Régénérés (cohérent avec Q83) | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
-| Q117 | Succès par défaut manquants au déploiement : Tous rajoutés (aucune liste de retraits n'existait) ; un retrait volontaire passe désormais par `achievementList.removedDefaults` | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
 
 ## 3. Récit
 
@@ -33,3 +28,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q118 | Garde-fous de l'admin : une erreur déjà en base dans une autre section bloque-t-elle l'enregistrement ? : Non : seules les erreurs nouvelles bloquent | Valider (option prudente) |
+| Q119 | Tolérances de la validation : Clé inconnue acceptée ; texte ou oui/non absent non bloquant ; `null` permis si le défaut vaut `null` ; pas de borne haute générique (bornes par champ au lot AA2) | Valider (option prudente) |
+| Q120 | Migration `relics-5.23` sans cas confirmé sur la pré-prod : Ajoutée quand même (sans effet sans liste personnalisée, protège un serveur ancien) | Valider (option prudente) |
+| Q121 | Écritures internes du serveur (générateur, migrations, retour arrière) et garde-fous : Non vérifiées (la garde ne voit que les requêtes de l'admin) | Valider (option prudente) |

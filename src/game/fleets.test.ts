@@ -19,6 +19,10 @@ import { performAttack } from "@/game/attack";
 import { findUnit } from "@/game/units";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
+import { getStorageCapacity } from "@/game/buildings";
+import { flushState } from "@/game/flush";
+import { deliverToColony } from "@/game/colonies";
+import { completeTradeContract } from "@/game/tradeContracts";
 
 const NOW = 1_800_000_000_000;
 function player(uid: string, patch: Partial<PlayerState> = {}): PlayerState {
@@ -146,5 +150,53 @@ describe("spy, recycle and patrol missions", () => {
     expect(() => performLaunch({ mission: "patrol", now: NOW, owner, ownerQueues: defaultQueues(), fleet: { chasseur: 1 }, patrolMinutes: 10 })).toThrow(/entre/);
     const poor = player("att", { units: { chasseur: { level: 1, count: 100 } }, resources: { ...player("x").resources, energy: 10 } });
     expect(() => performLaunch({ mission: "patrol", now: NOW, owner: poor, ownerQueues: defaultQueues(), fleet: { chasseur: 100 }, patrolMinutes: 60 })).toThrow(/énergie/);
+  });
+});
+
+/* 6.14.61 (AU27, AJ27-2, constat AJ-6) : invariant I6 (GDD §4), le butin et les livraisons arrivent même entrepôt plein.
+   Choix assumé : le stock dépasse alors la capacité ; la production s'arrête, mais rien n'est retiré. */
+describe("I6 : entrepôt plein", () => {
+  const fullOwner = () => {
+    const p = player("att", { units: { chasseur: { level: 1, count: 0 }, cargo: { level: 1, count: 0 } } });
+    const cap = getStorageCapacity(p.buildings, p.techLevels);
+    p.resources = { ...p.resources, scrap: cap, energy: cap };
+    return { p, cap };
+  };
+  const returning = (patch: Partial<Fleet>): Fleet =>
+    ({ id: "f", ownerUid: "att", ownerPseudo: "ATT", targetUid: "def", targetPseudo: "DEF", mission: "attack", units: { cargo: 5 }, departAtMs: NOW - 7_200_000, arriveAtMs: NOW - 3_600_000, returnAtMs: NOW, status: "returning", loot: null, reportId: "", outcome: "", recalled: false, ...patch }) as Fleet;
+
+  it("le butin d'une attaque rentre en entier, au-delà de la capacité", () => {
+    const { p, cap } = fullOwner();
+    const back = completeFleetReturn(p, returning({ loot: { scrap: 50_000, energy: 20_000 } }), NOW);
+    expect(back.owner.resources.scrap).toBe(cap + 50_000);
+    expect(back.owner.resources.energy).toBe(cap + 20_000);
+    expect(back.owner.units.cargo.count).toBe(5);
+  });
+
+  it("le stock au-delà de la capacité est gardé : la production s'arrête, rien n'est retiré", () => {
+    const { p, cap } = fullOwner();
+    const back = completeFleetReturn(p, returning({ loot: { scrap: 50_000 } }), NOW);
+    back.owner.resourcesUpdatedAtMs = NOW;
+    const later = flushState(back.owner, defaultQueues(), NOW + 3_600_000).player;
+    expect(later.resources.scrap).toBeGreaterThanOrEqual(cap + 50_000);
+  });
+
+  it("une livraison rappelée rapporte sa cargaison, et un rapatriement de colonie son chargement, entrepôt plein", () => {
+    const { p, cap } = fullOwner();
+    const recalled = completeFleetReturn(p, returning({ mission: "transport", recalled: true, transport: { direction: "deliver", colonyId: "c1", cargo: { scrap: 30_000 } } }), NOW);
+    expect(recalled.owner.resources.scrap).toBe(cap + 30_000);
+    const collected = completeFleetReturn(fullOwner().p, returning({ mission: "transport", transport: { direction: "collect", colonyId: "c1", cargo: {} }, loot: { energy: 40_000 } }), NOW);
+    expect(collected.owner.resources.energy).toBe(cap + 40_000);
+  });
+
+  it("une livraison vers une colonie ou un client de contrat arrive en entier", () => {
+    const colony = { resources: { scrap: 1e12, energy: 0, nano: 0, data: 0 } } as unknown as Parameters<typeof deliverToColony>[0];
+    deliverToColony(colony, { scrap: 10_000 });
+    expect(colony.resources.scrap).toBe(1e12 + 10_000);
+    const { p: client, cap } = fullOwner();
+    const supplier = player("sup");
+    const contract = { status: "accepted", deadlineMs: NOW + 3_600_000, wantRes: "scrap", wantAmount: 25_000, payRes: "energy", payAmount: 100, deposit: 10 } as unknown as Parameters<typeof completeTradeContract>[0];
+    completeTradeContract(contract, client, supplier, 25_000, NOW);
+    expect(client.resources.scrap).toBe(cap + 25_000);
   });
 });

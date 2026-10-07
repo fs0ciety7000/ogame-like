@@ -306,6 +306,7 @@ __export(hooksEntry_exports, {
   consumeBeacon: () => consumeBeacon,
   consumeCharge: () => consumeCharge,
   consumeJammer: () => consumeJammer,
+  contentSectionErrors: () => contentSectionErrors,
   contestAmberPurse: () => contestAmberPurse,
   contestPhase: () => contestPhase,
   contestPrizes: () => contestPrizes,
@@ -5430,8 +5431,8 @@ function canAscend(player, queues, now) {
 }
 function ascend(player, queues, now) {
   var _a;
-  const check = canAscend(player, queues, now);
-  if (!check.ok) throw new GameActionError((_a = check.reason) != null ? _a : "Ascension impossible.");
+  const check2 = canAscend(player, queues, now);
+  if (!check2.ok) throw new GameActionError((_a = check2.reason) != null ? _a : "Ascension impossible.");
   for (const b of BUILDINGS) {
     if (keptOnAscension(b)) continue;
     const cur = player.buildings[b.id];
@@ -14232,7 +14233,7 @@ function launchFleet(input) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
   const { now, attacker, defender } = input;
   if (attacker.allianceId && attacker.allianceId === defender.allianceId) throw new GameActionError("Tu ne peux pas attaquer un membre de ton alliance.");
-  const check = checkAttackAllowed({
+  const check2 = checkAttackAllowed({
     now,
     attackerUid: attacker.uid,
     attackerXp: (_a = attacker.xp) != null ? _a : 0,
@@ -14248,7 +14249,7 @@ function launchFleet(input) {
     lastDefenderDefeatMs: (_e = defender.lastDefeatAtMs) != null ? _e : null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 36e5 : void 0
   });
-  if (!check.allowed) throw new GameActionError((_f = check.message) != null ? _f : "Attaque impossible.");
+  if (!check2.allowed) throw new GameActionError((_f = check2.message) != null ? _f : "Attaque impossible.");
   const units = {};
   for (const [unitId, raw] of Object.entries((_g = input.fleet) != null ? _g : {})) {
     const qty = Math.floor(Number(raw));
@@ -15371,7 +15372,7 @@ function warlordCanTarget(d, npc, t, now) {
   const p = t.player;
   if (p.npc || ((_a = p.xp) != null ? _a : 0) < WARLORD_RULES.minTargetXp || onVacation(p, now)) return false;
   if (!t.reprisal && now - t.lastWarlordHitMs < WARLORD_RULES.targetCooldownHours * 36e5) return false;
-  const check = checkAttackAllowed({
+  const check2 = checkAttackAllowed({
     now,
     attackerUid: npc.uid,
     attackerXp: 0,
@@ -15384,7 +15385,7 @@ function warlordCanTarget(d, npc, t, now) {
     defenderShieldUntilMs: shieldUntil(p),
     lastDefenderDefeatMs: (_d = p.lastDefeatAtMs) != null ? _d : null
   });
-  if (!check.allowed) return false;
+  if (!check2.allowed) return false;
   if (d.personality === "opportunist" && !t.reprisal) {
     const beaten = ((_e = p.lastDefeatAtMs) != null ? _e : 0) > 0 && now - ((_f = p.lastDefeatAtMs) != null ? _f : 0) <= WARLORD_RULES.opportunistDefeatHours * 36e5;
     const prod = productionHours(p, WARLORD_RULES.opportunistStockHours);
@@ -15617,7 +15618,7 @@ function warlordPowerAlerts(warlords, humanPowers, ratio = WARLORD_ALERT_RATIO) 
 function performAttack(input) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R;
   const { now, attackerUid, defenderUid, defender } = input;
-  const check = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
+  const check2 = input.inFlight ? { allowed: true, message: void 0 } : checkAttackAllowed({
     now,
     attackerUid,
     attackerXp: (_a = input.attacker.xp) != null ? _a : 0,
@@ -15632,7 +15633,7 @@ function performAttack(input) {
     defenderIsWarlord: !!defender.npc,
     lastDefenderDefeatMs: (_e = defender.lastDefeatAtMs) != null ? _e : null
   });
-  if (!check.allowed) return { ok: false, message: (_f = check.message) != null ? _f : "Attaque impossible." };
+  if (!check2.allowed) return { ok: false, message: (_f = check2.message) != null ? _f : "Attaque impossible." };
   const weak = weakTargetFactor((_g = input.attacker.xp) != null ? _g : 0, (_h = defender.xp) != null ? _h : 0, !!defender.npc || !!input.attacker.npc);
   const fleet = {};
   for (const [unitId, raw] of Object.entries((_i = input.fleet) != null ? _i : {})) {
@@ -18167,9 +18168,9 @@ function generatePassSeason(o) {
     }
     reasons.push(`Simulation : le plus actif finissait au jour ${pace.topDay} ; points par palier port\xE9s \xE0 ${pointsPerTier}.`);
   }
-  const check = passPaceCheck({ pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" }, o.digest);
+  const check2 = passPaceCheck({ pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" }, o.digest);
   reasons.push(
-    `Simulation : joueur m\xE9dian au dernier palier ${check.medianDay === null ? "apr\xE8s la fin du mois" : `le jour ${check.medianDay}`} (cible ${rules.targetMedianDay}), plus actif ${check.topDay === null ? "apr\xE8s la fin du mois" : `le jour ${check.topDay}`} (pas avant ${rules.targetTopDay}).`
+    `Simulation : joueur m\xE9dian au dernier palier ${check2.medianDay === null ? "apr\xE8s la fin du mois" : `le jour ${check2.medianDay}`} (cible ${rules.targetMedianDay}), plus actif ${check2.topDay === null ? "apr\xE8s la fin du mois" : `le jour ${check2.topDay}`} (pas avant ${rules.targetTopDay}).`
   );
   const line = (speaker, text) => ({ speaker, text: fill2(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxi\xE8me acte", "D\xE9nouement"];
@@ -18188,7 +18189,7 @@ function generatePassSeason(o) {
     requirements,
     challengeMode: "cumulative",
     commander,
-    auto: { generatedAtMs: o.now, variant, reasons, pace: check, generator: GENERATOR_VERSION.pass }
+    auto: { generatedAtMs: o.now, variant, reasons, pace: check2, generator: GENERATOR_VERSION.pass }
   };
 }
 function passPaceCheck(season, d) {
@@ -21848,6 +21849,101 @@ function applyRegisteredRules(groups) {
   }
 }
 
+// src/game/contentShape.ts
+var KIND_LABEL = {
+  number: "un nombre",
+  string: "un texte",
+  boolean: "oui ou non",
+  array: "une liste",
+  object: "un objet"
+};
+function kindOf(v) {
+  if (typeof v === "number") return "number";
+  if (typeof v === "string") return "string";
+  if (typeof v === "boolean") return "boolean";
+  if (Array.isArray(v)) return "array";
+  if (v && typeof v === "object") return "object";
+  return null;
+}
+function describe(v) {
+  if (v === null) return "vide (null)";
+  if (typeof v === "number" && !Number.isFinite(v)) return String(v);
+  if (typeof v === "string") return `le texte \xAB ${v.length > 24 ? `${v.slice(0, 24)}\u2026` : v} \xBB`;
+  if (Array.isArray(v)) return "une liste";
+  if (typeof v === "object") return "un objet";
+  return String(v);
+}
+var join = (path, key) => typeof key === "number" ? `${path}[${key}]` : path ? `${path}.${key}` : key;
+var MAX_ERRORS = 20;
+function check(value2, samples, label3, path, errors) {
+  if (errors.length >= MAX_ERRORS || value2 === void 0) return;
+  const nullable = samples.some((s) => s === null);
+  const known = samples.filter((s) => s !== null && s !== void 0);
+  if (known.length === 0) return;
+  const kinds = new Set(known.map(kindOf).filter((k) => k !== null));
+  if (kinds.size === 0) return;
+  const field = path ? `\xAB ${path} \xBB` : "la valeur";
+  const expected = [...kinds].map((k) => KIND_LABEL[k]).join(" ou ");
+  if (value2 === null) {
+    if (!nullable && (kinds.has("number") || kinds.has("array") || kinds.has("string") || kinds.has("boolean"))) errors.push(`${label3} : ${field} doit \xEAtre ${expected}, re\xE7u : vide (null).`);
+    return;
+  }
+  const kind = kindOf(value2);
+  if (!kind || !kinds.has(kind)) {
+    errors.push(`${label3} : ${field} doit \xEAtre ${expected}, re\xE7u : ${describe(value2)}.`);
+    return;
+  }
+  if (kind === "number") {
+    const n = value2;
+    if (!Number.isFinite(n)) errors.push(`${label3} : ${field} doit \xEAtre un nombre fini, re\xE7u : ${describe(n)}.`);
+    else if (n < 0 && known.every((s) => typeof s !== "number" || s >= 0)) errors.push(`${label3} : ${field} ne peut pas \xEAtre n\xE9gatif (re\xE7u : ${n}).`);
+    return;
+  }
+  if (kind === "array") {
+    const elementSamples = known.filter(Array.isArray).reduce((acc, s) => acc.concat(s), []);
+    if (elementSamples.length === 0) return;
+    value2.forEach((el, i) => checkElement(el, elementSamples, label3, join(path, i), errors));
+    return;
+  }
+  if (kind === "object") {
+    const objSamples = known.filter((s) => kindOf(s) === "object");
+    for (const [k, v] of Object.entries(value2)) {
+      const sub = objSamples.filter((s) => k in s).map((s) => s[k]);
+      if (sub.length > 0) check(v, sub, label3, join(path, k), errors);
+    }
+  }
+}
+function checkElement(value2, samples, label3, path, errors) {
+  var _a;
+  const objSamples = samples.filter((s) => kindOf(s) === "object");
+  if (objSamples.length > 0 && objSamples.length === samples.filter((s) => s !== null && s !== void 0).length && kindOf(value2) === "object") {
+    const el = value2;
+    const required = Object.keys(objSamples[0]).filter((k) => objSamples.every((s) => s[k] !== void 0 && s[k] !== null && (typeof s[k] === "number" || typeof s[k] === "object")));
+    for (const k of required) if (el[k] === void 0 && errors.length < MAX_ERRORS) errors.push(`${label3} : \xAB ${join(path, k)} \xBB manquant (attendu : ${KIND_LABEL[(_a = kindOf(objSamples[0][k])) != null ? _a : "number"]}).`);
+  }
+  check(value2, samples, label3, path, errors);
+}
+function shapeErrors(label3, value2, defaultValue, path = "") {
+  const errors = [];
+  check(value2, [defaultValue], label3, path, errors);
+  return errors;
+}
+function listShapeErrors(section, itemLabel, value2, defaults) {
+  if (!Array.isArray(value2)) return [`${section} : la section doit \xEAtre une liste, re\xE7u : ${describe(value2)}.`];
+  const errors = [];
+  value2.forEach((el, i) => {
+    if (errors.length >= MAX_ERRORS) return;
+    if (kindOf(el) !== "object") {
+      errors.push(`${section} : l'\xE9l\xE9ment n\xB0 ${i + 1} doit \xEAtre un objet, re\xE7u : ${describe(el)}.`);
+      return;
+    }
+    const o = el;
+    const name = typeof o.name === "string" && o.name ? o.name : typeof o.nom === "string" && o.nom ? o.nom : typeof o.id === "string" ? o.id : `n\xB0 ${i + 1}`;
+    checkElement(el, [...defaults], `${itemLabel} ${name}`, "", errors);
+  });
+  return errors;
+}
+
 // src/game/content.ts
 var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 function withFixedUnits(units) {
@@ -21931,10 +22027,10 @@ function removedDefaultAchievements(rules) {
   const list = (_a = rules == null ? void 0 : rules.achievementList) == null ? void 0 : _a.removedDefaults;
   return Array.isArray(list) ? list.filter((x) => typeof x === "string") : [];
 }
-function applyGameContent(overrides) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb;
+function resolveGameContent(overrides) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob;
   const defaults = defaultGameContent();
-  const content = {
+  return {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
     units: withFixedUnits((_b = overrides.units) != null ? _b : defaults.units),
     technologies: (_c = overrides.technologies) != null ? _c : defaults.technologies,
@@ -22044,6 +22140,10 @@ function applyGameContent(overrides) {
       })()
     })
   };
+}
+function applyGameContent(overrides) {
+  var _a, _b;
+  const content = resolveGameContent(overrides);
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);
@@ -22059,7 +22159,7 @@ function applyGameContent(overrides) {
   setChronicles(content.chronicles);
   setPassSeasons(content.passSeasons);
   setRelics(content.relics, content.relicSettings);
-  setLootTables((_pb = content.relicSettings) == null ? void 0 : _pb.loot, (_qb = content.relicSettings) == null ? void 0 : _qb.lootTokenCap);
+  setLootTables((_a = content.relicSettings) == null ? void 0 : _a.loot, (_b = content.relicSettings) == null ? void 0 : _b.lootTokenCap);
   setTitles(content.titles ? withLateDefaults(content.titles) : DEFAULT_TITLES);
   Object.assign(PVP_RULES, content.rules.pvp);
   Object.assign(COMBAT_RULES, content.rules.combat);
@@ -22085,7 +22185,7 @@ function applyGameContent(overrides) {
   SEASON_BOSS_TUNING.flightMinutes = sb.flightMinutes;
   SEASON_BOSS_TUNING.lossMult = sb.lossMult;
   SEASON_BOSS_TUNING.weakness = sb.weakness;
-  const _rb = content.rules.allianceBoss, { bosses: allianceBosses } = _rb, allianceBossRules = __objRest(_rb, ["bosses"]);
+  const _c = content.rules.allianceBoss, { bosses: allianceBosses } = _c, allianceBossRules = __objRest(_c, ["bosses"]);
   Object.assign(ALLIANCE_BOSS_RULES, allianceBossRules);
   setAllianceBosses(allianceBosses);
   Object.assign(WAR_RULES, content.rules.wars);
@@ -22168,6 +22268,7 @@ function validateRules(rules) {
       } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre oui ou non.`);
       else if (typeof d === "string" && typeof v !== "string") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un texte.`);
       else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre une liste.`);
+      else if (d !== null && typeof d === "object") errors.push(...shapeErrors(label3, v, d, key));
     }
   }
   const merged = mergeRulesForCheck(rules);
@@ -22251,6 +22352,14 @@ var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r;
   const errors = [];
+  const LIST_SECTIONS = [["buildings", "B\xE2timents"], ["units", "Unit\xE9s"], ["technologies", "Technologies"], ["missions", "Missions"], ["relics", "Reliques"]];
+  for (const [key, label3] of LIST_SECTIONS) if (content[key] !== void 0 && !Array.isArray(content[key])) errors.push(`${label3} : la section doit \xEAtre une liste.`);
+  if (errors.length > 0) return errors;
+  const defaults = defaultGameContent();
+  errors.push(...listShapeErrors("B\xE2timents", "B\xE2timent", content.buildings, defaults.buildings));
+  errors.push(...listShapeErrors("Unit\xE9s", "Unit\xE9", content.units, defaults.units));
+  errors.push(...listShapeErrors("Technologies", "Techno", content.technologies, defaults.technologies));
+  if (content.relics !== void 0) errors.push(...listShapeErrors("Reliques", "Relique", content.relics, defaults.relics));
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id));
   const techIds = new Set(content.technologies.map((t) => t.id));
@@ -22358,6 +22467,46 @@ function validateGameContent(content) {
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
+}
+var CONTENT_SECTION_LABELS = {
+  buildings: "B\xE2timents",
+  units: "Unit\xE9s",
+  technologies: "Technologies",
+  missions: "Missions",
+  factions: "Factions",
+  ranks: "Rangs",
+  achievements: "Succ\xE8s",
+  rules: "R\xE8gles",
+  warlords: "Seigneurs de guerre",
+  seasonPass: "Passe de saison",
+  chronicles: "Chroniques",
+  passSeasons: "Passes g\xE9n\xE9r\xE9s",
+  relics: "Reliques",
+  relicSettings: "R\xE9glages des reliques",
+  titles: "Titres",
+  worldBosses: "Boss mondiaux",
+  officers: "Officiers"
+};
+function contentSectionErrors(section, data, stored) {
+  var _a;
+  if (!CONTENT_SECTIONS.includes(section)) return [];
+  const label3 = (_a = CONTENT_SECTION_LABELS[section]) != null ? _a : section;
+  const check2 = (overrides) => {
+    var _a2, _b;
+    try {
+      const content = resolveGameContent(overrides);
+      content.rules = (_a2 = overrides.rules) != null ? _a2 : {};
+      return validateGameContent(content);
+    } catch (err) {
+      return [`${label3} : contenu illisible (${String((_b = err == null ? void 0 : err.message) != null ? _b : err)}).`];
+    }
+  };
+  if (data === null || data === void 0 || typeof data !== "object") return [`${label3} : contenu illisible (une liste ou un objet est attendu).`];
+  const defaultValue = defaultGameContent()[section];
+  if (Array.isArray(defaultValue) !== Array.isArray(data)) return [`${label3} : la section doit \xEAtre ${Array.isArray(defaultValue) ? "une liste" : "un objet"}.`];
+  const before = check2(stored);
+  const after = check2(__spreadProps(__spreadValues({}, stored), { [section]: data }));
+  return after.filter((e3) => !before.includes(e3));
 }
 
 // src/game/staff.ts

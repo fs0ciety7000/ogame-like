@@ -158,6 +158,9 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.56 | [Succès par défaut toujours présents](6.14.56-succes-par-defaut.md) | correctif | aucune (AU27, lot AP-L1), Q82 |
 | 6.14.57 | [Générateur versionné, anciens brouillons régénérés](6.14.57-generateur-versionne.md) | correctif | aucune (AU27, lot AP-L2), Q83 |
 | 6.14.58 | [Défis du passe et épisodes faisables](6.14.58-defis-faisables.md) | correctif (équilibre) | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md) (AU27, lot AP-L3), Q84, Q85 |
+| 6.14.59 | [Garde-fous du contenu réglé dans l'admin](6.14.59-garde-fous-admin.md) | correctif | aucune (AU27, lot AA1), Q75 |
+| 6.14.60 | [Reliques de la 5.23 et migrations des contenus ajoutés](6.14.60-reliques-5-23.md) | correctif | aucune (AU27, lot AJ27-3) |
+| 6.14.61 | [Test de l'invariant I6 (entrepôt plein)](6.14.61-test-i6.md) | correctif (tests) | aucune (AU27, lot AJ27-2) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

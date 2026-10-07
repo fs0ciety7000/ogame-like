@@ -14,6 +14,10 @@
 ## Admin
 64 panneaux : contenu éditable, règles, équilibrage (diagnostic, historique, simulateur « et si »), planificateur d'événements, boss,
 seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription manquants sans rien envoyer, 6.14.52), rétention, signalements, sauvegardes R2, statut et métriques.
+- Garde-fous (6.14.59, I26) : toute section de contenu est vérifiée par le serveur à l'enregistrement (`guardContentConfig`), selon la
+  forme de sa valeur par défaut, à toute profondeur (nombre fini, `null` refusé pour un nombre, champ chiffré obligatoire dans une liste
+  d'objets, pas de négatif si le défaut est positif). Le refus nomme le champ et le type attendu ; l'éditeur affiche les mêmes erreurs
+  avant l'enregistrement. Onglet Règles : encadré « À vérifier (non bloquant) » pour les nombres à plus de ×2 de leur défaut (Q75).
 
 ## Technique
 - 30 tâches planifiées côté serveur (dont 3 chaque minute : flottes, maintenance, enchères).
