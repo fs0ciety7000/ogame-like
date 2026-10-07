@@ -18,6 +18,14 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q164 | 1re Ascension : ≈ 3 mois pour l'actif et 4,5 à 6 pour l'occasionnel (écart ×1,4), ou 3–4 mois pour l'actif et 5–6 pour le moyen (écart ×2) ? : ≈ 3 mois, freiné par la **durée** (aucun mur) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q165 | Durée du dernier niveau du second palier : ≈ 10 jours ? : 30 h + 24 h par niveau (niveau 20 : 246 h) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q166 | Recherche : facteur sur les niveaux tardifs, ou croissance globale plus forte ? : ×30 dès le niveau 6, 7 jours au plus par niveau | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q167 | Ascension : délai de 30 jours et maximum 10 ? : oui (une par saison, ≈ 18 mois de cycles pour l'actif) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q168 | Projets de prestige : récompense seulement visible, ou petit bonus ? : visible seulement (classement, bannières, monument, succès) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q169 | Ordre de livraison : projets avant la bascule du rythme ? : oui : RL-2 (projets) puis RL-3 (bascule au début d'un mois, annonce une semaine avant) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q170 | Coût du second palier croissant à chaque Ascension (option B) ? : non (crée un mur : jusqu'à 95 % de sessions bloquées) ; les cycles raccourcissent un peu, comme dans un jeu à prestige | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
+| Q171 | Entrepôt du début : l'occasionnel perd 33 à 42 % de sa production le premier mois : mesurer d'abord (RL-4) | Rythme sur des mois (Ascension, recherche, projets de prestige) | Valider (recommandé par l'étude) |
 
 ## 3. Récit
 
