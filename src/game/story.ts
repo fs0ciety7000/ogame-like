@@ -72,6 +72,15 @@ export const STORY_CHAPTERS: StoryChapter[] = [
 /** Raid scripté, déclenché quand les roquettes du chapitre 2 sont installées. */
 export const TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TUTORIAL_RAID_META = {
+  factionId: { label: "Faction du raid (id)" },
+  trigger: { label: "Étape du tutoriel qui déclenche le raid (id)" },
+  powerPct: { label: "Puissance du raid : part de ta défense", unit: "part", min: 0, max: 2 },
+  minPower: { label: "Puissance minimale du raid", min: 0, max: 10_000 },
+  delayMinutes: { label: "Arrivée du raid après l'étape", unit: "min", min: 0, max: 1440 },
+};
+
 export const RAID_LINES: StoryLine[] = [
   { speaker: "varan", text: "Alors comme ça, tu joues aux défenseurs ? Mes éclaireurs arrivent, {pseudo}. Montre-moi ce que valent tes roquettes." },
   { speaker: "vashka", text: "Pas de panique : ce n'est qu'une avant-garde. Tes défenses suffiront. Regarde la flotte hostile approcher sur l'accueil." },

@@ -29,6 +29,11 @@ export const ALLIANCE_CHALLENGES: { id: string; name: string; emoji: string; met
 /** 6.9.2 (AU5) : heures de production du podium (1er, 2e, 3e…), réglables (registre « allianceChallenge »). */
 export const ALLIANCE_CHALLENGE_RULES = { rewardHours: [6, 4, 2] };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ALLIANCE_CHALLENGE_RULES_META = {
+  rewardHours: { label: "Podium : heures de production (1re, 2e, 3e alliance)", unit: "h", hint: "Une valeur par place du défi de la semaine des alliances." },
+};
+
 export interface AllianceChallengeStanding {
   allianceId: string;
   tag: string;

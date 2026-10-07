@@ -19,6 +19,16 @@ export const GLOBAL_CHAT_RULES = {
   page: 60,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const GLOBAL_CHAT_RULES_META = {
+  maxLength: { label: "Longueur d'un message", unit: "caractères", min: 20, max: 5000 },
+  cooldownMs: { label: "Délai entre deux messages", unit: "ms", min: 0, max: 600_000, hint: "4 000 = 4 s." },
+  perMinute: { label: "Messages par minute, au plus", min: 1, max: 120 },
+  reportsToHide: { label: "Signalements qui masquent un message", min: 1, max: 50 },
+  keep: { label: "Messages gardés en base", min: 50, max: 10_000, hint: "Les plus anciens sont effacés." },
+  page: { label: "Messages chargés à l'ouverture", min: 10, max: 500 },
+};
+
 export const CHAT_MODERATION_KEYS = { mutes: "chat_mutes", filter: "chat_filter" } as const;
 
 /** Liste de base (mots entiers ; variantes au pluriel couvertes par le « s? »). */
@@ -146,6 +156,16 @@ export const CHAT_ROOM_RULES = {
   idleDays: 14,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const CHAT_ROOM_RULES_META = {
+  nameMin: { label: "Nom d'un salon : longueur minimale", unit: "caractères", min: 1, max: 20 },
+  nameMax: { label: "Nom d'un salon : longueur maximale", unit: "caractères", min: 3, max: 60 },
+  topicMax: { label: "Sujet d'un salon : longueur maximale", unit: "caractères", min: 0, max: 500 },
+  perOwner: { label: "Salons ouverts par joueur", min: 0, max: 10 },
+  maxOpen: { label: "Salons ouverts sur le serveur", min: 0, max: 500 },
+  idleDays: { label: "Fermeture après ces jours sans message", unit: "j", min: 1, max: 365 },
+};
+
 export interface ChatRoom {
   id: string;
   name: string;
@@ -200,6 +220,11 @@ export function roomIcon(raw: unknown): string {
 /* 5.27 : mentions @pseudo et événements de salon. */
 export const MENTION_RULES = { maxPerMessage: 5 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MENTION_RULES_META = {
+  maxPerMessage: { label: "Mentions (@pseudo) par message, au plus", min: 0, max: 20 },
+};
+
 /** Pseudos mentionnés (@pseudo), sans doublon (casse ignorée), 5 au plus. */
 export function parseMentions(text: string): string[] {
   const out: string[] = [];
@@ -220,6 +245,14 @@ export function mentions(text: string, pseudo: string): boolean {
 }
 
 export const ROOM_EVENT_RULES = { labelMin: 3, labelMax: 60, maxAheadDays: 7, durationHours: 1 };
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ROOM_EVENT_RULES_META = {
+  labelMin: { label: "Libellé : longueur minimale", unit: "caractères", min: 1, max: 20 },
+  labelMax: { label: "Libellé : longueur maximale", unit: "caractères", min: 10, max: 200 },
+  maxAheadDays: { label: "Programmé au plus tôt", unit: "j", min: 1, max: 60, hint: "Un événement se programme ce nombre de jours à l'avance au plus." },
+  durationHours: { label: "Durée d'un événement", unit: "h", min: 0.25, max: 24 },
+};
 
 /** Événement de salon : libellé filtré, date dans les 7 prochains jours. atMs 0 : l'événement est retiré. */
 export function validateRoomEvent(raw: { label?: unknown; atMs?: unknown }, now: number, extraFilter?: string[]): { label: string; atMs: number } {

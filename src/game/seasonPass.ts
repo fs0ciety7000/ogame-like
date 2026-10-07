@@ -410,6 +410,14 @@ export const PASS_BONUS_RULES = {
   maxPerMonth: 10,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PASS_BONUS_RULES_META = {
+  enabled: { label: "Paliers bonus après le dernier palier" },
+  points: { label: "Points par palier bonus", unit: "points", min: 1, max: 10_000 },
+  tokens: { label: "Jetons par palier bonus", unit: "jetons", min: 0, max: 20 },
+  maxPerMonth: { label: "Paliers bonus par mois, au plus", min: 0, max: 100 },
+};
+
 /** Paliers bonus versés pour un surplus donné (moteur pur, voir passBonusProgress pour l'affichage). */
 export function settlePassBonus(st: PassState, extra: number): number {
   const r = PASS_BONUS_RULES;
@@ -435,6 +443,12 @@ export const PASS_OVERFLOW = {
   /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
   minPoints: 40,
   amberPerPoint: 1,
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PASS_OVERFLOW_META = {
+  minPoints: { label: "Gain minimal converti", unit: "points", min: 0, max: 1000, hint: "Seules les sources qui rapportent au moins ce nombre de points sont converties (petits gains exclus)." },
+  amberPerPoint: { label: "Ambre par point en trop", unit: "Ambre", min: 0, max: 100 },
 };
 
 /** Ajoute des points de passe. Retourne l'Ambre versée si le passe était déjà au maximum (5.18). */

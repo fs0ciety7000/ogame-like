@@ -21,6 +21,16 @@ export const TERRITORY_RULES = {
   validHours: 3,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TERRITORY_RULES_META = {
+  cols: { label: "Grille : colonnes (figé)", min: 6, max: 6, hint: "Les secteurs en cours en dépendent." },
+  rows: { label: "Grille : lignes (figé)", min: 4, max: 4, hint: "Les secteurs en cours en dépendent." },
+  minLevels: { label: "Niveaux cumulés pour tenir un secteur", unit: "niveaux", min: 0, max: 10_000, hint: "Planètes mères et colonies comprises." },
+  bonusPerSector: { label: "Production en plus par secteur tenu", unit: "part", min: 0, max: 0.2 },
+  maxBonus: { label: "Bonus maximal", unit: "part", min: 0, max: 1 },
+  validHours: { label: "Validité du bonus sans recalcul", unit: "h", min: 1, max: 48 },
+};
+
 export const SECTOR_COUNT = TERRITORY_RULES.cols * TERRITORY_RULES.rows;
 
 /** Secteur d'un point de la carte (identifiant de planète ou de colonie). */

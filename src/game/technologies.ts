@@ -300,6 +300,16 @@ export const RESEARCH_RULES = {
   maxLevelSeconds: 0,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const RESEARCH_RULES_META = {
+  maxConcurrent: { label: "Recherches en parallèle", min: 1, max: 10 },
+  costGrowth: { label: "Croissance du coût par niveau", unit: "×", min: 1, max: 5, hint: "Coût = coût de base × croissance^(niveau − 1) ; une techno peut avoir la sienne." },
+  timeGrowth: { label: "Croissance de la durée par niveau", unit: "×", min: 1, max: 5 },
+  lateFromLevel: { label: "Recherche tardive : dès le niveau", unit: "niveau", min: 0, max: 50, hint: "0 = jamais. Passe à 7 à la bascule du rythme." },
+  lateTimeFactor: { label: "Recherche tardive : durée multipliée par", unit: "×", min: 1, max: 100, hint: "1 = sans effet. Passe à 25 à la bascule du rythme." },
+  maxLevelSeconds: { label: "Durée maximale d'un niveau", unit: "s", min: 0, max: 31_536_000, hint: "Avant réductions ; 0 = sans plafond. 604 800 (7 j) à la bascule du rythme." },
+};
+
 /** Nombre fini et positif d'une règle, sinon sa valeur par défaut (réglage vidé ou absurde). */
 function researchRule(v: unknown, fallback: number): number {
   const n = Number(v);

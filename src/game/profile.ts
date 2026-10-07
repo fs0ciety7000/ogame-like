@@ -40,6 +40,12 @@ export interface CosmeticOption {
 
 export const PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PROFILE_RULES_META = {
+  mottoMax: { label: "Devise : longueur", unit: "caractères", min: 0, max: 300 },
+  pinnedMax: { label: "Succès épinglés au profil", min: 0, max: 10 },
+};
+
 type StylePlayer = Pick<PlayerState, "pirates" | "bounties" | "stats"> & Partial<Pick<PlayerState, "profileStyle" | "referral" | "seasonPass" | "chronicle" | "unlockedAchievements" | "casino">>;
 
 const FREE_BANNERS: Omit<CosmeticOption, "unlocked">[] = [

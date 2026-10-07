@@ -52,6 +52,14 @@ export interface ModulePreset {
 export const MODULE_CLASSES: UnitClass[] = ["light", "medium", "heavy", "support"];
 export const MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MODULE_RULES_META = {
+  slotsPerClass: { label: "Emplacements de module par classe", min: 0, max: 6, hint: "En baisser vide les emplacements en trop." },
+  maxItems: { label: "Inventaire de modules, au plus", min: 1, max: 500 },
+  fuseCount: { label: "Plans identiques pour une fusion", min: 2, max: 10 },
+  maxPresets: { label: "Préréglages de modules", min: 0, max: 20 },
+};
+
 export const MODULE_RARITIES: { id: ModuleRarity; label: string; weight: number; tone: "neutral" | "accent" | "violet" | "gold"; recycleAmber: number }[] = [
   { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
   { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
@@ -82,6 +90,14 @@ export const MODULE_BUILD_COST: Record<ModuleRarity, Partial<Record<ResourceId, 
   rare: { scrap: 60_000, energy: 30_000, nano: 15_000 },
   epic: { scrap: 180_000, energy: 90_000, nano: 45_000, data: 5_000 },
   legendary: { scrap: 500_000, energy: 250_000, nano: 120_000, data: 20_000 },
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MODULE_BUILD_COST_META = {
+  common: { label: "Module commun", hint: "Ressources par fabrication." },
+  rare: { label: "Module rare", hint: "Ressources par fabrication." },
+  epic: { label: "Module épique", hint: "Ressources par fabrication." },
+  legendary: { label: "Module légendaire", hint: "Ressources par fabrication." },
 };
 
 export function findModuleTemplate(id: string): ModuleTemplate | undefined {

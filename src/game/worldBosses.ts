@@ -168,6 +168,12 @@ export const WORLD_BOSS_RULES = {
   anchorMondayUtc: Date.UTC(2026, 0, 5),
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const WORLD_BOSS_RULES_META = {
+  minGapDays: { label: "Écart minimal entre deux apparitions", unit: "j", min: 1, max: 6, hint: "De début à début ; 6 au plus (une par semaine)." },
+  anchorMondayUtc: { label: "Semaine de référence (un lundi)", unit: "date", min: 0, hint: "Changer cette date décale tout le calendrier des boss." },
+};
+
 const DAY = 86_400_000;
 
 /** Catalogue en vigueur (remplacé par applyGameContent, section « worldBosses »). */

@@ -23,6 +23,14 @@ export interface PollResults {
 
 export const POLL_RULES = { minOptions: 2, maxOptions: 6, maxQuestion: 160, maxOption: 80 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const POLL_RULES_META = {
+  minOptions: { label: "Choix d'un sondage : au moins", min: 2, max: 10 },
+  maxOptions: { label: "Choix d'un sondage : au plus", min: 2, max: 20 },
+  maxQuestion: { label: "Question : longueur", unit: "caractères", min: 20, max: 1000 },
+  maxOption: { label: "Choix : longueur", unit: "caractères", min: 10, max: 500 },
+};
+
 export function normalizePoll(raw: unknown): Poll | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;

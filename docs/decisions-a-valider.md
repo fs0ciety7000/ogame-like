@@ -18,6 +18,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q259 | Bornes larges (souvent de 0 à environ 10 fois le défaut) ; une valeur déjà enregistrée hors bornes doit être corrigée avant d'enregistrer l'onglet Règles (`docs/changes/6.14.95-metadonnees-reglages.md`) | les réglages restent libres dans une plage large ; une faute de frappe (×100) est refusée | valider |
+| Q260 | Pas encore vérifiées : reportées dans une suite d'AA1 ou dans AA3 (`docs/changes/6.14.95-metadonnees-reglages.md`) | aucun, tant qu'un admin ne croise pas deux valeurs | valider (dans AA3) |
 | Q241 | Proposé (pas lancé) : Aide d'alliance, H31-1 (`docs/proposals/feuille-de-route-2031-hiver.md`) | −1 % du temps restant par aide (3 min au moins), 10 aides par chantier, 30 données par jour | ★★★ valider |
 | Q242 | Proposé (pas lancé) : Demande de renforts, H31-2 (`docs/proposals/feuille-de-route-2031-hiver.md`) | une demande toutes les 8 h, garnison envoyée en un clic, pas de don d'unités | ★★ valider |
 | Q243 | Proposé (pas lancé) : Ligue des alliances, H31-3 (`docs/proposals/feuille-de-route-2031-hiver.md`) | groupes de 8 alliances, 7 manches d'un jour par mois, médailles et boutique de ligue | ★★ valider |

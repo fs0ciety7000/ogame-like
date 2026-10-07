@@ -364,6 +364,17 @@ export const TREATY_RULES = {
   embargoNotoriety: 1,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TREATY_RULES_META = {
+  durationDays: { label: "Durée d'un traité", unit: "j", min: 1, max: 60 },
+  cost: { label: "Coût par traité", unit: "h", hint: "Heures de production commune ; 0 = gratuit." },
+  maxNotoriety: { label: "Notoriété maximale pour signer", hint: "Par traité ; embargo sans condition." },
+  escortAmbush: { label: "Escorte : embuscades d'expédition", unit: "×", min: 0, max: 1 },
+  embargoRaidPower: { label: "Embargo : puissance des raids", unit: "×", min: 1, max: 5 },
+  embargoBounty: { label: "Embargo : primes", unit: "×", min: 1, max: 5 },
+  embargoNotoriety: { label: "Embargo : notoriété ajoutée", min: 0, max: 10 },
+};
+
 export const TREATY_LABELS: Record<TreatyKind, { name: string; effect: string }> = {
   pact: { name: "Pacte de péage", effect: "Pas d'ultimatum ni de raid de leur part ; en expédition, leurs patrouilles te laissent passer sans péage." },
   escort: { name: "Contrat d'escorte", effect: "Leurs navires escortent tes expéditions : deux fois moins d'embuscades." },

@@ -140,6 +140,17 @@ export const NAV_UNLOCK_RULES = {
   } as Record<string, NavPageRule>,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const NAV_UNLOCK_RULES_META = {
+  enabled: { label: "Ouverture progressive du menu", hint: "Décoché : tout le monde voit tout (ancien menu)." },
+  newAccountsFrom: { label: "Comptes neufs à partir du", unit: "date", min: 0, hint: "Un compte créé avant et au moins au rang des vétérans voit tout." },
+  veteranRank: { label: "Rang des vétérans (id)", hint: "Ex. fer2 = Fer II." },
+  colonyLead: { label: "Avance de la page Colonies", unit: "niveaux", min: 0, max: 200, hint: "La page s'ouvre ce nombre de niveaux cumulés avant le seuil de la 1re colonie." },
+  filterContracts: { label: "Objectifs du jour tirés parmi les systèmes ouverts" },
+  style: { label: "Page fermée : hidden (cachée) ou locked (grisée)" },
+  pages: { label: "Pages à ouverture progressive", hint: "Par page : rank, signals, step, requires. Une page absente reste toujours visible." },
+};
+
 /** Pages hors de l'ouverture progressive (palier 0, pied de barre, pages de la palette) : toujours visibles. */
 export const NAV_ALWAYS_VISIBLE = [
   "/game",

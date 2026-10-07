@@ -366,6 +366,12 @@ export const BOSS_REMINDERS = {
   endingHours: 6,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BOSS_REMINDERS_META = {
+  eveHours: { label: "Annonce d'un boss : au plus tôt avant l'apparition", unit: "h", min: 1, max: 168, hint: "Envoyée au plus tard 1 h avant." },
+  endingHours: { label: "Rappel avant la fin d'un boss", unit: "h", min: 0, max: 72, hint: "Seulement si le boss n'est pas tombé." },
+};
+
 /** Apparition à annoncer maintenant (la veille), ou null. */
 export function eveReminderDue(next: { startMs: number } | null | undefined, lastAnnounced: number | undefined, now: number): boolean {
   if (!next) return false;

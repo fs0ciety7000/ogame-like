@@ -127,6 +127,39 @@ export const WARLORD_RULES = {
   },
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const WARLORD_RULES_META = {
+  tierRange: { label: "Puissance visée par catégorie (min, max)", hint: "Faibles et moyens : × la médiane des actifs ; forts : × le meilleur joueur." },
+  minPower: { label: "Puissance minimale d'un seigneur", min: 0, max: 1_000_000_000, hint: "Serveur presque vide." },
+  growthPerDay: { label: "Croissance maximale par jour", unit: "part", min: 0, max: 1, hint: "Part de la puissance visée." },
+  maxDefenseRatio: { label: "Plafond : × la meilleure défense de joueur", unit: "×", min: 0.1, max: 10 },
+  shrinkPerDay: { label: "Excédent perdu par jour", unit: "part", min: 0, max: 1, hint: "Armée au-delà de la puissance visée." },
+  snapAbove: { label: "Recalage immédiat au-delà de", unit: "×", min: 1, max: 20, hint: "Multiple de la puissance visée ; recalage à 1,2 fois." },
+  counterDays: { label: "Durée de la contre-composition", unit: "j", min: 0, max: 60 },
+  counterWeight: { label: "Poids de la classe renforcée", unit: "×", min: 1, max: 10 },
+  outlierRatio: { label: "Joueur écarté de la référence au-delà de", unit: "×", min: 1, max: 20, hint: "Plus de N fois au-dessus du suivant (compte admin, de test…)." },
+  buildingFactor: { label: "Bâtiments : × le niveau moyen des actifs", hint: "Par catégorie de seigneur." },
+  buildingLevelEveryHours: { label: "Un niveau de bâtiment toutes les", unit: "h", min: 1, max: 168 },
+  xpGrowthPerHour: { label: "Croissance de l'XP par heure", unit: "part", min: 0, max: 1 },
+  activeDays: { label: "Joueur actif : vu dans les", unit: "j", min: 1, max: 60 },
+  attackEveryHours: { label: "Une attaque toutes les", unit: "h", min: 1, max: 720, hint: "Par seigneur agressif ou opportuniste." },
+  attackJitterHours: { label: "Écart aléatoire autour de l'attaque", unit: "h", min: 0, max: 72 },
+  retryHours: { label: "Nouvel essai sans cible", unit: "h", min: 0.25, max: 72 },
+  targetCooldownHours: { label: "Une même cible : une attaque toutes les", unit: "h", min: 0, max: 720, hint: "Tous seigneurs confondus." },
+  minTargetXp: { label: "XP minimale d'une cible", unit: "XP", min: 0, max: 1_000_000_000, hint: "2 000 = jamais sous Bronze I." },
+  attackPowerMin: { label: "Puissance envoyée : au moins × la défense de la cible", unit: "×", min: 0.1, max: 5 },
+  attackPowerMax: { label: "Puissance envoyée : au plus × la défense de la cible", unit: "×", min: 0.1, max: 5 },
+  travelMinHours: { label: "Trajet minimal", unit: "h", min: 0.1, max: 72, hint: "Le joueur doit avoir le temps de réagir." },
+  travelMaxHours: { label: "Trajet maximal", unit: "h", min: 0.1, max: 72 },
+  lootCapHours: { label: "Butin plafonné à la production de la cible", unit: "h", min: 0, max: 72 },
+  opportunistDefeatHours: { label: "Opportuniste : cible battue dans les", unit: "h", min: 0, max: 168 },
+  opportunistStockHours: { label: "Opportuniste : cible au stock de plus de", unit: "h", min: 0, max: 168 },
+  stockHours: { label: "Stock gardé en réserve", unit: "h", hint: "Heures de production, bâtisseur et autres." },
+  offenseShare: { label: "Part de la puissance en vaisseaux d'attaque", unit: "part", hint: "Par tempérament ; le reste en défenses." },
+  messageEveryHours: { label: "Un message au plus toutes les", unit: "h", min: 0, max: 720, hint: "Par seigneur et par joueur." },
+  vendetta: { label: "Vendetta", hint: "costHours, durationHours, goalFactor, powerLoss, awayDays, passPoints, minShare." },
+};
+
 const ORIGIN_ART: Record<WarlordOrigin, { label: string; art: string; emblem: string; color: string }> = {
   kesh: { label: "Kesh'Vaar renégats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
   choeur: { label: "Déserteurs du Chœur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },

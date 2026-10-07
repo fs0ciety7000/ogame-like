@@ -52,6 +52,15 @@ export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", 
 /** 5.15 : jetons du casino gagnés au déblocage, selon le palier. */
 export const ACHIEVEMENT_TOKENS: Record<AchievementTier, number> = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ACHIEVEMENT_TOKENS_META = {
+  bronze: { label: "Jetons au palier bronze", unit: "jetons", min: 0, max: 50, hint: "Jetons du casino gagnés quand un succès atteint ce palier." },
+  argent: { label: "Jetons au palier argent", unit: "jetons", min: 0, max: 50 },
+  or: { label: "Jetons au palier or", unit: "jetons", min: 0, max: 50 },
+  legendaire: { label: "Jetons au palier légendaire", unit: "jetons", min: 0, max: 50 },
+  mythique: { label: "Jetons au palier mythique", unit: "jetons", min: 0, max: 100, hint: "Palier réservé aux exploits rarissimes (gros lot du casino)." },
+};
+
 export const TIER_REWARDS: Record<AchievementTier, { xp: number; hours: number }> = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
@@ -60,6 +69,16 @@ export const TIER_REWARDS: Record<AchievementTier, { xp: number; hours: number }
   // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
   mythique: { xp: 400, hours: 12 },
 };
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TIER_REWARDS_META = {
+  bronze: { label: "Palier bronze", hint: "xp : XP gagnée ; hours : heures de production versées." },
+  argent: { label: "Palier argent", hint: "xp : XP gagnée ; hours : heures de production versées." },
+  or: { label: "Palier or", hint: "xp : XP gagnée ; hours : heures de production versées." },
+  legendaire: { label: "Palier légendaire", hint: "xp : XP gagnée ; hours : heures de production versées." },
+  mythique: { label: "Palier mythique", hint: "xp : XP gagnée ; hours : heures de production versées." },
+};
+
 export const CATEGORY_LABELS: Record<AchievementCategory, { label: string; emoji: string }> = {
   combat: { label: "Combat", emoji: "⚔️" },
   construction: { label: "Construction", emoji: "🏗️" },
@@ -422,6 +441,11 @@ export function derivedAchievements(): AchievementDef[] {
  *  enregistrée (succès ajoutés au code après la première écriture de la liste) sont complétés à l'application du contenu. */
 export const ACHIEVEMENT_LIST_RULES = { removedDefaults: [] as string[] };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ACHIEVEMENT_LIST_RULES_META = {
+  removedDefaults: { label: "Succès par défaut retirés (ids)", hint: "Ces succès du code ne reviennent pas quand la liste enregistrée est complétée. Rempli par l'onglet Succès." },
+};
+
 /** 6.14.56 : liste enregistrée complétée par les succès par défaut qui y manquent, sauf ceux retirés exprès
  *  (`removedDefaults`). Un succès ajouté se place après le succès par défaut qui le précède dans le code. */
 export function withDefaultAchievements(stored: AchievementDef[], removed: readonly string[] = []): AchievementDef[] {
@@ -455,6 +479,11 @@ setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 
 /** Prix d'un indice (Ambre de Ruche), payé une fois par succès secret (Z5 : GameRules.achievementHint). */
 export const ACHIEVEMENT_HINT_RULES = { price: 25 };
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ACHIEVEMENT_HINT_RULES_META = {
+  price: { label: "Prix d'un indice de succès secret", unit: "Ambre", min: 0, max: 1000, hint: "Ambre de Ruche dépensée pour lire la piste d'un succès caché." },
+};
 
 /** Indices cryptiques par mesure : une piste, jamais le seuil exact. */
 const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {

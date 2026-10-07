@@ -263,6 +263,13 @@ export function percentiles(values: number[]): { median: number; p90: number } {
 /* 5.26.2 : alerte de l'équipe sur un gain d'XP de succès anormal (24 h glissantes). */
 export const ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR, minXp: 2000, minShare: 0.6 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ACHIEVEMENT_XP_ALERT_META = {
+  windowMs: { label: "Fenêtre d'observation", unit: "ms", min: 3_600_000, max: 604_800_000, hint: "Période glissante où l'XP des succès est comparée à l'XP totale (86 400 000 = 24 h)." },
+  minXp: { label: "XP de succès minimale pour alerter", unit: "XP", min: 0, max: 1_000_000 },
+  minShare: { label: "Part de l'XP venue des succès", unit: "part", min: 0, max: 1, hint: "Alerte quand les succès font au moins cette part de l'XP gagnée sur la fenêtre (0,6 = 60 %)." },
+};
+
 /** XP de succès sur 24 h si elle dépasse le seuil et la part de l'XP totale (sinon null). */
 export function achievementXpAlert(stats: PlayerState["stats"], now: number): { xp: number; total: number; share: number } | null {
   const t = ledgerTotals(stats, now, ACHIEVEMENT_XP_ALERT.windowMs);

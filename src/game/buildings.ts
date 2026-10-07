@@ -70,6 +70,14 @@ export const DOCK_BUILDING_ID = "cale_seche";
  *  automatique, priorités, Cale orbitale (+orbitalRepair de vaisseaux sauvés). */
 export const DOCK_TIERS = { triage: 5, auto: 10, priority: 15, orbital: 20 } as const;
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const DOCK_TIERS_META = {
+  triage: { label: "Cale sèche : niveau du triage", unit: "niveau", min: 1, max: 50, hint: "Démantèlement en cale et réglage par défaut après un combat." },
+  auto: { label: "Cale sèche : niveau de la remise automatique", unit: "niveau", min: 1, max: 50 },
+  priority: { label: "Cale sèche : niveau des priorités de réparation", unit: "niveau", min: 1, max: 50 },
+  orbital: { label: "Cale sèche : niveau de la cale orbitale", unit: "niveau", min: 1, max: 50 },
+};
+
 // Niveaux 1 à 10 inchangés, puis +25 % par niveau jusqu'au niveau 20.
 // v3.6 : production des bâtiments de fin de partie (ressource rare, par seconde).
 const ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
@@ -302,6 +310,12 @@ type UnlockInfo =
 export const LOCKABLE_BUILDINGS: BuildingId[] = [];
 export const BUILDING_UNLOCK_COST: Record<BuildingId, UnlockInfo> = {};
 export const PRODUCTION_RESOURCE_BY_BUILDING: Record<BuildingId, string> = {};
+
+/** 6.14.95 (AA2) : métadonnées de « Bâtiments : coût de déblocage », une entrée par bâtiment (liste du contenu, lue à l'usage). */
+export function buildingUnlockCostMeta(): Record<string, { label: string; hint: string }> {
+  const hint = "Recalculé depuis le coût de déblocage de l'onglet Bâtiments : le régler là-bas.";
+  return Object.fromEntries(Object.keys(BUILDING_UNLOCK_COST).map((id) => [id, { label: `Déblocage : ${BUILDINGS.find((b) => b.id === id)?.name ?? id}`, hint }]));
+}
 
 export function setBuildings(defs: BuildingDef[]) {
   BUILDINGS.splice(0, BUILDINGS.length, ...defs);

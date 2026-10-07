@@ -28,6 +28,16 @@ export const VACATION_RULES = {
   minStayHours: 48,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const VACATION_RULES_META = {
+  minDays: { label: "Durée minimale", unit: "j", min: 1, max: 30 },
+  maxDays: { label: "Durée maximale", unit: "j", min: 1, max: 90 },
+  cooldownDays: { label: "Attente entre deux périodes", unit: "j", min: 0, max: 60 },
+  productionFactor: { label: "Production pendant l'absence", unit: "part", min: 0, max: 1, hint: "0,25 = 25 % de la production normale." },
+  recentAttackHours: { label: "Pas d'activation après une attaque subie", unit: "h", min: 0, max: 168 },
+  minStayHours: { label: "Retour anticipé possible après", unit: "h", min: 0, max: 336 },
+};
+
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 

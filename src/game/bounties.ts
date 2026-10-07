@@ -53,6 +53,17 @@ export const BOUNTY_RULES = {
   exchange: { rarePerAmber: 40, weeklyCap: 100 },
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BOUNTY_RULES_META = {
+  dailyLimit: { label: "Primes par jour", min: 1, max: 20, hint: "Compteur remis à zéro à minuit (UTC)." },
+  refreshHours: { label: "Renouvellement du tableau des primes", unit: "h", min: 1, max: 72 },
+  retries: { label: "Essais en plus après un échec", min: 0, max: 5, hint: "Un échec laisse la prime ouverte ce nombre de fois." },
+  amberPerRank: { label: "Ambre en plus par rang de l'Essaim", unit: "part", min: 0, max: 1, hint: "0,1 = +10 % d'Ambre par rang au-delà du premier." },
+  tiers: { label: "Paliers de prime (★ à ★★★★)", hint: "Par palier : pct (puissance du fugitif / ta puissance d'attaque), minMinutes–maxMinutes (trajet), xp, amber, rep, floor (puissance minimale), minRank." },
+  ranks: { label: "Rangs de l'Essaim", hint: "name et at (réputation requise), dans l'ordre croissant." },
+  exchange: { label: "Échange Ambre → ressources rares", hint: "rarePerAmber : rares par Ambre ; weeklyCap : Ambre échangeable par semaine." },
+};
+
 export const KESH = {
   name: "Kesh'Vaar",
   full: "L'Essaim de la Traque",
@@ -524,6 +535,18 @@ export const BOUNTY_SHOP_RULES = {
   pheromoneHours: 24,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BOUNTY_SHOP_RULES_META = {
+  acceleratorMinutes: { label: "Accélérateur : minutes retirées au chantier", unit: "min", min: 1, max: 1440 },
+  boostHours: { label: "Gelée de la Reine : durée du bonus de production", unit: "h", min: 1, max: 168, hint: "Cumulable : chaque achat prolonge l'effet." },
+  maxCharges: { label: "Charges d'un objet en réserve, au plus", min: 1, max: 20 },
+  shieldHours: { label: "Bouclier de la Ruche : durée", unit: "h", min: 0, max: 72 },
+  shieldCooldownDays: { label: "Bouclier de la Ruche : délai entre deux achats", unit: "j", min: 0, max: 60 },
+  title: { label: "Titre vendu au Comptoir" },
+  painkillerHours: { label: "Analgésique : heures de réparation de l'Atelier d'un coup", unit: "h", min: 0, max: 48 },
+  pheromoneHours: { label: "Phéromone : durée du bonus d'XP des officiers", unit: "h", min: 1, max: 168, hint: "Le bonus lui-même se règle dans « Officiers : second rôle… » (pheromonePct)." },
+};
+
 /** 5.26.3 : couleurs de pseudo (jetons du thème ; le rouge reste réservé au danger). */
 export const NAME_TONES: { id: string; label: string }[] = [
   { id: "accent", label: "Cyan" },
@@ -811,6 +834,19 @@ export const ELITE_RULES = {
   minShare: 0.005,
   killed: { xp: 300, amber: 150, rep: 8 },
   failed: { xp: 100, amber: 50, rep: 3 },
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ELITE_RULES_META = {
+  hpFactor: { label: "Structure : × puissance d'attaque des joueurs actifs", unit: "×", min: 0.1, max: 20 },
+  minHp: { label: "Structure minimale", min: 0, max: 10_000_000_000 },
+  cooldownHours: { label: "Délai entre deux assauts d'un joueur", unit: "h", min: 0, max: 168 },
+  flightMinutes: { label: "Trajet vers la proie", unit: "min", min: 1, max: 1440 },
+  lossPct: { label: "Vaisseaux perdus par assaut", unit: "part", min: 0, max: 1 },
+  minRank: { label: "Rang minimal dans l'Essaim", min: 1, max: 10 },
+  minShare: { label: "Part minimale de la structure pour être récompensé", unit: "part", min: 0, max: 1 },
+  killed: { label: "Récompense : proie abattue", hint: "xp, amber, rep." },
+  failed: { label: "Récompense : proie enfuie", hint: "xp, amber, rep." },
 };
 
 export interface EliteHunt {

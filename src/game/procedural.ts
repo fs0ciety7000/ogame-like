@@ -231,6 +231,19 @@ function passPace(passes: ReturnType<typeof passState>[], monthId: string, obser
 /** Nombre de base par épisode (une semaine de jeu normale). */
 export const BASE_COUNTS: Record<ChronicleObjective, number> = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BASE_COUNTS_META = {
+  contract: { label: "Objectifs du jour terminés", min: 0, max: 100, hint: "Quantité de base d'un objectif de chapitre, avant la difficulté du mois." },
+  bounty: { label: "Primes remplies", min: 0, max: 100 },
+  raidRepelled: { label: "Raids repoussés", min: 0, max: 100 },
+  victory: { label: "Victoires", min: 0, max: 100 },
+  bossAssault: { label: "Assauts de boss", min: 0, max: 100 },
+  mission: { label: "Missions", min: 0, max: 100 },
+  spy: { label: "Espionnages", min: 0, max: 100 },
+  market: { label: "Échanges au marché", min: 0, max: 100 },
+  warlordWin: { label: "Victoires contre un seigneur", min: 0, max: 100 },
+};
+
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
 
 export function chapterDifficulty(d: WorldDigest): { value: number; reasons: string[] } {

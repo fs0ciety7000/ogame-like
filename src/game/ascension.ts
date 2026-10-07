@@ -21,6 +21,16 @@ export const ASCENSION_RULES = {
   upkeepFreeDays: 7,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ASCENSION_RULES_META = {
+  productionPerAscension: { label: "Production en plus par Ascension", unit: "part", min: 0, max: 1, hint: "Bonus permanent : 0,1 = +10 % de production par Ascension." },
+  buildTimePerAscension: { label: "Durée de construction en moins par Ascension", unit: "part", min: 0, max: 0.1, hint: "0,05 = −5 % par Ascension, sous le plafond « Temps de construction » des bonus." },
+  maxAscensions: { label: "Ascensions au plus", min: 1, max: 50, hint: "Passe à 10 à la bascule du rythme. Ne jamais descendre sous le nombre déjà atteint par un joueur." },
+  cooldownDays: { label: "Délai entre deux Ascensions", unit: "j", min: 0, max: 365, hint: "Passe à 30 à la bascule du rythme (groupe « Rythme »)." },
+  shieldHours: { label: "Bouclier après une Ascension", unit: "h", min: 0, max: 336, hint: "Aucune attaque ne peut viser le joueur pendant ce temps." },
+  upkeepFreeDays: { label: "Entretien de flotte offert après une Ascension", unit: "j", min: 0, max: 60 },
+};
+
 /** 5.15 : insigne d'ascension (illustration à venir, voir docs/prompts-ascension.md).
  *  Tant qu'il vaut null, l'interface affiche une icône vectorielle à la place. */
 export const ASCENSION_INSIGNIA: string | null = "/assets/ascension/insigne.webp";

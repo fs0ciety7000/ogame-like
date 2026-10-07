@@ -39,7 +39,8 @@ import { OUTCOME_POINTS } from "@/game/casino";
 import { WEEKLY_STOCK_RULES } from "@/game/weeklyStock";
 import { PATRON_RULES } from "@/game/patrons";
 import { applyRhythmSwitch } from "@/game/rhythm";
-import { applyRegisteredRules, mergeRuleGroup, REGISTERED_RULES, registeredRuleSnapshot, type RegisteredRuleGroups } from "@/game/ruleRegistry";
+import { applyRegisteredRules, mergeRuleGroup, REGISTERED_RULES, registeredRuleSnapshot, ruleFieldMeta, type RegisteredRuleGroups } from "@/game/ruleRegistry";
+import { ruleBoundError } from "@/game/ruleMeta";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
@@ -503,6 +504,12 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
         else if (d >= 0 && v < 0) errors.push(`${label} : « ${key} » ne peut pas être négatif.`);
         else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label} : « ${key} » doit être entre −1 et 0.`);
         else if (/Pct$/.test(key) && v > 1) errors.push(`${label} : « ${key} » est une part (0,1 = 10 %), 1 au plus.`);
+        else {
+          // 6.14.95 (AA2) : bornes déclarées dans les métadonnées du champ (X_RULES_META, HISTORICAL_RULES_META).
+          const meta = ruleFieldMeta(group, key);
+          const bound = ruleBoundError(meta, v);
+          if (bound) errors.push(`${label} : « ${meta?.label ?? key} » (${key}) doit être ${bound}${meta?.unit ? ` (${meta.unit})` : ""}.`);
+        }
       } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label} : « ${key} » doit être oui ou non.`);
       else if (typeof d === "string" && typeof v !== "string") errors.push(`${label} : « ${key} » doit être un texte.`);
       else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label} : « ${key} » doit être une liste.`);

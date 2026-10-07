@@ -56,6 +56,16 @@ export const SYNTH_RULES = {
   minutesPerLevel: 77,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const SYNTH_RULES_META = {
+  pctPerLevel: { label: "Effet par niveau de capsule", unit: "%", min: 0, max: 50, hint: "5 = +5 % par niveau (niveau 10 au plus)." },
+  maxStock: { label: "Capsules d'un type en réserve", min: 1, max: 20 },
+  activeHours: { label: "Durée d'une capsule active", unit: "h", min: 0.5, max: 168 },
+  costHoursPerLevel: { label: "Coût : production commune par niveau", unit: "h", min: 0, max: 48 },
+  baseMinutes: { label: "Fabrication au niveau 1", unit: "min", min: 0, max: 1440 },
+  minutesPerLevel: { label: "Fabrication : minutes par niveau en plus", unit: "min", min: 0, max: 1440 },
+};
+
 export interface SynthesisState {
   crafting: { type: CapsuleType; level: number; endsAtMs: number } | null;
   /** Niveaux des capsules en réserve, par type. */

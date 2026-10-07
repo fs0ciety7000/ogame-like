@@ -194,6 +194,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.92 | [Illustrations par API, lot 1 (annonces, technos, reliques, lune, comptoir, prestige)](6.14.92-illustrations-api-lot-1.md) | ajout (illustrations) | aucune (IMG), Q228 à Q230 |
 | 6.14.93 | [Illustrations par API, lot 2 (factions, boss d'alliance, passe, devblog, en-têtes)](6.14.93-illustrations-api-lot-2.md) | ajout (illustrations), outillage | aucune (IMG), Q238 à Q240 |
 | 6.14.94 | [Docs remises au code et garde de comptage (AJ27-1)](6.14.94-docs-remises-au-code.md) | docs + test | aucune (constat AJ-7) |
+| 6.14.95 | [Métadonnées des réglages de l'admin (AA2)](6.14.95-metadonnees-reglages.md) | ajout (admin) + test | [audit AU27](../audit/2026-10-07-au27-admin-evolutif.md) (AA-24, AA-28) |
 | 6.14.96 | [Texte secondaire lisible sur le fond des panneaux, « Production » en neutre (TH-L3, TH-L4)](6.14.96-themes-contraste-production.md) | correctif (interface) | Q235 |
 | 6.14.97 | [Verrous et manques sans opacité (TH-L1)](6.14.97-verrous-sans-opacite.md) | correctif (interface) | aucune (AU28 thèmes) |
 | 6.14.98 | [Titres longs des bâtiments et libellés du menu « Plus » (TH-L2)](6.14.98-titres-longs-menu-plus.md) | correctif (interface) | aucune (AU28 thèmes) |

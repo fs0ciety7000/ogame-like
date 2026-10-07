@@ -79,6 +79,9 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
   (+ icône), lignes `{ label, value, tone? }` alignées (valeurs en mono tabulaire), `sections` séparées par un filet, `note`.
   Une infobulle qui contient des chiffres passe par elle plutôt que par une phrase.
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
+- **Champ de réglage de l'admin** (`AllRulesEditor`, 6.14.95) : libellé clair, nom technique en petit (mono 10 px, admin), défaut et
+  bornes en `tabular-nums`, unité en suffixe du champ ; `HudChip size="sm" tone="accent"` « modifié » et bouton `ghost` « Défaut »
+  quand la valeur diffère du défaut ; `HudCallout tone="danger"` hors bornes (refusé), `tone="ember"` au-delà de ×2 ou ÷2 du défaut.
 - **Pages longues sur téléphone (375 px)** : viser moins de 5 000 px pour un joueur neuf comme avancé (`pagelen.mjs`). Ne rien retirer :
   une section à la fois (onglets ou puces `aria-pressed`), sections secondaires repliées (`FoldSection`, `aria-expanded`), « Afficher plus »,
   ou vue « liste » (une ligne par élément, la carte s'ouvre au toucher, bascule mémorisée par appareil : Bâtiments 6.12.0).

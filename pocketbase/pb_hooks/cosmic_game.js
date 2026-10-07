@@ -892,6 +892,24 @@ var EFFECT_STATS = {
 };
 var EFFECT_CAP_RULES = {};
 for (const [k, info] of Object.entries(EFFECT_STATS)) if (info.cap && k !== "attack" && k !== "defense") EFFECT_CAP_RULES[k] = __spreadValues({}, info.cap);
+var EFFECT_CAP_RULES_META = {
+  unitAttack: { label: "Attaque des unit\xE9s cibl\xE9es", hint: "Plafond du bonus par couche : tech (technos), empire (reliques, officiers, talents\u2026). 0,5 = +50 %." },
+  unitHp: { label: "Points de vie des unit\xE9s cibl\xE9es", hint: "Plafond par couche (0,5 = +50 %)." },
+  classEdge: { label: "Avantage de classe", hint: "Plafond par couche (0,2 = +20 %)." },
+  shield: { label: "Bouclier plan\xE9taire", hint: "Plafond par couche (0,15 = +15 %)." },
+  protectedStorage: { label: "Entrep\xF4t \xE0 l'abri du pillage", hint: "Plafond par couche (0,25 = +25 %)." },
+  buildingDiscount: { label: "Co\xFBt des b\xE2timents (r\xE9duction)", hint: "R\xE9duction maximale par couche (0,5 = \u221250 %)." },
+  tradeTax: { label: "Taxe du march\xE9 et des cadeaux (r\xE9duction)", hint: "R\xE9duction maximale, couche empire seulement." },
+  buildTime: { label: "Temps de construction (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  researchTime: { label: "Temps de recherche (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  unitTime: { label: "Temps de production des unit\xE9s (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  unitBuildTime: { label: "Temps de production des unit\xE9s cibl\xE9es (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  unitCost: { label: "Co\xFBt des unit\xE9s cibl\xE9es (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  fleetSpeed: { label: "Temps de vol (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  fleetUpkeep: { label: "Entretien de la flotte (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  jumpGateCooldown: { label: "Recharge de la porte de saut (r\xE9duction)", hint: "R\xE9duction maximale par couche." },
+  phalanxRange: { label: "Port\xE9e de la phalange", hint: "Plafond du bonus par couche (0,5 = +50 %)." }
+};
 function effectCap(stat3, layer) {
   var _a, _b;
   const r = (_a = EFFECT_CAP_RULES[stat3]) == null ? void 0 : _a[layer];
@@ -1011,6 +1029,12 @@ var UNIT_AUDIT_RULES = {
   /** Unités lourdes de fin de partie (au moins `endgameSlots` places) : leur avance est voulue, jusqu'à ce rapport. */
   endgameSlots: 10,
   endgameStrongAbove: 2.2
+};
+var UNIT_AUDIT_RULES_META = {
+  strongAbove: { label: "Unit\xE9 trop forte au-dessus de", unit: "\xD7", min: 1, max: 10, hint: "Rapport \xE0 la moyenne, par co\xFBt et par place." },
+  weakBelow: { label: "Unit\xE9 trop faible sous", unit: "\xD7", min: 0, max: 1 },
+  endgameSlots: { label: "Unit\xE9 lourde de fin de partie : places au moins", min: 1, max: 100 },
+  endgameStrongAbove: { label: "Unit\xE9 lourde trop forte au-dessus de", unit: "\xD7", min: 1, max: 10 }
 };
 
 // src/game/effectTargets.ts
@@ -1183,6 +1207,10 @@ function roleBonusText(role, l) {
   return parts.join(", ");
 }
 var OFFICER_TUNING_RULES = { seasonSecondaryShare: 0.5, pheromonePct: 0.25 };
+var OFFICER_TUNING_RULES_META = {
+  seasonSecondaryShare: { label: "Commandant de saison : force du second r\xF4le", unit: "part", min: 0, max: 1, hint: "Part de l'effet d'un officier ordinaire (0,5 = moiti\xE9)." },
+  pheromonePct: { label: "Ph\xE9romone : XP des officiers en plus", unit: "part", min: 0, max: 2, hint: "0,25 = +25 % d'XP pendant la dur\xE9e r\xE9gl\xE9e au Comptoir de la Ruche." }
+};
 var SEASON_COMMANDERS = [];
 var ROLE_DEF = (role) => COMMANDERS.find((c) => c.id === role);
 var half = (l) => Math.round(l * OFFICER_TUNING_RULES.seasonSecondaryShare * 10) / 10;
@@ -1243,6 +1271,26 @@ var COMMANDER_XP = {
   unitsBuilt: 5,
   giftSent: 5,
   playerContract: 10
+};
+var COMMANDER_XP_META = {
+  attackWin: { label: "Attaque gagn\xE9e", unit: "XP", min: 0, max: 1e3, hint: "XP d'officier gagn\xE9e par l'officier concern\xE9 \xE0 chaque action." },
+  lairWin: { label: "Repaire pirate vaincu", unit: "XP", min: 0, max: 1e3 },
+  bountyWin: { label: "Prime remplie", unit: "XP", min: 0, max: 1e3 },
+  bossAssault: { label: "Assaut de boss", unit: "XP", min: 0, max: 1e3 },
+  defenseWin: { label: "D\xE9fense r\xE9ussie", unit: "XP", min: 0, max: 1e3 },
+  raidRepelled: { label: "Raid repouss\xE9", unit: "XP", min: 0, max: 1e3 },
+  defenseLost: { label: "D\xE9fense perdue", unit: "XP", min: 0, max: 1e3 },
+  buildingDone: { label: "B\xE2timent termin\xE9", unit: "XP", min: 0, max: 1e3 },
+  researchDone: { label: "Recherche termin\xE9e", unit: "XP", min: 0, max: 1e3 },
+  spyLaunched: { label: "Espionnage lanc\xE9", unit: "XP", min: 0, max: 1e3 },
+  probesCaught: { label: "Sondes ennemies abattues", unit: "XP", min: 0, max: 1e3 },
+  missionDone: { label: "Mission termin\xE9e", unit: "XP", min: 0, max: 1e3 },
+  contractClaimed: { label: "Objectif du jour r\xE9clam\xE9", unit: "XP", min: 0, max: 1e3 },
+  marketTrade: { label: "\xC9change au march\xE9", unit: "XP", min: 0, max: 1e3 },
+  fleetDispatched: { label: "Flotte envoy\xE9e", unit: "XP", min: 0, max: 1e3 },
+  unitsBuilt: { label: "Unit\xE9s produites (par tranche de 10)", unit: "XP", min: 0, max: 1e3 },
+  giftSent: { label: "Cadeau envoy\xE9", unit: "XP", min: 0, max: 1e3 },
+  playerContract: { label: "Contrat de livraison rempli", unit: "XP", min: 0, max: 1e3 }
 };
 var COMMANDER_SOURCES = {
   admiral: [
@@ -1886,6 +1934,12 @@ function consumeAegis(player, now) {
 // src/game/modules.ts
 var MODULE_CLASSES = ["light", "medium", "heavy", "support"];
 var MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
+var MODULE_RULES_META = {
+  slotsPerClass: { label: "Emplacements de module par classe", min: 0, max: 6, hint: "En baisser vide les emplacements en trop." },
+  maxItems: { label: "Inventaire de modules, au plus", min: 1, max: 500 },
+  fuseCount: { label: "Plans identiques pour une fusion", min: 2, max: 10 },
+  maxPresets: { label: "Pr\xE9r\xE9glages de modules", min: 0, max: 20 }
+};
 var MODULE_RARITIES = [
   { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
   { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
@@ -1913,6 +1967,12 @@ var MODULE_BUILD_COST = {
   rare: { scrap: 6e4, energy: 3e4, nano: 15e3 },
   epic: { scrap: 18e4, energy: 9e4, nano: 45e3, data: 5e3 },
   legendary: { scrap: 5e5, energy: 25e4, nano: 12e4, data: 2e4 }
+};
+var MODULE_BUILD_COST_META = {
+  common: { label: "Module commun", hint: "Ressources par fabrication." },
+  rare: { label: "Module rare", hint: "Ressources par fabrication." },
+  epic: { label: "Module \xE9pique", hint: "Ressources par fabrication." },
+  legendary: { label: "Module l\xE9gendaire", hint: "Ressources par fabrication." }
 };
 function findModuleTemplate(id) {
   return MODULE_TEMPLATES.find((t) => t.id === id);
@@ -2132,6 +2192,14 @@ var TERRITORY_RULES = {
   /** Le bonus écrit sur le joueur reste valable ce délai (h) sans recalcul. */
   validHours: 3
 };
+var TERRITORY_RULES_META = {
+  cols: { label: "Grille : colonnes (fig\xE9)", min: 6, max: 6, hint: "Les secteurs en cours en d\xE9pendent." },
+  rows: { label: "Grille : lignes (fig\xE9)", min: 4, max: 4, hint: "Les secteurs en cours en d\xE9pendent." },
+  minLevels: { label: "Niveaux cumul\xE9s pour tenir un secteur", unit: "niveaux", min: 0, max: 1e4, hint: "Plan\xE8tes m\xE8res et colonies comprises." },
+  bonusPerSector: { label: "Production en plus par secteur tenu", unit: "part", min: 0, max: 0.2 },
+  maxBonus: { label: "Bonus maximal", unit: "part", min: 0, max: 1 },
+  validHours: { label: "Validit\xE9 du bonus sans recalcul", unit: "h", min: 1, max: 48 }
+};
 var SECTOR_COUNT = TERRITORY_RULES.cols * TERRITORY_RULES.rows;
 function sectorOf(planetId) {
   const c = galaxyCoords(planetId);
@@ -2208,6 +2276,9 @@ function describeGain(gain) {
 
 // src/game/missions.ts
 var MISSION_XP_RULES = { perHour: 60 };
+var MISSION_XP_RULES_META = {
+  perHour: { label: "XP sugg\xE9r\xE9e par heure de mission", unit: "XP", min: 0, max: 1e4, hint: "Proposition de l'\xE9diteur de missions, pas une r\xE8gle appliqu\xE9e." }
+};
 var DEFAULT_MISSIONS = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
   forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35e3, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
@@ -2430,6 +2501,11 @@ function percentiles(values) {
   return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
 }
 var ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR, minXp: 2e3, minShare: 0.6 };
+var ACHIEVEMENT_XP_ALERT_META = {
+  windowMs: { label: "Fen\xEAtre d'observation", unit: "ms", min: 36e5, max: 6048e5, hint: "P\xE9riode glissante o\xF9 l'XP des succ\xE8s est compar\xE9e \xE0 l'XP totale (86 400 000 = 24 h)." },
+  minXp: { label: "XP de succ\xE8s minimale pour alerter", unit: "XP", min: 0, max: 1e6 },
+  minShare: { label: "Part de l'XP venue des succ\xE8s", unit: "part", min: 0, max: 1, hint: "Alerte quand les succ\xE8s font au moins cette part de l'XP gagn\xE9e sur la fen\xEAtre (0,6 = 60 %)." }
+};
 function achievementXpAlert(stats, now) {
   var _a;
   const t = ledgerTotals(stats, now, ACHIEVEMENT_XP_ALERT.windowMs);
@@ -2561,6 +2637,10 @@ var WORLD_BOSS_RULES = {
   minGapDays: 4,
   /** Semaine de référence : lundi 5 janvier 2026 (heure de Paris). */
   anchorMondayUtc: Date.UTC(2026, 0, 5)
+};
+var WORLD_BOSS_RULES_META = {
+  minGapDays: { label: "\xC9cart minimal entre deux apparitions", unit: "j", min: 1, max: 6, hint: "De d\xE9but \xE0 d\xE9but ; 6 au plus (une par semaine)." },
+  anchorMondayUtc: { label: "Semaine de r\xE9f\xE9rence (un lundi)", unit: "date", min: 0, hint: "Changer cette date d\xE9cale tout le calendrier des boss." }
 };
 var DAY = 864e5;
 var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
@@ -2856,6 +2936,10 @@ var BOSS_REMINDERS = {
   /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
   endingHours: 6
 };
+var BOSS_REMINDERS_META = {
+  eveHours: { label: "Annonce d'un boss : au plus t\xF4t avant l'apparition", unit: "h", min: 1, max: 168, hint: "Envoy\xE9e au plus tard 1 h avant." },
+  endingHours: { label: "Rappel avant la fin d'un boss", unit: "h", min: 0, max: 72, hint: "Seulement si le boss n'est pas tomb\xE9." }
+};
 function eveReminderDue(next, lastAnnounced, now) {
   if (!next) return false;
   const left = next.startMs - now;
@@ -2970,6 +3054,13 @@ var STORY_SPEAKERS = {
   maru: { name: "Le Proph\xE8te Maru", role: "Culte du L\xE9viathan", image: "/assets/warlords/maru.webp", color: "#7dff9a" }
 };
 var TUTORIAL_RAID = { factionId: "varan", trigger: "rockets10", powerPct: 0.25, minPower: 5, delayMinutes: 2 };
+var TUTORIAL_RAID_META = {
+  factionId: { label: "Faction du raid (id)" },
+  trigger: { label: "\xC9tape du tutoriel qui d\xE9clenche le raid (id)" },
+  powerPct: { label: "Puissance du raid : part de ta d\xE9fense", unit: "part", min: 0, max: 2 },
+  minPower: { label: "Puissance minimale du raid", min: 0, max: 1e4 },
+  delayMinutes: { label: "Arriv\xE9e du raid apr\xE8s l'\xE9tape", unit: "min", min: 0, max: 1440 }
+};
 var TUTORIAL_TITLE = "Recrue de Vashka";
 
 // src/game/onboarding.ts
@@ -3382,6 +3473,11 @@ var RESOURCE_LIST = [
   { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
 ];
 var EXCHANGE_RULES = { commonToRare: 0.01, rareToCommon: 50, taxPct: 0.05 };
+var EXCHANGE_RULES_META = {
+  commonToRare: { label: "Comptoir : rares par ressource commune", min: 1e-4, max: 1, hint: "0,01 = 1 rare pour 100 communes ; 0,004 \xE0 la bascule du rythme." },
+  rareToCommon: { label: "Comptoir : communes par ressource rare", min: 1, max: 1e4 },
+  taxPct: { label: "Taxe du comptoir", unit: "part", min: 0, max: 1 }
+};
 function getTradeRate(sellId, buyId) {
   const sell = RESOURCE_LIST.find((r) => r.id === sellId);
   const buy = RESOURCE_LIST.find((r) => r.id === buyId);
@@ -3590,6 +3686,14 @@ var RESEARCH_RULES = {
   /** Durée maximale d'un niveau, avant les réductions (secondes ; 0 = sans plafond). */
   maxLevelSeconds: 0
 };
+var RESEARCH_RULES_META = {
+  maxConcurrent: { label: "Recherches en parall\xE8le", min: 1, max: 10 },
+  costGrowth: { label: "Croissance du co\xFBt par niveau", unit: "\xD7", min: 1, max: 5, hint: "Co\xFBt = co\xFBt de base \xD7 croissance^(niveau \u2212 1) ; une techno peut avoir la sienne." },
+  timeGrowth: { label: "Croissance de la dur\xE9e par niveau", unit: "\xD7", min: 1, max: 5 },
+  lateFromLevel: { label: "Recherche tardive : d\xE8s le niveau", unit: "niveau", min: 0, max: 50, hint: "0 = jamais. Passe \xE0 7 \xE0 la bascule du rythme." },
+  lateTimeFactor: { label: "Recherche tardive : dur\xE9e multipli\xE9e par", unit: "\xD7", min: 1, max: 100, hint: "1 = sans effet. Passe \xE0 25 \xE0 la bascule du rythme." },
+  maxLevelSeconds: { label: "Dur\xE9e maximale d'un niveau", unit: "s", min: 0, max: 31536e3, hint: "Avant r\xE9ductions ; 0 = sans plafond. 604 800 (7 j) \xE0 la bascule du rythme." }
+};
 function researchRule(v, fallback) {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -3727,6 +3831,12 @@ function describeTechEffect(e3, level3, names = {}) {
 // src/game/buildings.ts
 var DOCK_BUILDING_ID = "cale_seche";
 var DOCK_TIERS = { triage: 5, auto: 10, priority: 15, orbital: 20 };
+var DOCK_TIERS_META = {
+  triage: { label: "Cale s\xE8che : niveau du triage", unit: "niveau", min: 1, max: 50, hint: "D\xE9mant\xE8lement en cale et r\xE9glage par d\xE9faut apr\xE8s un combat." },
+  auto: { label: "Cale s\xE8che : niveau de la remise automatique", unit: "niveau", min: 1, max: 50 },
+  priority: { label: "Cale s\xE8che : niveau des priorit\xE9s de r\xE9paration", unit: "niveau", min: 1, max: 50 },
+  orbital: { label: "Cale s\xE8che : niveau de la cale orbitale", unit: "niveau", min: 1, max: 50 }
+};
 var ENDGAME_PRODUCTION = [1, 1, 2, 2, 3, 4, 5, 6, 8, 10];
 var PRODUCTION_TABLE = [2, 4, 7, 13, 23, 42, 75, 135, 259, 500, 625, 781, 977, 1221, 1526, 1907, 2384, 2980, 3725, 4657];
 function tier2(common, commonMax, rare, rareMax) {
@@ -3939,6 +4049,13 @@ var BUILDINGS = [];
 var LOCKABLE_BUILDINGS = [];
 var BUILDING_UNLOCK_COST = {};
 var PRODUCTION_RESOURCE_BY_BUILDING = {};
+function buildingUnlockCostMeta() {
+  const hint = "Recalcul\xE9 depuis le co\xFBt de d\xE9blocage de l'onglet B\xE2timents : le r\xE9gler l\xE0-bas.";
+  return Object.fromEntries(Object.keys(BUILDING_UNLOCK_COST).map((id) => {
+    var _a, _b;
+    return [id, { label: `D\xE9blocage : ${(_b = (_a = BUILDINGS.find((b) => b.id === id)) == null ? void 0 : _a.name) != null ? _b : id}`, hint }];
+  }));
+}
 function setBuildings(defs) {
   var _a;
   BUILDINGS.splice(0, BUILDINGS.length, ...defs);
@@ -4706,6 +4823,12 @@ var ALLIANCE_PERMS = [
   { id: "kick", label: "Exclusion", hint: "Exclure un membre (jamais le fondateur)." }
 ];
 var ALLIANCE_PROFILE_RULES = { maxRanks: 6, maxApplications: 30, descriptionMax: 600, messageMax: 300 };
+var ALLIANCE_PROFILE_RULES_META = {
+  maxRanks: { label: "Rangs personnalis\xE9s par alliance", min: 1, max: 20 },
+  maxApplications: { label: "Candidatures en attente, au plus", min: 1, max: 200 },
+  descriptionMax: { label: "Description de l'alliance : longueur", unit: "caract\xE8res", min: 50, max: 5e3 },
+  messageMax: { label: "Message de candidature : longueur", unit: "caract\xE8res", min: 20, max: 2e3 }
+};
 var PERM_IDS = new Set(ALLIANCE_PERMS.map((p) => p.id));
 var COLOR = /^#[0-9a-fA-F]{6}$/;
 var LEGACY_PERMS = {
@@ -5423,6 +5546,14 @@ var ASCENSION_RULES = {
   shieldHours: 72,
   upkeepFreeDays: 7
 };
+var ASCENSION_RULES_META = {
+  productionPerAscension: { label: "Production en plus par Ascension", unit: "part", min: 0, max: 1, hint: "Bonus permanent : 0,1 = +10 % de production par Ascension." },
+  buildTimePerAscension: { label: "Dur\xE9e de construction en moins par Ascension", unit: "part", min: 0, max: 0.1, hint: "0,05 = \u22125 % par Ascension, sous le plafond \xAB Temps de construction \xBB des bonus." },
+  maxAscensions: { label: "Ascensions au plus", min: 1, max: 50, hint: "Passe \xE0 10 \xE0 la bascule du rythme. Ne jamais descendre sous le nombre d\xE9j\xE0 atteint par un joueur." },
+  cooldownDays: { label: "D\xE9lai entre deux Ascensions", unit: "j", min: 0, max: 365, hint: "Passe \xE0 30 \xE0 la bascule du rythme (groupe \xAB Rythme \xBB)." },
+  shieldHours: { label: "Bouclier apr\xE8s une Ascension", unit: "h", min: 0, max: 336, hint: "Aucune attaque ne peut viser le joueur pendant ce temps." },
+  upkeepFreeDays: { label: "Entretien de flotte offert apr\xE8s une Ascension", unit: "j", min: 0, max: 60 }
+};
 var DAY4 = 24 * 36e5;
 function ascensionCount(player) {
   return Math.max(0, Math.min(ASCENSION_RULES.maxAscensions, Math.floor(Number(player == null ? void 0 : player.ascensions) || 0)));
@@ -5967,6 +6098,9 @@ var COLONY_SPEC_RULES = {
   /** Délai entre deux changements (le premier choix est libre). */
   changeCooldownMs: 7 * 24 * 36e5
 };
+var COLONY_SPEC_RULES_META = {
+  changeCooldownMs: { label: "D\xE9lai entre deux changements de sp\xE9cialisation", unit: "ms", min: 0, max: 7776e6, hint: "604 800 000 = 7 jours. Le premier choix est libre." }
+};
 function findColonySpec(id) {
   return COLONY_SPECS.find((s) => s.id === id);
 }
@@ -6006,6 +6140,11 @@ var DEPOSIT_RULES = {
   costFactor: 1.2,
   /** Durée : celle d'un extracteur de colonie × ce facteur. */
   timeFactor: 1.5
+};
+var DEPOSIT_RULES_META = {
+  perSecond: { label: "Production par seconde, niveaux 1 \xE0 15", hint: "Une valeur par niveau du gisement." },
+  costFactor: { label: "Co\xFBt : \xD7 celui d'un extracteur de colonie", unit: "\xD7", min: 0.1, max: 10, hint: "Plus des nanocomposants (\xBD) et des donn\xE9es (\xBC)." },
+  timeFactor: { label: "Dur\xE9e : \xD7 celle d'un extracteur de colonie", unit: "\xD7", min: 0.1, max: 10 }
 };
 function hashString2(text) {
   let h = 2166136261;
@@ -6723,6 +6862,14 @@ var SYNTH_RULES = {
   baseMinutes: 30,
   minutesPerLevel: 77
 };
+var SYNTH_RULES_META = {
+  pctPerLevel: { label: "Effet par niveau de capsule", unit: "%", min: 0, max: 50, hint: "5 = +5 % par niveau (niveau 10 au plus)." },
+  maxStock: { label: "Capsules d'un type en r\xE9serve", min: 1, max: 20 },
+  activeHours: { label: "Dur\xE9e d'une capsule active", unit: "h", min: 0.5, max: 168 },
+  costHoursPerLevel: { label: "Co\xFBt : production commune par niveau", unit: "h", min: 0, max: 48 },
+  baseMinutes: { label: "Fabrication au niveau 1", unit: "min", min: 0, max: 1440 },
+  minutesPerLevel: { label: "Fabrication : minutes par niveau en plus", unit: "min", min: 0, max: 1440 }
+};
 function synthesisEffects(player, now) {
   const st = synthesisState(player);
   if (!st.armor || st.armor.untilMs <= now || !(st.armor.pct > 0)) return [];
@@ -7241,6 +7388,15 @@ var TREATY_RULES = {
   embargoRaidPower: 1.25,
   embargoBounty: 1.5,
   embargoNotoriety: 1
+};
+var TREATY_RULES_META = {
+  durationDays: { label: "Dur\xE9e d'un trait\xE9", unit: "j", min: 1, max: 60 },
+  cost: { label: "Co\xFBt par trait\xE9", unit: "h", hint: "Heures de production commune ; 0 = gratuit." },
+  maxNotoriety: { label: "Notori\xE9t\xE9 maximale pour signer", hint: "Par trait\xE9 ; embargo sans condition." },
+  escortAmbush: { label: "Escorte : embuscades d'exp\xE9dition", unit: "\xD7", min: 0, max: 1 },
+  embargoRaidPower: { label: "Embargo : puissance des raids", unit: "\xD7", min: 1, max: 5 },
+  embargoBounty: { label: "Embargo : primes", unit: "\xD7", min: 1, max: 5 },
+  embargoNotoriety: { label: "Embargo : notori\xE9t\xE9 ajout\xE9e", min: 0, max: 10 }
 };
 function activeTreaty(st, now) {
   const t = st == null ? void 0 : st.treaty;
@@ -8158,6 +8314,12 @@ var PASS_BONUS_RULES = {
   tokens: 1,
   maxPerMonth: 10
 };
+var PASS_BONUS_RULES_META = {
+  enabled: { label: "Paliers bonus apr\xE8s le dernier palier" },
+  points: { label: "Points par palier bonus", unit: "points", min: 1, max: 1e4 },
+  tokens: { label: "Jetons par palier bonus", unit: "jetons", min: 0, max: 20 },
+  maxPerMonth: { label: "Paliers bonus par mois, au plus", min: 0, max: 100 }
+};
 function settlePassBonus(st, extra) {
   var _a, _b;
   const r = PASS_BONUS_RULES;
@@ -8174,6 +8336,10 @@ var PASS_OVERFLOW = {
   /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
   minPoints: 40,
   amberPerPoint: 1
+};
+var PASS_OVERFLOW_META = {
+  minPoints: { label: "Gain minimal converti", unit: "points", min: 0, max: 1e3, hint: "Seules les sources qui rapportent au moins ce nombre de points sont converties (petits gains exclus)." },
+  amberPerPoint: { label: "Ambre par point en trop", unit: "Ambre", min: 0, max: 100 }
 };
 function addPassPoints(player, source, now, times = 1) {
   passHook == null ? void 0 : passHook(player, source, now, times);
@@ -8329,6 +8495,15 @@ var BOUNTY_RULES = {
     { name: "Main de la Reine", at: 150 }
   ],
   exchange: { rarePerAmber: 40, weeklyCap: 100 }
+};
+var BOUNTY_RULES_META = {
+  dailyLimit: { label: "Primes par jour", min: 1, max: 20, hint: "Compteur remis \xE0 z\xE9ro \xE0 minuit (UTC)." },
+  refreshHours: { label: "Renouvellement du tableau des primes", unit: "h", min: 1, max: 72 },
+  retries: { label: "Essais en plus apr\xE8s un \xE9chec", min: 0, max: 5, hint: "Un \xE9chec laisse la prime ouverte ce nombre de fois." },
+  amberPerRank: { label: "Ambre en plus par rang de l'Essaim", unit: "part", min: 0, max: 1, hint: "0,1 = +10 % d'Ambre par rang au-del\xE0 du premier." },
+  tiers: { label: "Paliers de prime (\u2605 \xE0 \u2605\u2605\u2605\u2605)", hint: "Par palier : pct (puissance du fugitif / ta puissance d'attaque), minMinutes\u2013maxMinutes (trajet), xp, amber, rep, floor (puissance minimale), minRank." },
+  ranks: { label: "Rangs de l'Essaim", hint: "name et at (r\xE9putation requise), dans l'ordre croissant." },
+  exchange: { label: "\xC9change Ambre \u2192 ressources rares", hint: "rarePerAmber : rares par Ambre ; weeklyCap : Ambre \xE9changeable par semaine." }
 };
 var KESH = {
   name: "Kesh'Vaar",
@@ -8620,6 +8795,16 @@ var BOUNTY_SHOP_RULES = {
   painkillerHours: 2,
   pheromoneHours: 24
 };
+var BOUNTY_SHOP_RULES_META = {
+  acceleratorMinutes: { label: "Acc\xE9l\xE9rateur : minutes retir\xE9es au chantier", unit: "min", min: 1, max: 1440 },
+  boostHours: { label: "Gel\xE9e de la Reine : dur\xE9e du bonus de production", unit: "h", min: 1, max: 168, hint: "Cumulable : chaque achat prolonge l'effet." },
+  maxCharges: { label: "Charges d'un objet en r\xE9serve, au plus", min: 1, max: 20 },
+  shieldHours: { label: "Bouclier de la Ruche : dur\xE9e", unit: "h", min: 0, max: 72 },
+  shieldCooldownDays: { label: "Bouclier de la Ruche : d\xE9lai entre deux achats", unit: "j", min: 0, max: 60 },
+  title: { label: "Titre vendu au Comptoir" },
+  painkillerHours: { label: "Analg\xE9sique : heures de r\xE9paration de l'Atelier d'un coup", unit: "h", min: 0, max: 48 },
+  pheromoneHours: { label: "Ph\xE9romone : dur\xE9e du bonus d'XP des officiers", unit: "h", min: 1, max: 168, hint: "Le bonus lui-m\xEAme se r\xE8gle dans \xAB Officiers : second r\xF4le\u2026 \xBB (pheromonePct)." }
+};
 var NAME_TONES = [
   { id: "accent", label: "Cyan" },
   { id: "mint", label: "Menthe" },
@@ -8868,6 +9053,17 @@ var ELITE_RULES = {
   killed: { xp: 300, amber: 150, rep: 8 },
   failed: { xp: 100, amber: 50, rep: 3 }
 };
+var ELITE_RULES_META = {
+  hpFactor: { label: "Structure : \xD7 puissance d'attaque des joueurs actifs", unit: "\xD7", min: 0.1, max: 20 },
+  minHp: { label: "Structure minimale", min: 0, max: 1e10 },
+  cooldownHours: { label: "D\xE9lai entre deux assauts d'un joueur", unit: "h", min: 0, max: 168 },
+  flightMinutes: { label: "Trajet vers la proie", unit: "min", min: 1, max: 1440 },
+  lossPct: { label: "Vaisseaux perdus par assaut", unit: "part", min: 0, max: 1 },
+  minRank: { label: "Rang minimal dans l'Essaim", min: 1, max: 10 },
+  minShare: { label: "Part minimale de la structure pour \xEAtre r\xE9compens\xE9", unit: "part", min: 0, max: 1 },
+  killed: { label: "R\xE9compense : proie abattue", hint: "xp, amber, rep." },
+  failed: { label: "R\xE9compense : proie enfuie", hint: "xp, amber, rep." }
+};
 function eliteWindow(now) {
   const id = weekId(now);
   const startMs = Date.parse(`${id}T00:00:00Z`);
@@ -9071,6 +9267,18 @@ var MOON_RULES = {
    *  sans lune ajoute cette part à la réserve (`moonPity`), en plus du tirage : lune garantie au 20e combat à 0,05.
    *  0 = pas de pitié (la réserve reste en base, sans effet). */
   pityPerDefense: 0.05
+};
+var MOON_RULES_META = {
+  enabled: { label: "Lunes activ\xE9es" },
+  debrisPerPercent: { label: "D\xE9bris pour 1 % de chance de lune", min: 1, max: 1e9, hint: "Ferraille + \xE9nergie. Passe \xE0 2 000 000 \xE0 la bascule du rythme." },
+  maxChance: { label: "Chance maximale d'un combat", unit: "part", min: 0, max: 1 },
+  shieldBonus: { label: "Bonus de bouclier plan\xE9taire", unit: "part", min: 0, max: 0.5, hint: "Couche empire, sous le plafond \xAB Bouclier plan\xE9taire \xBB." },
+  protectedStorageBonus: { label: "Entrep\xF4t \xE0 l'abri du pillage en plus", unit: "part", min: 0, max: 1, hint: "Couche empire." },
+  maxLevel: { label: "Niveau maximal de la lune", min: 1, max: 20, hint: "1 = pas d'am\xE9lioration. Phalange et porte de saut d\xE9pendent du niveau." },
+  shieldPerLevel: { label: "Bouclier en plus par niveau au-del\xE0 du 1er", unit: "part", min: 0, max: 0.2 },
+  upgradeCost: { label: "Co\xFBt du passage au niveau 2", hint: "Multipli\xE9 par la croissance \xE0 chaque niveau suivant." },
+  costGrowth: { label: "Croissance du co\xFBt par niveau", unit: "\xD7", min: 1, max: 10, hint: "Passe \xE0 3 \xE0 la bascule du rythme." },
+  pityPerDefense: { label: "Piti\xE9 lunaire : part ajout\xE9e par combat subi", unit: "part", min: 0, max: 1, hint: "0,05 = lune garantie au 20e combat subi sans lune ; 0 = pas de piti\xE9." }
 };
 var MOON_NAMES = ["S\xE9l\xE9n\xE9", "Ph\u0153b\xE9", "Nyx", "Callisto", "Io", "Thalassa", "Mimas", "Anank\xE9", "Kallichore", "H\xE9lik\xE8", "M\xE9thone", "Pandore"];
 function moonChance(debris) {
@@ -9338,6 +9546,15 @@ var PRESTIGE_RULES = {
     { projects: 500, name: "Anneau monumental" },
     { projects: 1e3, name: "Merveille du secteur" }
   ]
+};
+var PRESTIGE_RULES_META = {
+  enabled: { label: "Projets de prestige ouverts", hint: "D\xE9coch\xE9 : plus de nouveau projet (un projet en cours se termine)." },
+  hoursPerProject: { label: "Co\xFBt d'un projet", unit: "h", min: 0, max: 168, hint: "En heures de production commune du moment." },
+  durationHours: { label: "Dur\xE9e d'un projet", unit: "h", min: 0, max: 168 },
+  unlockExtractorLevel: { label: "Niveau des 4 extracteurs qui ouvre les projets", unit: "niveau", min: 1, max: 40 },
+  pointsPerProject: { label: "Points de prestige par projet", unit: "points", min: 0, max: 1e3 },
+  growth: { label: "Croissance du co\xFBt par projet achev\xE9", unit: "\xD7", min: 1, max: 3, hint: "1 = co\xFBt constant en heures." },
+  monuments: { label: "Monuments de la fiche publique", hint: "projects (projets achev\xE9s requis) et name ; le plus haut atteint s'affiche." }
 };
 var num3 = (v, fallback, min = 0) => {
   const n = Number(v);
@@ -9636,6 +9853,15 @@ var NAV_UNLOCK_RULES = {
     "/game/prestige": { signals: ["prestigeReady"] }
   }
 };
+var NAV_UNLOCK_RULES_META = {
+  enabled: { label: "Ouverture progressive du menu", hint: "D\xE9coch\xE9 : tout le monde voit tout (ancien menu)." },
+  newAccountsFrom: { label: "Comptes neufs \xE0 partir du", unit: "date", min: 0, hint: "Un compte cr\xE9\xE9 avant et au moins au rang des v\xE9t\xE9rans voit tout." },
+  veteranRank: { label: "Rang des v\xE9t\xE9rans (id)", hint: "Ex. fer2 = Fer II." },
+  colonyLead: { label: "Avance de la page Colonies", unit: "niveaux", min: 0, max: 200, hint: "La page s'ouvre ce nombre de niveaux cumul\xE9s avant le seuil de la 1re colonie." },
+  filterContracts: { label: "Objectifs du jour tir\xE9s parmi les syst\xE8mes ouverts" },
+  style: { label: "Page ferm\xE9e : hidden (cach\xE9e) ou locked (gris\xE9e)" },
+  pages: { label: "Pages \xE0 ouverture progressive", hint: "Par page : rank, signals, step, requires. Une page absente reste toujours visible." }
+};
 var NAV_PAGE_LABELS = {
   "/game/galaxie": "Galaxie",
   "/game/alliance": "Alliance",
@@ -9863,6 +10089,18 @@ var CONTRACT_RULES = {
   chestRare: 1500,
   chestXp: 150
 };
+var CONTRACT_RULES_META = {
+  perDay: { label: "Objectifs du jour", min: 1, max: 10 },
+  streakBonusPerDay: { label: "Bonus de s\xE9rie par jour", unit: "part", min: 0, max: 1, hint: "0,1 = +10 % de r\xE9compense par jour de s\xE9rie." },
+  streakBonusMax: { label: "Bonus de s\xE9rie maximal", unit: "part", min: 0, max: 2 },
+  chestEvery: { label: "Coffre tous les N jours de s\xE9rie", unit: "j", min: 1, max: 60 },
+  xpPerContract: { label: "XP par objectif", unit: "XP", min: 0, max: 1e4 },
+  rarePerContract: { label: "Ressources rares par objectif", min: 0, max: 1e6, hint: "Avant l'\xE9chelle de progression du joueur." },
+  tokensPerContract: { label: "Jetons par objectif", unit: "jetons", min: 0, max: 20 },
+  allDoneTokens: { label: "Jetons en plus quand tous sont faits", unit: "jetons", min: 0, max: 20 },
+  chestRare: { label: "Coffre : chaque ressource rare", min: 0, max: 1e7 },
+  chestXp: { label: "Coffre : XP", unit: "XP", min: 0, max: 1e5 }
+};
 var ALL_TYPES = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
 var CONTRACT_PAGES = {
   win_attack: ["/game/galaxie"],
@@ -10032,6 +10270,12 @@ function rerollContract(player, contractId, now) {
 
 // src/game/dailyMissions.ts
 var DAILY_RULES = { tasks: 0, legacyTasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
+var DAILY_RULES_META = {
+  tasks: { label: "T\xE2ches tir\xE9es par jour (ancien syst\xE8me)", min: 0, max: 10, hint: "0 : fusionn\xE9es dans les objectifs du jour depuis 6.2. Laisser \xE0 0." },
+  legacyTasks: { label: "T\xE2ches des anciennes journ\xE9es", min: 0, max: 10, hint: "Sert seulement \xE0 payer les journ\xE9es commenc\xE9es avant la fusion." },
+  tokensPerTask: { label: "Jetons par t\xE2che", unit: "jetons", min: 0, max: 20 },
+  allBonusTokens: { label: "Jetons en plus quand toutes sont faites", unit: "jetons", min: 0, max: 20 }
+};
 var POOL = [
   { key: "mission", count: 2 },
   { key: "spy", count: 2 },
@@ -10256,6 +10500,13 @@ var BOSS_PHASE_RULES = {
   shieldPct: 0.25,
   shieldDamageFactor: 0.85,
   weaknessFactor: 1.5
+};
+var BOSS_PHASE_RULES_META = {
+  ripostePct: { label: "Phase 2 (riposte) sous cette part de structure", unit: "part", min: 0, max: 1 },
+  riposteLossFactor: { label: "Pertes des assaillants en phase de riposte", unit: "\xD7", min: 1, max: 5 },
+  shieldPct: { label: "Phase 3 (bouclier) sous cette part de structure", unit: "part", min: 0, max: 1, hint: "Doit rester sous le seuil de riposte." },
+  shieldDamageFactor: { label: "D\xE9g\xE2ts en phase 3, hors faiblesse", unit: "\xD7", min: 0.1, max: 1, hint: "0,85 = \u221215 % de d\xE9g\xE2ts derri\xE8re le bouclier." },
+  weaknessFactor: { label: "D\xE9g\xE2ts des vaisseaux de la faiblesse en phase 3", unit: "\xD7", min: 1, max: 5 }
 };
 var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
 function bossFightPhase(state) {
@@ -10674,6 +10925,13 @@ function unlockedPlanetLook(p, look) {
 // src/game/achievements.ts
 var TIER_LABELS = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "L\xE9gendaire", mythique: "Mythique" };
 var ACHIEVEMENT_TOKENS = { bronze: 0, argent: 0, or: 1, legendaire: 2, mythique: 5 };
+var ACHIEVEMENT_TOKENS_META = {
+  bronze: { label: "Jetons au palier bronze", unit: "jetons", min: 0, max: 50, hint: "Jetons du casino gagn\xE9s quand un succ\xE8s atteint ce palier." },
+  argent: { label: "Jetons au palier argent", unit: "jetons", min: 0, max: 50 },
+  or: { label: "Jetons au palier or", unit: "jetons", min: 0, max: 50 },
+  legendaire: { label: "Jetons au palier l\xE9gendaire", unit: "jetons", min: 0, max: 50 },
+  mythique: { label: "Jetons au palier mythique", unit: "jetons", min: 0, max: 100, hint: "Palier r\xE9serv\xE9 aux exploits rarissimes (gros lot du casino)." }
+};
 var TIER_REWARDS = {
   bronze: { xp: 10, hours: 0 },
   argent: { xp: 25, hours: 0 },
@@ -10681,6 +10939,13 @@ var TIER_REWARDS = {
   legendaire: { xp: 150, hours: 6 },
   // v5.14.2 : palier réservé aux exploits rarissimes (le gros lot du casino).
   mythique: { xp: 400, hours: 12 }
+};
+var TIER_REWARDS_META = {
+  bronze: { label: "Palier bronze", hint: "xp : XP gagn\xE9e ; hours : heures de production vers\xE9es." },
+  argent: { label: "Palier argent", hint: "xp : XP gagn\xE9e ; hours : heures de production vers\xE9es." },
+  or: { label: "Palier or", hint: "xp : XP gagn\xE9e ; hours : heures de production vers\xE9es." },
+  legendaire: { label: "Palier l\xE9gendaire", hint: "xp : XP gagn\xE9e ; hours : heures de production vers\xE9es." },
+  mythique: { label: "Palier mythique", hint: "xp : XP gagn\xE9e ; hours : heures de production vers\xE9es." }
 };
 var CATEGORY_LABELS2 = {
   combat: { label: "Combat", emoji: "\u2694\uFE0F" },
@@ -11218,6 +11483,9 @@ function derivedAchievements() {
   ];
 }
 var ACHIEVEMENT_LIST_RULES = { removedDefaults: [] };
+var ACHIEVEMENT_LIST_RULES_META = {
+  removedDefaults: { label: "Succ\xE8s par d\xE9faut retir\xE9s (ids)", hint: "Ces succ\xE8s du code ne reviennent pas quand la liste enregistr\xE9e est compl\xE9t\xE9e. Rempli par l'onglet Succ\xE8s." }
+};
 function withDefaultAchievements(stored, removed = []) {
   const have = new Set(stored.map((a) => a.id));
   const skip = new Set(removed);
@@ -11243,6 +11511,9 @@ function setAchievements(defs) {
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 var ACHIEVEMENT_HINT_RULES = { price: 25 };
+var ACHIEVEMENT_HINT_RULES_META = {
+  price: { label: "Prix d'un indice de succ\xE8s secret", unit: "Ambre", min: 0, max: 1e3, hint: "Ambre de Ruche d\xE9pens\xE9e pour lire la piste d'un succ\xE8s cach\xE9." }
+};
 var METRIC_HINTS = {
   defeats: "Celui qui tombe souvent finit par apprendre \xE0 se relever.",
   phoenix: "Les cendres d'une d\xE9faite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
@@ -11484,6 +11755,14 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
+var VACATION_RULES_META = {
+  minDays: { label: "Dur\xE9e minimale", unit: "j", min: 1, max: 30 },
+  maxDays: { label: "Dur\xE9e maximale", unit: "j", min: 1, max: 90 },
+  cooldownDays: { label: "Attente entre deux p\xE9riodes", unit: "j", min: 0, max: 60 },
+  productionFactor: { label: "Production pendant l'absence", unit: "part", min: 0, max: 1, hint: "0,25 = 25 % de la production normale." },
+  recentAttackHours: { label: "Pas d'activation apr\xE8s une attaque subie", unit: "h", min: 0, max: 168 },
+  minStayHours: { label: "Retour anticip\xE9 possible apr\xE8s", unit: "h", min: 0, max: 336 }
+};
 var DAY9 = 864e5;
 var HOUR7 = 36e5;
 function onVacation(p, now) {
@@ -11681,6 +11960,11 @@ var BUILD_PLAN_RULES = {
   /** Niveau de la Fonderie requis pour chaque emplacement (le 1er est offert). */
   slotLevels: [0, 5, 10],
   maxWaitHours: 24
+};
+var BUILD_PLAN_RULES_META = {
+  slotBuilding: { label: "B\xE2timent qui ouvre les emplacements (id)" },
+  slotLevels: { label: "Niveau du b\xE2timent requis par emplacement", unit: "niveau", hint: "Un niveau par emplacement de la file planifi\xE9e ; le 1er (0) est offert." },
+  maxWaitHours: { label: "Attente maximale sans ressources", unit: "h", min: 1, max: 168, hint: "Au-del\xE0, l'\xE9tape quitte la file et le joueur est pr\xE9venu." }
 };
 var BUILD_SLOT_BONUS_LEVELS = [5, 10];
 function buildSlots(player) {
@@ -12269,6 +12553,10 @@ function setActiveTitle(player, label3) {
 
 // src/game/talents.ts
 var TALENT_RULES = { pointsPerAscension: 3, maxRank: 3 };
+var TALENT_RULES_META = {
+  pointsPerAscension: { label: "Points de talent par Ascension", min: 0, max: 20 },
+  maxRank: { label: "Rang maximal d'un talent", min: 1, max: 10, hint: "En baisser ne retire pas les rangs d\xE9j\xE0 pris." }
+};
 var TALENTS = [
   { id: "rendement", branch: "economie", name: "Rendement imp\xE9rial", description: "Production de toutes les ressources.", effect: { kind: "productionAll" }, perRank: 0.02 },
   { id: "fonderies", branch: "economie", name: "Fonderies profondes", description: "Production de ferraille.", effect: { kind: "production", res: "scrap" }, perRank: 0.02 },
@@ -14137,11 +14425,23 @@ var SEASON_WAR_RULES = {
   rewardHours: [48, 24, 12],
   titles: ["Conqu\xE9rants de la saison", "Strat\xE8ges de la saison", "V\xE9t\xE9rans de la saison"]
 };
+var SEASON_WAR_RULES_META = {
+  powerPerPoint: { label: "Puissance ennemie d\xE9truite par point", min: 1, max: 1e9 },
+  sectorPoints: { label: "Points par secteur tenu \xE0 la cl\xF4ture", unit: "points", min: 0, max: 1e4 },
+  rewardHours: { label: "Podium : heures de production vers\xE9es au tr\xE9sor (1re, 2e, 3e)", unit: "h" },
+  titles: { label: "Titres d'alliance du podium" }
+};
 var WAR_CHEST_RULES = {
   depositPct: 0.1,
   capDays: 30,
   shieldHours: 2,
   shieldCostHours: 4
+};
+var WAR_CHEST_RULES_META = {
+  depositPct: { label: "D\xE9p\xF4t : part du bonus du tr\xE9sor", unit: "part", min: 0, max: 1 },
+  capDays: { label: "Plafond du coffre : jours de d\xE9p\xF4ts", unit: "j", min: 1, max: 365 },
+  shieldHours: { label: "Bouclier offert \xE0 un membre", unit: "h", min: 0, max: 72 },
+  shieldCostHours: { label: "Co\xFBt du bouclier : production du membre", unit: "h", min: 0, max: 72 }
 };
 function readWarChest(raw) {
   var _a, _b;
@@ -14881,6 +15181,12 @@ var COLONY_BASE_RULES = {
   perColony: 1,
   /** 6.11.1 (Z4, Q9) : la base combat aux côtés des défenses de la colonie attaquée, comme une garnison (pertes possibles). Désactivé par défaut. */
   defendsColony: false
+};
+var COLONY_BASE_RULES_META = {
+  enabled: { label: "Flotte bas\xE9e sur les colonies", hint: "D\xE9coch\xE9 : plus de nouvelle base (les bases en place vont \xE0 leur terme)." },
+  maxDays: { label: "Stationnement maximal", unit: "j", min: 1, max: 60, hint: "La base rentre seule ensuite." },
+  perColony: { label: "Bases \xE0 la fois sur une m\xEAme colonie", min: 1, max: 10 },
+  defendsColony: { label: "La base d\xE9fend la colonie attaqu\xE9e", hint: "Elle combat comme une garnison, pertes possibles." }
 };
 function colonyBaseDefends() {
   return COLONY_BASE_RULES.defendsColony === true;
@@ -15672,6 +15978,37 @@ var WARLORD_RULES = {
     /** Part minimale de l'objectif pour être récompensé (vendetta d'alliance). */
     minShare: 0.1
   }
+};
+var WARLORD_RULES_META = {
+  tierRange: { label: "Puissance vis\xE9e par cat\xE9gorie (min, max)", hint: "Faibles et moyens : \xD7 la m\xE9diane des actifs ; forts : \xD7 le meilleur joueur." },
+  minPower: { label: "Puissance minimale d'un seigneur", min: 0, max: 1e9, hint: "Serveur presque vide." },
+  growthPerDay: { label: "Croissance maximale par jour", unit: "part", min: 0, max: 1, hint: "Part de la puissance vis\xE9e." },
+  maxDefenseRatio: { label: "Plafond : \xD7 la meilleure d\xE9fense de joueur", unit: "\xD7", min: 0.1, max: 10 },
+  shrinkPerDay: { label: "Exc\xE9dent perdu par jour", unit: "part", min: 0, max: 1, hint: "Arm\xE9e au-del\xE0 de la puissance vis\xE9e." },
+  snapAbove: { label: "Recalage imm\xE9diat au-del\xE0 de", unit: "\xD7", min: 1, max: 20, hint: "Multiple de la puissance vis\xE9e ; recalage \xE0 1,2 fois." },
+  counterDays: { label: "Dur\xE9e de la contre-composition", unit: "j", min: 0, max: 60 },
+  counterWeight: { label: "Poids de la classe renforc\xE9e", unit: "\xD7", min: 1, max: 10 },
+  outlierRatio: { label: "Joueur \xE9cart\xE9 de la r\xE9f\xE9rence au-del\xE0 de", unit: "\xD7", min: 1, max: 20, hint: "Plus de N fois au-dessus du suivant (compte admin, de test\u2026)." },
+  buildingFactor: { label: "B\xE2timents : \xD7 le niveau moyen des actifs", hint: "Par cat\xE9gorie de seigneur." },
+  buildingLevelEveryHours: { label: "Un niveau de b\xE2timent toutes les", unit: "h", min: 1, max: 168 },
+  xpGrowthPerHour: { label: "Croissance de l'XP par heure", unit: "part", min: 0, max: 1 },
+  activeDays: { label: "Joueur actif : vu dans les", unit: "j", min: 1, max: 60 },
+  attackEveryHours: { label: "Une attaque toutes les", unit: "h", min: 1, max: 720, hint: "Par seigneur agressif ou opportuniste." },
+  attackJitterHours: { label: "\xC9cart al\xE9atoire autour de l'attaque", unit: "h", min: 0, max: 72 },
+  retryHours: { label: "Nouvel essai sans cible", unit: "h", min: 0.25, max: 72 },
+  targetCooldownHours: { label: "Une m\xEAme cible : une attaque toutes les", unit: "h", min: 0, max: 720, hint: "Tous seigneurs confondus." },
+  minTargetXp: { label: "XP minimale d'une cible", unit: "XP", min: 0, max: 1e9, hint: "2 000 = jamais sous Bronze I." },
+  attackPowerMin: { label: "Puissance envoy\xE9e : au moins \xD7 la d\xE9fense de la cible", unit: "\xD7", min: 0.1, max: 5 },
+  attackPowerMax: { label: "Puissance envoy\xE9e : au plus \xD7 la d\xE9fense de la cible", unit: "\xD7", min: 0.1, max: 5 },
+  travelMinHours: { label: "Trajet minimal", unit: "h", min: 0.1, max: 72, hint: "Le joueur doit avoir le temps de r\xE9agir." },
+  travelMaxHours: { label: "Trajet maximal", unit: "h", min: 0.1, max: 72 },
+  lootCapHours: { label: "Butin plafonn\xE9 \xE0 la production de la cible", unit: "h", min: 0, max: 72 },
+  opportunistDefeatHours: { label: "Opportuniste : cible battue dans les", unit: "h", min: 0, max: 168 },
+  opportunistStockHours: { label: "Opportuniste : cible au stock de plus de", unit: "h", min: 0, max: 168 },
+  stockHours: { label: "Stock gard\xE9 en r\xE9serve", unit: "h", hint: "Heures de production, b\xE2tisseur et autres." },
+  offenseShare: { label: "Part de la puissance en vaisseaux d'attaque", unit: "part", hint: "Par temp\xE9rament ; le reste en d\xE9fenses." },
+  messageEveryHours: { label: "Un message au plus toutes les", unit: "h", min: 0, max: 720, hint: "Par seigneur et par joueur." },
+  vendetta: { label: "Vendetta", hint: "costHours, durationHours, goalFactor, powerLoss, awayDays, passPoints, minShare." }
 };
 var ORIGIN_ART = {
   kesh: { label: "Kesh'Vaar ren\xE9gats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
@@ -16713,6 +17050,19 @@ var PHALANX_RULES = {
   /** Coût minimal d'un balayage, en énergie. */
   scanCostMin: 1e3
 };
+var PHALANX_RULES_META = {
+  enabled: { label: "Phalange activ\xE9e", hint: "D\xE9coch\xE9 : balayages refus\xE9s, radar coup\xE9, rien n'est perc\xE9." },
+  rangePerLevel: { label: "Port\xE9e par niveau de lune", unit: "cases", min: 0, max: 200, hint: "En unit\xE9s de carte (carte de c\xF4t\xE9 100 : 142 couvre toute la carte)." },
+  radar: { label: "Radar d'alliance", hint: "Alerte les alli\xE9s au lancement d'une attaque de joueur." },
+  radarMaxNotified: { label: "Radar : alli\xE9s pr\xE9venus par attaque, au plus", min: 0, max: 50, hint: "Les plus proches de la plan\xE8te vis\xE9e." },
+  revealDecoyLevel: { label: "Niveau de lune qui perce le brouilleur", unit: "niveau", min: 0, max: 20, hint: "Montre la vraie composition ; 0 = jamais." },
+  revealBoostLevel: { label: "Niveau de lune qui r\xE9v\xE8le les capsules", unit: "niveau", min: 0, max: 20, hint: "Stimulants d'assaut embarqu\xE9s ; 0 = jamais." },
+  scanCooldownMinutes: { label: "Recharge du balayage au niveau 1", unit: "min", min: 0, max: 1440 },
+  scanCooldownCutPerLevel: { label: "Recharge en moins par niveau au-del\xE0 du 1er", unit: "min", min: 0, max: 60 },
+  scanCooldownMinMinutes: { label: "Recharge minimale", unit: "min", min: 0, max: 1440 },
+  scanCostHours: { label: "Co\xFBt d'un balayage : production d'\xE9nergie", unit: "h", min: 0, max: 24 },
+  scanCostMin: { label: "Co\xFBt minimal d'un balayage", unit: "\xE9nergie", min: 0, max: 1e9 }
+};
 var num6 = (v, d = 0) => Number.isFinite(Number(v)) ? Number(v) : d;
 function formatWait2(ms) {
   const min = Math.ceil(Math.max(0, ms) / 6e4);
@@ -16916,6 +17266,18 @@ var JUMP_GATE_RULES = {
   allyJumpArrivalMinutes: 5,
   /** 6.14.48 : une attaque repoussée moins de N minutes après un saut compte comme un sauvetage (`gateSaves`, succès secret). */
   saveWindowMinutes: 10
+};
+var JUMP_GATE_RULES_META = {
+  enabled: { label: "Porte de saut activ\xE9e", hint: "D\xE9coch\xE9 : plus aucun saut." },
+  minMoonLevel: { label: "Niveau de lune qui ouvre la porte", unit: "niveau", min: 1, max: 20 },
+  cooldownHours: { label: "Recharge au niveau minimal", unit: "h", min: 0, max: 168 },
+  cooldownCutPerLevel: { label: "Recharge en moins par niveau au-del\xE0 du minimum", unit: "h", min: 0, max: 48 },
+  cooldownMinHours: { label: "Recharge minimale, effets compris", unit: "h", min: 0, max: 168 },
+  missions: { label: "Missions que la porte rapatrie", hint: "patrol, garrison, colonybase : on peut seulement en retirer." },
+  allyJump: { label: "Saut de garnison vers un alli\xE9", hint: "L'alli\xE9 doit aussi avoir une lune." },
+  allyJumpMinMoonLevel: { label: "Saut vers un alli\xE9 : niveau de lune requis", unit: "niveau", min: 1, max: 20 },
+  allyJumpArrivalMinutes: { label: "Saut vers un alli\xE9 : arriv\xE9e apr\xE8s", unit: "min", min: 0, max: 1440 },
+  saveWindowMinutes: { label: "Fen\xEAtre d'un sauvetage", unit: "min", min: 0, max: 1440, hint: "Une attaque repouss\xE9e dans ce d\xE9lai apr\xE8s un saut compte comme un sauvetage (succ\xE8s secret)." }
 };
 var JUMPABLE_MISSIONS = ["patrol", "garrison", "colonybase"];
 var JUMPABLE_STATUS = ["outbound", "stationed", "returning"];
@@ -17345,6 +17707,11 @@ var MESSAGE_RULES = {
   perMinute: 8,
   perDay: 300
 };
+var MESSAGE_RULES_META = {
+  maxLength: { label: "Longueur d'un message priv\xE9", unit: "caract\xE8res", min: 50, max: 1e4 },
+  perMinute: { label: "Messages par minute, au plus", min: 1, max: 120 },
+  perDay: { label: "Messages par jour, au plus", min: 1, max: 1e4 }
+};
 function sanitizeMessageText(raw) {
   const text = String(raw != null ? raw : "").replace(/\r\n?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   if (!text) throw new GameActionError("Message vide.");
@@ -17370,6 +17737,10 @@ var CANCEL_RULES = {
   graceMs: 6e4,
   /** Part remboursée du temps restant. */
   refundPct: 0.8
+};
+var CANCEL_RULES_META = {
+  graceMs: { label: "Annulation int\xE9grale apr\xE8s le lancement", unit: "ms", min: 0, max: 36e5, hint: "Clic par erreur : tout est rendu dans ce d\xE9lai (60 000 = 1 min)." },
+  refundPct: { label: "Part rembours\xE9e ensuite", unit: "part", min: 0, max: 1, hint: "Part du co\xFBt non \xE9coul\xE9 rendue apr\xE8s le d\xE9lai de gr\xE2ce (hors limite de l'entrep\xF4t)." }
 };
 function refundFraction(startMs, endMs, now) {
   if (now - startMs <= CANCEL_RULES.graceMs) return 1;
@@ -18010,6 +18381,17 @@ function passPace(passes, monthId, observedDays, now) {
   return { median: round2(median3(rates)), top: round2(percentile(rates, passGenRules().topPercentile)) };
 }
 var BASE_COUNTS = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
+var BASE_COUNTS_META = {
+  contract: { label: "Objectifs du jour termin\xE9s", min: 0, max: 100, hint: "Quantit\xE9 de base d'un objectif de chapitre, avant la difficult\xE9 du mois." },
+  bounty: { label: "Primes remplies", min: 0, max: 100 },
+  raidRepelled: { label: "Raids repouss\xE9s", min: 0, max: 100 },
+  victory: { label: "Victoires", min: 0, max: 100 },
+  bossAssault: { label: "Assauts de boss", min: 0, max: 100 },
+  mission: { label: "Missions", min: 0, max: 100 },
+  spy: { label: "Espionnages", min: 0, max: 100 },
+  market: { label: "\xC9changes au march\xE9", min: 0, max: 100 },
+  warlordWin: { label: "Victoires contre un seigneur", min: 0, max: 100 }
+};
 function chapterDifficulty(d) {
   const r = chronicleGenRules();
   const mature = r.matureEpisodeDays;
@@ -18576,6 +18958,10 @@ var PASS_REWARD_RULES = {
   finalAmber: 300,
   /** Effort d'un passe complet, en mois d'activité du joueur médian. */
   monthEffort: 1
+};
+var PASS_REWARD_RULES_META = {
+  finalAmber: { label: "Ambre du dernier palier d'un passe g\xE9n\xE9r\xE9", unit: "Ambre", min: 0, max: 1e4, hint: "Avec le commandant et le cosm\xE9tique." },
+  monthEffort: { label: "Effort d'un passe complet", unit: "mois", min: 0.1, max: 6, hint: "En mois d'activit\xE9 du joueur m\xE9dian." }
 };
 function monthlyBudget(key, d) {
   return Math.max(1, Math.round(weeklyRate(key, d) * 4.3 * PASS_REWARD_RULES.monthEffort));
@@ -19187,6 +19573,10 @@ function nextMonthId(id) {
 
 // src/game/profile.ts
 var PROFILE_RULES = { mottoMax: 60, pinnedMax: 3 };
+var PROFILE_RULES_META = {
+  mottoMax: { label: "Devise : longueur", unit: "caract\xE8res", min: 0, max: 300 },
+  pinnedMax: { label: "Succ\xE8s \xE9pingl\xE9s au profil", min: 0, max: 10 }
+};
 var FREE_BANNERS = [
   { id: "nebula", label: "N\xE9buleuse", gradient: "linear-gradient(120deg,#0b1430 0%,#1d2a6b 45%,#4be8ff55 100%)", hint: "Offerte" },
   { id: "aurore", label: "Aurore", gradient: "linear-gradient(120deg,#0a1a1a 0%,#0f4d45 50%,#5ef2b066 100%)", hint: "Offerte" },
@@ -19342,6 +19732,12 @@ function publicShowcase(p) {
 
 // src/game/polls.ts
 var POLL_RULES = { minOptions: 2, maxOptions: 6, maxQuestion: 160, maxOption: 80 };
+var POLL_RULES_META = {
+  minOptions: { label: "Choix d'un sondage : au moins", min: 2, max: 10 },
+  maxOptions: { label: "Choix d'un sondage : au plus", min: 2, max: 20 },
+  maxQuestion: { label: "Question : longueur", unit: "caract\xE8res", min: 20, max: 1e3 },
+  maxOption: { label: "Choix : longueur", unit: "caract\xE8res", min: 10, max: 500 }
+};
 function normalizePoll(raw) {
   if (!raw || typeof raw !== "object") return null;
   const r = raw;
@@ -21006,6 +21402,25 @@ var RHYTHM_RULES = {
   /** Lune : débris pour 1 % de chance. */
   moonDebrisPerPercent: 2e6
 };
+var RHYTHM_RULES_META = {
+  enabled: { label: "Bascule du rythme activ\xE9e", hint: "D\xE9coch\xE9 : la bascule n'a pas lieu (ou est annul\xE9e), anciennes valeurs partout." },
+  switchAt: { label: "Date de la bascule", unit: "date", min: 0 },
+  announceDays: { label: "Annonce en jeu avant la date", unit: "j", min: 0, max: 60 },
+  tier2CostFactor: { label: "Co\xFBts du second palier (niveaux 11 \xE0 20)", unit: "\xD7", min: 0.1, max: 20 },
+  tier2BaseSeconds: { label: "Dur\xE9e du niveau 11 des b\xE2timents de l'Ascension", unit: "s", min: 0, max: 1e7, hint: "129 600 = 36 h." },
+  tier2SecondsPerLevel: { label: "Dur\xE9e ajout\xE9e par niveau au-del\xE0 du 11", unit: "s", min: 0, max: 1e7, hint: "97 200 = 27 h." },
+  researchLateFromLevel: { label: "Recherche tardive : d\xE8s le niveau", unit: "niveau", min: 0, max: 50 },
+  researchLateTimeFactor: { label: "Recherche tardive : dur\xE9e multipli\xE9e par", unit: "\xD7", min: 1, max: 100 },
+  researchMaxLevelSeconds: { label: "Recherche : dur\xE9e maximale d'un niveau", unit: "s", min: 0, max: 31536e3, hint: "604 800 = 7 jours." },
+  ascensionCooldownDays: { label: "D\xE9lai entre deux Ascensions", unit: "j", min: 0, max: 365 },
+  maxAscensions: { label: "Ascensions au plus", min: 1, max: 50, hint: "Jamais moins qu'avant la bascule." },
+  exchangeCommonToRare: { label: "Comptoir : rares par ressource commune", min: 1e-4, max: 1, hint: "0,004 = 1 pour 250." },
+  missionProductionMultiplier: { label: "Missions : multiplicateur de production", unit: "\xD7", min: 0, max: 10 },
+  missionRareProductionRef: { label: "Missions : production de r\xE9f\xE9rence des rares", min: 1, max: 1e9 },
+  moonUpgradeCost: { label: "Lune : co\xFBt du niveau 2" },
+  moonCostGrowth: { label: "Lune : croissance du co\xFBt par niveau", unit: "\xD7", min: 1, max: 10 },
+  moonDebrisPerPercent: { label: "Lune : d\xE9bris pour 1 % de chance", min: 1, max: 1e9 }
+};
 var RHYTHM_PREVIOUS = {
   tier2BaseSeconds: 10800,
   tier2SecondsPerLevel: 3600,
@@ -21093,6 +21508,11 @@ function applyRhythmSwitch(content, defaultBuildings2, nowMs) {
 
 // src/game/actionTemplates.ts
 var TEMPLATE_RULES = { maxTemplates: 12, maxSteps: 20, maxUnitQty: 1e5 };
+var TEMPLATE_RULES_META = {
+  maxTemplates: { label: "Mod\xE8les d'actions par joueur", min: 1, max: 50 },
+  maxSteps: { label: "\xC9tapes par mod\xE8le", min: 1, max: 100, hint: "Un mod\xE8le plus long est tronqu\xE9 au chargement." },
+  maxUnitQty: { label: "Quantit\xE9 d'unit\xE9s par \xE9tape, au plus", min: 1, max: 1e7 }
+};
 
 // src/game/allianceChallenge.ts
 var ALLIANCE_CHALLENGE_KEY = "alliance_challenge";
@@ -21107,6 +21527,9 @@ var ALLIANCE_CHALLENGES = [
   { id: "vigies", name: "Les vigies", emoji: "\u{1F6F0}\uFE0F", metric: "vigil", hint: "Garnisons envoy\xE9es et balayages de phalange des membres." }
 ];
 var ALLIANCE_CHALLENGE_RULES = { rewardHours: [6, 4, 2] };
+var ALLIANCE_CHALLENGE_RULES_META = {
+  rewardHours: { label: "Podium : heures de production (1re, 2e, 3e alliance)", unit: "h", hint: "Une valeur par place du d\xE9fi de la semaine des alliances." }
+};
 function challengeOfWeek(weekId2) {
   const index2 = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
   return ALLIANCE_CHALLENGES[(index2 % ALLIANCE_CHALLENGES.length + ALLIANCE_CHALLENGES.length) % ALLIANCE_CHALLENGES.length];
@@ -21190,6 +21613,18 @@ var ALLIANCE_DAILY_RULES = {
   passPoints: 15,
   rewardHours: 1,
   treasuryPct: 0.1
+};
+var ALLIANCE_DAILY_RULES_META = {
+  proposeHour: { label: "Heure de proposition des objectifs", unit: "h", min: 0, max: 23, hint: "Trois objectifs sur quatre sont propos\xE9s au vote \xE0 cette heure." },
+  voteEndHour: { label: "Heure de fin du vote", unit: "h", min: 0, max: 23, hint: "Apr\xE8s l'heure de proposition. L'objectif le plus vot\xE9 devient actif." },
+  activeDays: { label: "Membre actif : connect\xE9 dans les", unit: "j", min: 1, max: 30, hint: "Seuls les membres actifs comptent dans la taille des objectifs." },
+  treasuryHours: { label: "Objectif tr\xE9sor : heures de production des actifs", unit: "h", min: 0, max: 48 },
+  missionsPerMember: { label: "Objectif missions : par membre actif", min: 0, max: 50 },
+  researchPerMember: { label: "Objectif recherches : par membre actif", min: 0, max: 20 },
+  powerPct: { label: "Objectif puissance : part de la flotte de l'alliance", unit: "part", min: 0, max: 1, hint: "Puissance \xE0 d\xE9truire = cette part de la flotte cumul\xE9e des membres (500 au moins)." },
+  passPoints: { label: "R\xE9ussite : points de passe par membre", unit: "points", min: 0, max: 500 },
+  rewardHours: { label: "R\xE9ussite : heures de production par membre", unit: "h", min: 0, max: 48 },
+  treasuryPct: { label: "R\xE9ussite : bonus du tr\xE9sor", unit: "part", min: 0, max: 1, hint: "Le tr\xE9sor re\xE7oit cette part de la base de l'objectif tr\xE9sor." }
 };
 var DAILY_KINDS = ["treasury", "missions", "power", "research"];
 var DAILY_STAT = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
@@ -21311,6 +21746,14 @@ var ALLIANCE_SAGA_RULES = {
   weeks: 4,
   share: 0.6
 };
+var ALLIANCE_SAGA_RULES_META = {
+  objectives: { label: "Objectifs par saga", min: 1, max: 6 },
+  pointsPerObjective: { label: "Points par objectif atteint", unit: "points", min: 1, max: 1e4 },
+  overflowCap: { label: "D\xE9passement compt\xE9 au plus", unit: "\xD7", min: 1, max: 10, hint: "Un objectif d\xE9pass\xE9 compte jusqu'\xE0 ce multiple (2 = 200 points pour 100)." },
+  rewardHours: { label: "Podium : heures de production vers\xE9es au tr\xE9sor (1re, 2e, 3e)", unit: "h" },
+  weeks: { label: "Dur\xE9e de r\xE9f\xE9rence de l'objectif", unit: "semaines", min: 1, max: 12, hint: "Objectif = m\xE9diane hebdomadaire \xD7 semaines \xD7 taille m\xE9diane des alliances \xD7 part." },
+  share: { label: "Part de l'effort m\xE9dian vis\xE9e", unit: "\xD7", min: 0.05, max: 5 }
+};
 function readAllianceSaga(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   return {
@@ -21400,6 +21843,13 @@ var CHALLENGE_RULES = {
   titleDays: 7,
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7
+};
+var CHALLENGE_RULES_META = {
+  minShare: { label: "Part minimale de l'objectif pour \xEAtre r\xE9compens\xE9", unit: "part", min: 0, max: 1 },
+  tiers: { label: "Paliers du d\xE9fi", hint: "at (\xD7 l'objectif), hours (production), rare (ressources rares)." },
+  title: { label: "Titre du d\xE9fi" },
+  titleDays: { label: "Titre port\xE9 pendant", unit: "j", min: 0, max: 60 },
+  activeDays: { label: "Joueur actif : vu dans les", unit: "j", min: 1, max: 60 }
 };
 var DAY12 = 864e5;
 function weekWindow(now) {
@@ -21535,6 +21985,19 @@ var COALITION_RULES = {
   /** Échec : le seigneur gagne cette part de puissance. */
   failGrowth: 0.1
 };
+var COALITION_RULES_META = {
+  thresholdFactor: { label: "Seuil de menace : \xD7 le meilleur joueur", unit: "\xD7", min: 1, max: 10, hint: "Un seigneur plus puissant que ce multiple du meilleur joueur devient une cible de coalition." },
+  holdHours: { label: "Dur\xE9e au-dessus du seuil avant la coalition", unit: "h", min: 0, max: 336 },
+  durationDays: { label: "Dur\xE9e d'une coalition", unit: "j", min: 1, max: 30 },
+  goalFactor: { label: "Objectif : \xD7 la puissance de flotte du seigneur", unit: "\xD7", min: 0.1, max: 10 },
+  cooldownDays: { label: "D\xE9lai avant une nouvelle coalition", unit: "j", min: 0, max: 90 },
+  powerLoss: { label: "R\xE9ussite : puissance perdue par le seigneur", unit: "part", min: 0, max: 1 },
+  awayDays: { label: "R\xE9ussite : absence du seigneur", unit: "j", min: 0, max: 60 },
+  minShare: { label: "Part minimale de l'objectif pour \xEAtre r\xE9compens\xE9", unit: "part", min: 0, max: 1 },
+  rewardHours: { label: "R\xE9compense : heures de production", unit: "h", min: 0, max: 72 },
+  topRelics: { label: "Relique \xE9pique pour les meilleurs contributeurs", min: 0, max: 20, hint: "Nombre de joueurs du haut du classement qui la re\xE7oivent." },
+  failGrowth: { label: "\xC9chec : puissance gagn\xE9e par le seigneur", unit: "part", min: 0, max: 1 }
+};
 var HOUR11 = 36e5;
 var DAY13 = 24 * HOUR11;
 function coalitionState(raw) {
@@ -21651,6 +22114,11 @@ var DIPLOMACY_RULES = {
   maxPacts: 3,
   messageMax: 500
 };
+var DIPLOMACY_RULES_META = {
+  breakNoticeHours: { label: "Pr\xE9avis de rupture d'un pacte", unit: "h", min: 0, max: 336, hint: "Le pacte prot\xE8ge encore pendant le pr\xE9avis." },
+  maxPacts: { label: "Pactes simultan\xE9s par alliance", min: 0, max: 20, hint: "Propos\xE9s, actifs ou en pr\xE9avis." },
+  messageMax: { label: "Message diplomatique : longueur", unit: "caract\xE8res", min: 20, max: 5e3 }
+};
 var HOUR12 = 36e5;
 function pactStatusAt(p, now) {
   return p.status === "ending" && p.endsAtMs > 0 && now >= p.endsAtMs ? "ended" : p.status;
@@ -21757,6 +22225,10 @@ function upcomingAgenda(now, days = 30, extra = []) {
 // src/game/gazette.ts
 var GAZETTE_KEY = "gazette";
 var GAZETTE_RULES = { publishHour: 9, keepIssues: 8 };
+var GAZETTE_RULES_META = {
+  publishHour: { label: "Heure de parution (lundi, Paris)", unit: "h", min: 0, max: 23 },
+  keepIssues: { label: "Num\xE9ros gard\xE9s", min: 1, max: 52 }
+};
 var numMap = (v) => v && typeof v === "object" ? v : {};
 function gazetteState(raw) {
   const r = raw && typeof raw === "object" ? raw : {};
@@ -21992,6 +22464,14 @@ var GLOBAL_CHAT_RULES = {
   /** Messages chargés à l'ouverture. */
   page: 60
 };
+var GLOBAL_CHAT_RULES_META = {
+  maxLength: { label: "Longueur d'un message", unit: "caract\xE8res", min: 20, max: 5e3 },
+  cooldownMs: { label: "D\xE9lai entre deux messages", unit: "ms", min: 0, max: 6e5, hint: "4 000 = 4 s." },
+  perMinute: { label: "Messages par minute, au plus", min: 1, max: 120 },
+  reportsToHide: { label: "Signalements qui masquent un message", min: 1, max: 50 },
+  keep: { label: "Messages gard\xE9s en base", min: 50, max: 1e4, hint: "Les plus anciens sont effac\xE9s." },
+  page: { label: "Messages charg\xE9s \xE0 l'ouverture", min: 10, max: 500 }
+};
 var CHAT_MODERATION_KEYS = { mutes: "chat_mutes", filter: "chat_filter" };
 var BASE_FILTER = ["connard", "connasse", "salope", "encule", "encul\xE9", "pute", "batard", "b\xE2tard", "fdp", "ntm", "nique", "pd", "tapette", "negro", "bougnoule", "youpin"];
 var fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -22084,6 +22564,14 @@ var CHAT_ROOM_RULES = {
   /** Un salon sans message depuis N jours se ferme tout seul. */
   idleDays: 14
 };
+var CHAT_ROOM_RULES_META = {
+  nameMin: { label: "Nom d'un salon : longueur minimale", unit: "caract\xE8res", min: 1, max: 20 },
+  nameMax: { label: "Nom d'un salon : longueur maximale", unit: "caract\xE8res", min: 3, max: 60 },
+  topicMax: { label: "Sujet d'un salon : longueur maximale", unit: "caract\xE8res", min: 0, max: 500 },
+  perOwner: { label: "Salons ouverts par joueur", min: 0, max: 10 },
+  maxOpen: { label: "Salons ouverts sur le serveur", min: 0, max: 500 },
+  idleDays: { label: "Fermeture apr\xE8s ces jours sans message", unit: "j", min: 1, max: 365 }
+};
 function validateRoom(raw, ctx) {
   var _a, _b;
   const r = raw && typeof raw === "object" ? raw : {};
@@ -22111,6 +22599,9 @@ function roomIcon(raw) {
   return ROOM_ICONS.some((i) => i.id === id) ? id : "";
 }
 var MENTION_RULES = { maxPerMessage: 5 };
+var MENTION_RULES_META = {
+  maxPerMessage: { label: "Mentions (@pseudo) par message, au plus", min: 0, max: 20 }
+};
 function parseMentions(text) {
   const out = [];
   const re = /(^|[^0-9A-Za-z_@\u00C0-\u024F])@([0-9A-Za-z_\u00C0-\u024F-]{3,20})/g;
@@ -22123,6 +22614,12 @@ function parseMentions(text) {
   return out;
 }
 var ROOM_EVENT_RULES = { labelMin: 3, labelMax: 60, maxAheadDays: 7, durationHours: 1 };
+var ROOM_EVENT_RULES_META = {
+  labelMin: { label: "Libell\xE9 : longueur minimale", unit: "caract\xE8res", min: 1, max: 20 },
+  labelMax: { label: "Libell\xE9 : longueur maximale", unit: "caract\xE8res", min: 10, max: 200 },
+  maxAheadDays: { label: "Programm\xE9 au plus t\xF4t", unit: "j", min: 1, max: 60, hint: "Un \xE9v\xE9nement se programme ce nombre de jours \xE0 l'avance au plus." },
+  durationHours: { label: "Dur\xE9e d'un \xE9v\xE9nement", unit: "h", min: 0.25, max: 24 }
+};
 function validateRoomEvent(raw, now, extraFilter) {
   var _a;
   const atMs = Math.floor(Number(raw.atMs) || 0);
@@ -22140,6 +22637,10 @@ function roomIdle(room, now) {
 
 // src/game/goals.ts
 var GOAL_RULES = { maxGoals: 6, maxFleet: 1e5 };
+var GOAL_RULES_META = {
+  maxGoals: { label: "Objectifs personnels par joueur", min: 1, max: 50 },
+  maxFleet: { label: "Quantit\xE9 d'unit\xE9s vis\xE9e, au plus", min: 1, max: 1e8 }
+};
 
 // src/game/leagues.ts
 var LEAGUES_KEY = "leagues";
@@ -22157,6 +22658,11 @@ var LEAGUE_RULES = {
   relegatePct: 0.2,
   /** Semaines gardées dans l'historique de chaque joueur. */
   historyWeeks: 8
+};
+var LEAGUE_RULES_META = {
+  promotePct: { label: "Part qui monte chaque semaine", unit: "part", min: 0, max: 0.5 },
+  relegatePct: { label: "Part qui descend chaque semaine", unit: "part", min: 0, max: 0.5 },
+  historyWeeks: { label: "Semaines gard\xE9es dans l'historique", unit: "semaines", min: 1, max: 104 }
 };
 var WEEK_MS = 7 * 24 * 3600 * 1e3;
 function leagueWeekStart(now) {
@@ -22295,6 +22801,12 @@ var MARKET_HISTORY_RULES = {
   highFactor: 2,
   lowFactor: 0.5
 };
+var MARKET_HISTORY_RULES_META = {
+  days: { label: "P\xE9riode de l'historique des prix", unit: "j", min: 1, max: 365 },
+  minTrades: { label: "\xC9changes minimum pour juger un prix", min: 1, max: 1e3 },
+  highFactor: { label: "Prix \xE9lev\xE9 : au-dessus de \xD7 le prix habituel", unit: "\xD7", min: 1, max: 10 },
+  lowFactor: { label: "Prix bas : sous \xD7 le prix habituel", unit: "\xD7", min: 0.01, max: 1 }
+};
 
 // src/game/referral.ts
 var REFERRAL_RULES = {
@@ -22305,6 +22817,15 @@ var REFERRAL_RULES = {
   amberSponsor: 150,
   amberRecruit: 100,
   banner: "recruteur"
+};
+var REFERRAL_RULES_META = {
+  linkWindowHours: { label: "D\xE9lai pour d\xE9clarer un parrain", unit: "h", min: 1, max: 720, hint: "Apr\xE8s l'inscription du filleul." },
+  rewardXp: { label: "XP que le filleul doit atteindre", unit: "XP", min: 0, max: 1e7, hint: "2 000 = Bronze I." },
+  minAgeDays: { label: "Anciennet\xE9 du filleul requise", unit: "j", min: 0, max: 90 },
+  perMonth: { label: "Filleuls r\xE9compens\xE9s par mois, au plus", min: 0, max: 100 },
+  amberSponsor: { label: "Ambre du parrain", unit: "Ambre", min: 0, max: 1e4 },
+  amberRecruit: { label: "Ambre du filleul", unit: "Ambre", min: 0, max: 1e4 },
+  banner: { label: "Banni\xE8re du parrain (id)" }
 };
 function referralState(p) {
   var _a;
@@ -22353,6 +22874,11 @@ var RENAME_RULES = {
   minLength: 3,
   maxLength: 20
 };
+var RENAME_RULES_META = {
+  amber: { label: "Prix d'un changement de pseudo", unit: "Ambre", min: 0, max: 1e4 },
+  minLength: { label: "Pseudo : longueur minimale", unit: "caract\xE8res", min: 1, max: 20 },
+  maxLength: { label: "Pseudo : longueur maximale", unit: "caract\xE8res", min: 3, max: 40 }
+};
 function pseudoLogin(pseudo) {
   return pseudo.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
 }
@@ -22398,6 +22924,14 @@ var REPORT_RULES = {
   resolutionMax: 2e3,
   /** Signalements par joueur sur 24 h glissantes. */
   maxPerDay: 5
+};
+var REPORT_RULES_META = {
+  titleMax: { label: "Titre : longueur", unit: "caract\xE8res", min: 20, max: 500 },
+  descriptionMin: { label: "Description : longueur minimale", unit: "caract\xE8res", min: 0, max: 200 },
+  descriptionMax: { label: "Description : longueur maximale", unit: "caract\xE8res", min: 100, max: 2e4 },
+  commentMax: { label: "Commentaire : longueur", unit: "caract\xE8res", min: 100, max: 2e4 },
+  resolutionMax: { label: "R\xE9solution : longueur", unit: "caract\xE8res", min: 100, max: 2e4 },
+  maxPerDay: { label: "Signalements par joueur sur 24 h", min: 1, max: 100 }
 };
 function isReportCategory(v) {
   return REPORT_CATEGORIES.some((c) => c.id === v);
@@ -22488,84 +23022,139 @@ function githubIssueBody(report, link) {
   ].filter((l) => l !== null).join("\n");
 }
 
+// src/game/ruleMeta.ts
+function ruleBoundError(meta, value2) {
+  if (!meta || !Number.isFinite(value2)) return null;
+  const lo = meta.min;
+  const hi = meta.max;
+  if (lo !== void 0 && value2 < lo || hi !== void 0 && value2 > hi) {
+    if (lo !== void 0 && hi !== void 0) return `entre ${lo} et ${hi}`;
+    return lo !== void 0 ? `au moins ${lo}` : `au plus ${hi}`;
+  }
+  return null;
+}
+var HISTORICAL_RULES_META = {
+  pvp: {
+    npcWinMinXp: { label: "XP minimale d'une victoire contre un PNJ", unit: "XP", min: 0 },
+    defenseXpLossWindowMs: { label: "Fen\xEAtre de la perte d'XP en d\xE9fense", unit: "ms", min: 0, hint: "86 400 000 = 24 h." }
+  },
+  economy: {
+    protectedHoursFromMs: { label: "Abri en heures de production : actif \xE0 partir de", unit: "date", min: 0 }
+  },
+  fleets: {
+    mapSize: { label: "Taille de la carte de la galaxie", min: 10, max: 1e3, hint: "C\xF4t\xE9 de la carte, en unit\xE9s de distance. Change toutes les distances de vol." }
+  },
+  colonies: {
+    levelsRequired: { label: "Niveaux cumul\xE9s requis pour chaque colonie", hint: "Un seuil par colonie, dans l'ordre." },
+    foundationShare: { label: "Fondation : part des niveaux de la plan\xE8te m\xE8re", unit: "part", min: 0, max: 1 },
+    foundationMax: { label: "Fondation : niveau maximal", min: 0 }
+  },
+  colonyRoutes: {
+    intervals: { label: "Cadences propos\xE9es", unit: "h", hint: "Valeurs s\xE9par\xE9es par des virgules." }
+  },
+  spy: {
+    sentinelCounterCap: { label: "Contre-espionnage : sentinelles compt\xE9es au plus", min: 0 },
+    sentinelUnitId: { label: "Unit\xE9 de contre-espionnage (id)" }
+  },
+  debris: {
+    capacityPerLevel: { label: "Capacit\xE9 par niveau", min: 0 }
+  },
+  seasons: {
+    firstSeasonId: { label: "Premi\xE8re saison (AAAA-MM)" }
+  },
+  alliances: {
+    membersPerQuarter: { label: "Membres en plus par niveau de Quartiers f\xE9d\xE9r\xE9s", min: 0 },
+    sharedReportsMax: { label: "Rapports partag\xE9s gard\xE9s", min: 0 }
+  },
+  expeditions: {
+    rareRate: { label: "Taux des ressources rares", min: 0 },
+    forceMinPower: { label: "Force ennemie minimale", unit: "\xD7", min: 0, hint: "Multiple de ta puissance." },
+    forceMaxPower: { label: "Force ennemie maximale", unit: "\xD7", min: 0, hint: "Multiple de ta puissance ; au moins la force minimale." }
+  },
+  leviathan: {
+    podiumHours: { label: "Heures de production du podium (1er, 2e, 3e\u2026)", unit: "h" },
+    relicAmber: { label: "Ambre par relique (raret\xE9)", unit: "Ambre" }
+  }
+};
+
 // src/game/ruleRegistry.ts
 var REGISTERED_RULES = {
-  achievementTokens: { label: "Succ\xE8s : jetons par palier", target: () => ACHIEVEMENT_TOKENS },
-  achievementTierRewards: { label: "Succ\xE8s : XP et production par palier", target: () => TIER_REWARDS },
-  achievementXpAlert: { label: "Anti-abus : XP des succ\xE8s", target: () => ACHIEVEMENT_XP_ALERT },
-  actionTemplates: { label: "File d'actions : mod\xE8les", target: () => TEMPLATE_RULES },
-  allianceChallenge: { label: "Alliance : d\xE9fi de la semaine (podium)", target: () => ALLIANCE_CHALLENGE_RULES },
-  allianceDaily: { label: "Alliance : objectif du jour", target: () => ALLIANCE_DAILY_RULES },
-  allianceProfile: { label: "Alliance : fiche, rangs et candidatures", target: () => ALLIANCE_PROFILE_RULES },
-  allianceSaga: { label: "Alliance : saga", target: () => ALLIANCE_SAGA_RULES },
-  ascension: { label: "Ascension", target: () => ASCENSION_RULES },
-  bossPhases: { label: "Boss : phases (riposte, bouclier, faiblesse)", target: () => BOSS_PHASE_RULES },
-  bossReminders: { label: "Boss : rappels (veille, fin)", target: () => BOSS_REMINDERS },
-  bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES },
-  bountyShop: { label: "Comptoir de la Ruche", target: () => BOUNTY_SHOP_RULES },
-  buildPlan: { label: "File planifi\xE9e des b\xE2timents", target: () => BUILD_PLAN_RULES },
-  buildingUnlockCost: { label: "B\xE2timents : co\xFBt de d\xE9blocage", target: () => BUILDING_UNLOCK_COST },
-  cancel: { label: "Annulation des chantiers", target: () => CANCEL_RULES },
-  chapterBaseCounts: { label: "Chroniques : quantit\xE9s de base des objectifs", target: () => BASE_COUNTS },
-  chatRooms: { label: "Salons", target: () => CHAT_ROOM_RULES },
-  coalition: { label: "Coalitions de seigneurs", target: () => COALITION_RULES },
-  colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
-  colonySpec: { label: "Colonies : sp\xE9cialisation", target: () => COLONY_SPEC_RULES },
-  colonyBase: { label: "Colonies : flotte bas\xE9e", target: () => COLONY_BASE_RULES },
-  moon: { label: "Lunes : naissance, bonus et piti\xE9", target: () => MOON_RULES },
+  achievementTokens: { label: "Succ\xE8s : jetons par palier", target: () => ACHIEVEMENT_TOKENS, meta: () => ACHIEVEMENT_TOKENS_META },
+  achievementTierRewards: { label: "Succ\xE8s : XP et production par palier", target: () => TIER_REWARDS, meta: () => TIER_REWARDS_META },
+  achievementXpAlert: { label: "Anti-abus : XP des succ\xE8s", target: () => ACHIEVEMENT_XP_ALERT, meta: () => ACHIEVEMENT_XP_ALERT_META },
+  actionTemplates: { label: "File d'actions : mod\xE8les", target: () => TEMPLATE_RULES, meta: () => TEMPLATE_RULES_META },
+  allianceChallenge: { label: "Alliance : d\xE9fi de la semaine (podium)", target: () => ALLIANCE_CHALLENGE_RULES, meta: () => ALLIANCE_CHALLENGE_RULES_META },
+  allianceDaily: { label: "Alliance : objectif du jour", target: () => ALLIANCE_DAILY_RULES, meta: () => ALLIANCE_DAILY_RULES_META },
+  allianceProfile: { label: "Alliance : fiche, rangs et candidatures", target: () => ALLIANCE_PROFILE_RULES, meta: () => ALLIANCE_PROFILE_RULES_META },
+  allianceSaga: { label: "Alliance : saga", target: () => ALLIANCE_SAGA_RULES, meta: () => ALLIANCE_SAGA_RULES_META },
+  ascension: { label: "Ascension", target: () => ASCENSION_RULES, meta: () => ASCENSION_RULES_META },
+  bossPhases: { label: "Boss : phases (riposte, bouclier, faiblesse)", target: () => BOSS_PHASE_RULES, meta: () => BOSS_PHASE_RULES_META },
+  bossReminders: { label: "Boss : rappels (veille, fin)", target: () => BOSS_REMINDERS, meta: () => BOSS_REMINDERS_META },
+  bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES, meta: () => BOUNTY_RULES_META },
+  bountyShop: { label: "Comptoir de la Ruche", target: () => BOUNTY_SHOP_RULES, meta: () => BOUNTY_SHOP_RULES_META },
+  buildPlan: { label: "File planifi\xE9e des b\xE2timents", target: () => BUILD_PLAN_RULES, meta: () => BUILD_PLAN_RULES_META },
+  buildingUnlockCost: { label: "B\xE2timents : co\xFBt de d\xE9blocage", target: () => BUILDING_UNLOCK_COST, meta: buildingUnlockCostMeta },
+  cancel: { label: "Annulation des chantiers", target: () => CANCEL_RULES, meta: () => CANCEL_RULES_META },
+  chapterBaseCounts: { label: "Chroniques : quantit\xE9s de base des objectifs", target: () => BASE_COUNTS, meta: () => BASE_COUNTS_META },
+  chatRooms: { label: "Salons", target: () => CHAT_ROOM_RULES, meta: () => CHAT_ROOM_RULES_META },
+  coalition: { label: "Coalitions de seigneurs", target: () => COALITION_RULES, meta: () => COALITION_RULES_META },
+  colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES, meta: () => DEPOSIT_RULES_META },
+  colonySpec: { label: "Colonies : sp\xE9cialisation", target: () => COLONY_SPEC_RULES, meta: () => COLONY_SPEC_RULES_META },
+  colonyBase: { label: "Colonies : flotte bas\xE9e", target: () => COLONY_BASE_RULES, meta: () => COLONY_BASE_RULES_META },
+  moon: { label: "Lunes : naissance, bonus et piti\xE9", target: () => MOON_RULES, meta: () => MOON_RULES_META },
   // 6.14.74 (DP-L1, proposals/deblocage-progressif.md) : ouverture progressive du menu (I30).
-  navUnlock: { label: "Ouverture du menu (comptes neufs)", target: () => NAV_UNLOCK_RULES },
+  navUnlock: { label: "Ouverture du menu (comptes neufs)", target: () => NAV_UNLOCK_RULES, meta: () => NAV_UNLOCK_RULES_META },
   // 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md §5.4).
-  phalanx: { label: "Lunes : phalange", target: () => PHALANX_RULES },
-  jumpGate: { label: "Lunes : porte de saut", target: () => JUMP_GATE_RULES },
-  passRewards: { label: "Passe g\xE9n\xE9r\xE9 : dernier palier et effort", target: () => PASS_REWARD_RULES },
-  achievementHint: { label: "Succ\xE8s : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
+  phalanx: { label: "Lunes : phalange", target: () => PHALANX_RULES, meta: () => PHALANX_RULES_META },
+  jumpGate: { label: "Lunes : porte de saut", target: () => JUMP_GATE_RULES, meta: () => JUMP_GATE_RULES_META },
+  passRewards: { label: "Passe g\xE9n\xE9r\xE9 : dernier palier et effort", target: () => PASS_REWARD_RULES, meta: () => PASS_REWARD_RULES_META },
+  achievementHint: { label: "Succ\xE8s : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES, meta: () => ACHIEVEMENT_HINT_RULES_META },
   // 6.14.56 (AU27, AP-1) : succès du code retirés exprès (les autres succès par défaut absents de la liste sont complétés).
-  achievementList: { label: "Succ\xE8s : succ\xE8s par d\xE9faut retir\xE9s", target: () => ACHIEVEMENT_LIST_RULES },
-  passBonus: { label: "Passe : paliers bonus apr\xE8s le dernier palier", target: () => PASS_BONUS_RULES },
-  missionXp: { label: "Missions : XP sugg\xE9r\xE9e par heure (\xE9diteur)", target: () => MISSION_XP_RULES },
-  commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
-  dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },
-  dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },
-  diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES },
-  dockTiers: { label: "Cale s\xE8che : paliers de niveau", target: () => DOCK_TIERS },
-  effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES },
-  eliteBounty: { label: "Proie d'\xE9lite", target: () => ELITE_RULES },
-  exchange: { label: "Comptoir d'\xE9change : taux et taxe", target: () => EXCHANGE_RULES },
-  gazette: { label: "Gazette", target: () => GAZETTE_RULES },
-  globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
-  goals: { label: "Objectifs personnels", target: () => GOAL_RULES },
-  leagues: { label: "Divisions", target: () => LEAGUE_RULES },
-  marketHistory: { label: "March\xE9 : historique des prix", target: () => MARKET_HISTORY_RULES },
-  mentions: { label: "Mentions", target: () => MENTION_RULES },
-  messages: { label: "Messagerie priv\xE9e", target: () => MESSAGE_RULES },
-  moduleCost: { label: "Modules : co\xFBt de fabrication", target: () => MODULE_BUILD_COST },
-  modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES },
-  officerTuning: { label: "Officiers : second r\xF4le des commandants de saison, Ph\xE9romone", target: () => OFFICER_TUNING_RULES },
-  passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW },
-  polls: { label: "Sondages", target: () => POLL_RULES },
+  achievementList: { label: "Succ\xE8s : succ\xE8s par d\xE9faut retir\xE9s", target: () => ACHIEVEMENT_LIST_RULES, meta: () => ACHIEVEMENT_LIST_RULES_META },
+  passBonus: { label: "Passe : paliers bonus apr\xE8s le dernier palier", target: () => PASS_BONUS_RULES, meta: () => PASS_BONUS_RULES_META },
+  missionXp: { label: "Missions : XP sugg\xE9r\xE9e par heure (\xE9diteur)", target: () => MISSION_XP_RULES, meta: () => MISSION_XP_RULES_META },
+  commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP, meta: () => COMMANDER_XP_META },
+  dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES, meta: () => CONTRACT_RULES_META },
+  dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES, meta: () => DAILY_RULES_META },
+  diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES, meta: () => DIPLOMACY_RULES_META },
+  dockTiers: { label: "Cale s\xE8che : paliers de niveau", target: () => DOCK_TIERS, meta: () => DOCK_TIERS_META },
+  effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES, meta: () => EFFECT_CAP_RULES_META },
+  eliteBounty: { label: "Proie d'\xE9lite", target: () => ELITE_RULES, meta: () => ELITE_RULES_META },
+  exchange: { label: "Comptoir d'\xE9change : taux et taxe", target: () => EXCHANGE_RULES, meta: () => EXCHANGE_RULES_META },
+  gazette: { label: "Gazette", target: () => GAZETTE_RULES, meta: () => GAZETTE_RULES_META },
+  globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES, meta: () => GLOBAL_CHAT_RULES_META },
+  goals: { label: "Objectifs personnels", target: () => GOAL_RULES, meta: () => GOAL_RULES_META },
+  leagues: { label: "Divisions", target: () => LEAGUE_RULES, meta: () => LEAGUE_RULES_META },
+  marketHistory: { label: "March\xE9 : historique des prix", target: () => MARKET_HISTORY_RULES, meta: () => MARKET_HISTORY_RULES_META },
+  mentions: { label: "Mentions", target: () => MENTION_RULES, meta: () => MENTION_RULES_META },
+  messages: { label: "Messagerie priv\xE9e", target: () => MESSAGE_RULES, meta: () => MESSAGE_RULES_META },
+  moduleCost: { label: "Modules : co\xFBt de fabrication", target: () => MODULE_BUILD_COST, meta: () => MODULE_BUILD_COST_META },
+  modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES, meta: () => MODULE_RULES_META },
+  officerTuning: { label: "Officiers : second r\xF4le des commandants de saison, Ph\xE9romone", target: () => OFFICER_TUNING_RULES, meta: () => OFFICER_TUNING_RULES_META },
+  passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW, meta: () => PASS_OVERFLOW_META },
+  polls: { label: "Sondages", target: () => POLL_RULES, meta: () => POLL_RULES_META },
   // 6.14.85 (RL-2, proposals/rythme-long-terme.md §5.2) : projets de prestige.
-  prestige: { label: "Projets de prestige", target: () => PRESTIGE_RULES },
-  profile: { label: "Profil", target: () => PROFILE_RULES },
-  referral: { label: "Parrainage", target: () => REFERRAL_RULES },
-  research: { label: "Labo : recherches en parall\xE8le, croissance des co\xFBts et dur\xE9es, recherche tardive", target: () => RESEARCH_RULES },
+  prestige: { label: "Projets de prestige", target: () => PRESTIGE_RULES, meta: () => PRESTIGE_RULES_META },
+  profile: { label: "Profil", target: () => PROFILE_RULES, meta: () => PROFILE_RULES_META },
+  referral: { label: "Parrainage", target: () => REFERRAL_RULES, meta: () => REFERRAL_RULES_META },
+  research: { label: "Labo : recherches en parall\xE8le, croissance des co\xFBts et dur\xE9es, recherche tardive", target: () => RESEARCH_RULES, meta: () => RESEARCH_RULES_META },
   // 6.14.88 (RL-3, proposals/rythme-long-terme.md §5) : bascule datée du rythme (rhythm.ts).
-  rhythm: { label: "Rythme sur des mois : bascule dat\xE9e (second palier, recherche, Ascension, comptoir, missions, lune)", target: () => RHYTHM_RULES },
-  rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
-  reports: { label: "Signalements", target: () => REPORT_RULES },
-  roomEvents: { label: "\xC9v\xE9nements de salon", target: () => ROOM_EVENT_RULES },
-  seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES },
-  synthesis: { label: "Labo de synth\xE8se", target: () => SYNTH_RULES },
-  talents: { label: "Talents d'Ascension", target: () => TALENT_RULES },
-  territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES },
-  treaties: { label: "Trait\xE9s avec les factions", target: () => TREATY_RULES },
-  tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID },
-  unitAudit: { label: "\xC9quilibrage : seuils de l'audit des unit\xE9s", target: () => UNIT_AUDIT_RULES },
-  vacation: { label: "Mode vacances", target: () => VACATION_RULES },
-  warChest: { label: "Coffre de guerre", target: () => WAR_CHEST_RULES },
-  warlords: { label: "Seigneurs de guerre", target: () => WARLORD_RULES },
-  weeklyChallenge: { label: "D\xE9fi de la semaine", target: () => CHALLENGE_RULES },
-  worldBossRotation: { label: "Boss mondiaux : rotation", target: () => WORLD_BOSS_RULES }
+  rhythm: { label: "Rythme sur des mois : bascule dat\xE9e (second palier, recherche, Ascension, comptoir, missions, lune)", target: () => RHYTHM_RULES, meta: () => RHYTHM_RULES_META },
+  rename: { label: "Changement de pseudo", target: () => RENAME_RULES, meta: () => RENAME_RULES_META },
+  reports: { label: "Signalements", target: () => REPORT_RULES, meta: () => REPORT_RULES_META },
+  roomEvents: { label: "\xC9v\xE9nements de salon", target: () => ROOM_EVENT_RULES, meta: () => ROOM_EVENT_RULES_META },
+  seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES, meta: () => SEASON_WAR_RULES_META },
+  synthesis: { label: "Labo de synth\xE8se", target: () => SYNTH_RULES, meta: () => SYNTH_RULES_META },
+  talents: { label: "Talents d'Ascension", target: () => TALENT_RULES, meta: () => TALENT_RULES_META },
+  territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES, meta: () => TERRITORY_RULES_META },
+  treaties: { label: "Trait\xE9s avec les factions", target: () => TREATY_RULES, meta: () => TREATY_RULES_META },
+  tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID, meta: () => TUTORIAL_RAID_META },
+  unitAudit: { label: "\xC9quilibrage : seuils de l'audit des unit\xE9s", target: () => UNIT_AUDIT_RULES, meta: () => UNIT_AUDIT_RULES_META },
+  vacation: { label: "Mode vacances", target: () => VACATION_RULES, meta: () => VACATION_RULES_META },
+  warChest: { label: "Coffre de guerre", target: () => WAR_CHEST_RULES, meta: () => WAR_CHEST_RULES_META },
+  warlords: { label: "Seigneurs de guerre", target: () => WARLORD_RULES, meta: () => WARLORD_RULES_META },
+  weeklyChallenge: { label: "D\xE9fi de la semaine", target: () => CHALLENGE_RULES, meta: () => CHALLENGE_RULES_META },
+  worldBossRotation: { label: "Boss mondiaux : rotation", target: () => WORLD_BOSS_RULES, meta: () => WORLD_BOSS_RULES_META }
 };
 var isPlain = (x) => !!x && typeof x === "object" && !Array.isArray(x);
 function mergeRuleGroup(defaults, override) {
@@ -22582,6 +23171,15 @@ function applyRegisteredRules(groups) {
     const v = groups[k];
     if (isPlain(v)) Object.assign(r.target(), structuredClone(v));
   }
+}
+function ruleGroupMeta(group) {
+  var _a;
+  const r = REGISTERED_RULES[group];
+  return r ? r.meta() : (_a = HISTORICAL_RULES_META[group]) != null ? _a : {};
+}
+function ruleFieldMeta(group, key) {
+  const m = ruleGroupMeta(group);
+  return Object.prototype.hasOwnProperty.call(m, key) ? m[key] : void 0;
 }
 
 // src/game/contentShape.ts
@@ -22981,7 +23579,7 @@ var RULE_GROUP_LABELS = __spreadValues({
   patrons: "M\xE9c\xE8nes"
 }, Object.fromEntries(Object.entries(REGISTERED_RULES).map(([k, r]) => [k, r.label])));
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -23001,6 +23599,11 @@ function validateRules(rules) {
         else if (d >= 0 && v < 0) errors.push(`${label3} : \xAB ${key} \xBB ne peut pas \xEAtre n\xE9gatif.`);
         else if (d < 0 && (v < -1 || v > 0)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre entre \u22121 et 0.`);
         else if (/Pct$/.test(key) && v > 1) errors.push(`${label3} : \xAB ${key} \xBB est une part (0,1 = 10 %), 1 au plus.`);
+        else {
+          const meta = ruleFieldMeta(group, key);
+          const bound = ruleBoundError(meta, v);
+          if (bound) errors.push(`${label3} : \xAB ${(_b = meta == null ? void 0 : meta.label) != null ? _b : key} \xBB (${key}) doit \xEAtre ${bound}${(meta == null ? void 0 : meta.unit) ? ` (${meta.unit})` : ""}.`);
+        }
       } else if (typeof d === "boolean" && typeof v !== "boolean") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre oui ou non.`);
       else if (typeof d === "string" && typeof v !== "string") errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre un texte.`);
       else if (Array.isArray(d) && !Array.isArray(v)) errors.push(`${label3} : \xAB ${key} \xBB doit \xEAtre une liste.`);
@@ -23016,14 +23619,14 @@ function validateRules(rules) {
   if (!(merged.classes.harvesterRecycleBonus >= 0 && merged.classes.harvesterRecycleBonus <= 5)) errors.push("Classes : bonus de recyclage du R\xE9colteur entre 0 et 5.");
   if (!(merged.classes.scoutExpeditionTime >= 0 && merged.classes.scoutExpeditionTime < 1)) errors.push("Classes : r\xE9duction d'exp\xE9dition de l'\xC9claireur entre 0 et 0,99.");
   if (!(merged.colonies.defenseQueueMax >= 0 && merged.colonies.defenseQueueMax <= 20)) errors.push("Colonies : file de d\xE9fense entre 0 et 20 lots.");
-  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= ((_c = (_b = merged.colonies.levelsRequired) == null ? void 0 : _b.length) != null ? _c : 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
-  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_d = merged.events.bossWeekend) != null ? _d : "first", startHour: (_e = merged.leviathan.startHour) != null ? _e : 18, durationHours: merged.leviathan.durationHours, dates: (_f = merged.events.bossDates) != null ? _f : [] }));
+  if (!(merged.colonies.maxColonies >= 0 && merged.colonies.maxColonies <= ((_d = (_c = merged.colonies.levelsRequired) == null ? void 0 : _c.length) != null ? _d : 0))) errors.push("Colonies : autant de seuils de niveaux que de colonies.");
+  errors.push(...validateBossSchedule("L\xE9viathan", { weekend: (_e = merged.events.bossWeekend) != null ? _e : "first", startHour: (_f = merged.leviathan.startHour) != null ? _f : 18, durationHours: merged.leviathan.durationHours, dates: (_g = merged.events.bossDates) != null ? _g : [] }));
   errors.push(...validateBossSchedule("Boss de saison", merged.seasonBoss));
   const sbr = merged.seasonBoss;
   if (sbr.cooldownHours !== void 0 && !(sbr.cooldownHours >= 0.25 && sbr.cooldownHours <= 48)) errors.push("Boss de saison : d\xE9lai entre deux assauts entre 0,25 et 48 h.");
   if (sbr.flightMinutes !== void 0 && !(sbr.flightMinutes >= 1 && sbr.flightMinutes <= 240)) errors.push("Boss de saison : trajet entre 1 et 240 min.");
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
-  if (!((_g = merged.leviathan.name) == null ? void 0 : _g.trim())) errors.push("L\xE9viathan : nom vide.");
+  if (!((_h = merged.leviathan.name) == null ? void 0 : _h.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
   errors.push(...validateMutatorRules(merged.mutators));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
@@ -23062,16 +23665,16 @@ function validateRules(rules) {
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
   if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
   if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
-  for (const ev of (_h = merged.events.scheduled) != null ? _h : []) {
+  for (const ev of (_i = merged.events.scheduled) != null ? _i : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
-    if (!(Number.isInteger(ev.repeatCount) && ((_i = ev.repeatCount) != null ? _i : 0) >= 2 && ((_j = ev.repeatCount) != null ? _j : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_j = ev.repeatCount) != null ? _j : 0) >= 2 && ((_k = ev.repeatCount) != null ? _k : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
   }
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
     for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_k = st.chest) == null ? void 0 : _k[key];
+      const r = (_l = st.chest) == null ? void 0 : _l[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
     }
   }
@@ -25279,10 +25882,10 @@ Le premier vrai article arrive bient\xF4t : le r\xE9capitulatif de tout ce qui a
 \u2014 L'\xE9quipe Cosmic Empires`
 };
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/crypto.js
+// node_modules/@noble/hashes/esm/crypto.js
 var crypto = typeof globalThis === "object" && "crypto" in globalThis ? globalThis.crypto : void 0;
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/utils.js
+// node_modules/@noble/hashes/esm/utils.js
 function isBytes(a) {
   return a instanceof Uint8Array || ArrayBuffer.isView(a) && a.constructor.name === "Uint8Array";
 }
@@ -25418,7 +26021,7 @@ function randomBytes(bytesLength = 32) {
   throw new Error("crypto.getRandomValues must be defined");
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/utils.js
+// node_modules/@noble/curves/esm/utils.js
 var _0n = /* @__PURE__ */ BigInt(0);
 var _1n = /* @__PURE__ */ BigInt(1);
 function _abool2(value2, title = "") {
@@ -25571,7 +26174,7 @@ function memoized(fn) {
   };
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/modular.js
+// node_modules/@noble/curves/esm/abstract/modular.js
 var _0n2 = BigInt(0);
 var _1n2 = BigInt(1);
 var _2n = /* @__PURE__ */ BigInt(2);
@@ -25908,7 +26511,7 @@ function mapHashToField(key, fieldOrder, isLE = false) {
   return isLE ? numberToBytesLE(reduced, fieldLen) : numberToBytesBE(reduced, fieldLen);
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/_md.js
+// node_modules/@noble/hashes/esm/_md.js
 function setBigUint64(view, byteOffset, value2, isLE) {
   if (typeof view.setBigUint64 === "function")
     return view.setBigUint64(byteOffset, value2, isLE);
@@ -26064,7 +26667,7 @@ var SHA512_IV = /* @__PURE__ */ Uint32Array.from([
   327033209
 ]);
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/_u64.js
+// node_modules/@noble/hashes/esm/_u64.js
 var U32_MASK64 = /* @__PURE__ */ BigInt(2 ** 32 - 1);
 var _32n = /* @__PURE__ */ BigInt(32);
 function fromBig(n, le = false) {
@@ -26099,7 +26702,7 @@ var add4H = (low, Ah, Bh, Ch, Dh) => Ah + Bh + Ch + Dh + (low / 2 ** 32 | 0) | 0
 var add5L = (Al, Bl, Cl, Dl, El) => (Al >>> 0) + (Bl >>> 0) + (Cl >>> 0) + (Dl >>> 0) + (El >>> 0);
 var add5H = (low, Ah, Bh, Ch, Dh, Eh) => Ah + Bh + Ch + Dh + Eh + (low / 2 ** 32 | 0) | 0;
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/sha2.js
+// node_modules/@noble/hashes/esm/sha2.js
 var SHA256_K = /* @__PURE__ */ Uint32Array.from([
   1116352408,
   1899447441,
@@ -26459,7 +27062,7 @@ var sha256 = /* @__PURE__ */ createHasher(() => new SHA256());
 var sha512 = /* @__PURE__ */ createHasher(() => new SHA512());
 var sha384 = /* @__PURE__ */ createHasher(() => new SHA384());
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/hmac.js
+// node_modules/@noble/hashes/esm/hmac.js
 var HMAC = class extends Hash {
   constructor(hash3, _key) {
     super();
@@ -26527,7 +27130,7 @@ var HMAC = class extends Hash {
 var hmac = (hash3, key, message) => new HMAC(hash3, key).update(message).digest();
 hmac.create = (hash3, key) => new HMAC(hash3, key);
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/curve.js
+// node_modules/@noble/curves/esm/abstract/curve.js
 var _0n3 = BigInt(0);
 var _1n3 = BigInt(1);
 function negateCt(condition, item) {
@@ -26805,7 +27408,7 @@ function _createCurveFields(type, CURVE, curveOpts = {}, FpFnLE) {
   return { CURVE, Fp, Fn };
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/abstract/weierstrass.js
+// node_modules/@noble/curves/esm/abstract/weierstrass.js
 var divNearest = (num11, den) => (num11 + (num11 >= 0 ? den : -den) / _2n2) / den;
 function _splitEndoScalar(k, basis, n) {
   const [[a1, b1], [a2, b2]] = basis;
@@ -27819,13 +28422,13 @@ function weierstrass(c) {
   return _ecdsa_new_output_to_legacy(c, signs);
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/_shortw_utils.js
+// node_modules/@noble/curves/esm/_shortw_utils.js
 function createCurve(curveDef, defHash) {
   const create = (hash3) => weierstrass(__spreadProps(__spreadValues({}, curveDef), { hash: hash3 }));
   return __spreadProps(__spreadValues({}, create(defHash)), { create });
 }
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/nist.js
+// node_modules/@noble/curves/esm/nist.js
 var p256_CURVE = {
   p: BigInt("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff"),
   n: BigInt("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551"),
@@ -27860,10 +28463,10 @@ var p256 = createCurve(__spreadProps(__spreadValues({}, p256_CURVE), { Fp: Fp256
 var p384 = createCurve(__spreadProps(__spreadValues({}, p384_CURVE), { Fp: Fp384, lowS: false }), sha384);
 var p521 = createCurve(__spreadProps(__spreadValues({}, p521_CURVE), { Fp: Fp521, lowS: false, allowedPrivateKeyLengths: [130, 131, 132] }), sha512);
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/curves/esm/p256.js
+// node_modules/@noble/curves/esm/p256.js
 var p2562 = p256;
 
-// ../../../../../../home/user/ogame-like/node_modules/@noble/hashes/esm/sha256.js
+// node_modules/@noble/hashes/esm/sha256.js
 var sha2562 = sha256;
 
 // src/game/base64url.ts

@@ -31,6 +31,20 @@ export const MOON_RULES = {
   pityPerDefense: 0.05,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MOON_RULES_META = {
+  enabled: { label: "Lunes activées" },
+  debrisPerPercent: { label: "Débris pour 1 % de chance de lune", min: 1, max: 1_000_000_000, hint: "Ferraille + énergie. Passe à 2 000 000 à la bascule du rythme." },
+  maxChance: { label: "Chance maximale d'un combat", unit: "part", min: 0, max: 1 },
+  shieldBonus: { label: "Bonus de bouclier planétaire", unit: "part", min: 0, max: 0.5, hint: "Couche empire, sous le plafond « Bouclier planétaire »." },
+  protectedStorageBonus: { label: "Entrepôt à l'abri du pillage en plus", unit: "part", min: 0, max: 1, hint: "Couche empire." },
+  maxLevel: { label: "Niveau maximal de la lune", min: 1, max: 20, hint: "1 = pas d'amélioration. Phalange et porte de saut dépendent du niveau." },
+  shieldPerLevel: { label: "Bouclier en plus par niveau au-delà du 1er", unit: "part", min: 0, max: 0.2 },
+  upgradeCost: { label: "Coût du passage au niveau 2", hint: "Multiplié par la croissance à chaque niveau suivant." },
+  costGrowth: { label: "Croissance du coût par niveau", unit: "×", min: 1, max: 10, hint: "Passe à 3 à la bascule du rythme." },
+  pityPerDefense: { label: "Pitié lunaire : part ajoutée par combat subi", unit: "part", min: 0, max: 1, hint: "0,05 = lune garantie au 20e combat subi sans lune ; 0 = pas de pitié." },
+};
+
 export interface MoonState {
   name: string;
   /** 6.14.0 : niveau (absent = 1). */

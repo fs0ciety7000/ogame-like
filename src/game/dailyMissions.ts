@@ -15,6 +15,14 @@ import type { PlayerState } from "@/types/game";
  *  les missions faites et non réclamées le jour de la bascule (settleLegacyDaily). */
 export const DAILY_RULES = { tasks: 0, legacyTasks: 3, tokensPerTask: 1, allBonusTokens: 2 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const DAILY_RULES_META = {
+  tasks: { label: "Tâches tirées par jour (ancien système)", min: 0, max: 10, hint: "0 : fusionnées dans les objectifs du jour depuis 6.2. Laisser à 0." },
+  legacyTasks: { label: "Tâches des anciennes journées", min: 0, max: 10, hint: "Sert seulement à payer les journées commencées avant la fusion." },
+  tokensPerTask: { label: "Jetons par tâche", unit: "jetons", min: 0, max: 20 },
+  allBonusTokens: { label: "Jetons en plus quand toutes sont faites", unit: "jetons", min: 0, max: 20 },
+};
+
 /** Tâches possibles (faisables par tout le monde) et quantité demandée. */
 const POOL: { key: ChronicleObjective; count: number }[] = [
   { key: "mission", count: 2 },

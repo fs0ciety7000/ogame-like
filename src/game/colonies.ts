@@ -251,6 +251,11 @@ export const COLONY_SPEC_RULES = {
   changeCooldownMs: 7 * 24 * 3600_000,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const COLONY_SPEC_RULES_META = {
+  changeCooldownMs: { label: "Délai entre deux changements de spécialisation", unit: "ms", min: 0, max: 7_776_000_000, hint: "604 800 000 = 7 jours. Le premier choix est libre." },
+};
+
 export function findColonySpec(id: string | null | undefined): ColonySpecDef | undefined {
   return COLONY_SPECS.find((s) => s.id === id);
 }
@@ -310,6 +315,13 @@ export const DEPOSIT_RULES = {
   costFactor: 1.2,
   /** Durée : celle d'un extracteur de colonie × ce facteur. */
   timeFactor: 1.5,
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const DEPOSIT_RULES_META = {
+  perSecond: { label: "Production par seconde, niveaux 1 à 15", hint: "Une valeur par niveau du gisement." },
+  costFactor: { label: "Coût : × celui d'un extracteur de colonie", unit: "×", min: 0.1, max: 10, hint: "Plus des nanocomposants (½) et des données (¼)." },
+  timeFactor: { label: "Durée : × celle d'un extracteur de colonie", unit: "×", min: 0.1, max: 10 },
 };
 
 function hashString(text: string): number {

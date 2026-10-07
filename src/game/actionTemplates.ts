@@ -27,6 +27,13 @@ export interface ActionTemplate {
 
 export const TEMPLATE_RULES = { maxTemplates: 12, maxSteps: 20, maxUnitQty: 100_000 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TEMPLATE_RULES_META = {
+  maxTemplates: { label: "Modèles d'actions par joueur", min: 1, max: 50 },
+  maxSteps: { label: "Étapes par modèle", min: 1, max: 100, hint: "Un modèle plus long est tronqué au chargement." },
+  maxUnitQty: { label: "Quantité d'unités par étape, au plus", min: 1, max: 10_000_000 },
+};
+
 export type StepOutcome = "start" | "plan" | "queue" | "error";
 
 export interface StepPreview {

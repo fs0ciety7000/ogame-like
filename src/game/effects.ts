@@ -166,6 +166,26 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
 export const EFFECT_CAP_RULES: Record<string, { tech?: number; empire?: number }> = {};
 for (const [k, info] of Object.entries(EFFECT_STATS)) if (info.cap && k !== "attack" && k !== "defense") EFFECT_CAP_RULES[k] = { ...info.cap };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const EFFECT_CAP_RULES_META = {
+  unitAttack: { label: "Attaque des unités ciblées", hint: "Plafond du bonus par couche : tech (technos), empire (reliques, officiers, talents…). 0,5 = +50 %." },
+  unitHp: { label: "Points de vie des unités ciblées", hint: "Plafond par couche (0,5 = +50 %)." },
+  classEdge: { label: "Avantage de classe", hint: "Plafond par couche (0,2 = +20 %)." },
+  shield: { label: "Bouclier planétaire", hint: "Plafond par couche (0,15 = +15 %)." },
+  protectedStorage: { label: "Entrepôt à l'abri du pillage", hint: "Plafond par couche (0,25 = +25 %)." },
+  buildingDiscount: { label: "Coût des bâtiments (réduction)", hint: "Réduction maximale par couche (0,5 = −50 %)." },
+  tradeTax: { label: "Taxe du marché et des cadeaux (réduction)", hint: "Réduction maximale, couche empire seulement." },
+  buildTime: { label: "Temps de construction (réduction)", hint: "Réduction maximale par couche." },
+  researchTime: { label: "Temps de recherche (réduction)", hint: "Réduction maximale par couche." },
+  unitTime: { label: "Temps de production des unités (réduction)", hint: "Réduction maximale par couche." },
+  unitBuildTime: { label: "Temps de production des unités ciblées (réduction)", hint: "Réduction maximale par couche." },
+  unitCost: { label: "Coût des unités ciblées (réduction)", hint: "Réduction maximale par couche." },
+  fleetSpeed: { label: "Temps de vol (réduction)", hint: "Réduction maximale par couche." },
+  fleetUpkeep: { label: "Entretien de la flotte (réduction)", hint: "Réduction maximale par couche." },
+  jumpGateCooldown: { label: "Recharge de la porte de saut (réduction)", hint: "Réduction maximale par couche." },
+  phalanxRange: { label: "Portée de la phalange", hint: "Plafond du bonus par couche (0,5 = +50 %)." },
+};
+
 /** Plafond en vigueur d'une grandeur pour une couche (undefined : aucun). */
 export function effectCap(stat: EffectStat, layer: EffectLayer): number | undefined {
   const r = EFFECT_CAP_RULES[stat]?.[layer];

@@ -18,6 +18,14 @@ export const MARKET_HISTORY_RULES = {
   lowFactor: 0.5,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MARKET_HISTORY_RULES_META = {
+  days: { label: "Période de l'historique des prix", unit: "j", min: 1, max: 365 },
+  minTrades: { label: "Échanges minimum pour juger un prix", min: 1, max: 1000 },
+  highFactor: { label: "Prix élevé : au-dessus de × le prix habituel", unit: "×", min: 1, max: 10 },
+  lowFactor: { label: "Prix bas : sous × le prix habituel", unit: "×", min: 0.01, max: 1 },
+};
+
 const DAY = 86400_000;
 
 type Trade = Pick<MarketOffer, "giveRes" | "giveAmount" | "wantRes" | "wantAmount" | "filledAtMs">;

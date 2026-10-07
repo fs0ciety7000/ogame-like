@@ -9,6 +9,13 @@ export const RENAME_RULES = {
   maxLength: 20,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const RENAME_RULES_META = {
+  amber: { label: "Prix d'un changement de pseudo", unit: "Ambre", min: 0, max: 10_000 },
+  minLength: { label: "Pseudo : longueur minimale", unit: "caractères", min: 1, max: 20 },
+  maxLength: { label: "Pseudo : longueur maximale", unit: "caractères", min: 3, max: 40 },
+};
+
 export interface RenameState {
   fromPseudo: string;
   atMs: number;

@@ -31,6 +31,12 @@ export interface Goal {
 
 export const GOAL_RULES = { maxGoals: 6, maxFleet: 100_000 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const GOAL_RULES_META = {
+  maxGoals: { label: "Objectifs personnels par joueur", min: 1, max: 50 },
+  maxFleet: { label: "Quantité d'unités visée, au plus", min: 1, max: 100_000_000 },
+};
+
 export interface PlanStep {
   kind: "unlock" | "building" | "tech" | "units";
   id: string;

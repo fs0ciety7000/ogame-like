@@ -72,6 +72,27 @@ export const RHYTHM_RULES = {
   moonDebrisPerPercent: 2_000_000,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const RHYTHM_RULES_META = {
+  enabled: { label: "Bascule du rythme activée", hint: "Décoché : la bascule n'a pas lieu (ou est annulée), anciennes valeurs partout." },
+  switchAt: { label: "Date de la bascule", unit: "date", min: 0 },
+  announceDays: { label: "Annonce en jeu avant la date", unit: "j", min: 0, max: 60 },
+  tier2CostFactor: { label: "Coûts du second palier (niveaux 11 à 20)", unit: "×", min: 0.1, max: 20 },
+  tier2BaseSeconds: { label: "Durée du niveau 11 des bâtiments de l'Ascension", unit: "s", min: 0, max: 10_000_000, hint: "129 600 = 36 h." },
+  tier2SecondsPerLevel: { label: "Durée ajoutée par niveau au-delà du 11", unit: "s", min: 0, max: 10_000_000, hint: "97 200 = 27 h." },
+  researchLateFromLevel: { label: "Recherche tardive : dès le niveau", unit: "niveau", min: 0, max: 50 },
+  researchLateTimeFactor: { label: "Recherche tardive : durée multipliée par", unit: "×", min: 1, max: 100 },
+  researchMaxLevelSeconds: { label: "Recherche : durée maximale d'un niveau", unit: "s", min: 0, max: 31_536_000, hint: "604 800 = 7 jours." },
+  ascensionCooldownDays: { label: "Délai entre deux Ascensions", unit: "j", min: 0, max: 365 },
+  maxAscensions: { label: "Ascensions au plus", min: 1, max: 50, hint: "Jamais moins qu'avant la bascule." },
+  exchangeCommonToRare: { label: "Comptoir : rares par ressource commune", min: 0.0001, max: 1, hint: "0,004 = 1 pour 250." },
+  missionProductionMultiplier: { label: "Missions : multiplicateur de production", unit: "×", min: 0, max: 10 },
+  missionRareProductionRef: { label: "Missions : production de référence des rares", min: 1, max: 1_000_000_000 },
+  moonUpgradeCost: { label: "Lune : coût du niveau 2" },
+  moonCostGrowth: { label: "Lune : croissance du coût par niveau", unit: "×", min: 1, max: 10 },
+  moonDebrisPerPercent: { label: "Lune : débris pour 1 % de chance", min: 1, max: 1_000_000_000 },
+};
+
 export type RhythmRules = typeof RHYTHM_RULES;
 
 /** Anciennes valeurs par défaut (avant 6.14.88) : seule une valeur égale est remplacée à la bascule. Référence de migration,

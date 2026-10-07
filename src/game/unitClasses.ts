@@ -79,6 +79,14 @@ export const UNIT_AUDIT_RULES = {
   endgameStrongAbove: 2.2,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const UNIT_AUDIT_RULES_META = {
+  strongAbove: { label: "Unité trop forte au-dessus de", unit: "×", min: 1, max: 10, hint: "Rapport à la moyenne, par coût et par place." },
+  weakBelow: { label: "Unité trop faible sous", unit: "×", min: 0, max: 1 },
+  endgameSlots: { label: "Unité lourde de fin de partie : places au moins", min: 1, max: 100 },
+  endgameStrongAbove: { label: "Unité lourde trop forte au-dessus de", unit: "×", min: 1, max: 10 },
+};
+
 /** Audit d'équilibrage : valeur de combat par coût et par place, comparée à la médiane de la catégorie. */
 export function unitBalanceAudit(all: UnitDef[] = UNITS): UnitAuditRow[] {
   const classes = unitClasses(all);

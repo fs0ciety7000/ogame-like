@@ -61,6 +61,20 @@ export const CONTRACT_RULES = {
   chestXp: 150,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const CONTRACT_RULES_META = {
+  perDay: { label: "Objectifs du jour", min: 1, max: 10 },
+  streakBonusPerDay: { label: "Bonus de série par jour", unit: "part", min: 0, max: 1, hint: "0,1 = +10 % de récompense par jour de série." },
+  streakBonusMax: { label: "Bonus de série maximal", unit: "part", min: 0, max: 2 },
+  chestEvery: { label: "Coffre tous les N jours de série", unit: "j", min: 1, max: 60 },
+  xpPerContract: { label: "XP par objectif", unit: "XP", min: 0, max: 10_000 },
+  rarePerContract: { label: "Ressources rares par objectif", min: 0, max: 1_000_000, hint: "Avant l'échelle de progression du joueur." },
+  tokensPerContract: { label: "Jetons par objectif", unit: "jetons", min: 0, max: 20 },
+  allDoneTokens: { label: "Jetons en plus quand tous sont faits", unit: "jetons", min: 0, max: 20 },
+  chestRare: { label: "Coffre : chaque ressource rare", min: 0, max: 10_000_000 },
+  chestXp: { label: "Coffre : XP", unit: "XP", min: 0, max: 100_000 },
+};
+
 export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> = {
   upgrade_building: (n) => `Lancer ${n} amélioration${n > 1 ? "s" : ""} de bâtiment`,
   research: (n) => `Lancer ${n} recherche${n > 1 ? "s" : ""}`,

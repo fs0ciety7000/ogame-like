@@ -16,6 +16,11 @@ export interface MissionDef {
 /** Z5 (printemps) : XP suggérée par heure de mission dans l'éditeur (GameRules.missionXp). */
 export const MISSION_XP_RULES = { perHour: 60 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MISSION_XP_RULES_META = {
+  perHour: { label: "XP suggérée par heure de mission", unit: "XP", min: 0, max: 10_000, hint: "Proposition de l'éditeur de missions, pas une règle appliquée." },
+};
+
 export const DEFAULT_MISSIONS: Record<string, MissionDef> = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
   forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35000, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },

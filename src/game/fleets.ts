@@ -112,6 +112,14 @@ export const COLONY_BASE_RULES = {
   defendsColony: false,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const COLONY_BASE_RULES_META = {
+  enabled: { label: "Flotte basée sur les colonies", hint: "Décoché : plus de nouvelle base (les bases en place vont à leur terme)." },
+  maxDays: { label: "Stationnement maximal", unit: "j", min: 1, max: 60, hint: "La base rentre seule ensuite." },
+  perColony: { label: "Bases à la fois sur une même colonie", min: 1, max: 10 },
+  defendsColony: { label: "La base défend la colonie attaquée", hint: "Elle combat comme une garnison, pertes possibles." },
+};
+
 /** 6.11.1 : la base avancée défend-elle sa colonie ? (lu par le serveur au combat). */
 export function colonyBaseDefends(): boolean {
   return COLONY_BASE_RULES.defendsColony === true;

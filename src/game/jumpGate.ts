@@ -38,6 +38,20 @@ export const JUMP_GATE_RULES = {
   saveWindowMinutes: 10,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const JUMP_GATE_RULES_META = {
+  enabled: { label: "Porte de saut activée", hint: "Décoché : plus aucun saut." },
+  minMoonLevel: { label: "Niveau de lune qui ouvre la porte", unit: "niveau", min: 1, max: 20 },
+  cooldownHours: { label: "Recharge au niveau minimal", unit: "h", min: 0, max: 168 },
+  cooldownCutPerLevel: { label: "Recharge en moins par niveau au-delà du minimum", unit: "h", min: 0, max: 48 },
+  cooldownMinHours: { label: "Recharge minimale, effets compris", unit: "h", min: 0, max: 168 },
+  missions: { label: "Missions que la porte rapatrie", hint: "patrol, garrison, colonybase : on peut seulement en retirer." },
+  allyJump: { label: "Saut de garnison vers un allié", hint: "L'allié doit aussi avoir une lune." },
+  allyJumpMinMoonLevel: { label: "Saut vers un allié : niveau de lune requis", unit: "niveau", min: 1, max: 20 },
+  allyJumpArrivalMinutes: { label: "Saut vers un allié : arrivée après", unit: "min", min: 0, max: 1440 },
+  saveWindowMinutes: { label: "Fenêtre d'un sauvetage", unit: "min", min: 0, max: 1440, hint: "Une attaque repoussée dans ce délai après un saut compte comme un sauvetage (succès secret)." },
+};
+
 /** Missions qu'un saut peut rapatrier, au plus (I23) : jamais une attaque ni un retour de raid (pas de pillage « aller simple »),
  *  ni un transport ou une livraison (pas de convoi instantané), ni une expédition, une sonde, un recyclage, un boss ou une prime. */
 export const JUMPABLE_MISSIONS: readonly FleetMission[] = ["patrol", "garrison", "colonybase"];

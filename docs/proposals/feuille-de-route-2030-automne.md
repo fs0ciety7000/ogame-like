@@ -30,7 +30,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 18 | UX-5 | Accueil du joueur : Prise en main en tête, redondances retirées | M | livré (6.14.63) |
 | 19 | UX-8 | Navigation mobile : onglets par défaut, pastille « Plus » neutre | S | livré (6.14.64) |
 | 20 | AJ27-1 | Docs remises au code (GDD, fiches, constats ouverts) et garde de comptage | S | livré (6.14.94) |
-| 21 | AA2 | Libellés, unités, bornes et aide pour chaque réglage de l'admin | M | à faire |
+| 21 | AA2 | Libellés, unités, bornes et aide pour chaque réglage de l'admin | M | livré (6.14.95) |
 | 22 | AA3 | Chiffres en dur rendus réglables (Comptoir, talents, spécialisations, modules, sac…), valeurs inchangées | M | à faire |
 | 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | à faire |
 | 24 | RL-0 | Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/proposals/rythme-long-terme.md`, Q164 à Q171) ; reste le mode `--long` de `progression-sim.mjs` | S | livré en partie (6.14.78) |

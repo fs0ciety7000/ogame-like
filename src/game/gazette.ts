@@ -18,6 +18,12 @@ import { upcomingAgenda } from "@/game/agenda";
 export const GAZETTE_KEY = "gazette";
 export const GAZETTE_RULES = { publishHour: 9, keepIssues: 8 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const GAZETTE_RULES_META = {
+  publishHour: { label: "Heure de parution (lundi, Paris)", unit: "h", min: 0, max: 23 },
+  keepIssues: { label: "Numéros gardés", min: 1, max: 52 },
+};
+
 export type GazetteSectionKind = "boss" | "vendetta" | "war" | "progress" | "raid" | "warlord" | "newcomers" | "ascension" | "defense" | "market" | "solidarity" | "alliance" | "agenda";
 
 export interface GazetteSection {

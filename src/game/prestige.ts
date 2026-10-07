@@ -65,6 +65,17 @@ export const PRESTIGE_RULES = {
   ] as PrestigeMonument[],
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PRESTIGE_RULES_META = {
+  enabled: { label: "Projets de prestige ouverts", hint: "Décoché : plus de nouveau projet (un projet en cours se termine)." },
+  hoursPerProject: { label: "Coût d'un projet", unit: "h", min: 0, max: 168, hint: "En heures de production commune du moment." },
+  durationHours: { label: "Durée d'un projet", unit: "h", min: 0, max: 168 },
+  unlockExtractorLevel: { label: "Niveau des 4 extracteurs qui ouvre les projets", unit: "niveau", min: 1, max: 40 },
+  pointsPerProject: { label: "Points de prestige par projet", unit: "points", min: 0, max: 1000 },
+  growth: { label: "Croissance du coût par projet achevé", unit: "×", min: 1, max: 3, hint: "1 = coût constant en heures." },
+  monuments: { label: "Monuments de la fiche publique", hint: "projects (projets achevés requis) et name ; le plus haut atteint s'affiche." },
+};
+
 export interface PrestigeProject {
   startedAtMs: number;
   endsAtMs: number;

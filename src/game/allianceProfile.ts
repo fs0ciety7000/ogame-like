@@ -60,6 +60,14 @@ export interface AllianceProfile {
 
 export const ALLIANCE_PROFILE_RULES = { maxRanks: 6, maxApplications: 30, descriptionMax: 600, messageMax: 300 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ALLIANCE_PROFILE_RULES_META = {
+  maxRanks: { label: "Rangs personnalisés par alliance", min: 1, max: 20 },
+  maxApplications: { label: "Candidatures en attente, au plus", min: 1, max: 200 },
+  descriptionMax: { label: "Description de l'alliance : longueur", unit: "caractères", min: 50, max: 5000 },
+  messageMax: { label: "Message de candidature : longueur", unit: "caractères", min: 20, max: 2000 },
+};
+
 const PERM_IDS = new Set(ALLIANCE_PERMS.map((p) => p.id));
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 

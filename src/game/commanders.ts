@@ -162,6 +162,12 @@ export function roleBonusText(role: CommanderId, l: number): string {
  *  commandant de saison, bonus d'XP de la Phéromone de recrutement (Comptoir). */
 export const OFFICER_TUNING_RULES = { seasonSecondaryShare: 0.5, pheromonePct: 0.25 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const OFFICER_TUNING_RULES_META = {
+  seasonSecondaryShare: { label: "Commandant de saison : force du second rôle", unit: "part", min: 0, max: 1, hint: "Part de l'effet d'un officier ordinaire (0,5 = moitié)." },
+  pheromonePct: { label: "Phéromone : XP des officiers en plus", unit: "part", min: 0, max: 2, hint: "0,25 = +25 % d'XP pendant la durée réglée au Comptoir de la Ruche." },
+};
+
 /** Ce qu'un passe de saison décrit (données enregistrées, voir passSeasons.ts). */
 export interface SeasonCommanderDef {
   id: string;
@@ -247,6 +253,28 @@ export const COMMANDER_XP = {
   unitsBuilt: 5,
   giftSent: 5,
   playerContract: 10,
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const COMMANDER_XP_META = {
+  attackWin: { label: "Attaque gagnée", unit: "XP", min: 0, max: 1000, hint: "XP d'officier gagnée par l'officier concerné à chaque action." },
+  lairWin: { label: "Repaire pirate vaincu", unit: "XP", min: 0, max: 1000 },
+  bountyWin: { label: "Prime remplie", unit: "XP", min: 0, max: 1000 },
+  bossAssault: { label: "Assaut de boss", unit: "XP", min: 0, max: 1000 },
+  defenseWin: { label: "Défense réussie", unit: "XP", min: 0, max: 1000 },
+  raidRepelled: { label: "Raid repoussé", unit: "XP", min: 0, max: 1000 },
+  defenseLost: { label: "Défense perdue", unit: "XP", min: 0, max: 1000 },
+  buildingDone: { label: "Bâtiment terminé", unit: "XP", min: 0, max: 1000 },
+  researchDone: { label: "Recherche terminée", unit: "XP", min: 0, max: 1000 },
+  spyLaunched: { label: "Espionnage lancé", unit: "XP", min: 0, max: 1000 },
+  probesCaught: { label: "Sondes ennemies abattues", unit: "XP", min: 0, max: 1000 },
+  missionDone: { label: "Mission terminée", unit: "XP", min: 0, max: 1000 },
+  contractClaimed: { label: "Objectif du jour réclamé", unit: "XP", min: 0, max: 1000 },
+  marketTrade: { label: "Échange au marché", unit: "XP", min: 0, max: 1000 },
+  fleetDispatched: { label: "Flotte envoyée", unit: "XP", min: 0, max: 1000 },
+  unitsBuilt: { label: "Unités produites (par tranche de 10)", unit: "XP", min: 0, max: 1000 },
+  giftSent: { label: "Cadeau envoyé", unit: "XP", min: 0, max: 1000 },
+  playerContract: { label: "Contrat de livraison rempli", unit: "XP", min: 0, max: 1000 },
 };
 
 /** v5.6 : ce qui fait progresser chaque officier (affiché sur sa fiche). */

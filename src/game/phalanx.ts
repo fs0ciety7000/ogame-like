@@ -48,6 +48,21 @@ export const PHALANX_RULES = {
   scanCostMin: 1000,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PHALANX_RULES_META = {
+  enabled: { label: "Phalange activée", hint: "Décoché : balayages refusés, radar coupé, rien n'est percé." },
+  rangePerLevel: { label: "Portée par niveau de lune", unit: "cases", min: 0, max: 200, hint: "En unités de carte (carte de côté 100 : 142 couvre toute la carte)." },
+  radar: { label: "Radar d'alliance", hint: "Alerte les alliés au lancement d'une attaque de joueur." },
+  radarMaxNotified: { label: "Radar : alliés prévenus par attaque, au plus", min: 0, max: 50, hint: "Les plus proches de la planète visée." },
+  revealDecoyLevel: { label: "Niveau de lune qui perce le brouilleur", unit: "niveau", min: 0, max: 20, hint: "Montre la vraie composition ; 0 = jamais." },
+  revealBoostLevel: { label: "Niveau de lune qui révèle les capsules", unit: "niveau", min: 0, max: 20, hint: "Stimulants d'assaut embarqués ; 0 = jamais." },
+  scanCooldownMinutes: { label: "Recharge du balayage au niveau 1", unit: "min", min: 0, max: 1440 },
+  scanCooldownCutPerLevel: { label: "Recharge en moins par niveau au-delà du 1er", unit: "min", min: 0, max: 60 },
+  scanCooldownMinMinutes: { label: "Recharge minimale", unit: "min", min: 0, max: 1440 },
+  scanCostHours: { label: "Coût d'un balayage : production d'énergie", unit: "h", min: 0, max: 24 },
+  scanCostMin: { label: "Coût minimal d'un balayage", unit: "énergie", min: 0, max: 1_000_000_000 },
+};
+
 type MoonPlayer = Partial<Pick<PlayerState, "moon" | "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass">>;
 
 const num = (v: unknown, d = 0): number => (Number.isFinite(Number(v)) ? Number(v) : d);

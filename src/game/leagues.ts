@@ -45,6 +45,13 @@ export const LEAGUE_RULES = {
   historyWeeks: 8,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const LEAGUE_RULES_META = {
+  promotePct: { label: "Part qui monte chaque semaine", unit: "part", min: 0, max: 0.5 },
+  relegatePct: { label: "Part qui descend chaque semaine", unit: "part", min: 0, max: 0.5 },
+  historyWeeks: { label: "Semaines gardées dans l'historique", unit: "semaines", min: 1, max: 104 },
+};
+
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
 /** Début de la semaine (lundi 0 h UTC) contenant `now`. */

@@ -308,6 +308,15 @@ export const BOSS_PHASE_RULES = {
   weaknessFactor: 1.5,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BOSS_PHASE_RULES_META = {
+  ripostePct: { label: "Phase 2 (riposte) sous cette part de structure", unit: "part", min: 0, max: 1 },
+  riposteLossFactor: { label: "Pertes des assaillants en phase de riposte", unit: "×", min: 1, max: 5 },
+  shieldPct: { label: "Phase 3 (bouclier) sous cette part de structure", unit: "part", min: 0, max: 1, hint: "Doit rester sous le seuil de riposte." },
+  shieldDamageFactor: { label: "Dégâts en phase 3, hors faiblesse", unit: "×", min: 0.1, max: 1, hint: "0,85 = −15 % de dégâts derrière le bouclier." },
+  weaknessFactor: { label: "Dégâts des vaisseaux de la faiblesse en phase 3", unit: "×", min: 1, max: 5 },
+};
+
 /** Vaisseaux qui peuvent être la faiblesse d'un boss (s'ils existent dans le contenu). */
 const WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
 

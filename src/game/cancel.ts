@@ -22,6 +22,12 @@ export const CANCEL_RULES = {
   refundPct: 0.8,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const CANCEL_RULES_META = {
+  graceMs: { label: "Annulation intégrale après le lancement", unit: "ms", min: 0, max: 3_600_000, hint: "Clic par erreur : tout est rendu dans ce délai (60 000 = 1 min)." },
+  refundPct: { label: "Part remboursée ensuite", unit: "part", min: 0, max: 1, hint: "Part du coût non écoulé rendue après le délai de grâce (hors limite de l'entrepôt)." },
+};
+
 type Cost = Partial<Record<ResourceId, number>>;
 
 /** Part du coût rendue selon l'avancement. */

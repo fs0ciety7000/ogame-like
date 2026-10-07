@@ -37,6 +37,15 @@ export const CHALLENGE_RULES = {
   activeDays: 7,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const CHALLENGE_RULES_META = {
+  minShare: { label: "Part minimale de l'objectif pour être récompensé", unit: "part", min: 0, max: 1 },
+  tiers: { label: "Paliers du défi", hint: "at (× l'objectif), hours (production), rare (ressources rares)." },
+  title: { label: "Titre du défi" },
+  titleDays: { label: "Titre porté pendant", unit: "j", min: 0, max: 60 },
+  activeDays: { label: "Joueur actif : vu dans les", unit: "j", min: 1, max: 60 },
+};
+
 export interface Challenge {
   id: string;
   type: ChallengeType;

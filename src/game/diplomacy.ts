@@ -17,6 +17,13 @@ export const DIPLOMACY_RULES = {
   messageMax: 500,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const DIPLOMACY_RULES_META = {
+  breakNoticeHours: { label: "Préavis de rupture d'un pacte", unit: "h", min: 0, max: 336, hint: "Le pacte protège encore pendant le préavis." },
+  maxPacts: { label: "Pactes simultanés par alliance", min: 0, max: 20, hint: "Proposés, actifs ou en préavis." },
+  messageMax: { label: "Message diplomatique : longueur", unit: "caractères", min: 20, max: 5000 },
+};
+
 export type PactStatus = "proposed" | "active" | "ending" | "ended" | "declined" | "cancelled";
 
 export interface AlliancePact {

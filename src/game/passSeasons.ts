@@ -57,6 +57,12 @@ export const PASS_REWARD_RULES = {
   monthEffort: 1,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const PASS_REWARD_RULES_META = {
+  finalAmber: { label: "Ambre du dernier palier d'un passe généré", unit: "Ambre", min: 0, max: 10_000, hint: "Avec le commandant et le cosmétique." },
+  monthEffort: { label: "Effort d'un passe complet", unit: "mois", min: 0.1, max: 6, hint: "En mois d'activité du joueur médian." },
+};
+
 /** Quantité d'une action demandée sur tout le passe : 4,3 semaines d'activité médiane
  *  (bornée comme les objectifs des Chroniques ; valeurs de base sans données). */
 export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">): number {

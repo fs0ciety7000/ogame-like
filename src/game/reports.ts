@@ -36,6 +36,16 @@ export const REPORT_RULES = {
   maxPerDay: 5,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const REPORT_RULES_META = {
+  titleMax: { label: "Titre : longueur", unit: "caractères", min: 20, max: 500 },
+  descriptionMin: { label: "Description : longueur minimale", unit: "caractères", min: 0, max: 200 },
+  descriptionMax: { label: "Description : longueur maximale", unit: "caractères", min: 100, max: 20_000 },
+  commentMax: { label: "Commentaire : longueur", unit: "caractères", min: 100, max: 20_000 },
+  resolutionMax: { label: "Résolution : longueur", unit: "caractères", min: 100, max: 20_000 },
+  maxPerDay: { label: "Signalements par joueur sur 24 h", min: 1, max: 100 },
+};
+
 export interface ReportEntry {
   kind: "created" | "comment" | "status";
   atMs: number;

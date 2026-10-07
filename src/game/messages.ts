@@ -11,6 +11,13 @@ export const MESSAGE_RULES = {
   perDay: 300,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const MESSAGE_RULES_META = {
+  maxLength: { label: "Longueur d'un message privé", unit: "caractères", min: 50, max: 10_000 },
+  perMinute: { label: "Messages par minute, au plus", min: 1, max: 120 },
+  perDay: { label: "Messages par jour, au plus", min: 1, max: 10_000 },
+};
+
 /** Texte nettoyé, ou erreur si vide ou trop long. */
 export function sanitizeMessageText(raw: unknown): string {
   const text = String(raw ?? "")

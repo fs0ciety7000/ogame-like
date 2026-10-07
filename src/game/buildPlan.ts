@@ -24,6 +24,13 @@ export const BUILD_PLAN_RULES = {
   maxWaitHours: 24,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const BUILD_PLAN_RULES_META = {
+  slotBuilding: { label: "Bâtiment qui ouvre les emplacements (id)" },
+  slotLevels: { label: "Niveau du bâtiment requis par emplacement", unit: "niveau", hint: "Un niveau par emplacement de la file planifiée ; le 1er (0) est offert." },
+  maxWaitHours: { label: "Attente maximale sans ressources", unit: "h", min: 1, max: 168, hint: "Au-delà, l'étape quitte la file et le joueur est prévenu." },
+};
+
 /* 5.32 (proposals/constructeurs.md, option C) : chantiers de bâtiments en parallèle. 6 de base (réglable :
    ECONOMY_RULES.buildSlotsBase), +1 à la Fonderie quantique niveau 5, +1 au niveau 10. Un chantier déjà en cours
    au-delà de la limite (avant la 5.32) va à son terme ; seul le lancement suivant attend. */

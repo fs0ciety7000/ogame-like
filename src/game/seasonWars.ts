@@ -29,11 +29,27 @@ export const SEASON_WAR_RULES = {
   titles: ["Conquérants de la saison", "Stratèges de la saison", "Vétérans de la saison"],
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const SEASON_WAR_RULES_META = {
+  powerPerPoint: { label: "Puissance ennemie détruite par point", min: 1, max: 1_000_000_000 },
+  sectorPoints: { label: "Points par secteur tenu à la clôture", unit: "points", min: 0, max: 10_000 },
+  rewardHours: { label: "Podium : heures de production versées au trésor (1re, 2e, 3e)", unit: "h" },
+  titles: { label: "Titres d'alliance du podium" },
+};
+
 export const WAR_CHEST_RULES = {
   depositPct: 0.1,
   capDays: 30,
   shieldHours: 2,
   shieldCostHours: 4,
+};
+
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const WAR_CHEST_RULES_META = {
+  depositPct: { label: "Dépôt : part du bonus du trésor", unit: "part", min: 0, max: 1 },
+  capDays: { label: "Plafond du coffre : jours de dépôts", unit: "j", min: 1, max: 365 },
+  shieldHours: { label: "Bouclier offert à un membre", unit: "h", min: 0, max: 72 },
+  shieldCostHours: { label: "Coût du bouclier : production du membre", unit: "h", min: 0, max: 72 },
 };
 
 type Res = Partial<Record<ResourceId, number>>;

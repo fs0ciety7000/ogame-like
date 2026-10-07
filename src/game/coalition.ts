@@ -29,6 +29,21 @@ export const COALITION_RULES = {
   failGrowth: 0.1,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const COALITION_RULES_META = {
+  thresholdFactor: { label: "Seuil de menace : × le meilleur joueur", unit: "×", min: 1, max: 10, hint: "Un seigneur plus puissant que ce multiple du meilleur joueur devient une cible de coalition." },
+  holdHours: { label: "Durée au-dessus du seuil avant la coalition", unit: "h", min: 0, max: 336 },
+  durationDays: { label: "Durée d'une coalition", unit: "j", min: 1, max: 30 },
+  goalFactor: { label: "Objectif : × la puissance de flotte du seigneur", unit: "×", min: 0.1, max: 10 },
+  cooldownDays: { label: "Délai avant une nouvelle coalition", unit: "j", min: 0, max: 90 },
+  powerLoss: { label: "Réussite : puissance perdue par le seigneur", unit: "part", min: 0, max: 1 },
+  awayDays: { label: "Réussite : absence du seigneur", unit: "j", min: 0, max: 60 },
+  minShare: { label: "Part minimale de l'objectif pour être récompensé", unit: "part", min: 0, max: 1 },
+  rewardHours: { label: "Récompense : heures de production", unit: "h", min: 0, max: 72 },
+  topRelics: { label: "Relique épique pour les meilleurs contributeurs", min: 0, max: 20, hint: "Nombre de joueurs du haut du classement qui la reçoivent." },
+  failGrowth: { label: "Échec : puissance gagnée par le seigneur", unit: "part", min: 0, max: 1 },
+};
+
 export interface Coalition {
   id: string;
   warlordId: string;

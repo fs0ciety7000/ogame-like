@@ -12,6 +12,12 @@ import type { PlayerState, ResourceId } from "@/types/game";
 
 export const TALENT_RULES = { pointsPerAscension: 3, maxRank: 3 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const TALENT_RULES_META = {
+  pointsPerAscension: { label: "Points de talent par Ascension", min: 0, max: 20 },
+  maxRank: { label: "Rang maximal d'un talent", min: 1, max: 10, hint: "En baisser ne retire pas les rangs déjà pris." },
+};
+
 export type TalentBranch = "economie" | "guerre" | "logistique";
 
 export type TalentEffect =

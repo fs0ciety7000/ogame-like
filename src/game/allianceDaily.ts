@@ -30,6 +30,20 @@ export const ALLIANCE_DAILY_RULES = {
   treasuryPct: 0.1,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ALLIANCE_DAILY_RULES_META = {
+  proposeHour: { label: "Heure de proposition des objectifs", unit: "h", min: 0, max: 23, hint: "Trois objectifs sur quatre sont proposés au vote à cette heure." },
+  voteEndHour: { label: "Heure de fin du vote", unit: "h", min: 0, max: 23, hint: "Après l'heure de proposition. L'objectif le plus voté devient actif." },
+  activeDays: { label: "Membre actif : connecté dans les", unit: "j", min: 1, max: 30, hint: "Seuls les membres actifs comptent dans la taille des objectifs." },
+  treasuryHours: { label: "Objectif trésor : heures de production des actifs", unit: "h", min: 0, max: 48 },
+  missionsPerMember: { label: "Objectif missions : par membre actif", min: 0, max: 50 },
+  researchPerMember: { label: "Objectif recherches : par membre actif", min: 0, max: 20 },
+  powerPct: { label: "Objectif puissance : part de la flotte de l'alliance", unit: "part", min: 0, max: 1, hint: "Puissance à détruire = cette part de la flotte cumulée des membres (500 au moins)." },
+  passPoints: { label: "Réussite : points de passe par membre", unit: "points", min: 0, max: 500 },
+  rewardHours: { label: "Réussite : heures de production par membre", unit: "h", min: 0, max: 48 },
+  treasuryPct: { label: "Réussite : bonus du trésor", unit: "part", min: 0, max: 1, hint: "Le trésor reçoit cette part de la base de l'objectif trésor." },
+};
+
 export type DailyKind = "treasury" | "missions" | "power" | "research";
 export const DAILY_KINDS: DailyKind[] = ["treasury", "missions", "power", "research"];
 

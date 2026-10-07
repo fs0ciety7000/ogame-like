@@ -28,6 +28,16 @@ export const ALLIANCE_SAGA_RULES = {
   share: 0.6,
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const ALLIANCE_SAGA_RULES_META = {
+  objectives: { label: "Objectifs par saga", min: 1, max: 6 },
+  pointsPerObjective: { label: "Points par objectif atteint", unit: "points", min: 1, max: 10_000 },
+  overflowCap: { label: "Dépassement compté au plus", unit: "×", min: 1, max: 10, hint: "Un objectif dépassé compte jusqu'à ce multiple (2 = 200 points pour 100)." },
+  rewardHours: { label: "Podium : heures de production versées au trésor (1re, 2e, 3e)", unit: "h" },
+  weeks: { label: "Durée de référence de l'objectif", unit: "semaines", min: 1, max: 12, hint: "Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × part." },
+  share: { label: "Part de l'effort médian visée", unit: "×", min: 0.05, max: 5 },
+};
+
 export interface AllianceSagaDef {
   monthId: string;
   title: string;

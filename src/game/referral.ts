@@ -20,6 +20,17 @@ export const REFERRAL_RULES = {
   banner: "recruteur",
 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const REFERRAL_RULES_META = {
+  linkWindowHours: { label: "Délai pour déclarer un parrain", unit: "h", min: 1, max: 720, hint: "Après l'inscription du filleul." },
+  rewardXp: { label: "XP que le filleul doit atteindre", unit: "XP", min: 0, max: 10_000_000, hint: "2 000 = Bronze I." },
+  minAgeDays: { label: "Ancienneté du filleul requise", unit: "j", min: 0, max: 90 },
+  perMonth: { label: "Filleuls récompensés par mois, au plus", min: 0, max: 100 },
+  amberSponsor: { label: "Ambre du parrain", unit: "Ambre", min: 0, max: 10_000 },
+  amberRecruit: { label: "Ambre du filleul", unit: "Ambre", min: 0, max: 10_000 },
+  banner: { label: "Bannière du parrain (id)" },
+};
+
 export interface ReferralState {
   /** Côté filleul : son parrain. */
   by?: string;

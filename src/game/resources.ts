@@ -37,6 +37,13 @@ export function resourceEmoji(id: string): string {
 /** 6.9.7 (AU11) : comptoir d'échange réglable (registre « exchange ») : taux entre communes et rares, taxe versée au pot commun. */
 export const EXCHANGE_RULES = { commonToRare: 0.01, rareToCommon: 50, taxPct: 0.05 };
 
+/** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const EXCHANGE_RULES_META = {
+  commonToRare: { label: "Comptoir : rares par ressource commune", min: 0.0001, max: 1, hint: "0,01 = 1 rare pour 100 communes ; 0,004 à la bascule du rythme." },
+  rareToCommon: { label: "Comptoir : communes par ressource rare", min: 1, max: 10_000 },
+  taxPct: { label: "Taxe du comptoir", unit: "part", min: 0, max: 1 },
+};
+
 export function getTradeRate(sellId: ResourceId, buyId: ResourceId): number {
   const sell = RESOURCE_LIST.find((r) => r.id === sellId);
   const buy = RESOURCE_LIST.find((r) => r.id === buyId);

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { applyGameContent, currentGameContent, RULE_GROUP_LABELS, validateRules } from "@/game/content";
-import { REGISTERED_RULES } from "@/game/ruleRegistry";
+import { applyGameContent, currentGameContent, defaultGameContent, RULE_GROUP_LABELS, validateRules } from "@/game/content";
+import { REGISTERED_RULES, ruleFieldMeta, ruleGroupMeta } from "@/game/ruleRegistry";
+import { HISTORICAL_RULES_META, type RuleFieldMeta } from "@/game/ruleMeta";
+import { applyRhythmSwitch, RHYTHM_RULES } from "@/game/rhythm";
 import { VACATION_RULES } from "@/game/vacation";
 import { BOUNTY_RULES } from "@/game/bounties";
 
@@ -67,5 +69,51 @@ describe("6.9.1 registre des réglages", () => {
       while ((m = re.exec(src))) if (!NOT_GAME_RULES.has(m[1]) && !new RegExp(`\\b${m[1]}\\b`).test(wired)) missing.push(`${file.slice(2)} ${m[1]}`);
     }
     expect(missing).toEqual([]);
+  });
+
+  /* 6.14.95 (AU27, lot AA2 : AA-24, AA-28) : métadonnées des réglages. */
+  it("garde : chaque champ de chaque groupe du registre a un libellé, et rien que des champs existants", () => {
+    const missing: string[] = [];
+    const unknown: string[] = [];
+    for (const [group, r] of Object.entries(REGISTERED_RULES)) {
+      const meta = r.meta() as Record<string, RuleFieldMeta>;
+      const target = r.target() as Record<string, unknown>;
+      for (const key of Object.keys(target)) if (!meta[key]?.label?.trim()) missing.push(`${group}.${key}`);
+      for (const key of Object.keys(meta)) if (!(key in target)) unknown.push(`${group}.${key}`);
+    }
+    expect(missing).toEqual([]);
+    expect(unknown).toEqual([]);
+  });
+
+  it("garde : métadonnées JSON pures, bornes cohérentes, chaque défaut dans ses bornes", () => {
+    const defaults = defaultGameContent().rules as unknown as Record<string, Record<string, unknown>>;
+    const groups = [...Object.keys(REGISTERED_RULES), ...Object.keys(HISTORICAL_RULES_META)];
+    const bad: string[] = [];
+    for (const group of groups) {
+      const meta = ruleGroupMeta(group) as Record<string, RuleFieldMeta>;
+      expect(JSON.parse(JSON.stringify(meta)), group).toEqual(meta);
+      for (const [key, m] of Object.entries(meta)) {
+        const d = defaults[group]?.[key];
+        if (d === undefined) bad.push(`${group}.${key} : champ absent des défauts`);
+        if ((m.min !== undefined || m.max !== undefined) && typeof d !== "number") bad.push(`${group}.${key} : bornes sur un champ non numérique`);
+        if (m.min !== undefined && m.max !== undefined && m.min > m.max) bad.push(`${group}.${key} : min > max`);
+        if (typeof d === "number" && ((m.min !== undefined && d < m.min) || (m.max !== undefined && d > m.max))) bad.push(`${group}.${key} : défaut ${d} hors de [${m.min} ; ${m.max}]`);
+      }
+    }
+    expect(bad).toEqual([]);
+    // Aucun refus sur les défauts, ni après la bascule du rythme (valeurs visées comprises).
+    expect(validateRules(defaultGameContent().rules)).toEqual([]);
+    const switched = applyRhythmSwitch(defaultGameContent(), defaultGameContent().buildings, RHYTHM_RULES.switchAt + 1);
+    expect(switched.rules.research.lateTimeFactor).toBe(RHYTHM_RULES.researchLateTimeFactor);
+    expect(validateRules(switched.rules)).toEqual([]);
+  });
+
+  it("une valeur hors des bornes déclarées est refusée, avec son libellé", () => {
+    const r = currentGameContent().rules;
+    expect(ruleFieldMeta("phalanx", "rangePerLevel")?.label).toMatch(/Portée/);
+    const errs = validateRules({ ...r, phalanx: { ...r.phalanx, rangePerLevel: 500 } } as never).join(" ");
+    expect(errs).toMatch(/Lunes : phalange : « Portée par niveau de lune » \(rangePerLevel\) doit être entre 0 et 200/);
+    expect(validateRules({ ...r, vacation: { ...r.vacation, productionFactor: 1 } } as never)).toEqual([]);
+    expect(validateRules({ ...r, fleets: { ...r.fleets, mapSize: 5 } } as never).join(" ")).toMatch(/Taille de la carte/);
   });
 });
