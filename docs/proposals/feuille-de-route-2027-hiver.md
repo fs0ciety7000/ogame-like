@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'hiver 2027
 
-Statut : **en cours** (2026-10-07, clôture d'AU16). Règle n° 3 : les lots s'enchaînent sans attendre ; ceux qui demandent la production,
+Statut : **close** (2026-10-07, AU17 : `docs/audit/2026-10-07-au17-hiver.md`), suite dans `feuille-de-route-2028-printemps.md`. Ouverte à la clôture d'AU16. Règle n° 3 : les lots s'enchaînent sans attendre ; ceux qui demandent la production,
 `main` ou une PR sont sautés et notés (Q12). Orientation à revoir avec l'utilisateur (Q15).
 
 ## Planning
@@ -13,4 +13,4 @@ Statut : **en cours** (2026-10-07, clôture d'AU16). Règle n° 3 : les lots s'e
 | 4 | H2 | Test d'intégration des seigneurs autonome (AT-4, SP-2) | S | livré en 6.11.10 |
 | 5 | H3 | Billet de devblog « le jeu sur téléphone » (6.10.2 à 6.11.x) et débris de colonie | S | livré en 6.11.11 |
 | 6 | Z6 | Performance selon les Web Vitals de production (Q8) | M | dépend de Z1 |
-| 7 | AU17 | Revue d'hiver, même grille | M | fin des lots |
+| 7 | AU17 | Revue d'hiver, même grille | M | livré en 6.11.12 |
