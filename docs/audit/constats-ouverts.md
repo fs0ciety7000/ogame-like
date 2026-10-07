@@ -23,7 +23,6 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
 | AU29-2 | AU24 | Production en 5.27.0 : préparer la mise en production sans ouvrir la PR | H29-1 |
-| AU29-3 | AU24 | Trois lectures sans tri dans les tests d'intégration | H29-2 |
 | AU29-4 | AU24 | Seigneurs et Boss du Codex hors de « Tout réclamer » | H29-3 |
 | AU29-5 | AU24 | Questions ouvertes trop nombreuses pour une relecture rapide | H29-4 |
 
@@ -67,6 +66,7 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 | Z1-d | Pas de route logistique en prod, car les routes (5.33) ne sont pas sur `main` (5.27.0) : ce n'est pas un signal |
 | ET-2 | La base avancée (6.10.0) n'est pas sur `main` : aucune attaque de colonie bloquée en production, rien à dédommager |
 | ET29-3 | Cette page (6.14.18) ; reprise par AU24 (6.14.20) |
+| AU29-3 | 6.14.21 : lectures triées ou filtrées ; échec isolé de « v3.9 bounties » à surveiller (AU25) |
 | COM-3 (reste) | 6.14.19 : casino de la semaine et pot commun (solde, entrées par source) dans la santé |
 | PNJ-5 | 6.14.19 : unités d'élite débloquées dans la santé (jugement avec les mesures) |
 | PNJ-4 | 6.14.19 : 79 % de raids repoussés sur 81 en 7 jours dans la copie de la prod, dans la cible (60 à 80 %) |

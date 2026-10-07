@@ -756,11 +756,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // Refus : le Silencieux part, B voit le raid arriver puis le repousse.
       const refused = await ps.answerPirateUltimatum("refuse");
       expect(refused.raid).toMatchObject({ factionId: "varan" });
-      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` }))[0];
+      // 6.14.21 (H29-2) : liste filtrée sur la faction et triée (ordre non garanti sinon).
+      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate" && factionId="varan"`, sort: "-departAtMs" }))[0];
       expect(raid).toMatchObject({ status: "outbound", factionId: "varan", ownerPseudo: "Le Silencieux" });
       await wait(Math.max(0, refused.raid!.arriveAtMs - Date.now()) + 400);
       await ps.syncPlayer("");
-      const report = (await pb.collection("battle_reports").getFullList({ filter: `defenderUid="${bId}" && attackerUid="pirates"` }))[0];
+      const report = (await pb.collection("battle_reports").getFullList({ filter: `defenderUid="${bId}" && attackerUid="pirates"`, sort: "-timestamp" }))[0];
       expect(report.outcome).toBe("defender_win");
       const afterRaid = await varan();
       expect(afterRaid).toMatchObject({ raidsWon: 1, notoriety: 1, repelled: 1, ultimatum: null });
@@ -1643,7 +1644,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const rareBefore = (await snap(bId)).resources.aiFragment;
       const refused = await ps.answerPirateUltimatum("refuse");
       expect(refused.raid).toMatchObject({ factionId: "gravhorn" });
-      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate"` }))[0];
+      const raid = (await pb.collection("fleets").getFullList({ filter: `targetUid="${bId}" && mission="pirate" && factionId="gravhorn"`, sort: "-departAtMs" }))[0];
       expect(raid).toMatchObject({ factionId: "gravhorn", ownerPseudo: "L'Unité Ambre" });
       await wait(Math.max(0, refused.raid!.arriveAtMs - Date.now()) + 400);
       await ps.syncPlayer("");
