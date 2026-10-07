@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { EyeOff, Flag, MessageSquareOff, RefreshCw, RotateCcw, Trash2, Volume2 } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudTag } from "@/components/ui/hud";
@@ -90,7 +91,17 @@ export function ChatModerationPanel() {
                       <EyeOff className="h-3.5 w-3.5" /> Masquer
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => void act({ action: "delete", id: m.id }, "Message supprimé.")}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      void (async () => {
+                        // 6.9.3 (AU6, COM6-1) : suppression définitive confirmée.
+                        if (await askConfirm({ title: `Supprimer le message de ${m.pseudo} ?`, message: "Il disparaît pour tout le monde, sans retour possible. « Masquer » le garde pour l'historique.", confirmLabel: "Supprimer", tone: "danger" }))
+                          await act({ action: "delete", id: m.id }, "Message supprimé.");
+                      })()
+                    }
+                  >
                     <Trash2 className="h-3.5 w-3.5" /> Supprimer
                   </Button>
                   <Button size="sm" variant="ghost" className="text-ember-glow" onClick={() => (setMuteFor({ uid: m.uid, pseudo: m.pseudo }), setReason(""))}>

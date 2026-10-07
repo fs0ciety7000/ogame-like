@@ -286,7 +286,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
               }
             }}
             rows={1}
-            placeholder={current ? `Message dans #${current.name}… (Entrée pour envoyer)` : "Message à tout le serveur… (Entrée pour envoyer)"}
+            placeholder={current ? `Message dans #${current.name}…` : "Message à tout le serveur…"}
             aria-label="Message au canal global"
             className="min-h-[2.5rem] flex-1 resize-none border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-glow/60 focus:outline-none"
           />
@@ -296,7 +296,7 @@ export function GlobalChannel({ uid, onOpenPlayer }: { uid: string; onOpenPlayer
           </Button>
         </div>
         <p className="flex justify-between text-[10px] text-slate-600">
-          <span>Respect et bonne humeur : les grossièretés sont masquées, les abus signalés.</span>
+          <span>Entrée pour envoyer. Respect et bonne humeur : les grossièretés sont masquées, les abus signalés.</span>
           <span className="font-mono">
             {draft.length}/{GLOBAL_CHAT_RULES.maxLength}
           </span>

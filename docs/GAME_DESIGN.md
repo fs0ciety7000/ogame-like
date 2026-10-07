@@ -167,3 +167,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-06 | 6.9.0 | Revue AU4 (commerce) : garde-fous en place ; 9 réglages du commerce passés dans l'admin (COM-1) ; volumes à relever en AU13 | `docs/audit/2026-10-06-au4-commerce.md`, `docs/changes/6.9.0-commerce-reglable.md` |
 | 2026-10-06 | 6.9.1 | Registre des réglages : 54 objets de règles du moteur dans l'admin (624 champs), garde de test ; grille des territoires figée | `docs/changes/6.9.1-registre-reglages.md` |
 | 2026-10-07 | 6.9.2 | Revue AU5 (alliances) : départ, exclusion, déclaration de guerre et reddition confirmés ; diplomates et podium du défi réglables | `docs/audit/2026-10-07-au5-alliances.md`, `docs/changes/6.9.2-alliances-confirmations.md` |
+| 2026-10-07 | 6.9.3 | Revue AU6 (communications) : blocage et suppression de message confirmés, saisie mobile lisible | `docs/audit/2026-10-07-au6-communications.md`, `docs/changes/6.9.3-communications.md` |

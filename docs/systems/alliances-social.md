@@ -32,3 +32,6 @@ Rapport `docs/audit/2026-10-07-au5-alliances.md`. Depuis la 6.9.2 : départ, exc
 `alliances.maxDiplomats` (2) et `allianceChallenge.rewardHours` (6, 4, 2) réglables. Toutes les règles du domaine sont dans l'admin
 (groupes `alliances`, `wars`, `territoryWar`, `allianceBoss` et registre 6.9.1 : objectif du jour, fiche, saga, diplomatie, territoires,
 guerres de saison, coffre de guerre).
+
+## Revue AU6 (2026-10-07)
+Rapport `docs/audit/2026-10-07-au6-communications.md` : blocage et suppression confirmés (6.9.3) ; règles du canal, des salons, de la messagerie, des sondages et de la gazette réglables (registre 6.9.1).

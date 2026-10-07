@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import { Archive, ArchiveRestore, ArrowLeft, Ban, Check, CheckCheck, Globe2, Loader2, Mail, Search, Send } from "lucide-react";
 import { isConversationArchived } from "@/game/messages";
 import { archiveConversation } from "@/services/playerService";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { markConversationRead as markReadForArchive } from "@/services/messageService";
 import { usePlayerStore } from "@/store/playerStore";
 import { HudChip } from "@/components/ui/hud";
@@ -119,6 +120,8 @@ export function MessagesPage() {
   const block = blocks.find((b) => b.blockedUid === withUid);
   const toggleBlock = async () => {
     if (!withUid) return;
+    // 6.9.3 (AU6, COM6-1) : bloquer se confirme (débloquer reste immédiat).
+    if (!block && !(await askConfirm({ title: `Bloquer ${withPseudo} ?`, message: "Tu ne recevras plus ses messages privés. Tu pourras le débloquer à tout moment.", confirmLabel: "Bloquer", tone: "danger" }))) return;
     try {
       if (block) {
         await unblock(block.id);
@@ -303,7 +306,7 @@ export function MessagesPage() {
                       }
                     }}
                     rows={2}
-                    placeholder="Ton message… (Entrée pour envoyer)"
+                    placeholder="Ton message…"
                     className="min-h-[2.75rem] flex-1 resize-y border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-glow/60 focus:outline-none"
                   />
                   <EmojiPicker onPick={(e) => setDraft((d) => (d + e).slice(0, MESSAGE_RULES.maxLength))} />
