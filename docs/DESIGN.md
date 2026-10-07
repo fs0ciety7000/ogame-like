@@ -65,6 +65,15 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
 - **Pages longues sur téléphone (375 px)** : viser moins de 5 000 px pour un joueur neuf comme avancé (`pagelen.mjs`). Ne rien retirer :
   une section à la fois (onglets ou puces `aria-pressed`), sections secondaires repliées (`FoldSection`, `aria-expanded`), « Afficher plus »,
   ou vue « liste » (une ligne par élément, la carte s'ouvre au toucher, bascule mémorisée par appareil : Bâtiments 6.12.0).
+- **Chrome mobile (6.14.62)** : au-dessous de 768 px, le haut de page tient en environ 200 px. Un bandeau du haut (maintenance,
+  vacances, annonce, boss) porte `data-strip` et vit dans `StripStack` (`AppShell`) : seul le premier s'affiche, une ligne « +N bandeaux »
+  déplie les autres ; le serveur de test devient une pastille de l'en-tête (`PreprodTag`). Les 4 ressources communes tiennent sur une ligne,
+  les pastilles sur une seconde ligne qui défile. L'en-tête ne répète pas le titre d'une page qui a son `PageHeader`.
+- **Astuce de page** (`PageTip`, 6.14.62) : rendue par `PageHeader`, sous le titre, en `HudCallout tone="neutral"` (jamais l'or, qui
+  promet une récompense), deux lignes et « Lire la suite », croix de 44 px. Sa vue est gardée sur le compte (`tip:<page>` dans
+  `announcementsSeen`).
+- **Pastilles de navigation** : le rouge (`danger`) reste aux menaces ; un compteur de lectures (notes de version, messages, bouton
+  « Plus ») est neutre (6.14.64).
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière

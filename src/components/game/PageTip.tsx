@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Lightbulb, X } from "lucide-react";
@@ -6,9 +6,12 @@ import { onboardingEligible } from "@/game/onboarding";
 import { usePlayerStore } from "@/store/playerStore";
 import { ALLIANCE_RULES, findAllianceResearch } from "@/game/alliances";
 import { PVP_RULES } from "@/game/pvp";
+import { HudCallout } from "@/components/ui/hud";
+import { markAnnouncementsSeen } from "@/services/playerService";
+import { cn } from "@/lib/utils";
 
 /* Bulles d'aide (v2.9) : une explication courte la première fois qu'un
-   joueur débutant ouvre chaque page. Mémorisées dans le navigateur.
+   joueur débutant ouvre chaque page. Mémorisées sur le compte depuis 6.14.62.
    6.14.54 (AD-7) : un chiffre de règle est lu dans la règle en vigueur (accesseur, réglable dans l'admin), jamais écrit en dur. */
 
 const SEEN_KEY = "cosmic-empires:tips-seen";
@@ -37,12 +40,36 @@ export const PAGE_TIPS: Record<string, string> = {
   },
 };
 
+/* 6.14.62 (AD-6, Q93) : la vue d'une astuce est gardée sur le compte, dans la liste des annonces vues (`announcementsSeen`,
+   identifiants « tip:<page> », comme les scènes du récit) : une astuce fermée ne revient sur aucun appareil. Le navigateur
+   garde une copie (affichage immédiat, hors ligne). « Réafficher les astuces » (Réglages) vaut pour cet appareil : il ignore
+   alors les vues du compte (OVERRIDE_KEY). */
+const OVERRIDE_KEY = "cosmic-empires:tips-local";
+
+/** Identifiant d'une astuce dans la liste des vues du compte (`/game/batiments` → `tip:batiments`). */
+export function tipId(pathname: string): string {
+  return `tip:${pathname.replace(/^\/game\/?/, "").replace(/[^A-Za-z0-9._-]+/g, "-") || "accueil"}`;
+}
+
 function readSeen(): string[] {
   try {
     return JSON.parse(localStorage.getItem(SEEN_KEY) ?? "[]") as string[];
   } catch {
     return [];
   }
+}
+
+function localOnly(): boolean {
+  try {
+    return localStorage.getItem(OVERRIDE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Astuce déjà vue : sur cet appareil, ou sur le compte (sauf si le joueur les a réaffichées ici). */
+export function tipSeen(pathname: string, accountSeen: readonly string[] | undefined, local = readSeen(), ignoreAccount = localOnly()): boolean {
+  return local.includes(pathname) || (!ignoreAccount && (accountSeen ?? []).includes(tipId(pathname)));
 }
 
 export function tipsEnabled(): boolean {
@@ -57,53 +84,75 @@ export function setTipsEnabled(on: boolean, resetSeen = false) {
   try {
     if (on) localStorage.removeItem(OFF_KEY);
     else localStorage.setItem(OFF_KEY, "1");
-    if (resetSeen) localStorage.removeItem(SEEN_KEY);
+    if (resetSeen) {
+      localStorage.removeItem(SEEN_KEY);
+      localStorage.setItem(OVERRIDE_KEY, "1");
+    }
   } catch {
     /* stockage indisponible */
   }
 }
 
+/** Astuce de la page (une fois par page, joueurs en Prise en main) : sous le titre, ton neutre, deux lignes et « Lire la suite ».
+ *  Rendue par `PageHeader` (6.14.62), plus au-dessus du titre. */
 export function PageTip() {
   const { pathname } = useLocation();
   const player = usePlayerStore((s) => s.player);
-  const [visible, setVisible] = useState<string | null>(null);
+  const accountSeen = player?.announcementsSeen;
+  const [closed, setClosed] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
   const tip = PAGE_TIPS[pathname];
   const eligible = !!player && onboardingEligible(player);
+  const visible = !!tip && eligible && closed !== pathname && tipsEnabled() && !tipSeen(pathname, accountSeen);
 
   useEffect(() => {
-    setVisible(tip && eligible && tipsEnabled() && !readSeen().includes(pathname) ? pathname : null);
-  }, [pathname, tip, eligible]);
+    setExpanded(false);
+  }, [pathname]);
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    setClamped(!!el && el.scrollHeight > el.clientHeight + 1);
+  }, [tip, visible, expanded]);
 
   const close = (all: boolean) => {
+    const paths = all ? Object.keys(PAGE_TIPS) : [pathname];
     try {
-      localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), pathname])]));
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...new Set([...readSeen(), ...paths])]));
     } catch {
       /* stockage indisponible */
     }
     if (all) setTipsEnabled(false);
-    setVisible(null);
+    setClosed(pathname);
+    // Gardé sur le compte : l'astuce ne revient pas sur un autre appareil (échec silencieux : la copie locale suffit ici).
+    void markAnnouncementsSeen(paths.map(tipId)).catch(() => undefined);
   };
 
   return (
-    <AnimatePresence>
-      {visible === pathname && tip && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-          className="hud-cut-sm mb-4 flex items-start gap-3 border border-gold-glow/30 bg-gold-glow/[0.06] p-3"
-          role="note"
-        >
-          <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-gold-glow" />
-          <p className="flex-1 text-sm text-slate-300">{tip}</p>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <button type="button" onClick={() => close(false)} className="p-0.5 text-slate-500 hover:text-slate-200" aria-label="Fermer l'aide">
+    <AnimatePresence initial={false}>
+      {visible && tip && (
+        <motion.div key={pathname} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }}>
+          <HudCallout tone="neutral" role="note" aria-label="Astuce" className="flex items-start gap-3 text-sm">
+            <Lightbulb aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+            <div className="min-w-0 flex-1">
+              <p ref={textRef} className={cn("text-slate-300", !expanded && "line-clamp-2")}>
+                {tip}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
+                {(clamped || expanded) && (
+                  <button type="button" onClick={() => setExpanded((e) => !e)} aria-expanded={expanded} className="relative text-xs text-cyan-glow before:absolute before:-inset-2 hover:underline">
+                    {expanded ? "Réduire" : "Lire la suite"}
+                  </button>
+                )}
+                <button type="button" onClick={() => close(true)} aria-label="Masquer toutes les astuces" className="relative font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400 before:absolute before:-inset-2 hover:text-slate-100">
+                  Tout masquer
+                </button>
+              </div>
+            </div>
+            <button type="button" onClick={() => close(false)} aria-label="Fermer l'astuce" className="-my-2.5 -mr-2.5 grid h-11 w-11 shrink-0 place-items-center text-slate-400 hover:text-slate-100">
               <X className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => close(true)} className="font-mono text-[9px] uppercase tracking-[0.12em] text-slate-500 hover:text-gold-glow">
-              Tout masquer
-            </button>
-          </div>
+          </HudCallout>
         </motion.div>
       )}
     </AnimatePresence>

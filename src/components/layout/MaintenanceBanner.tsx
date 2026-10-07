@@ -11,7 +11,7 @@ export function MaintenanceBanner() {
   if (!m.enabled) return <UpcomingMaintenanceNotice />;
   const remaining = maintenanceRemainingMs(m, Date.now());
   return (
-    <div className="relative z-30 flex items-center gap-3 overflow-hidden border-b border-gold-glow/40 bg-space-950 px-4 py-1.5 text-xs sm:px-6">
+    <div data-strip className="relative z-30 flex items-center gap-3 overflow-hidden border-b border-gold-glow/40 bg-space-950 px-4 py-1.5 text-xs sm:px-6">
       <span aria-hidden className="mt-hazard absolute inset-y-0 left-0 w-2" />
       <span className="ml-2 inline-block h-2 w-2 animate-pulse rounded-full bg-gold-glow shadow-[0_0_6px_var(--color-gold-glow)]" />
       <span className="font-mono font-bold uppercase tracking-[0.16em] text-gold-glow">Maintenance active</span>
@@ -36,7 +36,7 @@ export function UpcomingMaintenanceNotice({ className }: { className?: string })
   const at = new Date(up.startAtMs).toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" });
   const length = up.endsAtMs ? formatDuration((up.endsAtMs - up.startAtMs) / 1000) : null;
   return (
-    <div role="status" className={cn("relative z-30 flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5 text-xs sm:px-6", soon ? "border-ember-glow/50 bg-ember-glow/10" : "border-gold-glow/30 bg-space-950", className)}>
+    <div data-strip role="status" className={cn("relative z-30 flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-4 py-1.5 text-xs sm:px-6", soon ? "border-ember-glow/50 bg-ember-glow/10" : "border-gold-glow/30 bg-space-950", className)}>
       <span className={cn("font-mono font-bold uppercase tracking-[0.16em]", soon ? "text-ember-glow" : "text-gold-glow")}>Maintenance prévue</span>
       <span className="text-slate-300">
         {at}

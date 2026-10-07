@@ -564,7 +564,7 @@ function HelpCard() {
             onCheckedChange={(v) => {
               setTipsEnabled(v, v);
               setTips(v);
-              toast.success(v ? "Les bulles d'aide réapparaîtront sur chaque page." : "Bulles d'aide désactivées.");
+              toast.success(v ? "Les bulles d'aide réapparaîtront sur chaque page, sur cet appareil." : "Bulles d'aide désactivées.");
             }}
           />
         </label>

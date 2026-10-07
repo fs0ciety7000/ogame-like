@@ -46,8 +46,10 @@ export function ResourceHud() {
   const rare = RESOURCE_LIST.filter((r) => r.rarity === "rare");
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:flex xl:flex-wrap xl:items-stretch">
+    // 6.14.62 (AD-2) : sur téléphone, les 4 ressources communes tiennent sur une ligne (icône, stock, débit ; le nom est dans
+    // l'infobulle et le nom accessible) et les pastilles sur une seconde ligne qui défile à l'horizontale.
+    <div className="flex flex-col gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-4 gap-1 sm:gap-1.5 xl:flex xl:flex-wrap xl:items-stretch">
       {common.map((res) => {
         const rate = rates[res.id] ?? 0;
         const trend = history.slice(-12).map((p) => p.r[res.id] ?? 0);
@@ -62,32 +64,44 @@ export function ResourceHud() {
               <motion.div
                 key={pulse[res.id] ?? 0}
                 data-hud-res={res.id}
+                aria-label={`${res.name} : ${formatNumber(resources[res.id])}${full ? ", entrepôt plein" : ""}`}
                 initial={pulse[res.id] ? { scale: 1.08 } : false}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
-                  "hud-cut-sm relative flex min-w-[9.5rem] items-center gap-2 overflow-hidden border bg-space-900/70 px-2.5 pb-2 pt-1.5 xl:flex-1",
+                  "hud-cut-sm relative flex min-w-0 items-center gap-1 overflow-hidden border bg-space-900/70 px-1.5 pb-1.5 pt-1 sm:min-w-[9.5rem] sm:gap-2 sm:px-2.5 sm:pb-2 sm:pt-1.5 xl:flex-1",
                   // 5.21.2 : cadre à la couleur du thème ; seule la mention « plein » garde la couleur d'alerte.
                   full ? "border-cyan-glow/45" : nearFull ? "border-cyan-glow/30" : "border-cyan-glow/15",
                 )}
               >
-                <ResourceIcon id={res.id} className="h-8 w-8" />
+                <ResourceIcon id={res.id} className="h-6 w-6 shrink-0 sm:h-8 sm:w-8" />
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-[15px] font-semibold text-slate-100" />
+                  <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
+                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="truncate tabular-mono text-[13px] font-semibold leading-tight text-slate-100 sm:text-[15px]" />
                     {full ? (
-                      <span className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-ember-glow">plein</span>
+                      <span className="font-mono text-[9px] font-bold uppercase leading-tight tracking-[0.14em] text-ember-glow">plein</span>
+                    ) : nearFull && secondsToFull !== null ? (
+                      <>
+                        {/* Téléphone : « plein dans » prend la place du débit (la ligne du nom est masquée). */}
+                        <span className="truncate font-mono text-[9px] uppercase leading-tight tracking-[0.08em] text-ember-glow sm:hidden">plein {formatDuration(Math.ceil(secondsToFull))}</span>
+                        {rate !== 0 && (
+                          <span className={cn("hidden truncate tabular-mono text-[10px] leading-tight sm:inline", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
+                            {rate > 0 ? "+" : ""}
+                            {formatCompact(rate)}/s
+                          </span>
+                        )}
+                      </>
                     ) : rate !== 0 ? (
-                      <span className={cn("tabular-mono text-[10px]", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
+                      <span className={cn("truncate tabular-mono text-[10px] leading-tight", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
                         {rate > 0 ? "+" : ""}
                         {formatCompact(rate)}/s
                       </span>
                     ) : null}
                   </div>
                   {nearFull && secondsToFull !== null ? (
-                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.12em] text-ember-glow">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
+                    <p className="hidden truncate font-mono text-[9px] uppercase tracking-[0.12em] text-ember-glow sm:block">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
                   ) : (
-                    <p className="truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500">{res.name}</p>
+                    <p className="hidden truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500 sm:block">{res.name}</p>
                   )}
                 </div>
                 {trend.length >= 2 && <Sparkline values={trend} className="hidden 2xl:block" />}
@@ -124,7 +138,7 @@ export function ResourceHud() {
         );
       })}
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="-mx-4 flex items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:shrink-0">
       {/* 5.24 : Ambre, monnaie premium : liseré doré, coin coupé, à part des ressources. */}
       <Tooltip>
         <TooltipTrigger asChild>

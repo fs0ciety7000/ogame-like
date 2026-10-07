@@ -5,9 +5,10 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
 import { VacationBanner } from "@/components/layout/VacationBanner";
-import { PreprodBanner } from "@/components/layout/PreprodBanner";
+import { PreprodBanner, PreprodTag } from "@/components/layout/PreprodBanner";
+import { StripStack } from "@/components/layout/StripStack";
+import { usePageHeaderStore } from "@/store/pageHeaderStore";
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
-import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
 import { useReportBadges } from "@/services/reportService";
 import { LogOut, Maximize, Minimize, Music, Music as MusicOff, PenSquare, Search, Settings, Volume2, VolumeX, Wrench } from "lucide-react";
@@ -181,6 +182,8 @@ export function AppShell() {
   }, [uidForMessages]);
   useReportBadgeSync(user?.uid ?? null, isAdmin);
   const pendingReports = useReportBadges((s) => s.pendingNew);
+  // 6.14.62 (AD-2) : sur téléphone, le titre de l'en-tête s'efface tant que la page affiche le sien (PageHeader).
+  const pageHasHeader = usePageHeaderStore((s) => s.mounted > 0);
 
   useEffect(() => {
     document.title = player ? `${player.pseudo} — Cosmic Empires` : "Cosmic Empires";
@@ -218,22 +221,26 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
         <PreprodBanner />
-        <MaintenanceBanner />
-        <VacationBanner />
-        <AnnouncementBanners />
-        <BossLiveStrip />
+        {/* 6.14.62 (AD-2) : bandeaux fusionnés sur téléphone (le premier, puis « +N »). */}
+        <StripStack>
+          <MaintenanceBanner />
+          <VacationBanner />
+          <AnnouncementBanners flat />
+          <BossLiveStrip />
+        </StripStack>
         <header className="relative z-20 shrink-0 border-b border-cyan-glow/10 bg-space-950/70 backdrop-blur-xl">
           <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/30" />
-          <div className="flex items-center gap-3 px-4 pt-3 sm:px-6 md:pt-3">
+          <div className="flex items-center gap-3 px-4 pt-2.5 sm:px-6 md:pt-3">
             {/* Mobile : logo ; bureau : titre de la page en cours. */}
-            <Link to="/game" className="md:hidden">
+            <Link to="/game" className="shrink-0 md:hidden">
               <img src={assetUrl("/assets/logo/logo.webp")} alt="" className="h-9 w-9 object-contain drop-shadow-[0_0_8px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
             </Link>
             <div className="min-w-0">
               <p className="hud-eyebrow truncate text-[10px] text-cyan-glow/70">
                 {player?.pseudo ?? "…"} <span className="text-slate-600">//</span> Secteur {sectorCode}
               </p>
-              <p className="hud-title truncate text-lg text-slate-100 md:hidden">{currentLabel ?? "Cosmic Empires"}</p>
+              <PreprodTag />
+              {!pageHasHeader && <p className="hud-title truncate text-lg text-slate-100 md:hidden">{currentLabel ?? "Cosmic Empires"}</p>}
               <p className="hud-title hidden truncate text-lg text-slate-100 md:block">
                 <span className="text-slate-500">Poste de commandement · </span>
                 {currentLabel ?? "Accueil"}
@@ -250,8 +257,9 @@ export function AppShell() {
               >
                 <Search className="h-4 w-4" />
               </HeaderButton>
-              <FullscreenToggle />
+              {/* 6.14.62 (AD-2) : plein écran, sons et musique au bureau seulement (place du nom et du serveur sur téléphone). */}
               <span className="hidden sm:contents">
+                <FullscreenToggle />
                 <SfxToggle />
                 <MusicToggle />
               </span>
@@ -279,19 +287,18 @@ export function AppShell() {
               </HeaderButton>
             </div>
           </div>
-          <div className="px-4 pb-3 pt-2.5 sm:px-6">
+          <div className="px-4 pb-2.5 pt-2 sm:px-6 md:pb-3 md:pt-2.5">
             <ResourceHud />
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 md:overflow-y-auto">
+        <main className="min-w-0 flex-1 px-4 py-4 sm:px-6 md:overflow-y-auto md:py-5">
           {loading || !contentLoaded ? (
             <BootSequence />
           ) : (
             // Remonté quand l'administration modifie le contenu du jeu, pour
             // que chaque écran relise les nouvelles définitions.
             <Suspense key={contentVersion} fallback={<PageLoader />}>
-              <PageTip />
               <PageTransition>
                 <Outlet />
               </PageTransition>

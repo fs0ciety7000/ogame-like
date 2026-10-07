@@ -10,10 +10,12 @@ import { useCasinoVisible } from "@/services/casinoService";
 import { useIsAdmin } from "@/services/adminService";
 import { HudChip, HudSwitch } from "@/components/ui/hud";
 import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
-import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet, Compass } from "lucide-react";
+import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Maximize, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet, Compass } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
+import { DEFAULT_TABS, moreBadgeCount } from "@/lib/mobileTabs";
+import { fullscreenSupported, isFullscreen, toggleFullscreen } from "@/lib/fullscreen";
 import { cn, formatCompact } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SignalIndicator } from "@/components/layout/SignalIndicator";
@@ -251,10 +253,16 @@ function InlineBadge({ count }: { count: number }) {
   return <span className="grid h-4 min-w-4 shrink-0 place-items-center bg-danger-glow px-1 font-mono text-[9.5px] font-bold tabular-nums text-space-950">{count > 99 ? "99+" : count}</span>;
 }
 
-function Badge({ count }: { count: number }) {
+function Badge({ count, neutral = false }: { count: number; neutral?: boolean }) {
   if (count <= 0) return null;
   return (
-    <span className="absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center bg-danger-glow px-1 font-mono text-[9px] font-bold text-space-950">
+    <span
+      className={cn(
+        "absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center px-1 font-mono text-[9px] font-bold tabular-nums",
+        // 6.14.64 (AD-14) : la pastille « Plus » est neutre (messages, alliance) ; le rouge reste aux menaces.
+        neutral ? "border border-slate-400/60 bg-space-800 text-slate-100" : "bg-danger-glow text-space-950",
+      )}
+    >
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -551,6 +559,24 @@ function CockpitSwitch({ className, compact }: { className?: string; compact?: b
   );
 }
 
+/** 6.14.62 : plein écran dans le menu mobile (son bouton a quitté l'en-tête du téléphone pour laisser la place au nom). */
+function FullscreenSwitch({ className }: { className?: string }) {
+  const [on, setOn] = useState(isFullscreen());
+  useEffect(() => {
+    const sync = () => setOn(isFullscreen());
+    document.addEventListener("fullscreenchange", sync);
+    return () => document.removeEventListener("fullscreenchange", sync);
+  }, []);
+  if (!fullscreenSupported()) return null;
+  return (
+    <label className={cn("flex cursor-pointer items-center gap-2 border-t border-white/5 pt-2", className)}>
+      <Maximize className={cn("h-3.5 w-3.5 shrink-0", on ? "text-cyan-glow" : "text-slate-500")} />
+      <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">Plein écran</span>
+      <HudSwitch checked={on} onCheckedChange={() => void toggleFullscreen()} label="Plein écran" />
+    </label>
+  );
+}
+
 /** Barre latérale (bureau). */
 function Sidebar() {
   const navGroups = useNavGroups();
@@ -623,8 +649,7 @@ function Sidebar() {
 
 /* ---------- mobile : barre d'onglets + menu complet ---------- */
 
-/** v4.5 : onglets épinglés par le joueur (4 au plus), mémorisés sur l'appareil. */
-const DEFAULT_TABS = ["/game", "/game/unites", "/game/galaxie", "/game/passe"];
+/** v4.5 : onglets épinglés par le joueur (4 au plus), mémorisés sur l'appareil. Onglets par défaut : `DEFAULT_TABS` (6.14.64). */
 const TABS_KEY = "cosmic-empires:mobile-tabs";
 const MAX_TABS = 4;
 
@@ -658,7 +683,7 @@ function TabLink({ item }: { item: NavItem }) {
       item={item}
       className={({ isActive }) =>
         cn(
-          "relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
+          "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors",
           "before:absolute before:inset-x-[25%] before:top-0 before:h-0.5 before:bg-cyan-glow before:shadow-[0_0_10px_var(--color-cyan-glow)] before:transition-opacity",
           isActive ? "text-cyan-glow before:opacity-100" : "text-slate-500 before:opacity-0",
         )
@@ -666,7 +691,7 @@ function TabLink({ item }: { item: NavItem }) {
     >
       <span className="relative">
         <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
-        <Badge count={badge} />
+        <Badge count={badge} neutral={item.to === "/game/nouveautes"} />
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
@@ -740,6 +765,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
         <div onClickCapture={onClose}>
           <CockpitSwitch className="mt-4" />
         </div>
+        <FullscreenSwitch className="mt-2" />
       </DialogContent>
     </Dialog>
   );
@@ -762,7 +788,7 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
     >
       <span className="relative">
         <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
-        <Badge count={badge} />
+        <Badge count={badge} neutral={item.to === "/game/nouveautes"} />
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
@@ -780,11 +806,11 @@ function MobileTabBar() {
   const [tabIds, setTabIds] = useState(readTabs);
   const location = useLocation();
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
-  const changelogUnread = useUnreadChangelogCount();
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
   const hidden = useHiddenRoutes();
   const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && !hidden.has(i.to));
+  const moreCount = moreBadgeCount({ messages: messagesUnread, alliance: allianceUnread, reports: reportsUnread }, tabs.map((t) => t.to));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
     <>
@@ -797,14 +823,14 @@ function MobileTabBar() {
           type="button"
           onClick={() => setOpen(true)}
           className={cn(
-            "relative flex flex-1 flex-col items-center gap-1 py-2 text-[10px] font-semibold uppercase tracking-[0.08em]",
+            "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em]",
             "before:absolute before:inset-x-[25%] before:top-0 before:h-0.5 before:bg-cyan-glow before:shadow-[0_0_10px_var(--color-cyan-glow)]",
             inMenu ? "text-cyan-glow before:opacity-100" : "text-slate-500 before:opacity-0",
           )}
         >
           <span className="relative">
             <LayoutGrid className="h-5 w-5" />
-            <Badge count={allianceUnread + changelogUnread + reportsUnread + messagesUnread} />
+            <Badge count={moreCount} neutral />
           </span>
           Plus
         </button>

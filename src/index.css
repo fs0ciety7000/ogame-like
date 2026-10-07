@@ -1973,6 +1973,13 @@ main {
     animation: banner-scan 4.5s ease-in-out infinite;
   }
 }
+/* 6.14.62 (AD-2) : sur téléphone, les bandeaux du haut (maintenance, vacances, annonces, boss) se fusionnent :
+   le premier seul est visible, la pastille « +N » de StripStack déplie les autres. */
+@media (max-width: 767px) {
+  .strip-stack:not([data-open]) > [data-strip] ~ [data-strip] {
+    display: none;
+  }
+}
 @keyframes banner-marquee {
   from {
     transform: translateX(0);

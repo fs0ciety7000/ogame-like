@@ -25,12 +25,15 @@ const STYLE: Record<NextActionKind, { icon: typeof Zap; tone: HudTone }> = {
   repair: { icon: Wrench, tone: "ember" },
 };
 
-export function NextActionsCard({ max = 4 }: { max?: number }) {
+/** `exclude` : sortes déjà dites ailleurs sur l'écran (6.14.63 : sur l'accueil, les pastilles de chantiers à l'arrêt). */
+export function NextActionsCard({ max = 4, exclude = [] }: { max?: number; exclude?: readonly NextActionKind[] }) {
   const player = usePlayerStore((s) => s.player);
   const queues = usePlayerStore((s) => s.queues);
   const fleets = useFleetStore((s) => s.fleets);
   if (!player) return null;
-  const actions = nextActions(player, queues, fleets, Date.now()).slice(0, max);
+  const actions = nextActions(player, queues, fleets, Date.now())
+    .filter((a) => !exclude.includes(a.kind))
+    .slice(0, max);
   if (actions.length === 0) return null;
 
   return (

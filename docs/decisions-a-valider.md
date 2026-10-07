@@ -18,6 +18,12 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q122 | Astuces de page gardées sur le compte (Q93) : où les enregistrer ? : Dans la liste `announcementsSeen` déjà partagée, avec des identifiants `tip:<page>` (aucun changement de moteur ni de schéma) | Écran mobile et accueil du joueur | Valider (option prudente) |
+| Q123 | « Réafficher les astuces » (Réglages) : Ne vaut que pour l'appareil (aucune action ne retire une vue du compte) | Écran mobile et accueil du joueur | Valider (option prudente) |
+| Q124 | Prise en main réduite (Q96) : Réutilise le drapeau `hidden` déjà enregistré sur le compte (`hideOnboarding` inchangée) | Écran mobile et accueil du joueur | Valider (option prudente) |
+| Q125 | Plein écran sur téléphone : Retiré de l'en-tête, déplacé dans le menu « Plus » | Écran mobile et accueil du joueur | Valider (option prudente) |
+| Q126 | Libellé « Serveur de test » à 375 px : Tronqué ; l'icône et l'infobulle gardent le sens | Écran mobile et accueil du joueur | Valider (option prudente) |
+| Q127 | Liste des objectifs de la Prise en main : Repliée par défaut, à toutes les largeurs | Écran mobile et accueil du joueur | Valider (option prudente) |
 
 ## 3. Récit
 

@@ -48,6 +48,11 @@ import { parisHour } from "@/game/stats";
 import { useCockpitView } from "@/lib/cockpitView";
 import { CockpitHub } from "@/components/cockpit/CockpitHub";
 import { CommanderGuideCard } from "@/components/game/CommanderGuideCard";
+import { onboardingEligible, onboardingState } from "@/game/onboarding";
+import type { NextActionKind } from "@/game/nextActions";
+
+/** 6.14.63 (AD-8) : sur l'accueil, « Que faire maintenant ? » ne répète pas les pastilles de chantiers à l'arrêt (QueueStrip). */
+const SAID_BY_QUEUE_STRIP: readonly NextActionKind[] = ["build", "research", "units", "mission"];
 
 export function DashboardPage() {
   useNowTicker();
@@ -110,8 +115,10 @@ export function DashboardPage() {
   const maxBuildingLevels = BUILDINGS.reduce((sum, b) => sum + b.maxLevel, 0);
   const developmentPercent = maxBuildingLevels > 0 ? Math.round((totalBuildingLevels / maxBuildingLevels) * 100) : 0;
 
+  // 6.14.63 (AD-8) : pendant la Prise en main dépliée, son objectif courant et les pastilles suffisent.
+  const onboardingOpen = onboardingEligible(player) && !onboardingState(player).hidden;
   const sections: Record<DashboardSection, ReactNode> = {
-    next: <NextActionsCard />,
+    next: onboardingOpen ? null : <NextActionsCard exclude={SAID_BY_QUEUE_STRIP} />,
     fleets: <FleetsPanel hideWhenEmpty />,
     progress: <ProgressHub now={now} />,
     economy: (
@@ -243,9 +250,9 @@ export function DashboardPage() {
           </Button>
         }
       />
-      <QueueStrip queues={queues} now={now} />
-
+      {/* 6.14.63 (AD-8) : la Prise en main passe en tête, sous le titre. */}
       <OnboardingChecklist player={player} />
+      <QueueStrip queues={queues} now={now} />
       <CommanderGuideCard player={player} />
       <StoryDialog player={player} />
       {/* 6.0 : rappel tant qu'aucune classe d'empire n'est choisie (premier choix gratuit). */}

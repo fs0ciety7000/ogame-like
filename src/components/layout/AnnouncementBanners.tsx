@@ -44,6 +44,7 @@ export function BannerStrip({ banner, onDismiss }: { banner: Banner; onDismiss?:
   const duration = Math.max(14, Math.round(banner.text.length * 0.28));
   return (
     <div
+      data-strip
       role={banner.kind === "critical" || banner.kind === "alert" ? "alert" : "status"}
       style={{ "--banner-color": color, "--banner-duration": `${duration}s` } as React.CSSProperties}
       className="relative z-30 flex items-stretch overflow-hidden border-b border-[color-mix(in_srgb,var(--banner-color)_45%,transparent)] bg-[color-mix(in_srgb,var(--banner-color)_9%,var(--color-space-950))] text-xs text-slate-200 sm:text-[13px]"
@@ -77,18 +78,13 @@ export function BannerStrip({ banner, onDismiss }: { banner: Banner; onDismiss?:
   );
 }
 
-/** Bandeaux actifs, les plus graves d'abord (3 au plus). */
-export function AnnouncementBanners({ publicOnly = false }: { publicOnly?: boolean }) {
+/** Bandeaux actifs, les plus graves d'abord (3 au plus). `flat` : sans conteneur, pour la pile du jeu (`StripStack`, 6.14.62). */
+export function AnnouncementBanners({ publicOnly = false, flat = false }: { publicOnly?: boolean; flat?: boolean }) {
   useNowTicker();
   const banners = useBannerStore((s) => s.banners);
   const dismissed = useBannerStore((s) => s.dismissed);
   const shown = visibleBanners(banners, Date.now(), { dismissed, publicOnly });
   if (shown.length === 0) return null;
-  return (
-    <div className="shrink-0">
-      {shown.map((b) => (
-        <BannerStrip key={b.id} banner={b} onDismiss={() => dismissBanner(b)} />
-      ))}
-    </div>
-  );
+  const strips = shown.map((b) => <BannerStrip key={b.id} banner={b} onDismiss={() => dismissBanner(b)} />);
+  return flat ? <>{strips}</> : <div className="shrink-0">{strips}</div>;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Award } from "lucide-react";
+import { Award, ChevronDown } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HudPanel } from "@/components/ui/panel";
 import { MutatorCallout } from "@/components/game/MutatorCallout";
@@ -25,6 +25,24 @@ import { usePlayerStore } from "@/store/playerStore";
 
 type HubTab = "today" | "pass" | "chronicles" | "week";
 
+/* 6.14.63 (AD-8) : le détail (onglets) est replié par défaut ; le résumé reste visible, et toucher une case ouvre son
+   onglet. Ouvert ou fermé : mémorisé sur l'appareil. */
+const OPEN_KEY = "cosmic-empires:progress-hub-open";
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function saveOpen(open: boolean) {
+  try {
+    localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+  } catch {
+    /* non mémorisé */
+  }
+}
+
 function Dot({ on }: { on: boolean }) {
   return on ? <span aria-label="récompense à récupérer" className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-mint-glow" /> : null;
 }
@@ -32,9 +50,18 @@ function Dot({ on }: { on: boolean }) {
 export function ProgressHub({ now }: { now: number }) {
   const player = usePlayerStore((s) => s.player);
   const [tab, setTab] = useState<HubTab>("today");
+  const [detail, setDetailState] = useState(readOpen);
+  const setDetail = (open: boolean) => {
+    setDetailState(open);
+    saveOpen(open);
+  };
   // « #contrats » (Que faire maintenant) ouvre l'onglet du jour.
   useEffect(() => {
-    const open = () => window.location.hash === "#contrats" && setTab("today");
+    const open = () => {
+      if (window.location.hash !== "#contrats") return;
+      setTab("today");
+      setDetailState(true);
+    };
     open();
     window.addEventListener("hashchange", open);
     return () => window.removeEventListener("hashchange", open);
@@ -69,19 +96,30 @@ export function ProgressHub({ now }: { now: number }) {
       title="Progression et récompenses"
       tone="mint"
       aside={
-        <HudChip asChild size="sm" tone="accent">
-          <Link to="/game/ordres">Ordres du jour</Link>
-        </HudChip>
+        <>
+          <HudChip asChild size="sm" tone="accent">
+            <Link to="/game/ordres">Ordres du jour</Link>
+          </HudChip>
+          <HudChip asChild size="sm" tone="neutral">
+            <button type="button" onClick={() => setDetail(!detail)} aria-expanded={detail} aria-controls="progress-hub-detail">
+              {detail ? "Replier" : "Détail"}
+              <ChevronDown aria-hidden className={cn("h-3 w-3 transition-transform", detail && "rotate-180")} />
+            </button>
+          </HudChip>
+        </>
       }
     >
       <div id="contrats" className="scroll-mt-24" />
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+      <div className={cn("grid grid-cols-2 gap-2 lg:grid-cols-4", detail && "mb-4")}>
         {summary.map((s) => (
           <button
             key={s.label}
             type="button"
-            onClick={() => setTab(s.tab)}
-            className={cn("hud-cut-sm relative border bg-space-900/50 px-3 py-2 text-left transition-colors hover:border-cyan-glow/40", tab === s.tab ? "border-cyan-glow/30" : "border-white/10")}
+            onClick={() => {
+              setTab(s.tab);
+              setDetail(true);
+            }}
+            className={cn("hud-cut-sm relative border bg-space-900/50 px-3 py-2 text-left transition-colors hover:border-cyan-glow/40", detail && tab === s.tab ? "border-cyan-glow/30" : "border-white/10")}
           >
             <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: HUD_TONE[s.tone] }} />
             <span className="block font-mono text-[10px] uppercase tracking-wider text-slate-500">{s.label}</span>
@@ -90,40 +128,42 @@ export function ProgressHub({ now }: { now: number }) {
           </button>
         ))}
       </div>
-      <Tabs value={tab} onValueChange={(v) => setTab(v as HubTab)}>
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="today">
-            Aujourd'hui
-            <Dot on={contracts > 0 || daily} />
-          </TabsTrigger>
-          <TabsTrigger value="pass">
-            Passe
-            <Dot on={passClaimable > 0} />
-          </TabsTrigger>
-          <TabsTrigger value="chronicles">
-            Chroniques
-            <Dot on={chronReady} />
-          </TabsTrigger>
-          <TabsTrigger value="week">Semaine</TabsTrigger>
-        </TabsList>
-        <TabsContent value="today" className="mt-4 grid gap-4 lg:grid-cols-2">
-          <DailyMissionsCard now={now} />
-          <ContractsCard compact />
-        </TabsContent>
-        <TabsContent value="pass" className="mt-4 flex flex-col gap-4">
-          <PassProgressCard now={now} />
-          <p className="text-xs text-slate-500">Chaque palier du passe se débloque avec les points gagnés en jouant : missions, combats, boss, primes.</p>
-        </TabsContent>
-        <TabsContent value="chronicles" className="mt-4 grid gap-4 lg:grid-cols-2">
-          <ChronicleHomeCard now={now} />
-          <MonthRecapCard now={now} />
-        </TabsContent>
-        <TabsContent value="week" className="mt-4 flex flex-col gap-4">
-          <MutatorCallout compact />
-          <ChallengeCard />
-          <WeeklyRecapCard />
-        </TabsContent>
-      </Tabs>
+      {detail && (
+        <Tabs id="progress-hub-detail" value={tab} onValueChange={(v) => setTab(v as HubTab)}>
+          <TabsList className="w-full justify-start">
+            <TabsTrigger value="today">
+              Aujourd'hui
+              <Dot on={contracts > 0 || daily} />
+            </TabsTrigger>
+            <TabsTrigger value="pass">
+              Passe
+              <Dot on={passClaimable > 0} />
+            </TabsTrigger>
+            <TabsTrigger value="chronicles">
+              Chroniques
+              <Dot on={chronReady} />
+            </TabsTrigger>
+            <TabsTrigger value="week">Semaine</TabsTrigger>
+          </TabsList>
+          <TabsContent value="today" className="mt-4 grid gap-4 lg:grid-cols-2">
+            <DailyMissionsCard now={now} />
+            <ContractsCard compact />
+          </TabsContent>
+          <TabsContent value="pass" className="mt-4 flex flex-col gap-4">
+            <PassProgressCard now={now} />
+            <p className="text-xs text-slate-500">Chaque palier du passe se débloque avec les points gagnés en jouant : missions, combats, boss, primes.</p>
+          </TabsContent>
+          <TabsContent value="chronicles" className="mt-4 grid gap-4 lg:grid-cols-2">
+            <ChronicleHomeCard now={now} />
+            <MonthRecapCard now={now} />
+          </TabsContent>
+          <TabsContent value="week" className="mt-4 flex flex-col gap-4">
+            <MutatorCallout compact />
+            <ChallengeCard />
+            <WeeklyRecapCard />
+          </TabsContent>
+        </Tabs>
+      )}
     </HudPanel>
   );
 }
