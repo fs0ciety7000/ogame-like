@@ -202,3 +202,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.13.1 | Revue AU19 : été 2028 clos (vue liste, lunes), SP-2 expliqué ; automne 2028 proposé | `docs/audit/2026-10-07-au19-ete-2028.md` |
 | 2026-10-07 | 6.13.2 | A28-1 : billet 47 « Les lunes » | `content/blog/47-lunes.md` |
 | 2026-10-07 | 6.13.3 | A28-2 : nom de la lune public (fiche joueur, astre sur la Galaxie), champ `moonName` des profils | `docs/changes/6.13.3-lune-publique.md` |
+| 2026-10-07 | 6.13.4 | Revue AU20 : automne 2028 clos (billet, lune publique) ; hiver 2028 proposé (améliorer sa lune, Codex) | `docs/audit/2026-10-07-au20-automne-2028.md` |
