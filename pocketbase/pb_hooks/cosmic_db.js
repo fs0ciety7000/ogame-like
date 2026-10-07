@@ -234,6 +234,13 @@ function syncProfile(app, player) {
     profile.set("empireClass", clsId);
     changed = true;
   }
+  // 6.13.3 : nom de la lune, public (vide sans lune).
+  const moon = parseJsonField(player, "moon", null);
+  const moonName = moon && typeof moon.name === "string" && Number(moon.bornAtMs) > 0 ? moon.name : "";
+  if (profile.getString("moonName") !== moonName) {
+    profile.set("moonName", moonName);
+    changed = true;
+  }
   // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
   const vac = parseJsonField(player, "vacation", null);
   const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;

@@ -1403,6 +1403,13 @@
         "presentable": false
       },
       {
+        "name": "moonName",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
         "name": "ascensions",
         "type": "number",
         "required": false,

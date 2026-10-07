@@ -16,7 +16,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { KESH, patronTier, rankName } from "@/game/bounties";
 import { HudChip } from "@/components/ui/hud";
 import { assetUrl } from "@/lib/assets";
-import { HandCoins, Loader2 } from "lucide-react";
+import { HandCoins, Loader2, Moon } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { FollowOnlineButton } from "@/components/game/RemindersCard";
 import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
@@ -140,6 +140,11 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
               <TitleBadge label={entry.activeTitle} size="xs" className="mt-1" />
             )}
             <EmpireClassChip classId={entry?.empireClass} className="mt-1" />
+            {entry?.moonName && (
+              <HudChip size="sm" tone="violet" className="mt-1" title="Lune née d'un grand combat au-dessus de sa planète mère.">
+                <Moon className="h-3 w-3" /> Lune {entry.moonName}
+              </HudChip>
+            )}
             {patron && (
               <HudChip size="sm" tone={patron.tone} className="mt-1" title={`${feats!.patron} Ambre versés au pot commun`}>
                 <HandCoins className="h-3 w-3" /> {patron.label}

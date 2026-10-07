@@ -1394,6 +1394,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const a = await snap(aId);
       expect(a.moon?.name, "lune du défenseur").toBeTruthy();
       expect(a.moon.fromDebris).toBeGreaterThan(0);
+      // 6.13.3 : le nom de la lune est public (fiche joueur, Galaxie).
+      expect((await admin.collection("profiles").getOne(aId)).moonName).toBe(a.moon.name);
       expect((await snap(bId)).moon ?? null).toBeNull();
     } finally {
       await admin.collection("players").update(aId, { moon: null });

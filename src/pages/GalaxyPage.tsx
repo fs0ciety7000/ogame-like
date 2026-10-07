@@ -462,6 +462,12 @@ export function GalaxyPage() {
                     ) : (
                       <circle r={(isSelf ? 1.3 : 1) / k} fill={color} style={{ filter: `drop-shadow(0 0 ${1.5 / k}px ${color})` }} />
                     )}
+                    {/* 6.13.3 : la lune, petit astre en orbite. */}
+                    {b.moonName && (
+                      <circle cx={1.6 / k} cy={-1.2 / k} r={0.45 / k} fill="var(--color-slate-300)" opacity={0.85}>
+                        <title>{`Lune ${b.moonName}`}</title>
+                      </circle>
+                    )}
                     {showLabel && (
                       <text y={-2.2 / k} textAnchor="middle" fontSize={1.8 / k} fill={isSelf ? "var(--color-gold-glow)" : "var(--color-slate-300)"}>
                         {tag ? `[${tag}] ` : ""}

@@ -282,6 +282,8 @@ export interface LeaderboardEntry {
   avatar?: string;
   /** 6.0 : classe d'empire (identifiant). */
   empireClass?: string;
+  /** 6.13.3 : nom de la lune (vide sans lune). */
+  moonName?: string;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -304,10 +306,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     lastActiveMs: (data.lastActiveMs as number) || undefined,
     avatar: (data.avatar as string) || undefined,
     empireClass: (data.empireClass as string) || undefined,
+    moonName: (data.moonName as string) || undefined,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass,moonName";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
