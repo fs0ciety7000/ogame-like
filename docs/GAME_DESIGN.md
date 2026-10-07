@@ -199,3 +199,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.15 | Consigne redonnée : pause annulée (Q17), règle n° 3 « jamais de pause », Q15 et Q16 tranchées ; feuille de route d'été 2028 | `docs/changes/6.11.15-reprise-travail-continu.md` |
 | 2026-10-07 | 6.12.0 | R2 (Q16) : vue « liste » de Bâtiments sur téléphone, joueur avancé 6 271 → 1 814 px | `docs/changes/6.12.0-batiments-vue-liste.md` |
 | 2026-10-07 | 6.13.0 | R3 à R5 (Q15) : lunes, nées d'un gros combat sur la planète mère, +3 % bouclier et +5 % d'entrepôt à l'abri par la couche empire ; invariant I21 | `docs/changes/6.13.0-lunes.md` |
+| 2026-10-07 | 6.13.1 | Revue AU19 : été 2028 clos (vue liste, lunes), SP-2 expliqué ; automne 2028 proposé | `docs/audit/2026-10-07-au19-ete-2028.md` |

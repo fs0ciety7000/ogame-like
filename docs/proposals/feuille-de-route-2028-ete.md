@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'été 2028
 
-Statut : **en cours** (2026-10-07). Ouverte quand la consigne de la règle n° 3 a été redonnée : la pause d'AU18 (Q17) est annulée, les
+Statut : **close** (2026-10-07, AU19 : `docs/audit/2026-10-07-au19-ete-2028.md`), suite dans `feuille-de-route-2028-automne.md`. Ouverte quand la consigne de la règle n° 3 a été redonnée : la pause d'AU18 (Q17) est annulée, les
 questions ouvertes sont tranchées par l'option recommandée (Q15, Q16) et notées. Les lots qui demandent la production, `main` ou une PR
 restent sautés (Q12).
 
@@ -14,4 +14,4 @@ restent sautés (Q12).
 | 4 | R4 | Lunes, lot 1 : moteur (naissance, plafonds, réglages admin) et tests | M | livré en 6.13.0 (avec R5) |
 | 5 | R5 | Lunes, lot 2 : serveur, interface, changelog | M | livré en 6.13.0 |
 | 6 | Z0, Z1, Z6 | Mise en production, mesures, performance (repris) | — | en attente de l'utilisateur (Q12) |
-| 7 | AU19 | Revue, même grille | M | fin des lots |
+| 7 | AU19 | Revue, même grille | M | livré en 6.13.1 |
