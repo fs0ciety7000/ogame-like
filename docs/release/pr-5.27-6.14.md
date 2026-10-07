@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.102 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.103 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 168 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 169 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -204,6 +204,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.100 : Palette Netrunner, couleurs de sens séparées (TH-L5) (`docs/changes/6.14.100-palette-netrunner.md`)
 - 6.14.101 : L'attention porte une forme dans les thèmes orange (TH-L6) (`docs/changes/6.14.101-ember-forme-themes-orange.md`)
 - 6.14.102 : Feuille de route d'hiver 2031 proposée (18 nouveautés à valider) (`docs/changes/6.14.102-feuille-de-route-2031-proposee.md`)
+- 6.14.103 : Chargement du moteur dans n'importe quel ordre ; règles de la pré-prod contrôlées contre les bornes (`docs/changes/6.14.103-ordre-chargement-bornes-preprod.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

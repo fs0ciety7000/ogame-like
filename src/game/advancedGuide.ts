@@ -66,7 +66,10 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "colonyReady",
     chapter: "colonies",
-    label: `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de bâtiments`,
+    // 6.14.103 : accesseur, lu à l'usage (import circulaire : COLONY_RULES pas encore initialisé si `content` est chargé en premier).
+    get label() {
+      return `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de bâtiments`;
+    },
     learn: "Une colonie se mérite : il faut une planète mère développée. Chaque niveau de bâtiment compte, fin de partie comprise.",
     to: "/game/batiments",
     reward: { scrap: 2_000_000, energy: 2_000_000 },

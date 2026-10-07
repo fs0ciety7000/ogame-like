@@ -9374,7 +9374,10 @@ var GUIDE_STEPS = [
   {
     id: "colonyReady",
     chapter: "colonies",
-    label: `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de b\xE2timents`,
+    // 6.14.103 : accesseur, lu à l'usage (import circulaire : COLONY_RULES pas encore initialisé si `content` est chargé en premier).
+    get label() {
+      return `Cumuler ${COLONY_RULES.levelsRequired[0]} niveaux de b\xE2timents`;
+    },
     learn: "Une colonie se m\xE9rite : il faut une plan\xE8te m\xE8re d\xE9velopp\xE9e. Chaque niveau de b\xE2timent compte, fin de partie comprise.",
     to: "/game/batiments",
     reward: { scrap: 2e6, energy: 2e6 },
