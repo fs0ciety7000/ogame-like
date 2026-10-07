@@ -205,3 +205,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.13.4 | Revue AU20 : automne 2028 clos (billet, lune publique) ; hiver 2028 proposé (améliorer sa lune, Codex) | `docs/audit/2026-10-07-au20-automne-2028.md` |
 | 2026-10-07 | 6.14.0 | H28-1 : améliorer sa lune (niveaux 1 à 5, +2 % de bouclier par niveau, sous le plafond de 15 %), Q18 | `docs/changes/6.14.0-ameliorer-sa-lune.md` |
 | 2026-10-07 | 6.14.1 | H28-2 : fiche de Codex « Lunes » (Légendes), débloquée avec sa propre lune, Q19 | `docs/changes/6.14.1-codex-lunes.md` |
+| 2026-10-07 | 6.14.2 | Revue AU21 : hiver 2028 clos (niveaux de lune, Codex), SP-2 clos ; printemps 2029 proposé (succès lunaires, billet) | `docs/audit/2026-10-07-au21-hiver-2028.md` |
