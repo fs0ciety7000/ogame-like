@@ -149,6 +149,8 @@ Puis le test d'intégration PocketBase (script local de la session, il vide la b
 `.env.local` peut pointer vers la production : pour tester l'interface en local, lancer Vite avec `VITE_POCKETBASE_URL=http://127.0.0.1:8090`.
 Un test vérifie que le bundle des hooks est à jour : il échoue si `build:hooks` a été oublié.
 Un test d'intégration qui lit les joueurs A ou B appelle d'abord `ensureAB()` : il doit pouvoir tourner seul (`-t "<nom>"`) pour qu'on l'étudie.
+Un test qui se connecte en A rend la main à B avant de finir (`loginPlayer(B…)`) : les tests suivants agissent en B (6.14.0 : deux échecs en cascade).
+Toujours lire le résultat de l'intégration **avant** de committer.
 
 ## Livrer
 

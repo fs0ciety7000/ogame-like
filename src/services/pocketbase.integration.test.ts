@@ -1401,6 +1401,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await loginPlayer(A.email, A.pw);
       await ps.upgradeMoon();
       expect((await snap(aId)).moon.level).toBe(2);
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
       expect((await snap(bId)).moon ?? null).toBeNull();
     } finally {
       await admin.collection("players").update(aId, { moon: null });
