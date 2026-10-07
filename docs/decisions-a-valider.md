@@ -22,35 +22,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q110 | Accent de Constellation (accent ≠ texte) : Sable `#d6c49a` ; l'onglet actif garde son soulignement | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
 | Q111 | Bouton « Créer mon empire » sur l'accueil : `secondary` : « Connexion » reste le seul bouton plein | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
 | Q112 | Confusions de couleurs voulues des autres thèmes (Cockpit monochrome, Holo, Netrunner, Matrice…) : Gardées telles quelles, figées dans la garde `themeTokens.test.ts` | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
-| Q82 | Les 47 paliers de succès auto déjà créés (pré-prod, donc production) : **garder** (données des joueurs, récompenses déjà versées) et brider la suite (AP-L4) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q83 | Brouillon de novembre écrit par l'ancien générateur : **régénérer automatiquement** tant que le mois n'a pas commencé (AP-L2), noté au journal | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q84 | Action dont la médiane du serveur est 0 : dans les défis du passe ? : **exclure** du passe (un défi bloque les suivants) ; la variété passe par les Chroniques (épisode 3, à quantité faisable) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q85 | Épisode 3 des Chroniques (« rebondissement ») : **peu pratiquée mais faisable** | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q86 | Après 36 saisons (novembre 2029) : **générer puis relire dans l'admin** (même circuit que le brouillon du passe) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q87 | « Repousser une attaque » dans les objectifs du jour : **compter aussi les raids de faction repoussés** et poids 0,5 | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q88 | Faction des Chroniques : **table par thème et par année** (3 tables, une par année du catalogue) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q89 | Succès auto : qui fait monter un palier ? : **3 joueurs ou 10 % des actifs**, un palier par mesure et par mois | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
-| Q90 | Onglets mobiles par défaut : **(b)**. Le Passe reste à un toucher par la ligne d'Ordres du jour. Les choix déjà enregistrés par les joueurs (`localStorage`) ne bougent pas | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q91 | Corriger Constellation ou changer de thème de référence pour les captures : **(a)**. C'est un thème proposé aux joueurs, et le défaut doit y être corrigé | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q92 | Teinte du violet en Constellation : **(a)**, qui reste dans la palette du thème | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q93 | Mémoire des astuces de page : **(b)**, sur le modèle d'`announcementsSeen` : nouveau champ du profil, `GAME_FIELDS` et schéma | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q94 | Cibles de 44 px : **(b)** : aucune mise en page ne bouge au bureau | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q95 | Emoji dans les textes saisis par l'admin (bannières, événements) : **(b)** : la garde vise les `.tsx` seulement | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q96 | Masquer la Prise en main : **(b)** : une ligne « Prise en main 0/10 → » reste, sans perte possible | Revue AU27 (design UI/UX) | Valider (option recommandée par l'audit) |
-| Q97 | Quand appliquer le second palier ×4, alors qu'un joueur a déjà fait son Ascension avec les anciens coûts ? : Au début d'un mois, avec Z0 et une annonce une semaine avant ; seuls les niveaux futurs coûtent plus, rien n'est retiré ni remboursé | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q98 | Rareté : baisser le taux du comptoir ou le plafonner ? : Les deux, dans cet ordre : taux à 1 pour 250 (réglage), puis plafond hebdomadaire (moteur) | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q99 | Coffre du 7e jour : bornes fixes réduites ou indexation sur la production ? : Bornes [2 M, 12 M] tout de suite, indexation [6, 18] h ensuite | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q100 | `pvp.hardXpRatio` 12 → 10 réduit les cibles sur un serveur de 14 actifs : on le fait ? : Oui, à 10 (le premier quartile est hors de portée de la médiane) ; on mesure le nombre de combats par jour (2,1 aujourd'hui) | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q101 | Boss : renforcer tout de suite ou attendre 8 semaines (Q21) ? : Attendre, en mesurant d'abord le temps avant la mort (AE-L4) | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q102 | Ambre : réduire les primes des paliers 3 et 4 ou ajouter des dépenses ? : Réduire les gains futurs d'un tiers (soldes intacts), après une mesure par source | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q103 | Menu progressif : quels comptes voient tout ? : Tout compte existant au-delà de Fer II, et tout compte qui a déjà ouvert la page ; seuls les nouveaux comptes ont l'ouverture par rang | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q57 | Bouton « Saut » pendant la recharge : Visible, grisé, avec le décompte ; cliquable seulement porte prête | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q58 | Balayer depuis l'alerte d'attaque : Lien vers le panneau Lune (l'alerte couvrirait la confirmation) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q59 | Toast de réussite du balayage et du saut : Pas de toast côté client : la notification du serveur en affiche un (sinon en double) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q60 | « Envoyer une garnison » depuis les alliés menacés : Seulement quand l'allié est visé sur sa planète mère | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q61 | Guide avancé et frise « Prochaines fins » (fichiers du moteur) : Reportés au lot É30-1d | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q62 | Changelog joueur et billet : Annoncés avec le lot É30-1d (tout ensemble) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
-| Q63 | Fréquence de lecture de la phalange : Au plus une fois par minute sur Lune et Alliance, et à chaque attaque entrante ; lectures `moon/phalanx` à surveiller sur la pré-prod | Interface de la phalange et de la porte de saut | Valider (option prudente) |
 
 ## 3. Récit
 
