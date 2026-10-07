@@ -18,6 +18,13 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q152 | Déclencheur : rang seul (AE-13) ou premier de signal, étape, rang ? : **Premier des trois** : les contradictions du §2.3 disparaissent, le rang reste un plafond | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q153 | Page fermée : cachée ou grisée avec cadenas (comme le Planificateur) ? : **Cachée**, avec une seule ligne « Prochaine ouverture » ; grisée dans Ctrl+K | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q154 | Paliers et rangs du §5.2 (Casino, boss et seigneurs à Argent III ; Colonies 20 niveaux avant le seuil) : **Ceux du §5.2** | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q155 | « A déjà ouvert la page » (Q103) : aucune trace de visite avant 6.14.62 : astuce vue (`tip:`) ou marque `nav:` dans `announcementsSeen`, plus les signaux d'usage ; aucun nouveau champ | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q156 | Option « Tout afficher » dans les Réglages pour tout joueur ? : **Oui** (ancien joueur sur un nouveau compte) ; elle ouvre aussi les objectifs du jour | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q157 | Annonce pour ce lot ? : **Non** : rien ne change pour les comptes existants ; une ligne de changelog et une mention dans le billet de la prochaine grosse mise à jour | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
+| Q158 | Objectifs du jour filtrés par les systèmes ouverts : **Oui**, pour les nouveaux jours seulement | Menu des nouveaux joueurs ouvert au fil de la progression | Valider (recommandé par l'étude) |
 | Q138 | Carte des Chroniques sur le Passe : Remplacée par une ligne-lien vers la page des Chroniques (`ChroniclesCard.tsx` supprimé, la page garde sa frise et la réclamation) | Hiérarchie des pages | Valider (option prudente) |
 | Q139 | Tête du Passe : Les 3 tuiles (palier, points, fin de saison) restent en tête, avant la grille des paliers | Hiérarchie des pages | Valider (option prudente) |
 | Q140 | Codex : filtre unique : Les tuiles (avec « Tout ») plutôt que la barre d'onglets | Hiérarchie des pages | Valider (option prudente) |
