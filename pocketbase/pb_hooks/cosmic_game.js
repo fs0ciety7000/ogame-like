@@ -16392,7 +16392,7 @@ function scanReportText(report, nextScanAtMs, now) {
   const n = report.fleets.length;
   return {
     title: `Balayage de ${report.targetPseudo}`,
-    message: `Balayage de ${report.targetPseudo} : ${n} flotte${n > 1 ? "s" : ""} en vol, ${formatInt(report.docked)} vaisseaux \xE0 quai. Prochain balayage dans ${formatWait2(nextScanAtMs - now)}.`
+    message: `Balayage de ${report.targetPseudo} : ${n} flotte${n > 1 ? "s" : ""} en vol, ${formatInt(report.docked)} vaisseau${report.docked > 1 ? "x" : ""} \xE0 quai. Prochain balayage dans ${formatWait2(nextScanAtMs - now)}.`
   };
 }
 function phalanxHidden(attacker, trueUnits, boosts, formation) {

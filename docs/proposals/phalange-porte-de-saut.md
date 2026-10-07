@@ -1,6 +1,6 @@
 # Proposition : phalange et porte de saut lunaires (É30-1, Q31)
 
-Statut : **en cours** (2026-10-07) : lots É30-1a livré (moteur, `docs/changes/6.14.44-phalange-moteur.md`), É30-1b livré (serveur, `docs/changes/6.14.48-phalange-serveur.md`) et É30-1c livré (interface, `docs/changes/6.14.49-phalange-interface.md`), É30-1d livré (admin et chaîne de contenu, `docs/changes/6.14.69-phalange-chaine.md`), É30-1e à faire. Q31 validée par l'utilisateur sur `/decisions` (option A de `docs/proposals/prochain-systeme.md`).
+Statut : **livrée** (2026-10-07) : lots É30-1a livré (moteur, `docs/changes/6.14.44-phalange-moteur.md`), É30-1b livré (serveur, `docs/changes/6.14.48-phalange-serveur.md`) et É30-1c livré (interface, `docs/changes/6.14.49-phalange-interface.md`), É30-1d livré (admin et chaîne de contenu, `docs/changes/6.14.69-phalange-chaine.md`), É30-1e livré (essai réel sur la pré-prod, `docs/changes/6.14.70-essai-lune-preprod.md`). Q31 validée par l'utilisateur sur `/decisions` (option A de `docs/proposals/prochain-systeme.md`).
 La recommandation s'applique sans attendre (règle n° 3) ; les choix de conception sont listés au §8 et notés dans `docs/QUESTIONS.md`.
 Lots É30-1a à É30-1e de `docs/proposals/feuille-de-route-2030-ete.md`.
 

@@ -336,7 +336,7 @@ export function scanReportText(report: ScanReport, nextScanAtMs: number, now: nu
   const n = report.fleets.length;
   return {
     title: `Balayage de ${report.targetPseudo}`,
-    message: `Balayage de ${report.targetPseudo} : ${n} flotte${n > 1 ? "s" : ""} en vol, ${formatInt(report.docked)} vaisseaux à quai. Prochain balayage dans ${formatWait(nextScanAtMs - now)}.`,
+    message: `Balayage de ${report.targetPseudo} : ${n} flotte${n > 1 ? "s" : ""} en vol, ${formatInt(report.docked)} vaisseau${report.docked > 1 ? "x" : ""} à quai. Prochain balayage dans ${formatWait(nextScanAtMs - now)}.`,
   };
 }
 

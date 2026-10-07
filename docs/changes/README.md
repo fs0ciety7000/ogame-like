@@ -169,6 +169,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.67 | [Hiérarchie des pages : l'action principale d'abord](6.14.67-hierarchie-pages.md) | correctif (interface) | aucune (AU27, lot UX-6) |
 | 6.14.68 | [Tactile et accessibilité : 44 px au toucher, noms et raisons visibles](6.14.68-tactile-accessibilite.md) | correctif (interface) | aucune (AU27, lot UX-7), Q94 |
 | 6.14.69 | [Phalange et porte de saut : admin et chaîne de contenu](6.14.69-phalange-chaine.md) | fonctionnalité (admin, contenu) | [phalange-porte-de-saut](../proposals/phalange-porte-de-saut.md), lot É30-1d |
+| 6.14.70 | [Phalange et porte de saut : essai réel sur la pré-prod](6.14.70-essai-lune-preprod.md) | correctif (interface) + outillage | [phalange-porte-de-saut](../proposals/phalange-porte-de-saut.md), lot É30-1e |
 | 6.14.71 | [Proposition d'équilibrage et simulateur de progression](6.14.71-proposition-equilibrage.md) | docs + outillage | [equilibrage-au27](../proposals/equilibrage-au27.md), lot AE-L0, Q97 à Q103 |
 | 6.14.72 | [Réglages sûrs : défense à domicile, bouclier, écart d'XP, coffre du 7e jour](6.14.72-reglages-surs.md) | ajustement (équilibre) | [equilibrage-au27](../proposals/equilibrage-au27.md), lot AE-L1, Q99, Q100 |
 | 6.14.73 | [Proposition du déblocage progressif du menu](6.14.73-proposition-deblocage.md) | docs | Q152 à Q158 |

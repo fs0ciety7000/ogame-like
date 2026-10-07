@@ -125,7 +125,13 @@ Ce que Claude fait ensuite sur la pré-prod :
 - veille (6.14.39) : `node scripts/preprod-watch.mjs` en arrière-plan, toutes les 2 min, rend la main dès qu'un envoi `/img` ou une
   réponse `/decisions` arrive (CLAUDE.md, règle n° 3) ;
 - documents en direct (6.14.42) : `node scripts/live-docs.mjs push|status|pull`, collection `live_docs` lue par `/decisions` et `/img`
-  avant la version du build (pas de redéploiement pour une question, une feuille de route ou un prompt).
+  avant la version du build (pas de redéploiement pour une question, une feuille de route ou un prompt) ;
+- essai de la lune (6.14.70) : `node scripts/preprod-essai-lune.mjs <dossier> [--sans-captures] [--garder]` joue la phalange et la porte
+  de saut avec trois comptes dédiés (`claude_lune_a`, `_b`, `_c`, e-mails `@test.invalid`, mots de passe tirés au hasard et gardés nulle
+  part) : alliance de test, attaque leurrée, radar, perce-brouillard, balayage, saut et refus, succès ; captures 375 et 1440 px en thème
+  Constellation (Admin → Règles → Lunes par un droit d'admin temporaire) ; puis ménage (flottes rappelées, alliance dissoute, comptes
+  supprimés par `account/delete`, sauf `--garder`). Une ligne « ok » ou « ÉCART » par vérification. `ESSAI_FRONT_URL` capture un Vite
+  local lancé avec `VITE_POCKETBASE_URL=$PREPROD_PB_URL` (correctif d'interface vu avant le push).
 
 Les écritures sont permises sur la pré-prod uniquement ; la production reste en lecture seule.
 

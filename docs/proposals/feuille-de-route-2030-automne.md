@@ -23,6 +23,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
 | 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | livré (6.14.69) |
 | 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | livré (6.14.70) |
+| 14b | É30-1f | Suite de l'essai de la lune (6.14.70) : une seule notification après un saut (taire « Patrouille terminée »), retour de flotte réussi qui n'est plus en rouge au Journal système, mesure « victoires de l'attaquant avec ou sans lune » (niveau de lune du défenseur dans le rapport de combat) | S | à faire |
 | 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | livré (6.14.71) |
 | 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | livré (6.14.72 ; essai sur la pré-prod au prochain push) |
 | 17 | UX-4 | Écran mobile : ressources sur une ligne, bandeaux fusionnés, contenu visible plus haut | M | livré (6.14.62) |

@@ -9,7 +9,7 @@ Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q1
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 138 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 139 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -171,6 +171,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.67 : Hiérarchie des pages : l'action principale d'abord (`docs/changes/6.14.67-hierarchie-pages.md`)
 - 6.14.68 : Tactile et accessibilité : 44 px au toucher, noms et raisons visibles (`docs/changes/6.14.68-tactile-accessibilite.md`)
 - 6.14.69 : Phalange et porte de saut : admin et chaîne de contenu (`docs/changes/6.14.69-phalange-chaine.md`)
+- 6.14.70 : Phalange et porte de saut : essai réel sur la pré-prod (`docs/changes/6.14.70-essai-lune-preprod.md`)
 - 6.14.71 : Proposition d'équilibrage et simulateur de progression (`docs/changes/6.14.71-proposition-equilibrage.md`)
 - 6.14.72 : Réglages sûrs : défense à domicile, bouclier, écart d'XP, coffre du 7e jour (`docs/changes/6.14.72-reglages-surs.md`)
 - 6.14.73 : Proposition du déblocage progressif du menu (`docs/changes/6.14.73-proposition-deblocage.md`)

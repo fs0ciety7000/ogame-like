@@ -22,7 +22,7 @@ import { gateCooldownMs, gateReadyAtMs, gateUnlocked, jumpMissions } from "@/gam
 import { moonLevel, playerMoon } from "@/game/moon";
 import { formatWait } from "@/game/phalanx";
 import { ScanButton } from "@/components/game/PhalanxPanel";
-import { refreshPhalanx } from "@/store/phalanxStore";
+import { refreshPhalanx, usePiercedFleet } from "@/store/phalanxStore";
 import { resolveRelaunch, useLastMission } from "@/store/lastMissionStore";
 import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
@@ -78,6 +78,12 @@ function fleetSummary(fleet: Fleet): string {
     .filter(([, n]) => n > 0)
     .map(([id, n]) => `${formatCompact(n)} ${findUnit(id)?.name ?? id}`)
     .join(", ") + (fleet.decoyed ? " · leurre actif" : "");
+}
+
+/** 6.14.70 (É30-1e) : composition d'une attaque entrante ; percée par la phalange, la vraie (comme le panneau Lune). */
+function IncomingSummary({ fleet }: { fleet: Fleet }) {
+  const pierced = usePiercedFleet(fleet.id);
+  return <>{fleetSummary(pierced?.pierced?.decoy ? { ...fleet, units: pierced.units } : fleet)}</>;
 }
 
 /** Flottes du joueur (aller, retour) et flottes hostiles en approche. */
@@ -236,14 +242,18 @@ export function FleetsPanel({
             key={f.id}
             className="hud-callout hud-tone-danger hud-callout-alert p-2.5"
           >
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-danger-glow">
-              <AlertTriangle className="h-3.5 w-3.5" /> {f.mission === "pirate" ? "Raid du" : "Attaque de"}{" "}
-              <PlayerName uid={f.ownerUid} pseudo={f.ownerPseudo} /> — impact dans {formatClock(left)}
+            {/* 6.14.70 : texte dans un seul bloc (en flex, chaque morceau devenait une colonne à 375 px). */}
+            <p className="flex items-start gap-1.5 text-xs font-semibold text-danger-glow">
+              <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0">
+                {f.mission === "pirate" ? "Raid du" : "Attaque de"} <PlayerName uid={f.ownerUid} pseudo={f.ownerPseudo} /> — impact dans{" "}
+                <span className="font-mono tabular-nums">{formatClock(left)}</span>
+              </span>
             </p>
             <p className="mt-1 text-[11px] text-slate-400">
               {f.mission === "pirate"
                 ? `${findFaction(f.factionId ?? "varan")?.name ?? "Faction hostile"}${findFaction(f.factionId ?? "varan")?.raid.target === "fleet" ? " · vise ta flotte à quai" : ""} · puissance ${formatCompact(f.power ?? 0)}`
-                : fleetSummary(f)}
+                : <IncomingSummary fleet={f} />}
             </p>
             <ThreatGauge fleet={f} className="mt-1.5" />
             {f.mission === "attack" && <ScanButton targetUid={f.ownerUid} pseudo={f.ownerPseudo} compact className="mt-1.5" />}
@@ -328,7 +338,8 @@ export function FleetsPanel({
               {f.recalled && " · rappelée"}
               {awaitingDeparture(f, now) && <span className="text-cyan-glow"> · décollage programmé dans <span className="font-mono">{formatClock(Math.floor((f.departAtMs - now) / 1000))}</span></span>}
             </p>
-            <div className="mt-1.5 flex items-center gap-2">
+            {/* 6.14.70 : les boutons passent à la ligne dans une colonne étroite (« Saut » et son décompte étaient coupés). */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <Progress
                 value={
                   (stationed
@@ -339,7 +350,7 @@ export function FleetsPanel({
                       ? fleetProgress(f, now)
                       : 1 - fleetProgress(f, now)) * 100
                 }
-                className="flex-1"
+                className="min-w-16 flex-1"
               />
               {(outbound || stationed) && recallable && (
                 <Button
