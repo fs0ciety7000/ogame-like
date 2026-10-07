@@ -25,3 +25,25 @@ describe("6.14.26 : illustrations intégrées", () => {
     expect(new Set(slots.map((s) => s.target)).size).toBe(slots.length);
   });
 });
+
+/* 6.14.36 : une annonce illustrée n'est publiée qu'une fois son image produite (page /img) et poussée. */
+describe("6.14.36 : annonces et illustrations", () => {
+  const src = readFileSync("src/components/game/Announcement.tsx", "utf8");
+  const block = src.slice(src.indexOf("export const ANNOUNCEMENTS_ALL"), src.indexOf("export const ANNOUNCEMENTS: Announcement[]"));
+  const entries = block.split(/\n {2}\{\n/).slice(1);
+
+  it("une annonce attend son image tant qu'elle n'est pas intégrée, puis pointe sur le fichier", () => {
+    const checked: string[] = [];
+    for (const e of entries) {
+      const slotId = /artSlot: "([^"]+)"/.exec(e)?.[1];
+      if (!slotId) continue;
+      const slot = slots.find((s) => s.id === slotId);
+      expect(slot, slotId).toBeTruthy();
+      const pending = /pendingArt: true/.test(e);
+      expect(pending, `${slotId} : drapeau pendingArt`).toBe(!slot!.done);
+      expect(e, slotId).toContain(`art: "${slot!.target.replace(/^public/, "")}"`);
+      checked.push(slotId);
+    }
+    expect(checked).toContain("annonce-6.14");
+  });
+});

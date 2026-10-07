@@ -230,6 +230,11 @@ Toujours lire le résultat de l'intégration **avant** de committer.
   Nouvelle entrée en tête de `ANNOUNCEMENTS` (`Announcement.tsx`), avec un identifiant inédit. La modale s'affiche une fois par compte :
   la vue est gardée côté serveur (`announcementsSeen`, action `seenAnnouncements`), quel que soit l'appareil. Elle reste consultable sur
   `/game/annonces`. Son illustration va dans `scripts/illustrations.json` (page `/img`).
+- > **Instructions (2026-10-07) : image d'annonces (prompt Midjourney une fois poussé via /img, on publie seulement une fois l'asset img
+  > est créé et poussé).**
+
+  L'annonce porte `artSlot` et `pendingArt: true` : elle reste cachée jusqu'à l'intégration de son image, qui retire le drapeau
+  (`docs/illustrations.md`). Jamais d'annonce publiée avec une image provisoire.
 - Après la fusion d'une PR qui touche `pocketbase/pb_hooks`, rappeler à l'admin de cliquer « Mettre à jour les hooks ».
 - Aucun secret (mot de passe, jeton) dans le dépôt, même temporaire.
 - `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).

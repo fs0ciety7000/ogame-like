@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.35 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.36 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 102 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 103 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -138,6 +138,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.33 : Billets de la grande mise à jour et annonce (`docs/changes/6.14.33-billets-et-annonce.md`)
 - 6.14.34 : Intégration : arrivées forcées sans course (`docs/changes/6.14.34-integration-arrivees-forcees.md`)
 - 6.14.35 : Réponses aux décisions reportées (`docs/changes/6.14.35-reponses-decisions.md`)
+- 6.14.36 : Une annonce attend son illustration (`docs/changes/6.14.36-annonce-apres-image.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

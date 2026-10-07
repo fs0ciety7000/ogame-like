@@ -45,6 +45,9 @@ rythme dans les routines de claude.ai.
    - **Technologies** : ajouter l'identifiant à `TECH_ART` (`technologies.ts`). Le Codex prend alors `/assets/technologies/<id>.webp`,
      même sur un contenu personnalisé ; le champ « Image (Codex) » de l'admin reste prioritaire.
    - **Offres de la semaine** : rien à faire, la carte lit `weekly-<id>.webp`.
+   - **Annonces** (6.14.36) : une annonce illustrée porte `artSlot` (identifiant de l'image) et `pendingArt: true` tant que l'image
+     manque : elle reste cachée (ni modale, ni `/game/annonces`). À l'intégration, retirer `pendingArt` : l'annonce est publiée au
+     déploiement suivant. `illustrations.test.ts` vérifie la cohérence.
    - **Comptoir** : identifiant ajouté à `SHOP_ITEM_ART` (`src/pages/BountiesPage.tsx`).
    - **Annonce, lune, bâtiments** : même nom de fichier ; augmenter `ASSET_VERSION` (`src/lib/assets.ts`) pour vider le cache des
      navigateurs.

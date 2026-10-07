@@ -19,7 +19,8 @@ import { cn } from "@/lib/utils";
 /* =====================================================
    Annonces plein écran (style bande-annonce d'extension), affichées une
    seule fois par compte et par appareil. Pour en ajouter une : nouvelle
-   entrée en tête de ANNOUNCEMENTS, avec un identifiant inédit.
+   entrée en tête de ANNOUNCEMENTS_ALL, avec un identifiant inédit ; une annonce illustrée attend son image
+   (`artSlot`, `pendingArt`, 6.14.36).
 ===================================================== */
 
 export interface Announcement {
@@ -45,20 +46,27 @@ export interface Announcement {
   emblem?: string;
   /** 5.26 : sondage communautaire (annonces de l'administration). */
   poll?: import("@/game/polls").Poll | null;
+  /** 6.14.36 : identifiant de l'illustration dans scripts/illustrations.json (page /img). */
+  artSlot?: string;
+  /** 6.14.36 : illustration pas encore produite : l'annonce reste cachée (ni modale, ni /game/annonces). L'intégration de
+   *  l'image retire ce drapeau (docs/illustrations.md), ce qui publie l'annonce au déploiement suivant. */
+  pendingArt?: boolean;
 }
 
-export const ANNOUNCEMENTS: Announcement[] = [
+export const ANNOUNCEMENTS_ALL: Announcement[] = [
   {
     // 6.14.33 : grande mise à jour (5.27 → 6.14), avec le billet « la grande mise à jour » (content/blog/49).
-    // Illustration provisoire : celle du récapitulatif 5.7, en attendant le rendu (`annonce-6.14` sur /img).
+    // 6.14.36 : publiée seulement une fois son illustration produite et poussée (`annonce-6.14` sur /img).
     id: "v6.14-grande-maj",
     eyebrow: "Mise à jour 6.14 · La grande mise à jour",
     title: "Tout l'empire a bougé d'un coup",
     text: "45 nouveautés arrivent ensemble : classes d'empire, lunes, bases avancées, Ordres du jour, un Codex complet. Le récapitulatif est sur le devblog, le détail dans Nouveautés.",
     factions: [],
     tone: "gold",
-    art: "/assets/story/v5-recap.webp",
-    artMobile: "/assets/story/v5-recap.webp",
+    art: "/assets/story/v6-14-grande-maj.webp",
+    artMobile: "/assets/story/v6-14-grande-maj.webp",
+    artSlot: "annonce-6.14",
+    pendingArt: true,
     features: [
       { title: "Classes d'empire", text: "Industriel, Seigneur de guerre ou Explorateur : un bonus et un vaisseau de classe. Premier choix gratuit.", to: "/game/classe", image: "/assets/logo/logo.webp" },
       { title: "Ordres du jour", text: "Toutes tes corvées au même endroit, et « Tout réclamer » en un clic.", to: "/game/ordres", image: "/assets/bounties/items/priority.webp" },
@@ -373,6 +381,9 @@ export const ANNOUNCEMENTS: Announcement[] = [
     cta: { label: "Découvrir les menaces", to: "/game/menaces" },
   },
 ];
+
+/** 6.14.36 : annonces publiées, sans celles qui attendent leur illustration. */
+export const ANNOUNCEMENTS: Announcement[] = ANNOUNCEMENTS_ALL.filter((a) => !a.pendingArt);
 
 const SEEN_KEY = "cosmic-empires:announcements-seen";
 function readSeen(): string[] {
