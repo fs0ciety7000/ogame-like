@@ -82,6 +82,9 @@ Une fois l'accès donné (§6), Claude peut le lancer.
 - réécrit vers la pré-prod les adresses de la prod (`base.` et `empire.fs0ciety.org`) dans la configuration du jeu et les billets :
   les illustrations envoyées dans l'admin sont dans la sauvegarde, seule l'adresse change. Les historiques (`admin_logs`, `reports`) restent tels quels.
 
+Mesures (agrégats anonymes, lecture seule) : `node scripts/preprod-measure.mjs <fichier.json>`, plus le rapport du serveur
+`/api/cosmic/admin/balance` ; méthode et point zéro dans `docs/audit/2026-10-07-z1-mesures.md`.
+
 Captures d'écran d'une page (375 px et bureau, thème Constellation) : `node scripts/preprod-capture.mjs /game/codex <dossier> "Bâtiments,Technologies"`.
 
 Si les fichiers (avatars, illustrations) sont rangés sur S3 (Settings → Files storage), donner à la pré-prod **un autre bucket** : le

@@ -219,3 +219,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.13 | C3 : préréglages d'effet pour les 10 unités qui n'en avaient pas, Q25 | `docs/changes/6.14.13-prereglages-unites.md` |
 | 2026-10-07 | 6.14.14 | C4 : succès des boss d'alliance (trophées par joueur, `stats.allianceBossKilled`), garde de la chaîne de contenu sans manque connu, Q26 | `docs/changes/6.14.14-succes-boss-alliance.md` |
 | 2026-10-07 | 6.14.15 | PP-3 : adresses de la prod réécrites sur la pré-prod, script de capture ; feuille de route d'automne révisée (Z1 avant l'inventaire) | `docs/changes/6.14.15-preprod-adresses.md` |
+| 2026-10-07 | 6.14.16 | Z1 : mesures sur la copie de la prod (point zéro) ; PRG-1 expliqué (missions à +2 au lancement du passe) ; Codex hors de « Tout réclamer » | `docs/audit/2026-10-07-z1-mesures.md` |
