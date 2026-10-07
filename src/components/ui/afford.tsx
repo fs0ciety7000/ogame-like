@@ -97,6 +97,7 @@ export function BlockedReason({ children, tone = "warn", className }: { children
 /** Texte « ressources insuffisantes » avec l'estimation d'attente. */
 export function affordText(seconds: number): string {
   if (seconds <= 0) return "";
-  if (!Number.isFinite(seconds)) return "Ressources insuffisantes, et ta production actuelle ne suffira pas : échange au marché ou augmente la production.";
-  return `Ressources insuffisantes : disponible dans ~${formatDuration(Math.ceil(seconds))} à production constante.`;
+  // 6.11.13 (P1) : une ligne ; la pastille de coût dit déjà ce qui manque (« manque 20 k »).
+  if (!Number.isFinite(seconds)) return "Ta production n'y suffira pas : passe par le marché.";
+  return `Disponible dans ~${formatDuration(Math.ceil(seconds))} à production constante.`;
 }

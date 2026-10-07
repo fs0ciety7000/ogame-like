@@ -173,7 +173,7 @@ export function BuildingsPage() {
               <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert", building.endgame && "legendary-frame")}>
                 <HudBrackets className="border-gold-glow/70" />
                 <LevelPulse level={level} />
-                <div className={cn("relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-[5.5rem_1fr] max-[380px]:gap-3", isLocked && "max-sm:grid-cols-[4.5rem_1fr] max-sm:gap-3 max-sm:pb-2")}>
+                <div className={cn("relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-sm:grid-cols-[6rem_1fr] max-sm:gap-3", isLocked && "max-sm:grid-cols-[4.5rem_1fr] max-sm:pb-2")}>
                   <div className={cn("hud-cut relative aspect-square overflow-hidden border border-gold-glow/25 bg-space-900", TIER_FRAME[visualTier(level)])}>
                     <LevelUpBurst level={level} />
                     <img

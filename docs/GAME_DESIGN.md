@@ -193,3 +193,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.10 | H2 : test d'intégration des seigneurs autonome (`ensureAB`), stable seul 3/3 et en suite 78/78 | `docs/changes/6.11.10-test-seigneurs-autonome.md` |
 | 2026-10-07 | 6.11.11 | H3 : billet 46 « le jeu sur téléphone » (neuf pages sous 5 000 px, débris de colonie) | `content/blog/46-jeu-sur-telephone.md` |
 | 2026-10-07 | 6.11.12 | Revue AU17 : hiver clos (H1 à H3 livrés), aucune page au-dessus de 5 000 px pour un joueur neuf ; printemps 2028 proposé (P1 : joueur avancé) | `docs/audit/2026-10-07-au17-hiver.md` |
+| 2026-10-07 | 6.11.13 | P1 : 42 pages mesurées avec un joueur avancé (aucun débordement ; Bâtiments 6 460 → 6 271 px), raison de bouton grisé en une ligne ; Q16 | `docs/changes/6.11.13-joueur-avance-mobile.md` |
