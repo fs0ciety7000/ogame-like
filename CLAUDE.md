@@ -127,7 +127,8 @@ Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seu
 - Un invariant de `docs/GAME_DESIGN.md` qui change = un test qui change dans le même commit.
 - Places et capacité des hangars : uniquement `hangarLoad` / `playerUnitCapacity` (`src/game/hangar.ts`). Un test interdit `getUnitCapacity(` ailleurs.
 - Une récompense quotidienne ou à réclamer s'ajoute à `pendingClaims` (`claimAll.ts`) : elle est alors couverte par « Tout réclamer »
-  et par la pastille unique d'Ordres du jour (`ordersReadyCount`). Pas de nouvelle pastille dans la barre latérale.
+  et par la pastille unique d'Ordres du jour (`ordersReadyCount`). Pas de nouvelle pastille dans la barre latérale. Une récompense qui
+  dépend de données du serveur n'y entre que si le joueur seul suffit à la vérifier, sinon elle reste sur sa page (Codex : seigneurs, boss, 6.14.17).
 - Une récompense en vaisseaux (épave, coffre…) passe par `addReady` (`workshop.ts`), jamais directement dans `units` ou une flotte : invariant I3.
 - Nouveau champ du profil joueur : l'ajouter à `GAME_FIELDS` (`playerFields.ts`), au type `PlayerState` et à `pocketbase/pb_schema.json`
   (le serveur crée le champ au démarrage par la synchronisation du schéma). Un nouveau bonus passe par une source du circuit d'effets

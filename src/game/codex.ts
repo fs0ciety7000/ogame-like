@@ -317,10 +317,20 @@ export function claimCodexCategory(player: PlayerState, entries: CodexEntry[], c
 
 /** 5.15.12 : catégories complètes dont la récompense attend (pastille du menu). Sans les
  *  données du serveur (seigneurs, boss affrontés), seules les catégories sûres comptent. */
-export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): number {
+export function codexClaimableCategories(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): CodexCategory[] {
   const entries = codexEntries(player, new Set(), now);
   return CODEX_CATEGORIES.filter((c) => {
     const st = codexCategoryState(player, entries, c.id);
     return st.complete && !st.claimed && (st.reward.tokens > 0 || st.reward.amber > 0);
-  }).length;
+  }).map((c) => c.id);
+}
+
+export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): number {
+  return codexClaimableCategories(player, now).length;
+}
+
+/** 6.14.17 (Z1-2) : réclamation depuis « Tout réclamer » (action du joueur). Sans les données du serveur, une catégorie
+ *  de seigneurs ou de boss n'est jamais complète ici : elle se réclame depuis la page du Codex (route codexClaim). */
+export function claimCodexCategoryLocal(player: PlayerState, category: unknown, now: number): { tokens: number; amber: number } {
+  return claimCodexCategory(player, codexEntries(player, new Set(), now), category, now);
 }

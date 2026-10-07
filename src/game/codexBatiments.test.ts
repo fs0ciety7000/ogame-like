@@ -1,8 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { claimCodexCategory, codexCategoryState, codexEntries } from "@/game/codex";
+import { performPlayerAction } from "@/game/actions";
+import { pendingClaims } from "@/game/claimAll";
+import { claimCodexCategory, codexCategoryState, codexClaimedCategories, codexEntries } from "@/game/codex";
 import { applyGameContent } from "@/game/content";
-import { defaultPlayerState } from "@/game/defaults";
+import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { TECH_CODEX_IMAGE, TECHNOLOGIES } from "@/game/technologies";
 import type { PlayerState } from "@/types/game";
 
@@ -50,5 +52,22 @@ describe("6.14.12 (C2) : Codex des bâtiments et des technologies", () => {
   it("joueur sans bâtiments ni technos : fiches verrouillées, pas d'erreur", () => {
     const entries = codexEntries({ stats: {}, units: {} } as unknown as PlayerState, new Set(), NOW);
     expect(entries.filter((e) => e.category === "buildings" || e.category === "technologies").every((e) => !e.unlocked)).toBe(true);
+  });
+});
+
+describe("6.14.17 (Z1-2) : catégories du Codex dans « Tout réclamer »", () => {
+  beforeAll(() => applyGameContent({}));
+
+  it("une catégorie complète est réclamée par « Tout réclamer », une seule fois", () => {
+    const p = defaultPlayerState("u1", "Archi") as PlayerState;
+    p.buildings = Object.fromEntries(BUILDINGS.map((b) => [b.id, { level: 1, unlocked: true }]));
+    expect(pendingClaims(p, NOW)).toContainEqual({ type: "codexClaim", category: "buildings" });
+    // Seigneurs et boss dépendent du serveur : jamais proposés ici.
+    expect(pendingClaims(p, NOW).filter((c) => c.type === "codexClaim").map((c) => (c as { category: string }).category)).not.toContain("warlords");
+    const out = performPlayerAction(p, defaultQueues(), { type: "claimAll" }, NOW);
+    expect((out.result as Record<string, number>).codexClaim).toBeGreaterThanOrEqual(1);
+    expect(codexClaimedCategories(out.player)).toContain("buildings");
+    expect(pendingClaims(out.player, NOW).some((c) => c.type === "codexClaim" && c.category === "buildings")).toBe(false);
+    expect(() => performPlayerAction(out.player, out.queues, { type: "codexClaim", category: "buildings" }, NOW)).toThrow(/déjà/);
   });
 });

@@ -24,7 +24,6 @@ import { getRankIcon, getRankLabel, getRankProgress } from "@/game/ranks";
 import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
-import { codexClaimableCount } from "@/game/codex";
 import { ordersReadyCount } from "@/game/dailyOrders";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
@@ -229,13 +228,11 @@ function useBadges(): (to: string) => number {
   const leviathanSeen = useLeviathanSeen((s) => s.ids);
   // 5.30 : pastille unique des récompenses prêtes (série, missions, contrats, passe, Chroniques…), = « Tout réclamer ».
   const ordersReady = usePlayerStore((s) => (s.player ? ordersReadyCount(s.player, Date.now()) : 0));
-  const codexReady = usePlayerStore((s) => (s.player ? codexClaimableCount(s.player, Date.now()) : 0));
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
   return (to) =>
     ({
       "/game/ordres": ordersReady,
-      "/game/codex": codexReady,
       "/game/messages": messagesUnread,
       "/game/uber": leviathanNew,
       "/game/alliance": allianceUnread,

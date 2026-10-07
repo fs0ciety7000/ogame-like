@@ -16,6 +16,7 @@ import { buildColonyDefense, renameColony, setColonyRoute, setColonySpec, startC
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
 import { pendingClaims } from "@/game/claimAll";
+import { claimCodexCategoryLocal } from "@/game/codex";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -86,6 +87,7 @@ export type GameAction =
   | { type: "setTitle"; title: string }
   | { type: "claimOnboarding"; stepId: string }
   | { type: "claimGuide"; stepId: string }
+  | { type: "codexClaim"; category: string }
   | { type: "claimAll" }
   | { type: "hideGuide"; hidden: boolean }
   | { type: "hideOnboarding"; hidden: boolean }
@@ -369,6 +371,9 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "claimGuide":
       return claimGuideStep(player, String(action.stepId ?? ""));
+
+    case "codexClaim":
+      return claimCodexCategoryLocal(player, action.category, now);
 
     case "claimAll": {
       // v5.11 : chaque réclamation passe par son action habituelle ; un échec n'arrête pas les autres.

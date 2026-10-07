@@ -117,6 +117,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.14 | [Succès des boss d'alliance](6.14.14-succes-boss-alliance.md) | ajout | `chaine-contenu.md` (C4), Q26 |
 | 6.14.15 | [Pré-prod : adresses des fichiers, script de capture](6.14.15-preprod-adresses.md) | ajout (outillage) | aucune (PP-3), Q22 |
 | 6.14.16 | [Mesures Z1 sur la pré-prod](6.14.16-mesures-z1.md) | docs, outillage | aucune (Z1), Q2, Q3, Q18, Q21 |
+| 6.14.17 | [Codex dans « Tout réclamer »](6.14.17-codex-tout-reclamer.md) | correctif | aucune (Z1-2), Q27 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

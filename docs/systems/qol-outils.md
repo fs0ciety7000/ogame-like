@@ -18,6 +18,6 @@ seigneurs, e-mails, rétention, signalements, sauvegardes R2, statut et métriqu
 - Bundle principal 904 Ko (non compressé), scène 3D 572 Ko, Admin 520 Ko, Labo 200 Ko, changelog 252 Ko.
 
 ## État (audit 2026-10-06)
-- 5.30 : Ordres du jour réunit les corvées quotidiennes, avec une seule pastille dans la barre latérale (= `pendingClaims`). Reste dispersé : file d'actions, objectifs personnels.
+- 5.30 : Ordres du jour réunit les corvées quotidiennes, avec une seule pastille dans la barre latérale (= `pendingClaims`) ; 6.14.17 : le Codex y entre, sa pastille propre disparaît. Reste dispersé : file d'actions, objectifs personnels.
 - `README.md` affirme encore que « toute la logique de jeu tourne côté client » : faux depuis la v2 (audit D1).
 - Performance (5.29.0) : fenêtres rares chargées à la demande (bundle d'entrée 925 → 880 Ko), horloge de décompte unique (`useNowTicker`), tâches serveur regroupées par cadence. Reste : le moteur entier est dans le bundle d'entrée tant que le contenu de l'admin est appliqué au démarrage.

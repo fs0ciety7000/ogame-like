@@ -5,6 +5,7 @@ import { passState, passTier, tierRequirements } from "@/game/seasonPass";
 import { streakStatus } from "@/game/streak";
 import { dailyMissions } from "@/game/dailyMissions";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
+import { codexClaimableCategories } from "@/game/codex";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -14,6 +15,7 @@ import type { PlayerState } from "@/types/game";
    son action habituelle (mêmes contrôles, mêmes effets).
    5.30 (Ordres du jour) : aussi la série de connexion, les missions du jour
    et les épisodes des Chroniques. La liste sert aussi de pastille unique.
+   6.14.17 : et les catégories complètes du Codex (leur pastille propre disparaît).
 ===================================================== */
 
 export type ClaimAllAction =
@@ -23,7 +25,8 @@ export type ClaimAllAction =
   | { type: "claimContract"; contractId: string }
   | { type: "passClaim"; tier: number }
   | { type: "claimOnboarding"; stepId: string }
-  | { type: "claimGuide"; stepId: string };
+  | { type: "claimGuide"; stepId: string }
+  | { type: "codexClaim"; category: string };
 
 /** Réclamations prêtes (lecture seule). */
 export function pendingClaims(player: PlayerState, now: number): ClaimAllAction[] {
@@ -52,6 +55,8 @@ export function pendingClaims(player: PlayerState, now: number): ClaimAllAction[
   }
   if (onboardingEligible(player)) for (const s of onboardingProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimOnboarding", stepId: s.step.id });
   if (guideVisible(player)) for (const s of guideProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimGuide", stepId: s.step.id });
+  // 6.14.17 (Z1-2) : catégories du Codex complètes (celles que le joueur seul permet de vérifier, sans faux positif).
+  for (const category of codexClaimableCategories(player, now)) out.push({ type: "codexClaim", category });
   return out;
 }
 
@@ -63,6 +68,7 @@ export const CLAIM_LABELS: Record<ClaimAllAction["type"], [string, string]> = {
   passClaim: ["palier du passe", "paliers du passe"],
   claimOnboarding: ["objectif de prise en main", "objectifs de prise en main"],
   claimGuide: ["objectif du Carnet", "objectifs du Carnet"],
+  codexClaim: ["catégorie du Codex", "catégories du Codex"],
 };
 
 /** « 2 contrats, 1 palier du passe » */
