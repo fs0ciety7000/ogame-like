@@ -3,7 +3,7 @@ import { EmptyState, HudCallout, HudChip } from "@/components/ui/hud";
 import { ELITE_COUNTER, RANK_NUMERALS, TRAIT_NAMES, type EliteTarget } from "@/game/warlordRanks";
 import { ELITE_UNITS, findUnit } from "@/game/units";
 import { eliteStatus } from "@/game/eliteUnits";
-import { HudPanel, EmptyAction } from "@/components/ui/panel";
+import { HudPanel, EmptyAction, ShowMoreButton } from "@/components/ui/panel";
 import { CoalitionCard } from "@/components/game/CoalitionCard";
 import type { Coalition } from "@/game/coalition";
 import { Link, useNavigate } from "react-router-dom";
@@ -37,6 +37,10 @@ function Portrait({ w, className }: { w: WarlordPublic; className?: string }) {
   const [src, setSrc] = useState(w.portrait);
   return <img src={assetUrl(src)} alt="" onError={() => src !== w.fallbackArt && setSrc(w.fallbackArt)} className={cn("object-cover object-top", className)} />;
 }
+
+/* 6.11.7 (A3) : sur téléphone, 4 seigneurs d'abord (dix cartes faisaient 6 000 px), celui de ta vendetta en tête. */
+const MOBILE_STEP = 4;
+const isNarrow = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
 
 const PERSONALITY_TONE: Record<string, string> = {
   aggressive: "border-danger-glow/50 text-danger-glow",
@@ -81,6 +85,8 @@ export function WarlordsPage() {
   const away = player ? onVacation(player, now) : false;
   const tokens = player ? bountyState(player).vendettaTokens : 0;
   const mine = list?.find((w) => w.vendetta && (w.vendetta.ownerUid === player?.uid || (w.vendetta.allianceId && w.vendetta.allianceId === player?.allianceId)));
+  const [shownCount, setShownCount] = useState(() => (isNarrow() ? MOBILE_STEP : Infinity));
+  const ordered = list ? [...list].sort((a, b) => Number(b === mine) - Number(a === mine)) : [];
 
   const open = async () => {
     if (!vendetta) return;
@@ -137,16 +143,16 @@ export function WarlordsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {list.map((w, i) => {
+          {ordered.slice(0, shownCount).map((w, i) => {
             const gone = w.absentUntilMs > now;
             const v = w.vendetta;
             return (
               <motion.div key={w.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <Card className={cn("relative flex h-full overflow-hidden p-0", gone && "opacity-60")} style={{ boxShadow: `inset 3px 0 0 ${w.color}` }}>
-                  <TiltPortrait glow="var(--color-ember-glow)" className="w-32 shrink-0 sm:w-40">
+                <Card className={cn("relative flex h-full flex-col overflow-hidden p-0 sm:flex-row", gone && "opacity-60")} style={{ boxShadow: `inset 3px 0 0 ${w.color}` }}>
+                  <TiltPortrait glow="var(--color-ember-glow)" className="h-28 w-full shrink-0 sm:h-auto sm:w-40">
                     <Portrait w={w} className="h-full w-full" />
                   </TiltPortrait>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:p-4">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <img src={assetUrl(w.emblem)} alt="" className="h-8 w-8 object-contain" onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
                       <h3 className="hud-title text-base normal-case tracking-[0.02em]" style={{ color: w.color }}>
@@ -172,7 +178,7 @@ export function WarlordsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="line-clamp-3 text-xs leading-relaxed text-slate-400">{w.bio}</p>
+                    <p className="line-clamp-2 text-xs leading-relaxed text-slate-400 sm:line-clamp-3">{w.bio}</p>
                     {w.rank && w.nextThreshold ? (
                       <div className="text-[11px] text-slate-500">
                         <div className="flex justify-between font-mono">
@@ -242,6 +248,7 @@ export function WarlordsPage() {
           })}
         </div>
       )}
+      {ordered.length > shownCount && <ShowMoreButton more={ordered.length - shownCount} step={MOBILE_STEP} onClick={() => setShownCount((n) => n + MOBILE_STEP)} />}
 
       {player && <EliteUnitsPanel />}
 

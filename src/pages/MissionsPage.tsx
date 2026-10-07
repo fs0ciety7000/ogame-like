@@ -60,14 +60,14 @@ export function MissionsPage() {
         <SortableGridToggle page="missions" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
 
-      <SortableGrid page="missions" editing={editingCards} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" items={Object.values(MISSIONS)} getId={(mission) => mission.key} getLabel={(mission) => mission.name} render={(mission, index) => {
+      <SortableGrid page="missions" editing={editingCards} className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3" items={Object.values(MISSIONS)} getId={(mission) => mission.key} getLabel={(mission) => mission.name} render={(mission, index) => {
           const active = queues.activeMissions.find((m) => m.key === mission.key);
           const hasReq = hasPrerequisites(mission, player.units);
           const prereqEntries = Object.entries(mission.prereq);
           const rewards = missionRewards(mission, player);
 
           return (
-            <Card key={mission.key} className="hud-glitch flex flex-col gap-3 p-4">
+            <Card key={mission.key} className="hud-glitch flex flex-col gap-3 p-3.5 sm:p-4">
               <div className="relative grid grid-cols-[auto_1fr] items-start gap-3.5">
                 <div
                   className={cn(
@@ -118,7 +118,8 @@ export function MissionsPage() {
                 </div>
               </div>
 
-              <div className="relative mt-auto">
+              {/* 6.11.7 (A3) : sur téléphone, pas de bouton désactivé sous une mission verrouillée (les prérequis ✗ le disent). */}
+              <div className={cn("relative mt-auto", !active && !hasReq && "max-sm:hidden")}>
                 {active ? (
                   <Progress value={100 - ((active.endTime - now) / (mission.duration * 1000)) * 100} />
                 ) : (

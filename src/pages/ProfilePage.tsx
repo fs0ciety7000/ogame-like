@@ -1,7 +1,7 @@
 import { AscensionStars } from "@/components/game/AscensionCard";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
-import { LevelTicks, StatTile, EmptyState } from "@/components/ui/hud";
+import { HudChip, LevelTicks, StatTile, EmptyState } from "@/components/ui/hud";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { GameActionError, setActiveTitle } from "@/services/playerService";
@@ -28,7 +28,6 @@ import { ReferralCard } from "@/components/game/ReferralCard";
 import { RenameCard } from "@/components/game/RenameCard";
 import { AvatarCard } from "@/components/game/AvatarCard";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
-import { Button } from "@/components/ui/button";
 import { Palette } from "lucide-react";
 
 function usePlaytimeDisplay(baseSeconds: number) {
@@ -48,6 +47,8 @@ function usePlaytimeDisplay(baseSeconds: number) {
 export function ProfilePage() {
   const player = usePlayerStore((s) => s.player);
   const playtime = usePlaytimeDisplay(player?.playtimeSeconds ?? 0);
+  // 6.11.7 (A3) : sur une colonne (sous xl), un volet à la fois ; le lien #personnalisation ouvre le second.
+  const [pane, setPane] = useState<"dossier" | "perso">(() => (typeof window !== "undefined" && window.location.hash === "#personnalisation" ? "perso" : "dossier"));
 
   if (!player) return null;
 
@@ -72,19 +73,26 @@ export function ProfilePage() {
     <div className="flex flex-col gap-6">
       <PageHeader eyebrow="Cosmic Empires / Dossier" title="Profil" description="Progression, statistiques et rang." right={
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-            {/* Sur une colonne, la personnalisation passe sous le dossier : raccourci direct. */}
-            <Button asChild variant="ghost" size="sm" className="xl:hidden">
-              <a href="#personnalisation">
-                <Palette className="h-3.5 w-3.5" /> Personnaliser
-              </a>
-            </Button>
             <EmpireShareActions player={player} kind="profile" />
           </div>
         } />
 
+      <div className="flex flex-wrap gap-2 xl:hidden" role="group" aria-label="Volet du profil">
+        <HudChip asChild tone={pane === "dossier" ? "accent" : "neutral"}>
+          <button type="button" aria-pressed={pane === "dossier"} onClick={() => setPane("dossier")}>
+            Dossier
+          </button>
+        </HudChip>
+        <HudChip asChild tone={pane === "perso" ? "accent" : "neutral"}>
+          <button type="button" aria-pressed={pane === "perso"} onClick={() => setPane("perso")}>
+            <Palette className="h-3.5 w-3.5" /> Personnaliser
+          </button>
+        </HudChip>
+      </div>
+
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         {/* ---------- Dossier ---------- */}
-        <section className="flex min-w-0 flex-col gap-6" aria-label="Dossier du commandant">
+        <section className={cn("flex min-w-0 flex-col gap-6", pane !== "dossier" && "max-xl:hidden")} aria-label="Dossier du commandant">
           <Card className="flex flex-col gap-5 p-5">
             <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
               <RadialGauge value={progress.percent} size={104} strokeWidth={5}>
@@ -156,7 +164,7 @@ export function ProfilePage() {
         </section>
 
         {/* ---------- Personnalisation ---------- */}
-        <section id="personnalisation" className="@container flex min-w-0 scroll-mt-20 flex-col gap-6" aria-label="Personnalisation">
+        <section id="personnalisation" className={cn("@container flex min-w-0 scroll-mt-20 flex-col gap-6", pane !== "perso" && "max-xl:hidden")} aria-label="Personnalisation">
           <p className="hud-eyebrow -mb-3 text-cyan-glow/80">Personnalisation</p>
           <AvatarCard player={player} />
           <ProfileStyleCard player={player} />
