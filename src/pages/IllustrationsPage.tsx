@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, Copy, ImageUp, Images, Lock, Server } from "lucide-react";
+import { CheckCircle2, Copy, ImageUp, Images, Lock, LogIn, Server } from "lucide-react";
 import { HudPanel } from "@/components/ui/panel";
 import { EmptyState, HudCallout, HudChip, StatTile, type HudTone } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
 import { pb } from "@/lib/pocketbase";
 import { useAdminStatus } from "@/services/adminService";
+import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
 import { cn, timeAgo } from "@/lib/utils";
 import slotsRaw from "../../scripts/illustrations.json?raw";
@@ -143,8 +144,24 @@ export function IllustrationsPage() {
           <p className="text-sm text-slate-400">Vérification de ton accès…</p>
         ) : !admin ? (
           <HudPanel icon={<Lock className="h-4 w-4" />} title="Réservé aux administrateurs">
-            <EmptyState icon={<Lock />} title="Accès refusé">
-              Connecte-toi avec un compte administrateur du jeu.
+            <EmptyState
+              icon={<Lock />}
+              title="Accès refusé"
+              action={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    logout();
+                    window.location.assign("/");
+                  }}
+                >
+                  <LogIn className="mr-1.5 h-3.5 w-3.5" />
+                  Se reconnecter
+                </Button>
+              }
+            >
+              Cette page demande un compte administrateur du jeu. Si ton compte l'est, ta session est sans doute ancienne : reconnecte-toi.
             </EmptyState>
           </HudPanel>
         ) : (

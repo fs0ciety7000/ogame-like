@@ -89,6 +89,9 @@ Mesures (agrégats anonymes, lecture seule) : `node scripts/preprod-measure.mjs 
 
 Captures d'écran d'une page (375 px et bureau, thème Constellation) : `node scripts/preprod-capture.mjs /game/codex <dossier> "Bâtiments,Technologies"`.
 
+Après le nettoyage, ou quand Claude remet une adresse sur un compte, une session déjà ouverte avec ce compte peut être refusée
+(« Accès refusé » sur `/img`, admin non reconnu) : se déconnecter, puis se reconnecter.
+
 Si les fichiers (avatars, illustrations) sont rangés sur S3 (Settings → Files storage), donner à la pré-prod **un autre bucket** : le
 script le signale.
 
