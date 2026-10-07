@@ -2,6 +2,7 @@ import { EmptyAction } from "@/components/ui/panel";
 import { useEffect, useMemo, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Flag, ShieldHalf, Swords, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ function WarCard({ war, allianceId, canLead }: { war: AllianceWar; allianceId: s
   const total = Math.max(1, us + them);
 
   const doSurrender = async () => {
+    // 6.9.2 (AU5, ALL-3) : reddition confirmée.
+    if (!(await askConfirm({ title: "Rendre les armes ?", message: `La guerre contre ${enemy} s'arrête : elle compte comme perdue pour ton alliance.`, confirmLabel: "Se rendre", tone: "danger" }))) return;
     try {
       await surrenderWar(war.id);
       toast("Ton alliance a rendu les armes.");
@@ -121,10 +124,13 @@ export function WarTab({ alliance, canLead }: { alliance: Alliance; canLead: boo
   const canPay = payFrom === "chest" ? chestCovers : affordable;
 
   const declare = async () => {
+    // 6.9.2 (AU5, ALL-3) : déclaration confirmée (coût payé tout de suite).
+    const cost = `${formatCompact(WAR_RULES.costScrap)} ferraille et ${formatCompact(WAR_RULES.costEnergy)} énergie`;
+    if (!(await askConfirm({ title: "Déclarer la guerre ?", message: `${cost} sont pris ${payFrom === "chest" ? "dans le coffre de guerre" : "dans le trésor"}. Les hostilités commencent dans ${WAR_RULES.prepHours} h.`, confirmLabel: "Déclarer", tone: "danger" }))) return;
     setBusy(true);
     try {
       await declareWar(target, payFrom);
-      toast.success("Guerre déclarée ! Les hostilités commencent dans 12 h.");
+      toast.success(`Guerre déclarée ! Les hostilités commencent dans ${WAR_RULES.prepHours} h.`);
       setTarget("");
     } catch (err) {
       toast.error(errorText(err, "Déclaration impossible."));

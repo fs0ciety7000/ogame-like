@@ -203,7 +203,7 @@ export { BLOG_WELCOME } from "@/game/blogWelcome";
 export { challengeFromBytes, cleanPasskeyName, clientChallenge, PASSKEY_RULES, PasskeyError, utf8Encode as passkeyUtf8, verifyAssertion, verifyRegistration } from "@/game/webauthn";
 export { CONTESTS_KEY, contestAmberPurse, contestPhase, contestPrizes, contestPurse, normalizeContests, pruneContests, refreshContest, validateContest } from "@/game/contests";
 export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
-export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_REWARDS, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
+export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_RULES, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
 export { allianceWeekId } from "@/game/allianceBoss";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";

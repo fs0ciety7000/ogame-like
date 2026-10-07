@@ -24,7 +24,8 @@ export const ALLIANCE_CHALLENGES: { id: string; name: string; emoji: string; met
 ];
 
 /** Heures de production cumulée des membres versées au trésor du podium. */
-export const ALLIANCE_CHALLENGE_REWARDS = [6, 4, 2];
+/** 6.9.2 (AU5) : heures de production du podium (1er, 2e, 3e…), réglables (registre « allianceChallenge »). */
+export const ALLIANCE_CHALLENGE_RULES = { rewardHours: [6, 4, 2] };
 
 export interface AllianceChallengeStanding {
   allianceId: string;
@@ -109,7 +110,7 @@ export function refreshAllianceChallenge(state: AllianceChallengeState, players:
 
 /** Récompense d'une place : heures de production cumulée des membres. */
 export function allianceChallengeReward(rank: number, members: Pick<PlayerState, "buildings" | "techLevels">[]): Partial<Record<ResourceId, number>> {
-  const hours = ALLIANCE_CHALLENGE_REWARDS[rank - 1] ?? 0;
+  const hours = ALLIANCE_CHALLENGE_RULES.rewardHours[rank - 1] ?? 0;
   const out: Partial<Record<ResourceId, number>> = {};
   if (!hours) return out;
   for (const m of members) for (const [k, v] of Object.entries(productionHours(m, hours)) as [ResourceId, number][]) out[k] = (out[k] ?? 0) + v;

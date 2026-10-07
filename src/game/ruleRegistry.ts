@@ -1,5 +1,6 @@
 import { ACHIEVEMENT_TOKENS, TIER_REWARDS } from "@/game/achievements";
 import { TEMPLATE_RULES } from "@/game/actionTemplates";
+import { ALLIANCE_CHALLENGE_RULES } from "@/game/allianceChallenge";
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
 import { ALLIANCE_PROFILE_RULES } from "@/game/allianceProfile";
 import { ALLIANCE_SAGA_RULES } from "@/game/allianceSaga";
@@ -64,6 +65,7 @@ export const REGISTERED_RULES = {
   achievementTierRewards: { label: "Succès : XP et production par palier", target: () => TIER_REWARDS },
   achievementXpAlert: { label: "Anti-abus : XP des succès", target: () => ACHIEVEMENT_XP_ALERT },
   actionTemplates: { label: "File d'actions : modèles", target: () => TEMPLATE_RULES },
+  allianceChallenge: { label: "Alliance : défi de la semaine (podium)", target: () => ALLIANCE_CHALLENGE_RULES },
   allianceDaily: { label: "Alliance : objectif du jour", target: () => ALLIANCE_DAILY_RULES },
   allianceProfile: { label: "Alliance : fiche, rangs et candidatures", target: () => ALLIANCE_PROFILE_RULES },
   allianceSaga: { label: "Alliance : saga", target: () => ALLIANCE_SAGA_RULES },

@@ -5793,7 +5793,7 @@ function allianceChallengeTick(now) {
     if (state.weekId !== game.allianceWeekId(now)) {
       const challenge = game.findAllianceChallenge(state.challengeId);
       const results = [];
-      state.standings.slice(0, game.ALLIANCE_CHALLENGE_REWARDS.length).forEach((st, i) => {
+      state.standings.slice(0, game.ALLIANCE_CHALLENGE_RULES.rewardHours.length).forEach((st, i) => {
         const aRec = allianceRecs.find((a) => a.id === st.allianceId);
         if (!aRec) return;
         const members = players.filter((p) => p.allianceId === st.allianceId);

@@ -5,7 +5,7 @@ import { Medal, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { allianceNextWeekMs } from "@/game/allianceBoss";
-import { ALLIANCE_CHALLENGE_REWARDS, findAllianceChallenge, type AllianceChallengeState } from "@/game/allianceChallenge";
+import { ALLIANCE_CHALLENGE_RULES, findAllianceChallenge, type AllianceChallengeState } from "@/game/allianceChallenge";
 import { RESOURCE_LIST } from "@/game/resources";
 import { bossCountdown } from "@/components/game/BossStage";
 import { fetchAllianceChallenge } from "@/services/allianceService";
@@ -71,7 +71,7 @@ export function AllianceChallengeTab({ allianceId }: { allianceId: string }) {
           <h2 className="hud-title flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-gold-glow" /> Récompenses
           </h2>
-          {ALLIANCE_CHALLENGE_REWARDS.map((h, i) => (
+          {ALLIANCE_CHALLENGE_RULES.rewardHours.map((h, i) => (
             <p key={i}>
               <span className="font-mono" style={{ color: MEDALS[i] }}>
                 {i === 0 ? "1re" : `${i + 1}e`} place

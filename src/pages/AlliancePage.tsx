@@ -23,6 +23,7 @@ import { useDirectoryStore } from "@/store/directoryStore";
 import { OnlineDot } from "@/components/ui/online-dot";
 import { EmptyState, HudChip } from "@/components/ui/hud";
 import { toast } from "sonner";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Crown, Handshake, Shield, ShieldPlus, UserX } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -259,6 +260,20 @@ function AllianceRoom({
   };
 
   const handleLeave = async () => {
+    // 6.9.2 (AU5, ALL-2) : départ confirmé ; le dernier membre dissout l'alliance et son trésor est perdu.
+    const last = (alliance?.members.length ?? 0) <= 1;
+    const founder = !!alliance && alliance.createdBy === uid;
+    const ok = await askConfirm({
+      title: last ? "Dissoudre l'alliance ?" : "Quitter l'alliance ?",
+      message: last
+        ? "Tu es le dernier membre : l'alliance disparaît, avec son trésor, ses recherches et ses projets."
+        : founder
+          ? "Tu es fondateur : un officier (sinon le plus ancien membre) prend ta place."
+          : "Tu pourras rejoindre une autre alliance ensuite.",
+      confirmLabel: last ? "Dissoudre" : "Quitter",
+      tone: "danger",
+    });
+    if (!ok) return;
     setLeaving(true);
     try {
       await leaveAlliance(uid, allianceId);
@@ -280,6 +295,9 @@ function AllianceRoom({
   };
 
   const handleKick = async (targetUid: string) => {
+    // 6.9.2 (AU5, ALL-3) : exclusion confirmée.
+    const who = alliance?.memberPseudos[targetUid] ?? "ce membre";
+    if (!(await askConfirm({ title: `Exclure ${who} ?`, message: "Il quitte l'alliance tout de suite et perd l'accès au trésor, aux recherches et au canal.", confirmLabel: "Exclure", tone: "danger" }))) return;
     try {
       await kickMember(uid, allianceId, targetUid);
       toast.success("Membre exclu de l'alliance.");

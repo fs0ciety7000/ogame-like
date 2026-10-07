@@ -70,6 +70,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.6.0 | [Menaces PNJ (AU1 : A à D)](6.6.0-menaces-pnj.md) | rework | [menaces-pnj](../proposals/menaces-pnj.md) |
 | 6.7.0 | [Rendez-vous étalés sur la semaine](6.7.0-calendrier-semaine.md) | rework | [calendrier-semaine](../proposals/calendrier-semaine.md) |
 | 6.7.1 | [Casino ouvert en permanence, réglages admin](6.7.1-casino-reglages.md) | correctif | [calendrier-semaine](../proposals/calendrier-semaine.md) |
+| 6.9.2 | [Alliances, confirmations et réglages](6.9.2-alliances-confirmations.md) | correctif | aucune (AU5) |
 | 6.9.1 | [Registre des réglages](6.9.1-registre-reglages.md) | correctif + refactoring | aucune (règle n° 2) |
 | 6.9.0 | [Commerce réglable dans l'admin](6.9.0-commerce-reglable.md) | correctif + ajout | aucune (AU4, COM-1) |
 | 6.8.2 | [Chroniques générées sous réglages](6.8.2-chroniques-generees.md) | fonctionnalité + ajout | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md), lot 3 |

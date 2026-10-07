@@ -26,3 +26,9 @@ messages privés (archives), réactions, sondages, gazette quotidienne, signalem
 - Taille : 8 membres de base et jusqu'à 20 avec Quartiers fédérés depuis la 5.33 (audit E5, `proposals/alliances-grandes.md`). Boss d'alliance
   déjà proportionnel (PV = puissance des membres actifs, coût = heures de production de chaque membre). Territoires et garnisons à relever si
   une alliance dépasse 12.
+
+## Revue AU5 (2026-10-07)
+Rapport `docs/audit/2026-10-07-au5-alliances.md`. Depuis la 6.9.2 : départ, exclusion, déclaration de guerre et reddition confirmés ;
+`alliances.maxDiplomats` (2) et `allianceChallenge.rewardHours` (6, 4, 2) réglables. Toutes les règles du domaine sont dans l'admin
+(groupes `alliances`, `wars`, `territoryWar`, `allianceBoss` et registre 6.9.1 : objectif du jour, fiche, saga, diplomatie, territoires,
+guerres de saison, coffre de guerre).

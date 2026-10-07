@@ -111,7 +111,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 5 | V | Rendez-vous de la semaine (Q4) : proposition à partir d'AU1 et AU2, puis implémentation | M | livré 6.7.0 (mesure BOSS-2 reportée) |
 | 6 | AU3 | Revue Progression : Passe, Chroniques, Codex, succès et titres, défis hebdo, série, objectifs du jour, saisons, divisions, palmarès | M | rapport livré (`2026-10-06-au3-progression.md`) ; 6.8.0, 6.8.1 et 6.8.2 livrés (passe et Chroniques génératifs) ; PRG-2 en question (`QUESTIONS.md` Q4) |
 | 7 | AU4 | Revue Commerce : marché, ordres d'achat, contrats, enchères, PNJ marchand, pot commun, concours, casino et tournoi | M | livré : rapport (`2026-10-06-au4-commerce.md`) + 6.9.0 (COM-1) |
-| 8 | AU5 | Revue Alliances : membres et rôles, trésor, recherches, guerres, guerre de territoire, projets, saga, diplomatie, calendrier | M | à faire |
+| 8 | AU5 | Revue Alliances : membres et rôles, trésor, recherches, guerres, guerre de territoire, projets, saga, diplomatie, calendrier | M | livré : rapport (`2026-10-07-au5-alliances.md`) + 6.9.2 |
 | 9 | AU6 | Revue Communications : messages, canal global, salons, modération, annonces, sondages, gazette, notifications | M | à faire |
 | 10 | AU7 | Revue Galaxie et combat : carte, joueurs et classement, espionnage, rapports, journal, simulateur | M | à faire |
 | 11 | AU8 | Revue État-major et bonus : officiers, reliques, talents, Ascension, classes, circuit d'effets | M | à faire |

@@ -57,6 +57,8 @@ export const ALLIANCE_RULES = {
   sharedReportsMax: 50,
   /** Saison : somme des XP de saison des N meilleurs membres. */
   seasonTopMembers: 5,
+  /** 6.9.2 (AU5) : diplomates au plus par alliance. */
+  maxDiplomats: 2,
   seasonRewardHours: 8,
   seasonTitle: "Allié champion",
   researches: [
@@ -83,7 +85,6 @@ export const ALLIANCE_RULES = {
 export type AllianceRole = "founder" | "officer" | "diplomat" | "member";
 
 /** v4.9 : diplomates par alliance, au plus. */
-export const MAX_DIPLOMATS = 2;
 
 /** Peut signer et rompre les pactes, déclarer une guerre ou y répondre. */
 export function canDiplomacy(role: AllianceRole | null): boolean {
@@ -243,8 +244,8 @@ export function setRole(alliance: Alliance, actorUid: string, targetUid: string,
   if (!alliance.members.includes(targetUid) || targetUid === alliance.createdBy) throw new GameActionError("Ce joueur ne peut pas changer de rôle.");
   if (role !== "officer" && role !== "diplomat" && role !== "member") throw new GameActionError("Rôle inconnu.");
   const roles = { ...(alliance.roles ?? {}) };
-  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= MAX_DIPLOMATS) {
-    throw new GameActionError(`${MAX_DIPLOMATS} diplomates au plus par alliance.`);
+  if (role === "diplomat" && roles[targetUid] !== "diplomat" && Object.values(roles).filter((r) => r === "diplomat").length >= ALLIANCE_RULES.maxDiplomats) {
+    throw new GameActionError(`${ALLIANCE_RULES.maxDiplomats} diplomates au plus par alliance.`);
   }
   if (role === "member") delete roles[targetUid];
   else roles[targetUid] = role;
