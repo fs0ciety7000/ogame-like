@@ -9,7 +9,7 @@ Le reste est dans `docs/` :
 | `docs/GAME_DESIGN.md` | **GDD** : piliers, boucles, carte des systèmes, **invariants du moteur**, règles de conception, fiches systèmes, grille et journal d'audit |
 | `docs/WORKFLOW.md` | chaîne complète d'une fonctionnalité : brief → benchmark → chiffres → moteur → serveur → UI → audit → livraison ; méthode de level design |
 | `docs/systems/*.md` | **une fiche par domaine du jeu** (règles et chiffres en vigueur, code, admin, état) : à lire avant de toucher un système |
-| `docs/audit/*.md` | rapports d'audit datés (constats C, E, Q, P, D numérotés, réutilisés par les propositions) |
+| `docs/audit/*.md` | rapports d'audit datés (constats C, E, Q, P, D numérotés, réutilisés par les propositions) ; **`constats-ouverts.md`** : inventaire tenu à jour |
 | `docs/proposals/*.md` | propositions chiffrées (une par système), dont la feuille de route |
 | `docs/QUESTIONS.md` | **journal des questions et décisions prises seul** (règle n° 3), à revoir avec l'utilisateur |
 | `docs/changes/*.md` | **une fiche par lot livré** (fonctionnalité, ajout, rework, ajustement, correctif, refactoring, docs), modèle et index dans `docs/changes/README.md` |
@@ -98,7 +98,8 @@ La mémoire du projet est dans le dépôt, pas dans la conversation. Une nouvell
 1. ce fichier ;
 2. `docs/QUESTIONS.md` (décisions en attente) ;
 3. la feuille de route en cours (`docs/proposals/feuille-de-route-*.md`, statut « en cours ») ;
-4. les dernières fiches de `docs/changes/README.md`.
+4. les dernières fiches de `docs/changes/README.md` ;
+5. `docs/audit/constats-ouverts.md` (ce qui reste, et pourquoi).
 
 Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seulement dans le scratchpad : un outil réutilisable va dans
 `scripts/`.

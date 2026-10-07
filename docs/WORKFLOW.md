@@ -113,6 +113,8 @@ Chaque lot relit puis met à jour :
 - `docs/DESIGN.md` si un composant ou une règle visuelle apparaît ;
 - ce fichier si la méthode évolue ;
 - `CLAUDE.md` pour toute règle de travail ou tout piège appris (goja, migrations, schéma…).
+- `docs/audit/constats-ouverts.md` quand un constat s'ouvre ou se ferme ; chaque revue AU le réécrit (6.14.18, ET29-3) ;
+  un constat « faisable seul » ne reste pas ouvert plus d'une feuille de route.
 
 Une règle devenue fausse est réécrite, pas contournée.
 

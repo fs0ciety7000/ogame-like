@@ -221,3 +221,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.15 | PP-3 : adresses de la prod réécrites sur la pré-prod, script de capture ; feuille de route d'automne révisée (Z1 avant l'inventaire) | `docs/changes/6.14.15-preprod-adresses.md` |
 | 2026-10-07 | 6.14.16 | Z1 : mesures sur la copie de la prod (point zéro) ; PRG-1 expliqué (missions à +2 au lancement du passe) ; Codex hors de « Tout réclamer » | `docs/audit/2026-10-07-z1-mesures.md` |
 | 2026-10-07 | 6.14.17 | Z1-2 : catégories du Codex dans « Tout réclamer » et la pastille unique, Q27 | `docs/changes/6.14.17-codex-tout-reclamer.md` |
+| 2026-10-07 | 6.14.18 | A29-1 : inventaire des constats ouverts ; la prod est en 5.27.0, tout le reste attend Z0 | `docs/audit/constats-ouverts.md` |
