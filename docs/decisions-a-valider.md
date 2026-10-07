@@ -28,7 +28,3 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
-| Q118 | Garde-fous de l'admin : une erreur déjà en base dans une autre section bloque-t-elle l'enregistrement ? : Non : seules les erreurs nouvelles bloquent | Valider (option prudente) |
-| Q119 | Tolérances de la validation : Clé inconnue acceptée ; texte ou oui/non absent non bloquant ; `null` permis si le défaut vaut `null` ; pas de borne haute générique (bornes par champ au lot AA2) | Valider (option prudente) |
-| Q120 | Migration `relics-5.23` sans cas confirmé sur la pré-prod : Ajoutée quand même (sans effet sans liste personnalisée, protège un serveur ancien) | Valider (option prudente) |
-| Q121 | Écritures internes du serveur (générateur, migrations, retour arrière) et garde-fous : Non vérifiées (la garde ne voit que les requêtes de l'admin) | Valider (option prudente) |
