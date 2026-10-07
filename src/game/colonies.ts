@@ -143,8 +143,6 @@ export const COLONY_ROUTE_RULES = {
   supplyHomeReservePct: 0.3,
 };
 
-/** 6.4 : valeur par défaut (la valeur en vigueur est `COLONY_RULES.defenseQueueMax`, réglable dans l'admin). */
-export const COLONY_DEFENSE_QUEUE_MAX = 5;
 
 export function setColonyRoute(player: PlayerState, colonyIdIn: string, everyHoursIn: unknown, keepPctIn: unknown, now: number, directionIn?: unknown): ColonyRoute | null {
   const colony = colonyOf(player, colonyIdIn);
@@ -609,7 +607,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   if ((player.units[unitId]?.level ?? 0) <= 0) throw new GameActionError("Débloque d'abord cette défense sur ta planète mère.");
   const qty = Math.floor(Number(qtyIn));
   if (!(qty > 0)) throw new GameActionError("Quantité invalide.");
-  // 6.4 : un lot en construction, jusqu'à COLONY_DEFENSE_QUEUE_MAX en attente (payés d'avance).
+  // 6.4 : un lot en construction, jusqu'à COLONY_RULES.defenseQueueMax en attente (payés d'avance).
   if (colony.defenseJob && (colony.defenseQueue?.length ?? 0) >= COLONY_RULES.defenseQueueMax) throw new GameActionError(`File pleine : ${COLONY_RULES.defenseQueueMax} lots en attente au plus.`);
   const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + colonyDefensePendingSpace(colony) + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");

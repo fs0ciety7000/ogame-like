@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { COLONY_DEFENSE_QUEUE_MAX, COLONY_ROUTE_RULES, advanceColonies, buildColonyDefense, colonyDefenseHangar, colonyDefensePendingSpace, colonyStorage, runColonyRoute, setColonyRoute, startColonization } from "@/game/colonies";
+import { COLONY_ROUTE_RULES, COLONY_RULES, advanceColonies, buildColonyDefense, colonyDefenseHangar, colonyDefensePendingSpace, colonyStorage, runColonyRoute, setColonyRoute, startColonization } from "@/game/colonies";
 import { performCancel } from "@/game/cancel";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { COMMON_RESOURCES, storageCapacityOf } from "@/game/economy";
@@ -88,7 +88,7 @@ describe("file de défense coloniale", () => {
     const { p, c, def } = ready();
     const t = NOW + 3 * H;
     buildColonyDefense(p, c.id, def.id, 1, t);
-    for (let i = 0; i < COLONY_DEFENSE_QUEUE_MAX; i++) buildColonyDefense(p, c.id, def.id, 1, t);
+    for (let i = 0; i < COLONY_RULES.defenseQueueMax; i++) buildColonyDefense(p, c.id, def.id, 1, t);
     expect(() => buildColonyDefense(p, c.id, def.id, 1, t)).toThrow(/File pleine/);
     const { p: p2, c: c2, def: d2 } = ready();
     const h = colonyDefenseHangar(c2, p2, t);
