@@ -34,6 +34,8 @@ export const JUMP_GATE_RULES = {
   allyJump: false,
   allyJumpMinMoonLevel: 5,
   allyJumpArrivalMinutes: 5,
+  /** 6.14.48 : une attaque repoussée moins de N minutes après un saut compte comme un sauvetage (`gateSaves`, succès secret). */
+  saveWindowMinutes: 10,
 };
 
 /** Missions qu'un saut peut rapatrier, au plus (I23) : jamais une attaque ni un retour de raid (pas de pillage « aller simple »),
@@ -121,7 +123,7 @@ export function markJump(player: PlayerState, now: number): number {
   const ms = m ? gateCooldownMs(moonLevel(m), player) : null;
   if (!m || ms === null) throw new GameActionError("Ta porte de saut est fermée.");
   const readyAtMs = now + ms;
-  player.moon = { ...m, gateReadyAtMs: readyAtMs };
+  player.moon = { ...m, gateReadyAtMs: readyAtMs, lastJumpAtMs: now };
   bumpStat(player, "gateJumps");
   return readyAtMs;
 }
@@ -137,4 +139,16 @@ export function jumpText(mission: FleetMission, readyAtMs: number, now: number):
 export function allyJumpAllowed(player: Pick<GatePlayer, "moon"> | null | undefined): boolean {
   const m = playerMoon(player);
   return !!m && JUMP_GATE_RULES.enabled === true && JUMP_GATE_RULES.allyJump === true && moonLevel(m) >= Math.max(1, Math.floor(num(JUMP_GATE_RULES.allyJumpMinMoonLevel, 5)));
+}
+
+/** 6.14.48 : l'attaque repoussée à `now` l'a-t-elle été par une flotte rapatriée dans la fenêtre `saveWindowMinutes` ?
+ *  Un saut ne compte qu'une fois : le sauvetage efface `lastJumpAtMs`, puis le compteur `gateSaves` monte. */
+export function markGateSave(player: PlayerState, now: number): boolean {
+  const m = playerMoon(player);
+  const at = num(m?.lastJumpAtMs);
+  const windowMs = Math.max(0, num(JUMP_GATE_RULES.saveWindowMinutes)) * 60_000;
+  if (!m || at <= 0 || now < at || now - at > windowMs) return false;
+  player.moon = { ...m, lastJumpAtMs: 0 };
+  bumpStat(player, "gateSaves");
+  return true;
 }

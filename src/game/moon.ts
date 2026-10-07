@@ -42,6 +42,8 @@ export interface MoonState {
   scanReadyAtMs?: number;
   /** 6.14.44 : prochain saut de la porte possible ; absent = prête. */
   gateReadyAtMs?: number;
+  /** 6.14.48 : dernier saut de la porte (succès « Retour fracassant », compteur `gateSaves`) ; absent ou 0 = aucun à compter. */
+  lastJumpAtMs?: number;
 }
 
 /** Noms tirés au sort (affichés tels quels). */

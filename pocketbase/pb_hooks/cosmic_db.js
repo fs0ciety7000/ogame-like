@@ -241,6 +241,12 @@ function syncProfile(app, player) {
     profile.set("moonName", moonName);
     changed = true;
   }
+  // 6.14.48 (Q41) : niveau de la lune, public (0 sans lune) : le risque (porte de saut, perce-brouillard) se voit avant d'attaquer.
+  const moonLevel = moonName ? Math.max(1, Math.floor(Number(moon.level) || 1)) : 0;
+  if (profile.getInt("moonLevel") !== moonLevel) {
+    profile.set("moonLevel", moonLevel);
+    changed = true;
+  }
   // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
   const vac = parseJsonField(player, "vacation", null);
   const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;
@@ -1496,6 +1502,8 @@ function resolveAttackArrival(txApp, game, rec, now) {
     const won = game.grantTokens(result.attacker, readCasino(txApp, game).settings.rewards.warlord);
     if (won > 0) result.notifications = (result.notifications || []).concat([{ kind: "event", title: `+${game.tokensLabel(won)}`, message: `Seigneur de guerre pillé : ${game.tokensLabel(won)} pour le Casino orbital.`, createdAtMs: now, read: false, link: "/game/casino", data: tokenNotifData(null, won) }]);
   }
+  // 6.14.48 (É30-1b) : attaque de joueur repoussée sur la planète mère juste après un saut de la porte (`gateSaves`).
+  if (!attacker.player.npc && !colonyOwner && result.combat.outcome === "defender_win") game.markGateSave(result.defender, now);
   savePlayer(txApp, game, attacker, result.attacker, result.attackerQueues);
   savePlayer(txApp, game, defender, result.defender, result.defenderQueues);
   // v5.10 : le rapport d'abord, pour que les notifications de combat y mènent.
@@ -1873,6 +1881,8 @@ function launchFleetRequest(e) {
         { kind: "spy-detected", title: "Anomalie chimique", message: `Ton Espionne a repéré des traces de synthèse sur la flotte de ${attacker.player.pseudo} : elle embarque des capsules (stimulant ou brouilleur).`, createdAtMs: now, read: false },
       ]);
     }
+    // 6.14.48 (É30-1b, I22) : radar d'alliance, les alliés de la cible dont la phalange couvre la planète visée sont prévenus.
+    if (mission === "attack" && target && target.allianceId) radarAlert(txApp, game, rec, attacker.player, target, now);
     // Léviathan : le délai entre deux assauts part du lancement.
     if (leviathan) writeLeviathan(txApp, leviathan);
     if (seasonBoss) writeSeasonBoss(txApp, game, seasonBoss);
@@ -1888,6 +1898,229 @@ function launchFleetRequest(e) {
     response = Object.assign({ id: rec.id, formation: rec.getString("formation") }, out.fleet, { anomaly: !!anomaly });
   });
 
+  return e.json(200, response);
+}
+
+/* ---------- 6.14.48 (É30-1b, proposals/phalange-porte-de-saut.md) : phalange et porte de saut ---------- */
+
+/** Joueur brut (lecture seule) avec son identifiant, pour les fonctions de la phalange. */
+function plainPlayer(r) {
+  const p = toPlain(r);
+  p.uid = r.id;
+  return p;
+}
+
+/** Membres de l'alliance `allianceId` (hors `exceptUid`), fiches brutes. */
+function allianceMates(txApp, allianceId, exceptUid) {
+  if (!allianceId) return [];
+  return txApp
+    .findRecordsByFilter("players", "allianceId = {:a} && id != {:u}", "", 200, 0, { a: allianceId, u: exceptUid || "" })
+    .map(plainPlayer);
+}
+
+/** Planète visée, telle qu'on la nomme dans une alerte (« planète mère » ou nom de la colonie). */
+function targetPlanetName(target, fleet) {
+  if (!fleet.targetOwnerUid) return "planète mère";
+  const colony = (target.colonies || []).filter((c) => c && c.id === fleet.targetUid)[0];
+  return colony && colony.name ? colony.name : "colonie";
+}
+
+/** Radar d'alliance (I22) : au lancement d'une attaque de joueur, les alliés de la cible dont la phalange couvre la planète visée
+ *  sont prévenus (`radarMaxNotified` au plus, les plus proches d'abord). Une erreur ici ne bloque jamais le lancement. */
+function radarAlert(txApp, game, rec, attackerPlayer, target, now) {
+  try {
+    if (!game.PHALANX_RULES.enabled || game.PHALANX_RULES.radar !== true) return;
+    const fleet = fleetFromRecord(rec, true);
+    const candidates = allianceMates(txApp, target.allianceId, target.uid);
+    const uids = game.radarRecipients(fleet, target.allianceId, candidates, { attackerNpc: !!attackerPlayer.npc });
+    if (uids.length === 0) return;
+    const text = game.radarText(attackerPlayer.pseudo, target.pseudo, targetPlanetName(target, fleet), fleet.arriveAtMs, now);
+    const data = { phalanx: "radar", fleetId: rec.id, attackerUid: fleet.ownerUid, attackerPseudo: attackerPlayer.pseudo, allyUid: target.uid, allyPseudo: target.pseudo, targetUid: fleet.targetUid, arriveAtMs: fleet.arriveAtMs };
+    uids.forEach((uid) => notify(txApp, uid, [{ kind: "alliance", title: text.title, message: text.message, createdAtMs: now, read: false, link: "/game/alliance", data }]));
+  } catch (err) {
+    console.log(`[cosmic] radar d'alliance : ${err}`);
+  }
+}
+
+/** Ligne publique d'une flotte d'attaque (jamais les champs cachés). */
+function phalanxFleetLine(f) {
+  return {
+    id: f.id,
+    ownerUid: f.ownerUid,
+    ownerPseudo: f.ownerPseudo,
+    targetUid: f.targetUid,
+    targetPseudo: f.targetPseudo,
+    targetOwnerUid: f.targetOwnerUid || "",
+    departAtMs: f.departAtMs,
+    arriveAtMs: f.arriveAtMs,
+    formation: f.formation || "",
+    units: f.units || {},
+    power: f.power === undefined ? null : f.power,
+  };
+}
+
+/**
+ * POST /api/cosmic/moon/phalanx {} — état de la phalange et de la porte de saut (lecture seule) :
+ * flottes d'attaque qui te visent (percées selon le niveau de lune, I22), attaques sur les alliés dans ta portée, recharges.
+ */
+function phalanxRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const now = Date.now();
+  applyContent($app, game);
+  const loaded = loadPlayer($app, game, uid);
+  const player = loaded.player;
+  const level = game.phalanxLevel(player);
+  const features = game.phalanxFeatures(level);
+  const moon = game.playerMoon(player);
+  // Flottes d'attaque qui me visent (planète mère ou colonie) : perce-brouillard selon le niveau.
+  const attackerCache = {};
+  const attackerOf = (ownerUid) => {
+    if (!(ownerUid in attackerCache)) attackerCache[ownerUid] = findOrNull($app, "players", ownerUid) ? loadPlayer($app, game, ownerUid).player : null;
+    return attackerCache[ownerUid];
+  };
+  const incoming = $app
+    .findRecordsByFilter("fleets", 'mission = "attack" && status = "outbound" && (targetUid = {:u} || targetOwnerUid = {:u})', "arriveAtMs", 50, 0, { u: uid })
+    .map((r) => {
+      const shown = fleetFromRecord(r, true);
+      const pierce = features.revealDecoy || features.revealBoosts;
+      const hidden = pierce ? game.phalanxHidden(features.revealDecoy ? attackerOf(shown.ownerUid) : null, parseJsonField(r, "trueUnits", null), parseJsonField(r, "boosts", null), shown.formation) : null;
+      const revealed = game.revealIncoming(shown, hidden, level, uid);
+      return Object.assign(phalanxFleetLine(shown), {
+        units: revealed.units,
+        power: revealed.power,
+        assault: revealed.assault,
+        pierced: revealed.pierced,
+        piercedText: game.piercedText(shown.units, revealed),
+      });
+    });
+  // Attaques sur les alliés dans ma portée (composition affichée à la cible, leurre compris : Q34).
+  let allies = [];
+  const allianceId = loaded.rec.getString("allianceId");
+  if (level > 0 && allianceId) {
+    const mates = allianceMates($app, allianceId, uid);
+    const mateUids = mates.map((m) => m.uid);
+    if (mateUids.length > 0) {
+      const params = {};
+      const clauses = mateUids.map((m, i) => {
+        params[`m${i}`] = m;
+        return `targetUid = {:m${i}} || targetOwnerUid = {:m${i}}`;
+      });
+      const fleets = $app
+        .findRecordsByFilter("fleets", `mission = "attack" && status = "outbound" && (${clauses.join(" || ")})`, "arriveAtMs", 100, 0, params)
+        .map((r) => fleetFromRecord(r, true))
+        // Raids des seigneurs de guerre exclus, comme pour le radar (§5.2).
+        .filter((f) => !isNpcUid($app, f.ownerUid));
+      const pseudoOf = {};
+      mates.forEach((m) => (pseudoOf[m.uid] = m.pseudo));
+      allies = game.alliedThreats(Object.assign({}, player, { uid }), fleets, mateUids).map((f) => {
+        const victimUid = f.targetOwnerUid || f.targetUid;
+        return Object.assign(phalanxFleetLine(f), { allyUid: victimUid, allyPseudo: pseudoOf[victimUid] || f.targetPseudo });
+      });
+    }
+  }
+  const gateMin = game.gateMinLevel();
+  const moonLvl = moon ? game.moonLevel(moon) : 0;
+  return e.json(200, {
+    enabled: !!game.PHALANX_RULES.enabled,
+    level,
+    range: game.phalanxRange(player),
+    features,
+    scan: { readyAtMs: moon ? Number(moon.scanReadyAtMs) || 0 : 0, cooldownMs: features.scanCooldownMs, cost: game.scanCost(player) },
+    gate: {
+      enabled: game.JUMP_GATE_RULES.enabled === true,
+      unlocked: game.gateUnlocked(player),
+      minLevel: gateMin,
+      readyAtMs: game.gateReadyAtMs(player),
+      cooldownMs: moon ? game.gateCooldownMs(moonLvl, player) : null,
+      missions: game.jumpMissions(),
+    },
+    incoming,
+    allies,
+    now,
+  });
+}
+
+/**
+ * POST /api/cosmic/moon/scan { targetUid } — balayage de l'agresseur (I22) : un joueur dont une flotte d'attaque vient vers toi,
+ * une de tes colonies ou un allié dans ta portée. Énergie payée, recharge posée, rapport en notification (Journal).
+ */
+function phalanxScanRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const targetUid = String(body(e).targetUid || "");
+  if (!targetUid) throw new BadRequestError("Choisis un joueur à balayer.");
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    applyContent(txApp, game);
+    const loaded = loadPlayer(txApp, game, uid);
+    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+    const allyUids = allianceMates(txApp, loaded.rec.getString("allianceId"), uid).map((m) => m.uid);
+    const aggressorFleets = targetUid === uid ? [] : txApp.findRecordsByFilter("fleets", 'ownerUid = {:t} && mission = "attack" && status = "outbound"', "", 100, 0, { t: targetUid }).map((r) => fleetFromRecord(r, true));
+    try {
+      game.checkScan(flushed.player, targetUid, aggressorFleets, now, { allyUids });
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    const targetRec = findOrNull(txApp, "players", targetUid);
+    if (!targetRec) throw new NotFoundError("Ce joueur est introuvable.");
+    const target = plainPlayer(targetRec);
+    // Flottes en vol de la cible : composition affichée seulement (jamais `trueUnits` ni `boosts`).
+    const inFlight = txApp.findRecordsByFilter("fleets", 'ownerUid = {:t} && status != "done"', "arriveAtMs", 100, 0, { t: targetUid }).map((r) => fleetFromRecord(r, true));
+    const report = game.buildScanReport(target, inFlight, now);
+    const paid = game.markScan(flushed.player, now);
+    const text = game.scanReportText(report, paid.readyAtMs, now);
+    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+    notify(txApp, uid, flushed.notifications.concat([{ kind: "spy", title: text.title, message: text.message, createdAtMs: now, read: false, data: { phalanx: "scan", report } }]));
+    response = { report, cost: paid.cost, scanReadyAtMs: paid.readyAtMs, message: text.message };
+  });
+  return e.json(200, response);
+}
+
+/**
+ * POST /api/cosmic/fleet/jump { fleetId } — porte de saut (I23) : une patrouille, une garnison ou une base avancée rentre tout de suite
+ * à la planète mère par le chemin de retour habituel (`resolveFleetReturn`, I8), puis la recharge est posée (`markJump`).
+ */
+function fleetJumpRequest(e) {
+  const game = loadGame();
+  const uid = e.auth.id;
+  const fleetId = String(body(e).fleetId || "");
+  let response = null;
+  $app.runInTransaction((txApp) => {
+    const now = Date.now();
+    applyContent(txApp, game);
+    const rec = findOrNull(txApp, "fleets", fleetId);
+    if (!rec || rec.getString("ownerUid") !== uid) throw new NotFoundError("Flotte introuvable.");
+    const before = loadPlayer(txApp, game, uid);
+    const fleet = fleetFromRecord(rec);
+    try {
+      game.checkJump(before.player, fleet, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    const hostUid = fleet.mission === "garrison" && fleet.status === "stationed" ? fleet.targetUid : "";
+    const jumped = game.jumpedFleet(fleet, now);
+    rec.set("status", jumped.status);
+    rec.set("returnAtMs", jumped.returnAtMs);
+    // Retour habituel : unités rendues, leurre effacé, remise en service automatique, notifications (I8).
+    resolveFleetReturn(txApp, game, rec, now);
+    const owner = loadPlayer(txApp, game, uid);
+    let readyAtMs;
+    try {
+      readyAtMs = game.markJump(owner.player, now);
+    } catch (err) {
+      throw asHttpError(game, err);
+    }
+    savePlayer(txApp, game, owner, owner.player, owner.queues);
+    const text = game.jumpText(fleet.mission, readyAtMs, now);
+    notify(txApp, uid, [{ kind: "fleet", title: text.title, message: text.message, createdAtMs: now, read: false, data: { phalanx: "jump", fleetId: rec.id } }]);
+    // Q39 : l'hôte d'une garnison rapatriée est prévenu.
+    if (hostUid && hostUid !== uid) {
+      notify(txApp, hostUid, [{ kind: "alliance", title: "Garnison rappelée", message: `${owner.player.pseudo} a rappelé sa garnison par la porte de saut.`, createdAtMs: now, read: false }]);
+    }
+    response = { fleetId: rec.id, status: rec.getString("status"), gateReadyAtMs: readyAtMs, message: text.message };
+  });
   return e.json(200, response);
 }
 
@@ -9768,4 +10001,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { cadenceTick, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };
+module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError };

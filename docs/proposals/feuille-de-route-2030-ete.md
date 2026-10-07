@@ -12,7 +12,7 @@ une action ajoutée par l'utilisateur devient un lot ici (son identifiant `A…`
 | 1 | É30-2 | Z6 sur la pré-prod : poids du JavaScript au démarrage, temps d'affichage de l'accueil et des pages lourdes (375 px et bureau), comparés aux mesures de 6.9.10 ; une piste chiffrée si un seuil est dépassé | M | livré (6.14.39) |
 | 2 | É30-1 | Phalange et porte de saut lunaires (Q31 validée, option A) : proposition `docs/proposals/phalange-porte-de-saut.md` (Q33 à Q41), en 5 lots ci-dessous | L | en cours |
 | 2a | É30-1a | Moteur pur et tests : `phalanx.ts`, `jumpGate.ts`, pitié lunaire, stats `phalanxRange` et `jumpGateCooldown`, registre des règles, invariants I21 à I23 | S à M | livré (6.14.44) |
-| 2b | É30-1b | Serveur : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar d'alliance au lancement, niveau de lune public, schéma, intégration | M | à faire |
+| 2b | É30-1b | Serveur : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar d'alliance au lancement, niveau de lune public, schéma, intégration | M | livré (6.14.48) |
 | 2c | É30-1c | Interface : lune, alerte de raid, jauge de menace, bouton « Saut », alliés menacés, portée dans la Galaxie ; audit DESIGN et 375 px | M | à faire |
 | 2d | É30-1d | Admin et chaîne de contenu : réglages et santé, 2 reliques, succès, Codex, titre, défi d'alliance, 5 prompts sur `/img`, changelog, billet, annonce | M | à faire |
 | 2e | É30-1e | Essai sur la pré-prod, audit, fiches et GDD | S | à faire |

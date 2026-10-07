@@ -147,6 +147,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.44 | [Phalange, porte de saut et pitié lunaire (moteur)](6.14.44-phalange-moteur.md) | fonctionnalité (moteur) | `phalange-porte-de-saut.md`, Q33 à Q41 |
 | 6.14.45 | [Réponses Q32 à Q41 reportées](6.14.45-reponses-q32-q41.md) | docs | Q32 à Q41 |
 | 6.14.47 | [Illustrations, troisième lot (technos 8 à 10, 12 et 13)](6.14.47-illustrations-lot-3.md) | ajout | aucune (IMG, docs/illustrations.md) |
+| 6.14.48 | [Phalange et porte de saut (serveur)](6.14.48-phalange-serveur.md) | fonctionnalité (serveur) | `phalange-porte-de-saut.md`, Q33 à Q49 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

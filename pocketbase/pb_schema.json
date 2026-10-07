@@ -1416,6 +1416,12 @@
         "presentable": false
       },
       {
+        "name": "moonLevel",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
         "name": "ascensions",
         "type": "number",
         "required": false,

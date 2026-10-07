@@ -299,6 +299,16 @@ routerAdd(
   $apis.requireAuth("users"),
 );
 
+/**
+ * 6.14.48 (É30-1b, proposals/phalange-porte-de-saut.md) : phalange et porte de saut lunaires.
+ * POST /api/cosmic/moon/phalanx {}              — état : flottes qui te visent (percées selon le niveau), alliés menacés, recharges.
+ * POST /api/cosmic/moon/scan    { targetUid }   — balayage de l'agresseur (énergie, recharge, rapport en notification).
+ * POST /api/cosmic/fleet/jump   { fleetId }     — porte de saut : patrouille, garnison ou base avancée rapatriée tout de suite.
+ */
+routerAdd("POST", "/api/cosmic/moon/phalanx", (e) => require(`${__hooks}/cosmic_db.js`).phalanxRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/moon/scan", (e) => require(`${__hooks}/cosmic_db.js`).phalanxScanRequest(e), $apis.requireAuth("users"));
+routerAdd("POST", "/api/cosmic/fleet/jump", (e) => require(`${__hooks}/cosmic_db.js`).fleetJumpRequest(e), $apis.requireAuth("users"));
+
 // 5.29 (P3) : tâches regroupées par cadence (étapes et métriques par nom : cosmic_db.js, CADENCES).
 // Chaque minute : flottes (arrivées, retours, débris, recherches d'alliance), fin de maintenance, enchères.
 cronAdd("cosmic_minute", "* * * * *", () => {

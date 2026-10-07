@@ -6,6 +6,7 @@ import { distanceBetween, type Fleet } from "@/game/fleets";
 import { modifiersFrom } from "@/game/modifiers";
 import type { MoonState } from "@/game/moon";
 import {
+  alliedThreats,
   alliesCovered,
   buildScanReport,
   canScan,
@@ -14,6 +15,7 @@ import {
   markScan,
   PHALANX_RULES,
   phalanxFeatures,
+  phalanxHidden,
   phalanxRange,
   piercedText,
   radarRecipients,
@@ -222,5 +224,39 @@ describe("phalange : balayage de l'agresseur (I22)", () => {
     expect(report.docked).toBeGreaterThanOrEqual(118);
     const text = scanReportText({ ...report, docked: 118 }, NOW + 25 * MIN, NOW).message;
     expect(text).toBe("Balayage de KRAX : 2 flottes en vol, 118 vaisseaux à quai. Prochain balayage dans 25 min.");
+  });
+});
+
+describe("phalange : aides du serveur (6.14.48, É30-1b)", () => {
+  it("alliedThreats : attaques sur un allié dans la portée, jamais sur soi, ni d'un allié, ni hors portée", () => {
+    const near = uidAt("mira", (d) => d <= 30, "n");
+    const far = uidAt("mira", (d) => d > 80, "x");
+    const me = player("mira", { moon: moon(2) });
+    const fleets = [
+      attackFleet("krax", near, { id: "a" }),
+      attackFleet("krax", far, { id: "b" }),
+      attackFleet("krax", "mira", { id: "c" }),
+      attackFleet(near, far, { id: "d" }),
+      attackFleet("krax", near, { id: "e", status: "returning" }),
+      attackFleet("krax", near, { id: "f", mission: "spy" }),
+    ];
+    expect(alliedThreats(me, fleets, [near, far]).map((f) => f.id)).toEqual(["a"]);
+    expect(alliedThreats(player("mira"), fleets, [near])).toEqual([]);
+    expect(alliedThreats(me, fleets, [])).toEqual([]);
+  });
+
+  it("phalanxHidden : vraie puissance calculée sur trueUnits, bonus d'attaque de l'attaquant", () => {
+    const krax = player("krax", { units: { ...defaultPlayerState("krax", "KRAX").units, fregate: { level: 1, count: 50 } } });
+    const hidden = phalanxHidden(krax, { fregate: 40 }, { assault: 20 }, "balanced");
+    expect(hidden.trueUnits).toEqual({ fregate: 40 });
+    expect(hidden.truePower).toBeGreaterThan(0);
+    expect(hidden.attackMod).toBe(0);
+    expect(phalanxHidden(null, { fregate: 40 }, null).truePower).toBeNull();
+    expect(phalanxHidden(krax, {}, null)).toMatchObject({ trueUnits: null, truePower: null });
+    const shown = attackFleet("krax", "mira", { units: { fregate: 10 } });
+    const seen = revealIncoming(shown, hidden, 4, "mira");
+    expect(seen.units).toEqual({ fregate: 40 });
+    expect(seen.power).toBe(Math.round(hidden.truePower! * 1.2));
+    expect(seen.assault).toBe(20);
   });
 });

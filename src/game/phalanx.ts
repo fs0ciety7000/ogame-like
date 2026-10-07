@@ -14,7 +14,7 @@
 ===================================================== */
 import { GameActionError } from "@/game/errors";
 import { hourlyProduction } from "@/game/economy";
-import { distanceBetween, FLEET_MISSION_LABELS, targetsPlayer, type Fleet, type FleetMission } from "@/game/fleets";
+import { attackPowerShown, distanceBetween, FLEET_MISSION_LABELS, targetsPlayer, type Fleet, type FleetMission } from "@/game/fleets";
 import { formatInt } from "@/game/format";
 import { playerModifiers } from "@/game/modifiers";
 import { moonLevel, playerMoon } from "@/game/moon";
@@ -338,4 +338,40 @@ export function scanReportText(report: ScanReport, nextScanAtMs: number, now: nu
     title: `Balayage de ${report.targetPseudo}`,
     message: `Balayage de ${report.targetPseudo} : ${n} flotte${n > 1 ? "s" : ""} en vol, ${formatInt(report.docked)} vaisseaux à quai. Prochain balayage dans ${formatWait(nextScanAtMs - now)}.`,
   };
+}
+
+/* ---------- 6.14.48 (É30-1b) : aides du serveur ---------- */
+
+/** Champs cachés d'une flotte d'attaque, complétés par la vraie puissance et le bonus d'attaque de l'attaquant (lus par le serveur
+ *  seulement, pour `revealIncoming`). `attacker` absent (joueur supprimé) : la puissance sera recalculée par le client. */
+export function phalanxHidden(
+  attacker: PlayerState | null | undefined,
+  trueUnits: Record<string, number> | null | undefined,
+  boosts: PhalanxHidden["boosts"],
+  formation?: string,
+): PhalanxHidden {
+  const real = hasUnits(trueUnits) ? { ...trueUnits } : null;
+  return {
+    trueUnits: real,
+    boosts: boosts ?? null,
+    truePower: attacker && real ? attackPowerShown(attacker, real, formation) : null,
+    attackMod: attacker ? Math.max(0, playerModifiers(attacker).attack) : 0,
+  };
+}
+
+type ThreatFleet = Pick<Fleet, "ownerUid" | "mission" | "status" | "targetUid"> & { targetOwnerUid?: string | null };
+
+/** Attaques en approche vers un allié (`allyUids`) dont la planète visée est dans la portée de `player` (radar consultable, I22).
+ *  Ni les attaques qui visent `player` lui-même, ni celles d'un allié. */
+export function alliedThreats<F extends ThreatFleet>(player: MoonPlayer & { uid: string }, fleets: readonly F[], allyUids: readonly string[]): F[] {
+  const allies = new Set(allyUids.filter((u) => u && u !== player.uid));
+  if (allies.size === 0) return [];
+  const range = phalanxRange(player);
+  if (!(range > 0)) return [];
+  return fleets.filter((f) => {
+    if (f.mission !== "attack" || f.status !== "outbound" || allies.has(f.ownerUid) || f.ownerUid === player.uid) return false;
+    if (targetsPlayer(f, player.uid)) return false;
+    const victim = f.targetOwnerUid || f.targetUid;
+    return allies.has(victim) && distanceBetween(player.uid, f.targetUid) <= range;
+  });
 }

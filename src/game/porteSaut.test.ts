@@ -4,7 +4,7 @@ import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { performFleetReturn, type Fleet } from "@/game/fleets";
 import { modifiersFrom } from "@/game/modifiers";
 import type { MoonState } from "@/game/moon";
-import { allyJumpAllowed, canJump, checkJump, gateCooldownMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markJump } from "@/game/jumpGate";
+import { allyJumpAllowed, canJump, checkJump, gateCooldownMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markGateSave, markJump } from "@/game/jumpGate";
 import { threatEstimate } from "@/game/threat";
 import type { PlayerState } from "@/types/game";
 
@@ -107,5 +107,21 @@ describe("porte de saut : quelles flottes (I23)", () => {
     applyGameContent({ rules: { jumpGate: { allyJump: true } } } as never);
     expect(allyJumpAllowed({ moon: moon(5) })).toBe(true);
     expect(allyJumpAllowed({ moon: moon(4) })).toBe(false);
+  });
+});
+
+describe("porte de saut : sauvetage (6.14.48, compteur gateSaves)", () => {
+  it("une attaque repoussée moins de 10 min après le saut compte une fois", () => {
+    const p = player("mira", { moon: moon(3) });
+    markJump(p, NOW);
+    expect(p.moon?.lastJumpAtMs).toBe(NOW);
+    expect(markGateSave(p, NOW + 11 * 60_000)).toBe(false);
+    expect(markGateSave(p, NOW + 9 * 60_000)).toBe(true);
+    expect(p.stats?.gateSaves).toBe(1);
+    expect(markGateSave(p, NOW + 9 * 60_000)).toBe(false);
+    expect(markGateSave(player("x"), NOW)).toBe(false);
+    applyGameContent({ rules: { jumpGate: { saveWindowMinutes: 0 } } } as never);
+    const q = player("mira", { moon: moon(3, { lastJumpAtMs: NOW - 1 }) });
+    expect(markGateSave(q, NOW)).toBe(false);
   });
 });

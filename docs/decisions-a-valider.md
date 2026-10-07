@@ -18,6 +18,12 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q50 | Sauvetage par la porte (`gateSaves`) : compté où ? : Par le serveur à l'arrivée de l'attaque (pas dans le moteur de combat, pour éviter un import circulaire) | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
+| Q51 | Fenêtre d'un sauvetage par la porte : 10 min après le saut (réglage `jumpGate.saveWindowMinutes`), un seul sauvetage par saut | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
+| Q52 | Radar d'alliance : respecte-t-il le réglage « événements d'alliance » coupé par le joueur ? : Non : c'est une alerte de défense, comme « Flotte hostile en approche » | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
+| Q53 | Seigneurs PNJ et radar d'alliance : Ils ne déclenchent pas le radar et n'apparaissent pas dans les alliés menacés | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
+| Q54 | Balayer un seigneur qui t'attaque : Permis (c'est un agresseur) | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
+| Q55 | Vraie puissance d'une flotte leurrée : Recalculée à chaque lecture sur la fiche actuelle de l'attaquant, rien n'est stocké dans la flotte | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
 | Q42 | Pitié lunaire : les combats lancés par un PNJ (seigneur) remplissent-ils la réserve ? : Non, seulement les combats lancés par un joueur | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
 | Q43 | Pitié : la réserve se remplit avant ou après le tirage de la lune ? : Avant (arrondi au millionième) : la garantie tombe bien au 20e combat | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |
 | Q44 | Pitié « farmable » : un allié peut attaquer 20 fois avec un seul vaisseau pour garantir une lune. Exiger un seuil ? : Pas de seuil (la proposition vise aussi les petits pillages) | Phalange, porte de saut ou pitié lunaire (moteur livré, serveur à venir) | Valider (option prudente) |

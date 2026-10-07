@@ -136,7 +136,7 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 
 ### 7.4 Lunes : phalange, porte de saut, pitié (6.14.44, `moon.ts`, `phalanx.ts`, `jumpGate.ts`)
 
-Moteur livré en 6.14.44 (lot É30-1a) ; routes serveur et interface aux lots É30-1b et É30-1c (`proposals/phalange-porte-de-saut.md`).
+Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar au lancement, `profiles.moonLevel`) ; interface au lot É30-1c (`proposals/phalange-porte-de-saut.md`).
 
 | Niveau de lune | Phalange (`PHALANX_RULES`) | Porte de saut (`JUMP_GATE_RULES`) |
 |:--|:--|:--|
@@ -150,6 +150,10 @@ Moteur livré en 6.14.44 (lot É30-1a) ; routes serveur et interface aux lots É
 - Balayage : agresseur seulement (I22) ; coût 30 min de production d'énergie, 1 000 au moins ; recharge 30 − 5 × (niveau − 1) min, 5 au moins.
 - Porte : patrouille, garnison, base avancée ; recharge 24 − 2 × (niveau − 3) h × (1 − `jumpGateCooldown`, plafond empire 30 %), 6 h au moins ; gratuite.
 - Pitié : +5 % par combat subi sur la planète mère sans lune (attaquant joueur), lune garantie au 20e ; champ `players.moonPity`.
+- Serveur (6.14.48) : le radar part au lancement d'une attaque de joueur (`launchFleetRequest`), notification « Phalange : allié menacé » ;
+  le saut rapatrie par `resolveFleetReturn` (I8) et prévient l'hôte d'une garnison (Q39) ; « sauvetage » (`gateSaves`) : attaque de joueur
+  repoussée sur la planète mère moins de `jumpGate.saveWindowMinutes` (10) après un saut, compté une fois par saut (`moon.lastJumpAtMs`).
+- Niveau de lune public : `profiles.moonLevel` (0 sans lune, Q41).
 - Désactiver : `phalanx.enabled`, `jumpGate.enabled` à faux, `moon.pityPerDefense` à 0 (Admin → Règles → Tous les réglages).
 
 ## 8. Journal des audits
@@ -249,5 +253,6 @@ Moteur livré en 6.14.44 (lot É30-1a) ; routes serveur et interface aux lots É
 | 2026-10-07 | 6.14.29 | Revue AU25 : hiver 2029 clos (dossier de mise en production, `/img`, décisions à valider) ; printemps 2030 ouvert | `docs/audit/2026-10-07-au25-hiver-2029.md` |
 | 2026-10-07 | 6.14.35 | Réponses de l'utilisateur sur `/decisions` : 22 décisions validées, Q11 close, Q12 en attente, prochain système à choisir (Q31) | `docs/proposals/prochain-systeme.md` |
 | 2026-10-07 | 6.14.44 | É30-1a : phalange, porte de saut et pitié lunaire dans le moteur (règles, stats `phalanxRange` et `jumpGateCooldown`, champ `moonPity`) ; invariant I21 modifié, I22 et I23 | `docs/changes/6.14.44-phalange-moteur.md` |
+| 2026-10-07 | 6.14.48 | É30-1b : routes de la phalange et de la porte de saut, radar d'alliance au lancement, niveau de lune public, compteur `gateSaves` (réglage `jumpGate.saveWindowMinutes`) ; I22 vérifié en intégration | `docs/changes/6.14.48-phalange-serveur.md` |
 | 2026-10-07 | 6.14.38 | Revue AU26 : printemps 2030 clos (`/decisions`, billets, annonce, intégration fiable) ; été 2030 ouvert (Z6 sur la pré-prod, système Q31) | `docs/audit/2026-10-07-au26-printemps-2030.md` |
 | 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |

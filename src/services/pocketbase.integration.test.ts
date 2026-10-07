@@ -1488,6 +1488,160 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  /** 6.14.48 (É30-1b) : lune de test (niveau donné, recharges prêtes). */
+  const testMoon = (level: number) => ({ name: "Nyx", level, bornAtMs: Date.now() - 60_000, fromDebris: 1 });
+
+  it("6.14.48 phalange : radar d'alliance, perce-brouillard et balayage de l'agresseur", async () => {
+    await ensureAB();
+    const fleets: string[] = [];
+    const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+    const rulesBefore = rulesRec ? rulesRec.data : null;
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const cEmail = `ph${suffix}@test.dev`;
+    let cId = "";
+    // Alliance de test (identifiant seul : le radar lit `players.allianceId`).
+    const ally = `phal${suffix}xxxxxxxxxx`.slice(0, 15);
+    try {
+      // Portée large (la position sur la carte dépend de l'identifiant) ; trajet de 30 min : la flotte reste en vol pendant le test.
+      const data = Object.assign({}, rulesBefore || {}, { phalanx: { rangePerLevel: 200 }, fleets: { baseMinutes: 30, minutesPerDistance: 0 } });
+      if (rulesRec) await admin.collection("game_config").update(rulesRec.id, { data });
+      else await admin.collection("game_config").create({ key: "rules", data });
+      await admin.collection("players").update(aId, { moon: testMoon(4), allianceId: ally, colonies: [], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, xp: bBefore.xp, resources: RICH, resourcesUpdatedAtMs: Date.now(), units: { fregate: { level: 1, count: 30 } } });
+      await admin.collection("players").update(bId, { allianceId: "", units: { fregate: { level: 1, count: 40 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0, vacation: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      // C : allié de A, lune de niveau 1.
+      const cUser = await admin.collection("users").create({ username: `phal_${suffix}`, name: `Phal_${suffix}`, email: cEmail, password: "motdepasse3", passwordConfirm: "motdepasse3" });
+      cId = cUser.id;
+      const cClient = new PocketBase(PB_TEST_URL);
+      await cClient.collection("users").authWithPassword(cEmail, "motdepasse3");
+      await cClient.send("/api/cosmic/init", { method: "POST" });
+      await admin.collection("players").update(cId, { allianceId: ally, moon: testMoon(1), createdAtMs: MONTH_AGO(), resources: RICH, resourcesUpdatedAtMs: Date.now() });
+      const aClient = new PocketBase(PB_TEST_URL);
+      await aClient.collection("users").authWithPassword(A.email, A.pw);
+      const post = (client: PocketBase, path: string, body: Record<string, unknown> = {}) => client.send(`/api/cosmic/${path}`, { method: "POST", body });
+
+      // Avant l'attaque, B n'est pas un agresseur : balayage refusé.
+      await expect(post(aClient, "moon/scan", { targetUid: bId })).rejects.toThrow(/ne balaie qu'un joueur/);
+      // Q41 : le niveau de lune est public.
+      await post(aClient, "action", { type: "sync" });
+      expect((await admin.collection("profiles").getOne(aId)).moonLevel).toBe(4);
+
+      // B attaque A : C, allié dont la phalange couvre A, est prévenu ; ni A ni B.
+      await loginPlayer(B.email, B.pw);
+      const sent = await ps.sendFleet(aId, { fregate: 40 }, "attack");
+      fleets.push(sent.id);
+      const radar = (uid: string) => admin.collection("notifications").getFullList({ filter: `player_id="${uid}" && title="Phalange : allié menacé"`, sort: "-createdAtMs" });
+      const cNotes = await radar(cId);
+      expect(cNotes).toHaveLength(1);
+      expect(cNotes[0].message).toContain(`${B.pseudo} vise ${A.pseudo} (planète mère)`);
+      expect(cNotes[0].data.fleetId).toBe(sent.id);
+      expect(await radar(aId)).toHaveLength(0);
+      expect(await radar(bId)).toHaveLength(0);
+
+      // Leurre posé par le superuser : 10 frégates affichées, 40 réelles, stimulant de 20 %.
+      await admin.collection("fleets").update(sent.id, { units: { fregate: 10 }, trueUnits: { fregate: 40 }, boosts: { assault: 20 } });
+      // A (lune 4) : vraie composition et stimulant percés.
+      const aView = await post(aClient, "moon/phalanx");
+      expect(aView.level).toBe(4);
+      const inc = aView.incoming.find((f: { id: string }) => f.id === sent.id);
+      expect(inc.units).toEqual({ fregate: 40 });
+      expect(inc.pierced).toEqual({ decoy: true, boosts: true });
+      expect(inc.assault).toBe(20);
+      expect(inc.piercedText).toContain("40 vaisseaux, pas 10");
+      // C (lune 1) : l'attaque sur son allié, composition affichée seulement (I22).
+      const cView = await post(cClient, "moon/phalanx");
+      expect(cView.incoming).toEqual([]);
+      const threat = cView.allies.find((f: { id: string }) => f.id === sent.id);
+      expect(threat.units).toEqual({ fregate: 10 });
+      expect(threat.allyUid).toBe(aId);
+      expect(JSON.stringify(cView)).not.toMatch(/trueUnits|"assault":20/);
+      // B, sans lune : rien de percé, aucun allié couvert.
+      const bView = await ps.callGame<{ level: number; incoming: unknown[]; allies: unknown[] }>("moon/phalanx");
+      expect(bView).toMatchObject({ level: 0, incoming: [], allies: [] });
+
+      // Balayage de l'agresseur : énergie payée, recharge posée (niveau 4 : 15 min), rapport sans champ caché.
+      const energyBefore = (await snap(aId)).resources.energy;
+      const scan = await post(aClient, "moon/scan", { targetUid: bId });
+      expect(scan.cost).toBeGreaterThanOrEqual(1000);
+      const line = scan.report.fleets.find((f: { id: string }) => f.id === sent.id);
+      expect(line.units).toEqual({ fregate: 10 });
+      expect(scan.scanReadyAtMs - Date.now()).toBeGreaterThan(14 * 60_000);
+      const aAfter = await snap(aId);
+      expect(aAfter.moon.scanReadyAtMs).toBe(scan.scanReadyAtMs);
+      expect(aAfter.resources.energy).toBeLessThanOrEqual(energyBefore - scan.cost + 100);
+      expect(aAfter.stats.phalanxScans).toBe((aBefore.stats?.phalanxScans ?? 0) + 1);
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title="Balayage de ${B.pseudo}"` })).toHaveLength(1);
+      // Recharge : deuxième balayage refusé.
+      await expect(post(aClient, "moon/scan", { targetUid: bId })).rejects.toThrow(/se recharge/);
+      // C balaie aussi B : l'attaque vise un allié dans sa portée.
+      expect((await post(cClient, "moon/scan", { targetUid: bId })).report.targetUid).toBe(bId);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      if (cId) {
+        await admin.collection("players").delete(cId).catch(() => undefined);
+        await admin.collection("users").delete(cId).catch(() => undefined);
+      }
+      await admin.collection("players").update(aId, { moon: null, allianceId: aBefore?.allianceId ?? "", resources: aBefore?.resources, units: aBefore?.units, xp: aBefore?.xp, stats: aBefore?.stats ?? null });
+      await admin.collection("players").update(bId, { allianceId: bBefore?.allianceId ?? "", units: bBefore?.units });
+      const cur = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+      if (cur) {
+        if (rulesBefore) await admin.collection("game_config").update(cur.id, { data: rulesBefore });
+        else await admin.collection("game_config").delete(cur.id);
+      }
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
+  it("6.14.48 porte de saut : patrouille rapatriée tout de suite, recharge, mission refusée", async () => {
+    await ensureAB();
+    const fleets: string[] = [];
+    const aBefore = await snap(aId);
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    const jump = (fleetId: string) => aClient.send("/api/cosmic/fleet/jump", { method: "POST", body: { fleetId } });
+    const patrol = async () => {
+      const f = (await aClient.send("/api/cosmic/fleet/send", { method: "POST", body: { mission: "patrol", fleet: { chasseur: 10 }, minutes: 30 } })) as { id: string };
+      fleets.push(f.id);
+      return f;
+    };
+    try {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${aId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(aId, { moon: testMoon(2), resources: RICH, resourcesUpdatedAtMs: Date.now(), units: { chasseur: { level: 1, count: 20 } }, vacation: null });
+      const p1 = await patrol();
+      expect((await snap(aId)).units.chasseur.count).toBe(10);
+      // Lune de niveau 2 : porte fermée.
+      await expect(jump(p1.id)).rejects.toThrow(/niveau 3/);
+      // Niveau 3 : la patrouille est à quai tout de suite (chemin de retour habituel).
+      await admin.collection("players").update(aId, { moon: testMoon(3) });
+      const out = await jump(p1.id);
+      expect(out.status).toBe("done");
+      expect((await admin.collection("fleets").getOne(p1.id)).status).toBe("done");
+      const a = await snap(aId);
+      expect(a.units.chasseur.count).toBe(20);
+      expect(a.moon.gateReadyAtMs).toBe(out.gateReadyAtMs);
+      expect(out.gateReadyAtMs - Date.now()).toBeGreaterThan(23 * 3600_000);
+      expect(a.stats.gateJumps).toBe((aBefore.stats?.gateJumps ?? 0) + 1);
+      expect(await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title="Saut réussi"` })).toHaveLength(1);
+      // Deuxième patrouille : la porte se recharge.
+      const p2 = await patrol();
+      await expect(jump(p2.id)).rejects.toThrow(/se recharge/);
+      expect((await admin.collection("fleets").getOne(p2.id)).status).toBe("outbound");
+      // Recharge effacée : une mission non permise reste refusée ; la flotte d'un autre est introuvable.
+      await admin.collection("players").update(aId, { moon: testMoon(3) });
+      const other = await admin.collection("fleets").create({ ownerUid: aId, ownerPseudo: A.pseudo, targetUid: `nulle${suffix}`, targetPseudo: "Champ", mission: "recycle", units: { chasseur: 1 }, departAtMs: Date.now(), arriveAtMs: Date.now() + 3600_000, status: "outbound" });
+      fleets.push(other.id);
+      await expect(jump(other.id)).rejects.toThrow(/ne ramène que/);
+      const bFleet = await admin.collection("fleets").create({ ownerUid: bId, ownerPseudo: B.pseudo, targetUid: bId, targetPseudo: B.pseudo, mission: "patrol", units: { chasseur: 1 }, departAtMs: Date.now(), arriveAtMs: Date.now() + 3600_000, status: "outbound" });
+      fleets.push(bFleet.id);
+      await expect(jump(bFleet.id)).rejects.toMatchObject({ status: 404 });
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { moon: null, resources: aBefore?.resources, units: aBefore?.units, stats: aBefore?.stats ?? null });
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
   it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
