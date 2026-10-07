@@ -122,6 +122,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.19 | [Santé de l'équilibre complétée](6.14.19-sante-completee.md) | ajout (admin) | aucune (A29-2) |
 | 6.14.20 | [Revue AU24](6.14.20-revue-au24.md) | docs | aucune (AU24) |
 | 6.14.21 | [Tests d'intégration sans tri](6.14.21-tests-sans-tri.md) | correctif (tests) | aucune (H29-2) |
+| 6.14.22 | [Atelier d'illustrations](6.14.22-atelier-illustrations.md) | ajout (outillage), docs | aucune (demande de l'utilisateur), Q28 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

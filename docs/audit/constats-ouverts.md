@@ -48,6 +48,8 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 ## Images provisoires (règle n° 4 de CLAUDE.md)
 
+Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py --missing` (`docs/illustrations.md`).
+
 | Contenu | Lot | Image en place | Prompt |
 |:--|:--|:--|:--|
 | Cale sèche | 5.28.0 | copie de `atelier_reparation.webp` (même fichier) | `docs/prompts-5.28.md` |

@@ -1,0 +1,326 @@
+<title>Atelier d'illustrations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Page de dépôt mobile des rendus Midjourney (Cosmic Empires, thème Constellation : graphite, os, bandes rouge-orange-jaune-bleu).
+   Une colonne : en-tête à bandes, compteurs, filtres, puis une fiche par image. Un seul aspect sombre, assumé (le jeu est sombre). */
+:root {
+  --bg: #0c0d0f;
+  --panel: #141518;
+  --panel-2: #1a1b1f;
+  --line: #2a2b30;
+  --bone: #ece6d6;
+  --muted: #9a958a;
+  --ember: #e0582c;
+  --gold: #f2b33d;
+  --mint: #7fc4a6;
+  --sky: #5b8fd6;
+  --red: #d9452f;
+  --font-title: "Saira Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  background:
+    radial-gradient(ellipse 110% 50% at 50% -10%, color-mix(in srgb, var(--bone) 7%, transparent), transparent 65%),
+    var(--bg);
+  color: var(--bone);
+  font: 15px/1.5 var(--font-body);
+  padding-inline: 16px;
+  padding-block: 0 48px;
+  min-height: 100%;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.bands { display: grid; grid-template-columns: repeat(4, 1fr); height: 5px; margin-inline: -16px; }
+.bands span:nth-child(1) { background: var(--red); }
+.bands span:nth-child(2) { background: var(--ember); }
+.bands span:nth-child(3) { background: var(--gold); }
+.bands span:nth-child(4) { background: var(--sky); }
+header { display: flex; flex-direction: column; gap: 6px; padding-top: 18px; }
+.eyebrow { font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 34px/1 var(--font-title); letter-spacing: 0.1em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0; max-width: 62ch; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.count { background: var(--panel); border: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.count b { font: 600 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.count span { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.count.todo b { color: var(--bone); }
+.count.sent b { color: var(--gold); }
+.count.done b { color: var(--mint); }
+ol.steps { margin: 0; padding: 12px 14px 12px 34px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+ol.steps li::marker { font-family: var(--font-mono); color: var(--ember); }
+.notice { border: 1px solid var(--gold); color: var(--gold); padding: 10px 12px; font-size: 14px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  background: transparent; color: var(--muted); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { color: var(--bg); background: var(--bone); border-color: var(--bone); }
+.chip:focus-visible, .btn:focus-visible, .upload:focus-within { outline: 2px solid var(--ember); outline-offset: 2px; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line); padding: 12px; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; }
+.card.sent { border-left-color: var(--gold); }
+.card.done { border-left-color: var(--mint); }
+.thumb { width: 72px; height: 72px; background: var(--panel-2) repeating-conic-gradient(#1f2024 0 25%, #17181b 0 50%) 0 0 / 12px 12px; border: 1px solid var(--line); display: grid; place-items: center; overflow: hidden; }
+.thumb img { width: 100%; height: 100%; object-fit: contain; }
+.thumb small { font: 500 10px/1.2 var(--font-mono); color: var(--muted); text-align: center; padding: 4px; }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.name { font: 700 19px/1.1 var(--font-title); letter-spacing: 0.06em; text-transform: uppercase; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; color: var(--muted); border: 1px solid var(--line); padding: 4px 6px; }
+.tag.cut { color: var(--sky); border-color: color-mix(in srgb, var(--sky) 50%, transparent); }
+.state { font: 600 11px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 6px; border: 1px solid currentColor; }
+.state.todo { color: var(--muted); }
+.state.sent { color: var(--gold); }
+.state.done { color: var(--mint); }
+details { border-top: 1px dashed var(--line); padding-top: 6px; }
+summary { cursor: pointer; font: 500 12px/1.4 var(--font-mono); color: var(--muted); letter-spacing: 0.06em; }
+pre { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; font: 12px/1.5 var(--font-mono); color: var(--bone); background: var(--panel-2); padding: 8px; max-height: 180px; overflow: auto; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn, .upload span {
+  font: 600 13px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 11px 12px; border: 1px solid var(--bone); background: transparent; color: var(--bone); cursor: pointer; display: inline-block;
+}
+.upload { position: relative; }
+.upload input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.upload span { background: var(--bone); color: var(--bg); }
+.upload.busy span { background: var(--gold); border-color: var(--gold); }
+.msg { font-size: 13px; color: var(--muted); }
+.msg.err { color: var(--red); }
+.target { font: 11px/1.3 var(--font-mono); color: var(--muted); word-break: break-all; }
+footer { color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color 0.2s; } }
+@media (max-width: 420px) { h1 { font-size: 28px; } .card { grid-template-columns: 56px minmax(0, 1fr); } .thumb { width: 56px; height: 56px; } }
+</style>
+
+<div class="bands" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Cosmic Empires · illustrations à produire</div>
+    <h1>Atelier d'illustrations</h1>
+    <p class="lede">Une ligne par image qui attend son rendu définitif. Copie le prompt, génère dans Midjourney, puis envoie l'image sur la même ligne. Claude détoure, convertit en WebP et range le fichier dans le jeu.</p>
+  </header>
+
+  <div class="counts" aria-live="polite">
+    <div class="count todo"><b id="n-todo">0</b><span>À faire</span></div>
+    <div class="count sent"><b id="n-sent">0</b><span>Envoyées</span></div>
+    <div class="count done"><b id="n-done">0</b><span>Intégrées</span></div>
+  </div>
+
+  <ol class="steps">
+    <li>« Copier le prompt », colle-le dans Midjourney.</li>
+    <li>Choisis la variante, fais « Upscale », enregistre l'image dans ta galerie.</li>
+    <li>Ici, « Envoyer l'image » sur la ligne de cette image (PNG, JPEG ou WebP).</li>
+    <li>Dis « images envoyées » dans la session Claude : la ligne passe à « Intégrée » quand le fichier est dans le jeu.</li>
+  </ol>
+
+  <div class="notice" id="notice" hidden>L'envoi d'images demande la page ouverte dans claude.ai, connecté avec ton compte. Les prompts restent copiables.</div>
+
+  <div class="filters" role="group" aria-label="Filtrer par statut" id="f-state"></div>
+  <div class="filters" role="group" aria-label="Filtrer par groupe" id="f-group"></div>
+
+  <div class="list" id="list"></div>
+  <footer>Formats : technologies, lune et bâtiments en 512 × 512 opaques ; objets du Comptoir en 256 × 256 détourés (fond transparent) ; annonce en 1 920 px de large. Pas de texte dans les images.</footer>
+</div>
+
+<script id="slots" type="application/json">__SLOTS__</script>
+<script>
+(() => {
+  const SLOTS = JSON.parse(document.getElementById("slots").textContent);
+  const STATES = [["all", "Toutes"], ["todo", "À faire"], ["sent", "Envoyées"], ["done", "Intégrées"]];
+  const GROUPS = ["Toutes", ...new Set(SLOTS.map((s) => s.group))];
+  let uploads = {};
+  let fState = "todo";
+  let fGroup = "Toutes";
+  let db = null;
+  let assets = null;
+  const msgs = {};
+  const busy = new Set();
+
+  const stateOf = (s) => (s.done || uploads[s.id]?.status === "intégrée" ? "done" : uploads[s.id] ? "sent" : "todo");
+  const LABEL = { todo: "À faire", sent: "Envoyée", done: "Intégrée" };
+  const fmt = (s) => (s.height ? `${s.width} × ${s.height}` : `${s.width} px de large`);
+
+  function chips(el, items, current, onPick) {
+    el.textContent = "";
+    for (const [value, label] of items) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = label;
+      b.setAttribute("aria-pressed", String(value === current));
+      b.addEventListener("click", () => onPick(value));
+      el.append(b);
+    }
+  }
+
+  function render() {
+    const counts = { todo: 0, sent: 0, done: 0 };
+    for (const s of SLOTS) counts[stateOf(s)]++;
+    for (const k of Object.keys(counts)) document.getElementById("n-" + k).textContent = counts[k];
+    chips(document.getElementById("f-state"), STATES.map(([v, l]) => [v, v === "all" ? l : `${l} ${counts[v]}`]), fState, (v) => { fState = v; render(); });
+    chips(document.getElementById("f-group"), GROUPS.map((g) => [g, g]), fGroup, (v) => { fGroup = v; render(); });
+    const list = document.getElementById("list");
+    list.textContent = "";
+    const shown = SLOTS.filter((s) => (fState === "all" || stateOf(s) === fState) && (fGroup === "Toutes" || s.group === fGroup));
+    if (!shown.length) {
+      const p = document.createElement("p");
+      p.className = "msg";
+      p.textContent = fState === "todo" ? "Rien à faire dans ce filtre : toutes ces images sont envoyées ou intégrées." : "Aucune image dans ce filtre.";
+      list.append(p);
+    }
+    for (const s of shown) list.append(card(s));
+  }
+
+  function card(s) {
+    const st = stateOf(s);
+    const up = uploads[s.id];
+    const el = document.createElement("article");
+    el.className = "card " + st;
+
+    const thumb = document.createElement("div");
+    thumb.className = "thumb";
+    if (up?.assetId) {
+      const img = document.createElement("img");
+      img.src = "/_blob/" + up.assetId;
+      img.alt = "Rendu envoyé pour " + s.name;
+      img.addEventListener("error", () => { thumb.textContent = ""; const sm = document.createElement("small"); sm.textContent = "image supprimée"; thumb.append(sm); });
+      thumb.append(img);
+    } else {
+      const sm = document.createElement("small");
+      sm.textContent = s.cutout ? "fond transparent" : fmt(s);
+      thumb.append(sm);
+    }
+
+    const body = document.createElement("div");
+    body.className = "body";
+    const top = document.createElement("div");
+    top.className = "top";
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = s.name;
+    const state = document.createElement("span");
+    state.className = "state " + st;
+    state.textContent = LABEL[st];
+    top.append(name, state);
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    for (const [txt, cls] of [[s.group, ""], [fmt(s), ""], [s.cutout ? "détourée" : "opaque", s.cutout ? "cut" : ""]]) {
+      const t = document.createElement("span");
+      t.className = "tag " + cls;
+      t.textContent = txt;
+      meta.append(t);
+    }
+
+    const det = document.createElement("details");
+    if (st === "todo") det.open = true;
+    const sum = document.createElement("summary");
+    sum.textContent = "Prompt Midjourney";
+    const pre = document.createElement("pre");
+    pre.textContent = s.prompt;
+    det.append(sum, pre);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "btn";
+    copy.textContent = "Copier le prompt";
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(s.prompt);
+        msgs[s.id] = { text: "Prompt copié." };
+      } catch {
+        det.open = true;
+        const r = document.createRange();
+        r.selectNodeContents(pre);
+        const sel = getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        msgs[s.id] = { text: "Copie automatique refusée : le prompt est sélectionné, copie-le à la main." };
+      }
+      render();
+    });
+    actions.append(copy);
+
+    if (assets && db && st !== "done") {
+      const lab = document.createElement("label");
+      lab.className = "upload" + (busy.has(s.id) ? " busy" : "");
+      const span = document.createElement("span");
+      span.textContent = busy.has(s.id) ? "Envoi…" : up ? "Remplacer l'image" : "Envoyer l'image";
+      const input = document.createElement("input");
+      input.type = "file";
+      input.id = "file-" + s.id;
+      input.accept = "image/png,image/jpeg,image/webp";
+      input.disabled = busy.has(s.id);
+      input.addEventListener("change", () => input.files[0] && send(s, input.files[0]));
+      lab.append(span, input);
+      actions.append(lab);
+    }
+
+    const target = document.createElement("div");
+    target.className = "target";
+    target.textContent = s.target;
+
+    body.append(top, meta, det, actions, target);
+    if (msgs[s.id]) {
+      const m = document.createElement("div");
+      m.className = "msg" + (msgs[s.id].err ? " err" : "");
+      m.textContent = msgs[s.id].text;
+      body.append(m);
+    }
+    el.append(thumb, body);
+    return el;
+  }
+
+  const ERRORS = {
+    too_large: "Image trop lourde (20 Mo au plus) : enregistre-la en JPEG.",
+    unsupported_type: "Format refusé : envoie un PNG, un JPEG ou un WebP.",
+    quota_or_state: "Espace de dépôt plein : préviens Claude, il fera de la place.",
+    rate_limited: "Trop d'envois d'un coup : attends quelques secondes et recommence.",
+    upstream_auth: "Session expirée : recharge la page.",
+  };
+
+  async function send(s, file) {
+    busy.add(s.id);
+    msgs[s.id] = { text: "Envoi de " + file.name + "…" };
+    render();
+    const previous = uploads[s.id]?.assetId;
+    try {
+      const type = ["image/png", "image/jpeg", "image/webp"].includes(file.type) ? file.type : /\.png$/i.test(file.name) ? "image/png" : /\.webp$/i.test(file.name) ? "image/webp" : "image/jpeg";
+      const res = await assets.upload(file, { type });
+      await db.collection("uploads").doc(s.id).set({ assetId: res.id, fileName: file.name, sizeBytes: res.sizeBytes, uploadedAt: new Date().toISOString(), status: "envoyée" });
+      // Remplacement voulu : l'ancien rendu n'est plus pointé par aucune ligne.
+      if (previous && previous !== res.id) assets.delete(previous).catch(() => {});
+      msgs[s.id] = { text: "Image envoyée. Claude l'intégrera à ta prochaine demande." };
+    } catch (e) {
+      msgs[s.id] = { text: ERRORS[e?.code] || "L'envoi a échoué. Réessaie ; si ça recommence, préviens Claude.", err: true };
+    } finally {
+      busy.delete(s.id);
+      render();
+    }
+  }
+
+  render();
+
+  (async () => {
+    const c = window.claude;
+    if (!c?.use) { document.getElementById("notice").hidden = false; return; }
+    [db, assets] = await Promise.all([c.use("db"), c.use("assets")]);
+    if (!db || !assets) { document.getElementById("notice").hidden = false; render(); return; }
+    db.collection("uploads").onSnapshot(
+      (snap) => {
+        uploads = Object.fromEntries(snap.docs.filter((d) => d.exists).map((d) => [d.id, d.data()]));
+        render();
+      },
+      () => { document.getElementById("notice").hidden = false; },
+    );
+    render();
+  })();
+})();
+</script>

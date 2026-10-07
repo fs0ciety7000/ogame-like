@@ -83,7 +83,8 @@ La liste complète, avec les fichiers de chaque maillon, est la **chaîne de con
 - succès (entrée et maîtrise), Codex, titre ou bannière ;
 - défis, missions, primes ; butin ;
 - équilibre (simulateur) et interface (Ctrl+K, Formules, Journal) ;
-- illustration : image provisoire et prompts Midjourney dans `docs/prompts-<version>.md` ;
+- illustration : image provisoire, puis une ligne dans `scripts/illustrations.json` (prompt, format, détourage) et la page de dépôt
+  republiée ; l'utilisateur dépose ses rendus depuis son mobile, Claude les intègre (`docs/illustrations.md`) ;
 - changelog et billet ;
 - essai sur la pré-prod.
 
