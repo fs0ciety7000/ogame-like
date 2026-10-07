@@ -5,7 +5,7 @@ import { useState } from "react";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Lock, Wrench } from "lucide-react";
+import { ChevronDown, ChevronUp, LayoutGrid, List, Lock, Wrench } from "lucide-react";
 import { Card, HudBrackets } from "@/components/ui/card";
 import { CostPill, HudChip, HudTag, LevelTicks } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,19 @@ import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { affordText, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
 import { useProductionRates } from "@/hooks/useLiveResources";
 
+/* 6.12.0 (Q16) : vue liste par défaut sur téléphone au-delà de 10 bâtiments débloqués ; le choix est gardé par appareil. */
+const VIEW_KEY = "cosmic-empires:batiments-vue";
+const LIST_VIEW_MIN_UNLOCKED = 10;
+const narrowScreen = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
+function readBuildingsView(): "cards" | "list" | null {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    return v === "cards" || v === "list" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 export function BuildingsPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
@@ -58,8 +71,22 @@ export function BuildingsPage() {
   // 5.20 : onglets Bâtiments / Atelier de réparation (?onglet=atelier).
   const [params, setParams] = useSearchParams();
   const tab = params.get("onglet") === "atelier" ? "atelier" : "batiments";
+  // 6.12.0 (Q16) : vue « liste » sur téléphone (une ligne par bâtiment, la carte s'ouvre au toucher).
+  const [viewPref, setViewPref] = useState<"cards" | "list" | null>(readBuildingsView);
+  const [openIds, setOpenIds] = useState<string[]>([]);
 
   if (!player || !queues) return null;
+  const unlockedCount = BUILDINGS.filter((b) => player.buildings[b.id]?.unlocked).length;
+  const listMode = narrowScreen() && (viewPref ? viewPref === "list" : unlockedCount > LIST_VIEW_MIN_UNLOCKED);
+  const chooseView = (v: "cards" | "list") => {
+    setViewPref(v);
+    setOpenIds([]);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* stockage indisponible : choix gardé pour la session */
+    }
+  };
   const repairing = workshopState(player).jobs.length;
   const ready = dockReadyCount(player);
 
@@ -134,7 +161,21 @@ export function BuildingsPage() {
         <HudChip size="sm" tone={activeBuildCount(queues) >= buildSlots(player) ? "ember" : "neutral"} title="Améliorations de bâtiments menées en même temps. +1 à la Fonderie quantique 5 et 10.">
           Chantiers <span className="font-mono tabular-nums">{activeBuildCount(queues)} / {buildSlots(player)}</span>
         </HudChip>
-        <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+        <div className="flex items-center gap-1.5">
+          <div className="flex gap-1 sm:hidden" role="group" aria-label="Affichage des bâtiments">
+            <HudChip asChild size="sm" tone={listMode ? "neutral" : "accent"}>
+              <button type="button" aria-pressed={!listMode} onClick={() => chooseView("cards")}>
+                <LayoutGrid className="h-3.5 w-3.5" /> Cartes
+              </button>
+            </HudChip>
+            <HudChip asChild size="sm" tone={listMode ? "accent" : "neutral"}>
+              <button type="button" aria-pressed={listMode} onClick={() => chooseView("list")}>
+                <List className="h-3.5 w-3.5" /> Liste
+              </button>
+            </HudChip>
+          </div>
+          <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
+        </div>
       </div>
 
       <SortableGrid page="batiments" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-3 sm:gap-5" items={BUILDINGS} getId={(building) => building.id} getLabel={(building) => building.name} render={(building, index) => {
@@ -160,6 +201,33 @@ export function BuildingsPage() {
                 + Programmer niv. {plannable}
               </button>
             ) : null;
+
+          if (listMode && !openIds.includes(building.id)) {
+            const affordable = Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0));
+            return (
+              <button
+                key={building.id}
+                type="button"
+                aria-expanded={false}
+                onClick={() => setOpenIds((o) => [...o, building.id])}
+                className={cn("flex w-full items-center gap-3 border border-white/10 bg-space-900/60 p-2 text-left transition-colors hover:border-cyan-glow/40", isLocked && "opacity-70")}
+              >
+                <img src={assetUrl(buildingImage(building, level))} alt="" className="hud-cut h-10 w-10 shrink-0 object-cover" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-slate-100">{building.name}</span>
+                  <span className="font-mono text-[11px] tabular-nums text-slate-500">
+                    {isLocked ? "verrouillé" : `niv. ${level} / ${building.maxLevel}`}
+                  </span>
+                </span>
+                {activeUpgrade ? (
+                  <HudChip size="sm" tone="mint">{formatDuration((activeUpgrade.endTime - now) / 1000)}</HudChip>
+                ) : !isLocked && level < building.maxLevel && affordable ? (
+                  <HudChip size="sm" tone="accent">Prêt</HudChip>
+                ) : null}
+                <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+              </button>
+            );
+          }
 
           return (
             <motion.div
@@ -352,6 +420,11 @@ export function BuildingsPage() {
                   </div>
                 </div>
               </Card>
+              {listMode && (
+                <button type="button" aria-expanded onClick={() => setOpenIds((o) => o.filter((id) => id !== building.id))} className="mt-1 flex w-full items-center justify-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500 hover:text-slate-200">
+                  <ChevronUp className="h-3.5 w-3.5" /> Replier
+                </button>
+              )}
             </motion.div>
           );
         }} />

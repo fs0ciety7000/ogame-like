@@ -53,6 +53,9 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   (+ icône), lignes `{ label, value, tone? }` alignées (valeurs en mono tabulaire), `sections` séparées par un filet, `note`.
   Une infobulle qui contient des chiffres passe par elle plutôt que par une phrase.
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
+- **Pages longues sur téléphone (375 px)** : viser moins de 5 000 px pour un joueur neuf comme avancé (`pagelen.mjs`). Ne rien retirer :
+  une section à la fois (onglets ou puces `aria-pressed`), sections secondaires repliées (`FoldSection`, `aria-expanded`), « Afficher plus »,
+  ou vue « liste » (une ligne par élément, la carte s'ouvre au toucher, bascule mémorisée par appareil : Bâtiments 6.12.0).
 - **`StatTile`** (`tone` = `HudTone`), **`StatBar`**, **`HudMeter`**, **`LevelTicks`**, **`EmptyState`**, **`CostPill`** : jauges et chiffres.
 - **`Button`** (`variant="primary" | "outline" | …`) : toute action, `asChild` pour un lien.
 - **`PageHeader`** : en-tête de chaque page. `backdrop="/assets/…"` pose une illustration discrète derrière
