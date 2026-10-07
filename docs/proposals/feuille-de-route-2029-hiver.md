@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'hiver 2029
 
-Statut : **en cours** (2026-10-07, clôture d'AU24 : `docs/audit/2026-10-07-au24-automne-2029.md`). Règle n° 3 : jamais de pause ;
+Statut : **close** (2026-10-07, AU25 : `docs/audit/2026-10-07-au25-hiver-2029.md`), suite dans `feuille-de-route-2030-printemps.md`. Ouverte à la clôture d'AU24 (`docs/audit/2026-10-07-au24-automne-2029.md`). Règle n° 3 : jamais de pause ;
 production, `main` et PR sautés (Q12), mais préparés.
 
 ## Planning
@@ -12,4 +12,4 @@ production, `main` et PR sautés (Q12), mais préparés.
 | 3 | H29-3 | Codex : Seigneurs et Boss dans « Tout réclamer » côté serveur (données des seigneurs affrontés et du Hall of fame), pastille unique tenue (AU29-4, Q27) | M | livré en 6.14.25 |
 | 4 | H29-4 | Synthèse des décisions à valider (`docs/decisions-a-valider.md`) : une ligne par question ouverte, choix appliqué, conséquence, option recommandée (AU29-5) | S | livré en 6.14.28 |
 | 5 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12), facilité par H29-1 |
-| 6 | AU25 | Revue, même grille ; inventaire `constats-ouverts.md` repris | M | fin des lots |
+| 6 | AU25 | Revue, même grille ; inventaire `constats-ouverts.md` repris | M | livré en 6.14.29 |

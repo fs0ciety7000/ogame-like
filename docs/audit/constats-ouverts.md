@@ -22,6 +22,9 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
+| AU30-3 | AU25 | Échec isolé de « v3.9 bounties » (intégration) | P30-3 |
+| AU30-4 | AU25 | Pas de récapitulatif joueur pour la mise en production | P30-1 |
+| AU30-2 (texte de PR) | AU25 | Texte de la PR prêt à coller | P30-2 |
 
 
 ### Attend des mesures (après la mise en production, puis une nouvelle copie sur la pré-prod)

@@ -226,4 +226,5 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.22 | Atelier d'illustrations : dépôt mobile des rendus Midjourney, détourage, WebP, copie dans les assets, Q28 | `docs/illustrations.md` |
 | 2026-10-07 | 6.14.23 | Page `/img` de la pré-prod : rendus envoyés par lot, reconnus par leur nom de fichier, collection `illustration_uploads` | `docs/changes/6.14.23-img-preprod.md` |
 | 2026-10-07 | 6.14.24 | H29-1 : dossier de mise en production 5.27 → 6.14, répétition sur la pré-prod | `docs/release/5.27-a-6.14.md` |
+| 2026-10-07 | 6.14.29 | Revue AU25 : hiver 2029 clos (dossier de mise en production, `/img`, décisions à valider) ; printemps 2030 ouvert | `docs/audit/2026-10-07-au25-hiver-2029.md` |
 | 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |
