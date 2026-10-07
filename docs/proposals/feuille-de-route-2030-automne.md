@@ -85,8 +85,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
 | 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | à faire |
 | 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | à faire |
-| 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | à faire |
-| 65d | TH-L4 | Garde des contrastes mesurée sur `space-600` (Q235) | S | à faire |
+| 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | livré (6.14.96) |
+| 65d | TH-L4 | Garde des contrastes mesurée sur `space-600` (Q235) | S | livré (6.14.96) |
 | 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q233) | M | à faire |
 | 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q234) | M | à faire |
 | 65g | TH-L7 | `scripts/theme-audit.mjs` à chaque revue de fin de feuille de route (Q237) | S | à faire |

@@ -16,7 +16,7 @@ Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait p
 Médailles : `--th-medal-gold|silver|bronze`. Raretés : `--th-rarity-common|rare|epic|legendary|mythic`.
 Transparence d'une couleur (hex ou jeton) : `alpha(couleur, 30)` de `@/lib/utils` (jamais `${couleur}55`).
 Les couleurs choisies et enregistrées par les joueurs (rangs d'alliance…) restent des données hex, rangées dans `src/game`.
-Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--th-space-700` (fond clair des panneaux) dans chaque thème ;
+Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--th-space-600` (fond réel des panneaux, 6.14.96) dans chaque thème ;
 `text-slate-600` est réservé au décor (filets, séparateurs, icônes inactives), jamais à un texte qui porte une information (6.14.55) ;
 un texte, un `placeholder`, une heure ou un rang en gris passe en `text-slate-500` (garde, 6.14.83).
 **Plancher de 11 px** : aucun texte sous 11 px hors admin (`text-[11px]` au plus petit, pastilles `hud-chip` comprises) ; seuls les

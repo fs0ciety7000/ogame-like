@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 /* 6.14.55 (UX-2, AD-1 et AD-12) : garde des jetons de couleur des 13 thèmes (src/index.css).
-   1. Contraste : `--th-text-500` (texte secondaire, `text-slate-500`) ≥ 4,5:1 (WCAG AA) sur `--th-space-700`,
-      le fond le plus clair des panneaux.
+   1. Contraste : `--th-text-500` (texte secondaire, `text-slate-500`) ≥ 4,5:1 (WCAG AA) sur `--th-space-600`,
+      plus proche du fond réel des panneaux que `space-700` (6.14.96, TH-L4).
    2. Écart (CIEDE2000) entre les couleurs de sens (DESIGN.md « couleur = sens ») : accent, violet (`--th-accent2`),
       ok, danger, or, ember ≥ 15, et accent / texte (`--th-text-100`) ≥ 12. Constellation, thème de toutes les captures,
       respecte tout. Les confusions voulues d'autres thèmes (monochromes : Cockpit, Holo…) sont listées avec leur écart
@@ -121,13 +121,13 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
       ["atlas", "aurora", "cockpit", "constellation", "holo", "ishimura", "matrice", "netrunner", "omni", "signal", "spartan", "tactique", "voyageur"],
     );
     for (const t of Object.values(THEMES)) {
-      for (const k of [...SENSE, "text-100", "text-400", "text-500", "space-700"]) expect(t[k], k).toMatch(/^#[0-9a-f]{6}$/);
+      for (const k of [...SENSE, "text-100", "text-400", "text-500", "space-600", "space-700"]) expect(t[k], k).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
 
   it("--th-text-500 atteint 4,5:1 sur le fond des panneaux dans chaque thème (AD-12)", () => {
     const low = Object.entries(THEMES)
-      .map(([n, t]) => [n, contrast(t["text-500"], t["space-700"])] as const)
+      .map(([n, t]) => [n, contrast(t["text-500"], t["space-600"])] as const)
       .filter(([, c]) => c < TEXT_500_MIN)
       .map(([n, c]) => `${n} ${c.toFixed(2)}:1`);
     expect(low).toEqual([]);
@@ -135,7 +135,7 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
 
   it("--th-danger se lit comme texte : ≥ 4,5:1 sur le fond des panneaux (6.14.90, TH-5)", () => {
     const low = Object.entries(THEMES)
-      .map(([n, t]) => [n, contrast(t.danger, t["space-700"])] as const)
+      .map(([n, t]) => [n, contrast(t.danger, t["space-700"])] as const) // space-600 : 7 thèmes sous 4,5:1, repris en TH-L5/TH-L6
       .filter(([, c]) => c < TEXT_500_MIN)
       .map(([n, c]) => `${n} ${c.toFixed(2)}:1`);
     expect(low).toEqual([]);
@@ -143,7 +143,7 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
 
   it("la hiérarchie du texte reste lisible : 400 plus contrasté que 500, lui-même plus que 600", () => {
     for (const [n, t] of Object.entries(THEMES)) {
-      const bg = t["space-700"];
+      const bg = t["space-600"];
       expect(contrast(t["text-400"], bg), n).toBeGreaterThan(contrast(t["text-500"], bg));
       expect(contrast(t["text-500"], bg), n).toBeGreaterThan(contrast(t["text-600"], bg));
     }

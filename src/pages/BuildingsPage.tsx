@@ -262,7 +262,7 @@ export function BuildingsPage() {
                   </div>
                   <div className="min-w-0">
                     <span className="flex flex-wrap gap-1.5">
-                      <HudTag tone={productionResource ? "ember" : "accent"} className="max-w-full whitespace-normal">{categoryLabel(building)}</HudTag>
+                      <HudTag tone={productionResource ? "neutral" : "accent"} className="max-w-full whitespace-normal">{categoryLabel(building)}</HudTag>
                       {building.endgame && <HudTag tone="gold">Légendaire</HudTag>}
                     </span>
                     <h3 className="hud-title mt-2 text-[17px] text-slate-100 [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
