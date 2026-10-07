@@ -2,6 +2,8 @@
 
 Statut : **choix fait** (2026-10-07) : l'utilisateur a validé **A** sur `/decisions` (Q31). Suite dans
 `docs/proposals/phalange-porte-de-saut.md` (lot É30-1). B (comptoirs d'alliance) reste la piste suivante.
+Correction : le défenseur voit déjà les flottes hostiles dès le décollage (§2.1 de la proposition détaillée) ; la phalange apporte
+plutôt le radar d'alliance, la vraie composition des flottes et le balayage de l'agresseur (Q33).
 
 ## 1. Ce que disent les chiffres (Z1, copie de la production)
 

@@ -143,6 +143,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.40 | [Illustrations, deuxième lot (technos 1 à 7)](6.14.40-illustrations-lot-2.md) | ajout | aucune (IMG, docs/illustrations.md) |
 | 6.14.41 | [Feuille de route sur /decisions, Q12 écartée, Q31 validée](6.14.41-feuille-de-route-decisions.md) | ajout (outillage) | Q12, Q31 |
 | 6.14.42 | [Documents en direct pour /decisions et /img](6.14.42-documents-en-direct.md) | ajout (outillage) | aucune (consigne) |
+| 6.14.43 | [Proposition phalange et porte de saut](6.14.43-proposition-phalange.md) | docs | Q33 à Q41 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
