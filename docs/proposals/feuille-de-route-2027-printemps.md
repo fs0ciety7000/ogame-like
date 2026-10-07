@@ -1,8 +1,8 @@
 # Proposition : feuille de route de printemps 2027
 
-Statut : **proposée** (2026-10-07, clôture d'AU13). Ordre provisoire noté en Q11 (`docs/QUESTIONS.md`) : à valider ou réordonner.
-Règle n° 3 : les lots s'enchaînent dans cet ordre une fois la liste validée ; écrire en production, pousser sur `main` et ouvrir une PR restent
-hors du travail automatique.
+Statut : **en cours** (2026-10-07, clôture d'AU13). Ordre provisoire noté en Q11 (`docs/QUESTIONS.md`), modifiable à tout moment.
+Règle n° 3 : les lots s'enchaînent sans attendre de validation. Écrire en production, pousser sur `main` et ouvrir une PR restent hors du
+travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dépendent prennent l'option prudente.
 
 ## 1. D'où viennent les lots
 - Questions ouvertes de `QUESTIONS.md` (Q1 à Q10).

@@ -7,7 +7,7 @@ Deux niveaux :
 
 | Type | Fichier | Quand |
 |:--|:--|:--|
-| **Proposition** | `docs/proposals/<système>.md` | avant de coder, quand le changement touche l'équilibre, les données des joueurs ou un système entier ; attend la décision de l'utilisateur (`WORKFLOW.md` §2) |
+| **Proposition** | `docs/proposals/<système>.md` | avant de coder, quand le changement touche l'équilibre, les données des joueurs ou un système entier ; la recommandation est appliquée sans attendre, le choix noté dans `docs/QUESTIONS.md` (règle n° 3, `WORKFLOW.md` §2) |
 | **Fiche de changement** | `docs/changes/<version>-<slug>.md` | pour **chaque** lot livré, proposition ou non ; écrite pendant le lot, terminée avant le commit |
 
 Une proposition livrée a aussi sa fiche de changement, qui renvoie vers elle.
@@ -75,6 +75,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.9.10 | [Bloc de démarrage mesuré, chargement à la demande reporté](6.9.10-mesure-bloc-demarrage.md) | docs | feuille de route (X), Q8 |
 | 6.10.0 | [Base avancée sur une colonie](6.10.0-flotte-basee.md) | fonctionnalité | `flotte-basee.md` (Y), Q9, Q10 |
 | 6.10.1 | [Revue AU13 : commerce dans la santé, Nouveautés par tranches, garde des routes admin](6.10.1-revue-transverse.md) | correctif | aucune (AU13), Q11 |
+| docs | [Travail continu entre deux feuilles de route](docs-travail-continu-2.md) | docs | consigne du 2026-10-07, Q12 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

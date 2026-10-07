@@ -21,7 +21,9 @@ panel admin. Une proposition liste les réglages qu'elle ajoute et où l'admin l
 
 Règle (CLAUDE.md règle n° 3) : on n'attend plus la décision à l'étape 5. La recommandation est appliquée, le choix et ses
 alternatives sont notés dans `docs/QUESTIONS.md` pour être revus avec l'utilisateur ; une proposition qui touche aux données des
-joueurs (unités, ressources, niveaux) prend l'option la plus prudente et dit comment revenir en arrière. Un lot fini, on passe au suivant.
+joueurs (unités, ressources, niveaux) prend l'option la plus prudente et dit comment revenir en arrière. Un lot fini, on passe au suivant ;
+une feuille de route finie, on écrit la suivante et on la commence. Consigne de l'utilisateur : « N'attends plus que je te dise de passer à
+la suite. Travaille automatiquement. Si tu as des questions ou besoin de précisions. Note et log les, on ajustera ensemble. »
 
 Petit changement (ajustement, correctif, refactoring) : les étapes 3 à 5 peuvent être sautées, **jamais la fiche de changement** de
 l'étape 8 (modèle dans `docs/changes/README.md`). Elle se remplit pendant le lot, pas après.

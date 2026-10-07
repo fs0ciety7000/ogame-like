@@ -1,6 +1,7 @@
 # Questions et décisions prises seul
 
-Règle n° 3 de `CLAUDE.md` : on ne s'arrête plus pour demander. Chaque question, doute ou choix que l'utilisateur pourrait vouloir trancher
+Règle n° 3 de `CLAUDE.md` (« N'attends plus que je te dise de passer à la suite. Travaille automatiquement. Si tu as des questions ou
+besoin de précisions. Note et log les, on ajustera ensemble. ») : on ne s'arrête plus pour demander, même entre deux feuilles de route. Chaque question, doute ou choix que l'utilisateur pourrait vouloir trancher
 est noté ici avec le choix fait, puis le travail continue. On revoit ensemble ; une décision changée devient un lot (fiche `docs/changes/`).
 
 Statuts : **ouverte** (choix provisoire appliqué), **validée**, **changée** (renvoie au lot qui la corrige).
@@ -17,4 +18,5 @@ Statuts : **ouverte** (choix provisoire appliqué), **validée**, **changée** (
 | Q8 | 2026-10-07 | X (6.9.10) | Charger succès, saisons et Chroniques à la demande ? | Non pour l'instant : `content.ts` (appliqué au démarrage) importe presque tout le moteur, qui lit ces données de façon synchrone et est partagé avec le serveur. Gain estimé 15 à 20 Ko compressés sur 276 Ko, contre une refonte du moteur. Mesures dans la fiche 6.9.10 | Rouvrir X avec la piste « registre de sections de contenu paresseuses » de la fiche | ouverte |
 | Q9 | 2026-10-07 | 6.10.0 (Y) | La flotte basée défend-elle la colonie ? Peut-elle être attaquée ? | Non aux deux (comme une flotte en vol) : pas de nouveau calcul de combat ni de pertes sur des vaisseaux stationnés | Proposition à écrire (combat de colonie avec garnison)  ; les flottes `colonybase` restent hors des garnisons (`mission = "garrison"`) | ouverte |
 | Q10 | 2026-10-07 | 6.10.0 (Y) | Durée et retour d'une base | 14 jours au plus, 1 base par colonie ; les survivants d'une attaque reviennent à la base (butin à la planète mère) ; si la base est levée entre-temps, ils rentrent à la planète mère | Admin → Règles → Colonies (durée, bases par colonie, ouverture) | ouverte |
-| Q11 | 2026-10-07 | AU13 | Ordre de la feuille de route de printemps (Z0 à Z6, AU14) | Proposé : Z0 (mise en production) et Z1 (mesures) d'abord, puis Z2 et Z5 sans dépendance ; Z3, Z4, Z6 après les chiffres réels | `docs/proposals/feuille-de-route-2027-printemps.md` | ouverte |
+| Q11 | 2026-10-07 | AU13 | Ordre de la feuille de route de printemps (Z0 à Z6, AU14) | Proposé : Z0 (mise en production) et Z1 (mesures) d'abord, puis Z2 et Z5 sans dépendance ; Z3, Z4, Z6 après les chiffres réels | `docs/proposals/feuille-de-route-2027-printemps.md` | ouverte (ordre appliqué) |
+| Q12 | 2026-10-07 | Printemps (Z0, Z1) | Mise en production et mesures de production : hors du travail automatique (production, `main`, PR ; le jeton de lecture a expiré) | Sautés ; Z2 et Z5 d'abord, puis Z3 et Z4 en version prudente (désactivés par défaut ou sans changement d'équilibre) en attendant les chiffres réels | Me donner le feu vert pour la PR et un accès de lecture, Z0 et Z1 passent alors en tête | ouverte |
