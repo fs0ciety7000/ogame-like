@@ -115,6 +115,9 @@ Chaque lot relit puis met à jour :
 - `CLAUDE.md` pour toute règle de travail ou tout piège appris (goja, migrations, schéma…).
 - `docs/audit/constats-ouverts.md` quand un constat s'ouvre ou se ferme ; chaque revue AU le réécrit (6.14.18, ET29-3) ;
   un constat « faisable seul » ne reste pas ouvert plus d'une feuille de route.
+- un compte écrit dans une fiche système ou le GDD (unités, succès, modèles, tâches, plafonds) est gardé par `docsCounts.test.ts`
+  (6.14.93) : le lot qui change le code met la phrase à jour ; le journal du GDD (§8) reste dans l'ordre des versions ; une feuille
+  de route dont tous les lots sont livrés passe au statut « livrée ».
 
 Une règle devenue fausse est réécrite, pas contournée.
 

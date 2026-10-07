@@ -4,7 +4,7 @@
 Puissance militaire (attaque, défense) et logistique (cargo, drones, sondes). Bornée par les hangars.
 
 ## Règles et chiffres
-- 21 unités, dont 3 d'élite (contre les seigneurs seulement) ; classes Faible / Moyen / Fort / Soutien calculées (√(ATK × PV)) ;
+- 24 unités par défaut : 17 de base, le Traqueur kesh, 3 d'élite (contre les seigneurs seulement) et 3 de classe ; classes Faible / Moyen / Fort / Soutien calculées (√(ATK × PV)) ;
   Fort > Moyen > Faible > Fort (±20 % de dégâts).
 - Places : de 1 (roquette, frégate) à 80 (Étoile noire) ; capacité = hangars × tech × effets d'empire (`hangar.ts`).
 - Revente au hangar : 50 % du prix ; démantèlement en Cale sèche : 60 %.

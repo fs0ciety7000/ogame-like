@@ -119,7 +119,7 @@ systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres
 
 ### 7.2 Atelier de réparation (`workshop.ts`)
 
-- Sauve une part des unités détruites (5 %/niv. jusqu'au 10, puis 2 %/niv. ; 70 % au niv. 20 ; plafond global 95 % avec les bonus).
+- Sauve une part des unités détruites (5 %/niv. jusqu'au 10, puis 2 %/niv. ; 70 % au niv. 20 ; plafond global 85 % avec les bonus, réglable : `combat.repairCap`).
 - Répare en PV/s : 30 au niv. 1, +25 %/niv. ; d'abord la file (lots), puis les coques. Accélérations : Nanoréparation, Mécanicien, Clé de soudure, Vaisseaux-ateliers, Ambre, Analgésique.
 - Un lot gardé au hangar rentre dès qu'il est réparé (il avait sa place). Un lot en Cale sèche devient « prêt ».
 
@@ -407,17 +407,19 @@ l'entrepôt remis au niveau 1 ne peut plus contenir le prix des derniers niveaux
 | 2026-10-07 | 6.14.17 | Z1-2 : catégories du Codex dans « Tout réclamer » et la pastille unique, Q27 | `docs/changes/6.14.17-codex-tout-reclamer.md` |
 | 2026-10-07 | 6.14.18 | A29-1 : inventaire des constats ouverts ; la prod est en 5.27.0, tout le reste attend Z0 | `docs/audit/constats-ouverts.md` |
 | 2026-10-07 | 6.14.19 | A29-2 : santé complétée (raids repoussés, élites, casino, pot commun, rythme des succès) ; COM-3 et PNJ-5 fermés | `docs/changes/6.14.19-sante-completee.md` |
+| 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |
 | 2026-10-07 | 6.14.22 | Atelier d'illustrations : dépôt mobile des rendus Midjourney, détourage, WebP, copie dans les assets, Q28 | `docs/illustrations.md` |
 | 2026-10-07 | 6.14.23 | Page `/img` de la pré-prod : rendus envoyés par lot, reconnus par leur nom de fichier, collection `illustration_uploads` | `docs/changes/6.14.23-img-preprod.md` |
 | 2026-10-07 | 6.14.24 | H29-1 : dossier de mise en production 5.27 → 6.14, répétition sur la pré-prod | `docs/release/5.27-a-6.14.md` |
 | 2026-10-07 | 6.14.29 | Revue AU25 : hiver 2029 clos (dossier de mise en production, `/img`, décisions à valider) ; printemps 2030 ouvert | `docs/audit/2026-10-07-au25-hiver-2029.md` |
 | 2026-10-07 | 6.14.35 | Réponses de l'utilisateur sur `/decisions` : 22 décisions validées, Q11 close, Q12 en attente, prochain système à choisir (Q31) | `docs/proposals/prochain-systeme.md` |
+| 2026-10-07 | 6.14.38 | Revue AU26 : printemps 2030 clos (`/decisions`, billets, annonce, intégration fiable) ; été 2030 ouvert (Z6 sur la pré-prod, système Q31) | `docs/audit/2026-10-07-au26-printemps-2030.md` |
+| 2026-10-07 | 6.14.39 | Performance mesurée sur la pré-prod (Z6) : Galaxie lente sur mobile, images du Codex lourdes ; décor 3D de l'accueil allégé | `docs/changes/6.14.39-performance-preprod.md`, lot É30-5 |
+| 2026-10-07 | 6.14.43 | Proposition phalange et porte de saut lunaires (système Q31), choix Q33 à Q41 | `proposals/phalange-porte-de-saut.md` |
 | 2026-10-07 | 6.14.44 | É30-1a : phalange, porte de saut et pitié lunaire dans le moteur (règles, stats `phalanxRange` et `jumpGateCooldown`, champ `moonPity`) ; invariant I21 modifié, I22 et I23 | `docs/changes/6.14.44-phalange-moteur.md` |
 | 2026-10-07 | 6.14.48 | É30-1b : routes de la phalange et de la porte de saut, radar d'alliance au lancement, niveau de lune public, compteur `gateSaves` (réglage `jumpGate.saveWindowMinutes`) ; I22 vérifié en intégration | `docs/changes/6.14.48-phalange-serveur.md` |
-| 2026-10-07 | 6.14.38 | Revue AU26 : printemps 2030 clos (`/decisions`, billets, annonce, intégration fiable) ; été 2030 ouvert (Z6 sur la pré-prod, système Q31) | `docs/audit/2026-10-07-au26-printemps-2030.md` |
 | 2026-10-07 | 6.14.51 | Revue AU27 : sept audits (jeu et chaîne de contenu, admin et évolutivité, chaîne d'actions, procédural, design UI/UX, équilibrage, illustrations) ; été 2030 clos (phalange et porte de saut livrées en moteur, serveur et interface) ; automne 2030 ouvert (65 lots, Q64 à Q103) | `docs/changes/6.14.51-revue-au27.md` |
 | 2026-10-07 | 6.14.52 | Lot AC-A (AU27) : campagne d'e-mails sans réécriture de la fiche (jetons créés avant l'envoi), message privé et désinscription en transaction, notifications des 4 rattrapages muets (nuit, contrat, pseudo, enchérisseur remboursé), départ du raid du tutoriel ; invariant I24 | `docs/changes/6.14.52-ecritures-sures.md`, `proposals/chaine-actions.md` |
-| 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |
 | 2026-10-07 | 6.14.56 | Lot AP-L1 (AU27) : succès par défaut complétés dans la liste enregistrée (4 manquaient sur la pré-prod), retraits exprès notés (`removedDefaults`), le générateur de paliers n'écrit plus la liste entière ; invariant I25 | `docs/changes/6.14.56-succes-par-defaut.md` |
 | 2026-10-07 | 6.14.57 | Lot AP-L2 (AU27) : version du générateur dans le contenu généré, brouillons et chapitres non commencés d'un ancien générateur régénérés (brouillon de novembre à l'ancien format), ancien état dans l'historique ; I17 étendu | `docs/changes/6.14.57-generateur-versionne.md` |
 | 2026-10-07 | 6.14.58 | Lot AP-L3 (AU27) : défis du passe bornés par la médiane du serveur, actions de médiane nulle exclues (Q84), garde de faisabilité avant publication d'office, épisode 3 faisable (Q85) ; médian de novembre jour 35 → 27, serveurs hors du mois 77 → 12 sur 200 ; I18 et I19 étendus | `docs/changes/6.14.58-defis-faisables.md` |

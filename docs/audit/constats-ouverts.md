@@ -8,8 +8,8 @@ constat fermé sort du tableau et passe dans « Fermés depuis le dernier invent
 
 ## Fait qui pèse sur tout le reste
 
-La production (`main`, PR #143 du 2026-10-06) est en **5.27.0**. Les 57 commits suivants (5.27.1 → 6.14.17) n'existent que sur la branche
-de travail et sur la pré-prod. Un constat « livré » ne l'est donc que sur la branche. Exemples :
+La production (`main`, PR #143 du 2026-10-06) est en **5.27.0**. Les versions suivantes (5.27.1 → 6.14.x, index `docs/changes/README.md`)
+n'existent que sur la branche de travail et sur la pré-prod. Un constat « livré » ne l'est donc que sur la branche. Exemples :
 - le plafond de PNJ-1 : en production, l'attaque des PNJ monte toujours jusqu'à +140 % ;
 - les correctifs de la Cale sèche (5.28) ;
 - l'entrepôt et le pillage (E1, E2).
@@ -44,7 +44,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 | SP-1, ET-1, AT-1, HV-1, PR-1, ET28-1, AU28-1, HV28-1, PR29-1, ET29-1 | AU14 à AU23 | Z0 (mise en production) et Z6 (performance) sautés à chaque saison | feu vert pour la PR vers `main` (Q12) |
 | P1, PERF-1 | audit global, AU13 | Moteur dans le bloc de démarrage (276 Ko compressés) | Z6 après Z0 ; chargement à la demande (Q8) |
 | AT-6 | AU16, Q15 | Orientation des feuilles de route (choix pris seul : lunes, chaîne de contenu) | revue des choix avec toi |
-| Q ouvertes | `QUESTIONS.md` | Q1, Q2, Q4 à Q6, Q9 à Q11, Q15, Q16, Q18 à Q27 : choix provisoires appliqués | validation ou changement |
+| Q ouvertes | `QUESTIONS.md` | choix provisoires appliqués : liste à jour sur `/decisions` et dans `docs/decisions-a-valider.md` | validation ou changement |
 
 ## Images provisoires (règle n° 4 de CLAUDE.md)
 
@@ -58,6 +58,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Id | Comment |
 |:--|:--|
+| AJ-7 | 6.14.93 : chiffres des fiches et du GDD remis au code (sauvetage 85 %, 24 unités, 147 succès, 7 modèles de modules, 17 tâches), journal §8 trié ; garde `docsCounts.test.ts` |
 | Images provisoires (lot 1) | 6.14.92 : Cale sèche, lune, phalange, porte de saut, 4 technos (plus d'image commune), annonce 5.7, 14 reliques (plus d'image empruntée ni cassée), 9 objets du Comptoir, monument de prestige ; images générées par API |
 | AE-6 | 6.14.72 : vaisseaux à quai 75 %, défense à domicile +25 % ; seuil JcJ ×0,75 → ×0,90 (simulation `pvpBudget.ts`) ; l'effet en production se suit avec Z1-c |
 | AE-8 | 6.14.72 : `pvp.hardXpRatio` 12 → 10 (Q100), le premier quartile d'XP hors de portée de la médiane |

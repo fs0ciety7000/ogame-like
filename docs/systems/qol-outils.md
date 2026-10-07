@@ -36,8 +36,8 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
   fiche par l'API des collections (règle `players.updateRule`).
 
 ## Technique
-- 30 tâches planifiées côté serveur (dont 3 chaque minute : flottes, maintenance, enchères).
-- Bundle principal 904 Ko (non compressé), scène 3D 572 Ko, Admin 520 Ko, Labo 200 Ko, changelog 252 Ko.
+- 17 tâches planifiées côté serveur (`cronAdd` de `cosmic.pb.js`) ; les tâches à la minute, aux 5 et aux 10 min sont des étapes de `CADENCES` (`cosmic_db.js`, 5.29).
+- Tailles des blocs et temps de chargement : dernière mesure dans `docs/changes/6.14.39-performance-preprod.md`.
 
 ## État (audit 2026-10-06)
 - 5.30 : Ordres du jour réunit les corvées quotidiennes, avec une seule pastille dans la barre latérale (= `pendingClaims`) ; 6.14.17 : le Codex y entre, sa pastille propre disparaît. Reste dispersé : file d'actions, objectifs personnels.

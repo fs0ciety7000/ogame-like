@@ -3,7 +3,7 @@
 Référence complète : GDD `docs/GAME_DESIGN.md` §7.2 et §7.3, proposition livrée `docs/proposals/cale-seche.md`.
 
 ## En bref
-- Atelier : sauve 5 %/niv. des unités détruites (70 % au niv. 20, plafond global 95 % avec les bonus) ; répare 30 PV/s au niv. 1, +25 %/niv.
+- Atelier : sauve 5 %/niv. des unités détruites (70 % au niv. 20, plafond global 85 % avec les bonus, réglable : `combat.repairCap`) ; répare 30 PV/s au niv. 1, +25 %/niv.
 - Cale sèche : 1 000 postes/niv. hors hangar ; prêts remis en service selon la place ; paliers Triage (5), remise automatique (10), priorités (15), Cale orbitale (20).
 - Accélérations : Nanoréparation, Mécanicien, Clé de soudure, Vaisseaux-ateliers, Ambre (1 Ambre / 10 min), Analgésique.
 

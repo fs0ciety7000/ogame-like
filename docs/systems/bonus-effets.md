@@ -9,7 +9,7 @@ territoires, modules, capsules, mutateurs de saison (couche « empire »). Plafo
 |:--|:--|
 | Officiers (commandants) | 12 rôles, 2 postes (+1 à Platine), niveau 20 ; recrutement 150 Ambre ; officiers rares (boss) |
 | Reliques | 26 modèles, 3 emplacements (+1 à la 1re Ascension), 30 au plus, fusion par 3 ; mythiques ; les 8 composées (5.23) rejoignent une liste personnalisée par la migration `relics-5.23` (6.14.60, I27) |
-| Modules | 2 emplacements par classe, 30 plans, fusion par 3, 5 préréglages |
+| Modules | 2 emplacements par classe, 7 modèles (inventaire de 30 modules), fusion par 3, 5 préréglages |
 | Capsules (Labo de synthèse) | 5 %/niv., 3 en stock, 12 h actives |
 | Talents | 3 points par Ascension, rang 3 max |
 | Mutateurs | un par mois (ou aucun) |
