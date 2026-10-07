@@ -76,6 +76,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.10.0 | [Base avancée sur une colonie](6.10.0-flotte-basee.md) | fonctionnalité | `flotte-basee.md` (Y), Q9, Q10 |
 | 6.10.1 | [Revue AU13 : commerce dans la santé, Nouveautés par tranches, garde des routes admin](6.10.1-revue-transverse.md) | correctif | aucune (AU13), Q11 |
 | docs | [Travail continu entre deux feuilles de route](docs-travail-continu-2.md) | docs | consigne du 2026-10-07, Q12 |
+| 6.10.2 | [Pages longues sur mobile](6.10.2-pages-longues.md) | rework | feuille de route de printemps (Z2) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

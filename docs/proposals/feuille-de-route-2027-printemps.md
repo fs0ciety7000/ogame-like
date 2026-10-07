@@ -15,7 +15,7 @@ travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dé
 |:--|:--|:--|:--|:--|
 | 1 | Z0 | Mise en production de `claude/hiver-k-s` : PR unique, « Mettre à jour les hooks », redémarrage, lecture des relevés (santé, commerce, passe) | S | décision utilisateur |
 | 2 | Z1 | Mesures de production (lecture seule) : PRG-1 (points d'octobre), BOSS-2, COM-3 réels, usage des bases avancées ; réponses à Q3 et Q8 | S | Z0 |
-| 3 | Z2 | Pages longues (UI-3) : Menaces, Bâtiments, Unités, Formules en onglets ou blocs repliables, cible < 5 000 px à 375 px | M | — |
+| 3 | Z2 | Pages longues (UI-3) : Menaces, Bâtiments, Unités, Formules en onglets ou blocs repliables, cible < 5 000 px à 375 px | M | livré 6.10.2 (Menaces 2 148, Bâtiments 5 456, Unités 5 651 px ; Formules gardée) |
 | 4 | Z3 | Passe : paliers bonus après le dernier palier (PRG-2, Q4), proposition chiffrée puis lot | M | Z1 |
 | 5 | Z4 | Base avancée, suite (Q9) : la base défend la colonie (combat de colonie avec la flotte basée), proposition puis lot | L | Z1 (usage réel) |
 | 6 | Z5 | Constantes de règle restantes (Q7) : inventaire final et conversion vers les objets de règles | M | — |

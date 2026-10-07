@@ -314,7 +314,7 @@ export function UnitsPage() {
                     })()}
                   </div>
                 </div>
-                <div className="hud-stage relative mt-2 grid h-44 place-items-center">
+                <div className={cn("hud-stage relative mt-2 grid h-28 place-items-center sm:h-44", isLocked && "max-sm:hidden")}>
                   <LevelUpBurst level={data.level} colorVar="var(--color-cyan-glow)" />
                   {!isLocked && (
                     <div className="absolute right-4 top-1 z-[2] text-right">
@@ -325,7 +325,7 @@ export function UnitsPage() {
                   <img
                     src={assetUrl(unit.image)}
                     alt={unit.name}
-                    className={cn("hud-float relative max-h-40 w-[78%] object-contain drop-shadow-[0_18px_24px_color-mix(in_srgb,var(--color-space-950)_60%,transparent)]", isLocked && "opacity-40 grayscale")}
+                    className={cn("hud-float relative max-h-24 w-[78%] object-contain sm:max-h-40 drop-shadow-[0_18px_24px_color-mix(in_srgb,var(--color-space-950)_60%,transparent)]", isLocked && "opacity-40 grayscale")}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.opacity = "0";
                     }}

@@ -15,6 +15,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FleetsPanel } from "@/components/game/FleetsPanel";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import type { FormationId } from "@/game/formations";
@@ -311,16 +312,36 @@ export function ThreatsPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
   const [lairFaction, setLairFaction] = useState<FactionDef | null>(null);
+  const [tab, setTab] = useState<string | null>(null);
   if (!player) return null;
   const factions = FACTIONS.filter((f) => f.enabled);
+  // Z2 (printemps) : une faction à la fois (9 400 px à 375 px quand elles s'empilaient) ; d'office celle qui te vise.
+  const hunting = activeUltimatum(player, Date.now())?.faction.id;
+  const current = factions.some((f) => f.id === tab) ? tab! : (factions.find((f) => f.id === hunting) ?? factions[0])?.id;
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeader eyebrow="Cosmic Empires / Menaces" title="Menaces" description="Les factions qui rôdent aux confins de la galaxie. Une seule à la fois peut te viser." />
       {factions.length === 0 && <Card><EmptyState icon="☠️" title="Calme plat" action={<EmptyAction to="/game/unites?onglet=defense">Renforcer les défenses</EmptyAction>}>Aucune faction hostile active pour l'instant.</EmptyState></Card>}
-      {factions.map((f) => (
-        <FactionCard key={f.id} faction={f} player={player} onLair={() => setLairFaction(f)} />
-      ))}
+      {factions.length > 1 ? (
+        <Tabs value={current} onValueChange={setTab}>
+          <TabsList>
+            {factions.map((f) => (
+              <TabsTrigger key={f.id} value={f.id}>
+                {f.name}
+                {f.id === hunting && <Skull className="ml-1 h-3 w-3 text-danger-glow" aria-label="te vise" />}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {factions.map((f) => (
+            <TabsContent key={f.id} value={f.id} className="mt-4">
+              <FactionCard faction={f} player={player} onLair={() => setLairFaction(f)} />
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        factions.map((f) => <FactionCard key={f.id} faction={f} player={player} onLair={() => setLairFaction(f)} />)
+      )}
       <FleetsPanel hideWhenEmpty />
       <LairDialog faction={lairFaction} onClose={() => setLairFaction(null)} />
     </div>
