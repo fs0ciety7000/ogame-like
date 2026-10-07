@@ -34,7 +34,7 @@ export const STYLE_PREFIX =
 export const NO_TEXT = "No text, no letters, no numbers, no logos, no watermark.";
 
 /** Consigne ajoutée quand l'emplacement demande un détourage (`cutout`). */
-export const TRANSPARENT = "Single isolated object on a transparent background, nothing behind it, soft rim light, generous margin around the object.";
+export const TRANSPARENT = "Single isolated object on a transparent background, nothing behind it, soft rim light, object fully visible and occupying about 65% of the frame, wide empty margin on every side.";
 
 /** Paramètres Midjourney d'un prompt (`--ar 16:9 --v 7 --style raw --s 250` → { ar: "16:9", v: "7", style: "raw", s: "250" }). */
 export function midjourneyParams(prompt) {

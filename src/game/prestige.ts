@@ -30,9 +30,8 @@ export const PRESTIGE_EXTRACTORS = ["extracteur_ferraille", "reacteur_instable",
 
 const COMMONS: ResourceId[] = ["scrap", "energy", "nano", "data"];
 
-/** Illustration du chantier et du monument : image provisoire tant que l'emplacement `prestige-monument`
- *  (scripts/illustrations.json, cible /assets/prestige/monument.webp) n'est pas intégré (docs/illustrations.md). */
-export const PRESTIGE_IMAGE = "/assets/buildings/fonderie_quantique.webp";
+/** Illustration du chantier et du monument (emplacement `prestige-monument` de scripts/illustrations.json, 6.14.92). */
+export const PRESTIGE_IMAGE = "/assets/prestige/monument.webp";
 
 export interface PrestigeMonument {
   /** Projets achevés à partir desquels le monument s'élève. */

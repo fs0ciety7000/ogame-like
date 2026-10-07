@@ -195,7 +195,7 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     category: "legends",
     name: "La phalange",
     subtitle: "L'œil de la lune",
-    image: "/assets/moon/lune.webp",
+    image: "/assets/moon/phalange.webp",
     text: "Les ingénieurs ont fini par tourner vers le ciel ce que la lune leur offrait : un socle stable, loin des parasites de la planète. Une parabole de coques soudées, un faisceau qui balaie le vide. La phalange ne voit pas tout. Elle voit ce qui vient vers toi et vers les tiens, et elle ne se laisse pas tromper par un leurre.",
     unlocked: scans > 0,
     facts: [
@@ -210,7 +210,7 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
     category: "legends",
     name: "La porte de saut",
     subtitle: "Le seuil de la lune",
-    image: "/assets/moon/lune.webp",
+    image: "/assets/moon/porte-de-saut.webp",
     text: "Un anneau ancré dans la roche, une membrane violette qui frémit au moindre signal. Personne ne sait vraiment pourquoi elle ne mène qu'à la planète mère. Les pilotes disent qu'elle reconnaît le chemin de la maison. Elle ne s'ouvre qu'une fois par jour, et jamais pour un pillard.",
     unlocked: jumps > 0,
     facts: [

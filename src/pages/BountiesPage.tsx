@@ -464,7 +464,7 @@ const ITEM_ICONS: Record<ShopItemId, typeof Zap> = {
   planetFx: Orbit,
 };
 
-/** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, docs/illustrations.md) ; 6.14.26 : les 10 premières. */
+/** 5.27 : illustrations du Comptoir déjà en place (public/assets/bounties/items, docs/illustrations.md) ; 6.14.26 : les 10 premières ; 6.14.92 : les 9 autres. */
 const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {
   phantom: "/assets/bounties/items/phantom.webp",
   painkiller: "/assets/bounties/items/painkiller.webp",
@@ -476,6 +476,15 @@ const SHOP_ITEM_ART: Partial<Record<ShopItemId, string>> = {
   keshReaction: "/assets/bounties/items/keshReaction.webp",
   roomBanner: "/assets/bounties/items/roomBanner.webp",
   planetFx: "/assets/bounties/items/planetFx.webp",
+  accelerator: "/assets/bounties/items/accelerator.webp",
+  boost: "/assets/bounties/items/boost.webp",
+  jammer: "/assets/bounties/items/jammer.webp",
+  beacon: "/assets/bounties/items/beacon.webp",
+  shield: "/assets/bounties/items/shield.webp",
+  dossier: "/assets/bounties/items/dossier.webp",
+  planner: "/assets/bounties/items/planner.webp",
+  title: "/assets/bounties/items/title.webp",
+  frame: "/assets/bounties/items/frame.webp",
 };
 
 /** 5.28 : état d'un objet, en pastille (effet actif, réserve, acquis). */

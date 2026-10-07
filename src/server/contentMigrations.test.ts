@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { defaultGameContent } from "@/game/content";
 import { CLASS_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
@@ -110,5 +110,25 @@ describe("AE-L1 : migration rules-6.14.72", () => {
     expect(data).toEqual({ combat: { homeFleetDefenseFactor: 0.6, homeDefenseBonus: 0.25 }, pvp: { hardXpRatio: 8 }, streak: { chest: { common: [10_000_000, 50_000_000] } } });
     expect(rulesMigration("rules-6.14.72").run({}, [])).toBe(false);
     expect(rulesMigration("rules-6.14.72").run(null, [])).toBe(false);
+  });
+});
+
+/* 6.14.92 : les reliques qui empruntaient l'image d'une autre ont la leur. La migration remplace l'ancienne image provisoire
+   d'une liste personnalisée par celle que prend la relique par défaut (`relicImage` : /assets/relics/<id>.webp). */
+describe("6.14.92 : migration relics-art-6.14.92", () => {
+  it("vise des reliques par défaut sans image propre, et leur donne le chemin par défaut", () => {
+    const m = rulesMigration("relics-art-6.14.92") as unknown as { key: string; patches: { id: string; field: string; from: string; to: string }[] };
+    expect(m.key).toBe("relics");
+    expect(m.patches.length).toBe(10);
+    const relics = defaultGameContent().relics as { id: string; image?: string }[];
+    for (const p of m.patches) {
+      const def = relics.find((r) => r.id === p.id);
+      expect(def, p.id).toBeTruthy();
+      expect(def?.image, p.id).toBeUndefined();
+      expect(p.field).toBe("image");
+      expect(p.to).toBe(`/assets/relics/${p.id}.webp`);
+      expect(p.from).not.toBe(p.to);
+      expect(existsSync(`public${p.to}`), p.to).toBe(true);
+    }
   });
 });

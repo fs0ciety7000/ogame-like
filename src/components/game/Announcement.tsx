@@ -62,8 +62,7 @@ const rhythmDay = () => formatDateTime(RHYTHM_RULES.switchAt, "day", "server").r
 export const ANNOUNCEMENTS_ALL: Announcement[] = [
   {
     // 6.14.88 (RL-3) : bascule du rythme, avec le billet « Un jeu au long cours » (content/blog/54). Paraît `rhythm.announceDays`
-    // jours avant `rhythm.switchAt` (7 jours, le 25 octobre par défaut) ; publiée seulement une fois son illustration produite et
-    // poussée (`annonce-rythme` sur /img).
+    // jours avant `rhythm.switchAt` (7 jours, le 25 octobre par défaut) ; illustrée en 6.14.92 (`annonce-rythme`).
     id: "v6.14-rythme",
     get eyebrow() {
       return `${rhythmDay()} · Un jeu au long cours`;
@@ -77,7 +76,6 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
     art: "/assets/story/annonce-rythme.webp",
     artMobile: "/assets/story/annonce-rythme.webp",
     artSlot: "annonce-rythme",
-    pendingArt: true,
     liveFromMs: () => (RHYTHM_RULES.enabled === false ? Infinity : rhythmAnnounceAt(RHYTHM_RULES)),
     // Chiffres lus dans le groupe `rhythm` (valeurs prises à la bascule).
     get features() {
@@ -94,7 +92,7 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
   },
   {
     // 6.14.69 (É30-1d) : phalange, porte de saut et pitié lunaire, avec le billet « Ta lune veille » (content/blog/53).
-    // Publiée seulement une fois son illustration produite et poussée (`announce-phalange` sur /img).
+    // Illustrée en 6.14.92 (`announce-phalange`).
     id: "v6.14-lune-veille",
     eyebrow: "Mise à jour 6.14 · Ta lune veille",
     title: "Ta lune voit venir l'orage",
@@ -104,7 +102,6 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
     art: "/assets/story/annonce-phalange.webp",
     artMobile: "/assets/story/annonce-phalange.webp",
     artSlot: "announce-phalange",
-    pendingArt: true,
     features: [
       { title: "Phalange", text: "Radar d'alliance dès le niveau 1, leurres percés au niveau 2, balayage de l'agresseur (recharge 30 min).", to: "/game/statistiques?onglet=lune", image: "/assets/moon/lune.webp" },
       { title: "Porte de saut", text: "Au niveau 3, une patrouille, une garnison ou une base avancée rentre à quai d'un coup. Recharge 24 h.", to: "/game/statistiques?onglet=lune", image: "/assets/moon/lune.webp" },
@@ -115,7 +112,7 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
   },
   {
     // 6.14.33 : grande mise à jour (5.27 → 6.14), avec le billet « la grande mise à jour » (content/blog/49).
-    // 6.14.36 : publiée seulement une fois son illustration produite et poussée (`annonce-6.14` sur /img).
+    // 6.14.36 : publiée une fois son illustration intégrée (`annonce-6.14`, 6.14.92).
     id: "v6.14-grande-maj",
     eyebrow: "Mise à jour 6.14 · La grande mise à jour",
     title: "Tout l'empire a bougé d'un coup",
@@ -125,7 +122,6 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
     art: "/assets/story/v6-14-grande-maj.webp",
     artMobile: "/assets/story/v6-14-grande-maj.webp",
     artSlot: "annonce-6.14",
-    pendingArt: true,
     features: [
       { title: "Classes d'empire", text: "Industriel, Seigneur de guerre ou Explorateur : un bonus et un vaisseau de classe. Premier choix gratuit.", to: "/game/classe", image: "/assets/logo/logo.webp" },
       { title: "Ordres du jour", text: "Toutes tes corvées au même endroit, et « Tout réclamer » en un clic.", to: "/game/ordres", image: "/assets/bounties/items/priority.webp" },

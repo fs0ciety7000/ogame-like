@@ -52,16 +52,13 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Contenu | Lot | Image en place | Prompt |
 |:--|:--|:--|:--|
-| Cale sèche | 5.28.0 | copie de `atelier_reparation.webp` (même fichier) | `docs/prompts-5.28.md` |
-| Lune (Codex, Légendes) | 6.14.1 | `public/assets/moon/lune.webp` générée par script | `docs/prompts-6.14.md` |
-| 26 technologies (Codex) | 6.14.12 | image commune `TECH_CODEX_IMAGE` (Cargo, Intercepteur, Étoile noire, Bastion faits en 6.14.26 ; tech1 à tech7 en 6.14.40 ; tech8 à tech10, tech12, tech13 en 6.14.47 ; tech14, tech15, tech20 à tech27 en 6.14.87 ; restent tech16, tech17, tech29, tech30) | `scripts/illustrations.json` |
-| Annonce 5.7 | 5.7 | copie de `choeur-banner.webp` | `docs/prompts-annonce-5.7.md` |
-| Reliques `sceau_sentinelle`, `plaque_bastion` et deux autres paires | — | deux reliques par image (`relics.ts`) | à écrire si l'image doit être propre à chaque relique |
+| Factions (bannières et emblèmes), boss d'alliance, thèmes et officiers du passe, devblog 50 à 52, en-têtes de pages | 6.14.93 | images générées (6.14.92), branchement au lot 6.14.93 | `scripts/illustrations.json` |
 
 ## Fermés depuis le dernier inventaire
 
 | Id | Comment |
 |:--|:--|
+| Images provisoires (lot 1) | 6.14.92 : Cale sèche, lune, phalange, porte de saut, 4 technos (plus d'image commune), annonce 5.7, 14 reliques (plus d'image empruntée ni cassée), 9 objets du Comptoir, monument de prestige ; images générées par API |
 | AE-6 | 6.14.72 : vaisseaux à quai 75 %, défense à domicile +25 % ; seuil JcJ ×0,75 → ×0,90 (simulation `pvpBudget.ts`) ; l'effet en production se suit avec Z1-c |
 | AE-8 | 6.14.72 : `pvp.hardXpRatio` 12 → 10 (Q100), le premier quartile d'XP hors de portée de la médiane |
 | AE-3 (bornes) | 6.14.72 : coffre du 7e jour 2 M à 12 M (465 h → 20 h de production du joueur quotidien) ; l'indexation reste au lot AE-L3 |

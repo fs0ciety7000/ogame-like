@@ -77,20 +77,20 @@ export const DEFAULT_RELICS: RelicTemplate[] = [
   { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taillée dans l'ambre de la première Reine, elle fait fructifier l'empire.", mythicOnly: true },
   { id: "oeil_neant", name: "Œil du Néant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
   { id: "egide_stellaire", name: "Égide stellaire", effect: "defense", lore: "Un bouclier forgé au cœur d'une étoile mourante.", mythicOnly: true },
-  // 5.23 : effets composés (grandeur × cible × portée), bonus de rareté × scale. Images provisoires.
-  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, lore: "Gravé sur la première Sentinelle à n'avoir jamais cédé.", image: "/assets/relics/ecaille_leviathan.webp" },
-  { id: "plaque_bastion", name: "Plaque de rempart", effect: "custom", custom: { stat: "unitHp", target: "cat:defense", scale: 1 }, lore: "Un pan de muraille qui refuse de tomber.", image: "/assets/relics/ecaille_leviathan.webp" },
-  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, lore: "Elle ne sert qu'entre égaux.", image: "/assets/relics/engrenage_varan.webp" },
-  { id: "trophee_seigneur", name: "Trophée de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, lore: "Arraché à la cuirasse d'un seigneur tombé.", image: "/assets/relics/engrenage_varan.webp" },
-  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, lore: "Les chasseurs Kesh la portent pour flairer leurs proies.", image: "/assets/relics/oeil_vesper.webp" },
-  { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi.", image: "/assets/relics/cristal_memoriel.webp" },
-  { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martelé les quilles des premiers cuirassés.", image: "/assets/relics/noyau_forge.webp" },
-  { id: "navette_mere", name: "Navette-mère", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche.", image: "/assets/relics/noyau_forge.webp" },
+  // 5.23 : effets composés (grandeur × cible × portée), bonus de rareté × scale. Image propre à chaque relique depuis 6.14.92.
+  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, lore: "Gravé sur la première Sentinelle à n'avoir jamais cédé." },
+  { id: "plaque_bastion", name: "Plaque de rempart", effect: "custom", custom: { stat: "unitHp", target: "cat:defense", scale: 1 }, lore: "Un pan de muraille qui refuse de tomber." },
+  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, lore: "Elle ne sert qu'entre égaux." },
+  { id: "trophee_seigneur", name: "Trophée de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, lore: "Arraché à la cuirasse d'un seigneur tombé." },
+  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, lore: "Les chasseurs Kesh la portent pour flairer leurs proies." },
+  { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi." },
+  { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martelé les quilles des premiers cuirassés." },
+  { id: "navette_mere", name: "Navette-mère", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche." },
   // 6.14.69 (É30-1d, proposals/phalange-porte-de-saut.md §7) : reliques de la lune. Portée de la phalange (× 2 : +6 % en commune,
   // +20 % en épique, +30 % en légendaire, plafond 50 %) et recharge de la porte de saut (× 1,5 : −4,5 % en commune, −15 % en épique,
-  // −22,5 % en légendaire, plafond 30 %). Images provisoires (emplacements relic-lentille-selene et relic-cle-seuil sur /img).
-  { id: "lentille_selene", name: "Lentille de Séléné", effect: "custom", custom: { stat: "phalanxRange", scale: 2 }, lore: "Taillée dans le cristal d'une lune morte. Par elle, la phalange voit plus loin que l'horizon.", image: "/assets/relics/oeil_vesper.webp" },
-  { id: "cle_seuil", name: "Clé du seuil", effect: "custom", custom: { stat: "jumpGateCooldown", scale: 1.5 }, lore: "Un anneau d'énergie tient dans son panneton. La porte de saut s'ouvre plus vite pour qui la porte.", image: "/assets/relics/cle_soudure.webp" },
+  // −22,5 % en légendaire, plafond 30 %). Images définitives depuis 6.14.92.
+  { id: "lentille_selene", name: "Lentille de Séléné", effect: "custom", custom: { stat: "phalanxRange", scale: 2 }, lore: "Taillée dans le cristal d'une lune morte. Par elle, la phalange voit plus loin que l'horizon." },
+  { id: "cle_seuil", name: "Clé du seuil", effect: "custom", custom: { stat: "jumpGateCooldown", scale: 1.5 }, lore: "Un anneau d'énergie tient dans son panneton. La porte de saut s'ouvre plus vite pour qui la porte." },
 ];
 
 /** Registre courant (v5.9 : remplacé par le contenu de l'administration). */
