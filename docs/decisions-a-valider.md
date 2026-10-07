@@ -18,8 +18,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
-| Q54 | Balayer un seigneur qui t'attaque : Permis (c'est un agresseur) | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
-| Q55 | Vraie puissance d'une flotte leurrée : Recalculée à chaque lecture sur la fiche actuelle de l'attaquant, rien n'est stocké dans la flotte | Phalange et porte de saut (serveur livré, interface à venir) | Valider (option prudente) |
 
 ## 3. Récit
 
