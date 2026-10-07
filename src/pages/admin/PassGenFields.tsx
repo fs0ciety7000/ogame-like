@@ -3,6 +3,7 @@ import type { GameRules } from "@/game/content";
 import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
 import { PASS_GEN_RULES, tierBudgets, type PassGenRules } from "@/game/passGen";
 import { PASS_REWARD_RULES } from "@/game/passSeasons";
+import { PASS_BONUS_RULES } from "@/game/seasonPass";
 import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
 
 /* 6.8.1 : réglages du passe généré (GameRules.passGen) : budget des récompenses, plafonds, rythme, défis. */
@@ -29,6 +30,8 @@ const toList = (s: string) =>
 export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules: Dispatch<SetStateAction<GameRules>> }) {
   const g: PassGenRules = { ...PASS_GEN_RULES, ...rules.passGen };
   const passRewards = { ...PASS_REWARD_RULES, ...(rules.passRewards as Partial<typeof PASS_REWARD_RULES>) };
+  const bonus = { ...PASS_BONUS_RULES, ...(rules.passBonus as Partial<typeof PASS_BONUS_RULES>) };
+  const setBonus = (patch: Partial<typeof PASS_BONUS_RULES>) => setRules((r) => ({ ...r, passBonus: { ...bonus, ...patch } }));
   const set = (patch: Partial<PassGenRules>) => setRules((r) => ({ ...r, passGen: { ...g, ...r.passGen, ...patch } }));
   const budgets = tierBudgets(30, g);
   const fmt = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -71,6 +74,12 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
         {(Object.keys(WEIGHT_LABELS) as (keyof PassGenRules["weights"])[]).map((k) => (
           <NumberField key={k} label={`Poids de tirage : ${WEIGHT_LABELS[k]}`} value={g.weights[k]} min={0} step={0.5} onChange={(v) => set({ weights: { ...g.weights, [k]: v ?? 0 } })} />
         ))}
+      </Section>
+      <Section title="Passe : paliers bonus après le dernier palier (6.11)">
+        <CheckboxField label="Paliers bonus actifs" checked={bonus.enabled} hint="Tout point gagné après le dernier palier avance un palier bonus." onChange={(v) => setBonus({ enabled: v })} />
+        <NumberField label="Points par palier bonus" value={bonus.points} min={1} step={10} onChange={(v) => setBonus({ points: Math.max(1, Math.round(v ?? 120)) })} />
+        <NumberField label="Jetons de casino par palier bonus" value={bonus.tokens} min={0} step={1} onChange={(v) => setBonus({ tokens: Math.max(0, Math.round(v ?? 1)) })} />
+        <NumberField label="Paliers bonus par mois au plus" value={bonus.maxPerMonth} min={0} step={1} onChange={(v) => setBonus({ maxPerMonth: Math.max(0, Math.round(v ?? 10)) })} />
       </Section>
       <Section title="Passe généré : rythme et défis (6.8.1)">
         <NumberField label="Jour de fin visé (joueur médian)" value={g.targetMedianDay} min={1} step={1} onChange={(v) => set({ targetMedianDay: Math.round(v ?? 24) })} />

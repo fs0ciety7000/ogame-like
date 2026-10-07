@@ -192,6 +192,9 @@ export interface PassState {
   bySource?: Record<string, number>;
   /** 6.8.0 : instant où le dernier palier a été atteint (rythme du passe, santé de l'équilibre). */
   finishedAtMs?: number;
+  /** 6.11.0 (PRG-2, Z3) : points gagnés après le dernier palier et paliers bonus déjà versés ce mois. */
+  bonusPoints?: number;
+  bonusTiers?: number;
 }
 
 export function passTitle(seasonId: string): string {
@@ -225,6 +228,8 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
     ...(raw.daily && typeof raw.daily === "object" && typeof raw.daily.day === "string" ? { daily: normalizeDaily(raw.daily) } : {}),
     ...(Object.keys(bySource).length ? { bySource } : {}),
     ...(Number(raw.finishedAtMs) > 0 ? { finishedAtMs: Number(raw.finishedAtMs) } : {}),
+    ...(Number(raw.bonusPoints) > 0 ? { bonusPoints: Math.floor(Number(raw.bonusPoints)) } : {}),
+    ...(Number(raw.bonusTiers) > 0 ? { bonusTiers: Math.floor(Number(raw.bonusTiers)) } : {}),
   };
 }
 
@@ -353,7 +358,7 @@ export function passTier(points: number, seasonId: string = currentSeasonId()): 
   return Math.min(pass.tiers.length, Math.floor(points / pass.pointsPerTier));
 }
 
-function passMax(seasonId: string): number {
+export function passMax(seasonId: string): number {
   const pass = activePass(seasonId);
   return pass.tiers.length * pass.pointsPerTier;
 }
@@ -396,6 +401,36 @@ export function onPassPoints(hook: typeof passHook): void {
 }
 
 /** 5.18 : passe terminé : les gros gains de points (épisode des Chroniques, vendetta, boss…) deviennent de l'Ambre. */
+/** 6.11.0 (PRG-2, Z3, proposals/progression.md option B1) : paliers bonus répétables après le dernier palier.
+ *  Chaque tranche de `points` points gagnés au-delà du maximum verse `tokens` jetons de casino, `maxPerMonth` fois au plus. */
+export const PASS_BONUS_RULES = {
+  enabled: true,
+  points: 120,
+  tokens: 1,
+  maxPerMonth: 10,
+};
+
+/** Paliers bonus versés pour un surplus donné (moteur pur, voir passBonusProgress pour l'affichage). */
+export function settlePassBonus(st: PassState, extra: number): number {
+  const r = PASS_BONUS_RULES;
+  if (!r.enabled || !(extra > 0) || !(r.points > 0)) return 0;
+  const done = st.bonusTiers ?? 0;
+  if (done >= r.maxPerMonth) return 0;
+  st.bonusPoints = (st.bonusPoints ?? 0) + Math.floor(extra);
+  const due = Math.min(r.maxPerMonth, Math.floor(st.bonusPoints / r.points)) - done;
+  if (due <= 0) return 0;
+  st.bonusTiers = done + due;
+  return due;
+}
+
+/** Avancée vers le prochain palier bonus (null : désactivé). */
+export function passBonusProgress(st: PassState): { tiers: number; max: number; into: number; size: number; tokens: number } | null {
+  const r = PASS_BONUS_RULES;
+  if (!r.enabled || !(r.points > 0)) return null;
+  const tiers = st.bonusTiers ?? 0;
+  return { tiers, max: r.maxPerMonth, into: tiers >= r.maxPerMonth ? r.points : (st.bonusPoints ?? 0) - tiers * r.points, size: r.points, tokens: r.tokens };
+}
+
 export const PASS_OVERFLOW = {
   /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
   minPoints: 40,
@@ -413,6 +448,9 @@ export function addPassPoints(player: PlayerState, source: PassSource, now: numb
   const before = st.points;
   st.points = Math.min(max, st.points + gain);
   notePoints(st, source, before, now);
+  // 6.11.0 (Z3) : tout surplus avance les paliers bonus (jetons de casino, plafonnés par mois).
+  const bonus = settlePassBonus(st, overflow);
+  if (bonus > 0) grantTokens(player, bonus * PASS_BONUS_RULES.tokens);
   player.seasonPass = st;
   if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
     const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);

@@ -38,7 +38,7 @@ import { PROFILE_RULES } from "@/game/profile";
 import { REFERRAL_RULES } from "@/game/referral";
 import { RENAME_RULES } from "@/game/rename";
 import { REPORT_RULES } from "@/game/reports";
-import { PASS_OVERFLOW } from "@/game/seasonPass";
+import { PASS_BONUS_RULES, PASS_OVERFLOW } from "@/game/seasonPass";
 import { SEASON_WAR_RULES, WAR_CHEST_RULES } from "@/game/seasonWars";
 import { TUTORIAL_RAID } from "@/game/story";
 import { SYNTH_RULES } from "@/game/synthesis";
@@ -91,6 +91,7 @@ export const REGISTERED_RULES = {
   colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
   passRewards: { label: "Passe généré : dernier palier et effort", target: () => PASS_REWARD_RULES },
   achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
+  passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES },
   missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
   dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, isCumulativePass, OBJECTIVE_LABELS, PASS_POINTS, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, isCumulativePass, OBJECTIVE_LABELS, PASS_POINTS, passBonusProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -60,6 +60,13 @@ function rewardIcon(r: PassReward): string {
 function endOfMonth(now: number): number {
   const d = new Date(now);
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1);
+}
+
+/** 6.11.0 (Z3) : passe terminé, avancée des paliers bonus (jetons de casino). */
+function bonusSub(b: ReturnType<typeof passBonusProgress>): string {
+  if (!b) return "Passe terminé !";
+  if (b.tiers >= b.max) return `Passe terminé · ${b.max} / ${b.max} paliers bonus`;
+  return `Palier bonus ${b.tiers + 1} / ${b.max} : ${b.into} / ${b.size} points pour +${b.tokens} jeton${b.tokens > 1 ? "s" : ""}`;
 }
 
 export function SeasonPassPage() {
@@ -152,7 +159,7 @@ export function SeasonPassPage() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : "Passe terminé !"} icon={<Ticket className="h-4 w-4" />} />
+        <StatTile label="Palier" value={`${tier} / ${tiers}`} sub={tier < tiers ? `${inTier} / ${pass.pointsPerTier} points vers le palier ${tier + 1}` : bonusSub(passBonusProgress(st))} icon={<Ticket className="h-4 w-4" />} />
         <StatTile label="Points" value={`${st.points} / ${max}`} sub="≈ 40 points par jour d'activité" tone="gold" />
         <StatTile label="Fin de la saison" value={formatClock(Math.max(0, Math.floor((endOfMonth(now) - now) / 1000)))} sub="Les paliers non réclamés sont perdus" tone="ember" />
       </div>

@@ -1,6 +1,6 @@
 # Proposition : progression, suites de la revue AU3
 
-Statut : **en cours** : C (titres groupés) et la mesure du rythme (A, traçage par source) livrés en 6.8.0 (`docs/changes/6.8.0-progression-generative.md`) ; A (rythme : points par palier calculés, jours cibles 24 et 15) livré en 6.8.1 (`docs/changes/6.8.1-passe-par-budget.md`) ; B (après le dernier palier) en attente. Constats : `docs/audit/2026-10-06-au3-progression.md`.
+Statut : **en cours** : C (titres groupés) et la mesure du rythme (A, traçage par source) livrés en 6.8.0 (`docs/changes/6.8.0-progression-generative.md`) ; A (rythme : points par palier calculés, jours cibles 24 et 15) livré en 6.8.1 (`docs/changes/6.8.1-passe-par-budget.md`) ; B (après le dernier palier, option B1) livré en 6.11.0 (`docs/changes/6.11.0-paliers-bonus.md`). Constats : `docs/audit/2026-10-06-au3-progression.md`.
 Les points A et B sont repris et étendus par `docs/proposals/generation-passe-chroniques.md` (passe et Chroniques entièrement génératifs).
 
 ## 1. Le problème vu par le joueur
@@ -33,7 +33,7 @@ par palier, barème par source), sans code. Le simulateur de durée du passe (5.
 | B2 | Tout surplus devient de l'Ambre (1 Ambre pour 4 points, 150 par mois au plus) | simple | pousse l'Ambre (monnaie rare) |
 | B3 | Ne rien changer | aucun code | 24 jours sans passe |
 
-**Recommandation : B1**, réglable dans l'admin (taille du palier bonus, jetons, plafond). À faire après A.
+**Recommandation : B1**, réglable dans l'admin (taille du palier bonus, jetons, plafond). **Livrée en 6.11.0.**
 
 ## C. Titres en série (PRG-4)
 
