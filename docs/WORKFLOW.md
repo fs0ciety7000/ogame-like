@@ -156,5 +156,7 @@ Exemple : un nouveau vaisseau « Corvette ».
 - Défi de passe « construire 20 corvettes » et prime Kesh'Vaar ; présence dans les tables de butin.
 - Simulateur ; changelog, prompts et image.
 
-Garde (lot à venir, `docs/proposals/chaine-contenu.md`) : un test qui liste, pour chaque unité, bâtiment, techno, relique et boss, les
-maillons manquants (Codex, succès, porteur d'effets) et échoue sur un contenu nouveau incomplet.
+Garde (6.14.11, `docs/proposals/chaine-contenu.md`) : `contentChainReport()` (`src/game/contentChain.ts`) donne, pour chaque unité,
+bâtiment, techno, relique et boss, l'état des maillons 5 à 7 (Codex, succès d'entrée et de maîtrise, préréglage d'effet de l'unité, porteur
+d'effet). `contentChain.test.ts` échoue sur un manque absent de `KNOWN_GAPS` et sur un manque connu déjà comblé. Les autres maillons
+(image, changelog, pré-prod…) restent cochés dans la fiche du lot.

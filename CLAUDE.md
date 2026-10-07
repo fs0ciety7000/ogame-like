@@ -87,7 +87,9 @@ La liste complète, avec les fichiers de chaque maillon, est la **chaîne de con
 - changelog et billet ;
 - essai sur la pré-prod.
 
-La fiche du lot coche chaque maillon : fait, sans objet, ou reporté au lot X de la feuille de route. La revue de fin de feuille de route
+La fiche du lot coche chaque maillon : fait, sans objet, ou reporté au lot X de la feuille de route. La garde `contentChain.test.ts` (6.14.11)
+vérifie Codex, succès et effets de chaque unité, bâtiment, techno, relique et boss : un contenu ajouté sans eux la fait échouer.
+Un test qui lit les succès les recharge (`setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS))`) : `src/test/setup.ts` les vide avant chaque test. La revue de fin de feuille de route
 vérifie la chaîne pour chaque contenu livré, et l'audit suivant reprend une image provisoire tant que la définitive n'est pas arrivée.
 
 ## Reprendre dans une nouvelle session

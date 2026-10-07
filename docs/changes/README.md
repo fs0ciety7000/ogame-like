@@ -111,6 +111,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.8 | [Pré-prod test.fs0ciety.org](6.14.8-preprod.md) | ajout (outillage) | aucune (PP-1), Q22 |
 | 6.14.9 | [Pré-prod Coolify et chaîne de contenu](6.14.9-preprod-coolify-chaine-contenu.md) | ajout (outillage), docs | aucune (PP-2), Q22 |
 | 6.14.10 | [Reprise de session, intégration dans le dépôt](6.14.10-reprise-session.md) | outillage, docs | aucune |
+| 6.14.11 | [Garde de la chaîne de contenu, pré-prod nettoyée](6.14.11-garde-chaine-contenu.md) | ajout (outillage), docs | `chaine-contenu.md` (C1), Q22, Q23 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
