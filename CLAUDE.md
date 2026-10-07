@@ -66,24 +66,29 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 
-## Règle n° 4 : un contenu ajouté est un contenu complet
+## Règle n° 4 : un contenu ajouté est un contenu complet (chaîne de contenu)
 
 > **Instructions : Pour chaque ajout de contenu, il faut créer succès, alimenter codex, etc.**
 > **Instructions : quand il y a besoin, écris les prompts Midjourney pour la génération d'illustrations.**
+> **Instructions (2026-10-07) : pour chaque ajout de contenu et fonctionnalités / systèmes : création de nouveaux effets (sur base du
+> système, tech, bâtiments, unités créés ou déjà présents), effets utilisables sur reliques, plans, etc. ; ajout de succès, codex ; ajout de
+> reliques, plans et autres ; ajout dans le panel admin ; création de défis, missions ; workflow complet. L'idée est que si on veut ajouter
+> un nouveau vaisseau, une nouvelle tech, un nouveau bâtiment, tout s'enchaîne.**
 
-Tout nouveau contenu (système, bâtiment, unité, techno, relique, boss, faction, événement, objet du Comptoir…) part avec, dans le même lot
-ou dans le lot suivant de la feuille de route :
+La liste complète, avec les fichiers de chaque maillon, est la **chaîne de contenu** de `docs/WORKFLOW.md` §7. En bref :
+- contenu et migration ;
+- réglages et admin ;
+- effets donnés et effets reçus (cibles, préréglages, nouvelle stat si besoin) ;
+- porteurs d'effets : relique, plan ou module, talent, officier, techno ;
+- succès (entrée et maîtrise), Codex, titre ou bannière ;
+- défis, missions, primes ; butin ;
+- équilibre (simulateur) et interface (Ctrl+K, Formules, Journal) ;
+- illustration : image provisoire et prompts Midjourney dans `docs/prompts-<version>.md` ;
+- changelog et billet ;
+- essai sur la pré-prod.
 
-- **succès** : au moins un palier d'entrée et un palier de maîtrise (`derivedAchievements` pour un succès lié à un catalogue ou à une
-  règle, mesure lue à l'usage) ;
-- **Codex** : une entrée (`codex.ts`), débloquée par le joueur lui-même ;
-- selon le cas : titre ou bannière, défi du passe, objectif des Chroniques, ligne du Journal, notification ;
-- **illustration** : si une image manque, prompts Midjourney dans `docs/prompts-<version>.md` (style des prompts existants, format et
-  dimensions attendus) et image provisoire dans `public/assets/…`. La fiche du lot le signale, et l'audit suivant le reprend tant que
-  l'image définitive n'est pas arrivée ;
-- changelog joueurs, et billet de devblog pour un contenu important.
-
-La revue de fin de feuille de route vérifie cette liste pour chaque contenu livré.
+La fiche du lot coche chaque maillon : fait, sans objet, ou reporté au lot X de la feuille de route. La revue de fin de feuille de route
+vérifie la chaîne pour chaque contenu livré, et l'audit suivant reprend une image provisoire tant que la définitive n'est pas arrivée.
 
 ## Langue et ton
 
@@ -185,10 +190,13 @@ Toujours lire le résultat de l'intégration **avant** de committer.
 - `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).
   Jamais de règle vers la production ni de push sur `main`.
 - Données de production : lecture seule (GET), extraits gardés hors du dépôt (scratchpad). Seuls des agrégats anonymes entrent dans les docs.
-- **Pré-prod** (`docs/preprod.md`, `test.fs0ciety.org` + `base-test.fs0ciety.org`) : copie nettoyée de la prod (`scripts/preprod-scrub.mjs`).
-  Lectures, essais et écritures y sont permis (mesures Z1, test d'une branche avant PR). Accès par les variables d'environnement
-  `PREPROD_PB_URL`, `PREPROD_PB_ADMIN_EMAIL`, `PREPROD_PB_ADMIN_PASSWORD`, jamais dans le dépôt. Un script qui écrit refuse toute adresse
-  qui n'est pas un serveur de test (`isPreprodHost`). Les e-mails restent coupés là-bas (`COSMIC_MAIL_DISABLED=1`).
+- **Pré-prod** (`docs/preprod.md`) : `test.fs0ciety.org`, un seul conteneur (`Dockerfile.preprod`) que Coolify construit depuis la
+  branche de travail à chaque push. **Tout passe par la pré-prod avant la production** : un lot qui touche le serveur ou l'interface est
+  vérifié sur `test.fs0ciety.org` après le push (santé, version des hooks, pages touchées). Seule une PR fusionnée sur `main` atteint la prod.
+  La pré-prod est une copie nettoyée de la prod (`scripts/preprod-scrub.mjs`) ; lectures, essais et écritures y sont permis. Accès par les
+  variables d'environnement `PREPROD_PB_URL`, `PREPROD_PB_ADMIN_EMAIL`, `PREPROD_PB_ADMIN_PASSWORD`, jamais dans le dépôt. Un script qui
+  écrit refuse toute adresse qui n'est pas un serveur de test (`isPreprodHost`). L'image coupe les e-mails (`COSMIC_MAIL_DISABLED=1`) et la
+  mise à jour des hooks depuis GitHub (`COSMIC_HOOKS_AUTOUPDATE=0`).
 
 ## Méthode de game design
 

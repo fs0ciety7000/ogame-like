@@ -121,3 +121,40 @@ Une règle devenue fausse est réécrite, pas contournée.
 - Lot 0 = correctif sans changement de règle (données, affichage, garde-fous). Il part seul s'il est urgent.
 - Un lot = moteur + tests + serveur + UI d'un même morceau ; pas de lot « tout le moteur » puis « toute l'UI ».
 - Le changelog décrit ce que le joueur voit, pas le code. Le devblog explique le pourquoi, chiffres à l'appui.
+
+## 7. Chaîne de contenu : tout s'enchaîne
+
+Consigne de l'utilisateur (2026-10-07) : pour chaque ajout de contenu, fonctionnalité ou système, la chaîne complète suit. L'objectif :
+quand on ajoute un vaisseau, une techno ou un bâtiment, tout s'enchaîne. Ajouter un contenu, c'est parcourir cette liste dans le même lot,
+ou dans les lots suivants de la feuille de route, sans attendre que quelqu'un le demande. La fiche du lot coche chaque ligne : fait,
+sans objet, ou reporté au lot X.
+
+| # | Maillon | Ce qu'on ajoute | Où |
+|:--|:--|:--|:--|
+| 1 | **Contenu** | la fiche (stats, coûts, prérequis, image) | `units.ts`, `buildings.ts`, `technologies.ts`, `relics.ts`, `modules.ts`… ; `CONTENT_MIGRATIONS` (`appendFromDefaults`, `cosmic_db.js`) |
+| 2 | **Réglages et admin** | chaque chiffre réglable (règle n° 2), éditeur de la fiche, rapport d'impact | `GameRules` / `ruleRegistry.ts`, onglet du domaine, `ContentEditor`, `panels.tsx`, `impact.ts` |
+| 3 | **Effets donnés** | ce que le contenu apporte passe par le circuit d'effets, sous les plafonds | `effects.ts` (`EFFECT_STATS`), `empireEffects` (`modifiers.ts`), `derived.test.ts`, `effectsRead.test.ts` |
+| 4 | **Effets reçus** | les effets qui peuvent le viser (+ % d'attaque sur cette unité ou sa classe, + % aux stats de la lune…) : cible ajoutée et préréglages | `effectTargets.ts` (sélecteur unité / classe / catégorie), `effectCatalog.ts` (`EFFECT_PRESETS`), nouvelle stat dans `EFFECT_STATS` si besoin |
+| 5 | **Porteurs d'effets** | au moins une relique, un plan ou module, un talent, un officier ou une techno qui utilise ces effets | `relics.ts` (`DEFAULT_RELICS`, `RELIC_EFFECT_STAT`), `modules.ts`, `techEffects.ts`, `commanders.ts`, `talents.ts` ; formulaires `RelicForm`, `TechEffectsEditor`, `ComposedEffectFields` |
+| 6 | **Succès** | un palier d'entrée et un palier de maîtrise ; un secret si le contenu s'y prête | `achievements.ts` (`METRICS`, `derivedAchievements`, mesure lue à l'usage) |
+| 7 | **Codex** | une entrée, débloquée par le joueur lui-même | `codex.ts` |
+| 8 | **Titre, bannière** | si le contenu a une maîtrise ou un exploit à afficher | `titles.ts`, `banners.ts` |
+| 9 | **Défis et missions** | un défi de passe, un objectif des Chroniques, un défi hebdo, une mission ou une prime qui fait jouer le contenu | `passGen.ts`, `chronicleGen.ts`, `challenges.ts`, `dailyMissions.ts`, `missions.ts`, `bounties.ts` |
+| 10 | **Butin et récompenses** | où on l'obtient : tables de butin, coffres, Comptoir, enchères | `loot.ts`, `bounties.ts` (Comptoir), `auctions.ts`, `addReady` (vaisseaux, I3) |
+| 11 | **Équilibre** | simulateur, « et si », analyse d'équilibrage, mesure dans la santé de l'équilibre si utile | `simulator.ts`, `whatIf.ts`, `balance/` |
+| 12 | **Interface** | page ou carte, recherche Ctrl+K, page Formules, Journal, notification, tutoriel avancé si c'est une étape | `src/pages/`, `CommandPalette`, `FormulasPage`, `timeline.ts`, `advancedGuide.ts` |
+| 13 | **Illustrations** | image provisoire, prompts Midjourney (`docs/prompts-<version>.md`) | `public/assets/…` |
+| 14 | **Joueurs** | changelog ; billet de devblog pour un contenu important | `changelog/`, `content/blog/` |
+| 15 | **Pré-prod** | déploiement et essai sur `test.fs0ciety.org` avant la PR | `docs/preprod.md` |
+
+Exemple : un nouveau vaisseau « Corvette ».
+- Fiche dans `units.ts` et migration de contenu.
+- Coûts et stats réglables dans Admin → Unités.
+- Bonus éventuel de la corvette dans la couche empire.
+- Sélecteur `unit:corvette` déjà couvert ; préréglage « +10 % d'attaque des corvettes » dans `effectCatalog.ts`.
+- Relique « Moteur de corvette » ; succès « 100 corvettes » et « corvette niveau 10 » ; entrée de Codex (automatique pour les unités).
+- Défi de passe « construire 20 corvettes » et prime Kesh'Vaar ; présence dans les tables de butin.
+- Simulateur ; changelog, prompts et image.
+
+Garde (lot à venir, `docs/proposals/chaine-contenu.md`) : un test qui liste, pour chaque unité, bâtiment, techno, relique et boss, les
+maillons manquants (Codex, succès, porteur d'effets) et échoue sur un contenu nouveau incomplet.

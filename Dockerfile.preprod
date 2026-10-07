@@ -1,0 +1,38 @@
+# 6.14.9 : serveur de test (pré-prod), construit par Coolify depuis la branche de travail (docs/preprod.md).
+# Un seul conteneur : PocketBase sert l'API, les hooks du jeu et le front (pb_public) sur le même domaine.
+# Jamais pour la production : e-mails coupés et mise à jour automatique des hooks désactivée dans l'image.
+
+# 1. Front (Vite)
+FROM node:22-alpine AS front
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY . .
+# Adresse publique du serveur de test (front et API sur le même domaine).
+ARG VITE_POCKETBASE_URL=https://test.fs0ciety.org
+ARG VITE_SERVER_LABEL="Serveur de test"
+ENV VITE_POCKETBASE_URL=$VITE_POCKETBASE_URL VITE_SERVER_LABEL=$VITE_SERVER_LABEL
+RUN npm run build:hooks && npm run build
+
+# 2. PocketBase + hooks + front
+FROM alpine:3.20
+# Même version que la production (PocketBase → Settings, en bas de page).
+ARG PB_VERSION=0.36.0
+ARG TARGETARCH=amd64
+RUN apk add --no-cache ca-certificates wget unzip \
+  && wget -q "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_${TARGETARCH}.zip" -O /tmp/pb.zip \
+  && unzip -q /tmp/pb.zip pocketbase -d /pb \
+  && rm /tmp/pb.zip
+COPY --from=front /app/pocketbase/pb_hooks /pb/pb_hooks
+COPY --from=front /app/dist /pb/pb_public
+# Garde-fous de la pré-prod (surchargeables dans Coolify, à ne jamais changer) :
+# - aucun e-mail aux vrais joueurs, même juste après l'import de la copie de la prod ;
+# - les hooks viennent de l'image (la branche déployée), pas de GitHub.
+ENV COSMIC_MAIL_DISABLED=1 \
+    COSMIC_HOOKS_AUTOUPDATE=0 \
+    COSMIC_GAME_URL=https://test.fs0ciety.org \
+    COSMIC_PASSKEY_ORIGINS=https://test.fs0ciety.org
+EXPOSE 8090
+VOLUME /pb/pb_data
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD wget -qO- http://127.0.0.1:8090/api/health || exit 1
+CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--hooksDir=/pb/pb_hooks", "--publicDir=/pb/pb_public"]

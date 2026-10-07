@@ -1,0 +1,9 @@
+node_modules
+dist
+legacy
+migration-output
+.git
+.env*
+*.log
+*.tsbuildinfo
+e2e

@@ -1,6 +1,6 @@
 // 6.14.8 : prépare un serveur de test (pré-prod) restauré depuis une sauvegarde de la production.
 //
-//   PB_URL=https://base-test.fs0ciety.org PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
+//   PB_URL=https://test.fs0ciety.org PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
 //     PREPROD_GAME_URL=https://test.fs0ciety.org [PREPROD_KEEP_EMAILS=moi@exemple.fr] \
 //     PREPROD_CONFIRM=oui node scripts/preprod-scrub.mjs
 //
@@ -105,4 +105,4 @@ await purge("passkeys");
 // 4. Messages privés.
 await purge("private_messages");
 
-console.log("Serveur de test prêt. Étapes suivantes : docs/preprod.md §4.");
+console.log("Serveur de test prêt. Étapes suivantes : docs/preprod.md §6.");

@@ -1,79 +1,117 @@
 # Pré-prod : test.fs0ciety.org
 
-Serveur de test : une copie de la production, pour tester une branche avant de la fusionner et pour lire des chiffres réels
-(Q12 : mesures Z1, cibles d'équilibre Q2, Q18, Q21). Rien de ce qui s'y passe ne touche la production.
+Serveur de test : une copie de la production, déployée par Coolify depuis la branche de travail (`claude/hiver-k-s`).
+**Tout passe par là avant la production** : chaque push sur la branche redéploie la pré-prod. On y teste, on y mesure (Z1, Q2, Q18,
+Q21), et seule une PR fusionnée sur `main` atteint la production (`.github/workflows/deploy.yml`).
 
 | | Production | Pré-prod |
 |:--|:--|:--|
-| Jeu (front) | `empire.fs0ciety.org` | `test.fs0ciety.org` |
-| PocketBase | `base.fs0ciety.org` | `base-test.fs0ciety.org` |
-| Hooks | branche `main` | branche de travail (`claude/…`) |
+| Adresse | `empire.fs0ciety.org` (jeu) + `base.fs0ciety.org` (API) | `test.fs0ciety.org` (jeu **et** API, un seul conteneur) |
+| Code | `main`, après fusion d'une PR | branche `claude/hiver-k-s`, à chaque push |
+| Construction | Vercel (front) + hooks téléchargés | `Dockerfile.preprod` : front construit + PocketBase + hooks de la branche |
 | E-mails, sauvegardes S3, Google / Apple | actifs | **coupés** |
 
-## 1. PocketBase de test (Coolify)
+## 1. DNS
 
-1. **DNS** : `base-test` (CNAME vers le serveur Coolify, comme `base`).
-2. **Coolify** : nouvelle ressource PocketBase (même image que la prod), **volume `pb_data` à part** (jamais celui de la prod),
-   domaine `https://base-test.fs0ciety.org`.
-3. **Variables d'environnement** :
+Chez le registrar ou chez Cloudflare : un enregistrement `test` qui pointe vers le serveur Coolify. C'est le même serveur que `base` :
+un CNAME `test → base.fs0ciety.org` ou un A vers la même IP.
 
-   | Variable | Valeur | Pourquoi |
-   |:--|:--|:--|
-   | `COSMIC_MAIL_DISABLED` | `1` | aucun e-mail aux vrais joueurs, même avant le nettoyage (§3) |
-   | `COSMIC_HOOKS_BRANCH` | `claude/hiver-k-s` (la branche à tester) | « Mettre à jour les hooks » prend cette branche |
-   | `COSMIC_GAME_URL` | `https://test.fs0ciety.org` | liens du serveur vers le jeu de test |
-   | `COSMIC_PASSKEY_ORIGINS` | `https://test.fs0ciety.org` | passkeys liées au domaine de test |
-   | `COSMIC_GITHUB_TOKEN` | **ne pas mettre** | sinon le bouton « Copie vers R2 » lancerait la copie de la prod |
-   | `COSMIC_BLOG_HOST` | **ne pas mettre** | le devblog reste celui de la prod |
+## 2. Créer l'application dans Coolify
 
-4. Démarrer, créer le compte superutilisateur de test (mot de passe différent de la prod).
+1. **Projects** → le projet du jeu (ou un nouveau projet « Cosmic Empires — test ») → **+ New** → **Private Repository (with GitHub App)**.
+   Prendre le dépôt `fs0ciety7000/ogame-like`, branche **`claude/hiver-k-s`**.
+2. **Build Pack** : **Dockerfile**.
+   - Base Directory : `/`.
+   - Dockerfile Location : `/Dockerfile.preprod`.
+3. **Network** :
+   - Ports Exposes : `8090` ;
+   - Domains : `https://test.fs0ciety.org`.
+4. **Persistent Storage** → **+ Add** → **Volume** :
+   - nom `cosmic-test-data` ;
+   - Destination Path `/pb/pb_data`.
 
-## 2. Importer la copie de la production
+   Ne jamais monter le volume de la prod.
+5. **Environment Variables** : rien d'obligatoire, l'image porte déjà les garde-fous. Facultatif : `PB_VERSION` en **Build Variable**
+   pour l'aligner sur la prod (la version est affichée dans PocketBase → Settings, en bas de page ; par défaut `0.36.0`).
+   Ne jamais ajouter `COSMIC_GITHUB_TOKEN` (il lancerait la copie R2 de la prod) ni `COSMIC_BLOG_HOST`.
+6. **Advanced** → **Auto Deploy** activé : chaque push sur la branche reconstruit et redéploie.
+7. **Deploy**. Au bout de quelques minutes, `https://test.fs0ciety.org/api/health` répond.
+
+L'image (`Dockerfile.preprod`) fixe :
+- `COSMIC_MAIL_DISABLED=1` : aucun e-mail du jeu, même juste après l'import ;
+- `COSMIC_HOOKS_AUTOUPDATE=0` : les hooks viennent de la branche déployée ;
+- `COSMIC_GAME_URL` et `COSMIC_PASSKEY_ORIGINS` sur `https://test.fs0ciety.org` ;
+- le bandeau « Serveur de test » dans le jeu.
+
+## 3. Premier superutilisateur
+
+Coolify → l'application → **Terminal** :
+
+```sh
+/pb/pocketbase superuser upsert ton@email 'un-mot-de-passe-de-test' --dir /pb/pb_data
+```
+
+Le mot de passe doit être **différent de celui de la prod**.
+
+## 4. Importer la copie de la production
 
 1. Production : `https://base.fs0ciety.org/_/` → Settings → **Backups** → télécharger la dernière sauvegarde (ou la prendre sur R2).
-2. Pré-prod : `https://base-test.fs0ciety.org/_/` → Settings → Backups → **Upload backup** → **Restore**.
-   La restauration remet aussi les réglages de la prod (SMTP, sauvegardes S3, Google / Apple) : `COSMIC_MAIL_DISABLED=1` bloque les
-   e-mails du jeu en attendant le §3. Le superutilisateur redevient celui de la prod : le changer tout de suite.
+2. Pré-prod : `https://test.fs0ciety.org/_/` → Settings → Backups → **Upload backup** → **Restore**. PocketBase redémarre ; si le
+   conteneur s'arrête, Coolify le relance.
+3. La restauration remet les comptes superutilisateurs et les réglages de la prod. Dans le Terminal, recréer tout de suite un
+   superutilisateur de test :
+   - le tien : commande du §3 ;
+   - celui de Claude (§6), avec son propre mot de passe.
 
-## 3. Nettoyer la copie (une fois après chaque import)
+## 5. Nettoyer la copie (après chaque import)
+
+Depuis une machine avec Node et le dépôt :
 
 ```bash
-PB_URL=https://base-test.fs0ciety.org PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
+PB_URL=https://test.fs0ciety.org PB_ADMIN_EMAIL=… PB_ADMIN_PASSWORD=… \
   PREPROD_GAME_URL=https://test.fs0ciety.org PREPROD_KEEP_EMAILS=ton@email \
   PREPROD_CONFIRM=oui node scripts/preprod-scrub.mjs
 ```
 
-`scripts/preprod-scrub.mjs` refuse toute adresse qui n'est pas un serveur de test (`test`, `preprod`, local). Il :
+Une fois l'accès donné (§6), Claude peut le lancer.
 
-- coupe les e-mails, les sauvegardes automatiques et leur copie S3, la connexion Google / Apple ;
+`scripts/preprod-scrub.mjs` refuse toute adresse qui n'est pas un serveur de test (`test`, `preprod`, local). Il :
+- coupe les e-mails (SMTP), les sauvegardes automatiques et leur copie S3, la connexion Google / Apple ;
 - remplace les e-mails des comptes par `<id>@test.invalid`, sauf `PREPROD_KEEP_EMAILS`. La connexion par pseudo et mot de passe reste possible ;
 - vide les jetons de désinscription et supprime les passkeys (liées au domaine de la prod) ainsi que les messages privés.
 
-Si les fichiers (avatars, illustrations) sont sur S3 (Settings → Files storage), donner à la pré-prod **un autre bucket** : le script
-le signale.
+Si les fichiers (avatars, illustrations) sont rangés sur S3 (Settings → Files storage), donner à la pré-prod **un autre bucket** : le
+script le signale.
 
-## 4. Front de test (Vercel)
+## 6. Accès de Claude (réglages de l'environnement cloud)
 
-Même projet Vercel que la prod :
+Dans claude.ai/code, ouvrir le menu de l'environnement dans la barre de titre de la session, puis **Edit** :
 
-1. Domaine `test.fs0ciety.org` rattaché à la branche à tester (Settings → Domains → Git branch).
-2. Variables **Preview** de cette branche :
-   - `VITE_POCKETBASE_URL=https://base-test.fs0ciety.org` ;
-   - `VITE_SERVER_LABEL=Serveur de test`, qui affiche un bandeau en haut du jeu.
-3. Redéployer, puis sur la pré-prod : Admin → bouton **Mettre à jour les hooks** (en tête de page). Les nouveaux champs se créent au démarrage.
+1. **Secrets** : section **Network secrets** (« API credentials » sur une app pas à jour), sinon **Environment variables**.
+   Une ligne par variable, au format `NOM=valeur` :
 
-## 5. Accès pour Claude (lecture et essais sur la pré-prod)
+   | Nom | Valeur |
+   |:--|:--|
+   | `PREPROD_PB_URL` | `https://test.fs0ciety.org` |
+   | `PREPROD_PB_ADMIN_EMAIL` | l'e-mail du superutilisateur de test créé pour Claude (§4.3) |
+   | `PREPROD_PB_ADMIN_PASSWORD` | son mot de passe (propre à la pré-prod) |
 
-- **Secrets** : dans les réglages de l'environnement cloud, et jamais dans le dépôt ni dans le chat. Ajouter
-  `PREPROD_PB_URL`, `PREPROD_PB_ADMIN_EMAIL` et `PREPROD_PB_ADMIN_PASSWORD`, avec un superutilisateur **propre à la pré-prod**.
-- **Réseau** : autoriser `base-test.fs0ciety.org` et `test.fs0ciety.org` dans l'accès réseau de l'environnement.
-- **Ce que Claude y fait** :
-  - lire les agrégats : santé de l'équilibre, passe, boss, commerce ;
-  - lancer les mesures Z1 ;
-  - tester une branche en vrai : combats, crons, migrations.
-- **Écritures** : permises sur la pré-prod uniquement. La production reste en lecture seule et n'est jamais une cible des scripts.
-- **Données** : seuls des agrégats anonymes entrent dans les docs. Aucun extrait par joueur, aucun e-mail.
+2. **Network access** :
+   - en niveau **Limited**, ajouter `test.fs0ciety.org` dans **Allowed domains** et laisser « Allow package managers » coché ;
+   - en niveau **Custom** sur une app pas à jour, même ajout, avec la liste par défaut des gestionnaires de paquets.
+3. Enregistrer. Les variables sont lues **par une nouvelle session** : en ouvrir une sur la même branche.
 
-## 6. Rafraîchir
+Jamais de secret dans le chat ni dans le dépôt.
 
-Pour repartir d'une copie fraîche : réimporter une sauvegarde de la prod (§2), relancer le nettoyage (§3), puis mettre à jour les hooks.
+Ce que Claude fait ensuite sur la pré-prod :
+- après chaque push, vérification du déploiement (santé, version des hooks, pages clés) ;
+- mesures Z1 (agrégats anonymes seulement dans les docs) ;
+- essais de combats, de crons et de migrations ;
+- nettoyage après import.
+
+Les écritures sont permises sur la pré-prod uniquement ; la production reste en lecture seule.
+
+## 7. Rafraîchir la copie
+
+Réimporter une sauvegarde de la prod (§4), recréer les superutilisateurs de test, puis relancer le nettoyage (§5). Le code, lui, suit
+la branche tout seul (Auto Deploy).
