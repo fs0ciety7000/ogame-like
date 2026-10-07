@@ -125,6 +125,17 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   }
 
   let aId = "", bId = "", allianceId = "";
+  /** 6.11.10 (H2) : un test lancé seul (`-t`) crée A et B s'ils n'existent pas encore (sinon il lisait un profil nul). */
+  const ensureAB = async () => {
+    if (!aId) {
+      aId = (await registerPlayer(A.pseudo, A.email, A.pw)).id;
+      logout();
+    }
+    if (!bId) {
+      bId = (await registerPlayer(B.pseudo, B.email, B.pw)).id;
+      logout();
+    }
+  };
 
   it("registers two players and the server creates their profiles", async () => {
     aId = (await registerPlayer(A.pseudo, A.email, A.pw)).id;
@@ -2048,6 +2059,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v4.2 warlords: hourly tick, raid on a lord, vendetta, lord attack, replies and vacation", async () => {
+    await ensureAB();
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
     const tick = (action = "tick", warlordId = "") => admin.send<Record<string, number>>("/api/cosmic/admin/warlords", { method: "POST", body: { action, warlordId } });
