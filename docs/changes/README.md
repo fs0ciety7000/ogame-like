@@ -83,6 +83,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.11.2 | [Revue AU14 et clôture du printemps](6.11.2-revue-printemps.md) | docs | aucune (AU14) |
 | 6.11.3 | [Unités plus courte sur mobile](6.11.3-unites-mobile.md) | ajustement | aucune (E2), Q14 |
 | 6.11.4 | [Débris sur les colonies](6.11.4-debris-colonies.md) | correctif | aucune (E1), Q13 |
+| 6.11.5 | [Revue AU15 et clôture de l'été](6.11.5-revue-ete.md) | docs | aucune (AU15) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
