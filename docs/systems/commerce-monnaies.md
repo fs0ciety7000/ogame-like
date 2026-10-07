@@ -38,3 +38,10 @@ Rapport `docs/audit/2026-10-06-au4-commerce.md`. Depuis la 6.9.0, tous les chiff
 (`auctions`), contrats (`tradeContracts`), cadeaux (`gifts`), concours (`contests`), points du tournoi (`tournamentPoints`), offre de la
 semaine (`weeklyStock`, prix et exemplaires), mécènes (`patrons`) ; marché et PNJ marchand (`market`) ; casino dans Admin → Pot commun.
 Comptoir d'échange (6.9.7) : taux et taxe réglables (`exchange`).
+
+## 6.14.104 (revue AU27, lot AA3)
+Chiffres des listes fixes réglables, valeurs inchangées (fiche `docs/changes/6.14.104-chiffres-reglables.md`) :
+- **Comptoir de la Ruche** : prix des 22 objets (30 à 600 Ambre) dans `bountyShop.prices` (Admin → Règles → « Comptoir de la Ruche : prix »).
+  Les descriptions lisent les règles (accélérateur, Gelée `economy.keshBoostPct` et `boostHours`, Voile, dossier, analgésique, réserve `maxCharges`).
+- **Offre de la semaine** : sac de jetons (25) dans `weeklyStock.tokensBag` ; **mécènes** : paliers du badge (25, 100, 500, 2 000 Ambre)
+  dans `patrons.tiers` (croissants, contrôlés) ; **enchères** : `auctions.maxStart` (10¹²) a son champ (Admin → Règles → Commerce).

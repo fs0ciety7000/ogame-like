@@ -15,13 +15,23 @@ export const CHALLENGE_KEY = "challenge";
 
 export type ChallengeType = "raids" | "missions" | "units" | "market" | "expeditions" | "bounties";
 
+/** 6.14.104 (AA3, AA-8) : objectif par joueur actif lu dans CHALLENGE_RULES.perActive (admin, Défi de la semaine) ; types en dur. */
+const challengeType = (id: ChallengeType, label: string, unit: string) => ({
+  label,
+  unit,
+  get perActive() {
+    const v = Number(CHALLENGE_RULES.perActive[id]);
+    return Number.isFinite(v) && v > 0 ? v : 1;
+  },
+});
+
 export const CHALLENGE_TYPES: Record<ChallengeType, { label: string; unit: string; perActive: number }> = {
-  raids: { label: "Repousser les raids des factions", unit: "raids repoussés", perActive: 3 },
-  missions: { label: "Terminer des missions", unit: "missions", perActive: 25 },
-  units: { label: "Construire des unités", unit: "unités", perActive: 400 },
-  market: { label: "Faire vivre le marché", unit: "ressources échangées", perActive: 2_000_000 },
-  expeditions: { label: "Explorer l'inconnu", unit: "expéditions", perActive: 6 },
-  bounties: { label: "Remplir les primes de l'Essaim", unit: "primes", perActive: 8 },
+  raids: challengeType("raids", "Repousser les raids des factions", "raids repoussés"),
+  missions: challengeType("missions", "Terminer des missions", "missions"),
+  units: challengeType("units", "Construire des unités", "unités"),
+  market: challengeType("market", "Faire vivre le marché", "ressources échangées"),
+  expeditions: challengeType("expeditions", "Explorer l'inconnu", "expéditions"),
+  bounties: challengeType("bounties", "Remplir les primes de l'Essaim", "primes"),
 };
 
 export const CHALLENGE_RULES = {
@@ -35,6 +45,8 @@ export const CHALLENGE_RULES = {
   titleDays: 7,
   /** Joueur actif : vu dans les 7 derniers jours. */
   activeDays: 7,
+  /** 6.14.104 (AA3, AA-8) : objectif de chaque type de défi, par joueur actif. */
+  perActive: { raids: 3, missions: 25, units: 400, market: 2_000_000, expeditions: 6, bounties: 8 } as Record<ChallengeType, number>,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -44,6 +56,7 @@ export const CHALLENGE_RULES_META = {
   title: { label: "Titre du défi" },
   titleDays: { label: "Titre porté pendant", unit: "j", min: 0, max: 60 },
   activeDays: { label: "Joueur actif : vu dans les", unit: "j", min: 1, max: 60 },
+  perActive: { label: "Objectif par joueur actif, par type de défi", hint: "raids, missions, unités, marché (ressources échangées), expéditions, primes : objectif de la semaine = valeur × joueurs actifs (plus de 0)." },
 };
 
 export interface Challenge {

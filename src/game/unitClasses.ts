@@ -77,6 +77,13 @@ export const UNIT_AUDIT_RULES = {
   /** Unités lourdes de fin de partie (au moins `endgameSlots` places) : leur avance est voulue, jusqu'à ce rapport. */
   endgameSlots: 10,
   endgameStrongAbove: 2.2,
+  /** 6.14.104 (AA3, AA-32) : alerte de l'admin quand un seigneur dépasse ce multiple de la puissance du 2e joueur. */
+  warlordAlertRatio: 1.5,
+  /** 6.14.104 (AA3, AA-32) : zone cible du taux de victoire des attaquants en JcJ (diagnostic d'équilibrage, en %). */
+  pvpAttackLow: 40,
+  pvpAttackHigh: 65,
+  /** 6.14.104 (AA3, AA-32) : valeur d'une ressource rare en ressources communes (outils d'équilibrage : coûts, simulateur). */
+  rareValue: 50,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -85,6 +92,10 @@ export const UNIT_AUDIT_RULES_META = {
   weakBelow: { label: "Unité trop faible sous", unit: "×", min: 0, max: 1 },
   endgameSlots: { label: "Unité lourde de fin de partie : places au moins", min: 1, max: 100 },
   endgameStrongAbove: { label: "Unité lourde trop forte au-dessus de", unit: "×", min: 1, max: 10 },
+  warlordAlertRatio: { label: "Seigneurs : alerte au-delà de ce multiple du 2e joueur", unit: "×", min: 1, max: 10, hint: "Onglet Seigneurs : puissance d'un seigneur comparée à celle du 2e joueur humain." },
+  pvpAttackLow: { label: "JcJ : taux de victoire des attaquants, bas de la zone cible", unit: "%", min: 0, max: 100, hint: "Diagnostic d'équilibrage (Admin → Équilibrage). Inférieur au haut de la zone." },
+  pvpAttackHigh: { label: "JcJ : taux de victoire des attaquants, haut de la zone cible", unit: "%", min: 0, max: 100 },
+  rareValue: { label: "Valeur d'une ressource rare (en ressources communes)", min: 1, max: 1000, hint: "Outils d'équilibrage seulement (coûts comparés, simulateur de progression)." },
 };
 
 /** Audit d'équilibrage : valeur de combat par coût et par place, comparée à la médiane de la catégorie. */

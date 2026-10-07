@@ -22,7 +22,7 @@ import {
   adminEditPlayer,
   type AdminPlayer,
 } from "@/services/adminService";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, NumberListField, Section } from "@/pages/admin/fields";
 import { adminEditCount, adminEditDiff } from "@/game/adminEdit";
 import { COLONY_BASE_RULES } from "@/game/fleets";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
@@ -33,6 +33,7 @@ import { NavUnlockRulesFields } from "@/pages/admin/NavUnlockRulesFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
 import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
 import { RhythmRulesFields } from "@/pages/admin/RhythmRulesFields";
+import { FixedListRulesFields } from "@/pages/admin/FixedListRulesFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -529,6 +530,12 @@ export function RulesPanel() {
             step={0.5}
             onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, tollHours: v ?? 0 } }))}
           />
+          {/* 6.14.104 (AA3, AA-29). */}
+          <NumberListField label="Durées proposées (h)" value={rules.expeditions.durations} onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, durations: v.filter((h) => h > 0) } }))} />
+          <NumberField label="Expédition en chaîne : étapes en plus, au plus" value={rules.expeditions.maxDepth} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, maxDepth: Math.max(0, Math.round(v ?? 0)) } }))} />
+          <NumberField label="Étape profonde : butin en plus par étape (0,25 = +25 %)" value={rules.expeditions.deepLootBonus} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, deepLootBonus: v ?? 0 } }))} />
+          <NumberField label="Étape profonde : puissance adverse en plus par étape (0,2 = +20 %)" value={rules.expeditions.deepRisk} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, deepRisk: v ?? 0 } }))} />
+          <NumberField label="Étape profonde : part de la cale perdue (embuscade perdue)" value={rules.expeditions.deepLootLoss} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, expeditions: { ...r.expeditions, deepLootLoss: v ?? 0 } }))} />
           <NumberField
             label="Probabilité relative : rien"
             value={rules.expeditions.weights.nothing}
@@ -687,6 +694,9 @@ export function RulesPanel() {
             hint="Flottes en vol en même temps par joueur. Les sondes et les expéditions ne comptent pas (elles ont leur propre limite)."
             onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, slotsBase: v ?? 10 } }))}
           />
+          {/* 6.14.104 (AA3, AA-29). */}
+          <NumberField label="Taille de la carte de la galaxie" value={rules.fleets.mapSize} min={10} step={10} hint="Côté de la carte, en unités de distance (entre 10 et 1 000). Change toutes les distances de vol." onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, mapSize: v ?? 100 } }))} />
+          <NumberField label="Départ différé d'une flotte, au plus (min)" value={rules.fleets.delayMaxMinutes} min={0} step={30} hint="0 = pas de départ différé." onChange={(v) => setRules((r) => ({ ...r, fleets: { ...r.fleets, delayMaxMinutes: Math.max(0, Math.round(v ?? 0)) } }))} />
         </Section>
         <Section title="Technos de combat et Traqueur Kesh (6.6)">
           <NumberField
@@ -754,6 +764,10 @@ export function RulesPanel() {
           <NumberField label="Niveau max des bâtiments" value={rules.colonies.maxLevel} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, maxLevel: Math.round(v ?? 1) } }))} />
           <NumberField label="Coût des bâtiments (× planète mère)" value={rules.colonies.costFactor} min={0} step={0.1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, costFactor: v ?? 1 } }))} />
           <NumberField label="Bonus de production (0,5 = +50 %)" value={rules.colonies.productionBonus} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, productionBonus: v ?? 0 } }))} />
+          {/* 6.14.104 (AA3, AA-29). */}
+          <NumberListField label="Niveaux cumulés requis pour chaque colonie" value={rules.colonies.levelsRequired} hint="Un seuil par colonie, dans l'ordre : autant de seuils que de colonies au plus." onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, levelsRequired: v.map((n) => Math.max(0, Math.round(n))) } }))} />
+          <NumberField label="Fondation : part des niveaux de la planète mère (0,5 = 50 %)" value={rules.colonies.foundationShare} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, foundationShare: v ?? 0 } }))} />
+          <NumberField label="Fondation : niveau maximal" value={rules.colonies.foundationMax} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, foundationMax: Math.max(0, Math.round(v ?? 0)) } }))} />
           <NumberField label="File de défense : lots en attente" value={rules.colonies.defenseQueueMax} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, defenseQueueMax: Math.round(v ?? 0) } }))} />
           <NumberField label="Routes : frais de convoi (0,1 = 10 %)" value={rules.colonyRoutes.feePct} min={0} step={0.01} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, feePct: v ?? 0 } }))} />
           <NumberField label="Routes : réserve par défaut de la colonie" value={rules.colonyRoutes.defaultKeepPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, defaultKeepPct: v ?? 0 } }))} />
@@ -927,6 +941,14 @@ export function RulesPanel() {
             step={50_000}
             onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, missionRareProductionRef: v ?? 0 } }))}
           />
+          {/* 6.14.104 (AA3, AA-29) : la durée se règle avec les autres chiffres du Comptoir. */}
+          <NumberField
+            label="Gelée de la Reine : bonus de production (0,2 = +20 %)"
+            value={rules.economy.keshBoostPct}
+            min={0}
+            step={0.05}
+            onChange={(v) => setRules((r) => ({ ...r, economy: { ...r.economy, keshBoostPct: v ?? 0 } }))}
+          />
         </Section>
         <EventsAndSeasonsSections rules={rules} setRules={setRules} />
         <PassGenFields rules={rules} setRules={setRules} />
@@ -934,6 +956,8 @@ export function RulesPanel() {
         <CommerceRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.84 et 6.14.85 (RL-1, RL-2) : Labo (coûts et durées des recherches) et projets de prestige. */}
         <RhythmRulesFields rules={rules} setRules={setRules} />
+        {/* 6.14.104 (AA3) : chiffres des listes fixes (Comptoir, talents, spécialisations, modules, divisions, défi, barèmes). */}
+        <FixedListRulesFields rules={rules} setRules={setRules} />
       </Card>
       {/* 6.7.2 : tout GameRules est réglable dans l'admin, même sans section dédiée. */}
       <AllRulesEditor rules={rules} setRules={setRules} />

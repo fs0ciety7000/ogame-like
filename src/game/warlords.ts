@@ -8,7 +8,7 @@ import { productionHours } from "@/game/pirates";
 import { checkAttackAllowed } from "@/game/pvp";
 import { onVacation } from "@/game/vacation";
 import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
-import { unitClasses } from "@/game/unitClasses";
+import { UNIT_AUDIT_RULES, unitClasses } from "@/game/unitClasses";
 import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { overallHull } from "@/game/workshop";
@@ -973,8 +973,12 @@ export function ascendantRelic(d: Pick<WarlordDef, "id">, now: number, random: (
   return makeRelic(tpl.id, "mythic", now, `ascendant:${d.id}`, random);
 }
 
-/** 5.23 : seuil d'alerte (administration) : un seigneur plus de N fois au-dessus du 2e joueur. */
-export const WARLORD_ALERT_RATIO = 1.5;
+/** 5.23 : seuil d'alerte (administration) : un seigneur plus de N fois au-dessus du 2e joueur.
+ *  6.14.104 (AA3, AA-32) : réglable (UNIT_AUDIT_RULES.warlordAlertRatio, Admin → Règles), lu à l'usage. */
+export function warlordAlertRatio(): number {
+  const v = Number(UNIT_AUDIT_RULES.warlordAlertRatio);
+  return Number.isFinite(v) && v > 0 ? v : 1.5;
+}
 
 export interface WarlordPowerAlert {
   id: string;
@@ -986,7 +990,7 @@ export interface WarlordPowerAlert {
 }
 
 /** 5.23 : seigneurs trop forts par rapport au 2e joueur (comptes écartés de l'équilibrage déjà retirés). */
-export function warlordPowerAlerts(warlords: { id: string; name: string; power: number }[], humanPowers: number[], ratio = WARLORD_ALERT_RATIO): { second: number; alerts: WarlordPowerAlert[] } {
+export function warlordPowerAlerts(warlords: { id: string; name: string; power: number }[], humanPowers: number[], ratio = warlordAlertRatio()): { second: number; alerts: WarlordPowerAlert[] } {
   const sorted = humanPowers.filter((v) => v > 0).sort((a, b) => b - a);
   const second = sorted[1] ?? sorted[0] ?? 0;
   if (!(second > 0)) return { second: 0, alerts: [] };

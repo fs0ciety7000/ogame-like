@@ -15,7 +15,7 @@ import { EXCHANGE_RULES } from "@/game/resources";
 import { STREAK_RULES } from "@/game/streak";
 import { getTechCost, getTechTime, RESEARCH_RULES, techBonus, techReductionFactor, TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
-import { RARE_VALUE } from "@/game/balance/analysis";
+import { rareValue } from "@/game/balance/analysis";
 import type { Buildings, TechLevels } from "@/types/game";
 
 /* =====================================================
@@ -25,7 +25,7 @@ import type { Buildings, TechLevels } from "@/types/game";
    90 jours, au pas de 10 min. À chaque session, il réclame la série et les
    objectifs du jour, relance les missions débloquées, fait ses expéditions
    (valeur moyenne), remplit ses chantiers (le moins cher d'abord) et ses
-   recherches (la moins chère d'abord, rares comptées `RARE_VALUE`). Il passe par le
+   recherches (la moins chère d'abord, rares comptées `rareValue()`). Il passe par le
    comptoir quand seules les rares manquent. La prise en main est versée à J0.
 
    Production, entrepôt, coûts, durées, échelle des rares, récompenses des
@@ -228,7 +228,7 @@ export function onboardingTotal(): Record<string, number> {
 }
 
 const isRare = (k: string) => (RARES as readonly string[]).includes(k);
-const value = (c: Cost) => Object.entries(c).reduce((a, [k, n]) => a + (n ?? 0) * (isRare(k) ? RARE_VALUE : 1), 0);
+const value = (c: Cost) => Object.entries(c).reduce((a, [k, n]) => a + (n ?? 0) * (isRare(k) ? rareValue() : 1), 0);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
 

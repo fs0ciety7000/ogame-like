@@ -166,8 +166,6 @@ export function validateSeasonPass(cfg: Partial<SeasonPassConfig> | undefined): 
   return errors;
 }
 
-/** Ambre donnée à la place d'une capsule quand la réserve est pleine. */
-const CAPSULE_AMBER = 15;
 
 export interface PassState {
   seasonId: string;
@@ -443,12 +441,15 @@ export const PASS_OVERFLOW = {
   /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
   minPoints: 40,
   amberPerPoint: 1,
+  /** 6.14.104 (AA3, AA-11) : Ambre donnée à la place d'une capsule quand la réserve est pleine. */
+  capsuleAmber: 15,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const PASS_OVERFLOW_META = {
   minPoints: { label: "Gain minimal converti", unit: "points", min: 0, max: 1000, hint: "Seules les sources qui rapportent au moins ce nombre de points sont converties (petits gains exclus)." },
   amberPerPoint: { label: "Ambre par point en trop", unit: "Ambre", min: 0, max: 100 },
+  capsuleAmber: { label: "Ambre à la place d'une capsule (réserve pleine)", unit: "Ambre", min: 0, max: 500 },
 };
 
 /** Ajoute des points de passe. Retourne l'Ambre versée si le passe était déjà au maximum (5.18). */
@@ -541,9 +542,10 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
       return describePassReward(r);
     }
     const b = bountyState(player);
-    b.amber += CAPSULE_AMBER;
+    const capsuleAmber = Math.max(0, Math.floor(Number(PASS_OVERFLOW.capsuleAmber) || 0));
+    b.amber += capsuleAmber;
     player.bounties = b;
-    return `${CAPSULE_AMBER} Ambre (réserve de capsules pleine)`;
+    return `${capsuleAmber} Ambre (réserve de capsules pleine)`;
   }
   if (r.kind === "tokens") {
     grantTokens(player, r.count);

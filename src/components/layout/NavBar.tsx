@@ -49,7 +49,8 @@ interface NavItem {
   lock?: "planner";
 }
 
-const PLANNER_PRICE = findShopItem("planner")?.price ?? 600;
+/** 6.14.104 (AA3) : prix réglable dans l'admin, lu à l'usage (jamais au chargement du module). */
+const plannerPrice = () => findShopItem("planner")?.price ?? 600;
 
 type ItemLinkProps = Omit<React.ComponentProps<typeof NavLink>, "to"> & { item: NavItem };
 
@@ -62,7 +63,7 @@ function ItemLink({ item, className, children, end: _end, ...rest }: ItemLinkPro
   const locked = navLocked || plannerLocked;
   if (locked) {
     const cls = typeof className === "function" ? className({ isActive: false, isPending: false, isTransitioning: false }) : className;
-    const why = navLocked ? navCondition(item.to) : `à débloquer au Comptoir de la Ruche (${PLANNER_PRICE} Ambre)`;
+    const why = navLocked ? navCondition(item.to) : `à débloquer au Comptoir de la Ruche (${plannerPrice()} Ambre)`;
     return (
       <span
         role="link"

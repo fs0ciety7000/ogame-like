@@ -341,11 +341,14 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
       gifts: { ...defaults.rules.gifts, ...(overrides.rules?.gifts ?? {}) },
       contests: { ...defaults.rules.contests, ...(overrides.rules?.contests ?? {}) },
       tournamentPoints: { ...defaults.rules.tournamentPoints, ...(overrides.rules?.tournamentPoints ?? {}) },
+      // 6.14.104 (AA3) : champs simples ajoutés (sac de jetons) gardés ; sous-objets fusionnés champ par champ.
       weeklyStock: {
+        ...defaults.rules.weeklyStock,
+        ...(overrides.rules?.weeklyStock ?? {}),
         prices: { ...defaults.rules.weeklyStock.prices, ...(overrides.rules?.weeklyStock?.prices ?? {}) },
         quantities: { ...defaults.rules.weeklyStock.quantities, ...(overrides.rules?.weeklyStock?.quantities ?? {}) },
       },
-      patrons: { ...defaults.rules.patrons, ...(overrides.rules?.patrons ?? {}) },
+      patrons: { ...defaults.rules.patrons, ...(overrides.rules?.patrons ?? {}), tiers: { ...defaults.rules.patrons.tiers, ...(overrides.rules?.patrons?.tiers ?? {}) } },
       // 6.9.1 : registre des réglages, fusion profonde (un champ ajouté plus tard garde sa valeur par défaut).
       ...(Object.fromEntries(
         Object.keys(REGISTERED_RULES).map((k) => [k, mergeRuleGroup((defaults.rules as unknown as Record<string, unknown>)[k], (overrides.rules as Record<string, unknown> | undefined)?.[k])]),
@@ -554,6 +557,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!Object.values(merged.tournamentPoints).every((v) => v >= 0)) errors.push("Tournoi : points par tirage ≥ 0.");
   if (![...Object.values(merged.weeklyStock.prices), ...Object.values(merged.weeklyStock.quantities)].every((v) => v >= 1)) errors.push("Offre de la semaine : prix et exemplaires ≥ 1.");
   if (!(merged.patrons.top >= 1)) errors.push("Mécènes : au moins 1 place.");
+  errors.push(...validateFixedListNumbers(merged));
+  errors.push(...crossBoundErrors(merged));
   // 6.9.1 : la grille des territoires est figée (l'état des secteurs en dépend).
   const terr = merged.territories as { cols?: number; rows?: number };
   const terrDef = defaultGameContent().rules.territories as { cols?: number; rows?: number };
@@ -593,6 +598,84 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
       const r = st.chest?.[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`Série de connexion : coffre, ${label} : minimum ≤ maximum, positifs.`);
     }
+  }
+  return errors;
+}
+
+/**
+ * 6.14.104 (AU27, lot AA3) : chiffres des listes fixes (Comptoir, talents, spécialisations, modules, divisions, défi, mécènes,
+ * offre de la semaine, barèmes) : sous-objets sans métadonnées de bornes, contrôlés ici.
+ */
+function validateFixedListNumbers(merged: GameRules): string[] {
+  const errors: string[] = [];
+  const d = defaultGameContent().rules;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+  const entries = (o: unknown) => Object.entries(o && typeof o === "object" ? (o as Record<string, unknown>) : {});
+  for (const [id, v] of entries(merged.bountyShop.prices)) if (!(num(v) >= 1 && num(v) <= 100_000)) errors.push(`Comptoir de la Ruche : prix de « ${id} » entre 1 et 100 000 Ambre.`);
+  for (const [id, v] of entries(merged.talents.perRank)) {
+    const max = id === "reseau" ? 2 : 0.25;
+    if (!(num(v) >= 0 && num(v) <= max)) errors.push(`Talents d'Ascension : valeur par rang de « ${id} » entre 0 et ${String(max).replace(".", ",")}.`);
+  }
+  for (const [id, f] of entries(merged.colonySpec.specs))
+    for (const [k, v] of entries(f)) if (!(num(v) >= 0.1 && num(v) <= 5)) errors.push(`Colonies : spécialisation « ${id} », multiplicateur « ${k} » entre 0,1 et 5.`);
+  const weights = entries(merged.modules.rarityWeights);
+  if (weights.some(([, v]) => !(num(v) >= 0)) || !(weights.reduce((a, [, v]) => a + (num(v) || 0), 0) > 0)) errors.push("Modules de vaisseaux : poids de rareté positifs, au moins un non nul.");
+  for (const [id, v] of entries(merged.modules.recycleAmber)) if (!(num(v) >= 0 && num(v) <= 10_000)) errors.push(`Modules de vaisseaux : Ambre de recyclage « ${id} » entre 0 et 10 000.`);
+  for (const [fam, vals] of entries(merged.modules.familyValues)) {
+    const max = fam === "voile" ? 20 : 1;
+    for (const [r, v] of entries(vals)) if (!(num(v) >= 0 && num(v) <= max)) errors.push(`Modules de vaisseaux : valeur « ${fam} / ${r} » entre 0 et ${max}.`);
+  }
+  const tiers = entries(merged.leagues.tiers) as [string, { tokens?: unknown; placementPct?: unknown }][];
+  for (const [id, t] of tiers) {
+    if (!(Number.isInteger(num(t?.tokens)) && num(t?.tokens) >= 0 && num(t?.tokens) <= 100)) errors.push(`Divisions : jetons de « ${id} » entiers, entre 0 et 100.`);
+    if (!(num(t?.placementPct) >= 0 && num(t?.placementPct) <= 1)) errors.push(`Divisions : part de placement de « ${id} » entre 0 et 1.`);
+  }
+  const placement = tiers.reduce((a, [, t]) => a + (num(t?.placementPct) || 0), 0);
+  if (Math.abs(placement - 1) > 0.001) errors.push(`Divisions : les parts de placement font ${Math.round(placement * 1000) / 10} %, elles doivent faire 100 %.`);
+  for (const [id, v] of entries(merged.weeklyChallenge.perActive)) if (!(num(v) > 0)) errors.push(`Défi de la semaine : objectif par joueur actif de « ${id} » plus grand que 0.`);
+  const bag = num(merged.weeklyStock.tokensBag);
+  if (!(Number.isInteger(bag) && bag >= 1 && bag <= 1000)) errors.push("Offre de la semaine : sac de jetons entier, entre 1 et 1 000.");
+  const patronTiers = { ...d.patrons.tiers, ...(merged.patrons.tiers ?? {}) };
+  const order = ["bronze", "argent", "or", "grand"] as const;
+  if (!order.every((k, i) => num(patronTiers[k]) >= 1 && (i === 0 || num(patronTiers[k]) > num(patronTiers[order[i - 1]])))) errors.push("Mécènes : paliers du badge croissants (bronze < argent < or < grand), 1 Ambre au moins.");
+  for (const [id, b] of entries(merged.effectPresets.budgets)) for (const [k, v] of entries(b)) if (!(num(v) >= 0)) errors.push(`Préréglages d'effets : barème « ${id} », « ${k} » positif.`);
+  return errors;
+}
+
+/**
+ * 6.14.104 (AU27, AA3, Q260) : bornes croisées entre deux champs d'un même groupe (minimum ≤ maximum, seuils dans l'ordre).
+ * `strict` : le premier doit être strictement inférieur au second.
+ */
+export const CROSS_BOUNDS: { group: string; low: string; high: string; strict?: boolean }[] = [
+  { group: "warlords", low: "travelMinHours", high: "travelMaxHours" },
+  { group: "chatRooms", low: "nameMin", high: "nameMax" },
+  { group: "rename", low: "minLength", high: "maxLength" },
+  { group: "bossPhases", low: "shieldPct", high: "ripostePct", strict: true },
+  { group: "patrol", low: "minMinutes", high: "maxMinutes" },
+  { group: "expeditions", low: "depositMinHours", high: "depositMaxHours" },
+  { group: "expeditions", low: "rareMinHours", high: "rareMaxHours" },
+  { group: "expeditions", low: "wreckMinPct", high: "wreckMaxPct" },
+  { group: "expeditions", low: "ambushMinPower", high: "ambushMaxPower" },
+  { group: "expeditions", low: "forceMinPower", high: "forceMaxPower" },
+  { group: "jumpGate", low: "cooldownMinHours", high: "cooldownHours" },
+  { group: "phalanx", low: "scanCooldownMinMinutes", high: "scanCooldownMinutes" },
+  { group: "unitAudit", low: "weakBelow", high: "strongAbove", strict: true },
+  { group: "unitAudit", low: "strongAbove", high: "endgameStrongAbove" },
+  { group: "unitAudit", low: "pvpAttackLow", high: "pvpAttackHigh", strict: true },
+];
+
+function crossBoundErrors(merged: GameRules): string[] {
+  const errors: string[] = [];
+  const all = merged as unknown as Record<string, Record<string, unknown>>;
+  for (const { group, low, high, strict } of CROSS_BOUNDS) {
+    const g = all[group];
+    const a = g?.[low];
+    const b = g?.[high];
+    if (typeof a !== "number" || typeof b !== "number" || !Number.isFinite(a) || !Number.isFinite(b)) continue;
+    if (strict ? a < b : a <= b) continue;
+    const label = RULE_GROUP_LABELS[group] ?? group;
+    const name = (k: string) => `« ${ruleFieldMeta(group, k)?.label ?? k} » (${k})`;
+    errors.push(`${label} : ${name(low)} doit être ${strict ? "inférieur à" : "inférieur ou égal à"} ${name(high)}.`);
   }
   return errors;
 }

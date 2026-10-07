@@ -239,21 +239,88 @@ export interface ColonySpecDef {
   defenseTime?: number;
 }
 
+/** 6.14.104 (AA3, AA-4) : multiplicateurs d'une spécialisation (1 = sans effet). */
+export type ColonySpecFactors = Partial<Record<"production" | "deposit" | "storage" | "hangar" | "defenseTime", number>>;
+
+/** « +25 % », « −20 % » (multiplicateur → écart). */
+const signedPct = (m: number | undefined) => {
+  const pct = Math.round(((m ?? 1) - 1) * 100);
+  return pct >= 0 ? `+${pct} %` : `−${-pct} %`;
+};
+
+const SPEC_FACTOR_LABELS: Record<keyof ColonySpecFactors, string> = {
+  production: "production",
+  deposit: "gisement rare",
+  storage: "entrepôt",
+  hangar: "hangar de défense",
+  defenseTime: "durée des défenses",
+};
+
+/** 6.14.104 (AA3, AA-4) : chiffres lus dans COLONY_SPEC_RULES.specs (admin, Colonies : spécialisation) ; ids, noms et
+ *  phrases en dur. Le résumé est construit depuis les chiffres (un facteur ajouté par l'admin s'y ajoute en fin de phrase). */
+const colonySpec = (id: ColonySpecId, name: string, emoji: string, text: (f: ColonySpecFactors) => string, used: (keyof ColonySpecFactors)[]): ColonySpecDef => {
+  const factors = (): ColonySpecFactors => (COLONY_SPEC_RULES.specs[id] ?? {}) as ColonySpecFactors;
+  const factor = (k: keyof ColonySpecFactors) => {
+    const v = Number(factors()[k]);
+    return Number.isFinite(v) && v > 0 ? v : undefined;
+  };
+  return {
+    id,
+    name,
+    emoji,
+    get summary() {
+      const f = factors();
+      const extra = (Object.keys(SPEC_FACTOR_LABELS) as (keyof ColonySpecFactors)[]).filter((k) => !used.includes(k) && factor(k) !== undefined && factor(k) !== 1);
+      const base = text(f);
+      return extra.length === 0 ? base : `${base.replace(/\.$/, "")}, ${extra.map((k) => `${SPEC_FACTOR_LABELS[k]} ${signedPct(factor(k))}`).join(", ")}.`;
+    },
+    get production() {
+      return factor("production");
+    },
+    get deposit() {
+      return factor("deposit");
+    },
+    get storage() {
+      return factor("storage");
+    },
+    get hangar() {
+      return factor("hangar");
+    },
+    get defenseTime() {
+      return factor("defenseTime");
+    },
+  };
+};
+
 export const COLONY_SPECS: ColonySpecDef[] = [
-  { id: "forge", name: "Forge industrielle", emoji: "🏭", summary: "Ressources communes +25 %, gisement rare −20 %.", production: 1.25, deposit: 0.8 },
-  { id: "extraction", name: "Comptoir minier", emoji: "💎", summary: "Gisement rare +60 %, ressources communes −10 %.", production: 0.9, deposit: 1.6 },
-  { id: "bastion", name: "Bastion", emoji: "🛡️", summary: "Hangar de défense +50 % et défenses 30 % plus rapides, production −10 %.", production: 0.9, hangar: 1.5, defenseTime: 0.7 },
-  { id: "depot", name: "Dépôt logistique", emoji: "📦", summary: "Entrepôt +60 % : la colonie stocke plus longtemps sans perte.", storage: 1.6 },
+  colonySpec("forge", "Forge industrielle", "🏭", (f) => `Ressources communes ${signedPct(f.production)}, gisement rare ${signedPct(f.deposit)}.`, ["production", "deposit"]),
+  colonySpec("extraction", "Comptoir minier", "💎", (f) => `Gisement rare ${signedPct(f.deposit)}, ressources communes ${signedPct(f.production)}.`, ["production", "deposit"]),
+  colonySpec(
+    "bastion",
+    "Bastion",
+    "🛡️",
+    (f) => `Hangar de défense ${signedPct(f.hangar)} et défenses ${Math.round((1 - (f.defenseTime ?? 1)) * 100)} % plus rapides, production ${signedPct(f.production)}.`,
+    ["production", "hangar", "defenseTime"],
+  ),
+  colonySpec("depot", "Dépôt logistique", "📦", (f) => `Entrepôt ${signedPct(f.storage)} : la colonie stocke plus longtemps sans perte.`, ["storage"]),
 ];
 
 export const COLONY_SPEC_RULES = {
   /** Délai entre deux changements (le premier choix est libre). */
   changeCooldownMs: 7 * 24 * 3600_000,
+  /** 6.14.104 (AA3, AA-4) : multiplicateurs de chaque spécialisation (1 = sans effet ; 0,7 en durée = 30 % plus rapide). */
+  specs: {
+    forge: { production: 1.25, deposit: 0.8 },
+    extraction: { production: 0.9, deposit: 1.6 },
+    bastion: { production: 0.9, hangar: 1.5, defenseTime: 0.7 },
+    depot: { storage: 1.6 },
+  } as Record<ColonySpecId, ColonySpecFactors>,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const COLONY_SPEC_RULES_META = {
   changeCooldownMs: { label: "Délai entre deux changements de spécialisation", unit: "ms", min: 0, max: 7_776_000_000, hint: "604 800 000 = 7 jours. Le premier choix est libre." },
+  specs: { label: "Multiplicateurs de chaque spécialisation", unit: "×", hint: "production, deposit (gisement rare), storage (entrepôt), hangar (hangar de défense), defenseTime (durée des défenses) : 1 = sans effet, entre 0,1 et 5. Le résumé affiché au joueur suit les chiffres." },
 };
 
 export function findColonySpec(id: string | null | undefined): ColonySpecDef | undefined {

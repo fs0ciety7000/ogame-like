@@ -1,4 +1,5 @@
 import { WARLORD_RULES } from "@/game/warlords";
+import { UNIT_AUDIT_RULES } from "@/game/unitClasses";
 import { computeBalance516, findings516, type Balance516 } from "@/game/balance/v516";
 import { TECHNOLOGIES, techEffects } from "@/game/technologies";
 import { rollingPvpWinPct, type BalanceSnapshot } from "@/game/balance/history";
@@ -271,9 +272,13 @@ export function computeLiveBalance(
 
 /* ---------- 3. Propositions sur données réelles ---------- */
 
-/** v5.5 : au-delà, l'attaquant gagne trop souvent (bonus à domicile +0,05). */
-export const PVP_ATTACK_HIGH = 65;
-export const PVP_ATTACK_LOW = 40;
+/** v5.5 : au-delà, l'attaquant gagne trop souvent (bonus à domicile +0,05).
+ *  6.14.104 (AA3, AA-32) : zone cible du taux de victoire des attaquants (UNIT_AUDIT_RULES, Admin → Règles), lue à l'usage. */
+export function pvpAttackBand(): { low: number; high: number } {
+  const low = Number(UNIT_AUDIT_RULES.pvpAttackLow);
+  const high = Number(UNIT_AUDIT_RULES.pvpAttackHigh);
+  return { low: Number.isFinite(low) ? low : 40, high: Number.isFinite(high) ? high : 65 };
+}
 
 export function liveFindings(live: LiveBalance): Proposal[] {
   const out: Proposal[] = [];
@@ -285,9 +290,10 @@ export function liveFindings(live: LiveBalance): Proposal[] {
     const up = (bonus + 0.05).toFixed(2).replace(".", ",");
     const down = Math.max(0, bonus - 0.05).toFixed(2).replace(".", ",");
     const cur = bonus.toFixed(2).replace(".", ",");
-    if (pvp.w > PVP_ATTACK_HIGH) out.push({ id: "pvp-attack", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${PVP_ATTACK_LOW}–${PVP_ATTACK_HIGH} %). Défendre rapporte trop peu.`, proposal: `Bonus à domicile ${cur} → ${up}.`, where: "Règles → Combat" });
-    else if (pvp.w < PVP_ATTACK_LOW) out.push({ id: "pvp-defense", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant ne gagne que ${pvp.w} % des ${pvp.battles} combats (${pvp.span}). Attaquer décourage.`, proposal: `Bonus à domicile ${cur} → ${down}.`, where: "Règles → Combat" });
-    else out.push({ id: "pvp-ok", severity: "info", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${PVP_ATTACK_LOW}–${PVP_ATTACK_HIGH} %).`, proposal: "Rien à changer.", where: "—" });
+    const band = pvpAttackBand();
+    if (pvp.w > band.high) out.push({ id: "pvp-attack", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${band.low}–${band.high} %). Défendre rapporte trop peu.`, proposal: `Bonus à domicile ${cur} → ${up}.`, where: "Règles → Combat" });
+    else if (pvp.w < band.low) out.push({ id: "pvp-defense", severity: "warning", area: "Combats", finding: `JcJ : l'attaquant ne gagne que ${pvp.w} % des ${pvp.battles} combats (${pvp.span}). Attaquer décourage.`, proposal: `Bonus à domicile ${cur} → ${down}.`, where: "Règles → Combat" });
+    else out.push({ id: "pvp-ok", severity: "info", area: "Combats", finding: `JcJ : l'attaquant gagne ${pvp.w} % des ${pvp.battles} combats (${pvp.span}, cible ${band.low}–${band.high} %).`, proposal: "Rien à changer.", where: "—" });
   }
   // v5.5 : repaires toujours intouchés après deux semaines d'historique.
   const h = live.history ?? [];

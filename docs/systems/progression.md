@@ -115,3 +115,8 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   dans les bandes du §4.1 ; Ascensions la 1re année 6 / 5 / 4 / 4 → 5 / 5 / 3 / 4 ; sessions bloquées, pire mois 25,8 / 50 / 5 / 6,7 %
   → **0,8 / 6,7 / 5 / 13,3 %** ; production perdue 2 / 1 / 10 / 9 % → 6 / 1 / 14 / 12 % ; première semaine de l'actif 1,8 % → 0.
   Garde : I29 à 365 jours sans exception. Fiche : `docs/changes/6.14.89-reglage-fin-rythme.md`.
+
+## 6.14.104 (revue AU27, lot AA3)
+Valeurs inchangées, réglables (Admin → Règles, sections « 6.14.104 ») : valeur par rang des 15 talents (`talents.perRank`, 0,02 ; réseau
+0,2), jetons et part de placement des 6 divisions (`leagues.tiers`, total des parts = 100 %, contrôlé), objectif par joueur actif des 6
+défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'une capsule (`passOverflow.capsuleAmber`, 15).

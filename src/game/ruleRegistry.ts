@@ -17,6 +17,7 @@ import { CONTRACT_RULES, CONTRACT_RULES_META } from "@/game/contracts";
 import { DAILY_RULES, DAILY_RULES_META } from "@/game/dailyMissions";
 import { DIPLOMACY_RULES, DIPLOMACY_RULES_META } from "@/game/diplomacy";
 import { EFFECT_CAP_RULES, EFFECT_CAP_RULES_META } from "@/game/effects";
+import { EFFECT_PRESET_RULES, EFFECT_PRESET_RULES_META } from "@/game/effectCatalog";
 import { BOSS_REMINDERS, BOSS_REMINDERS_META } from "@/game/events";
 import { GAZETTE_RULES, GAZETTE_RULES_META } from "@/game/gazette";
 import { EXCHANGE_RULES, EXCHANGE_RULES_META } from "@/game/resources";
@@ -120,6 +121,8 @@ export const REGISTERED_RULES = {
   diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES, meta: () => DIPLOMACY_RULES_META },
   dockTiers: { label: "Cale sèche : paliers de niveau", target: () => DOCK_TIERS, meta: () => DOCK_TIERS_META },
   effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES, meta: () => EFFECT_CAP_RULES_META },
+  // 6.14.104 (AU27, lot AA3, AA-13) : barèmes des préréglages d'effets (aide à l'édition, aucun effet en jeu).
+  effectPresets: { label: "Préréglages d'effets : barèmes suggérés", target: () => EFFECT_PRESET_RULES, meta: () => EFFECT_PRESET_RULES_META },
   eliteBounty: { label: "Proie d'élite", target: () => ELITE_RULES, meta: () => ELITE_RULES_META },
   exchange: { label: "Comptoir d'échange : taux et taxe", target: () => EXCHANGE_RULES, meta: () => EXCHANGE_RULES_META },
   gazette: { label: "Gazette", target: () => GAZETTE_RULES, meta: () => GAZETTE_RULES_META },

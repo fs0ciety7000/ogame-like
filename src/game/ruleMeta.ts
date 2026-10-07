@@ -65,9 +65,13 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   },
   economy: {
     protectedHoursFromMs: { label: "Abri en heures de production : actif à partir de", unit: "date", min: 0 },
+    // 6.14.104 (AA3, AA-29).
+    keshBoostPct: { label: "Gelée de la Reine : bonus de production", unit: "part", min: 0, max: 1, hint: "0,2 = +20 % pendant la durée réglée au Comptoir de la Ruche (boostHours)." },
+    missionProductionMultiplier: { label: "Missions : ressources communes, au moins ce multiple de (durée × production)", unit: "×", min: 0, max: 10, hint: "Passe à 0,75 à la bascule du rythme." },
   },
   fleets: {
     mapSize: { label: "Taille de la carte de la galaxie", min: 10, max: 1000, hint: "Côté de la carte, en unités de distance. Change toutes les distances de vol." },
+    delayMaxMinutes: { label: "Départ différé d'une flotte, au plus", unit: "min", min: 0, max: 10_080, hint: "0 = pas de départ différé." },
   },
   colonies: {
     levelsRequired: { label: "Niveaux cumulés requis pour chaque colonie", hint: "Un seuil par colonie, dans l'ordre." },
@@ -90,8 +94,30 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   alliances: {
     membersPerQuarter: { label: "Membres en plus par niveau de Quartiers fédérés", min: 0 },
     sharedReportsMax: { label: "Rapports partagés gardés", min: 0 },
+    // 6.14.104 (AA3, AA-29).
+    maxDiplomats: { label: "Diplomates par alliance, au plus", min: 0, max: 20 },
+    researches: { label: "Recherches d'alliance", hint: "Liste (id, nom, effet) : une recherche ajoutée par défaut reste disponible même si la liste est modifiée." },
+    projects: { label: "Projets d'alliance", hint: "Liste des projets et de leurs paliers." },
+  },
+  auctions: {
+    maxStart: { label: "Mise à prix maximale", min: 1, max: 1e15, hint: "Une enchère ne peut pas dépasser 10 fois cette valeur." },
+  },
+  weeklyStock: {
+    prices: { label: "Prix de chaque offre", unit: "Ambre" },
+    quantities: { label: "Exemplaires de chaque offre (tout le serveur)" },
+    tokensBag: { label: "Sac de jetons : jetons donnés", min: 1, max: 1000 },
+  },
+  patrons: {
+    top: { label: "Places au classement des mécènes", min: 1, max: 100 },
+    tiers: { label: "Badge « Mécène » : Ambre versée pour chaque palier", unit: "Ambre", hint: "bronze < argent < or < grand, 1 au moins." },
   },
   expeditions: {
+    // 6.14.104 (AA3, AA-29).
+    durations: { label: "Durées proposées", unit: "h", hint: "Valeurs séparées par des virgules." },
+    maxDepth: { label: "Expédition en chaîne : étapes en plus, au plus", min: 0, max: 10 },
+    deepLootBonus: { label: "Étape profonde : butin en plus par étape", unit: "part", min: 0, max: 2 },
+    deepRisk: { label: "Étape profonde : puissance adverse en plus par étape", unit: "part", min: 0, max: 2 },
+    deepLootLoss: { label: "Étape profonde : part de la cale perdue en cas d'embuscade perdue", unit: "part", min: 0, max: 1 },
     rareRate: { label: "Taux des ressources rares", min: 0 },
     forceMinPower: { label: "Force ennemie minimale", unit: "×", min: 0, hint: "Multiple de ta puissance." },
     forceMaxPower: { label: "Force ennemie maximale", unit: "×", min: 0, hint: "Multiple de ta puissance ; au moins la force minimale." },

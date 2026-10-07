@@ -24,3 +24,8 @@ livraison) : le corps de `fleet/send` est gardé dans le navigateur (`launchFlee
 
 ## Revue AU7 (2026-10-07)
 Rappel confirmé (6.9.4). `fleets.lairDistance` (60) et `fleets.delayMaxMinutes` (720) réglables.
+
+## 6.14.104 (revue AU27, lot AA3)
+`fleets.mapSize` et `fleets.delayMaxMinutes` dans Admin → Règles → Flottes en vol ; expéditions : durées proposées, profondeur
+(`maxDepth`) et étapes profondes (`deepLootBonus`, `deepRisk`, `deepLootLoss`) dans la section Expéditions. Bornes croisées contrôlées :
+minimum ≤ maximum pour gisement, trésor, épave, embuscade et passage forcé.

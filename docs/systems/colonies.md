@@ -19,3 +19,8 @@
 ## État (audit 2026-10-06)
 - Routes logistiques depuis la 5.33 (audit E6, `proposals/routes-logistiques.md`). Route inverse et file de défense depuis la 6.4 (`proposals/colonies-suite.md`). Base avancée depuis la 6.10 (`proposals/flotte-basee.md`). Reste : pas de chantier naval sur colonie.
 - Seuil de fondation : seuls les bâtiments construits comptent (`effectiveBuildingLevel`) depuis la 5.28.1 (C3).
+
+## 6.14.104 (revue AU27, lot AA3)
+Multiplicateurs des 4 spécialisations dans `colonySpec.specs` (1,25 / 0,8 ; 0,9 / 1,6 ; 0,9 / 1,5 / 0,7 ; 1,6), entre 0,1 et 5 ; le résumé
+affiché suit les chiffres. Seuils de niveaux par colonie (`colonies.levelsRequired`) et fondation (`foundationShare`, `foundationMax`)
+ont leur champ dans Admin → Règles → Colonies.

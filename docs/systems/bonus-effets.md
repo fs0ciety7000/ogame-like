@@ -25,3 +25,8 @@ Admin : éditeur d'effets composables, rapport d'impact.
 
 ## Revue AU8 (2026-10-07)
 Plafonds par grandeur et couche réglables (`effectCaps`, 6.9.5), lus par `effectCap()` ; attaque et défense des technos : `combat.techCombatCap`. Gelée : `economy.keshBoostPct` ; Phéromone et second rôle des commandants de saison : `officerTuning`.
+
+## 6.14.104 (revue AU27, lot AA3)
+Modules : poids du tirage (60 / 28 / 10 / 2), Ambre de recyclage (1 / 3 / 8 / 20) et valeurs par famille et rareté (+3 % à +18 % ;
+voile 1 à 4) dans `modules.rarityWeights`, `recycleAmber`, `familyValues`. Barèmes des préréglages d'effets (aide à l'édition) :
+groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.

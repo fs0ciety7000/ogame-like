@@ -50,7 +50,24 @@ export interface ModulePreset {
 }
 
 export const MODULE_CLASSES: UnitClass[] = ["light", "medium", "heavy", "support"];
-export const MODULE_RULES = { slotsPerClass: 2, maxItems: 30, fuseCount: 3, maxPresets: 5 };
+export const MODULE_RULES = {
+  slotsPerClass: 2,
+  maxItems: 30,
+  fuseCount: 3,
+  maxPresets: 5,
+  /** 6.14.104 (AA3, AA-5) : poids du tirage de rareté d'un plan (relatifs). */
+  rarityWeights: { common: 60, rare: 28, epic: 10, legendary: 2 } as Record<ModuleRarity, number>,
+  /** 6.14.104 (AA3, AA-5) : Ambre rendue au recyclage d'un plan, par rareté. */
+  recycleAmber: { common: 1, rare: 3, epic: 8, legendary: 20 } as Record<ModuleRarity, number>,
+  /** 6.14.104 (AA3, AA-5) : valeur d'un module par famille et rareté (0,04 = +4 % ; voile : niveaux de contre-espionnage). */
+  familyValues: {
+    armement: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
+    blindage: { common: 0.05, rare: 0.08, epic: 0.12, legendary: 0.18 },
+    soute: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
+    propulsion: { common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 },
+    voile: { common: 1, rare: 2, epic: 3, legendary: 4 },
+  } as Record<ModuleFamily, Record<ModuleRarity, number>>,
+};
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const MODULE_RULES_META = {
@@ -58,21 +75,54 @@ export const MODULE_RULES_META = {
   maxItems: { label: "Inventaire de modules, au plus", min: 1, max: 500 },
   fuseCount: { label: "Plans identiques pour une fusion", min: 2, max: 10 },
   maxPresets: { label: "Préréglages de modules", min: 0, max: 20 },
+  rarityWeights: { label: "Tirage d'un plan : poids de chaque rareté", hint: "Poids relatifs (60 / 28 / 10 / 2 = 60 % de communs). Au moins un poids positif." },
+  recycleAmber: { label: "Recyclage d'un plan : Ambre par rareté", unit: "Ambre" },
+  familyValues: { label: "Valeur d'un module par famille et rareté", hint: "0,04 = +4 % (entre 0 et 1) ; voile furtif : niveaux de contre-espionnage (entre 0 et 20). Les plafonds d'effets s'appliquent toujours." },
 };
 
-export const MODULE_RARITIES: { id: ModuleRarity; label: string; weight: number; tone: "neutral" | "accent" | "violet" | "gold"; recycleAmber: number }[] = [
-  { id: "common", label: "Commun", weight: 60, tone: "neutral", recycleAmber: 1 },
-  { id: "rare", label: "Rare", weight: 28, tone: "accent", recycleAmber: 3 },
-  { id: "epic", label: "Épique", weight: 10, tone: "violet", recycleAmber: 8 },
-  { id: "legendary", label: "Légendaire", weight: 2, tone: "gold", recycleAmber: 20 },
+type ModuleTone = "neutral" | "accent" | "violet" | "gold";
+const nonNegative = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+};
+/** 6.14.104 (AA3, AA-5) : poids et Ambre de recyclage lus dans MODULE_RULES (admin, Modules de vaisseaux) ; ids en dur. */
+const rarity = (id: ModuleRarity, label: string, tone: ModuleTone) => ({
+  id,
+  label,
+  tone,
+  get weight() {
+    return nonNegative(MODULE_RULES.rarityWeights[id]);
+  },
+  get recycleAmber() {
+    return Math.floor(nonNegative(MODULE_RULES.recycleAmber[id]));
+  },
+});
+
+export const MODULE_RARITIES: { id: ModuleRarity; label: string; weight: number; tone: ModuleTone; recycleAmber: number }[] = [
+  rarity("common", "Commun", "neutral"),
+  rarity("rare", "Rare", "accent"),
+  rarity("epic", "Épique", "violet"),
+  rarity("legendary", "Légendaire", "gold"),
 ];
 
+/** 6.14.104 (AA3, AA-5) : valeurs lues dans MODULE_RULES.familyValues ; familles, stats et classes en dur. */
+const family = (id: ModuleFamily, label: string, stat: EffectStat, classes: UnitClass[], unit: "pct" | "level") => ({
+  label,
+  stat,
+  classes,
+  get values(): Record<ModuleRarity, number> {
+    const v = MODULE_RULES.familyValues[id] ?? {};
+    return { common: nonNegative(v.common), rare: nonNegative(v.rare), epic: nonNegative(v.epic), legendary: nonNegative(v.legendary) };
+  },
+  unit,
+});
+
 export const MODULE_FAMILIES: Record<ModuleFamily, { label: string; stat: EffectStat; classes: UnitClass[]; values: Record<ModuleRarity, number>; unit: "pct" | "level" }> = {
-  armement: { label: "Armement", stat: "unitAttack", classes: ["light", "medium", "heavy"], values: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 }, unit: "pct" },
-  blindage: { label: "Blindage", stat: "unitHp", classes: ["light", "medium", "heavy"], values: { common: 0.05, rare: 0.08, epic: 0.12, legendary: 0.18 }, unit: "pct" },
-  soute: { label: "Soute", stat: "cargo", classes: ["support"], values: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 }, unit: "pct" },
-  propulsion: { label: "Propulsion", stat: "fleetSpeed", classes: ["support"], values: { common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 }, unit: "pct" },
-  voile: { label: "Voile furtif", stat: "counterSpy", classes: ["support"], values: { common: 1, rare: 2, epic: 3, legendary: 4 }, unit: "level" },
+  armement: family("armement", "Armement", "unitAttack", ["light", "medium", "heavy"], "pct"),
+  blindage: family("blindage", "Blindage", "unitHp", ["light", "medium", "heavy"], "pct"),
+  soute: family("soute", "Soute", "cargo", ["support"], "pct"),
+  propulsion: family("propulsion", "Propulsion", "fleetSpeed", ["support"], "pct"),
+  voile: family("voile", "Voile furtif", "counterSpy", ["support"], "level"),
 };
 
 export const MODULE_TEMPLATES: ModuleTemplate[] = [

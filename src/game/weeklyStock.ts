@@ -26,12 +26,19 @@ export interface WeeklyOffer {
 export const WEEKLY_STOCK_RULES = {
   prices: { rareRelic: 250, rarePlan: 200, epicPlan: 450, tokens: 120 } as Record<WeeklyOfferId, number>,
   quantities: { rareRelic: 8, rarePlan: 10, epicPlan: 4, tokens: 15 } as Record<WeeklyOfferId, number>,
+  /** 6.14.104 (AA3, AA-10) : jetons du casino dans le sac de jetons. */
+  tokensBag: 25,
 };
 
-const offer = (id: WeeklyOfferId, name: string, description: string): WeeklyOffer => ({
+/** 6.14.104 (AA3) : jetons du sac (entier, 1 au moins). */
+const tokensBag = () => Math.max(1, Math.round(Number(WEEKLY_STOCK_RULES.tokensBag) || 1));
+
+const offer = (id: WeeklyOfferId, name: string, description: string | (() => string)): WeeklyOffer => ({
   id,
   name,
-  description,
+  get description() {
+    return typeof description === "function" ? description() : description;
+  },
   get price() {
     return Math.max(1, Math.round(WEEKLY_STOCK_RULES.prices[id] ?? 1));
   },
@@ -44,7 +51,7 @@ export const WEEKLY_OFFERS: WeeklyOffer[] = [
   offer("rareRelic", "Relique de l'Essaim", "Une relique tirée au hasard, rare au moins."),
   offer("rarePlan", "Plan de module rare", "Un plan de module tiré au hasard, rare au moins."),
   offer("epicPlan", "Plan de module épique", "Un plan de module tiré au hasard, épique au moins."),
-  offer("tokens", "Sac de jetons", "25 jetons pour la machine à sous du pot commun."),
+  offer("tokens", "Sac de jetons", () => `${tokensBag()} jetons pour la machine à sous du pot commun.`),
 ];
 
 export const WEEKLY_STOCK_KEY = "weekly_stock";
@@ -117,8 +124,9 @@ export function buyWeeklyOffer(player: PlayerState, uid: string, rawStock: unkno
     addModuleItem(player, rollModulePlan("weekly", now, random, offer.id === "rarePlan" ? "rare" : "epic"));
     message = `${offer.name} reçu : retrouve-le dans État-major → Modules.`;
   } else {
-    grantTokens(player, 25);
-    message = "25 jetons ajoutés à ta réserve du casino.";
+    const n = tokensBag();
+    grantTokens(player, n);
+    message = `${n} jetons ajoutés à ta réserve du casino.`;
   }
   const st = bountyState(player);
   st.amber -= offer.price;

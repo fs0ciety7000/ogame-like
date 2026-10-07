@@ -3,7 +3,9 @@ import { playerCombatEffects } from "@/game/effectTargets";
 import { advanceWorkshop, applyHull, atelierLevel, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { MODULE_RARITIES, modulesState, type ModuleRarity } from "@/game/modules";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
-import { addDossiers, COMMANDER_XP, grantCommanderXp, OFFICER_TUNING_RULES } from "@/game/commanders";
+import { addDossiers, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, OFFICER_TUNING_RULES } from "@/game/commanders";
+import { ECONOMY_RULES } from "@/game/economy";
+import { TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
@@ -13,6 +15,7 @@ import { GameActionError } from "@/game/errors";
 import { flushState, type NewNotification } from "@/game/flush";
 import { formatInt } from "@/game/format";
 import { formationEffects } from "@/game/formations";
+import { PATRON_RULES } from "@/game/patrons";
 import { RESOURCE_LIST } from "@/game/resources";
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
@@ -533,6 +536,31 @@ export const BOUNTY_SHOP_RULES = {
   /** 5.26.3 */
   painkillerHours: 2,
   pheromoneHours: 24,
+  /** 6.14.104 (AA3, constat AA-1) : prix de chaque objet du Comptoir, en Ambre (les objets et leurs ids restent dans le code). */
+  prices: {
+    accelerator: 30,
+    boost: 80,
+    jammer: 50,
+    beacon: 60,
+    shield: 150,
+    dossier: 40,
+    phantom: 40,
+    painkiller: 50,
+    reroll: 70,
+    priority: 60,
+    pheromone: 90,
+    vendettaToken: 120,
+    blueprint: 600,
+    planner: 600,
+    title: 120,
+    frame: 200,
+    emblem: 150,
+    emojis: 80,
+    nameColor: 120,
+    keshReaction: 60,
+    roomBanner: 80,
+    planetFx: 200,
+  } as Record<ShopItemId, number>,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -545,6 +573,7 @@ export const BOUNTY_SHOP_RULES_META = {
   title: { label: "Titre vendu au Comptoir" },
   painkillerHours: { label: "Analgésique : heures de réparation de l'Atelier d'un coup", unit: "h", min: 0, max: 48 },
   pheromoneHours: { label: "Phéromone : durée du bonus d'XP des officiers", unit: "h", min: 1, max: 168, hint: "Le bonus lui-même se règle dans « Officiers : second rôle… » (pheromonePct)." },
+  prices: { label: "Prix des objets du Comptoir", unit: "Ambre", hint: "Un prix par objet (id), 1 Ambre au moins. Les objets eux-mêmes restent dans le code." },
 };
 
 /** 5.26.3 : couleurs de pseudo (jetons du thème ; le rouge reste réservé au danger). */
@@ -556,31 +585,53 @@ export const NAME_TONES: { id: string; label: string }[] = [
   { id: "violet", label: "Violet" },
 ];
 
+/** 6.14.104 (AA3) : « 1 h », « 90 min ». */
+const minutesText = (m: number) => (m % 60 === 0 ? `${m / 60} h` : `${m} min`);
+/** 6.14.104 (AA3) : « 3 en réserve au plus » (BOUNTY_SHOP_RULES.maxCharges). */
+const chargesText = () => `${BOUNTY_SHOP_RULES.maxCharges} en réserve au plus`;
+
+/** 6.14.104 (AA3, AA-1) : prix lu dans BOUNTY_SHOP_RULES.prices (admin, Comptoir de la Ruche) ; les ids restent en dur (modèle 6.9.0). */
+const shopItem = (id: ShopItemId, name: string | (() => string), group: ShopItem["group"], description: string | (() => string)): ShopItem => ({
+  id,
+  get name() {
+    return typeof name === "function" ? name() : name;
+  },
+  group,
+  get price() {
+    return Math.max(1, Math.round(Number(BOUNTY_SHOP_RULES.prices[id]) || 1));
+  },
+  get description() {
+    return typeof description === "function" ? description() : description;
+  },
+});
+
 export const SHOP_ITEMS: ShopItem[] = [
-  { id: "accelerator", name: "Accélérateur de chantier", price: 30, group: "consumable", description: "Une construction de bâtiment en cours se termine 1 h plus tôt." },
-  { id: "boost", name: "Gelée de la Reine", price: 80, group: "consumable", description: "Production +20 % pendant 24 h (cumulable dans le temps)." },
-  { id: "jammer", name: "Brouilleur d'essaim", price: 50, group: "consumable", description: "Le prochain espionnage reçu échoue : les sondes rentrent sans rapport. 3 en réserve au plus." },
-  { id: "beacon", name: "Balise de repli", price: 60, group: "consumable", description: "Ramène aussitôt une flotte en vol à la base, avec sa cargaison. 3 en réserve au plus." },
-  { id: "shield", name: "Voile de chitine", price: 150, group: "consumable", description: "Bouclier de 6 h contre les attaques de joueurs. Une fois par semaine ; attaquer le lève." },
-  { id: "dossier", name: "Dossier d'entraînement", price: 40, group: "consumable", description: "+200 XP pour l'officier de ton choix, même hors poste (page Commandants)." },
-  { id: "phantom", name: "Sondes fantômes", price: 40, group: "consumable", description: "Ton prochain espionnage passe inaperçu : sondes impossibles à repérer, la cible n'en sait rien. 3 en réserve au plus." },
-  { id: "painkiller", name: "Analgésique d'atelier", price: 50, group: "consumable", description: "Les réparations en cours à l'Atelier avancent aussitôt de 2 h." },
-  { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de rareté d'un plan de module commun (une fois par plan)." },
-  { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en tête des contrats visibles pendant 24 h. 3 en réserve au plus." },
-  { id: "pheromone", name: "Phéromone de recrutement", price: 90, group: "consumable", get description() {
-      return `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`;
-    } },
-  { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite après une vendetta : tu peux lui en déclarer une nouvelle sans attendre son retour. 3 en réserve au plus." },
-  { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)." },
-  { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels." },
-  { id: "title", name: "Titre « Chasseur de l'Essaim »", price: 120, group: "cosmetic", description: "Un titre à afficher à côté de ton nom." },
-  { id: "frame", name: "Cadre de chitine", price: 200, group: "cosmetic", description: "Cadre ambré autour de ta fiche publique." },
-  { id: "emblem", name: "Emblème de l'Essaim", price: 150, group: "cosmetic", description: "L'emblème kesh'vaar sur ta fiche publique." },
-  { id: "emojis", name: "Emojis Kesh'Vaar", price: 80, group: "cosmetic", description: "4 emojis exclusifs pour les discussions." },
-  { id: "nameColor", name: "Couleur de pseudo", price: 120, group: "cosmetic", description: "Ton pseudo en couleur dans le canal global et les salons (cyan, menthe, or, braise ou violet, modifiable à volonté)." },
-  { id: "keshReaction", name: "Réaction kesh'vaar", price: 60, group: "cosmetic", description: "Une 7e réaction, l'emblème de l'Essaim, sous les messages du canal. Visible de tous." },
-  { id: "roomBanner", name: "Bannière de salon", price: 80, group: "cosmetic", description: "Une icône au choix pour ton salon thématique, affichée dans la liste des salons." },
-  { id: "planetFx", name: "Effet de planète", price: 200, group: "cosmetic", description: "Débloque l'anneau d'ambre et l'aurore pour ta planète d'accueil (Profil)." },
+  shopItem("accelerator", "Accélérateur de chantier", "consumable", () => `Une construction de bâtiment en cours se termine ${minutesText(BOUNTY_SHOP_RULES.acceleratorMinutes)} plus tôt.`),
+  shopItem("boost", "Gelée de la Reine", "consumable", () => `Production +${Math.round(ECONOMY_RULES.keshBoostPct * 100)} % pendant ${BOUNTY_SHOP_RULES.boostHours} h (cumulable dans le temps).`),
+  shopItem("jammer", "Brouilleur d'essaim", "consumable", () => `Le prochain espionnage reçu échoue : les sondes rentrent sans rapport. ${chargesText()}.`),
+  shopItem("beacon", "Balise de repli", "consumable", () => `Ramène aussitôt une flotte en vol à la base, avec sa cargaison. ${chargesText()}.`),
+  shopItem("shield", "Voile de chitine", "consumable", () => {
+    const days = BOUNTY_SHOP_RULES.shieldCooldownDays;
+    const every = days === 7 ? "Une fois par semaine" : days === 1 ? "Une fois par jour" : `Une fois tous les ${days} jours`;
+    return `Bouclier de ${BOUNTY_SHOP_RULES.shieldHours} h contre les attaques de joueurs. ${every} ; attaquer le lève.`;
+  }),
+  shopItem("dossier", "Dossier d'entraînement", "consumable", () => `+${COMMANDER_RULES.dossierXp} XP pour l'officier de ton choix, même hors poste (page Commandants).`),
+  shopItem("phantom", "Sondes fantômes", "consumable", () => `Ton prochain espionnage passe inaperçu : sondes impossibles à repérer, la cible n'en sait rien. ${chargesText()}.`),
+  shopItem("painkiller", "Analgésique d'atelier", "consumable", () => `Les réparations en cours à l'Atelier avancent aussitôt de ${BOUNTY_SHOP_RULES.painkillerHours} h.`),
+  shopItem("reroll", "Rappel de plan", "consumable", "Relance le tirage de rareté d'un plan de module commun (une fois par plan)."),
+  shopItem("priority", "Contrat prioritaire", "consumable", () => `Ton prochain contrat de livraison passe en tête des contrats visibles pendant ${TRADE_CONTRACT_RULES.priorityHours} h. ${chargesText()}.`),
+  shopItem("pheromone", "Phéromone de recrutement", "consumable", () => `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`),
+  shopItem("vendettaToken", "Jeton de vendetta", "consumable", () => `Rappelle un seigneur en fuite après une vendetta : tu peux lui en déclarer une nouvelle sans attendre son retour. ${chargesText()}.`),
+  shopItem("blueprint", "Plan du Traqueur Kesh", "unit", "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)."),
+  shopItem("planner", "Planificateur", "feature", "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels."),
+  shopItem("title", () => `Titre « ${BOUNTY_SHOP_RULES.title} »`, "cosmetic", "Un titre à afficher à côté de ton nom."),
+  shopItem("frame", "Cadre de chitine", "cosmetic", "Cadre ambré autour de ta fiche publique."),
+  shopItem("emblem", "Emblème de l'Essaim", "cosmetic", "L'emblème kesh'vaar sur ta fiche publique."),
+  shopItem("emojis", "Emojis Kesh'Vaar", "cosmetic", "4 emojis exclusifs pour les discussions."),
+  shopItem("nameColor", "Couleur de pseudo", "cosmetic", "Ton pseudo en couleur dans le canal global et les salons (cyan, menthe, or, braise ou violet, modifiable à volonté)."),
+  shopItem("keshReaction", "Réaction kesh'vaar", "cosmetic", "Une 7e réaction, l'emblème de l'Essaim, sous les messages du canal. Visible de tous."),
+  shopItem("roomBanner", "Bannière de salon", "cosmetic", "Une icône au choix pour ton salon thématique, affichée dans la liste des salons."),
+  shopItem("planetFx", "Effet de planète", "cosmetic", "Débloque l'anneau d'ambre et l'aurore pour ta planète d'accueil (Profil)."),
 ];
 
 export function findShopItem(id: unknown): ShopItem | undefined {
@@ -1065,11 +1116,21 @@ export function pheromoneActive(player: Pick<PlayerState, "bounties">, now: numb
 }
 
 /* Badge « Mécène » : Ambre versée au pot commun (dons, taxe des enchères en Ambre). */
-export const PATRON_TIERS: { at: number; label: string; tone: "neutral" | "accent" | "violet" | "gold" }[] = [
-  { at: 25, label: "Mécène de bronze", tone: "neutral" },
-  { at: 100, label: "Mécène d'argent", tone: "accent" },
-  { at: 500, label: "Mécène d'or", tone: "gold" },
-  { at: 2000, label: "Grand mécène", tone: "violet" },
+export type PatronTierId = "bronze" | "argent" | "or" | "grand";
+/** 6.14.104 (AA3, AA-9) : seuil de chaque palier lu dans PATRON_RULES.tiers (admin, Mécènes) ; ids, noms et couleurs en dur. */
+const patronTierDef = (id: PatronTierId, label: string, tone: "neutral" | "accent" | "violet" | "gold") => ({
+  id,
+  label,
+  tone,
+  get at() {
+    return Math.max(1, Math.round(Number(PATRON_RULES.tiers[id]) || 1));
+  },
+});
+export const PATRON_TIERS: { id: PatronTierId; at: number; label: string; tone: "neutral" | "accent" | "violet" | "gold" }[] = [
+  patronTierDef("bronze", "Mécène de bronze", "neutral"),
+  patronTierDef("argent", "Mécène d'argent", "accent"),
+  patronTierDef("or", "Mécène d'or", "gold"),
+  patronTierDef("grand", "Grand mécène", "violet"),
 ];
 
 export function patronTier(amberDonated: number): (typeof PATRON_TIERS)[number] | null {

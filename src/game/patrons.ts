@@ -7,7 +7,11 @@
 
 export const PATRONS_KEY = "patrons";
 /** 6.9.0 (AU4) : places du classement des mécènes (GameRules.patrons). */
-export const PATRON_RULES = { top: 10 };
+export const PATRON_RULES = {
+  top: 10,
+  /** 6.14.104 (AA3, AA-9) : Ambre versée pour chaque palier du badge « Mécène » (dans l'ordre, croissant). */
+  tiers: { bronze: 25, argent: 100, or: 500, grand: 2000 } as Record<"bronze" | "argent" | "or" | "grand", number>,
+};
 
 export interface PatronEntry {
   uid: string;

@@ -47,3 +47,8 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
   `ensureMailTokens` ; message privé et désinscription en transaction) ; notifications des rattrapages muets écrites. 6.14.65 (AC-B) : éditeur de
   fiche de l'admin par différences, côté serveur ; 6.14.66 (AC-C) : suppression de compte côté serveur (`purgePlayer`), règles de
   suppression de `players` et `queues` réservées aux admins, recopiées au démarrage (`SCHEMA_RULE_SYNC`) : `proposals/chaine-actions.md`.
+
+## 6.14.104 (revue AU27, lot AA3)
+Seuils des outils d'équilibrage dans le groupe `unitAudit` : alerte des seigneurs (×1,5 le 2e joueur), zone cible JcJ (40 à 65 %
+de victoires des attaquants), valeur d'une rare (50) (Admin → Règles → « Outils d'équilibrage : seuils »). `validateRules` contrôle
+aussi les paires de réglages (`CROSS_BOUNDS`, `content.ts`) : minimum ≤ maximum, seuils dans l'ordre (Q260).

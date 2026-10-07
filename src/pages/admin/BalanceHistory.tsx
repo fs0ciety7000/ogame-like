@@ -3,7 +3,7 @@ import { Camera } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { BalanceSnapshot } from "@/game/balance/history";
-import { PVP_ATTACK_HIGH, PVP_ATTACK_LOW } from "@/game/balance/diagnostics";
+import { pvpAttackBand } from "@/game/balance/diagnostics";
 import { COMBAT_KINDS, type CombatKind } from "@/game/balance/combatTypes";
 import { adminBalanceSnapshot } from "@/services/adminService";
 import { formatCompact } from "@/lib/utils";
@@ -37,10 +37,10 @@ export function buildSeries(h: BalanceSnapshot[]): Series[] {
     {
       id: "pvp",
       title: "JcJ : victoires de l'attaquant",
-      hint: `7 jours glissants, au moins 10 combats ; zone cible ${PVP_ATTACK_LOW}–${PVP_ATTACK_HIGH} %`,
+      hint: `7 jours glissants, au moins 10 combats ; zone cible ${pvpAttackBand().low}–${pvpAttackBand().high} %`,
       unit: "%",
       points: h.map((_, i) => rolling(h, i, 7, (s) => s.pvpAttackerWins, (s) => s.pvpBattles, 10)),
-      band: [PVP_ATTACK_LOW, PVP_ATTACK_HIGH],
+      band: [pvpAttackBand().low, pvpAttackBand().high],
     },
     {
       id: "raids",

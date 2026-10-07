@@ -10,12 +10,34 @@ import type { PlayerState, ResourceId } from "@/types/game";
    permanents ; on peut tout redistribuer une fois par saison.
 ===================================================== */
 
-export const TALENT_RULES = { pointsPerAscension: 3, maxRank: 3 };
+export const TALENT_RULES = {
+  pointsPerAscension: 3,
+  maxRank: 3,
+  /** 6.14.104 (AA3, AA-2) : valeur par rang de chaque talent (0,02 = +2 % ; réseau : niveaux d'espionnage). Ids et effets en dur. */
+  perRank: {
+    rendement: 0.02,
+    fonderies: 0.02,
+    reacteurs: 0.02,
+    nanoforges: 0.02,
+    archivistes: 0.02,
+    assaut: 0.02,
+    rempart: 0.02,
+    ateliers: 0.02,
+    sentinelles: 0.02,
+    reseau: 0.2,
+    chantiers: 0.02,
+    laboratoires: 0.02,
+    entrepots: 0.02,
+    soutes: 0.02,
+    intendance: 0.02,
+  } as Record<string, number>,
+};
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const TALENT_RULES_META = {
   pointsPerAscension: { label: "Points de talent par Ascension", min: 0, max: 20 },
   maxRank: { label: "Rang maximal d'un talent", min: 1, max: 10, hint: "En baisser ne retire pas les rangs déjà pris." },
+  perRank: { label: "Valeur par rang de chaque talent", hint: "0,02 = +2 % par rang (entre 0 et 0,25). Réseau d'informateurs : niveaux d'espionnage par rang (entre 0 et 2). Les plafonds d'effets s'appliquent toujours." },
 };
 
 export type TalentBranch = "economie" | "guerre" | "logistique";
@@ -42,24 +64,42 @@ export const TALENT_BRANCHES: { id: TalentBranch; name: string; color: string }[
   { id: "logistique", name: "Logistique", color: "var(--color-cyan-glow)" },
 ];
 
+/** 6.14.104 (AA3) : « 0,2 ». */
+const decimalText = (n: number) => String(Math.round(n * 1000) / 1000).replace(".", ",");
+
+/** 6.14.104 (AA3, AA-2) : valeur par rang lue dans TALENT_RULES.perRank (admin, Talents d'Ascension) ; ids et effets en dur. */
+const talent = (id: string, branch: TalentBranch, name: string, description: string | (() => string), effect: TalentEffect): TalentDef => ({
+  id,
+  branch,
+  name,
+  get description() {
+    return typeof description === "function" ? description() : description;
+  },
+  effect,
+  get perRank() {
+    const v = Number(TALENT_RULES.perRank[id]);
+    return Number.isFinite(v) && v >= 0 ? v : 0;
+  },
+});
+
 export const TALENTS: TalentDef[] = [
-  { id: "rendement", branch: "economie", name: "Rendement impérial", description: "Production de toutes les ressources.", effect: { kind: "productionAll" }, perRank: 0.02 },
-  { id: "fonderies", branch: "economie", name: "Fonderies profondes", description: "Production de ferraille.", effect: { kind: "production", res: "scrap" }, perRank: 0.02 },
-  { id: "reacteurs", branch: "economie", name: "Réacteurs stabilisés", description: "Production d'énergie instable.", effect: { kind: "production", res: "energy" }, perRank: 0.02 },
-  { id: "nanoforges", branch: "economie", name: "Nanoforges", description: "Production de nanocomposants.", effect: { kind: "production", res: "nano" }, perRank: 0.02 },
-  { id: "archivistes", branch: "economie", name: "Archivistes", description: "Production de données anciennes.", effect: { kind: "production", res: "data" }, perRank: 0.02 },
+  talent("rendement", "economie", "Rendement impérial", "Production de toutes les ressources.", { kind: "productionAll" }),
+  talent("fonderies", "economie", "Fonderies profondes", "Production de ferraille.", { kind: "production", res: "scrap" }),
+  talent("reacteurs", "economie", "Réacteurs stabilisés", "Production d'énergie instable.", { kind: "production", res: "energy" }),
+  talent("nanoforges", "economie", "Nanoforges", "Production de nanocomposants.", { kind: "production", res: "nano" }),
+  talent("archivistes", "economie", "Archivistes", "Production de données anciennes.", { kind: "production", res: "data" }),
 
-  { id: "assaut", branch: "guerre", name: "Doctrine d'assaut", description: "Attaque de tes flottes.", effect: { kind: "attack" }, perRank: 0.02 },
-  { id: "rempart", branch: "guerre", name: "Rempart", description: "Défense de tes unités.", effect: { kind: "defense" }, perRank: 0.02 },
-  { id: "ateliers", branch: "guerre", name: "Ateliers de campagne", description: "Vaisseaux réparés après un combat.", effect: { kind: "repair" }, perRank: 0.02 },
-  { id: "sentinelles", branch: "guerre", name: "Sentinelles", description: "Chances de repérer l'espionnage adverse.", effect: { kind: "detection" }, perRank: 0.02 },
-  { id: "reseau", branch: "guerre", name: "Réseau d'informateurs", description: "Niveau d'espionnage (+0,2 par rang).", effect: { kind: "spyLevel" }, perRank: 0.2 },
+  talent("assaut", "guerre", "Doctrine d'assaut", "Attaque de tes flottes.", { kind: "attack" }),
+  talent("rempart", "guerre", "Rempart", "Défense de tes unités.", { kind: "defense" }),
+  talent("ateliers", "guerre", "Ateliers de campagne", "Vaisseaux réparés après un combat.", { kind: "repair" }),
+  talent("sentinelles", "guerre", "Sentinelles", "Chances de repérer l'espionnage adverse.", { kind: "detection" }),
+  talent("reseau", "guerre", "Réseau d'informateurs", () => `Niveau d'espionnage (+${decimalText(TALENT_RULES.perRank.reseau ?? 0)} par rang).`, { kind: "spyLevel" }),
 
-  { id: "chantiers", branch: "logistique", name: "Chantiers rapides", description: "Durée de construction des bâtiments.", effect: { kind: "buildTime" }, perRank: 0.02 },
-  { id: "laboratoires", branch: "logistique", name: "Laboratoires", description: "Durée des recherches.", effect: { kind: "researchTime" }, perRank: 0.02 },
-  { id: "entrepots", branch: "logistique", name: "Entrepôts étendus", description: "Capacité des entrepôts.", effect: { kind: "storage" }, perRank: 0.02 },
-  { id: "soutes", branch: "logistique", name: "Soutes renforcées", description: "Capacité de transport des flottes.", effect: { kind: "cargo" }, perRank: 0.02 },
-  { id: "intendance", branch: "logistique", name: "Intendance", description: "Production de toutes les ressources (logistique).", effect: { kind: "productionAll" }, perRank: 0.02 },
+  talent("chantiers", "logistique", "Chantiers rapides", "Durée de construction des bâtiments.", { kind: "buildTime" }),
+  talent("laboratoires", "logistique", "Laboratoires", "Durée des recherches.", { kind: "researchTime" }),
+  talent("entrepots", "logistique", "Entrepôts étendus", "Capacité des entrepôts.", { kind: "storage" }),
+  talent("soutes", "logistique", "Soutes renforcées", "Capacité de transport des flottes.", { kind: "cargo" }),
+  talent("intendance", "logistique", "Intendance", "Production de toutes les ressources (logistique).", { kind: "productionAll" }),
 ];
 
 export interface TalentState {
@@ -89,7 +129,7 @@ export function learnTalent(player: PlayerState, talentId: unknown): TalentState
   if (!def) throw new GameActionError("Talent inconnu.");
   const st = talentState(player);
   if ((st.ranks[def.id] ?? 0) >= TALENT_RULES.maxRank) throw new GameActionError("Ce talent est déjà au rang maximum.");
-  if (talentPoints(player).free <= 0) throw new GameActionError("Aucun point de talent disponible : chaque Ascension en donne 3.");
+  if (talentPoints(player).free <= 0) throw new GameActionError(`Aucun point de talent disponible : chaque Ascension en donne ${TALENT_RULES.pointsPerAscension}.`);
   st.ranks[def.id] = (st.ranks[def.id] ?? 0) + 1;
   player.talents = st;
   return st;

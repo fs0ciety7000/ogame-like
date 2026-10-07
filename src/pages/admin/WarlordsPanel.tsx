@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { pb } from "@/lib/pocketbase";
 import { currentGameContent } from "@/game/content";
-import { PERSONALITY_LABELS, TIER_LABELS, WARLORD_ALERT_RATIO, type WarlordHistoryPoint, type WarlordPublic, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
+import { PERSONALITY_LABELS, TIER_LABELS, warlordAlertRatio, type WarlordHistoryPoint, type WarlordPublic, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { fetchWarlords, type WarlordsView } from "@/services/warlordService";
 import { HudCallout, HudChip } from "@/components/ui/hud";
@@ -167,7 +167,7 @@ export function WarlordsPanel() {
       )}
       {balance && balance.alerts.length === 0 && balance.second > 0 && (
         <p className="text-xs text-slate-500">
-          Aucun seigneur au-delà de ×{String(WARLORD_ALERT_RATIO).replace(".", ",")} le 2e joueur (<span className="font-mono">{formatNumber(balance.second)}</span>).
+          Aucun seigneur au-delà de ×{String(warlordAlertRatio()).replace(".", ",")} le 2e joueur (<span className="font-mono">{formatNumber(balance.second)}</span>).
         </p>
       )}
 

@@ -35,3 +35,6 @@ guerres de saison, coffre de guerre).
 
 ## Revue AU6 (2026-10-07)
 Rapport `docs/audit/2026-10-07-au6-communications.md` : blocage et suppression confirmés (6.9.3) ; règles du canal, des salons, de la messagerie, des sondages et de la gazette réglables (registre 6.9.1).
+
+## 6.14.104 (revue AU27, lot AA3)
+`alliances.maxDiplomats` a son champ (Admin → Règles → Alliances) ; salons : `nameMin` ≤ `nameMax` contrôlé, comme `rename.minLength` ≤ `maxLength`.

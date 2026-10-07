@@ -1,10 +1,12 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
 import { OUTCOME_LABELS, type SpinOutcome } from "@/game/casino";
+import { PATRON_TIERS } from "@/game/bounties";
 import { WEEKLY_OFFERS, type WeeklyOfferId } from "@/game/weeklyStock";
 import { NumberField, Section, TextField } from "@/pages/admin/fields";
 
-/* 6.9.0 (AU4) : réglages du commerce (enchères, contrats, cadeaux, concours, tournoi, offre de la semaine, mécènes). */
+/* 6.9.0 (AU4) : réglages du commerce (enchères, contrats, cadeaux, concours, tournoi, offre de la semaine, mécènes).
+   6.14.104 (AA3) : paliers du badge « Mécène », sac de jetons, mise à prix maximale. */
 
 type R = GameRules;
 const hours = (s: string) =>
@@ -33,6 +35,7 @@ export function CommerceRulesFields({ rules, setRules }: { rules: R; setRules: D
         <NumberField label="Mise à prix min : ressource commune" value={au.minStart.common} min={1} step={10} onChange={(v) => setAu({ minStart: { ...au.minStart, common: v ?? 1 } })} />
         <NumberField label="Mise à prix min : ressource rare" value={au.minStart.rare} min={1} step={1} onChange={(v) => setAu({ minStart: { ...au.minStart, rare: v ?? 1 } })} />
         <NumberField label="Mise à prix min : Ambre" value={au.minStart.amber} min={1} step={1} onChange={(v) => setAu({ minStart: { ...au.minStart, amber: v ?? 1 } })} />
+        <NumberField label="Mise à prix maximale (une enchère : 10 fois au plus)" value={au.maxStart} min={1} step={1_000_000} onChange={(v) => setAu({ maxStart: Math.max(1, v ?? 1e12) })} />
         <NumberField label="Alertes de vente par joueur" value={au.watchMax} min={0} step={1} onChange={(v) => setAu({ watchMax: Math.round(v ?? 0) })} />
         <NumberField label="Historique : ventes gardées par lot" value={au.historyPerLot} min={1} step={1} onChange={(v) => setAu({ historyPerLot: Math.round(v ?? 1) })} />
       </Section>
@@ -49,13 +52,18 @@ export function CommerceRulesFields({ rules, setRules }: { rules: R; setRules: D
       <Section title="Pot commun : concours, tournoi, Comptoir (6.9.0)">
         <NumberField label="Concours : part du pot engagée au plus (0,8 = 80 %)" value={rules.contests.maxPotShare} min={0.05} step={0.05} onChange={(v) => setContest({ maxPotShare: v ?? 0.8 })} />
         <NumberField label="Concours : places au classement" value={rules.contests.standingsSize} min={1} step={1} onChange={(v) => setContest({ standingsSize: Math.round(v ?? 20) })} />
-        <NumberField label="Mécènes : places au classement" value={rules.patrons.top} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, patrons: { top: Math.round(v ?? 10) } }))} />
+        <NumberField label="Mécènes : places au classement" value={rules.patrons.top} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, patrons: { ...r.patrons, top: Math.round(v ?? 10) } }))} />
+        {/* 6.14.104 (AA3, AA-9) : paliers du badge « Mécène ». */}
+        {PATRON_TIERS.map((t) => (
+          <NumberField key={`pt-${t.id}`} label={`Badge « ${t.label} » : Ambre versée`} value={rules.patrons.tiers?.[t.id]} min={1} step={25} onChange={(v) => setRules((r) => ({ ...r, patrons: { ...r.patrons, tiers: { ...r.patrons.tiers, [t.id]: Math.max(1, Math.round(v ?? 1)) } } }))} />
+        ))}
         {(Object.keys(rules.tournamentPoints) as SpinOutcome[]).map((k) => (
           <NumberField key={k} label={`Tournoi : points pour « ${OUTCOME_LABELS[k] ?? k} »`} value={rules.tournamentPoints[k]} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, tournamentPoints: { ...r.tournamentPoints, [k]: Math.max(0, Math.round(v ?? 0)) } }))} />
         ))}
         {WEEKLY_OFFERS.map((o) => (
           <NumberField key={`p-${o.id}`} label={`Offre de la semaine : ${o.name} (prix en Ambre)`} value={rules.weeklyStock.prices[o.id]} min={1} step={10} onChange={(v) => setWeekly("prices", o.id, v ?? 1)} />
         ))}
+        <NumberField label="Offre de la semaine : jetons du sac de jetons" value={rules.weeklyStock.tokensBag} min={1} step={5} onChange={(v) => setRules((r) => ({ ...r, weeklyStock: { ...r.weeklyStock, tokensBag: Math.max(1, Math.round(v ?? 25)) } }))} />
         {WEEKLY_OFFERS.map((o) => (
           <NumberField key={`q-${o.id}`} label={`Offre de la semaine : ${o.name} (exemplaires)`} value={rules.weeklyStock.quantities[o.id]} min={1} step={1} onChange={(v) => setWeekly("quantities", o.id, v ?? 1)} />
         ))}

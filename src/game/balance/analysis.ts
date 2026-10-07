@@ -6,6 +6,7 @@ import { getProductionBonus } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { findUnit, OFFENSIVE_UNITS, UNITS, type UnitDef } from "@/game/units";
+import { UNIT_AUDIT_RULES } from "@/game/unitClasses";
 import type { Buildings, TechLevels, Units } from "@/types/game";
 
 /* =====================================================
@@ -16,15 +17,19 @@ import type { Buildings, TechLevels, Units } from "@/types/game";
    (BALANCE_REPORT=1 npx vitest run src/game/balance).
 ===================================================== */
 
-/** Une ressource rare vaut ce nombre de ressources communes (taux du comptoir). */
-export const RARE_VALUE = 50;
+/** Une ressource rare vaut ce nombre de ressources communes (taux du comptoir).
+ *  6.14.104 (AA3, AA-32) : réglable (UNIT_AUDIT_RULES.rareValue, Admin → Règles), lu à l'usage. */
+export function rareValue(): number {
+  const v = Number(UNIT_AUDIT_RULES.rareValue);
+  return Number.isFinite(v) && v > 0 ? v : 50;
+}
 
 /** Valeur d'un coût en ressources communes équivalentes. */
 export function costValue(cost: Partial<Record<string, number>>): number {
   let total = 0;
   for (const [res, n] of Object.entries(cost)) {
     const rare = RESOURCE_LIST.find((r) => r.id === res)?.rarity === "rare";
-    total += (n ?? 0) * (rare ? RARE_VALUE : 1);
+    total += (n ?? 0) * (rare ? rareValue() : 1);
   }
   return total;
 }

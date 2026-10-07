@@ -28,13 +28,27 @@ export interface DivisionDef {
   placementPct: number;
 }
 
+/** 6.14.104 (AA3, AA-7) : jetons et part de placement lus dans LEAGUE_RULES.tiers (admin, Divisions) ; ids, noms et couleurs en dur. */
+const division = (id: LeagueTier, label: string, color: string): DivisionDef => ({
+  id,
+  label,
+  color,
+  get tokens() {
+    return Math.max(0, Math.floor(Number(LEAGUE_RULES.tiers[id]?.tokens) || 0));
+  },
+  get placementPct() {
+    const v = Number(LEAGUE_RULES.tiers[id]?.placementPct);
+    return Number.isFinite(v) && v >= 0 ? v : 0;
+  },
+});
+
 export const LEAGUE_TIERS: DivisionDef[] = [
-  { id: "bronze", label: "Bronze", color: "var(--th-medal-bronze)", tokens: 1, placementPct: 0.25 },
-  { id: "argent", label: "Argent", color: "var(--th-medal-silver)", tokens: 1, placementPct: 0.25 },
-  { id: "or", label: "Or", color: "var(--th-medal-gold)", tokens: 2, placementPct: 0.2 },
-  { id: "platine", label: "Platine", color: "var(--th-rarity-rare)", tokens: 2, placementPct: 0.15 },
-  { id: "diamant", label: "Diamant", color: "var(--th-rarity-epic)", tokens: 3, placementPct: 0.1 },
-  { id: "mythique", label: "Mythique", color: "var(--th-rarity-mythic)", tokens: 4, placementPct: 0.05 },
+  division("bronze", "Bronze", "var(--th-medal-bronze)"),
+  division("argent", "Argent", "var(--th-medal-silver)"),
+  division("or", "Or", "var(--th-medal-gold)"),
+  division("platine", "Platine", "var(--th-rarity-rare)"),
+  division("diamant", "Diamant", "var(--th-rarity-epic)"),
+  division("mythique", "Mythique", "var(--th-rarity-mythic)"),
 ];
 
 export const LEAGUE_RULES = {
@@ -43,6 +57,15 @@ export const LEAGUE_RULES = {
   relegatePct: 0.2,
   /** Semaines gardées dans l'historique de chaque joueur. */
   historyWeeks: 8,
+  /** 6.14.104 (AA3, AA-7) : jetons du casino par participant actif, et part des joueurs placés à l'entrée (total 1). */
+  tiers: {
+    bronze: { tokens: 1, placementPct: 0.25 },
+    argent: { tokens: 1, placementPct: 0.25 },
+    or: { tokens: 2, placementPct: 0.2 },
+    platine: { tokens: 2, placementPct: 0.15 },
+    diamant: { tokens: 3, placementPct: 0.1 },
+    mythique: { tokens: 4, placementPct: 0.05 },
+  } as Record<LeagueTier, { tokens: number; placementPct: number }>,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -50,6 +73,7 @@ export const LEAGUE_RULES_META = {
   promotePct: { label: "Part qui monte chaque semaine", unit: "part", min: 0, max: 0.5 },
   relegatePct: { label: "Part qui descend chaque semaine", unit: "part", min: 0, max: 0.5 },
   historyWeeks: { label: "Semaines gardées dans l'historique", unit: "semaines", min: 1, max: 104 },
+  tiers: { label: "Jetons et placement de chaque division", hint: "tokens : jetons du casino par participant actif (entier, 0 à 100) ; placementPct : part des joueurs placés à l'entrée. La somme des parts vaut 1 (100 %)." },
 };
 
 const WEEK_MS = 7 * 24 * 3600 * 1000;
