@@ -208,3 +208,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.2 | Revue AU21 : hiver 2028 clos (niveaux de lune, Codex), SP-2 clos ; printemps 2029 proposé (succès lunaires, billet) | `docs/audit/2026-10-07-au21-hiver-2028.md` |
 | 2026-10-07 | 6.14.3 | P29-1 : succès « Clair de lune » (secret) et « Lune pleine » (niveau maximal lu à l'usage), Q20 | `docs/changes/6.14.3-succes-lunaires.md` |
 | 2026-10-07 | 6.14.4 | P29-2 : billet de devblog « Ta lune grandit » (niveaux, Codex, succès) | `docs/changes/6.14.4-billet-lunes-2.md` |
+| 2026-10-07 | 6.14.5 | Revue AU22 : printemps 2029 clos (succès lunaires, billet), BOSS-4 clos ; été 2029 proposé (mesure BOSS-2) | `docs/audit/2026-10-07-au22-printemps-2029.md` |
