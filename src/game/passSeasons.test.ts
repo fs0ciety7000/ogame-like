@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { applyGameContent, validateGameContent, currentGameContent } from "@/game/content";
 import { activeLevels, assignCommanders, findCommander, recruitCommander, OFFICER_TUNING_RULES, commandersState, grantCommanderXp, xpForLevel } from "@/game/commanders";
 import { activePass, addPassPoints, claimPassTier, passState, tierRequirements, trackActivity } from "@/game/seasonPass";
-import { CHALLENGE_KEYS, challengeSize, hasFullChallenges, regenerateChallenges, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_FINAL_AMBER, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { CHALLENGE_KEYS, challengeSize, hasFullChallenges, regenerateChallenges, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_REWARD_RULES, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { bountyState } from "@/game/bounties";
 import { defaultPlayerState } from "@/game/defaults";
 import type { WorldDigest } from "@/game/procedural";
@@ -37,7 +37,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     expect(generatePassSeason(opts)).toEqual(s);
     expect(s.status).toBe("draft");
     expect(s.tiers).toHaveLength(30);
-    expect(s.tiers[29]).toEqual([{ kind: "commander", id: "s-2026-11" }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }]);
+    expect(s.tiers[29]).toEqual([{ kind: "commander", id: "s-2026-11" }, { kind: "amber", amount: PASS_REWARD_RULES.finalAmber }, { kind: "cosmetic" }]);
     expect(Object.keys(s.requirements)).toHaveLength(30);
     expect(s.scenario.milestones.map((m) => m.tier)).toEqual([0, 10, 20, 30]);
     expect(s.commander.primary).not.toBe(s.commander.secondary);
@@ -171,7 +171,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     const amber = bountyState(p).amber;
     const gained = claimPassTier(p, 30, NOV_10);
     expect(gained[0]).toContain(def.name);
-    expect(bountyState(p).amber).toBe(amber + PASS_FINAL_AMBER);
+    expect(bountyState(p).amber).toBe(amber + PASS_REWARD_RULES.finalAmber);
     expect(commandersState(p).roster[def.id]).toBeDefined();
     expect(passState(p, NOV_10).claimed).toHaveLength(30);
   });

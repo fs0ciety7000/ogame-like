@@ -13,7 +13,8 @@ export interface MissionDef {
  *  principalement des combats, bâtiments et recherches. Relancer une
  *  mission courte en boucle ne rapporte donc pas plus d'XP par heure
  *  qu'une mission longue. */
-export const MISSION_XP_PER_HOUR = 60;
+/** Z5 (printemps) : XP suggérée par heure de mission dans l'éditeur (GameRules.missionXp). */
+export const MISSION_XP_RULES = { perHour: 60 };
 
 export const DEFAULT_MISSIONS: Record<string, MissionDef> = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },

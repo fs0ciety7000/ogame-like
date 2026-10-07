@@ -223,8 +223,6 @@ function passPace(passes: ReturnType<typeof passState>[], monthId: string, obser
 export const BASE_COUNTS: Record<ChronicleObjective, number> = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
-/** Un épisode ouvert depuis moins longtemps ne dit encore rien de sa difficulté (6.8.2 : réglable, chronicleGen.matureEpisodeDays). */
-export const MATURE_EPISODE_DAYS = 5;
 
 export function chapterDifficulty(d: WorldDigest): { value: number; reasons: string[] } {
   const r = chronicleGenRules();

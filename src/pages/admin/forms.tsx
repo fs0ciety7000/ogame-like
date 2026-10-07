@@ -11,7 +11,7 @@ import {
 import { getUnitBuildTime, UNIT_LEVEL_BONUS_DEFAULT, unitLevelBonus, type UnitDef } from "@/game/units";
 import { getTechCost, getTechTime, type TechDef } from "@/game/technologies";
 import { TechEffectsEditor } from "@/pages/admin/TechEffectsEditor";
-import { MISSION_XP_PER_HOUR, type MissionDef } from "@/game/missions";
+import { MISSION_XP_RULES, type MissionDef } from "@/game/missions";
 import { currentGameContent } from "@/game/content";
 import { formatCost } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
@@ -574,7 +574,7 @@ export function newMission(): MissionDef {
 export function MissionForm({ value: m, onChange, isNew }: { value: MissionDef; onChange: (m: MissionDef) => void; isNew: boolean }) {
   const set = (patch: Partial<MissionDef>) => onChange({ ...m, ...patch });
   const { xp = 0, ...resources } = m.reward;
-  const suggestedXp = Math.max(1, Math.round((m.duration / 3600) * MISSION_XP_PER_HOUR));
+  const suggestedXp = Math.max(1, Math.round((m.duration / 3600) * MISSION_XP_RULES.perHour));
   const perHour = (v: number) => formatNumber(Math.round((v * 3600) / Math.max(1, m.duration)));
   return (
     <div className="flex flex-col gap-3">
@@ -596,7 +596,7 @@ export function MissionForm({ value: m, onChange, isNew }: { value: MissionDef; 
         <NumberField label="XP" value={xp} min={0} step={1} onChange={(v) => set({ reward: { ...resources, xp: v ?? 0 } })} />
         <div className="flex items-end">
           <Button variant="outline" size="sm" type="button" onClick={() => set({ reward: { ...resources, xp: suggestedXp } })}>
-            Appliquer {suggestedXp} XP ({MISSION_XP_PER_HOUR} XP/h)
+            Appliquer {suggestedXp} XP ({MISSION_XP_RULES.perHour} XP/h)
           </Button>
         </div>
       </Section>

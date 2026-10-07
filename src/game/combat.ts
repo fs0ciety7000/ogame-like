@@ -11,7 +11,7 @@ export const COMBAT_RULES = {
   /** 6.7.1 : une techno, à son niveau maximal, au plus (1 = +100 %). */
   techCombatPerTechMax: 1,
   /** 6.7.1 : bonus du Traqueur Kesh contre tous les PNJ (0,5 = +50 %), en attaque comme en défense. */
-  // Valeur littérale : lire KESH_PVE_BONUS ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
+  // Valeur littérale : lire une constante d'un autre module ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
   keshPveBonus: 0.5,
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,

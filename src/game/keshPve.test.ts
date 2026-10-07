@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeFleetPower, homeDefensePower, pveAttackFactor, pveHomeDefenseFactor } from "@/game/combat";
-import { KESH_HUNTER_UNIT, KESH_PVE_BONUS } from "@/game/units";
+import { COMBAT_RULES, computeFleetPower, homeDefensePower, pveAttackFactor, pveHomeDefenseFactor } from "@/game/combat";
+import { KESH_HUNTER_UNIT } from "@/game/units";
 
 /* v5.9 : le Traqueur Kesh garde ses +50 % d'attaque contre tous les PNJ,
    en attaque (flotte envoyée) comme en défense (vaisseaux à quai). */
@@ -13,7 +13,7 @@ describe("v5.9 Traqueur Kesh contre les PNJ", () => {
     const fleet = { [K]: 10, fregate: 20 };
     const all = computeFleetPower(units, {}, fleet, ["attack"]);
     const hunters = computeFleetPower(units, {}, { [K]: 10 }, ["attack"]);
-    expect(pveAttackFactor(units, {}, fleet)).toBeCloseTo(1 + (KESH_PVE_BONUS * hunters) / all);
+    expect(pveAttackFactor(units, {}, fleet)).toBeCloseTo(1 + (COMBAT_RULES.keshPveBonus * hunters) / all);
     expect(pveAttackFactor(units, {}, { fregate: 20 })).toBe(1);
   });
 

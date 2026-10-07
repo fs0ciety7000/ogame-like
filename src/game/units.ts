@@ -173,9 +173,6 @@ export function ownedBlueprints(player: { bounties?: { owned?: string[] } }): st
   return player.bounties?.owned?.includes("blueprint") ? [KESH_HUNTER_UNIT.id] : [];
 }
 
-/** Bonus d'attaque du Traqueur contre les PNJ (seigneurs, menaces, primes, boss, Léviathan), en attaque comme en défense. */
-export const KESH_PVE_BONUS = 0.5;
-
 /** Gain d'attaque et de défense par niveau, pour les unités qui n'en précisent pas. */
 export const UNIT_LEVEL_BONUS_DEFAULT = 5;
 

@@ -18,7 +18,7 @@ travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dé
 | 3 | Z2 | Pages longues (UI-3) : Menaces, Bâtiments, Unités, Formules en onglets ou blocs repliables, cible < 5 000 px à 375 px | M | livré 6.10.2 (Menaces 2 148, Bâtiments 5 456, Unités 5 651 px ; Formules gardée) |
 | 4 | Z3 | Passe : paliers bonus après le dernier palier (PRG-2, Q4), proposition chiffrée puis lot | M | Z1 |
 | 5 | Z4 | Base avancée, suite (Q9) : la base défend la colonie (combat de colonie avec la flotte basée), proposition puis lot | L | Z1 (usage réel) |
-| 6 | Z5 | Constantes de règle restantes (Q7) : inventaire final et conversion vers les objets de règles | M | — |
+| 6 | Z5 | Constantes de règle restantes (Q7) : inventaire final et conversion vers les objets de règles | M | livré 6.10.3 |
 | 7 | Z6 | Performance, si les Web Vitals de production le justifient (Q8) : textes lourds du contenu chargés après le premier affichage | M | Z1 |
 | 8 | AU14 | Revue de printemps : même grille que AU1 à AU13 sur les systèmes touchés | M | fin des lots |
 

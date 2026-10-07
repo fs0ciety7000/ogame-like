@@ -26,8 +26,6 @@ import { CATALOG_START, catalogEntryFor, catalogIndex, illustrationPrompt, portr
 
 export const PASS_SEASONS_SECTION = "passSeasons";
 
-/** Ambre du dernier palier, en plus du commandant (un recrutement coûte 150). */
-export const PASS_FINAL_AMBER = 300;
 /** v5.14.1 : actions possibles dans un défi de palier. Les raids repoussés et les assauts
  *  de boss n'en font pas partie : le joueur ne les déclenche pas quand il veut, et un
  *  défi bloque les suivants. */
@@ -51,7 +49,13 @@ export function challengeRamp(tier: number, tiers = 30): number {
 /** v5.14.1 : effort d'un passe complet, en mois d'activité du joueur médian. Le passe
  *  est le contenu d'un mois : ses défis réunis demandent, pour chaque action, un mois
  *  entier de l'activité médiane (et un seul défi avance à la fois). */
-export const PASS_MONTH_EFFORT = 1;
+/** Z5 (printemps) : Ambre du dernier palier et effort du passe, réglables (GameRules.passRewards). */
+export const PASS_REWARD_RULES = {
+  /** Ambre du dernier palier d'un passe généré (avec le commandant et le cosmétique). */
+  finalAmber: 300,
+  /** Effort d'un passe complet, en mois d'activité du joueur médian. */
+  monthEffort: 1,
+};
 
 /** Quantité d'une action demandée sur tout le passe : 4,3 semaines d'activité médiane
  *  (bornée comme les objectifs des Chroniques ; valeurs de base sans données). */
@@ -59,7 +63,7 @@ export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "wee
   const base = BASE_COUNTS[key] ?? 3;
   const weekly = d.weeklyMedian[key] ?? 0;
   const eff = weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
-  return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
+  return Math.max(1, Math.round(eff * 4.3 * PASS_REWARD_RULES.monthEffort));
 }
 
 /** v5.14.1 : défis des paliers. Chaque palier a les siens (compteur propre, un palier à la
@@ -485,7 +489,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
     tiers = b.tiers;
     reasons.push(...b.reasons);
   } else reasons.push(`Récompenses : gabarit fixe (budget désactivé), ${Math.round(tiersValue(tiers.slice(0, -1), rules))} h de production équivalentes.`);
-  tiers[tiers.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
+  tiers[tiers.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_REWARD_RULES.finalAmber }, { kind: "cosmetic" }];
   // 6.8.1 : points par palier calculés sur les points par jour mesurés ; sans mesure, l'ancien ajustement de ±15 %.
   const computed = computePointsPerTier(o.digest.passPace, tiers.length, rules);
   let pointsPerTier = computed?.ppt ?? g.pass.pointsPerTier;

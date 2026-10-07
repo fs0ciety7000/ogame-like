@@ -5,7 +5,8 @@ import { TECH_COMBAT_CAP } from "@/game/effects";
 import { DEFAULT_FACTIONS, findFaction, LAIR_LOCATE_RULES, locateLair, pirateState, productionHours } from "@/game/pirates";
 
 import { defaultPlayerState } from "@/game/defaults";
-import { findUnit, KESH_HUNTER_UNIT, KESH_PVE_BONUS } from "@/game/units";
+import { findUnit, KESH_HUNTER_UNIT } from "@/game/units";
+import { COMBAT_RULES } from "@/game/combat";
 import type { PlayerState } from "@/types/game";
 
 /* 6.6.0 (revue AU1, proposition menaces-pnj.md) : plafond des technos de
@@ -57,7 +58,7 @@ describe("B : Traqueur Kesh", () => {
   });
 
   it("frappe les PNJ 50 % plus fort par l'unité elle-même (la techno n'ajoute rien en JcJ)", () => {
-    expect(KESH_PVE_BONUS).toBe(0.5);
+    expect(COMBAT_RULES.keshPveBonus).toBe(0.5);
   });
 });
 

@@ -377,8 +377,8 @@ setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 
 /* ---------- 5.26.2 : indices des succès secrets ---------- */
 
-/** Prix d'un indice (Ambre de Ruche), payé une fois par succès secret. */
-export const ACHIEVEMENT_HINT_PRICE = 25;
+/** Prix d'un indice (Ambre de Ruche), payé une fois par succès secret (Z5 : GameRules.achievementHint). */
+export const ACHIEVEMENT_HINT_RULES = { price: 25 };
 
 /** Indices cryptiques par mesure : une piste, jamais le seuil exact. */
 const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {

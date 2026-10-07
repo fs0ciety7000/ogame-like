@@ -179,3 +179,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.10.0 | Lot Y : base avancée sur une colonie (stationnement 14 j, attaque depuis la base et retour à la base, rapatriement) ; invariant I20 | `docs/changes/6.10.0-flotte-basee.md` |
 | 2026-10-07 | 6.10.1 | Revue AU13 (transverse) : routes admin gardées par un test, commerce dans la santé de l'équilibre, Nouveautés par tranches ; feuille de route d'hiver close, printemps proposé | `docs/audit/2026-10-07-au13-transverse.md` |
 | 2026-10-07 | 6.10.2 | Z2 : Menaces en onglets par faction, fiches Bâtiments et Unités compactes sur mobile | `docs/changes/6.10.2-pages-longues.md` |
+| 2026-10-07 | 6.10.3 | Z5 : Ambre du dernier palier, effort du passe, prix d'un indice, XP de mission suggérée réglables ; constantes mortes retirées (Q7 close) | `docs/changes/6.10.3-constantes-regles.md` |

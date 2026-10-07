@@ -7,7 +7,7 @@ import { HudCallout, HudChip } from "@/components/ui/hud";
 import { currentGameContent } from "@/game/content";
 import { chronicleMonthId } from "@/game/chronicles";
 import { COMMANDER_ROLES, COMMANDERS, seasonCommanderDef, type CommanderId } from "@/game/commanders";
-import { CHALLENGE_KEYS, hasFullChallenges, nextMonthId, passSeasonAllowed, PASS_FINAL_AMBER, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
+import { CHALLENGE_KEYS, hasFullChallenges, nextMonthId, passSeasonAllowed, PASS_REWARD_RULES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { describePassReward, normalizeTierReqs, OBJECTIVE_LABELS, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { CATALOG_START, catalogEntryFor, THEME_PRIMARY } from "@/game/seasonCatalog";
@@ -151,7 +151,7 @@ export function PassSeasonsPanel() {
       </div>
 
       <p className="text-xs text-slate-400">
-        À partir de {seasonLabel(CATALOG_START)}, le générateur écrit chaque mois un brouillon : thème du catalogue, scénario en quatre temps, 30 paliers avec chacun son défi, et au dernier palier un commandant de saison inédit avec {PASS_FINAL_AMBER} Ambre. Relis, retouche, puis publie avant le 1er : un brouillon non publié est publié d'office le 1er du mois.
+        À partir de {seasonLabel(CATALOG_START)}, le générateur écrit chaque mois un brouillon : thème du catalogue, scénario en quatre temps, 30 paliers avec chacun son défi, et au dernier palier un commandant de saison inédit avec {PASS_REWARD_RULES.finalAmber} Ambre. Relis, retouche, puis publie avant le 1er : un brouillon non publié est publié d'office le 1er du mois.
       </p>
 
       <CatalogOverview current={current} />

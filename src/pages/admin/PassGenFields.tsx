@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
 import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
 import { PASS_GEN_RULES, tierBudgets, type PassGenRules } from "@/game/passGen";
+import { PASS_REWARD_RULES } from "@/game/passSeasons";
 import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
 
 /* 6.8.1 : réglages du passe généré (GameRules.passGen) : budget des récompenses, plafonds, rythme, défis. */
@@ -27,6 +28,7 @@ const toList = (s: string) =>
 
 export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules: Dispatch<SetStateAction<GameRules>> }) {
   const g: PassGenRules = { ...PASS_GEN_RULES, ...rules.passGen };
+  const passRewards = { ...PASS_REWARD_RULES, ...(rules.passRewards as Partial<typeof PASS_REWARD_RULES>) };
   const set = (patch: Partial<PassGenRules>) => setRules((r) => ({ ...r, passGen: { ...g, ...r.passGen, ...patch } }));
   const budgets = tierBudgets(30, g);
   const fmt = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -40,6 +42,21 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
         <TextField label="Paliers jalons" value={g.milestones.join(", ")} onChange={(v) => set({ milestones: toList(v) })} hint="Deux récompenses, valeur renforcée." />
         <TextField label="Reliques rares aux paliers" value={g.rareRelicTiers.join(", ")} onChange={(v) => set({ rareRelicTiers: toList(v) })} />
         <TextField label="Reliques épiques aux paliers" value={g.epicRelicTiers.join(", ")} onChange={(v) => set({ epicRelicTiers: toList(v) })} />
+        <NumberField
+          label="Dernier palier : Ambre (avec commandant et cosmétique)"
+          value={passRewards.finalAmber}
+          min={0}
+          step={50}
+          onChange={(v) => setRules((r) => ({ ...r, passRewards: { ...passRewards, finalAmber: Math.max(0, Math.round(v ?? 0)) } }))}
+        />
+        <NumberField
+          label="Effort du passe (mois d'activité médiane)"
+          value={passRewards.monthEffort}
+          min={0.25}
+          step={0.25}
+          hint="Quantité totale de chaque défi : 4,3 semaines d'activité médiane × cet effort."
+          onChange={(v) => setRules((r) => ({ ...r, passRewards: { ...passRewards, monthEffort: v ?? 1 } }))}
+        />
         <NumberField label="Production au plus par récompense (h)" value={g.productionMaxHours} min={1} step={1} onChange={(v) => set({ productionMaxHours: v ?? 1 })} />
         <p className="text-xs text-slate-400 sm:col-span-2">
           Aperçu : palier 1 ≈ <span className="font-mono tabular-nums">{fmt(budgets[0])} h</span>, palier 10 ≈ <span className="font-mono tabular-nums">{fmt(budgets[9])} h</span>, palier 29 ≈{" "}

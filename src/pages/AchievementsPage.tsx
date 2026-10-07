@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import {
   ACHIEVEMENTS,
-  ACHIEVEMENT_HINT_PRICE,
+  ACHIEVEMENT_HINT_RULES,
   achievementHint,
   achievementProgress,
   achievementVisibility,
@@ -135,7 +135,7 @@ function SecretHint({ a, player }: { a: AchievementDef; player: PlayerState }) {
     const ok = await askConfirm({
       title: "Acheter un indice ?",
       message: "Une piste cryptique sur ce succès secret, sans le seuil exact. Elle reste affichée ensuite.",
-      details: <AmberAmount value={ACHIEVEMENT_HINT_PRICE} className="font-mono tabular-nums" />,
+      details: <AmberAmount value={ACHIEVEMENT_HINT_RULES.price} className="font-mono tabular-nums" />,
       confirmLabel: "Acheter l'indice",
       tone: "gold",
     });
@@ -150,8 +150,8 @@ function SecretHint({ a, player }: { a: AchievementDef; player: PlayerState }) {
     setBusy(false);
   };
   return (
-    <Button size="sm" variant="ghost" className="self-start" disabled={busy || amber < ACHIEVEMENT_HINT_PRICE} title={amber < ACHIEVEMENT_HINT_PRICE ? "Pas assez d'Ambre." : undefined} onClick={() => void buy()}>
-      <Lightbulb className="h-3.5 w-3.5" /> Indice · <AmberAmount value={ACHIEVEMENT_HINT_PRICE} label={false} className="font-mono tabular-nums" />
+    <Button size="sm" variant="ghost" className="self-start" disabled={busy || amber < ACHIEVEMENT_HINT_RULES.price} title={amber < ACHIEVEMENT_HINT_RULES.price ? "Pas assez d'Ambre." : undefined} onClick={() => void buy()}>
+      <Lightbulb className="h-3.5 w-3.5" /> Indice · <AmberAmount value={ACHIEVEMENT_HINT_RULES.price} label={false} className="font-mono tabular-nums" />
     </Button>
   );
 }

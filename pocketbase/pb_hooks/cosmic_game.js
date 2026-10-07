@@ -2152,6 +2152,7 @@ function describeGain(gain) {
 }
 
 // src/game/missions.ts
+var MISSION_XP_RULES = { perHour: 60 };
 var DEFAULT_MISSIONS = {
   patrouille_courte: { key: "patrouille_courte", name: "Patrouille courte", duration: 60, reward: { scrap: 800, xp: 1 }, prereq: { drone_recuperateur: 2 } },
   forage_profond: { key: "forage_profond", name: "Forage profond", duration: 1800, reward: { scrap: 35e3, xp: 30 }, prereq: { drone_recuperateur: 12, cargo: 3 } },
@@ -9701,7 +9702,7 @@ function setAchievements(defs) {
   ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
-var ACHIEVEMENT_HINT_PRICE = 25;
+var ACHIEVEMENT_HINT_RULES = { price: 25 };
 var METRIC_HINTS = {
   defeats: "Celui qui tombe souvent finit par apprendre \xE0 se relever.",
   phoenix: "Les cendres d'une d\xE9faite sont encore chaudes : frappe avant qu'elles ne refroidissent.",
@@ -11243,7 +11244,7 @@ var COMBAT_RULES = {
   /** 6.7.1 : une techno, à son niveau maximal, au plus (1 = +100 %). */
   techCombatPerTechMax: 1,
   /** 6.7.1 : bonus du Traqueur Kesh contre tous les PNJ (0,5 = +50 %), en attaque comme en défense. */
-  // Valeur littérale : lire KESH_PVE_BONUS ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
+  // Valeur littérale : lire une constante d'un autre module ici casse l'initialisation (import circulaire units ↔ combat dans le navigateur).
   keshPveBonus: 0.5,
   /** Part des ressources rares du défenseur pillée par un attaquant vainqueur. */
   lootPercent: 0.08,
@@ -17026,7 +17027,6 @@ function simulatePass(season, profile, monthDays = 30, horizon = 90) {
 
 // src/game/passSeasons.ts
 var PASS_SEASONS_SECTION = "passSeasons";
-var PASS_FINAL_AMBER = 300;
 var CHALLENGE_KEYS = ["victory", "contract", "spy", "market", "bounty", "warlordWin"];
 function challengeSize(tier) {
   if (tier === 20 || tier === 30) return 3;
@@ -17038,13 +17038,18 @@ function challengeSize(tier) {
 function challengeRamp(tier, tiers2 = 30) {
   return 0.4 + 2.1 * (tier - 1) / Math.max(1, tiers2 - 1);
 }
-var PASS_MONTH_EFFORT = 1;
+var PASS_REWARD_RULES = {
+  /** Ambre du dernier palier d'un passe généré (avec le commandant et le cosmétique). */
+  finalAmber: 300,
+  /** Effort d'un passe complet, en mois d'activité du joueur médian. */
+  monthEffort: 1
+};
 function monthlyBudget(key, d) {
   var _a, _b;
   const base = (_a = BASE_COUNTS[key]) != null ? _a : 3;
   const weekly = (_b = d.weeklyMedian[key]) != null ? _b : 0;
   const eff = weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
-  return Math.max(1, Math.round(eff * 4.3 * PASS_MONTH_EFFORT));
+  return Math.max(1, Math.round(eff * 4.3 * PASS_REWARD_RULES.monthEffort));
 }
 function generateTierChallenges(rng, focus, d, tiers2) {
   const playable = CHALLENGE_KEYS.filter((k) => {
@@ -17390,7 +17395,7 @@ function generatePassSeason(o) {
     tiers2 = b.tiers;
     reasons.push(...b.reasons);
   } else reasons.push(`R\xE9compenses : gabarit fixe (budget d\xE9sactiv\xE9), ${Math.round(tiersValue(tiers2.slice(0, -1), rules))} h de production \xE9quivalentes.`);
-  tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }];
+  tiers2[tiers2.length - 1] = [{ kind: "commander", id: commander.id }, { kind: "amber", amount: PASS_REWARD_RULES.finalAmber }, { kind: "cosmetic" }];
   const computed = computePointsPerTier(o.digest.passPace, tiers2.length, rules);
   let pointsPerTier = (_d = computed == null ? void 0 : computed.ppt) != null ? _d : g.pass.pointsPerTier;
   reasons.push(...(_e = computed == null ? void 0 : computed.reasons) != null ? _e : [...g.reasons, "Pas encore de points par jour mesur\xE9s : ajustement sur la part de joueurs qui ont fini."]);
@@ -18018,8 +18023,8 @@ function applyAction(s, action) {
     case "achievementHint": {
       const a = checkHintPurchase(player, action.achievementId);
       const st = bountyState(player);
-      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
-      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      if (st.amber < ACHIEVEMENT_HINT_RULES.price) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_RULES.price} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_RULES.price;
       player.bounties = st;
       player.stats = __spreadProps(__spreadValues({}, (_A = player.stats) != null ? _A : {}), { hintsBought: [...(_C = (_B = player.stats) == null ? void 0 : _B.hintsBought) != null ? _C : [], a.id] });
       return { hint: achievementHint(a) };
@@ -20714,6 +20719,9 @@ var REGISTERED_RULES = {
   colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
   colonySpec: { label: "Colonies : sp\xE9cialisation", target: () => COLONY_SPEC_RULES },
   colonyBase: { label: "Colonies : flotte bas\xE9e", target: () => COLONY_BASE_RULES },
+  passRewards: { label: "Passe g\xE9n\xE9r\xE9 : dernier palier et effort", target: () => PASS_REWARD_RULES },
+  achievementHint: { label: "Succ\xE8s : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
+  missionXp: { label: "Missions : XP sugg\xE9r\xE9e par heure (\xE9diteur)", target: () => MISSION_XP_RULES },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
   dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },
   dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },

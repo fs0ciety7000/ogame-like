@@ -41,7 +41,7 @@ import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recr
 import { activateCapsule, craftCapsule } from "@/game/synthesis";
 import { equipRelic, fuseRelics, recycleRelic } from "@/game/relics";
 import { bountyState } from "@/game/bounties";
-import { ACHIEVEMENT_HINT_PRICE, achievementHint, checkHintPurchase } from "@/game/achievements";
+import { ACHIEVEMENT_HINT_RULES, achievementHint, checkHintPurchase } from "@/game/achievements";
 import { setConversationArchived } from "@/game/messages";
 import { applyModulePreset, buildModule, deleteModulePreset, fuseModulePlans, mountModule, recycleModule, saveModulePreset, unmountModule } from "@/game/modules";
 import { productionHours, locateLair } from "@/game/pirates";
@@ -486,8 +486,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "achievementHint": {
       const a = checkHintPurchase(player, action.achievementId);
       const st = bountyState(player);
-      if (st.amber < ACHIEVEMENT_HINT_PRICE) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_PRICE} Ambre de Ruche pour cet indice.`);
-      st.amber -= ACHIEVEMENT_HINT_PRICE;
+      if (st.amber < ACHIEVEMENT_HINT_RULES.price) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_RULES.price} Ambre de Ruche pour cet indice.`);
+      st.amber -= ACHIEVEMENT_HINT_RULES.price;
       player.bounties = st;
       player.stats = { ...(player.stats ?? {}), hintsBought: [...(player.stats?.hintsBought ?? []), a.id] };
       return { hint: achievementHint(a) };

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { applyGameContent, currentGameContent, validateRules } from "@/game/content";
 import { challengePool, computePointsPerTier, generateBudgetTiers, PASS_GEN_RULES, passGenRules, rewardValue, tiersValue } from "@/game/passGen";
-import { generatePassSeason, PASS_FINAL_AMBER } from "@/game/passSeasons";
+import { generatePassSeason, PASS_REWARD_RULES } from "@/game/passSeasons";
 import { seededRandom, worldDigest, type WorldDigest } from "@/game/procedural";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PassReward } from "@/game/seasonPass";
@@ -61,7 +61,7 @@ describe("6.8.1 récompenses par budget", () => {
 
   it("le passe de saison garde son dernier palier (commandant, Ambre, cosmétique) ; budget désactivé : ancien gabarit", () => {
     const s = generatePassSeason({ monthId: "2026-11", digest: digest(), existing: [], now: OCT_20 });
-    expect(s.tiers[29]).toEqual([{ kind: "commander", id: "s-2026-11" }, { kind: "amber", amount: PASS_FINAL_AMBER }, { kind: "cosmetic" }]);
+    expect(s.tiers[29]).toEqual([{ kind: "commander", id: "s-2026-11" }, { kind: "amber", amount: PASS_REWARD_RULES.finalAmber }, { kind: "cosmetic" }]);
     expect(Math.abs(tiersValue(s.tiers.slice(0, 29)) - passGenRules().budgetHours)).toBeLessThanOrEqual(passGenRules().budgetHours * 0.05);
     applyGameContent({ rules: { ...currentGameContent().rules, passGen: { ...PASS_GEN_RULES, enabled: false } } });
     const old = generatePassSeason({ monthId: "2026-11", digest: digest(), existing: [], now: OCT_20 });

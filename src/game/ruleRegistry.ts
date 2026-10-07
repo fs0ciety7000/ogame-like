@@ -1,4 +1,4 @@
-import { ACHIEVEMENT_TOKENS, TIER_REWARDS } from "@/game/achievements";
+import { ACHIEVEMENT_HINT_RULES, ACHIEVEMENT_TOKENS, TIER_REWARDS } from "@/game/achievements";
 import { TEMPLATE_RULES } from "@/game/actionTemplates";
 import { ALLIANCE_CHALLENGE_RULES } from "@/game/allianceChallenge";
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
@@ -28,6 +28,8 @@ import { LEAGUE_RULES } from "@/game/leagues";
 import { BOSS_PHASE_RULES } from "@/game/leviathan";
 import { MARKET_HISTORY_RULES } from "@/game/marketHistory";
 import { MESSAGE_RULES } from "@/game/messages";
+import { MISSION_XP_RULES } from "@/game/missions";
+import { PASS_REWARD_RULES } from "@/game/passSeasons";
 import { MODULE_BUILD_COST, MODULE_RULES } from "@/game/modules";
 import { TREATY_RULES } from "@/game/pirates";
 import { POLL_RULES } from "@/game/polls";
@@ -87,6 +89,9 @@ export const REGISTERED_RULES = {
   colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
   colonySpec: { label: "Colonies : spécialisation", target: () => COLONY_SPEC_RULES },
   colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
+  passRewards: { label: "Passe généré : dernier palier et effort", target: () => PASS_REWARD_RULES },
+  achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
+  missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },
   dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES },
   dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },

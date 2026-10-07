@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   ACHIEVEMENTS,
   derivedAchievements,
-  ACHIEVEMENT_HINT_PRICE,
+  ACHIEVEMENT_HINT_RULES,
   achievementHint,
   achievementProgress,
   achievementVisibility,
@@ -136,7 +136,7 @@ describe("5.26.2 : indices des succès secrets", () => {
     expect(() => performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "first_blood" }, 1)).toThrow(/indice/);
     const out = performPlayerAction(p, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 1);
     expect((out.result as { hint: string }).hint).toMatch(/cendres/);
-    expect(out.player.bounties?.amber).toBe(60 - ACHIEVEMENT_HINT_PRICE);
+    expect(out.player.bounties?.amber).toBe(60 - ACHIEVEMENT_HINT_RULES.price);
     expect(out.player.stats?.hintsBought).toEqual(["phoenix"]);
     expect(() => performPlayerAction(out.player, defaultQueues(), { type: "achievementHint", achievementId: "phoenix" }, 2)).toThrow(/déjà/);
     expect(achievementHint({ metric: "victories", category: "combat" })).toMatch(/combat/);
