@@ -51,7 +51,9 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   Liseré gauche coloré, coin coupé ; `alert` pour une menace en cours.
 - **`HudToaster`** (`src/components/ui/hud-toast.tsx`) : toasts sonner au style du HUD (coin coupé, liseré et icône
   de la couleur sémantique, titre en capitales, action en pastille). `toast.success/error/warning` prennent mint / danger /
-  ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind).tone`).
+  ember ; une notification de jeu passe `className: "hud-tone-…"` (ton de son type, `notificationStyle(kind, n).tone`).
+  Une notification de flotte n'est rouge que pour une menace (`isHostileFleetNotification` : flotte hostile, raid, ultimatum,
+  garnison au combat) ; un retour ou un saut réussi prend le ton courant, et INFO au Journal système (`systemLogStyle`, 6.14.77).
 - **`askConfirm`** (`src/components/ui/confirm-dialog.tsx`) : toute confirmation, jamais `window.confirm` / `alert` / `prompt`
   (boîte grise du navigateur, hors thème ; un test échoue). `await askConfirm({ title, message, details, confirmLabel, tone })` rend
   `true` si le joueur confirme. Titre = la question courte ; `message` = la conséquence ; `details` = coût, solde (`CostPill`).
@@ -74,6 +76,14 @@ sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **at
   `announcementsSeen`).
 - **Pastilles de navigation** : le rouge (`danger`) reste aux menaces ; un compteur de lectures (notes de version, messages, bouton
   « Plus ») est neutre (6.14.64).
+- **Menu progressif (6.14.75, I30)** : une page pas encore ouverte est **cachée** (groupe vide caché aussi), jamais affichée avec un
+  cadenas, sauf réglage `navUnlock.style = "locked"` (grisée comme le Planificateur, condition dans le `title` et l'`aria-label`). Une
+  page qui vient de s'ouvrir porte `HudChip size="sm" tone="accent"` « Nouveau » jusqu'à la première visite (losange accent en barre
+  réduite) : c'est une invitation, pas une récompense (jamais l'or) ni une menace (jamais le rouge). Sous le menu, une seule ligne
+  grisée `text-slate-500` « Prochaine ouverture : … · 40 / 100 XP » (trois noms au plus, le reste dans le `title`). Dans Ctrl+K, une
+  page fermée reste trouvable : icône et libellé `text-slate-500`, sa condition à la place de « Navigation ». Un lien vers une page
+  fermée (défi du passe, des Chroniques) dit « Ouvre : … » (`ObjectiveGoLink`, `HudChip asChild`) ; une étape du tutoriel dit
+  « Débloque : … ».
 - **Hiérarchie d'une page (6.14.67)** : l'action principale de la page vient juste sous l'en-tête (la grille des Missions, les
   paliers du Passe, « Rejoindre » pour un joueur sans alliance) ; l'explication et les compteurs secondaires passent dessous ou
   se replient (`FoldSection`). Une carte n'a qu'un bouton plein (`primary`) : le premier pas sûr (Espionner un seigneur) ; une

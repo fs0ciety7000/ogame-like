@@ -106,3 +106,14 @@ export function groupNotifications<T extends { id: string; kind: NotificationKin
   }
   return groups;
 }
+
+/* 6.14.77 (É30-1f, écart 6 de 6.14.70) : le genre `fleet` mêle les menaces (flotte hostile, raid, ultimatum, garnison au combat)
+   et les retours sans danger (patrouille rentrée, saut réussi, livraison, expédition). Couleur = sens (DESIGN.md) : seul le premier
+   cas est une alerte rouge. Classement par le texte, pour couvrir aussi les notifications déjà enregistrées. */
+const HOSTILE_FLEET_TEXT = /hostile|impact dans|raid dans|exige|a combattu/i;
+
+/** Notification de flotte qui annonce une menace ou une perte (alerte), par opposition à un retour ou un saut réussi. */
+export function isHostileFleetNotification(n: { kind: NotificationKind; title?: string | null; message?: string | null }): boolean {
+  if (n.kind !== "fleet") return false;
+  return HOSTILE_FLEET_TEXT.test(`${n.title ?? ""} ${n.message ?? ""}`);
+}

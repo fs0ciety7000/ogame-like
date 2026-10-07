@@ -1608,7 +1608,9 @@ function dockAutoOnReturn(txApp, game, uid, player, queues, rec, now) {
   return game.autoCommission(player, queues, game.unitsAwayOf(others, uid), now);
 }
 
-function resolveFleetReturn(txApp, game, rec, now) {
+/** Retour d'une flotte (I8). `quiet` (6.14.77, porte de saut) : la notification de retour habituelle (« Patrouille terminée »…)
+ *  est tue, l'appelant envoie la sienne ; les remises en service automatiques restent notifiées. */
+function resolveFleetReturn(txApp, game, rec, now, quiet) {
   if (rec.getString("mission") === "expedition") return expeditionStep(txApp, game, rec, now, 2);
   const fleet = fleetFromRecord(rec);
   // 6.10.0 : partie d'une base encore en place, la flotte y revient ; le butin va à la planète mère.
@@ -1627,7 +1629,7 @@ function resolveFleetReturn(txApp, game, rec, now) {
     game.clearDecoy(out.owner, rec.id);
     const docked = dockAutoOnReturn(txApp, game, fleet.ownerUid, out.owner, out.queues, rec, now);
     savePlayer(txApp, game, owner, out.owner, out.queues);
-    notify(txApp, fleet.ownerUid, out.notifications.concat(docked));
+    notify(txApp, fleet.ownerUid, (quiet ? [] : out.notifications).concat(docked));
   }
   rec.set("status", "done");
   txApp.save(rec);
@@ -2130,8 +2132,9 @@ function fleetJumpRequest(e) {
     const jumped = game.jumpedFleet(fleet, now);
     rec.set("status", jumped.status);
     rec.set("returnAtMs", jumped.returnAtMs);
-    // Retour habituel : unités rendues, leurre effacé, remise en service automatique, notifications (I8).
-    resolveFleetReturn(txApp, game, rec, now);
+    // Retour habituel : unités rendues, leurre effacé, remise en service automatique (I8). 6.14.77 (É30-1f) : sans la notification
+    // de retour (« Patrouille terminée »), le joueur ne reçoit que « Saut réussi ».
+    resolveFleetReturn(txApp, game, rec, now, true);
     const owner = loadPlayer(txApp, game, uid);
     let readyAtMs;
     try {
@@ -5758,6 +5761,11 @@ function liveBalance(now, withHistory) {
         const loot = toPlain(r).loot;
         if (loot && typeof loot === "object") out.lootTotal = Object.keys(loot).reduce((a, k) => a + (Number(loot[k]) || 0), 0);
       }
+      // 6.14.77 (É30-1f) : lune du défenseur au moment du combat (null : rapport d'avant 6.14.77).
+      // Champ JSON lu brut (« 2 », « null » ou vide), sans copier tout le rapport.
+      const moonRaw = String(r.getString("defenderMoonLevel") || "").trim();
+      const moonLvl = moonRaw && moonRaw !== "null" ? Number(moonRaw) : NaN;
+      out.defenderMoonLevel = isFinite(moonLvl) ? moonLvl : null;
       // 5.22 : rang du seigneur engagé (suivi d'équilibrage par rang).
       if (out.attackerUid.indexOf("npc") === 0 || out.defenderUid.indexOf("npc") === 0) {
         const log = toPlain(r).combatLog;

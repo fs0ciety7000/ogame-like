@@ -1,10 +1,11 @@
+import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, Lock, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudChip } from "@/components/ui/hud";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { AmberAmount } from "@/components/ui/amber";
-import { episodeUnlockMs, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth } from "@/game/chronicles";
+import { episodeUnlockMs, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective } from "@/game/chronicles";
 import { describePassReward, PASS_POINTS } from "@/game/seasonPass";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ export function ChronicleTimeline({
   busy,
   onClaim,
   onReplay,
+  goTo,
 }: {
   month: ChronicleMonth;
   bonus: ChronicleBonus;
@@ -39,6 +41,8 @@ export function ChronicleTimeline({
   busy?: number | null;
   onClaim?: (i: number) => void;
   onReplay?: (i: number) => void;
+  /** 6.14.76 (DP-L3) : lien vers la page où l'on agit (une page pas encore au menu s'ouvre au clic). */
+  goTo?: (objective: ChronicleObjective) => ReactNode;
 }) {
   const reduce = useReducedMotion();
   const accent = month.theme.accent;
@@ -112,6 +116,7 @@ export function ChronicleTimeline({
                   <div className="h-full transition-[width] duration-500" style={{ width: `${Math.min(100, (progress / e.objective.count) * 100)}%`, background: accent }} />
                 </div>
               )}
+              {goTo && view && !locked && !done && !ready && <div className="flex">{goTo(e.objective.type)}</div>}
               <div className="flex flex-wrap gap-1">
                 <HudChip size="sm" tone="accent" className="normal-case tracking-normal">
                   +{PASS_POINTS.chronicle} pts

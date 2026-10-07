@@ -173,6 +173,11 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.71 | [Proposition d'équilibrage et simulateur de progression](6.14.71-proposition-equilibrage.md) | docs + outillage | [equilibrage-au27](../proposals/equilibrage-au27.md), lot AE-L0, Q97 à Q103 |
 | 6.14.72 | [Réglages sûrs : défense à domicile, bouclier, écart d'XP, coffre du 7e jour](6.14.72-reglages-surs.md) | ajustement (équilibre) | [equilibrage-au27](../proposals/equilibrage-au27.md), lot AE-L1, Q99, Q100 |
 | 6.14.73 | [Proposition du déblocage progressif du menu](6.14.73-proposition-deblocage.md) | docs | Q152 à Q158 |
+| 6.14.74 | [Déblocage progressif du menu : moteur](6.14.74-deblocage-moteur.md) | fonctionnalité (moteur) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L1, Q152 à Q158 |
+| 6.14.75 | [Déblocage progressif du menu : interface](6.14.75-deblocage-interface.md) | fonctionnalité (interface) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L2, Q153, Q155, Q156 |
+| 6.14.76 | [Déblocage progressif : Prise en main, Carnet, panneau Lune, passe](6.14.76-deblocage-prise-en-main.md) | ajout (interface) | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L3 |
+| 6.14.78 | [Rythme sur des mois : proposition et simulateur sur 365 jours](6.14.78-rythme-long-terme.md) | docs | Q164 à Q171 |
+| 6.14.77 | [Suite de l'essai de la lune : une notification par saut, Journal système, victoires avec ou sans lune](6.14.77-suite-essai-lune.md) | correctif + ajout (mesure) | [phalange-porte-de-saut](../proposals/phalange-porte-de-saut.md), lot É30-1f |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

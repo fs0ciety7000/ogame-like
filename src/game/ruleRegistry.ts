@@ -22,6 +22,7 @@ import { GAZETTE_RULES } from "@/game/gazette";
 import { EXCHANGE_RULES } from "@/game/resources";
 import { COLONY_BASE_RULES } from "@/game/fleets";
 import { MOON_RULES } from "@/game/moon";
+import { NAV_UNLOCK_RULES } from "@/game/navUnlock";
 import { PHALANX_RULES } from "@/game/phalanx";
 import { JUMP_GATE_RULES } from "@/game/jumpGate";
 import { RESEARCH_RULES } from "@/game/technologies";
@@ -93,6 +94,8 @@ export const REGISTERED_RULES = {
   colonySpec: { label: "Colonies : spécialisation", target: () => COLONY_SPEC_RULES },
   colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
   moon: { label: "Lunes : naissance, bonus et pitié", target: () => MOON_RULES },
+  // 6.14.74 (DP-L1, proposals/deblocage-progressif.md) : ouverture progressive du menu (I30).
+  navUnlock: { label: "Ouverture du menu (comptes neufs)", target: () => NAV_UNLOCK_RULES },
   // 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md §5.4).
   phalanx: { label: "Lunes : phalange", target: () => PHALANX_RULES },
   jumpGate: { label: "Lunes : porte de saut", target: () => JUMP_GATE_RULES },

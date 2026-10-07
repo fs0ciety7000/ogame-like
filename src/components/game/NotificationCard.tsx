@@ -26,6 +26,7 @@ import { HUD_TONE, HudChip, type HudTone } from "@/components/ui/hud";
 import { AmberIcon } from "@/components/ui/amber";
 import { RESOURCE_LIST } from "@/game/resources";
 import { cn, formatCompact, timeAgo } from "@/lib/utils";
+import { isHostileFleetNotification } from "@/lib/notificationCategories";
 import type { GameNotification, NotificationKind, ResourceId } from "@/types/game";
 
 /* v5.9 : carte de notification commune (cloche et Journal) — une icône et
@@ -54,9 +55,13 @@ const KIND_STYLE: Record<NotificationKind, { icon: LucideIcon; tone: HudTone; la
   system: { icon: Bell, tone: "neutral", label: "Système" },
 };
 
-/** Style d'un type de notification : icône, ton du HUD (couleur du thème) et libellé. */
-export function notificationStyle(kind: NotificationKind) {
-  const s = KIND_STYLE[kind] ?? KIND_STYLE.system;
+/** 6.14.77 (É30-1f) : flotte sans menace (retour, saut réussi, livraison) : ton courant, pas le rouge des menaces. */
+const FLEET_CALM: { icon: LucideIcon; tone: HudTone; label: string } = { icon: Rocket, tone: "accent", label: "Flotte" };
+
+/** Style d'un type de notification : icône, ton du HUD (couleur du thème) et libellé. Avec la notification, une flotte
+ *  sans menace (retour, saut) prend le ton courant ; le rouge reste à la flotte hostile (couleur = sens). */
+export function notificationStyle(kind: NotificationKind, n?: { title?: string | null; message?: string | null }) {
+  const s = kind === "fleet" && n && !isHostileFleetNotification({ kind, title: n.title, message: n.message }) ? FLEET_CALM : (KIND_STYLE[kind] ?? KIND_STYLE.system);
   return { ...s, color: HUD_TONE[s.tone] };
 }
 
@@ -119,7 +124,7 @@ export function NotificationCard({
   onOpen?: () => void;
   compact?: boolean;
 }) {
-  const s = notificationStyle(n.kind);
+  const s = notificationStyle(n.kind, n);
   const Icon = s.icon;
   const Tag = onOpen ? "button" : "div";
   return (

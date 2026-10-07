@@ -7,6 +7,7 @@ import { Check, Gift, Lock, Ticket } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
+import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { activePass, describePassReward, isCumulativePass, OBJECTIVE_LABELS, PASS_POINTS, passBonusProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
@@ -157,6 +158,14 @@ export function SeasonPassPage() {
               </HudChip>
             ))}
           </div>
+          {/* 6.14.76 (DP-L3) : où relever le défi ; une page pas encore au menu s'ouvre au clic. */}
+          {challenge.reqs.some((r) => !r.met) && (
+            <div className="flex flex-wrap gap-1.5">
+              {[...new Set(challenge.reqs.filter((r) => !r.met).map((r) => r.key))].map((key) => (
+                <ObjectiveGoLink key={key} objective={key} />
+              ))}
+            </div>
+          )}
           <p className="text-xs text-slate-500">
             {isCumulativePass(st.seasonId)
               ? "Totaux du mois : chaque action compte pour tous les paliers, rien n'est perdu. Les défis se relèvent dans l'ordre ; il faut le défi ET les points pour réclamer un palier."

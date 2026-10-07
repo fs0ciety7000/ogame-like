@@ -1,29 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusDot } from "@/components/ui/status-dot";
 import { useNotificationStore } from "@/store/notificationStore";
-import type { NotificationKind } from "@/types/game";
-
-const LEVEL_STYLE: Record<NotificationKind, { level: string; className: string }> = {
-  building: { level: "SUCCESS", className: "text-mint-glow" },
-  research: { level: "SUCCESS", className: "text-mint-glow" },
-  unit: { level: "SUCCESS", className: "text-mint-glow" },
-  mission: { level: "SUCCESS", className: "text-mint-glow" },
-  "combat-attacker": { level: "INFO", className: "text-cyan-glow" },
-  "combat-defender": { level: "WARN", className: "text-ember-glow" },
-  achievement: { level: "UNLOCK", className: "text-gold-glow" },
-  "spy-detected": { level: "ALERT", className: "text-ember-glow" },
-  bounty: { level: "HUNT", className: "text-gold-glow" },
-  spy: { level: "INTEL", className: "text-cyan-glow" },
-  debris: { level: "INFO", className: "text-slate-300" },
-  season: { level: "SAISON", className: "text-gold-glow" },
-  alliance: { level: "ALLIANCE", className: "text-cyan-glow" },
-  event: { level: "EVENT", className: "text-gold-glow" },
-  gift: { level: "INFO", className: "text-mint-glow" },
-  fleet: { level: "ALERTE", className: "text-danger-glow" },
-  report: { level: "SUPPORT", className: "text-gold-glow" },
-  message: { level: "MESSAGE", className: "text-cyan-glow" },
-  system: { level: "INFO", className: "text-cyan-glow" },
-};
+import { systemLogStyle } from "@/lib/systemLog";
 
 function timeLabel(ms: number): string {
   return new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -46,7 +24,7 @@ export function SystemLogPanel() {
         ) : (
           <ul className="max-h-52 space-y-1 overflow-y-auto tabular-mono text-xs">
             {items.slice(0, 20).map((n) => {
-              const style = LEVEL_STYLE[n.kind];
+              const style = systemLogStyle(n);
               return (
                 <li key={n.id} className="flex gap-2 text-slate-400">
                   <span className="shrink-0 text-slate-600">[{timeLabel(n.createdAtMs)}]</span>

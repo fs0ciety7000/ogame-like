@@ -1,4 +1,6 @@
-import { applyBuildingDiscount, BUILDINGS, defaultBuildings, effectiveBuildingLevel, getBuildingUpgradeCost, getBuildingUpgradeTime, getStorageCapacity, requiredForAscension } from "@/game/buildings";
+import { ASCENSION_RULES } from "@/game/ascension";
+import { rawUnitCapacity } from "@/game/hangar";
+import { applyBuildingDiscount, BUILDINGS, defaultBuildings, effectiveBuildingLevel, getBuildingUpgradeCost, getBuildingUpgradeTime, getStorageCapacity, keptOnAscension, requiredForAscension } from "@/game/buildings";
 import { buildSlots } from "@/game/buildPlan";
 import { CONTRACT_RULES } from "@/game/contracts";
 import { defaultResources } from "@/game/defaults";
@@ -6,6 +8,7 @@ import { missionRewards, rareRewardScale } from "@/game/economy";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { MISSIONS } from "@/game/missions";
 import { ONBOARDING_STEPS } from "@/game/onboarding";
+import { getRank } from "@/game/ranks";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { EXCHANGE_RULES } from "@/game/resources";
 import { STREAK_RULES } from "@/game/streak";
@@ -32,9 +35,19 @@ import type { Buildings, TechLevels } from "@/types/game";
    Hors modèle (tout accélère le vrai jeu) : achats d'unités, combats, pillage,
    événements, reliques, officiers, talents, alliance, classes, primes.
    Les résultats sont des ordres de grandeur, pas des dates exactes.
+
+   Étude du rythme long terme (docs/proposals/rythme-long-terme.md) : options
+   facultatives, toutes éteintes par défaut (les repères d'I29 ne bougent pas) :
+   horizon libre (`days`, 365 pour un an), Ascensions successives (`ascend`,
+   règles ASCENSION_RULES), modèles d'options à l'étude (conditions d'Ascension,
+   coût croissant par Ascension, plafond de niveau par ère, recherche tardive plus
+   longue, durées du second palier), puits de dépense (flotte dans la place des
+   hangars, projets de prestige), XP et rang, relevés par fenêtre de 30 jours
+   (sessions bloquées, sessions sans progression, production perdue, jours « fini »).
 ===================================================== */
 
 const COMMONS = ["scrap", "energy", "nano", "data"] as const;
+const EXTRACTORS = ["extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees"];
 const RARES = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"] as const;
 const HOUR = 3600;
 const DAY = 86_400;
@@ -82,6 +95,58 @@ export interface ProgressionOptions {
   useExchange?: boolean;
   /** Jours des relevés. */
   milestones?: number[];
+  /** Largeur des fenêtres de relevé (jours), 30 par défaut. */
+  windowDays?: number;
+  /** Le joueur fait chaque Ascension dès qu'elle est possible (ASCENSION_RULES : délai, maximum, bonus). */
+  ascend?: boolean;
+  /** Option B (modèle) : condition en plus des bâtiments au maximum, pour la n-ième Ascension. */
+  ascensionGate?: (ctx: AscensionGateContext) => boolean;
+  /** Option B (modèle) : coût du second palier multiplié par (1 + x)^n après n Ascensions. */
+  costGrowthPerAscension?: number;
+  /** Option D (modèle) : niveau le plus haut ouvert ce jour-là pour les bâtiments exigés par l'Ascension (ères du serveur). */
+  levelCapByDay?: (day: number) => number;
+  /** Option A (modèle) : recherche tardive, coût et durée multipliés pour les niveaux ≥ fromLevel ; durée d'un niveau plafonnée à maxSeconds (avant réductions). */
+  techLate?: { fromLevel: number; costFactor: number; timeFactor: number; maxSeconds?: number };
+  /** Option A (modèle) : durées du second palier des bâtiments multipliées. */
+  tier2TimeFactor?: number;
+  /** Option A (modèle) : croissance des durées de recherche par niveau (1,67 dans le code, constante TIME_GROWTH). */
+  techTimeGrowth?: number;
+  /** Puits : surplus commun au-dessus de reserveShare × entrepôt dépensé en vaisseaux d'attaque, dans la place des hangars. */
+  fleetSink?: { reserveShare: number };
+  /** Option C (modèle, AE-L6) : projets de prestige, un à la fois ; le n-ième coûte hours × growth^n heures de la production commune du moment. */
+  prestigeProjects?: { hours: number; growth: number; durationHours: number; reserveShare: number; /** Ouverts quand les 4 extracteurs atteignent ce niveau (0 : dès J0). */ minExtractorLevel?: number };
+}
+
+export interface AscensionGateContext {
+  /** Numéro de l'Ascension visée (1 = la première). */
+  n: number;
+  day: number;
+  xp: number;
+  techLevels: number;
+  techComplete: boolean;
+  prestigeProjects: number;
+  /** Jour de la précédente Ascension (null : aucune). */
+  lastAscensionDay: number | null;
+}
+
+export interface ProgressionWindow {
+  fromDay: number;
+  toDay: number;
+  sessions: number;
+  /** Sessions avec un chantier ou un labo libre, rien d'abordable alors qu'il reste à faire (mur), en %. */
+  blockedPct: number;
+  /** Sessions sans bâtiment ni recherche lancés (files pleines comprises), en %. */
+  noProgressPct: number;
+  /** Sessions sans bâtiment, recherche, vaisseau ni projet lancés, en %. */
+  noSpendPct: number;
+  /** Jours joués sans aucun bâtiment ni recherche lancés. */
+  daysWithoutLaunch: number;
+  /** Jours joués sans bâtiment, recherche, vaisseau ni projet lancés. */
+  daysWithoutSpend: number;
+  /** Jours où bâtiments et arbre sont au maximum, sans Ascension possible (« fini, sans suite »). */
+  finishedDays: number;
+  /** Production commune perdue dans la fenêtre, en %. */
+  lostPct: number;
 }
 
 export interface ProgressionSnapshot {
@@ -98,6 +163,16 @@ export interface ProgressionSnapshot {
   rareStock: number;
   /** Production commune perdue (entrepôt plein), cumul depuis J0, en %. */
   lostPct: number;
+  /** Somme des niveaux des bâtiments exigés par l'Ascension. */
+  buildingLevels: number;
+  xp: number;
+  rank: string;
+  ascensions: number;
+  /** Flotte achetée par le puits (valeur en communes) et places occupées / capacité des hangars d'attaque. */
+  fleetValue: number;
+  fleetPlaces: number;
+  fleetCapacity: number;
+  prestigeProjects: number;
 }
 
 export interface ProgressionChest {
@@ -133,6 +208,13 @@ export interface ProgressionResult {
   /** Communes converties au comptoir. */
   exchangedCommon: number;
   snapshots: ProgressionSnapshot[];
+  /** Jours des Ascensions faites (option `ascend`). */
+  ascensionDays: number[];
+  /** Relevés par fenêtre de `windowDays` jours. */
+  windows: ProgressionWindow[];
+  xp: number;
+  /** Jour où la place des hangars d'attaque est pleine pour la première fois (puits de flotte). */
+  fleetFullDay: number | null;
 }
 
 type Cost = Record<string, number | undefined>;
@@ -155,6 +237,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   const step = options.stepSeconds ?? 600;
   const useExchange = options.useExchange !== false;
   const milestones = new Set(options.milestones ?? [1, 3, 7, 14, 30, 60, 90]);
+  const windowDays = Math.max(1, options.windowDays ?? 30);
   const M = PROGRESSION_SIM_MODEL;
 
   const buildings: Buildings = defaultBuildings();
@@ -185,8 +268,47 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   const income: Record<string, number> = {};
   const snapshots: ProgressionSnapshot[] = [];
 
-  const commonPerHour = () => {
+  // Étude du rythme long terme : Ascensions, puits, XP, fenêtres (éteints par défaut).
+  const required = BUILDINGS.filter(requiredForAscension);
+  let ascensions = 0;
+  let lastAscensionT: number | null = null;
+  const ascensionDays: number[] = [];
+  let xp = 0;
+  let fleetValue = 0;
+  let fleetPlaces = 0;
+  let fleetFullDay: number | null = null;
+  let projects = 0;
+  let projectEnd = 0;
+  type Win = { sessions: number; blocked: number; noProgress: number; noSpend: number; finished: number; overflow: number; produced: number; days: Map<number, boolean>; spendDays: Map<number, boolean> };
+  const wins: Win[] = [];
+  const win = (day: number): Win => (wins[Math.floor(day / windowDays)] ??= { sessions: 0, blocked: 0, noProgress: 0, noSpend: 0, finished: 0, overflow: 0, produced: 0, days: new Map(), spendDays: new Map() });
+  const prodFactor = () => 1 + ascensions * ASCENSION_RULES.productionPerAscension;
+  const ascBuildFactor = () => Math.max(0.1, 1 - ascensions * ASCENSION_RULES.buildTimePerAscension);
+  const ratesNow = () => {
     const r = getProductionRatesPerSecond(buildings, tech);
+    if (ascensions === 0) return r;
+    const f = prodFactor();
+    return Object.fromEntries(Object.entries(r).map(([k, v]) => [k, (v ?? 0) * f])) as typeof r;
+  };
+  const levelCap = (b: (typeof BUILDINGS)[number], day: number) => (options.levelCapByDay && requiredForAscension(b) ? Math.min(b.maxLevel, options.levelCapByDay(day)) : b.maxLevel);
+  const buildingCost = (b: (typeof BUILDINGS)[number], next: number): Cost => {
+    const c = getBuildingUpgradeCost(b, next) as Cost;
+    const g = options.costGrowthPerAscension ?? 0;
+    if (!g || !ascensions || !b.upgrade.tier2 || next < b.upgrade.tier2.fromLevel) return c;
+    const f = Math.pow(1 + g, ascensions);
+    return Object.fromEntries(Object.entries(c).map(([k, n]) => [k, (n ?? 0) * f]));
+  };
+  const buildingTime = (b: (typeof BUILDINGS)[number], next: number) => {
+    const s = getBuildingUpgradeTime(b, next);
+    return options.tier2TimeFactor && b.upgrade.tier2 && next >= b.upgrade.tier2.fromLevel ? s * options.tier2TimeFactor : s;
+  };
+  const late = (level: number) => (options.techLate && level >= options.techLate.fromLevel ? options.techLate : null);
+  /** Durée d'un niveau de recherche, avec la croissance d'étude si elle est donnée (même formule que getTechTime). */
+  const techTime = (tt: (typeof TECHNOLOGIES)[number], level: number) => (options.techTimeGrowth ? Math.floor(tt.baseTime * Math.pow(options.techTimeGrowth, level - 1)) : getTechTime(tt, level));
+  const allMaxed = () => required.every((b) => (buildings[b.id]?.level ?? 0) >= b.maxLevel);
+
+  const commonPerHour = () => {
+    const r = ratesNow();
     return COMMONS.reduce((a, k) => a + (r[k] ?? 0), 0) * HOUR;
   };
   const unitUnlocked = (id: string) => {
@@ -237,14 +359,16 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     for (const [key, end] of Object.entries(mQueue)) {
       if (end > t) continue;
       const rw = missionRewards(MISSIONS[key], player());
+      xp += rw.xp ?? 0;
       delete rw.xp;
       add(rw, "missions", t);
       delete mQueue[key];
     }
 
     // Production (communes plafonnées par l'entrepôt, rares sans plafond).
-    const rates = getProductionRatesPerSecond(buildings, tech);
+    const rates = ratesNow();
     const cap = getStorageCapacity(buildings, tech);
+    const w = win(Math.floor(t / DAY));
     for (const [k, rate] of Object.entries(rates)) {
       const g = (rate ?? 0) * step;
       if (isRare(k)) {
@@ -252,9 +376,11 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         continue;
       }
       produced += g;
+      w.produced += g;
       if (t >= 14 * DAY) income.production = (income.production ?? 0) + g;
       const kept = Math.min(Math.max(0, cap - (res[k] ?? 0)), g);
       overflow += g - kept;
+      w.overflow += g - kept;
       res[k] += kept;
     }
 
@@ -264,12 +390,13 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     const skipped = profile.skipEvery > 0 && day % profile.skipEvery === profile.skipEvery - 1;
     if (!skipped && profile.sessionHours.some((h) => h * HOUR === sec)) {
       let launched = 0;
+      let sunk = 0;
       // Série de connexion, coffre du 7e jour et objectifs du jour (première session du jour).
       if (lastStreakDay !== day) {
         streak = lastStreakDay === day - 1 ? streak + 1 : 1;
         lastStreakDay = day;
         const cycleDay = ((streak - 1) % 7) + 1;
-        const r = getProductionRatesPerSecond(buildings, tech);
+        const r = ratesNow();
         const hours = STREAK_RULES.hours[cycleDay - 1] ?? 0;
         for (const k of COMMONS) add({ [k]: Math.max(STREAK_RULES.floor, (r[k] ?? 0) * hours * HOUR) }, "série", t);
         if (cycleDay === 7) {
@@ -284,6 +411,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         const scale = rareRewardScale(player());
         const mult = (1 + Math.min(CONTRACT_RULES.streakBonusMax, objStreak * CONTRACT_RULES.streakBonusPerDay)) * scale;
         for (let i = 0; i < profile.objectives; i++) add({ [RARES[(i + day) % RARES.length]]: CONTRACT_RULES.rarePerContract * mult }, "objectifs", t);
+        xp += profile.objectives * CONTRACT_RULES.xpPerContract;
         if (profile.objectives >= CONTRACT_RULES.perDay) {
           objStreak++;
           objDays++;
@@ -298,15 +426,40 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       // Expéditions (valeur moyenne, versée tout de suite).
       while (expToday < EXPEDITION_RULES.maxPerDay && unitUnlocked("fregate")) {
         expToday++;
+        xp += EXPEDITION_RULES.xpPerHour * (EXPEDITION_RULES.durations[0] ?? 2);
         const ph = commonPerHour();
         for (const k of COMMONS) add({ [k]: (M.expeditionDepositShare * M.expeditionDepositHours * ph) / COMMONS.length }, "expéditions", t);
         for (const k of RARES) add({ [k]: (M.expeditionRareShare * M.expeditionRareHours * ph) / EXPEDITION_RULES.rareRate / RARES.length }, "expéditions", t);
       }
+      // Ascension (option `ascend`) : dès que possible ; les chantiers attendent que les files se vident.
+      let holdBuilds = false;
+      if (options.ascend && ascensions < ASCENSION_RULES.maxAscensions && allMaxed()) {
+        const cooldownOk = lastAscensionT === null || t - lastAscensionT >= ASCENSION_RULES.cooldownDays * DAY;
+        const techComplete = researchable.every((tt) => (tech[tt.id] ?? 0) >= tt.maxLevel);
+        const gateOk =
+          !options.ascensionGate ||
+          options.ascensionGate({ n: ascensions + 1, day, xp, techLevels: Object.values(tech).reduce((a, b) => a + b, 0), techComplete, prestigeProjects: projects, lastAscensionDay: ascensionDays.length ? ascensionDays[ascensionDays.length - 1] : null });
+        if (cooldownOk && gateOk) {
+          if (Object.keys(bQueue).length === 0) {
+            for (const b of BUILDINGS) {
+              if (keptOnAscension(b)) continue;
+              const cur = buildings[b.id];
+              buildings[b.id] = { ...(cur ?? { unlocked: !!b.startsUnlocked }), level: 1 };
+            }
+            const start = defaultResources() as Record<string, number>;
+            for (const k of Object.keys(res)) res[k] = start[k] ?? 0;
+            if (ascensionDay === null) ascensionDay = round1(t / DAY);
+            ascensions++;
+            lastAscensionT = t;
+            ascensionDays.push(round1(t / DAY));
+          } else holdBuilds = true;
+        }
+      }
       // Chantiers : le moins cher d'abord.
       const slots = buildSlots({ buildings });
       const discount = techBonus(tech, "building_discount");
-      const buildFactor = techReductionFactor(tech, "building_time");
-      for (let again = true; again && Object.keys(bQueue).length < slots; ) {
+      const buildFactor = techReductionFactor(tech, "building_time") * ascBuildFactor();
+      for (let again = !holdBuilds; again && Object.keys(bQueue).length < slots; ) {
         again = false;
         const cands: { id: string; cost: Cost; unlock?: boolean }[] = [];
         for (const b of BUILDINGS) {
@@ -322,8 +475,8 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
             if (b.unlockCost) cands.push({ id: b.id, cost: b.unlockCost, unlock: true });
             continue;
           }
-          if ((st.level ?? 0) >= b.maxLevel) continue;
-          cands.push({ id: b.id, cost: applyBuildingDiscount(getBuildingUpgradeCost(b, (st.level ?? 0) + 1), discount) });
+          if ((st.level ?? 0) >= levelCap(b, day)) continue;
+          cands.push({ id: b.id, cost: applyBuildingDiscount(buildingCost(b, (st.level ?? 0) + 1), discount) });
         }
         cands.sort((a, b) => value(a.cost) - value(b.cost));
         const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost));
@@ -332,9 +485,9 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         again = true;
         launched++;
         if (c.unlock) buildings[c.id] = { ...buildings[c.id], unlocked: true };
-        else bQueue[c.id] = t + Math.round(getBuildingUpgradeTime(BUILDINGS.find((b) => b.id === c.id)!, (buildings[c.id].level ?? 0) + 1) * buildFactor);
+        else bQueue[c.id] = t + Math.round(buildingTime(BUILDINGS.find((b) => b.id === c.id)!, (buildings[c.id].level ?? 0) + 1) * buildFactor);
       }
-      const buildLeft = BUILDINGS.some((b) => !bQueue[b.id] && (buildings[b.id]?.level ?? 0) < b.maxLevel);
+      const buildLeft = !holdBuilds && BUILDINGS.some((b) => !bQueue[b.id] && (buildings[b.id]?.level ?? 0) < levelCap(b, day));
       if (firstWall === null && day >= 1 && buildLeft && slots - Object.keys(bQueue).length >= M.wallFreeSlots) firstWall = round1(t / DAY);
       // Recherches : la moins chère d'abord.
       const researchFactor = techReductionFactor(tech, "research_time");
@@ -342,30 +495,81 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         again = false;
         const cands = researchable
           .filter((tt) => !rQueue[tt.id] && (tech[tt.id] ?? 0) < tt.maxLevel && Object.entries(tt.prereq).every(([k, n]) => (tech[k] ?? 0) >= n))
-          .map((tt) => ({ tt, cost: getTechCost(tt, (tech[tt.id] ?? 0) + 1) as Cost }))
+          .map((tt) => {
+            const next = (tech[tt.id] ?? 0) + 1;
+            const cost = getTechCost(tt, next) as Cost;
+            const l = late(next);
+            return { tt, cost: l ? (Object.fromEntries(Object.entries(cost).map(([k, n]) => [k, (n ?? 0) * l.costFactor])) as Cost) : cost };
+          })
           .sort((a, b) => value(a.cost) - value(b.cost));
         const c = cands.find((x) => afford(x.cost)) ?? cands.find((x) => tryExchange(x.cost));
         if (!c) break;
         pay(c.cost);
         again = true;
         launched++;
-        rQueue[c.tt.id] = t + Math.round(getTechTime(c.tt, (tech[c.tt.id] ?? 0) + 1) * researchFactor);
+        const next = (tech[c.tt.id] ?? 0) + 1;
+        const l = late(next);
+        const raw = techTime(c.tt, next) * (l?.timeFactor ?? 1);
+        rQueue[c.tt.id] = t + Math.round(Math.min(l?.maxSeconds ?? Infinity, raw) * researchFactor);
       }
       const researchLeft = researchable.some((tt) => !rQueue[tt.id] && (tech[tt.id] ?? 0) < tt.maxLevel);
+      // Puits : projets de prestige (un à la fois), puis vaisseaux dans la place des hangars.
+      if (options.prestigeProjects && t >= projectEnd && EXTRACTORS.every((id) => effectiveBuildingLevel(buildings, id) >= (options.prestigeProjects?.minExtractorLevel ?? 0))) {
+        const pp = options.prestigeProjects;
+        const each = (pp.hours * Math.pow(pp.growth, projects) * commonPerHour()) / COMMONS.length;
+        const reserve = pp.reserveShare * cap;
+        if (each > 0 && COMMONS.every((k) => res[k] - reserve >= each)) {
+          for (const k of COMMONS) res[k] -= each;
+          projects++;
+          projectEnd = t + pp.durationHours * HOUR;
+          sunk++;
+        }
+      }
+      if (options.fleetSink) {
+        const capPlaces = rawUnitCapacity(buildings, "attack", tech);
+        const density = (u: (typeof UNITS)[number]) => (u.cost.scrap + u.cost.energy) / Math.max(1, u.hangarSpace);
+        const unit = UNITS.filter((u) => u.category === "attack" && !u.blueprint && !u.empireClass && !u.elite && unitUnlocked(u.id)).sort((a, b) => density(b) - density(a))[0];
+        if (unit) {
+          const reserve = options.fleetSink.reserveShare * cap;
+          const space = Math.max(1, unit.hangarSpace);
+          const n = Math.floor(Math.min((res.scrap - reserve) / Math.max(1, unit.cost.scrap), (res.energy - reserve) / Math.max(1, unit.cost.energy), (capPlaces - fleetPlaces) / space));
+          if (n > 0) {
+            res.scrap -= n * unit.cost.scrap;
+            res.energy -= n * unit.cost.energy;
+            fleetValue += n * (unit.cost.scrap + unit.cost.energy);
+            fleetPlaces += n * space;
+            sunk++;
+          }
+          if (fleetFullDay === null && capPlaces > 0 && capPlaces - fleetPlaces < space) fleetFullDay = round1(t / DAY);
+        }
+      }
       const window = day < 7 ? dead.early : day < 30 ? dead.mid : dead.late;
       window[1]++;
       const anyLeft = (Object.keys(bQueue).length < slots && buildLeft) || (Object.keys(rQueue).length < RESEARCH_RULES.maxConcurrent && researchLeft);
       if (launched === 0 && anyLeft) window[0]++;
+      const sw = win(day);
+      sw.sessions++;
+      if (launched === 0 && anyLeft) sw.blocked++;
+      if (launched === 0) sw.noProgress++;
+      if (launched === 0 && sunk === 0) sw.noSpend++;
+      sw.days.set(day, (sw.days.get(day) ?? false) || launched > 0);
+      sw.spendDays.set(day, (sw.spendDays.get(day) ?? false) || launched + sunk > 0);
     }
 
     const end = t + step;
+    if (end % DAY === 0) {
+      // « Fini, sans suite » : bâtiments et arbre au maximum, files vides, aucune Ascension possible ce jour-là.
+      const canAscendNow = !!options.ascend && ascensions < ASCENSION_RULES.maxAscensions && (lastAscensionT === null || end - lastAscensionT >= ASCENSION_RULES.cooldownDays * DAY);
+      const techDone = researchable.every((tt) => (tech[tt.id] ?? 0) >= tt.maxLevel);
+      if (allMaxed() && techDone && !Object.keys(bQueue).length && !Object.keys(rQueue).length && !canAscendNow) win(end / DAY - 1).finished++;
+    }
     if (ascensionDay === null && BUILDINGS.filter(requiredForAscension).every((b) => (buildings[b.id]?.level ?? 0) >= b.maxLevel)) ascensionDay = round1(end / DAY);
     if (techCompleteDay === null && researchable.every((tt) => (tech[tt.id] ?? 0) >= tt.maxLevel)) techCompleteDay = round1(end / DAY);
     if (end % DAY === 0 && milestones.has(end / DAY)) {
       const lv = (id: string) => effectiveBuildingLevel(buildings, id);
       snapshots.push({
         day: end / DAY,
-        extractors: ["extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees"].map(lv),
+        extractors: EXTRACTORS.map(lv),
         storageLevel: lv("entrepot"),
         techLevels: Object.values(tech).reduce((a, b) => a + b, 0),
         techCount: Object.keys(tech).length,
@@ -374,6 +578,14 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         commonStock: Math.round(COMMONS.reduce((a, k) => a + res[k], 0)),
         rareStock: Math.round(RARES.reduce((a, k) => a + res[k], 0)),
         lostPct: pct(overflow, produced),
+        buildingLevels: required.reduce((a, b) => a + (buildings[b.id]?.level ?? 0), 0),
+        xp: Math.round(xp),
+        rank: getRank(xp).name,
+        ascensions,
+        fleetValue: Math.round(fleetValue),
+        fleetPlaces,
+        fleetCapacity: rawUnitCapacity(buildings, "attack", tech),
+        prestigeProjects: projects,
       });
     }
   }
@@ -392,6 +604,21 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     firstChest,
     exchangedCommon: Math.round(exchanged),
     snapshots,
+    ascensionDays,
+    windows: wins.map((x, i) => ({
+      fromDay: i * windowDays,
+      toDay: Math.min(days, (i + 1) * windowDays),
+      sessions: x.sessions,
+      blockedPct: pct(x.blocked, x.sessions),
+      noProgressPct: pct(x.noProgress, x.sessions),
+      noSpendPct: pct(x.noSpend, x.sessions),
+      daysWithoutLaunch: [...x.days.values()].filter((v) => !v).length,
+      daysWithoutSpend: [...x.spendDays.values()].filter((v) => !v).length,
+      finishedDays: x.finished,
+      lostPct: pct(x.overflow, x.produced),
+    })),
+    xp: Math.round(xp),
+    fleetFullDay,
   };
 }
 

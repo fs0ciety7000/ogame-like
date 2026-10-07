@@ -1,6 +1,8 @@
 # Proposition : ouverture progressive des systèmes (AE-13, AE-L5)
 
-Statut : **proposée** (2026-10-07). Étude en lecture seule du code, aucun lot livré.
+Statut : **en cours** (2026-10-07) : validée (Q152 à Q158) ; DP-L1 à DP-L3 livrés en 6.14.74 à 6.14.76
+(`docs/changes/6.14.74-deblocage-moteur.md`, `6.14.75-deblocage-interface.md`, `6.14.76-deblocage-prise-en-main.md`) ; DP-L4 à DP-L7 à faire.
+Invariants renumérotés : **I30** (menu) et **I31** (objectifs du jour, DP-L4), I29 étant pris.
 Sources : constat AE-13 et lot AE-L5 de `docs/audit/2026-10-07-au27-equilibrage.md`, Q103 (AE-Q7, **validée** : « tout compte existant
 au-delà de Fer II, et tout compte qui a déjà ouvert la page, voit tout ; seuls les nouveaux comptes ont l'ouverture par rang »),
 parcours du nouveau joueur de `docs/audit/2026-10-07-au27-design-ux.md` (AD-8, UX-5), lune de `docs/proposals/phalange-porte-de-saut.md`.
@@ -302,7 +304,7 @@ ressources pendant que tu construis. » ; « Prochaine ouverture : Colonies · 8
 | # | Invariant | Où | Test |
 |:--|:--|:--|:--|
 | **I30** (nouveau) | Menu progressif : il **masque** sans bloquer (aucune route ni action refusée) ; une page ouverte ne se referme jamais ; une page s'ouvre au plus tard à son rang plafond ; un signal `danger` ouvre Combats, Menaces ou Seigneurs avant que la notification soit lue ; un compte créé avant `newAccountsFrom` au-delà de `veteranRank`, ou un admin, voit tout ; `enabled` à faux rend l'ancien menu | `navUnlock.ts`, `NavBar.tsx` (`useHiddenRoutes`) | `navUnlock.test.ts` |
-| **I30* (nouveau) | Un objectif du jour d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur ; le tirage du jour en cours n'est jamais refait | `contracts.ts` (`ensureContracts`) | `contracts.test.ts`, intégration « DP-L4 » |
+| **I31** (nouveau) | Un objectif du jour d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur ; le tirage du jour en cours n'est jamais refait | `contracts.ts` (`ensureContracts`) | `contracts.test.ts`, intégration « DP-L4 » |
 
 Gardes ajoutées :
 - chaque entrée de `NAV_GROUPS` a une règle dans `NAV_UNLOCK_RULES.pages` ou figure dans la liste « toujours visible » (une nouvelle page

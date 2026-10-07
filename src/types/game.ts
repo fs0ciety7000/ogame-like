@@ -236,6 +236,9 @@ export interface BattleReport {
   planetId?: string;
   /** 5.18 : déroulé du combat en tours (points de vie restants de chaque camp) et retraite. */
   combatLog?: CombatLog;
+  /** 6.14.77 (É30-1f) : niveau de lune du défenseur au moment du combat (0 : sans lune ; null ou absent : rapport antérieur
+   *  ou combat sans joueur défenseur). Sert à la santé de l'équilibre (victoires de l'attaquant avec ou sans lune). */
+  defenderMoonLevel?: number | null;
 }
 
 export interface CombatLog {

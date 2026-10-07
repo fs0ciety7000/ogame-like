@@ -99,6 +99,16 @@ export function BalanceHealthSection({ health, achievementsPace }: { health: Bal
             />
           </>
         )}
+        {/* 6.14.77 (É30-1f) : victoires de l'attaquant en JcJ contre une cible avec ou sans lune (lune relevée dans le rapport). */}
+        {health.moonPvp && (
+          <StatTile
+            size="sm"
+            tone="violet"
+            label={`Attaquant gagnant (${health.moonPvp.windowDays} j)`}
+            value={health.moonPvp.withMoon.battles || health.moonPvp.withoutMoon.battles ? `${health.moonPvp.withMoon.winPct} % / ${health.moonPvp.withoutMoon.winPct} %` : "—"}
+            sub={`avec lune (${health.moonPvp.withMoon.battles} combats) / sans lune (${health.moonPvp.withoutMoon.battles}) · ${health.moonPvp.unknown} sans relevé`}
+          />
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <span>Alliances ({health.alliances.count}) :</span>

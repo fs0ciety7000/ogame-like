@@ -22,7 +22,7 @@ import type { BattleReport, PlayerState } from "@/types/game";
    l'onglet Équilibrage, sans accès direct aux données des joueurs.
 ===================================================== */
 
-export interface HealthReport extends Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp"> {
+export interface HealthReport extends Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp" | "defenderMoonLevel"> {
   /** Butin total (toutes ressources), si connu. */
   lootTotal?: number;
 }
@@ -144,7 +144,27 @@ export interface BalanceHealth {
     jumpers: number;
     saves: number;
   };
+  /** 6.14.77 (É30-1f) : victoires de l'attaquant en JcJ contre une cible avec ou sans lune, sur `windowDays` (30 j). `unknown` :
+   *  combats sans niveau de lune relevé (rapports d'avant 6.14.77), écartés des deux taux. */
+  moonPvp: MoonPvpHealth;
 }
+
+export interface MoonPvpSide {
+  battles: number;
+  attackerWins: number;
+  /** Part des combats gagnés par l'attaquant (0 sans combat). */
+  winPct: number;
+}
+
+export interface MoonPvpHealth {
+  windowDays: number;
+  withMoon: MoonPvpSide;
+  withoutMoon: MoonPvpSide;
+  unknown: number;
+}
+
+/** 6.14.77 (É30-1f) : fenêtre de la mesure « victoires de l'attaquant avec ou sans lune ». */
+export const MOON_PVP_WINDOW_DAYS = 30;
 
 export function median(xs: number[]): number {
   if (xs.length === 0) return 0;
@@ -261,6 +281,28 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
     })(),
     casino: casinoHealth(players, now, input.serverPot),
     moons: moonHealth(players),
+    moonPvp: moonPvpHealth(input.reports, now),
+  };
+}
+
+/** 6.14.77 (É30-1f) : combats JcJ de la fenêtre partagés selon la lune du défenseur au moment du combat (`defenderMoonLevel`). */
+export function moonPvpHealth(
+  reports: Pick<HealthReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp" | "defenderMoonLevel">[],
+  now: number,
+  windowDays = MOON_PVP_WINDOW_DAYS,
+): MoonPvpHealth {
+  const since = now - windowDays * 86_400_000;
+  const pvp = reports.filter((r) => r.timestamp >= since && r.timestamp <= now && isPvpReport(r));
+  const known = pvp.filter((r) => typeof r.defenderMoonLevel === "number" && Number.isFinite(r.defenderMoonLevel));
+  const side = (rows: typeof known): MoonPvpSide => {
+    const wins = rows.filter((r) => r.outcome === "attacker_win").length;
+    return { battles: rows.length, attackerWins: wins, winPct: rows.length ? Math.round((wins / rows.length) * 100) : 0 };
+  };
+  return {
+    windowDays,
+    withMoon: side(known.filter((r) => (r.defenderMoonLevel as number) > 0)),
+    withoutMoon: side(known.filter((r) => (r.defenderMoonLevel as number) <= 0)),
+    unknown: pvp.length - known.length,
   };
 }
 

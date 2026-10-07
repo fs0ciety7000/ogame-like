@@ -26,7 +26,9 @@ import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { setTipsEnabled, tipsEnabled } from "@/components/game/PageTip";
-import { GameActionError, hideOnboarding, syncPlayer, hideGuide } from "@/services/playerService";
+import { GameActionError, hideOnboarding, markAnnouncementsSeen, syncPlayer, hideGuide } from "@/services/playerService";
+import { useNavUnlock } from "@/components/layout/NavBar";
+import { NAV_SHOW_ALL_OFF, NAV_SHOW_ALL_ON } from "@/game/navUnlock";
 import { endVacation, startVacation } from "@/services/warlordService";
 import { onVacation, VACATION_RULES } from "@/game/vacation";
 import { chronicleOf } from "@/game/chronicles";
@@ -550,6 +552,17 @@ function HelpCard() {
   const hidden = player ? onboardingState(player).hidden === true : false;
   const eligible = player ? onboardingEligible(player) : false;
   const guideHiddenNow = player ? guideHidden(player) && guideClaimed(player).length < GUIDE_STEPS.length : false;
+  // 6.14.75 (DP-L2, Q156) : « Tout afficher » (compte) : le menu complet pour un ancien joueur sur un nouveau compte.
+  const navStatusNow = useNavUnlock().status;
+  const [navBusy, setNavBusy] = useState(false);
+  const showAll = navStatusNow === "showAll";
+  const setShowAll = (on: boolean) => {
+    setNavBusy(true);
+    void markAnnouncementsSeen([on ? NAV_SHOW_ALL_ON : NAV_SHOW_ALL_OFF])
+      .then(() => toast.success(on ? "Toutes les pages sont au menu." : "Le menu s'ouvre de nouveau au fil de ta progression. Les pages déjà visitées restent."))
+      .catch((err) => toast.error(err instanceof GameActionError ? err.message : "Action impossible."))
+      .finally(() => setNavBusy(false));
+  };
   return (
     <Card>
       <CardHeader>
@@ -568,6 +581,15 @@ function HelpCard() {
             }}
           />
         </label>
+        {(navStatusNow === "progressive" || showAll) && (
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-slate-300">
+              Tout afficher dans le menu
+              <span className="block text-xs text-slate-500">Sinon, les pages s'ouvrent au fil de ta progression.</span>
+            </span>
+            <HudSwitch checked={showAll} disabled={navBusy} label="Tout afficher dans le menu" onCheckedChange={setShowAll} />
+          </label>
+        )}
         {eligible && hidden && (
           <Button
             variant="outline"
@@ -855,7 +877,7 @@ const SETTINGS_TABS: { id: string; label: string; icon: typeof UserRound; entrie
     label: "Jeu et aide",
     icon: LifeBuoy,
     entries: [
-      { key: "help", title: "Aide et prise en main", keywords: "tutoriel guide bulles aide", render: () => <HelpCard /> },
+      { key: "help", title: "Aide et prise en main", keywords: "tutoriel guide bulles aide menu pages tout afficher", render: () => <HelpCard /> },
       { key: "vacation", title: "Mode vacances", keywords: "vacances absence pause protection", render: () => <VacationCard /> },
     ],
   },

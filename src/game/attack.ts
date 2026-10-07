@@ -1,4 +1,4 @@
-import { addMoonPity, MOON_RULES, rollMoon } from "@/game/moon";
+import { addMoonPity, MOON_RULES, moonLevel, playerMoon, rollMoon } from "@/game/moon";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { applyHull, sendToWorkshop, workshopState } from "@/game/workshop";
 import { describeGain } from "@/game/format";
@@ -116,6 +116,9 @@ export function performAttack(input: AttackInput): AttackOutput {
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
+  // 6.14.77 (É30-1f) : niveau de lune du défenseur avant le combat (0 : sans lune), pour la santé de l'équilibre.
+  const defenderMoon = playerMoon(defender);
+  const defenderMoonLevel = defenderMoon ? moonLevel(defenderMoon) : 0;
   // 5.23 : cible bien moins expérimentée : butin et XP dégressifs (plus de blocage dès ×3).
   const weak = weakTargetFactor(input.attacker.xp ?? 0, defender.xp ?? 0, !!defender.npc || !!input.attacker.npc);
 
@@ -378,6 +381,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     garrisons: (input.garrisons ?? []).map((g, i) => ({ ownerUid: g.ownerUid, ownerPseudo: g.ownerPseudo, units: g.fleet, losses: combat.garrisonLosses?.[i] ?? {} })),
     attackerFleet: fleet,
     planetId: colony ? colony.id : "",
+    defenderMoonLevel,
   };
 
   return {

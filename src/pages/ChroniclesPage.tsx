@@ -13,6 +13,7 @@ import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { AmberAmount } from "@/components/ui/amber";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
+import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { SceneDialog } from "@/components/game/StoryDialog";
 import { RewardReveal } from "@/components/game/RewardReveal";
 import { chronicleBonus, chronicleOf, chroniclesConfig, chronicleState, seasonBossWindow, unlockedEpisodes } from "@/game/chronicles";
@@ -98,6 +99,7 @@ export function ChroniclesPage() {
           busy={busy}
           onClaim={(i) => void claim(i)}
           onReplay={setReplay}
+          goTo={(objective) => <ObjectiveGoLink objective={objective} />}
         />
       </HudPanel>
 

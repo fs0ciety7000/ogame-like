@@ -35,6 +35,11 @@ export function playerUnitCapacity(player: CapacityPlayer, category: HangarCateg
   return empire > 0 ? Math.floor(withTech * (1 + empire)) : withTech;
 }
 
+/** 6.14.78 : capacité brute (bâtiments × technos, sans effets d'empire) pour les simulateurs (`balance/progressionSim.ts`) : le calcul reste ici (I5). */
+export function rawUnitCapacity(buildings: Parameters<typeof getUnitCapacity>[0], category: HangarCategory, techLevels?: Parameters<typeof getUnitCapacity>[2]): number {
+  return getUnitCapacity(buildings ?? {}, category, techLevels);
+}
+
 /** Places occupées par un ensemble d'unités d'une catégorie. */
 export function placesOf(units: Record<string, number>, category: HangarCategory): number {
   let used = 0;

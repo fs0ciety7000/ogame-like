@@ -11,7 +11,8 @@ import { UNITS } from "@/game/units";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { assetUrl } from "@/lib/assets";
 import type { Alliance } from "@/types/game";
-import { ALL_NAV_ITEMS, useHiddenRoutes } from "@/components/layout/NavBar";
+import { ALL_NAV_ITEMS, useHardHiddenRoutes, useNavUnlock } from "@/components/layout/NavBar";
+import { navCondition } from "@/game/navUnlock";
 import { closeCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
@@ -28,6 +29,8 @@ interface PaletteItem {
   sublabel?: string;
   icon: ReactNode;
   run: () => void;
+  /** 6.14.75 (DP-L2) : page pas encore ouverte (grisée, avec sa condition) ; la choisir l'ouvre. */
+  muted?: boolean;
 }
 
 export function CommandPalette() {
@@ -37,7 +40,9 @@ export function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
-  const hidden = useHiddenRoutes();
+  // 6.14.75 (DP-L2, Q153) : une page pas encore ouverte reste trouvable, grisée avec sa condition ; la choisir l'ouvre.
+  const hidden = useHardHiddenRoutes();
+  const closed = useNavUnlock().closed;
   const player = usePlayerStore((s) => s.player);
 
   useEffect(() => {
@@ -59,9 +64,10 @@ export function CommandPalette() {
       (n) => ({
         key: `nav-${n.to}`,
         label: n.label,
-        sublabel: "Navigation",
-        icon: <n.icon className="h-4 w-4 text-cyan-glow" />,
+        sublabel: closed.has(n.to) ? navCondition(n.to) : "Navigation",
+        icon: <n.icon className={cn("h-4 w-4", closed.has(n.to) ? "text-slate-500" : "text-cyan-glow")} />,
         run: () => navigate(n.to),
+        muted: closed.has(n.to),
       }),
     );
 
@@ -166,7 +172,7 @@ export function CommandPalette() {
     }
 
     return [...actionItems, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
-  }, [query, players, alliances, navigate, hidden, player]);
+  }, [query, players, alliances, navigate, hidden, closed, player]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -223,12 +229,18 @@ export function CommandPalette() {
                   onMouseEnter={() => setActiveIndex(i)}
                   className={cn(
                     "hud-cut-sm flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
-                    i === activeIndex ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300",
+                    i === activeIndex ? "bg-cyan-glow/10 text-cyan-glow" : item.muted ? "text-slate-500" : "text-slate-300",
                   )}
                 >
                   {item.icon}
                   <span className="flex-1 truncate">{item.label}</span>
-                  {item.sublabel && <span className="hud-eyebrow shrink-0 text-slate-600">{item.sublabel}</span>}
+                  {item.muted ? (
+                    <span className="min-w-0 max-w-[55%] truncate text-[11px] text-slate-500" title={item.sublabel}>
+                      {item.sublabel}
+                    </span>
+                  ) : (
+                    item.sublabel && <span className="hud-eyebrow shrink-0 text-slate-600">{item.sublabel}</span>
+                  )}
                 </button>
               ))
             )}

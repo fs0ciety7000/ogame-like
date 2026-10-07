@@ -48,6 +48,7 @@ import { parisHour } from "@/game/stats";
 import { useCockpitView } from "@/lib/cockpitView";
 import { CockpitHub } from "@/components/cockpit/CockpitHub";
 import { CommanderGuideCard } from "@/components/game/CommanderGuideCard";
+import { useHiddenRoutes } from "@/components/layout/NavBar";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import type { NextActionKind } from "@/game/nextActions";
 
@@ -68,6 +69,8 @@ export function DashboardPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const cockpit = useCockpitView((s) => s.enabled);
+  // 6.14.75 (DP-L2) : les cartes du Léviathan, du casino et des colonies suivent l'ouverture de leur page.
+  const hiddenRoutes = useHiddenRoutes();
 
   if (!player) return null;
 
@@ -179,17 +182,17 @@ export function DashboardPage() {
       </Card>
     ),
     workshop: <WorkshopHomeCard />,
-    colonies: <ColoniesCard />,
+    colonies: hiddenRoutes.has("/game/colonies") ? null : <ColoniesCard />,
     leviathan: (
       <div className="flex flex-col gap-4">
-        <LeviathanBanner />
+        {!hiddenRoutes.has("/game/uber") && <LeviathanBanner />}
         <BossReturnCard />
       </div>
     ),
     events: (
       <div className="flex flex-col gap-4">
         <EventCard />
-        <CasinoBanner player={player} />
+        {!hiddenRoutes.has("/game/casino") && <CasinoBanner player={player} />}
         <RunningContestCard />
         <AgendaCard now={now} />
       </div>

@@ -78,6 +78,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I27 | Tout identifiant par défaut d'unité, de bâtiment, de techno ou de relique ajouté après la première liste a une entrée `appendFromDefaults` dans `CONTENT_MIGRATIONS`, ou est ajouté d'office (`withFixedUnits`, `withFixedBuildings`) | `cosmic_db.js` (`CONTENT_MIGRATIONS`) | `contentMigrations.test.ts` |
 | I28 | L'état de jeu d'un joueur ne s'écrit et ne s'efface que par le serveur : l'éditeur de l'admin envoie des **différences**, appliquées sur la fiche relue et rattrapée dans la transaction, sous les plafonds (niveaux maximaux, entrepôt des ressources communes, hangars par `hangarLoad`), motif et journal obligatoires ; la suppression d'un compte (admin ou joueur) passe par `purgePlayer`, qui rend aux autres joueurs ce qui leur revient (mises, cautions, garnisons, rôle de fondateur) ; les règles d'API réservent la suppression de `players` et `queues` aux admins et refusent l'écriture directe de l'état de jeu, y compris aux admins du jeu | `adminEdit.ts` (`adminEditDiff`, `applyAdminEdit`), `cosmic_db.js` (`adminPlayerAction`, `purgePlayer`, `accountDelete`, `guardUserDelete`, `SCHEMA_RULE_SYNC`), `pb_schema.json` | `adminEdit.test.ts`, `compteServeur.test.ts`, intégration « 6.14.65 (AC-B) », « 6.14.66 (AC-C) » |
 | I29 | Équilibre gardé par simulation : avec les règles par défaut, le simulateur de progression (déterministe, 4 profils sur 90 jours) garde la 1re Ascension de chaque profil dans ses bornes (actif J8–13, moyen J15–23, occasionnel J38–56, quotidien J26–40 en 6.14.72 ; le lot AE-L2 les déplace vers les cibles du §2) ; à budget égal, un défenseur moitié défenses, moitié vaisseaux à quai tient jusqu'à ×0,85 au moins de sa dépense, des défenses seules jusqu'à ×2 ; le coffre du 7e jour du joueur quotidien reste sous 24 h de sa production. Un réglage qui sort de ces bornes passe par une proposition et change les bornes dans le même commit | `balance/progressionSim.ts`, `balance/pvpBudget.ts` (`node scripts/progression-sim.mjs`) | `progressionSim.test.ts` |
+| I30 | Menu progressif : il **masque** sans bloquer (aucune route ni action ne lit l'ouverture du menu) ; une page s'ouvre au premier de ses déclencheurs (signal d'usage, étape de la Prise en main ou du Carnet atteinte, rang plafond) et au plus tard à son rang plafond ; une page ouverte ne se referme jamais (marque `nav:<page>` à la première visite ou à l'ouverture par un danger passager, astuce `tip:<page>` vue) ; un danger (flotte hostile, rapport reçu, combat subi, ultimatum, raid scripté) ouvre Galaxie, Combats et Menaces, un contact de seigneur ouvre Seigneurs ; l'étape en cours de la Prise en main et du Carnet ne vise jamais une page fermée ; un compte créé avant `newAccountsFrom` et au moins à `veteranRank`, un admin, l'option « Tout afficher » ou `enabled` à faux rendent le menu complet, sans rien écrire sur la fiche ; chaque entrée du menu a une règle `navUnlock.pages` ou figure dans `NAV_ALWAYS_VISIBLE` | `navUnlock.ts` (`navOpenPages`, `navSignals`), `NavBar.tsx` (`useNavUnlock`, `useHiddenRoutes`) | `navUnlock.test.ts` |
 
 ## 5. Règles de conception
 
@@ -142,7 +143,7 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 
 ### 7.4 Lunes : phalange, porte de saut, pitié (6.14.44, `moon.ts`, `phalanx.ts`, `jumpGate.ts`)
 
-Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar au lancement, `profiles.moonLevel`), interface en 6.14.49 (É30-1c), admin et chaîne de contenu en 6.14.69 (É30-1d), essai réel sur la pré-prod en 6.14.70 (É30-1e : radar, perce-brouillard, balayage, saut et refus vérifiés par l'API joueur, `scripts/preprod-essai-lune.mjs`) (`proposals/phalange-porte-de-saut.md`).
+Moteur livré en 6.14.44 (lot É30-1a), serveur en 6.14.48 (É30-1b : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar au lancement, `profiles.moonLevel`), interface en 6.14.49 (É30-1c), admin et chaîne de contenu en 6.14.69 (É30-1d), essai réel sur la pré-prod en 6.14.70 (É30-1e : radar, perce-brouillard, balayage, saut et refus vérifiés par l'API joueur, `scripts/preprod-essai-lune.mjs`), suite en 6.14.77 (É30-1f : une seule notification par saut, niveau de lune du défenseur dans le rapport de combat, victoires de l'attaquant avec ou sans lune dans la santé de l'équilibre) (`proposals/phalange-porte-de-saut.md`).
 
 | Niveau de lune | Phalange (`PHALANX_RULES`) | Porte de saut (`JUMP_GATE_RULES`) |
 |:--|:--|:--|
@@ -210,6 +211,37 @@ production perdue à J14 96 % → 67 % ; 1re Ascension presque inchangée (actif
 Simulateur (`progressionSim.ts`) : joueur glouton par profil (actif 8 sessions par jour, moyen 3, occasionnel 1 un jour sur 3 manqué,
 quotidien 1 sans manquer), règles en vigueur lues dans le moteur ; hors modèle : unités, combats, événements, reliques, alliance.
 Il donne des ordres de grandeur. Garde : I29.
+
+### 7.7 Ouverture progressive du menu (6.14.74 à 6.14.76, `navUnlock.ts`, `NavBar.tsx`)
+
+Lots DP-L1 à DP-L3 de `docs/proposals/deblocage-progressif.md` (option C+D, Q152 à Q158). Fiche du domaine : `docs/systems/qol-outils.md`.
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Ouverture progressive | active | `navUnlock.enabled` (Admin → Règles → Tous les réglages → Ouverture du menu ; section dédiée au lot DP-L5) |
+| Comptes « existants » (menu complet) | créés avant le **2026-10-08, 0 h** (Paris) **et** au moins **Fer II** | `navUnlock.newAccountsFrom` (ms), `navUnlock.veteranRank` |
+| Page fermée | **cachée** (une ligne « Prochaine ouverture », grisée dans Ctrl+K) | `navUnlock.style` (`hidden` / `locked`) |
+| Colonies | ouvertes **20** niveaux cumulés avant le seuil de la 1re colonie | `navUnlock.colonyLead` |
+| Objectifs du jour tirés parmi les systèmes ouverts | oui (serveur au lot DP-L4) | `navUnlock.filterContracts` |
+| Par page : rang plafond, signaux, étape, conditions | tableau ci-dessous | `navUnlock.pages` (fusion page par page) |
+
+Toujours visibles (palier 0) : Accueil, Ordres du jour, Ressources, Bâtiments, Unités, Labo, Communications et le pied de barre (Profil,
+Nouveautés, Annonces, Signalements, Bible, Devblog) : **13 entrées** à J0 (40 avant). L'Ascension garde sa règle (au menu après la 1re).
+
+| Palier (rang plafond) | Pages | Signaux et étapes qui ouvrent plus tôt |
+|:--|:--|:--|
+| Fer III | Galaxie, Alliance | danger, étape « spy » ; alliance, étape « alliance » |
+| Fer II | Missions, Combats, Menaces, Classement, Succès, Passe, Primes, Classe d'empire, Journal | 1re unité, étape « mission » ; danger, fin des 72 h, rapport ; danger (Primes) ; étape « empireClass » du Carnet |
+| Bronze III | Commerce, Codex, Chroniques, Gazette, Statistiques, Portefeuille, Simulateur, Planificateur | 1er échange, fiche du Codex, lune ou pitié (étape « moonWatch »), 1re Ambre, rapport, Planificateur à portée |
+| Argent III | État-major, Seigneurs, Boss mondial, Boss de saison, Hall of fame, Casino | relique ou officier (étape « relicEquip »), contact de seigneur, 1re participation à un boss |
+| Or III | Colonies, Guerre de territoire | colonie proche ou fondée (étape « colonyFound ») ; alliance obligatoire, alliance engagée |
+
+Signaux (`NAV_SIGNALS`, liste fermée lue par `navSignals`) : `danger`, `protectionOver`, `report`, `firstUnit`, `colonyNear`, `hasColony`,
+`inAlliance`, `allianceAtWar`, `hasRelicOrOfficer`, `warlordContact`, `bossJoined`, `rareCurrency`, `marketOffer`, `codexReady`,
+`plannerAmber`, `hasMoon`, `ascended`. Visiter une page fermée (lien, Ctrl+K, défi du passe ou des Chroniques) l'ouvre (intention).
+Option « Tout afficher » (Réglages → Jeu et aide, Q156) : marques `nav:all` / `nav:progressif`, la dernière posée l'emporte.
+Panneau Lune de Statistiques : seulement avec une lune, une réserve de pitié ou l'étape « Ta lune » du Carnet atteinte (`moonPanelVisible`).
+Garde : I30.
 
 ## 8. Journal des audits
 
@@ -325,3 +357,7 @@ Il donne des ordres de grandeur. Garde : I29.
 | 2026-10-07 | 6.14.70 | É30-1e : essai réel de la phalange et de la porte de saut sur la pré-prod (3 comptes de test, alliance de test, leurre ; 66 vérifications) ; 3 correctifs de l'écran Flottes (vraie composition d'une attaque percée, en-tête à 375 px, bouton « Saut » coupé) ; 3 écarts décrits (pluriel du balayage, double notification du saut, étiquette ALERTE du Journal système) ; proposition livrée | `docs/changes/6.14.70-essai-lune-preprod.md` |
 | 2026-10-07 | 6.14.71 | Lot AE-L0 (AU27) : proposition d'équilibrage chiffrée, simulateur de progression (4 profils, 90 jours) et combats à budget égal dans le dépôt, script `progression-sim.mjs` ; invariant I29 | `docs/changes/6.14.71-proposition-equilibrage.md`, `proposals/equilibrage-au27.md` |
 | 2026-10-07 | 6.14.72 | Lot AE-L1 (AU27) : réglages sûrs (vaisseaux à quai 75 %, défense à domicile +25 %, bouclier 3 h, écart d'XP ×10, coffre du 7e jour 2 M à 12 M), migration des règles enregistrées ; seuil JcJ ×0,75 → ×0,90, coffre 465 h → 20 h de production | `docs/changes/6.14.72-reglages-surs.md` |
+| 2026-10-07 | 6.14.74 | Lot DP-L1 : moteur de l'ouverture progressive du menu (`navUnlock.ts` : règles `navUnlock` au registre, 17 signaux, étapes du tutoriel, rang plafond, comptes existants), 18 tests ; invariant I30 | `docs/changes/6.14.74-deblocage-moteur.md`, `proposals/deblocage-progressif.md` |
+| 2026-10-07 | 6.14.75 | Lot DP-L2 : menu progressif dans l'interface (barre latérale, mobile, Ctrl+K grisé, « Prochaine ouverture », pastille « Nouveau », marque `nav:<page>`, « Tout afficher », cartes de l'accueil) ; compte neuf 13 entrées, ancien compte 39 | `docs/changes/6.14.75-deblocage-interface.md` |
+| 2026-10-07 | 6.14.76 | Lot DP-L3 : Prise en main et Carnet (« Débloque : … »), panneau Lune conditionnel, liens « Ouvre : … » des défis du passe et des Chroniques ; changelog | `docs/changes/6.14.76-deblocage-prise-en-main.md` |
+| 2026-10-07 | 6.14.77 | É30-1f : suite de l'essai de la lune ; après un saut, une seule notification (« Saut réussi », retour habituel tu) ; Journal système et cartes de notification : un retour de flotte ou un saut réussi en information (cyan), l'alerte rouge reste aux menaces (flotte hostile, raid, ultimatum, garnison au combat) ; rapport de combat JcJ : `defenderMoonLevel` (lune du défenseur avant le combat) et santé « victoires de l'attaquant avec ou sans lune » sur 30 jours | `docs/changes/6.14.77-suite-essai-lune.md` |

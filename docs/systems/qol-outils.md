@@ -10,6 +10,11 @@
   changement de pseudo, remboursement d'enchère) : invariant I24 (6.14.52).
 - Suppression du compte (Réglages → Zone dangereuse) : faite par le serveur, mot de passe revérifié ; alliance quittée (fondateur
   remplacé), garnisons alliées renvoyées, mises et cautions des autres joueurs rendues ; irréversible (6.14.66, I28).
+- Menu progressif (6.14.74 à 6.14.76, I30, GDD §7.7) : un compte neuf voit 13 entrées ; chaque page s'ouvre au premier de ses
+  déclencheurs (usage, étape de la Prise en main ou du Carnet, rang plafond de Fer III à Or III) et ne se referme jamais ; un danger
+  ouvre Galaxie, Combats et Menaces ; pastille « Nouveau » jusqu'à la première visite, ligne « Prochaine ouverture », pages fermées
+  grisées dans Ctrl+K ; visiter une page fermée l'ouvre ; « Tout afficher » (Réglages → Jeu et aide). Comptes créés avant le
+  2026-10-08 et au moins Fer II : menu complet. Règles `navUnlock` (Admin → Règles → Tous les réglages ; éditeur dédié au lot DP-L5).
 - Ctrl+K (actions, onglets), raccourcis clavier, mode compact, vue cockpit, 13 thèmes.
 - Page Formules (calculs expliqués avec les chiffres du joueur), simulateur de combat, Statistiques de l'empire.
 

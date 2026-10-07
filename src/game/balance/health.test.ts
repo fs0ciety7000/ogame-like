@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
 import { defaultPlayerState } from "@/game/defaults";
-import { balanceHealth, bossHealth, casinoHealth, median, npcHealth } from "@/game/balance/health";
+import { balanceHealth, bossHealth, casinoHealth, median, MOON_PVP_WINDOW_DAYS, moonPvpHealth, npcHealth } from "@/game/balance/health";
 import { achievementsPace } from "@/game/balance/history";
 import { casinoWeekId } from "@/game/casino";
 import { ELITE_UNIT_IDS } from "@/game/units";
@@ -148,5 +148,50 @@ describe("6.14.19 (A29-2) : santé complétée", () => {
     expect(achievementsPace([snap("2026-10-01", 10), snap("2026-10-05", 14), snap("2026-10-08", 20)])).toBe(10);
     expect(achievementsPace([snap("2026-10-05", 14), snap("2026-10-08", 20)])).toBeNull();
     expect(achievementsPace([])).toBeNull();
+  });
+});
+
+describe("6.14.77 (É30-1f) : victoires de l'attaquant avec ou sans lune", () => {
+  const H = 3_600_000;
+  const r = (outcome: "attacker_win" | "defender_win" | "draw", moon: number | null | undefined, ageMs = H, attackerUid = "a1") => ({
+    attackerUid,
+    defenderUid: "d1",
+    outcome,
+    timestamp: NOW - ageMs,
+    defenderMoonLevel: moon,
+  });
+
+  it("sépare les combats JcJ par lune du défenseur, sur 30 jours", () => {
+    const h = moonPvpHealth(
+      [
+        r("attacker_win", 2),
+        r("defender_win", 1),
+        r("defender_win", 4),
+        r("defender_win", 3),
+        r("attacker_win", 0),
+        r("attacker_win", 0),
+        r("draw", 0),
+        r("attacker_win", null), // rapport d'avant 6.14.77
+        r("attacker_win", undefined),
+        r("attacker_win", 3, 31 * 24 * H), // hors fenêtre
+        r("attacker_win", 3, H, "pirates"), // pas du JcJ
+      ],
+      NOW,
+    );
+    expect(MOON_PVP_WINDOW_DAYS).toBe(30);
+    expect(h.windowDays).toBe(30);
+    expect(h.withMoon).toEqual({ battles: 4, attackerWins: 1, winPct: 25 });
+    expect(h.withoutMoon).toEqual({ battles: 3, attackerWins: 2, winPct: 67 });
+    expect(h.unknown).toBe(2);
+  });
+
+  it("sans combat : taux à 0, et la santé porte la mesure", () => {
+    const empty = moonPvpHealth([], NOW);
+    expect(empty.withMoon).toEqual({ battles: 0, attackerWins: 0, winPct: 0 });
+    expect(empty.unknown).toBe(0);
+    const health = balanceHealth({ players: [], reports: [r("attacker_win", 2, 20 * 24 * H)], fleets: [], builds: {}, alliances: [] }, NOW, 7);
+    // Fenêtre propre (30 j), indépendante de celle de la santé (7 j).
+    expect(health.moonPvp.withMoon.battles).toBe(1);
+    expect(health.pvp.battlesPerDay).toBe(0);
   });
 });

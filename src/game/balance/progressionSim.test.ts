@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { onboardingTotal, PROGRESSION_PROFILES, scaleTier2Costs, simulateAllProfiles, simulateProgression, type ProgressionResult } from "@/game/balance/progressionSim";
 import { attackerWinThreshold, budgetDuel } from "@/game/balance/pvpBudget";
+import { ASCENSION_RULES } from "@/game/ascension";
 import { BUILDINGS } from "@/game/buildings";
 import { STREAK_RULES } from "@/game/streak";
 
@@ -95,5 +96,45 @@ describe("AE-L0 : JcJ à budget égal", () => {
   it("à dépense égale, l'attaquant paie plus cher qu'avant (pertes ≥ 30 %)", () => {
     const d = budgetDuel(1, "mixed");
     expect(d.attackerLoss).toBeGreaterThanOrEqual(0.3);
+  });
+});
+
+/* Étude du rythme long terme (docs/proposals/rythme-long-terme.md) : options facultatives du simulateur. Éteintes par défaut :
+   les repères ci-dessus (I29) ne bougent pas. */
+describe("Rythme long terme : options du simulateur", () => {
+  const actif = PROGRESSION_PROFILES.actif;
+
+  it("ascend : Ascensions successives, délai respecté, au plus le maximum des règles ; « fini, sans suite » relevé", () => {
+    const r = simulateProgression(actif, { days: 120, ascend: true, milestones: [30, 120] });
+    expect(r.ascensionDays.length).toBeGreaterThanOrEqual(2);
+    expect(r.ascensionDays.length).toBeLessThanOrEqual(ASCENSION_RULES.maxAscensions);
+    for (let i = 1; i < r.ascensionDays.length; i++) expect(r.ascensionDays[i] - r.ascensionDays[i - 1]).toBeGreaterThanOrEqual(ASCENSION_RULES.cooldownDays - 0.01);
+    expect(r.ascensionDay).toBe(r.ascensionDays[0]);
+    expect(r.snapshots.at(-1)!.ascensions).toBe(r.ascensionDays.length);
+    // Règles par défaut : tout est fait avant J120, puis plus rien à lancer (constat de la proposition).
+    expect(r.windows).toHaveLength(4);
+    expect(r.windows.at(-1)!.finishedDays).toBeGreaterThan(0);
+    for (const w of r.windows) {
+      expect(w.lostPct).toBeGreaterThanOrEqual(0);
+      expect(w.lostPct).toBeLessThanOrEqual(100);
+      expect(w.daysWithoutSpend).toBeLessThanOrEqual(w.daysWithoutLaunch);
+    }
+  });
+
+  it("projets de prestige : la production perdue baisse ; la flotte reste dans la place des hangars", () => {
+    const base = simulateProgression(actif, { days: 90, ascend: true });
+    const sink = simulateProgression(actif, { days: 90, ascend: true, fleetSink: { reserveShare: 0.6 }, prestigeProjects: { hours: 8, growth: 1, durationHours: 8, reserveShare: 0.1, minExtractorLevel: 10 } });
+    expect(sink.lostPct).toBeLessThan(base.lostPct);
+    const last = sink.snapshots.at(-1)!;
+    expect(last.prestigeProjects).toBeGreaterThan(0);
+    expect(last.fleetPlaces).toBeLessThanOrEqual(last.fleetCapacity);
+  });
+
+  it("modèles d'options : plafond de niveau par ère, recherche tardive plus longue", () => {
+    const capped = simulateProgression(actif, { days: 14, levelCapByDay: (d) => 8 + Math.floor(d / 7), milestones: [7] });
+    expect(Math.max(...capped.snapshots[0].extractors)).toBeLessThanOrEqual(9);
+    const late = simulateProgression(actif, { days: 60, techLate: { fromLevel: 6, costFactor: 1, timeFactor: 30, maxSeconds: 7 * 86_400 } });
+    expect(results.actif.techCompleteDay).not.toBeNull();
+    expect(late.techCompleteDay ?? Infinity).toBeGreaterThan(results.actif.techCompleteDay!);
   });
 });

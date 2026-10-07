@@ -12,6 +12,7 @@ import { chapterOf, STORY_CHAPTERS } from "@/game/story";
 import { claimOnboarding, GameActionError, hideOnboarding } from "@/services/playerService";
 import { cn, formatCompact } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { useStepOpens } from "@/components/layout/NavBar";
 
 /** Prise en main (v2.9) : dix objectifs récompensés, sur l'accueil.
  *  6.14.63 (AD-8, Q96) : la réduire ne la fait plus disparaître : une ligne « Prise en main 3 / 10 » reste (rien ne se
@@ -21,6 +22,8 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
   const [toggling, setToggling] = useState(false);
   // 6.14.63 (AD-8) : la liste des dix objectifs se déplie à la demande (l'objectif courant reste en tête).
   const [listOpen, setListOpen] = useState(false);
+  // 6.14.76 (DP-L3) : l'étape en cours ouvre sa page du menu (règle `navUnlock`, réglage `step`) : la carte le dit.
+  const opens = useStepOpens(onboardingProgress(player).find((s) => !s.claimed)?.step.id);
   if (!onboardingEligible(player)) return null;
 
   const steps = onboardingProgress(player);
@@ -109,6 +112,11 @@ export function OnboardingChecklist({ player }: { player: PlayerState }) {
             <div className="hud-cut-sm border border-cyan-glow/25 bg-cyan-glow/[0.05] p-4">
               <p className="font-display text-base text-slate-100">{next.step.label}</p>
               <p className="mt-1 text-sm text-slate-400">{next.step.hint}</p>
+              {opens.length > 0 && (
+                <HudChip size="sm" tone="accent" className="mt-2">
+                  Débloque : {opens.join(", ")}
+                </HudChip>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <span className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-300">
                   <Gift className="h-3.5 w-3.5 text-gold-glow" />

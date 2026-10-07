@@ -23,7 +23,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
 | 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | livré (6.14.69) |
 | 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | livré (6.14.70) |
-| 14b | É30-1f | Suite de l'essai de la lune (6.14.70) : une seule notification après un saut (taire « Patrouille terminée »), retour de flotte réussi qui n'est plus en rouge au Journal système, mesure « victoires de l'attaquant avec ou sans lune » (niveau de lune du défenseur dans le rapport de combat) | S | à faire |
+| 14b | É30-1f | Suite de l'essai de la lune (6.14.70) : une seule notification après un saut (taire « Patrouille terminée »), retour de flotte réussi qui n'est plus en rouge au Journal système, mesure « victoires de l'attaquant avec ou sans lune » (niveau de lune du défenseur dans le rapport de combat) | S | livré (6.14.77) |
 | 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | livré (6.14.71) |
 | 16 | AE-L1 | Réglages sûrs : coffre du 7e jour, défense de la planète mère, bouclier après défaite, écart d'XP (essayés sur la pré-prod) | S | livré (6.14.72 ; essai sur la pré-prod au prochain push) |
 | 17 | UX-4 | Écran mobile : ressources sur une ligne, bandeaux fusionnés, contenu visible plus haut | M | livré (6.14.62) |
@@ -33,7 +33,12 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 21 | AA2 | Libellés, unités, bornes et aide pour chaque réglage de l'admin | M | à faire |
 | 22 | AA3 | Chiffres en dur rendus réglables (Comptoir, talents, spécialisations, modules, sac…), valeurs inchangées | M | à faire |
 | 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | à faire |
-| 24 | AE-L2 | Progression : second palier des bâtiments ×4 et rareté (après Q99 et Q100) | M | en attente de l'étude du rythme long terme (`docs/proposals/rythme-long-terme.md`) : J42 seulement pour l'actif, avec 43 % de sessions sans rien à lancer |
+| 24 | RL-0 | Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/proposals/rythme-long-terme.md`, Q164 à Q171) ; reste le mode `--long` de `progression-sim.mjs` | S | livré en partie (6.14.78) |
+| 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | à faire |
+| 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | à faire |
+| 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | à faire |
+| 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
+| 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | à faire |
 | 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | à faire |
 | 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | à faire |
 | 27 | AP-L4 | Succès procéduraux bridés (détenteurs minimum, un palier par mois) | S | à faire |
@@ -60,9 +65,9 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | à faire |
 | 49 | AJ27-9 | Codex : officiers, Doctrines, Arsenal | M | à faire |
 | 50 | AJ27-10 | Reliques par source, porteurs « signature » par unité | M | à faire |
-| 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | à faire |
-| 51b | DP-L2 | Déblocage progressif : interface (menu, mobile, Ctrl+K, « Prochaine ouverture », « Tout afficher ») | M | à faire |
-| 51c | DP-L3 | Déblocage progressif : Prise en main, Carnet, panneau Lune, passe | S | à faire |
+| 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | livré (6.14.74, `docs/changes/6.14.74-deblocage-moteur.md`) |
+| 51b | DP-L2 | Déblocage progressif : interface (menu, mobile, Ctrl+K, « Prochaine ouverture », « Tout afficher ») | M | livré (6.14.75, `docs/changes/6.14.75-deblocage-interface.md`) |
+| 51c | DP-L3 | Déblocage progressif : Prise en main, Carnet, panneau Lune, passe | S | livré (6.14.76, `docs/changes/6.14.76-deblocage-prise-en-main.md`) |
 | 51d | DP-L4 | Déblocage progressif : serveur (objectifs du jour filtrés, danger qui ouvre sa page) | S | à faire |
 | 51e | DP-L5 | Déblocage progressif : éditeur dans l'admin | S | à faire |
 | 51f | DP-L6 | Déblocage progressif : chaîne de contenu et livraison | S | à faire |
@@ -75,7 +80,6 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 58 | UX-10 | Hygiène et gardes du design system | M | à faire |
 | 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | à faire |
 | 60 | AC-H | Ménage, boutons « Lancer maintenant », test « tour des actions » | M | à faire |
-| 61 | AE-L6 | Puits de dépense permanent (proposition) | L | à faire |
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition) | L | à faire |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |

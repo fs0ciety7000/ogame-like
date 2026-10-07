@@ -11,10 +11,13 @@ import { GUIDE_CHAPTERS, GUIDE_TITLE, guideProgress, guideVisible } from "@/game
 import { claimGuide, GameActionError, hideGuide } from "@/services/playerService";
 import { cn, formatCompact } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { useStepOpens } from "@/components/layout/NavBar";
 
 /** v5.11 : Carnet du commandant — tutoriel avancé (colonies, reliques, Ascension). */
 export function CommanderGuideCard({ player }: { player: PlayerState }) {
   const [busy, setBusy] = useState(false);
+  // 6.14.76 (DP-L3) : l'étape en cours ouvre sa page du menu (Classe, Colonies, État-major, Statistiques) : la carte le dit.
+  const opens = useStepOpens(guideProgress(player).find((s) => !s.claimed)?.step.id);
   if (!guideVisible(player)) return null;
 
   const steps = guideProgress(player);
@@ -71,6 +74,11 @@ export function CommanderGuideCard({ player }: { player: PlayerState }) {
         <div className="hud-callout hud-tone-violet p-4">
           <p className="font-display text-base text-slate-100">{next.step.label}</p>
           <p className="mt-1 text-sm text-slate-300">{next.step.learn}</p>
+          {opens.length > 0 && (
+            <HudChip size="sm" tone="accent" className="mt-2">
+              Débloque : {opens.join(", ")}
+            </HudChip>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="flex flex-wrap items-center gap-2 font-mono text-xs text-slate-300">
               <Gift className="h-3.5 w-3.5 text-gold-glow" />

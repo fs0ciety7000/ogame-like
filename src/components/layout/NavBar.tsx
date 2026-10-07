@@ -1,6 +1,6 @@
 import { PlayerName } from "@/components/ui/player-name";
 import { AscensionStars } from "@/components/game/AscensionCard";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
 import { assetUrl } from "@/lib/assets";
@@ -32,6 +32,10 @@ import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
 import { useGlobalUnreadCount } from "@/services/globalChatService";
 import { useAuthStore } from "@/store/authStore";
+import { useFleetStore } from "@/store/fleetStore";
+import { isHostile } from "@/components/game/FleetsPanel";
+import { markAnnouncementsSeen } from "@/services/playerService";
+import { NAV_UNLOCK_RULES, navClosedPages, navCondition, navMarkId, navOpenPages, navPageMarked, navPagesOpenedByStep, navStatus, nextNavOpening, type NavContext, type NavNextOpening, type NavStatus } from "@/game/navUnlock";
 
 interface NavItem {
   to: string;
@@ -50,15 +54,20 @@ type ItemLinkProps = Omit<React.ComponentProps<typeof NavLink>, "to"> & { item: 
 
 /** NavLink, ou lien externe (nouvel onglet) pour les pages hors application. */
 function ItemLink({ item, className, children, end: _end, ...rest }: ItemLinkProps) {
-  const locked = usePlayerStore((s) => item.lock === "planner" && !plannerUnlocked(s.player));
+  const nav = useContext(NavUnlockContext);
+  // 6.14.75 (DP-L2, Q153) : réglage `navUnlock.style` à « locked » : une page fermée reste au menu, grisée avec sa condition.
+  const navLocked = nav?.style === "locked" && nav.closed.has(item.to);
+  const plannerLocked = usePlayerStore((s) => item.lock === "planner" && !plannerUnlocked(s.player));
+  const locked = navLocked || plannerLocked;
   if (locked) {
     const cls = typeof className === "function" ? className({ isActive: false, isPending: false, isTransitioning: false }) : className;
+    const why = navLocked ? navCondition(item.to) : `à débloquer au Comptoir de la Ruche (${PLANNER_PRICE} Ambre)`;
     return (
       <span
         role="link"
         aria-disabled="true"
-        title={`${item.label} : à débloquer au Comptoir de la Ruche (${PLANNER_PRICE} Ambre).`}
-        aria-label={`${item.label}, verrouillé : à débloquer au Comptoir de la Ruche`}
+        title={`${item.label} : ${why.charAt(0).toLowerCase()}${why.slice(1)}.`}
+        aria-label={`${item.label}, verrouillé : ${why.charAt(0).toLowerCase()}${why.slice(1)}`}
         className={cn(cls, "pointer-events-auto relative cursor-not-allowed opacity-45 hover:translate-x-0")}
       >
         {typeof children === "function" ? children({ isActive: false, isPending: false, isTransitioning: false }) : children}
@@ -185,12 +194,11 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 /** Groupes listés dans la barre latérale ; le dernier (Compte) est en pied de barre. */
-/** v5.12 : pages visibles seulement quand elles sont ouvertes (le casino), sauf pour l'administration. */
-/** Pages cachées du menu : casino fermé (sauf admin), concours (réservés aux admins depuis la 5.13). */
-export function useHiddenRoutes(): ReadonlySet<string> {
+/** Pages cachées par une règle propre : casino fermé (sauf admin), concours (réservés aux admins depuis la 5.13),
+ *  Ascension avant la première (5.15 : avant, raccourci sur Bâtiments). */
+export function useHardHiddenRoutes(): ReadonlySet<string> {
   const casino = useCasinoVisible();
   const admin = useIsAdmin();
-  // 5.15 : la page Ascension n'est au menu qu'après la première ascension (avant : raccourci sur Bâtiments).
   const ascended = usePlayerStore((s) => (s.player?.ascensions ?? 0) > 0);
   return useMemo(() => {
     const hidden = new Set<string>();
@@ -201,9 +209,123 @@ export function useHiddenRoutes(): ReadonlySet<string> {
   }, [casino, admin, ascended]);
 }
 
+/* 6.14.75 (DP-L2, proposals/deblocage-progressif.md) : ouverture progressive du menu (moteur `navUnlock.ts`, I30).
+   Un seul calcul pour la barre latérale, la barre mobile, la palette Ctrl+K et les cartes de l'accueil. */
+export interface NavUnlockView {
+  status: NavStatus;
+  /** Pages réglées encore fermées (vide hors du mode progressif). */
+  closed: ReadonlySet<string>;
+  /** Pages ouvertes jamais visitées : pastille « Nouveau » jusqu'à la première visite. */
+  fresh: ReadonlySet<string>;
+  /** Pages ouvertes seulement par un signal passager (flotte hostile) : la marque les garde ouvertes. */
+  transient: string[];
+  next: NavNextOpening | null;
+  style: "hidden" | "locked";
+}
+
+const NavUnlockContext = createContext<NavUnlockView | null>(null);
+
+/** Données du menu hors de la fiche du joueur : administrateur, flotte hostile en approche (signal `danger`). */
+function useNavFlags(): { admin: boolean; hostileIncoming: boolean } {
+  const admin = useIsAdmin();
+  const uid = useAuthStore((s) => s.user?.uid);
+  const hostileIncoming = useFleetStore((s) => s.fleets.some((f) => isHostile(f, uid)));
+  return { admin, hostileIncoming };
+}
+
+/** Libellés des pages qu'une étape du tutoriel ouvre (« Débloque : Missions » sur la carte de l'étape). */
+export function useStepOpens(step: string | undefined): string[] {
+  const player = usePlayerStore((s) => s.player);
+  const { admin, hostileIncoming } = useNavFlags();
+  return useMemo(() => (player && step ? navPagesOpenedByStep(player, step, { now: Date.now(), admin, hostileIncoming }).map(navLabel) : []), [player, step, admin, hostileIncoming]);
+}
+
+export function useNavUnlock(): NavUnlockView {
+  const player = usePlayerStore((s) => s.player);
+  const { admin, hostileIncoming } = useNavFlags();
+  return useMemo(() => {
+    const style = NAV_UNLOCK_RULES.style === "locked" ? "locked" : "hidden";
+    if (!player) return { status: "disabled", closed: new Set<string>(), fresh: new Set<string>(), transient: [], next: null, style };
+    const ctx: NavContext = { now: Date.now(), admin, hostileIncoming };
+    const status = navStatus(player, ctx);
+    const closed = new Set(navClosedPages(player, ctx));
+    const progressive = status === "progressive";
+    const open = progressive ? [...navOpenPages(player, ctx)] : [];
+    const fresh = new Set(open.filter((page) => !navPageMarked(player, page)));
+    const transient = hostileIncoming && progressive ? open.filter((page) => !navPageMarked(player, page) && navClosedPages(player, { ...ctx, hostileIncoming: false }).includes(page)) : [];
+    return { status, closed, fresh, transient, next: progressive ? nextNavOpening(player, ctx) : null, style };
+  }, [player, admin, hostileIncoming]);
+}
+
+/** Pages cachées du menu : règles propres (casino, concours, Ascension) et pages pas encore ouvertes (`navUnlock`, style « hidden »). */
+export function useHiddenRoutes(): ReadonlySet<string> {
+  const hard = useHardHiddenRoutes();
+  const nav = useNavUnlock();
+  return useMemo(() => (nav.style === "hidden" && nav.closed.size > 0 ? new Set([...hard, ...nav.closed]) : hard), [hard, nav]);
+}
+
+/** Marque `nav:<page>` à la première visite d'une page réglée, et tout de suite pour une page ouverte par un danger passager
+ *  (action `seenAnnouncements`, comme les astuces) : une page ouverte ne se referme jamais. Rien n'est écrit hors du mode progressif. */
+const marksSent = new Set<string>();
+function useNavMarks(nav: NavUnlockView) {
+  const { pathname } = useLocation();
+  const progressive = nav.status === "progressive";
+  const here = Object.keys(NAV_UNLOCK_RULES.pages).find((page) => pathname === page || pathname.startsWith(`${page}/`)) ?? null;
+  // Page fraîchement ouverte, ou page fermée atteinte par un lien, Ctrl+K ou un objectif (ouverture par l'intention).
+  const visit = here && (nav.fresh.has(here) || nav.closed.has(here)) ? here : null;
+  const transientKey = nav.transient.join(",");
+  useEffect(() => {
+    if (!progressive) return;
+    const pages = [...(visit ? [visit] : []), ...(transientKey ? transientKey.split(",") : [])];
+    const ids = pages.map(navMarkId).filter((id) => !marksSent.has(id));
+    if (ids.length === 0) return;
+    for (const id of ids) marksSent.add(id);
+    // Échec silencieux : la page reste ouverte par son déclencheur, la marque repartira à la prochaine visite.
+    void markAnnouncementsSeen(ids).catch(() => {
+      for (const id of ids) marksSent.delete(id);
+    });
+  }, [progressive, visit, transientKey]);
+}
+
 function useNavGroups(): NavGroup[] {
-  const hidden = useHiddenRoutes();
-  return hidden.size === 0 ? NAV_GROUPS : NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !hidden.has(i.to)) }));
+  const hidden = useHardHiddenRoutes();
+  const nav = useContext(NavUnlockContext);
+  return useMemo(() => {
+    const hide = new Set([...hidden, ...(nav?.style === "hidden" ? nav.closed : [])]);
+    if (hide.size === 0) return NAV_GROUPS;
+    // Groupe vide (Opérations, Grands ennemis, Progression à J0) : caché ; le pied de barre (Compte) reste.
+    return NAV_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !hide.has(i.to)) })).filter((g, i, all) => g.items.length > 0 || i === all.length - 1);
+  }, [hidden, nav]);
+}
+
+/** Libellé d'une page du menu. */
+function navLabel(to: string): string {
+  return NAV_GROUPS.flatMap((g) => g.items).find((i) => i.to === to)?.label ?? to;
+}
+
+/** « Prochaine ouverture : Galaxie et Alliance · 40 / 100 XP » (une ligne grisée sous le menu). */
+function NextOpeningLine({ className }: { className?: string }) {
+  const nav = useContext(NavUnlockContext);
+  const next = nav?.next;
+  if (!next || next.pages.length === 0) return null;
+  const labels = next.pages.map(navLabel);
+  // Trois noms au plus (la liste complète au survol) : la ligne reste courte au palier « Commandant » (8 pages).
+  const shown = labels.length > 3 ? [...labels.slice(0, 2), `${labels.length - 2} autres`] : labels;
+  const list = shown.length > 1 ? `${shown.slice(0, -1).join(", ")} et ${shown[shown.length - 1]}` : shown[0];
+  return (
+    <p className={cn("text-[11px] leading-snug text-slate-500", className)} title={`À ${next.rankName} : ${labels.join(", ")}`}>
+      <span className="font-mono text-[10px] uppercase tracking-[0.14em]">Prochaine ouverture</span> : {list} ·{" "}
+      <span className="font-mono tabular-nums">
+        {formatCompact(next.xp)} / {formatCompact(next.targetXp)} XP
+      </span>
+    </p>
+  );
+}
+
+/** Pastille « Nouveau » d'une page qui vient de s'ouvrir (jusqu'à la première visite). */
+function useIsFresh(to: string): boolean {
+  const nav = useContext(NavUnlockContext);
+  return !!nav?.fresh.has(to);
 }
 
 const SIDE_GROUPS = NAV_GROUPS.slice(0, -1);
@@ -303,6 +425,7 @@ function bossIconClass(phase: BossPhase | null): string {
 /** Lien de la barre latérale (bureau), aux couleurs de son groupe (--nav-accent). */
 function SideLink({ item, badge }: { item: NavItem; badge: number }) {
   const bossInfo = useBossNavInfo(item.to);
+  const fresh = useIsFresh(item.to);
   const phase = bossInfo?.phase ?? null;
   return (
     <ItemLink
@@ -336,6 +459,11 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
           <span className={cn("min-w-0 flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
           {bossInfo && <BossChip info={bossInfo} />}
           <InlineBadge count={badge} />
+          {fresh && !badge && !isActive && (
+            <HudChip size="sm" tone="accent" className="shrink-0 px-1 py-px text-[8.5px] tracking-[0.12em]">
+              Nouveau
+            </HudChip>
+          )}
           {isActive && !badge && <span className="h-1.5 w-1.5 shrink-0 rotate-45 bg-[var(--nav-accent)] shadow-[0_0_8px_var(--nav-accent)]" />}
         </>
       )}
@@ -477,10 +605,11 @@ function useWideScreen(): boolean {
 function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
   const bossInfo = useBossNavInfo(item.to);
   const phase = bossInfo?.phase ?? null;
+  const fresh = useIsFresh(item.to);
   return (
     <ItemLink
       item={item}
-      title={bossInfo ? `${item.label} · ${bossNavText(bossInfo).full}` : item.label}
+      title={bossInfo ? `${item.label} · ${bossNavText(bossInfo).full}` : fresh ? `${item.label} · nouveau` : item.label}
       aria-label={item.label}
       className={({ isActive }) =>
         cn(
@@ -493,6 +622,7 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
     >
       <item.icon className={cn("h-4 w-4", bossIconClass(phase))} />
       {badge > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+      {fresh && !badge && <span aria-hidden className="absolute right-0.5 top-0.5 h-2 w-2 rotate-45 bg-cyan-glow" />}
       <BossDot phase={phase} className="bottom-0.5 right-0.5" />
     </ItemLink>
   );
@@ -624,6 +754,7 @@ function Sidebar() {
             }}
           />
         ))}
+        <NextOpeningLine className="mx-1 mt-1 border-t border-white/5 px-2 pt-2.5" />
       </nav>
       <div className="border-t border-cyan-glow/10 pt-2.5">
         <FooterLinks badgeOf={badgeOf} />
@@ -762,6 +893,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
             </div>
           ))}
         </div>
+        <NextOpeningLine className="mt-4 border-t border-white/5 pt-3" />
         <div onClickCapture={onClose}>
           <CockpitSwitch className="mt-4" />
         </div>
@@ -773,6 +905,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
 
 function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
   const badge = useBadge(item.to);
+  const fresh = useIsFresh(item.to);
   const bossInfo = useBossNavInfo(item.to);
   const phase = bossInfo?.phase ?? null;
   return (
@@ -792,6 +925,11 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
+      {fresh && !badge && (
+        <HudChip size="sm" tone="accent" className="-mt-1 px-1 py-px text-[8.5px] tracking-[0.12em]">
+          Nouveau
+        </HudChip>
+      )}
       {bossInfo && (
         <span className="-mt-1 whitespace-nowrap font-mono text-[8.5px] tabular-nums tracking-[0.12em]" style={{ color: BOSS_NAV[bossInfo.phase].color }}>
           {bossNavText(bossInfo).chip}
@@ -808,8 +946,13 @@ function MobileTabBar() {
   const allianceUnread = useAllianceUnreadStore((s) => s.count) + usePactUnreadStore((s) => Object.values(s.unread).reduce((a, b) => a + b, 0));
   const reportsUnread = useReportBadges((r) => r.unread);
   const messagesUnread = useUnreadMessageCount(useAuthStore((s) => s.user?.uid)) + useGlobalUnreadCount(useAuthStore((s) => s.user?.uid));
-  const hidden = useHiddenRoutes();
-  const tabs = tabIds.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i && !hidden.has(i.to));
+  const hard = useHardHiddenRoutes();
+  const nav = useContext(NavUnlockContext);
+  const hidden = new Set([...hard, ...(nav?.style === "hidden" ? nav.closed : [])]);
+  // 6.14.75 (DP-L2) : un onglet épinglé pas encore ouvert (Galaxie à J0) laisse sa place à Labo, puis Ressources.
+  const shown = tabIds.filter((to) => !hidden.has(to));
+  for (const fallback of ["/game/labo", "/game/ressources", "/game/ordres"]) if (shown.length < tabIds.length && !shown.includes(fallback) && !hidden.has(fallback)) shown.push(fallback);
+  const tabs = shown.map((to) => ALL_NAV_ITEMS.find((i) => i.to === to)!).filter((i) => !!i);
   const moreCount = moreBadgeCount({ messages: messagesUnread, alliance: allianceUnread, reports: reportsUnread }, tabs.map((t) => t.to));
   const inMenu = !tabs.some((t) => (t.end ? location.pathname === t.to : location.pathname.startsWith(t.to)));
   return (
@@ -849,10 +992,12 @@ function MobileTabBar() {
 }
 
 export function NavBar() {
+  const nav = useNavUnlock();
+  useNavMarks(nav);
   return (
-    <>
+    <NavUnlockContext.Provider value={nav}>
       <Sidebar />
       <MobileTabBar />
-    </>
+    </NavUnlockContext.Provider>
   );
 }

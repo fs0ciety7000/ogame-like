@@ -671,6 +671,12 @@
         "type": "json",
         "required": false,
         "maxSize": 40000
+      },
+      {
+        "name": "defenderMoonLevel",
+        "type": "json",
+        "required": false,
+        "maxSize": 100
       }
     ],
     "indexes": [

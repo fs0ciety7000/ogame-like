@@ -137,7 +137,7 @@ export function useGameSync(uid: string | null) {
 
       const showOne = (item: (typeof fresh)[number]) => {
         // Toast du HUD : icône et couleur du type, comme dans la cloche.
-        const style = notificationStyle(item.kind);
+        const style = notificationStyle(item.kind, item);
         const icon = createElement(style.icon);
         const className = `hud-tone-${style.tone}`;
         // v3.8 : « Voir » ouvre la page concernée (conversation, rapport…).

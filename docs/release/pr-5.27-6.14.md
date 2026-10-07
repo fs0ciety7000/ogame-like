@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.73 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.78 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 139 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 144 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -175,6 +175,11 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.71 : Proposition d'équilibrage et simulateur de progression (`docs/changes/6.14.71-proposition-equilibrage.md`)
 - 6.14.72 : Réglages sûrs : défense à domicile, bouclier, écart d'XP, coffre du 7e jour (`docs/changes/6.14.72-reglages-surs.md`)
 - 6.14.73 : Proposition du déblocage progressif du menu (`docs/changes/6.14.73-proposition-deblocage.md`)
+- 6.14.74 : Déblocage progressif du menu : moteur (`docs/changes/6.14.74-deblocage-moteur.md`)
+- 6.14.75 : Déblocage progressif du menu : interface (`docs/changes/6.14.75-deblocage-interface.md`)
+- 6.14.76 : Déblocage progressif : Prise en main, Carnet, panneau Lune, passe (`docs/changes/6.14.76-deblocage-prise-en-main.md`)
+- 6.14.77 : Suite de l'essai de la lune : une notification par saut, Journal système, victoires avec ou sans lune (`docs/changes/6.14.77-suite-essai-lune.md`)
+- 6.14.78 : Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/changes/6.14.78-rythme-long-terme.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

@@ -1683,6 +1683,73 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.14.77 porte de saut : une seule notification (« Saut réussi »), sans « Patrouille terminée »", async () => {
+    await ensureAB();
+    const fleets: string[] = [];
+    const aBefore = await snap(aId);
+    const aClient = new PocketBase(PB_TEST_URL);
+    await aClient.collection("users").authWithPassword(A.email, A.pw);
+    try {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${aId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("players").update(aId, { moon: testMoon(3), resources: RICH, resourcesUpdatedAtMs: Date.now(), units: { chasseur: { level: 1, count: 20 } }, vacation: null });
+      const sent = (await aClient.send("/api/cosmic/fleet/send", { method: "POST", body: { mission: "patrol", fleet: { chasseur: 10 }, minutes: 30 } })) as { id: string };
+      fleets.push(sent.id);
+      // Notifications de flotte de A effacées : celle d'un saut du test précédent (même seconde) serait comptée.
+      for (const old of await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="fleet"` })) await admin.collection("notifications").delete(old.id);
+      const t0 = Date.now() - 1000;
+      const out = await aClient.send("/api/cosmic/fleet/jump", { method: "POST", body: { fleetId: sent.id } });
+      expect(out.status).toBe("done");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && kind="fleet" && createdAtMs >= ${t0}`, sort: "createdAtMs" });
+      expect(notes.map((n) => n.title)).toEqual(["Saut réussi"]);
+      // Un retour habituel (sans la porte) garde sa notification.
+      await admin.collection("players").update(aId, { moon: testMoon(3) });
+      const back = (await aClient.send("/api/cosmic/fleet/send", { method: "POST", body: { mission: "patrol", fleet: { chasseur: 5 }, minutes: 30 } })) as { id: string };
+      fleets.push(back.id);
+      await admin.collection("fleets").update(back.id, { status: "returning", returnAtMs: Date.now() - 1000 });
+      const t1 = Date.now() - 1000;
+      await aClient.send("/api/cosmic/action", { method: "POST", body: { type: "sync", playtimeDeltaSeconds: 0 } }); // traite les flottes de A
+      for (let i = 0; i < 20 && (await admin.collection("fleets").getOne(back.id)).status !== "done"; i++) await wait(500);
+      const ended = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title="Patrouille terminée" && createdAtMs >= ${t1}`, sort: "createdAtMs" });
+      expect(ended).toHaveLength(1);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { moon: null, resources: aBefore?.resources, units: aBefore?.units, stats: aBefore?.stats ?? null });
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
+  it("6.14.77 rapport de combat : niveau de lune du défenseur, et santé « avec ou sans lune »", async () => {
+    await ensureAB();
+    const since = Date.now() - 1000;
+    const fleets: string[] = [];
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    try {
+      await admin.collection("players").update(aId, { moon: testMoon(2), colonies: [], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, xp: bBefore.xp, units: { fregate: { level: 1, count: 5 } } });
+      await admin.collection("players").update(bId, { allianceId: "", units: { fregate: { level: 1, count: 20 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0, vacation: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await loginPlayer(B.email, B.pw);
+      const sent = await ps.sendFleet(aId, { fregate: 20 }, "attack");
+      fleets.push(sent.id);
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.reportId, "rapport de combat").toBeTruthy();
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.defenderMoonLevel).toBe(2);
+      // Santé de l'équilibre : le combat compte parmi les cibles avec lune.
+      const live = await admin.send("/api/cosmic/admin/balance", { method: "GET" });
+      expect(live.health.moonPvp.windowDays).toBe(30);
+      expect(live.health.moonPvp.withMoon.battles).toBeGreaterThanOrEqual(1);
+    } finally {
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}" && timestamp >= ${since}` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("players").update(aId, { moon: null, units: aBefore?.units, resources: aBefore?.resources, lastDefeatAtMs: aBefore?.lastDefeatAtMs ?? 0, xp: aBefore?.xp });
+      await admin.collection("players").update(bId, { allianceId: bBefore?.allianceId ?? "", units: bBefore?.units });
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
   it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);

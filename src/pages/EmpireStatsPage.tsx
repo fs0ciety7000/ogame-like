@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 import { empireStats, ratio } from "@/game/empireStats";
 import { playerMoon } from "@/game/moon";
+import { moonPanelVisible } from "@/game/navUnlock";
 import { MoonLine } from "@/components/game/MoonLine";
 import { MoonPanel } from "@/components/game/PhalanxPanel";
 import { FLEET_MISSION_LABELS, type FleetMission } from "@/game/fleets";
@@ -408,10 +409,13 @@ export function EmpireStatsPage() {
           </motion.div>
         </Section>
 
-        {/* 6.14.49 (É30-1c) : lune, phalange et porte de saut ; sans lune, la réserve de pitié. */}
-        <div id="lune" className="scroll-mt-24">
-          <MoonPanel player={player} />
-        </div>
+        {/* 6.14.49 (É30-1c) : lune, phalange et porte de saut ; sans lune, la réserve de pitié.
+            6.14.76 (DP-L3) : panneau seulement avec une lune, une réserve de pitié ou le chapitre « Ta lune » du Carnet. */}
+        {moonPanelVisible(player) && (
+          <div id="lune" className="scroll-mt-24">
+            <MoonPanel player={player} />
+          </div>
+        )}
 
         <Section title="Armée" icon={Rocket} tone={EMBER} aside={<SectionLink to="/game/unites">Unités</SectionLink>}>
           <div className="grid gap-4 sm:grid-cols-[auto_auto_1fr] sm:items-center">
