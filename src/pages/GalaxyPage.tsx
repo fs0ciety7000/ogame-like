@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { FoldSection } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { subscribeDebrisFields, subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
-import { debrisTotal, type DebrisField } from "@/game/debris";
+import { debrisLocation, debrisTotal, type DebrisField } from "@/game/debris";
+import { colonyOwnerUid } from "@/game/colonies";
 import { GarrisonDialog, RecycleDialog } from "@/components/game/MissionDialogs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { formatCoords, galaxyCoords } from "@/game/galaxy";
@@ -221,8 +222,8 @@ export function GalaxyPage() {
   const visibleFleets = activeFleets.filter((f) => f.mission !== "patrol");
   const patrolling = activeFleets.some((f) => f.mission === "patrol" && f.ownerUid === uid);
   const liveDebris = debrisFields.filter((d) => d.expiresAtMs > now && debrisTotal(d) > 0);
-  const selectedDebris = selected ? liveDebris.find((d) => d.id === selected.uid) ?? null : null;
-  const debrisByDistance = uid ? [...liveDebris].sort((a, b) => distanceBetween(uid, a.id) - distanceBetween(uid, b.id)) : liveDebris;
+  const selectedDebris = selected ? liveDebris.find((d) => debrisLocation(d) === selected.uid) ?? null : null;
+  const debrisByDistance = uid ? [...liveDebris].sort((a, b) => distanceBetween(uid, debrisLocation(a)) - distanceBetween(uid, debrisLocation(b))) : liveDebris;
   const shownAlliances = alliances.filter((a) => players.some((p) => p.allianceId === a.id)).slice(0, 8);
 
   return (
@@ -392,10 +393,10 @@ export function GalaxyPage() {
 
               {/* Champs de débris */}
               {liveDebris.map((d) => {
-                const pos = mapPosition(d.id);
+                const pos = mapPosition(debrisLocation(d));
                 const r = Math.min(2.4, 0.9 + Math.log10(1 + debrisTotal(d)) * 0.3) / k;
                 return (
-                  <g key={`debris-${d.id}`} transform={`translate(${pos.x + 1.8 / k} ${pos.y + 1.8 / k})`} className="cursor-pointer" onClick={() => clickPlayer(d.id)}>
+                  <g key={`debris-${d.id}`} transform={`translate(${pos.x + 1.8 / k} ${pos.y + 1.8 / k})`} className="cursor-pointer" onClick={() => clickPlayer(colonyOwnerUid(debrisLocation(d)) ?? debrisLocation(d))}>
                     <title>{`Débris : ${formatCompact(d.scrap)} ferraille, ${formatCompact(d.energy)} énergie`}</title>
                     {[0, 72, 144, 216, 288].map((a) => (
                       <rect
@@ -651,8 +652,8 @@ export function GalaxyPage() {
                     type="button"
                     className="flex-1 truncate text-left text-slate-300 hover:text-slate-100"
                     onClick={() => {
-                      setSelectedUid(d.id);
-                      centerOn(mapPosition(d.id));
+                      setSelectedUid(colonyOwnerUid(debrisLocation(d)) ?? debrisLocation(d));
+                      centerOn(mapPosition(debrisLocation(d)));
                     }}
                   >
                     {d.locationPseudo} · {formatCompact(debrisTotal(d))}

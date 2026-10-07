@@ -8,7 +8,7 @@
 | Missions de flotte | attaque, transport, livraison, garnison (1 à 24 h, 3 par hôte), base avancée sur sa colonie (6.10, 14 j au plus, départ des attaques depuis la colonie), patrouille (30 à 480 min), recyclage, expédition, repaire, prime, boss |
 | Espionnage | sondes ; 1 min + 0,5 min × distance ; détection 10 % + 10 %/point d'écart (5 à 75 %) ; paliers du rapport 0/2/4/6 |
 | Expéditions | 10 vaisseaux min., 2/4/8 h, 3 par jour ; gisement 35, rien 15, trésor 15, embuscade 15, faction 10, épave 10 (poids) ; en chaîne jusqu'à 3 étapes de plus |
-| Débris | 30 % du coût, 48 h, drones récupérateurs (soute) |
+| Débris | 30 % du coût, 48 h, drones récupérateurs (soute) ; un champ par planète mère ou colonie (6.11.4 : clé `debrisKey` de 15 caractères, emplacement dans `locationId`) |
 
 **Emplacements de flotte (5.33)** : 10 flottes en vol à la fois (`FLEET_RULES.slotsBase`, Règles → Flottes en vol). Les sondes et les expéditions ne
 comptent pas ; les garnisons, si. Le serveur compte (`fleetsActive`), le moteur refuse (`fleetSlotBlocker`). Le panneau Flottes affiche « n / 10 »

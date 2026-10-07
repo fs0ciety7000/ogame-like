@@ -184,3 +184,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.1 | Z4 : la base avancée peut défendre sa colonie comme une garnison (réglage admin, désactivé par défaut, Q9) | `docs/changes/6.11.1-base-defend-colonie.md` |
 | 2026-10-07 | 6.11.2 | Revue AU14 : feuille de route de printemps close (Z2 à Z5 livrés, Z0, Z1, Z6 en attente), diagnostic d'un test intermittent, billet de devblog ; été proposé | `docs/audit/2026-10-07-au14-printemps.md` |
 | 2026-10-07 | 6.11.3 | E2 : Unités à 375 px de 5 651 à 5 256 px (cartes verrouillées compactées), objectif 5 000 px non atteint (Q14) | `docs/changes/6.11.3-unites-mobile.md` |
+| 2026-10-07 | 6.11.4 | E1 : champ de débris sur les colonies (clé `debrisKey` de 15 caractères, `locationId`) ; une attaque de colonie avec pertes ne bloque plus la résolution (Q13 close) | `docs/changes/6.11.4-debris-colonies.md` |

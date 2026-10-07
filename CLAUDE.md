@@ -111,6 +111,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   Dès novembre 2026 les chapitres sont générés ; un chapitre écrit à la main va dans `chronicles.library` et n'entre dans un mois que par
   `applyLibraryChapter` (invariant I17). Un seul passe par mois (`activePass`).
 - Une action serveur qui dépend des flottes en vol passe par `actionNeedsAway` (`cosmic.pb.js` lit alors les flottes).
+- Un identifiant d'enregistrement PocketBase tient en 15 caractères `[a-z0-9]` : un identifiant de colonie (`<uid>-c<n>`, 18) ne sert jamais
+  de clé tel quel. Dériver une clé (`debrisKey`, 6.11.4) et garder l'emplacement dans un champ à part (`locationId`).
 - Nouveau bâtiment, unité, techno ou relique par défaut : l'ajouter aussi au contenu personnalisé par une entrée `appendFromDefaults` de `CONTENT_MIGRATIONS` (`cosmic_db.js`), sinon il n'apparaît pas sur un serveur dont l'admin a modifié la liste.
 - Une migration ponctuelle (`onBootstrap`) qui rend ou retire des unités, des ressources ou des niveaux **respecte les plafonds**
   (hangar, entrepôt) ou documente pourquoi elle les dépasse. Voir l'incident 5.22 dans `docs/proposals/cale-seche.md`.

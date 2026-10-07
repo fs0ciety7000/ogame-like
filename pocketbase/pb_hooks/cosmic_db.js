@@ -389,8 +389,9 @@ function fleetFromRecord(rec, publicView) {
 
 /* ---------- Champs de débris ---------- */
 
-function loadDebris(txApp, id) {
-  const rec = findOrNull(txApp, "debris_fields", id);
+/** `locationId` : planète mère ou colonie ; la clé du champ en dérive (6.11.4 : une colonie a une clé de 15 caractères). */
+function loadDebris(txApp, locationId) {
+  const rec = findOrNull(txApp, "debris_fields", loadGame().debrisKey(locationId));
   return rec ? { rec, field: toPlain(rec) } : { rec: null, field: null };
 }
 
@@ -401,6 +402,7 @@ function saveDebris(txApp, loaded, field) {
     rec.set("id", field.id);
   }
   ["locationPseudo", "scrap", "energy", "expiresAtMs", "updatedAtMs"].forEach((f) => rec.set(f, field[f]));
+  if (field.locationId) rec.set("locationId", field.locationId);
   txApp.save(rec);
 }
 
@@ -1533,8 +1535,8 @@ function resolveAttackArrival(txApp, game, rec, now) {
     ]);
   });
 
-  // 6.11.1 : pas de champ de débris sur une colonie (son identifiant <uid>-c<n> dépasse 15 caractères ; Q13).
-  if (game.debrisTotal(result.debris) > 0 && !colonyOwner) {
+  // 6.11.4 (E1) : une colonie a aussi son champ, sous une clé dérivée de 15 caractères (`debrisKey`).
+  if (game.debrisTotal(result.debris) > 0) {
     const debris = loadDebris(txApp, fleet.targetUid);
     const field = game.mergeDebris(debris.field, result.debris, { uid: fleet.targetUid, pseudo: fleet.targetPseudo }, now);
     saveDebris(txApp, debris, field);

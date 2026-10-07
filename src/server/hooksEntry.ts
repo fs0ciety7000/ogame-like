@@ -19,7 +19,7 @@ export { resolveSpyArrival } from "@/game/espionage";
 export { ALLIANCE_RULES, allianceNextDueMs, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
 export { stationGarrison, endGarrison, baseReturnUnits, isActiveBase, colonyBaseDefends } from "@/game/fleets";
 export { currentSeasonId, performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
-export { collectDebris, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
+export { collectDebris, debrisKey, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { parseResetOptions, resetPlayerState } from "@/game/reset";
 export { activeUltimatum, answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID, PIRATE_RULES, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";

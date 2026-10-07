@@ -7,6 +7,7 @@
 // scénarios (donner des ressources, vieillir un compte) : les joueurs ne
 // peuvent plus modifier eux-mêmes ces champs.
 import { findUnit } from "@/game/units";
+import { debrisKey } from "@/game/debris";
 import { sectorLabel, sectorOf } from "@/game/territories";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import PocketBase from "pocketbase";
@@ -1393,6 +1394,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(report.garrisons).toHaveLength(1);
       const after = await admin.collection("fleets").getOne(base.id);
       expect((after.units as Record<string, number>).chasseur ?? 0).toBeLessThanOrEqual(20);
+      // 6.11.4 (E1) : le combat laisse un champ de débris sur la colonie, sous une clé de 15 caractères.
+      const field = await admin.collection("debris_fields").getOne(debrisKey(colonyId));
+      expect(field.locationId).toBe(colonyId);
+      expect(Number(field.scrap) + Number(field.energy)).toBeGreaterThan(0);
+      await admin.collection("debris_fields").delete(field.id);
     } finally {
       for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && planetId="${colonyId}"` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);

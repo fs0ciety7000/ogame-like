@@ -27,7 +27,7 @@ import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from 
 import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
 import { onVacation } from "@/game/vacation";
 import { bountyTarget, dropShield, ELITE_RULES, shieldUntil, startBounty } from "@/game/bounties";
-import { debrisTotal, isRecyclerUnit, type DebrisField } from "@/game/debris";
+import { debrisLocation, debrisTotal, isRecyclerUnit, type DebrisField } from "@/game/debris";
 
 /* =====================================================
    Flottes en vol : une attaque met du temps à arriver. Le défenseur voit
@@ -691,11 +691,11 @@ export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de débris n'existe plus.");
   const units = takeUnits(owner, raw, isRecyclerUnit, "Seuls les Drones récupérateurs et les Récolteurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
-  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, field.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
+  const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, debrisLocation(field)), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
   return {
     attacker: owner,
-    fleet: newFleet(owner, { uid: field.id, pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
+    fleet: newFleet(owner, { uid: debrisLocation(field), pseudo: field.locationPseudo }, "recycle", units, now, arriveAtMs),
     defenderNotifications: [],
   };
 }

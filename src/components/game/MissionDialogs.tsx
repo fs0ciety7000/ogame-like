@@ -12,7 +12,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { distanceBetween, fleetSpeed, PATROL_RULES, patrolEnergyCost, travelSeconds } from "@/game/fleets";
 import { playerModifiers } from "@/game/modifiers";
-import { DEBRIS_RULES, recyclerCapacity, type DebrisField } from "@/game/debris";
+import { DEBRIS_RULES, debrisLocation, recyclerCapacity, type DebrisField } from "@/game/debris";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { formatDuration, formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
@@ -149,13 +149,13 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   }
   const count = Object.values(fleet).reduce((a, n) => a + n, 0);
   const capacity = player ? recyclerCapacity(player, fleet) : 0;
-  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, field.id), fleetSpeed(player.units, fleet), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
+  const flight = player && uid && field && count > 0 ? travelSeconds(distanceBetween(uid, debrisLocation(field)), fleetSpeed(player.units, fleet), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;
 
   const send = async () => {
     if (!field || count <= 0) return;
     setSubmitting(true);
     try {
-      await sendFleet(field.id, fleet, "recycle");
+      await sendFleet(debrisLocation(field), fleet, "recycle");
       triggerWarpEffect();
       toast.success("Recycleurs en route", { description: "Premier arrivé, premier servi : un autre joueur peut te devancer." });
       setPicked({});

@@ -25,8 +25,10 @@ export interface DebrisAmount {
 }
 
 export interface DebrisField extends DebrisAmount {
-  /** Même identifiant que la base où il se trouve. */
+  /** Clé du champ : l'identifiant de la base où il se trouve, ou sa clé dérivée (`debrisKey`) pour une colonie. */
   id: string;
+  /** 6.11.4 : identifiant de l'emplacement (planète mère ou colonie `<uid>-c<n>`). Absent sur les champs plus anciens. */
+  locationId?: string;
   locationPseudo: string;
   expiresAtMs: number;
   updatedAtMs: number;
@@ -52,10 +54,34 @@ export function debrisTotal(d: DebrisAmount | null | undefined): number {
 }
 
 /** Ajoute des débris à un champ (créé au besoin) et relance sa durée de vie. */
+/** Hachage 32 bits (FNV-1a) en base 36 sur 7 caractères : sans `Intl` ni API récente (goja). */
+function hash7(text: string, seed: number): string {
+  let h = seed >>> 0;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return ("000000" + h.toString(36)).slice(-7);
+}
+
+/** 6.11.4 (E1, Q13) : clé d'enregistrement d'un champ de débris. Un identifiant de base PocketBase tient en 15 caractères :
+ *  une planète mère garde son identifiant, une colonie (`<uid>-c<n>`, 18) reçoit une clé dérivée stable de 15 caractères. */
+export function debrisKey(locationId: string): string {
+  const id = String(locationId ?? "");
+  if (id.length <= 15) return id;
+  return "d" + hash7(id, 2166136261) + hash7(id, 374761393).slice(0, 7);
+}
+
+/** Emplacement d'un champ (anciens champs : leur clé est l'identifiant de la planète). */
+export function debrisLocation(field: Pick<DebrisField, "id" | "locationId">): string {
+  return field.locationId || field.id;
+}
+
 export function mergeDebris(field: DebrisField | null, add: DebrisAmount, location: { uid: string; pseudo: string }, now: number): DebrisField {
   const alive = field && field.expiresAtMs > now ? field : null;
   return {
-    id: location.uid,
+    id: debrisKey(location.uid),
+    locationId: location.uid,
     locationPseudo: location.pseudo,
     scrap: (alive?.scrap ?? 0) + add.scrap,
     energy: (alive?.energy ?? 0) + add.energy,

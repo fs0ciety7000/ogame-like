@@ -1478,6 +1478,13 @@
         "presentable": false
       },
       {
+        "name": "locationId",
+        "type": "text",
+        "required": false,
+        "max": 40,
+        "presentable": false
+      },
+      {
         "name": "scrap",
         "type": "number",
         "required": false,
