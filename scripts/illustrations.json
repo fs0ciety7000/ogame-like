@@ -564,6 +564,18 @@
    "quality": 80,
    "prompt": "sci-fi strategy game key art, a sprawling interstellar empire seen from high orbit, a glowing home planet on the right connected by luminous trade routes to several distinct colony worlds (rusty iron world, crystalline ice moon, toxic green jungle planet), fleets of tiny ships following the routes, holographic tactical overlay lines and numbers floating in space, calm dark starfield on the left third, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed --ar 16:9 --v 7 --style raw",
    "done": null
+  },
+  {
+   "id": "annonce-6.14",
+   "group": "Annonces",
+   "name": "Annonce 6.14 « la grande mise à jour » (16:9)",
+   "target": "public/assets/story/v6-14-grande-maj.webp",
+   "width": 1920,
+   "height": 0,
+   "cutout": false,
+   "quality": 80,
+   "prompt": "sci-fi strategy game key art, an interstellar empire waking up at dawn: a home planet with a small grey moon, fleets of different classes leaving orbit in formation, colony worlds lit along luminous trade routes, an amber insectoid trading station glowing in the distance, calm dark starfield on the left third for text, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed, no text --ar 16:9 --v 7 --style raw",
+   "done": null
   }
  ]
 }

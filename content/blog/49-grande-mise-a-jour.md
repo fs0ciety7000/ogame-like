@@ -48,6 +48,15 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 - **Portefeuille** : chaque chiffre expliqué, d'où il vient.
 - Confirmations avant les départs et les demi-tours irréversibles.
 
+## Pour aller plus loin
+
+- **Piller rapporte, les PNJ se calment** (6.2 et 6.6) : pillage, repaires, Traqueur Kesh, plafond des technologies.
+- **Une semaine rythmée, un passe à ton rythme** (6.7 et 6.8) : calendrier, passe et Chroniques générés.
+- **Un Codex complet, un Comptoir illustré** (6.14) : Codex, « Tout réclamer », succès d'alliance, illustrations.
+
+Les billets précédents racontent le reste en détail : Cale sèche, Ordres du jour, classes d'empire, vaisseaux de classe, base avancée,
+jeu sur téléphone, lunes.
+
 ## Et ensuite
 
 Les illustrations définitives arrivent par lots : le Comptoir de la Ruche et quatre technologies sont déjà là. Le reste suit. Dis-nous

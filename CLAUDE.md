@@ -212,9 +212,19 @@ Toujours lire le résultat de l'intégration **avant** de committer.
 
 - Une branche de travail par session ; une PR **par lot terminé** (pas de PR intermédiaire).
 - Chaque lot a sa fiche `docs/changes/` (règle n° 1) ; la PR liste les fiches qu'elle porte.
-- Chaque lot visible par les joueurs a :
-  - un fichier `changelog/AAAA-MM-JJ-slug.md` (frontmatter `version`, `iteration`, `date`, `title`) ;
-  - pour les lots importants, un billet `content/blog/NN-slug.md`.
+- Chaque lot visible par les joueurs a un fichier `changelog/AAAA-MM-JJ-slug.md` (frontmatter `version`, `iteration`, `date`, `title`).
+- > **Instructions (2026-10-07) : à chaque grosse mise à jour -> nouveau billet devblog. Mise à jour du billet devblog « la grande mise
+  > à jour » et autres en fonction des ajustements / nouveautés etc. Plusieurs billets créés si grosse maj (changelog).**
+
+  Grosse mise à jour = lot important, ou mise en production qui groupe plusieurs versions. Elle a un billet récapitulatif et un billet
+  par thème (`content/blog/NN-slug.md`, chiffres repris des changelogs). Tant qu'un billet n'est pas publié, chaque ajustement ou nouveauté
+  du même ensemble le met à jour : récapitulatif `49-grande-mise-a-jour.md` et billets 50 à 52 pour la mise en production 5.27 → 6.14.
+- > **Instructions (2026-10-07) : à l'arrivée d'un billet « grosse mise à jour », il faut créer une « annonce » avec la modale etc. La
+  > modale ne s'ouvre qu'une fois par joueur (peu importe le navigateur etc). Les annonces peuvent se revoir sur /game/annonces.**
+
+  Nouvelle entrée en tête de `ANNOUNCEMENTS` (`Announcement.tsx`), avec un identifiant inédit. La modale s'affiche une fois par compte :
+  la vue est gardée côté serveur (`announcementsSeen`, action `seenAnnouncements`), quel que soit l'appareil. Elle reste consultable sur
+  `/game/annonces`. Son illustration va dans `scripts/illustrations.json` (page `/img`).
 - Après la fusion d'une PR qui touche `pocketbase/pb_hooks`, rappeler à l'admin de cliquer « Mettre à jour les hooks ».
 - Aucun secret (mot de passe, jeton) dans le dépôt, même temporaire.
 - `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).

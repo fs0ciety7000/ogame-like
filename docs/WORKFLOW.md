@@ -146,7 +146,7 @@ sans objet, ou reporté au lot X.
 | 11 | **Équilibre** | simulateur, « et si », analyse d'équilibrage, mesure dans la santé de l'équilibre si utile | `simulator.ts`, `whatIf.ts`, `balance/` |
 | 12 | **Interface** | page ou carte, recherche Ctrl+K, page Formules, Journal, notification, tutoriel avancé si c'est une étape | `src/pages/`, `CommandPalette`, `FormulasPage`, `timeline.ts`, `advancedGuide.ts` |
 | 13 | **Illustrations** | image provisoire ; ligne dans `scripts/illustrations.json` (prompt, format, détourage), visible sur `test.fs0ciety.org/img` ; envoi par lot, reconnaissance et intégration (`docs/illustrations.md`) | `public/assets/…` |
-| 14 | **Joueurs** | changelog ; billet de devblog pour un contenu important | `changelog/`, `content/blog/` |
+| 14 | **Joueurs** | changelog ; grosse mise à jour : billet récapitulatif et billets par thème, tenus à jour jusqu'à publication, et annonce (modale vue une fois par compte, revisible sur `/game/annonces`) | `changelog/`, `content/blog/`, `ANNOUNCEMENTS` (`Announcement.tsx`) |
 | 15 | **Pré-prod** | déploiement et essai sur `test.fs0ciety.org` avant la PR | `docs/preprod.md` |
 
 Exemple : un nouveau vaisseau « Corvette ».

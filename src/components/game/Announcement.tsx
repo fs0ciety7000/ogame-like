@@ -49,6 +49,25 @@ export interface Announcement {
 
 export const ANNOUNCEMENTS: Announcement[] = [
   {
+    // 6.14.33 : grande mise à jour (5.27 → 6.14), avec le billet « la grande mise à jour » (content/blog/49).
+    // Illustration provisoire : celle du récapitulatif 5.7, en attendant le rendu (`annonce-6.14` sur /img).
+    id: "v6.14-grande-maj",
+    eyebrow: "Mise à jour 6.14 · La grande mise à jour",
+    title: "Tout l'empire a bougé d'un coup",
+    text: "45 nouveautés arrivent ensemble : classes d'empire, lunes, bases avancées, Ordres du jour, un Codex complet. Le récapitulatif est sur le devblog, le détail dans Nouveautés.",
+    factions: [],
+    tone: "gold",
+    art: "/assets/story/v5-recap.webp",
+    artMobile: "/assets/story/v5-recap.webp",
+    features: [
+      { title: "Classes d'empire", text: "Industriel, Seigneur de guerre ou Explorateur : un bonus et un vaisseau de classe. Premier choix gratuit.", to: "/game/classe", image: "/assets/logo/logo.webp" },
+      { title: "Ordres du jour", text: "Toutes tes corvées au même endroit, et « Tout réclamer » en un clic.", to: "/game/ordres", image: "/assets/bounties/items/priority.webp" },
+      { title: "Lunes", text: "Un gros combat chez toi peut faire naître une lune : bouclier et abri en plus.", to: "/game/statistiques", image: "/assets/moon/lune.webp" },
+      { title: "Codex et Comptoir", text: "Bâtiments et technologies au Codex ; le Comptoir illustré.", to: "/game/codex", image: "/assets/bounties/items/weekly-rareRelic.webp" },
+    ],
+    cta: { label: "Voir les nouveautés", to: "/game/nouveautes" },
+  },
+  {
     id: "v5.7-recap",
     eyebrow: "Mise à jour 5.7 · Le grand récapitulatif",
     title: "Ton empire a changé d'échelle",
