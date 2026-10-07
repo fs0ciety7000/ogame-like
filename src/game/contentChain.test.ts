@@ -11,7 +11,6 @@ import { UNITS } from "@/game/units";
  * `*` remplace l'identifiant quand tout un type de contenu manque le maillon (un rattrapage le règle d'un coup).
  */
 const KNOWN_GAPS: Record<string, string> = {
-  "allianceBoss:*:achievementEntry": "C4 : succès des boss d'alliance (mesure à créer)",
 };
 
 const known = (gap: string) => {

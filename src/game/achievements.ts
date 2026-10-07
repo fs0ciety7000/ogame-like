@@ -1,6 +1,7 @@
 import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/game/commanders";
 import { SEASON_CATALOG } from "@/game/seasonCatalog";
 import { WORLD_BOSSES } from "@/game/worldBosses";
+import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import { BUILDINGS, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
@@ -152,6 +153,15 @@ export const METRICS = {
   rareOfficers: { label: "Officiers rares dans l'état-major", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => findCommander(id)?.rare).length },
   seasonCommanders: { label: "Commandants de saison gagnés", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => isSeasonOfficer(id)).length },
   worldBossTypes: { label: "Boss mondiaux différents abattus", value: (p: PlayerState) => (playerStats(p).worldBossKilled ?? []).length },
+  // 6.14.14 (C4) : boss d'alliance ; le tableau complet lit la liste en vigueur à l'usage (jamais au chargement du module).
+  allianceBossTypes: { label: "Boss d'alliance différents abattus", value: (p: PlayerState) => (playerStats(p).allianceBossKilled ?? []).length },
+  allianceBossAll: {
+    label: "Tous les boss d'alliance abattus (0/1)",
+    value: (p: PlayerState) => {
+      const seen = new Set(playerStats(p).allianceBossKilled ?? []);
+      return ALLIANCE_BOSSES.length > 0 && ALLIANCE_BOSSES.every((b) => seen.has(b.id)) ? 1 : 0;
+    },
+  },
   // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p: PlayerState) => Math.max(0, Math.floor(Number((p.casino as { jackpots?: number } | undefined)?.jackpots) || 0)) },
   // 5.26.1 : systèmes récents (Atelier, modules, enchères, reliques, primes).
@@ -356,6 +366,9 @@ export function derivedAchievements(): AchievementDef[] {
     // 6.14.3 (P29-1, Q20) : lunes.
     def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir naître une lune au-dessus de ta planète mère.", "🌙", { auto: true, secret: true }),
     def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "🌕", { auto: true }),
+    // 6.14.14 (C4) : boss d'alliance (chaîne de contenu), palier complet lu à l'usage (allianceBossAll).
+    def("boss_alliance_1", "alliance", "argent", "allianceBossTypes", 1, "Frappe d'alliance", "Abattre un boss d'alliance en y prenant ta part.", "🛡️", { auto: true }),
+    def("boss_alliance_all", "alliance", "or", "allianceBossAll", 1, "Trophées d'alliance", "Abattre chaque boss d'alliance au moins une fois.", "🏆", { auto: true, secret: true }),
     def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs différents en vendetta.", "💀", { auto: true }),
     def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitué du casino", "Jouer 10 tours au Casino orbital.", "🎰", { auto: true }),
     def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "🍀", { auto: true }),

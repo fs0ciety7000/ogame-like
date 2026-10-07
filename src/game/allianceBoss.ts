@@ -199,6 +199,10 @@ export function grantAllianceBossReward(
     return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
   }
   addPassPoints(player, "allianceBoss", now);
+  // 6.14.14 (C4) : trophée du boss (succès et chaîne de contenu).
+  const bossId = allianceBossDef(state).id;
+  const killed = player.stats?.allianceBossKilled ?? [];
+  if (!killed.includes(bossId)) player.stats = { ...(player.stats ?? {}), allianceBossKilled: [...killed, bossId] };
   const gain = productionHours(player, ALLIANCE_BOSS_RULES.rewardHours);
   for (const [res, n] of Object.entries(gain) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
   if (ranking[0]?.uid === player.uid) {

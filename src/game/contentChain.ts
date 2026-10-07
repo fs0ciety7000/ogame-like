@@ -52,7 +52,7 @@ export const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMe
   tech: { entry: ["techCount"], mastery: ["techsMaxedPct", "maxTechLevel"] },
   relic: { entry: ["relicsOwned"], mastery: null },
   worldBoss: { entry: ["worldBossTypes"], mastery: null },
-  allianceBoss: { entry: [], mastery: null },
+  allianceBoss: { entry: ["allianceBossTypes"], mastery: ["allianceBossAll"] },
   seasonBoss: { entry: ["bossSeals"], mastery: null },
 };
 

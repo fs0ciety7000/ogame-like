@@ -48,6 +48,8 @@ export interface PlayerStats {
   threatenedBy?: string[];
   /** v5.14 : boss mondiaux abattus (identifiants, une fois chacun). */
   worldBossKilled?: string[];
+  /** 6.14.14 (C4) : boss d'alliance abattus avec une part suffisante des dégâts (identifiants, une fois chacun). */
+  allianceBossKilled?: string[];
   /** Raids subis pendant qu'une flotte était en patrouille. */
   evasions?: number;
   /** Victoire dans l'heure suivant une défaite. */

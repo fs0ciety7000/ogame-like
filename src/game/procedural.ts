@@ -646,7 +646,8 @@ export function monthsToGenerate(existing: Pick<ChronicleMonth, "id">[], now: nu
 
 /* ---------- succès : paliers suivants ---------- */
 
-const NO_EXTENSION = new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel"]);
+// 6.14.14 : allianceBossTypes plafonne au nombre de boss d'alliance (le palier complet est allianceBossAll).
+const NO_EXTENSION = new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel", "allianceBossTypes"]);
 const NEXT_TIER: Record<AchievementTier, AchievementTier> = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 

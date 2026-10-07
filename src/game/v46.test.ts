@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { METRICS } from "@/game/achievements";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import {
   ALLIANCE_BOSS_RULES,
+  ALLIANCE_BOSSES,
+  allianceBossDef,
   allianceBossCost,
   allianceBossOfWeek,
   allianceBossRefund,
@@ -89,6 +92,15 @@ describe("v4.6 alliance boss", () => {
     const small = grantAllianceBossReward(st, members[2], NOW);
     expect(small).toMatchObject({ points: PASS_POINTS.allianceBossTry, gain: {} });
     expect(grantAllianceBossReward(st, members[1], NOW).points).toBe(0);
+    // 6.14.14 (C4) : trophée gardé une fois, seulement pour une part suffisante des dégâts.
+    expect(members[0].stats?.allianceBossKilled).toEqual([allianceBossDef(st).id]);
+    grantAllianceBossReward(st, members[0], NOW, () => 0.9);
+    expect(members[0].stats?.allianceBossKilled).toEqual([allianceBossDef(st).id]);
+    expect(members[2].stats?.allianceBossKilled).toBeUndefined();
+    expect(METRICS.allianceBossTypes.value(members[0])).toBe(1);
+    expect(METRICS.allianceBossAll.value(members[0])).toBe(0);
+    members[0].stats = { ...members[0].stats, allianceBossKilled: ALLIANCE_BOSSES.map((b) => b.id) };
+    expect(METRICS.allianceBossAll.value(members[0])).toBe(1);
     expect(passState(members[0], NOW).points).toBeGreaterThanOrEqual(PASS_POINTS.allianceBoss);
     const refund = allianceBossRefund(st);
     expect(refund.scrap).toBe(Math.floor(st.cost.scrap! * ALLIANCE_BOSS_RULES.refundPct));

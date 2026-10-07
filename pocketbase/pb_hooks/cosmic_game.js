@@ -9200,6 +9200,481 @@ function settleLegacyDaily(player, now) {
   return tokens;
 }
 
+// src/game/leviathan.ts
+var LEVIATHAN_KEY = "leviathan";
+var FEED_MAX = 40;
+var LEVIATHAN_RULES = {
+  name: "Le L\xE9viathan",
+  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
+  hpFactor: 4,
+  minHp: 1e5,
+  durationHours: 72,
+  /** v5.10.4 : heure d'apparition le vendredi (heure de Paris). Le week-end du mois et
+   *  l'activation sont dans les règles des événements (bossWeekend, bossMonthly). */
+  startHour: 18,
+  /** Un assaut toutes les N heures par joueur. */
+  cooldownHours: 4,
+  /** Trajet aller (et retour), en minutes. */
+  flightMinutes: 30,
+  /** Part de chaque type de vaisseau détruite à chaque assaut (réparable à l'Atelier). */
+  lossPct: 0.08,
+  /** Récompense : base + bonus × √(dégâts / dégâts du premier), en heures de production.
+   *  v5.13 : racine carrée, pour que les gros participants ne soient plus loin derrière le premier. */
+  baseRewardHours: 3,
+  bonusRewardHours: 12,
+  /** v5.13 : bonus du podium (1er, 2e, 3e) quand le Léviathan tombe, en heures de production. */
+  podiumHours: [6, 4, 2],
+  /** v5.13 : reliques épiques pour les N premiers (rare pour les autres participants). */
+  topRelics: 3,
+  /** v5.13 : Ambre versée à la place d'une relique quand la collection est pleine. */
+  relicAmber: { epic: 60, rare: 30 },
+  /** Récompenses si le Léviathan survit. */
+  failedRewardFactor: 0.5,
+  title: "Fl\xE9au du L\xE9viathan",
+  titleDays: 7
+};
+var HOUR5 = 36e5;
+function normalizeLeviathan(raw) {
+  var _a;
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.maxHp) > 0)) return null;
+  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadProps(__spreadValues({
+    id: String(r.id)
+  }, r.bossId ? { bossId: String(r.bossId) } : {}), {
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs) || 0,
+    maxHp: Number(r.maxHp),
+    hp: Math.max(0, Number(r.hp) || 0),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
+    endedAtMs: Number(r.endedAtMs) || 0,
+    rewarded: r.rewarded === true,
+    titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
+    timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
+  }), r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {}), r.endingNotified === true ? { endingNotified: true } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
+}
+function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
+  var _a;
+  if (state.status !== "killed" || state.killedBy) return (_a = state.killedBy) != null ? _a : null;
+  const end = state.endedAtMs || state.endMs;
+  let best = null;
+  for (const [uid, c] of Object.entries(state.contributions)) {
+    if (!c || !(c.damage > 0) || !(c.lastLaunchMs >= state.startMs)) continue;
+    const at = c.lastLaunchMs + flightMinutes * 6e4;
+    if (at > end + 6e4) continue;
+    if (!best || at > best.at) best = { uid, pseudo: c.pseudo, at };
+  }
+  return best ? { uid: best.uid, pseudo: best.pseudo } : null;
+}
+function leviathanSchedule() {
+  var _a, _b, _c, _d;
+  const weekly = EVENT_RULES.bossWeekly !== false;
+  const minGapDays = Math.min(6, Math.max(WORLD_BOSS_RULES.minGapDays, Math.ceil(LEVIATHAN_RULES.durationHours / 24)));
+  return __spreadValues({
+    enabled: weekly || EVENT_RULES.bossMonthly !== false,
+    weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first",
+    startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18,
+    durationHours: LEVIATHAN_RULES.durationHours,
+    dates: (_c = EVENT_RULES.bossDates) != null ? _c : [],
+    skips: (_d = EVENT_RULES.bossSkips) != null ? _d : []
+  }, weekly ? { weekly: { minGapDays } } : {});
+}
+function worldBossForStart(startMs) {
+  return EVENT_RULES.bossWeekly === false ? findWorldBoss("leviathan") : worldBossOfWeek(weekOfLocal(startMs + parisOffsetMs(startMs)));
+}
+function worldBossOf(state) {
+  return findWorldBoss(state == null ? void 0 : state.bossId);
+}
+var worldBossName = (state) => worldBossOf(state).name;
+var worldBossTitle = (state) => worldBossOf(state).title;
+function leviathanWindow(now) {
+  const [w] = bossWindows(now, leviathanSchedule(), 1);
+  if (!w || now < w.startMs) return null;
+  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs: w.endMs };
+}
+function nextLeviathanStart(now) {
+  var _a, _b;
+  return (_b = (_a = bossWindows(now, leviathanSchedule(), 1)[0]) == null ? void 0 : _a.startMs) != null ? _b : null;
+}
+function isActive(state, now) {
+  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
+}
+function leviathanHp(activePlayers) {
+  const power = activePlayers.reduce((a, p) => {
+    var _a, _b;
+    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  }, 0);
+  return Math.max(LEVIATHAN_RULES.minHp, Math.round(power * LEVIATHAN_RULES.hpFactor));
+}
+function spawnLeviathan(window, activePlayers, previous, bossId) {
+  var _a;
+  const boss = bossId ? findWorldBoss(bossId) : worldBossForStart(window.startMs);
+  const maxHp = Math.max(LEVIATHAN_RULES.minHp, Math.round(leviathanHp(activePlayers) * boss.hpMult));
+  return __spreadProps(__spreadValues({}, window), { bossId: boss.id, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: (_a = previous == null ? void 0 : previous.titleHolder) != null ? _a : null, timeline: [{ t: window.startMs, hp: maxHp }] });
+}
+function checkLeviathanLaunch(state, uid, pseudo, now) {
+  var _a, _b;
+  if (!state || !isActive(state, now)) throw new GameActionError(`${worldBossName(state)} n'est pas l\xE0 en ce moment.`);
+  const c = state.contributions[uid];
+  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR5 - now : 0;
+  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
+}
+var SEASON_BOSS_TUNING = {};
+var isSeasonBossState = (state) => {
+  var _a;
+  return !!((_a = state == null ? void 0 : state.id) == null ? void 0 : _a.startsWith("boss-"));
+};
+var seasonBossCooldownHours = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.cooldownHours) != null ? _a : LEVIATHAN_RULES.cooldownHours;
+};
+var seasonBossFlightMinutes = () => {
+  var _a;
+  return (_a = SEASON_BOSS_TUNING.flightMinutes) != null ? _a : LEVIATHAN_RULES.flightMinutes;
+};
+function bossTuning(state) {
+  var _a, _b;
+  if (state.bossId) {
+    const b = findWorldBoss(String(state.bossId));
+    return { lossMult: b.lossMult, weakness: b.weakness };
+  }
+  if (isSeasonBossState(state)) return { lossMult: (_a = SEASON_BOSS_TUNING.lossMult) != null ? _a : 1, weakness: (_b = SEASON_BOSS_TUNING.weakness) != null ? _b : [] };
+  return { lossMult: 1, weakness: [] };
+}
+var BOSS_PHASE_RULES = {
+  /** Phase 2 sous cette part de structure : riposte. */
+  ripostePct: 0.5,
+  riposteLossFactor: 1.5,
+  /** Phase 3 sous cette part : bouclier et faiblesse. */
+  shieldPct: 0.25,
+  shieldDamageFactor: 0.85,
+  weaknessFactor: 1.5
+};
+var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
+function bossFightPhase(state) {
+  const pct7 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
+  return pct7 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct7 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
+}
+function bossWeakness(state) {
+  const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
+  const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
+  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
+  let h = 0;
+  for (const ch of state.id) h = h * 31 + ch.charCodeAt(0) >>> 0;
+  return list.length ? list[h % list.length] : "";
+}
+var BOSS_PHASE_INFO = {
+  1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
+  2: { name: "Riposte", desc: `Bless\xE9, il riposte : pertes \xD7${BOSS_PHASE_RULES.riposteLossFactor} \xE0 chaque assaut.` },
+  3: { name: "Carapace fissur\xE9e", desc: `Il se replie derri\xE8re un bouclier (\u2212${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de d\xE9g\xE2ts), mais sa faiblesse est expos\xE9e : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de d\xE9g\xE2ts pour ce type de vaisseau.` }
+};
+function bossAssaultEstimate(state, player, fleet, formation) {
+  const fx = formationEffects(formation);
+  const base = computeFleetPower(player.units, player.techLevels, fleet, ["attack"]);
+  const phase = bossFightPhase(state);
+  let phaseFactor = 1;
+  if (phase === 3 && base > 0) {
+    const weak = bossWeakness(state);
+    const weakPower = fleet[weak] ? computeFleetPower(player.units, player.techLevels, { [weak]: fleet[weak] }, ["attack"]) : 0;
+    const share = Math.min(1, weakPower / base);
+    phaseFactor = share * BOSS_PHASE_RULES.weaknessFactor + (1 - share) * BOSS_PHASE_RULES.shieldDamageFactor;
+  }
+  const mods = playerModifiers(player);
+  const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
+  const lossMult = bossTuning(state).lossMult;
+  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
+  return { power, lossPct, phase };
+}
+var BOSS_REACTIONS = ["\u{1F525}", "\u{1F4A5}", "\u{1F44F}", "\u{1F631}", "\u{1FAE1}"];
+var REACTORS_MAX = 200;
+function bossFeedKey(f) {
+  var _a, _b;
+  return `${f.t}:${(_b = f.uid) != null ? _b : `p${(_a = f.phase) != null ? _a : 0}`}`;
+}
+function reactToBossFeed(state, key, uid, emoji) {
+  var _a, _b, _c, _d, _e;
+  if (!BOSS_REACTIONS.includes(emoji)) throw new GameActionError("R\xE9action inconnue.");
+  const feed = (_a = state.feed) != null ? _a : [];
+  const i = feed.findIndex((f) => bossFeedKey(f) === key);
+  if (i < 0) throw new GameActionError("Cette ligne du fil a disparu.");
+  const entry = feed[i];
+  if (entry.uid === uid) throw new GameActionError("On ne s'applaudit pas soi-m\xEAme.");
+  const had = (_c = Object.entries((_b = entry.reactions) != null ? _b : {}).find(([, who]) => who.includes(uid))) == null ? void 0 : _c[0];
+  const reactions = {};
+  for (const [e3, who] of Object.entries((_d = entry.reactions) != null ? _d : {})) {
+    const rest = who.filter((u) => u !== uid);
+    if (rest.length) reactions[e3] = rest;
+  }
+  if (had !== emoji) reactions[emoji] = [...(_e = reactions[emoji]) != null ? _e : [], uid].slice(-REACTORS_MAX);
+  const next = [...feed];
+  next[i] = __spreadProps(__spreadValues({}, entry), { reactions });
+  return __spreadProps(__spreadValues({}, state), { feed: next });
+}
+function resolveLeviathanAssault(state, player, fleet, formation, now) {
+  var _a, _b;
+  const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
+  const active = isActive(state, now);
+  const damage = active ? Math.min(state.hp, power) : 0;
+  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
+  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
+  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
+  const hp = state.hp - damage;
+  const killed = active && hp <= 0;
+  let feed = (_b = state.feed) != null ? _b : [];
+  if (active && damage > 0) {
+    const before = bossFightPhase(state);
+    const after = bossFightPhase({ hp: Math.max(0, hp), maxHp: state.maxHp });
+    feed = [...feed, __spreadValues({ t: now, uid: player.uid, pseudo: player.pseudo, damage }, killed ? { killed: true } : {})];
+    if (!killed && after > before) feed = [...feed, { t: now, phase: after }];
+    feed = feed.slice(-FEED_MAX);
+  }
+  return {
+    state: __spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({}, state), feed.length ? { feed } : {}), {
+      hp: Math.max(0, hp),
+      status: killed ? "killed" : state.status,
+      endedAtMs: killed ? now : state.endedAtMs
+    }), killed ? { killedBy: { uid: player.uid, pseudo: player.pseudo } } : {}), {
+      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
+    }),
+    damage,
+    survivors,
+    lost,
+    recovered,
+    hull,
+    killed
+  };
+}
+function leviathanRanking(state) {
+  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.damage - a.damage);
+}
+function rewardHours(state, uid) {
+  var _a, _b, _c, _d, _e;
+  const ranking = leviathanRanking(state);
+  const top = (_b = (_a = ranking[0]) == null ? void 0 : _a.damage) != null ? _b : 0;
+  const mine = (_d = (_c = state.contributions[uid]) == null ? void 0 : _c.damage) != null ? _d : 0;
+  if (!(mine > 0) || !(top > 0)) return 0;
+  const hours2 = (LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * Math.sqrt(mine / top)) * worldBossOf(state).rewardMult;
+  if (state.status !== "killed") return hours2 * LEVIATHAN_RULES.failedRewardFactor;
+  const rank2 = ranking.findIndex((r) => r.uid === uid);
+  return hours2 + ((_e = LEVIATHAN_RULES.podiumHours[rank2]) != null ? _e : 0);
+}
+function grantLeviathanReward(state, player, random = Math.random) {
+  var _a, _b, _c, _d, _e, _f;
+  const hours2 = rewardHours(state, player.uid);
+  const gain = hours2 > 0 ? productionHours(player, hours2) : {};
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
+  if (state.status === "killed" && hours2 > 0) {
+    bumpStat(player, "leviathanKills");
+    const id = worldBossOf(state).id;
+    const seen = (_c = (_b = player.stats) == null ? void 0 : _b.worldBossKilled) != null ? _c : [];
+    if (!seen.includes(id)) player.stats = __spreadProps(__spreadValues({}, (_d = player.stats) != null ? _d : {}), { worldBossKilled: [...seen, id] });
+  }
+  const top = leviathanRanking(state)[0];
+  const title = !!top && top.uid === player.uid && state.status === "killed";
+  const label3 = worldBossTitle(state);
+  if (title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === label3)) {
+    player.titles = [...(_f = player.titles) != null ? _f : [], { label: label3, seasonId: `leviathan:${state.id}`, rank: 1 }];
+    player.activeTitle = label3;
+  }
+  if (state.status === "killed" && hours2 > 0) {
+    const rank2 = leviathanRanking(state).findIndex((r) => r.uid === player.uid);
+    const rarity = rank2 >= 0 && rank2 < LEVIATHAN_RULES.topRelics ? "epic" : "rare";
+    const item = rollRelic("leviathan", Date.now(), random, rarity);
+    if (addRelic(player, item)) return { gain, title, relic: relicLabel(item) };
+    const amber = LEVIATHAN_RULES.relicAmber[rarity];
+    const b = bountyState(player);
+    b.amber += amber;
+    player.bounties = b;
+    return { gain, title, amber };
+  }
+  return { gain, title };
+}
+function removeLeviathanTitle(player, label3 = LEVIATHAN_RULES.title) {
+  var _a, _b;
+  player.titles = ((_a = player.titles) != null ? _a : []).filter((t) => t.label !== label3);
+  if (player.activeTitle === label3) player.activeTitle = (_b = player.titles[0]) == null ? void 0 : _b.label;
+}
+function closeLeviathan(state, now) {
+  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
+  return state;
+}
+var TIMELINE_MAX = 120;
+function recordLeviathanTimeline(state, now) {
+  if (!isActive(state, now)) return state;
+  const last = state.timeline[state.timeline.length - 1];
+  if (last && now - last.t < HOUR5) return state;
+  return __spreadProps(__spreadValues({}, state), { timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) });
+}
+function resizeLeviathan(state, maxHp, now) {
+  if (!isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
+  const next = Math.round(maxHp);
+  const done = state.maxHp - state.hp;
+  if (!(next > done)) throw new GameActionError(`La structure doit d\xE9passer les d\xE9g\xE2ts d\xE9j\xE0 inflig\xE9s (${done}).`);
+  return __spreadProps(__spreadValues({}, state), { maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) });
+}
+function rescheduleBoss(state, endMs, now) {
+  if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
+  const end = Math.round(endMs);
+  if (!(end > now + 5 * 6e4)) throw new GameActionError("La nouvelle fin doit \xEAtre dans plus de 5 minutes.");
+  if (end - state.startMs > 14 * 24 * HOUR5) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
+  const next = __spreadProps(__spreadValues({}, state), { endMs: end });
+  if (end - now > BOSS_REMINDERS.endingHours * HOUR5) delete next.endingNotified;
+  return next;
+}
+function endingReminderDue(state, now) {
+  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR5;
+}
+
+// src/game/allianceBoss.ts
+var ALLIANCE_BOSS_RULES = {
+  /** Structure : ce facteur × puissance d'attaque des membres actifs (7 j). */
+  hpFactor: 2.5,
+  minHp: 5e4,
+  durationHours: 24,
+  cooldownHours: 4,
+  flightMinutes: 20,
+  /** Coût d'appel : heures de production cumulée de tous les membres. */
+  costHours: 3,
+  /** Part du coût rendue au trésor si le boss tombe. */
+  refundPct: 0.5,
+  /** Part minimale des dégâts pour être récompensé. */
+  minSharePct: 0.05,
+  rewardHours: 2,
+  killPoints: 40,
+  failPoints: 15
+};
+var DEFAULT_ALLIANCE_BOSSES = [
+  { id: "gravhorn", name: "Cuirass\xE9 Gravhorn", image: "/assets/story/gravhorn.webp", lore: "Un cuirass\xE9 du Syndicat, blind\xE9 comme un coffre-fort, venu saisir les dettes de ton alliance." },
+  { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
+  { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
+];
+var ALLIANCE_BOSSES = DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b));
+function setAllianceBosses(defs) {
+  const list = (defs != null ? defs : []).filter((b) => {
+    var _a, _b;
+    return b && /^[a-z0-9_]+$/.test((_a = b.id) != null ? _a : "") && String((_b = b.name) != null ? _b : "").trim();
+  });
+  ALLIANCE_BOSSES.splice(0, ALLIANCE_BOSSES.length, ...(list.length ? list : DEFAULT_ALLIANCE_BOSSES).map((b) => __spreadValues({}, b)));
+}
+var DAY7 = 24 * 36e5;
+var HOUR6 = 36e5;
+function allianceWeekId(now) {
+  const day = parisDay(now);
+  const t = Date.parse(`${day}T00:00:00Z`);
+  const dow = new Date(t).getUTCDay();
+  return new Date(t - (dow + 6) % 7 * DAY7).toISOString().slice(0, 10);
+}
+function allianceBossOfWeek(now) {
+  const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
+  const index2 = Math.floor(monday / (7 * DAY7));
+  return ALLIANCE_BOSSES[(index2 % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
+}
+function allianceBossDef(state) {
+  var _a;
+  return (_a = ALLIANCE_BOSSES.find((b) => b.id === state.bossId)) != null ? _a : ALLIANCE_BOSSES[0];
+}
+function normalizeAllianceBoss(raw) {
+  var _a, _b, _c, _d;
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw;
+  if (!r.id || !(Number(r.maxHp) > 0)) return null;
+  return __spreadValues(__spreadValues(__spreadValues({
+    id: String(r.id),
+    startMs: Number(r.startMs) || 0,
+    endMs: Number(r.endMs) || 0,
+    maxHp: Number(r.maxHp),
+    hp: Math.max(0, Number(r.hp) || 0),
+    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
+    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
+    endedAtMs: Number(r.endedAtMs) || 0,
+    rewarded: r.rewarded === true,
+    titleHolder: null,
+    timeline: Array.isArray(r.timeline) ? r.timeline : [],
+    weekId: String((_a = r.weekId) != null ? _a : ""),
+    bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
+    launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
+    cost: r.cost && typeof r.cost === "object" ? r.cost : {}
+  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_d = r.killedBy.pseudo) != null ? _d : "") } } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
+}
+function allianceBossCost(members) {
+  var _a, _b;
+  const cost = {};
+  for (const m of members) {
+    for (const [res, n] of Object.entries(productionHours(m, ALLIANCE_BOSS_RULES.costHours))) cost[res] = ((_a = cost[res]) != null ? _a : 0) + n;
+  }
+  for (const k of Object.keys(cost)) cost[k] = Math.ceil((_b = cost[k]) != null ? _b : 0);
+  return cost;
+}
+function allianceBossHp(activeMembers) {
+  const power = activeMembers.reduce((a, p) => {
+    var _a, _b;
+    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
+  }, 0);
+  return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
+}
+function canCallAllianceBoss(alliance, uid) {
+  var _a;
+  return hasAlliancePerm(__spreadProps(__spreadValues({}, alliance), { members: (_a = alliance.members) != null ? _a : [uid] }), uid, "boss");
+}
+function callAllianceBoss(alliance, previous, members, activeMembers, uid, now, worldBoss = null) {
+  var _a, _b, _c;
+  if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
+  const weekId2 = allianceWeekId(now);
+  if (previous && previous.weekId === weekId2) throw new GameActionError("Le boss d'alliance a d\xE9j\xE0 \xE9t\xE9 appel\xE9 cette semaine (prochain lundi).");
+  if (worldBoss && worldBoss.endMs > now) throw new GameActionError(`En alternance avec le boss mondial : il est l\xE0 jusqu'au ${parisWhenLabel(worldBoss.endMs)}. Appelle le boss d'alliance apr\xE8s son d\xE9part.`);
+  const cost = allianceBossCost(members);
+  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
+  for (const [res, n] of Object.entries(cost)) {
+    if (((_b = treasury[res]) != null ? _b : 0) < n) throw new GameActionError("Le tr\xE9sor de l'alliance ne suffit pas pour appeler le boss.");
+  }
+  for (const [res, n] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - n;
+  alliance.treasury = treasury;
+  const boss = allianceBossOfWeek(now);
+  const maxHp = allianceBossHp(activeMembers);
+  const endMs = now + ALLIANCE_BOSS_RULES.durationHours * HOUR6;
+  return { id: `ab-${weekId2}`, startMs: now, endMs, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [{ t: now, hp: maxHp }], weekId: weekId2, bossId: boss.id, launchedBy: uid, cost };
+}
+function checkAllianceBossLaunch(state, uid, pseudo, now) {
+  var _a, _b;
+  if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError("Aucun boss d'alliance \xE0 combattre en ce moment.");
+  const c = state.contributions[uid];
+  const wait = c ? c.lastLaunchMs + ALLIANCE_BOSS_RULES.cooldownHours * HOUR6 - now : 0;
+  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
+  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
+}
+function allianceBossRefund(state) {
+  if (state.status !== "killed") return {};
+  return Object.fromEntries(Object.entries(state.cost).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * ALLIANCE_BOSS_RULES.refundPct)]));
+}
+function grantAllianceBossReward(state, player, now, random = Math.random) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  const ranking = leviathanRanking(state);
+  const total2 = ranking.reduce((a, c) => a + c.damage, 0);
+  const mine = (_b = (_a = state.contributions[player.uid]) == null ? void 0 : _a.damage) != null ? _b : 0;
+  if (!(mine > 0)) return { points: 0, gain: {} };
+  if (state.status !== "killed") {
+    addPassPoints(player, "allianceBossTry", now);
+    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
+  }
+  if (mine < total2 * ALLIANCE_BOSS_RULES.minSharePct) {
+    addPassPoints(player, "allianceBossTry", now);
+    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
+  }
+  addPassPoints(player, "allianceBoss", now);
+  const bossId = allianceBossDef(state).id;
+  const killed = (_d = (_c = player.stats) == null ? void 0 : _c.allianceBossKilled) != null ? _d : [];
+  if (!killed.includes(bossId)) player.stats = __spreadProps(__spreadValues({}, (_e = player.stats) != null ? _e : {}), { allianceBossKilled: [...killed, bossId] });
+  const gain = productionHours(player, ALLIANCE_BOSS_RULES.rewardHours);
+  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_f = player.resources[res]) != null ? _f : 0) + n;
+  if (((_g = ranking[0]) == null ? void 0 : _g.uid) === player.uid) {
+    const item = rollRelic("allianceBoss", now, random, "rare");
+    if (addRelic(player, item)) return { points: ALLIANCE_BOSS_RULES.killPoints, gain, relic: relicLabel(item) };
+  }
+  return { points: ALLIANCE_BOSS_RULES.killPoints, gain };
+}
+
 // src/game/planetLook.ts
 var DEFAULT_PLANET_LOOK = { palette: "ocean", ring: "thin", atmosphere: "clear", moon: "none" };
 var hasPlanetFx = (p) => {
@@ -9572,6 +10047,19 @@ var METRICS = {
     var _a;
     return ((_a = playerStats(p).worldBossKilled) != null ? _a : []).length;
   } },
+  // 6.14.14 (C4) : boss d'alliance ; le tableau complet lit la liste en vigueur à l'usage (jamais au chargement du module).
+  allianceBossTypes: { label: "Boss d'alliance diff\xE9rents abattus", value: (p) => {
+    var _a;
+    return ((_a = playerStats(p).allianceBossKilled) != null ? _a : []).length;
+  } },
+  allianceBossAll: {
+    label: "Tous les boss d'alliance abattus (0/1)",
+    value: (p) => {
+      var _a;
+      const seen = new Set((_a = playerStats(p).allianceBossKilled) != null ? _a : []);
+      return ALLIANCE_BOSSES.length > 0 && ALLIANCE_BOSSES.every((b) => seen.has(b.id)) ? 1 : 0;
+    }
+  },
   // v5.14.2 : gros lots (7-7-7) remportés au Casino orbital.
   casinoJackpots: { label: "Gros lots 7-7-7 au casino", value: (p) => {
     var _a;
@@ -9826,6 +10314,9 @@ function derivedAchievements() {
     // 6.14.3 (P29-1, Q20) : lunes.
     def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir na\xEEtre une lune au-dessus de ta plan\xE8te m\xE8re.", "\u{1F319}", { auto: true, secret: true }),
     def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "\u{1F315}", { auto: true }),
+    // 6.14.14 (C4) : boss d'alliance (chaîne de contenu), palier complet lu à l'usage (allianceBossAll).
+    def("boss_alliance_1", "alliance", "argent", "allianceBossTypes", 1, "Frappe d'alliance", "Abattre un boss d'alliance en y prenant ta part.", "\u{1F6E1}\uFE0F", { auto: true }),
+    def("boss_alliance_all", "alliance", "or", "allianceBossAll", 1, "Troph\xE9es d'alliance", "Abattre chaque boss d'alliance au moins une fois.", "\u{1F3C6}", { auto: true, secret: true }),
     def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs diff\xE9rents en vendetta.", "\u{1F480}", { auto: true }),
     def("casino_1", "prestige", "bronze", "casinoSpins", 10, "Habitu\xE9 du casino", "Jouer 10 tours au Casino orbital.", "\u{1F3B0}", { auto: true }),
     def("casino_2", "prestige", "argent", "casinoWins", 25, "Main heureuse", "Gagner 25 tours au casino.", "\u{1F340}", { auto: true }),
@@ -10027,10 +10518,10 @@ function validateTitles(defs) {
 }
 
 // src/game/weeklyRecap.ts
-var DAY7 = 864e5;
+var DAY8 = 864e5;
 function weekIdOf(now) {
   const d = new Date(now);
-  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY7;
+  const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - (d.getUTCDay() + 6) % 7 * DAY8;
   return new Date(monday).toISOString().slice(0, 10);
 }
 function weeklySnapshot(player, weekId2) {
@@ -10091,8 +10582,8 @@ var VACATION_RULES = {
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48
 };
-var DAY8 = 864e5;
-var HOUR5 = 36e5;
+var DAY9 = 864e5;
+var HOUR7 = 36e5;
 function onVacation(p, now) {
   const v = p.vacation;
   return !!v && !v.endedAtMs && v.startedAtMs <= now && now < v.untilMs;
@@ -10105,17 +10596,17 @@ function startVacation(player, daysIn, ctx, now) {
   }
   if (onVacation(player, now)) throw new GameActionError("Tu es d\xE9j\xE0 en vacances.");
   const lastEnd = (_d = (_c = (_a = player.vacation) == null ? void 0 : _a.endedAtMs) != null ? _c : (_b = player.vacation) == null ? void 0 : _b.untilMs) != null ? _d : 0;
-  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY8) {
-    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY8 - now) / HOUR5);
+  if (lastEnd > 0 && now < lastEnd + VACATION_RULES.cooldownDays * DAY9) {
+    const left = Math.ceil((lastEnd + VACATION_RULES.cooldownDays * DAY9 - now) / HOUR7);
     throw new GameActionError(`Tes derni\xE8res vacances sont trop r\xE9centes : encore ${left} h d'attente.`);
   }
   if (ctx.fleetsAway > 0) throw new GameActionError("Rappelle d'abord tes flottes : elles doivent toutes \xEAtre \xE0 quai.");
   if (ctx.hostileIncoming > 0) throw new GameActionError("Une flotte hostile approche : impossible de partir maintenant.");
   if (ctx.ultimatum) throw new GameActionError("R\xE9ponds d'abord \xE0 l'ultimatum en cours.");
-  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR5) {
+  if (ctx.lastAttackedAtMs > 0 && now - ctx.lastAttackedAtMs < VACATION_RULES.recentAttackHours * HOUR7) {
     throw new GameActionError(`Tu as \xE9t\xE9 attaqu\xE9 il y a moins de ${VACATION_RULES.recentAttackHours} h : les vacances ne servent pas de bouclier d'urgence.`);
   }
-  const v = { startedAtMs: now, untilMs: now + days * DAY8 };
+  const v = { startedAtMs: now, untilMs: now + days * DAY9 };
   player.vacation = v;
   return v;
 }
@@ -10123,8 +10614,8 @@ function endVacation(player, queues, at, early = false) {
   var _a, _b;
   const v = player.vacation;
   if (!v || v.endedAtMs) return;
-  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR5) {
-    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR5 - at) / HOUR5);
+  if (early && at - v.startedAtMs < VACATION_RULES.minStayHours * HOUR7) {
+    const left = Math.ceil((v.startedAtMs + VACATION_RULES.minStayHours * HOUR7 - at) / HOUR7);
     throw new GameActionError(`Retour possible apr\xE8s ${VACATION_RULES.minStayHours} h de vacances : encore ${left} h.`);
   }
   const end = Math.min(at, v.untilMs);
@@ -11861,333 +12352,6 @@ function resolveCombat(params) {
   });
 }
 
-// src/game/leviathan.ts
-var LEVIATHAN_KEY = "leviathan";
-var FEED_MAX = 40;
-var LEVIATHAN_RULES = {
-  name: "Le L\xE9viathan",
-  /** Points de structure : ce facteur × puissance d'attaque des joueurs actifs (7 j). */
-  hpFactor: 4,
-  minHp: 1e5,
-  durationHours: 72,
-  /** v5.10.4 : heure d'apparition le vendredi (heure de Paris). Le week-end du mois et
-   *  l'activation sont dans les règles des événements (bossWeekend, bossMonthly). */
-  startHour: 18,
-  /** Un assaut toutes les N heures par joueur. */
-  cooldownHours: 4,
-  /** Trajet aller (et retour), en minutes. */
-  flightMinutes: 30,
-  /** Part de chaque type de vaisseau détruite à chaque assaut (réparable à l'Atelier). */
-  lossPct: 0.08,
-  /** Récompense : base + bonus × √(dégâts / dégâts du premier), en heures de production.
-   *  v5.13 : racine carrée, pour que les gros participants ne soient plus loin derrière le premier. */
-  baseRewardHours: 3,
-  bonusRewardHours: 12,
-  /** v5.13 : bonus du podium (1er, 2e, 3e) quand le Léviathan tombe, en heures de production. */
-  podiumHours: [6, 4, 2],
-  /** v5.13 : reliques épiques pour les N premiers (rare pour les autres participants). */
-  topRelics: 3,
-  /** v5.13 : Ambre versée à la place d'une relique quand la collection est pleine. */
-  relicAmber: { epic: 60, rare: 30 },
-  /** Récompenses si le Léviathan survit. */
-  failedRewardFactor: 0.5,
-  title: "Fl\xE9au du L\xE9viathan",
-  titleDays: 7
-};
-var HOUR6 = 36e5;
-function normalizeLeviathan(raw) {
-  var _a;
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadValues(__spreadProps(__spreadValues({
-    id: String(r.id)
-  }, r.bossId ? { bossId: String(r.bossId) } : {}), {
-    startMs: Number(r.startMs) || 0,
-    endMs: Number(r.endMs) || 0,
-    maxHp: Number(r.maxHp),
-    hp: Math.max(0, Number(r.hp) || 0),
-    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
-    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
-    endedAtMs: Number(r.endedAtMs) || 0,
-    rewarded: r.rewarded === true,
-    titleHolder: r.titleHolder && r.titleHolder.uid ? r.titleHolder : null,
-    timeline: Array.isArray(r.timeline) ? r.timeline.filter((p) => p && Number.isFinite(p.t) && Number.isFinite(p.hp)) : []
-  }), r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_a = r.killedBy.pseudo) != null ? _a : "") } } : {}), r.archived === true ? { archived: true } : {}), r.legacyChecked === true ? { legacyChecked: true } : {}), r.endingNotified === true ? { endingNotified: true } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
-}
-function inferKilledBy(state, flightMinutes = LEVIATHAN_RULES.flightMinutes) {
-  var _a;
-  if (state.status !== "killed" || state.killedBy) return (_a = state.killedBy) != null ? _a : null;
-  const end = state.endedAtMs || state.endMs;
-  let best = null;
-  for (const [uid, c] of Object.entries(state.contributions)) {
-    if (!c || !(c.damage > 0) || !(c.lastLaunchMs >= state.startMs)) continue;
-    const at = c.lastLaunchMs + flightMinutes * 6e4;
-    if (at > end + 6e4) continue;
-    if (!best || at > best.at) best = { uid, pseudo: c.pseudo, at };
-  }
-  return best ? { uid: best.uid, pseudo: best.pseudo } : null;
-}
-function leviathanSchedule() {
-  var _a, _b, _c, _d;
-  const weekly = EVENT_RULES.bossWeekly !== false;
-  const minGapDays = Math.min(6, Math.max(WORLD_BOSS_RULES.minGapDays, Math.ceil(LEVIATHAN_RULES.durationHours / 24)));
-  return __spreadValues({
-    enabled: weekly || EVENT_RULES.bossMonthly !== false,
-    weekend: (_a = EVENT_RULES.bossWeekend) != null ? _a : "first",
-    startHour: (_b = LEVIATHAN_RULES.startHour) != null ? _b : 18,
-    durationHours: LEVIATHAN_RULES.durationHours,
-    dates: (_c = EVENT_RULES.bossDates) != null ? _c : [],
-    skips: (_d = EVENT_RULES.bossSkips) != null ? _d : []
-  }, weekly ? { weekly: { minGapDays } } : {});
-}
-function worldBossForStart(startMs) {
-  return EVENT_RULES.bossWeekly === false ? findWorldBoss("leviathan") : worldBossOfWeek(weekOfLocal(startMs + parisOffsetMs(startMs)));
-}
-function worldBossOf(state) {
-  return findWorldBoss(state == null ? void 0 : state.bossId);
-}
-var worldBossName = (state) => worldBossOf(state).name;
-var worldBossTitle = (state) => worldBossOf(state).title;
-function leviathanWindow(now) {
-  const [w] = bossWindows(now, leviathanSchedule(), 1);
-  if (!w || now < w.startMs) return null;
-  return { id: `lev-${w.startMs}`, startMs: w.startMs, endMs: w.endMs };
-}
-function nextLeviathanStart(now) {
-  var _a, _b;
-  return (_b = (_a = bossWindows(now, leviathanSchedule(), 1)[0]) == null ? void 0 : _a.startMs) != null ? _b : null;
-}
-function isActive(state, now) {
-  return !!state && state.status === "active" && now >= state.startMs && now < state.endMs && state.hp > 0;
-}
-function leviathanHp(activePlayers) {
-  const power = activePlayers.reduce((a, p) => {
-    var _a, _b;
-    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
-  }, 0);
-  return Math.max(LEVIATHAN_RULES.minHp, Math.round(power * LEVIATHAN_RULES.hpFactor));
-}
-function spawnLeviathan(window, activePlayers, previous, bossId) {
-  var _a;
-  const boss = bossId ? findWorldBoss(bossId) : worldBossForStart(window.startMs);
-  const maxHp = Math.max(LEVIATHAN_RULES.minHp, Math.round(leviathanHp(activePlayers) * boss.hpMult));
-  return __spreadProps(__spreadValues({}, window), { bossId: boss.id, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: (_a = previous == null ? void 0 : previous.titleHolder) != null ? _a : null, timeline: [{ t: window.startMs, hp: maxHp }] });
-}
-function checkLeviathanLaunch(state, uid, pseudo, now) {
-  var _a, _b;
-  if (!state || !isActive(state, now)) throw new GameActionError(`${worldBossName(state)} n'est pas l\xE0 en ce moment.`);
-  const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + LEVIATHAN_RULES.cooldownHours * HOUR6 - now : 0;
-  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
-  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
-}
-var SEASON_BOSS_TUNING = {};
-var isSeasonBossState = (state) => {
-  var _a;
-  return !!((_a = state == null ? void 0 : state.id) == null ? void 0 : _a.startsWith("boss-"));
-};
-var seasonBossCooldownHours = () => {
-  var _a;
-  return (_a = SEASON_BOSS_TUNING.cooldownHours) != null ? _a : LEVIATHAN_RULES.cooldownHours;
-};
-var seasonBossFlightMinutes = () => {
-  var _a;
-  return (_a = SEASON_BOSS_TUNING.flightMinutes) != null ? _a : LEVIATHAN_RULES.flightMinutes;
-};
-function bossTuning(state) {
-  var _a, _b;
-  if (state.bossId) {
-    const b = findWorldBoss(String(state.bossId));
-    return { lossMult: b.lossMult, weakness: b.weakness };
-  }
-  if (isSeasonBossState(state)) return { lossMult: (_a = SEASON_BOSS_TUNING.lossMult) != null ? _a : 1, weakness: (_b = SEASON_BOSS_TUNING.weakness) != null ? _b : [] };
-  return { lossMult: 1, weakness: [] };
-}
-var BOSS_PHASE_RULES = {
-  /** Phase 2 sous cette part de structure : riposte. */
-  ripostePct: 0.5,
-  riposteLossFactor: 1.5,
-  /** Phase 3 sous cette part : bouclier et faiblesse. */
-  shieldPct: 0.25,
-  shieldDamageFactor: 0.85,
-  weaknessFactor: 1.5
-};
-var WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
-function bossFightPhase(state) {
-  const pct7 = state.maxHp > 0 ? state.hp / state.maxHp : 0;
-  return pct7 <= BOSS_PHASE_RULES.shieldPct ? 3 : pct7 <= BOSS_PHASE_RULES.ripostePct ? 2 : 1;
-}
-function bossWeakness(state) {
-  const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
-  const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
-  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
-  let h = 0;
-  for (const ch of state.id) h = h * 31 + ch.charCodeAt(0) >>> 0;
-  return list.length ? list[h % list.length] : "";
-}
-var BOSS_PHASE_INFO = {
-  1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
-  2: { name: "Riposte", desc: `Bless\xE9, il riposte : pertes \xD7${BOSS_PHASE_RULES.riposteLossFactor} \xE0 chaque assaut.` },
-  3: { name: "Carapace fissur\xE9e", desc: `Il se replie derri\xE8re un bouclier (\u2212${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de d\xE9g\xE2ts), mais sa faiblesse est expos\xE9e : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de d\xE9g\xE2ts pour ce type de vaisseau.` }
-};
-function bossAssaultEstimate(state, player, fleet, formation) {
-  const fx = formationEffects(formation);
-  const base = computeFleetPower(player.units, player.techLevels, fleet, ["attack"]);
-  const phase = bossFightPhase(state);
-  let phaseFactor = 1;
-  if (phase === 3 && base > 0) {
-    const weak = bossWeakness(state);
-    const weakPower = fleet[weak] ? computeFleetPower(player.units, player.techLevels, { [weak]: fleet[weak] }, ["attack"]) : 0;
-    const share = Math.min(1, weakPower / base);
-    phaseFactor = share * BOSS_PHASE_RULES.weaknessFactor + (1 - share) * BOSS_PHASE_RULES.shieldDamageFactor;
-  }
-  const mods = playerModifiers(player);
-  const power = Math.round(base * fx.attackFactor * allianceSiegeFactor(player.allianceResearch) * pveAttackFactor(player.units, player.techLevels, fleet) * (1 + mods.attack) * (1 + mods.bossDamage) * phaseFactor);
-  const lossMult = bossTuning(state).lossMult;
-  const lossPct = Math.min(1, LEVIATHAN_RULES.lossPct * lossMult * fx.attackerLossFactor * (phase >= 2 ? BOSS_PHASE_RULES.riposteLossFactor : 1));
-  return { power, lossPct, phase };
-}
-var BOSS_REACTIONS = ["\u{1F525}", "\u{1F4A5}", "\u{1F44F}", "\u{1F631}", "\u{1FAE1}"];
-var REACTORS_MAX = 200;
-function bossFeedKey(f) {
-  var _a, _b;
-  return `${f.t}:${(_b = f.uid) != null ? _b : `p${(_a = f.phase) != null ? _a : 0}`}`;
-}
-function reactToBossFeed(state, key, uid, emoji) {
-  var _a, _b, _c, _d, _e;
-  if (!BOSS_REACTIONS.includes(emoji)) throw new GameActionError("R\xE9action inconnue.");
-  const feed = (_a = state.feed) != null ? _a : [];
-  const i = feed.findIndex((f) => bossFeedKey(f) === key);
-  if (i < 0) throw new GameActionError("Cette ligne du fil a disparu.");
-  const entry = feed[i];
-  if (entry.uid === uid) throw new GameActionError("On ne s'applaudit pas soi-m\xEAme.");
-  const had = (_c = Object.entries((_b = entry.reactions) != null ? _b : {}).find(([, who]) => who.includes(uid))) == null ? void 0 : _c[0];
-  const reactions = {};
-  for (const [e3, who] of Object.entries((_d = entry.reactions) != null ? _d : {})) {
-    const rest = who.filter((u) => u !== uid);
-    if (rest.length) reactions[e3] = rest;
-  }
-  if (had !== emoji) reactions[emoji] = [...(_e = reactions[emoji]) != null ? _e : [], uid].slice(-REACTORS_MAX);
-  const next = [...feed];
-  next[i] = __spreadProps(__spreadValues({}, entry), { reactions });
-  return __spreadProps(__spreadValues({}, state), { feed: next });
-}
-function resolveLeviathanAssault(state, player, fleet, formation, now) {
-  var _a, _b;
-  const { power, lossPct } = bossAssaultEstimate(state, player, fleet, formation);
-  const active = isActive(state, now);
-  const damage = active ? Math.min(state.hp, power) : 0;
-  const repair = withRepairBonus(getRepairPercent(player.buildings), player);
-  const { survivors, lost, recovered, hull } = bossAssaultLosses(player, fleet, lossPct, repair, active);
-  const c = (_a = state.contributions[player.uid]) != null ? _a : { pseudo: player.pseudo, damage: 0, assaults: 0, lastLaunchMs: now };
-  const hp = state.hp - damage;
-  const killed = active && hp <= 0;
-  let feed = (_b = state.feed) != null ? _b : [];
-  if (active && damage > 0) {
-    const before = bossFightPhase(state);
-    const after = bossFightPhase({ hp: Math.max(0, hp), maxHp: state.maxHp });
-    feed = [...feed, __spreadValues({ t: now, uid: player.uid, pseudo: player.pseudo, damage }, killed ? { killed: true } : {})];
-    if (!killed && after > before) feed = [...feed, { t: now, phase: after }];
-    feed = feed.slice(-FEED_MAX);
-  }
-  return {
-    state: __spreadProps(__spreadValues(__spreadProps(__spreadValues(__spreadValues({}, state), feed.length ? { feed } : {}), {
-      hp: Math.max(0, hp),
-      status: killed ? "killed" : state.status,
-      endedAtMs: killed ? now : state.endedAtMs
-    }), killed ? { killedBy: { uid: player.uid, pseudo: player.pseudo } } : {}), {
-      contributions: active ? __spreadProps(__spreadValues({}, state.contributions), { [player.uid]: __spreadProps(__spreadValues({}, c), { pseudo: player.pseudo, damage: c.damage + damage, assaults: c.assaults + 1 }) }) : state.contributions
-    }),
-    damage,
-    survivors,
-    lost,
-    recovered,
-    hull,
-    killed
-  };
-}
-function leviathanRanking(state) {
-  return Object.entries(state.contributions).filter(([, c]) => c.damage > 0).map(([uid, c]) => __spreadValues({ uid }, c)).sort((a, b) => b.damage - a.damage);
-}
-function rewardHours(state, uid) {
-  var _a, _b, _c, _d, _e;
-  const ranking = leviathanRanking(state);
-  const top = (_b = (_a = ranking[0]) == null ? void 0 : _a.damage) != null ? _b : 0;
-  const mine = (_d = (_c = state.contributions[uid]) == null ? void 0 : _c.damage) != null ? _d : 0;
-  if (!(mine > 0) || !(top > 0)) return 0;
-  const hours2 = (LEVIATHAN_RULES.baseRewardHours + LEVIATHAN_RULES.bonusRewardHours * Math.sqrt(mine / top)) * worldBossOf(state).rewardMult;
-  if (state.status !== "killed") return hours2 * LEVIATHAN_RULES.failedRewardFactor;
-  const rank2 = ranking.findIndex((r) => r.uid === uid);
-  return hours2 + ((_e = LEVIATHAN_RULES.podiumHours[rank2]) != null ? _e : 0);
-}
-function grantLeviathanReward(state, player, random = Math.random) {
-  var _a, _b, _c, _d, _e, _f;
-  const hours2 = rewardHours(state, player.uid);
-  const gain = hours2 > 0 ? productionHours(player, hours2) : {};
-  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_a = player.resources[res]) != null ? _a : 0) + n;
-  if (state.status === "killed" && hours2 > 0) {
-    bumpStat(player, "leviathanKills");
-    const id = worldBossOf(state).id;
-    const seen = (_c = (_b = player.stats) == null ? void 0 : _b.worldBossKilled) != null ? _c : [];
-    if (!seen.includes(id)) player.stats = __spreadProps(__spreadValues({}, (_d = player.stats) != null ? _d : {}), { worldBossKilled: [...seen, id] });
-  }
-  const top = leviathanRanking(state)[0];
-  const title = !!top && top.uid === player.uid && state.status === "killed";
-  const label3 = worldBossTitle(state);
-  if (title && !((_e = player.titles) != null ? _e : []).some((t) => t.label === label3)) {
-    player.titles = [...(_f = player.titles) != null ? _f : [], { label: label3, seasonId: `leviathan:${state.id}`, rank: 1 }];
-    player.activeTitle = label3;
-  }
-  if (state.status === "killed" && hours2 > 0) {
-    const rank2 = leviathanRanking(state).findIndex((r) => r.uid === player.uid);
-    const rarity = rank2 >= 0 && rank2 < LEVIATHAN_RULES.topRelics ? "epic" : "rare";
-    const item = rollRelic("leviathan", Date.now(), random, rarity);
-    if (addRelic(player, item)) return { gain, title, relic: relicLabel(item) };
-    const amber = LEVIATHAN_RULES.relicAmber[rarity];
-    const b = bountyState(player);
-    b.amber += amber;
-    player.bounties = b;
-    return { gain, title, amber };
-  }
-  return { gain, title };
-}
-function removeLeviathanTitle(player, label3 = LEVIATHAN_RULES.title) {
-  var _a, _b;
-  player.titles = ((_a = player.titles) != null ? _a : []).filter((t) => t.label !== label3);
-  if (player.activeTitle === label3) player.activeTitle = (_b = player.titles[0]) == null ? void 0 : _b.label;
-}
-function closeLeviathan(state, now) {
-  if (state.status === "active" && now >= state.endMs) return __spreadProps(__spreadValues({}, state), { status: "failed", endedAtMs: now });
-  return state;
-}
-var TIMELINE_MAX = 120;
-function recordLeviathanTimeline(state, now) {
-  if (!isActive(state, now)) return state;
-  const last = state.timeline[state.timeline.length - 1];
-  if (last && now - last.t < HOUR6) return state;
-  return __spreadProps(__spreadValues({}, state), { timeline: [...state.timeline, { t: now, hp: state.hp }].slice(-TIMELINE_MAX) });
-}
-function resizeLeviathan(state, maxHp, now) {
-  if (!isActive(state, now)) throw new GameActionError("Le L\xE9viathan n'est pas l\xE0 en ce moment.");
-  const next = Math.round(maxHp);
-  const done = state.maxHp - state.hp;
-  if (!(next > done)) throw new GameActionError(`La structure doit d\xE9passer les d\xE9g\xE2ts d\xE9j\xE0 inflig\xE9s (${done}).`);
-  return __spreadProps(__spreadValues({}, state), { maxHp: next, hp: next - done, timeline: [...state.timeline, { t: now, hp: next - done }].slice(-TIMELINE_MAX) });
-}
-function rescheduleBoss(state, endMs, now) {
-  if (!state || !isActive(state, now)) throw new GameActionError("Aucun combat en cours.");
-  const end = Math.round(endMs);
-  if (!(end > now + 5 * 6e4)) throw new GameActionError("La nouvelle fin doit \xEAtre dans plus de 5 minutes.");
-  if (end - state.startMs > 14 * 24 * HOUR6) throw new GameActionError("Un combat ne peut pas durer plus de 14 jours.");
-  const next = __spreadProps(__spreadValues({}, state), { endMs: end });
-  if (end - now > BOSS_REMINDERS.endingHours * HOUR6) delete next.endingNotified;
-  return next;
-}
-function endingReminderDue(state, now) {
-  return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR6;
-}
-
 // src/game/chronicles.ts
 var DEFAULT_CHRONICLE_BONUS = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
 var DEFAULT_CODEX_REWARDS = {
@@ -12566,7 +12730,7 @@ function validateChronicles(cfg) {
   }
   return errors;
 }
-var HOUR7 = 36e5;
+var HOUR8 = 36e5;
 function parisDate(now) {
   const local = new Date(now + parisOffsetMs(now));
   return { y: local.getUTCFullYear(), m: local.getUTCMonth() + 1, d: local.getUTCDate() };
@@ -12718,7 +12882,7 @@ function checkSeasonBossLaunch(state, uid, pseudo, now) {
   const name = state ? (_b = (_a = bossMonthOf(state)) == null ? void 0 : _a.boss.name) != null ? _b : "Le boss de saison" : "Le boss de saison";
   if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError(`${name} n'est pas l\xE0 en ce moment.`);
   const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR7 - now : 0;
+  const wait = c ? c.lastLaunchMs + seasonBossCooldownHours() * HOUR8 - now : 0;
   if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
   return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_c = c == null ? void 0 : c.damage) != null ? _c : 0, assaults: (_d = c == null ? void 0 : c.assaults) != null ? _d : 0, lastLaunchMs: now } }) });
 }
@@ -12763,151 +12927,6 @@ function moveWrittenToLibrary(cfg, now) {
   if (moving.length === 0) return null;
   const library = [...((_a = cfg.library) != null ? _a : []).filter((l) => !moving.some((m) => m.id === l.id)), ...moving];
   return __spreadProps(__spreadValues({}, cfg), { months: months.filter((m) => !moving.includes(m)), library });
-}
-
-// src/game/allianceBoss.ts
-var ALLIANCE_BOSS_RULES = {
-  /** Structure : ce facteur × puissance d'attaque des membres actifs (7 j). */
-  hpFactor: 2.5,
-  minHp: 5e4,
-  durationHours: 24,
-  cooldownHours: 4,
-  flightMinutes: 20,
-  /** Coût d'appel : heures de production cumulée de tous les membres. */
-  costHours: 3,
-  /** Part du coût rendue au trésor si le boss tombe. */
-  refundPct: 0.5,
-  /** Part minimale des dégâts pour être récompensé. */
-  minSharePct: 0.05,
-  rewardHours: 2,
-  killPoints: 40,
-  failPoints: 15
-};
-var DEFAULT_ALLIANCE_BOSSES = [
-  { id: "gravhorn", name: "Cuirass\xE9 Gravhorn", image: "/assets/story/gravhorn.webp", lore: "Un cuirass\xE9 du Syndicat, blind\xE9 comme un coffre-fort, venu saisir les dettes de ton alliance." },
-  { id: "kesh", name: "Nid-m\xE8re Kesh'Vaar", image: "/assets/bounties/hunters.webp", lore: "Une ruche ren\xE9gate en d\xE9rive : chaque heure, de nouvelles larves \xE9closent dans ses flancs." },
-  { id: "confrerie", name: "Croiseur de la Confr\xE9rie", image: "/assets/story/varan.webp", lore: "Un croiseur de Varan, envoy\xE9 pour rayer ton alliance de la Liste. \xC0 coups de canon." }
-];
-var ALLIANCE_BOSSES = DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b));
-function setAllianceBosses(defs) {
-  const list = (defs != null ? defs : []).filter((b) => {
-    var _a, _b;
-    return b && /^[a-z0-9_]+$/.test((_a = b.id) != null ? _a : "") && String((_b = b.name) != null ? _b : "").trim();
-  });
-  ALLIANCE_BOSSES.splice(0, ALLIANCE_BOSSES.length, ...(list.length ? list : DEFAULT_ALLIANCE_BOSSES).map((b) => __spreadValues({}, b)));
-}
-var DAY9 = 24 * 36e5;
-var HOUR8 = 36e5;
-function allianceWeekId(now) {
-  const day = parisDay(now);
-  const t = Date.parse(`${day}T00:00:00Z`);
-  const dow = new Date(t).getUTCDay();
-  return new Date(t - (dow + 6) % 7 * DAY9).toISOString().slice(0, 10);
-}
-function allianceBossOfWeek(now) {
-  const monday = Date.parse(`${allianceWeekId(now)}T00:00:00Z`);
-  const index2 = Math.floor(monday / (7 * DAY9));
-  return ALLIANCE_BOSSES[(index2 % ALLIANCE_BOSSES.length + ALLIANCE_BOSSES.length) % ALLIANCE_BOSSES.length];
-}
-function allianceBossDef(state) {
-  var _a;
-  return (_a = ALLIANCE_BOSSES.find((b) => b.id === state.bossId)) != null ? _a : ALLIANCE_BOSSES[0];
-}
-function normalizeAllianceBoss(raw) {
-  var _a, _b, _c, _d;
-  if (!raw || typeof raw !== "object") return null;
-  const r = raw;
-  if (!r.id || !(Number(r.maxHp) > 0)) return null;
-  return __spreadValues(__spreadValues(__spreadValues({
-    id: String(r.id),
-    startMs: Number(r.startMs) || 0,
-    endMs: Number(r.endMs) || 0,
-    maxHp: Number(r.maxHp),
-    hp: Math.max(0, Number(r.hp) || 0),
-    status: r.status === "killed" || r.status === "failed" ? r.status : "active",
-    contributions: r.contributions && typeof r.contributions === "object" ? r.contributions : {},
-    endedAtMs: Number(r.endedAtMs) || 0,
-    rewarded: r.rewarded === true,
-    titleHolder: null,
-    timeline: Array.isArray(r.timeline) ? r.timeline : [],
-    weekId: String((_a = r.weekId) != null ? _a : ""),
-    bossId: String((_b = r.bossId) != null ? _b : ALLIANCE_BOSSES[0].id),
-    launchedBy: String((_c = r.launchedBy) != null ? _c : ""),
-    cost: r.cost && typeof r.cost === "object" ? r.cost : {}
-  }, r.rewards && typeof r.rewards === "object" ? { rewards: r.rewards } : {}), r.killedBy && r.killedBy.uid ? { killedBy: { uid: String(r.killedBy.uid), pseudo: String((_d = r.killedBy.pseudo) != null ? _d : "") } } : {}), Array.isArray(r.feed) ? { feed: r.feed.filter((f) => f && Number.isFinite(f.t)).slice(-FEED_MAX) } : {});
-}
-function allianceBossCost(members) {
-  var _a, _b;
-  const cost = {};
-  for (const m of members) {
-    for (const [res, n] of Object.entries(productionHours(m, ALLIANCE_BOSS_RULES.costHours))) cost[res] = ((_a = cost[res]) != null ? _a : 0) + n;
-  }
-  for (const k of Object.keys(cost)) cost[k] = Math.ceil((_b = cost[k]) != null ? _b : 0);
-  return cost;
-}
-function allianceBossHp(activeMembers) {
-  const power = activeMembers.reduce((a, p) => {
-    var _a, _b;
-    return a + computeFullPower((_a = p.units) != null ? _a : {}, (_b = p.techLevels) != null ? _b : {}, OFFENSIVE_UNITS, ["attack"]);
-  }, 0);
-  return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
-}
-function canCallAllianceBoss(alliance, uid) {
-  var _a;
-  return hasAlliancePerm(__spreadProps(__spreadValues({}, alliance), { members: (_a = alliance.members) != null ? _a : [uid] }), uid, "boss");
-}
-function callAllianceBoss(alliance, previous, members, activeMembers, uid, now, worldBoss = null) {
-  var _a, _b, _c;
-  if (!canCallAllianceBoss(alliance, uid)) throw new GameActionError("Seuls le fondateur et les officiers peuvent appeler le boss d'alliance.");
-  const weekId2 = allianceWeekId(now);
-  if (previous && previous.weekId === weekId2) throw new GameActionError("Le boss d'alliance a d\xE9j\xE0 \xE9t\xE9 appel\xE9 cette semaine (prochain lundi).");
-  if (worldBoss && worldBoss.endMs > now) throw new GameActionError(`En alternance avec le boss mondial : il est l\xE0 jusqu'au ${parisWhenLabel(worldBoss.endMs)}. Appelle le boss d'alliance apr\xE8s son d\xE9part.`);
-  const cost = allianceBossCost(members);
-  const treasury = __spreadValues({}, (_a = alliance.treasury) != null ? _a : {});
-  for (const [res, n] of Object.entries(cost)) {
-    if (((_b = treasury[res]) != null ? _b : 0) < n) throw new GameActionError("Le tr\xE9sor de l'alliance ne suffit pas pour appeler le boss.");
-  }
-  for (const [res, n] of Object.entries(cost)) treasury[res] = ((_c = treasury[res]) != null ? _c : 0) - n;
-  alliance.treasury = treasury;
-  const boss = allianceBossOfWeek(now);
-  const maxHp = allianceBossHp(activeMembers);
-  const endMs = now + ALLIANCE_BOSS_RULES.durationHours * HOUR8;
-  return { id: `ab-${weekId2}`, startMs: now, endMs, maxHp, hp: maxHp, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [{ t: now, hp: maxHp }], weekId: weekId2, bossId: boss.id, launchedBy: uid, cost };
-}
-function checkAllianceBossLaunch(state, uid, pseudo, now) {
-  var _a, _b;
-  if (!state || state.status !== "active" || now < state.startMs || now >= state.endMs || state.hp <= 0) throw new GameActionError("Aucun boss d'alliance \xE0 combattre en ce moment.");
-  const c = state.contributions[uid];
-  const wait = c ? c.lastLaunchMs + ALLIANCE_BOSS_RULES.cooldownHours * HOUR8 - now : 0;
-  if (wait > 0) throw new GameActionError(`Prochain assaut possible dans ${Math.ceil(wait / 6e4)} min.`);
-  return __spreadProps(__spreadValues({}, state), { contributions: __spreadProps(__spreadValues({}, state.contributions), { [uid]: { pseudo, damage: (_a = c == null ? void 0 : c.damage) != null ? _a : 0, assaults: (_b = c == null ? void 0 : c.assaults) != null ? _b : 0, lastLaunchMs: now } }) });
-}
-function allianceBossRefund(state) {
-  if (state.status !== "killed") return {};
-  return Object.fromEntries(Object.entries(state.cost).map(([r, n]) => [r, Math.floor((n != null ? n : 0) * ALLIANCE_BOSS_RULES.refundPct)]));
-}
-function grantAllianceBossReward(state, player, now, random = Math.random) {
-  var _a, _b, _c, _d;
-  const ranking = leviathanRanking(state);
-  const total2 = ranking.reduce((a, c) => a + c.damage, 0);
-  const mine = (_b = (_a = state.contributions[player.uid]) == null ? void 0 : _a.damage) != null ? _b : 0;
-  if (!(mine > 0)) return { points: 0, gain: {} };
-  if (state.status !== "killed") {
-    addPassPoints(player, "allianceBossTry", now);
-    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
-  }
-  if (mine < total2 * ALLIANCE_BOSS_RULES.minSharePct) {
-    addPassPoints(player, "allianceBossTry", now);
-    return { points: ALLIANCE_BOSS_RULES.failPoints, gain: {} };
-  }
-  addPassPoints(player, "allianceBoss", now);
-  const gain = productionHours(player, ALLIANCE_BOSS_RULES.rewardHours);
-  for (const [res, n] of Object.entries(gain)) player.resources[res] = ((_c = player.resources[res]) != null ? _c : 0) + n;
-  if (((_d = ranking[0]) == null ? void 0 : _d.uid) === player.uid) {
-    const item = rollRelic("allianceBoss", now, random, "rare");
-    if (addRelic(player, item)) return { points: ALLIANCE_BOSS_RULES.killPoints, gain, relic: relicLabel(item) };
-  }
-  return { points: ALLIANCE_BOSS_RULES.killPoints, gain };
 }
 
 // src/game/expeditions.ts
@@ -17077,7 +17096,7 @@ function monthsToGenerate(existing, now, leadDay) {
   if (parisDay2(now) >= leadDay && !ids.has(next)) out.push(next);
   return out;
 }
-var NO_EXTENSION = /* @__PURE__ */ new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel"]);
+var NO_EXTENSION = /* @__PURE__ */ new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel", "allianceBossTypes"]);
 var NEXT_TIER = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 var ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 function niceNumber(x) {
@@ -26578,7 +26597,7 @@ function validateBroadcast(b) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "6.14.12" : "dev";
+var LOGIC_VERSION = true ? "6.14.14" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false) || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"moon","type":"json","required":false,"maxSize":2000},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"base","type":"json","required":false,"maxSize":2000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"moonName","type":"text","required":false,"max":40,"presentable":false},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"locationId","type":"text","required":false,"max":40,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]}]' : "[]";
 
 // src/game/serverMetrics.ts
