@@ -31,9 +31,12 @@ export function FormationPicker({ value, onChange, className }: { value: Formati
 }
 
 /** Posture de la base (v3.0). */
+/* 6.11.9 (H1) : sur téléphone, trois colonnes et la seule description de la posture choisie (290 px quand tout s'empilait). */
 export function PosturePicker({ value, onChange, disabled }: { value: PostureId; onChange: (p: PostureId) => void; disabled?: boolean }) {
+  const chosen = POSTURES.find((p) => p.id === value);
   return (
-    <div className="grid gap-1.5 sm:grid-cols-3" role="radiogroup" aria-label="Posture de la base">
+    <div className="flex flex-col gap-1.5">
+    <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Posture de la base">
       {POSTURES.map((p) => (
         <button
           key={p.id}
@@ -43,14 +46,16 @@ export function PosturePicker({ value, onChange, disabled }: { value: PostureId;
           disabled={disabled && value !== p.id}
           onClick={() => onChange(p.id)}
           className={cn(
-            "flex flex-col items-start gap-0.5 border px-3 py-2 text-left transition-colors disabled:opacity-40",
+            "flex flex-col items-start gap-0.5 border px-3 py-2 text-left transition-colors disabled:opacity-40 max-sm:items-center max-sm:px-1.5",
             value === p.id ? "border-cyan-glow/70 bg-cyan-glow/10" : "border-white/10 hover:border-cyan-glow/40",
           )}
         >
-          <span className={cn("font-display text-sm font-semibold uppercase tracking-[0.1em]", value === p.id ? "text-cyan-glow" : "text-slate-200")}>{p.name}</span>
-          <span className="text-[11px] text-slate-500">{p.description()}</span>
+          <span className={cn("font-display text-sm font-semibold uppercase tracking-[0.1em] max-sm:text-xs", value === p.id ? "text-cyan-glow" : "text-slate-200")}>{p.name}</span>
+          <span className="text-[11px] text-slate-500 max-sm:hidden">{p.description()}</span>
         </button>
       ))}
+    </div>
+    {chosen && <p className="text-[11px] text-slate-500 sm:hidden">{chosen.description()}</p>}
     </div>
   );
 }

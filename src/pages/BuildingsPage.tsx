@@ -137,7 +137,7 @@ export function BuildingsPage() {
         <SortableGridToggle page="batiments" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
       </div>
 
-      <SortableGrid page="batiments" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-5" items={BUILDINGS} getId={(building) => building.id} getLabel={(building) => building.name} render={(building, index) => {
+      <SortableGrid page="batiments" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,22rem),1fr))] gap-3 sm:gap-5" items={BUILDINGS} getId={(building) => building.id} getLabel={(building) => building.name} render={(building, index) => {
           const state = player.buildings[building.id];
           // Aligné sur la vérification serveur (startBuildingUpgrade) : tout
           // bâtiment non débloqué est verrouillé, y compris l'Atelier de
@@ -173,7 +173,7 @@ export function BuildingsPage() {
               <Card className={cn("hud-glitch relative flex h-full flex-col", nearlyDone && "animate-pulse-alert", building.endgame && "legendary-frame")}>
                 <HudBrackets className="border-gold-glow/70" />
                 <LevelPulse level={level} />
-                <div className="relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-[5.5rem_1fr] max-[380px]:gap-3">
+                <div className={cn("relative grid grid-cols-[minmax(0,9.5rem)_1fr] gap-4 p-4 max-[380px]:grid-cols-[5.5rem_1fr] max-[380px]:gap-3", isLocked && "max-sm:grid-cols-[4.5rem_1fr] max-sm:gap-3 max-sm:pb-2")}>
                   <div className={cn("hud-cut relative aspect-square overflow-hidden border border-gold-glow/25 bg-space-900", TIER_FRAME[visualTier(level)])}>
                     <LevelUpBurst level={level} />
                     <img
@@ -200,7 +200,7 @@ export function BuildingsPage() {
                     <h3 className="hud-title mt-2 text-[17px] text-slate-100 [hyphens:auto] [overflow-wrap:anywhere]" lang="fr">{building.name}</h3>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="mt-1 flex cursor-help items-baseline gap-1.5">
+                        <div className={cn("mt-1 flex cursor-help items-baseline gap-1.5", isLocked && "max-sm:hidden")}>
                           <b className="hud-title text-3xl leading-none text-slate-100">{level}</b>
                           <span className="font-mono text-xs text-slate-500">/ {building.maxLevel}</span>
                         </div>
@@ -224,12 +224,12 @@ export function BuildingsPage() {
                         )}
                       </TooltipContent>
                     </Tooltip>
-                    <LevelTicks level={level} max={building.maxLevel} next={!isLocked && level < building.maxLevel} className="mt-2" />
+                    <LevelTicks level={level} max={building.maxLevel} next={!isLocked && level < building.maxLevel} className={cn("mt-2", isLocked && "max-sm:hidden")} />
                   </div>
                 </div>
 
                 <div className="relative flex flex-1 flex-col gap-3 px-4 pb-4">
-                  <p className="text-sm leading-snug text-slate-400">{building.description}</p>
+                  <p className={cn("text-sm leading-snug text-slate-400", isLocked && "max-sm:line-clamp-2")}>{building.description}</p>
 
                   {!isLocked && productionResource && (() => {
                     const cur = productionPerSecond(building.id, level);
@@ -294,9 +294,17 @@ export function BuildingsPage() {
                             </Button>
                           </>
                         ) : (
-                          <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
-                            Débloquer · {formatCompact(unlockInfo.amount)} {unlockInfo.label}
-                          </Button>
+                          <>
+                            {/* 6.11.9 : le coût passe dans une pastille (« Débloquer · 500 Nanocomposants » débordait à 375 px). */}
+                            <div className="mb-2 flex flex-wrap gap-1.5">
+                              <CostPill>
+                                {formatCompact(unlockInfo.amount)} {unlockInfo.label}
+                              </CostPill>
+                            </div>
+                            <Button className="w-full" disabled={pending === building.id} onClick={() => void handleUnlock(building.id)}>
+                              Débloquer
+                            </Button>
+                          </>
                         )
                       ) : (
                         <Button className="w-full" variant="secondary" disabled>

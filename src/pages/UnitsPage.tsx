@@ -119,12 +119,13 @@ export function UnitsPage() {
 
       <PostureCard player={player} />
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* 6.11.9 (H1) : les deux jauges côte à côte aussi sur téléphone. */}
+      <div className="grid grid-cols-2 gap-3">
         {(["attack", "defense"] as const).map((cat) => {
           const l = loads[cat];
           const percent = l.capacity > 0 ? (l.used / l.capacity) * 100 : 0;
           return (
-            <Card key={cat} className="flex items-center gap-4 p-4">
+            <Card key={cat} className="flex items-center gap-4 p-4 max-sm:flex-col max-sm:items-start max-sm:gap-2 max-sm:p-3">
               <RadialGauge value={Math.min(100, percent)} size={64} strokeWidth={5} color={l.overflow > 0 ? "var(--color-ember-glow)" : cat === "attack" ? "var(--color-danger-glow)" : "var(--color-cyan-glow)"}>
                 <span className="tabular-mono text-xs font-medium text-slate-200">{Math.round(percent)}%</span>
               </RadialGauge>
@@ -216,14 +217,17 @@ export function UnitsPage() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Classe d'unité">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* 6.11.9 (H1) : sur téléphone, les filtres tiennent sur une ligne qui défile. */}
+          <div className="flex items-center gap-1.5 max-sm:-mx-1 max-sm:w-[calc(100%+0.5rem)] max-sm:overflow-x-auto max-sm:px-1" role="group" aria-label="Classe d'unité">
           {(["all", "light", "medium", "heavy", "support"] as const)
             .filter((c) => c === "all" || UNITS.some((u) => u.category === tab && classes[u.id] === c))
             .map((c) => (
-              <Button key={c} size="sm" variant={classFilter === c ? "secondary" : "ghost"} aria-pressed={classFilter === c} onClick={() => setClassFilter(c)}>
+              <Button key={c} size="sm" variant={classFilter === c ? "secondary" : "ghost"} aria-pressed={classFilter === c} onClick={() => setClassFilter(c)} className="shrink-0">
                 {c === "all" ? "Toutes" : UNIT_CLASS_LABELS[c]}
               </Button>
             ))}
+          </div>
           <span className="text-[11px] text-slate-500">
             Classe d'après l'attaque et la résistance. Au combat, Fort bat Moyen, Moyen bat Faible, Faible bat Fort (<span className="font-mono">±{Math.round(COMBAT_RULES.classEdge * 100)} %</span> de dégâts) : panache ta flotte.
           </span>
@@ -233,7 +237,7 @@ export function UnitsPage() {
         </div>
       </div>
 
-      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-3 sm:gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
+      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-2.5 sm:gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);

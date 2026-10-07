@@ -323,7 +323,7 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
         getLabel={(def) => def.name}
         render={(def) => <CommanderCard key={def.id} def={def} player={player} now={now} />}
       />
-      <FoldSection id="etat-major-rares" tone="violet" title="Officiers rares" aside={<span className="text-[11px] text-slate-500">Ne se recrutent pas : commandant de saison de ce rôle au palier 30, ou trouvaille très rare sur un boss</span>}>
+      <FoldSection id="etat-major-rares" tone="violet" defaultOpen={!narrowScreen()} title="Officiers rares" aside={<span className="text-[11px] text-slate-500">Ne se recrutent pas : commandant de saison de ce rôle au palier 30, ou trouvaille très rare sur un boss</span>}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {COMMANDERS.filter((d) => d.rare).map((def) => (
             <CommanderCard key={def.id} def={def} player={player} now={now} />
@@ -682,6 +682,9 @@ function SynthesisTab({ player, now }: { player: PlayerState; now: number }) {
 }
 
 /* ---------- page ---------- */
+
+/* 6.11.9 (H1) : sur téléphone, les officiers rares (ils ne se recrutent pas) démarrent repliés. */
+const narrowScreen = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 639px)").matches;
 
 export function CommandPage() {
   const player = usePlayerStore((s) => s.player);

@@ -189,3 +189,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.6 | A2 : Formules (8 053 → 1 265 px) une section à la fois, Statistiques (6 665 → 4 215 px) sections secondaires repliées sur téléphone | `docs/changes/6.11.6-formules-statistiques-mobile.md` |
 | 2026-10-07 | 6.11.7 | A3 : Seigneurs (6 458 → 3 114 px), Profil (6 050 → 2 929 px), Missions (5 894 → 4 967 px) à 375 px | `docs/changes/6.11.7-seigneurs-profil-missions-mobile.md` |
 | 2026-10-07 | 6.11.8 | Revue AU16 : automne clos (A2, A3 livrés), trois pages encore au-dessus de 5 000 px, orientation posée (Q15) ; hiver proposé | `docs/audit/2026-10-07-au16-automne.md` |
+| 2026-10-07 | 6.11.9 | H1 : Bâtiments (5 456 → 4 754 px), Unités (5 285 → 4 999 px), État-major (5 092 → 2 945 px) ; bouton de déblocage qui débordait corrigé ; Q14 close | `docs/changes/6.11.9-batiments-unites-etat-major-mobile.md` |
