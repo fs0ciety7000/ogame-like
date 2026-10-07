@@ -67,7 +67,8 @@ Valable pour toute la session et tout le projet, à chaque demande :
   (`test.fs0ciety.org/decisions`, `empire.fs0ciety.org/decisions`, admins) au déploiement ; on ajoute aussi sa ligne (groupe, effet,
   conseil) dans `docs/decisions-a-valider.md` (un test l'exige). Les réponses (collection `decision_answers`) se relisent par
   `node scripts/decisions.mjs` en début de session et à chaque passage de la routine horaire : « valide » → statut « validée » ;
-  « changer » → lot de changement et règle réécrite (instructions, GDD, WORKFLOW). Une question traitée quitte la page.
+  « changer » → lot de changement et règle réécrite (instructions, GDD, WORKFLOW) ; un « changer » sans note se précise d'abord avec
+  l'utilisateur (6.14.35). Une question traitée quitte la page.
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 

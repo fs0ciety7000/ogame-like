@@ -135,6 +135,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.32 | [Page /decisions dans le jeu](6.14.32-page-decisions.md) | ajout (outillage) | aucune, Q30 |
 | 6.14.33 | [Billets de la grande mise à jour et annonce](6.14.33-billets-et-annonce.md) | docs, ajout | aucune (consignes du 2026-10-07) |
 | 6.14.34 | [Intégration : arrivées forcées sans course](6.14.34-integration-arrivees-forcees.md) | correctif (tests) | aucune (P30-3) |
+| 6.14.35 | [Réponses aux décisions reportées](6.14.35-reponses-decisions.md) | docs | `prochain-systeme.md`, Q31 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
