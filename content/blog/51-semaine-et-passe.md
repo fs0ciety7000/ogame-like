@@ -5,6 +5,7 @@ excerpt: "Le boss de la chronique passe au mardi, le tournoi du casino au mercre
 category: mises-a-jour
 tags: [passe, chroniques, calendrier]
 version: "6.8.2"
+cover: /assets/blog/articles/6-14/semaine-et-passe.webp
 ---
 > [!LORE] Registre de l'Empire
 > « Le secteur ne dort plus le lundi. »

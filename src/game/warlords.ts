@@ -130,8 +130,8 @@ export const WARLORD_RULES = {
 const ORIGIN_ART: Record<WarlordOrigin, { label: string; art: string; emblem: string; color: string }> = {
   kesh: { label: "Kesh'Vaar renégats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
   choeur: { label: "Déserteurs du Chœur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
-  confrerie: { label: "Anciens de la Confrérie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan.webp", color: "#ff7a45" },
-  gravhorn: { label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn.webp", color: "#f2c94c" },
+  confrerie: { label: "Anciens de la Confrérie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan-emblem.webp", color: "#ff7a45" },
+  gravhorn: { label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn-emblem.webp", color: "#f2c94c" },
   leviathan: { label: "Culte du Léviathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" },
 };
 

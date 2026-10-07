@@ -52,12 +52,13 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Contenu | Lot | Image en place | Prompt |
 |:--|:--|:--|:--|
-| Factions (bannières et emblèmes), boss d'alliance, thèmes et officiers du passe, devblog 50 à 52, en-têtes de pages | 6.14.93 | images générées (6.14.92), branchement au lot 6.14.93 | `scripts/illustrations.json` |
+| Classes d'empire (3), modules (7), spécialisations de colonie (4) | 6.14.93 | fichiers intégrés, pas encore affichés (emoji ou icône) : aucun champ d'image (Q240) | `scripts/illustrations.json` (fait) |
 
 ## Fermés depuis le dernier inventaire
 
 | Id | Comment |
 |:--|:--|
+| Images provisoires (lot 2) | 6.14.93 : bannières et emblèmes de 5 factions, 3 boss d'alliance, 12 thèmes du passe, 3 portraits de saison, couvertures des billets 50 à 52, 8 en-têtes ; les 129 emplacements de `/img` sont faits |
 | Images provisoires (lot 1) | 6.14.92 : Cale sèche, lune, phalange, porte de saut, 4 technos (plus d'image commune), annonce 5.7, 14 reliques (plus d'image empruntée ni cassée), 9 objets du Comptoir, monument de prestige ; images générées par API |
 | AE-6 | 6.14.72 : vaisseaux à quai 75 %, défense à domicile +25 % ; seuil JcJ ×0,75 → ×0,90 (simulation `pvpBudget.ts`) ; l'effet en production se suit avec Z1-c |
 | AE-8 | 6.14.72 : `pvp.hardXpRatio` 12 → 10 (Q100), le premier quartile d'XP hors de portée de la médiane |

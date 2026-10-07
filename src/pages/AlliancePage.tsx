@@ -593,6 +593,7 @@ export function AlliancePage() {
       <PageHeader
         eyebrow="Cosmic Empires / Diplomatie"
         title="Alliance"
+        backdrop="/assets/headers/alliance.webp"
         description="Rejoins ou crée une alliance, discute en temps réel."
       />
       {/* 6.14.49 (É30-1c) : radar de la phalange, attaques sur les alliés dans ta portée (rien sans lune). */}

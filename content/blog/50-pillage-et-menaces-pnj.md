@@ -5,6 +5,7 @@ excerpt: "Un raid réussi emporte 30 % du stock exposé, les repaires s'ouvrent 
 category: mises-a-jour
 tags: [combat, equilibrage, pnj]
 version: "6.6.0"
+cover: /assets/blog/articles/6-14/pillage-et-menaces-pnj.webp
 ---
 > [!LORE] Registre de l'Empire
 > « On ne pille plus pour la gloire. On pille pour remplir les soutes. »

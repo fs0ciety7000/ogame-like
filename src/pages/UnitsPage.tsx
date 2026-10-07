@@ -115,7 +115,7 @@ export function UnitsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Chantier naval" title="Unités" description="Construis ta flotte d'attaque et de défense." />
+      <PageHeader eyebrow="Cosmic Empires / Chantier naval" title="Unités" backdrop="/assets/headers/unites.webp" description="Construis ta flotte d'attaque et de défense." />
 
       <PostureCard player={player} />
 

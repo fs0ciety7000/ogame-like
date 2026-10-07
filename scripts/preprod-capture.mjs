@@ -1,6 +1,9 @@
 // 6.14.15 : captures d'écran d'une page du jeu sur la pré-prod (thème Constellation, 375 px et bureau).
 //
-//   node scripts/preprod-capture.mjs /game/codex <dossier de sortie> ["Onglet 1,Onglet 2"]
+//   node scripts/preprod-capture.mjs /game/codex <dossier de sortie> ["Onglet 1,Onglet 2"] ["Texte 1,Texte 2"]
+//
+// 6.14.93 : le 4e argument (textes séparés par des virgules) fait défiler jusqu'à chaque texte, après le dernier onglet, et
+// ajoute une capture par texte (`<page>-vue-<texte>-<largeur>.png`) : contenu sous la ligne de flottaison.
 //
 // Variables : PREPROD_PB_URL, PREPROD_PB_ADMIN_EMAIL, PREPROD_PB_ADMIN_PASSWORD (docs/preprod.md §6).
 // Compte de capture : « claude_capture » (créé au premier lancement) ; son mot de passe est tiré au hasard à chaque
@@ -13,7 +16,7 @@ import { chromium } from "playwright";
 import { randomBytes } from "node:crypto";
 
 const { PREPROD_PB_URL: URL_, PREPROD_PB_ADMIN_EMAIL, PREPROD_PB_ADMIN_PASSWORD } = process.env;
-const [path = "/game", out = ".", tabsArg = ""] = process.argv.slice(2);
+const [path = "/game", out = ".", tabsArg = "", scrollArg = ""] = process.argv.slice(2);
 if (!URL_ || !PREPROD_PB_ADMIN_EMAIL || !PREPROD_PB_ADMIN_PASSWORD) {
   console.error("Renseigne PREPROD_PB_URL, PREPROD_PB_ADMIN_EMAIL et PREPROD_PB_ADMIN_PASSWORD.");
   process.exit(1);
@@ -92,6 +95,13 @@ for (const [name, viewport] of [["mobile", { width: 375, height: 812 }], ["deskt
     await t.first().click();
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `${out}/${slug}-${tab.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${name}.png` });
+  }
+  for (const text of scrollArg.split(",").map((t) => t.trim()).filter(Boolean)) {
+    const el = page.getByText(text, { exact: false }).first();
+    if (!(await el.count())) continue;
+    await el.scrollIntoViewIfNeeded().catch(() => {});
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: `${out}/${slug}-vue-${text.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${name}.png` });
   }
   const width = await page.evaluate(() => document.documentElement.scrollWidth);
   const overflow = await page.evaluate(measureOverflow);

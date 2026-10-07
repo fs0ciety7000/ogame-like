@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { defaultGameContent } from "@/game/content";
 import { CLASS_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
 import { SYNTH_BUILDING_ID } from "@/game/buildings";
+import { PASS_THEME_OLD_IMAGES, PASS_THEMES, SEASON_PORTRAITS } from "@/game/passSeasons";
 
 /* 6.14.60 (AU27, AJ27-3, constat AJ-5) : tout contenu par défaut (unité, bâtiment, techno, relique) ajouté après la
    première liste a son entrée `appendFromDefaults` dans CONTENT_MIGRATIONS (cosmic_db.js). Sans elle, il n'apparaît
@@ -130,5 +131,56 @@ describe("6.14.92 : migration relics-art-6.14.92", () => {
       expect(p.from).not.toBe(p.to);
       expect(existsSync(`public${p.to}`), p.to).toBe(true);
     }
+  });
+});
+
+/* 6.14.93 : factions, boss d'alliance et passe illustrés ; une liste ou une saison déjà enregistrée reçoit les nouvelles images,
+   une image réglée à la main est gardée. */
+describe("6.14.93 : migrations des illustrations (factions, boss d'alliance, passe)", () => {
+  it("factions : bannière et emblème ajoutés s'ils manquent, Chœur et réglage manuel intacts", () => {
+    const items = [{ id: "varan" }, { id: "cartel", emblem: "/x.webp" }, { id: "choeur" }];
+    const changes: string[] = [];
+    expect(rulesMigration("factions-art-6.14.93").run(items, changes)).toBe(true);
+    expect(items[0]).toEqual({ id: "varan", banner: "/assets/story/varan-banner.webp", emblem: "/assets/story/varan-emblem.webp" });
+    expect(items[1]).toEqual({ id: "cartel", banner: "/assets/story/cartel-banner.webp", emblem: "/x.webp" });
+    expect(items[2]).toEqual({ id: "choeur" });
+    const factions = defaultGameContent().factions as { id: string; banner?: string; emblem?: string }[];
+    for (const id of ["varan", "gravhorn", "inquisition", "cartel", "meute"]) {
+      const f = factions.find((x) => x.id === id)!;
+      expect(f.banner).toBe(`/assets/story/${id}-banner.webp`);
+      expect(f.emblem).toBe(`/assets/story/${id}-emblem.webp`);
+      expect(existsSync(`public${f.banner}`) && existsSync(`public${f.emblem}`), id).toBe(true);
+    }
+  });
+
+  it("boss d'alliance : image provisoire remplacée, image réglée gardée", () => {
+    const data = { allianceBoss: { bosses: [{ id: "gravhorn", image: "/assets/story/gravhorn.webp" }, { id: "kesh", image: "/mien.webp" }] } };
+    expect(rulesMigration("alliance-boss-art-6.14.93").run(data, [])).toBe(true);
+    expect(data.allianceBoss.bosses.map((b) => b.image)).toEqual(["/assets/bosses/alliance-gravhorn.webp", "/mien.webp"]);
+    expect(rulesMigration("alliance-boss-art-6.14.93").run({}, [])).toBe(false);
+    for (const b of defaultGameContent().rules.allianceBoss.bosses) expect(existsSync(`public${b.image}`), b.id).toBe(true);
+  });
+
+  it("passe : image du thème et portrait des mois illustrés", () => {
+    (globalThis as Record<string, unknown>).loadGame = () => ({ PASS_THEME_OLD_IMAGES, SEASON_PORTRAITS });
+    const data = {
+      seasons: [
+        { id: "2026-11", theme: { id: "vide", image: PASS_THEME_OLD_IMAGES.vide }, commander: { portrait: "" } },
+        { id: "2027-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } },
+      ],
+    };
+    try {
+      expect(rulesMigration("pass-art-6.14.93").run(data, [])).toBe(true);
+    } finally {
+      delete (globalThis as Record<string, unknown>).loadGame;
+    }
+    expect(data.seasons[0]).toEqual({ id: "2026-11", theme: { id: "vide", image: "/assets/pass/theme-vide.webp" }, commander: { portrait: "/assets/commanders/s-2026-11.webp" } });
+    expect(data.seasons[1]).toEqual({ id: "2027-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } });
+    for (const t of PASS_THEMES) {
+      expect(t.image).toBe(`/assets/pass/theme-${t.id}.webp`);
+      expect(existsSync(`public${t.image}`), t.id).toBe(true);
+      expect(PASS_THEME_OLD_IMAGES[t.id], t.id).toBeTruthy();
+    }
+    for (const m of SEASON_PORTRAITS) expect(existsSync(`public/assets/commanders/s-${m}.webp`), m).toBe(true);
   });
 });
