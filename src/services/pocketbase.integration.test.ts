@@ -1360,6 +1360,52 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const colonyId = `${aId}-c1`;
+    const colony = {
+      id: colonyId, slot: 1, name: "Rempart-Sud", foundedAtMs: Date.now() - 86400000, updatedAtMs: Date.now(),
+      buildings: { extracteur_ferraille: { level: 1, unlocked: true }, entrepot: { level: 1, unlocked: true }, hangar_defense: { level: 1, unlocked: true } },
+      resources: { ...RICH }, building: null, defenses: {}, defenseJob: null,
+    };
+    const fleets: string[] = [];
+    const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+    const rulesBefore = rulesRec ? rulesRec.data : null;
+    try {
+      const data = Object.assign({}, rulesBefore || {}, { colonyBase: Object.assign({}, (rulesBefore || {}).colonyBase || {}, { defendsColony: true }) });
+      if (rulesRec) await admin.collection("game_config").update(rulesRec.id, { data });
+      else await admin.collection("game_config").create({ key: "rules", data });
+      await admin.collection("players").update(aId, { colonies: [colony], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, xp: (await snap(bId)).xp, units: { chasseur: { level: 1, count: 30 } } });
+      await admin.collection("players").update(bId, { allianceId: "", units: { chasseur: { level: 1, count: 40 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0 });
+      const base = await admin.collection("fleets").create({
+        ownerUid: aId, ownerPseudo: aBefore!.pseudo, targetUid: colonyId, targetPseudo: "Rempart-Sud", mission: "colonybase", units: { chasseur: 20 },
+        departAtMs: Date.now() - 7200000, arriveAtMs: Date.now() - 3600000, returnAtMs: 0, status: "stationed", durationMs: 14 * 86400000,
+        stationedUntilMs: Date.now() + 10 * 86400000, base: { colonyId }, recalled: false, loot: null, reportId: "", outcome: "",
+      });
+      fleets.push(base.id);
+      const sent = await ps.sendFleet(colonyId, { chasseur: 30 }, "attack");
+      fleets.push(sent.id);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      const report = await admin.collection("battle_reports").getOne(landed.reportId);
+      expect(report.garrisons).toHaveLength(1);
+      const after = await admin.collection("fleets").getOne(base.id);
+      expect((after.units as Record<string, number>).chasseur ?? 0).toBeLessThanOrEqual(20);
+    } finally {
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && planetId="${colonyId}"` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      const cur = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+      if (cur) {
+        if (rulesBefore) await admin.collection("game_config").update(cur.id, { data: rulesBefore });
+        else await admin.collection("game_config").delete(cur.id);
+      }
+      await admin.collection("players").update(aId, { colonies: [], resources: aBefore!.resources, lastDefeatAtMs: aBefore!.lastDefeatAtMs ?? 0, xp: aBefore!.xp, units: aBefore!.units });
+      await admin.collection("players").update(bId, { allianceId: bBefore!.allianceId, units: bBefore!.units });
+    }
+  }, 60_000);
+
   it("v3.3 anomalies: an impossible stock jump becomes a staff report", async () => {
     const before = await snap(bId);
     const now = Date.now();

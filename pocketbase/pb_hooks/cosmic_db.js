@@ -1432,7 +1432,14 @@ function resolveAttackArrival(txApp, game, rec, now) {
     return;
   }
   // Garnisons alliées chez le défenseur : elles combattent à ses côtés.
-  const garrisonRecs = defender && !colonyOwner ? stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid"))) : [];
+  // 6.11.1 (Z4) : sur une colonie, sa base avancée combat comme une garnison si l'admin l'a activé.
+  const garrisonRecs = !defender
+    ? []
+    : colonyOwner
+      ? game.colonyBaseDefends()
+        ? txApp.findRecordsByFilter("fleets", 'targetUid = {:c} && ownerUid = {:o} && mission = "colonybase" && status = "stationed"', "", 5, 0, { c: fleet.targetUid, o: colonyOwner })
+        : []
+      : stationedGarrisons(txApp, fleet.targetUid).filter((g) => findOrNull(txApp, "players", g.getString("ownerUid")));
   const garrisons = garrisonRecs.map((g) => {
     const owner = toPlain(txApp.findRecordById("players", g.getString("ownerUid")));
     const gf = fleetFromRecord(g);
@@ -1518,15 +1525,16 @@ function resolveAttackArrival(txApp, game, rec, now) {
     notify(txApp, g.getString("ownerUid"), [
       {
         kind: "fleet",
-        title: "Ta garnison a combattu",
-        message: `Attaque de ${fleet.ownerPseudo} contre ${fleet.targetPseudo} : ${lost} vaisseau(x) perdu(s)${left ? "" : ", garnison détruite"}.`,
+        title: g.getString("mission") === "colonybase" ? "Ta base avancée a combattu" : "Ta garnison a combattu",
+        message: `Attaque de ${fleet.ownerPseudo} contre ${fleet.targetPseudo} : ${lost} vaisseau(x) perdu(s)${left ? "" : g.getString("mission") === "colonybase" ? ", base détruite" : ", garnison détruite"}.`,
         createdAtMs: now,
         read: false,
       },
     ]);
   });
 
-  if (game.debrisTotal(result.debris) > 0) {
+  // 6.11.1 : pas de champ de débris sur une colonie (son identifiant <uid>-c<n> dépasse 15 caractères ; Q13).
+  if (game.debrisTotal(result.debris) > 0 && !colonyOwner) {
     const debris = loadDebris(txApp, fleet.targetUid);
     const field = game.mergeDebris(debris.field, result.debris, { uid: fleet.targetUid, pseudo: fleet.targetPseudo }, now);
     saveDebris(txApp, debris, field);

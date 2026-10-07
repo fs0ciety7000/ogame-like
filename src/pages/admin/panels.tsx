@@ -738,6 +738,7 @@ export function RulesPanel() {
           <NumberField label="Ravitaillement : la planète mère garde (0,3 = 30 %)" value={rules.colonyRoutes.supplyHomeReservePct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, colonyRoutes: { ...r.colonyRoutes, supplyHomeReservePct: v ?? 0 } }))} />
           <CheckboxField label="Base avancée ouverte (6.10)" checked={colonyBaseRules(rules).enabled} hint="Décoché : plus de nouvelle base ; les bases en place vont à leur terme." onChange={(v: boolean) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), enabled: v } }))} />
           <NumberField label="Base avancée : durée maximale (jours)" value={colonyBaseRules(rules).maxDays} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), maxDays: Math.max(1, Math.round(v ?? 14)) } }))} />
+          <CheckboxField label="Base avancée : défend sa colonie (6.11.1)" checked={colonyBaseRules(rules).defendsColony} hint="Coché : la base combat avec les défenses de la colonie attaquée, comme une garnison (50 %), et peut perdre des vaisseaux." onChange={(v: boolean) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), defendsColony: v } }))} />
           <NumberField label="Base avancée : bases par colonie" value={colonyBaseRules(rules).perColony} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), perColony: Math.max(1, Math.round(v ?? 1)) } }))} />
         </Section>
         <Section title="Espionnage">

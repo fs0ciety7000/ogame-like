@@ -18,7 +18,7 @@ import { triggerWarpEffect } from "@/store/warpEffectStore";
 import type { PlayerState } from "@/types/game";
 
 /* 6.10.0 (proposals/flotte-basee.md) : base avancée sur une colonie. La flotte y stationne, attaque depuis là
-   (fenêtre d'attaque, « Départ ») et y revient ; elle ne défend pas la colonie. */
+   (fenêtre d'attaque, « Départ ») et y revient ; depuis la 6.11.1, elle peut défendre la colonie (réglage admin). */
 
 const shipsLine = (units: Record<string, number>) =>
   Object.entries(units)
@@ -85,8 +85,8 @@ export function ColonyBasePanel({ colony, player }: { colony: Colony; player: Pl
       ) : (
         <div className="mt-1.5 flex flex-col items-start gap-2 text-[11px] text-slate-400 sm:flex-row sm:items-center">
           <span className="min-w-0 sm:flex-1">
-            Stationne une flotte ici, jusqu'à <span className="font-mono tabular-nums">{COLONY_BASE_RULES.maxDays} j</span> : tes attaques partent de la colonie et y reviennent. Elle ne
-            défend pas la colonie.
+            Stationne une flotte ici, jusqu'à <span className="font-mono tabular-nums">{COLONY_BASE_RULES.maxDays} j</span> : tes attaques partent de la colonie et y reviennent.{" "}
+            {COLONY_BASE_RULES.defendsColony ? "Elle défend aussi la colonie (pertes possibles)." : "Elle ne défend pas la colonie."}
           </span>
           <Button size="sm" variant="outline" disabled={!COLONY_BASE_RULES.enabled} onClick={() => setOpen(true)}>
             <Anchor className="h-3.5 w-3.5" /> Baser une flotte

@@ -108,7 +108,14 @@ export const COLONY_BASE_RULES = {
   maxDays: 14,
   /** Bases à la fois sur une même colonie. */
   perColony: 1,
+  /** 6.11.1 (Z4, Q9) : la base combat aux côtés des défenses de la colonie attaquée, comme une garnison (pertes possibles). Désactivé par défaut. */
+  defendsColony: false,
 };
+
+/** 6.11.1 : la base avancée défend-elle sa colonie ? (lu par le serveur au combat). */
+export function colonyBaseDefends(): boolean {
+  return COLONY_BASE_RULES.defendsColony === true;
+}
 
 export interface Fleet {
   id: string;

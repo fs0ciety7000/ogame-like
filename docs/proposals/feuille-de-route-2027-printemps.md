@@ -17,7 +17,7 @@ travail automatique : Z0 et Z1 sont sautés et notés (Q12), les lots qui en dé
 | 2 | Z1 | Mesures de production (lecture seule) : PRG-1 (points d'octobre), BOSS-2, COM-3 réels, usage des bases avancées ; réponses à Q3 et Q8 | S | Z0 |
 | 3 | Z2 | Pages longues (UI-3) : Menaces, Bâtiments, Unités, Formules en onglets ou blocs repliables, cible < 5 000 px à 375 px | M | livré 6.10.2 (Menaces 2 148, Bâtiments 5 456, Unités 5 651 px ; Formules gardée) |
 | 4 | Z3 | Passe : paliers bonus après le dernier palier (PRG-2, Q4), proposition chiffrée puis lot | M | livré 6.11.0 (option B1 de `progression.md`, valeurs prudentes) |
-| 5 | Z4 | Base avancée, suite (Q9) : la base défend la colonie (combat de colonie avec la flotte basée), proposition puis lot | L | Z1 (usage réel) |
+| 5 | Z4 | Base avancée, suite (Q9) : la base défend la colonie (combat de colonie avec la flotte basée), proposition puis lot | L | livré 6.11.1 (désactivé par défaut, Q9) |
 | 6 | Z5 | Constantes de règle restantes (Q7) : inventaire final et conversion vers les objets de règles | M | livré 6.10.3 |
 | 7 | Z6 | Performance, si les Web Vitals de production le justifient (Q8) : textes lourds du contenu chargés après le premier affichage | M | Z1 |
 | 8 | AU14 | Revue de printemps : même grille que AU1 à AU13 sur les systèmes touchés ; test d'intégration « v4.2 warlords » intermittent (vu en 6.11.0) | M | fin des lots |

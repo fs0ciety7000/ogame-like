@@ -181,3 +181,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.10.2 | Z2 : Menaces en onglets par faction, fiches Bâtiments et Unités compactes sur mobile | `docs/changes/6.10.2-pages-longues.md` |
 | 2026-10-07 | 6.10.3 | Z5 : Ambre du dernier palier, effort du passe, prix d'un indice, XP de mission suggérée réglables ; constantes mortes retirées (Q7 close) | `docs/changes/6.10.3-constantes-regles.md` |
 | 2026-10-07 | 6.11.0 | Z3 (PRG-2) : paliers bonus du passe, 1 jeton tous les 120 points après le dernier palier, 10 par mois | `docs/changes/6.11.0-paliers-bonus.md` |
+| 2026-10-07 | 6.11.1 | Z4 : la base avancée peut défendre sa colonie comme une garnison (réglage admin, désactivé par défaut, Q9) | `docs/changes/6.11.1-base-defend-colonie.md` |

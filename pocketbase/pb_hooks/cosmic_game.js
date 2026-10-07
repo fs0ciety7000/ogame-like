@@ -281,6 +281,7 @@ __export(hooksEntry_exports, {
   codexEntries: () => codexEntries,
   codexProgress: () => codexProgress,
   collectDebris: () => collectDebris,
+  colonyBaseDefends: () => colonyBaseDefends,
   colonyOwnerUid: () => colonyOwnerUid,
   compileGazette: () => compileGazette,
   completeFleetReturn: () => completeFleetReturn,
@@ -13911,8 +13912,13 @@ var COLONY_BASE_RULES = {
   /** Durée maximale du stationnement, en jours ; la base rentre seule ensuite. */
   maxDays: 14,
   /** Bases à la fois sur une même colonie. */
-  perColony: 1
+  perColony: 1,
+  /** 6.11.1 (Z4, Q9) : la base combat aux côtés des défenses de la colonie attaquée, comme une garnison (pertes possibles). Désactivé par défaut. */
+  defendsColony: false
 };
+function colonyBaseDefends() {
+  return COLONY_BASE_RULES.defendsColony === true;
+}
 function mapPosition(uid) {
   const c = galaxyCoords(uid);
   return { x: c.x * FLEET_RULES.mapSize, y: c.y * FLEET_RULES.mapSize };
