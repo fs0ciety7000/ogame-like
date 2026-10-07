@@ -89,6 +89,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.11.8 | [Revue AU16 et clôture de l'automne](6.11.8-revue-automne.md) | docs | aucune (AU16), Q15 |
 | 6.11.9 | [Bâtiments, Unités et État-major sous 5 000 px sur mobile](6.11.9-batiments-unites-etat-major-mobile.md) | ajustement | aucune (H1), Q14 |
 | 6.11.10 | [Test d'intégration des seigneurs autonome](6.11.10-test-seigneurs-autonome.md) | refactoring | aucune (H2) |
+| 6.11.11 | [Billet de devblog « le jeu sur téléphone »](6.11.11-billet-telephone.md) | docs | aucune (H3) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
