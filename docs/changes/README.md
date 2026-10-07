@@ -72,6 +72,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.7.1 | [Casino ouvert en permanence, réglages admin](6.7.1-casino-reglages.md) | correctif | [calendrier-semaine](../proposals/calendrier-semaine.md) |
 | 6.9.8 | [Colonies, délai de spécialisation affiché](6.9.8-colonies.md) | correctif | aucune (AU12) |
 | 6.9.9 | [Puissance d'une flotte détaillée](6.9.9-puissance-flotte.md) | ajout | feuille de route (W) |
+| 6.9.10 | [Bloc de démarrage mesuré, chargement à la demande reporté](6.9.10-mesure-bloc-demarrage.md) | docs | feuille de route (X), Q8 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

@@ -122,7 +122,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 16 | AU12 | Revue Colonies : routes, spécialisations, file de défense | S | livré : rapport (`2026-10-07-au12-colonies.md`) + 6.9.8 |
 | 17 | Y | Flotte basée sur une colonie (Q.3) : proposition, puis implémentation | L | à faire |
 | 18 | W | Lisibilité : puissance d'une flotte entière détaillée dans la fenêtre d'attaque | S | livrée (6.9.9) |
-| 19 | X | Performance : contenu (succès, saisons, Chroniques) chargé à la demande | M | à faire |
+| 19 | X | Performance : contenu (succès, saisons, Chroniques) chargé à la demande | M | mesuré, reporté (6.9.10, Q8) |
 | 20 | AU13 | Revue transverse et clôture : admin, sécurité serveur, tâches planifiées, accessibilité, blog, statut ; synthèse et feuille de route suivante | M | à faire |
 | — | G.2, J.3, O.2, M.2 | Conditionnels, déclenchés par les relevés de U | — | conditionnel |
 | fin | Mise en production | PR `claude/hiver-k-s` → `main`, puis « Mettre à jour les hooks » | — | à faire |
