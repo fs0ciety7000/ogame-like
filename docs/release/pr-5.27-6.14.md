@@ -9,7 +9,7 @@ Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q1
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 156 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 157 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -191,6 +191,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.87 : Illustrations, quatrième lot (technos 14, 15 et 20 à 27) (`docs/changes/6.14.87-illustrations-lot-4.md`)
 - 6.14.88 : Bascule du rythme : un jeu au long cours, datée au 1er novembre 2026 (AE-L2 compris) (`docs/changes/6.14.88-bascule-rythme.md`)
 - 6.14.89 : Réglage fin du rythme avant la bascule : second palier 36 h + 27 h, recherche tardive dès le niveau 7, ×25 (`docs/changes/6.14.89-reglage-fin-rythme.md`)
+- 6.14.90 : Audit visuel des 13 thèmes (AU28) : danger lisible, texte secondaire d'Aurora, boutons survolés (`docs/changes/6.14.90-audit-themes.md`)
 - 6.14.91 : Génération des illustrations par API (OpenAI gpt-image-1) (`docs/changes/6.14.91-generation-par-api.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

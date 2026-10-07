@@ -83,6 +83,13 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition) | L | à faire |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
+| 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | à faire |
+| 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | à faire |
+| 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | à faire |
+| 65d | TH-L4 | Garde des contrastes mesurée sur `space-600` (Q230) | S | à faire |
+| 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q228) | M | à faire |
+| 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q229) | M | à faire |
+| 65g | TH-L7 | `scripts/theme-audit.mjs` à chaque revue de fin de feuille de route (Q232) | S | à faire |
 | 65 | AU28 | Revue, même grille | M | fin des lots |
 | — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | plus tard |
 | — | Z0 | Mise en production | — | écartée pour l'instant (Q12) |

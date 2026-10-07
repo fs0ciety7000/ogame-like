@@ -239,7 +239,7 @@
   --th-accent: #ff5e8a;
   --th-accent2: #ffa64d;
   --th-ok: #5cf2c0;
-  --th-danger: #ff3d5a;
+  --th-danger: #ff4433; /* 6.14.90 (TH-3) : rouge franc, distinct de l'accent rose (écart 10 → 19,5) */
   --th-gold: #ffd36b;
   --th-ember: #ffa64d;
   --th-space-950: #0c0617;
@@ -252,7 +252,7 @@
   --th-text-200: #fbe6dc;
   --th-text-300: #e4cbd8;
   --th-text-400: #b9a6c9;
-  --th-text-500: #9380a8; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
+  --th-text-500: #a08db5; /* 6.14.90 (TH-2) : ≥ 4,5:1 aussi sur les panneaux violets, plus clairs que space-700 */
   --th-text-600: #5e4f74;
   --th-ink: #fff0e8;
   --th-body-glow: #4a1550;
@@ -307,7 +307,7 @@
   --th-accent: #e6dfcc;
   --th-accent2: #a77fdc;
   --th-ok: #6fd3a8;
-  --th-danger: #e2553f;
+  --th-danger: #e85e48; /* 6.14.90 (TH-6) : 4,9:1 sur space-700 (4,5 avant) */
   --th-gold: #ceae33;
   --th-ember: #e88a3a;
   --th-space-950: #07090c;
@@ -409,7 +409,7 @@
   --th-accent: #d6c49a; /* 6.14.55 : sable, distinct du texte os (AD-1) */
   --th-accent2: #5b8fd6; /* 6.14.55 : violet = bleu acier (Q-AD-3 a), plus l'ember */
   --th-ok: #7fc4a6;
-  --th-danger: #d9452f;
+  --th-danger: #e5553d; /* 6.14.90 (TH-5) : 4,8:1 sur space-700 (4,05 avant) ; la bande garde #d9452f */
   --th-gold: #f2b33d;
   --th-ember: #e0802c; /* 6.14.55 : orange de la bande, loin du danger et de l'or */
   --th-space-950: #08090a;
@@ -1035,7 +1035,8 @@ body {
 }
 :root[data-theme="signal"] .hud-btn-primary:hover {
   background: var(--th-accent2);
-  color: var(--th-text-100);
+  /* 6.14.90 (TH-4) : encre sombre sur le magenta (5,6:1 ; texte clair : 3,2:1). */
+  color: var(--th-btn-ink);
 }
 :root[data-theme="signal"] ::selection {
   background: var(--th-accent2);
@@ -1240,7 +1241,8 @@ main {
 :root[data-theme="constellation"] .hud-btn-primary:hover {
   /* 6.14.55 : décor de la bande orange (stripe), le violet sémantique est devenu bleu acier. */
   background: var(--th-stripe-2);
-  color: var(--th-text-100);
+  /* 6.14.90 (TH-1) : encre sombre sur l'orange (6,5:1 ; texte os : 2,6:1). */
+  color: var(--th-btn-ink);
 }
 :root[data-theme="constellation"] ::selection {
   background: var(--th-stripe-2);

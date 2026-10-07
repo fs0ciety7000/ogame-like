@@ -23,6 +23,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
 | AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32, AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17 sauf AE-6 et AE-8 (AE-3 et AE-7 : reste le moteur, lot AE-L3), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
+| AU28 thèmes | 6.14.90 | TH-7 à TH-15 (`docs/audit/2026-10-07-au28-themes.md`) : verrous grisés par opacité, titres coupés, ember en décor, Netrunner, ember des thèmes orange | TH-L1 à TH-L7 |
 | É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
 
 

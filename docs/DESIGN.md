@@ -21,7 +21,10 @@ Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--t
 un texte, un `placeholder`, une heure ou un rang en gris passe en `text-slate-500` (garde, 6.14.83).
 **Plancher de 11 px** : aucun texte sous 11 px hors admin (`text-[11px]` au plus petit, pastilles `hud-chip` comprises) ; seuls les
 libellés d'un dessin SVG (`<text>`, en unités du dessin) y échappent (6.14.83).
-Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, écart entre couleurs de sens).
+`--th-danger` se lit aussi comme texte (« Zone dangereuse ») : ≥ 4,5:1 sur `--th-space-700` dans chaque thème ; un bouton survolé
+garde une encre lisible (`--th-btn-ink` sur un fond clair ou saturé, jamais `--th-text-100` sur l'orange ou le magenta) (6.14.90).
+Audit des 13 thèmes : `scripts/theme-audit.mjs` (captures et mesures, revue AU28).
+Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, danger lisible, écart entre couleurs de sens).
 
 ## Couleurs = sens
 

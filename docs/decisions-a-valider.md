@@ -31,3 +31,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q228 | Séparer or/accent et violet/danger, la barre rouge devient un décor (lot TH-L5) ; thème gardé (`docs/audit/2026-10-07-au28-themes.md`) | valider |
+| Q229 | Icône d'alerte obligatoire sur tout ember (lot TH-L6), sans casser le monochrome de Cockpit (`docs/audit/2026-10-07-au28-themes.md`) | valider |
+| Q230 | Mesurer sur `space-600`, plus proche du fond réel des panneaux (lot TH-L4) (`docs/audit/2026-10-07-au28-themes.md`) | valider |
+| Q231 | Rouge franc `#ff4433` au lieu du rose `#ff3d5a` (déjà appliqué) : ne se confond plus avec l'accent (`docs/audit/2026-10-07-au28-themes.md`) | valider |
+| Q232 | Constellation pour les captures livrées ; audit des 13 thèmes (`scripts/theme-audit.mjs`) à chaque revue de fin de feuille de route (TH-L7) (`docs/audit/2026-10-07-au28-themes.md`) | valider |

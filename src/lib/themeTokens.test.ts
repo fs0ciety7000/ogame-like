@@ -97,7 +97,7 @@ const KNOWN: Record<string, Record<string, number>> = {
   holo: { "accent/accent2": 0, "gold/ember": 7.8 },
   cockpit: { "accent/accent2": 0, "accent/ember": 0, "accent2/ember": 0 },
   netrunner: { "accent/gold": 0, "accent2/danger": 0 },
-  aurora: { "accent/danger": 10.1, "accent2/ember": 0 },
+  aurora: { "accent2/ember": 0 }, // 6.14.90 (TH-3) : accent/danger levée (10,1 → 19,5)
   voyageur: { "accent/text-100": 7 },
   omni: { "accent/ember": 7.1, "gold/ember": 11.3 },
   spartan: { "accent2/ok": 7.7 },
@@ -128,6 +128,14 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
   it("--th-text-500 atteint 4,5:1 sur le fond des panneaux dans chaque thème (AD-12)", () => {
     const low = Object.entries(THEMES)
       .map(([n, t]) => [n, contrast(t["text-500"], t["space-700"])] as const)
+      .filter(([, c]) => c < TEXT_500_MIN)
+      .map(([n, c]) => `${n} ${c.toFixed(2)}:1`);
+    expect(low).toEqual([]);
+  });
+
+  it("--th-danger se lit comme texte : ≥ 4,5:1 sur le fond des panneaux (6.14.90, TH-5)", () => {
+    const low = Object.entries(THEMES)
+      .map(([n, t]) => [n, contrast(t.danger, t["space-700"])] as const)
       .filter(([, c]) => c < TEXT_500_MIN)
       .map(([n, c]) => `${n} ${c.toFixed(2)}:1`);
     expect(low).toEqual([]);
