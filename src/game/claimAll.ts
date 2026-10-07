@@ -5,7 +5,7 @@ import { passState, passTier, tierRequirements } from "@/game/seasonPass";
 import { streakStatus } from "@/game/streak";
 import { dailyMissions } from "@/game/dailyMissions";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
-import { codexClaimableCategories } from "@/game/codex";
+import { codexClaimableCategories, type CodexContext } from "@/game/codex";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -29,7 +29,7 @@ export type ClaimAllAction =
   | { type: "codexClaim"; category: string };
 
 /** Réclamations prêtes (lecture seule). */
-export function pendingClaims(player: PlayerState, now: number): ClaimAllAction[] {
+export function pendingClaims(player: PlayerState, now: number, codex?: CodexContext): ClaimAllAction[] {
   const out: ClaimAllAction[] = [];
   // 5.30 : série du jour d'abord, puis missions du jour.
   if (!streakStatus(player, now).claimed) out.push({ type: "streakClaim" });
@@ -55,8 +55,9 @@ export function pendingClaims(player: PlayerState, now: number): ClaimAllAction[
   }
   if (onboardingEligible(player)) for (const s of onboardingProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimOnboarding", stepId: s.step.id });
   if (guideVisible(player)) for (const s of guideProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimGuide", stepId: s.step.id });
-  // 6.14.17 (Z1-2) : catégories du Codex complètes (celles que le joueur seul permet de vérifier, sans faux positif).
-  for (const category of codexClaimableCategories(player, now)) out.push({ type: "codexClaim", category });
+  // 6.14.17 (Z1-2) : catégories du Codex complètes. 6.14.25 (H29-3) : avec `codex` (serveur), Seigneurs et Boss aussi ;
+  // sans lui (pastille du client), seulement celles que le joueur seul permet de vérifier, sans faux positif.
+  for (const category of codexClaimableCategories(player, now, codex)) out.push({ type: "codexClaim", category });
   return out;
 }
 

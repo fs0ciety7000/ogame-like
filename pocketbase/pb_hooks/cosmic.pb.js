@@ -94,9 +94,11 @@ routerAdd(
             uid,
           )
         : {};
+      // 6.14.25 (H29-3) : « Tout réclamer » et le Codex lisent les seigneurs affrontés et le Hall of fame.
+      const codex = game.actionNeedsCodex(action) ? db.codexContext(txApp, game, uid) : undefined;
       let out;
       try {
-        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway);
+        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway, codex);
       } catch (err) {
         throw db.asHttpError(game, err);
       }

@@ -7,6 +7,7 @@ export { performAttack } from "@/game/attack";
 export {
   performPlayerAction,
   actionNeedsAway,
+  actionNeedsCodex,
   performGift,
   newPlayerProfile,
   applyLegacyBattleReport,

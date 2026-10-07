@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
-import { performPlayerAction } from "@/game/actions";
+import { actionNeedsCodex, performPlayerAction } from "@/game/actions";
+import { warlordsConfig } from "@/game/warlords";
 import { pendingClaims } from "@/game/claimAll";
 import { claimCodexCategory, codexCategoryState, codexClaimedCategories, codexEntries } from "@/game/codex";
 import { applyGameContent } from "@/game/content";
@@ -69,5 +70,24 @@ describe("6.14.17 (Z1-2) : catégories du Codex dans « Tout réclamer »", () =
     expect(codexClaimedCategories(out.player)).toContain("buildings");
     expect(pendingClaims(out.player, NOW).some((c) => c.type === "codexClaim" && c.category === "buildings")).toBe(false);
     expect(() => performPlayerAction(out.player, out.queues, { type: "codexClaim", category: "buildings" }, NOW)).toThrow(/déjà/);
+  });
+});
+
+describe("6.14.25 (H29-3) : Seigneurs et Boss dans « Tout réclamer » (serveur)", () => {
+  beforeAll(() => applyGameContent({}));
+
+  it("avec les données du serveur, la catégorie Seigneurs complète est réclamée ; sans elles, jamais", () => {
+    const p = defaultPlayerState("u1", "Archi") as PlayerState;
+    const ctx = { fought: warlordsConfig().defs.filter((d) => d.enabled).map((d) => d.id), bossesFought: [] };
+    const has = (list: ReturnType<typeof pendingClaims>) => list.some((c) => c.type === "codexClaim" && c.category === "warlords");
+    expect(has(pendingClaims(p, NOW))).toBe(false);
+    expect(has(pendingClaims(p, NOW, ctx))).toBe(true);
+    expect(actionNeedsCodex({ type: "claimAll" })).toBe(true);
+    expect(actionNeedsCodex({ type: "build" })).toBe(false);
+    const out = performPlayerAction(p, defaultQueues(), { type: "claimAll" }, NOW, {}, false, ctx);
+    expect(codexClaimedCategories(out.player)).toContain("warlords");
+    // Sans contexte, la réclamation directe refuse (catégorie incomplète vue du joueur seul).
+    const q = defaultPlayerState("u2", "Archi") as PlayerState;
+    expect(() => performPlayerAction(q, defaultQueues(), { type: "codexClaim", category: "warlords" }, NOW)).toThrow(/incomplète/);
   });
 });

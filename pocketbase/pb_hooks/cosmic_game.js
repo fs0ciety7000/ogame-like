@@ -163,6 +163,7 @@ __export(hooksEntry_exports, {
   acceptTradeContract: () => acceptTradeContract,
   achievementXpAlert: () => achievementXpAlert,
   actionNeedsAway: () => actionNeedsAway,
+  actionNeedsCodex: () => actionNeedsCodex,
   activeBan: () => activeBan,
   activeMute: () => activeMute,
   activeUltimatum: () => activeUltimatum,
@@ -16293,19 +16294,23 @@ function claimCodexCategory(player, entries, category, now) {
   player.stats = __spreadProps(__spreadValues({}, (_a = player.stats) != null ? _a : {}), { codexClaimed: [...codexClaimedCategories(player), id] });
   return st.reward;
 }
-function codexClaimableCategories(player, now) {
-  const entries = codexEntries(player, /* @__PURE__ */ new Set(), now);
+var contextEntries = (player, now, ctx) => {
+  var _a, _b;
+  return codexEntries(player, new Set((_a = ctx == null ? void 0 : ctx.fought) != null ? _a : []), now, { bossesFought: new Set((_b = ctx == null ? void 0 : ctx.bossesFought) != null ? _b : []) });
+};
+function codexClaimableCategories(player, now, ctx) {
+  const entries = contextEntries(player, now, ctx);
   return CODEX_CATEGORIES.filter((c) => {
     const st = codexCategoryState(player, entries, c.id);
     return st.complete && !st.claimed && (st.reward.tokens > 0 || st.reward.amber > 0);
   }).map((c) => c.id);
 }
-function claimCodexCategoryLocal(player, category, now) {
-  return claimCodexCategory(player, codexEntries(player, /* @__PURE__ */ new Set(), now), category, now);
+function claimCodexCategoryLocal(player, category, now, ctx) {
+  return claimCodexCategory(player, contextEntries(player, now, ctx), category, now);
 }
 
 // src/game/claimAll.ts
-function pendingClaims(player, now) {
+function pendingClaims(player, now, codex) {
   var _a, _b;
   const out = [];
   if (!streakStatus(player, now).claimed) out.push({ type: "streakClaim" });
@@ -16334,7 +16339,7 @@ function pendingClaims(player, now) {
   if (guideVisible(player)) {
     for (const s of guideProgress(player)) if (s.done && !s.claimed) out.push({ type: "claimGuide", stepId: s.step.id });
   }
-  for (const category of codexClaimableCategories(player, now)) out.push({ type: "codexClaim", category });
+  for (const category of codexClaimableCategories(player, now, codex)) out.push({ type: "codexClaim", category });
   return out;
 }
 
@@ -18421,10 +18426,10 @@ function applyAction(s, action) {
     case "claimGuide":
       return claimGuideStep(player, String((_p = action.stepId) != null ? _p : ""));
     case "codexClaim":
-      return claimCodexCategoryLocal(player, action.category, now);
+      return claimCodexCategoryLocal(player, action.category, now, s.codex);
     case "claimAll": {
       const counts = {};
-      for (const sub of pendingClaims(player, now)) {
+      for (const sub of pendingClaims(player, now, s.codex)) {
         try {
           applyAction(s, sub);
           counts[sub.type] = ((_q = counts[sub.type]) != null ? _q : 0) + 1;
@@ -18599,11 +18604,11 @@ function applyAction(s, action) {
       throw new GameActionError("Action inconnue.");
   }
 }
-function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}, awayKnown = false) {
+function performPlayerAction(playerIn, queuesIn, action, now, unitsAway = {}, awayKnown = false, codex) {
   const preFlushPlayer = __spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) });
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway, codex },
     action
   );
   if (awayKnown) flushed.notifications.push(...autoCommission(flushed.player, flushed.queues, unitsAway, now));
@@ -18615,6 +18620,9 @@ function actionNeedsAway(player, action) {
   if (type === "buildUnits" || type === "dockCommission") return true;
   const w = player.workshop;
   return dockTier(player, "auto") && (((_b = (_a = w == null ? void 0 : w.jobs) == null ? void 0 : _a.length) != null ? _b : 0) > 0 || Object.keys((_c = w == null ? void 0 : w.ready) != null ? _c : {}).length > 0);
+}
+function actionNeedsCodex(action) {
+  return (action == null ? void 0 : action.type) === "claimAll" || (action == null ? void 0 : action.type) === "codexClaim";
 }
 var GIFT_RULES = { minAccountDays: 3, outsideAllianceTax: 0.2 };
 function giftDeliveryRate(sender, recipient) {

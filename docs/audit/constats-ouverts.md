@@ -22,7 +22,6 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| AU29-4 | AU24 | Seigneurs et Boss du Codex hors de « Tout réclamer » | H29-3 |
 | AU29-5 | AU24 | Questions ouvertes trop nombreuses pour une relecture rapide | H29-4 |
 
 
@@ -68,6 +67,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | ET-2 | La base avancée (6.10.0) n'est pas sur `main` : aucune attaque de colonie bloquée en production, rien à dédommager |
 | ET29-3 | Cette page (6.14.18) ; reprise par AU24 (6.14.20) |
 | AU29-2 | 6.14.24 : dossier de mise en production prêt (`docs/release/5.27-a-6.14.md`) ; la PR attend le feu vert (Q12) |
+| AU29-4 | 6.14.25 : Seigneurs et Boss dans « Tout réclamer » côté serveur |
 | AU29-3 | 6.14.21 : lectures triées ou filtrées ; échec isolé de « v3.9 bounties » à surveiller (AU25) |
 | COM-3 (reste) | 6.14.19 : casino de la semaine et pot commun (solde, entrées par source) dans la santé |
 | PNJ-5 | 6.14.19 : unités d'élite débloquées dans la santé (jugement avec les mesures) |

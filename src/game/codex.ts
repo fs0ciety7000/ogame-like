@@ -317,8 +317,18 @@ export function claimCodexCategory(player: PlayerState, entries: CodexEntry[], c
 
 /** 5.15.12 : catégories complètes dont la récompense attend (pastille du menu). Sans les
  *  données du serveur (seigneurs, boss affrontés), seules les catégories sûres comptent. */
-export function codexClaimableCategories(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): CodexCategory[] {
-  const entries = codexEntries(player, new Set(), now);
+/** 6.14.25 (H29-3) : données du serveur pour les catégories Seigneurs et Boss (seigneurs affrontés, boss du Hall of fame). */
+export interface CodexContext {
+  fought: string[];
+  bossesFought: string[];
+}
+
+const contextEntries = (player: CodexPlayer, now: number, ctx?: CodexContext) =>
+  codexEntries(player, new Set(ctx?.fought ?? []), now, { bossesFought: new Set(ctx?.bossesFought ?? []) });
+
+/** Catégories complètes à réclamer. Sans `ctx` (client), Seigneurs et Boss ne sont jamais complètes : pas de faux positif. */
+export function codexClaimableCategories(player: CodexPlayer & Pick<PlayerState, "stats">, now: number, ctx?: CodexContext): CodexCategory[] {
+  const entries = contextEntries(player, now, ctx);
   return CODEX_CATEGORIES.filter((c) => {
     const st = codexCategoryState(player, entries, c.id);
     return st.complete && !st.claimed && (st.reward.tokens > 0 || st.reward.amber > 0);
@@ -329,8 +339,8 @@ export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "sta
   return codexClaimableCategories(player, now).length;
 }
 
-/** 6.14.17 (Z1-2) : réclamation depuis « Tout réclamer » (action du joueur). Sans les données du serveur, une catégorie
- *  de seigneurs ou de boss n'est jamais complète ici : elle se réclame depuis la page du Codex (route codexClaim). */
-export function claimCodexCategoryLocal(player: PlayerState, category: unknown, now: number): { tokens: number; amber: number } {
-  return claimCodexCategory(player, codexEntries(player, new Set(), now), category, now);
+/** 6.14.17 (Z1-2) : réclamation depuis « Tout réclamer » (action du joueur). 6.14.25 : le serveur fournit `ctx`, les
+ *  catégories Seigneurs et Boss y passent aussi ; sans lui, elles ne sont jamais complètes. */
+export function claimCodexCategoryLocal(player: PlayerState, category: unknown, now: number, ctx?: CodexContext): { tokens: number; amber: number } {
+  return claimCodexCategory(player, contextEntries(player, now, ctx), category, now);
 }

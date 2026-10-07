@@ -16,7 +16,7 @@ import { buildColonyDefense, renameColony, setColonyRoute, setColonySpec, startC
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
 import { pendingClaims } from "@/game/claimAll";
-import { claimCodexCategoryLocal } from "@/game/codex";
+import { claimCodexCategoryLocal, type CodexContext } from "@/game/codex";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -188,6 +188,8 @@ interface ActionState {
   now: number;
   /** Vaisseaux partis en mission (ils reviendront occuper le hangar). */
   unitsAway: Record<string, number>;
+  /** 6.14.25 (H29-3) : seigneurs affrontés et boss du Hall of fame (Codex), fournis par le serveur. */
+  codex?: CodexContext;
 }
 
 /** v4.2 : seules ces actions restent possibles pendant les vacances. */
@@ -373,12 +375,12 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       return claimGuideStep(player, String(action.stepId ?? ""));
 
     case "codexClaim":
-      return claimCodexCategoryLocal(player, action.category, now);
+      return claimCodexCategoryLocal(player, action.category, now, s.codex);
 
     case "claimAll": {
       // v5.11 : chaque réclamation passe par son action habituelle ; un échec n'arrête pas les autres.
       const counts: Partial<Record<string, number>> = {};
-      for (const sub of pendingClaims(player, now)) {
+      for (const sub of pendingClaims(player, now, s.codex)) {
         try {
           applyAction(s, sub);
           counts[sub.type] = (counts[sub.type] ?? 0) + 1;
@@ -618,11 +620,13 @@ export function performPlayerAction(
   unitsAway: Record<string, number> = {},
   /** 5.28 : `unitsAway` a bien été lu (sinon, pas de remise en service automatique : la place serait surestimée). */
   awayKnown = false,
+  /** 6.14.25 : données du Codex lues par le serveur (`actionNeedsCodex`). */
+  codex?: CodexContext,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; result: unknown } {
   const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) };
   const flushed = flushState(preFlushPlayer, queuesIn, now);
   const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway },
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway, codex },
     action,
   );
   // 5.28 : Cale sèche au palier 10 : les vaisseaux prêts rentrent d'eux-mêmes dès qu'une place se libère.
@@ -638,6 +642,11 @@ export function actionNeedsAway(player: Pick<PlayerState, "buildings" | "worksho
   if (type === "buildUnits" || type === "dockCommission") return true;
   const w = player.workshop;
   return dockTier(player, "auto") && ((w?.jobs?.length ?? 0) > 0 || Object.keys(w?.ready ?? {}).length > 0);
+}
+
+/** 6.14.25 (H29-3) : le serveur doit-il lire les seigneurs affrontés et le Hall of fame (Codex) pour cette action ? */
+export function actionNeedsCodex(action: { type?: unknown } | null | undefined): boolean {
+  return action?.type === "claimAll" || action?.type === "codexClaim";
 }
 
 /* ---------- dons de ressources entre joueurs ---------- */
