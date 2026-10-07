@@ -435,6 +435,31 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.23 illustrations: only game admins drop Midjourney renders", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    // Image PNG minimale (1 × 1).
+    const png = Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0));
+    const form = () => {
+      const f = new FormData();
+      f.append("file", new Blob([png], { type: "image/png" }), "fs0ciety_sci-fi_game_item_icon_test.png");
+      f.append("fileName", "fs0ciety_sci-fi_game_item_icon_test.png");
+      f.append("status", "envoyée");
+      return f;
+    };
+    await expect(pb.collection("illustration_uploads").create(form())).rejects.toBeTruthy();
+    await expect(pb.collection("illustration_uploads").getFullList()).resolves.toEqual([]);
+    await admin.collection("admins").create({ id: bId, note: "test" });
+    try {
+      const rec = await pb.collection("illustration_uploads").create(form());
+      expect(rec).toMatchObject({ status: "envoyée", fileName: "fs0ciety_sci-fi_game_item_icon_test.png" });
+      expect((await pb.collection("illustration_uploads").getFullList()).map((r) => r.id)).toContain(rec.id);
+      await admin.collection("illustration_uploads").delete(rec.id);
+    } finally {
+      await admin.collection("admins").delete(bId);
+    }
+  });
+
   it("admin routes exist (statistics, season closing)", async () => {
     const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
     expect(stats).toBeTruthy();

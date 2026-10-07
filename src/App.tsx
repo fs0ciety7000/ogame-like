@@ -17,6 +17,8 @@ import { lazyPage } from "@/lib/lazyPage";
 // Pages publiques chargées à la demande : le formulaire de connexion
 // (react-hook-form) ne pèse plus sur le bundle du jeu.
 const LoginPage = lazyPage(() => import("@/pages/LoginPage"), "LoginPage");
+// 6.14.23 : atelier d'illustrations de la pré-prod (dépôt des rendus Midjourney).
+const IllustrationsPage = lazyPage(() => import("@/pages/IllustrationsPage"), "IllustrationsPage");
 const ResetPasswordPage = lazyPage(() => import("@/pages/ResetPasswordPage"), "ResetPasswordPage");
 const HallOfFamePage = lazyPage(() => import("@/pages/HallOfFamePage"), "HallOfFamePage");
 const DashboardPage = lazyPage(() => import("@/pages/DashboardPage"), "DashboardPage");
@@ -110,6 +112,7 @@ export default function App() {
             <Route path="/confidentialite" element={<StaticPageRedirect to="/confidentialite.html" />} />
 
             <Route element={<ProtectedRoute />}>
+              <Route path="/img" element={<IllustrationsPage />} />
               <Route path="/game" element={<AppShell />}>
                 <Route index element={<DashboardPage />} />
                 <Route path="ordres" element={<OrdersPage />} />

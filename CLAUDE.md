@@ -83,8 +83,8 @@ La liste complète, avec les fichiers de chaque maillon, est la **chaîne de con
 - succès (entrée et maîtrise), Codex, titre ou bannière ;
 - défis, missions, primes ; butin ;
 - équilibre (simulateur) et interface (Ctrl+K, Formules, Journal) ;
-- illustration : image provisoire, puis une ligne dans `scripts/illustrations.json` (prompt, format, détourage) et la page de dépôt
-  republiée ; l'utilisateur dépose ses rendus depuis son mobile, Claude les intègre (`docs/illustrations.md`) ;
+- illustration : image provisoire, puis une ligne dans `scripts/illustrations.json` (prompt, format, détourage), qui apparaît sur
+  `test.fs0ciety.org/img` au push ; l'utilisateur y envoie ses rendus par lot, Claude les reconnaît et les intègre (`docs/illustrations.md`) ;
 - changelog et billet ;
 - essai sur la pré-prod.
 

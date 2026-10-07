@@ -82,6 +82,8 @@ Une fois l'accès donné (§6), Claude peut le lancer.
 - réécrit vers la pré-prod les adresses de la prod (`base.` et `empire.fs0ciety.org`) dans la configuration du jeu et les billets :
   les illustrations envoyées dans l'admin sont dans la sauvegarde, seule l'adresse change. Les historiques (`admin_logs`, `reports`) restent tels quels.
 
+Illustrations : `https://test.fs0ciety.org/img` (admins du jeu), envoi des rendus Midjourney par lot ; procédure dans `docs/illustrations.md`.
+
 Mesures (agrégats anonymes, lecture seule) : `node scripts/preprod-measure.mjs <fichier.json>`, plus le rapport du serveur
 `/api/cosmic/admin/balance` ; méthode et point zéro dans `docs/audit/2026-10-07-z1-mesures.md`.
 

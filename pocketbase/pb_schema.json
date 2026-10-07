@@ -3419,5 +3419,74 @@
     "indexes": [
       "CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"
     ]
+  },
+  {
+    "id": "pbc_ce_illu_uploads",
+    "name": "illustration_uploads",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "fields": [
+      {
+        "name": "file",
+        "type": "file",
+        "required": true,
+        "maxSelect": 1,
+        "maxSize": 20971520,
+        "mimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/webp"
+        ],
+        "thumbs": [
+          "240x240"
+        ],
+        "protected": false
+      },
+      {
+        "name": "fileName",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      },
+      {
+        "name": "uploadedAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "name": "uploaderUid",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      },
+      {
+        "name": "slotId",
+        "type": "text",
+        "required": false,
+        "max": 80,
+        "presentable": false
+      },
+      {
+        "name": "status",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "note",
+        "type": "text",
+        "required": false,
+        "max": 300,
+        "presentable": false
+      }
+    ]
   }
 ]

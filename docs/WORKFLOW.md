@@ -145,7 +145,7 @@ sans objet, ou reporté au lot X.
 | 10 | **Butin et récompenses** | où on l'obtient : tables de butin, coffres, Comptoir, enchères | `loot.ts`, `bounties.ts` (Comptoir), `auctions.ts`, `addReady` (vaisseaux, I3) |
 | 11 | **Équilibre** | simulateur, « et si », analyse d'équilibrage, mesure dans la santé de l'équilibre si utile | `simulator.ts`, `whatIf.ts`, `balance/` |
 | 12 | **Interface** | page ou carte, recherche Ctrl+K, page Formules, Journal, notification, tutoriel avancé si c'est une étape | `src/pages/`, `CommandPalette`, `FormulasPage`, `timeline.ts`, `advancedGuide.ts` |
-| 13 | **Illustrations** | image provisoire ; ligne dans `scripts/illustrations.json` (prompt, format, détourage), page de dépôt republiée ; intégration par `scripts/illustrations.py` (`docs/illustrations.md`) | `public/assets/…` |
+| 13 | **Illustrations** | image provisoire ; ligne dans `scripts/illustrations.json` (prompt, format, détourage), visible sur `test.fs0ciety.org/img` ; envoi par lot, reconnaissance et intégration (`docs/illustrations.md`) | `public/assets/…` |
 | 14 | **Joueurs** | changelog ; billet de devblog pour un contenu important | `changelog/`, `content/blog/` |
 | 15 | **Pré-prod** | déploiement et essai sur `test.fs0ciety.org` avant la PR | `docs/preprod.md` |
 

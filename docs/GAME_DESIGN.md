@@ -224,4 +224,5 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.14.18 | A29-1 : inventaire des constats ouverts ; la prod est en 5.27.0, tout le reste attend Z0 | `docs/audit/constats-ouverts.md` |
 | 2026-10-07 | 6.14.19 | A29-2 : santé complétée (raids repoussés, élites, casino, pot commun, rythme des succès) ; COM-3 et PNJ-5 fermés | `docs/changes/6.14.19-sante-completee.md` |
 | 2026-10-07 | 6.14.22 | Atelier d'illustrations : dépôt mobile des rendus Midjourney, détourage, WebP, copie dans les assets, Q28 | `docs/illustrations.md` |
+| 2026-10-07 | 6.14.23 | Page `/img` de la pré-prod : rendus envoyés par lot, reconnus par leur nom de fichier, collection `illustration_uploads` | `docs/changes/6.14.23-img-preprod.md` |
 | 2026-10-07 | 6.14.20 | Revue AU24 : automne 2029 clos (chaîne de contenu, Z1, santé complétée) ; hiver 2029 ouvert (dossier de mise en production, tests, Codex serveur, décisions à valider) | `docs/audit/2026-10-07-au24-automne-2029.md` |
