@@ -1,5 +1,6 @@
 // 6.14.23 : rendus Midjourney déposés sur la pré-prod (test.fs0ciety.org/img, collection `illustration_uploads`).
 //
+//   node scripts/preprod-illustrations.mjs check                     # nombre d'envois à traiter (0 = rien à faire ; tâche planifiée)
 //   node scripts/preprod-illustrations.mjs pull <dossier>            # télécharge les envois non intégrés et reconnaît chaque image
 //   node scripts/preprod-illustrations.mjs assign <envoi> <image>    # attribue un envoi à une image (après examen à l'œil)
 //   node scripts/preprod-illustrations.mjs reject <envoi> [raison]   # écarte un envoi (doublon, mauvaise image)
@@ -34,7 +35,10 @@ await pb.collection("_superusers").authWithPassword(PREPROD_PB_ADMIN_EMAIL, PREP
 
 const known = (id) => SLOTS.some((s) => s.id === id);
 
-if (cmd === "pull") {
+if (cmd === "check") {
+  const r = await pb.collection(COLLECTION).getList(1, 1, { filter: 'status = "envoyée" || status = "attribuée"', fields: "id" });
+  console.log(`${r.totalItems} envoi(s) à traiter`);
+} else if (cmd === "pull") {
   const dir = args[0];
   if (!dir) throw new Error("Indique le dossier de destination.");
   mkdirSync(join(dir, "a-identifier"), { recursive: true });

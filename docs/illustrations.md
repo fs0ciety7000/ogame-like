@@ -18,7 +18,15 @@ Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur gén
 1. Ouvrir `test.fs0ciety.org/img`, connecté avec son compte admin.
 2. Pour chaque image « À faire » : « Copier le prompt », le coller dans Midjourney, faire « Upscale » et enregistrer.
 3. « Choisir les images » : sélectionner tout le lot d'un coup. Garder le nom de fichier de Midjourney si possible : il sert à la reconnaissance.
-4. Écrire « images envoyées » dans la session.
+4. C'est tout : la tâche planifiée (ci-dessous) les prend dans l'heure. « images envoyées » dans la session lance le traitement tout de suite.
+
+## Tâche planifiée (6.14.26)
+
+Une routine claude.ai (« Illustrations /img : intégration automatique », `trig_01YYCSf7tQdBikosym8habog`) réveille la session de
+travail **toutes les heures** (minute 57). Elle lance `node scripts/preprod-illustrations.mjs check`. À 0, elle s'arrête sans rien
+commiter ; sinon, elle déroule l'intégration ci-dessous et résume ce qui a été fait. L'utilisateur n'a plus besoin d'écrire « images
+envoyées ». Le traitement ne tourne pas sur le serveur : rembg, le commit et le push demandent la session. On l'arrête ou on change son
+rythme dans les routines de claude.ai.
 
 ## Côté Claude (intégration)
 
