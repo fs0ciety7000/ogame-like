@@ -20,7 +20,7 @@ import { setCockpitView, useCockpitView } from "@/lib/cockpitView";
 import { setCompactCards, useCompactCards } from "@/lib/density";
 import { HudSwitch } from "@/components/ui/hud";
 import { GUIDE_STEPS, guideClaimed, guideHidden } from "@/game/advancedGuide";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { setBrowserNotifications, showBrowserNotification, useBrowserNotifyStore } from "@/store/browserNotifyStore";
@@ -103,7 +103,7 @@ function ChangePasswordCard() {
   );
 }
 
-const fmtDate = (ms: number) => (ms ? new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "jamais");
+const fmtDate = (ms: number) => (ms ? formatDateTime(ms, "date") : "jamais");
 
 /* v5.9 : passkeys et compte Google rattaché. */
 function SignInMethodsCard() {
@@ -361,7 +361,7 @@ function BrowserNotificationsCard() {
               variant="ghost"
               onClick={() => {
                 toast("Passe sur un autre onglet : la notification de test arrive dans 3 s.");
-                setTimeout(() => showBrowserNotification("🛸 Test Cosmic Empires", "Les notifications fonctionnent."), 3000);
+                setTimeout(() => showBrowserNotification("Test Cosmic Empires", "Les notifications fonctionnent."), 3000);
               }}
             >
               Tester
@@ -482,7 +482,8 @@ function VacationCard() {
       setBusy(false);
     }
   };
-  const fmt = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  // Moment propre au joueur (fin de ses vacances) : heure de l'appareil.
+  const fmt = (ms: number) => formatDateTime(ms, "long");
   return (
     <Card>
       <CardHeader>
@@ -655,9 +656,9 @@ function ThemeCard() {
               </div>
               <span className="flex items-center justify-between">
                 <span className="hud-title text-sm text-slate-100">{t.name}</span>
-                {theme === t.id && <span className="font-mono text-[10px] tracking-[0.16em] text-cyan-glow">ACTIF</span>}
+                {theme === t.id && <span className="font-mono text-[11px] tracking-[0.12em] text-cyan-glow">ACTIF</span>}
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500">{t.inspiration}</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-slate-500">{t.inspiration}</span>
               <span className="text-xs text-slate-400">{t.description}</span>
             </button>
           ))}
@@ -714,7 +715,7 @@ function ThemeCard() {
           </span>
           <span className="flex shrink-0 items-center gap-3">
             {!isWinter(Date.now()) && (
-              <button type="button" className="font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-glow hover:underline" onClick={(e) => (e.preventDefault(), previewWinter())}>
+              <button type="button" className="font-mono text-[11px] uppercase tracking-[0.12em] text-cyan-glow hover:underline" onClick={(e) => (e.preventDefault(), previewWinter())}>
                 Aperçu
               </button>
             )}
@@ -812,12 +813,13 @@ function AccountCard() {
         <span className="text-slate-400">Pseudo</span>
         <span className="text-slate-100">{player?.pseudo ?? "…"}</span>
       </div>
-      <div className="flex items-center justify-between gap-3">
+      {/* 6.14.86 (AD-22) : une adresse longue passe à la ligne au lieu de sortir de la carte (375 px). */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="text-slate-400">Email de récupération</span>
         {recoveryOk ? (
-          <span className="flex items-center gap-1.5 text-mint-glow">
-            <ShieldCheck className="h-4 w-4" />
-            {user?.email}
+          <span className="flex min-w-0 items-center gap-1.5 text-mint-glow">
+            <ShieldCheck className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-all">{user?.email}</span>
           </span>
         ) : (
           <span className="flex items-center gap-1.5 text-gold-glow" title="Compte créé avant cette fonctionnalité">
@@ -912,7 +914,7 @@ export function SettingsPage() {
 
       <div className="relative max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" aria-hidden />
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un réglage (thème, vacances, mot de passe…)" aria-label="Chercher un réglage" className="pl-9" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Chercher un réglage" aria-label="Chercher un réglage" title="Thème, vacances, mot de passe…" className="pl-9" />
       </div>
 
       {q ? (
@@ -930,9 +932,10 @@ export function SettingsPage() {
         )
       ) : (
         <Tabs value={tab} onValueChange={(v) => setParams((p) => (p.set("onglet", v), p), { replace: true })}>
-          <TabsList>
+          {/* 6.14.86 (AD-22) : sur téléphone, les 4 onglets en 2 × 2 (« Notifications » n'est plus coupé hors de l'écran). */}
+          <TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
             {SETTINGS_TABS.map((t) => (
-              <TabsTrigger key={t.id} value={t.id} className="flex items-center gap-1.5">
+              <TabsTrigger key={t.id} value={t.id} className="flex items-center justify-center gap-1.5">
                 <t.icon className="h-3.5 w-3.5" aria-hidden /> {t.label}
               </TabsTrigger>
             ))}

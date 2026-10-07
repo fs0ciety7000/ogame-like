@@ -176,8 +176,8 @@ describe("design system", () => {
             .split("\n")
             .flatMap((line, i) => (/setInterval\(\s*\(\)\s*=>\s*set(?:Now|Tick|Time)\(/.test(line) ? [`${file}:${i + 1}`] : [])),
     );
-    // GalaxyPage : animation des flottes à 250 ms, reprise au lot UX-11 (après la phalange).
-    expectRatchet(offenders, { "src/pages/GalaxyPage.tsx": 1 });
+    // 6.14.86 (UX-11) : la Galaxie lit useNowEvery(1000) ; plus aucune exception.
+    expect(offenders).toEqual([]);
   });
 
   it("6.14.83 : corps de useEffect entre accolades (doublé par la règle eslint no-restricted-syntax)", () => {
@@ -188,7 +188,8 @@ describe("design system", () => {
             .split("\n")
             .flatMap((line, i) => (/\buseEffect\(\s*\(\)\s*=>\s*(?![\s{])/.test(line) ? [`${file}:${i + 1}`] : [])),
     );
-    expectRatchet(offenders, PENDING_EFFECTS);
+    // 6.14.86 : les 3 fichiers de l'admin repris ; la règle eslint est en erreur partout.
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -200,7 +201,6 @@ const PENDING_ROUNDED: Record<string, number> = {
 const PENDING_EMOJI: Record<string, number> = {
   "src/components/cockpit/CockpitHub.tsx": 2,
   "src/pages/AchievementsPage.tsx": 1,
-  "src/pages/SettingsPage.tsx": 1,
   "src/pages/admin/AchievementForm.tsx": 1,
   "src/pages/admin/BannersPanel.tsx": 2,
   "src/pages/admin/ContentHistoryPanel.tsx": 1,
@@ -211,18 +211,13 @@ const PENDING_EMOJI: Record<string, number> = {
 };
 const PENDING_SMALL_TEXT: Record<string, number> = {
   "src/components/cockpit/CockpitHub.tsx": 4,
-  "src/components/layout/NavBar.tsx": 17,
-  "src/components/layout/ResourceHud.tsx": 6,
   "src/pages/AchievementsPage.tsx": 3,
   "src/pages/DashboardPage.tsx": 2,
-  "src/pages/SettingsPage.tsx": 3,
 };
 const PENDING_SLATE_600: Record<string, number> = {
-  "src/components/layout/NavBar.tsx": 3,
   "src/pages/AchievementsPage.tsx": 1,
 };
 const PENDING_DATES: Record<string, number> = {
-  "src/pages/SettingsPage.tsx": 2,
   "src/pages/admin/ActivityPanel.tsx": 4,
   "src/pages/admin/BackupsCard.tsx": 1,
   "src/pages/admin/CasinoAdmin.tsx": 1,
@@ -241,9 +236,4 @@ const PENDING_DATES: Record<string, number> = {
   "src/pages/admin/WarlordsPanel.tsx": 1,
   "src/pages/admin/applyBossDuration.ts": 1,
   "src/pages/admin/bossFields.tsx": 1,
-};
-const PENDING_EFFECTS: Record<string, number> = {
-  "src/pages/admin/ReportsPanel.tsx": 2,
-  "src/pages/admin/MailPanel.tsx": 1,
-  "src/pages/admin/EmojisPanel.tsx": 1,
 };

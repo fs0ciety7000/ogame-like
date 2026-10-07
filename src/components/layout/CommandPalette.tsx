@@ -3,12 +3,12 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowUpCircle, CornerDownRight, FlaskConical, Flag, Gift, Hammer, Search, User, Zap } from "lucide-react";
+import { ArrowUpCircle, Building2, CornerDownRight, FlaskConical, Flag, Gift, Hammer, Rocket, Search, User, Zap } from "lucide-react";
 import { matchPaletteTabs } from "@/lib/paletteTabs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { BUILDINGS } from "@/game/buildings";
-import { UNITS } from "@/game/units";
-import { TECHNOLOGIES } from "@/game/technologies";
+import { ownedBlueprints, UNITS } from "@/game/units";
+import { checkPrereqs, getTechCost, TECHNOLOGIES } from "@/game/technologies";
 import { assetUrl } from "@/lib/assets";
 import type { Alliance } from "@/types/game";
 import { ALL_NAV_ITEMS, useHardHiddenRoutes, useNavUnlock } from "@/components/layout/NavBar";
@@ -26,11 +26,15 @@ import { canAffordAll } from "@/game/resources";
 interface PaletteItem {
   key: string;
   label: string;
+  /** 6.14.86 (AD-25) : fin du libellé toujours visible (« → niv. 3 ») ; c'est le nom qui se tronque. */
+  suffix?: string;
   sublabel?: string;
   icon: ReactNode;
   run: () => void;
   /** 6.14.75 (DP-L2) : page pas encore ouverte (grisée, avec sa condition) ; la choisir l'ouvre. */
   muted?: boolean;
+  /** 6.14.86 (AD-25) : action impossible pour l'instant (ressources, prérequis) : grisée et rangée en fin de liste. */
+  blocked?: boolean;
 }
 
 export function CommandPalette() {
@@ -88,7 +92,7 @@ export function CommandPalette() {
             key: `player-${p.uid}`,
             label: p.pseudo,
             sublabel: getRankLabel(p.xp),
-            icon: <User className="h-4 w-4 text-mint-glow" />,
+            icon: <User className="h-4 w-4 text-cyan-glow" />,
             run: () => navigate(`/game/joueurs?fiche=${p.uid}`),
           }))
       : [];
@@ -103,18 +107,18 @@ export function CommandPalette() {
         key: `alliance-${a.id}`,
         label: `[${a.tag}] ${a.name}`,
         sublabel: `Alliance · ${a.members.length} membre${a.members.length > 1 ? "s" : ""}`,
-        icon: <Flag className="h-4 w-4 text-gold-glow" />,
+        icon: <Flag className="h-4 w-4 text-cyan-glow" />,
         run: () => navigate("/game/joueurs?mode=alliances"),
       }));
     const unitItems: PaletteItem[] = UNITS.filter((u) => match(u.name))
       .slice(0, 4)
-      .map((u) => ({ key: `unit-${u.id}`, label: u.name, sublabel: "Unité", icon: thumb(u.image) ?? <User className="h-4 w-4" />, run: () => navigate("/game/unites") }));
+      .map((u) => ({ key: `unit-${u.id}`, label: u.name, sublabel: "Unité", icon: thumb(u.image) ?? <Rocket className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/unites") }));
     const buildingItems: PaletteItem[] = BUILDINGS.filter((b) => match(b.name))
       .slice(0, 4)
-      .map((b) => ({ key: `building-${b.id}`, label: b.name, sublabel: "Bâtiment", icon: thumb(b.image) ?? <User className="h-4 w-4" />, run: () => navigate("/game/batiments") }));
+      .map((b) => ({ key: `building-${b.id}`, label: b.name, sublabel: "Bâtiment", icon: thumb(b.image) ?? <Building2 className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/batiments") }));
     const techItems: PaletteItem[] = TECHNOLOGIES.filter((t) => match(t.nom))
       .slice(0, 4)
-      .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-violet-glow" />, run: () => navigate("/game/labo") }));
+      .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/labo") }));
 
     // 5.16 : actions directes (améliorer, rechercher, construire, réclamer) ; le serveur valide tout.
     const run = (label: string, action: () => Promise<unknown>) => () => {
@@ -138,19 +142,28 @@ export function CommandPalette() {
         const ok = canAffordAll(player.resources, cost);
         actionItems.push({
           key: `act-up-${b.id}`,
-          label: `Améliorer ${b.name} → niv. ${level + 1}`,
+          label: `Améliorer ${b.name}`,
+          suffix: ` → niv. ${level + 1}`,
           sublabel: ok ? "Action" : "Ressources insuffisantes",
-          icon: <ArrowUpCircle className={cn("h-4 w-4", ok ? "text-mint-glow" : "text-slate-600")} />,
+          blocked: !ok,
+          icon: <ArrowUpCircle className={cn("h-4 w-4", ok ? "text-cyan-glow" : "text-slate-500")} />,
           run: run(`${b.name} : amélioration lancée.`, () => startBuildingUpgrade(player.uid, b.id as BuildingId)),
         });
       }
+      const plans = ownedBlueprints(player);
       for (const t of TECHNOLOGIES.filter((x) => match(x.nom)).slice(0, 3)) {
         const level = player.techLevels?.[t.id] ?? 0;
+        if (t.maxLevel && level >= t.maxLevel) continue;
+        // 6.14.86 (AD-25) : même verdict que le Labo (prérequis, puis ressources) ; le serveur reste juge.
+        const prereqOk = checkPrereqs(t, player.techLevels ?? {}, plans).valid;
+        const ok = prereqOk && canAffordAll(player.resources, getTechCost(t, level + 1));
         actionItems.push({
           key: `act-tech-${t.id}`,
-          label: `Rechercher ${t.nom} → niv. ${level + 1}`,
-          sublabel: "Action",
-          icon: <FlaskConical className="h-4 w-4 text-mint-glow" />,
+          label: `Rechercher ${t.nom}`,
+          suffix: ` → niv. ${level + 1}`,
+          sublabel: ok ? "Action" : prereqOk ? "Ressources insuffisantes" : "Prérequis manquants",
+          blocked: !ok,
+          icon: <FlaskConical className={cn("h-4 w-4", ok ? "text-cyan-glow" : "text-slate-500")} />,
           run: run(`${t.nom} : recherche lancée.`, () => startResearch(player.uid, t.id)),
         });
       }
@@ -164,14 +177,17 @@ export function CommandPalette() {
             key: `act-unit-${u.id}`,
             label: `Construire ${formatNumber(n)} × ${u.name}`,
             sublabel: "Action",
-            icon: <Hammer className="h-4 w-4 text-mint-glow" />,
+            icon: <Hammer className="h-4 w-4 text-cyan-glow" />,
             run: run(`${formatNumber(n)} × ${u.name} en construction.`, () => enqueueUnitBuild(player.uid, u.id, n)),
           });
         }
       }
     }
 
-    return [...actionItems, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems];
+    // 6.14.86 (AD-25) : les actions faisables d'abord, les impossibles en fin de liste (après les fiches qu'elles concernent).
+    const doable = actionItems.filter((a) => !a.blocked);
+    const blocked = actionItems.filter((a) => a.blocked);
+    return [...doable, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems, ...blocked];
   }, [query, players, alliances, navigate, hidden, closed, player]);
 
   useEffect(() => {
@@ -229,12 +245,19 @@ export function CommandPalette() {
                   onMouseEnter={() => setActiveIndex(i)}
                   className={cn(
                     "hud-cut-sm flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors",
-                    i === activeIndex ? "bg-cyan-glow/10 text-cyan-glow" : item.muted ? "text-slate-500" : "text-slate-300",
+                    i === activeIndex ? "bg-cyan-glow/10 text-cyan-glow" : item.muted || item.blocked ? "text-slate-500" : "text-slate-300",
                   )}
                 >
                   {item.icon}
-                  <span className="flex-1 truncate">{item.label}</span>
-                  {item.muted ? (
+                  <span className="flex min-w-0 flex-1 flex-col" title={item.suffix ? `${item.label}${item.suffix}` : undefined}>
+                    <span className="flex min-w-0">
+                      <span className="truncate">{item.label}</span>
+                      {item.suffix && <span className="shrink-0 whitespace-pre font-mono tabular-nums">{item.suffix}</span>}
+                    </span>
+                    {/* Action impossible : la raison passe sous le libellé, qui garde toute la largeur (375 px). */}
+                    {item.blocked && <span className="truncate text-[11px] text-slate-500">{item.sublabel}</span>}
+                  </span>
+                  {item.blocked ? null : item.muted ? (
                     <span className="min-w-0 max-w-[55%] truncate text-[11px] text-slate-500" title={item.sublabel}>
                       {item.sublabel}
                     </span>

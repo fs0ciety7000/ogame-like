@@ -21,7 +21,9 @@ export function EmojisPanel() {
   const [code, setCode] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => setList(stored), [stored]);
+  useEffect(() => {
+    setList(stored);
+  }, [stored]);
 
   const cleanCode = code.trim().toLowerCase().replace(/^:|:$/g, "");
   const codeError = !cleanCode

@@ -93,12 +93,20 @@ describe("6.14.74 ouverture progressive du menu (I30)", () => {
     }
   });
 
-  it("Or III (avec une alliance) : tout est ouvert", () => {
-    const p = fresh({ xp: xpOf("or3"), allianceId: "a1" });
+  it("Or III (avec une alliance et les extracteurs au niveau des projets de prestige) : tout est ouvert", () => {
+    // 6.14.85 (RL-2) : Prestige n'a pas de rang plafond, seulement sa condition (4 extracteurs au niveau requis).
+    const extractors = (p: PlayerState) => {
+      for (const id of ["extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees"]) p.buildings[id] = { ...p.buildings[id], unlocked: true, level: 10 };
+      return p;
+    };
+    const p = extractors(fresh({ xp: xpOf("or3"), allianceId: "a1" }));
     expect(navClosedPages(p, ctx())).toEqual([]);
     expect(nextNavOpening(p, ctx())).toBeNull();
     // Sans alliance, seule la Guerre de territoire reste fermée.
-    expect(navClosedPages(fresh({ xp: xpOf("or3") }), ctx())).toEqual(["/game/guerre-territoire"]);
+    expect(navClosedPages(extractors(fresh({ xp: xpOf("or3") })), ctx())).toEqual(["/game/guerre-territoire"]);
+    // Extracteurs en dessous : Prestige reste fermé, quel que soit le rang, et sa condition se lit.
+    expect(navClosedPages(fresh({ xp: xpOf("or3"), allianceId: "a1" }), ctx())).toEqual(["/game/prestige"]);
+    expect(navCondition("/game/prestige")).toMatch(/extracteurs/);
   });
 
   it("une page ouverte ne se referme jamais : marque nav: ou astuce tip: déjà vue", () => {
@@ -322,9 +330,10 @@ describe("6.14.80 (DP-L5) admin : aperçu d'un compte neuf et section dédiée",
     expect(j0.next?.rankId).toBe("fer3");
     expect(navPreview({ rankId: "fer2" }, FROM).open.map((o) => o.page)).toEqual(expect.arrayContaining(["/game/galaxie", "/game/missions", "/game/journal"]));
     const or3 = navPreview({ rankId: "or3" }, FROM);
-    expect(or3.closed.map((c) => c.page)).toEqual(["/game/guerre-territoire"]);
+    // 6.14.85 (RL-2) : Prestige s'ouvre par sa seule condition (extracteurs), jamais par le rang.
+    expect(or3.closed.map((c) => c.page)).toEqual(["/game/guerre-territoire", "/game/prestige"]);
     expect(or3.closed[0].condition).toMatch(/il faut une alliance/);
-    expect(navPreview({ rankId: "or3", alliance: true }, FROM).closed).toEqual([]);
+    expect(navPreview({ rankId: "or3", alliance: true }, FROM).closed.map((c) => c.page)).toEqual(["/game/prestige"]);
     expect(navPreview({ rankId: "non_classe", danger: true }, FROM).open.map((o) => o.page)).toEqual(expect.arrayContaining(["/game/galaxie", "/game/combats", "/game/menaces"]));
     expect(navPreview({ rankId: "non_classe", hoursSinceSignup: 72 }, FROM).open.map((o) => o.page)).toEqual(["/game/combats", "/game/menaces"]);
   });

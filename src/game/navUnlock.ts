@@ -4,6 +4,7 @@ import { COLONY_RULES, homeLevels } from "@/game/colonies";
 import { commandersState } from "@/game/commanders";
 import { defaultPlayerState } from "@/game/defaults";
 import { playerMoon } from "@/game/moon";
+import { prestigeUnlocked } from "@/game/prestige";
 import { onboardingEligible, onboardingState, ONBOARDING_STEPS } from "@/game/onboarding";
 import { PVP_RULES } from "@/game/pvp";
 import { RANKS } from "@/game/ranks";
@@ -51,6 +52,7 @@ export const NAV_SIGNALS = [
   "plannerAmber",
   "hasMoon",
   "ascended",
+  "prestigeReady",
 ] as const;
 export type NavSignal = (typeof NAV_SIGNALS)[number];
 
@@ -72,6 +74,7 @@ export const NAV_SIGNAL_LABELS: Record<NavSignal, string> = {
   plannerAmber: "le Planificateur débloqué au Comptoir",
   hasMoon: "une lune ou une réserve de pitié",
   ascended: "ta première Ascension",
+  prestigeReady: "tes 4 extracteurs au niveau requis des projets de prestige",
 };
 
 export interface NavPageRule {
@@ -132,6 +135,8 @@ export const NAV_UNLOCK_RULES = {
     // Palier 5 : colonies.
     "/game/colonies": { rank: "or3", signals: ["colonyNear", "hasColony"], step: "colonyFound" },
     "/game/guerre-territoire": { rank: "or3", signals: ["allianceAtWar"], requires: ["inAlliance"] },
+    // 6.14.85 (RL-2) : projets de prestige, ouverts seulement par leur condition (4 extracteurs au niveau requis), sans rang plafond.
+    "/game/prestige": { signals: ["prestigeReady"] },
   } as Record<string, NavPageRule>,
 };
 
@@ -186,6 +191,7 @@ export const NAV_PAGE_LABELS: Record<string, string> = {
   "/game/casino": "Casino",
   "/game/colonies": "Colonies",
   "/game/guerre-territoire": "Guerre de territoire",
+  "/game/prestige": "Prestige",
 };
 
 /** Nom d'une page réglée (le chemin s'il n'a pas de libellé : page ajoutée dans l'admin). */
@@ -295,6 +301,7 @@ export function navSignals(p: PlayerState, ctx: NavContext): Set<NavSignal> {
   if (plannerUnlocked(p) || amber.amber >= (findShopItem("planner")?.price ?? Infinity)) out.add("plannerAmber");
   if (moonPanelVisible(p)) out.add("hasMoon");
   if ((Number(p.ascensions) || 0) > 0) out.add("ascended");
+  if (prestigeUnlocked(p)) out.add("prestigeReady");
   return out;
 }
 
@@ -477,6 +484,7 @@ export const ACHIEVEMENT_PAGES: Record<string, string> = {
   phalanxScans: "/game/statistiques",
   gateJumps: "/game/statistiques",
   gateSaves: "/game/statistiques",
+  prestigeProjects: "/game/prestige",
 };
 
 /** Page fermée du système d'un succès (ou null : page ouverte, toujours visible, ou hors du mode progressif). */

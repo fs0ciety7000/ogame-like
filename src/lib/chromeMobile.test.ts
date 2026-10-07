@@ -49,7 +49,17 @@ describe("6.14.64 : barre d'onglets mobile (Q90)", () => {
     expect(moreBadgeCount({ messages: 2, alliance: 1, reports: 0 }, DEFAULT_TABS)).toBe(3);
     expect(moreBadgeCount({ messages: 2, alliance: 1, reports: 4 }, ["/game", "/game/messages"])).toBe(5);
     expect(moreBadgeCount({ messages: 0, alliance: 0, reports: 0 }, DEFAULT_TABS)).toBe(0);
-    expect(src("src/components/layout/NavBar.tsx")).toMatch(/<Badge count=\{moreCount\} neutral \/>/);
+    expect(src("src/components/layout/NavBar.tsx")).toMatch(/<Badge count=\{moreCount\} tone="neutral" \/>/);
+  });
+
+  it("6.14.86 (couleur = sens) : aucune pastille du menu en rouge hors menace ; récompenses en or, lectures en neutre", () => {
+    const nav = src("src/components/layout/NavBar.tsx");
+    const tones = /const BADGE_TONE[^=]*= \{([^}]*)\}/.exec(nav)?.[1] ?? "";
+    expect(tones).toContain('"/game/ordres": "gold"');
+    expect(tones).not.toContain("danger");
+    // Pastilles et points lisent le ton de la page, jamais un rouge écrit en dur.
+    expect(nav).not.toMatch(/rounded-full bg-danger-glow|place-items-center bg-danger-glow/);
+    expect(src("src/components/layout/NotificationBell.tsx")).toMatch(/hasUrgentUnread \? "bg-danger-glow/);
   });
 });
 

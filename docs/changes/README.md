@@ -183,6 +183,10 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.81 | [Déblocage progressif : chaîne et livraison](6.14.81-deblocage-chaine.md) | ajout (interface) + docs | [deblocage-progressif](../proposals/deblocage-progressif.md), lot DP-L6, Q157, Q180 |
 | 6.14.82 | [Cohérence visuelle : couleur = sens, titres, onglets du Journal, icônes au lieu des emoji, gros chiffres en mono](6.14.82-coherence-visuelle.md) | correctif (interface) | aucune (AU27, lot UX-9, AD-5, AD-15, AD-16, AD-20, AD-21) |
 | 6.14.83 | [Hygiène du design system : 11 px, gris de décor, formatDateTime, horloge partagée, gardes](6.14.83-hygiene-design.md) | refactoring (interface) + tests | aucune (AU27, lot UX-10, AD-12, AD-27, AD-28, AD-29) |
+| 6.14.84 | [Recherche réglable : croissances, recherche tardive, durée maximale, valeurs neutres](6.14.84-recherche-reglable.md) | refactoring (règles) + ajout (admin) | [rythme-long-terme](../proposals/rythme-long-terme.md), lot RL-1, Q164 à Q171 |
+| 6.14.85 | [Projets de prestige : puits durable, récompense visible seulement](6.14.85-projets-de-prestige.md) | fonctionnalité | [rythme-long-terme](../proposals/rythme-long-terme.md), lot RL-2, Q168, Q169 |
+| 6.14.86 | [Finitions de l'interface : Réglages mobile, pastilles du menu, 11 px de l'en-tête, Ctrl+K, flottes de la Galaxie](6.14.86-finitions-interface.md) | correctif (interface) + tests | aucune (AU27, lot UX-11 et suites d'UX-9/UX-10, AD-22, AD-25, AD-28) |
+| 6.14.87 | [Illustrations, quatrième lot (technos 14, 15 et 20 à 27)](6.14.87-illustrations-lot-4.md) | ajout | aucune (IMG, docs/illustrations.md) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

@@ -54,6 +54,7 @@ import { setProfileStyle } from "@/game/profile";
 import { learnTalent, resetTalents } from "@/game/talents";
 import { addSeenAnnouncements } from "@/game/announcements";
 import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
+import { beginPrestige, prestigeStartCost } from "@/game/prestige";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -100,6 +101,7 @@ export type GameAction =
   | { type: "colonySpec"; colonyId: string; spec: string }
   | { type: "empireClass"; classId: string }
   | { type: "moonUpgrade" }
+  | { type: "prestigeStart" }
   | { type: "colonyRoute"; colonyId: string; everyHours: number; keepPct: number; direction?: "collect" | "supply" }
   | { type: "locateLair"; factionId: string }
   | { type: "commanderRecruit"; commanderId: string; method?: "amber" | "production" }
@@ -436,6 +438,13 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     // 6.14.0 : améliorer sa lune.
     case "moonUpgrade":
       return upgradeMoon(player);
+
+    // 6.14.85 (RL-2) : projet de prestige, un à la fois (I32) ; payé comme une dépense (objectif « Dépenser »).
+    case "prestigeStart": {
+      const cost = prestigeStartCost(player);
+      pay(player, cost, now);
+      return beginPrestige(player, cost, now);
+    }
 
     case "colonySpec":
       setColonySpec(player, String(action.colonyId ?? ""), String(action.spec ?? ""), now);

@@ -403,6 +403,13 @@
         "required": false,
         "maxSize": 50000,
         "presentable": false
+      },
+      {
+        "name": "prestige",
+        "type": "json",
+        "required": false,
+        "maxSize": 4000,
+        "presentable": false
       }
     ],
     "indexes": [
@@ -1423,6 +1430,18 @@
       },
       {
         "name": "moonLevel",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "prestigePoints",
+        "type": "number",
+        "required": false,
+        "onlyInt": true
+      },
+      {
+        "name": "prestigeProjects",
         "type": "number",
         "required": false,
         "onlyInt": true

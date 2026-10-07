@@ -34,8 +34,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 22 | AA3 | Chiffres en dur rendus réglables (Comptoir, talents, spécialisations, modules, sac…), valeurs inchangées | M | à faire |
 | 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | à faire |
 | 24 | RL-0 | Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/proposals/rythme-long-terme.md`, Q164 à Q171) ; reste le mode `--long` de `progression-sim.mjs` | S | livré en partie (6.14.78) |
-| 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | à faire |
-| 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | à faire |
+| 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | livré (6.14.84) |
+| 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | livré (6.14.85) ; reportés : thème de saison, défi d'alliance et défi du passe (voir la fiche) |
 | 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | à faire |
 | 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
 | 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | à faire |
@@ -76,9 +76,9 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 54 | AP-L11 | Illustrations de saison (thèmes, portraits, second boss par archétype) | M | à faire |
 | 55 | AP-L12 | Catalogue des saisons au-delà de 36 mois | M | à faire |
 | 56 | AP-L14 | Outil `procedural-sim.mjs` dans le dépôt | S | à faire |
-| 57 | UX-9 | Cohérence visuelle (couleurs de décor, titres, icônes à la place des emoji) | M | livré (6.14.82, `docs/changes/6.14.82-coherence-visuelle.md`) ; Réglages mobile (AD-22) et pastilles du menu reportés (fichiers d'une autre tâche) |
-| 58 | UX-10 | Hygiène et gardes du design system | M | livré (6.14.83, `docs/changes/6.14.83-hygiene-design.md`) ; exceptions comptées (admin, menu, en-tête, accueil, cockpit, Succès, Réglages) à reprendre |
-| 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | à faire |
+| 57 | UX-9 | Cohérence visuelle (couleurs de décor, titres, icônes à la place des emoji) | M | livré (6.14.82, `docs/changes/6.14.82-coherence-visuelle.md`) ; Réglages mobile (AD-22) et pastilles du menu repris en 6.14.86 |
+| 58 | UX-10 | Hygiène et gardes du design system | M | livré (6.14.83, `docs/changes/6.14.83-hygiene-design.md`) ; exceptions du menu, de l'en-tête, des Réglages et des `useEffect` de l'admin retirées en 6.14.86 ; restent admin (arrondis, emoji, dates), accueil, cockpit, Succès |
+| 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | livré (6.14.86, `docs/changes/6.14.86-finitions-interface.md`) |
 | 60 | AC-H | Ménage, boutons « Lancer maintenant », test « tour des actions » | M | à faire |
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition) | L | à faire |

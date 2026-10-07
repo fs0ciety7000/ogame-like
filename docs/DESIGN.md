@@ -82,8 +82,14 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
 - **Astuce de page** (`PageTip`, 6.14.62) : rendue par `PageHeader`, sous le titre, en `HudCallout tone="neutral"` (jamais l'or, qui
   promet une récompense), deux lignes et « Lire la suite », croix de 44 px. Sa vue est gardée sur le compte (`tip:<page>` dans
   `announcementsSeen`).
-- **Pastilles de navigation** : le rouge (`danger`) reste aux menaces ; un compteur de lectures (notes de version, messages, bouton
-  « Plus ») est neutre (6.14.64).
+- **Pastilles de navigation** (6.14.86) : le ton suit le sens de la page (`BADGE_TONE`, `NavBar.tsx`) : récompenses prêtes (Ordres
+  du jour) en `gold`, Léviathan en `violet` (événement), signalements à traiter en `ember` ; un compteur de lectures (messages,
+  alliance, notes de version, bouton « Plus ») est neutre. Le rouge (`danger`) reste aux menaces : la cloche n'est rouge que pour une
+  attaque subie ou un espion détecté non lus. Un groupe replié prend le ton le plus fort de ses pages ; les points (barre réduite,
+  liens du pied) suivent le même ton. Pastilles de 16 px, chiffre à 11 px.
+- **Ctrl+K** (6.14.86) : les actions faisables d'abord, les impossibles (ressources, prérequis) en fin de liste, grisées, la raison
+  sous le libellé ; le niveau visé (« → niv. 3 ») reste visible, c'est le nom qui se tronque. Une forme d'icône par type de contenu,
+  en accent (or pour une récompense à réclamer), `text-slate-500` si l'action est impossible.
 - **Menu progressif (6.14.75, I30)** : une page pas encore ouverte est **cachée** (groupe vide caché aussi), jamais affichée avec un
   cadenas, sauf réglage `navUnlock.style = "locked"` (grisée comme le Planificateur, condition dans le `title` et l'`aria-label`). Une
   page qui vient de s'ouvrir porte `HudChip size="sm" tone="accent"` « Nouveau » jusqu'à la première visite (losange accent en barre
@@ -115,6 +121,8 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
 - **Titres** : un titre de panneau est `HudPanel` (eyebrow mono) ou `hud-title` (`CardTitle`, `h2/h3 className="hud-title text-sm"`),
   jamais `font-display` en casse mixte ; le nom d'un objet (unité, annonce, chapitre) reste en `font-display`.
 - **Onglets** : `Tabs` / `TabsList` / `TabsTrigger` (Journal 6.14.82, Réglages, Codex), jamais de boutons `role="tab"` faits main.
+  La rangée défile quand elle dépasse ; quatre onglets qui ne tiennent pas à 375 px passent en grille 2 × 2 sous 640 px
+  (`grid w-full grid-cols-2 sm:inline-flex sm:w-auto`, Réglages 6.14.86) plutôt que de cacher le dernier hors de l'écran.
 - **Icônes** : lucide ou `GameIcon`, jamais un emoji écrit dans un `.tsx` (rendu différent selon le système, hors thème). Les emoji
   saisis par l'admin (titres, bannières, événements) ou envoyés par le serveur restent des données (Q-AD-6). ★ et ↔ sont des signes
   typographiques, permis.
@@ -174,9 +182,12 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
   `zone = "server"` (heure de Paris) pour un rendez-vous fixé par le serveur (boss, maintenance, casino, Chroniques, Gazette,
   agenda, guerre de territoire) ; `"local"` (défaut) pour un moment propre au joueur (arrivée de flotte, message, journal, historique).
 - Faire : un décompte en direct lit `useNowTicker()` ; un état qui change à la minute lit `useNowEvery(30_000)` (même horloge,
-  rendu seulement au changement de pas). Un `setInterval` reste permis pour recharger des données (classement, statut).
+  rendu seulement au changement de pas). Une animation qui suit le temps (flottes de la Galaxie, 6.14.86) lit `useNowEvery(1000)`
+  et lisse le pas par une transition CSS d'une seconde, linéaire. Un `setInterval` reste permis pour recharger des données
+  (classement, statut).
 - Garde-fous (`src/lib/designSystem.test.ts`) : couleurs hex, pastilles arrondies, `rounded-2xl/3xl` et (6.14.83) `rounded-md/lg/xl`,
   `shadow-lg/xl/2xl`, pilules `rounded-full` + `px-*`, capitales hors mono, `toLocaleString` sur un nombre, boîtes natives du
   navigateur ; (6.14.82-83) emoji dans un `.tsx`, texte sous 11 px hors admin, `text-slate-600` sur un texte, `toLocale*String`
-  hors `formatDateTime`, `setInterval(() => setNow(…))`, `useEffect` sans accolades (aussi la règle eslint `no-restricted-syntax`).
-  Les fichiers qu'une autre tâche modifiait pendant le lot sont des exceptions comptées (cliquet : le compte ne peut que baisser).
+  hors `formatDateTime`, `setInterval(() => setNow(…))`, `useEffect` sans accolades (aussi la règle eslint `no-restricted-syntax`,
+  en erreur partout depuis 6.14.86). Les fichiers pas encore repris sont des exceptions comptées (cliquet : le compte ne peut que
+  baisser) ; 6.14.86 a retiré le menu, l'en-tête, les Réglages, la Galaxie et les `useEffect` de l'admin.

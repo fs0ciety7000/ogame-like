@@ -1,5 +1,6 @@
 import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import { PHALANX_RULES } from "@/game/phalanx";
+import { PRESTIGE_IMAGE, PRESTIGE_RULES, prestigeMonument, prestigeState } from "@/game/prestige";
 import { gateMinLevel, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { chroniclesConfig, chronicleMonthId, codexRewards, episodeUnlockMs } from "@/game/chronicles";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
@@ -86,7 +87,7 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 const resourceName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -216,6 +217,25 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       { label: "Ouverte", value: `dès le niveau ${gateMinLevel()} de la lune` },
       { label: "Recharge", value: `${JUMP_GATE_RULES.cooldownHours} h, ${JUMP_GATE_RULES.cooldownMinHours} h au moins` },
       ...(jumps > 0 ? [{ label: "Tes sauts", value: String(jumps) }] : []),
+    ],
+  });
+  // 6.14.85 (RL-2) : projets de prestige, débloquée au premier projet achevé.
+  const prestige = prestigeState(player);
+  const monument = prestigeMonument(prestige.projects);
+  out.push({
+    id: "legend:prestige",
+    category: "legends",
+    name: "Les projets de prestige",
+    subtitle: "Bâtir pour la postérité",
+    image: PRESTIGE_IMAGE,
+    text: "Quand les entrepôts débordent et que les chantiers n'ont plus rien à promettre, les grands empires se mettent à bâtir pour rien. Pour rien d'utile, du moins : des stèles gravées au nom des équipages, des arches que personne ne franchit, des flèches plantées dans le vide pour accrocher la lumière. Les voisins y voient du gaspillage. Les historiens, eux, ne retiennent que ces empires-là.",
+    unlocked: prestige.projects > 0,
+    facts: [
+      { label: "Coût", value: `${PRESTIGE_RULES.hoursPerProject} h de ta production commune` },
+      { label: "Durée", value: `${PRESTIGE_RULES.durationHours} h, un projet à la fois` },
+      { label: "Récompense", value: `${PRESTIGE_RULES.pointsPerProject} points de prestige, monument, succès (aucun bonus)` },
+      ...(prestige.projects > 0 ? [{ label: "Tes projets", value: String(prestige.projects) }] : []),
+      ...(monument ? [{ label: "Ton monument", value: monument.name }] : []),
     ],
   });
   // 5.15.12 : reliques (hors retirées) et officiers de base.

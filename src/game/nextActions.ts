@@ -8,6 +8,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
 import type { Fleet } from "@/game/fleets";
 import { navPageOpen, navPath } from "@/game/navUnlock";
+import { prestigeBlocker } from "@/game/prestige";
 import type { PlayerState, QueuesState } from "@/types/game";
 
 /* =====================================================
@@ -42,7 +43,9 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
 
   if (economy.full.length > 0) {
     const names = economy.full.map((id) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id).join(", ");
-    out.push({ kind: "storage", priority: 2, title: "Entrepôt plein", text: `${names} : la production est perdue. Dépense ou agrandis l'entrepôt.`, to: "/game/batiments" });
+    // 6.14.85 (RL-2, proposition §5.5) : un projet de prestige est la sortie la plus simple quand il est possible.
+    if (!prestigeBlocker(player)) out.push({ kind: "storage", priority: 2, title: "Entrepôt plein", text: `${names} : la production est perdue. Lance un projet de prestige, dépense ou agrandis l'entrepôt.`, to: "/game/prestige" });
+    else out.push({ kind: "storage", priority: 2, title: "Entrepôt plein", text: `${names} : la production est perdue. Dépense ou agrandis l'entrepôt.`, to: "/game/batiments" });
   }
 
   if (queues) {

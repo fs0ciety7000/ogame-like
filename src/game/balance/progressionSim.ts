@@ -8,6 +8,7 @@ import { missionRewards, rareRewardScale } from "@/game/economy";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { MISSIONS } from "@/game/missions";
 import { ONBOARDING_STEPS } from "@/game/onboarding";
+import { PRESTIGE_RULES } from "@/game/prestige";
 import { getRank } from "@/game/ranks";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { EXCHANGE_RULES } from "@/game/resources";
@@ -620,6 +621,15 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     xp: Math.round(xp),
     fleetFullDay,
   };
+}
+
+/** 6.14.85 (RL-2) : option `prestigeProjects` tirée des règles en vigueur (groupe `prestige`) ; null si les projets sont fermés.
+ *  `reserveShare` (part de l'entrepôt gardée avant de lancer un projet) est une hypothèse du modèle, pas une règle.
+ *  Écarts du modèle : le coût est lu sur la production avec le bonus d'Ascension et réparti à parts égales entre les 4
+ *  ressources communes ; le jeu lit la production des extracteurs et technos (`prestigeCost`), ressource par ressource. */
+export function prestigeProjectsFromRules(reserveShare = 0.1): NonNullable<ProgressionOptions["prestigeProjects"]> | null {
+  if (!PRESTIGE_RULES.enabled) return null;
+  return { hours: Number(PRESTIGE_RULES.hoursPerProject) || 0, growth: Number(PRESTIGE_RULES.growth) || 1, durationHours: Number(PRESTIGE_RULES.durationHours) || 0, reserveShare, minExtractorLevel: Number(PRESTIGE_RULES.unlockExtractorLevel) || 0 };
 }
 
 /** Les quatre profils du rapport, dans l'ordre. */

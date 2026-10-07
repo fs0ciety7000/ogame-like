@@ -5,6 +5,7 @@ import { TitleBadge } from "@/components/game/TitleBadge";
 import { allianceFlightFactor } from "@/game/alliances";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { Eye, Gift, Grid3x3, LocateFixed, Minus, Plus, Radar, Recycle, Search, ShieldPlus, Sword } from "lucide-react";
+import { useNowEvery } from "@/hooks/useNowTicker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,16 +80,6 @@ function clampView(v: View): View {
   return { k, x: Math.min(0, Math.max(min, v.x)), y: Math.min(0, Math.max(min, v.y)) };
 }
 
-/** Temps d'animation fluide des flottes (rafraîchi 4 fois par seconde). */
-function useSmoothNow(): number {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
-
 export function GalaxyPage() {
   const [players, setPlayers] = useState<LeaderboardEntry[]>([]);
   const [alliances, setAlliances] = useState<Alliance[]>([]);
@@ -102,7 +93,9 @@ export function GalaxyPage() {
   const [showSectors, setShowSectors] = useState(true);
   const [showLegend, setShowLegend] = useState(false);
   const fleets = useFleetStore((s) => s.fleets);
-  const now = useSmoothNow();
+  // 6.14.86 (UX-11, AD-28) : horloge partagée à la seconde (plus d'intervalle à 250 ms) ; la transition CSS d'une
+  // seconde, linéaire, fait glisser chaque flotte d'un tic au suivant sans saut.
+  const now = useNowEvery(1000);
   const [spyTarget, setSpyTarget] = useState<{ uid: string; pseudo: string } | null>(null);
   const [attackTarget, setAttackTarget] = useState<{ uid: string; pseudo: string; xp?: number } | null>(null);
   const [tradeTarget, setTradeTarget] = useState<{ uid: string; pseudo: string; allianceId?: string | null; createdAtMs?: number } | null>(null);
@@ -379,7 +372,7 @@ export function GalaxyPage() {
                         <circle r={3.6 / k} fill="none" stroke={style.color} strokeWidth={0.3 / k} strokeDasharray={`${0.8 / k} ${0.5 / k}`} />
                       </g>
                     )}
-                    <g transform={`translate(${px} ${py}) rotate(${angle}) scale(${style.hostile ? 1.5 : 1})`} style={{ transition: "transform 0.25s linear" }} className="cursor-help">
+                    <g transform={`translate(${px} ${py}) rotate(${angle}) scale(${style.hostile ? 1.5 : 1})`} style={{ transition: "transform 1s linear" }} className="cursor-help">
                       <circle r={3 / k} fill={style.color} opacity={style.hostile ? 0.22 : 0.12} className={style.hostile ? "animate-pulse" : undefined} />
                       <circle r={1.8 / k} fill={style.color} opacity={0.22} />
                       <path d={`M ${1.6 / k} 0 L ${-1 / k} ${-0.9 / k} L ${-0.4 / k} 0 L ${-1 / k} ${0.9 / k} Z`} fill={style.color} />

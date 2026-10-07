@@ -36,9 +36,4 @@ export default tseslint.config(
       "no-restricted-syntax": ["error", ...USE_EFFECT_BRACES],
     },
   },
-  {
-    // Fichiers de l'admin pas encore repris (cliquet : la liste ne fait que raccourcir).
-    files: ["src/pages/admin/ReportsPanel.tsx", "src/pages/admin/MailPanel.tsx", "src/pages/admin/EmojisPanel.tsx"],
-    rules: { "no-restricted-syntax": ["warn", ...USE_EFFECT_BRACES] },
-  },
 );

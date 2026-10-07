@@ -59,6 +59,8 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
      `relic-lentille-selene` et `relic-cle-seuil` : retirer le champ `image` de `lentille_selene` et `cle_seuil` (`DEFAULT_RELICS`), la
      relique prend alors `/assets/relics/<id>.webp` (liste personnalisée : une migration `patches` de `CONTENT_MIGRATIONS` remplace
      l'ancien `image` par le nouveau) ; `announce-phalange` : retirer `pendingArt` de l'annonce `v6.14-lune-veille`.
+   - **Prestige** (6.14.85) : `prestige-monument` → remplacer la valeur de `PRESTIGE_IMAGE` (`src/game/prestige.ts`, image provisoire
+     `/assets/buildings/fonderie_quantique.webp`) par `/assets/prestige/monument.webp` : page Prestige et fiche du Codex suivent.
 4. Fiche `docs/changes/`, validation, commit, push. `node scripts/preprod-illustrations.mjs integrated <id> …`. Vérifier sur la pré-prod
    (`scripts/preprod-capture.mjs`).
 

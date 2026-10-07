@@ -44,7 +44,9 @@ export function ReportsPanel() {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("signalement");
 
-  useEffect(() => subscribeReports(setReports), []);
+  useEffect(() => {
+    return subscribeReports(setReports);
+  }, []);
   useEffect(() => {
     void adminReportConfig().then(setConfig);
   }, []);
@@ -149,7 +151,9 @@ function ReportDetail({ report, github, onDeleted }: { report: GameReport; githu
   const shot = reportScreenshotUrl(report);
   const ctx = report.context ?? {};
 
-  useEffect(() => setResolution(report.resolution), [report.resolution]);
+  useEffect(() => {
+    setResolution(report.resolution);
+  }, [report.resolution]);
 
   const run = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);

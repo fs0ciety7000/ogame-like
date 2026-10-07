@@ -276,7 +276,8 @@ export function AppShell() {
                 <HeaderButton title="Administration" asLink={pendingReports > 0 ? "/game/admin?onglet=reports" : "/game/admin"}>
                   <Wrench className="h-4 w-4" />
                   {pendingReports > 0 && (
-                    <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-danger-glow px-0.5 font-mono text-[11px] font-bold leading-none text-space-950">
+                    // 6.14.86 : signalements à traiter = attention (orange), pas une menace.
+                    <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-ember-glow px-0.5 font-mono text-[11px] font-bold leading-none tabular-nums text-space-950">
                       {pendingReports > 9 ? "9+" : pendingReports}
                     </span>
                   )}

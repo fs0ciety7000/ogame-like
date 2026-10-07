@@ -59,6 +59,8 @@ export const DEFAULT_TITLES: TitleDef[] = [
   T("main_or", "Main d'or", "A aligné trois 7 au Casino orbital.", "🍀", "legendary"),
   // 6.14.69 (É30-1d) : décerné par le succès « Maître du seuil » (25 sauts de porte).
   T("gardien_seuil", "Gardien du seuil", "25 flottes ramenées par la porte de saut lunaire.", "🗝️", "epic"),
+  // 6.14.85 (RL-2) : décerné par le succès « Grand œuvre » (100 projets de prestige).
+  T("batisseur_eternite", "Bâtisseur d'éternité", "100 projets de prestige achevés.", "🏛️", "epic"),
   // Déblocage automatique sur une mesure.
   T("mecene", "Mécène", "A offert 10 cadeaux à d'autres commandants.", "🎁", "rare", { metric: "giftsSent", threshold: 10 }),
   T("marchand_etoiles", "Marchand des étoiles", "Un million de ressources échangées au marché.", "🪙", "rare", { metric: "traded", threshold: 1_000_000 }),
@@ -70,7 +72,7 @@ export const TITLES: TitleDef[] = [];
 const BY_LABEL = new Map<string, TitleDef>();
 
 /** Titres ajoutés après coup : ajoutés aussi aux catalogues déjà personnalisés (v5.12). */
-const LATE_DEFAULTS = ["as_casino", "main_or", "gardien_seuil"];
+const LATE_DEFAULTS = ["as_casino", "main_or", "gardien_seuil", "batisseur_eternite"];
 
 /** Catalogue enregistré + titres par défaut arrivés depuis. */
 export function withLateDefaults(defs: TitleDef[]): TitleDef[] {

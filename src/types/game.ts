@@ -146,6 +146,8 @@ export interface PlayerState {
   moon?: import("@/game/moon").MoonState | null;
   /** 6.14.44 : réserve de pitié lunaire (0 à 1), remplie par les combats subis sur la planète mère sans lune (absent = 0). */
   moonPity?: number;
+  /** 6.14.85 (RL-2) : projets de prestige (compteur, points, projet en cours ; proposals/rythme-long-terme.md §5.2). */
+  prestige?: import("@/game/prestige").PrestigeState | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

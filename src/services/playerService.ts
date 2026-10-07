@@ -288,6 +288,9 @@ export interface LeaderboardEntry {
   moonName?: string;
   /** 6.14.48 : niveau de la lune (0 sans lune), public (Q41). */
   moonLevel?: number;
+  /** 6.14.85 (RL-2) : points et projets de prestige (classement « Prestige », monument de la fiche). */
+  prestigePoints?: number;
+  prestigeProjects?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -312,10 +315,12 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     empireClass: (data.empireClass as string) || undefined,
     moonName: (data.moonName as string) || undefined,
     moonLevel: (data.moonLevel as number) || 0,
+    prestigePoints: (data.prestigePoints as number) || 0,
+    prestigeProjects: (data.prestigeProjects as number) || 0,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass,moonName,moonLevel";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass,moonName,moonLevel,prestigePoints,prestigeProjects";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -961,4 +966,15 @@ export function fetchPublicPlanet(uid: string): Promise<import("@/game/planetLoo
 /** 6.14.0 : améliorer sa lune (achat immédiat). */
 export function upgradeMoon() {
   return act({ type: "moonUpgrade" });
+}
+
+/** 6.14.85 (RL-2) : classement « Prestige » (points de prestige), les premiers seulement. */
+export async function fetchPrestigeLeaderboard(limit = 10): Promise<LeaderboardEntry[]> {
+  const res = await pb.collection("profiles").getList<PbRecord>(1, limit, { sort: "-prestigePoints,-prestigeProjects", filter: "prestigePoints > 0", fields: LEADERBOARD_FIELDS });
+  return res.items.map(leaderboardEntryFromRecord);
+}
+
+/** 6.14.85 (RL-2) : lancer un projet de prestige (un à la fois). */
+export function startPrestigeProject() {
+  return act<import("@/game/prestige").PrestigeState>({ type: "prestigeStart" });
 }

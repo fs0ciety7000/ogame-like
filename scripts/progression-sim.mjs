@@ -8,6 +8,8 @@
 // Exemples :
 //   node scripts/progression-sim.mjs --base avant-ae-l1   # mesure du lot AE-L1 (anciennes valeurs → code)
 //   node scripts/progression-sim.mjs ae-l2               # effet attendu du lot AE-L2 sur le code actuel
+//   node scripts/progression-sim.mjs --prestige --ascend --days 365   # 6.14.85 (RL-2) : avant = sans projets de prestige,
+//                                                        # après = projets selon les règles `prestige` en vigueur ; --ascend : Ascensions dès que possible
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -46,7 +48,9 @@ const opt = (name) => {
 const baseArg = opt("--base");
 const days = Number(opt("--days") ?? 90);
 const asJson = args.includes("--json");
-const afterArg = args.filter((a) => a !== "--json")[0];
+const withPrestige = args.includes("--prestige");
+const withAscend = args.includes("--ascend");
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -69,9 +73,11 @@ const dir = mkdtempSync(path.join(tmpdir(), "progression-sim-"));
 const outfile = path.join(dir, "sim.mjs");
 await build({
   stdin: {
+    // 6.14.85 : le simulateur d'abord (même ordre de chargement que le jeu) : commencer par content.ts lisait COLONY_RULES
+    // (advancedGuide.ts) avant son initialisation (import circulaire), et le script échouait dès 6.14.8x.
     contents: `
+      export { simulateAllProfiles, scaleTier2Costs, prestigeProjectsFromRules } from "@/game/balance/progressionSim";
       export { applyGameContent } from "@/game/content";
-      export { simulateAllProfiles, scaleTier2Costs } from "@/game/balance/progressionSim";
       export { attackerWinThreshold, budgetDuel } from "@/game/balance/pvpBudget";
       export { COMBAT_RULES } from "@/game/combat";
       export { PVP_RULES } from "@/game/pvp";
@@ -91,11 +97,12 @@ await build({
 const E = await import(pathToFileURL(outfile).href);
 rmSync(dir, { recursive: true, force: true });
 
-function measure(settings) {
+function measure(settings, prestige = false) {
   E.applyGameContent({ rules: settings.rules ?? {} });
   const restore = settings.tier2Factor && settings.tier2Factor !== 1 ? E.scaleTier2Costs(settings.tier2Factor) : () => {};
   try {
-    const profiles = E.simulateAllProfiles({ days });
+    const projects = prestige ? E.prestigeProjectsFromRules() : null;
+    const profiles = E.simulateAllProfiles({ days, ascend: withAscend, ...(projects ? { prestigeProjects: projects } : {}), milestones: [days] });
     const pvp = {
       mixedThreshold: E.attackerWinThreshold("mixed"),
       defensesThreshold: E.attackerWinThreshold("defenses"),
@@ -116,7 +123,7 @@ function measure(settings) {
 }
 
 const before = measure(base);
-const result = measure(after);
+const result = measure(after, withPrestige);
 
 if (asJson) {
   console.log(JSON.stringify({ before, after: result }, null, 2));
@@ -147,6 +154,29 @@ for (let i = 0; i < before.profiles.length; i++) {
       `${a.deadSessionsPct.mid} % → ${b.deadSessionsPct.mid} %`,
     ]),
   );
+}
+if (withPrestige || withAscend) {
+  // 6.14.85 (RL-2) : puits des projets de prestige (production perdue, jours sans dépense, projets achevés).
+  const worst = (r, k) => Math.max(0, ...r.windows.map((w) => w[k]));
+  const last = (r) => r.snapshots[r.snapshots.length - 1] ?? { prestigeProjects: 0 };
+  console.log(`\nPuits et rythme (${withPrestige ? "après = projets de prestige des règles en vigueur" : "sans projets"}${withAscend ? ", Ascensions dès que possible" : ""}) :`);
+  console.log(row(["Profil", "Projets à la fin", "Prod. perdue (cumul)", "Jours sans dépense (pire mois)", "Jours « fini, sans suite »", "Ascensions (jours)"]));
+  console.log(row(["---", "---", "---", "---", "---", "---"]));
+  for (let i = 0; i < before.profiles.length; i++) {
+    const a = before.profiles[i];
+    const b = result.profiles[i];
+    const fin = (r) => r.windows.reduce((n, w) => n + w.finishedDays, 0);
+    console.log(
+      row([
+        a.profile,
+        `${last(a).prestigeProjects} → ${last(b).prestigeProjects}`,
+        `${a.lostPct} % → ${b.lostPct} %`,
+        `${worst(a, "daysWithoutSpend")} → ${worst(b, "daysWithoutSpend")}`,
+        `${fin(a)} → ${fin(b)}`,
+        `${a.ascensionDays.join(", ") || "—"} → ${b.ascensionDays.join(", ") || "—"}`,
+      ]),
+    );
+  }
 }
 const thr = (x) => (x === null ? "> ×3" : `×${x.toFixed(2)}`);
 const duel = (d) => `${d.outcome}, attaquant −${Math.round(d.attackerLoss * 100)} %, défenseur −${Math.round(d.defenderLoss * 100)} %`;

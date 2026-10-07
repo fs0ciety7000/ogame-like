@@ -27,6 +27,7 @@ const DashboardPage = lazyPage(() => import("@/pages/DashboardPage"), "Dashboard
 const OrdersPage = lazyPage(() => import("@/pages/OrdersPage"), "OrdersPage");
 const WalletPage = lazyPage(() => import("@/pages/WalletPage"), "WalletPage");
 const EmpireClassPage = lazyPage(() => import("@/pages/EmpireClassPage"), "EmpireClassPage");
+const PrestigePage = lazyPage(() => import("@/pages/PrestigePage"), "PrestigePage");
 const ResourcesPage = lazyPage(() => import("@/pages/ResourcesPage"), "ResourcesPage");
 const BuildingsPage = lazyPage(() => import("@/pages/BuildingsPage"), "BuildingsPage");
 const UnitsPage = lazyPage(() => import("@/pages/UnitsPage"), "UnitsPage");
@@ -144,6 +145,7 @@ export default function App() {
                 <Route path="colonies" element={<ColoniesPage />} />
                 <Route path="statistiques" element={<EmpireStatsPage />} />
                 <Route path="ascension" element={<AscensionPage />} />
+                <Route path="prestige" element={<PrestigePage />} />
                 <Route path="redaction" element={<BlogEditorPage />} />
                 <Route path="palmares" element={<HallOfFamePage />} />
                 <Route path="menaces" element={<ThreatsPage />} />

@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
-import { Calculator, Coins, Crosshair, Factory, Gauge, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
+import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
@@ -22,6 +22,8 @@ import { OBJECTIVE_LABELS } from "@/game/chronicles";
 import { formatWait, PHALANX_RULES, phalanxFeatures, phalanxLevel, phalanxRange, scanCost } from "@/game/phalanx";
 import { gateCooldownMs, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { MOON_RULES, moonPity } from "@/game/moon";
+import { RESEARCH_RULES } from "@/game/technologies";
+import { PRESTIGE_RULES, prestigeCost, prestigeHours, prestigeMonument, prestigeState, prestigeUnlocked } from "@/game/prestige";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
@@ -60,7 +62,9 @@ export const FORMULA_SECTIONS = [
   { id: "combat", label: "Combat", icon: Crosshair },
   { id: "protections", label: "Protections", icon: Shield },
   { id: "menaces", label: "Raids et seigneurs", icon: Skull },
+  { id: "recherche", label: "Recherche", icon: FlaskConical },
   { id: "lune", label: "Lune et phalange", icon: Moon },
+  { id: "prestige", label: "Prestige", icon: Landmark },
   { id: "gains", label: "Missions et gains", icon: Coins },
   { id: "bonus", label: "Bonus", icon: Sparkles },
   { id: "passe", label: "Passe et Chroniques", icon: Ticket },
@@ -381,6 +385,16 @@ seigneur de guerre : attaque avec ${pct(WARLORD_RULES.attackPowerMin)} à ${pct(
       </Block>
 
       {/* 6.14.49 (É30-1c) : paliers de la lune (phalange, porte de saut), coût du balayage, pitié. */}
+      <Block id="recherche" title="Recherche" icon={FlaskConical} intro="Chaque niveau d'une technologie coûte et dure plus que le précédent. Les réductions de durée (technos, officiers, reliques, talents) s'appliquent ensuite.">
+        <Formula>
+          {`coût du niveau n = coût de base × ${formatDecimal(RESEARCH_RULES.costGrowth, 2)}^(n − 1)   (sauf croissance propre à la techno)
+durée du niveau n = durée de base × ${formatDecimal(RESEARCH_RULES.timeGrowth, 2)}^(n − 1)${RESEARCH_RULES.lateFromLevel > 0 ? `
+dès le niveau ${RESEARCH_RULES.lateFromLevel} : durée × ${formatDecimal(RESEARCH_RULES.lateTimeFactor, 2)}` : ""}${RESEARCH_RULES.maxLevelSeconds > 0 ? `
+durée d'un niveau : ${formatWait(RESEARCH_RULES.maxLevelSeconds * 1000)} au plus, avant les réductions` : ""}
+recherches en parallèle : ${RESEARCH_RULES.maxConcurrent}`}
+        </Formula>
+      </Block>
+
       <Block id="lune" title="Lune et phalange" icon={Moon} intro="Une lune naît d'un grand combat sur ta planète mère. Chaque niveau élargit la portée de sa phalange ; dès le niveau requis, elle perce les leurres et ouvre une porte de saut.">
         <Table
           head={["Niveau", "Portée", "Balayage", "Perce", "Porte de saut"]}
@@ -413,6 +427,26 @@ chance de lune = chance des débris + réserve ; réserve +${pct(MOON_RULES.pity
             ) : (
               <Row label="Réserve de pitié" value={pct(moonPity(p))} hint="chance ajoutée au prochain combat subi" />
             )}
+          </Mine>
+        )}
+      </Block>
+
+      <Block id="prestige" title="Projets de prestige" icon={Landmark} intro="Quand tes 4 extracteurs ont le niveau requis, ta production en trop peut bâtir des projets de prestige. Ils ne donnent aucun bonus : des points, un monument sur ta fiche et des succès.">
+        <Formula>
+          {`ouverture : 4 extracteurs au niveau ${PRESTIGE_RULES.unlockExtractorLevel}
+coût = ${formatDecimal(PRESTIGE_RULES.hoursPerProject, 1)} h${PRESTIGE_RULES.growth !== 1 ? ` × ${formatDecimal(PRESTIGE_RULES.growth, 2)}^(projets achevés)` : ""} de production commune (extracteurs × technologies), ressource par ressource
+durée = ${formatDecimal(PRESTIGE_RULES.durationHours, 1)} h ; un seul projet à la fois
+récompense = ${PRESTIGE_RULES.pointsPerProject} points de prestige par projet ; monument selon le nombre de projets`}
+        </Formula>
+        {p && (
+          <Mine>
+            <Row label="Projets achevés" value={n(prestigeState(p).projects)} hint={prestigeMonument(prestigeState(p).projects)?.name ?? "pas encore de monument"} />
+            <Row label="Points de prestige" value={n(prestigeState(p).points)} />
+            <Row
+              label="Prochain projet"
+              value={Object.entries(prestigeCost(p)).map(([res, v]) => `${n(v ?? 0)} ${resName(res).toLowerCase()}`).join(", ") || "—"}
+              hint={prestigeUnlocked(p) ? `${formatDecimal(prestigeHours(p), 1)} h de ta production` : "extracteurs pas encore au niveau requis"}
+            />
           </Mine>
         )}
       </Block>

@@ -523,7 +523,9 @@ export function MailPanel() {
 
 function useAllianceList(): Alliance[] {
   const [list, setList] = useState<Alliance[]>([]);
-  useEffect(() => subscribeAlliances(setList), []);
+  useEffect(() => {
+    return subscribeAlliances(setList);
+  }, []);
   return list;
 }
 

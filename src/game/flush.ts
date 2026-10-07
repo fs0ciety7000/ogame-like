@@ -24,6 +24,7 @@ import { advanceWeeklyRecap } from "@/game/weeklyRecap";
 import { endVacation, VACATION_RULES } from "@/game/vacation";
 import { syncClassUnits } from "@/game/classUnits";
 import { advanceBuildPlan } from "@/game/buildPlan";
+import { advancePrestige } from "@/game/prestige";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -114,6 +115,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   if (player.testMode) finishAllTimers(queues, now);
   // 5.20 : Atelier de réparation (unités en file, puis coques abîmées).
   notifications.push(...advanceWorkshop(player, now, !!player.testMode));
+  // 6.14.85 (RL-2) : projet de prestige arrivé à terme (compteur, points, notification au Journal).
+  notifications.push(...advancePrestige(player, now));
 
   // --- Bâtiments en construction ---
   const finishedAt: Record<string, number> = {};

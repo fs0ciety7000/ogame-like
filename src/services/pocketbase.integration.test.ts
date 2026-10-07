@@ -1791,6 +1791,41 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.14.85 (RL-2) projet de prestige : lancé par le serveur, un à la fois, achevé au rattrapage, points publics (I32)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const EXTRACTORS = ["extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees"];
+    try {
+      const buildings = { ...before.buildings };
+      for (const id of EXTRACTORS) buildings[id] = { ...(buildings[id] ?? {}), unlocked: true, level: 10 };
+      const plenty = { ...RICH, scrap: 1e9, energy: 1e9, nano: 1e9, data: 1e9 };
+      await admin.collection("players").update(bId, { buildings, prestige: null, vacation: null, resources: plenty, resourcesUpdatedAtMs: Date.now() });
+      const st = await ps.startPrestigeProject();
+      expect(st.active?.endsAtMs ?? 0).toBeGreaterThan(Date.now() + 7 * 3_600_000);
+      const paid = await snap(bId);
+      expect(paid.resources.scrap).toBeLessThan(1e9);
+      await expect(ps.startPrestigeProject()).rejects.toThrow(/un seul à la fois/);
+      // Fin forcée : le rattrapage suivant achève le projet (compteur, points, notification), dans la transaction de l'action.
+      await admin.collection("players").update(bId, { prestige: { ...paid.prestige, active: { ...paid.prestige.active, endsAtMs: Date.now() - 1000 } } });
+      await ps.syncPlayer(bId);
+      const after = await snap(bId);
+      expect(after.prestige).toMatchObject({ projects: 1, points: 8, active: null });
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Projet de prestige achevé"` });
+      expect(notes).toHaveLength(1);
+      expect(notes[0].link).toBe("/game/prestige");
+      // Fiche publique et classement « Prestige ».
+      const profile = await admin.collection("profiles").getOne(bId);
+      expect(profile.prestigePoints).toBe(8);
+      expect(profile.prestigeProjects).toBe(1);
+      const top = await ps.fetchPrestigeLeaderboard(10);
+      expect(top.find((e) => e.uid === bId)?.prestigePoints).toBe(8);
+    } finally {
+      await admin.collection("players").update(bId, { buildings: before.buildings, resources: before.resources, prestige: null, xp: before.xp, unlockedAchievements: before.unlockedAchievements, titles: before.titles ?? [], stats: before.stats ?? {}, resourcesUpdatedAtMs: Date.now() });
+      for (const n of await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Projet de prestige achevé"` })) await admin.collection("notifications").delete(n.id).catch(() => undefined);
+    }
+  }, 60_000);
+
   it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);

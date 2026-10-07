@@ -11,6 +11,7 @@ import { useIsAdmin } from "@/services/adminService";
 import { HudChip, HudSwitch } from "@/components/ui/hud";
 import { BOSS_NAV, BOSS_TONE, bossNavText, useBossNavInfo } from "@/hooks/useBossStatus";
 import { LayoutDashboard, Factory, Building2, Rocket, FlaskConical, MapPin, Orbit, Users, Swords, Flag, UserCircle, Sparkles, Trophy, Skull, Medal, LayoutGrid, Bug, Calculator, Store, Fish, Globe2, ScrollText, Mail, Crosshair, Shield as ShieldStar, Ticket, Scroll, Crown, Flame, Pin, Newspaper, Megaphone, BookOpen, BookMarked, Sigma, BarChart3, ChevronDown, ChevronsLeft, ChevronsRight, Gift, Gauge, Maximize, Dices, Map as MapIcon, CalendarClock, Lock, ClipboardList, Wallet, Compass } from "lucide-react";
+import { Landmark } from "lucide-react";
 import { useLeviathanSeen } from "@/store/leviathanSeenStore";
 import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
@@ -119,6 +120,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/game/colonies", label: "Colonies", icon: Globe2 },
       { to: "/game/classe", label: "Classe d'empire", icon: Compass },
       { to: "/game/ascension", label: "Ascension", icon: Sparkles },
+      { to: "/game/prestige", label: "Prestige", icon: Landmark },
       { to: "/game/statistiques", label: "Statistiques", icon: BarChart3 },
       { to: "/game/portefeuille", label: "Portefeuille", icon: Wallet },
     ],
@@ -314,7 +316,7 @@ function NextOpeningLine({ className }: { className?: string }) {
   const list = shown.length > 1 ? `${shown.slice(0, -1).join(", ")} et ${shown[shown.length - 1]}` : shown[0];
   return (
     <p className={cn("text-[11px] leading-snug text-slate-500", className)} title={`À ${next.rankName} : ${labels.join(", ")}`}>
-      <span className="font-mono text-[10px] uppercase tracking-[0.14em]">Prochaine ouverture</span> : {list} ·{" "}
+      <span className="font-mono text-[11px] uppercase tracking-[0.14em]">Prochaine ouverture</span> : {list} ·{" "}
       <span className="font-mono tabular-nums">
         {formatCompact(next.xp)} / {formatCompact(next.targetXp)} XP
       </span>
@@ -369,22 +371,45 @@ function useBadge(to: string): number {
   return useBadges()(to);
 }
 
+/** 6.14.86 (couleur = sens) : ton de la pastille de chaque page. Récompenses prêtes en or, Léviathan en violet
+ *  (événement), signalements à traiter en orange (attention) ; messages, alliance et notes de version en neutre (lectures).
+ *  Le rouge reste aux menaces : aucune pastille du menu n'en est une aujourd'hui. */
+type BadgeTone = "neutral" | "gold" | "violet" | "ember" | "danger";
+const BADGE_TONE: Record<string, BadgeTone> = {
+  "/game/ordres": "gold",
+  "/game/uber": "violet",
+  "/game/signalements": "ember",
+};
+const badgeTone = (to: string): BadgeTone => BADGE_TONE[to] ?? "neutral";
+/** Ton d'un groupe replié : le plus fort de ses pages (danger > attention > récompense > événement > lecture). */
+const TONE_RANK: BadgeTone[] = ["neutral", "violet", "gold", "ember", "danger"];
+const strongestTone = (tones: BadgeTone[]): BadgeTone => tones.reduce<BadgeTone>((a, t) => (TONE_RANK.indexOf(t) > TONE_RANK.indexOf(a) ? t : a), "neutral");
+const BADGE_CLASS: Record<BadgeTone, string> = {
+  neutral: "border border-slate-400/60 bg-space-800 text-slate-100",
+  gold: "bg-gold-glow text-space-950",
+  violet: "bg-violet-glow text-space-950",
+  ember: "bg-ember-glow text-space-950",
+  danger: "bg-danger-glow text-space-950",
+};
+/** Point de la barre réduite et des liens du pied : même ton que la pastille. */
+const DOT_CLASS: Record<BadgeTone, string> = {
+  neutral: "bg-slate-300",
+  gold: "bg-gold-glow shadow-[0_0_6px_var(--color-gold-glow)]",
+  violet: "bg-violet-glow shadow-[0_0_6px_var(--color-violet-glow)]",
+  ember: "bg-ember-glow shadow-[0_0_6px_var(--color-ember-glow)]",
+  danger: "bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]",
+};
+
 /** 5.15.9 : pastille en colonne, à droite du libellé (toutes alignées). */
-function InlineBadge({ count }: { count: number }) {
+function InlineBadge({ count, tone }: { count: number; tone: BadgeTone }) {
   if (count <= 0) return null;
-  return <span className="grid h-4 min-w-4 shrink-0 place-items-center bg-danger-glow px-1 font-mono text-[9.5px] font-bold tabular-nums text-space-950">{count > 99 ? "99+" : count}</span>;
+  return <span className={cn("grid h-4 min-w-4 shrink-0 place-items-center px-1 font-mono text-[11px] font-bold leading-none tabular-nums", BADGE_CLASS[tone])}>{count > 99 ? "99+" : count}</span>;
 }
 
-function Badge({ count, neutral = false }: { count: number; neutral?: boolean }) {
+function Badge({ count, tone }: { count: number; tone: BadgeTone }) {
   if (count <= 0) return null;
   return (
-    <span
-      className={cn(
-        "absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center px-1 font-mono text-[9px] font-bold tabular-nums",
-        // 6.14.64 (AD-14) : la pastille « Plus » est neutre (messages, alliance) ; le rouge reste aux menaces.
-        neutral ? "border border-slate-400/60 bg-space-800 text-slate-100" : "bg-danger-glow text-space-950",
-      )}
-    >
+    <span className={cn("absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center px-0.5 font-mono text-[11px] font-bold leading-none tabular-nums", BADGE_CLASS[tone])}>
       {count > 9 ? "9+" : count}
     </span>
   );
@@ -407,7 +432,7 @@ function BossChip({ info }: { info: { phase: BossPhase; returnMs: number | null;
   const { chip, full } = bossNavText(info);
   // DESIGN.md : pastille d'état = HudChip (ton = sens : danger en combat, mint abattu, ember retiré, neutre en sommeil).
   return (
-    <HudChip size="sm" tone={BOSS_TONE[info.phase]} title={full} className="shrink-0 whitespace-nowrap px-1 py-px text-[8.5px] tabular-nums tracking-[0.12em]">
+    <HudChip size="sm" tone={BOSS_TONE[info.phase]} title={full} className="shrink-0 whitespace-nowrap px-1 py-px text-[11px] tabular-nums tracking-[0.08em]">
       {chip}
     </HudChip>
   );
@@ -458,9 +483,9 @@ function SideLink({ item, badge }: { item: NavItem; badge: number }) {
           </span>
           <span className={cn("min-w-0 flex-1 truncate", phase === "dormant" && !isActive && "text-slate-500")}>{item.label}</span>
           {bossInfo && <BossChip info={bossInfo} />}
-          <InlineBadge count={badge} />
+          <InlineBadge count={badge} tone={badgeTone(item.to)} />
           {fresh && !badge && !isActive && (
-            <HudChip size="sm" tone="accent" className="shrink-0 px-1 py-px text-[8.5px] tracking-[0.12em]">
+            <HudChip size="sm" tone="accent" className="shrink-0 px-1 py-px text-[11px] tracking-[0.08em]">
               Nouveau
             </HudChip>
           )}
@@ -499,10 +524,10 @@ function SideGroup({ group, collapsed, onToggle, badgeOf }: { group: NavGroup; c
         <span className="grid h-4 w-4 place-items-center text-[var(--nav-accent)] opacity-80">
           <group.icon className="h-3 w-3" />
         </span>
-        <span className="hud-eyebrow text-[10px] text-slate-500 transition-colors group-hover/h:text-slate-300">{group.label}</span>
+        <span className="hud-eyebrow text-[11px] text-slate-500 transition-colors group-hover/h:text-slate-300">{group.label}</span>
         <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] to-transparent" />
         {!open && total > 0 && (
-          <InlineBadge count={total} />
+          <InlineBadge count={total} tone={strongestTone(group.items.filter((i) => badgeOf(i.to) > 0).map((i) => badgeTone(i.to)))} />
         )}
         <ChevronDown className={cn("h-3 w-3 text-slate-600 transition-transform duration-200 group-hover/h:text-slate-300", !open && "-rotate-90")} />
       </button>
@@ -537,7 +562,7 @@ function FooterLinks({ badgeOf }: { badgeOf: (to: string) => number }) {
           }
         >
           <item.icon className="h-4 w-4" />
-          {badgeOf(item.to) > 0 && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+          {badgeOf(item.to) > 0 && <span className={cn("absolute right-1 top-1 h-1.5 w-1.5 rounded-full", DOT_CLASS[badgeTone(item.to)])} />}
         </ItemLink>
       ))}
     </div>
@@ -559,13 +584,13 @@ function CommanderCard() {
             <PlayerName presence={false} uid={player.uid} pseudo={player.pseudo} allianceId={player.allianceId || null} className="min-w-0 [overflow-wrap:anywhere]" />
             <AscensionStars count={player.ascensions} />
           </p>
-          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-cyan-glow">
+          <p className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cyan-glow">
             <span className="truncate">{getRankLabel(player.xp)}</span>
             <StaffBadge uid={player.uid} compact />
           </p>
         </div>
       </div>
-      <div className="mt-2.5 flex items-baseline justify-between font-mono text-[10px] text-slate-500">
+      <div className="mt-2.5 flex items-baseline justify-between font-mono text-[11px] text-slate-500">
         <span>{formatCompact(player.xp)} XP</span>
         <span>{progress.next ? `→ ${progress.next}` : "Rang max"}</span>
       </div>
@@ -621,7 +646,7 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
       }
     >
       <item.icon className={cn("h-4 w-4", bossIconClass(phase))} />
-      {badge > 0 && <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-danger-glow shadow-[0_0_6px_var(--color-danger-glow)]" />}
+      {badge > 0 && <span className={cn("absolute right-0.5 top-0.5 h-2 w-2 rounded-full", DOT_CLASS[badgeTone(item.to)])} />}
       {fresh && !badge && <span aria-hidden className="absolute right-0.5 top-0.5 h-2 w-2 rotate-45 bg-cyan-glow" />}
       <BossDot phase={phase} className="bottom-0.5 right-0.5" />
     </ItemLink>
@@ -657,7 +682,7 @@ function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number
           <CompactLink key={item.to} item={item} badge={badgeOf(item.to)} />
         ))}
         <CockpitSwitch compact className="mx-auto mt-1" />
-        <button type="button" onClick={onExpand} title="Déplier la barre" aria-label="Déplier la barre" className="mx-auto mt-1 grid h-8 w-9 place-items-center text-slate-600 hover:text-cyan-glow">
+        <button type="button" onClick={onExpand} title="Déplier la barre" aria-label="Déplier la barre" className="mx-auto mt-1 grid h-8 w-9 place-items-center text-slate-500 hover:text-cyan-glow">
           <ChevronsRight className="h-4 w-4" />
         </button>
       </div>
@@ -683,7 +708,7 @@ function CockpitSwitch({ className, compact }: { className?: string; compact?: b
   return (
     <label className={cn("flex cursor-pointer items-center gap-2 border-t border-white/5 pt-2", className)}>
       <Gauge className={cn("h-3.5 w-3.5 shrink-0", on ? "text-cyan-glow" : "text-slate-500")} />
-      <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">Vue cockpit</span>
+      <span className="flex-1 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-300">Vue cockpit</span>
       <HudSwitch checked={on} onCheckedChange={toggle} label="Vue cockpit" />
     </label>
   );
@@ -701,7 +726,7 @@ function FullscreenSwitch({ className }: { className?: string }) {
   return (
     <label className={cn("flex cursor-pointer items-center gap-2 border-t border-white/5 pt-2", className)}>
       <Maximize className={cn("h-3.5 w-3.5 shrink-0", on ? "text-cyan-glow" : "text-slate-500")} />
-      <span className="flex-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-300">Plein écran</span>
+      <span className="flex-1 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-300">Plein écran</span>
       <HudSwitch checked={on} onCheckedChange={() => void toggleFullscreen()} label="Plein écran" />
     </label>
   );
@@ -763,13 +788,13 @@ function Sidebar() {
         <div className="flex items-center justify-between">
           <SignalIndicator />
           <LiveClock />
-          <button type="button" onClick={() => setMode(wide ? "compact" : "auto")} title="Réduire la barre" aria-label="Réduire la barre" className="text-slate-600 hover:text-cyan-glow">
+          <button type="button" onClick={() => setMode(wide ? "compact" : "auto")} title="Réduire la barre" aria-label="Réduire la barre" className="text-slate-500 hover:text-cyan-glow">
             <ChevronsLeft className="h-4 w-4" />
           </button>
         </div>
         <CockpitSwitch className="mt-2" />
         {CURRENT_VERSION && (
-          <NavLink to="/game/nouveautes" className="mt-1.5 block font-mono text-[10px] tracking-[0.14em] text-slate-600 hover:text-cyan-glow">
+          <NavLink to="/game/nouveautes" className="mt-1.5 block font-mono text-[11px] tracking-[0.14em] text-slate-500 hover:text-cyan-glow">
             BUILD v{CURRENT_VERSION}
           </NavLink>
         )}
@@ -814,7 +839,7 @@ function TabLink({ item }: { item: NavItem }) {
       item={item}
       className={({ isActive }) =>
         cn(
-          "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] transition-colors",
+          "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.03em] transition-colors",
           "before:absolute before:inset-x-[25%] before:top-0 before:h-0.5 before:bg-cyan-glow before:shadow-[0_0_10px_var(--color-cyan-glow)] before:transition-opacity",
           isActive ? "text-cyan-glow before:opacity-100" : "text-slate-500 before:opacity-0",
         )
@@ -822,7 +847,7 @@ function TabLink({ item }: { item: NavItem }) {
     >
       <span className="relative">
         <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
-        <Badge count={badge} neutral={item.to === "/game/nouveautes"} />
+        <Badge count={badge} tone={badgeTone(item.to)} />
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
@@ -855,7 +880,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
           <button
             type="button"
             onClick={() => setEditing((e) => !e)}
-            className={cn("ml-auto border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em]", editing ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-white/10 text-slate-400")}
+            className={cn("ml-auto border px-2 py-1 font-mono text-[11px] uppercase tracking-[0.14em]", editing ? "border-cyan-glow/60 bg-cyan-glow/15 text-cyan-glow" : "border-white/10 text-slate-400")}
           >
             {editing ? "Terminé" : "Épingler"}
           </button>
@@ -864,7 +889,7 @@ function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onCl
         <div className="mt-3 flex flex-col gap-4">
           {navGroups.map((group) => (
             <div key={group.id} style={{ "--nav-accent": group.accent } as React.CSSProperties}>
-              <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[10px] text-slate-500">
+              <p className="hud-eyebrow mb-2 flex items-center gap-2 text-[11px] text-slate-500">
                 <group.icon className="h-3 w-3 text-[var(--nav-accent)]" />
                 {group.label}
                 <span aria-hidden className="h-px flex-1 bg-gradient-to-r from-[color-mix(in_srgb,var(--nav-accent)_35%,transparent)] to-transparent" />
@@ -921,17 +946,17 @@ function MenuTile({ item, onClick }: { item: NavItem; onClick: () => void }) {
     >
       <span className="relative">
         <item.icon className={cn("h-5 w-5", bossIconClass(phase))} />
-        <Badge count={badge} neutral={item.to === "/game/nouveautes"} />
+        <Badge count={badge} tone={badgeTone(item.to)} />
         {!badge && <BossDot phase={phase} />}
       </span>
       {item.label}
       {fresh && !badge && (
-        <HudChip size="sm" tone="accent" className="-mt-1 px-1 py-px text-[8.5px] tracking-[0.12em]">
+        <HudChip size="sm" tone="accent" className="-mt-1 px-1 py-px text-[11px] tracking-[0.08em]">
           Nouveau
         </HudChip>
       )}
       {bossInfo && (
-        <span className="-mt-1 whitespace-nowrap font-mono text-[8.5px] tabular-nums tracking-[0.12em]" style={{ color: BOSS_NAV[bossInfo.phase].color }}>
+        <span className="-mt-1 whitespace-nowrap font-mono text-[11px] tabular-nums tracking-[0.08em]" style={{ color: BOSS_NAV[bossInfo.phase].color }}>
           {bossNavText(bossInfo).chip}
         </span>
       )}
@@ -966,14 +991,14 @@ function MobileTabBar() {
           type="button"
           onClick={() => setOpen(true)}
           className={cn(
-            "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.06em]",
+            "relative flex flex-1 flex-col items-center gap-1 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.03em]",
             "before:absolute before:inset-x-[25%] before:top-0 before:h-0.5 before:bg-cyan-glow before:shadow-[0_0_10px_var(--color-cyan-glow)]",
             inMenu ? "text-cyan-glow before:opacity-100" : "text-slate-500 before:opacity-0",
           )}
         >
           <span className="relative">
             <LayoutGrid className="h-5 w-5" />
-            <Badge count={moreCount} neutral />
+            <Badge count={moreCount} tone="neutral" />
           </span>
           Plus
         </button>

@@ -281,6 +281,18 @@ function syncProfile(app, player) {
     profile.set("moonLevel", moonLevel);
     changed = true;
   }
+  // 6.14.85 (RL-2) : points et projets de prestige, publics (classement « Prestige », monument de la fiche).
+  const prestige = parseJsonField(player, "prestige", null) || {};
+  const prestigePoints = Math.max(0, Math.floor(Number(prestige.points) || 0));
+  const prestigeProjects = Math.max(0, Math.floor(Number(prestige.projects) || 0));
+  if (profile.getInt("prestigePoints") !== prestigePoints) {
+    profile.set("prestigePoints", prestigePoints);
+    changed = true;
+  }
+  if (profile.getInt("prestigeProjects") !== prestigeProjects) {
+    profile.set("prestigeProjects", prestigeProjects);
+    changed = true;
+  }
   // v4.2 : fin des vacances affichée sur la fiche (0 hors vacances).
   const vac = parseJsonField(player, "vacation", null);
   const vacUntil = vac && !vac.endedAtMs && Number(vac.untilMs) > Date.now() ? Number(vac.untilMs) : 0;

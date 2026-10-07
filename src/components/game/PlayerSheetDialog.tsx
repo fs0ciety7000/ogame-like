@@ -16,7 +16,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { KESH, patronTier, rankName } from "@/game/bounties";
 import { HudChip } from "@/components/ui/hud";
 import { assetUrl } from "@/lib/assets";
-import { HandCoins, Loader2, Moon } from "lucide-react";
+import { HandCoins, Landmark, Loader2, Moon } from "lucide-react";
+import { prestigeMonument } from "@/game/prestige";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { FollowOnlineButton } from "@/components/game/RemindersCard";
 import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
@@ -144,6 +145,12 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
               <HudChip size="sm" tone="violet" className="mt-1" title="Lune née d'un grand combat au-dessus de sa planète mère.">
                 <Moon className="h-3 w-3" /> Lune {entry.moonName}
                 {(entry.moonLevel ?? 0) > 0 && <span className="tabular-nums"> · niv. {entry.moonLevel}</span>}
+              </HudChip>
+            )}
+            {(entry?.prestigeProjects ?? 0) > 0 && prestigeMonument(entry!.prestigeProjects!) && (
+              <HudChip size="sm" tone="gold" className="mt-1" title={`${formatNumber(entry!.prestigeProjects!)} projets de prestige achevés, ${formatNumber(entry!.prestigePoints ?? 0)} points de prestige.`}>
+                <Landmark className="h-3 w-3" /> {prestigeMonument(entry!.prestigeProjects!)!.name}
+                <span className="tabular-nums"> · {formatNumber(entry!.prestigePoints ?? 0)} pts</span>
               </HudChip>
             )}
             {patron && (

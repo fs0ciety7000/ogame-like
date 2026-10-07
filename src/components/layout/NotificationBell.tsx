@@ -70,7 +70,8 @@ export function NotificationBell() {
         >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center bg-danger-glow px-0.5 font-mono text-[11px] font-bold leading-none text-space-950">
+            // 6.14.86 (couleur = sens) : rouge seulement pour une menace non lue (attaque subie, espion détecté), neutre sinon.
+            <span className={cn("absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center px-0.5 font-mono text-[11px] font-bold leading-none tabular-nums", hasUrgentUnread ? "bg-danger-glow text-space-950" : "border border-slate-400/60 bg-space-800 text-slate-100")}>
               {unread > 9 ? "9+" : unread}
             </span>
           )}
@@ -99,7 +100,7 @@ export function NotificationBell() {
                 )}
               >
                 {c.label}
-                {count > 0 && <span className="bg-danger-glow px-1 font-bold text-slate-100">{count}</span>}
+                {count > 0 && <span className="bg-space-800 px-1 font-bold tabular-nums text-slate-100">{count}</span>}
               </button>
             );
           })}

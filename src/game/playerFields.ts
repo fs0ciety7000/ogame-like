@@ -50,6 +50,8 @@ export const GAME_FIELDS = [
   "talents",
   "casino",
   "workshop",
+  // 6.14.85 (RL-2) : projets de prestige.
+  "prestige",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"] as const;

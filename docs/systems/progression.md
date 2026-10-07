@@ -13,11 +13,12 @@
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons, **2 M à 12 M** de chaque ressource commune depuis la 6.14.72, 45 M à 280 M avant ; indexation sur la production au lot AE-L3) |
 | Succès | continu | 76 (dont dérivés des catalogues ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
 | Ascension | ≥ 7 jours | 5 au plus ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent. 1re Ascension possible (simulateur, 6.14.72) : J10 (actif), J19 (moyen), J46 (occasionnel), J32 (quotidien) ; cible du GDD §2 : J35–50, J60–90, > J120 (lot AE-L2) |
+| Projets de prestige (6.14.85) | un à la fois, 8 h | ouverts quand les 4 extracteurs sont au niveau **10** ; coût **8 h** de production commune du moment (extracteurs × technos), durée **8 h** ; **8 points** par projet, monument de la fiche publique (Stèle à 1 projet … Merveille du secteur à 1 000), classement « Prestige », succès 1 / 10 / 100 (titre « Bâtisseur d'éternité ») / 1 000 (secret) ; **aucun bonus** (Q168, I32) ; Admin → Règles → Projets de prestige |
 | Codex, titres, bannières | collection | 10 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché) ; récompense par catégorie complète (Unités, Bâtiments, Technologies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
 
 ## Code et admin
 `seasons.ts`, `leagues.ts`, `seasonPass.ts`, `passSeasons.ts`, `chronicles.ts`, `challenges.ts`, `contracts.ts`, `dailyMissions.ts`,
-`streak.ts`, `achievements.ts`, `ascension.ts`, `talents.ts`, `xpTiers.ts`, `codex.ts`.
+`streak.ts`, `achievements.ts`, `ascension.ts`, `talents.ts`, `xpTiers.ts`, `codex.ts`, `prestige.ts` (6.14.85, page `PrestigePage.tsx`).
 
 ## État (audit 2026-10-06)
 - Corvées quotidiennes réunies depuis la 5.30 dans **Ordres du jour** (`/game/ordres`, `dailyOrders.ts`) : liste de contrôle, « Tout réclamer » (série, objectifs du jour, passe, Chroniques, prise en main ; 6.14.17 : catégories du Codex), pastille unique, rendez-vous de la semaine. Contrats et missions fusionnés en 4 objectifs du jour depuis la 6.2.1.
@@ -75,3 +76,14 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   [--base …]` (préréglages `avant-ae-l1`, `ae-l2`). Garde : `progressionSim.test.ts` (bornes d'Ascension par profil).
 - **Coffre du 7e jour** ramené à 2 M à 12 M par ressource commune (AE-3, Q99) : 465 h → 20 h de production du joueur quotidien, production
   perdue à J14 96 % → 67 %. Proposition : `docs/proposals/equilibrage-au27.md`.
+
+## 6.14.84 et 6.14.85 (rythme long terme, lots RL-1 et RL-2)
+- **Recherche réglable** (RL-1) : `research.costGrowth`, `timeGrowth`, `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds` dans les
+  règles, valeurs neutres (le jeu ne change pas, `rechercheReglable.test.ts`). La bascule est le lot RL-3.
+- **Projets de prestige** (RL-2) : puits durable de la production (groupe `prestige`, I32), page Prestige ouverte par sa condition
+  (signal `prestigeReady`), action `prestigeStart`, fin au rattrapage avec notification, classement (`profiles.prestigePoints`), monument
+  sur la fiche publique, 4 succès, fiche du Codex, Formules, frise « Prochaines fins », sortie « Entrepôt plein ». Simulateur :
+  `node scripts/progression-sim.mjs --prestige [--ascend] [--days 365]` (avant = sans projets, après = règles `prestige` en vigueur).
+  Mesure avec les valeurs actuelles (avant RL-3), 365 jours, Ascensions : production perdue 91 / 90 / 74 / 84 % → 74 / 58 / 64 / 75 %
+  (actif, moyen, occasionnel, quotidien), jours sans dépense du pire mois 30 / 30 / 20 / 30 → 0 / 1 / 0 / 0, 650 / 609 / 159 / 264
+  projets. Fiche : `docs/changes/6.14.85-projets-de-prestige.md`.

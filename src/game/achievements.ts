@@ -12,6 +12,7 @@ import { playerStats } from "@/game/stats";
 import { GameActionError } from "@/game/errors";
 import { normalizePlanetLook } from "@/game/planetLook";
 import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
+import { prestigeState } from "@/game/prestige";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -199,6 +200,8 @@ export const METRICS = {
   },
   streakBest: { label: "Meilleure série de connexion (jours)", value: (p: PlayerState) => Math.floor(Number((p.streak as { best?: number } | undefined)?.best) || 0) },
   ascensionsDone: { label: "Ascensions accomplies", value: (p: PlayerState) => Math.floor(Number(p.ascensions) || 0) },
+  // 6.14.85 (RL-2) : projets de prestige achevés (cumul, gardé par l'Ascension).
+  prestigeProjects: { label: "Projets de prestige achevés", value: (p: PlayerState) => prestigeState(p).projects },
   // 6.14.3 : lunes (le niveau maximal se lit à l'usage : il est réglable).
   moonLevel: { label: "Niveau de la lune (0 sans lune)", value: (p: PlayerState) => (playerMoon(p) ? moonLevel(playerMoon(p)) : 0) },
   moonMaxed: {
@@ -372,6 +375,11 @@ export function derivedAchievements(): AchievementDef[] {
     // 6.14.3 (P29-1, Q20) : lunes.
     def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir naître une lune au-dessus de ta planète mère.", "🌙", { auto: true, secret: true }),
     def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "🌕", { auto: true }),
+    // 6.14.85 (RL-2, proposals/rythme-long-terme.md §5.2) : projets de prestige (entrée, paliers, maîtrise avec titre, secret).
+    def("prestige_1", "prestige", "bronze", "prestigeProjects", 1, "Première pierre", "Achever un projet de prestige.", "🏛️", { auto: true }),
+    def("prestige_10", "prestige", "argent", "prestigeProjects", 10, "Obélisque", "Achever 10 projets de prestige.", "🗿", { auto: true }),
+    def("prestige_100", "prestige", "or", "prestigeProjects", 100, "Grand œuvre", "Achever 100 projets de prestige.", "🏟️", { auto: true, title: "Bâtisseur d'éternité", titleId: "batisseur_eternite" }),
+    def("prestige_1000", "prestige", "legendaire", "prestigeProjects", 1000, "Merveille du secteur", "Achever 1 000 projets de prestige.", "🌌", { auto: true, secret: true }),
     // 6.14.69 (É30-1d, proposals/phalange-porte-de-saut.md §7) : phalange et porte de saut (entrée, maîtrise, secret).
     def("phalange_1", "combat", "bronze", "phalanxScans", 1, "Œil de la lune", "Balayer un agresseur avec la phalange de ta lune.", "🔭", { auto: true }),
     def("phalange_50", "combat", "argent", "phalanxScans", 50, "Vigie", "Lancer 50 balayages de phalange.", "🛰️", { auto: true }),
@@ -458,6 +466,7 @@ const METRIC_HINTS: Partial<Record<AchievementMetric, string>> = {
   casinoJackpots: "Trois fois le même chiffre, et le pot commun change de mains.",
   moonLevel: "Un champ de débris assez lourd finit parfois par tourner autour de ceux qui ont tenu bon.",
   gateSaves: "Une flotte au loin ne défend rien. Ramène-la d'un coup, juste avant que la tempête ne frappe.",
+  prestigeProjects: "Un empire qui n'a plus rien à bâtir pour lui bâtit pour la postérité. Encore, et encore.",
 };
 
 /** Indice d'un succès (piste de la mesure, sinon la catégorie). */

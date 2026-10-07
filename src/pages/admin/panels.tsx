@@ -32,6 +32,7 @@ import { MoonRulesFields } from "@/pages/admin/MoonRulesFields";
 import { NavUnlockRulesFields } from "@/pages/admin/NavUnlockRulesFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
 import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
+import { RhythmRulesFields } from "@/pages/admin/RhythmRulesFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -931,6 +932,8 @@ export function RulesPanel() {
         <PassGenFields rules={rules} setRules={setRules} />
         <ChronicleGenFields rules={rules} setRules={setRules} />
         <CommerceRulesFields rules={rules} setRules={setRules} />
+        {/* 6.14.84 et 6.14.85 (RL-1, RL-2) : Labo (coûts et durées des recherches) et projets de prestige. */}
+        <RhythmRulesFields rules={rules} setRules={setRules} />
       </Card>
       {/* 6.7.2 : tout GameRules est réglable dans l'admin, même sans section dédiée. */}
       <AllRulesEditor rules={rules} setRules={setRules} />

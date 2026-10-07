@@ -83,29 +83,29 @@ export function ResourceHud() {
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
                     <AnimatedNumber value={resources[res.id]} format={formatCompact} className="truncate tabular-mono text-[13px] font-semibold leading-tight text-slate-100 sm:text-[15px]" />
                     {full ? (
-                      <span className="font-mono text-[9px] font-bold uppercase leading-tight tracking-[0.14em] text-ember-glow">plein</span>
+                      <span className="font-mono text-[11px] font-bold uppercase leading-tight tracking-[0.08em] text-ember-glow">plein</span>
                     ) : nearFull && secondsToFull !== null ? (
                       <>
                         {/* Téléphone : « plein dans » prend la place du débit (la ligne du nom est masquée). */}
-                        <span className="truncate font-mono text-[9px] uppercase leading-tight tracking-[0.08em] text-ember-glow sm:hidden">plein {formatDuration(Math.ceil(secondsToFull))}</span>
+                        <span className="truncate font-mono text-[11px] uppercase leading-tight tracking-[0.04em] text-ember-glow sm:hidden">plein {formatDuration(Math.ceil(secondsToFull))}</span>
                         {rate !== 0 && (
-                          <span className={cn("hidden truncate tabular-mono text-[10px] leading-tight sm:inline", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
+                          <span className={cn("hidden truncate tabular-mono text-[11px] leading-tight sm:inline", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
                             {rate > 0 ? "+" : ""}
                             {formatCompact(rate)}/s
                           </span>
                         )}
                       </>
                     ) : rate !== 0 ? (
-                      <span className={cn("truncate tabular-mono text-[10px] leading-tight", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
+                      <span className={cn("truncate tabular-mono text-[11px] leading-tight", rate > 0 ? "text-mint-glow" : "text-danger-glow")}>
                         {rate > 0 ? "+" : ""}
                         {formatCompact(rate)}/s
                       </span>
                     ) : null}
                   </div>
                   {nearFull && secondsToFull !== null ? (
-                    <p className="hidden truncate font-mono text-[9px] uppercase tracking-[0.12em] text-ember-glow sm:block">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
+                    <p className="hidden truncate font-mono text-[11px] uppercase tracking-[0.08em] text-ember-glow sm:block">plein dans {formatDuration(Math.ceil(secondsToFull))}</p>
                   ) : (
-                    <p className="hidden truncate font-mono text-[9px] uppercase tracking-[0.16em] text-slate-500 sm:block">{res.name}</p>
+                    <p className="hidden truncate font-mono text-[11px] uppercase tracking-[0.1em] text-slate-500 sm:block">{res.name}</p>
                   )}
                 </div>
                 {trend.length >= 2 && <Sparkline values={trend} className="hidden 2xl:block" />}

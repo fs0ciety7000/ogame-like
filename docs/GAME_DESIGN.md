@@ -80,6 +80,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I29 | Équilibre gardé par simulation : avec les règles par défaut, le simulateur de progression (déterministe, 4 profils sur 90 jours) garde la 1re Ascension de chaque profil dans ses bornes (actif J8–13, moyen J15–23, occasionnel J38–56, quotidien J26–40 en 6.14.72 ; le lot AE-L2 les déplace vers les cibles du §2) ; à budget égal, un défenseur moitié défenses, moitié vaisseaux à quai tient jusqu'à ×0,85 au moins de sa dépense, des défenses seules jusqu'à ×2 ; le coffre du 7e jour du joueur quotidien reste sous 24 h de sa production. Un réglage qui sort de ces bornes passe par une proposition et change les bornes dans le même commit | `balance/progressionSim.ts`, `balance/pvpBudget.ts` (`node scripts/progression-sim.mjs`) | `progressionSim.test.ts` |
 | I30 | Menu progressif : il **masque** sans bloquer (aucune route ni action ne lit l'ouverture du menu) ; une page s'ouvre au premier de ses déclencheurs (signal d'usage, étape de la Prise en main ou du Carnet atteinte, rang plafond) et au plus tard à son rang plafond ; une page ouverte ne se referme jamais (marque `nav:<page>` à la première visite ou à l'ouverture par un danger passager, astuce `tip:<page>` vue, page annoncée `stats.navAnnounced`) ; un danger (flotte hostile, rapport reçu, combat subi, ultimatum, raid scripté) ouvre Galaxie, Combats et Menaces, un contact de seigneur ouvre Seigneurs ; l'étape en cours de la Prise en main et du Carnet ne vise jamais une page fermée ; un compte créé avant `newAccountsFrom` et au moins à `veteranRank`, un admin, l'option « Tout afficher » ou `enabled` à faux rendent le menu complet, sans rien écrire sur la fiche ; chaque entrée du menu a une règle `navUnlock.pages` ou figure dans `NAV_ALWAYS_VISIBLE` | `navUnlock.ts` (`navOpenPages`, `navSignals`), `NavBar.tsx` (`useNavUnlock`, `useHiddenRoutes`) | `navUnlock.test.ts` |
 | I31 | Objectifs du jour du menu progressif : un objectif d'un **nouveau** jour (et une relance) n'est tiré que parmi les types dont la page est ouverte pour le joueur (`CONTRACT_PAGES` : attaque, sondes → Galaxie ; défense → Combats ; missions → Missions ; marché, dons → Commerce ; les autres sur une page toujours visible) ; le tirage du jour en cours n'est jamais refait ; `navUnlock.filterContracts` à faux, « Tout afficher », un ancien compte ou `enabled` à faux tirent parmi tous les types. Le serveur annonce les pages ouvertes par une notification « Nouveau : … » (une par ouverture, dans la transaction de l'action, I24), jamais pour un ancien compte ni un admin | `contracts.ts` (`openContractTypes`, `ensureContracts`, `rerollContract`), `navUnlock.ts` (`navOpeningNotice`), `cosmic.pb.js` (route des actions) | `contracts.test.ts`, `navUnlock.test.ts`, intégration « 6.14.79 (DP-L4) » |
+| I32 | Projets de prestige : un projet coûte exactement `prestige.hoursPerProject` × `prestige.growth`^(projets achevés) heures de la production commune du moment (extracteurs × technos, `getProductionRatesPerSecond`, ressource par ressource, arrondi à l'unité inférieure), payé à l'action dans la transaction du serveur (I24) ; un seul tourne à la fois ; il ne s'ouvre que si les 4 extracteurs atteignent `prestige.unlockExtractorLevel` ; il ne donne **aucun** bonus de combat ni de production (rien n'entre dans la couche empire : I14 intact) ; compteur et points ne baissent jamais (l'Ascension les garde, un projet en cours se termine même si `enabled` passe à faux) | `prestige.ts` (`prestigeCost`, `prestigeStartCost`, `advancePrestige`), `actions.ts` (`prestigeStart`), `flush.ts` | `prestige.test.ts`, intégration « 6.14.85 (RL-2) » |
 
 ## 5. Règles de conception
 
@@ -236,10 +237,11 @@ Nouveautés, Annonces, Signalements, Bible, Devblog) : **13 entrées** à J0 (40
 | Bronze III | Commerce, Codex, Chroniques, Gazette, Statistiques, Portefeuille, Simulateur, Planificateur | 1er échange, fiche du Codex, lune ou pitié (étape « moonWatch »), 1re Ambre, rapport, Planificateur à portée |
 | Argent III | État-major, Seigneurs, Boss mondial, Boss de saison, Hall of fame, Casino | relique ou officier (étape « relicEquip »), contact de seigneur, 1re participation à un boss |
 | Or III | Colonies, Guerre de territoire | colonie proche ou fondée (étape « colonyFound ») ; alliance obligatoire, alliance engagée |
+| sans rang plafond (6.14.85) | Prestige | seulement `prestigeReady` : 4 extracteurs au niveau `prestige.unlockExtractorLevel` (10) |
 
 Signaux (`NAV_SIGNALS`, liste fermée lue par `navSignals`) : `danger`, `protectionOver`, `report`, `firstUnit`, `colonyNear`, `hasColony`,
 `inAlliance`, `allianceAtWar`, `hasRelicOrOfficer`, `warlordContact`, `bossJoined`, `rareCurrency`, `marketOffer`, `codexReady`,
-`plannerAmber`, `hasMoon`, `ascended`. Visiter une page fermée (lien, Ctrl+K, défi du passe ou des Chroniques) l'ouvre (intention).
+`plannerAmber`, `hasMoon`, `ascended`, `prestigeReady` (6.14.85 : 4 extracteurs au niveau des projets de prestige). Visiter une page fermée (lien, Ctrl+K, défi du passe ou des Chroniques) l'ouvre (intention).
 Option « Tout afficher » (Réglages → Jeu et aide, Q156) : marques `nav:all` / `nav:progressif`, la dernière posée l'emporte.
 Panneau Lune de Statistiques : seulement avec une lune, une réserve de pitié ou l'étape « Ta lune » du Carnet atteinte (`moonPanelVisible`).
 
@@ -260,6 +262,27 @@ l'Ambre de la barre des ressources n'apparaît qu'avec Primes ouvert ou un solde
 s'affiche « À découvrir » avec la condition, sans progression ; « Que faire maintenant ? » (`nextActions`), le rappel de la classe
 d'empire, la vue cockpit (actions rapides, agenda) ne proposent que des pages ouvertes.
 Garde : I30, I31.
+
+### 7.8 Rythme long terme : recherche réglable et projets de prestige (6.14.84 et 6.14.85, `technologies.ts`, `prestige.ts`)
+
+Lots RL-1 et RL-2 de `docs/proposals/rythme-long-terme.md` (Q164 à Q171 validées). Fiches du domaine : `docs/systems/recherche.md`,
+`docs/systems/progression.md`.
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Croissance du coût d'un niveau de recherche | ×**2,7** par niveau (sauf croissance propre à la techno) | `research.costGrowth` (Règles → Labo : coûts et durées des recherches) |
+| Croissance de la durée | ×**1,67** par niveau | `research.timeGrowth` |
+| Recherche tardive | **aucune** (dès le niveau 0 = jamais, ×1) ; RL-3 : dès le niveau 6, ×30 | `research.lateFromLevel`, `research.lateTimeFactor` |
+| Durée maximale d'un niveau (avant réductions) | **sans plafond** (0) ; RL-3 : 7 jours | `research.maxLevelSeconds` |
+| Projets de prestige | ouverts | `prestige.enabled` (Règles → Projets de prestige) |
+| Coût d'un projet | **8 h** de production commune du moment, ×**1** par projet achevé | `prestige.hoursPerProject`, `prestige.growth` |
+| Durée d'un projet | **8 h**, un à la fois (I32) | `prestige.durationHours` |
+| Ouverture | 4 extracteurs au niveau **10** (page Prestige au menu à ce moment) | `prestige.unlockExtractorLevel` |
+| Récompense | **8 points** de prestige par projet ; monuments à 1, 10, 25, 50, 100, 250, 500 et 1 000 projets ; aucun bonus (Q168) | `prestige.pointsPerProject`, `prestige.monuments` |
+
+Le prestige se voit : classement « Prestige » (page Prestige, `profiles.prestigePoints`), monument sur la fiche publique, 4 succès
+(Première pierre, Obélisque, Grand œuvre avec le titre « Bâtisseur d'éternité », Merveille du secteur en secret), fiche « Les projets de
+prestige » du Codex (Légendes). « Que faire maintenant ? » propose un projet quand l'entrepôt est plein. Garde : I32.
 
 ## 8. Journal des audits
 
@@ -382,3 +405,5 @@ Garde : I30, I31.
 | 2026-10-07 | 6.14.79 | Lot DP-L4 : objectifs du jour d'un nouveau jour tirés parmi les pages ouvertes (relance comprise), notification « Nouveau : … » envoyée par le serveur à chaque ouverture (mémoire `stats.navAnnounced`, qui garde aussi la page ouverte) ; invariant I31 ; intégration « 6.14.79 (DP-L4) » | `docs/changes/6.14.79-deblocage-serveur.md` |
 | 2026-10-07 | 6.14.80 | Lot DP-L5 : Admin → Règles → Ouverture du menu (réglages généraux, une fiche par page, aperçu d'un compte neuf par rang avec le brouillon) | `docs/changes/6.14.80-deblocage-admin.md` |
 | 2026-10-07 | 6.14.81 | Lot DP-L6 : 18 astuces de page, Ambre de la barre des ressources, succès « À découvrir », « Que faire maintenant ? », rappel de classe et vue cockpit sans page fermée ; changelog, ligne au billet 49 | `docs/changes/6.14.81-deblocage-chaine.md` |
+| 2026-10-07 | 6.14.84 | Lot RL-1 : recherche réglable (`research.costGrowth`, `timeGrowth`, `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`), défauts neutres (mêmes coûts et durées, test) ; éditeur Admin → Règles → Labo, section Recherche des Formules | `docs/changes/6.14.84-recherche-reglable.md`, `proposals/rythme-long-terme.md` |
+| 2026-10-07 | 6.14.85 | Lot RL-2 : projets de prestige (8 h de production, 8 h, un à la fois, ouverts aux extracteurs niveau 10, récompense visible seulement) ; invariant I32 ; simulateur `--prestige` (valeurs actuelles, 365 j : production perdue de l'actif 91 % → 74 %) | `docs/changes/6.14.85-projets-de-prestige.md`, `proposals/rythme-long-terme.md` |

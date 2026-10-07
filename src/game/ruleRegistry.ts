@@ -24,6 +24,7 @@ import { COLONY_BASE_RULES } from "@/game/fleets";
 import { MOON_RULES } from "@/game/moon";
 import { NAV_UNLOCK_RULES } from "@/game/navUnlock";
 import { PHALANX_RULES } from "@/game/phalanx";
+import { PRESTIGE_RULES } from "@/game/prestige";
 import { JUMP_GATE_RULES } from "@/game/jumpGate";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
@@ -125,9 +126,11 @@ export const REGISTERED_RULES = {
   officerTuning: { label: "Officiers : second rôle des commandants de saison, Phéromone", target: () => OFFICER_TUNING_RULES },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW },
   polls: { label: "Sondages", target: () => POLL_RULES },
+  // 6.14.85 (RL-2, proposals/rythme-long-terme.md §5.2) : projets de prestige.
+  prestige: { label: "Projets de prestige", target: () => PRESTIGE_RULES },
   profile: { label: "Profil", target: () => PROFILE_RULES },
   referral: { label: "Parrainage", target: () => REFERRAL_RULES },
-  research: { label: "Labo : recherches en parallèle", target: () => RESEARCH_RULES },
+  research: { label: "Labo : recherches en parallèle, croissance des coûts et durées, recherche tardive", target: () => RESEARCH_RULES },
   rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
   reports: { label: "Signalements", target: () => REPORT_RULES },
   roomEvents: { label: "Événements de salon", target: () => ROOM_EVENT_RULES },

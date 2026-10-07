@@ -5,6 +5,7 @@ import { MISSIONS } from "@/game/missions";
 import { findTech } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import { playerMoon } from "@/game/moon";
+import { prestigeState } from "@/game/prestige";
 import type { PlayerState, QueuesState } from "@/types/game";
 import type { Fleet } from "@/game/fleets";
 
@@ -14,7 +15,7 @@ import type { Fleet } from "@/game/fleets";
    date de fin.
 ===================================================== */
 
-export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony" | "repair" | "moon";
+export type TimelineKind = "building" | "research" | "mission" | "units" | "fleet" | "hostile" | "colony" | "repair" | "moon" | "prestige";
 
 export interface TimelineEvent {
   id: string;
@@ -31,7 +32,7 @@ export function upcomingEvents(
   fleets: Fleet[] = [],
   uid?: string,
   /** v4.9.3 : chantiers des colonies et vaisseau colonial, sur la même frise. */
-  empire?: Pick<PlayerState, "colonies" | "colonizing"> & Partial<Pick<PlayerState, "moon">> | null,
+  empire?: Pick<PlayerState, "colonies" | "colonizing"> & Partial<Pick<PlayerState, "moon" | "prestige">> | null,
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   // 5.21 : unités immobilisées à l'Atelier de réparation (retour au hangar).
@@ -52,6 +53,9 @@ export function upcomingEvents(
     if ((moon.scanReadyAtMs ?? 0) > now) events.push({ id: "moon:scan", kind: "moon", label: "Phalange : balayage prêt", endTime: moon.scanReadyAtMs!, to: "/game/statistiques?onglet=lune" });
     if ((moon.gateReadyAtMs ?? 0) > now) events.push({ id: "moon:gate", kind: "moon", label: "Porte de saut prête", endTime: moon.gateReadyAtMs!, to: "/game/statistiques?onglet=lune" });
   }
+  // 6.14.85 (RL-2) : projet de prestige en cours.
+  const project = prestigeState(empire).active;
+  if (project) events.push({ id: "prestige", kind: "prestige", label: "Projet de prestige", endTime: project.endsAtMs, to: "/game/prestige" });
   for (const f of fleets) {
     const mission = f.mission ?? "attack";
     if (f.status === "outbound" && targetsPlayer(f, uid) && f.ownerUid !== uid && (mission === "attack" || mission === "pirate")) {

@@ -72,7 +72,7 @@ export const TECH_CODEX_IMAGE = "/assets/buildings/archives_fracturees.webp";
 
 /** 6.14.26 : technos qui ont leur illustration définitive (`public/assets/technologies/<id>.webp`, docs/illustrations.md).
  *  Un id ajouté ici suffit, même sur un contenu personnalisé ; le champ `image` de l'admin reste prioritaire. */
-export const TECH_ART: readonly string[] = ["tech1", "tech2", "tech3", "tech4", "tech5", "tech6", "tech7", "tech8", "tech9", "tech10", "tech11", "tech12", "tech13", "tech18", "tech19", "tech28"];
+export const TECH_ART: readonly string[] = ["tech1", "tech2", "tech3", "tech4", "tech5", "tech6", "tech7", "tech8", "tech9", "tech10", "tech11", "tech12", "tech13", "tech14", "tech15", "tech18", "tech19", "tech20", "tech21", "tech22", "tech23", "tech24", "tech25", "tech26", "tech27", "tech28"];
 
 /** Illustration du Codex d'une techno : image de l'admin, sinon illustration définitive, sinon image provisoire commune. */
 export function techImage(t: Pick<TechDef, "id" | "image">): string {
@@ -282,17 +282,36 @@ export function buildingsUnlockedByTech(techId: string, buildings: { id: string;
   return [...ids];
 }
 
-/** 6.9.7 (AU11) : recherches en parallèle au plus (registre « research »). */
-export const RESEARCH_RULES = { maxConcurrent: 4 };
-const COST_GROWTH = 2.7;
-const TIME_GROWTH = 1.67;
+/** 6.9.7 (AU11) : recherches en parallèle au plus (registre « research »).
+ *  6.14.84 (RL-1, proposals/rythme-long-terme.md §5.1) : croissance des coûts et des durées, recherche tardive et durée
+ *  maximale d'un niveau, réglables dans Admin → Règles → Labo. Valeurs par défaut neutres : mêmes coûts et durées
+ *  qu'avant (2,7 et 1,67 étaient des constantes du code). La bascule vers les valeurs de la proposition est le lot RL-3. */
+export const RESEARCH_RULES = {
+  maxConcurrent: 4,
+  /** Coût d'un niveau = coût de base × costGrowth^(niveau − 1) (une techno peut avoir sa propre croissance). */
+  costGrowth: 2.7,
+  /** Durée d'un niveau = durée de base × timeGrowth^(niveau − 1). */
+  timeGrowth: 1.67,
+  /** Recherche tardive : à partir de ce niveau, la durée est multipliée par `lateTimeFactor` (0 = jamais). */
+  lateFromLevel: 0,
+  /** Multiplicateur de durée des niveaux tardifs (1 = sans effet). */
+  lateTimeFactor: 1,
+  /** Durée maximale d'un niveau, avant les réductions (secondes ; 0 = sans plafond). */
+  maxLevelSeconds: 0,
+};
+
+/** Nombre fini et positif d'une règle, sinon sa valeur par défaut (réglage vidé ou absurde). */
+function researchRule(v: unknown, fallback: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
 
 export function findTech(id: string): TechDef | undefined {
   return TECHNOLOGIES.find((t) => t.id === id);
 }
 
 export function getTechCost(tech: TechDef, level: number): Record<string, number> {
-  const growth = tech.costGrowth ?? COST_GROWTH;
+  const growth = tech.costGrowth ?? researchRule(RESEARCH_RULES.costGrowth, 2.7);
   const factor = Math.pow(growth, level - 1);
   const cost: Record<string, number> = {};
   for (const [res, amount] of Object.entries(tech.baseCost)) {
@@ -307,8 +326,14 @@ export function getTechAmberCost(tech: Pick<TechDef, "amberCost">): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
+/** Durée d'un niveau (secondes, avant les réductions) : croissance, puis facteur des niveaux tardifs, puis plafond (RL-1). */
 export function getTechTime(tech: TechDef, level: number): number {
-  return Math.floor(tech.baseTime * Math.pow(TIME_GROWTH, level - 1));
+  let seconds = tech.baseTime * Math.pow(researchRule(RESEARCH_RULES.timeGrowth, 1.67), level - 1);
+  const lateFrom = Math.floor(Number(RESEARCH_RULES.lateFromLevel) || 0);
+  if (lateFrom > 0 && level >= lateFrom) seconds *= researchRule(RESEARCH_RULES.lateTimeFactor, 1);
+  const cap = Number(RESEARCH_RULES.maxLevelSeconds) || 0;
+  if (cap > 0) seconds = Math.min(seconds, cap);
+  return Math.floor(seconds);
 }
 
 export interface PrereqCheck {

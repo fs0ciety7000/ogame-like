@@ -167,7 +167,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "missile launcher rack firing rockets, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech15",
@@ -179,7 +179,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "ground cannon emitting concentric pulse waves, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech16",
@@ -239,7 +239,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "stealth probe with sensor array, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech21",
@@ -251,7 +251,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "glowing quantum-stable alloy ingot in a foundry, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech22",
@@ -263,7 +263,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "organic neural network lattice pulsing with data, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech23",
@@ -275,7 +275,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "energy containment field around resource vaults, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech24",
@@ -287,7 +287,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "antimatter engine nozzle with violet exhaust, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech25",
@@ -299,7 +299,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "gravitational lance focusing a gravity well, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech26",
@@ -311,7 +311,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "folding docking modules extending a hangar, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech27",
@@ -323,7 +323,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "swarm of welding nanites repairing a hull, holographic research schematic floating above a dark lab console, cyan and violet glow, salvaged-tech sci-fi, cinematic concept art, centered, square composition, muted palette, high detail --ar 1:1 --style raw --v 6",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "tech-tech28",
@@ -1523,6 +1523,18 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a radiant star collapsing into a new birth of light, transcendence, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
+   "done": null
+  },
+  {
+   "id": "prestige-monument",
+   "group": "Prestige",
+   "name": "Projets de prestige : chantier et monument (page Prestige, Codex)",
+   "target": "public/assets/prestige/monument.webp",
+   "width": 1024,
+   "height": 640,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "a colossal prestige monument under construction in high orbit above an industrial planet, a slender spire of salvaged hull plates and golden alloy rising from a scaffold ring, tiny construction drones and cranes, warm amber work lights against cold blue starlight, calm dark starfield, cinematic sci-fi concept art, wide composition, muted palette with gold accents, high detail, no text --ar 16:10 --v 7 --style raw --s 200",
    "done": null
   }
  ]
