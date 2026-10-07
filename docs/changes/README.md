@@ -97,6 +97,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.12.0 | [Vue « liste » de Bâtiments sur téléphone](6.12.0-batiments-vue-liste.md) | fonctionnalité | aucune (R2), Q16 |
 | 6.13.0 | [Lunes](6.13.0-lunes.md) | fonctionnalité | `lunes.md`, Q15 |
 | 6.13.1 | [Revue AU19 et clôture de l'été 2028](6.13.1-revue-ete-2028.md) | docs | aucune (AU19) |
+| 6.13.2 | [Billet de devblog « Les lunes »](6.13.2-billet-lunes.md) | docs | aucune (A28-1) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |
