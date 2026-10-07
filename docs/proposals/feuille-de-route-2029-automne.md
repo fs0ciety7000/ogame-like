@@ -11,7 +11,7 @@ production, `main` et PR sautés (Q12).
 | 0b | PP-2 | Pré-prod déployée par Coolify depuis la branche (`Dockerfile.preprod`, un seul conteneur) ; chaîne de contenu (`WORKFLOW.md` §7, règle n° 4) ; tout passe par la pré-prod (demande de l'utilisateur) | M | livré en 6.14.9 |
 | 0c | C1 | Proposition `chaine-contenu.md` puis garde : test qui liste les maillons manquants (Codex des bâtiments et technos, succès par contenu, porteurs d'effets) et lots de rattrapage | M | livré en 6.14.11 (4 manques connus, rattrapés en C2 à C4) |
 | 0d | C2 | Codex : entrées automatiques des 13 bâtiments et des 30 technos (débloquées par le joueur), garde `contentChain.test.ts` mise à jour | M | livré en 6.14.12 (Q24) |
-| 0e | C3 | Préréglages d'effet pour les 10 unités qui n'en ont pas (`effectCatalog.ts`) | S | à faire |
+| 0e | C3 | Préréglages d'effet pour les 10 unités qui n'en ont pas (`effectCatalog.ts`) | S | livré en 6.14.13 (Q25) |
 | 0f | C4 | Mesure « boss d'alliance affrontés » et succès d'entrée | S | à faire |
 | 1 | A29-1 | Inventaire des constats ouverts des revues AU1 à AU23 (`docs/audit/constats-ouverts.md`) : faisable seul, attend Z1 (pré-prod), attend l'utilisateur (ET29-3) ; plus la liste des contenus déjà livrés sans succès, entrée de Codex ou image définitive (CLAUDE.md règle n° 4) | M | à faire |
 | 2 | A29-2 | Premier constat « faisable seul » de l'inventaire | selon le constat | à faire |

@@ -37,6 +37,8 @@ const UNIT = { relic: 2.5, tech: 0.03, officer: 0.01 };
 const GROUP = { relic: 1.5, tech: 0.02, officer: 0.006 };
 const WIDE = { relic: 1, tech: 0.01, officer: 0.004 };
 const EDGE = { relic: 0.5, tech: 0.005, officer: 0.002 };
+/** 6.14.12 : unités d'élite (très fortes) : même barème que l'Étoile noire. */
+const ELITE = { relic: 1, tech: 0.01, officer: 0.004 };
 
 const p = (id: string, name: string, family: EffectPresetFamily, effect: ComposedEffect, suggest: EffectPreset["suggest"], idea: string): EffectPreset => ({ id, name, family, effect, suggest, idea });
 
@@ -56,6 +58,18 @@ export const EFFECT_PRESETS: EffectPreset[] = [
   p("lance_attaque", "Lance focalisée", "unites", { stat: "unitAttack", target: "unit:lance_gravitationnelle" }, UNIT, "Lance gravitationnelle plus précise."),
   p("etoile_pv", "Écorce de l'Étoile noire", "unites", { stat: "unitHp", target: "unit:etoile_noire" }, { relic: 1, tech: 0.01, officer: 0.004 }, "Pour la plus grosse unité : valeur prudente."),
   p("atelier_pv", "Coque d'Atelier", "unites", { stat: "unitHp", target: "unit:vaisseau_atelier" }, UNIT, "Les Vaisseaux-ateliers survivent aux raids."),
+  // 6.14.12 (C3) : une suggestion pour chaque unité (garde de la chaîne de contenu). PV pour les unités qui ne combattent pas,
+  // et pour le Traqueur Kesh (son bonus contre les PNJ existe déjà : KESH_PVE_BONUS) ; barème prudent pour les élites.
+  p("sonde_pv", "Coque furtive", "unites", { stat: "unitHp", target: "unit:sonde_espionnage" }, UNIT, "Les Sondes survivent mieux aux défenses adverses."),
+  p("cargo_pv", "Soute blindée", "unites", { stat: "unitHp", target: "unit:cargo" }, UNIT, "Les Cargos rentrent plus souvent avec le butin."),
+  p("roquette_attaque", "Têtes à fragmentation", "unites", { stat: "unitAttack", target: "unit:roquette" }, UNIT, "Les Roquettes frappent plus fort."),
+  p("traqueur_pv", "Carapace de traqueur", "unites", { stat: "unitHp", target: "unit:traqueur_kesh" }, UNIT, "Traqueurs Kesh plus durables (leur bonus contre les PNJ existe déjà)."),
+  p("fantome_attaque", "Frappe fantôme", "unites", { stat: "unitAttack", target: "unit:chasse_fantome" }, ELITE, "Unité d'élite : valeur prudente."),
+  p("rempart_pv", "Bélier renforcé", "unites", { stat: "unitHp", target: "unit:brise_rempart" }, ELITE, "Unité d'élite : valeur prudente."),
+  p("lame_attaque", "Fil écarlate", "unites", { stat: "unitAttack", target: "unit:lame_ecarlate" }, ELITE, "Unité d'élite : valeur prudente."),
+  p("recolteur_pv", "Bennes renforcées", "unites", { stat: "unitHp", target: "unit:recolteur" }, UNIT, "Les Récolteurs (classe Industriel) tiennent mieux."),
+  p("raid_attaque", "Salve de raid", "unites", { stat: "unitAttack", target: "unit:croiseur_raid" }, UNIT, "Croiseurs de raid (classe Seigneur) plus mordants."),
+  p("eclaireur_pv", "Coque d'exploration", "unites", { stat: "unitHp", target: "unit:eclaireur_lointain" }, UNIT, "Les Éclaireurs (classe Explorateur) reviennent plus souvent."),
   // Classes et catégories.
   p("classe_faible", "Doctrine de l'essaim", "classes", { stat: "unitAttack", target: "class:light" }, GROUP, "Toutes les unités de classe Faible."),
   p("classe_moyen", "Doctrine de ligne", "classes", { stat: "unitHp", target: "class:medium" }, GROUP, "Toutes les unités de classe Moyen."),

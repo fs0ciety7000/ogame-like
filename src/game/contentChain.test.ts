@@ -12,16 +12,6 @@ import { UNITS } from "@/game/units";
  */
 const KNOWN_GAPS: Record<string, string> = {
   "allianceBoss:*:achievementEntry": "C4 : succès des boss d'alliance (mesure à créer)",
-  "unit:sonde_espionnage:effectPreset": "C3 : préréglages des unités",
-  "unit:cargo:effectPreset": "C3",
-  "unit:roquette:effectPreset": "C3",
-  "unit:traqueur_kesh:effectPreset": "C3",
-  "unit:chasse_fantome:effectPreset": "C3",
-  "unit:brise_rempart:effectPreset": "C3",
-  "unit:lame_ecarlate:effectPreset": "C3",
-  "unit:recolteur:effectPreset": "C3",
-  "unit:croiseur_raid:effectPreset": "C3",
-  "unit:eclaireur_lointain:effectPreset": "C3",
 };
 
 const known = (gap: string) => {
