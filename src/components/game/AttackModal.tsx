@@ -285,10 +285,12 @@ export function AttackModal({
                                 </span>
                               </li>
                             ))}
-                            <li className="flex items-baseline justify-between gap-2 border-t border-white/10 pt-0.5 text-slate-400">
-                              <span>Base</span>
-                              <span className="font-mono tabular-nums">{formatNumber(Math.round(base))}</span>
-                            </li>
+                            {parts.length > 0 && (
+                              <li className="flex items-baseline justify-between gap-2 border-t border-white/10 pt-0.5 text-slate-400">
+                                <span>Base</span>
+                                <span className="font-mono tabular-nums">{formatNumber(Math.round(base))}</span>
+                              </li>
+                            )}
                             {formationEffects(formation).attackFactor !== 1 && (
                               <li className="flex items-baseline justify-between gap-2 text-slate-400">
                                 <span>Formation</span>
