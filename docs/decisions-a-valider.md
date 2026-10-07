@@ -36,8 +36,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q256 | Proposé (pas lancé) : Équipement des officiers, H31-16 (`docs/proposals/feuille-de-route-2031-hiver.md`) | 2 emplacements par officier, pièces à effets composés, montée par fragments | ★★ valider (proposition détaillée d'abord) |
 | Q257 | Proposé (pas lancé) : Notifications hors du jeu (PWA), H31-17 (`docs/proposals/feuille-de-route-2031-hiver.md`) | appli installable, notifications choisies dans les Options, rien la nuit, 6 par jour au plus | ★★★ valider |
 | Q258 | Proposé (pas lancé) : Semaine éclair, H31-18 (`docs/proposals/feuille-de-route-2031-hiver.md`) | ×2 sur chantiers et recherches jusqu'au niveau 10, une semaine par saison au plus | ★ valider |
-| Q238 | Portraits de saison pour novembre, décembre, janvier seulement ; migration des saisons écrites (`docs/changes/6.14.93-illustrations-api-lot-2.md`) | Les commandants des mois suivants gardent le portrait du rôle principal | Valider |
-| Q239 | En-têtes illustrés sur 8 pages (`docs/changes/6.14.93-illustrations-api-lot-2.md`) | Un visuel en haut de 8 pages, texte gardé lisible par le fondu | Valider |
 
 ## 3. Récit
 
@@ -48,9 +46,3 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
-| Q233 | Séparer or/accent et violet/danger, la barre rouge devient un décor (lot TH-L5) ; thème gardé (`docs/audit/2026-10-07-au28-themes.md`) | valider |
-| Q234 | Icône d'alerte obligatoire sur tout ember (lot TH-L6), sans casser le monochrome de Cockpit (`docs/audit/2026-10-07-au28-themes.md`) | valider |
-| Q235 | Mesurer sur `space-600`, plus proche du fond réel des panneaux (lot TH-L4) (`docs/audit/2026-10-07-au28-themes.md`) | valider |
-| Q236 | Rouge franc `#ff4433` au lieu du rose `#ff3d5a` (déjà appliqué) : ne se confond plus avec l'accent (`docs/audit/2026-10-07-au28-themes.md`) | valider |
-| Q237 | Constellation pour les captures livrées ; audit des 13 thèmes (`scripts/theme-audit.mjs`) à chaque revue de fin de feuille de route (TH-L7) (`docs/audit/2026-10-07-au28-themes.md`) | valider |
-| Q240 | Classes, modules, colonies : fichiers intégrés, affichage au lot suivant (`docs/changes/6.14.93-illustrations-api-lot-2.md`) | Valider |
