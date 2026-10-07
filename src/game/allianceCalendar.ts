@@ -1,5 +1,5 @@
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
-import { allianceBossDef, allianceBossOfWeek, allianceWeekId, type AllianceBossState } from "@/game/allianceBoss";
+import { allianceBossDef, allianceBossDurationText, allianceBossOfWeek, allianceWeekId, type AllianceBossState } from "@/game/allianceBoss";
 import { seasonBossSchedule, seasonBossWindow } from "@/game/chronicles";
 
 /** 6.7 (lot V) : « Mardi 18 h », sinon l'ancien libellé. */
@@ -48,7 +48,7 @@ export function allianceCalendar(input: CalendarInput, now: number, horizonDays 
   // Boss d'alliance : celui de la semaine (en cours, ou à appeler).
   const week = allianceWeekId(now);
   if (input.boss && input.boss.weekId === week && input.boss.status === "active") {
-    out.push({ kind: "boss", title: `Boss d'alliance : ${allianceBossDef(input.boss).name}`, detail: "24 h pour l'abattre", startMs: input.boss.startMs, endMs: input.boss.endMs, to: "/game/alliance?onglet=boss" });
+    out.push({ kind: "boss", title: `Boss d'alliance : ${allianceBossDef(input.boss).name}`, detail: allianceBossDurationText(), startMs: input.boss.startMs, endMs: input.boss.endMs, to: "/game/alliance?onglet=boss" });
   } else if (!input.boss || input.boss.weekId !== week) {
     const nextMonday = parisLocalToUtc(Date.parse(`${week}T00:00:00Z`) + 7 * DAY);
     out.push({ kind: "boss", title: `Boss d'alliance : ${allianceBossOfWeek(now).name}`, detail: "À appeler par un officier cette semaine", startMs: now, endMs: nextMonday, to: "/game/alliance?onglet=boss" });

@@ -1,5 +1,5 @@
 import { GameActionError } from "@/game/errors";
-import { formatInt } from "@/game/format";
+import { formatHours, formatInt } from "@/game/format";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { SYNTH_BUILDING, SYNTH_BUILDING_ID } from "@/game/buildings";
 import type { EffectGrant } from "@/game/effects";
@@ -26,7 +26,7 @@ export const CAPSULES: Record<CapsuleType, { name: string; short: string; descri
   armor: {
     name: "Carapace réactive",
     short: "Défense",
-    description: (p) => `+${p} % de défense contre la première attaque de joueur subie (12 h).`,
+    description: (p) => `+${p} % de défense contre la première attaque de joueur subie (${formatHours(SYNTH_RULES.activeHours)}).`,
     use: "activate",
   },
   decoy: {
@@ -38,7 +38,7 @@ export const CAPSULES: Record<CapsuleType, { name: string; short: string; descri
   veil: {
     name: "Brouilleur de défense",
     short: "Voile",
-    description: (p) => `Les rapports d'espionnage sur ta base montrent des défenses et une flotte faussées de ±${p} % (12 h).`,
+    description: (p) => `Les rapports d'espionnage sur ta base montrent des défenses et une flotte faussées de ±${p} % (${formatHours(SYNTH_RULES.activeHours)}).`,
     use: "activate",
   },
 };

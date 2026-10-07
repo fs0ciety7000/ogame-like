@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import { formatHours, formatPct } from "@/game/format";
 import { describeEffect, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectStat } from "@/game/effects";
 import { validUnitSelector } from "@/game/effectTargets";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -442,6 +443,13 @@ export function grantMythicRelic(
 
 export function expeditionRelicChance(hours: number): number {
   return Math.min(RELIC_RULES.expeditionMax, RELIC_RULES.expeditionBase + Math.max(0, hours - 2) * RELIC_RULES.expeditionPerHour);
+}
+
+/** 6.14.105 (AA4) : « jusqu'à 15 % à 8 h » : chance maximale d'une relique en expédition et durée qui l'atteint (RELIC_RULES, lu à l'usage). */
+export function expeditionRelicChanceText(): string {
+  const { expeditionBase: base, expeditionPerHour: perHour, expeditionMax: max } = RELIC_RULES;
+  const hours = perHour > 0 ? Math.max(2, Math.ceil(2 + (max - base) / perHour - 1e-9)) : 2;
+  return `jusqu'à ${formatPct(max)} à ${formatHours(hours)}`;
 }
 
 export function equipRelic(player: PlayerState, slotIn: unknown, relicId: unknown): void {

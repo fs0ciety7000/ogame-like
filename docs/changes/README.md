@@ -204,6 +204,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.102 | [Feuille de route d'hiver 2031 proposée (18 nouveautés à valider)](6.14.102-feuille-de-route-2031-proposee.md) | docs (proposition) | Q241 à Q258 |
 | 6.14.103 | [Chargement du moteur dans n'importe quel ordre ; règles de la pré-prod contrôlées contre les bornes](6.14.103-ordre-chargement-bornes-preprod.md) | correctif (moteur) + outillage | Q259 |
 | 6.14.104 | [Chiffres en dur rendus réglables, valeurs inchangées (AA3)](6.14.104-chiffres-reglables.md) | refactoring (moteur et admin) + test | [audit AU27](../audit/2026-10-07-au27-admin-evolutif.md) (AA-1 à AA-13, AA-29, AA-32), Q260 |
+| 6.14.105 | [Textes de règle vivants : construits depuis les règles en vigueur (AA4)](6.14.105-textes-de-regle-vivants.md) | refactoring (moteur, serveur, interface) + test | [audit AU27](../audit/2026-10-07-au27-admin-evolutif.md) (AA-21, AA-22, AA-6 en partie) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

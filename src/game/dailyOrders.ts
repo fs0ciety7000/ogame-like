@@ -2,7 +2,10 @@ import { pendingClaims } from "@/game/claimAll";
 import { contractDay } from "@/game/contracts";
 import { dailyMissions } from "@/game/dailyMissions";
 import { streakState, streakStatus } from "@/game/streak";
-import { bountyState } from "@/game/bounties";
+import { bountyBoardText, bountyRefreshText, bountyState } from "@/game/bounties";
+import { expeditionsPerDay } from "@/game/expeditions";
+import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
+import { formatHours } from "@/game/format";
 import { activePass, passState, passTier } from "@/game/seasonPass";
 import { chronicleOf, chronicleState, unlockedEpisodes } from "@/game/chronicles";
 import type { PlayerState } from "@/types/game";
@@ -20,8 +23,8 @@ export type OrderState = "ready" | "todo" | "done";
 export interface DailyOrder {
   id: "streak" | "daily" | "contracts" | "bounties" | "expedition" | "alliance" | "pass" | "chronicles";
   label: string;
-  /** Rythme affiché : jour, tableau de 8 h, mois. */
-  period: "jour" | "8 h" | "mois";
+  /** Rythme affiché : jour, tableau des primes (« 8 h », lu dans BOUNTY_RULES.refreshHours), mois. */
+  period: string;
   state: OrderState;
   /** Progression lisible (« 2 / 3 »), ou null. */
   value: string | null;
@@ -90,11 +93,11 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
   out.push({
     id: "bounties",
     label: "Primes Kesh'Vaar",
-    period: "8 h",
+    period: bountyRefreshText(),
     // Tableau jamais ouvert (vide) : il se remplit à la première visite.
     state: open > 0 || board.length === 0 ? "todo" : "done",
     value: board.length ? `${board.length - open} / ${board.length}` : null,
-    detail: hunting > 0 ? `${hunting} chasse${hunting > 1 ? "s" : ""} en cours, ${open} à lancer.` : open > 0 ? `${open} contrat${open > 1 ? "s" : ""} à lancer.` : board.length === 0 ? "Ouvre le tableau : 4 contrats toutes les 8 h." : "Tableau vidé : le suivant arrive dans 8 h au plus.",
+    detail: hunting > 0 ? `${hunting} chasse${hunting > 1 ? "s" : ""} en cours, ${open} à lancer.` : open > 0 ? `${open} contrat${open > 1 ? "s" : ""} à lancer.` : board.length === 0 ? `Ouvre le tableau : ${bountyBoardText()}.` : `Tableau vidé : le suivant arrive dans ${bountyRefreshText()} au plus.`,
     link: "/game/primes",
     ready: 0,
   });
@@ -105,7 +108,7 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
     period: "jour",
     state: ctx.expeditionActive ? "done" : "todo",
     value: null,
-    detail: ctx.expeditionActive ? "Une expédition est en vol." : "Jusqu'à 3 par jour, une à la fois.",
+    detail: ctx.expeditionActive ? "Une expédition est en vol." : `Jusqu'à ${expeditionsPerDay(player)} par jour, une à la fois.`,
     link: "/game/missions",
     ready: 0,
   });
@@ -117,7 +120,7 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
       period: "jour",
       state: "todo",
       value: null,
-      detail: "Vote jusqu'à 10 h (officiers), puis contribue à l'objectif choisi.",
+      detail: `Vote jusqu'à ${formatHours(ALLIANCE_DAILY_RULES.voteEndHour)} (officiers), puis contribue à l'objectif choisi.`,
       link: "/game/alliance",
       ready: 0,
     });

@@ -303,7 +303,7 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
       allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
       catchup: { ...defaults.rules.catchup, ...(overrides.rules?.catchup ?? {}) },
-      mutators: { ...defaults.rules.mutators, ...(overrides.rules?.mutators ?? {}), overrides: { ...(overrides.rules?.mutators?.overrides ?? {}) } },
+      mutators: { ...defaults.rules.mutators, ...(overrides.rules?.mutators ?? {}), overrides: { ...(overrides.rules?.mutators?.overrides ?? {}) }, values: { ...defaults.rules.mutators.values, ...(overrides.rules?.mutators?.values ?? {}) } },
       territoryWar: {
         ...defaults.rules.territoryWar,
         ...(overrides.rules?.territoryWar ?? {}),
@@ -425,6 +425,7 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   Object.assign(CATCHUP_RULES, content.rules.catchup);
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = { ...content.rules.mutators.overrides };
+  MUTATOR_RULES.values = { ...DEFAULT_MUTATOR_RULES.values, ...(content.rules.mutators.values ?? {}) };
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));

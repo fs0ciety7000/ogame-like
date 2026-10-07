@@ -278,49 +278,58 @@ export const COMMANDER_XP_META = {
 };
 
 /** v5.6 : ce qui fait progresser chaque officier (affiché sur sa fiche). */
+/** 6.14.105 (AA4) : XP lue dans COMMANDER_XP à l'usage (accesseur) : la fiche suit un réglage de l'admin (elle gardait la valeur
+ *  par défaut, lue au chargement du module). */
+const xpSource = (label: string, key: keyof typeof COMMANDER_XP): { label: string; xp: number } => ({
+  label,
+  get xp() {
+    return COMMANDER_XP[key];
+  },
+});
+
 export const COMMANDER_SOURCES: Record<CommanderId, { label: string; xp: number }[]> = {
   admiral: [
-    { label: "Attaque gagnée", xp: COMMANDER_XP.attackWin },
-    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
-    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin },
-    { label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault },
+    xpSource("Attaque gagnée", "attackWin"),
+    xpSource("Repaire pris", "lairWin"),
+    xpSource("Prime Kesh'Vaar remplie", "bountyWin"),
+    xpSource("Assaut sur un boss", "bossAssault"),
   ],
   strategist: [
-    { label: "Attaque repoussée", xp: COMMANDER_XP.defenseWin },
-    { label: "Raid de faction repoussé", xp: COMMANDER_XP.raidRepelled },
-    { label: "Attaque ou raid subi et perdu", xp: COMMANDER_XP.defenseLost },
+    xpSource("Attaque repoussée", "defenseWin"),
+    xpSource("Raid de faction repoussé", "raidRepelled"),
+    xpSource("Attaque ou raid subi et perdu", "defenseLost"),
   ],
   engineer: [
-    { label: "Bâtiment terminé (planète mère ou colonie)", xp: COMMANDER_XP.buildingDone },
-    { label: "Recherche terminée", xp: COMMANDER_XP.researchDone },
+    xpSource("Bâtiment terminé (planète mère ou colonie)", "buildingDone"),
+    xpSource("Recherche terminée", "researchDone"),
   ],
   spy: [
-    { label: "Espionnage lancé", xp: COMMANDER_XP.spyLaunched },
-    { label: "Sondes ennemies repérées", xp: COMMANDER_XP.probesCaught },
+    xpSource("Espionnage lancé", "spyLaunched"),
+    xpSource("Sondes ennemies repérées", "probesCaught"),
   ],
   steward: [
-    { label: "Mission terminée", xp: COMMANDER_XP.missionDone },
-    { label: "Contrat du jour récupéré", xp: COMMANDER_XP.contractClaimed },
-    { label: "Échange au Comptoir ou au marché", xp: COMMANDER_XP.marketTrade },
+    xpSource("Mission terminée", "missionDone"),
+    xpSource("Contrat du jour récupéré", "contractClaimed"),
+    xpSource("Échange au Comptoir ou au marché", "marketTrade"),
   ],
-  logistician: [{ label: "Flotte envoyée (transport, livraison, colonie, débris)", xp: COMMANDER_XP.fleetDispatched }],
-  mechanic: [{ label: "Lot d'unités terminé", xp: COMMANDER_XP.unitsBuilt }],
-  governor: [{ label: "Bâtiment terminé dans une colonie", xp: COMMANDER_XP.buildingDone }],
+  logistician: [xpSource("Flotte envoyée (transport, livraison, colonie, débris)", "fleetDispatched")],
+  mechanic: [xpSource("Lot d'unités terminé", "unitsBuilt")],
+  governor: [xpSource("Bâtiment terminé dans une colonie", "buildingDone")],
   corsair: [
-    { label: "Attaque gagnée", xp: COMMANDER_XP.attackWin },
-    { label: "Repaire pris", xp: COMMANDER_XP.lairWin },
-    { label: "Prime Kesh'Vaar remplie", xp: COMMANDER_XP.bountyWin },
+    xpSource("Attaque gagnée", "attackWin"),
+    xpSource("Repaire pris", "lairWin"),
+    xpSource("Prime Kesh'Vaar remplie", "bountyWin"),
   ],
   warden: [
-    { label: "Attaque repoussée", xp: COMMANDER_XP.defenseWin },
-    { label: "Raid de faction repoussé", xp: COMMANDER_XP.raidRepelled },
+    xpSource("Attaque repoussée", "defenseWin"),
+    xpSource("Raid de faction repoussé", "raidRepelled"),
   ],
   diplomat: [
-    { label: "Échange au marché", xp: COMMANDER_XP.marketTrade },
-    { label: "Contrat entre joueurs honoré", xp: COMMANDER_XP.playerContract },
-    { label: "Cadeau envoyé", xp: COMMANDER_XP.giftSent },
+    xpSource("Échange au marché", "marketTrade"),
+    xpSource("Contrat entre joueurs honoré", "playerContract"),
+    xpSource("Cadeau envoyé", "giftSent"),
   ],
-  hunter: [{ label: "Assaut sur un boss", xp: COMMANDER_XP.bossAssault }],
+  hunter: [xpSource("Assaut sur un boss", "bossAssault")],
 };
 
 export interface CommanderState {

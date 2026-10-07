@@ -18,6 +18,9 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q264 | « N contrats toutes les 8 h » lit `bounties.dailyLimit` (primes par jour), comme le demandait l'audit, alors que le tableau propose 3 ou 4 contrats (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | le texte peut paraître ambigu | valider, ou changer pour la formulation à deux chiffres |
+| Q265 | 0 à 2 ; 0 à 0,9 pour une réduction de durée ou de taxe (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | aucun | valider |
+| Q266 | Carnet : « 3 points de talent » par Ascension (au lieu de « un ») ; Ordres du jour : l'Explorateur voit 4 expéditions par jour (au lieu de 3) (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | les textes disent enfin la règle réelle | valider |
 | Q261 | Un total différent de 100 % est refusé à l'enregistrement (pas de normalisation automatique) (`docs/changes/6.14.104-chiffres-reglables.md`) | aucun : les divisions gardent leurs parts | valider |
 | Q262 | Larges : talents 0 à 0,25 par rang (réseau 0 à 2), modules 0 à 1 (voile 0 à 20), spécialisations 0,1 à 5, prix 1 à 100 000 Ambre (`docs/changes/6.14.104-chiffres-reglables.md`) | aucun ; une faute de frappe est refusée | valider |
 | Q263 | Refus à l'enregistrement ; égalité permise sauf seuils stricts (bouclier < riposte, faible < fort, zone JcJ) (`docs/changes/6.14.104-chiffres-reglables.md`) | aucun, tant qu'un admin ne croise pas deux valeurs | valider |

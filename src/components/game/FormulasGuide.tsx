@@ -24,6 +24,9 @@ import { gateCooldownMs, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { MOON_RULES, moonPity } from "@/game/moon";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { TALENT_RULES } from "@/game/talents";
+import { ROLE_EFFECTS } from "@/game/commanders";
+import { EFFECT_CAP_RULES } from "@/game/effects";
+import { CHRONICLE_GEN_RULES } from "@/game/chronicleGen";
 import { RHYTHM_RULES, rhythmPhase } from "@/game/rhythm";
 import { PRESTIGE_RULES, prestigeCost, prestigeHours, prestigeMonument, prestigeState, prestigeUnlocked } from "@/game/prestige";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -37,6 +40,10 @@ import { cn, formatCompact, formatDateTime, formatDecimal } from "@/lib/utils";
 ===================================================== */
 
 const pct = (x: number, digits = 0) => `${formatDecimal(x * 100, digits)} %`;
+/** 6.14.105 (AA4) : valeur par niveau d'un effet d'officier (ROLE_EFFECTS, réglable dans l'admin), lue à l'usage. */
+const perLevel = (role: keyof typeof ROLE_EFFECTS, i: number) => ROLE_EFFECTS[role]?.[i]?.perLevel ?? 0;
+/** « ½ », « 3 » : facteur d'une formule. */
+const factor = (x: number) => (x === 0.5 ? "½" : formatDecimal(x, 2));
 const n = (x: number) => (Number.isFinite(x) ? formatCompact(Math.round(x)) : "∞");
 const PASS_LABELS: Record<string, string> = {
   contract: "Contrat du jour récupéré",
@@ -502,15 +509,15 @@ ressources rares = récompense × max(1 + niveaux de bâtiments ÷ ${ECONOMY_RUL
         )}
       </Block>
 
-      <Block id="bonus" title="Bonus" icon={Sparkles} intro="Officiers, reliques, talents d'Ascension et secteurs d'alliance s'additionnent par effet. Les réductions de durée sont plafonnées à 50 %.">
+      <Block id="bonus" title="Bonus" icon={Sparkles} intro={`Officiers, reliques, talents d'Ascension et secteurs d'alliance s'additionnent par effet. Les réductions de durée sont plafonnées à ${pct(EFFECT_CAP_RULES.buildTime?.empire ?? 0.5)}.`}>
         <Table
           head={["Source", "Effet"]}
           rows={[
-            ["Amiral", "+1 % d'attaque par niveau"],
-            ["Stratège", "+1 % de défense par niveau"],
-            ["Ingénieur", "−1 % de durée (construction, recherche) par niveau"],
-            ["Intendant", "+1 % de production et +2 % d'entrepôt par niveau"],
-            ["Espion", "+0,2 niveau d'espionnage et +1 % de détection par niveau"],
+            ["Amiral", `+${pct(perLevel("admiral", 0))} d'attaque par niveau`],
+            ["Stratège", `+${pct(perLevel("strategist", 0))} de défense par niveau`],
+            ["Ingénieur", `−${pct(perLevel("engineer", 0))} de durée (construction, recherche) par niveau`],
+            ["Intendant", `+${pct(perLevel("steward", 0))} de production et +${pct(perLevel("steward", 1))} d'entrepôt par niveau`],
+            ["Espion", `+${formatDecimal(perLevel("spy", 0), 2)} niveau d'espionnage et +${pct(perLevel("spy", 1))} de détection par niveau`],
             ["Reliques", "leur effet (attaque, défense, production, durées, cale, réparation…) selon la rareté"],
             ["Talents d'Ascension", "production, attaque, défense, durées selon l'arbre"],
             ["Secteurs d'alliance", "production de tous les membres tant que le secteur est tenu"],
@@ -535,8 +542,8 @@ ressources rares = récompense × max(1 + niveaux de bâtiments ÷ ${ECONOMY_RUL
         </p>
         <Formula>
           {`chapitre généré :
-difficulté = 1 + (part des joueurs actifs ayant fini les épisodes − 50 %), entre ×0,7 et ×1,4
-objectif = activité médiane d'une semaine × difficulté, entre ½ et 3 × la base
+difficulté = 1 + (part des joueurs actifs ayant fini les épisodes − ${pct(CHRONICLE_GEN_RULES.targetCompletion)}), entre ×${formatDecimal(CHRONICLE_GEN_RULES.difficultyMin, 2)} et ×${formatDecimal(CHRONICLE_GEN_RULES.difficultyMax, 2)}
+objectif = activité médiane d'une semaine × difficulté, entre ${factor(CHRONICLE_GEN_RULES.objectiveMinFactor)} et ${factor(CHRONICLE_GEN_RULES.objectiveMaxFactor)} × la base
 bases : ${Object.entries(BASE_COUNTS).filter(([k]) => k !== "bossAssault").map(([k, v]) => `${OBJECTIVE_LABELS[k as keyof typeof OBJECTIVE_LABELS].toLowerCase()} ${v}`).join(", ")}
 passe du mois : palier +15 % si plus de 40 % ont fini le passe, −15 % si moins de 10 %`}
         </Formula>

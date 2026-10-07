@@ -5,7 +5,7 @@ import { Check, Copy, Gift, Mail, UserPlus, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { REFERRAL_RULES, referralLink, referralState } from "@/game/referral";
+import { REFERRAL_RULES, referralGoalLabel, referralLink, referralState, referralWindowText } from "@/game/referral";
 import { declareSponsor, fetchReferralInfo, sendVerificationEmail, type ReferralInfo } from "@/services/referralService";
 import { GameActionError } from "@/services/playerService";
 import type { PlayerState } from "@/types/game";
@@ -65,7 +65,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
         <UserPlus className="h-4 w-4 text-gold-glow" /> Parrainage
       </h3>
       <p className="text-sm text-slate-400">
-        Invite un ami avec ton lien. Quand il atteint <strong className="text-slate-200">Bronze I</strong>, tu reçois{" "}
+        Invite un ami avec ton lien. Quand il atteint <strong className="text-slate-200">{referralGoalLabel()}</strong>, tu reçois{" "}
         <strong className="text-gold-glow"><AmberAmount value={REFERRAL_RULES.amberSponsor} /></strong> et la bannière « Recruteur », lui{" "}
         <strong className="text-gold-glow"><AmberAmount value={REFERRAL_RULES.amberRecruit} /></strong>. {REFERRAL_RULES.perMonth} filleuls récompensés par mois au plus.
       </p>
@@ -86,7 +86,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
         {st.by && (
           <span>
             Ton parrain : <strong className="text-slate-100">{st.byPseudo}</strong>
-            {st.rewarded ? " · récompense reçue" : " · récompense à Bronze I"}
+            {st.rewarded ? " · récompense reçue" : ` · récompense à ${referralGoalLabel()}`}
           </span>
         )}
       </p>
@@ -95,7 +95,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
         <div className="hud-cut-sm border border-white/10 bg-white/[0.02] p-3 text-xs">
           <p className="mb-2 text-slate-300">Pour la récompense de parrainage :</p>
           <ul className="flex flex-col gap-1">
-            <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`Bronze I : ${formatNumber(Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp))} / ${formatNumber(REFERRAL_RULES.rewardXp)} XP`} />
+            <Cond ok={(player.xp ?? 0) >= REFERRAL_RULES.rewardXp} label={`${referralGoalLabel()} : ${formatNumber(Math.min(player.xp ?? 0, REFERRAL_RULES.rewardXp))} / ${formatNumber(REFERRAL_RULES.rewardXp)} XP`} />
             <Cond ok={ageDays(player.createdAtMs ?? Date.now()) >= REFERRAL_RULES.minAgeDays} label={`Compte de ${REFERRAL_RULES.minAgeDays} jours (${Math.min(ageDays(player.createdAtMs ?? Date.now()), REFERRAL_RULES.minAgeDays)} / ${REFERRAL_RULES.minAgeDays})`} />
             <Cond ok={!!info?.verified} label="E-mail confirmé" />
           </ul>
@@ -131,7 +131,7 @@ export function ReferralCard({ player }: { player: PlayerState }) {
       )}
       {canDeclare && (
         <div className="flex gap-2">
-          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Lien ou code de ton parrain (48 h après l'inscription)" className="text-xs" />
+          <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={`Lien ou code de ton parrain (${referralWindowText()} après l'inscription)`} className="text-xs" />
           <Button variant="outline" disabled={busy || !code.trim()} onClick={() => void declare()}>
             Valider
           </Button>

@@ -9,11 +9,11 @@ import { TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
-import { combatLogOf, computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
+import { COMBAT_RULES, combatLogOf, computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
 import { flushState, type NewNotification } from "@/game/flush";
-import { formatInt } from "@/game/format";
+import { formatHours, formatInt, formatPct } from "@/game/format";
 import { formationEffects } from "@/game/formations";
 import { PATRON_RULES } from "@/game/patrons";
 import { RESOURCE_LIST } from "@/game/resources";
@@ -250,6 +250,17 @@ export function bountyRank(reputation: number): number {
     if (reputation >= r.at) rank = i + 1;
   });
   return rank;
+}
+
+/** 6.14.105 (AA4, AA-21) : « 8 h », rythme du tableau des primes (BOUNTY_RULES.refreshHours, lu à l'usage). */
+export function bountyRefreshText(): string {
+  return formatHours(BOUNTY_RULES.refreshHours);
+}
+
+/** 6.14.105 (AA4, AA-21) : « 4 contrats toutes les 8 h » (BOUNTY_RULES.dailyLimit et refreshHours). */
+export function bountyBoardText(): string {
+  const n = BOUNTY_RULES.dailyLimit;
+  return `${n} contrat${n > 1 ? "s" : ""} toutes les ${bountyRefreshText()}`;
 }
 
 export function rankName(rank: number): string {
@@ -622,7 +633,7 @@ export const SHOP_ITEMS: ShopItem[] = [
   shopItem("priority", "Contrat prioritaire", "consumable", () => `Ton prochain contrat de livraison passe en tête des contrats visibles pendant ${TRADE_CONTRACT_RULES.priorityHours} h. ${chargesText()}.`),
   shopItem("pheromone", "Phéromone de recrutement", "consumable", () => `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`),
   shopItem("vendettaToken", "Jeton de vendetta", "consumable", () => `Rappelle un seigneur en fuite après une vendetta : tu peux lui en déclarer une nouvelle sans attendre son retour. ${chargesText()}.`),
-  shopItem("blueprint", "Plan du Traqueur Kesh", "unit", "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)."),
+  shopItem("blueprint", "Plan du Traqueur Kesh", "unit", () => `Débloque le Traqueur Kesh au chantier : rapide, +${formatPct(COMBAT_RULES.keshPveBonus)} d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan).`),
   shopItem("planner", "Planificateur", "feature", "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels."),
   shopItem("title", () => `Titre « ${BOUNTY_SHOP_RULES.title} »`, "cosmetic", "Un titre à afficher à côté de ton nom."),
   shopItem("frame", "Cadre de chitine", "cosmetic", "Cadre ambré autour de ta fiche publique."),
@@ -693,12 +704,12 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
       const chosen = entries.find(([id]) => id === buildingId) ?? entries.sort((a, b) => a[1]!.endTime - b[1]!.endTime)[0];
       const entry = chosen[1]!;
       entry.endTime = Math.max(now, entry.endTime - BOUNTY_SHOP_RULES.acceleratorMinutes * 60_000);
-      message = "Chantier accéléré d'une heure.";
+      message = `Chantier accéléré ${BOUNTY_SHOP_RULES.acceleratorMinutes === 60 ? "d'une heure" : `de ${minutesText(BOUNTY_SHOP_RULES.acceleratorMinutes)}`}.`;
       break;
     }
     case "boost":
       st.boostUntilMs = Math.max(now, st.boostUntilMs) + BOUNTY_SHOP_RULES.boostHours * HOUR;
-      message = "Gelée de la Reine : production +20 % pendant 24 h.";
+      message = `Gelée de la Reine : production +${formatPct(ECONOMY_RULES.keshBoostPct)} pendant ${formatHours(BOUNTY_SHOP_RULES.boostHours)}.`;
       break;
     case "jammer":
       st.jammers += 1;
@@ -711,7 +722,7 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
     case "shield":
       st.shieldUntilMs = now + BOUNTY_SHOP_RULES.shieldHours * HOUR;
       st.shieldBoughtAtMs = now;
-      message = "Voile de chitine actif pendant 6 h.";
+      message = `Voile de chitine actif pendant ${formatHours(BOUNTY_SHOP_RULES.shieldHours)}.`;
       break;
     case "dossier":
       addDossiers(player, 1);
@@ -728,7 +739,8 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
       const w = workshopState(player);
       player.workshop = { ...w, updatedAtMs: now - BOUNTY_SHOP_RULES.painkillerHours * HOUR };
       const done = advanceWorkshop(player, now);
-      message = done.length ? `Atelier : 2 h de réparations faites. ${done[0].message}` : "Atelier : 2 h de réparations faites.";
+      const head = `Atelier : ${formatHours(BOUNTY_SHOP_RULES.painkillerHours)} de réparations faites.`;
+      message = done.length ? `${head} ${done[0].message}` : head;
       break;
     }
     case "reroll": {
@@ -744,7 +756,7 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
     }
     case "priority":
       st.priorityContracts += 1;
-      message = "Contrat prioritaire prêt : ton prochain contrat passera en tête pendant 24 h.";
+      message = `Contrat prioritaire prêt : ton prochain contrat passera en tête pendant ${formatHours(TRADE_CONTRACT_RULES.priorityHours)}.`;
       break;
     case "pheromone":
       st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR;

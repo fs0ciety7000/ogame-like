@@ -39,3 +39,13 @@ export function formatShort(value: number): string {
   for (const [size, suffix] of units) if (abs >= size) return `${formatDecimal(n / size, 1)}${suffix}`;
   return formatDecimal(n, 1);
 }
+
+/** 6.14.105 (AA4) : durée de règle en heures, « 48 h », « 1,5 h » (textes construits depuis la règle). */
+export function formatHours(hours: number): string {
+  return `${formatDecimal(hours, 1)} h`;
+}
+
+/** 6.14.105 (AA4) : part de règle en pourcentage, 0,2 → « 20 % » (`digits` décimales au plus). */
+export function formatPct(part: number, digits = 0): string {
+  return `${formatDecimal((Number(part) || 0) * 100, digits)} %`;
+}

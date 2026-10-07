@@ -26,7 +26,7 @@ import {
 } from "@/services/authService";
 import { pbConfigured } from "@/lib/pocketbase";
 import { assetUrl } from "@/lib/assets";
-import { REFERRAL_RULES } from "@/game/referral";
+import { REFERRAL_RULES, referralGoalLabel } from "@/game/referral";
 import { BlogLatest } from "@/components/blog/BlogLatest";
 import { TrailerCard } from "@/components/auth/TrailerCard";
 import { AltSignIn } from "@/components/auth/AltSignIn";
@@ -104,7 +104,7 @@ export function LoginPage() {
         const sponsor = await claimPendingSponsor();
         toast.success("Empire créé avec succès !", {
           description: sponsor
-            ? `Parrain : ${sponsor}. Confirme ton e-mail (lien envoyé) et atteins Bronze I : vous recevrez tous les deux de l'Ambre.`
+            ? `Parrain : ${sponsor}. Confirme ton e-mail (lien envoyé) et atteins ${referralGoalLabel()} : vous recevrez tous les deux de l'Ambre.`
             : "Un lien de confirmation t'a été envoyé par e-mail.",
         });
       }
@@ -200,7 +200,7 @@ export function LoginPage() {
             <div className="hud-callout hud-tone-gold mb-4 flex items-center gap-2 px-3 py-2 text-xs text-gold-glow">
               <UserPlus className="h-4 w-4 shrink-0" />
               <span>
-                Invité par <strong>{sponsorName}</strong> : crée ton empire, confirme ton e-mail et atteins Bronze I pour recevoir {REFERRAL_RULES.amberRecruit} Ambre (ton parrain aussi).
+                Invité par <strong>{sponsorName}</strong> : crée ton empire, confirme ton e-mail et atteins {referralGoalLabel()} pour recevoir {REFERRAL_RULES.amberRecruit} Ambre (ton parrain aussi).
               </span>
             </div>
           )}

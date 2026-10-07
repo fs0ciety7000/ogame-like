@@ -4,7 +4,8 @@ import { seasonPayoutSummary } from "@/game/seasons";
 import { streakWeekSummary } from "@/game/streak";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { catchupBonus } from "@/game/catchup";
-import { MUTATOR_RULES, MUTATORS, mutatorFor } from "@/game/mutators";
+import { MUTATOR_RULES, MUTATORS, mutatorFor, mutatorValues } from "@/game/mutators";
+import { EFFECT_STATS } from "@/game/effects";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
 /* 5.15.9 : série de connexion réglable, et aperçu « avant / après » en direct
@@ -203,6 +204,29 @@ export function MutatorSection({ rules, setRules }: { rules: GameRules; setRules
           </li>
         ))}
       </ul>
+      {/* 6.14.105 (AA4) : force de chaque mutateur (une valeur par effet) ; la description vue des joueurs suit ces chiffres. */}
+      <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+        {MUTATORS.map((x) => {
+          const values = mutatorValues(x.id, m.values);
+          return x.grants.map((g, i) => (
+            <NumberField
+              key={`${x.id}-${i}`}
+              label={`${x.emoji} ${x.name} : ${EFFECT_STATS[g.stat]?.label ?? g.stat} (0,1 = 10 %)`}
+              value={values[i]}
+              min={0}
+              step={0.01}
+              onChange={(v) =>
+                setRules((r) => {
+                  const next = [...mutatorValues(x.id, r.mutators.values)];
+                  next[i] = v ?? 0;
+                  return { ...r, mutators: { ...r.mutators, values: { ...r.mutators.values, [x.id]: next } } };
+                })
+              }
+            />
+          ));
+        })}
+      </div>
+      <p className="text-[11px] text-slate-500 sm:col-span-2">Les descriptions ci-dessus suivent les valeurs enregistrées. Réduction de durée ou de taxe : 0,9 au plus ; autres effets : 2 au plus.</p>
     </Section>
   );
 }

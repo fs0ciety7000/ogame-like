@@ -54,7 +54,7 @@ const PAYTABLE: { combo: SlotSymbol[]; outcome: SpinOutcome }[] = [
   { combo: ["cherry", "skull", "bar"], outcome: "cherry" },
 ];
 
-function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseudo: string; onClose: () => void }) {
+function JackpotOverlay({ result, pseudo, fallbackHours, onClose }: { result: SpinResult; pseudo: string; fallbackHours: number; onClose: () => void }) {
   const reduce = useReducedMotion();
   const coins = useMemo(() => Array.from({ length: reduce ? 0 : 24 }, (_, i) => ({ id: i, x: Math.random() * 100, delay: 0.8 + Math.random() * 1.6, dur: 2.2 + Math.random() * 1.6, rot: (Math.random() - 0.5) * 540 })), [reduce]);
   const gains = (Object.entries(result.resources) as [ResourceId, number][]).filter(([, n]) => n > 0);
@@ -119,7 +119,7 @@ function JackpotOverlay({ result, pseudo, onClose }: { result: SpinResult; pseud
           ))}
         </div>
         <HudCallout tone="gold" className="w-full text-left text-xs">
-          {result.fromPot ? "Pris dans le pot commun du serveur. Tout le monde est prévenu !" : "Le pot commun était vide : 12 h de production à la place."}
+          {result.fromPot ? "Pris dans le pot commun du serveur. Tout le monde est prévenu !" : `Le pot commun était vide : ${fallbackHours} h de production à la place.`}
         </HudCallout>
         <Button size="lg" onClick={onClose}>
           Encaisser
@@ -497,7 +497,7 @@ export function CasinoPage() {
         </div>
       </div>
 
-      <AnimatePresence>{showJackpot && last && <JackpotOverlay result={last} pseudo={player.pseudo} onClose={() => setShowJackpot(false)} />}</AnimatePresence>
+      <AnimatePresence>{showJackpot && last && <JackpotOverlay result={last} pseudo={player.pseudo} fallbackHours={settings?.jackpotFallbackHours ?? 12} onClose={() => setShowJackpot(false)} />}</AnimatePresence>
     </div>
   );
 }

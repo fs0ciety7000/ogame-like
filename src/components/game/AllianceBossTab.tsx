@@ -19,6 +19,7 @@ import {
   normalizeAllianceBoss,
 } from "@/game/allianceBoss";
 import { leviathanRanking } from "@/game/leviathan";
+import { formatHours } from "@/game/format";
 import { AllianceError, callAllianceBoss } from "@/services/allianceService";
 import { launchFleet } from "@/services/playerService";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -111,8 +112,8 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
       ) : ended ? null : (
         <Card className="flex flex-col gap-3 p-5">
           <p className="text-sm text-slate-300">
-            Une fois par semaine, le fondateur ou un officier peut appeler le boss. Il reste <b>24 h</b>, et chaque membre peut lancer un assaut toutes les{" "}
-            {ALLIANCE_BOSS_RULES.cooldownHours} h.
+            Une fois par semaine, le fondateur ou un officier peut appeler le boss. Il reste <b>{formatHours(ALLIANCE_BOSS_RULES.durationHours)}</b>, et chaque membre peut lancer un assaut toutes les{" "}
+            {formatHours(ALLIANCE_BOSS_RULES.cooldownHours)}.
           </p>
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
             Coût : {ALLIANCE_BOSS_RULES.costHours} h de production cumulée des membres, payées par le trésor. Ta part :

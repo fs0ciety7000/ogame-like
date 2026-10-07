@@ -327,6 +327,7 @@ function parseJsonField(record, field, fallback) {
 }
 
 function profileFeats(player) {
+  const game = profileGame();
   const stats = parseJsonField(player, "stats", {}) || {};
   const titles = parseJsonField(player, "titles", []);
   const achievements = parseJsonField(player, "unlockedAchievements", []);
@@ -346,17 +347,28 @@ function profileFeats(player) {
     bounties: Number(stats.bounties) || 0,
     // 5.26.3 : badge « Mécène » (Ambre versée au pot commun).
     patron: Number(stats.amberDonated) || 0,
-    kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}),
-    showcase: showcaseOf(player),
+    kesh: keshFeats(parseJsonField(player, "bounties", {}) || {}, game),
+    showcase: showcaseOf(player, game),
   };
+}
+
+/** 6.14.105 (AA4, AA-22) : moteur chargé une fois pour la fiche publique, règles de l'admin appliquées (null si le chargement échoue). */
+function profileGame() {
+  try {
+    const game = loadGame();
+    applyContent($app, game);
+    return game;
+  } catch (err) {
+    console.log(`[cosmic] fiche publique, moteur : ${err}`);
+    return null;
+  }
 }
 
 /** v3.9 : rang dans l'Essaim, cosmétiques et Voile de chitine (fiche publique). */
 /** v4.0 : bannière, emblème, devise, officiers en poste et reliques équipées. */
-function showcaseOf(player) {
+function showcaseOf(player, game) {
+  if (!game) return null;
   try {
-    const game = loadGame();
-    applyContent($app, game);
     return game.publicShowcase({
       pirates: parseJsonField(player, "pirates", null),
       bounties: parseJsonField(player, "bounties", null),
@@ -378,15 +390,20 @@ function showcaseOf(player) {
   }
 }
 
-function keshFeats(b) {
+/** 6.14.105 (AA4, AA-22) : le rang se lit dans BOUNTY_RULES.ranks (moteur, réglable dans l'admin), plus dans un barème recopié ici. */
+function keshFeats(b, game) {
   const owned = Array.isArray(b.owned) ? b.owned : [];
   const rep = Number(b.reputation) || 0;
-  const ranks = [0, 10, 30, 70, 150];
-  let rank = 1;
-  ranks.forEach((at, i) => {
-    if (rep >= at) rank = i + 1;
-  });
-  return { rank: rep > 0 ? rank : 0, frame: owned.indexOf("frame") >= 0, emblem: owned.indexOf("emblem") >= 0, shieldUntilMs: Number(b.shieldUntilMs) || 0 };
+  let rank = 0;
+  if (rep > 0) {
+    try {
+      rank = game ? game.bountyRank(rep) : 1;
+    } catch (err) {
+      console.log(`[cosmic] rang de l'Essaim : ${err}`);
+      rank = 1;
+    }
+  }
+  return { rank, frame: owned.indexOf("frame") >= 0, emblem: owned.indexOf("emblem") >= 0, shieldUntilMs: Number(b.shieldUntilMs) || 0 };
 }
 
 function deleteProfile(app, playerId) {
@@ -8729,9 +8746,11 @@ function allianceBossRequest(e) {
     allianceRec.set("boss", state);
     txApp.save(allianceRec);
     const def = game.allianceBossDef(state);
-    allianceBossLog(txApp, allianceRec.id, uid, actor.player.pseudo, `${actor.player.pseudo} appelle ${def.name} : 24 h pour l'abattre.`, state.cost);
+    // 6.14.105 (AA4, AA-21) : durée et recharge lues dans les règles (ALLIANCE_BOSS_RULES), plus en dur.
+    allianceBossLog(txApp, allianceRec.id, uid, actor.player.pseudo, `${actor.player.pseudo} appelle ${def.name} : ${game.allianceBossDurationText()}.`, state.cost);
+    const callText = game.allianceBossCallText();
     members.forEach((m) => {
-      notify(txApp, m.uid, [{ kind: "alliance", title: `${def.name} approche !`, message: `${actor.player.pseudo} a appelé le boss d'alliance : 24 h pour l'abattre, un assaut toutes les 4 h.`, createdAtMs: now, read: false, link: "/game/alliance" }]);
+      notify(txApp, m.uid, [{ kind: "alliance", title: `${def.name} approche !`, message: `${actor.player.pseudo} a appelé le boss d'alliance : ${callText}.`, createdAtMs: now, read: false, link: "/game/alliance" }]);
     });
     out = state;
   });

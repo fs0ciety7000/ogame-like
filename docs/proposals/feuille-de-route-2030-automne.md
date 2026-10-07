@@ -32,7 +32,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 20 | AJ27-1 | Docs remises au code (GDD, fiches, constats ouverts) et garde de comptage | S | livré (6.14.94) |
 | 21 | AA2 | Libellés, unités, bornes et aide pour chaque réglage de l'admin | M | livré (6.14.95) |
 | 22 | AA3 | Chiffres en dur rendus réglables (Comptoir, talents, spécialisations, modules, sac…), valeurs inchangées | M | livré (6.14.104) |
-| 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | à faire |
+| 23 | AA4 | Textes de règle construits depuis les règles (parrainage, primes, boss d'alliance, Comptoir) | S | livré (6.14.105) |
 | 24 | RL-0 | Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/proposals/rythme-long-terme.md`, Q164 à Q171) ; reste le mode `--long` de `progression-sim.mjs` | S | livré en partie (6.14.78) |
 | 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | livré (6.14.84) |
 | 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | livré (6.14.85) ; reportés : thème de saison, défi d'alliance et défi du passe (voir la fiche) |

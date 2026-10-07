@@ -19,7 +19,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { FormationPicker } from "@/components/game/FormationPicker";
 import { allianceSiegeFactor } from "@/game/alliances";
 import { findBuilding } from "@/game/buildings";
-import { computeFleetPower, pveAttackFactor } from "@/game/combat";
+import { COMBAT_RULES, computeFleetPower, pveAttackFactor } from "@/game/combat";
+import { formatPct } from "@/game/format";
 import { formationEffects, type FormationId } from "@/game/formations";
 import { findFaction } from "@/game/pirates";
 import { findUnit, KESH_HUNTER_UNIT, OFFENSIVE_UNITS } from "@/game/units";
@@ -153,7 +154,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
                 <img src={assetUrl(findUnit(id)?.image ?? "")} alt="" className="h-7 w-7 object-contain" />
                 <span className="flex-1 truncate text-slate-300">
                   {findUnit(id)?.name}
-                  {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[11px] text-gold-glow">+50 % PNJ</span>}
+                  {id === KESH_HUNTER_UNIT.id && <span className="ml-1 text-[11px] text-gold-glow">+{formatPct(COMBAT_RULES.keshPveBonus)} PNJ</span>}
                 </span>
                 <NumberInput size="sm" value={fleet[id] ?? 0} max={owned} aria-label={`Quantité ${findUnit(id)?.name}`} onChange={(v) => setFleet((f) => ({ ...f, [id]: v }))} className="w-40 shrink-0" />
                 <span className="w-10 shrink-0 text-right font-mono text-[11px] text-slate-500" title="À quai">/{formatCompact(owned)}</span>
@@ -216,7 +217,7 @@ function KeshHero({ st }: { st: BountyState }) {
           <div className="border border-white/10 bg-space-950/70 p-3">
             <p className="hud-eyebrow text-[11px] text-slate-500">Rang dans l'Essaim</p>
             <p className="flex items-center gap-1.5 font-display text-lg text-slate-100">
-              <Crown className="h-4 w-4 text-gold-glow" /> {rankName(rank)} <span className="text-xs text-slate-500">({rank}/5)</span>
+              <Crown className="h-4 w-4 text-gold-glow" /> {rankName(rank)} <span className="text-xs text-slate-500">({rank}/{BOUNTY_RULES.ranks.length})</span>
             </p>
             {next ? (
               <>

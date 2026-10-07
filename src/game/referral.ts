@@ -1,5 +1,7 @@
 import { GameActionError } from "@/game/errors";
 import { bountyState } from "@/game/bounties";
+import { formatHours } from "@/game/format";
+import { getRankLabel } from "@/game/ranks";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -31,6 +33,16 @@ export const REFERRAL_RULES_META = {
   banner: { label: "Bannière du parrain (id)" },
 };
 
+/** 6.14.105 (AA4, AA-21) : « 48 h » (délai pour déclarer un parrain), lu dans la règle à l'usage. */
+export function referralWindowText(): string {
+  return formatHours(REFERRAL_RULES.linkWindowHours);
+}
+
+/** 6.14.105 (AA4) : rang à atteindre par le filleul (« Bronze I » pour 2 000 XP), lu dans `rewardXp` et la grille des rangs. */
+export function referralGoalLabel(): string {
+  return getRankLabel(REFERRAL_RULES.rewardXp);
+}
+
 export interface ReferralState {
   /** Côté filleul : son parrain. */
   by?: string;
@@ -60,7 +72,7 @@ export function linkReferrer(recruit: PlayerState, sponsor: Pick<PlayerState, "u
   const st = referralState(recruit);
   if (sponsor.uid === recruit.uid) throw new GameActionError("Tu ne peux pas être ton propre parrain.");
   if (st.by) throw new GameActionError("Tu as déjà un parrain.");
-  if (now - (recruit.createdAtMs ?? 0) > REFERRAL_RULES.linkWindowHours * 3600_000) throw new GameActionError("Le parrainage se déclare dans les 48 h qui suivent l'inscription.");
+  if (now - (recruit.createdAtMs ?? 0) > REFERRAL_RULES.linkWindowHours * 3600_000) throw new GameActionError(`Le parrainage se déclare dans les ${referralWindowText()} qui suivent l'inscription.`);
   if (referralState(sponsor).by === recruit.uid) throw new GameActionError("Ce joueur est déjà ton filleul.");
   recruit.referral = { ...st, by: sponsor.uid, byPseudo: sponsor.pseudo, linkedAtMs: now, rewarded: false };
 }

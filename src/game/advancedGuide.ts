@@ -1,12 +1,16 @@
 import { bountyState } from "@/game/bounties";
-import { homeLevels, COLONY_RULES } from "@/game/colonies";
+import { homeLevels, COLONY_ROUTE_RULES, COLONY_RULES } from "@/game/colonies";
+import { ASCENSION_RULES } from "@/game/ascension";
+import { CONTRACT_RULES } from "@/game/contracts";
+import { formatPct } from "@/game/format";
+import { JUMP_GATE_RULES } from "@/game/jumpGate";
 import { commandersState } from "@/game/commanders";
 import { GameActionError } from "@/game/errors";
 import { onboardingEligible, onboardingState } from "@/game/onboarding";
 import { equippedRelics, relicsState } from "@/game/relics";
 import { playerMoon } from "@/game/moon";
 import { playerStats } from "@/game/stats";
-import { talentPoints } from "@/game/talents";
+import { TALENT_RULES, talentPoints } from "@/game/talents";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -48,7 +52,11 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "dailyGoal",
     chapter: "empire",
     label: "Réclamer un objectif du jour",
-    learn: "Chaque jour, 4 objectifs tirés pour toi : ressources rares, XP et jetons. Ils se renouvellent à minuit, heure de Paris, et ta série grimpe si tu fais les 4.",
+    // 6.14.105 (AA4) : textes de règle lus à l'usage (accesseur), jamais au chargement du module.
+    get learn() {
+      const n = CONTRACT_RULES.perDay;
+      return `Chaque jour, ${n} objectifs tirés pour toi : ressources rares, XP et jetons. Ils se renouvellent à minuit, heure de Paris, et ta série grimpe si tu fais les ${n}.`;
+    },
     to: "/game/ordres",
     reward: { scrap: 300_000, energy: 300_000 },
     done: (p) => (p.contracts?.items ?? []).some((c) => c.claimed) || !!p.contracts?.lastCompletedDay,
@@ -79,7 +87,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "colonyFound",
     chapter: "colonies",
     label: "Fonder une colonie",
-    learn: "Une colonie a son propre stock, ses bâtiments et ses défenses, et produit 50 % de plus que la planète mère. Ses ressources reviennent par transport.",
+    get learn() {
+      return `Une colonie a son propre stock, ses bâtiments et ses défenses, et produit ${formatPct(COLONY_RULES.productionBonus)} de plus que la planète mère. Ses ressources reviennent par transport.`;
+    },
     to: "/game/colonies",
     reward: { reinforcedSteel: 200_000, cyberModule: 200_000 },
     done: (p) => colonies(p).length >= 1,
@@ -97,7 +107,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "colonyRoute",
     chapter: "colonies",
     label: "Ouvrir une route logistique",
-    learn: "Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta planète mère. 10 % se perdent en route.",
+    get learn() {
+      return `Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta planète mère. ${formatPct(COLONY_ROUTE_RULES.feePct)} se perdent en route.`;
+    },
     to: "/game/colonies",
     reward: { reinforcedSteel: 200_000, cyberModule: 200_000 },
     done: (p) => colonies(p).some((c) => !!c.route),
@@ -134,7 +146,10 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "ascend",
     chapter: "ascension",
     label: "Réaliser une Ascension",
-    learn: "Tous les bâtiments au maximum : l'Ascension les remet au niveau 1 contre +10 % de production et −5 % de temps de construction, pour toujours, et un point de talent.",
+    get learn() {
+      const pts = TALENT_RULES.pointsPerAscension;
+      return `Tous les bâtiments au maximum : l'Ascension les remet au niveau 1 contre +${formatPct(ASCENSION_RULES.productionPerAscension)} de production et −${formatPct(ASCENSION_RULES.buildTimePerAscension)} de temps de construction, pour toujours, et ${pts} point${pts > 1 ? "s" : ""} de talent.`;
+    },
     to: "/game/profil",
     reward: {},
     amber: 25,
@@ -154,7 +169,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "moonWatch",
     chapter: "moon",
     label: "Ta lune veille",
-    learn: "Un gros combat chez toi peut faire naître une lune. Sa phalange signale les attaques sur tes alliés proches ; au niveau 3, sa porte de saut ramène une flotte d'un coup. Sans lune, envoie une garnison à un allié menacé.",
+    get learn() {
+      return `Un gros combat chez toi peut faire naître une lune. Sa phalange signale les attaques sur tes alliés proches ; au niveau ${JUMP_GATE_RULES.minMoonLevel}, sa porte de saut ramène une flotte d'un coup. Sans lune, envoie une garnison à un allié menacé.`;
+    },
     to: "/game/statistiques?onglet=lune",
     reward: { scrap: 1_000_000, energy: 1_000_000 },
     done: (p) => !!playerMoon(p) || (Number(p.moonPity) || 0) > 0 || (playerStats(p).garrisons ?? 0) >= 1,

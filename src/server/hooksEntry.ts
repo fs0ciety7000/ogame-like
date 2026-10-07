@@ -209,6 +209,9 @@ export { CONTESTS_KEY, contestAmberPurse, contestPhase, contestPrizes, contestPu
 export { broadcastTargets, validateBroadcast } from "@/game/broadcast";
 export { ALLIANCE_CHALLENGE_KEY, ALLIANCE_CHALLENGE_RULES, allianceChallengeReward, findAllianceChallenge, normalizeAllianceChallenge, refreshAllianceChallenge, startAllianceChallengeWeek } from "@/game/allianceChallenge";
 export { allianceWeekId } from "@/game/allianceBoss";
+// 6.14.105 (AA4) : textes de règle construits depuis les règles (AA-21) et rang de l'Essaim lu dans BOUNTY_RULES.ranks (AA-22).
+export { allianceBossCallText, allianceBossDurationText } from "@/game/allianceBoss";
+export { bountyRank } from "@/game/bounties";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
 export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";

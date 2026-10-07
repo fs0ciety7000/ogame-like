@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, HudChip, StatTile, type HudTone } from "@/components/ui/hud";
 import { EmptyAction, HudPanel } from "@/components/ui/panel";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { gazetteNumber, gazettePublishAt, gazetteTrend, type GazetteSectionKind, type GazetteStats } from "@/game/gazette";
+import { GAZETTE_RULES, gazetteNumber, gazettePublishAt, gazetteTrend, type GazetteSectionKind, type GazetteStats } from "@/game/gazette";
 import { adminPublishGazette, useGazetteStore } from "@/services/gazetteService";
 import { useAdminStatus } from "@/services/maintenanceService";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -88,7 +88,7 @@ export function GazettePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Secteur" title="La Gazette" backdrop="/assets/headers/gazette.webp" description="Chaque lundi à 9 h, les grands faits de la semaine dans le secteur." />
+      <PageHeader eyebrow="Cosmic Empires / Secteur" title="La Gazette" backdrop="/assets/headers/gazette.webp" description={`Chaque lundi à ${GAZETTE_RULES.publishHour} h, les grands faits de la semaine dans le secteur.`} />
 
       {!issue ? (
         <Card>

@@ -8,6 +8,7 @@ import { productionHours } from "@/game/pirates";
 import { addPassPoints } from "@/game/seasonPass";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { parisDay } from "@/game/retention";
+import { formatHours } from "@/game/format";
 import type { Alliance, PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -34,6 +35,16 @@ export const ALLIANCE_BOSS_RULES = {
   killPoints: 40,
   failPoints: 15,
 };
+
+/** 6.14.105 (AA4, AA-21) : « 24 h pour l'abattre » (ALLIANCE_BOSS_RULES.durationHours, lu à l'usage). */
+export function allianceBossDurationText(): string {
+  return `${formatHours(ALLIANCE_BOSS_RULES.durationHours)} pour l'abattre`;
+}
+
+/** 6.14.105 (AA4, AA-21) : « 24 h pour l'abattre, un assaut toutes les 4 h » (durée et recharge réglables). Lu aussi par le serveur. */
+export function allianceBossCallText(): string {
+  return `${allianceBossDurationText()}, un assaut toutes les ${formatHours(ALLIANCE_BOSS_RULES.cooldownHours)}`;
+}
 
 export interface AllianceBossDef {
   id: string;

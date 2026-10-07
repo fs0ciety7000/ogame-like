@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { EmptyAction, FoldSection, HudPanel } from "@/components/ui/panel";
-import { relicImage } from "@/game/relics";
+import { expeditionRelicChanceText, relicImage } from "@/game/relics";
 import { AmberAmount } from "@/components/ui/amber";
 import { toast } from "sonner";
 import { Anchor, BookOpen, Boxes, Combine, Library, Package, Coins, Cog, Crosshair, Handshake, Landmark, ShieldCheck, Truck, Eye, FlaskConical, Gem, Hammer, Lock, Medal, Recycle, Shield, ShieldHalf, Sparkles, Swords, Timer, UserPlus, Wrench, Zap, Amphora } from "lucide-react";
@@ -52,7 +52,7 @@ import {
   type CapsuleType,
 } from "@/game/synthesis";
 import { productionHours } from "@/game/pirates";
-import { bountyState } from "@/game/bounties";
+import { bountyState, findShopItem } from "@/game/bounties";
 import {
   activateCapsule,
   assignCommanders,
@@ -301,7 +301,7 @@ function CommandersTab({ player, now }: { player: PlayerState; now: number }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile label="Postes" value={`${st.active.length} / ${slots}`} sub={slots < 3 ? "Un 3e poste au rang Platine" : "Rang Platine atteint"} icon={<Medal className="h-4 w-4" />} />
         <StatTile label="Officiers" value={`${Object.keys(st.roster).length} / ${COMMANDERS.length + SEASON_COMMANDERS.length}`} sub="Seuls les officiers en poste progressent" tone="gold" icon={<UserPlus className="h-4 w-4" />} />
-        <StatTile label="Dossiers" value={st.dossiers} sub="Au Comptoir de la Ruche (40 Ambre)" tone="mint" icon={<BookOpen className="h-4 w-4" />} />
+        <StatTile label="Dossiers" value={st.dossiers} sub={`Au Comptoir de la Ruche (${findShopItem("dossier")?.price ?? 0} Ambre)`} tone="mint" icon={<BookOpen className="h-4 w-4" />} />
       </div>
       <div className="flex justify-end">
         <SortableGridToggle page="officiers" editing={editingCards} onToggle={() => setEditingCards((e) => !e)} />
@@ -410,7 +410,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
       {/* 5.26 : emplacements et fusions à gauche, collection à droite sur grand écran. */}
       <div className="grid items-start gap-4 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-4">
-          <HudPanel icon={<Gem />} title="Emplacements de la base" tone="gold" aside={<span className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? " · un 4e à la première Ascension" : ""}</span>}>
+          <HudPanel icon={<Gem />} title="Emplacements de la base" tone="gold" aside={<span className="text-xs text-slate-500">{n} emplacements{n < RELIC_RULES.slots + 1 ? ` · un ${RELIC_RULES.slots + 1}e à ${RELIC_RULES.extraSlotAscensions <= 1 ? "la première Ascension" : `la ${RELIC_RULES.extraSlotAscensions}e Ascension`}` : ""}</span>}>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {Array.from({ length: n }).map((_, i) => {
                 const item = st.items.find((r) => r.id === st.slots[i]);
@@ -485,7 +485,7 @@ function RelicsTab({ player }: { player: PlayerState }) {
           </div>
           {sorted.length === 0 && (
             <EmptyState icon={<Amphora />} title="Aucune relique" action={<EmptyAction to="/game/missions">Lancer une expédition</EmptyAction>} className="p-0">
-              Les longues expéditions en rapportent parfois (jusqu'à 15 % à 8 h), la proie d'élite et le Léviathan en donnent une à chaque victoire.
+              Les longues expéditions en rapportent parfois ({expeditionRelicChanceText()}), la proie d'élite et le Léviathan en donnent une à chaque victoire.
             </EmptyState>
           )}
           <div className="grid gap-2 md:grid-cols-2">
