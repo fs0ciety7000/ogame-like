@@ -32,19 +32,3 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
-| Q104 | Campagne d'e-mails : comment protéger la fiche du joueur ? : Jetons de désinscription créés avant l'envoi (transaction, seul champ écrit) ; aucune migration des jetons sur la production | Valider (option prudente) |
-| Q105 | Envoi « à blanc » de l'admin : Il crée les jetons manquants (seul champ touché) et en rend le nombre ; pause `holdMs` (5 s au plus, admin) pour les tests | Valider (option prudente) |
-| Q106 | Destinataire supprimé pendant une campagne : Il ne reçoit rien et compte comme un échec | Valider (option prudente) |
-| Q107 | Livreur qui abandonne un contrat de commerce : Son rattrapage n'est pas sauvé, donc pas notifié (sinon notifié deux fois au rattrapage suivant) | Valider (option prudente) |
-| Q108 | Texte « Enchère annulée » (vendeur supprimé par l'admin) : Sur le modèle d'« Enchère dépassée » | Valider (option prudente) |
-| Q71 | Talents, classes, mutateurs, modules : chiffres seulement dans le registre (petit), ou sections de contenu complètes (ajout et retrait) ? : **Chiffres d'abord (AA3)**, sections ensuite (AA7, AA9). Les ids restent stables, il n'y a rien à migrer chez les joueurs | Valider (option recommandée par l'audit) |
-| Q72 | Tutoriel, accueil, guide avancé, annonces de version : réglables dans l'admin ? : **Non pour l'instant** : ce sont des textes d'interface livrés avec une version (et l'admin crée déjà des annonces personnalisées). À revoir si l'équipe veut éc | Valider (option recommandée par l'audit) |
-| Q73 | Bornes des effets de techno (`EFFECT_MAX_PER_LEVEL`) et plafonds : réglables ? : **Plafonds oui** (déjà dans `effectCaps`), **bornes de validation non** : elles protègent les invariants I9 et `TECH_COMBAT_CAP` contre une erreur de saisie | Valider (option recommandée par l'audit) |
-| Q74 | Rôles d'unités (AA-16) : drapeau `roles` dans la fiche d'unité, ou ids dans un groupe de règles (`SPY_RULES.probeUnitId`, `debris.recyclerUn : **Drapeau dans la fiche** : une unité ajoutée prend son rôle d'une case à cocher, et les deux champs actuels deviennent des valeurs de repli | Valider (option recommandée par l'audit) |
-| Q75 | Validation renforcée (AA1) : refuser, ou seulement avertir, les valeurs hors bornes ? : **Refuser** les types et formes invalides ; **avertir** (sans bloquer) au-delà de ×2 / ÷2 du défaut. C'est le plus prudent pour les données des joueurs, sans br | Valider (option recommandée par l'audit) |
-| Q76 | Quelle trace au Journal pour les réclamations ? : **B**, en `read: true` (pas de toast ni de pastille en plus, comme le défi hebdomadaire) | Valider (option recommandée par l'audit) |
-| Q77 | Que deviennent les échéances pendant une maintenance ? : **B** : les flottes continuent (sinon un afflux à la réouverture), les rendez-vous collectifs sont décalés | Valider (option recommandée par l'audit) |
-| Q78 | Suppression de compte par le joueur : **A** maintenant (ferme le contournement d'AC-3) ; B plus tard si des joueurs le demandent | Valider (option recommandée par l'audit) |
-| Q79 | Que permet-on en vacances ? : **A**, liste blanche = les 8 actions actuelles + lecture (phalange sans balayage, Codex consultable) | Valider (option recommandée par l'audit) |
-| Q80 | Clé d'idempotence pour les envois non répétables ? : **B** pour l'instant (aucun incident relevé), à rouvrir si un double envoi est signalé | Valider (option recommandée par l'audit) |
-| Q81 | Rythme du heartbeat : mesurer d'abord (Z6), puis **C** si l'écriture domine | Valider (option recommandée par l'audit) |
