@@ -49,7 +49,7 @@ export function MissionsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" description="Envoie ta flotte en exploration ou en patrouille." />
+      <PageHeader eyebrow="Cosmic Empires / Opérations" title="Missions" backdrop="/assets/headers/missions.webp" description="Envoie ta flotte en exploration ou en patrouille." />
       {/* 6.14.67 (UX-6, AD-10) : la grille des missions d'abord ; contrats, primes et expéditions
           dessous, les paliers d'XP repliés en bas. */}
       <div className="flex justify-end">

@@ -228,7 +228,7 @@ export function GalaxyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Cartographie" title="Carte galactique" description="Repère les empires voisins, suis tes flottes et lance une opération." />
+      <PageHeader eyebrow="Cosmic Empires / Cartographie" title="Carte galactique" backdrop="/assets/headers/galaxie.webp" description="Repère les empires voisins, suis tes flottes et lance une opération." />
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative min-w-[14rem] flex-1">

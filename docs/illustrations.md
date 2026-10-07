@@ -99,10 +99,17 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
      `relic-lentille-selene` et `relic-cle-seuil` : retirer le champ `image` de `lentille_selene` et `cle_seuil` (`DEFAULT_RELICS`), la
      relique prend alors `/assets/relics/<id>.webp` (liste personnalisée : une migration `patches` de `CONTENT_MIGRATIONS` remplace
      l'ancien `image` par le nouveau) ; `announce-phalange` : retirer `pendingArt` de l'annonce `v6.14-lune-veille`.
+   - **Factions** (6.14.93) : `banner` et `emblem` de la faction (`pirates.ts`) ; liste personnalisée : migration `run` sur `factions`.
+   - **Boss d'alliance** (6.14.93) : `image` de `DEFAULT_ALLIANCE_BOSSES` ; règles enregistrées : migration `run` sur `rules`.
+   - **Passe** (6.14.93) : thème → `image` de `PASS_THEMES` (ancienne image dans `PASS_THEME_OLD_IMAGES`) ; portrait de saison →
+     mois ajouté à `SEASON_PORTRAITS` (`passSeasons.ts`) ; saisons déjà écrites : migration `run` sur `passSeasons`.
+   - **En-têtes** (6.14.93) : `backdrop="/assets/headers/<page>.webp"` du `PageHeader` de la page.
+   - **Devblog** : `cover:` du billet dans `content/blog/` ; un billet déjà publié se règle dans Admin → Devblog.
+   - **Classes, modules, spécialisations de colonie** : pas encore de champ d'image (Q240), le fichier attend son lot d'affichage.
    - **Prestige** (6.14.85) : `prestige-monument` → remplacer la valeur de `PRESTIGE_IMAGE` (`src/game/prestige.ts`, image provisoire
      `/assets/buildings/fonderie_quantique.webp`) par `/assets/prestige/monument.webp` : page Prestige et fiche du Codex suivent.
 4. Fiche `docs/changes/`, validation, commit, push. `node scripts/preprod-illustrations.mjs integrated <id> …`. Vérifier sur la pré-prod
-   (`scripts/preprod-capture.mjs`).
+   (`scripts/preprod-capture.mjs` ; 4e argument : textes jusqu'où défiler pour capturer un contenu bas dans la page).
 
 **À chaque contenu qui demande une image** (règle n° 4) :
 - ajouter sa ligne dans `illustrations.json` : prompt au style de `docs/DESIGN.md`, sans texte dans l'image, fond sombre et neutre si

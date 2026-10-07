@@ -5,6 +5,7 @@ excerpt: "Bâtiments et technologies entrent au Codex, « Tout réclamer » pren
 category: mises-a-jour
 tags: [codex, succes, illustrations]
 version: "6.14.26"
+cover: /assets/blog/articles/6-14/codex-complet-et-illustrations.webp
 ---
 > [!LORE] Registre de l'Empire
 > « Ce qui n'est pas consigné n'a jamais existé. »

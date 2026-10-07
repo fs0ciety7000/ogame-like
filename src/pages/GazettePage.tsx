@@ -88,7 +88,7 @@ export function GazettePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Secteur" title="La Gazette" description="Chaque lundi à 9 h, les grands faits de la semaine dans le secteur." />
+      <PageHeader eyebrow="Cosmic Empires / Secteur" title="La Gazette" backdrop="/assets/headers/gazette.webp" description="Chaque lundi à 9 h, les grands faits de la semaine dans le secteur." />
 
       {!issue ? (
         <Card>

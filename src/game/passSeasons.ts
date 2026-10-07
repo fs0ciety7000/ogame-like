@@ -346,11 +346,31 @@ interface PassTheme {
   rivalLines: [string[], string[], string[], string[]];
 }
 
+/** 6.14.93 : mois dont le commandant de saison a son portrait (public/assets/commanders/s-<mois>.webp). Un autre mois prend le
+ *  portrait du rôle principal ; un portrait se règle aussi par saison dans l'admin (Passe de saison). */
+export const SEASON_PORTRAITS: readonly string[] = ["2026-11", "2026-12", "2027-01"];
+
+/** 6.14.93 : images des thèmes avant leur illustration propre (migration `pass-art-6.14.93` des saisons déjà écrites). */
+export const PASS_THEME_OLD_IMAGES: Record<string, string> = {
+  maree: "/assets/blog/articles/5-9/poste-commandement.webp",
+  forge: "/assets/blog/articles/5-10/pot-commun.webp",
+  archives: "/assets/blog/articles/reliques/couverture.webp",
+  hiver: "/assets/chronicles/2026-12-boss.webp",
+  comete: "/assets/blog/articles/5-10/coup-de-grace.webp",
+  primes: "/assets/blog/articles/5-9/podium-or.webp",
+  bazar: "/assets/blog/articles/5-12/salle-de-jeu.webp",
+  vide: "/assets/chronicles/2026-11-boss.webp",
+  rempart: "/assets/chronicles/2027-01-boss.webp",
+  colonies: "/assets/chronicles/2027-02-boss.webp",
+  chantiers: "/assets/blog/articles/5-10/couverture.webp",
+  moisson: "/assets/chronicles/2027-03-boss.webp",
+};
+
 export const PASS_THEMES: PassTheme[] = [
   {
     id: "maree",
     accent: "#4be8ff",
-    image: "/assets/blog/articles/5-9/poste-commandement.webp",
+    image: "/assets/pass/theme-maree.webp",
     mentor: "vashka",
     rival: "varan",
     focus: ["victory", "raidRepelled", "bounty"],
@@ -365,7 +385,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "forge",
     accent: "#ffb347",
-    image: "/assets/blog/articles/5-10/pot-commun.webp",
+    image: "/assets/pass/theme-forge.webp",
     mentor: "lysa",
     rival: "kragmor",
     focus: ["contract", "victory", "bounty"],
@@ -380,7 +400,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "archives",
     accent: "#a78bfa",
-    image: "/assets/blog/articles/reliques/couverture.webp",
+    image: "/assets/pass/theme-archives.webp",
     mentor: "nerea",
     rival: "vesper",
     focus: ["spy", "victory", "raidRepelled"],
@@ -395,7 +415,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "hiver",
     accent: "#9fd8ff",
-    image: "/assets/chronicles/2026-12-boss.webp",
+    image: "/assets/pass/theme-hiver.webp",
     mentor: "ilyon",
     rival: "vesper",
     focus: ["raidRepelled", "contract", "victory"],
@@ -410,7 +430,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "comete",
     accent: "#ff5c7a",
-    image: "/assets/blog/articles/5-10/coup-de-grace.webp",
+    image: "/assets/pass/theme-comete.webp",
     mentor: "brannoc",
     rival: "kor",
     focus: ["bossAssault", "victory", "bounty"],
@@ -425,7 +445,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "primes",
     accent: "#ffd86b",
-    image: "/assets/blog/articles/5-9/podium-or.webp",
+    image: "/assets/pass/theme-primes.webp",
     mentor: "vashka",
     rival: "maru",
     focus: ["bounty", "victory", "warlordWin"],
@@ -440,7 +460,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "bazar",
     accent: "#5ef2b0",
-    image: "/assets/blog/articles/5-12/salle-de-jeu.webp",
+    image: "/assets/pass/theme-bazar.webp",
     mentor: "kor",
     rival: "kragmor",
     focus: ["contract", "bounty", "raidRepelled"],
@@ -455,7 +475,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "vide",
     accent: "#ff5fd2",
-    image: "/assets/chronicles/2026-11-boss.webp",
+    image: "/assets/pass/theme-vide.webp",
     mentor: "maru",
     rival: "varan",
     focus: ["victory", "raidRepelled", "contract"],
@@ -471,7 +491,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "rempart",
     accent: "#7fb2ff",
-    image: "/assets/chronicles/2027-01-boss.webp",
+    image: "/assets/pass/theme-rempart.webp",
     mentor: "ilyon",
     rival: "varan",
     focus: ["raidRepelled", "victory", "contract"],
@@ -486,7 +506,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "colonies",
     accent: "#5ef2b0",
-    image: "/assets/chronicles/2027-02-boss.webp",
+    image: "/assets/pass/theme-colonies.webp",
     mentor: "lysa",
     rival: "kragmor",
     focus: ["contract", "raidRepelled", "victory"],
@@ -501,7 +521,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "chantiers",
     accent: "#ff8a3d",
-    image: "/assets/blog/articles/5-10/couverture.webp",
+    image: "/assets/pass/theme-chantiers.webp",
     mentor: "brannoc",
     rival: "kor",
     focus: ["victory", "contract", "warlordWin"],
@@ -516,7 +536,7 @@ export const PASS_THEMES: PassTheme[] = [
   {
     id: "moisson",
     accent: "#ffd86b",
-    image: "/assets/chronicles/2027-03-boss.webp",
+    image: "/assets/pass/theme-moisson.webp",
     mentor: "kor",
     rival: "maru",
     focus: ["contract", "bounty", "raidRepelled"],
@@ -586,7 +606,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
     id: `s-${o.monthId}`,
     name: cmdName,
     title: cmdTitle,
-    portrait: "",
+    portrait: SEASON_PORTRAITS.includes(o.monthId) ? `/assets/commanders/s-${o.monthId}.webp` : "",
     primary: THEME_PRIMARY[entry.theme],
     secondary: entry.commander.secondary,
     lore: fill(entry.commander.lore, vars),

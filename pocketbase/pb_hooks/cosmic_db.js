@@ -5508,6 +5508,80 @@ const CONTENT_MIGRATIONS = [
       { id: "cle_seuil", field: "image", from: "/assets/relics/cle_soudure.webp", to: "/assets/relics/cle_seuil.webp" },
     ],
   },
+  // 6.14.93 : bannières et emblèmes des factions pirates (Chœur excepté, déjà illustré) dans une liste personnalisée qui n'en a pas.
+  {
+    id: "factions-art-6.14.93",
+    key: "factions",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      let touched = false;
+      items.forEach((f) => {
+        if (!f || ["varan", "gravhorn", "inquisition", "cartel", "meute"].indexOf(f.id) < 0) return;
+        if (!f.banner) {
+          f.banner = `/assets/story/${f.id}-banner.webp`;
+          touched = true;
+          changes.push(`factions-art-6.14.93 : ${f.id}.banner`);
+        }
+        if (!f.emblem) {
+          f.emblem = `/assets/story/${f.id}-emblem.webp`;
+          touched = true;
+          changes.push(`factions-art-6.14.93 : ${f.id}.emblem`);
+        }
+      });
+      return touched;
+    },
+  },
+  // 6.14.93 : boss d'alliance illustrés, si les règles enregistrées gardent l'image provisoire.
+  {
+    id: "alliance-boss-art-6.14.93",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      const bosses = data && data.allianceBoss && data.allianceBoss.bosses;
+      if (!Array.isArray(bosses)) return false;
+      const OLD = { gravhorn: "/assets/story/gravhorn.webp", kesh: "/assets/bounties/hunters.webp", confrerie: "/assets/story/varan.webp" };
+      let touched = false;
+      bosses.forEach((b) => {
+        if (b && OLD[b.id] && b.image === OLD[b.id]) {
+          b.image = `/assets/bosses/alliance-${b.id}.webp`;
+          touched = true;
+          changes.push(`alliance-boss-art-6.14.93 : ${b.id}.image`);
+        }
+      });
+      return touched;
+    },
+  },
+  // 6.14.93 : saisons du passe déjà écrites (brouillons compris) : image du thème illustrée si elle vaut encore l'image empruntée,
+  // portrait du commandant pour les mois illustrés s'il est vide. Une image réglée à la main dans l'admin est gardée.
+  {
+    id: "pass-art-6.14.93",
+    key: "passSeasons",
+    patches: [],
+    run(data, changes) {
+      if (!data || !Array.isArray(data.seasons)) return false;
+      const game = loadGame();
+      const oldImages = game.PASS_THEME_OLD_IMAGES;
+      const portraits = game.SEASON_PORTRAITS;
+      let touched = false;
+      data.seasons.forEach((s) => {
+        if (!s) return;
+        const t = s.theme;
+        if (t && t.id && oldImages[t.id] && t.image === oldImages[t.id]) {
+          t.image = `/assets/pass/theme-${t.id}.webp`;
+          touched = true;
+          changes.push(`pass-art-6.14.93 : ${s.id}.theme.image`);
+        }
+        const c = s.commander;
+        if (c && !c.portrait && portraits.indexOf(s.id) >= 0) {
+          c.portrait = `/assets/commanders/s-${s.id}.webp`;
+          touched = true;
+          changes.push(`pass-art-6.14.93 : ${s.id}.commander.portrait`);
+        }
+      });
+      return touched;
+    },
+  },
   // 5.28 : Cale sèche ajoutée aux bâtiments personnalisés (docs/proposals/cale-seche.md).
   {
     id: "cale-seche-5.28",

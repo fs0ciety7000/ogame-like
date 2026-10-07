@@ -112,6 +112,8 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     leader: "Capitaine Orsk Varan",
     enforcer: "Le Silencieux",
     art: "/assets/story/varan.webp",
+    banner: "/assets/story/varan-banner.webp",
+    emblem: "/assets/story/varan-emblem.webp",
     color: "ember",
     story:
       "Depuis l'effondrement des routes commerciales, une flotte sans bannière rôde aux confins de la galaxie : la Confrérie du Vide.\n\n" +
@@ -139,6 +141,8 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     leader: "Oggrath le Pisteur",
     enforcer: "L'Unité Ambre",
     art: "/assets/story/gravhorn.webp",
+    banner: "/assets/story/gravhorn-banner.webp",
+    emblem: "/assets/story/gravhorn-emblem.webp",
     color: "gold",
     story:
       "On ne fuit pas le Syndicat. On le paie, ou on devient son trophée.\n\n" +
@@ -166,6 +170,8 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     leader: "Haut-Juge Séraphin Vol",
     enforcer: "Le Lecteur",
     art: "/assets/story/inquisition.webp",
+    banner: "/assets/story/inquisition-banner.webp",
+    emblem: "/assets/story/inquisition-emblem.webp",
     color: "cyan",
     story:
       "Dans les archives scellées de l'ancien Empire, certaines connaissances étaient interdites. L'Inquisition de l'Aube Blanche s'est donné pour mission de les garder enfouies.\n\n" +
@@ -193,6 +199,8 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     leader: "Madame Vashti Kor",
     enforcer: "Les Jumeaux Chrome",
     art: "/assets/story/cartel.webp",
+    banner: "/assets/story/cartel-banner.webp",
+    emblem: "/assets/story/cartel-emblem.webp",
     color: "danger",
     story:
       "Sur les stations-casinos de la Bordure, tout s'achète : les dettes, les secrets, les vies. Le Cartel Néon y règne sans partage.\n\n" +
@@ -220,6 +228,8 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     leader: "Ysgrim Crocs-de-Fer",
     enforcer: "La Louve Rouge",
     art: "/assets/story/meute.webp",
+    banner: "/assets/story/meute-banner.webp",
+    emblem: "/assets/story/meute-emblem.webp",
     color: "ember",
     story:
       "Venus des mondes morts du Rift, les guerriers de la Meute ont remplacé leur chair par l'acier et ne vivent que pour la chasse.\n\n" +

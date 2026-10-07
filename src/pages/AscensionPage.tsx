@@ -19,7 +19,7 @@ export function AscensionPage() {
   const pct = progress.needed > 0 ? Math.min(100, (progress.levels / progress.needed) * 100) : 100;
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Empire" title="Ascension" description="Recommence plus fort : ton empire repart de zéro, avec des bonus permanents et des talents." />
+      <PageHeader eyebrow="Cosmic Empires / Empire" title="Ascension" backdrop="/assets/headers/ascension.webp" description="Recommence plus fort : ton empire repart de zéro, avec des bonus permanents et des talents." />
       {progress.unlocked ? (
         <>
           <AscensionCard />

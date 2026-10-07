@@ -911,7 +911,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a pirate lair hollowed out of a giant asteroid, ember-orange docking lights, patched hull plates and chained wrecks hanging at its mouth, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-varan-emblem",
@@ -935,7 +935,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a fortified mercenary stronghold inside a gold-plated orbital vault station, glowing amber hexagonal lights, no signs, no signage, armored guard silhouettes at the gates, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-gravhorn-emblem",
@@ -947,7 +947,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a cracked golden ram horn crossed with a heavy vault key, gunmetal rim, circular sci-fi faction emblem, engraved metal insignia, centered on a dark background, soft rim light, painterly concept art, high detail, no text, no letters --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-inquisition-banner",
@@ -959,7 +959,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a gothic orbital scriptorium cathedral of white stone and cyan stained light, floating archive shelves around its spires, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-inquisition-emblem",
@@ -971,7 +971,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a white rising sun crest pierced by a vertical sword of light, pale cyan halo, circular sci-fi faction emblem, engraved metal insignia, centered on a dark background, soft rim light, painterly concept art, high detail, no text, no letters --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-cartel-banner",
@@ -983,7 +983,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a derelict casino station drifting in the dark, flickering pink and red neon lights without letters, abandoned roulette rings orbiting it, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-cartel-emblem",
@@ -995,7 +995,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a neon pink die crowned with a fur-trimmed golden coin, chrome rim, circular sci-fi faction emblem, engraved metal insignia, centered on a dark background, soft rim light, painterly concept art, high detail, no text, no letters --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-meute-banner",
@@ -1007,7 +1007,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a feral raider den carved into a crimson rift between shattered moons, wolf-head prows of raider ships docked in the cracks, sci-fi strategy game location banner, wide cinematic composition, dark starfield, painterly matte painting, highly detailed, no text, no letters --ar 21:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "faction-meute-emblem",
@@ -1019,7 +1019,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a snarling iron wolf head with glowing red eyes and scarred cybernetic jaw, circular sci-fi faction emblem, engraved metal insignia, centered on a dark background, soft rim light, painterly concept art, high detail, no text, no letters --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "boss-alliance-gravhorn",
@@ -1031,7 +1031,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a colossal Gravhorn battleship armored like a bank vault, gold and gunmetal plating, giant clamp arms reaching for a station, sci-fi strategy game boss illustration, cinematic wide shot, dark deep-space palette, volumetric light, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "boss-alliance-kesh",
@@ -1043,7 +1043,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a drifting renegade kesh'vaar mother-nest, an organic amber asteroid hive with larvae ships hatching from its glowing flanks, sci-fi strategy game boss illustration, cinematic wide shot, dark deep-space palette, volumetric light, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "boss-alliance-confrerie",
@@ -1055,7 +1055,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a patched-up pirate cruiser of the Void Brotherhood covered in scratched tally marks and salvaged hull plates, ember-orange broadside cannons firing, sci-fi strategy game boss illustration, cinematic wide shot, dark deep-space palette, volumetric light, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "classe-industriel",
@@ -1067,7 +1067,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a sprawling industrial capital planet covered in glowing foundries and orbital cargo elevators, warm amber city lights, sci-fi strategy game class card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "classe-seigneur",
@@ -1079,7 +1079,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a warlord flagship leading a raiding fleet out of orbit, ember-red engine trails and loaded cargo holds, sci-fi strategy game class card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "classe-explorateur",
@@ -1091,7 +1091,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a long-range explorer ship departing toward an uncharted violet nebula, holographic star charts trailing behind it, sci-fi strategy game class card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-canons_surcharges",
@@ -1103,7 +1103,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "twin overcharged starship cannon barrels glowing red-hot, heat vents venting sparks, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-matrice_de_visee",
@@ -1115,7 +1115,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a salvaged ballistic targeting matrix with a cyan crosshair lens and scorched pirate casing, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-blindage_reactif",
@@ -1127,7 +1127,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "reactive armor plates bursting outward in small controlled explosions, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-champ_dissipateur",
@@ -1139,7 +1139,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a thin bubble of shimmering energy spreading impact ripples across a hull segment, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-soute_modulaire",
@@ -1151,7 +1151,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "folding cargo bulkheads unfolding into extra compartments around stacked crates, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-post_combustion",
@@ -1163,7 +1163,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "an afterburner engine nozzle blasting a long blue-white flame, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "module-voile_furtif",
@@ -1175,7 +1175,7 @@
    "cutout": true,
    "quality": 85,
    "prompt": "a stealth veil emitter casting a violet distortion cloak over a small support ship, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "colonie-forge",
@@ -1187,7 +1187,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a colony world covered in smelting furnaces and smoke stacks, rivers of orange molten metal, sci-fi colony specialization card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "colonie-extraction",
@@ -1199,7 +1199,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a mining outpost drilling deep into a glowing rare crystal deposit, ore haulers lined up, sci-fi colony specialization card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "colonie-bastion",
@@ -1211,7 +1211,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a fortified colony with shield domes and defense turrets along stone ramparts, sci-fi colony specialization card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "colonie-depot",
@@ -1223,7 +1223,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a logistics colony with vast stacked storage silos and cargo shuttles landing in rows, sci-fi colony specialization card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-vide",
@@ -1235,7 +1235,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ff5fd2 accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-hiver",
@@ -1247,7 +1247,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a fortified ice-covered depot planet under a pale blue aurora, armored doors glowing, distant raider lights in the dark, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #9fd8ff accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-forge",
@@ -1259,7 +1259,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a colossal star forge built around a red dwarf, molten rivers of metal and orange sparks, cyan scaffolding lights, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ffb347 accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-bazar",
@@ -1271,7 +1271,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a huge orbital bazaar ring full of colorful stalls and docked merchant ships, emerald and gold lanterns, crowds of aliens, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #5ef2b0 accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-maree",
@@ -1283,7 +1283,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "two enormous battle fleets clashing like waves, cyan and red beams, a capital ship breaking through the line, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #4be8ff accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-colonies",
@@ -1295,7 +1295,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a freshly terraformed green planet at dawn, colony domes and landing ships, a mint-colored sunrise over new cities, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #5ef2b0 accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-primes",
@@ -1307,7 +1307,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a bounty board of glowing holographic wanted posters in a hive-like station, corsair ships docking under golden light, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ffd86b accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-comete",
@@ -1319,7 +1319,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a blazing scarlet comet crossing the sector, a colossal creature silhouette in its tail, hunter ships in pursuit, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ff5c7a accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-moisson",
@@ -1331,7 +1331,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "golden harvest fields on a planet seen from orbit, huge harvester ships and granary stations glowing gold, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ffd86b accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-archives",
@@ -1343,7 +1343,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a vast dark archive station with endless violet data shelves, a hooded figure stealing a glowing data core, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #a78bfa accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-chantiers",
@@ -1355,7 +1355,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "an enormous orbital shipyard with rows of warships under construction, ember sparks and scaffolding lights, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #ff8a3d accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "passe-theme-rempart",
@@ -1367,7 +1367,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a fortress planet ringed with shield walls under siege, waves of raider ships breaking against blue energy barriers, sci-fi strategy game key art, cinematic wide shot, dark deep-space palette with #7fb2ff accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "officier-s-2026-11",
@@ -1379,7 +1379,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #ff5fd2, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "officier-s-2026-12",
@@ -1391,7 +1391,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a stoic winter warden in white armored furs, frost on shoulders, sealed vault door glowing pale blue behind, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #9fd8ff, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "officier-s-2027-01",
@@ -1403,7 +1403,7 @@
    "cutout": false,
    "quality": 85,
    "prompt": "a brilliant starship engineer woman, welding goggles on forehead, orange-lit forge sparks, mechanical arm, sci-fi strategy game character portrait, head and shoulders, centered, facing the viewer, dramatic rim light in #ffb347, dark navy background, painterly digital illustration, highly detailed face, clean silhouette, no text, no letters --ar 4:5 --v 7 --style raw --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "blog-50",
@@ -1415,7 +1415,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a raiding frigate squadron leaving a burning pirate asteroid lair with overflowing cargo pods, a kesh'vaar hunter ship escorting them, epic cinematic sci-fi illustration, deep navy and black palette with cyan #4be8ff and gold #ffd86b accents, volumetric light, painterly concept art, highly detailed, no text, no letters --ar 16:9 --v 7 --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "blog-51",
@@ -1427,7 +1427,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a holographic weekly star calendar ring floating above a command deck, seven glowing nodes each showing a tiny boss, casino token or chronicle seal, epic cinematic sci-fi illustration, deep navy and black palette with cyan #4be8ff and gold #ffd86b accents, volumetric light, painterly concept art, highly detailed, no text, no letters --ar 16:9 --v 7 --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "blog-52",
@@ -1439,7 +1439,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "an open holographic codex book projecting floating cards of starships, buildings and research schematics, an amber insectoid trading counter in the background, epic cinematic sci-fi illustration, deep navy and black palette with cyan #4be8ff and gold #ffd86b accents, volumetric light, painterly concept art, highly detailed, no text, no letters --ar 16:9 --v 7 --s 250",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-batiments",
@@ -1451,7 +1451,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "an industrial planet surface with mining towers and reactors under a dark sky, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-unites",
@@ -1463,7 +1463,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a cavernous starship hangar with rows of fighters on launch rails, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-galaxie",
@@ -1475,7 +1475,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a wide spiral galaxy seen from its edge, faint sector grid overlay, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-menaces",
@@ -1487,7 +1487,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "pirate raiders emerging from a dark asteroid belt, warning beacons, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-alliance",
@@ -1499,7 +1499,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a council chamber with banners of many fleets around a holo-table, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-missions",
@@ -1511,7 +1511,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a mission briefing room with a tactical holo-map of a sector, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-gazette",
@@ -1523,7 +1523,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a space station newsroom with floating holographic headlines, no readable text, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "entete-ascension",
@@ -1535,7 +1535,7 @@
    "cutout": false,
    "quality": 80,
    "prompt": "a radiant star collapsing into a new birth of light, transcendence, sci-fi strategy game page header background, wide cinematic composition, the subject on the right two thirds and calm dark space on the left third, low contrast, muted neutral grading, painterly matte painting, no text --ar 16:9 --v 7 --style raw --s 200",
-   "done": null
+   "done": "2026-10-07"
   },
   {
    "id": "prestige-monument",

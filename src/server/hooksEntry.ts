@@ -187,7 +187,7 @@ export { balanceHealth } from "@/game/balance/health";
 export { currentGameContent, validateGameContent, validateRules, contentSectionErrors } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
-export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, outdatedPassDrafts, PASS_SEASONS_SECTION, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
+export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, outdatedPassDrafts, PASS_SEASONS_SECTION, PASS_THEME_OLD_IMAGES, SEASON_PORTRAITS, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
 export { moveWrittenToLibrary, applyLibraryChapter } from "@/game/chronicles";
 export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, GENERATOR_VERSION, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";

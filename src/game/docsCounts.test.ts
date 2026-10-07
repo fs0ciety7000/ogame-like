@@ -1,4 +1,4 @@
-// 6.14.93 (AJ27-1, constat AJ-7) : les chiffres écrits dans les fiches systèmes et le GDD suivent le code.
+// 6.14.94 (AJ27-1, constat AJ-7) : les chiffres écrits dans les fiches systèmes et le GDD suivent le code.
 // Un agent lit la fiche avant de coder (règle n° 1, point 5) : un chiffre faux l'envoie sur une mauvaise piste.
 // Quand un de ces tests échoue, on met la phrase du .md à jour avec le code (pas l'inverse).
 import { readFileSync, readdirSync } from "node:fs";

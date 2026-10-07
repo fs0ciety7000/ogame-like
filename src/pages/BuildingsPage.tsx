@@ -134,7 +134,7 @@ export function BuildingsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" description="Débloque et améliore les structures de ton empire." />
+      <PageHeader eyebrow="Cosmic Empires / Infrastructure" title="Bâtiments" backdrop="/assets/headers/batiments.webp" description="Débloque et améliore les structures de ton empire." />
 
       {/* 5.15 : l'Ascension a sa page ; un raccourci ici quand elle est ouverte. */}
       {player && ascensionProgress(player).unlocked && (
