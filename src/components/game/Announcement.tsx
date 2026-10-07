@@ -14,7 +14,8 @@ import { nextAnnouncement, scheduledAnnouncements, type AnnouncementSettings, ty
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { previewAnnouncement, useAnnouncementPreview, useAnnouncementSettings } from "@/services/announcementService";
 import { useContentStore } from "@/services/contentService";
-import { cn } from "@/lib/utils";
+import { RHYTHM_PREVIOUS, RHYTHM_RULES, rhythmAnnounceAt } from "@/game/rhythm";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* =====================================================
    Annonces plein écran (style bande-annonce d'extension), affichées une
@@ -51,9 +52,46 @@ export interface Announcement {
   /** 6.14.36 : illustration pas encore produite : l'annonce reste cachée (ni modale, ni /game/annonces). L'intégration de
    *  l'image retire ce drapeau (docs/illustrations.md), ce qui publie l'annonce au déploiement suivant. */
   pendingArt?: boolean;
+  /** 6.14.88 : l'annonce ne paraît (modale et /game/annonces) qu'à partir de ce moment (ms), lu à l'affichage. */
+  liveFromMs?: () => number;
 }
 
+/** 6.14.88 : date de la bascule du rythme, « 1er novembre » (heure de Paris), lue dans les règles en vigueur. */
+const rhythmDay = () => formatDateTime(RHYTHM_RULES.switchAt, "day", "server").replace(/^1 /, "1er ");
+
 export const ANNOUNCEMENTS_ALL: Announcement[] = [
+  {
+    // 6.14.88 (RL-3) : bascule du rythme, avec le billet « Un jeu au long cours » (content/blog/54). Paraît `rhythm.announceDays`
+    // jours avant `rhythm.switchAt` (7 jours, le 25 octobre par défaut) ; publiée seulement une fois son illustration produite et
+    // poussée (`annonce-rythme` sur /img).
+    id: "v6.14-rythme",
+    get eyebrow() {
+      return `${rhythmDay()} · Un jeu au long cours`;
+    },
+    title: "Ton empire se bâtit sur des mois",
+    get text() {
+      return `Le ${rhythmDay()}, le rythme change. Les niveaux 11 à 20 des bâtiments prennent des jours, les dernières recherches aussi, et l'Ascension revient une fois par saison au plus. Rien n'est retiré : tes niveaux, tes technos et tes Ascensions restent.`;
+    },
+    factions: [],
+    tone: "gold",
+    art: "/assets/story/annonce-rythme.webp",
+    artMobile: "/assets/story/annonce-rythme.webp",
+    artSlot: "annonce-rythme",
+    pendingArt: true,
+    liveFromMs: () => (RHYTHM_RULES.enabled === false ? Infinity : rhythmAnnounceAt(RHYTHM_RULES)),
+    // Chiffres lus dans le groupe `rhythm` (valeurs prises à la bascule).
+    get features() {
+      const r = RHYTHM_RULES;
+      const h = (s: number) => Math.round(s / 3600);
+      return [
+        { title: "Second palier en jours", text: `Niveau 11 en ${h(r.tier2BaseSeconds)} h, puis ${h(r.tier2SecondsPerLevel)} h de plus par niveau. Coûts ×${r.tier2CostFactor}. Lance, puis reviens.`, to: "/game/batiments", image: "/assets/buildings/extracteur_ferraille.webp" },
+        { title: "Recherche au long cours", text: `Dès le niveau ${r.researchLateFromLevel}, une recherche dure ${r.researchLateTimeFactor} fois plus : ${Math.round(h(r.researchMaxLevelSeconds) / 24)} jours au plus. Les niveaux 1 à ${r.researchLateFromLevel - 1} restent rapides.`, to: "/game/labo", image: "/assets/technologies/tech11.webp" },
+        { title: "Ascension par saison", text: `Une tous les ${r.ascensionCooldownDays} jours au plus, et jusqu'à ${r.maxAscensions} au lieu de ${RHYTHM_PREVIOUS.maxAscensions}. Succès jusqu'à l'Ascension X.`, to: "/game/ascension", image: "/assets/ascension/insigne.webp" },
+        { title: "Toujours de quoi faire", text: "Tes chantiers tournent : place ta production en trop dans un projet de prestige.", to: "/game/prestige", image: "/assets/buildings/fonderie_quantique.webp" },
+      ];
+    },
+    cta: { label: "Voir ce qui change", to: "/game/formules#f-ascension" },
+  },
   {
     // 6.14.69 (É30-1d) : phalange, porte de saut et pitié lunaire, avec le billet « Ta lune veille » (content/blog/53).
     // Publiée seulement une fois son illustration produite et poussée (`announce-phalange` sur /img).
@@ -406,6 +444,11 @@ export const ANNOUNCEMENTS_ALL: Announcement[] = [
 /** 6.14.36 : annonces publiées, sans celles qui attendent leur illustration. */
 export const ANNOUNCEMENTS: Announcement[] = ANNOUNCEMENTS_ALL.filter((a) => !a.pendingArt);
 
+/** 6.14.88 : une annonce datée (`liveFromMs`) ne paraît qu'à partir de sa date. */
+export function announcementOpen(a: Pick<Announcement, "liveFromMs">, now: number): boolean {
+  return !a.liveFromMs || now >= a.liveFromMs();
+}
+
 const SEEN_KEY = "cosmic-empires:announcements-seen";
 function readSeen(): string[] {
   try {
@@ -472,8 +515,9 @@ export function AnnouncementDialog() {
     // Pas par-dessus un ultimatum : l'annonce attendra le prochain chargement.
     // v4.5 : on attend le calendrier des annonces (game_config) avant de choisir.
     if (!uid || threatened || !contentLoaded || current) return;
-    const list = scheduledAnnouncements(ANNOUNCEMENTS, settings, Date.now(), fromCustom).filter(
-      (a) => a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled)),
+    const now = Date.now();
+    const list = scheduledAnnouncements(ANNOUNCEMENTS, settings, now, fromCustom).filter(
+      (a) => announcementOpen(a, now) && (a.factions.length === 0 || a.factions.some((id) => FACTIONS.some((f) => f.id === id && f.enabled))),
     );
     const next = nextAnnouncement(list, seenIds(uid, usePlayerStore.getState().player?.announcementsSeen));
     if (!next) return;

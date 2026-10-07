@@ -12,7 +12,7 @@
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons, **2 M à 12 M** de chaque ressource commune depuis la 6.14.72, 45 M à 280 M avant ; indexation sur la production au lot AE-L3) |
 | Succès | continu | 76 (dont dérivés des catalogues ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
-| Ascension | ≥ 7 jours | 5 au plus ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent. 1re Ascension possible (simulateur, 6.14.72) : J10 (actif), J19 (moyen), J46 (occasionnel), J32 (quotidien) ; cible du GDD §2 : J35–50, J60–90, > J120 (lot AE-L2) |
+| Ascension | ≥ 7 jours, puis **≥ 30 jours** dès la bascule du rythme (1er novembre 2026, 6.14.88) | 5 au plus, puis **10** ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent ; succès Ascension I, II, V et X. 1re Ascension (simulateur) : avant la bascule J10 (actif), J19 (moyen), J46 (occasionnel), J33 (quotidien) ; après **J87, J91, J126, J115** (cibles de `proposals/rythme-long-terme.md` §4.1 : J80–110, J95–125, J130–180, J110–150) |
 | Projets de prestige (6.14.85) | un à la fois, 8 h | ouverts quand les 4 extracteurs sont au niveau **10** ; coût **8 h** de production commune du moment (extracteurs × technos), durée **8 h** ; **8 points** par projet, monument de la fiche publique (Stèle à 1 projet … Merveille du secteur à 1 000), classement « Prestige », succès 1 / 10 / 100 (titre « Bâtisseur d'éternité ») / 1 000 (secret) ; **aucun bonus** (Q168, I32) ; Admin → Règles → Projets de prestige |
 | Codex, titres, bannières | collection | 10 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché) ; récompense par catégorie complète (Unités, Bâtiments, Technologies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
 
@@ -87,3 +87,17 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   Mesure avec les valeurs actuelles (avant RL-3), 365 jours, Ascensions : production perdue 91 / 90 / 74 / 84 % → 74 / 58 / 64 / 75 %
   (actif, moyen, occasionnel, quotidien), jours sans dépense du pire mois 30 / 30 / 20 / 30 → 0 / 1 / 0 / 0, 650 / 609 / 159 / 264
   projets. Fiche : `docs/changes/6.14.85-projets-de-prestige.md`.
+
+## 6.14.88 (rythme long terme, lot RL-3 avec AE-L2) : bascule datée
+- **Bascule** au 1er novembre 2026, 0 h (heure de Paris), réglable (Admin → Règles → Rythme sur des mois : date, annonce, valeurs visées,
+  case « Bascule active ») ; `rhythm.ts`, fonction pure appliquée à la résolution du contenu avec l'heure du moment (serveur à chaque
+  requête, client au chargement et à la date). Avant la date, rien ne change (`rythme.test.ts`). À la date, seul un réglage resté à son
+  ancien défaut prend la nouvelle valeur ; rien n'est écrit en base.
+- Valeurs : second palier ×4 (9 bâtiments) et 30 h + 24 h par niveau (8 bâtiments de l'Ascension, Cale sèche exclue) ; recherche ×30 dès
+  le niveau 6, 7 jours au plus ; Ascension tous les 30 jours, 10 au plus ; comptoir 1 pour 250 ; missions 0,75 et 400 000 ; lune AE-9.
+- Comptes existants : rien n'est retiré ; un chantier ou une recherche lancé garde sa fin.
+- Mesure (`node scripts/progression-sim.mjs --bascule --prestige --ascend --days 365`, avant → après) : 1re Ascension J10 / J19 / J46 /
+  J33 → **J87 / J91 / J126 / J115** (actif, moyen, occasionnel, quotidien) ; Ascensions la 1re année 5 / 5 / 5 / 5 → 6 / 5 / 4 / 4 ;
+  jours « fini, sans suite » 324 / 299 / 162 / 227 → **0** ; production perdue 74 / 58 / 64 / 75 % → **2 / 1 / 10 / 9 %**. Écart connu :
+  sessions bloquées 26 % (actif) et 50 % (moyen) le mois qui suit la 1re Ascension (fin de l'arbre trop chère pour la production remise à
+  zéro), réglage fin en RL-5. Garde : I29 à 365 jours. Fiche : `docs/changes/6.14.88-bascule-rythme.md`.

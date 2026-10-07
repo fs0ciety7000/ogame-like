@@ -10,6 +10,9 @@
 //   node scripts/progression-sim.mjs ae-l2               # effet attendu du lot AE-L2 sur le code actuel
 //   node scripts/progression-sim.mjs --prestige --ascend --days 365   # 6.14.85 (RL-2) : avant = sans projets de prestige,
 //                                                        # après = projets selon les règles `prestige` en vigueur ; --ascend : Ascensions dès que possible
+//   node scripts/progression-sim.mjs --bascule --prestige --ascend --days 365   # 6.14.88 (RL-3) : avant = règles d'avant la
+//                                                        # bascule du rythme, après = règles en vigueur après `rhythm.switchAt`
+//                                                        # (projets de prestige des deux côtés avec --prestige)
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -50,7 +53,8 @@ const days = Number(opt("--days") ?? 90);
 const asJson = args.includes("--json");
 const withPrestige = args.includes("--prestige");
 const withAscend = args.includes("--ascend");
-const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend"].includes(a))[0];
+const withSwitch = args.includes("--bascule");
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -66,7 +70,7 @@ function deepMerge(a, b) {
 
 const base = load(baseArg);
 const extra = load(afterArg);
-const after = { rules: deepMerge({}, extra.rules ?? {}), tier2Factor: extra.tier2Factor ?? 1 };
+const after = { rules: deepMerge({}, extra.rules ?? {}), tier2Factor: extra.tier2Factor ?? 1, afterSwitch: withSwitch };
 
 // Empaquetage du moteur pur.
 const dir = mkdtempSync(path.join(tmpdir(), "progression-sim-"));
@@ -82,6 +86,7 @@ await build({
       export { COMBAT_RULES } from "@/game/combat";
       export { PVP_RULES } from "@/game/pvp";
       export { STREAK_RULES } from "@/game/streak";
+      export { RHYTHM_RULES } from "@/game/rhythm";
     `,
     resolveDir: root,
     loader: "ts",
@@ -98,7 +103,8 @@ const E = await import(pathToFileURL(outfile).href);
 rmSync(dir, { recursive: true, force: true });
 
 function measure(settings, prestige = false) {
-  E.applyGameContent({ rules: settings.rules ?? {} });
+  // 6.14.88 : `afterSwitch` résout le contenu à la date de la bascule du rythme (rhythm.ts), sinon avant (règles du code).
+  E.applyGameContent({ rules: settings.rules ?? {} }, settings.afterSwitch ? E.RHYTHM_RULES.switchAt : undefined);
   const restore = settings.tier2Factor && settings.tier2Factor !== 1 ? E.scaleTier2Costs(settings.tier2Factor) : () => {};
   try {
     const projects = prestige ? E.prestigeProjectsFromRules() : null;
@@ -122,7 +128,7 @@ function measure(settings, prestige = false) {
   }
 }
 
-const before = measure(base);
+const before = measure(base, withSwitch && withPrestige);
 const result = measure(after, withPrestige);
 
 if (asJson) {
@@ -133,7 +139,7 @@ if (asJson) {
 const fmtDay = (d) => (d === null ? `> J${days}` : `J${d}`);
 const fmtM = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} Md` : n >= 1e6 ? `${(n / 1e6).toFixed(1)} M` : `${Math.round(n)}`);
 const row = (cells) => `| ${cells.join(" | ")} |`;
-console.log(`Avant : ${baseArg ? `code + ${baseArg}` : "règles du code"} ; après : ${afterArg ? `code + ${afterArg}` : "règles du code"} (${days} jours)\n`);
+console.log(`Avant : ${baseArg ? `code + ${baseArg}` : "règles du code"} ; après : ${afterArg ? `code + ${afterArg}` : "règles du code"}${withSwitch ? " après la bascule du rythme" : ""} (${days} jours)\n`);
 console.log("Réglages lus :", JSON.stringify(before.rules), "→", JSON.stringify(result.rules), "\n");
 console.log(row(["Profil", "1re Ascension", "Arbre complet", "Prod. perdue (cumul)", "Missions (J14+)", "Coffre du 7e jour", "Stock après coffre / entrepôt", "Sessions sans action J8–30"]));
 console.log(row(["---", "---", "---", "---", "---", "---", "---", "---"]));

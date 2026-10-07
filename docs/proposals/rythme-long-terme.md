@@ -1,8 +1,10 @@
 # Proposition : rythme long terme (1re Ascension, cycles, temps morts, production perdue)
 
-Statut : **validée** (Q164 à Q171), **livrée en partie** : RL-1 (recherche réglable, valeurs neutres) en 6.14.84
-(`docs/changes/6.14.84-recherche-reglable.md`), RL-2 (projets de prestige) en 6.14.85 (`docs/changes/6.14.85-projets-de-prestige.md`) ;
-RL-3 à RL-5 à faire. Lot RL-0 : Méthode : `docs/WORKFLOW.md` §2. Suite de `docs/proposals/equilibrage-au27.md` (AE-L2, AE-L4, AE-L6).
+Statut : **livrée** (Q164 à Q171 validées) : RL-1 (recherche réglable, valeurs neutres) en 6.14.84
+(`docs/changes/6.14.84-recherche-reglable.md`), RL-2 (projets de prestige) en 6.14.85 (`docs/changes/6.14.85-projets-de-prestige.md`),
+RL-3 (bascule datée du rythme au 1er novembre 2026, AE-L2 compris) en 6.14.88 (`docs/changes/6.14.88-bascule-rythme.md`). Restent les
+mesures après la bascule (RL-4) et le réglage fin à 8 semaines (RL-5), dont l'écart mesuré en 6.14.88 : sessions bloquées le mois qui suit
+la 1re Ascension (26 % actif, 50 % moyen). Lot RL-0 : Méthode : `docs/WORKFLOW.md` §2. Suite de `docs/proposals/equilibrage-au27.md` (AE-L2, AE-L4, AE-L6).
 Outil : simulateur de progression `src/game/balance/progressionSim.ts`, étendu par ce lot (horizon libre, Ascensions successives,
 puits de dépense, relevés par fenêtre de 30 jours), garde I29 inchangée. Les variantes de ce document ont tourné dans le scratchpad
 (scripts `rythme/run.mjs`, `variants.mjs`) ; le lot RL-0 les verse dans `scripts/progression-sim.mjs` (mode `--long`).
@@ -265,7 +267,8 @@ Revue à 8 semaines (comme AE-L7) : les durées et le facteur de recherche se r�
 
 ## 6. Invariants
 
-- **I29 (modifié par RL-3)** : en plus des bornes à 90 jours, le simulateur sur 365 jours (règles par défaut, Ascension dès que
+- **I29 (modifié par RL-3, livré en 6.14.88 : bandes du §4.1 avec le bas élargi de 10 %, sessions bloquées ≤ 15 % hors les 30 jours qui
+  suivent la 1re Ascension ; les bornes à 90 jours restent celles du jeu d'avant la bascule, en vigueur jusqu'à sa date)** : en plus des bornes à 90 jours, le simulateur sur 365 jours (règles par défaut, Ascension dès que
   possible, projets) garde la 1re Ascension dans les bandes du §4.1, aucun jour « fini, sans suite », les sessions bloquées sous 15 %
   par mois et la production perdue sous 15 % cumulés. Les bornes d'Ascension à 90 jours de `progressionSim.test.ts` changent dans le
   même commit (l'Ascension sort de l'horizon de 90 jours pour tous les profils).
@@ -282,7 +285,7 @@ Revue à 8 semaines (comme AE-L7) : les durées et le facteur de recherche se r�
 | **RL-0** | Cette proposition ; simulateur étendu (options éteintes, tests) : faits. À faire dans le même lot : mode `--long` de `scripts/progression-sim.mjs` (365 jours, Ascensions, puits, fenêtres) avec le préréglage `rythme-lt` ; questions RL-Q1 à RL-Q8 dans `QUESTIONS.md` et `decisions-a-valider.md` | S | maintenant |
 | **RL-1** | Recherche : `research.costGrowth`, `timeGrowth`, `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds` dans `RESEARCH_RULES` (défauts neutres, le jeu ne change pas), éditeur Admin → Règles → Labo, Formules ; tests (`reglages671`, `rulesAdmin`) | S–M | 1, **livré (6.14.84)** |
 | **RL-2** | Projets de prestige (AE-L6) : moteur (`prestige.ts`, I32), serveur (action, classement), interface (chantier, monument), admin (groupe `prestige`), chaîne de contenu complète, sortie « Entrepôt plein ». Utile tout de suite : la production perdue d'aujourd'hui (70 à 90 %) a un débouché | L | 2, **livré (6.14.85)** ; thème de saison, projet d'alliance et défi du passe reportés |
-| **RL-3** | Bascule du rythme, **AE-L2 compris** : second palier ×4 et comptoir, missions, lune (AE-L2 inchangé) ; durées du second palier 30 h + 24 h ; recherche tardive ×30 plafonnée à 7 j ; Ascension 30 j et maximum 10 (libellés jusqu'à X dans `ascension.ts` et `gazette.ts`, `AscensionCard` à 10 emplacements, succès Ascension II à X, Codex) ; migration des contenus non modifiés ; I29 étendu ; annonce une semaine avant, début de mois ; billet et changelog | M | 3 |
+| **RL-3** (**livré, 6.14.88**) | Bascule du rythme, **AE-L2 compris** : second palier ×4 et comptoir, missions, lune (AE-L2 inchangé) ; durées du second palier 30 h + 24 h ; recherche tardive ×30 plafonnée à 7 j ; Ascension 30 j et maximum 10 (libellés jusqu'à X dans `ascension.ts` et `gazette.ts`, `AscensionCard` à 10 emplacements, succès Ascension II à X, Codex) ; migration des contenus non modifiés ; I29 étendu ; annonce une semaine avant, début de mois ; billet et changelog | M | 3 |
 | **RL-4** | Mesures (§5.6), dans la page Santé de l'équilibre (AE-L4) | M | avec RL-3 |
 | **RL-5** | Après 8 semaines : réglage fin ; suite au-delà de 10 Ascensions ; échelle des rangs (R6) ; entrepôt du début (R7) | S | plus tard |
 

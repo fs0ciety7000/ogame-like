@@ -5,7 +5,7 @@ import { Play, Megaphone } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { allAnnouncements } from "@/components/game/Announcement";
+import { allAnnouncements, announcementOpen } from "@/components/game/Announcement";
 import { PollCard } from "@/components/game/PollCard";
 import { announcementStatus } from "@/game/announcements";
 import { previewAnnouncement, useAnnouncementSettings } from "@/services/announcementService";
@@ -22,7 +22,7 @@ export function AnnouncementsPage() {
   const now = Date.now();
   const list = allAnnouncements(settings).filter((a) => {
     const st = announcementStatus(a.id, settings, now);
-    return st === "live" || st === "ended";
+    return (st === "live" || st === "ended") && announcementOpen(a, now);
   });
 
   return (

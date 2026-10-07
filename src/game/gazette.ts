@@ -156,7 +156,8 @@ export function gazetteNumber(n: number): string {
 }
 const fmt = gazetteNumber;
 const MEDALS = ["🥇", "🥈", "🥉"];
-const ROMAN = ["", "I", "II", "III", "IV", "V"];
+// 6.14.88 (RL-3) : jusqu'à l'Ascension X (même liste que `ASCENSION_ROMAN`, ascension.ts).
+const ASCENSION_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 
 const DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 /** « mardi 18 h » à l'heure de Paris (sans Intl). */
@@ -229,7 +230,7 @@ export function compileGazette(input: GazetteInput, number: number): GazetteIssu
   if (Object.keys(ascSnap).length > 0) {
     const asc = input.players.filter((p) => (p.ascensions ?? 0) > (ascSnap[p.uid] ?? 0));
     if (asc.length > 0) {
-      sections.push({ kind: "ascension", title: "Ascensions", lines: asc.slice(0, 6).map((p) => `${p.pseudo} franchit l'Ascension ${ROMAN[Math.min(5, p.ascensions ?? 0)] || p.ascensions} et repart plus fort.`) });
+      sections.push({ kind: "ascension", title: "Ascensions", lines: asc.slice(0, 6).map((p) => `${p.pseudo} franchit l'Ascension ${ASCENSION_ROMAN[p.ascensions ?? 0] || p.ascensions} et repart plus fort.`) });
     }
   }
 

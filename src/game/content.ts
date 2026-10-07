@@ -38,6 +38,7 @@ import { CONTEST_RULES } from "@/game/contests";
 import { OUTCOME_POINTS } from "@/game/casino";
 import { WEEKLY_STOCK_RULES } from "@/game/weeklyStock";
 import { PATRON_RULES } from "@/game/patrons";
+import { applyRhythmSwitch } from "@/game/rhythm";
 import { applyRegisteredRules, mergeRuleGroup, REGISTERED_RULES, registeredRuleSnapshot, type RegisteredRuleGroups } from "@/game/ruleRegistry";
 import { ALLIANCE_RULES } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
@@ -236,9 +237,9 @@ function removedDefaultAchievements(rules: Partial<GameRules> | undefined): stri
 }
 
 /** 6.14.59 (AA1) : contenu complet fusionné avec les défauts, **sans l'appliquer** (pur : sert aussi à la validation serveur). */
-export function resolveGameContent(overrides: Partial<GameContent>): GameContent {
+export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: number): GameContent {
   const defaults = defaultGameContent();
-  return {
+  const content: GameContent = {
     buildings: withFixedBuildings(overrides.buildings ?? defaults.buildings),
     units: withFixedUnits(overrides.units ?? defaults.units),
     technologies: overrides.technologies ?? defaults.technologies,
@@ -356,11 +357,15 @@ export function resolveGameContent(overrides: Partial<GameContent>): GameContent
       })(),
     },
   };
+  // 6.14.88 (RL-3) : bascule datée du rythme, seulement quand l'heure est donnée (serveur, client) : sans heure (tests,
+  // validation de l'admin), le contenu enregistré tel quel.
+  return nowMs === undefined ? content : applyRhythmSwitch(content, defaults.buildings, nowMs);
 }
 
-/** Applique un contenu (sections absentes = valeurs par défaut du code). */
-export function applyGameContent(overrides: Partial<GameContent>): GameContent {
-  const content = resolveGameContent(overrides);
+/** Applique un contenu (sections absentes = valeurs par défaut du code). 6.14.88 : `nowMs` (serveur et client) applique la
+ *  bascule datée du rythme (`rhythm.ts`) ; sans heure, les valeurs enregistrées telles quelles. */
+export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number): GameContent {
+  const content = resolveGameContent(overrides, nowMs);
   setBuildings(content.buildings);
   setUnits(content.units);
   setTechnologies(content.technologies);

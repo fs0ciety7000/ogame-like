@@ -1,8 +1,8 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
-import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
+import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
-import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
+import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, requiredForAscension } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { allianceShieldBonus } from "@/game/alliances";
@@ -23,9 +23,11 @@ import { formatWait, PHALANX_RULES, phalanxFeatures, phalanxLevel, phalanxRange,
 import { gateCooldownMs, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { MOON_RULES, moonPity } from "@/game/moon";
 import { RESEARCH_RULES } from "@/game/technologies";
+import { TALENT_RULES } from "@/game/talents";
+import { RHYTHM_RULES, rhythmPhase } from "@/game/rhythm";
 import { PRESTIGE_RULES, prestigeCost, prestigeHours, prestigeMonument, prestigeState, prestigeUnlocked } from "@/game/prestige";
 import type { PlayerState, ResourceId } from "@/types/game";
-import { cn, formatCompact, formatDecimal } from "@/lib/utils";
+import { cn, formatCompact, formatDateTime, formatDecimal } from "@/lib/utils";
 
 /* =====================================================
    v5.4 : les formules du jeu, expliquées. Les valeurs viennent du contenu
@@ -52,6 +54,13 @@ const PASS_LABELS: Record<string, string> = {
   coalition: "Coalition gagnée contre un seigneur",
   allianceDaily: "Objectif du jour d'alliance",
 };
+/** 6.14.88 : durée longue lisible (« 30 h », « 10 j 6 h »). */
+const longWait = (ms: number) => {
+  const h = Math.round(ms / 3_600_000);
+  if (h < 48) return formatWait(ms);
+  const d = Math.floor(h / 24);
+  return h % 24 ? `${d} j ${h % 24} h` : `${d} j`;
+};
 const resName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
 
 export const FORMULA_SECTIONS = [
@@ -63,6 +72,7 @@ export const FORMULA_SECTIONS = [
   { id: "protections", label: "Protections", icon: Shield },
   { id: "menaces", label: "Raids et seigneurs", icon: Skull },
   { id: "recherche", label: "Recherche", icon: FlaskConical },
+  { id: "ascension", label: "Ascension et rythme", icon: Hourglass },
   { id: "lune", label: "Lune et phalange", icon: Moon },
   { id: "prestige", label: "Prestige", icon: Landmark },
   { id: "gains", label: "Missions et gains", icon: Coins },
@@ -210,6 +220,13 @@ export function FormulasGuide({ player }: { player: PlayerState | null }) {
   const shield = p ? getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) : 0;
   const pass = activePass(currentSeasonId(now));
   const buildingLevels = p ? BUILDINGS.reduce((a, b) => a + effectiveBuildingLevel(p.buildings, b.id), 0) : 0;
+  // 6.14.88 (RL-3) : bâtiments exigés par l'Ascension et leur second palier (règles en vigueur).
+  const ascensionBuildings = BUILDINGS.filter((b) => requiredForAscension(b));
+  const tier2Building = ascensionBuildings.find((b) => b.upgrade.tier2);
+  const tier2 = tier2Building?.upgrade.tier2 ?? null;
+  const tier2Max = tier2Building?.maxLevel ?? 20;
+  const phase = rhythmPhase(RHYTHM_RULES, now);
+  const rhythmPending = phase === "later" || phase === "announced";
   const unitRows = UNITS.filter((u) => UNIT_BASE_STATS[u.id]).map((u) => {
     const s = UNIT_BASE_STATS[u.id];
     return [
@@ -393,6 +410,27 @@ dès le niveau ${RESEARCH_RULES.lateFromLevel} : durée × ${formatDecimal(RESEA
 durée d'un niveau : ${formatWait(RESEARCH_RULES.maxLevelSeconds * 1000)} au plus, avant les réductions` : ""}
 recherches en parallèle : ${RESEARCH_RULES.maxConcurrent}`}
         </Formula>
+      </Block>
+
+      {/* 6.14.88 (RL-3) : rythme sur des mois. Valeurs en vigueur ; avant la bascule, ce qui change à sa date. */}
+      <Block id="ascension" title="Ascension et rythme" icon={Hourglass} intro="Le jeu se joue sur des mois. Le second palier des bâtiments (niveaux 11 à 20) prend des jours ; l'Ascension revient au plus une fois par saison.">
+        <Formula>
+          {`bâtiments exigés pour l'Ascension : ${ascensionBuildings.length}, tous au niveau maximal${tier2 ? `
+second palier : niveau ${tier2.fromLevel} en ${longWait(tier2.baseSeconds * 1000)}, puis + ${longWait(tier2.secondsPerLevel * 1000)} par niveau (niveau ${tier2Max} : ${longWait((tier2.baseSeconds + (tier2Max - tier2.fromLevel) * tier2.secondsPerLevel) * 1000)}), avant les réductions` : ""}
+délai entre deux Ascensions : ${ASCENSION_RULES.cooldownDays} jours
+Ascensions au plus : ${ASCENSION_RULES.maxAscensions}
+chaque Ascension : +${pct(ASCENSION_RULES.productionPerAscension)} de production, −${pct(ASCENSION_RULES.buildTimePerAscension)} de durée de construction, ${TALENT_RULES.pointsPerAscension} points de talent`}
+        </Formula>
+        {rhythmPending && (
+          <Formula>
+            {`dès le ${formatDateTime(RHYTHM_RULES.switchAt, "full", "server")} (heure de Paris), pour les niveaux lancés ensuite :
+second palier : niveau 11 en ${longWait(RHYTHM_RULES.tier2BaseSeconds * 1000)}, puis + ${longWait(RHYTHM_RULES.tier2SecondsPerLevel * 1000)} par niveau ; coûts × ${formatDecimal(RHYTHM_RULES.tier2CostFactor, 2)}
+recherche : durée × ${formatDecimal(RHYTHM_RULES.researchLateTimeFactor, 2)} dès le niveau ${RHYTHM_RULES.researchLateFromLevel}, ${longWait(RHYTHM_RULES.researchMaxLevelSeconds * 1000)} au plus par niveau
+Ascension : tous les ${RHYTHM_RULES.ascensionCooldownDays} jours au plus, ${RHYTHM_RULES.maxAscensions} au maximum
+comptoir : 1 rare pour ${n(1 / Math.max(1e-9, RHYTHM_RULES.exchangeCommonToRare))} communes ; missions : ${formatDecimal(RHYTHM_RULES.missionProductionMultiplier, 2)} × durée × production
+rien n'est retiré : niveaux, technos et Ascensions faites restent ; un chantier lancé garde sa fin`}
+          </Formula>
+        )}
       </Block>
 
       <Block id="lune" title="Lune et phalange" icon={Moon} intro="Une lune naît d'un grand combat sur ta planète mère. Chaque niveau élargit la portée de sa phalange ; dès le niveau requis, elle perce les leurres et ouvre une porte de saut.">

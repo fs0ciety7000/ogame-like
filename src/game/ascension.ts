@@ -25,10 +25,11 @@ export const ASCENSION_RULES = {
  *  Tant qu'il vaut null, l'interface affiche une icône vectorielle à la place. */
 export const ASCENSION_INSIGNIA: string | null = "/assets/ascension/insigne.webp";
 
-const ROMAN = ["", "I", "II", "III", "IV", "V"];
+/** 6.14.88 (RL-3) : jusqu'à l'Ascension X (maximum de 10 après la bascule du rythme). */
+export const ASCENSION_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 /** « Ascension III » */
 export function ascensionLabel(n: number): string {
-  return n > 0 ? `Ascension ${ROMAN[n] ?? n}` : "";
+  return n > 0 ? `Ascension ${ASCENSION_ROMAN[n] ?? n}` : "";
 }
 
 const DAY = 24 * 3600_000;

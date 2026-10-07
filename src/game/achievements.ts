@@ -409,6 +409,10 @@ export function derivedAchievements(): AchievementDef[] {
     def("serie_7", "prestige", "bronze", "streakBest", 7, "Une semaine sans faillir", "Tenir une série de connexion de 7 jours.", "📆", { auto: true }),
     def("serie_30", "prestige", "or", "streakBest", 30, "Un mois de garde", "Tenir une série de connexion de 30 jours.", "🗓️", { auto: true }),
     def("ascension_1", "prestige", "or", "ascensionsDone", 1, "Renaissance", "Accomplir une Ascension.", "✨", { auto: true }),
+    // 6.14.88 (RL-3) : jusqu'à l'Ascension X (maximum de 10 après la bascule du rythme, une tous les 30 jours au plus).
+    def("ascension_2", "prestige", "or", "ascensionsDone", 2, "Seconde aube", "Accomplir 2 Ascensions.", "🌅", { auto: true }),
+    def("ascension_5", "prestige", "legendaire", "ascensionsDone", 5, "Cinq renaissances", "Accomplir 5 Ascensions.", "🌠", { auto: true }),
+    def("ascension_10", "prestige", "legendaire", "ascensionsDone", 10, "Dixième ciel", "Accomplir 10 Ascensions.", "💫", { auto: true }),
     def("rang_legende", "prestige", "legendaire", "xp", 250_000, "Légende vivante", "Cumuler 250 000 XP.", "🌟", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
   ];

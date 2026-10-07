@@ -27,6 +27,7 @@ import { PHALANX_RULES } from "@/game/phalanx";
 import { PRESTIGE_RULES } from "@/game/prestige";
 import { JUMP_GATE_RULES } from "@/game/jumpGate";
 import { RESEARCH_RULES } from "@/game/technologies";
+import { RHYTHM_RULES } from "@/game/rhythm";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
 import { GOAL_RULES } from "@/game/goals";
 import { LEAGUE_RULES } from "@/game/leagues";
@@ -131,6 +132,8 @@ export const REGISTERED_RULES = {
   profile: { label: "Profil", target: () => PROFILE_RULES },
   referral: { label: "Parrainage", target: () => REFERRAL_RULES },
   research: { label: "Labo : recherches en parallèle, croissance des coûts et durées, recherche tardive", target: () => RESEARCH_RULES },
+  // 6.14.88 (RL-3, proposals/rythme-long-terme.md §5) : bascule datée du rythme (rhythm.ts).
+  rhythm: { label: "Rythme sur des mois : bascule datée (second palier, recherche, Ascension, comptoir, missions, lune)", target: () => RHYTHM_RULES },
   rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
   reports: { label: "Signalements", target: () => REPORT_RULES },
   roomEvents: { label: "Événements de salon", target: () => ROOM_EVENT_RULES },

@@ -14,7 +14,8 @@ import { cn, formatDuration } from "@/lib/utils";
 
 /** Insigne d'ascension (v3.4, 5.15) ; 5.15.13 : l'insigne généré répété une fois par
  *  ascension (Ascension II = 2 insignes, jusqu'à 5), sans étoile en doublon.
- *  `full` montre les cinq emplacements (ceux à venir en grisé) et « Ascension III ». */
+ *  `full` montre tous les emplacements (`maxAscensions`, 10 après la bascule du rythme ; ceux à venir en grisé) et
+ *  « Ascension III ». 6.14.88 : les emplacements passent à la ligne sur mobile. */
 export function AscensionStars({ count, full, className }: { count?: number; full?: boolean; className?: string }) {
   const n = ascensionCount({ ascensions: count });
   if (n <= 0) return null;
@@ -22,8 +23,8 @@ export function AscensionStars({ count, full, className }: { count?: number; ful
   const slots = full ? ASCENSION_RULES.maxAscensions : n;
   const size = full ? "h-7 w-7" : "h-5 w-5";
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-gold-glow", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
-      <span className={cn("inline-flex items-center", full ? "gap-0.5" : "-space-x-1.5")}>
+    <span className={cn("inline-flex items-center gap-1.5 text-gold-glow", full && "flex-wrap", className)} title={`${label} sur ${ASCENSION_RULES.maxAscensions}`} aria-label={label}>
+      <span className={cn("inline-flex items-center", full ? "flex-wrap gap-0.5" : "-space-x-1.5")}>
         {Array.from({ length: slots }, (_, i) =>
           ASCENSION_INSIGNIA ? (
             <img key={i} src={assetUrl(ASCENSION_INSIGNIA)} alt="" className={cn(size, "object-contain", i >= n && "opacity-25 grayscale")} />

@@ -782,6 +782,18 @@
    "done": null
   },
   {
+   "id": "annonce-rythme",
+   "group": "Annonces",
+   "name": "Annonce « Un jeu au long cours » : bascule du rythme (16:9)",
+   "target": "public/assets/story/annonce-rythme.webp",
+   "width": 1920,
+   "height": 0,
+   "cutout": false,
+   "quality": 80,
+   "prompt": "sci-fi strategy game key art, a vast orbital construction site around a home planet seen over many seasons: giant scaffolds on resource extractors, slow-moving cranes, a huge hourglass-shaped stellar monument half built in the foreground, the same planet shown under three successive seasons of light from left to right, a faint golden ascension sigil glowing above it, calm dark starfield on the left third for text, cyan and warm gold palette, cinematic wide shot, volumetric light, painterly digital illustration, highly detailed, no text --ar 16:9 --v 7 --style raw",
+   "done": null
+  },
+  {
    "id": "comptoir-accelerator",
    "group": "Comptoir de la Ruche",
    "name": "Accélérateur de chantier",

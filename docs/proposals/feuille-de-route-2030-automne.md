@@ -36,7 +36,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 24 | RL-0 | Rythme sur des mois : proposition et simulateur sur 365 jours (`docs/proposals/rythme-long-terme.md`, Q164 à Q171) ; reste le mode `--long` de `progression-sim.mjs` | S | livré en partie (6.14.78) |
 | 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | livré (6.14.84) |
 | 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | livré (6.14.85) ; reportés : thème de saison, défi d'alliance et défi du passe (voir la fiche) |
-| 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | à faire |
+| 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | livré (6.14.88 ; bascule datée au 1er novembre 2026, annonce en attente de son image `annonce-rythme`) |
 | 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
 | 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | à faire |
 | 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | à faire |

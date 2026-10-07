@@ -3387,6 +3387,38 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.88 (RL-3) : la bascule du rythme prend effet à sa date sur le serveur ; un chantier lancé avant garde sa fin", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const savedRules = rulesRec.data as Record<string, unknown>;
+    const player = await admin.collection("players").getOne(bId);
+    const savedBuildings = player.buildings;
+    const lots = 200_000_000;
+    try {
+      await admin.collection("players").update(bId, {
+        resources: { scrap: lots, energy: lots, nano: lots, data: lots, reinforcedSteel: lots, cyberModule: lots, syntheticNanites: lots, aiFragment: lots },
+        buildings: { ...player.buildings, extracteur_ferraille: { level: 10, unlocked: true }, archives_fracturees: { level: 10, unlocked: true } },
+      });
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      const seconds = (e: { endTime: number; startedAtMs: number }) => Math.round((e.endTime - e.startedAtMs) / 1000);
+      // Avant la date (défaut : 1er novembre 2026) : niveau 11 en 3 h.
+      await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
+      const before = (await admin.collection("queues").getOne(bId)).buildingUpgrades.extracteur_ferraille;
+      expect(seconds(before)).toBe(10_800);
+      // Date passée : niveau 11 en 30 h pour un chantier lancé maintenant ; le premier garde sa fin.
+      await admin.collection("game_config").update(rulesRec.id, { data: { ...savedRules, rhythm: { switchAt: Date.now() - 60_000 } } });
+      await ps.startBuildingUpgrade(bId, "archives_fracturees");
+      const q = (await admin.collection("queues").getOne(bId)).buildingUpgrades;
+      expect(seconds(q.archives_fracturees)).toBe(108_000);
+      expect(q.extracteur_ferraille.endTime).toBe(before.endTime);
+    } finally {
+      await admin.collection("game_config").update(rulesRec.id, { data: savedRules });
+      await admin.collection("queues").update(bId, { buildingUpgrades: {} });
+      await admin.collection("players").update(bId, { buildings: savedBuildings, resources: RICH });
+    }
+  });
+
   it("6.14.66 (AC-C) : le joueur supprime son compte par le serveur (flotte, offre, enchère, alliance, contrat nettoyés)", async () => {
     await ensureAB();
     const C = { pseudo: `Charl_${suffix}`, email: `del${suffix}@test.dev`, pw: "motdepasse3" };

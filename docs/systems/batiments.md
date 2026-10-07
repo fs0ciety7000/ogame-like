@@ -18,7 +18,7 @@ Colonne vertébrale de la progression : production, capacités (entrepôt, hanga
 | Générateur de bouclier | 10 | tech23 | +0,5 %/niv. de bouclier (max 5 %) |
 | Labo de synthèse | 10 | coût | capsules (5 %/niv.) |
 
-Coûts : géométriques de `baseCost` à `maxCost`, palier 2 à partir du niv. 11 (3 h puis +1 h/niv.). File planifiée : 1 à 3 emplacements
+Coûts : géométriques de `baseCost` à `maxCost`, palier 2 à partir du niv. 11 (3 h puis +1 h/niv. ; dès la bascule du rythme, 1er novembre 2026, 6.14.88 : coûts ×4 et, pour les 8 bâtiments exigés par l'Ascension, 30 h puis +24 h/niv. ; la Cale sèche garde ses durées). File planifiée : 1 à 3 emplacements
 (Fonderie niv. 5 et 10). Annulation : 100 % pendant 60 s, puis 80 % du temps restant.
 
 ## Code et admin

@@ -18,14 +18,16 @@ function loadGame() {
 }
 
 /** Applique le contenu personnalisé dans l'administration (game_config) :
- *  mêmes bâtiments, unités, technologies et règles que côté client. */
+ *  mêmes bâtiments, unités, technologies et règles que côté client.
+ *  6.14.88 (RL-3) : avec l'heure du moment, pour la bascule datée du rythme (`rhythm.ts`) : elle prend effet à la date,
+ *  sans migration ni redémarrage. */
 function applyContent(txApp, game) {
   const overrides = {};
   txApp.findAllRecords("game_config").forEach((r) => {
     const key = r.getString("key");
     if (game.CONTENT_SECTIONS.indexOf(key) >= 0) overrides[key] = toPlain(r).data;
   });
-  game.applyGameContent(overrides);
+  game.applyGameContent(overrides, Date.now());
 }
 
 function findOrNull(txApp, collection, id) {

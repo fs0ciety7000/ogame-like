@@ -18,6 +18,7 @@ import {
   type GameContent,
 } from "@/game/content";
 import { MAINTENANCE_KEY } from "@/game/maintenance";
+import { rhythmRulesOf, rhythmSwitched } from "@/game/rhythm";
 import { applyMaintenanceRecord } from "@/services/maintenanceService";
 import { STAFF_KEY } from "@/game/staff";
 import { applyStaffRecord } from "@/services/staffService";
@@ -69,15 +70,33 @@ function applyRecords(records: ConfigRecord[]) {
       (overrides as Record<string, unknown>)[r.key] = r.data;
     }
   }
-  const signature = JSON.stringify(overrides);
+  // 6.14.88 (RL-3) : la bascule datée du rythme fait partie de l'empreinte, et le contenu se réapplique à la date.
+  const now = Date.now();
+  const rhythm = rhythmRulesOf(overrides.rules);
+  const signature = `${rhythmSwitched(rhythm, now) ? "rythme:apres" : "rythme:avant"}|${JSON.stringify(overrides)}`;
+  scheduleRhythmSwitch(records, rhythm, now);
   if (signature === lastSignature) return;
   lastSignature = signature;
-  applyGameContent(overrides);
+  applyGameContent(overrides, now);
   useContentStore.setState((s) => ({
     version: s.version + 1,
     loaded: true,
     customized: Object.keys(overrides) as ContentSection[],
   }));
+}
+
+/** 6.14.88 : une page ouverte avant la bascule du rythme se met à jour à la date, sans rechargement (le serveur, lui, lit
+ *  l'heure à chaque requête). Au-delà de 24 j, le délai dépasse setTimeout : le prochain chargement s'en charge. */
+let rhythmTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleRhythmSwitch(records: ConfigRecord[], rhythm: ReturnType<typeof rhythmRulesOf>, now: number) {
+  if (rhythmTimer) clearTimeout(rhythmTimer);
+  rhythmTimer = null;
+  const wait = rhythm.switchAt - now;
+  if (rhythm.enabled === false || wait <= 0 || wait > 2_000_000_000) return;
+  rhythmTimer = setTimeout(() => {
+    rhythmTimer = null;
+    applyRecords(records);
+  }, wait + 1000);
 }
 
 async function fetchRecords(): Promise<ConfigRecord[]> {
@@ -96,6 +115,8 @@ export function startContentSync() {
     .then(applyRecords)
     .catch((err) => {
       console.warn("Contenu du jeu indisponible, valeurs par défaut utilisées :", err);
+      // 6.14.88 : valeurs par défaut, avec la bascule du rythme si sa date est passée.
+      applyGameContent({}, Date.now());
       useContentStore.setState({ loaded: true });
       applyMaintenanceRecord(null);
     });

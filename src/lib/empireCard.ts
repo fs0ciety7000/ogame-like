@@ -13,8 +13,10 @@ export interface EmpireCardInput {
   tag?: string;
   rank: string;
   rankIcon: string;
-  /** Ascensions (prestige des bâtiments) : 0 à 5, dessinées en étoiles. */
+  /** Ascensions (prestige des bâtiments) : 0 au maximum des règles, dessinées en étoiles. */
   ascensions?: number;
+  /** 6.14.88 : nombre d'emplacements d'étoile (`ASCENSION_RULES.maxAscensions`, 5 avant la bascule du rythme, 10 après). */
+  maxAscensions?: number;
   ascensionLabel?: string;
   /** Insigne d'ascension (image), dessiné avant les étoiles. */
   ascensionIcon?: string;
@@ -167,7 +169,7 @@ export async function drawEmpireCard(canvas: HTMLCanvasElement, input: EmpireCar
   ctx.fillStyle = "#cbd5e1";
   ctx.font = "600 24px Inter, sans-serif";
   ctx.fillText(input.rank, tx + (rankIcon ? 44 : 0), ay + 130);
-  // 5.15 : ascensions, cinq emplacements d'étoile après le rang.
+  // 5.15 : ascensions, un emplacement d'étoile par Ascension possible après le rang (6.14.88 : 10 au plus, plus serrées).
   if ((input.ascensions ?? 0) > 0) {
     let sx = tx + (rankIcon ? 44 : 0) + ctx.measureText(input.rank).width + 28;
     const insignia = input.ascensionIcon ? await loadImage(input.ascensionIcon) : null;
@@ -175,13 +177,15 @@ export async function drawEmpireCard(canvas: HTMLCanvasElement, input: EmpireCar
       ctx.drawImage(insignia, sx - 10, ay + 104, 34, 34);
       sx += 36;
     }
-    for (let i = 0; i < 5; i++) {
-      drawStar(ctx, sx + i * 26, ay + 121, 11, i < (input.ascensions ?? 0));
+    const slots = Math.max(5, Math.min(10, Math.floor(input.maxAscensions ?? 5)));
+    const gap = slots > 5 ? 20 : 26;
+    for (let i = 0; i < slots; i++) {
+      drawStar(ctx, sx + i * gap, ay + 121, slots > 5 ? 8 : 11, i < (input.ascensions ?? 0));
     }
     if (input.ascensionLabel) {
       ctx.fillStyle = "#ffd86b";
       ctx.font = "600 15px 'JetBrains Mono', monospace";
-      ctx.fillText(input.ascensionLabel.toUpperCase(), sx + 5 * 26 + 6, ay + 127);
+      ctx.fillText(input.ascensionLabel.toUpperCase(), sx + slots * gap + 6, ay + 127);
     }
   }
   if (input.title) {

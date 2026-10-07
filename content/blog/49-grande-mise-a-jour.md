@@ -61,6 +61,8 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 - **Une semaine rythmée, un passe à ton rythme** (6.7 et 6.8) : calendrier, passe et Chroniques générés.
 - **Un Codex complet, un Comptoir illustré** (6.14) : Codex, « Tout réclamer », succès d'alliance, illustrations.
 - **Ta lune veille** (6.14) : phalange, porte de saut, pitié lunaire, deux reliques, cinq succès et le défi d'alliance « Les vigies ».
+- **Un jeu au long cours** (6.14.88) : le 1er novembre, le second palier prend des jours, les dernières recherches aussi, et
+  l'Ascension revient au plus une fois par saison, jusqu'à 10. Rien n'est retiré.
 
 Les billets précédents racontent le reste en détail : Cale sèche, Ordres du jour, classes d'empire, vaisseaux de classe, base avancée,
 jeu sur téléphone, lunes.

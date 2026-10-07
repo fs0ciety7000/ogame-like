@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { onboardingTotal, PROGRESSION_PROFILES, scaleTier2Costs, simulateAllProfiles, simulateProgression, type ProgressionResult } from "@/game/balance/progressionSim";
+import { onboardingTotal, prestigeProjectsFromRules, PROGRESSION_PROFILES, scaleTier2Costs, simulateAllProfiles, simulateProgression, type ProgressionResult } from "@/game/balance/progressionSim";
+import { applyGameContent } from "@/game/content";
+import { RHYTHM_RULES } from "@/game/rhythm";
 import { attackerWinThreshold, budgetDuel } from "@/game/balance/pvpBudget";
 import { ASCENSION_RULES } from "@/game/ascension";
 import { BUILDINGS } from "@/game/buildings";
@@ -9,8 +11,9 @@ import { STREAK_RULES } from "@/game/streak";
    ses repères doivent rester dans les bornes ci-dessous. Un réglage qui les fait sortir change l'équilibre : il passe par
    une proposition (docs/proposals/equilibrage-au27.md) et ces bornes changent dans le même lot (invariant I29).
 
-   Bornes actuelles = mesure de 6.14.72 (marge d'environ ±20 %). Le lot AE-L2 (second palier ×4, comptoir) les déplacera
-   vers les cibles du GDD §2 : 1re Ascension J35–50 (actif), J60–90 (moyen), après J120 (occasionnel). */
+   Bornes actuelles = mesure de 6.14.72 (marge d'environ ±20 %), sur le jeu d'**avant la bascule du rythme** (contenu résolu
+   sans heure : valeurs en vigueur jusqu'à `rhythm.switchAt`). Après la bascule (6.14.88, RL-3, AE-L2 compris), la garde à
+   365 jours plus bas prend le relais. */
 const ASCENSION_BOUNDS: Record<string, [number, number]> = {
   actif: [8, 13],
   moyen: [15, 23],
@@ -136,5 +139,67 @@ describe("Rythme long terme : options du simulateur", () => {
     const late = simulateProgression(actif, { days: 60, techLate: { fromLevel: 6, costFactor: 1, timeFactor: 30, maxSeconds: 7 * 86_400 } });
     expect(results.actif.techCompleteDay).not.toBeNull();
     expect(late.techCompleteDay ?? Infinity).toBeGreaterThan(results.actif.techCompleteDay!);
+  });
+});
+
+/* 6.14.88 (RL-3, proposals/rythme-long-terme.md §4.1 et §6) : I29 étendu à 365 jours, sur les règles **après la bascule du
+   rythme** (`applyGameContent({}, rhythm.switchAt)`), Ascensions dès que possible et projets de prestige des règles.
+   Les bornes à 90 jours ci-dessus mesurent le jeu d'avant la bascule (contenu résolu sans heure), toujours en vigueur jusqu'à
+   la date. Bornes de la 1re Ascension : bandes cibles de la proposition, le bas élargi de 10 % (le simulateur donne des ordres
+   de grandeur). Sessions bloquées : ≤ 15 % chaque mois, sauf le mois qui suit la 1re Ascension (écart connu : la fin de l'arbre
+   coûte plus que la production remise à zéro ; mesure de 6.14.88 : 25,8 % actif, 50 % moyen ; réglage fin en RL-5). */
+const LONG_ASCENSION_BOUNDS: Record<string, [number, number]> = {
+  actif: [72, 110],
+  moyen: [85, 125],
+  quotidien: [99, 150],
+  occasionnel: [117, 180],
+};
+const LONG_ASCENSIONS_YEAR1: Record<string, [number, number]> = { actif: [5, 6], moyen: [4, 5], quotidien: [3, 4], occasionnel: [3, 4] };
+
+describe("RL-3 (6.14.88) : rythme sur des mois, 365 jours après la bascule (I29)", () => {
+  let long: Record<string, ProgressionResult>;
+  beforeAll(() => {
+    applyGameContent({}, RHYTHM_RULES.switchAt);
+    try {
+      const projects = prestigeProjectsFromRules();
+      long = Object.fromEntries(simulateAllProfiles({ days: 365, ascend: true, ...(projects ? { prestigeProjects: projects } : {}), milestones: [7, 30, 90, 365] }).map((r) => [r.profile, r]));
+    } finally {
+      applyGameContent({});
+    }
+  }, 180_000);
+
+  it("1re Ascension vers 3 mois (actif) à 4-6 mois (occasionnel), une par saison au plus, 3 à 6 la 1re année", () => {
+    for (const [id, [lo, hi]] of Object.entries(LONG_ASCENSION_BOUNDS)) {
+      const r = long[id];
+      expect(r.ascensionDay, id).not.toBeNull();
+      expect(r.ascensionDay!, id).toBeGreaterThanOrEqual(lo);
+      expect(r.ascensionDay!, id).toBeLessThanOrEqual(hi);
+      const [min, max] = LONG_ASCENSIONS_YEAR1[id];
+      expect(r.ascensionDays.length, id).toBeGreaterThanOrEqual(min);
+      expect(r.ascensionDays.length, id).toBeLessThanOrEqual(max);
+      for (let i = 1; i < r.ascensionDays.length; i++) expect(r.ascensionDays[i] - r.ascensionDays[i - 1], id).toBeGreaterThanOrEqual(30 - 0.01);
+    }
+    expect(long.actif.ascensionDay!).toBeLessThan(long.occasionnel.ascensionDay!);
+  });
+
+  it("aucun jour « fini, sans suite », production perdue ≤ 15 % sur l'année, au plus 3 jours sans dépense par mois (4 pour l'occasionnel)", () => {
+    for (const r of Object.values(long)) {
+      expect(r.windows.reduce((a, w) => a + w.finishedDays, 0), r.profile).toBe(0);
+      expect(r.lostPct, r.profile).toBeLessThanOrEqual(15);
+      for (const w of r.windows) expect(w.daysWithoutSpend, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(r.profile === "occasionnel" ? 4 : 3);
+    }
+  });
+
+  it("sessions bloquées ≤ 15 % chaque mois (hors les 30 jours qui suivent la 1re Ascension, ≤ 60 %) ; première semaine presque sans temps mort", () => {
+    for (const r of Object.values(long)) {
+      // Les 30 jours qui suivent la 1re Ascension (une ou deux fenêtres de 30 jours).
+      const first = r.ascensionDays[0] ?? Infinity;
+      const after = new Set([Math.floor(first / 30), Math.floor((first + 30) / 30)]);
+      for (const [i, w] of r.windows.entries()) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(after.has(i) ? 60 : 15);
+      // La proposition admet une session sans action sur 56 pour l'actif la première semaine (1,8 %).
+      expect(r.deadSessionsPct.early, r.profile).toBeLessThanOrEqual(2);
+    }
+    const j1 = long.actif.snapshots.find((s) => s.day === 7)!;
+    expect(Math.min(...j1.extractors)).toBeGreaterThanOrEqual(8);
   });
 });
