@@ -117,7 +117,7 @@ existe et vise la bonne session (`get_trigger`, sinon la recrée) : sans session
 > **Instructions (2026-10-07) : pour /img, check toutes les 2 min ; quand tu vois des nouvelles images, lance une tâche parallèle pour
 > process. Pareil pour décision : check toutes les 2 min ou à chaque modification, tâche parallèle et process.**
 
-La routine horaire reste un filet. En session, la veille rapide est `node scripts/preprod-watch.mjs` lancée **en arrière-plan** (tour de
+La routine horaire reste un filet. En session, la veille rapide est `node scripts/preprod-watch.mjs --auto-valide` lancée **en arrière-plan** (« valide » sans note reporté et envoyé seul ; tour de
 2 min, état dans `.pb/preprod-watch.json`) : elle se termine dès qu'un envoi `/img` ou une réponse `/decisions` est nouveau et dit
 lequel. On lance alors un agent parallèle (images : `docs/illustrations.md` ; réponses : report dans `QUESTIONS.md` et lot), sans commit
 de sa part (la session committe), puis on **relance la veille aussitôt**. Une nouvelle session la relance au démarrage.
