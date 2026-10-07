@@ -1,6 +1,7 @@
 # Proposition : passe de saison et Chroniques entièrement génératifs
 
-Statut : **livrée** (6.8.0, 6.8.1, 6.8.2 : `docs/changes/6.8.2-chroniques-generees.md`). Historique : acceptée (option B) ; lot 1 **livré** en 6.8.0 avec la bibliothèque du lot 3 (`docs/changes/6.8.0-progression-generative.md`) ; lot 2 **livré** en 6.8.1
+Statut : **livrée** (6.8.0, 6.8.1, 6.8.2 : `docs/changes/6.8.2-chroniques-generees.md`). Suites de la revue AU27 : générateur versionné
+(`docs/changes/6.14.57-generateur-versionne.md`) et défis faisables pour le joueur médian réel (`docs/changes/6.14.58-defis-faisables.md`). Historique : acceptée (option B) ; lot 1 **livré** en 6.8.0 avec la bibliothèque du lot 3 (`docs/changes/6.8.0-progression-generative.md`) ; lot 2 **livré** en 6.8.1
 (`docs/changes/6.8.1-passe-par-budget.md`, budget 140 h au lieu de 120 h pour garder la valeur de l'ancien gabarit) ; lot 6.8.2 à faire. Demande de l'utilisateur (2026-10-06) : « le Season pass et les chroniques doivent être génératifs.
 Le système doit les générer procéduralement (paliers, prérequis, récompenses etc.) ». Liée à la revue AU3 (`progression.md`, PRG-1 à PRG-3).
 
@@ -85,3 +86,9 @@ types d'objectifs autorisés, difficulté min/max), visibles dans Admin → Gén
 ## 8. Risques
 - Novembre : les joueurs n'ont pas encore vu le chapitre écrit ; le remplacer ne retire rien. Le passe de novembre est déjà généré.
 - Le budget en heures dépend de la production : un joueur très productif reçoit plus en ressources, comme aujourd'hui (récompenses en heures).
+
+## Règle de maintenance (6.14.57)
+
+Toute règle de génération qui change ce que reçoit le joueur monte `GENERATOR_VERSION` (`src/game/procedural.ts`) : les brouillons
+et chapitres non commencés écrits par une version plus ancienne sont alors régénérés (I17). Un succès par défaut se complète seul (I25) ;
+le retirer volontairement passe par `achievementList.removedDefaults` (Admin → Contenu).

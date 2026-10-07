@@ -53,7 +53,12 @@ export function ChroniclesPanel() {
   const save = async () => {
     setBusy(true);
     try {
-      await saveContentSection("chronicles", cfg);
+      // 6.14.57 (AP-3) : un chapitre généré retouché ici n'est plus régénéré d'office par le générateur.
+      const stored = currentGameContent().chronicles.months;
+      const now = Date.now();
+      const marked = { ...cfg, months: cfg.months.map((m) => (m.auto && !m.auto.editedAtMs && JSON.stringify(stored.find((x) => x.id === m.id)) !== JSON.stringify(m) ? { ...m, auto: { ...m.auto, editedAtMs: now } } : m)) };
+      await saveContentSection("chronicles", marked);
+      setCfg(marked);
       toast.success("Chroniques enregistrées.");
     } catch (err) {
       toast.error(`Enregistrement impossible : ${(err as Error).message}`);

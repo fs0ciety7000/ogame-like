@@ -1,10 +1,10 @@
 import { COMMANDER_ROLES, setSeasonCommanders, type SeasonCommanderDef } from "@/game/commanders";
 import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
-import { BASE_COUNTS, generatePass, seededRandom, type WorldDigest } from "@/game/procedural";
+import { BASE_COUNTS, generatePass, GENERATOR_VERSION, seededRandom, type WorldDigest } from "@/game/procedural";
 import { normalizeTierReqs, PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
-import { challengePool, computePointsPerTier, generateBudgetTiers, passGenRules, tiersValue } from "@/game/passGen";
+import { challengePool, computePointsPerTier, generateBudgetTiers, passGenRules, tiersValue, type PassGenRules } from "@/game/passGen";
 import { defaultSimProfiles, profileFromMedian, simulatePass } from "@/game/passSimulator";
 import { CATALOG_START, catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
 
@@ -60,10 +60,7 @@ export const PASS_REWARD_RULES = {
 /** Quantité d'une action demandée sur tout le passe : 4,3 semaines d'activité médiane
  *  (bornée comme les objectifs des Chroniques ; valeurs de base sans données). */
 export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">): number {
-  const base = BASE_COUNTS[key] ?? 3;
-  const weekly = d.weeklyMedian[key] ?? 0;
-  const eff = weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
-  return Math.max(1, Math.round(eff * 4.3 * PASS_REWARD_RULES.monthEffort));
+  return Math.max(1, Math.round(weeklyRate(key, d) * 4.3 * PASS_REWARD_RULES.monthEffort));
 }
 
 /** v5.14.1 : défis des paliers. Chaque palier a les siens (compteur propre, un palier à la
@@ -73,15 +70,19 @@ export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "wee
 export function generateTierChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
   // v5.14.2 : les seigneurs de guerre seulement si des joueurs en battent vraiment (sinon un
   // débutant, ou un serveur sans seigneurs, resterait bloqué : un défi bloque les suivants).
-  const playable = CHALLENGE_KEYS.filter((k) => k !== "warlordWin" || (d.weeklyMedian.warlordWin ?? 0) > 0);
+  // 6.14.58 : même seuil que les défis cumulés (actionPlayable, médiane du serveur).
+  const allowed = new Set(challengePool(d.weeklyMedian).map((x) => x.key));
+  const kept = CHALLENGE_KEYS.filter((k) => allowed.has(k));
+  const playable = kept.length > 0 ? kept : CHALLENGE_KEYS.filter((k) => k !== "warlordWin");
   const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   // 1. Actions de chaque palier : les moins utilisées d'abord (le thème à égalité), jamais celles du palier précédent.
   const used: Record<string, number> = {};
   const plan: ChronicleObjective[][] = [];
   let prev: ChronicleObjective[] = [];
   for (let t = 1; t <= tiers; t++) {
-    const keys = pool
-      .filter((k) => !prev.includes(k))
+    // 6.14.58 : une seule action jouable : elle revient (un palier a toujours un défi).
+    const avail = pool.filter((k) => !prev.includes(k));
+    const keys = (avail.length > 0 ? avail : pool)
       .map((k, i) => ({ k, w: (used[k] ?? 0) * 10 + i + rng() * 3 }))
       .sort((a, b) => a.w - b.w)
       .slice(0, challengeSize(t))
@@ -105,7 +106,7 @@ export function generateTierChallenges(rng: () => number, focus: ChronicleObject
     });
     // Jamais deux fois le même défi : on monte l'action la plus lourde jusqu'à ce qu'il soit inédit.
     const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
-    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    while (reqs.length > 0 && seen.has(sig())) reqs[reqs.length - 1].count += 1;
     seen.add(sig());
     reqs.forEach((r) => (last[r.key] = r.count));
     out[String(t)] = reqs;
@@ -119,11 +120,15 @@ export function passTargetDay(): number {
   return passGenRules().targetMedianDay;
 }
 
-/** Rythme de référence d'une action, par semaine : médiane du serveur (bornée), base sinon. */
-export function weeklyRate(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">): number {
+/** Rythme de référence d'une action, par semaine : médiane du serveur (bornée), base sinon.
+ *  6.14.58 (AU27, AP-2) : bornes réglables (`passGen.challengeMinFactor`, `challengeMaxFactor`) et plancher jamais au-dessus
+ *  de la médiane (avant : 1,5 victoire par semaine demandée quand le joueur médian en fait 1). */
+export function weeklyRate(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">, rules: PassGenRules = passGenRules()): number {
   const base = BASE_COUNTS[key] ?? 3;
   const weekly = d.weeklyMedian[key] ?? 0;
-  return weekly > 0 ? Math.max(base * 0.5, Math.min(base * 3, weekly)) : base;
+  if (!(weekly > 0)) return base;
+  const floor = Math.min(base * rules.challengeMinFactor, weekly);
+  return Math.max(floor, Math.min(base * rules.challengeMaxFactor, weekly));
 }
 
 /** Jour cible de chaque palier (cumul de la difficulté, dernier palier : PASS_TARGET_DAY). */
@@ -154,7 +159,8 @@ export function generateCumulativeChallenges(rng: () => number, focus: Chronicle
   const out: Record<string, PassRequirement[]> = {};
   let prev: ChronicleObjective[] = [];
   for (let t = 1; t <= tiers; t++) {
-    const free = pool.filter((k) => !prev.includes(k));
+    const avail = pool.filter((k) => !prev.includes(k));
+    const free = avail.length > 0 ? avail : pool;
     const feasible = free.filter((k) => by(k, t) >= 1);
     const extra = free.filter((k) => !feasible.includes(k)).sort((a, b) => by(b, t) - by(a, t));
     const candidates = feasible.length >= challengeSize(t) ? feasible : [...feasible, ...extra.slice(0, challengeSize(t) - feasible.length)];
@@ -167,13 +173,114 @@ export function generateCumulativeChallenges(rng: () => number, focus: Chronicle
     // Total du mois : jamais moins qu'au précédent passage de l'action.
     const reqs = keys.map((key) => ({ key, count: Math.max(1, Math.round(by(key, t)), last[key] ?? 0) }));
     const sig = () => reqs.map((r) => `${r.key}:${r.count}`).sort().join("|");
-    while (seen.has(sig())) reqs[reqs.length - 1].count += 1;
+    while (reqs.length > 0 && seen.has(sig())) reqs[reqs.length - 1].count += 1;
     seen.add(sig());
     reqs.forEach((r) => (last[r.key] = r.count));
     out[String(t)] = reqs;
     prev = keys;
   }
   return out;
+}
+
+/* ---------- 6.14.58 (AU27, AP-2) : garde de faisabilité ---------- */
+
+type PaceSeason = Pick<PassSeason, "pointsPerTier" | "tiers" | "requirements" | "challengeMode">;
+type Pace = { medianDay: number | null; topDay: number | null };
+
+const paceOk = (p: Pace, rules: PassGenRules) => p.medianDay !== null && p.medianDay <= rules.latestMedianDay;
+const paceRank = (p: Pace) => p.medianDay ?? 999;
+const dayText = (day: number | null) => (day === null ? "après la fin du mois" : `le jour ${day}`);
+
+/** Seuils réduits au prorata (au moins 1), dans l'ordre des paliers : un total cumulé ne baisse jamais d'un palier au suivant. */
+export function scaleRequirements(req: Record<string, PassRequirement[]>, factor: number): Record<string, PassRequirement[]> {
+  const last: Record<string, number> = {};
+  const out: Record<string, PassRequirement[]> = {};
+  for (const t of Object.keys(req).sort((a, b) => Number(a) - Number(b)))
+    out[t] = normalizeTierReqs(req[t]).map((r) => {
+      const count = Math.max(1, Math.round(r.count * factor), last[r.key] ?? 0);
+      last[r.key] = count;
+      return { key: r.key, count };
+    });
+  return out;
+}
+
+/** Garde de faisabilité des défis : si le joueur médian simulé finit après `latestMedianDay`, nouveaux tirages des défis
+ *  (`redraw(1…challengeRedraws)`), puis seuils réduits par pas de `challengeReduceStep` jusqu'à `challengeReduceMin`.
+ *  Rend les défis gardés, la simulation et les lignes de « Pourquoi ces chiffres ». */
+export function fitChallenges(
+  season: PaceSeason,
+  d: Pick<WorldDigest, "weeklyMedian" | "passPace">,
+  redraw: (k: number) => Record<string, PassRequirement[]>,
+  rules: PassGenRules = passGenRules(),
+): { requirements: Record<string, PassRequirement[]>; pointsPerTier: number; pace: Pace; changed: boolean; ok: boolean; reasons: string[] } {
+  const first = passPaceCheck(season, d);
+  if (paceOk(first, rules)) return { requirements: season.requirements, pointsPerTier: season.pointsPerTier, pace: first, changed: false, ok: true, reasons: [] };
+  const reasons = [`Garde de faisabilité : joueur médian au dernier palier ${dayText(first.medianDay)} (au plus tard le jour ${rules.latestMedianDay}).`];
+  // 0. Les points seuls (sans défi) suffisent-ils ? Sinon, points par palier baissés par pas de 5 (jamais sous le minimum).
+  let ppt = season.pointsPerTier;
+  const byPoints = (p: number) => passPaceCheck({ ...season, pointsPerTier: p, requirements: {} }, d);
+  while (!paceOk(byPoints(ppt), rules) && ppt - 5 >= rules.pointsMin) ppt -= 5;
+  if (!paceOk(byPoints(ppt), rules))
+    reasons.push(`Points par palier au minimum réglé (${rules.pointsMin}) : le joueur médian ne peut pas finir avant le jour ${rules.latestMedianDay} avec ses points par jour (baisser « Points par palier : minimum » pour un serveur aussi calme).`);
+  if (ppt !== season.pointsPerTier) {
+    reasons.push(`Points par palier ramenés de ${season.pointsPerTier} à ${ppt} : les points seuls faisaient finir le joueur médian trop tard.`);
+    season = { ...season, pointsPerTier: ppt };
+    const again = passPaceCheck(season, d);
+    if (paceOk(again, rules)) return { requirements: season.requirements, pointsPerTier: ppt, pace: again, changed: true, ok: true, reasons };
+  }
+  let best = { requirements: season.requirements, pace: first };
+  for (let k = 1; k <= rules.challengeRedraws; k++) {
+    const requirements = redraw(k);
+    const pace = passPaceCheck({ ...season, requirements }, d);
+    if (paceRank(pace) < paceRank(best.pace)) best = { requirements, pace };
+    if (paceOk(pace, rules)) {
+      reasons.push(`Nouveau tirage des défis (${k}) : joueur médian au dernier palier le jour ${pace.medianDay}.`);
+      return { requirements, pointsPerTier: ppt, pace, changed: true, ok: true, reasons };
+    }
+  }
+  if (rules.challengeRedraws > 0) reasons.push(`${rules.challengeRedraws} nouveaux tirages des défis : au mieux ${dayText(best.pace.medianDay)}.`);
+  let last = best;
+  for (let f = 1 - rules.challengeReduceStep; f >= rules.challengeReduceMin - 1e-9; f -= rules.challengeReduceStep) {
+    const requirements = scaleRequirements(best.requirements, f);
+    const pace = passPaceCheck({ ...season, requirements }, d);
+    last = { requirements, pace };
+    if (paceOk(pace, rules)) {
+      reasons.push(`Seuils des défis réduits à ${Math.round(f * 100)} % : joueur médian au dernier palier le jour ${pace.medianDay}.`);
+      return { requirements, pointsPerTier: ppt, pace, changed: true, ok: true, reasons };
+    }
+  }
+  reasons.push(`Seuils réduits à ${Math.round(rules.challengeReduceMin * 100)} % : joueur médian ${dayText(last.pace.medianDay)}. À relire (Admin → Passes de saison).`);
+  return { requirements: last.requirements, pointsPerTier: ppt, pace: last.pace, changed: true, ok: false, reasons };
+}
+
+/** Nouveau tirage des défis d'un passe (même mode, même thème), graine propre au tirage `k`. */
+function redrawChallenges(season: Pick<PassSeason, "id" | "theme" | "tiers" | "challengeMode">, d: Pick<WorldDigest, "weeklyMedian">, variant: number, k: number): Record<string, PassRequirement[]> {
+  const theme = PASS_THEMES.find((t) => t.id === season.theme.id) ?? PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme) ?? PASS_THEMES[0];
+  const rng = seededRandom(`challenges:${season.id}:${variant}:redraw${k}`);
+  const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
+  return gen(rng, shuffle(rng, theme.focus), d, season.tiers.length);
+}
+
+/** 6.14.58 : garde avant la publication d'office (un passe infaisable n'est jamais publié tel quel). Récompenses, points par
+ *  palier, thème et commandant inchangés ; seuls les défis sont tirés à nouveau ou réduits. */
+export function ensureFeasiblePass(season: PassSeason, d: Pick<WorldDigest, "weeklyMedian" | "passPace">): { season: PassSeason; changed: boolean; ok: boolean; reasons: string[] } {
+  const variant = season.auto?.variant ?? 0;
+  let fit = fitChallenges(season, d, (k) => redrawChallenges(season, d, variant, k));
+  let mode = season.challengeMode;
+  // Ancien format (un palier à la fois, compteur remis à zéro) toujours infaisable : défis en totaux du mois.
+  if (!fit.ok && season.challengeMode !== "cumulative") {
+    const cumulative = { ...season, challengeMode: "cumulative" as const };
+    const again = fitChallenges({ ...cumulative, requirements: redrawChallenges(cumulative, d, variant, 0) }, d, (k) => redrawChallenges(cumulative, d, variant, k));
+    if (again.ok || paceRank(again.pace) < paceRank(fit.pace)) {
+      fit = { ...again, changed: true, reasons: [...fit.reasons, "Défis passés en totaux du mois (ancien format : un palier à la fois).", ...again.reasons] };
+      mode = "cumulative";
+    }
+  }
+  if (!fit.changed) return { season, changed: false, ok: true, reasons: [] };
+  const auto = season.auto ?? { generatedAtMs: 0, variant: 0, reasons: [] };
+  const next: PassSeason = { ...season, pointsPerTier: fit.pointsPerTier, requirements: fit.requirements, auto: { ...auto, reasons: [...auto.reasons, ...fit.reasons], pace: fit.pace } };
+  if (mode === "cumulative") next.challengeMode = "cumulative";
+  return { season: next, changed: true, ok: fit.ok, reasons: fit.reasons };
 }
 
 export type PassSeasonStatus = "draft" | "published";
@@ -199,7 +306,17 @@ export interface PassSeason {
    *  absent : un palier à la fois, compteur remis à zéro (passes plus anciens). */
   challengeMode?: "cumulative";
   commander: SeasonCommanderDef & { prompt: string };
-  auto?: { generatedAtMs: number; variant: number; reasons: string[]; /** 6.8.1 : jours de fin simulés (médian, plus actif). */ pace?: { medianDay: number | null; topDay: number | null } };
+  auto?: {
+    generatedAtMs: number;
+    variant: number;
+    reasons: string[];
+    /** 6.8.1 : jours de fin simulés (médian, plus actif). */
+    pace?: { medianDay: number | null; topDay: number | null };
+    /** 6.14.57 (AU27, AP-3) : version du générateur qui l'a écrit (absente : avant 6.14.57). */
+    generator?: number;
+    /** 6.14.57 : brouillon retouché à la main dans l'admin : jamais régénéré d'office. */
+    editedAtMs?: number;
+  };
   publishedAtMs?: number;
   /** Annonce envoyée aux joueurs (une fois, au début du mois). */
   announcedAtMs?: number;
@@ -496,7 +613,16 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   reasons.push(...(computed?.reasons ?? [...g.reasons, "Pas encore de points par jour mesurés : ajustement sur la part de joueurs qui ont fini."]));
   const focus = shuffle(rng, theme.focus);
   reasons.push(`Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`);
-  const requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length);
+  let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length);
+  // 6.14.58 (AU27, AP-2) : défis faisables pour le joueur médian avant tout le reste (nouveaux tirages, puis seuils réduits).
+  const fit = fitChallenges({ pointsPerTier, tiers, requirements, challengeMode: "cumulative" }, o.digest, (k) =>
+    redrawChallenges({ id: o.monthId, theme: { id: theme.id } as PassSeason["theme"], tiers, challengeMode: "cumulative" }, o.digest, variant, k),
+  );
+  requirements = fit.requirements;
+  pointsPerTier = fit.pointsPerTier;
+  const excluded = Object.keys(rules.challengeWeights).filter((k) => Number(rules.challengeWeights[k]) > 0 && !challengePool(o.digest.weeklyMedian, rules).some((x) => x.key === k));
+  if (excluded.length > 0)
+    reasons.push(`Hors des défis (médiane du serveur trop faible, seuil ${rules.challengeMinWeekly} par semaine, ${rules.passiveMinWeekly} pour une action passive) : ${excluded.map((k) => OBJECTIVE_LABELS[k as ChronicleObjective]?.toLowerCase() ?? k).join(", ")}.`);
   const totals: Record<string, number> = {};
   Object.values(requirements).forEach((list) => list.forEach((r) => (totals[r.key] = (totals[r.key] ?? 0) + r.count)));
   reasons.push(
@@ -506,6 +632,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   );
   for (const t of [1, 10, 20, 30].filter((x) => x <= tiers.length))
     reasons.push(`Défi du palier ${t} : ${requirements[String(t)].map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} × ${r.count}`).join(", ")}.`);
+  reasons.push(...fit.reasons);
 
   // 6.8.1 : contrôle par simulation avant publication (joueur médian et plus actif du serveur).
   const pace = passPaceCheck({ pointsPerTier, tiers, requirements, challengeMode: "cumulative" }, o.digest);
@@ -542,7 +669,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
     requirements,
     challengeMode: "cumulative",
     commander,
-    auto: { generatedAtMs: o.now, variant, reasons, pace: check },
+    auto: { generatedAtMs: o.now, variant, reasons, pace: check, generator: GENERATOR_VERSION.pass },
   };
 }
 
@@ -636,6 +763,13 @@ export function upsertPassSeason(cfg: PassSeasonsConfig, season: PassSeason): Pa
 /** Publication : brouillon → publié (garde la date). */
 export function publishPassSeason(season: PassSeason, now: number): PassSeason {
   return { ...season, status: "published", publishedAtMs: season.publishedAtMs ?? now };
+}
+
+/** 6.14.57 (AU27, AP-3) : brouillons écrits par une version plus ancienne du générateur, à régénérer (même variante).
+ *  Seulement un brouillon généré (`auto`), du mois en cours ou d'un mois à venir, jamais retouché dans l'admin ; un passe
+ *  publié n'est jamais touché (les joueurs y avancent). */
+export function outdatedPassDrafts(cfg: PassSeasonsConfig, currentMonthId: string): PassSeason[] {
+  return cfg.seasons.filter((s) => s && s.status === "draft" && s.auto && !s.auto.editedAtMs && (s.auto.generator ?? 1) < GENERATOR_VERSION.pass && s.id >= currentMonthId && passSeasonAllowed(s.id));
 }
 
 /** Le mois suivant (AAAA-MM). */

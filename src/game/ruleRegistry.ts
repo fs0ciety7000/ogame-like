@@ -1,4 +1,4 @@
-import { ACHIEVEMENT_HINT_RULES, ACHIEVEMENT_TOKENS, TIER_REWARDS } from "@/game/achievements";
+import { ACHIEVEMENT_HINT_RULES, ACHIEVEMENT_LIST_RULES, ACHIEVEMENT_TOKENS, TIER_REWARDS } from "@/game/achievements";
 import { TEMPLATE_RULES } from "@/game/actionTemplates";
 import { ALLIANCE_CHALLENGE_RULES } from "@/game/allianceChallenge";
 import { ALLIANCE_DAILY_RULES } from "@/game/allianceDaily";
@@ -98,6 +98,8 @@ export const REGISTERED_RULES = {
   jumpGate: { label: "Lunes : porte de saut", target: () => JUMP_GATE_RULES },
   passRewards: { label: "Passe généré : dernier palier et effort", target: () => PASS_REWARD_RULES },
   achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
+  // 6.14.56 (AU27, AP-1) : succès du code retirés exprès (les autres succès par défaut absents de la liste sont complétés).
+  achievementList: { label: "Succès : succès par défaut retirés", target: () => ACHIEVEMENT_LIST_RULES },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES },
   missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP },

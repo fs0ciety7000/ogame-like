@@ -96,6 +96,26 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
           hint="Seigneurs, assauts de boss, raids : le joueur ne les déclenche pas à volonté."
           onChange={(v) => set({ passiveMinWeekly: v ?? 0 })}
         />
+        <NumberField
+          label="Toute action : médiane par semaine au moins"
+          value={g.challengeMinWeekly}
+          min={0}
+          step={0.25}
+          hint="Sous ce seuil (ou à 0), l'action n'entre pas dans les défis : un défi bloque les suivants."
+          onChange={(v) => set({ challengeMinWeekly: v ?? 0 })}
+        />
+        <NumberField label="Rythme d'une action : au moins (× base, jamais plus que la médiane)" value={g.challengeMinFactor} min={0.1} step={0.1} onChange={(v) => set({ challengeMinFactor: v ?? 0.5 })} />
+        <NumberField label="Rythme d'une action : au plus (× base)" value={g.challengeMaxFactor} min={0.1} step={0.5} onChange={(v) => set({ challengeMaxFactor: v ?? 3 })} />
+        <NumberField
+          label="Garde : nouveaux tirages des défis"
+          value={g.challengeRedraws}
+          min={0}
+          step={1}
+          hint="Si le joueur médian simulé finit après le jour limite, avant de réduire les seuils."
+          onChange={(v) => set({ challengeRedraws: Math.max(0, Math.round(v ?? 5)) })}
+        />
+        <NumberField label="Garde : pas de réduction des seuils (0,1 = 10 %)" value={g.challengeReduceStep} min={0.05} step={0.05} onChange={(v) => set({ challengeReduceStep: v ?? 0.1 })} />
+        <NumberField label="Garde : seuils réduits jusqu'à (0,4 = 40 %)" value={g.challengeReduceMin} min={0.1} step={0.05} onChange={(v) => set({ challengeReduceMin: v ?? 0.4 })} />
         {Object.keys(g.challengeWeights).map((k) => (
           <NumberField
             key={k}

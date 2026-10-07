@@ -18,10 +18,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
-| Q109 | Ember de Constellation : la teinte proposée par l'audit (`#e8a23a`) se confond avec l'or : `#e0802c` (orange de la bande du thème) | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
-| Q110 | Accent de Constellation (accent ≠ texte) : Sable `#d6c49a` ; l'onglet actif garde son soulignement | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
-| Q111 | Bouton « Créer mon empire » sur l'accueil : `secondary` : « Connexion » reste le seul bouton plein | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
-| Q112 | Confusions de couleurs voulues des autres thèmes (Cockpit monochrome, Holo, Netrunner, Matrice…) : Gardées telles quelles, figées dans la garde `themeTokens.test.ts` | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
+| Q113 | Seuil d'entrée d'une action dans les défis du passe : 0,25 par semaine (et non « médiane > 0 ») ; réglable | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
+| Q114 | Garde de faisabilité et minimum de points par palier (`pointsMin`) : La garde respecte `pointsMin`, même si le joueur médian finit après le 28e jour (dit dans « Pourquoi ces chiffres ») | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
+| Q115 | Garde avant publication d'office d'un brouillon retouché dans l'admin : Elle ne change que les défis et les points par palier | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
+| Q116 | Brouillons existants dont on ne sait pas s'ils ont été retouchés : Régénérés (cohérent avec Q83) | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
+| Q117 | Succès par défaut manquants au déploiement : Tous rajoutés (aucune liste de retraits n'existait) ; un retrait volontaire passe désormais par `achievementList.removedDefaults` | Passe, Chroniques et succès (contenu généré) | Valider (option prudente) |
 
 ## 3. Récit
 

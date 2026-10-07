@@ -6309,10 +6309,22 @@ function proceduralTick(now, opts) {
       // 6.8.0 : garde bonus, récompenses du Codex et bibliothèque (avant : seuls les mois étaient réécrits).
       writeConfig(txApp, "chronicles", Object.assign({}, content.chronicles, { months }));
     }
+    // 6.14.57 (AU27, AP-3) : chapitres non commencés d'un ancien générateur régénérés (relit le contenu écrit ci-dessus).
+    out.regenerated = [];
+    if (!o.monthId && o.achievements !== true) regenerateOutdatedChapters(txApp, game, players, now, out.regenerated, settings);
     if (settings.achievements && !o.monthId) {
       const proposals = game.proposeAchievementTiers(content.achievements, players, now);
       if (proposals.length > 0) {
-        writeConfig(txApp, "achievements", content.achievements.concat(proposals.map((p) => p.def)));
+        // 6.14.56 (AU27, AP-1) : n'ajoute que les nouveaux paliers à la liste enregistrée (le reste tel quel). Avant, la
+        // liste entière était réécrite et figeait les succès par défaut : ceux ajoutés au code ensuite manquaient.
+        const stored = configRecord(txApp, "achievements");
+        const storedList = stored ? toPlain(stored).data : null;
+        const base = Array.isArray(storedList) ? storedList : content.achievements;
+        const known = {};
+        base.forEach((a) => {
+          if (a && a.id) known[a.id] = true;
+        });
+        writeConfig(txApp, "achievements", base.concat(proposals.map((p) => p.def).filter((d) => !known[d.id])));
         proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
       }
     }
@@ -6321,7 +6333,7 @@ function proceduralTick(now, opts) {
     if (settings.pass && o.achievements !== true && !o.monthId) {
       passSeasonsTick(txApp, game, players, now, out.passes);
     }
-    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`)).concat(out.passes);
+    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.regenerated || []).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`)).concat(out.passes);
     if (lines.length > 0) {
       settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
       writeConfig(txApp, game.PROCEDURAL_KEY, settings);
@@ -6356,9 +6368,35 @@ function passSeasonsTick(txApp, game, players, now, lines) {
     changed = true;
     lines.push(`Passe ${id} : brouillon écrit, à relire et publier (Admin → Passes de saison).`);
   });
+  // 6.14.57 (AU27, AP-3) : un brouillon écrit par un ancien générateur (mois en cours ou à venir, jamais retouché) est
+  // régénéré avec la même variante ; l'ancien reste dans le journal de contenu (Admin → Historique).
+  if (settings.regenerateOutdated) {
+    const stale = game.outdatedPassDrafts(cfg, current);
+    if (stale.length > 0) {
+      keepContentVersion(txApp, game.PASS_SEASONS_SECTION, `avant régénération des brouillons ${stale.map((s) => s.id).join(", ")} (ancien générateur)`);
+      stale.forEach((old) => {
+        const next = passSeasonDraft(game, players, cfg, old.id, now, (old.auto && old.auto.variant) || 0);
+        cfg = game.upsertPassSeason(cfg, next);
+        changed = true;
+        lines.push(`Passe ${old.id} : brouillon d'un ancien générateur (v${(old.auto && old.auto.generator) || 1}) régénéré (v${next.auto.generator}, variante ${next.auto.variant}).`);
+      });
+    }
+  }
   // Début du mois : un brouillon oublié est publié d'office, puis le passe est annoncé une fois.
-  const cur = game.findPassSeason(cfg, current);
+  let cur = game.findPassSeason(cfg, current);
   if (cur && cur.status === "draft") {
+    // 6.14.58 (AU27, AP-2) : garde avant la publication d'office. Si le joueur médian simulé finit après le jour limite,
+    // les défis sont tirés à nouveau puis réduits (récompenses, points et commandant inchangés), noté dans « Pourquoi ».
+    const fit = game.ensureFeasiblePass(cur, game.worldDigest(players, now));
+    if (!fit.ok && !(cur.auto && cur.auto.editedAtMs)) {
+      // Toujours infaisable et jamais retouché : brouillon régénéré en entier (même variante) par le générateur actuel.
+      keepContentVersion(txApp, game.PASS_SEASONS_SECTION, `avant régénération du brouillon ${current} (infaisable)`);
+      cur = passSeasonDraft(game, players, cfg, current, now, (cur.auto && cur.auto.variant) || 0);
+      lines.push(`Passe ${current} : brouillon infaisable régénéré avant publication (joueur médian ${cur.auto.pace && cur.auto.pace.medianDay ? `au jour ${cur.auto.pace.medianDay}` : "après la fin du mois"}).`);
+    } else if (fit.changed) {
+      cur = fit.season;
+      lines.push(`Passe ${current} : défis rendus faisables avant publication. ${fit.reasons.join(" ")}`);
+    }
     cfg = game.upsertPassSeason(cfg, game.publishPassSeason(cur, now));
     changed = true;
     lines.push(`Passe ${current} publié d'office (brouillon non relu au début du mois).`);
@@ -6375,7 +6413,43 @@ function passSeasonsTick(txApp, game, players, now, lines) {
   if (changed) writeConfig(txApp, game.PASS_SEASONS_SECTION, cfg);
 }
 
-/** v5.13 : passage horaire des passes de saison (publication d'office et annonce dès le début du mois). */
+/** 6.14.57 : garde l'état d'une section avant qu'un générateur la réécrive (retour arrière : Admin → Historique). */
+function keepContentVersion(txApp, key, note) {
+  const rec = configRecord(txApp, key);
+  if (rec) saveContentVersion(txApp, key, toPlain(rec).data, true, "regenerate", "Générateur", note);
+}
+
+/** 6.14.57 (AU27, AP-3) : chapitres non commencés écrits par un ancien générateur → régénérés (même variante). Jamais un
+ *  chapitre commencé, écrit à la main ou repris de la bibliothèque (I17), jamais un chapitre retouché dans l'admin ; le reste
+ *  de la configuration des Chroniques (bonus, Codex, bibliothèque) est gardé. */
+function regenerateOutdatedChapters(txApp, game, players, now, lines, settings) {
+  if (!settings.regenerateOutdated || !settings.chapters) return;
+  applyContent(txApp, game);
+  const content = game.currentGameContent();
+  const stale = game.outdatedChapters(content.chronicles.months, now);
+  if (stale.length === 0) return;
+  const digest = game.worldDigest(players, now);
+  let months = content.chronicles.months;
+  const done = [];
+  stale.forEach((old) => {
+    const variant = (old.auto && old.auto.variant) || 0;
+    const month = game.generateChapter({ monthId: old.id, digest, existing: months.filter((m) => m.id !== old.id), settings, now, variant });
+    months = months.filter((m) => m.id !== old.id).concat([month]).sort((a, b) => (a.id < b.id ? -1 : 1));
+    done.push(`Chapitre ${old.id} : écrit par un ancien générateur (v${(old.auto && old.auto.generator) || 1}), régénéré (v${month.auto.generator}, variante ${variant}) : « ${month.title} ».`);
+  });
+  const next = Object.assign({}, content.chronicles, { months });
+  const errors = game.validateGameContent(Object.assign({}, content, { chronicles: next })).filter((x) => /^Chroniques/.test(x));
+  if (errors.length > 0) {
+    lines.push(`Chroniques : régénération abandonnée (${errors[0]}).`);
+    return;
+  }
+  keepContentVersion(txApp, "chronicles", `avant régénération des chapitres ${stale.map((m) => m.id).join(", ")} (ancien générateur)`);
+  writeConfig(txApp, "chronicles", next);
+  done.forEach((l) => lines.push(l));
+}
+
+/** v5.13 : passage horaire des passes de saison (publication d'office et annonce dès le début du mois).
+ *  6.14.57 : régénère aussi les chapitres non commencés d'un ancien générateur. */
 function passSeasonsRun(now) {
   const game = loadGame();
   const lines = [];
@@ -6383,8 +6457,10 @@ function passSeasonsRun(now) {
     applyContent(txApp, game);
     const rec = configRecord(txApp, game.PROCEDURAL_KEY);
     const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
-    if (!settings.enabled || !settings.pass) return;
-    passSeasonsTick(txApp, game, proceduralPlayers(txApp), now, lines);
+    if (!settings.enabled) return;
+    const players = proceduralPlayers(txApp);
+    if (settings.pass) passSeasonsTick(txApp, game, players, now, lines);
+    regenerateOutdatedChapters(txApp, game, players, now, lines, settings);
     if (lines.length > 0) {
       settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
       writeConfig(txApp, game.PROCEDURAL_KEY, settings);

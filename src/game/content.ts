@@ -47,7 +47,7 @@ import { WAR_RULES } from "@/game/wars";
 import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
-import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, type AchievementDef } from "@/game/achievements";
+import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
 
 /* =====================================================
    Contenu du jeu piloté par les données.
@@ -228,6 +228,12 @@ export function currentGameContent(): GameContent {
   return structuredClone(current);
 }
 
+/** 6.14.56 : succès par défaut retirés exprès (GameRules.achievementList.removedDefaults), lus avant la fusion des règles. */
+function removedDefaultAchievements(rules: Partial<GameRules> | undefined): string[] {
+  const list = (rules as { achievementList?: { removedDefaults?: unknown } } | undefined)?.achievementList?.removedDefaults;
+  return Array.isArray(list) ? list.filter((x): x is string => typeof x === "string") : [];
+}
+
 /** Applique un contenu (sections absentes = valeurs par défaut du code). */
 export function applyGameContent(overrides: Partial<GameContent>): GameContent {
   const defaults = defaultGameContent();
@@ -238,7 +244,8 @@ export function applyGameContent(overrides: Partial<GameContent>): GameContent {
     missions: overrides.missions ?? defaults.missions,
     factions: overrides.factions ?? defaults.factions,
     ranks: overrides.ranks ?? defaults.ranks,
-    achievements: overrides.achievements ?? defaults.achievements,
+    // 6.14.56 (AP-1) : une liste enregistrée garde les succès par défaut ajoutés au code depuis, sauf ceux retirés exprès.
+    achievements: Array.isArray(overrides.achievements) ? withDefaultAchievements(overrides.achievements, removedDefaultAchievements(overrides.rules)) : defaults.achievements,
     warlords: overrides.warlords ?? defaults.warlords,
     seasonPass: overrides.seasonPass ?? defaults.seasonPass,
     chronicles: overrides.chronicles ?? defaults.chronicles,

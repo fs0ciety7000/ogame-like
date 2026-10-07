@@ -43,7 +43,7 @@ const SECTION_LABELS: Record<string, string> = {
   officers: "Officiers",
 };
 
-const ACTION_LABELS: Record<string, string> = { update: "avant modification", delete: "avant remise à zéro", create: "avant personnalisation", rollback: "avant retour arrière" };
+const ACTION_LABELS: Record<string, string> = { update: "avant modification", delete: "avant remise à zéro", create: "avant personnalisation", rollback: "avant retour arrière", regenerate: "avant régénération par le générateur" };
 
 function sizeOf(v: unknown): string {
   const n = JSON.stringify(v ?? null).length;

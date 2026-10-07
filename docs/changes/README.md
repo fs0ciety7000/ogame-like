@@ -155,6 +155,9 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.53 | [Accueil public mobile, « Créer mon empire »](6.14.53-accueil-mobile.md) | correctif (interface) | aucune (AU27, lot UX-1) |
 | 6.14.54 | [Textes de règle justes, nombres lisibles](6.14.54-textes-justes.md) | correctif (interface) | aucune (AU27, lot UX-3) |
 | 6.14.55 | [Couleurs du thème distinctes, contraste AA](6.14.55-couleurs-theme.md) | correctif (interface) | aucune (AU27, lot UX-2) |
+| 6.14.56 | [Succès par défaut toujours présents](6.14.56-succes-par-defaut.md) | correctif | aucune (AU27, lot AP-L1), Q82 |
+| 6.14.57 | [Générateur versionné, anciens brouillons régénérés](6.14.57-generateur-versionne.md) | correctif | aucune (AU27, lot AP-L2), Q83 |
+| 6.14.58 | [Défis du passe et épisodes faisables](6.14.58-defis-faisables.md) | correctif (équilibre) | [generation-passe-chroniques](../proposals/generation-passe-chroniques.md) (AU27, lot AP-L3), Q84, Q85 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

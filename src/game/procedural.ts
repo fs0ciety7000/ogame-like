@@ -15,7 +15,7 @@ import {
 import { parisOffsetMs } from "@/game/events";
 import { formatInt } from "@/game/format";
 import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassReward } from "@/game/seasonPass";
-import { passGenRules, percentile, type PassPace } from "@/game/passGen";
+import { actionPlayable, hasActivityData, passGenRules, percentile, type PassPace } from "@/game/passGen";
 import { budgetEpisodeRewards, chronicleGenRules, objectiveWeight } from "@/game/chronicleGen";
 import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
 import { seasonLabel } from "@/game/seasons";
@@ -42,6 +42,12 @@ import type { PlayerState } from "@/types/game";
 
 export const PROCEDURAL_KEY = "procedural";
 
+/** 6.14.57 (AU27, AP-3) : version logique des générateurs, écrite dans `auto.generator` de chaque chapitre et passe générés.
+ *  Elle monte quand une règle de génération change ce que le joueur reçoit (objectifs, défis, récompenses) : un brouillon ou un
+ *  chapitre non commencé écrit par une version plus ancienne est régénéré (`outdatedChapters`, `outdatedPassDrafts`).
+ *  1 : avant 6.14.57 (champ absent) ; 2 : 6.14.57 ; 3 : 6.14.58 (défis et épisodes faisables, AP-L3). */
+export const GENERATOR_VERSION = { chapter: 3, pass: 3 };
+
 export interface ProceduralSettings {
   enabled: boolean;
   /** Écrit les chapitres des mois sans chronique. */
@@ -52,10 +58,12 @@ export interface ProceduralSettings {
   achievements: boolean;
   /** Jour du mois (Paris) à partir duquel le chapitre suivant est écrit. */
   leadDay: number;
+  /** 6.14.57 (AU27, AP-3) : régénère les brouillons de passe et les chapitres non commencés écrits par un générateur plus ancien. */
+  regenerateOutdated: boolean;
   log: { atMs: number; text: string }[];
 }
 
-export const DEFAULT_PROCEDURAL: ProceduralSettings = { enabled: true, chapters: true, pass: true, achievements: true, leadDay: 20, log: [] };
+export const DEFAULT_PROCEDURAL: ProceduralSettings = { enabled: true, chapters: true, pass: true, achievements: true, leadDay: 20, regenerateOutdated: true, log: [] };
 
 export function normalizeProcedural(raw: unknown): ProceduralSettings {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ProceduralSettings>;
@@ -66,6 +74,7 @@ export function normalizeProcedural(raw: unknown): ProceduralSettings {
     pass: bool(r.pass, DEFAULT_PROCEDURAL.pass),
     achievements: bool(r.achievements, DEFAULT_PROCEDURAL.achievements),
     leadDay: Math.min(28, Math.max(1, Math.floor(Number(r.leadDay) || DEFAULT_PROCEDURAL.leadDay))),
+    regenerateOutdated: bool(r.regenerateOutdated, DEFAULT_PROCEDURAL.regenerateOutdated),
     log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l.text === "string").slice(-50),
   };
 }
@@ -244,7 +253,8 @@ export function objectiveCount(type: ChronicleObjective, d: WorldDigest, difficu
   const r = chronicleGenRules();
   const base = BASE_COUNTS[type];
   const m = d.weeklyMedian[type] ?? 0;
-  const raw = m > 0 ? clamp(m * difficulty, base * r.objectiveMinFactor, base * r.objectiveMaxFactor) : base * difficulty;
+  // 6.14.58 (AU27, AP-4) : le plancher ne dépasse jamais la médiane du serveur (même règle que les défis du passe).
+  const raw = m > 0 ? clamp(m * difficulty, Math.min(base * r.objectiveMinFactor, m), base * r.objectiveMaxFactor) : base * difficulty;
   return Math.max(1, Math.round(raw));
 }
 
@@ -457,14 +467,21 @@ function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string
 /* ---------- objectifs ---------- */
 
 function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[]): ChronicleObjective[] {
-  const playable = ACTIVITY_KEYS.filter((k) => k !== "raidRepelled" || (d.weeklyMedian.raidRepelled ?? 0) > 0);
+  // 6.14.58 (AU27, AP-4) : seuil des actions passives unifié avec le passe (raids, seigneurs : médiane ≥ passiveMinWeekly).
+  const passive = passGenRules().passiveKeys;
+  const playable = ACTIVITY_KEYS.filter((k) => !passive.includes(k) || actionPlayable(k, d.weeklyMedian));
   // 6.8.2 : actions autorisées et pondérées (chronicleGen.objectiveWeights) ; il en faut 4 (sinon toutes celles jouables).
   const allowed = playable.filter((k) => objectiveWeight(k) > 0);
   const pool = allowed.length >= 4 ? allowed : playable;
   const weight = (k: ChronicleObjective) => (1 + Math.min(3, d.weeklyMedian[k] ?? 0)) * (previous.includes(k) ? 0.4 : 1) * (objectiveWeight(k) || 1);
   const chosen: ChronicleObjective[] = [];
   // Une action peu pratiquée pour varier le jeu (la moins faite des actions courantes).
-  const stretch = [...pool].filter((k) => k !== "warlordWin").sort((a, b) => (d.weeklyMedian[a] ?? 0) - (d.weeklyMedian[b] ?? 0))[Math.floor(rng() * 2)];
+  // 6.14.58 (Q-AP4) : peu pratiquée mais faisable : médiane du serveur ≥ chronicleGen.stretchMinWeekly (sans mesure : comme avant).
+  const minStretch = chronicleGenRules().stretchMinWeekly;
+  const rare = [...pool].filter((k) => k !== "warlordWin").sort((a, b) => (d.weeklyMedian[a] ?? 0) - (d.weeklyMedian[b] ?? 0));
+  const doable = hasActivityData(d.weeklyMedian) ? rare.filter((k) => (d.weeklyMedian[k] ?? 0) >= minStretch) : rare;
+  const stretchPool = doable.length >= 2 ? doable : rare;
+  const stretch = stretchPool[Math.floor(rng() * 2)];
   while (chosen.length < 3) {
     const left = pool.filter((k) => !chosen.includes(k) && k !== stretch);
     const total = left.reduce((a, k) => a + weight(k), 0);
@@ -604,7 +621,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} · ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
     { id: "archives", name: `Archives : ${label}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem },
   ];
-  const auto: ChapterAuto = { generatedAtMs: o.now, sourceMonth: d.monthId, archetype: arch.id, difficulty, activePlayers: d.activePlayers, reasons };
+  const auto: ChapterAuto = { generatedAtMs: o.now, sourceMonth: d.monthId, archetype: arch.id, difficulty, activePlayers: d.activePlayers, reasons, generator: GENERATOR_VERSION.chapter, variant: Math.max(0, Math.floor(o.variant ?? 0)) };
   const month: ChronicleMonth = {
     id: o.monthId,
     title,
@@ -630,6 +647,13 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     auto.reasons.push(...g.reasons);
   }
   return month;
+}
+
+/** 6.14.57 (AU27, AP-3) : chapitres générés par une version plus ancienne du générateur, à régénérer. Jamais un chapitre
+ *  commencé (premier épisode ouvert), jamais un chapitre écrit ou repris de la bibliothèque (sans `auto`, I17), jamais un
+ *  chapitre retouché dans l'admin (`auto.editedAtMs`). */
+export function outdatedChapters(months: ChronicleMonth[], now: number): ChronicleMonth[] {
+  return months.filter((m) => m && m.auto && !m.auto.editedAtMs && (m.auto.generator ?? 1) < GENERATOR_VERSION.chapter && episodeUnlockMs(m.id, 0) > now);
 }
 
 /** Mois à écrire maintenant : le mois en cours s'il n'a pas de chronique, et le suivant à partir de `leadDay`. */

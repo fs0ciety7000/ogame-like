@@ -13,6 +13,17 @@ import { askConfirm } from "@/components/ui/confirm-dialog";
 type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles";
 type Item<S extends ListSection> = GameContent[S][number];
 
+/** 6.14.56 (AU27, AP-1) : succès du code retirés exprès (GameRules.achievementList). Sans cette note, le complément des
+ *  succès par défaut (`withDefaultAchievements`) ferait revenir un succès supprimé. */
+async function updateRemovedDefaultAchievements(update: (ids: string[]) => string[]) {
+  const rules = currentGameContent().rules;
+  const raw: unknown = rules.achievementList?.removedDefaults;
+  const current = Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : [];
+  const next = update(current);
+  if (JSON.stringify(next) === JSON.stringify(current)) return;
+  await saveContentSection("rules", { ...rules, achievementList: { ...rules.achievementList, removedDefaults: next } });
+}
+
 /** Éditeur d'une liste de définitions (bâtiments, unités…) : liste à
  *  gauche, fiche à droite. Les modifications restent un brouillon local
  *  jusqu'à « Enregistrer », qui valide l'ensemble du contenu du jeu. */
@@ -81,6 +92,7 @@ export function ContentEditor<S extends ListSection>({
     try {
       // Les autres modifications en cours restent en brouillon : on n'enregistre que la suppression.
       const savedNext = saved.filter((x) => getId(x) !== getId(item));
+      if (section === "achievements" && fromCode) await updateRemovedDefaultAchievements((ids) => [...ids.filter((id) => id !== getId(item)), getId(item)]);
       await saveContentSection(section, savedNext as GameContent[S]);
       setSaved(savedNext);
       setDraft(next);
@@ -132,6 +144,7 @@ export function ContentEditor<S extends ListSection>({
     setBusy(true);
     try {
       await resetContentSection(section);
+      if (section === "achievements") await updateRemovedDefaultAchievements(() => []);
       const fresh = currentGameContent()[section] as Item<S>[];
       setSaved(fresh);
       setDraft(fresh);

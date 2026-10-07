@@ -37,6 +37,9 @@ export const CHRONICLE_GEN_RULES = {
   /** Quantité demandée : médiane d'une semaine × difficulté, bornée entre ces facteurs de la base. */
   objectiveMinFactor: 0.5,
   objectiveMaxFactor: 3,
+  /** 6.14.58 (AU27, AP-4, Q-AP4) : épisode 3 (« rebondissement ») : action peu pratiquée mais faisable, dont la médiane du
+   *  serveur atteint ce nombre par semaine (0 : la moins pratiquée de toutes, comme avant). */
+  stretchMinWeekly: 0.5,
   /** Poids des actions dans les objectifs (0 : jamais). Les raids repoussés n'entrent que si le serveur en repousse. */
   objectiveWeights: { contract: 1, bounty: 1, raidRepelled: 1, victory: 1, mission: 1, spy: 1, market: 1, warlordWin: 1, bossAssault: 0 } as Record<string, number>,
   /** Faction du chapitre selon le thème du passe du mois (identifiants d'archétypes). */
@@ -83,6 +86,7 @@ export function validateChronicleGenRules(r: ChronicleGenRules | undefined, arch
   if (!(r.targetCompletion > 0 && r.targetCompletion < 1)) e.push(`${L} : part visée entre 0 et 1.`);
   if (!(r.objectiveMinFactor > 0 && r.objectiveMinFactor <= r.objectiveMaxFactor)) e.push(`${L} : bornes des quantités min ≤ max.`);
   if (!(r.completionAmber >= 0)) e.push(`${L} : Ambre du chapitre terminé ≥ 0.`);
+  if (!(r.stretchMinWeekly >= 0)) e.push(`${L} : médiane du rebondissement ≥ 0.`);
   if (Object.values(r.objectiveWeights ?? {}).filter((v) => Number(v) > 0).length < 4) e.push(`${L} : au moins 4 actions autorisées dans les objectifs.`);
   if (archetypeIds.length)
     for (const [theme, a] of Object.entries(r.themeArchetypes ?? {})) if (!archetypeIds.includes(a)) e.push(`${L} : thème ${theme}, faction « ${a} » inconnue.`);

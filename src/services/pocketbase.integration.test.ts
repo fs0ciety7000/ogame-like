@@ -37,6 +37,9 @@ import { priceBounds } from "@/game/market";
 import { readAllianceSaga, sagaMonthId, sagaOf } from "@/game/allianceSaga";
 import { fetchNpcOpponents } from "@/services/codexService";
 import { CONTRACT_RULES } from "@/game/contracts";
+import { generatePassSeason, nextMonthId } from "@/game/passSeasons";
+import { generateChapter, worldDigest } from "@/game/procedural";
+import { chronicleMonthId } from "@/game/chronicles";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -2883,6 +2886,66 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const now = await find();
       if (before) await admin.collection("game_config").update(before.id, { data: before.data });
       else if (now) await admin.collection("game_config").delete(now.id);
+    }
+  });
+
+  it("6.14.57 (AP-3) brouillon et chapitre d'un ancien générateur régénérés ; passe publié, brouillon retouché et bibliothèque intacts", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { passes: await cfg("passSeasons"), chronicles: await cfg("chronicles"), procedural: await cfg("procedural") };
+    const put = async (key: string, data: unknown) => {
+      const rec = await cfg(key);
+      if (rec) await admin.collection("game_config").update(rec.id, { data });
+      else await admin.collection("game_config").create({ key, data });
+    };
+    const now = Date.now();
+    const m1 = nextMonthId(chronicleMonthId(now));
+    const m2 = nextMonthId(m1);
+    const m3 = nextMonthId(m2);
+    const m4 = nextMonthId(m3);
+    const digest = worldDigest([], now);
+    const old = (id: string) => {
+      const s = generatePassSeason({ monthId: id, digest, existing: [], now });
+      delete s.challengeMode;
+      delete s.auto!.generator;
+      return s;
+    };
+    const published = { ...old(m2), status: "published" as const, publishedAtMs: now };
+    const edited = { ...old(m3), auto: { ...old(m3).auto!, editedAtMs: now } };
+    const chapter = generateChapter({ monthId: m4, digest, existing: [], now });
+    delete chapter.auto!.generator;
+    const bonus = { episode: { tokens: 4, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
+    const chronicles = { ...defaultGameContent().chronicles, bonus };
+    try {
+      await put("passSeasons", { seasons: [old(m1), published, edited] });
+      await put("chronicles", { ...chronicles, months: [...chronicles.months.filter((m) => m.id !== m4), chapter] });
+      const before = (await cfg("chronicles"))!.data;
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeasonsRun" } });
+      expect(out.lines.some((l: string) => l.startsWith(`Passe ${m1} : brouillon d'un ancien générateur`))).toBe(true);
+      expect(out.lines.some((l: string) => l.startsWith(`Chapitre ${m4} : écrit par un ancien générateur`))).toBe(true);
+      const seasons = (await cfg("passSeasons"))!.data.seasons as { id: string; challengeMode?: string; auto?: { generator?: number } }[];
+      const draft = seasons.find((s) => s.id === m1)!;
+      expect(draft.challengeMode).toBe("cumulative");
+      expect(draft.auto?.generator).toBeGreaterThanOrEqual(3);
+      expect(seasons.find((s) => s.id === m2)).toEqual(JSON.parse(JSON.stringify(published)));
+      expect(seasons.find((s) => s.id === m3)).toEqual(JSON.parse(JSON.stringify(edited)));
+      const after = (await cfg("chronicles"))!.data;
+      expect(after.months.find((m: { id: string }) => m.id === m4).auto.generator).toBeGreaterThanOrEqual(3);
+      // Le reste de la configuration est gardé (bonus réglé, bibliothèque, mois écrits).
+      expect(after.bonus).toEqual(bonus);
+      expect(after.library).toEqual(before.library);
+      expect(after.months.filter((m: { id: string }) => m.id !== m4)).toEqual(before.months.filter((m: { id: string }) => m.id !== m4));
+      // L'ancien état reste dans le journal de contenu (retour arrière possible).
+      const versions = await admin.collection("content_versions").getList(1, 5, { filter: 'action = "regenerate"', sort: "-createdAtMs" });
+      expect(versions.items.map((v) => v.section)).toEqual(expect.arrayContaining(["passSeasons", "chronicles"]));
+      // Deuxième passage : rien à régénérer.
+      const again = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeasonsRun" } });
+      expect(again.lines.some((l: string) => /ancien générateur/.test(l))).toBe(false);
+    } finally {
+      for (const [key, rec] of [["passSeasons", keep.passes], ["chronicles", keep.chronicles], ["procedural", keep.procedural]] as const) {
+        const cur = await cfg(key);
+        if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
     }
   });
 

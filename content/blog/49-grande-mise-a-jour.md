@@ -30,7 +30,7 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 | **Lunes** | Statistiques, Galaxie | Un gros combat chez toi peut faire naître une lune : bouclier et abri en plus, jusqu'au niveau 5 |
 | **Base avancée** | Colonies | Stationne une flotte sur une colonie, jusqu'à 14 jours |
 | **Ordres du jour** | Menu | Toutes tes corvées au même endroit, et **Tout réclamer** en un clic |
-| **Passe et Chroniques** | Passe | Un passe à ton rythme, des paliers bonus après le dernier, un chapitre par mois |
+| **Passe et Chroniques** | Passe | Un passe à ton rythme (fini au plus tard le 28 pour un joueur régulier, défis calés sur le serveur), des paliers bonus après le dernier, un chapitre par mois |
 | **Codex** | Codex | Bâtiments et technologies ont leur fiche ; 5 jetons et 25 Ambre par catégorie complète |
 
 ## Combat et équilibre

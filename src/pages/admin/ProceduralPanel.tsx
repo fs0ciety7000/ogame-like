@@ -187,6 +187,12 @@ export function ProceduralPanel() {
           <Toggle label="Chapitres des Chroniques" hint="Scénario, objectifs, boss, récompenses, titre, bannière, Codex." checked={settings.chapters} onChange={(v) => void saveSettings({ chapters: v })} />
           <Toggle label="Passe propre à chaque chapitre" hint="Points par palier ajustés selon la réussite du mois, paliers variés." checked={settings.pass} onChange={(v) => void saveSettings({ pass: v })} />
           <Toggle label="Paliers de succès" hint="Ajoute le palier suivant quand un joueur a atteint le dernier." checked={settings.achievements} onChange={(v) => void saveSettings({ achievements: v })} />
+          <Toggle
+            label="Régénérer ce qu'a écrit un ancien générateur"
+            hint="Brouillons de passe et chapitres pas encore ouverts, s'ils ne sont pas retouchés. Jamais un passe publié ni un chapitre commencé."
+            checked={settings.regenerateOutdated}
+            onChange={(v) => void saveSettings({ regenerateOutdated: v })}
+          />
           <label className="flex items-center gap-2 text-sm text-slate-200">
             Écrire le mois suivant à partir du
             <NumberInput size="sm" min={1} max={28} stepper={false} quick={false} value={settings.leadDay} onCommit={(v) => v !== undefined && v !== settings.leadDay && void saveSettings({ leadDay: v })} aria-label="Jour d'écriture du mois suivant" className="w-28" />

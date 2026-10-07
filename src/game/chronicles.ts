@@ -49,6 +49,12 @@ export interface ChapterAuto {
   difficulty: number;
   activePlayers: number;
   reasons: string[];
+  /** 6.14.57 (AU27, AP-3) : version du générateur qui l'a écrit (absente : avant 6.14.57). */
+  generator?: number;
+  /** 6.14.57 : variante du tirage (« Régénérer »), reprise à la régénération. */
+  variant?: number;
+  /** 6.14.57 : retouché à la main dans l'admin : jamais régénéré d'office. */
+  editedAtMs?: number;
 }
 
 export interface SeasonBossDef {

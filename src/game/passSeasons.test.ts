@@ -60,7 +60,8 @@ describe("v5.13 passes de saison procéduraux", () => {
   it("v5.14.1 : un défi par palier, jamais le même, de plus en plus lourd, un mois d'activité par action", () => {
     let seed = 7;
     const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-    const d = { weeklyMedian: { victory: 6, contract: 10, mission: 12 } };
+    // 6.14.58 (Q-AP3) : sur un serveur mesuré, une action de médiane nulle n'entre plus dans les défis : toutes sont mesurées ici.
+    const d = { weeklyMedian: { victory: 6, contract: 10, mission: 12, spy: 3, market: 3, bounty: 2 } };
     const req = generateTierChallenges(rng, ["victory", "raidRepelled", "bounty"], d, 30);
     const sigs = new Set<string>();
     const last: Record<string, number> = {};
@@ -88,7 +89,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     for (const k of CHALLENGE_KEYS.filter((x) => x !== "warlordWin")) expect(totals[k]).toBeGreaterThanOrEqual(monthlyBudget(k, d) - 2);
     // Personne ne bat de seigneur de guerre : pas de défi qui en demande.
     expect(totals.warlordWin).toBeUndefined();
-    const withWarlords = generateTierChallenges(rng, ["victory"], { weeklyMedian: { warlordWin: 1 } }, 30);
+    const withWarlords = generateTierChallenges(rng, ["victory"], { weeklyMedian: { ...d.weeklyMedian, warlordWin: 1 } }, 30);
     expect(Object.values(withWarlords).flat().some((r) => r.key === "warlordWin")).toBe(true);
     expect(monthlyBudget("victory", d)).toBe(26);
     // Les derniers paliers pèsent plus que les premiers.

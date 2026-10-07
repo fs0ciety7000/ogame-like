@@ -54,6 +54,18 @@ export const PASS_GEN_RULES = {
   /** Actions que le joueur ne déclenche pas à volonté : seulement si la médiane du serveur en fait au moins autant par semaine. */
   passiveKeys: ["warlordWin", "bossAssault", "raidRepelled"],
   passiveMinWeekly: 0.5,
+  /** 6.14.58 (AU27, AP-2) : rythme d'une action dans les défis = médiane du serveur par semaine, bornée entre ces facteurs de
+   *  sa base ; le plancher ne dépasse jamais la médiane (un défi ne demande pas plus que ce que fait le joueur médian). */
+  challengeMinFactor: 0.5,
+  challengeMaxFactor: 3,
+  /** 6.14.58 (Q-AP3) : sur un serveur mesuré, une action dont la médiane par semaine est sous ce seuil (ou nulle) n'entre pas
+   *  dans les défis (un défi bloque les suivants). Les actions passives demandent en plus `passiveMinWeekly`. */
+  challengeMinWeekly: 0.25,
+  /** 6.14.58 : garde de faisabilité. Si le joueur médian simulé finit après `latestMedianDay` : jusqu'à ce nombre de nouveaux
+   *  tirages des défis, puis seuils réduits par pas jusqu'à ce plancher (part des seuils tirés). */
+  challengeRedraws: 5,
+  challengeReduceStep: 0.1,
+  challengeReduceMin: 0.4,
 };
 
 export type PassGenRules = typeof PASS_GEN_RULES;
@@ -89,6 +101,10 @@ export function validatePassGenRules(r: PassGenRules | undefined): string[] {
   if (!(r.productionMaxHours >= 1)) e.push(`${L} : heures de production par récompense ≥ 1.`);
   for (const [k, v] of Object.entries(r.values ?? {})) if (!(Number(v) > 0)) e.push(`${L} : valeur « ${k} » > 0.`);
   if (!Object.values(r.challengeWeights ?? {}).some((v) => Number(v) > 0)) e.push(`${L} : au moins une action dans les défis.`);
+  if (!(r.challengeMinFactor > 0 && r.challengeMinFactor <= r.challengeMaxFactor)) e.push(`${L} : bornes du rythme des défis min ≤ max.`);
+  if (!(r.challengeMinWeekly >= 0)) e.push(`${L} : seuil d'entrée des défis ≥ 0.`);
+  if (!(Number.isInteger(r.challengeRedraws) && r.challengeRedraws >= 0 && r.challengeRedraws <= 20)) e.push(`${L} : nouveaux tirages des défis entre 0 et 20.`);
+  if (!(r.challengeReduceStep > 0 && r.challengeReduceStep < 1 && r.challengeReduceMin > 0 && r.challengeReduceMin <= 1)) e.push(`${L} : réduction des seuils (pas et plancher entre 0 et 1).`);
   return e;
 }
 
@@ -247,13 +263,15 @@ export function computePointsPerTier(pace: PassPace | undefined, tiers: number, 
   const byTop = (top * rules.targetTopDay) / tiers;
   const medianMax = (pace.median * rules.latestMedianDay) / tiers;
   const raw = Math.max(byMedian, Math.min(byTop, medianMax));
-  const ppt = Math.max(rules.pointsMin, Math.min(rules.pointsMax, round5(raw)));
+  // 6.14.58 (AU27, AP-2) : l'arrondi ne fait jamais dépasser le jour limite du médian (60 au lieu de 59,07 : fin au jour 29).
+  const rounded = round5(raw) > medianMax ? Math.max(5, Math.floor(medianMax / 5) * 5) : round5(raw);
+  const ppt = Math.max(rules.pointsMin, Math.min(rules.pointsMax, rounded));
   const reasons = [
     `Points par jour mesurés : ${Math.round(pace.median)} (joueur médian), ${Math.round(top)} (plus actif, ${Math.round(rules.topPercentile * 100)}e centile).`,
     `Points par palier : ${ppt} (médian au dernier palier vers le jour ${Math.round((tiers * ppt) / pace.median)}, plus actif vers le jour ${Math.round((tiers * ppt) / top)} ; cibles ${rules.targetMedianDay} et ${rules.targetTopDay}).`,
   ];
   if (byTop > medianMax) reasons.push(`Le plus actif va beaucoup plus vite que le médian : le médian garde sa fin au jour ${rules.latestMedianDay} au plus tard.`);
-  if (ppt !== round5(raw)) reasons.push(`Garde-fou : points par palier bornés entre ${rules.pointsMin} et ${rules.pointsMax}.`);
+  if (ppt !== rounded) reasons.push(`Garde-fou : points par palier bornés entre ${rules.pointsMin} et ${rules.pointsMax}.`);
   return { ppt, reasons };
 }
 
@@ -268,8 +286,24 @@ export function percentile(xs: number[], p: number): number {
 
 /** Actions des défis et leur poids : poids > 0, et les actions passives seulement si le serveur les pratique. */
 export function challengePool(weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): { key: ChronicleObjective; weight: number }[] {
-  return Object.entries(rules.challengeWeights)
-    .filter(([, w]) => Number(w) > 0)
-    .filter(([k]) => !rules.passiveKeys.includes(k) || (weeklyMedian[k as ChronicleObjective] ?? 0) >= rules.passiveMinWeekly)
-    .map(([k, w]) => ({ key: k as ChronicleObjective, weight: Number(w) }));
+  const weighted = Object.entries(rules.challengeWeights).filter(([, w]) => Number(w) > 0);
+  const pool = weighted.filter(([k]) => actionPlayable(k as ChronicleObjective, weeklyMedian, rules));
+  // Serveur où presque rien n'est mesuré : les actions que le joueur déclenche à volonté restent (un palier sans défi n'existe pas).
+  const out = pool.length > 0 ? pool : weighted.filter(([k]) => !rules.passiveKeys.includes(k));
+  return out.map(([k, w]) => ({ key: k as ChronicleObjective, weight: Number(w) }));
+}
+
+/** 6.14.58 (AU27, AP-2) : le serveur a-t-il mesuré une activité (sinon : valeurs de base partout) ? */
+export function hasActivityData(weeklyMedian: Partial<Record<ChronicleObjective, number>>): boolean {
+  return Object.values(weeklyMedian).some((v) => (v ?? 0) > 0);
+}
+
+/** 6.14.58 : seuil unique d'une action pour les défis du passe et les objectifs des Chroniques. Une action passive (seigneurs,
+ *  assauts de boss, raids) demande une médiane d'au moins `passiveMinWeekly` par semaine ; sur un serveur mesuré, toute action
+ *  demande une médiane non nulle et d'au moins `challengeMinWeekly`. Sans mesure (serveur neuf) : actions actives seulement. */
+export function actionPlayable(key: ChronicleObjective, weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): boolean {
+  const m = weeklyMedian[key] ?? 0;
+  if (rules.passiveKeys.includes(key)) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
+  if (!hasActivityData(weeklyMedian)) return true;
+  return m > 0 && m >= rules.challengeMinWeekly;
 }

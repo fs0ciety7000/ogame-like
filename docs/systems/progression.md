@@ -49,3 +49,21 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
 ## 6.8.2 (lot 3 du passe génératif)
 - `chronicleGen.ts` : récompenses des 4 épisodes sous budget (même table de valeurs que le passe), objectifs pondérés, bornes de
   difficulté et de quantités, Ambre et relique du chapitre terminé, faction de chaque thème du catalogue. Admin → Règles → Chroniques générées.
+
+## 6.14.56 à 6.14.58 (revue AU27, lots AP-L1 à AP-L3)
+- **Succès par défaut toujours présents** (6.14.56, I25) : la liste enregistrée est complétée par les succès du code qui y manquent
+  (`withDefaultAchievements`), sauf ceux retirés exprès dans l'admin (`achievementList.removedDefaults`, noté à la suppression, vidé par
+  « Valeurs par défaut ») ; le générateur de paliers n'ajoute que ses paliers. Pré-prod : `chapter_reader`, `chapter_keeper`,
+  `seal_bearer`, `pass_finisher` revenus.
+- **Générateur versionné** (6.14.57, I17) : `auto.generator` dans chaque passe et chapitre générés (`GENERATOR_VERSION` : 3) ; un brouillon
+  de passe (mois en cours ou à venir) ou un chapitre au premier épisode pas encore ouvert, écrit par une version plus ancienne et jamais
+  retouché (`auto.editedAtMs`), est régénéré avec la même variante par la tâche horaire des passes et la tâche quotidienne du générateur ;
+  ancien état dans Admin → Historique du contenu ; interrupteur `procedural.regenerateOutdated` (Admin → Générateur).
+- **Défis faisables** (6.14.58, I18, I19) : rythme d'une action = médiane du serveur entre 0,5 et 3 × sa base, jamais au-dessus de la
+  médiane ; action de médiane nulle ou sous 0,25 par semaine hors des défis (Q84), passive sous 0,5 ; points par palier arrondis sans
+  dépasser le jour 28 du médian ; garde de faisabilité à la génération et avant la publication d'office (points par palier, 5 nouveaux
+  tirages, seuils réduits jusqu'à 40 %, sinon brouillon régénéré) ; épisode 3 des Chroniques parmi les actions de médiane ≥ 0,5 par
+  semaine (Q85). Réglages : Admin → Règles → Passe généré et Chroniques générées.
+- Simulation (méthode AU27, scripts hors dépôt) : novembre sur l'activité de la pré-prod, médian au dernier palier jour 35 → 27 (points
+  par palier 60 → 55), plus actif jour 13 → 10 ; 200 serveurs bruités : médian après le jour 31, 77 → 12 (limite : 25 points par palier
+  au minimum) ; ancien brouillon de novembre : jamais fini → régénéré.

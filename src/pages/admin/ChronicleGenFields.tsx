@@ -36,6 +36,14 @@ export function ChronicleGenFields({ rules, setRules }: { rules: GameRules; setR
         <NumberField label="Épisode mûr après (jours)" value={g.matureEpisodeDays} min={1} step={1} onChange={(v) => set({ matureEpisodeDays: Math.round(v ?? 5) })} />
         <NumberField label="Quantité demandée : au moins (× base)" value={g.objectiveMinFactor} min={0.1} step={0.1} onChange={(v) => set({ objectiveMinFactor: v ?? 0.5 })} />
         <NumberField label="Quantité demandée : au plus (× base)" value={g.objectiveMaxFactor} min={0.1} step={0.5} onChange={(v) => set({ objectiveMaxFactor: v ?? 3 })} />
+        <NumberField
+          label="Épisode 3 : médiane par semaine au moins"
+          value={g.stretchMinWeekly}
+          min={0}
+          step={0.25}
+          hint="Le rebondissement prend une action peu pratiquée mais faisable. 0 : la moins pratiquée de toutes."
+          onChange={(v) => set({ stretchMinWeekly: v ?? 0 })}
+        />
       </Section>
       <Section title="Chroniques générées : objectifs et faction du mois (6.8.2)">
         {Object.keys(g.objectiveWeights).map((k) => (

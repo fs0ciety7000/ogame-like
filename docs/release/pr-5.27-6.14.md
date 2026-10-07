@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.52 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.58 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 118 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 124 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -154,6 +154,12 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.50 : Audit des illustrations, 79 nouvelles images sur /img (`docs/changes/6.14.50-illustrations-audit-79.md`)
 - 6.14.51 : Revue AU27 (audits complets) (`docs/changes/6.14.51-revue-au27.md`)
 - 6.14.52 : Écritures sûres de la fiche joueur (`docs/changes/6.14.52-ecritures-sures.md`)
+- 6.14.53 : Accueil public mobile, « Créer mon empire » (`docs/changes/6.14.53-accueil-mobile.md`)
+- 6.14.54 : Textes de règle justes, nombres lisibles (`docs/changes/6.14.54-textes-justes.md`)
+- 6.14.55 : Couleurs du thème distinctes, contraste AA (`docs/changes/6.14.55-couleurs-theme.md`)
+- 6.14.56 : Succès par défaut toujours présents (`docs/changes/6.14.56-succes-par-defaut.md`)
+- 6.14.57 : Générateur versionné, anciens brouillons régénérés (`docs/changes/6.14.57-generateur-versionne.md`)
+- 6.14.58 : Défis du passe et épisodes faisables (`docs/changes/6.14.58-defis-faisables.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

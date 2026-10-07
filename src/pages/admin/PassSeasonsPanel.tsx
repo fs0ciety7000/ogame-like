@@ -98,12 +98,16 @@ export function PassSeasonsPanel() {
     }
   };
 
-  const save = async (next: PassSeason, msg: string) => {
+  const save = async (season: PassSeason, msg: string) => {
+    let next = season;
     const errs = validatePassSeasons({ seasons: [next] });
     if (errs.length) {
       toast.error(errs[0]);
       return;
     }
+    // 6.14.57 (AP-3) : un brouillon généré puis retouché ici n'est plus régénéré d'office par le générateur.
+    const stored = currentGameContent().passSeasons.seasons.find((s) => s.id === next.id);
+    if (next.status === "draft" && next.auto && !next.auto.editedAtMs && JSON.stringify(stored) !== JSON.stringify(next)) next = { ...next, auto: { ...next.auto, editedAtMs: Date.now() } };
     setBusy(true);
     try {
       await saveContentSection("passSeasons", upsertPassSeason(currentGameContent().passSeasons, next));
@@ -295,7 +299,10 @@ export function PassSeasonsPanel() {
 
           {draft.auto && (
             <details className="text-xs text-slate-400">
-              <summary className="cursor-pointer text-slate-300">Pourquoi ces choix ? (variante {draft.auto.variant})</summary>
+              <summary className="cursor-pointer text-slate-300">
+                Pourquoi ces choix ? (variante {draft.auto.variant}, générateur v{draft.auto.generator ?? 1}
+                {draft.auto.editedAtMs ? ", retouché" : ""})
+              </summary>
               <ul className="mt-2 list-disc space-y-0.5 pl-5">
                 {draft.auto.reasons.map((r, i) => (
                   <li key={i}>{r}</li>

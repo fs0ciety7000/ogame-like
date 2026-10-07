@@ -394,6 +394,32 @@ export function derivedAchievements(): AchievementDef[] {
   ];
 }
 
+/** 6.14.56 (AU27, AP-1) : succès du code retirés exprès par l'admin. Les autres succès par défaut absents de la liste
+ *  enregistrée (succès ajoutés au code après la première écriture de la liste) sont complétés à l'application du contenu. */
+export const ACHIEVEMENT_LIST_RULES = { removedDefaults: [] as string[] };
+
+/** 6.14.56 : liste enregistrée complétée par les succès par défaut qui y manquent, sauf ceux retirés exprès
+ *  (`removedDefaults`). Un succès ajouté se place après le succès par défaut qui le précède dans le code. */
+export function withDefaultAchievements(stored: AchievementDef[], removed: readonly string[] = []): AchievementDef[] {
+  const have = new Set(stored.map((a) => a.id));
+  const skip = new Set(removed);
+  const out = [...stored];
+  DEFAULT_ACHIEVEMENTS.forEach((d, i) => {
+    if (have.has(d.id) || skip.has(d.id)) return;
+    let at = out.length;
+    for (let j = i - 1; j >= 0; j--) {
+      const k = out.findIndex((a) => a.id === DEFAULT_ACHIEVEMENTS[j].id);
+      if (k >= 0) {
+        at = k + 1;
+        break;
+      }
+    }
+    out.splice(at, 0, structuredClone(d));
+    have.add(d.id);
+  });
+  return out;
+}
+
 export function setAchievements(defs: AchievementDef[]) {
   // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
   const have = new Set(defs.map((d) => d.id));
