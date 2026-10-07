@@ -152,6 +152,9 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.50 | [Audit des illustrations, 79 nouvelles images sur /img](6.14.50-illustrations-audit-79.md) | docs | aucune (AU27) |
 | 6.14.51 | [Revue AU27 (audits complets)](6.14.51-revue-au27.md) | docs | aucune (AU27) |
 | 6.14.52 | [Écritures sûres de la fiche joueur](6.14.52-ecritures-sures.md) | correctif | [chaine-actions](../proposals/chaine-actions.md), lot AC-A |
+| 6.14.53 | [Accueil public mobile, « Créer mon empire »](6.14.53-accueil-mobile.md) | correctif (interface) | aucune (AU27, lot UX-1) |
+| 6.14.54 | [Textes de règle justes, nombres lisibles](6.14.54-textes-justes.md) | correctif (interface) | aucune (AU27, lot UX-3) |
+| 6.14.55 | [Couleurs du thème distinctes, contraste AA](6.14.55-couleurs-theme.md) | correctif (interface) | aucune (AU27, lot UX-2) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

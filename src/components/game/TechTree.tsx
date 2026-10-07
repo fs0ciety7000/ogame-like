@@ -337,7 +337,7 @@ export function TechTree({
         <LegendDot color={STATUS_COLOR.maxed} label="Niveau max" />
         <LegendDot color={STATUS_COLOR.locked} label="Verrouillée" />
         <span className="text-slate-500">
-          Survole une technologie : sa chaîne de prérequis s'allume (vert = rempli, rouge = manquant, bleu = ce qu'elle débloque).
+          Touche ou survole une technologie : sa chaîne de prérequis s'allume (vert = rempli, rouge = manquant, bleu = ce qu'elle débloque).
         </span>
       </div>
     </div>

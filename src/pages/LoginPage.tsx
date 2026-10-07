@@ -3,7 +3,7 @@ import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { Rocket, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Eye, EyeOff, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
@@ -25,6 +25,7 @@ import {
   validatePseudo,
 } from "@/services/authService";
 import { pbConfigured } from "@/lib/pocketbase";
+import { assetUrl } from "@/lib/assets";
 import { REFERRAL_RULES } from "@/game/referral";
 import { BlogLatest } from "@/components/blog/BlogLatest";
 import { TrailerCard } from "@/components/auth/TrailerCard";
@@ -129,12 +130,14 @@ export function LoginPage() {
         <AnnouncementBanners publicOnly />
       </div>
 
-      <div className="relative z-10 grid w-full max-w-5xl items-center gap-10 lg:grid-cols-[1.1fr_420px]">
+      {/* 6.14.53 (AD-3) : une colonne sur mobile, enfants en min-w-0 (sinon la colonne prend la largeur de son contenu et
+          l'overflow-hidden du parent coupe le formulaire à droite). */}
+      <div className="relative z-10 grid w-full max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-[1.1fr_420px]">
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="hidden lg:block"
+          className="hidden min-w-0 lg:block"
         >
           <StatusDot label="Réseau stellaire actif" />
           <h1 className="mt-5 font-display text-5xl leading-[1.05] text-slate-100 glow-text xl:text-6xl">
@@ -168,14 +171,22 @@ export function LoginPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="w-full max-w-sm justify-self-center lg:justify-self-end"
+          className="w-full min-w-0 max-w-sm justify-self-center lg:justify-self-end"
         >
+          {/* 6.14.53 (AD-4) : sur mobile, le logo du jeu et le slogan du bureau, en court. */}
           <div className="mb-8 flex flex-col items-center gap-3 text-center lg:hidden">
-            <div className="hud-cut flex h-14 w-14 items-center justify-center bg-cyan-glow/10 text-cyan-glow shadow-[0_0_30px_-8px_var(--color-cyan-glow)]">
-              <Rocket className="h-7 w-7" />
-            </div>
+            <img
+              src={assetUrl("/assets/logo/logo.webp")}
+              alt=""
+              width={64}
+              height={64}
+              className="h-16 w-16 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]"
+            />
             <h1 className="font-display text-3xl tracking-wide text-slate-100 glow-text">Cosmic Empires</h1>
-            <p className="text-sm text-slate-400">Bâtis ton empire. Recherche. Combats. En temps réel.</p>
+            <p className="font-display text-lg tracking-wide text-slate-100">
+              BÂTIS. CONQUIERS. <span className="text-cyan-glow">RÈGNE.</span>
+            </p>
+            <p className="text-sm text-slate-400">Économie, flotte et combats contre d'autres commandants, en temps réel.</p>
           </div>
 
           {!pbConfigured && (
@@ -257,6 +268,14 @@ export function LoginPage() {
                   : "Envoyer le lien"}
           </Button>
 
+          {/* 6.14.53 (AD-4) : l'inscription, action principale d'un visiteur, devient un vrai bouton sous « Connexion ». */}
+          {mode === "login" && (
+            <Button type="button" variant="secondary" size="md" className="w-full" onClick={() => setMode("register")}>
+              <UserPlus className="h-4 w-4" />
+              Créer mon empire
+            </Button>
+          )}
+
           {mode === "login" && (
             <button
               type="button"
@@ -269,15 +288,15 @@ export function LoginPage() {
 
           {mode !== "forgot" && <AltSignIn />}
 
-          <button
-            type="button"
-            className="mt-1 text-center text-xs text-slate-400 transition hover:text-cyan-glow"
-            onClick={() => setMode(mode === "register" ? "login" : mode === "forgot" ? "login" : "register")}
-          >
-            {mode === "login" && "Nouveau joueur ? Crée ton empire"}
-            {mode === "register" && "Déjà un empire ? Connecte-toi"}
-            {mode === "forgot" && "Retour à la connexion"}
-          </button>
+          {mode !== "login" && (
+            <button
+              type="button"
+              className="mt-1 text-center text-xs text-slate-400 transition hover:text-cyan-glow"
+              onClick={() => setMode("login")}
+            >
+              {mode === "register" ? "Déjà un empire ? Connecte-toi" : "Retour à la connexion"}
+            </button>
+          )}
         </form>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-[0.25em] text-slate-500">
           <a href="/bible/index.html" className="transition hover:text-cyan-glow">

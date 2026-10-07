@@ -16,6 +16,9 @@ Ne jamais écrire une couleur en dur dans un composant : un thème ne pourrait p
 Médailles : `--th-medal-gold|silver|bronze`. Raretés : `--th-rarity-common|rare|epic|legendary|mythic`.
 Transparence d'une couleur (hex ou jeton) : `alpha(couleur, 30)` de `@/lib/utils` (jamais `${couleur}55`).
 Les couleurs choisies et enregistrées par les joueurs (rangs d'alliance…) restent des données hex, rangées dans `src/game`.
+Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--th-space-700` (fond clair des panneaux) dans chaque thème ;
+`text-slate-600` est réservé au décor (filets, séparateurs, icônes inactives), jamais à un texte qui porte une information (6.14.55).
+Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, écart entre couleurs de sens).
 
 ## Couleurs = sens
 
@@ -29,6 +32,12 @@ Les couleurs choisies et enregistrées par les joueurs (rangs d'alliance…) res
 | `violet` | second accent (événements) | événement du week-end, agenda |
 | `neutral` | information sans enjeu | puissance, compteurs |
 
+Dans un thème, deux couleurs de sens restent distinctes : écart CIEDE2000 ≥ 15 entre accent, violet (`--th-accent2`), mint, danger,
+or et ember, et ≥ 12 entre l'accent et le texte (`--th-text-100`). **Constellation**, thème des captures, respecte tout (6.14.55) :
+accent sable `#d6c49a` (le texte reste os), violet bleu acier `#5b8fd6`, ember orange `#e0802c` (celui de la bande), danger rouge,
+or ambre. Les thèmes monochromes (Cockpit, Holo…) gardent leurs confusions voulues, listées dans la garde, qui échoue si une
+nouvelle apparaît ou si l'une d'elles se resserre. Un décor propre au thème passe par ses jetons de décor (`--th-stripe-*`), pas par
+une couleur de sens. L'accent se marque aussi par la forme : soulignement de l'onglet actif (`TabsTrigger`), liseré, pastille.
 Ne pas décorer avec une couleur sémantique. Un même cas garde la même couleur partout :
 un chantier à l'arrêt (bâtiment, labo, chantier naval, missions) est une **action à mener**, donc `accent`,
 sur l'accueil comme dans la file des chantiers ; un entrepôt plein est une **attention** (`ember`). Une info ne passe jamais par la couleur seule (texte ou icône en plus).
@@ -94,7 +103,13 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
 ## À faire / à éviter
 
 - Faire : nombres en `font-mono` tabulaire, formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`), jamais
-  `toLocaleString` sur un nombre ; trois niveaux de texte maximum par panneau ; coins coupés ou droits.
+  `toLocaleString` sur un nombre ; trois niveaux de texte maximum par panneau ; coins coupés ou droits. Ces fonctions séparent les
+  milliers par une espace insécable U+00A0 : l'espace fine U+202F de fr-FR manque à toutes les polices de titre (6.14.54).
+- Faire : un texte qui cite un chiffre de règle (astuce, toast, aide) le lit dans la règle en vigueur (`ALLIANCE_RULES.maxMembers`,
+  accesseur `get` pour une liste fixe), jamais écrit en dur ; une aide dit « Touche ou survole », jamais « Survole » seul (6.14.54).
+- Faire : accueil public et pages mobiles vérifiés à 375 px sans défilement horizontal **ni élément coupé** : `scrollWidth` ne voit
+  pas un enfant caché par un parent en `overflow-hidden` ; `scripts/preprod-capture.mjs` liste les éléments dont le bord droit
+  dépasse la fenêtre. Une grille mobile a `grid-cols-1` et ses enfants `min-w-0` (6.14.53).
 - Faire : libellés en capitales en `font-mono` (ou `hud-eyebrow`) ; les titres en `hud-title`, les boutons et onglets en `font-display`.
 - Faire : `prefers-reduced-motion` est respecté partout (`MotionConfig reducedMotion="user"` dans `App`, pulsations Tailwind coupées).
 - Faire : animer pour signaler un état (alerte qui clignote, balayage = chargement) et respecter `prefers-reduced-motion`.

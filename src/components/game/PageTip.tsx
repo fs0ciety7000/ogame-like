@@ -4,9 +4,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Lightbulb, X } from "lucide-react";
 import { onboardingEligible } from "@/game/onboarding";
 import { usePlayerStore } from "@/store/playerStore";
+import { ALLIANCE_RULES, findAllianceResearch } from "@/game/alliances";
+import { PVP_RULES } from "@/game/pvp";
 
 /* Bulles d'aide (v2.9) : une explication courte la première fois qu'un
-   joueur débutant ouvre chaque page. Mémorisées dans le navigateur. */
+   joueur débutant ouvre chaque page. Mémorisées dans le navigateur.
+   6.14.54 (AD-7) : un chiffre de règle est lu dans la règle en vigueur (accesseur, réglable dans l'admin), jamais écrit en dur. */
 
 const SEEN_KEY = "cosmic-empires:tips-seen";
 const OFF_KEY = "cosmic-empires:tips-off";
@@ -15,16 +18,23 @@ export const PAGE_TIPS: Record<string, string> = {
   "/game/ressources": "Chaque bâtiment d'extraction produit en continu, même hors ligne. Surveille les jauges : un stock plein ne monte plus, et l'entrepôt met une partie à l'abri des pillards.",
   "/game/batiments": "Améliorer un bâtiment augmente sa production ou son effet. Chaque bâtiment a son propre chantier ; « Programmer » prépare la suite, lancée seule dès que possible.",
   "/game/unites": "Les unités d'attaque partent en mission ou au combat ; les défenses protègent ta base. Chaque unité se débloque et s'améliore au Labo.",
-  "/game/labo": "Les recherches débloquent les unités et donnent des bonus permanents (production, combat, vitesse…). Survole une technologie pour voir ses effets.",
+  "/game/labo": "Les recherches débloquent les unités et donnent des bonus permanents (production, combat, vitesse…). Touche ou survole une technologie pour voir ses effets.",
   "/game/missions": "Envoie des unités en mission : elles reviennent avec des ressources et de l'XP. Les unités engagées ne défendent pas ta base pendant ce temps.",
   "/game/galaxie": "La carte montre les autres commandants. Espionne avant d'attaquer : le rapport révèle ressources, flotte et défenses selon ton niveau d'Espionnage.",
-  "/game/joueurs": "Tous les commandants du serveur. Les débutants sont protégés 72 h ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.",
+  get "/game/joueurs"() {
+    const hours = Math.round(PVP_RULES.newbieProtectionMs / 3_600_000);
+    return `Tous les commandants du serveur. Les débutants sont protégés ${hours} h ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.`;
+  },
   "/game/combats": "Le journal de tes combats et espionnages. Depuis un rapport d'espionnage, « Simuler une attaque » estime l'issue avant d'envoyer ta flotte.",
   "/game/simulateur": "Teste un combat sans risque : la formule est exactement celle des vrais combats. Le résultat indique la puissance qu'il te faudrait pour gagner.",
   "/game/planificateur": "Tout ce qui tourne au même endroit. Enregistre une suite d'actions (bâtiments, unités, recherches) en modèle et rejoue-la en un clic : l'aperçu te dit avant ce qui passera.",
   "/game/commerce": "Quatre onglets : le Marché pour échanger tes surplus, les Contrats de livraison entre joueurs, les Enchères pour vendre reliques et plans de modules au plus offrant (en ressources ou en Ambre), et le Pot commun pour suivre les taxes versées jour après jour.",
   "/game/menaces": "Les factions surveillent les commandants trop riches ou trop agressifs. Paie le tribut ou repousse leurs raids pour localiser leur repaire.",
-  "/game/alliance": "Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. Jusqu'à 6 commandants.",
+  get "/game/alliance"() {
+    const base = Math.max(1, Math.floor(ALLIANCE_RULES.maxMembers));
+    const extra = Math.max(0, ALLIANCE_RULES.membersPerQuarter);
+    return `Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. ${base} commandants au départ${extra ? `, +${extra} par niveau de ${findAllianceResearch("quartiers")?.name ?? "Quartiers fédérés"}` : ""}.`;
+  },
 };
 
 function readSeen(): string[] {

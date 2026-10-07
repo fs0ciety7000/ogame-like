@@ -18,6 +18,10 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q109 | Ember de Constellation : la teinte proposée par l'audit (`#e8a23a`) se confond avec l'or : `#e0802c` (orange de la bande du thème) | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
+| Q110 | Accent de Constellation (accent ≠ texte) : Sable `#d6c49a` ; l'onglet actif garde son soulignement | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
+| Q111 | Bouton « Créer mon empire » sur l'accueil : `secondary` : « Connexion » reste le seul bouton plein | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
+| Q112 | Confusions de couleurs voulues des autres thèmes (Cockpit monochrome, Holo, Netrunner, Matrice…) : Gardées telles quelles, figées dans la garde `themeTokens.test.ts` | Couleurs et accueil (design UI/UX) | Valider (option prudente) |
 | Q82 | Les 47 paliers de succès auto déjà créés (pré-prod, donc production) : **garder** (données des joueurs, récompenses déjà versées) et brider la suite (AP-L4) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
 | Q83 | Brouillon de novembre écrit par l'ancien générateur : **régénérer automatiquement** tant que le mois n'a pas commencé (AP-L2), noté au journal | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
 | Q84 | Action dont la médiane du serveur est 0 : dans les défis du passe ? : **exclure** du passe (un défi bloque les suivants) ; la variété passe par les Chroniques (épisode 3, à quantité faisable) | Revue AU27 (contenu procédural) | Valider (option recommandée par l'audit) |
@@ -40,7 +44,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q101 | Boss : renforcer tout de suite ou attendre 8 semaines (Q21) ? : Attendre, en mesurant d'abord le temps avant la mort (AE-L4) | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
 | Q102 | Ambre : réduire les primes des paliers 3 et 4 ou ajouter des dépenses ? : Réduire les gains futurs d'un tiers (soldes intacts), après une mesure par source | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
 | Q103 | Menu progressif : quels comptes voient tout ? : Tout compte existant au-delà de Fer II, et tout compte qui a déjà ouvert la page ; seuls les nouveaux comptes ont l'ouverture par rang | Revue AU27 (équilibrage) | Valider (option recommandée par l'audit) |
-| Q56 | Panneau Lune : remplace-t-il la ligne `MoonLine` de la carte Planète mère ? : Non, il s'ajoute à côté (Statistiques, ancre `#lune`) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
 | Q57 | Bouton « Saut » pendant la recharge : Visible, grisé, avec le décompte ; cliquable seulement porte prête | Interface de la phalange et de la porte de saut | Valider (option prudente) |
 | Q58 | Balayer depuis l'alerte d'attaque : Lien vers le panneau Lune (l'alerte couvrirait la confirmation) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
 | Q59 | Toast de réussite du balayage et du saut : Pas de toast côté client : la notification du serveur en affiche un (sinon en double) | Interface de la phalange et de la porte de saut | Valider (option prudente) |

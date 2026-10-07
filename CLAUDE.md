@@ -223,7 +223,8 @@ Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seu
 - `manualChunks` (`vite.config.ts`) ne force que des paquets tiers chargés dès l'entrée (bloc `ui`, `vendor`) : jamais `src/game` ni `lucide-react`,
   sinon le code des pages paresseuses remonte dans un bloc chargé au démarrage.
 - Ne pas lancer prettier sur le dépôt.
-- Chaque lot front se termine par un audit DESIGN.md des fichiers touchés, plus une vérification mobile (largeur 375 px, sans défilement horizontal).
+- Chaque lot front se termine par un audit DESIGN.md des fichiers touchés, plus une vérification mobile (largeur 375 px, sans défilement horizontal
+  ni élément coupé : `scrollWidth` ne voit pas un enfant caché par un parent en `overflow-hidden`, `preprod-capture.mjs` le mesure, 6.14.53).
 - Captures d'écran (vérifications, livrables, rapports) : toujours en thème **Constellation**. Le thème est gardé par appareil :
   `localStorage.setItem("cosmic-empires:theme", "constellation")` dans un `addInitScript` de Playwright, avant le chargement de la page.
 

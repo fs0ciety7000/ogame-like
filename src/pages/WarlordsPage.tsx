@@ -93,7 +93,9 @@ export function WarlordsPage() {
     setBusy(true);
     try {
       await declareVendetta(vendetta.id, scope, recall);
-      toast.success(`Vendetta déclarée à ${vendetta.name}`, { description: "72 h pour lui détruire deux fois sa puissance de flotte." });
+      toast.success(`Vendetta déclarée à ${vendetta.name}`, {
+        description: `${WARLORD_RULES.vendetta.durationHours} h pour lui détruire ${WARLORD_RULES.vendetta.goalFactor}× sa puissance de flotte.`,
+      });
       setVendetta(null);
       await reload();
     } catch (err) {

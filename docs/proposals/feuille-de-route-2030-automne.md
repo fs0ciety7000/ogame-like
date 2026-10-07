@@ -18,9 +18,9 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 7 | AJ27-2 | Test de l'invariant I6 (butin et livraisons entrepôt plein) | S | à faire |
 | 8 | AC-B | Édition admin d'un joueur par le serveur (différences sur l'état rattrapé, plafonds, journal) | M | à faire |
 | 9 | AC-C | Suppression de compte côté serveur (ménage complet, règle de suppression réservée aux admins) | M | à faire |
-| 10 | UX-1 | Accueil public mobile (formulaire et devblog coupés à 375 px) | S | en cours (6.14.53) |
-| 11 | UX-3 | Textes de règle justes (astuces, toasts) et nombres lisibles | S | en cours (6.14.54) |
-| 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | en cours (6.14.55) |
+| 10 | UX-1 | Accueil public mobile (formulaire et devblog coupés à 375 px) | S | livré (6.14.53) |
+| 11 | UX-3 | Textes de règle justes (astuces, toasts) et nombres lisibles | S | livré (6.14.54) |
+| 12 | UX-2 | Couleurs du thème distinctes et contraste AA, avec garde | M | livré (6.14.55) |
 | 13 | É30-1d | Phalange : admin, santé, reliques, succès, Codex, titre, défi d'alliance, prompts, changelog, billet, annonce ; recharges au Journal | M | à faire |
 | 14 | É30-1e | Phalange : essai sur la pré-prod avec deux comptes, audit, GDD | S | à faire |
 | 15 | AE-L0 | Proposition d'équilibrage chiffrée et simulateur de progression dans le dépôt | S | à faire |

@@ -62,7 +62,7 @@ export function AllianceBossTab({ alliance, player }: { alliance: Alliance; play
     setBusy(true);
     try {
       await callAllianceBoss();
-      toast.success(`${def.name} approche : 24 h pour l'abattre !`);
+      toast.success(`${def.name} approche : ${ALLIANCE_BOSS_RULES.durationHours} h pour l'abattre !`);
     } catch (err) {
       toast.error(err instanceof AllianceError ? err.message : "Appel impossible.");
     } finally {

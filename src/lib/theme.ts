@@ -74,7 +74,7 @@ export const THEMES: { id: ThemeId; name: string; inspiration: string; descripti
     name: "Constellation",
     inspiration: "Esprit Starfield",
     description: "NASA-punk : os et graphite, typographie technique, bandes rouge, orange, jaune et bleu en tête de panneau. Aucun halo.",
-    swatches: ["#ece6d6", "#e0582c", "#f2b33d", "#18191c"],
+    swatches: ["#d6c49a", "#5b8fd6", "#e0802c", "#18191c"],
   },
   {
     id: "ishimura",

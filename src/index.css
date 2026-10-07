@@ -111,7 +111,7 @@
   --th-text-200: #e2e8f0;
   --th-text-300: #cbd5e1;
   --th-text-400: #94a3b8;
-  --th-text-500: #64748b;
+  --th-text-500: #738399; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #475569;
   --th-ink: #e7ecff;
   --th-body-glow: #101c3d;
@@ -155,7 +155,7 @@
   --th-text-200: #d6eaf8;
   --th-text-300: #b8d4e9;
   --th-text-400: #8fb3cf;
-  --th-text-500: #67879f;
+  --th-text-500: #6d8ea6; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #48627a;
   --th-ink: #eaf6ff;
   --th-body-glow: #0b3a6e;
@@ -187,7 +187,7 @@
   --th-text-200: #ffd8ad;
   --th-text-300: #f2b77f;
   --th-text-400: #c98a4f;
-  --th-text-500: #9a6537;
+  --th-text-500: #aa723f; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #6e4524;
   --th-ink: #ffd2a0;
   --th-body-glow: #2a1204;
@@ -219,7 +219,7 @@
   --th-text-200: #ece8c6;
   --th-text-300: #cfcaa6;
   --th-text-400: #a39f86;
-  --th-text-500: #7c7965;
+  --th-text-500: #84816c; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #57554a;
   --th-ink: #f4f1d0;
   --th-body-glow: #2a0710;
@@ -252,7 +252,7 @@
   --th-text-200: #fbe6dc;
   --th-text-300: #e4cbd8;
   --th-text-400: #b9a6c9;
-  --th-text-500: #8a77a0;
+  --th-text-500: #9380a8; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #5e4f74;
   --th-ink: #fff0e8;
   --th-body-glow: #4a1550;
@@ -286,7 +286,7 @@
   --th-text-200: #e3e6dd;
   --th-text-300: #c4c8bd;
   --th-text-400: #969b90;
-  --th-text-500: #6d7168;
+  --th-text-500: #7f847a; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #4a4d47;
   --th-ink: #eef1e8;
   --th-body-glow: #12160a;
@@ -320,7 +320,7 @@
   --th-text-200: #e7e4dc;
   --th-text-300: #c9c6bd;
   --th-text-400: #9b9a95;
-  --th-text-500: #6f7076;
+  --th-text-500: #868686; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #4b4e56;
   --th-ink: #f3efe2;
   --th-body-glow: #1d2533;
@@ -354,7 +354,7 @@
   --th-text-200: #dde6f0;
   --th-text-300: #bfcddd;
   --th-text-400: #8ea2b8;
-  --th-text-500: #627790;
+  --th-text-500: #6f849c; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #44556b;
   --th-ink: #ffe9d2;
   --th-body-glow: #0c2346;
@@ -388,7 +388,7 @@
   --th-text-200: #dcf1f7;
   --th-text-300: #b8d9e3;
   --th-text-400: #86aebb;
-  --th-text-500: #5c8391;
+  --th-text-500: #69909e; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #3f5f6b;
   --th-ink: #e8fdff;
   --th-body-glow: #0a3444;
@@ -406,12 +406,12 @@
   --th-font-body: "Space Grotesk", sans-serif;
   --th-title-track: 0.12em;
   --th-cut: 0px;
-  --th-accent: #ece6d6;
-  --th-accent2: #e0582c;
+  --th-accent: #d6c49a; /* 6.14.55 : sable, distinct du texte os (AD-1) */
+  --th-accent2: #5b8fd6; /* 6.14.55 : violet = bleu acier (Q-AD-3 a), plus l'ember */
   --th-ok: #7fc4a6;
   --th-danger: #d9452f;
   --th-gold: #f2b33d;
-  --th-ember: #e0582c;
+  --th-ember: #e0802c; /* 6.14.55 : orange de la bande, loin du danger et de l'or */
   --th-space-950: #08090a;
   --th-space-900: #0c0d0f;
   --th-space-800: #121315;
@@ -422,7 +422,7 @@
   --th-text-200: #e6e2d6;
   --th-text-300: #c8c3b4;
   --th-text-400: #9a968a;
-  --th-text-500: #6e6b63;
+  --th-text-500: #868378; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #4b4944;
   --th-ink: #f4f1e8;
   --th-body-glow: #2a2c31;
@@ -460,7 +460,7 @@
   --th-text-200: #f2dfc2;
   --th-text-300: #d6bf9c;
   --th-text-400: #a48d6c;
-  --th-text-500: #7a6850;
+  --th-text-500: #8f7b5e; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #544737;
   --th-ink: #fff1dc;
   --th-body-glow: #2a1300;
@@ -494,7 +494,7 @@
   --th-text-200: #dde5ff;
   --th-text-300: #b9c4f0;
   --th-text-400: #8b97cf;
-  --th-text-500: #6470a6;
+  --th-text-500: #7985bc; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #454f80;
   --th-ink: #f2f6ff;
   --th-body-glow: #4a1170;
@@ -528,7 +528,7 @@
   --th-text-200: #c4f5cb;
   --th-text-300: #9be0a6;
   --th-text-400: #6fb07b;
-  --th-text-500: #4d8256;
+  --th-text-500: #52885b; /* 6.14.55 : ≥ 4,5:1 sur space-700 */
   --th-text-600: #345a3b;
   --th-ink: #e6ffe9;
   --th-body-glow: #00210b;
@@ -1217,7 +1217,7 @@ main {
 :root[data-theme="constellation"] body {
   background:
     radial-gradient(ellipse 110% 65% at 50% -10%, var(--th-body-glow) 0%, transparent 65%),
-    radial-gradient(ellipse 80% 35% at 50% 110%, color-mix(in srgb, var(--th-accent2) 14%, transparent) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 35% at 50% 110%, color-mix(in srgb, var(--th-stripe-2) 14%, transparent) 0%, transparent 70%),
     linear-gradient(color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, color-mix(in srgb, var(--th-text-100) 3%, transparent) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(180deg, var(--color-space-800), var(--color-space-950) 70%);
@@ -1238,11 +1238,12 @@ main {
   box-shadow: none;
 }
 :root[data-theme="constellation"] .hud-btn-primary:hover {
-  background: var(--th-accent2);
+  /* 6.14.55 : décor de la bande orange (stripe), le violet sémantique est devenu bleu acier. */
+  background: var(--th-stripe-2);
   color: var(--th-text-100);
 }
 :root[data-theme="constellation"] ::selection {
-  background: var(--th-accent2);
+  background: var(--th-stripe-2);
   color: var(--th-text-100);
 }
 

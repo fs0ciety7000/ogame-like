@@ -10,20 +10,28 @@ export function alpha(color: string, pct: number): string {
   return `color-mix(in srgb, ${color} ${Math.round(pct)}%, transparent)`;
 }
 
+/** 6.14.54 (AD-5) : fr-FR sépare les milliers par U+202F (espace fine insécable), qu'aucune police de titre du jeu n'a
+    (Saira Condensed, Chakra Petch, Rajdhani… : « 32919 » affiché sans séparateur). On le remplace par U+00A0
+    (espace insécable), présente dans toutes. Affichage seulement : les nombres du moteur (`@/game/format`) ne changent pas. */
+const NARROW_NBSP = /\u202f/g;
+function withNbsp(s: string): string {
+  return s.replace(NARROW_NBSP, "\u00a0");
+}
+
 export function formatNumber(value: number): string {
   const v = Math.floor(value);
   if (Math.abs(v) < 1000) return String(v);
-  return new Intl.NumberFormat("fr-FR").format(v);
+  return withNbsp(new Intl.NumberFormat("fr-FR").format(v));
 }
 
 /** 5.15 : nombre à virgule (fr-FR), `digits` décimales au plus : « 1,25 ». */
 export function formatDecimal(value: number, digits = 2): string {
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }).format(value);
+  return withNbsp(new Intl.NumberFormat("fr-FR", { maximumFractionDigits: digits }).format(value));
 }
 
 export function formatCompact(value: number): string {
-  return new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 }).format(
-    Math.floor(value),
+  return withNbsp(
+    new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 }).format(Math.floor(value)),
   );
 }
 
@@ -32,7 +40,7 @@ export function formatPerSecond(hourly: number): string {
   const v = hourly / 3600;
   if (v >= 1000) return `${formatCompact(v)}/s`;
   if (v >= 10) return `${formatNumber(Math.round(v))}/s`;
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(v)}/s`;
+  return `${withNbsp(new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(v))}/s`;
 }
 
 export function formatDuration(totalSeconds: number): string {
