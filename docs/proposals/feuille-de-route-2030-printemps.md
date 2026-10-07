@@ -8,7 +8,7 @@ production, `main` et PR sautés (Q12), mais préparés pour le jour J.
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
 | 1 | P30-3 | Intégration : 10 passages complets ; cause de l'échec isolé de « v3.9 bounties » trouvée, ou test rendu déterministe (AU30-3) | S | à faire |
-| 2 | P30-1 | Billet de devblog récapitulatif de la mise en production (`content/blog/`), en brouillon jusqu'au jour J (AU30-4) | M | à faire |
+| 2 | P30-1 | Billet de devblog récapitulatif de la mise en production (`content/blog/`), en brouillon jusqu'au jour J (AU30-4) | M | livré en 6.14.30 |
 | 3 | P30-2 | Texte de la PR `claude/hiver-k-s` → `main` prêt à coller (`docs/release/pr-5.27-6.14.md`) : résumé, fiches portées, vérifications (AU30-2) | S | à faire |
 | 4 | P30-4 | Report des réponses aux décisions à valider (page à cocher) : statut « validée » ou lot de changement | selon réponses | attend l'utilisateur |
 | 5 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
