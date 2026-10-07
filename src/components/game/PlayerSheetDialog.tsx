@@ -143,6 +143,7 @@ export function PlayerSheetDialog({ target, onClose, actions }: { target: { uid:
             {entry?.moonName && (
               <HudChip size="sm" tone="violet" className="mt-1" title="Lune née d'un grand combat au-dessus de sa planète mère.">
                 <Moon className="h-3 w-3" /> Lune {entry.moonName}
+                {(entry.moonLevel ?? 0) > 0 && <span className="tabular-nums"> · niv. {entry.moonLevel}</span>}
               </HudChip>
             )}
             {patron && (

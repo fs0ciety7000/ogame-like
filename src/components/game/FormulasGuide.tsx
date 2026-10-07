@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
-import { Calculator, Coins, Crosshair, Factory, Gauge, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
+import { Calculator, Coins, Crosshair, Factory, Gauge, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
@@ -19,6 +19,9 @@ import { UNITS, UNIT_BASE_STATS, OFFENSIVE_UNITS } from "@/game/units";
 import { WARLORD_RULES } from "@/game/warlords";
 import { BASE_COUNTS } from "@/game/procedural";
 import { OBJECTIVE_LABELS } from "@/game/chronicles";
+import { formatWait, PHALANX_RULES, phalanxFeatures, phalanxLevel, phalanxRange, scanCost } from "@/game/phalanx";
+import { gateCooldownMs, JUMP_GATE_RULES } from "@/game/jumpGate";
+import { MOON_RULES, moonPity } from "@/game/moon";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
@@ -57,6 +60,7 @@ export const FORMULA_SECTIONS = [
   { id: "combat", label: "Combat", icon: Crosshair },
   { id: "protections", label: "Protections", icon: Shield },
   { id: "menaces", label: "Raids et seigneurs", icon: Skull },
+  { id: "lune", label: "Lune et phalange", icon: Moon },
   { id: "gains", label: "Missions et gains", icon: Coins },
   { id: "bonus", label: "Bonus", icon: Sparkles },
   { id: "passe", label: "Passe et Chroniques", icon: Ticket },
@@ -374,6 +378,43 @@ seigneur de guerre : attaque avec ${pct(WARLORD_RULES.attackPowerMin)} à ${pct(
           ])}
         />
         {p && <Mine>{<Row label="Niveaux de bâtiments cumulés" value={buildingLevels} hint="servent au plancher des raids" />}</Mine>}
+      </Block>
+
+      {/* 6.14.49 (É30-1c) : paliers de la lune (phalange, porte de saut), coût du balayage, pitié. */}
+      <Block id="lune" title="Lune et phalange" icon={Moon} intro="Une lune naît d'un grand combat sur ta planète mère. Chaque niveau élargit la portée de sa phalange ; dès le niveau requis, elle perce les leurres et ouvre une porte de saut.">
+        <Table
+          head={["Niveau", "Portée", "Balayage", "Perce", "Porte de saut"]}
+          rows={Array.from({ length: Math.max(1, Math.floor(Number(MOON_RULES.maxLevel) || 1)) }, (_, i) => {
+            const lvl = i + 1;
+            const f = phalanxFeatures(lvl);
+            const gate = gateCooldownMs(lvl);
+            return [
+              `Niveau ${lvl}`,
+              PHALANX_RULES.enabled ? formatDecimal(f.range, 0) : "—",
+              PHALANX_RULES.enabled ? formatWait(f.scanCooldownMs) : "—",
+              [f.revealDecoy && "leurre", f.revealBoosts && "capsules"].filter(Boolean).join(", ") || "—",
+              gate !== null ? formatWait(gate) : "—",
+            ];
+          })}
+        />
+        <Formula>
+          {`portée = ${PHALANX_RULES.rangePerLevel} × niveau de la lune × (1 + bonus de portée)
+balayage : max(${formatCompact(PHALANX_RULES.scanCostMin)}, ${formatDecimal(PHALANX_RULES.scanCostHours, 2)} h de production d'énergie) ; seulement un joueur qui t'attaque ou attaque un allié à ta portée
+porte de saut : ${JUMP_GATE_RULES.cooldownHours} h au niveau ${JUMP_GATE_RULES.minMoonLevel}, −${JUMP_GATE_RULES.cooldownCutPerLevel} h par niveau, ${JUMP_GATE_RULES.cooldownMinHours} h au moins (bonus compris)
+chance de lune = chance des débris + réserve ; réserve +${pct(MOON_RULES.pityPerDefense)} par combat subi sur ta planète mère, remise à 0 à la naissance`}
+        </Formula>
+        {p && (
+          <Mine>
+            {phalanxLevel(p) > 0 ? (
+              <>
+                <Row label="Portée de ta phalange" value={formatDecimal(phalanxRange(p), 0)} />
+                <Row label="Coût d'un balayage" value={`${n(scanCost(p))} énergie`} />
+              </>
+            ) : (
+              <Row label="Réserve de pitié" value={pct(moonPity(p))} hint="chance ajoutée au prochain combat subi" />
+            )}
+          </Mine>
+        )}
       </Block>
 
       <Block id="gains" title="Missions et gains" icon={Coins} intro="Les récompenses suivent ton développement : une mission rapporte toujours au moins ce que tes extracteurs auraient produit pendant sa durée.">

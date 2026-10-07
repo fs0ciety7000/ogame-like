@@ -4,6 +4,8 @@ import { threatEstimate, type ThreatVerdict } from "@/game/threat";
 import type { Fleet } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
+import { usePiercedFleet } from "@/store/phalanxStore";
+import { HudChip } from "@/components/ui/hud";
 import { cn, formatCompact } from "@/lib/utils";
 
 const VERDICT: Record<ThreatVerdict, { label: string; color: string }> = {
@@ -16,9 +18,12 @@ const VERDICT: Record<ThreatVerdict, { label: string; color: string }> = {
 export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compact?: boolean; className?: string }) {
   const player = usePlayerStore((s) => s.player);
   const fleets = useFleetStore((s) => s.fleets);
+  // 6.14.49 (É30-1c) : la phalange perce le leurre (vraie composition) et les capsules ; le verdict se refait sur ces valeurs.
+  const pierced = usePiercedFleet(fleet.mission === "attack" ? fleet.id : undefined);
   if (!player) return null;
   const fleetOnly = fleet.mission === "pirate" && findFaction(fleet.factionId ?? "varan")?.raid.target === "fleet";
-  const t = threatEstimate(fleet, player, { fleetOnly, garrisons: fleets });
+  const seen = pierced ? { ...fleet, units: pierced.units, power: pierced.power } : fleet;
+  const t = threatEstimate(seen, player, { fleetOnly, garrisons: fleets });
   const v = VERDICT[t.verdict];
   const total = t.attack + t.defense;
   const atkPct = total > 0 ? Math.max(4, Math.min(96, (t.attack / total) * 100)) : 50;
@@ -40,6 +45,15 @@ export function ThreatGauge({ fleet, compact, className }: { fleet: Fleet; compa
         <div className="h-full bg-danger-glow/80" style={{ width: `${atkPct}%` }} />
         <div className="h-full flex-1 bg-cyan-glow/70" />
       </div>
+      {pierced && (
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px] text-violet-glow">
+          <HudChip size="sm" tone="violet" title="Ta lune voit à travers le brouilleur et les capsules de cette flotte.">
+            Percé par la phalange
+          </HudChip>
+          {!compact && pierced.piercedText && <span>{pierced.piercedText.replace(/^Percé par la phalange : /, "")}</span>}
+          {compact && pierced.pierced?.decoy && <span>leurre détecté</span>}
+        </p>
+      )}
       {!compact && (
         <p className="mt-1 text-[10px] text-slate-500">
           Attaque {t.shield > 0 ? `après bouclier (−${Math.round(t.shield * 100)} %)` : ""} contre ta défense sur {t.targetName}

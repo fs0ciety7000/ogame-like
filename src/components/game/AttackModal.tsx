@@ -39,6 +39,8 @@ import { GameIcon } from "@/components/ui/game-icon";
 import { playerCargoCapacity, playerModifiers } from "@/game/modifiers";
 import { CAPSULES, capsulePct, synthesisState } from "@/game/synthesis";
 import { FlaskConical } from "lucide-react";
+import { PHALANX_RULES } from "@/game/phalanx";
+import { useDirectoryStore } from "@/store/directoryStore";
 
 /** Envoi d'une flotte d'attaque : le combat aura lieu à son arrivée. */
 export function AttackModal({
@@ -82,6 +84,10 @@ export function AttackModal({
     };
   }, [uid, target]);
   const [presetName, setPresetName] = useState("");
+  // 6.14.49 (Q38) : niveau de lune public de la cible (une colonie relève de la lune de son empire).
+  const targetMoonLevel = useDirectoryStore((st) => (target ? (st.moonLevelOf[target.uid.replace(/-c\d+$/, "")] ?? 0) : 0));
+  const decoyPierced = PHALANX_RULES.enabled && decoy > 0 && PHALANX_RULES.revealDecoyLevel > 0 && targetMoonLevel >= PHALANX_RULES.revealDecoyLevel;
+  const assaultPierced = PHALANX_RULES.enabled && assault > 0 && PHALANX_RULES.revealBoostLevel > 0 && targetMoonLevel >= PHALANX_RULES.revealBoostLevel;
   // 5.22 : unités d'élite proposées contre les seigneurs de guerre seulement.
   const OFFENSIVE_UNITS = ALL_OFFENSIVE.filter((id) => !isEliteUnit(id) || isWarlordUid(target?.uid));
   // 6.10.0 : départ depuis une base avancée (colonie) ; "" = planète mère.
@@ -412,6 +418,15 @@ export function AttackModal({
                   </div>
                 );
               })()}
+
+              {(decoyPierced || assaultPierced) && (
+                <HudCallout tone="ember" className="mt-2 text-xs">
+                  Ta cible a une lune niveau <span className="font-mono tabular-nums">{targetMoonLevel}</span> :{" "}
+                  {decoyPierced && "ton brouilleur sera percé (elle verra ta vraie flotte)"}
+                  {decoyPierced && assaultPierced && " et "}
+                  {assaultPierced && "ton stimulant sera chiffré"}.
+                </HudCallout>
+              )}
 
               {/* v3.8 : estimation du combat */}
               <div className="mt-3 border border-white/10 bg-black/20 px-3 py-2 text-xs">

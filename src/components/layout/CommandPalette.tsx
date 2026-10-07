@@ -67,7 +67,7 @@ export function CommandPalette() {
 
     // 5.26.2 : onglets des pages (« enchères », « modules », « atelier »…).
     const tabItems: PaletteItem[] = matchPaletteTabs(q, hidden).map((t) => ({
-      key: `tab-${t.to}`,
+      key: `tab-${t.to}-${t.label}`,
       label: t.label,
       sublabel: `Onglet · ${t.pageLabel}`,
       icon: <CornerDownRight className="h-4 w-4 text-cyan-glow" />,

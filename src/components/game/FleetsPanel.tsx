@@ -2,7 +2,7 @@ import { PlayerName } from "@/components/ui/player-name";
 import { targetsPlayer } from "@/game/fleets";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, CornerUpLeft, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
+import { AlertTriangle, CornerUpLeft, DoorOpen, RotateCcw, Rocket, Wind, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Card } from "@/components/ui/card";
@@ -17,7 +17,12 @@ import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { findUnit } from "@/game/units";
 import { factionOfLair, findFaction } from "@/game/pirates";
 import { formatClock, formatCompact } from "@/lib/utils";
-import { GameActionError, recallFleet, launchFleet } from "@/services/playerService";
+import { GameActionError, jumpFleet, recallFleet, launchFleet } from "@/services/playerService";
+import { gateCooldownMs, gateReadyAtMs, gateUnlocked, jumpMissions } from "@/game/jumpGate";
+import { moonLevel, playerMoon } from "@/game/moon";
+import { formatWait } from "@/game/phalanx";
+import { ScanButton } from "@/components/game/PhalanxPanel";
+import { refreshPhalanx } from "@/store/phalanxStore";
 import { resolveRelaunch, useLastMission } from "@/store/lastMissionStore";
 import { fireRecallBeacon } from "@/services/bountyService";
 import { bountyState } from "@/game/bounties";
@@ -91,6 +96,12 @@ export function FleetsPanel({
   const stored = useLastMission((s) => s.last);
   const last = useMemo(() => resolveRelaunch(stored, bountyState({ bounties }).board), [stored, bounties]);
   const now = Date.now();
+  // 6.14.49 (É30-1c) : porte de saut (lune de niveau 3+) : patrouille, garnison ou base avancée rapatriée tout de suite.
+  const player = usePlayerStore((s) => s.player);
+  const gateOpen = gateUnlocked(player);
+  const gateWaitMs = Math.max(0, gateReadyAtMs(player) - now);
+  const gateFleet = (f: Fleet) =>
+    gateOpen && jumpMissions().includes(f.mission) && (f.status === "outbound" || f.status === "stationed" || f.status === "returning") && !Object.values(f.loot ?? {}).some((n) => (n ?? 0) > 0);
 
   const incoming = fleets.filter((f) => isHostile(f, uid));
   const mine = fleets.filter((f) => f.ownerUid === uid && f.status !== "done");
@@ -133,6 +144,30 @@ export function FleetsPanel({
       toast.success("Mission relancée.");
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Relance impossible.");
+    } finally {
+      setPending(null);
+    }
+  };
+
+  const jump = async (fleet: Fleet) => {
+    const moon = playerMoon(player);
+    const cd = moon ? gateCooldownMs(moonLevel(moon), player) : null;
+    const what = fleet.mission === "patrol" ? "Ta patrouille" : fleet.mission === "garrison" ? "Ta garnison" : "Ta base avancée";
+    const ok = await askConfirm({
+      title: "Sauter par la porte ?",
+      message: `${what} rentre à quai tout de suite.${fleet.mission === "garrison" && fleet.status === "stationed" ? ` ${fleet.targetPseudo} est prévenu.` : ""}${fleet.mission === "patrol" ? " L'énergie de la patrouille n'est pas rendue." : ""}${cd !== null ? ` Prochain saut dans ${formatWait(cd)}.` : ""}`,
+      confirmLabel: "Sauter",
+      tone: "accent",
+    });
+    if (!ok) return;
+    setPending(fleet.id);
+    try {
+      // Succès : le serveur notifie « Saut réussi » (toast et Journal), comme pour un retour de flotte.
+      await jumpFleet(fleet.id);
+      void refreshPhalanx(undefined, true);
+    } catch (err) {
+      // Refus du serveur (recharge, mission, flotte chargée…), en tutoiement.
+      toast.error(err instanceof GameActionError ? err.message : "Saut impossible.");
     } finally {
       setPending(null);
     }
@@ -211,6 +246,7 @@ export function FleetsPanel({
                 : fleetSummary(f)}
             </p>
             <ThreatGauge fleet={f} className="mt-1.5" />
+            {f.mission === "attack" && <ScanButton targetUid={f.ownerUid} pseudo={f.ownerPseudo} compact className="mt-1.5" />}
             {f.anomaly && (
               <p className="mt-1 text-[11px] font-semibold text-violet-glow">
                 ⚗ Anomalie chimique : capsules à bord (stimulant ou leurre), la composition affichée peut être fausse.
@@ -314,6 +350,19 @@ export function FleetsPanel({
                   onClick={() => void recall(f)}
                 >
                   <CornerUpLeft className="mr-1 h-3.5 w-3.5" /> Rappeler
+                </Button>
+              )}
+              {gateFleet(f) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-violet-glow"
+                  disabled={pending === f.id || gateWaitMs > 0}
+                  title={gateWaitMs > 0 ? `Ta porte de saut se recharge : encore ${formatWait(gateWaitMs)}.` : "Porte de saut : retour à quai immédiat"}
+                  onClick={() => void jump(f)}
+                >
+                  <DoorOpen className="mr-1 h-3.5 w-3.5" /> Saut
+                  {gateWaitMs > 0 && <span className="ml-1 font-mono tabular-nums text-slate-400">{formatClock(Math.ceil(gateWaitMs / 1000))}</span>}
                 </Button>
               )}
               {beaconable && (

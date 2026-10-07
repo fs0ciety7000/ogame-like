@@ -38,6 +38,7 @@ import { isWarlordUid } from "@/game/warlords";
 import { FLEET_MISSION_LABELS, type Fleet } from "@/game/fleets";
 import { SECTOR_COUNT, sectorLabel, sectorOf, TERRITORY_RULES, territoryBonus } from "@/game/territories";
 import { allianceHue, useTerritories } from "@/services/territoryService";
+import { phalanxRange, PHALANX_RULES } from "@/game/phalanx";
 
 const SIZE = FLEET_RULES.mapSize;
 /** Marge autour de la carte : les empires posés au bord restent entiers. */
@@ -437,6 +438,18 @@ export function GalaxyPage() {
                 );
               })}
 
+              {/* 6.14.49 (É30-1c) : portée de ta phalange, autour de ta planète mère (radar d'alliance, balayage). */}
+              {(() => {
+                const range = phalanxRange(me);
+                const self = uid ? blips.find((b) => b.uid === uid) : undefined;
+                if (!self || !(range > 0)) return null;
+                return (
+                  <circle cx={self.pos.x} cy={self.pos.y} r={range} fill="var(--color-violet-glow)" fillOpacity={0.04} stroke="var(--color-violet-glow)" strokeOpacity={0.45} strokeWidth={0.25 / k} strokeDasharray={`${1.2 / k} ${0.8 / k}`} pointerEvents="none">
+                    <title>{`Portée de ta phalange : ${Math.round(range)}`}</title>
+                  </circle>
+                );
+              })()}
+
               {/* Empires */}
               {blips.map((b) => {
                 const isSelf = b.uid === uid;
@@ -465,7 +478,7 @@ export function GalaxyPage() {
                     {/* 6.13.3 : la lune, petit astre en orbite. */}
                     {b.moonName && (
                       <circle cx={1.6 / k} cy={-1.2 / k} r={0.45 / k} fill="var(--color-slate-300)" opacity={0.85}>
-                        <title>{`Lune ${b.moonName}`}</title>
+                        <title>{`Lune ${b.moonName}${(b.moonLevel ?? 0) > 0 ? ` (niveau ${b.moonLevel})` : ""}`}</title>
                       </circle>
                     )}
                     {showLabel && (
@@ -538,6 +551,11 @@ export function GalaxyPage() {
             <span className="flex items-center gap-1">
               <span className="h-1.5 w-1.5 rotate-45 bg-slate-300" /> Colonie
             </span>
+            {phalanxRange(me) > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="h-2 w-2 rounded-full border border-dashed border-violet-glow" /> Portée de ta phalange
+              </span>
+            )}
           </div>}
           <p className="pointer-events-none absolute right-2 top-2 hidden hud-cut-sm bg-space-950/70 px-2 py-1 text-[10px] text-slate-500 sm:block">
             Molette : zoom · glisser : déplacer · ×{k.toFixed(1)}
@@ -568,6 +586,14 @@ export function GalaxyPage() {
                   Secteur {formatCoords(selected.coords)} · {getRankLabel(selected.xp)}
                   {selected.allianceId && allianceById.get(selected.allianceId) && ` · [${allianceById.get(selected.allianceId)!.tag}]`}
                 </p>
+                {/* 6.14.49 : la lune et son niveau sont publics (Q41) : le risque se voit avant d'attaquer. */}
+                {!selectedColony && selected.moonName && (
+                  <p className="text-xs text-violet-glow">
+                    Lune {selected.moonName}
+                    {(selected.moonLevel ?? 0) > 0 && <span className="font-mono tabular-nums"> · niv. {selected.moonLevel}</span>}
+                    {PHALANX_RULES.enabled && (selected.moonLevel ?? 0) >= PHALANX_RULES.revealDecoyLevel && PHALANX_RULES.revealDecoyLevel > 0 && <span className="text-slate-500"> · perce les leurres</span>}
+                  </p>
+                )}
                 </div>
                 {/* 5.16 : planète personnalisée (empires seulement) */}
                 {!selectedColony && !("npc" in selected && selected.npc) && (

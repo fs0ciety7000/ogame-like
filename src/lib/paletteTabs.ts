@@ -36,6 +36,9 @@ export const PALETTE_TABS: PaletteTab[] = [
   tab("/game/alliance", "Alliance", "guerre", "Guerre"),
   tab("/game/alliance", "Alliance", "diplomatie", "Diplomatie", "pactes"),
   tab("/game/alliance", "Alliance", "calendrier", "Calendrier"),
+  // 6.14.49 (É30-1c) : panneau Lune de l'écran Statistiques (la page fait défiler jusqu'à lui).
+  tab("/game/statistiques", "Statistiques", "lune", "Phalange", "lune radar balayage perce-brouillard leurre"),
+  tab("/game/statistiques", "Statistiques", "lune", "Porte de saut", "lune saut rapatrier patrouille garnison"),
   tab("/game/reglages", "Réglages", "compte", "Compte", "mot de passe"),
   tab("/game/reglages", "Réglages", "apparence", "Apparence et son", "thème compact"),
   tab("/game/reglages", "Réglages", "notifications", "Notifications"),

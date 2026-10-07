@@ -12,9 +12,11 @@ interface Directory {
   tagOf: Record<string, string>;
   /** v4.6 : dernière activité réelle de chaque joueur (« en ligne »). */
   lastActiveOf: Record<string, number>;
+  /** 6.14.49 : niveau de lune public de chaque joueur (0 ou absent : pas de lune). */
+  moonLevelOf: Record<string, number>;
 }
 
-export const useDirectoryStore = create<Directory>(() => ({ allianceOf: {}, tagOf: {}, lastActiveOf: {} }));
+export const useDirectoryStore = create<Directory>(() => ({ allianceOf: {}, tagOf: {}, lastActiveOf: {}, moonLevelOf: {} }));
 
 let users = 0;
 let stop: (() => void) | null = null;
@@ -28,6 +30,7 @@ export function useDirectorySync(enabled: boolean) {
         useDirectoryStore.setState({
           allianceOf: Object.fromEntries(players.filter((p) => p.allianceId).map((p) => [p.uid, p.allianceId!])),
           lastActiveOf: Object.fromEntries(players.filter((p) => p.lastActiveMs).map((p) => [p.uid, p.lastActiveMs!])),
+          moonLevelOf: Object.fromEntries(players.filter((p) => (p.moonLevel ?? 0) > 0).map((p) => [p.uid, p.moonLevel!])),
         }),
       );
       const b = subscribeAlliances((alliances) => useDirectoryStore.setState({ tagOf: Object.fromEntries(alliances.map((al) => [al.id, al.tag])) }));

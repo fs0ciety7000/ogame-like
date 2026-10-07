@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { alarmGlitch } from "@/lib/fx/uiFx";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { AlertTriangle, Orbit, Wind, X } from "lucide-react";
+import { AlertTriangle, Orbit, ScanSearch, Wind, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
@@ -11,6 +11,9 @@ import { isHostile } from "@/components/game/FleetsPanel";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";
+import { usePlayerStore } from "@/store/playerStore";
+import { usePhalanxSync } from "@/store/phalanxStore";
+import { phalanxLevel } from "@/game/phalanx";
 import { formatClock } from "@/lib/utils";
 
 /* v4.9.3 : alerte plein écran à 5 minutes de l'impact d'une flotte hostile.
@@ -51,6 +54,15 @@ export function RaidAlert() {
   const uid = useAuthStore((s) => s.user?.uid);
   const [, force] = useState(0);
   const [patrol, setPatrol] = useState(false);
+  // 6.14.49 (É30-1c) : la phalange relit les flottes qui te visent dès qu'une attaque apparaît ou disparaît
+  // (alerte montée une fois pour toute l'appli : la jauge de menace et l'écran de la lune lisent le même état).
+  const player = usePlayerStore((s) => s.player);
+  const hostileKey = fleets
+    .filter((f) => isHostile(f, uid) && f.mission === "attack")
+    .map((f) => f.id)
+    .sort()
+    .join(",");
+  usePhalanxSync(player, `hostile:${hostileKey}`);
   const now = Date.now();
   const imminent = fleets
     .filter((f) => isHostile(f, uid) && f.arriveAtMs > now && f.arriveAtMs - now <= RAID_ALERT_MS && !dismissed.has(f.id))
@@ -110,6 +122,14 @@ export function RaidAlert() {
               <ThreatGauge fleet={next} className="mt-4" />
               <p className="mt-3 text-xs text-slate-400">Mets ta flotte à l'abri en patrouille, ou prépare tes défenses.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {/* L'alerte passe au-dessus des fenêtres : le balayage se fait depuis le panneau Lune (confirmation et rapport). */}
+                {next.mission === "attack" && phalanxLevel(player) > 0 && (
+                  <Button variant="outline" asChild onClick={close}>
+                    <Link to="/game/statistiques?onglet=lune">
+                      <ScanSearch className="h-4 w-4" /> Balayer l'agresseur
+                    </Link>
+                  </Button>
+                )}
                 <Button variant="danger" onClick={() => setPatrol(true)}>
                   <Wind className="h-4 w-4" /> Fuir en patrouille
                 </Button>

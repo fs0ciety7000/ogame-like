@@ -77,8 +77,11 @@ const KIND_LINKS: Partial<Record<NotificationKind, string>> = {
 };
 
 /** Lien d'une notification : le sien (v3.8), sinon celui de son type. */
-export function notificationLink(n: { kind: NotificationKind; link?: string | null }): string | null {
+export function notificationLink(n: { kind: NotificationKind; link?: string | null; data?: unknown }): string | null {
   if (n.link && n.link.startsWith("/game")) return n.link;
+  // 6.14.49 : balayage et saut de la phalange → panneau Lune (le radar d'alliance porte déjà son lien).
+  const phalanx = n.data && typeof n.data === "object" ? (n.data as { phalanx?: unknown }).phalanx : undefined;
+  if (phalanx === "scan" || phalanx === "jump") return "/game/statistiques?onglet=lune";
   return KIND_LINKS[n.kind] ?? null;
 }
 

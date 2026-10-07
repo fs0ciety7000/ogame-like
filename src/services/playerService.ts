@@ -7,6 +7,7 @@ import { rememberLastMission } from "@/store/lastMissionStore";
 import type { AwaySummary, GameAction } from "@/game/actions";
 import type { Fleet, FleetMission } from "@/game/fleets";
 import type { DebrisField } from "@/game/debris";
+import type { PhalanxFeatures, ScanReport } from "@/game/phalanx";
 import type {
   BattleReport,
   BuildingId,
@@ -77,7 +78,8 @@ export async function callGame<T>(path: string, body: Record<string, unknown> = 
   } catch (err) {
     const status = (err as { status?: number })?.status;
     const message = (err as { response?: { message?: string } })?.response?.message;
-    if (status === 404 && !message?.includes("joueur")) {
+    // 6.14.49 : un 404 du jeu porte un message (« Flotte introuvable. ») ; seul un 404 sans message du jeu veut dire « hooks absents ».
+    if (status === 404 && !message?.includes("joueur") && !message?.includes("introuvable")) {
       throw new GameActionError("Serveur de jeu indisponible : les hooks ne sont pas installés (voir README).");
     }
     if (status === 400 || status === 404) throw new GameActionError(message || "Action impossible.");
@@ -284,6 +286,8 @@ export interface LeaderboardEntry {
   empireClass?: string;
   /** 6.13.3 : nom de la lune (vide sans lune). */
   moonName?: string;
+  /** 6.14.48 : niveau de la lune (0 sans lune), public (Q41). */
+  moonLevel?: number;
 }
 
 function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
@@ -307,10 +311,11 @@ function leaderboardEntryFromRecord(data: PbRecord): LeaderboardEntry {
     avatar: (data.avatar as string) || undefined,
     empireClass: (data.empireClass as string) || undefined,
     moonName: (data.moonName as string) || undefined,
+    moonLevel: (data.moonLevel as number) || 0,
   };
 }
 
-const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass,moonName";
+const LEADERBOARD_FIELDS = "id,pseudo,xp,seasonId,seasonXp,createdAtMs,lastDefeatAtMs,lastAttackAtMs,allianceId,activeTitle,ascensions,ascendedAtMs,planets,npc,vacationUntilMs,lastActiveMs,avatar,empireClass,moonName,moonLevel";
 
 /** Classement "total", trié côté serveur par XP, lu dans les fiches
  *  publiques (collection profiles, tenue à jour par le serveur) : la fiche
@@ -595,6 +600,58 @@ export async function launchFleet<T = Fleet>(body: Record<string, unknown>, targ
 
 export function recallFleet(fleetId: string): Promise<Fleet> {
   return callGame<Fleet>("fleet/recall", { fleetId });
+}
+
+/* ---------- 6.14.49 (É30-1c) : phalange et porte de saut lunaires ---------- */
+
+/** Flotte d'attaque vue par la phalange (vue publique, percée pour la cible selon son niveau de lune). */
+export interface PhalanxFleetLine {
+  id: string;
+  ownerUid: string;
+  ownerPseudo: string;
+  targetUid: string;
+  targetPseudo: string;
+  targetOwnerUid: string;
+  departAtMs: number;
+  arriveAtMs: number;
+  formation: string;
+  units: Record<string, number>;
+  /** Puissance à afficher ; null : à recalculer sur `units`. */
+  power: number | null;
+  /** Flottes qui te visent seulement. */
+  assault?: number | null;
+  pierced?: { decoy: boolean; boosts: boolean };
+  piercedText?: string | null;
+  /** Attaques sur un allié seulement. */
+  allyUid?: string;
+  allyPseudo?: string;
+}
+
+export interface PhalanxStatus {
+  enabled: boolean;
+  level: number;
+  range: number;
+  features: PhalanxFeatures;
+  scan: { readyAtMs: number; cooldownMs: number; cost: number };
+  gate: { enabled: boolean; unlocked: boolean; minLevel: number; readyAtMs: number; cooldownMs: number | null; missions: string[] };
+  incoming: PhalanxFleetLine[];
+  allies: PhalanxFleetLine[];
+  now: number;
+}
+
+/** État de la phalange : flottes qui te visent (percées), alliés menacés dans ta portée, recharges (lecture seule). */
+export function fetchPhalanx(): Promise<PhalanxStatus> {
+  return callGame<PhalanxStatus>("moon/phalanx");
+}
+
+/** Balayage d'un agresseur : énergie payée, recharge posée, rapport rendu (et gardé dans le Journal). */
+export function scanAggressor(targetUid: string): Promise<{ report: ScanReport; cost: number; scanReadyAtMs: number; message: string }> {
+  return callGame("moon/scan", { targetUid });
+}
+
+/** Porte de saut : la patrouille, la garnison ou la base avancée rentre tout de suite à quai. */
+export function jumpFleet(fleetId: string): Promise<{ fleetId: string; status: string; gateReadyAtMs: number; message: string }> {
+  return callGame("fleet/jump", { fleetId });
 }
 
 /** Mes flottes et celles qui foncent sur moi (la règle d'accès ne montre

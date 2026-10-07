@@ -13,7 +13,7 @@ une action ajoutée par l'utilisateur devient un lot ici (son identifiant `A…`
 | 2 | É30-1 | Phalange et porte de saut lunaires (Q31 validée, option A) : proposition `docs/proposals/phalange-porte-de-saut.md` (Q33 à Q41), en 5 lots ci-dessous | L | en cours |
 | 2a | É30-1a | Moteur pur et tests : `phalanx.ts`, `jumpGate.ts`, pitié lunaire, stats `phalanxRange` et `jumpGateCooldown`, registre des règles, invariants I21 à I23 | S à M | livré (6.14.44) |
 | 2b | É30-1b | Serveur : routes `moon/phalanx`, `moon/scan`, `fleet/jump`, radar d'alliance au lancement, niveau de lune public, schéma, intégration | M | livré (6.14.48) |
-| 2c | É30-1c | Interface : lune, alerte de raid, jauge de menace, bouton « Saut », alliés menacés, portée dans la Galaxie ; audit DESIGN et 375 px | M | à faire |
+| 2c | É30-1c | Interface : lune, alerte de raid, jauge de menace, bouton « Saut », alliés menacés, portée dans la Galaxie ; audit DESIGN et 375 px | M | livré (6.14.49) |
 | 2d | É30-1d | Admin et chaîne de contenu : réglages et santé, 2 reliques, succès, Codex, titre, défi d'alliance, 5 prompts sur `/img`, changelog, billet, annonce | M | à faire |
 | 2e | É30-1e | Essai sur la pré-prod, audit, fiches et GDD | S | à faire |
 | 3 | É30-3 | Illustrations : intégration au fil des envois (routine horaire), annonce 6.14 publiée avec son image | selon envois | attend l'utilisateur (`/img`) |

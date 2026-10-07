@@ -18,6 +18,14 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q56 | Panneau Lune : remplace-t-il la ligne `MoonLine` de la carte Planète mère ? : Non, il s'ajoute à côté (Statistiques, ancre `#lune`) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q57 | Bouton « Saut » pendant la recharge : Visible, grisé, avec le décompte ; cliquable seulement porte prête | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q58 | Balayer depuis l'alerte d'attaque : Lien vers le panneau Lune (l'alerte couvrirait la confirmation) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q59 | Toast de réussite du balayage et du saut : Pas de toast côté client : la notification du serveur en affiche un (sinon en double) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q60 | « Envoyer une garnison » depuis les alliés menacés : Seulement quand l'allié est visé sur sa planète mère | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q61 | Guide avancé et frise « Prochaines fins » (fichiers du moteur) : Reportés au lot É30-1d | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q62 | Changelog joueur et billet : Annoncés avec le lot É30-1d (tout ensemble) | Interface de la phalange et de la porte de saut | Valider (option prudente) |
+| Q63 | Fréquence de lecture de la phalange : Au plus une fois par minute sur Lune et Alliance, et à chaque attaque entrante ; lectures `moon/phalanx` à surveiller sur la pré-prod | Interface de la phalange et de la porte de saut | Valider (option prudente) |
 
 ## 3. Récit
 

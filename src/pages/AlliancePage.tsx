@@ -60,6 +60,7 @@ import { AllianceSagaTab } from "@/components/game/AllianceSagaTab";
 import { AllianceCalendarTab } from "@/components/game/AllianceCalendarTab";
 import { AllianceRanking } from "@/components/game/AllianceRanking";
 import { GarrisonDialog } from "@/components/game/MissionDialogs";
+import { AlliedThreatsPanel } from "@/components/game/PhalanxPanel";
 import {
   IntelTab,
   ProjectsTab,
@@ -570,6 +571,8 @@ export function AlliancePage() {
         title="Alliance"
         description="Rejoins ou crée une alliance, discute en temps réel."
       />
+      {/* 6.14.49 (É30-1c) : radar de la phalange, attaques sur les alliés dans ta portée (rien sans lune). */}
+      {player.allianceId && <AlliedThreatsPanel />}
       {player.allianceId ? (
         <AllianceRoom
           uid={uid}

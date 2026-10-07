@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, MotionConfig, type Variants } from "framer-motion";
 import { BarChart3, ChevronDown, Coins, Crown, Factory, Gauge, Globe2, Rocket, Shield, Sigma, Skull, Sparkles, Swords, Trophy, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 import { empireStats, ratio } from "@/game/empireStats";
 import { playerMoon } from "@/game/moon";
 import { MoonLine } from "@/components/game/MoonLine";
+import { MoonPanel } from "@/components/game/PhalanxPanel";
 import { FLEET_MISSION_LABELS, type FleetMission } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -202,6 +203,13 @@ export function EmpireStatsPage() {
   const minute = Math.floor(Date.now() / 60_000);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- recalcul à la minute, au contenu et aux flottes
   const st = useMemo(() => (player ? empireStats(player, fleets, Date.now()) : null), [player, fleets, version, minute]);
+  // 6.14.49 : la palette Ctrl+K et les notifications de la phalange mènent au panneau « Lune » (?onglet=lune).
+  const [params] = useSearchParams();
+  const focus = params.get("onglet");
+  const ready = !!player;
+  useEffect(() => {
+    if (focus === "lune" && ready) document.getElementById("lune")?.scrollIntoView({ block: "start" });
+  }, [focus, ready]);
   if (!player || !st) return null;
   const o = st.overview;
   const m = st.military;
@@ -399,6 +407,11 @@ export function EmpireStatsPage() {
             })}
           </motion.div>
         </Section>
+
+        {/* 6.14.49 (É30-1c) : lune, phalange et porte de saut ; sans lune, la réserve de pitié. */}
+        <div id="lune" className="scroll-mt-24">
+          <MoonPanel player={player} />
+        </div>
 
         <Section title="Armée" icon={Rocket} tone={EMBER} aside={<SectionLink to="/game/unites">Unités</SectionLink>}>
           <div className="grid gap-4 sm:grid-cols-[auto_auto_1fr] sm:items-center">
