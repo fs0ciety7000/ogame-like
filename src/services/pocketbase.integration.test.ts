@@ -1372,6 +1372,41 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.13.0 lune : un gros combat sur la planète mère fait naître la lune du défenseur", async () => {
+    await ensureAB();
+    const since = Date.now() - 1000;
+    const fleets: string[] = [];
+    const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+    const rulesBefore = rulesRec ? rulesRec.data : null;
+    try {
+      // Chance certaine pour le test : 100 % dès 1 000 de débris.
+      const data = Object.assign({}, rulesBefore || {}, { moon: { enabled: true, debrisPerPercent: 10, maxChance: 1, shieldBonus: 0.03, protectedStorageBonus: 0.05 } });
+      if (rulesRec) await admin.collection("game_config").update(rulesRec.id, { data });
+      else await admin.collection("game_config").create({ key: "rules", data });
+      await admin.collection("players").update(aId, { moon: null, colonies: [], createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, xp: (await snap(bId)).xp, units: { fregate: { level: 1, count: 30 } } });
+      await admin.collection("players").update(bId, { allianceId: "", units: { fregate: { level: 1, count: 40 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0, vacation: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      await loginPlayer(B.email, B.pw);
+      const sent = await ps.sendFleet(aId, { fregate: 40 }, "attack");
+      fleets.push(sent.id);
+      await admin.collection("fleets").update(sent.id, { arriveAtMs: Date.now() - 1000 });
+      await ps.syncPlayer("");
+      const a = await snap(aId);
+      expect(a.moon?.name, "lune du défenseur").toBeTruthy();
+      expect(a.moon.fromDebris).toBeGreaterThan(0);
+      expect((await snap(bId)).moon ?? null).toBeNull();
+    } finally {
+      await admin.collection("players").update(aId, { moon: null });
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}" && timestamp >= ${since}` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      const cur = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+      if (cur) {
+        if (rulesBefore) await admin.collection("game_config").update(cur.id, { data: rulesBefore });
+        else await admin.collection("game_config").delete(cur.id);
+      }
+    }
+  });
+
   it("6.11.1 base avancée : défend sa colonie quand l'admin l'active", async () => {
     const aBefore = await snap(aId);
     const bBefore = await snap(bId);
@@ -2111,7 +2146,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await expect(ps.sendResourceGift({ fromUid: bId, toUid: "npcbrannoc00000", resources: { scrap: 10 } } as Parameters<typeof ps.sendResourceGift>[0])).rejects.toThrow(/cadeau/);
 
       // Attaque forcée de Brannoc contre A : trajet de 3 à 5 h, cible prévenue.
-      await admin.collection("players").update(aId, { xp: 6000, createdAtMs: MONTH_AGO(), lastAttackAtMs: Date.now() - 86400000, lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, units: { ...aBefore.units, roquette: { level: 1, count: 20 } } });
+      await admin.collection("players").update(aId, { xp: 6000, createdAtMs: MONTH_AGO(), lastAttackAtMs: Date.now() - 86400000, lastDefeatAtMs: 0, ascendedAtMs: 0, vacation: null, units: { roquette: { level: 1, count: 20 } } }); // 6.13.0 : défense fixe (elle dépendait des tests précédents : SP-2)
       st = await stateRec();
       const others = (await admin.collection("players").getFullList({ filter: "npc = ''", fields: "id" })).map((r) => r.id).filter((id) => id !== aId);
       // Tous les autres comptes de test viennent « d'être attaqués » : seul A reste une cible.

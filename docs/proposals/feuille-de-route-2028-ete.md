@@ -10,8 +10,8 @@ restent sautés (Q12).
 |:--|:--|:--|:--|:--|
 | 1 | R1 | Docs : pause levée, règle n° 3 précisée (jamais de pause), statuts périmés corrigés (J.2, Q4) | S | livré en 6.11.15 |
 | 2 | R2 | Q16 : vue « liste » de Bâtiments sur téléphone | S | livré en 6.12.0 (1 814 px) |
-| 3 | R3 | Q15 : proposition chiffrée du prochain système (`docs/proposals/lunes.md`), option prudente | M | à faire |
-| 4 | R4 | Lunes, lot 1 : moteur (naissance, plafonds, réglages admin) et tests | M | après R3 |
-| 5 | R5 | Lunes, lot 2 : serveur, interface, changelog | M | après R4 |
+| 3 | R3 | Q15 : proposition chiffrée du prochain système (`docs/proposals/lunes.md`), option prudente | M | livré (proposition B acceptée) |
+| 4 | R4 | Lunes, lot 1 : moteur (naissance, plafonds, réglages admin) et tests | M | livré en 6.13.0 (avec R5) |
+| 5 | R5 | Lunes, lot 2 : serveur, interface, changelog | M | livré en 6.13.0 |
 | 6 | Z0, Z1, Z6 | Mise en production, mesures, performance (repris) | — | en attente de l'utilisateur (Q12) |
 | 7 | AU19 | Revue, même grille | M | fin des lots |

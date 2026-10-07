@@ -142,6 +142,8 @@ export interface PlayerState {
   modules?: import("@/game/modules").ModulesState;
   /** 6.0 : classe d'empire (proposals/classes-empire.md). */
   empireClass?: import("@/game/empireClass").EmpireClassState | null;
+  /** 6.13.0 : lune née d'un gros combat sur la planète mère (proposals/lunes.md). */
+  moon?: import("@/game/moon").MoonState | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

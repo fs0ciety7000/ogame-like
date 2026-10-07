@@ -69,6 +69,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I18 | Passe généré : paliers 1 à 29 dans ±5 % du budget (`passGen.budgetHours`), plafonds du mois respectés (Ambre, jetons, dossiers, capsules), dernier palier hors budget ; points par palier entre `pointsMin` et `pointsMax`, même graine → même passe | `passGen.ts`, `passSeasons.ts` (`generatePassSeason`) | `progression681.test.ts` |
 | I19 | Chapitre généré : 4 épisodes, objectifs pris parmi les actions autorisées (`chronicleGen.objectiveWeights` > 0), difficulté dans ses bornes ; faction du thème du passe sauf si elle était là le mois précédent ; les récompenses par budget ne changent pas le reste du tirage | `procedural.ts` (`generateChapter`), `chronicleGen.ts` | `progression682.test.ts` |
 | I20 | Base avancée : une attaque partie d'une base ne prend jamais plus de vaisseaux que la base n'en contient et ne touche pas aux vaisseaux à quai de la planète mère ; les vaisseaux basés restent comptés dans le hangar de la planète mère (`unitsAwayOf`) | `fleets.ts` (`takeFromBase`, `baseReturnUnits`) | `flotteBasee.test.ts` |
+| I21 | Lune : un joueur en a au plus une ; elle ne naît que d'un combat sur sa planète mère (jamais sur une colonie ni pour un PNJ), chance 1 % par tranche de `debrisPerPercent` débris, `maxChance` au plus ; ses effets passent par la couche empire et ses plafonds | `moon.ts` (`rollMoon`, `moonEffects`), `attack.ts` | `lunes.test.ts`, `derived.test.ts` |
 
 ## 5. Règles de conception
 
@@ -197,3 +198,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.11.14 | Revue AU18 : printemps 2028 clos ; plus de lot faisable seul, feuilles de route en pause jusqu'à Q12, Q15 ou Q16 (Q17) | `docs/audit/2026-10-07-au18-printemps-2028.md` |
 | 2026-10-07 | 6.11.15 | Consigne redonnée : pause annulée (Q17), règle n° 3 « jamais de pause », Q15 et Q16 tranchées ; feuille de route d'été 2028 | `docs/changes/6.11.15-reprise-travail-continu.md` |
 | 2026-10-07 | 6.12.0 | R2 (Q16) : vue « liste » de Bâtiments sur téléphone, joueur avancé 6 271 → 1 814 px | `docs/changes/6.12.0-batiments-vue-liste.md` |
+| 2026-10-07 | 6.13.0 | R3 à R5 (Q15) : lunes, nées d'un gros combat sur la planète mère, +3 % bouclier et +5 % d'entrepôt à l'abri par la couche empire ; invariant I21 | `docs/changes/6.13.0-lunes.md` |

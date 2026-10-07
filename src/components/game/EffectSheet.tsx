@@ -21,6 +21,7 @@ const SOURCE_TONE: Record<EffectSourceKind, HudTone> = {
   season: "neutral",
   module: "mint",
   class: "gold",
+  moon: "violet",
 };
 
 const GROUPS: { id: EffectStatInfo["group"]; label: string }[] = [

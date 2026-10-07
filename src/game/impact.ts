@@ -1,3 +1,4 @@
+import { MOON_RULES } from "@/game/moon";
 import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, type EffectStat } from "@/game/effects";
 import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
@@ -79,6 +80,9 @@ export function effectImpactReport(): ImpactRow[] {
   for (const c of EMPIRE_CLASSES) {
     for (const e of c.effects) add(e.stat, e.target, "empire", { kind: "class", label: c.name, max: e.value, note: "une classe à la fois" });
   }
+  // 6.13.0 : lune (une par joueur).
+  add("shield", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.shieldBonus, note: "une lune" });
+  add("protectedStorage", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.protectedStorageBonus, note: "une lune" });
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });
 

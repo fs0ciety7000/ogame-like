@@ -1,3 +1,4 @@
+import { MOON_RULES, rollMoon } from "@/game/moon";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { applyHull, sendToWorkshop, workshopState } from "@/game/workshop";
 import { describeGain } from "@/game/format";
@@ -16,7 +17,7 @@ import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { protectedAmount } from "@/game/economy";
 import { recordContract } from "@/game/contracts";
 import { OFFENSIVE_UNITS } from "@/game/units";
-import { DEBRIS_RULES, debrisFromLosses, type DebrisAmount } from "@/game/debris";
+import { DEBRIS_RULES, debrisFromLosses, debrisTotal, type DebrisAmount } from "@/game/debris";
 import { eventDebrisPercent, lootFactor } from "@/game/events";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { formationEffects, postureEffects } from "@/game/formations";
@@ -40,6 +41,8 @@ import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types
 
 export interface AttackInput {
   now: number;
+  /** 6.13.0 : tirage aléatoire (tests) ; Math.random sinon. */
+  rand?: () => number;
   attackerUid: string;
   attacker: PlayerState;
   attackerQueues: QueuesState;
@@ -332,6 +335,21 @@ export function performAttack(input: AttackInput): AttackOutput {
     },
   ];
 
+  // 6.13.0 (proposals/lunes.md, I21) : un gros combat sur la planète mère d'un joueur peut faire naître une lune.
+  const debris = debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(combat.garrisonLosses ?? [])], eventDebrisPercent(now) ?? DEBRIS_RULES.percent);
+  const moon = rollMoon(owner, debrisTotal(debris), { now, onColony: !!colony, rand: input.rand });
+  if (moon) {
+    owner.moon = moon;
+    defenderNotifications.push({
+      kind: "event",
+      title: `Une lune est née : ${moon.name}`,
+      message: `Les débris du combat se sont rassemblés en orbite. ${moon.name} veille sur ta planète : +${Math.round(MOON_RULES.shieldBonus * 100)} % de bouclier, +${Math.round(MOON_RULES.protectedStorageBonus * 100)} % d'entrepôt à l'abri.`,
+      createdAtMs: now,
+      read: false,
+    });
+    notifications.push({ kind: "event", title: `Une lune est née au-dessus de ${def.pseudo}`, message: `Les débris de ton attaque ont formé ${moon.name}, la lune de ${def.pseudo}.`, createdAtMs: now, read: false });
+  }
+
   const report: Omit<BattleReport, "id"> = {
     attackerUid,
     attackerPseudo: input.attacker.pseudo,
@@ -370,7 +388,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     combat,
     survivors,
     loot: combat.loot ?? {},
-    debris: debrisFromLosses([combat.attackerLosses, combat.defenderLosses, ...(combat.garrisonLosses ?? [])], eventDebrisPercent(now) ?? DEBRIS_RULES.percent),
+    debris,
   };
 }
 

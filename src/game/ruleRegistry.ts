@@ -21,6 +21,7 @@ import { BOSS_REMINDERS } from "@/game/events";
 import { GAZETTE_RULES } from "@/game/gazette";
 import { EXCHANGE_RULES } from "@/game/resources";
 import { COLONY_BASE_RULES } from "@/game/fleets";
+import { MOON_RULES } from "@/game/moon";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
 import { GOAL_RULES } from "@/game/goals";
@@ -89,6 +90,7 @@ export const REGISTERED_RULES = {
   colonyDeposits: { label: "Colonies : gisements", target: () => DEPOSIT_RULES },
   colonySpec: { label: "Colonies : spécialisation", target: () => COLONY_SPEC_RULES },
   colonyBase: { label: "Colonies : flotte basée", target: () => COLONY_BASE_RULES },
+  moon: { label: "Lunes : naissance et bonus", target: () => MOON_RULES },
   passRewards: { label: "Passe généré : dernier palier et effort", target: () => PASS_REWARD_RULES },
   achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES },

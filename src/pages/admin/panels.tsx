@@ -23,6 +23,7 @@ import {
 } from "@/services/adminService";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { COLONY_BASE_RULES } from "@/game/fleets";
+import { MOON_RULES } from "@/game/moon";
 import { EventsAndSeasonsSections } from "@/pages/admin/eventsFields";
 import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { PassGenFields } from "@/pages/admin/PassGenFields";
@@ -45,6 +46,7 @@ const MIN = 60 * 1000;
 
 /** 6.10.0 : base avancée (groupe du registre, typé par ses valeurs par défaut). */
 const colonyBaseRules = (r: GameRules) => ({ ...COLONY_BASE_RULES, ...(r.colonyBase as Partial<typeof COLONY_BASE_RULES>) });
+const moonRules = (r: GameRules) => ({ ...MOON_RULES, ...(r.moon as Partial<typeof MOON_RULES>) });
 export function RulesPanel() {
   const customized = useContentStore((s) => s.customized.includes("rules"));
   const [rules, setRules] = useState<GameRules>(() => currentGameContent().rules);
@@ -740,6 +742,13 @@ export function RulesPanel() {
           <NumberField label="Base avancée : durée maximale (jours)" value={colonyBaseRules(rules).maxDays} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), maxDays: Math.max(1, Math.round(v ?? 14)) } }))} />
           <CheckboxField label="Base avancée : défend sa colonie (6.11.1)" checked={colonyBaseRules(rules).defendsColony} hint="Coché : la base combat avec les défenses de la colonie attaquée, comme une garnison (50 %), et peut perdre des vaisseaux." onChange={(v: boolean) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), defendsColony: v } }))} />
           <NumberField label="Base avancée : bases par colonie" value={colonyBaseRules(rules).perColony} min={1} step={1} onChange={(v) => setRules((r) => ({ ...r, colonyBase: { ...colonyBaseRules(r), perColony: Math.max(1, Math.round(v ?? 1)) } }))} />
+        </Section>
+        <Section title="Lunes (6.13)">
+          <CheckboxField label="Naissance des lunes ouverte" checked={moonRules(rules).enabled} hint="Décoché : plus de nouvelle lune ; les lunes existantes gardent leur bonus." onChange={(v: boolean) => setRules((r) => ({ ...r, moon: { ...moonRules(r), enabled: v } }))} />
+          <NumberField label="Débris pour 1 % de chance" value={moonRules(rules).debrisPerPercent} min={1000} step={10000} hint="Ferraille + énergie du combat (OGame : 100 000)." onChange={(v) => setRules((r) => ({ ...r, moon: { ...moonRules(r), debrisPerPercent: Math.max(1000, Math.round(v ?? 100000)) } }))} />
+          <NumberField label="Chance maximale (%)" value={Math.round(moonRules(rules).maxChance * 100)} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, moon: { ...moonRules(r), maxChance: Math.min(1, Math.max(0, (v ?? 20) / 100)) } }))} />
+          <NumberField label="Bonus de bouclier (%)" value={Math.round(moonRules(rules).shieldBonus * 1000) / 10} min={0} step={0.5} hint="Couche empire, plafond du bouclier compris." onChange={(v) => setRules((r) => ({ ...r, moon: { ...moonRules(r), shieldBonus: Math.max(0, (v ?? 3) / 100) } }))} />
+          <NumberField label="Bonus d'entrepôt à l'abri (%)" value={Math.round(moonRules(rules).protectedStorageBonus * 1000) / 10} min={0} step={0.5} hint="Couche empire, plafond de la part à l'abri compris." onChange={(v) => setRules((r) => ({ ...r, moon: { ...moonRules(r), protectedStorageBonus: Math.max(0, (v ?? 5) / 100) } }))} />
         </Section>
         <Section title="Espionnage">
           <NumberField

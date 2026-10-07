@@ -12,6 +12,7 @@ import { CornerBrackets } from "@/components/ui/corner-brackets";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmpireShareActions } from "@/components/game/EmpireShareActions";
 import { empireStats, ratio } from "@/game/empireStats";
+import { MOON_RULES, playerMoon } from "@/game/moon";
 import { FLEET_MISSION_LABELS, type FleetMission } from "@/game/fleets";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
@@ -194,6 +195,7 @@ const MOD_LABELS: { key: "attack" | "defense" | "productionAll" | "storage" | "b
 export function EmpireStatsPage() {
   useNowTicker();
   const player = usePlayerStore((s) => s.player);
+  const moon = playerMoon(player);
   const fleets = useFleetStore((s) => s.fleets);
   const version = useContentStore((s) => s.version);
   const minute = Math.floor(Date.now() / 60_000);
@@ -369,6 +371,12 @@ export function EmpireStatsPage() {
                     <span className="hud-title min-w-0 truncate text-sm text-slate-100">{p.name}</span>
                     {home ? <HudTag tone="gold">Mère</HudTag> : <HudTag tone="accent">Colonie</HudTag>}
                   </div>
+                  {home && moon && (
+                    <p className="relative mt-0.5 text-[11px] text-slate-400" title={`Née le ${new Date(moon.bornAtMs).toLocaleDateString("fr-FR")} d'un combat de ${formatCompact(moon.fromDebris)} débris.`}>
+                      Lune <span className="text-violet-glow">{moon.name}</span> : bouclier <span className="font-mono tabular-nums">+{Math.round(MOON_RULES.shieldBonus * 100)} %</span>, entrepôt à l'abri{" "}
+                      <span className="font-mono tabular-nums">+{Math.round(MOON_RULES.protectedStorageBonus * 100)} %</span>
+                    </p>
+                  )}
                   {!home && p.biome && (
                     <p className="relative mt-0.5 text-[11px] text-slate-500">
                       gisement {p.biome} niv. {p.depositLevel}

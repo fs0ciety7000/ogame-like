@@ -66,7 +66,7 @@ export const EFFECT_SCOPE_LABELS: Record<EffectScope, string> = {
   warlord: "Contre les seigneurs",
 };
 
-export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class";
+export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class" | "moon";
 
 export interface EffectSourceRef {
   kind: EffectSourceKind;
@@ -177,6 +177,7 @@ export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
   season: "Mutateur de saison",
   module: "Module de vaisseau",
   class: "Classe d'empire",
+  moon: "Lune",
 };
 
 export interface SumOptions {
