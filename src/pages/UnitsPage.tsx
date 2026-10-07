@@ -233,7 +233,7 @@ export function UnitsPage() {
         </div>
       </div>
 
-      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
+      <SortableGrid page="unites" editing={editingCards} className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,21rem),1fr))] gap-3 sm:gap-5" items={UNITS.filter((u) => u.category === tab && (classFilter === "all" || classes[u.id] === classFilter))} getId={(unit) => unit.id} getLabel={(unit) => unit.name} render={(unit, index) => {
           const data = player.units[unit.id] ?? { level: 0, count: 0 };
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);
@@ -333,10 +333,11 @@ export function UnitsPage() {
                   <div className="hud-scan" />
                 </div>
 
-                <div className="relative flex flex-1 flex-col gap-3 p-4 pt-3">
+                {/* E2 (été) : fiche verrouillée plus serrée sur mobile, sans paragraphe vide. */}
+                <div className={cn("relative flex flex-1 flex-col gap-3 p-4 pt-3", isLocked && "max-sm:gap-1.5 max-sm:pb-3 max-sm:pt-2")}>
                   <div>
                     <h3 className="hud-title text-xl text-slate-100">{unit.name}</h3>
-                    <p className="mt-0.5 text-sm leading-snug text-slate-400">{isLocked && !unit.blueprint && !unit.elite && !unit.empireClass ? "" : unit.description}</p>
+                    {!(isLocked && !unit.blueprint && !unit.elite && !unit.empireClass) && <p className="mt-0.5 text-sm leading-snug text-slate-400">{unit.description}</p>}
                     <div className="-ml-2 mt-1">
                       <UnitSpecButton unit={unit} player={player} />
                     </div>
@@ -366,9 +367,9 @@ export function UnitsPage() {
                         </>
                       ) : (
                         <>
-                          Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>{" "}
-                          <Link to="/game/labo" className="font-semibold text-cyan-glow hover:underline">
-                            Lancer la recherche
+                          Se débloque au Labo : <strong className="text-slate-300">{findTech(UNIT_TO_TECH[unit.id])?.nom ?? "recherche"}</strong>.{" "}
+                          <Link to="/game/labo" className="font-semibold text-cyan-glow underline-offset-2 hover:underline">
+                            Lancer la recherche →
                           </Link>
                         </>
                       )}
