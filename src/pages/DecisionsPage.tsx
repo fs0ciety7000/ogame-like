@@ -192,7 +192,7 @@ export function DecisionsPage() {
             ) : (
           <>
             <p className="text-sm text-slate-300">
-              Les choix que Claude a faits seul pour avancer. Valide-les, ou marque « À changer » avec ce que tu veux à la place. Claude relit tes réponses, met à jour ses instructions et ouvre les lots ; une question traitée quitte cette page au déploiement suivant.
+              Les choix que Claude a faits seul pour avancer. Valide-les, ou marque « À changer » avec ce que tu veux à la place. Claude relit tes réponses, met à jour ses instructions et ouvre les lots ; une question traitée quitte cette page dès que Claude envoie les documents à jour.
             </p>
             <div className="grid grid-cols-3 gap-2">
               <StatTile size="sm" tone="neutral" label="À voir" value={<span className="font-mono tabular-nums">{counts.todo}</span>} />
