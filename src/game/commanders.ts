@@ -158,8 +158,9 @@ export function roleBonusText(role: CommanderId, l: number): string {
 
 /* ---------- v5.13 : commandants de saison (dernier palier des passes générés) ---------- */
 
-/** Part du bonus du second rôle d'un commandant de saison. */
-export const SEASON_SECONDARY_SHARE = 0.5;
+/** 6.9.5 (AU8) : réglages des officiers hors onglet Officiers (registre « officerTuning ») : part du second rôle d'un
+ *  commandant de saison, bonus d'XP de la Phéromone de recrutement (Comptoir). */
+export const OFFICER_TUNING_RULES = { seasonSecondaryShare: 0.5, pheromonePct: 0.25 };
 
 /** Ce qu'un passe de saison décrit (données enregistrées, voir passSeasons.ts). */
 export interface SeasonCommanderDef {
@@ -177,7 +178,7 @@ export interface SeasonCommanderDef {
 export const SEASON_COMMANDERS: CommanderDef[] = [];
 
 const ROLE_DEF = (role: CommanderId) => COMMANDERS.find((c) => c.id === role)!;
-const half = (l: number) => Math.round(l * SEASON_SECONDARY_SHARE * 10) / 10;
+const half = (l: number) => Math.round(l * OFFICER_TUNING_RULES.seasonSecondaryShare * 10) / 10;
 
 export function seasonCommanderDef(s: SeasonCommanderDef): CommanderDef {
   const a = ROLE_DEF(s.primary);
@@ -347,7 +348,7 @@ export function activeLevels(player: Pick<PlayerState, "commanders">): Record<Co
     if (!def) continue;
     const level = commanderLevel(st.roster[id]?.xp ?? 0);
     out[def.role] += level;
-    if (def.secondary) out[def.secondary] += level * SEASON_SECONDARY_SHARE;
+    if (def.secondary) out[def.secondary] += level * OFFICER_TUNING_RULES.seasonSecondaryShare;
   }
   return out;
 }
@@ -399,7 +400,7 @@ export const ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = {
 };
 
 /** v5.14 : effets des officiers en poste, un par officier et par effet de rôle
- *  (le second rôle d'un commandant de saison compte à SEASON_SECONDARY_SHARE). */
+ *  (le second rôle d'un commandant de saison compte à OFFICER_TUNING_RULES.seasonSecondaryShare). */
 export function commanderEffects(player: Pick<PlayerState, "commanders">): EffectGrant[] {
   const st = commandersState(player);
   const out: EffectGrant[] = [];
@@ -409,22 +410,20 @@ export function commanderEffects(player: Pick<PlayerState, "commanders">): Effec
     const level = commanderLevel(st.roster[id]?.xp ?? 0);
     const source = { kind: "officer" as const, id: def.id, label: def.name };
     const roles: [CommanderId, number][] = [[def.role, level]];
-    if (def.secondary) roles.push([def.secondary, level * SEASON_SECONDARY_SHARE]);
+    if (def.secondary) roles.push([def.secondary, level * OFFICER_TUNING_RULES.seasonSecondaryShare]);
     for (const [role, lv] of roles) for (const e of ROLE_EFFECTS[role] ?? []) out.push({ stat: e.stat, target: e.target, value: lv * e.perLevel, layer: "empire", scope: e.scope, source });
   }
   return out;
 }
 
 /** XP gagnée par les officiers en poste de ce rôle (de base ou de saison). Modifie le joueur. */
-/** 5.26.3 : bonus d'XP de la Phéromone de recrutement (même valeur que BOUNTY_SHOP_RULES.pheromonePct). */
-export const PHEROMONE_PCT = 0.25;
 
 export function grantCommanderXp(player: PlayerState, role: CommanderId, amount: number): void {
   if (!(amount > 0)) return;
-  // 5.26.3 : Phéromone de recrutement (Comptoir) : +25 % tant qu'elle dure. Le joueur est
+  // 5.26.3 : Phéromone de recrutement (Comptoir) : bonus d'XP tant qu'elle dure. Le joueur est
   // rattrapé avant chaque action : resourcesUpdatedAtMs vaut l'instant présent.
   const pheromone = Number((player.bounties as { pheromoneUntilMs?: number } | undefined)?.pheromoneUntilMs) || 0;
-  if (pheromone > (player.resourcesUpdatedAtMs ?? 0)) amount = Math.round(amount * (1 + PHEROMONE_PCT));
+  if (pheromone > (player.resourcesUpdatedAtMs ?? 0)) amount = Math.round(amount * (1 + OFFICER_TUNING_RULES.pheromonePct));
   const st = commandersState(player);
   const ids = st.active.filter((id) => findCommander(id)?.role === role && st.roster[id]);
   if (ids.length === 0) return;

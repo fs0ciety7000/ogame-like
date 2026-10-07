@@ -114,7 +114,7 @@ correctifs dans le lot, propositions chiffrées regroupées pour l'équilibre.
 | 8 | AU5 | Revue Alliances : membres et rôles, trésor, recherches, guerres, guerre de territoire, projets, saga, diplomatie, calendrier | M | livré : rapport (`2026-10-07-au5-alliances.md`) + 6.9.2 |
 | 9 | AU6 | Revue Communications : messages, canal global, salons, modération, annonces, sondages, gazette, notifications | M | livré : rapport (`2026-10-07-au6-communications.md`) + 6.9.3 |
 | 10 | AU7 | Revue Galaxie et combat : carte, joueurs et classement, espionnage, rapports, journal, simulateur | M | livré : rapport (`2026-10-07-au7-galaxie-combat.md`) + 6.9.4 |
-| 11 | AU8 | Revue État-major et bonus : officiers, reliques, talents, Ascension, classes, circuit d'effets | M | à faire |
+| 11 | AU8 | Revue État-major et bonus : officiers, reliques, talents, Ascension, classes, circuit d'effets | M | livré : rapport (`2026-10-07-au8-etat-major-bonus.md`) + 6.9.5 |
 | 12 | P | Vaisseaux de classe, dès réception des illustrations (peut passer avant) | M | livré 6.5.0 |
 | 13 | AU9 | Revue Unités : hangars, Atelier et Cale sèche, modules | M | à faire |
 | 14 | AU10 | Revue Flottes : missions, expéditions, emplacements, « Relancer » | M | à faire |

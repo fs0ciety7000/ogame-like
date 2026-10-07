@@ -12,10 +12,11 @@ import { CANCEL_RULES } from "@/game/cancel";
 import { CHALLENGE_RULES } from "@/game/challenges";
 import { COALITION_RULES } from "@/game/coalition";
 import { COLONY_SPEC_RULES, DEPOSIT_RULES } from "@/game/colonies";
-import { COMMANDER_XP } from "@/game/commanders";
+import { COMMANDER_XP, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { CONTRACT_RULES } from "@/game/contracts";
 import { DAILY_RULES } from "@/game/dailyMissions";
 import { DIPLOMACY_RULES } from "@/game/diplomacy";
+import { EFFECT_CAP_RULES } from "@/game/effects";
 import { BOSS_REMINDERS } from "@/game/events";
 import { GAZETTE_RULES } from "@/game/gazette";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
@@ -87,6 +88,7 @@ export const REGISTERED_RULES = {
   dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },
   diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES },
   dockTiers: { label: "Cale sèche : paliers de niveau", target: () => DOCK_TIERS },
+  effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES },
   eliteBounty: { label: "Proie d'élite", target: () => ELITE_RULES },
   gazette: { label: "Gazette", target: () => GAZETTE_RULES },
   globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
@@ -97,6 +99,7 @@ export const REGISTERED_RULES = {
   messages: { label: "Messagerie privée", target: () => MESSAGE_RULES },
   moduleCost: { label: "Modules : coût de fabrication", target: () => MODULE_BUILD_COST },
   modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES },
+  officerTuning: { label: "Officiers : second rôle des commandants de saison, Phéromone", target: () => OFFICER_TUNING_RULES },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW },
   polls: { label: "Sondages", target: () => POLL_RULES },
   profile: { label: "Profil", target: () => PROFILE_RULES },

@@ -9,7 +9,7 @@ import { ascensionProductionFactor, upkeepFreeUntil } from "@/game/ascension";
 import type { Buildings, PlayerState, ResourceId, Resources, TechLevels, Units } from "@/types/game";
 import { empireEffects, playerModifiers } from "@/game/modifiers";
 import type { EffectScope } from "@/game/effects";
-import { techBonus, techReductionFactor, TECH_REDUCTION_CAP } from "@/game/technologies";
+import { techBonus, techEffectCap, techReductionFactor } from "@/game/technologies";
 import { catchupFactorAt, catchupUntil } from "@/game/catchup";
 
 /* =====================================================
@@ -20,6 +20,8 @@ import { catchupFactorAt, catchupUntil } from "@/game/catchup";
 ===================================================== */
 
 export const ECONOMY_RULES = {
+  /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar) ; 6.9.5 : réglable. */
+  keshBoostPct: 0.2,
   /** Énergie consommée par seconde et par place de hangar occupée. */
   upkeepPerPlaceAttack: 0.015,
   upkeepPerPlaceDefense: 0.0075,
@@ -74,8 +76,6 @@ export interface EconomyInput {
   bonuses?: { catchup?: { factor: number; untilMs: number; ratio: number } | null } | null;
 }
 
-/** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar). */
-export const KESH_BOOST_PCT = 0.2;
 
 function boostUntil(input: EconomyInput): number {
   const v = Number(input.bounties?.boostUntilMs);
@@ -83,7 +83,7 @@ function boostUntil(input: EconomyInput): number {
 }
 
 function boostAt(input: EconomyInput, at: number): number {
-  return (at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1) * catchupFactorAt(input, at);
+  return (at < boostUntil(input) ? 1 + ECONOMY_RULES.keshBoostPct : 1) * catchupFactorAt(input, at);
 }
 
 /** Capacité de l'entrepôt, Intendant en poste compris (v4.0). */
@@ -246,7 +246,7 @@ export function capacityProtected(buildings: Buildings, res: ResourceId, techLev
   // v3.3 : le Bastion fédéral s'ajoute (et repousse le plafond d'autant).
   // v5.14 : la Gardienne en poste aussi (couche empire, plafonnée à part).
   const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
-  const pct = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage") + bastion);
+  const pct = Math.min(techEffectCap("protected_storage") + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels, "protected_storage") + bastion);
   return Number.isFinite(capacity) ? Math.floor(capacity * pct) : 0;
 }
 
@@ -298,7 +298,7 @@ export function productionBonuses(input: EconomyInput, now: number, res: Resourc
     bySource[label] = (bySource[label] ?? 0) + g.value;
   }
   for (const label of ["Officiers", "Secteurs d'alliance", "Reliques et talents"]) if ((bySource[label] ?? 0) > 0.0001) out.push({ label, pct: bySource[label] });
-  if (now < boostUntil(input)) out.push({ label: "Gelée de la Reine", pct: KESH_BOOST_PCT });
+  if (now < boostUntil(input)) out.push({ label: "Gelée de la Reine", pct: ECONOMY_RULES.keshBoostPct });
   const catchup = catchupFactorAt(input, now);
   if (catchup > 1) out.push({ label: "Rattrapage", pct: catchup - 1 });
   const ev = productionMultipliers(now)[res];

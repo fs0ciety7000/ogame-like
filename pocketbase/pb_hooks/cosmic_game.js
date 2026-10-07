@@ -838,6 +838,13 @@ var EFFECT_STATS = {
   detection: { label: "D\xE9tection de l'espionnage", unit: "pct", group: "renseignement" },
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" }
 };
+var EFFECT_CAP_RULES = {};
+for (const [k, info] of Object.entries(EFFECT_STATS)) if (info.cap && k !== "attack" && k !== "defense") EFFECT_CAP_RULES[k] = __spreadValues({}, info.cap);
+function effectCap(stat3, layer) {
+  var _a, _b;
+  const r = (_a = EFFECT_CAP_RULES[stat3]) == null ? void 0 : _a[layer];
+  return r !== void 0 ? r : (_b = EFFECT_STATS[stat3].cap) == null ? void 0 : _b[layer];
+}
 var EFFECT_STAT_IDS = Object.keys(EFFECT_STATS);
 function inScope(g, scope) {
   var _a;
@@ -854,10 +861,9 @@ function rawEffectTotal(grants, layer, stat3, opts = {}) {
   return total2;
 }
 function clampEffect(stat3, layer, total2) {
-  var _a;
   const info = EFFECT_STATS[stat3];
   let v = total2;
-  const cap = (_a = info.cap) == null ? void 0 : _a[layer];
+  const cap = effectCap(stat3, layer);
   if (cap !== void 0) v = Math.min(cap, info.floor !== void 0 ? Math.max(info.floor, v) : v);
   return v;
 }
@@ -1124,10 +1130,10 @@ function roleBonusText(role, l) {
   if (role === "spy") parts.push(`${Math.round(l * COMMANDER_RULES.anomalyPerLevel * 100)} % de flairer une anomalie chimique`);
   return parts.join(", ");
 }
-var SEASON_SECONDARY_SHARE = 0.5;
+var OFFICER_TUNING_RULES = { seasonSecondaryShare: 0.5, pheromonePct: 0.25 };
 var SEASON_COMMANDERS = [];
 var ROLE_DEF = (role) => COMMANDERS.find((c) => c.id === role);
-var half = (l) => Math.round(l * SEASON_SECONDARY_SHARE * 10) / 10;
+var half = (l) => Math.round(l * OFFICER_TUNING_RULES.seasonSecondaryShare * 10) / 10;
 function seasonCommanderDef(s) {
   const a = ROLE_DEF(s.primary);
   const b = ROLE_DEF(s.secondary);
@@ -1263,7 +1269,7 @@ function activeLevels(player) {
     if (!def3) continue;
     const level3 = commanderLevel((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0);
     out[def3.role] += level3;
-    if (def3.secondary) out[def3.secondary] += level3 * SEASON_SECONDARY_SHARE;
+    if (def3.secondary) out[def3.secondary] += level3 * OFFICER_TUNING_RULES.seasonSecondaryShare;
   }
   return out;
 }
@@ -1314,17 +1320,16 @@ function commanderEffects(player) {
     const level3 = commanderLevel((_b = (_a = st.roster[id]) == null ? void 0 : _a.xp) != null ? _b : 0);
     const source = { kind: "officer", id: def3.id, label: def3.name };
     const roles = [[def3.role, level3]];
-    if (def3.secondary) roles.push([def3.secondary, level3 * SEASON_SECONDARY_SHARE]);
+    if (def3.secondary) roles.push([def3.secondary, level3 * OFFICER_TUNING_RULES.seasonSecondaryShare]);
     for (const [role, lv] of roles) for (const e3 of (_c = ROLE_EFFECTS[role]) != null ? _c : []) out.push({ stat: e3.stat, target: e3.target, value: lv * e3.perLevel, layer: "empire", scope: e3.scope, source });
   }
   return out;
 }
-var PHEROMONE_PCT = 0.25;
 function grantCommanderXp(player, role, amount3) {
   var _a, _b, _c, _d;
   if (!(amount3 > 0)) return;
   const pheromone = Number((_a = player.bounties) == null ? void 0 : _a.pheromoneUntilMs) || 0;
-  if (pheromone > ((_b = player.resourcesUpdatedAtMs) != null ? _b : 0)) amount3 = Math.round(amount3 * (1 + PHEROMONE_PCT));
+  if (pheromone > ((_b = player.resourcesUpdatedAtMs) != null ? _b : 0)) amount3 = Math.round(amount3 * (1 + OFFICER_TUNING_RULES.pheromonePct));
   const st = commandersState(player);
   const ids = st.active.filter((id) => {
     var _a2;
@@ -3386,6 +3391,20 @@ var TECH_EFFECT_LABELS = {
   stat: "Effet compos\xE9 : grandeur, cible et port\xE9e (valeur par niveau)"
 };
 var NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS);
+var CAPPED_EFFECT_STAT = {
+  building_discount: "buildingDiscount",
+  fleet_speed: "fleetSpeed",
+  building_time: "buildTime",
+  unit_time: "unitTime",
+  research_time: "researchTime",
+  fleet_upkeep: "fleetUpkeep",
+  protected_storage: "protectedStorage"
+};
+function techEffectCap(type) {
+  var _a;
+  const stat3 = CAPPED_EFFECT_STAT[type];
+  return (_a = stat3 && effectCap(stat3, "tech")) != null ? _a : TECH_REDUCTION_CAP;
+}
 var DEFAULT_TECHNOLOGIES = [
   { id: "tech1", nom: "Analyse de mat\xE9riaux", desc: "D\xE9bloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
   { id: "tech3", nom: "Am\xE9lioration \xE9nerg\xE9tique", desc: "Augmente l'efficacit\xE9 des g\xE9n\xE9rateurs.", maxLevel: 10, baseCost: { scrap: 150, energy: 50 }, baseTime: 45, effect: "energy_efficiency", prereq: {} },
@@ -5480,6 +5499,8 @@ function validateCatchupRules(r) {
 
 // src/game/economy.ts
 var ECONOMY_RULES = {
+  /** v3.9 : bonus de production de la Gelée de la Reine (Comptoir Kesh'Vaar) ; 6.9.5 : réglable. */
+  keshBoostPct: 0.2,
   /** Énergie consommée par seconde et par place de hangar occupée. */
   upkeepPerPlaceAttack: 0.015,
   upkeepPerPlaceDefense: 75e-4,
@@ -5504,14 +5525,13 @@ var ECONOMY_RULES = {
   missionRareProductionRef: 15e4
 };
 var COMMON_RESOURCES = RESOURCE_LIST.filter((r) => r.rarity === "common").map((r) => r.id);
-var KESH_BOOST_PCT = 0.2;
 function boostUntil(input) {
   var _a;
   const v = Number((_a = input.bounties) == null ? void 0 : _a.boostUntilMs);
   return Number.isFinite(v) ? v : 0;
 }
 function boostAt(input, at) {
-  return (at < boostUntil(input) ? 1 + KESH_BOOST_PCT : 1) * catchupFactorAt(input, at);
+  return (at < boostUntil(input) ? 1 + ECONOMY_RULES.keshBoostPct : 1) * catchupFactorAt(input, at);
 }
 function storageCapacityOf(input) {
   var _a;
@@ -5633,7 +5653,7 @@ function capacityProtected(buildings, res, techLevels2, allianceLevels, player) 
   if (!COMMON_RESOURCES.includes(res)) return 0;
   const capacity = getStorageCapacity(buildings, techLevels2);
   const bastion = allianceBastionBonus(allianceLevels) + (player ? playerModifiers(player).protectedStorage : 0);
-  const pct7 = Math.min(TECH_REDUCTION_CAP + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
+  const pct7 = Math.min(techEffectCap("protected_storage") + bastion, ECONOMY_RULES.protectedStoragePct + techBonus(techLevels2, "protected_storage") + bastion);
   return Number.isFinite(capacity) ? Math.floor(capacity * pct7) : 0;
 }
 function rareRewardScale(player) {
@@ -7057,7 +7077,6 @@ function note2(title, message, now) {
 }
 var BOUNTY_SHOP_RULES = {
   acceleratorMinutes: 60,
-  boostPct: KESH_BOOST_PCT,
   boostHours: 24,
   maxCharges: 3,
   shieldHours: 6,
@@ -7065,9 +7084,7 @@ var BOUNTY_SHOP_RULES = {
   title: "Chasseur de l'Essaim",
   /** 5.26.3 */
   painkillerHours: 2,
-  pheromoneHours: 24,
-  pheromonePct: PHEROMONE_PCT,
-  priorityHours: 24
+  pheromoneHours: 24
 };
 var NAME_TONES = [
   { id: "accent", label: "Cyan" },
@@ -7087,7 +7104,9 @@ var SHOP_ITEMS = [
   { id: "painkiller", name: "Analg\xE9sique d'atelier", price: 50, group: "consumable", description: "Les r\xE9parations en cours \xE0 l'Atelier avancent aussit\xF4t de 2 h." },
   { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de raret\xE9 d'un plan de module commun (une fois par plan)." },
   { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en t\xEAte des contrats visibles pendant 24 h. 3 en r\xE9serve au plus." },
-  { id: "pheromone", name: "Ph\xE9romone de recrutement", price: 90, group: "consumable", description: "Tes officiers gagnent 25 % d'XP en plus pendant 24 h (cumulable dans le temps)." },
+  { id: "pheromone", name: "Ph\xE9romone de recrutement", price: 90, group: "consumable", get description() {
+    return `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`;
+  } },
   { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite apr\xE8s une vendetta : tu peux lui en d\xE9clarer une nouvelle sans attendre son retour. 3 en r\xE9serve au plus." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "D\xE9bloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, L\xE9viathan)." },
   { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "D\xE9bloque la page Planificateur : tout ce qui tourne, la file planifi\xE9e, les mod\xE8les d'actions rejouables en un clic et les objectifs personnels." },
@@ -7202,7 +7221,7 @@ function buyShopItem(player, queues, itemId, now, buildingId, random = Math.rand
       break;
     case "pheromone":
       st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR4;
-      message = "Ph\xE9romone de recrutement : XP des officiers +25 % pendant 24 h.";
+      message = `Ph\xE9romone de recrutement : XP des officiers +${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h.`;
       break;
     case "vendettaToken":
       st.vendettaTokens += 1;
@@ -7482,7 +7501,7 @@ function shopReminders(player, now) {
   const soon = (until, reminded) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
   const left = (until) => `${Math.max(1, Math.round((until - now) / 6e4))} min`;
   if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
-    notifications.push({ kind: "bounty", title: "Ph\xE9romone bient\xF4t dissip\xE9e", message: `Le bonus d'XP des officiers (+25 %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de 24 h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    notifications.push({ kind: "bounty", title: "Ph\xE9romone bient\xF4t dissip\xE9e", message: `Le bonus d'XP des officiers (+${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de ${BOUNTY_SHOP_RULES.pheromoneHours} h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
     st.remindedPheromoneMs = st.pheromoneUntilMs;
   }
   if (soon(st.shieldUntilMs, st.remindedShieldMs)) {
@@ -20638,6 +20657,7 @@ var REGISTERED_RULES = {
   dailyMissions: { label: "Missions du jour", target: () => DAILY_RULES },
   diplomacy: { label: "Diplomatie", target: () => DIPLOMACY_RULES },
   dockTiers: { label: "Cale s\xE8che : paliers de niveau", target: () => DOCK_TIERS },
+  effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES },
   eliteBounty: { label: "Proie d'\xE9lite", target: () => ELITE_RULES },
   gazette: { label: "Gazette", target: () => GAZETTE_RULES },
   globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
@@ -20648,6 +20668,7 @@ var REGISTERED_RULES = {
   messages: { label: "Messagerie priv\xE9e", target: () => MESSAGE_RULES },
   moduleCost: { label: "Modules : co\xFBt de fabrication", target: () => MODULE_BUILD_COST },
   modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES },
+  officerTuning: { label: "Officiers : second r\xF4le des commandants de saison, Ph\xE9romone", target: () => OFFICER_TUNING_RULES },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW },
   polls: { label: "Sondages", target: () => POLL_RULES },
   profile: { label: "Profil", target: () => PROFILE_RULES },

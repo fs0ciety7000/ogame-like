@@ -7,7 +7,7 @@ import { playerUnitCapacity } from "@/game/hangar";
 import { COMBAT_RULES, computeFullPower, getShieldPercent, homeDefensePower, resolveCombat } from "@/game/combat";
 import { allianceShieldBonus } from "@/game/alliances";
 import { ASCENSION_RULES } from "@/game/ascension";
-import { COMMON_RESOURCES, ECONOMY_RULES, economySnapshot, KESH_BOOST_PCT, productionBonuses, protectedAmount, storageCapacityOf } from "@/game/economy";
+import { COMMON_RESOURCES, ECONOMY_RULES, economySnapshot, productionBonuses, protectedAmount, storageCapacityOf } from "@/game/economy";
 import { playerModifiers } from "@/game/modifiers";
 import { FACTIONS, PIRATE_RULES, pirateState, raidPower } from "@/game/pirates";
 import { computeCombatXp, PVP_RULES } from "@/game/pvp";
@@ -220,7 +220,7 @@ export function FormulasGuide({ player }: { player: PlayerState | null }) {
                × (1 + technologies)
                × recherche d'alliance × (1 + ${pct(ASCENSION_RULES.productionPerAscension)} par ascension)
                × (1 + Intendant + reliques + talents + secteurs d'alliance)
-               × événement en cours × Gelée de la Reine (+${pct(KESH_BOOST_PCT)})
+               × événement en cours × Gelée de la Reine (+${pct(ECONOMY_RULES.keshBoostPct)})
 panne d'énergie (stock à 0 et bilan négatif) : × ${ECONOMY_RULES.outageProductionFactor}`}
         </Formula>
         <p>Les bonus s'additionnent dans chaque parenthèse, puis les parenthèses se multiplient. Le niveau d'un bâtiment verrouillé compte pour 0.</p>

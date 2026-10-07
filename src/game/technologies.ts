@@ -1,4 +1,4 @@
-import { describeEffect, effectTotal, isUnitSelector, TECH_REDUCTION_CAP, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectScope, type EffectStat, TECH_COMBAT_LIMITS } from "@/game/effects";
+import { describeEffect, effectCap, effectTotal, isUnitSelector, TECH_REDUCTION_CAP, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectScope, type EffectStat, TECH_COMBAT_LIMITS } from "@/game/effects";
 /** Effets historiques (un seul par techno, avant la v2.6). */
 export type TechEffect =
   | "unlock_recipe"
@@ -123,6 +123,23 @@ export const TECH_EFFECT_LABELS: Record<TechEffectType, string> = {
 export const NUMERIC_TECH_EFFECTS = Object.keys(TECH_EFFECT_DEFAULTS) as TechEffectType[];
 /** Effets plafonnés à TECH_REDUCTION_CAP une fois cumulés. */
 export const CAPPED_TECH_EFFECTS: TechEffectType[] = ["building_discount", "fleet_speed", "building_time", "unit_time", "research_time", "fleet_upkeep", "protected_storage"];
+
+/** 6.9.5 (AU8) : grandeur plafonnée de chaque effet de techno, pour lire son plafond réglable (`effectCaps`). */
+const CAPPED_EFFECT_STAT: Partial<Record<TechEffectType, EffectStat>> = {
+  building_discount: "buildingDiscount",
+  fleet_speed: "fleetSpeed",
+  building_time: "buildTime",
+  unit_time: "unitTime",
+  research_time: "researchTime",
+  fleet_upkeep: "fleetUpkeep",
+  protected_storage: "protectedStorage",
+};
+
+/** Plafond (couche techno) d'un effet de techno plafonné, réglable dans l'admin. */
+export function techEffectCap(type: TechEffectType): number {
+  const stat = CAPPED_EFFECT_STAT[type];
+  return (stat && effectCap(stat, "tech")) ?? TECH_REDUCTION_CAP;
+}
 
 export const DEFAULT_TECHNOLOGIES: TechDef[] = [
   { id: "tech1", nom: "Analyse de matériaux", desc: "Débloque de nouvelles recettes dans le laboratoire.", maxLevel: 18, baseCost: { scrap: 100, energy: 20 }, baseTime: 30, effect: "unlock_recipe", costGrowth: 1.92, prereq: {} },
@@ -368,23 +385,23 @@ export function describeTechEffect(e: TechEffectDef, level: number, names: { res
     case "unit_defense":
       return `+${pct(v)} de défense des unités`;
     case "building_discount":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} sur le coût des bâtiments`;
+      return `−${pct(Math.min(techEffectCap("building_discount"), v))} sur le coût des bâtiments`;
     case "storage_capacity":
       return `+${pct(v)} de capacité des entrepôts`;
     case "protected_storage":
       return `+${pct(v)} de l'entrepôt à l'abri du pillage`;
     case "fleet_speed":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de vol`;
+      return `−${pct(Math.min(techEffectCap("fleet_speed"), v))} de temps de vol`;
     case "cargo_capacity":
       return `+${pct(v)} de cargaison`;
     case "building_time":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de construction des bâtiments`;
+      return `−${pct(Math.min(techEffectCap("building_time"), v))} de temps de construction des bâtiments`;
     case "unit_time":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de construction des unités`;
+      return `−${pct(Math.min(techEffectCap("unit_time"), v))} de temps de construction des unités`;
     case "research_time":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} de temps de recherche`;
+      return `−${pct(Math.min(techEffectCap("research_time"), v))} de temps de recherche`;
     case "fleet_upkeep":
-      return `−${pct(Math.min(TECH_REDUCTION_CAP, v))} d'entretien de la flotte`;
+      return `−${pct(Math.min(techEffectCap("fleet_upkeep"), v))} d'entretien de la flotte`;
     case "counter_spy":
       return `+${Math.floor(v)} point(s) de contre-espionnage`;
     case "hangar_capacity":

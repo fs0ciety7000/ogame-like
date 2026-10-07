@@ -3,13 +3,12 @@ import { playerCombatEffects } from "@/game/effectTargets";
 import { advanceWorkshop, applyHull, atelierLevel, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { MODULE_RARITIES, modulesState, type ModuleRarity } from "@/game/modules";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
-import { addDossiers, COMMANDER_XP, grantCommanderXp, PHEROMONE_PCT } from "@/game/commanders";
+import { addDossiers, COMMANDER_XP, grantCommanderXp, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { combatLogOf, computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
 import { contractDay, seededRandom } from "@/game/contracts";
-import { KESH_BOOST_PCT } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
 import { flushState, type NewNotification } from "@/game/flush";
 import { formatInt } from "@/game/format";
@@ -515,7 +514,6 @@ export interface ShopItem {
 
 export const BOUNTY_SHOP_RULES = {
   acceleratorMinutes: 60,
-  boostPct: KESH_BOOST_PCT,
   boostHours: 24,
   maxCharges: 3,
   shieldHours: 6,
@@ -524,8 +522,6 @@ export const BOUNTY_SHOP_RULES = {
   /** 5.26.3 */
   painkillerHours: 2,
   pheromoneHours: 24,
-  pheromonePct: PHEROMONE_PCT,
-  priorityHours: 24,
 };
 
 /** 5.26.3 : couleurs de pseudo (jetons du thème ; le rouge reste réservé au danger). */
@@ -548,7 +544,9 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: "painkiller", name: "Analgésique d'atelier", price: 50, group: "consumable", description: "Les réparations en cours à l'Atelier avancent aussitôt de 2 h." },
   { id: "reroll", name: "Rappel de plan", price: 70, group: "consumable", description: "Relance le tirage de rareté d'un plan de module commun (une fois par plan)." },
   { id: "priority", name: "Contrat prioritaire", price: 60, group: "consumable", description: "Ton prochain contrat de livraison passe en tête des contrats visibles pendant 24 h. 3 en réserve au plus." },
-  { id: "pheromone", name: "Phéromone de recrutement", price: 90, group: "consumable", description: "Tes officiers gagnent 25 % d'XP en plus pendant 24 h (cumulable dans le temps)." },
+  { id: "pheromone", name: "Phéromone de recrutement", price: 90, group: "consumable", get description() {
+      return `Tes officiers gagnent ${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % d'XP en plus pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h (cumulable dans le temps).`;
+    } },
   { id: "vendettaToken", name: "Jeton de vendetta", price: 120, group: "consumable", description: "Rappelle un seigneur en fuite après une vendetta : tu peux lui en déclarer une nouvelle sans attendre son retour. 3 en réserve au plus." },
   { id: "blueprint", name: "Plan du Traqueur Kesh", price: 600, group: "unit", description: "Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan)." },
   { id: "planner", name: "Planificateur", price: 600, group: "feature", description: "Débloque la page Planificateur : tout ce qui tourne, la file planifiée, les modèles d'actions rejouables en un clic et les objectifs personnels." },
@@ -676,7 +674,7 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
       break;
     case "pheromone":
       st.pheromoneUntilMs = Math.max(now, st.pheromoneUntilMs) + BOUNTY_SHOP_RULES.pheromoneHours * HOUR;
-      message = "Phéromone de recrutement : XP des officiers +25 % pendant 24 h.";
+      message = `Phéromone de recrutement : XP des officiers +${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} % pendant ${BOUNTY_SHOP_RULES.pheromoneHours} h.`;
       break;
     case "vendettaToken":
       st.vendettaTokens += 1;
@@ -1072,7 +1070,7 @@ export function shopReminders(player: Pick<PlayerState, "bounties">, now: number
   const soon = (until: number, reminded: number) => until > now && until - now <= SHOP_REMINDER_LEAD_MS && reminded !== until;
   const left = (until: number) => `${Math.max(1, Math.round((until - now) / 60_000))} min`;
   if (soon(st.pheromoneUntilMs, st.remindedPheromoneMs)) {
-    notifications.push({ kind: "bounty", title: "Phéromone bientôt dissipée", message: `Le bonus d'XP des officiers (+25 %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de 24 h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
+    notifications.push({ kind: "bounty", title: "Phéromone bientôt dissipée", message: `Le bonus d'XP des officiers (+${Math.round(OFFICER_TUNING_RULES.pheromonePct * 100)} %) prend fin dans ${left(st.pheromoneUntilMs)}. Une autre dose prolonge l'effet de ${BOUNTY_SHOP_RULES.pheromoneHours} h.`, link: "/game/primes?onglet=comptoir", createdAtMs: now, read: false });
     st.remindedPheromoneMs = st.pheromoneUntilMs;
   }
   if (soon(st.shieldUntilMs, st.remindedShieldMs)) {

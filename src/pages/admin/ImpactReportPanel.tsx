@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { HudChip, type HudTone } from "@/components/ui/hud";
 import { EFFECT_SOURCE_LABELS, EFFECT_STATS, effectStatLabel, formatEffectValue, type EffectSourceKind } from "@/game/effects";
-import { effectImpactReport, SEASON_SHARE_NOTE } from "@/game/impact";
+import { effectImpactReport, seasonShareNote } from "@/game/impact";
 import { RESOURCE_LABELS } from "@/game/resources";
 import { useContentStore } from "@/services/contentService";
 
@@ -33,7 +33,7 @@ export function ImpactReportPanel() {
         </div>
       </div>
       <p className="text-xs text-slate-400">
-        Pour chaque grandeur, toutes les sources que le contenu peut donner, à leur maximum, et le total théorique (plafonds compris). Ajouter une technologie, une relique ou un rôle d'officier met ce rapport à jour. {SEASON_SHARE_NOTE}
+        Pour chaque grandeur, toutes les sources que le contenu peut donner, à leur maximum, et le total théorique (plafonds compris). Ajouter une technologie, une relique ou un rôle d'officier met ce rapport à jour. {seasonShareNote()}
       </p>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {shown.map((r) => (

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { applyGameContent, validateGameContent, currentGameContent } from "@/game/content";
-import { activeLevels, assignCommanders, findCommander, recruitCommander, SEASON_SECONDARY_SHARE, commandersState, grantCommanderXp, xpForLevel } from "@/game/commanders";
+import { activeLevels, assignCommanders, findCommander, recruitCommander, OFFICER_TUNING_RULES, commandersState, grantCommanderXp, xpForLevel } from "@/game/commanders";
 import { activePass, addPassPoints, claimPassTier, passState, tierRequirements, trackActivity } from "@/game/seasonPass";
 import { CHALLENGE_KEYS, challengeSize, hasFullChallenges, regenerateChallenges, generatePassSeason, generateTierChallenges, monthlyBudget, PASS_FINAL_AMBER, PASS_THEMES, publishPassSeason, upsertPassSeason, validatePassSeasons, type PassSeason } from "@/game/passSeasons";
 import { bountyState } from "@/game/bounties";
@@ -184,7 +184,7 @@ describe("v5.13 passes de saison procéduraux", () => {
     assignCommanders(p, [s.commander.id], NOV_10);
     const lv = activeLevels(p);
     expect(lv[s.commander.primary]).toBe(10);
-    expect(lv[s.commander.secondary]).toBe(10 * SEASON_SECONDARY_SHARE);
+    expect(lv[s.commander.secondary]).toBe(10 * OFFICER_TUNING_RULES.seasonSecondaryShare);
     grantCommanderXp(p, s.commander.primary, 50);
     expect(commandersState(p).roster[s.commander.id].xp).toBe(xpForLevel(10) + 50);
     // Le passe retiré du catalogue : l'officier reste dans l'état-major (sans effet) jusqu'à son retour.

@@ -22,3 +22,6 @@ Admin : éditeur d'effets composables, rapport d'impact.
 ## État (audit 2026-10-06)
 - Règle « une stat déclarée est lue » : `hangarCapacity` corrigée en 5.28 ; `fleetUpkeep` et `buildingDiscount` lus dans la couche empire depuis la 5.28.1 (plafond `EMPIRE_COST_CAP` = 50 %, C5). Test de garde `effectsRead.test.ts` : une nouvelle stat sans lecteur empire le fait échouer.
 - Empilement de sources : la page « Fiche d'effets » existe, mais le joueur voit difficilement d'où vient un bonus en situation (combat, chantier).
+
+## Revue AU8 (2026-10-07)
+Plafonds par grandeur et couche réglables (`effectCaps`, 6.9.5), lus par `effectCap()` ; attaque et défense des technos : `combat.techCombatCap`. Gelée : `economy.keshBoostPct` ; Phéromone et second rôle des commandants de saison : `officerTuning`.

@@ -154,6 +154,17 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   counterSpy: { label: "Contre-espionnage", unit: "points", group: "renseignement" },
 };
 
+/** 6.9.5 (AU8) : plafonds de chaque grandeur par couche, réglables (registre « effectCaps »). Attaque et défense des
+ *  technos restent pilotées par `combat.techCombatCap` (6.7.1). Remplis depuis EFFECT_STATS (même module). */
+export const EFFECT_CAP_RULES: Record<string, { tech?: number; empire?: number }> = {};
+for (const [k, info] of Object.entries(EFFECT_STATS)) if (info.cap && k !== "attack" && k !== "defense") EFFECT_CAP_RULES[k] = { ...info.cap };
+
+/** Plafond en vigueur d'une grandeur pour une couche (undefined : aucun). */
+export function effectCap(stat: EffectStat, layer: EffectLayer): number | undefined {
+  const r = EFFECT_CAP_RULES[stat]?.[layer];
+  return r !== undefined ? r : EFFECT_STATS[stat].cap?.[layer];
+}
+
 export const EFFECT_STAT_IDS = Object.keys(EFFECT_STATS) as EffectStat[];
 
 export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
@@ -196,7 +207,7 @@ export function rawEffectTotal(grants: readonly EffectGrant[], layer: EffectLaye
 export function clampEffect(stat: EffectStat, layer: EffectLayer, total: number): number {
   const info = EFFECT_STATS[stat];
   let v = total;
-  const cap = info.cap?.[layer];
+  const cap = effectCap(stat, layer);
   if (cap !== undefined) v = Math.min(cap, info.floor !== undefined ? Math.max(info.floor, v) : v);
   return v;
 }

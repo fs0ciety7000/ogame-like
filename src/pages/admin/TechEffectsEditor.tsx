@@ -10,7 +10,7 @@ import {
   NUMERIC_TECH_EFFECTS,
   TECH_EFFECT_DEFAULTS,
   TECH_EFFECT_LABELS,
-  TECH_REDUCTION_CAP,
+  techEffectCap,
   techEffects,
   CAPPED_TECH_EFFECTS,
   type TechDef,
@@ -184,8 +184,8 @@ export function TechEffectsEditor({ tech, onChange }: { tech: TechDef; onChange:
                     · <span className="text-slate-500">niv. {tech.maxLevel} :</span> {describeTechEffect(shown, tech.maxLevel, n)}
                   </>
                 )}
-                {CAPPED_TECH_EFFECTS.includes(e.type) && effectValuePerLevel(e) * tech.maxLevel > TECH_REDUCTION_CAP && (
-                  <span className="text-gold-glow"> (plafonné à {TECH_REDUCTION_CAP * 100} % toutes technos confondues)</span>
+                {CAPPED_TECH_EFFECTS.includes(e.type) && effectValuePerLevel(e) * tech.maxLevel > techEffectCap(e.type) && (
+                  <span className="text-gold-glow"> (plafonné à {Math.round(techEffectCap(e.type) * 100)} % toutes technos confondues)</span>
                 )}
               </p>
             </div>

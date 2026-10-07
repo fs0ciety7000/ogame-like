@@ -58,6 +58,7 @@ import { PrestigePreview, PREVIEWABLE } from "@/components/game/PrestigePreview"
 import { RewardReveal } from "@/components/game/RewardReveal";
 import { normalizePlanetLook } from "@/game/planetLook";
 import { WEEKLY_OFFERS } from "@/game/weeklyStock";
+import { ECONOMY_RULES } from "@/game/economy";
 import { buyBountyItem, setBountyNameTone, sendBountyHunt, sendEliteAssault, useElite } from "@/services/bountyService";
 import { GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -809,7 +810,7 @@ function ShopTab({ player, st }: { player: PlayerState; st: BountyState }) {
         <ShopHistory st={st} />
       </div>
       <p className="text-xs text-slate-500">
-        Gelée de la Reine : +{Math.round(BOUNTY_SHOP_RULES.boostPct * 100)} % sur la planète mère. Voile de chitine : protège des nouvelles attaques de joueurs, pas des flottes déjà en route ni des factions.
+        Gelée de la Reine : +{Math.round(ECONOMY_RULES.keshBoostPct * 100)} % sur la planète mère. Voile de chitine : protège des nouvelles attaques de joueurs, pas des flottes déjà en route ni des factions.
       </p>
     </div>
   );

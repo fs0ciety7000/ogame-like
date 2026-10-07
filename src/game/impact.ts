@@ -1,5 +1,5 @@
 import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, type EffectStat } from "@/game/effects";
-import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, SEASON_SECONDARY_SHARE } from "@/game/commanders";
+import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
 import { TALENT_RULES, TALENTS } from "@/game/talents";
 import { EMPIRE_CLASSES } from "@/game/empireClass";
@@ -93,4 +93,6 @@ export function effectImpactReport(): ImpactRow[] {
 }
 
 /** Part du second rôle d'un commandant de saison (rappel pour l'affichage). */
-export const SEASON_SHARE_NOTE = `Commandants de saison : rôle principal entier, second rôle à ${Math.round(SEASON_SECONDARY_SHARE * 100)} %.`;
+export function seasonShareNote(): string {
+  return `Commandants de saison : rôle principal entier, second rôle à ${Math.round(OFFICER_TUNING_RULES.seasonSecondaryShare * 100)} %.`;
+}
