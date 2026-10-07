@@ -24,6 +24,8 @@ interface Props {
   answers: Record<string, RoadmapAnswer>;
   busy: string | null;
   docUrl: (file: string) => string;
+  /** 6.14.42 : ouvre un document dans la page (version en direct), sinon sur GitHub. */
+  onOpenDoc: (file: string) => void;
   answer: (qid: string, patch: { choice?: string; note?: string }) => Promise<void>;
 }
 
@@ -49,7 +51,7 @@ function planTone(status: string): { label: string; tone: HudTone } {
   return { label: "plan", tone: "neutral" };
 }
 
-export function RoadmapPanel({ current, past, plans, answers, busy, docUrl, answer }: Props) {
+export function RoadmapPanel({ current, past, plans, answers, busy, onOpenDoc, answer }: Props) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [addition, setAddition] = useState("");
   const texts = [current, ...past].filter((r): r is Roadmap => !!r).map((r) => JSON.stringify(r));
@@ -71,9 +73,9 @@ export function RoadmapPanel({ current, past, plans, answers, busy, docUrl, answ
           icon={<MapIcon className="h-4 w-4" />}
           title={plainText(current.title)}
           aside={
-            <a href={docUrl(current.file)} target="_blank" rel="noreferrer" className="font-mono text-xs text-cyan-glow underline-offset-2 hover:underline">
+            <button type="button" onClick={() => onOpenDoc(current.file)} className="font-mono text-xs text-cyan-glow underline-offset-2 hover:underline">
               document
-            </a>
+            </button>
           }
         >
           <div className="flex min-w-0 flex-col gap-3 text-sm">
@@ -188,9 +190,9 @@ export function RoadmapPanel({ current, past, plans, answers, busy, docUrl, answ
                   <HudChip size="sm" tone={t.tone}>
                     {t.label}
                   </HudChip>
-                  <a href={docUrl(p.file)} target="_blank" rel="noreferrer" className="text-cyan-glow underline-offset-2 hover:underline">
+                  <button type="button" onClick={() => onOpenDoc(p.file)} className="text-left text-cyan-glow underline-offset-2 hover:underline">
                     {plainText(p.title) || p.file}
-                  </a>
+                  </button>
                 </div>
                 <p className="text-xs text-slate-500">{plainText(p.status)}</p>
               </li>
@@ -207,9 +209,9 @@ export function RoadmapPanel({ current, past, plans, answers, busy, docUrl, answ
           <ul className="mt-2 flex flex-col gap-1">
             {past.map((r) => (
               <li key={r.file} className="flex flex-wrap items-center gap-2">
-                <a href={docUrl(r.file)} target="_blank" rel="noreferrer" className="text-cyan-glow underline-offset-2 hover:underline">
+                <button type="button" onClick={() => onOpenDoc(r.file)} className="text-left text-cyan-glow underline-offset-2 hover:underline">
                   {plainText(r.title)}
-                </a>
+                </button>
                 <span className="font-mono text-xs tabular-nums text-slate-500">
                   {r.lots.filter((l) => /^livr/i.test(l.state)).length}/{r.lots.length} lots livrés
                 </span>

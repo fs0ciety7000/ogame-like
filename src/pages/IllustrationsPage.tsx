@@ -8,6 +8,7 @@ import { pb } from "@/lib/pocketbase";
 import { useAdminStatus } from "@/services/adminService";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
+import { useLiveDocs } from "@/lib/liveDocs";
 import { cn, timeAgo } from "@/lib/utils";
 import slotsRaw from "../../scripts/illustrations.json?raw";
 
@@ -37,7 +38,18 @@ interface Upload {
   note: string;
 }
 
-const SLOTS: Slot[] = (JSON.parse(slotsRaw) as { slots: Slot[] }).slots;
+const BUILD_SLOTS: Slot[] = (JSON.parse(slotsRaw) as { slots: Slot[] }).slots;
+/** 6.14.42 : liste en direct (`live_docs`, envoyée par `scripts/live-docs.mjs push`), sinon celle du build. */
+const LIVE_SLOTS_PATH = "scripts/illustrations.json";
+function parseSlots(raw: string | undefined): Slot[] {
+  if (!raw) return BUILD_SLOTS;
+  try {
+    const slots = (JSON.parse(raw) as { slots?: Slot[] }).slots;
+    return Array.isArray(slots) && slots.length ? slots : BUILD_SLOTS;
+  } catch {
+    return BUILD_SLOTS;
+  }
+}
 const LABEL = (import.meta.env.VITE_SERVER_LABEL ?? "").trim();
 const COLLECTION = "illustration_uploads";
 /** Serveur de test où se déposent les rendus (docs/illustrations.md). */
@@ -67,6 +79,8 @@ export function IllustrationsPage() {
   const [view, setView] = useState<SlotState | "all">("todo");
   const [copied, setCopied] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const live = useLiveDocs([LIVE_SLOTS_PATH], !!admin && !!LABEL);
+  const SLOTS = useMemo(() => parseSlots(live.docs[LIVE_SLOTS_PATH]), [live.docs]);
 
   const load = useCallback(async () => {
     const list = await pb.collection(COLLECTION).getFullList({ sort: "-uploadedAtMs", batch: 500 }).catch(() => []);
@@ -85,8 +99,8 @@ export function IllustrationsPage() {
     const c = { todo: 0, received: 0, done: 0 };
     for (const s of SLOTS) c[stateOf(s)]++;
     return c;
-  }, [stateOf]);
-  const groups = useMemo(() => ["Toutes", ...new Set(SLOTS.map((s) => s.group))], []);
+  }, [stateOf, SLOTS]);
+  const groups = useMemo(() => ["Toutes", ...new Set(SLOTS.map((s) => s.group))], [SLOTS]);
   const shown = SLOTS.filter((s) => (group === "Toutes" || s.group === group) && (view === "all" || stateOf(s) === view));
   const pending = uploads.filter((u) => u.status === "envoyée").length;
 

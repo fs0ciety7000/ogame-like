@@ -3534,5 +3534,47 @@
         "presentable": false
       }
     ]
+  },
+  {
+    "id": "pbc_ce_live_docs",
+    "name": "live_docs",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "fields": [
+      {
+        "name": "path",
+        "type": "text",
+        "required": true,
+        "max": 200,
+        "presentable": false
+      },
+      {
+        "name": "content",
+        "type": "text",
+        "required": false,
+        "max": 1000000,
+        "presentable": false
+      },
+      {
+        "name": "updatedAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "name": "source",
+        "type": "text",
+        "required": false,
+        "max": 80,
+        "presentable": false
+      }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_live_docs_path ON live_docs (path)"
+    ]
   }
 ]

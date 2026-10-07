@@ -9,6 +9,8 @@ import { pb } from "@/lib/pocketbase";
 import { useAdminStatus } from "@/services/adminService";
 import { logout } from "@/services/authService";
 import { useAuthStore } from "@/store/authStore";
+import { useLiveDocs, withLive } from "@/lib/liveDocs";
+import { DocViewer } from "@/components/decisions/DocViewer";
 import { decisionDocs, DOCS_REPO, parseAdvice, parseChangeIndex, parsePlan, parseQuestions, parseRoadmap, plainText, questionNumber, splitRoadmaps } from "@/lib/decisions";
 import questionsRaw from "../../docs/QUESTIONS.md?raw";
 import adviceRaw from "../../docs/decisions-a-valider.md?raw";
@@ -18,25 +20,33 @@ import changesRaw from "../../docs/changes/README.md?raw";
    Les questions viennent de docs/QUESTIONS.md au build (à jour à chaque déploiement) ; les réponses vont dans la collection
    `decision_answers`, que Claude relit (scripts/decisions.mjs) pour mettre à jour les instructions et ouvrir les lots. */
 
-const QUESTIONS = parseQuestions(questionsRaw)
-  .filter((q) => q.open)
-  .sort((a, b) => questionNumber(a.id) - questionNumber(b.id));
-const ADVICE = parseAdvice(adviceRaw);
-const CHANGES = parseChangeIndex(changesRaw);
 /** 6.14.37 : documents lus sur la branche déployée (pré-prod : branche de travail ; production : main). */
 const DOCS_BRANCH = (import.meta.env.VITE_SERVER_LABEL ?? "").trim() ? "claude/hiver-k-s" : "main";
-/** 6.14.41 : feuilles de route et plans (propositions), lus au build. */
-const PROPOSALS = import.meta.glob("/docs/proposals/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
-const ROADMAPS = splitRoadmaps(
-  Object.entries(PROPOSALS)
-    .filter(([f]) => f.includes("/feuille-de-route-"))
-    .map(([f, md]) => parseRoadmap(f.replace(/^\//, ""), md)),
-);
-const PLANS = Object.entries(PROPOSALS)
-  .filter(([f]) => !f.includes("/feuille-de-route-"))
-  .map(([f, md]) => parsePlan(f.replace(/^\//, ""), md))
-  .sort((a, b) => a.title.localeCompare(b.title, "fr"));
 const docUrl = (file: string) => `${DOCS_REPO}/${DOCS_BRANCH}/${file}`;
+/** 6.14.41 : feuilles de route et plans (propositions), lus au build ; 6.14.42 : remplacés par la version en direct si elle existe. */
+const BUILD_DOCS: Record<string, string> = {
+  "docs/QUESTIONS.md": questionsRaw,
+  "docs/decisions-a-valider.md": adviceRaw,
+  "docs/changes/README.md": changesRaw,
+  ...Object.fromEntries(
+    Object.entries(import.meta.glob("/docs/proposals/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>).map(([f, md]) => [f.replace(/^\//, ""), md]),
+  ),
+};
+const LIVE_PREFIXES = ["docs/"];
+
+/** Questions, conseils, fiches, feuilles de route et plans à partir des documents (build ou direct). */
+function buildModel(docs: Record<string, string>) {
+  const questions = parseQuestions(docs["docs/QUESTIONS.md"] ?? "")
+    .filter((q) => q.open)
+    .sort((a, b) => questionNumber(a.id) - questionNumber(b.id));
+  const proposals = Object.entries(docs).filter(([f]) => /^docs\/proposals\/[^/]+\.md$/.test(f));
+  const roadmaps = splitRoadmaps(proposals.filter(([f]) => f.includes("/feuille-de-route-")).map(([f, md]) => parseRoadmap(f, md)));
+  const plans = proposals
+    .filter(([f]) => !f.includes("/feuille-de-route-"))
+    .map(([f, md]) => parsePlan(f, md))
+    .sort((a, b) => a.title.localeCompare(b.title, "fr"));
+  return { questions, advice: parseAdvice(docs["docs/decisions-a-valider.md"] ?? ""), changes: parseChangeIndex(docs["docs/changes/README.md"] ?? ""), roadmaps, plans };
+}
 const GROUP_ORDER = ["Bloquante", "Joueurs et équilibre", "Récit", "Outillage et méthode", "Autres"];
 const COLLECTION = "decision_answers";
 
@@ -63,6 +73,11 @@ export function DecisionsPage() {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [view, setView] = useState<View>("todo");
   const [tab, setTab] = useState<Tab>("decisions");
+  const [openDoc, setOpenDoc] = useState<string | null>(null);
+  // 6.14.42 : documents en direct (envoyés par Claude sans redéploiement), sinon ceux du build.
+  const live = useLiveDocs(LIVE_PREFIXES, !!admin);
+  const docs = useMemo(() => withLive(BUILD_DOCS, live.docs, "docs/"), [live.docs]);
+  const { questions: QUESTIONS, advice: ADVICE, changes: CHANGES, roadmaps: ROADMAPS, plans: PLANS } = useMemo(() => buildModel(docs), [docs]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +121,7 @@ export function DecisionsPage() {
       c[ch === "valide" || ch === "changer" ? ch : "todo"]++;
     }
     return c;
-  }, [answers]);
+  }, [answers, QUESTIONS]);
   const shown = QUESTIONS.filter((q) => view === "all" || (view === "todo" ? !answers[q.id]?.choice : !!answers[q.id]?.choice));
   const groups = GROUP_ORDER.map((g) => ({ g, list: shown.filter((q) => (ADVICE[q.id]?.group ?? "Autres") === g) })).filter((x) => x.list.length);
 
@@ -165,9 +180,15 @@ export function DecisionsPage() {
                 </HudChip>
               ))}
             </div>
+            {live.updatedAtMs > 0 && (
+              <p className="text-xs text-slate-500">
+                Documents en direct, mis à jour le <span className="font-mono tabular-nums">{new Date(live.updatedAtMs).toISOString().slice(0, 16).replace("T", " ")}</span> (UTC), sans attendre un déploiement.
+              </p>
+            )}
+            {openDoc && <DocViewer path={openDoc} content={docs[openDoc] ?? ""} url={docUrl(openDoc)} onClose={() => setOpenDoc(null)} />}
             {error && <p className="text-sm text-danger-glow">{error}</p>}
             {tab === "roadmap" ? (
-              <RoadmapPanel current={ROADMAPS.current} past={ROADMAPS.past} plans={PLANS} answers={answers} busy={busy} docUrl={docUrl} answer={answer} />
+              <RoadmapPanel current={ROADMAPS.current} past={ROADMAPS.past} plans={PLANS} answers={answers} busy={busy} docUrl={docUrl} onOpenDoc={(f) => (docs[f] !== undefined ? setOpenDoc(f) : window.open(docUrl(f), "_blank", "noreferrer"))} answer={answer} />
             ) : (
           <>
             <p className="text-sm text-slate-300">
@@ -245,11 +266,17 @@ export function DecisionsPage() {
                         {/* 6.14.37 : documents qui présentent le choix (proposition, fiche du lot). */}
                         <div className="flex flex-wrap items-center gap-1.5 text-xs">
                           <span className="hud-eyebrow text-[10px] text-slate-500">Documents</span>
-                          {decisionDocs(q, CHANGES).map((d) => (
+                          {decisionDocs(q, CHANGES).map((d) =>
+                            docs[d] !== undefined ? (
+                              <button key={d} type="button" onClick={() => setOpenDoc(d)} className="break-all text-left font-mono text-cyan-glow underline-offset-2 hover:underline">
+                                {d.replace(/^docs\//, "")}
+                              </button>
+                            ) : (
                             <a key={d} href={docUrl(d)} target="_blank" rel="noreferrer" className="break-all font-mono text-cyan-glow underline-offset-2 hover:underline">
                               {d.replace(/^docs\//, "")}
                             </a>
-                          ))}
+                            ),
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <Button size="sm" variant={a?.choice === "valide" ? "primary" : "secondary"} aria-pressed={a?.choice === "valide"} disabled={busy === q.id} onClick={() => void answer(q.id, { choice: "valide" })}>

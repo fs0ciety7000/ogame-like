@@ -486,6 +486,27 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.42 : documents en direct (live_docs) lisibles par les admins du jeu seulement, unicité du chemin", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const path = `docs/test-${Date.now()}.md`;
+    const doc = await admin.collection("live_docs").create({ path, content: "# Essai\n\nTexte long : " + "x".repeat(20000), updatedAtMs: Date.now(), source: "itest" });
+    try {
+      await expect(pb.collection("live_docs").getFullList()).resolves.toEqual([]);
+      await expect(pb.collection("live_docs").create({ path: "docs/autre.md", content: "pirate" })).rejects.toBeTruthy();
+      await expect(admin.collection("live_docs").create({ path, content: "doublon" })).rejects.toBeTruthy();
+      await admin.collection("admins").create({ id: bId, note: "test" });
+      try {
+        const list = await pb.collection("live_docs").getFullList({ filter: pb.filter("path = {:p}", { p: path }) });
+        expect(list.map((r) => r.content.length)).toEqual([doc.content.length]);
+      } finally {
+        await admin.collection("admins").delete(bId);
+      }
+    } finally {
+      await admin.collection("live_docs").delete(doc.id);
+    }
+  });
+
   it("admin routes exist (statistics, season closing)", async () => {
     const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
     expect(stats).toBeTruthy();

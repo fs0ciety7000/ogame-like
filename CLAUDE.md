@@ -84,9 +84,16 @@ Valable pour toute la session et tout le projet, à chaque demande :
   > d'illustrations.**
 
   Une question ouverte cite son document (`docs/…md` dans sa ligne, ou une version du lot présente dans l'index des fiches) : la page
-  affiche les liens, et `decisions.test.ts` échoue sans document. `/decisions` et `/img` se construisent depuis le dépôt : une question,
-  avec sa ligne dans `decisions-a-valider.md`, et une image, avec sa ligne dans `illustrations.json`, s'ajoutent **dans le push même
-  qui les crée**. Le déploiement de la pré-prod met les deux pages à jour, sans autre étape.
+  affiche les liens, et `decisions.test.ts` échoue sans document. Une question, avec sa ligne dans `decisions-a-valider.md`, et une
+  image, avec sa ligne dans `illustrations.json`, s'ajoutent **dans le push même qui les crée**.
+- > **Instructions (2026-10-07) : une route API pour lire et envoyer les décisions et plans / feuilles de route (les .md) sans push
+  > GitHub ni redéploiement Coolify ; pareil pour /img (envoi d'images, nouveaux prompts).**
+
+  `/decisions` et `/img` lisent d'abord la collection `live_docs` (6.14.42), puis la version du build. Après **toute** modification
+  d'une question, d'un conseil, d'une proposition, d'une feuille de route ou de `illustrations.json` : `node scripts/live-docs.mjs push`
+  (seuls les fichiers changés partent ; `status` pour comparer). Les pages sont à jour en quelques secondes. Le commit suit au lot,
+  car le dépôt reste la mémoire. La production garde son build (lecture seule). Une image intégrée au jeu (`public/assets`) demande
+  toujours un commit et un redéploiement.
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 

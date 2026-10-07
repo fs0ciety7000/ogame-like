@@ -35,6 +35,9 @@ rythme dans les routines de claude.ai.
 
 ## Côté Claude (intégration)
 
+Nouveau prompt ou image ajoutée à `scripts/illustrations.json` : `node scripts/live-docs.mjs push` la fait apparaître sur `/img` tout
+de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
+
 1. `node scripts/preprod-illustrations.mjs pull <scratchpad>/illu-in`.
    - Les images reconnues sont écrites sous `<id>.<ext>` et l'envoi passe à `attribuée`.
    - Les autres vont dans `a-identifier/` : les regarder (Read), comparer aux prompts, puis `assign <envoi> <id>` et les renommer. Un doublon

@@ -13,7 +13,7 @@ une action ajoutée par l'utilisateur devient un lot ici (son identifiant `A…`
 | 2 | É30-1 | Prochain système : **phalange et porte de saut lunaires** (Q31 validée, option A) : proposition détaillée `docs/proposals/phalange-porte-de-saut.md`, puis lots É30-1a, É30-1b… | M à L | en cours (proposition) |
 | 3 | É30-3 | Illustrations : intégration au fil des envois (routine horaire), annonce 6.14 publiée avec son image | selon envois | attend l'utilisateur (`/img`) |
 | 4 | É30-4 | Feuille de route sur `/decisions` : lots à valider ou modifier, actions à ajouter, plans en cours ; Q12 écartée | S | livré (6.14.41) |
-| 5 | É30-5 | Stabilité de l'affichage sur mobile (CLS p75 0,7 relevé sur la pré-prod) : trouver les éléments qui sautent (`PERF_SHIFTS=1`), réserver leur place | S à M | à faire |
+| 5 | É30-5 | Performance, suite de 6.14.39 : stabilité sur mobile (CLS p75 0,7, `PERF_SHIFTS=1`), LCP de la Galaxie (8,4 s mobile), images du Codex chargées à la demande (6 à 8 Mo) | M | à faire |
 | 6 | É30-6 | Rythme des succès (PRG-5 : médiane 70 sur 178 en une semaine) : proposition chiffrée de paliers plus étalés, sans retirer un succès gagné | M | à faire |
 | 7 | É30-7 | Reliques qui partagent une image (`sceau_sentinelle`, `plaque_bastion` et deux autres paires) : prompts propres, lignes sur `/img` | S | à faire |
 | 8 | AU27 | Revue, même grille | M | fin des lots |

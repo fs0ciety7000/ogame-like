@@ -123,7 +123,9 @@ Ce que Claude fait ensuite sur la pré-prod :
 - performance (6.14.39) : `node scripts/preprod-perf.mjs [--runs 3] [/game …]`, chargement à froid en profils mobile (375 px,
   processeur ×4, 4G lente) et bureau ; `PERF_SHIFTS=1` affiche les éléments qui provoquent des décalages (CLS) ;
 - veille (6.14.39) : `node scripts/preprod-watch.mjs` en arrière-plan, toutes les 2 min, rend la main dès qu'un envoi `/img` ou une
-  réponse `/decisions` arrive (CLAUDE.md, règle n° 3).
+  réponse `/decisions` arrive (CLAUDE.md, règle n° 3) ;
+- documents en direct (6.14.42) : `node scripts/live-docs.mjs push|status|pull`, collection `live_docs` lue par `/decisions` et `/img`
+  avant la version du build (pas de redéploiement pour une question, une feuille de route ou un prompt).
 
 Les écritures sont permises sur la pré-prod uniquement ; la production reste en lecture seule.
 
