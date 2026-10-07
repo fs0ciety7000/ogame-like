@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
 import { defaultPlayerState } from "@/game/defaults";
-import { balanceHealth, median } from "@/game/balance/health";
+import { balanceHealth, bossHealth, median } from "@/game/balance/health";
 import type { PlayerState } from "@/types/game";
 
 /* 6.0.1 (lot K) : santé de l'équilibre. */
@@ -86,5 +86,30 @@ describe("santé de l'équilibre", () => {
     const h = balanceHealth({ players: [p, { ...p, uid: "b" }], reports: [], fleets: [], builds: {}, alliances: [], commerce }, NOW, 7);
     expect(h.commerce).toEqual({ ...commerce, dealsPerPlayerWeek: 5 });
     expect(balanceHealth({ players: [p], reports: [], fleets: [], builds: {}, alliances: [] }, NOW, 7).commerce).toBeNull();
+  });
+
+  it("6.14.6 (BOSS-2) : boss abattus par type sur 8 semaines", () => {
+    const day = 86_400_000;
+    const e = (kind: "leviathan" | "seasonboss" | "allianceboss", won: boolean, ago: number, dmg: number, participants = 4) => ({
+      kind,
+      won,
+      endedAtMs: NOW - ago * day,
+      maxHp: 1000,
+      totalDamage: dmg,
+      participants,
+    });
+    const b = bossHealth(
+      [e("leviathan", true, 1, 1000, 10), e("leviathan", false, 8, 400, 2), e("leviathan", true, 15, 1200, 6), e("leviathan", false, 80, 0), e("allianceboss", false, 3, 250)],
+      NOW,
+    );
+    const lev = b.rows.find((r) => r.kind === "leviathan")!;
+    expect(b.windowDays).toBe(56);
+    expect([lev.fought, lev.won, lev.winPct]).toEqual([3, 2, 67]);
+    expect(lev.medianParticipants).toBe(6);
+    expect(lev.medianDamagePct).toBe(100);
+    expect(b.rows.find((r) => r.kind === "seasonboss")).toMatchObject({ fought: 0, winPct: 0 });
+    expect(b.rows.find((r) => r.kind === "allianceboss")).toMatchObject({ fought: 1, won: 0, medianDamagePct: 25 });
+    // Sans historique fourni, la mesure n'est pas relevée.
+    expect(balanceHealth({ players: [], reports: [], fleets: [], builds: {}, alliances: [] }, NOW).bosses).toBeNull();
   });
 });

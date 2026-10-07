@@ -22325,6 +22325,25 @@ function computeLiveBalance(players, warlords, reports, now, windowDays = 30) {
 }
 
 // src/game/balance/health.ts
+var BOSS_HEALTH_WINDOW_DAYS = 56;
+function bossHealth(entries, now, windowDays = BOSS_HEALTH_WINDOW_DAYS) {
+  const since = now - windowDays * 864e5;
+  const recent = entries.filter((e3) => e3.endedAtMs >= since && e3.endedAtMs <= now);
+  const rows = Object.keys(BOSS_KIND_LABELS).map((kind) => {
+    const of = recent.filter((e3) => e3.kind === kind);
+    const won = of.filter((e3) => e3.won).length;
+    return {
+      kind,
+      label: BOSS_KIND_LABELS[kind],
+      fought: of.length,
+      won,
+      winPct: of.length ? Math.round(won / of.length * 100) : 0,
+      medianParticipants: median6(of.map((e3) => e3.participants || 0)),
+      medianDamagePct: Math.round(median6(of.map((e3) => e3.maxHp > 0 ? Math.min(1, (e3.totalDamage || 0) / e3.maxHp) : 0)) * 100)
+    };
+  });
+  return { windowDays, rows };
+}
 function median6(xs) {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
@@ -22443,7 +22462,8 @@ function balanceHealth(input, now, windowDays = 7) {
     classes: { none: players.filter((p) => !p.empireClass).length, rows },
     commerce: input.commerce ? __spreadProps(__spreadValues({}, input.commerce), {
       dealsPerPlayerWeek: players.length ? round12((input.commerce.marketFilled + input.commerce.auctionsSold + input.commerce.contractsDelivered) / players.length * (7 / Math.max(1, windowDays))) : 0
-    }) : null
+    }) : null,
+    bosses: input.bossHistory ? bossHealth(input.bossHistory, now) : null
   };
 }
 

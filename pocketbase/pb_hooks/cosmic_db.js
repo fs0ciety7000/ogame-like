@@ -5474,7 +5474,15 @@ function liveBalance(now, withHistory) {
       contractsDelivered: count("trade_contracts", 'status = "delivered" && createdAtMs >= {:s}'),
       gifts: count("resource_gifts", "timestamp >= {:s}"),
     };
-    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances, commerce }, now, 7);
+    // 6.14.6 (BOSS-2) : combats de boss archivés (Hall of fame).
+    let bossHistory = [];
+    try {
+      const hist = configRecord($app, game.BOSS_HISTORY_KEY);
+      bossHistory = game.normalizeBossHistory(hist ? toPlain(hist).data : null);
+    } catch (_) {
+      bossHistory = [];
+    }
+    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances, commerce, bossHistory }, now, 7);
   } catch (err) {
     console.log(`[cosmic] santé de l'équilibre : ${err}`);
   }

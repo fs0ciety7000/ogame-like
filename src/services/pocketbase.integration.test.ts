@@ -2560,6 +2560,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(live.players.some((p: { pseudo: string }) => p.pseudo === pseudo)).toBe(true);
     expect(live.factions.length).toBeGreaterThan(0);
     expect(live.pvp.windowDays).toBe(30);
+    // 6.14.6 (BOSS-2) : boss abattus par type (Hall of fame), relevé même sans combat archivé.
+    expect(live.health?.bosses?.windowDays).toBe(56);
+    expect(live.health?.bosses?.rows.map((r: { kind: string }) => r.kind)).toEqual(["leviathan", "seasonboss", "allianceboss"]);
   });
 
   it("v5.4: generator writes a chapter, never replaces a hand-written month, refused to players", async () => {

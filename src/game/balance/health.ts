@@ -9,6 +9,7 @@ import { ACHIEVEMENTS } from "@/game/achievements";
 import { passState, PASS_RULES, activePass } from "@/game/seasonPass";
 import { parisOffsetMs } from "@/game/events";
 import { isPvpReport } from "@/game/balance/combatTypes";
+import { BOSS_KIND_LABELS, type BossHistoryEntry, type BossKind } from "@/game/bossHistory";
 import type { BattleReport, PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -34,6 +35,42 @@ export interface HealthInput {
   alliances: { members: string[] }[];
   /** AU13 (COM-3) : volumes du commerce sur la fenêtre, comptés par le serveur. */
   commerce?: CommerceCounts;
+  /** 6.14.6 (BOSS-2) : combats de boss archivés (Hall of fame, `boss_history`). */
+  bossHistory?: Pick<BossHistoryEntry, "kind" | "endedAtMs" | "won" | "participants" | "maxHp" | "totalDamage">[];
+}
+
+/** 6.14.6 (BOSS-2) : fenêtre de la mesure des boss (8 semaines : un boss mondial par semaine en alternance). */
+export const BOSS_HEALTH_WINDOW_DAYS = 56;
+
+export interface BossHealthRow {
+  kind: BossKind;
+  label: string;
+  fought: number;
+  won: number;
+  winPct: number;
+  medianParticipants: number;
+  /** Dégâts infligés en % des PV du boss (médiane, plafonnée à 100). */
+  medianDamagePct: number;
+}
+
+/** 6.14.6 (BOSS-2) : taux de boss abattus par type sur la fenêtre (combats terminés). */
+export function bossHealth(entries: NonNullable<HealthInput["bossHistory"]>, now: number, windowDays = BOSS_HEALTH_WINDOW_DAYS): { windowDays: number; rows: BossHealthRow[] } {
+  const since = now - windowDays * 86_400_000;
+  const recent = entries.filter((e) => e.endedAtMs >= since && e.endedAtMs <= now);
+  const rows = (Object.keys(BOSS_KIND_LABELS) as BossKind[]).map((kind) => {
+    const of = recent.filter((e) => e.kind === kind);
+    const won = of.filter((e) => e.won).length;
+    return {
+      kind,
+      label: BOSS_KIND_LABELS[kind],
+      fought: of.length,
+      won,
+      winPct: of.length ? Math.round((won / of.length) * 100) : 0,
+      medianParticipants: median(of.map((e) => e.participants || 0)),
+      medianDamagePct: Math.round(median(of.map((e) => (e.maxHp > 0 ? Math.min(1, (e.totalDamage || 0) / e.maxHp) : 0))) * 100),
+    };
+  });
+  return { windowDays, rows };
 }
 
 /** AU13 (COM-3) : volumes du commerce sur la fenêtre (offres du marchand PNJ exclues). */
@@ -74,6 +111,8 @@ export interface BalanceHealth {
   achievements: { total: number; medianUnlocked: number; medianPct: number };
   /** AU13 (COM-3) : volumes du commerce sur la fenêtre et échanges conclus par joueur actif et par semaine (null : non relevé). */
   commerce: (CommerceCounts & { dealsPerPlayerWeek: number }) | null;
+  /** 6.14.6 (BOSS-2) : boss abattus par type (null : non relevé). */
+  bosses: { windowDays: number; rows: BossHealthRow[] } | null;
 }
 
 export function median(xs: number[]): number {
@@ -183,5 +222,6 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
             : 0,
         }
       : null,
+    bosses: input.bossHistory ? bossHealth(input.bossHistory, now) : null,
   };
 }

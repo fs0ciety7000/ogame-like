@@ -38,6 +38,7 @@ Traqueur Kesh au-delà de son niveau maximal, aucun repaire ouvert (raids trop r
 livrées en 6.6.0 (`docs/changes/6.6.0-menaces-pnj.md`).
 
 ## Revue AU2 (2026-10-06)
-Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure des boss gonflée par `tech19_2`, taux de boss tués non
-mesuré, calendrier chargé en fin de semaine (lot V, livré en 6.7.0 : boss de la chronique le mardi, tournoi le mercredi) ; décompte de la
+Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure des boss gonflée par `tech19_2`, taux de boss tués
+(mesuré depuis la 6.14.6 : Admin → Équilibrage → Santé de l'équilibre, boss abattus par type sur 56 jours, participants et dégâts
+médians, lus dans le Hall of fame), calendrier chargé en fin de semaine (lot V, livré en 6.7.0 : boss de la chronique le mardi, tournoi le mercredi) ; décompte de la
 page Boss corrigé sur mobile.

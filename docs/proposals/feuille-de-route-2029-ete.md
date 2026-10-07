@@ -7,6 +7,6 @@ production, `main` et PR sautés (Q12).
 
 | # | Lot | Contenu | Taille | État |
 |:--|:--|:--|:--|:--|
-| 1 | E29-1 | Mesure BOSS-2 : taux de boss abattus (mondiaux, de saison, d'alliance) dans la santé de l'équilibre (admin), sans changer l'équilibre (PR29-3) | M | à faire |
+| 1 | E29-1 | Mesure BOSS-2 : taux de boss abattus (mondiaux, de saison, d'alliance) dans la santé de l'équilibre (admin), sans changer l'équilibre (PR29-3) | M | livré en 6.14.6 (Q21) |
 | 2 | Z0, Z1, Z6 | Mise en production, mesures, performance (repris) | — | en attente de l'utilisateur (Q12) |
 | 3 | AU23 | Revue, même grille | M | fin des lots |

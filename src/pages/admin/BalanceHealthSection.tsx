@@ -87,6 +87,26 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           sans classe <span className="ml-1 font-mono tabular-nums">{health.classes.none}</span>
         </HudChip>
       </div>
+      {/* 6.14.6 (BOSS-2) : boss abattus par type, depuis le Hall of fame. */}
+      {health.bosses && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>Boss abattus ({health.bosses.windowDays} j) :</span>
+          {health.bosses.rows.map((r) => (
+            <HudChip
+              key={r.kind}
+              size="sm"
+              tone={r.fought === 0 ? "neutral" : r.winPct >= 50 ? "mint" : "ember"}
+              title={r.fought ? `Participants (médiane) : ${r.medianParticipants} · dégâts (médiane) : ${r.medianDamagePct} % des PV` : "Aucun combat terminé sur la période"}
+            >
+              {r.label}{" "}
+              <span className="ml-1 font-mono tabular-nums">
+                {r.won}/{r.fought}
+                {r.fought ? ` · ${r.winPct} %` : ""}
+              </span>
+            </HudChip>
+          ))}
+        </div>
+      )}
       {/* 6.5.1 (lot U) : unités possédées par type (relevés de 6.3.1 et 6.5). */}
       <UnitRows label="Défenses construites" tone="accent" rows={health.defenses ?? []} />
       <UnitRows label="Vaisseaux de classe" tone="violet" rows={health.classUnits ?? []} />
