@@ -23,7 +23,7 @@ const PASS_SOURCE_LABELS: Record<string, string> = {
 
 const h = (x: number) => `${String(x).replace(".", ",")} h`;
 
-export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
+export function BalanceHealthSection({ health, achievementsPace }: { health: BalanceHealth; achievementsPace?: number | null }) {
   const e = health.exposure;
   return (
     <div className="flex flex-col gap-3">
@@ -42,7 +42,13 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           value={`${health.pass.finishedPct} % fini`}
           sub={`${health.pass.medianPoints} / ${health.pass.maxPoints} points (médiane)${health.pass.medianFinishDay ? ` · fini le ${health.pass.medianFinishDay} (médiane)` : ""}`}
         />
-        <StatTile size="sm" tone="violet" label="Succès (joueur médian)" value={`${health.achievements.medianPct} %`} sub={`${health.achievements.medianUnlocked} sur ${health.achievements.total}`} />
+        <StatTile
+          size="sm"
+          tone="violet"
+          label="Succès (joueur médian)"
+          value={`${health.achievements.medianPct} %`}
+          sub={`${health.achievements.medianUnlocked} sur ${health.achievements.total}${achievementsPace != null ? ` · +${achievementsPace} pts en 7 j` : ""}`}
+        />
         {health.commerce && (
           <StatTile
             size="sm"
@@ -52,6 +58,27 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
             sub={`marché ${health.commerce.marketFilled}/${health.commerce.marketCreated} · enchères ${health.commerce.auctionsSold}/${health.commerce.auctionsCreated} · contrats ${health.commerce.contractsDelivered}/${health.commerce.contractsCreated} · ${health.commerce.gifts} cadeaux`}
           />
         )}
+        {/* 6.14.19 (A29-2) : raids et repaires (PNJ-4, cible 60 à 80 % repoussés), élites (PNJ-5), casino et pot (COM-3). */}
+        {health.npc && (
+          <StatTile
+            size="sm"
+            tone={health.npc.raids && (health.npc.raidsRepelledPct < 60 || health.npc.raidsRepelledPct > 80) ? "ember" : "mint"}
+            label={`Raids repoussés (${health.npc.windowDays} j)`}
+            value={health.npc.raids ? `${health.npc.raidsRepelledPct} %` : "—"}
+            sub={`${health.npc.raids} raids · cible 60 à 80 % · repaires pris ${health.npc.lairsTakenPct} % (${health.npc.lairs})`}
+          />
+        )}
+        {health.elites && <StatTile size="sm" tone="gold" label="Unités d'élite" value={`${health.elites.sharePct} %`} sub={`${health.elites.players} joueurs en ont débloqué une`} />}
+        {health.casino && (
+          <StatTile
+            size="sm"
+            tone="violet"
+            label="Casino (semaine)"
+            value={`${health.casino.playersPct} %`}
+            sub={`des joueurs ont joué · ${health.casino.medianSpins} tirages (médiane) · ${health.casino.jackpots} gros lots en tout`}
+          />
+        )}
+        {health.casino?.pot && <StatTile size="sm" tone="gold" label="Pot commun" value={formatCompact(health.casino.pot.value)} sub={`ressources (valeur commune) · ${health.casino.pot.amber} Ambre`} />}
         <StatTile size="sm" tone="mint" label="Routes de colonies" value={`${health.colonies.withRoute} / ${health.colonies.colonies}`} sub={`dont ${health.colonies.supply ?? 0} en ravitaillement · ${health.colonies.queued ?? 0} files de défense`} />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
@@ -107,9 +134,20 @@ export function BalanceHealthSection({ health }: { health: BalanceHealth }) {
           ))}
         </div>
       )}
+      {health.casino?.pot && health.casino.pot.inflows.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>Entrées du pot commun :</span>
+          {health.casino.pot.inflows.map((r) => (
+            <HudChip key={r.source} size="sm" tone="gold" title={`${formatCompact(r.value)} en valeur de ressources communes`}>
+              {r.label} <span className="ml-1 font-mono tabular-nums">{r.sharePct} %</span>
+            </HudChip>
+          ))}
+        </div>
+      )}
       {/* 6.5.1 (lot U) : unités possédées par type (relevés de 6.3.1 et 6.5). */}
       <UnitRows label="Défenses construites" tone="accent" rows={health.defenses ?? []} />
       <UnitRows label="Vaisseaux de classe" tone="violet" rows={health.classUnits ?? []} />
+      {health.elites && <UnitRows label="Unités d'élite" tone="violet" rows={health.elites.rows} />}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { COMBAT_KINDS } from "@/game/balance/combatTypes";
 import { adminBalance } from "@/services/adminService";
 import { BalanceHistory } from "@/pages/admin/BalanceHistory";
 import { BalanceHealthSection } from "@/pages/admin/BalanceHealthSection";
+import { achievementsPace } from "@/game/balance/history";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
 import { commonPerHour, empireProfile, extractorCurve, missionTable, techProfile, unitMetrics, unitTable, type UnitMetrics } from "@/game/balance/analysis";
 import { findUnit, UNITS } from "@/game/units";
@@ -259,7 +260,7 @@ export function BalancePanel() {
 
       {live?.health && (
         <Section title="Santé de l'équilibre" aside={<span className="text-[11px] text-slate-500">joueurs actifs (14 j) · JcJ sur 7 j</span>}>
-          <BalanceHealthSection health={live.health} />
+          <BalanceHealthSection health={live.health} achievementsPace={achievementsPace(live.history)} />
         </Section>
       )}
       {live && (

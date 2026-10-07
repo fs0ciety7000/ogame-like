@@ -20,12 +20,8 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 
 ### Faisable seul
 
-| Id | Origine | Constat | Lot |
-|:--|:--|:--|:--|
-| COM-3 (reste) | AU4, AU13 | Casino (tirages) et pot commun absents de la santé de l'équilibre (`balance/health.ts`) | **A29-2** |
-| PNJ-5 | AU1 | Aucun indicateur pour les unités d'élite débloquées | **A29-2** |
-| PNJ-4 (relevé) | AU1 | Ni repaires ouverts ni taux de raids repoussés dans la santé (cible 70 %, mesuré 96 % en AU1) | **A29-2** (le jugement attend les mesures) |
-| PRG-5 (relevé) | AU3, Z1-a | Succès débloqués : la médiane existe, pas le rythme hebdomadaire (`progression.md` §D) | **A29-2** (le jugement attend les mesures) |
+Aucun (6.14.19). Le prochain inventaire (AU24) reprend cette section.
+
 
 ### Attend des mesures (après la mise en production, puis une nouvelle copie sur la pré-prod)
 
@@ -67,6 +63,9 @@ C'est l'argument principal pour Z0 (mise en production, Q12).
 | Z1-d | Pas de route logistique en prod, car les routes (5.33) ne sont pas sur `main` (5.27.0) : ce n'est pas un signal |
 | ET-2 | La base avancée (6.10.0) n'est pas sur `main` : aucune attaque de colonie bloquée en production, rien à dédommager |
 | ET29-3 | Cette page (6.14.18) |
+| COM-3 (reste) | 6.14.19 : casino de la semaine et pot commun (solde, entrées par source) dans la santé |
+| PNJ-5 | 6.14.19 : unités d'élite débloquées dans la santé (jugement avec les mesures) |
+| PNJ-4 (relevé), PRG-5 (relevé) | 6.14.19 : raids repoussés et repaires pris (7 j), points de succès gagnés en 7 jours ; le jugement reste dans « Attend des mesures » |
 | C2 à C4 (chaîne de contenu) | 6.14.12 à 6.14.14 : garde `contentChain.test.ts` sans manque connu |
 
 Tous les autres constats des rapports AU1 à AU23 et de l'audit global sont fermés, avec leur preuve dans `docs/changes/` ou la

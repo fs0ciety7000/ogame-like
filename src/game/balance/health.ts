@@ -3,12 +3,14 @@ import { exposureView } from "@/game/economy";
 import { EMPIRE_CLASSES } from "@/game/empireClass";
 import { economySnapshot } from "@/game/economy";
 import { fleetSlots, SLOT_FREE_MISSIONS } from "@/game/fleets";
-import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, findUnit } from "@/game/units";
+import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, ELITE_UNIT_IDS, findUnit } from "@/game/units";
+import { casinoWeekId, playerCasino } from "@/game/casino";
+import { normalizeServerPot, POT_SOURCE_LABELS, potValue, type PotSource } from "@/game/serverPot";
 import { withRepairBonus } from "@/game/modifiers";
 import { ACHIEVEMENTS } from "@/game/achievements";
 import { passState, PASS_RULES, activePass } from "@/game/seasonPass";
 import { parisOffsetMs } from "@/game/events";
-import { isPvpReport } from "@/game/balance/combatTypes";
+import { combatKind, isPvpReport } from "@/game/balance/combatTypes";
 import { BOSS_KIND_LABELS, type BossHistoryEntry, type BossKind } from "@/game/bossHistory";
 import type { BattleReport, PlayerState } from "@/types/game";
 
@@ -37,6 +39,8 @@ export interface HealthInput {
   commerce?: CommerceCounts;
   /** 6.14.6 (BOSS-2) : combats de boss archivés (Hall of fame, `boss_history`). */
   bossHistory?: Pick<BossHistoryEntry, "kind" | "endedAtMs" | "won" | "participants" | "maxHp" | "totalDamage">[];
+  /** 6.14.19 (A29-2, COM-3) : pot commun du serveur (game_config « server_pot »), brut. */
+  serverPot?: unknown;
 }
 
 /** 6.14.6 (BOSS-2) : fenêtre de la mesure des boss (8 semaines : un boss mondial par semaine en alternance). */
@@ -113,6 +117,18 @@ export interface BalanceHealth {
   commerce: (CommerceCounts & { dealsPerPlayerWeek: number }) | null;
   /** 6.14.6 (BOSS-2) : boss abattus par type (null : non relevé). */
   bosses: { windowDays: number; rows: BossHealthRow[] } | null;
+  /** 6.14.19 (A29-2, PNJ-4) : raids de faction sur la fenêtre (part repoussée, cible 60 à 80 %) et repaires attaqués (part prise). */
+  npc: { raids: number; raidsRepelledPct: number; lairs: number; lairsTakenPct: number; windowDays: number };
+  /** 6.14.19 (A29-2, PNJ-5) : unités d'élite débloquées (joueurs, part des actifs) et possédées par type. */
+  elites: { players: number; sharePct: number; rows: { id: string; name: string; total: number; owners: number }[] };
+  /** 6.14.19 (A29-2, COM-3) : casino de la semaine (joueurs qui ont joué, tirages médians de ceux-là, gros lots cumulés)
+   *  et pot commun (valeur en ressources communes, Ambre, entrées par source ; null : non relevé). */
+  casino: {
+    playersPct: number;
+    medianSpins: number;
+    jackpots: number;
+    pot: { value: number; amber: number; inflows: { source: string; label: string; value: number; sharePct: number }[] } | null;
+  };
 }
 
 export function median(xs: number[]): number {
@@ -223,5 +239,47 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
         }
       : null,
     bosses: input.bossHistory ? bossHealth(input.bossHistory, now) : null,
+    npc: npcHealth(input.reports.filter((r) => r.timestamp >= since), windowDays),
+    elites: (() => {
+      const who = players.filter((p) => ELITE_UNIT_IDS.some((id) => !!p.units?.[id])).length;
+      return { players: who, sharePct: players.length ? Math.round((who / players.length) * 100) : 0, rows: owned(ELITE_UNIT_IDS) };
+    })(),
+    casino: casinoHealth(players, now, input.serverPot),
   };
+}
+
+/** 6.14.19 (A29-2, PNJ-4) : raids de faction et repaires sur les rapports de la fenêtre. */
+export function npcHealth(reports: Pick<HealthReport, "attackerUid" | "defenderUid" | "outcome">[], windowDays: number): BalanceHealth["npc"] {
+  const raids = reports.filter((r) => combatKind(r) === "raid");
+  const lairs = reports.filter((r) => combatKind(r) === "lair");
+  const pct = (n: number, d: number) => (d ? Math.round((n / d) * 100) : 0);
+  return {
+    raids: raids.length,
+    raidsRepelledPct: pct(raids.filter((r) => r.outcome === "defender_win").length, raids.length),
+    lairs: lairs.length,
+    lairsTakenPct: pct(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length),
+    windowDays,
+  };
+}
+
+/** 6.14.19 (A29-2, COM-3) : casino de la semaine en cours et pot commun. */
+export function casinoHealth(players: PlayerState[], now: number, rawPot?: unknown): BalanceHealth["casino"] {
+  const week = casinoWeekId(now);
+  const spins = players.map((p) => playerCasino(p)).map((c) => (c.week.id === week ? c.week.spins : 0));
+  const played = spins.filter((n) => n > 0);
+  const jackpots = players.reduce((a, p) => a + playerCasino(p).jackpots, 0);
+  let pot: BalanceHealth["casino"]["pot"] = null;
+  if (rawPot !== undefined) {
+    const sp = normalizeServerPot(rawPot);
+    const inflows = (Object.keys(POT_SOURCE_LABELS) as PotSource[])
+      .map((source) => ({ source, label: POT_SOURCE_LABELS[source], value: Math.round(potValue(sp.totals[source] ?? {})) }))
+      .filter((r) => r.value > 0);
+    const total = inflows.reduce((a, r) => a + r.value, 0);
+    pot = {
+      value: Math.round(potValue(sp.resources)),
+      amber: Math.floor(sp.amber || 0),
+      inflows: inflows.map((r) => ({ ...r, sharePct: total ? Math.round((r.value / total) * 100) : 0 })).sort((a, b) => b.value - a.value),
+    };
+  }
+  return { playersPct: players.length ? Math.round((played.length / players.length) * 100) : 0, medianSpins: median(played), jackpots, pot };
 }

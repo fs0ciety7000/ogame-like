@@ -101,6 +101,17 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
   };
 }
 
+/** 6.14.19 (A29-2, PRG-5) : points de succès gagnés par le joueur médian sur les `days` derniers jours (en points de %,
+ *  d'après les photos quotidiennes ; null s'il manque une photo assez ancienne). */
+export function achievementsPace(history: BalanceSnapshot[] | null | undefined, days = 7): number | null {
+  const list = (Array.isArray(history) ? history : []).filter((s) => typeof s.achievementsPct === "number");
+  if (list.length < 2) return null;
+  const last = list[list.length - 1];
+  const target = Date.parse(`${last.day}T00:00:00Z`) - days * 86_400_000;
+  const older = [...list].reverse().find((s) => Date.parse(`${s.day}T00:00:00Z`) <= target);
+  return older ? (last.achievementsPct ?? 0) - (older.achievementsPct ?? 0) : null;
+}
+
 /** Ajoute (ou remplace) la photo du jour ; garde les 180 derniers jours. */
 export function pushSnapshot(history: BalanceSnapshot[] | null | undefined, snap: BalanceSnapshot): BalanceSnapshot[] {
   const list = (Array.isArray(history) ? history : []).filter((s) => s && s.day !== snap.day);

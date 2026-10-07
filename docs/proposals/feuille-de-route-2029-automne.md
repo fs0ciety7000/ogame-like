@@ -17,7 +17,7 @@ production, `main` et PR sautés (Q12).
 | 2 | Z1 | Mesures réelles **sur la pré-prod** (copie de la prod, agrégats anonymes) : PRG-1 (points du passe), BOSS-2 (boss abattus), commerce, bases avancées, paliers bonus, lunes, Codex ; réponses à Q2, Q3, Q18, Q21 ; rapport `docs/audit/2026-10-07-z1-mesures.md` ; script réutilisable `scripts/preprod-measure.mjs` | M | livré en 6.14.16 (Q3 close ; constat Z1-b → Z1-2) |
 | 3 | Z1-2 | Ajustements tirés des mesures (lots prudents, réglages de l'admin d'abord) ; une ligne par décision dans `QUESTIONS.md` | S | livré en 6.14.17 : Codex dans « Tout réclamer » (Q27) ; aucun autre chiffre ne justifie un ajustement prudent |
 | 4 | A29-1 | Inventaire des constats ouverts des revues AU1 à AU23 (`docs/audit/constats-ouverts.md`) : faisable seul, réglé par Z1, attend l'utilisateur ; plus les contenus livrés sans image définitive (CLAUDE.md règle n° 4) | M | livré en 6.14.18 (`docs/audit/constats-ouverts.md`) |
-| 5 | A29-2 | Santé de l'équilibre complétée (premiers constats « faisable seul » de l'inventaire) : casino et pot commun (COM-3), unités d'élite débloquées (PNJ-5), repaires et raids repoussés (PNJ-4), succès par semaine (PRG-5) | M | à faire |
+| 5 | A29-2 | Santé de l'équilibre complétée (premiers constats « faisable seul » de l'inventaire) : casino et pot commun (COM-3), unités d'élite débloquées (PNJ-5), repaires et raids repoussés (PNJ-4), succès par semaine (PRG-5) | M | livré en 6.14.19 |
 | 6 | Z0, Z6 | Mise en production, performance | — | en attente de l'utilisateur (Q12) |
 | 7 | AU24 | Revue, même grille ; clôture de l'automne 2029 et feuille de route suivante | M | fin des lots |
 

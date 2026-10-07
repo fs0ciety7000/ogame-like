@@ -1746,7 +1746,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await bClient.collection("players").update(bId, { notifPrefs: null });
 
       await loginPlayer(B.email, B.pw);
-      expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` }))[0]).toMatchObject({ text: "On signe ?", authorTag: X.tag });
+      // 6.14.19 : liste sans tri garanti (messages créés dans la même seconde) : on cherche le message par son texte.
+      expect((await pb.collection("pact_messages").getFullList({ filter: `pactId="${pact.id}"` })).find((m) => m.text === "On signe ?")).toMatchObject({ authorTag: X.tag });
       expect((await ds.diplomacy("accept", { pactId: pact.id })).status).toBe("active");
       // 5.18 : le pacte n'interdit plus l'attaque à titre personnel, seulement la guerre d'alliance.
       for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}"` })) await admin.collection("battle_reports").update(r.id, { timestamp: r.timestamp - 3 * 3600_000 });

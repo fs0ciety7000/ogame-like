@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
 import { defaultPlayerState } from "@/game/defaults";
-import { balanceHealth, bossHealth, median } from "@/game/balance/health";
+import { balanceHealth, bossHealth, casinoHealth, median, npcHealth } from "@/game/balance/health";
+import { achievementsPace } from "@/game/balance/history";
+import { casinoWeekId } from "@/game/casino";
+import { ELITE_UNIT_IDS } from "@/game/units";
 import type { PlayerState } from "@/types/game";
 
 /* 6.0.1 (lot K) : santé de l'équilibre. */
@@ -111,5 +114,39 @@ describe("santé de l'équilibre", () => {
     expect(b.rows.find((r) => r.kind === "allianceboss")).toMatchObject({ fought: 1, won: 0, medianDamagePct: 25 });
     // Sans historique fourni, la mesure n'est pas relevée.
     expect(balanceHealth({ players: [], reports: [], fleets: [], builds: {}, alliances: [] }, NOW).bosses).toBeNull();
+  });
+});
+
+describe("6.14.19 (A29-2) : santé complétée", () => {
+  it("raids repoussés et repaires pris (PNJ-4)", () => {
+    const r = (a: string, d: string, outcome: string) => ({ attackerUid: a, defenderUid: d, outcome, timestamp: NOW });
+    const out = npcHealth([r("pirates", "a", "defender_win"), r("pirates", "b", "defender_win"), r("pirates", "c", "attacker_win"), r("a", "lair_1", "attacker_win"), r("a", "b", "attacker_win")] as never, 7);
+    expect(out).toEqual({ raids: 3, raidsRepelledPct: 67, lairs: 1, lairsTakenPct: 100, windowDays: 7 });
+  });
+
+  it("élites, casino de la semaine et pot commun (PNJ-5, COM-3)", () => {
+    const a = player("a");
+    const b = player("b");
+    a.units = { ...a.units, [ELITE_UNIT_IDS[0]]: { level: 1, count: 0 } };
+    a.casino = { tokens: 0, dailyDay: "", spins: 9, wins: 1, jackpots: 1, week: { id: casinoWeekId(NOW), spins: 4, wins: 1, points: 0, resources: {} } } as unknown as PlayerState["casino"];
+    b.casino = { tokens: 0, dailyDay: "", spins: 3, wins: 0, jackpots: 0, week: { id: "ancienne", spins: 3, wins: 0, points: 0, resources: {} } } as unknown as PlayerState["casino"];
+    const h = balanceHealth({ players: [a, b], reports: [], fleets: [], builds: {}, alliances: [], serverPot: { resources: { scrap: 1000 }, totals: { market: { scrap: 3000 }, gift: { scrap: 1000 } }, amber: 12 } }, NOW);
+    expect(h.elites.players).toBe(1);
+    expect(h.elites.sharePct).toBe(50);
+    expect(h.casino.playersPct).toBe(50);
+    expect(h.casino.medianSpins).toBe(4);
+    expect(h.casino.jackpots).toBe(1);
+    expect(h.casino.pot?.value).toBe(1000);
+    expect(h.casino.pot?.amber).toBe(12);
+    expect(h.casino.pot?.inflows.map((x) => [x.source, x.sharePct])).toEqual([["market", 75], ["gift", 25]]);
+    // Sans pot transmis : non relevé.
+    expect(casinoHealth([a], NOW).pot).toBeNull();
+  });
+
+  it("rythme des succès sur 7 jours (PRG-5)", () => {
+    const snap = (day: string, achievementsPct: number) => ({ day, achievementsPct }) as never;
+    expect(achievementsPace([snap("2026-10-01", 10), snap("2026-10-05", 14), snap("2026-10-08", 20)])).toBe(10);
+    expect(achievementsPace([snap("2026-10-05", 14), snap("2026-10-08", 20)])).toBeNull();
+    expect(achievementsPace([])).toBeNull();
   });
 });

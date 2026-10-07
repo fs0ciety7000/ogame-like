@@ -22592,8 +22592,50 @@ function balanceHealth(input, now, windowDays = 7) {
     commerce: input.commerce ? __spreadProps(__spreadValues({}, input.commerce), {
       dealsPerPlayerWeek: players.length ? round12((input.commerce.marketFilled + input.commerce.auctionsSold + input.commerce.contractsDelivered) / players.length * (7 / Math.max(1, windowDays))) : 0
     }) : null,
-    bosses: input.bossHistory ? bossHealth(input.bossHistory, now) : null
+    bosses: input.bossHistory ? bossHealth(input.bossHistory, now) : null,
+    npc: npcHealth(input.reports.filter((r) => r.timestamp >= since), windowDays),
+    elites: (() => {
+      const who = players.filter((p) => ELITE_UNIT_IDS.some((id) => {
+        var _a2;
+        return !!((_a2 = p.units) == null ? void 0 : _a2[id]);
+      })).length;
+      return { players: who, sharePct: players.length ? Math.round(who / players.length * 100) : 0, rows: owned(ELITE_UNIT_IDS) };
+    })(),
+    casino: casinoHealth(players, now, input.serverPot)
   };
+}
+function npcHealth(reports, windowDays) {
+  const raids = reports.filter((r) => combatKind(r) === "raid");
+  const lairs = reports.filter((r) => combatKind(r) === "lair");
+  const pct7 = (n, d) => d ? Math.round(n / d * 100) : 0;
+  return {
+    raids: raids.length,
+    raidsRepelledPct: pct7(raids.filter((r) => r.outcome === "defender_win").length, raids.length),
+    lairs: lairs.length,
+    lairsTakenPct: pct7(lairs.filter((r) => r.outcome === "attacker_win").length, lairs.length),
+    windowDays
+  };
+}
+function casinoHealth(players, now, rawPot) {
+  const week = casinoWeekId(now);
+  const spins = players.map((p) => playerCasino(p)).map((c) => c.week.id === week ? c.week.spins : 0);
+  const played = spins.filter((n) => n > 0);
+  const jackpots2 = players.reduce((a, p) => a + playerCasino(p).jackpots, 0);
+  let pot = null;
+  if (rawPot !== void 0) {
+    const sp = normalizeServerPot(rawPot);
+    const inflows = Object.keys(POT_SOURCE_LABELS).map((source) => {
+      var _a;
+      return { source, label: POT_SOURCE_LABELS[source], value: Math.round(potValue((_a = sp.totals[source]) != null ? _a : {})) };
+    }).filter((r) => r.value > 0);
+    const total2 = inflows.reduce((a, r) => a + r.value, 0);
+    pot = {
+      value: Math.round(potValue(sp.resources)),
+      amber: Math.floor(sp.amber || 0),
+      inflows: inflows.map((r) => __spreadProps(__spreadValues({}, r), { sharePct: total2 ? Math.round(r.value / total2 * 100) : 0 })).sort((a, b) => b.value - a.value)
+    };
+  }
+  return { playersPct: players.length ? Math.round(played.length / players.length * 100) : 0, medianSpins: median6(played), jackpots: jackpots2, pot };
 }
 
 // src/game/blog.ts

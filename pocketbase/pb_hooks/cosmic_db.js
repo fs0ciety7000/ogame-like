@@ -5484,7 +5484,15 @@ function liveBalance(now, withHistory) {
     } catch (_) {
       bossHistory = [];
     }
-    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances, commerce, bossHistory }, now, 7);
+    // 6.14.19 (A29-2, COM-3) : pot commun (solde et entrées par source).
+    let serverPot = null;
+    try {
+      const potRec = configRecord($app, game.SERVER_POT_KEY);
+      serverPot = potRec ? toPlain(potRec).data : null;
+    } catch (_) {
+      serverPot = null;
+    }
+    live.health = game.balanceHealth({ players: active, reports, fleets, builds, alliances, commerce, bossHistory, serverPot }, now, 7);
   } catch (err) {
     console.log(`[cosmic] santé de l'équilibre : ${err}`);
   }
