@@ -1,7 +1,8 @@
 # Illustrations : du prompt Midjourney au fichier du jeu
 
-Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur génère les images sur mobile et les envoie par lot sur la pré-prod
-(`test.fs0ciety.org/img`), sans commit. Claude reconnaît chaque image, la détoure, la convertit et la range dans le jeu.
+Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). Depuis 6.14.91, les illustrations restantes sont **générées par l'API
+d'images d'OpenAI** (section « Génération par API » ci-dessous). Le circuit Midjourney (rendus envoyés par l'utilisateur sur
+`test.fs0ciety.org/img`, reconnus, détourés, convertis et rangés par Claude) reste en place pour un rendu fait à la main.
 
 ## Les pièces
 
@@ -10,7 +11,8 @@ Maillon 13 de la chaîne de contenu (`docs/WORKFLOW.md` §7). L'utilisateur gén
 | `scripts/illustrations.json` | **source unique** : une ligne par image (`id`, `group`, `name`, `target`, `width`, `height` (0 = proportions gardées), `cutout` (détourage), `quality`, `prompt`, `done`) |
 | **`https://test.fs0ciety.org/img`** (6.14.23) | page de la pré-prod, réservée aux admins du jeu (`IllustrationsPage.tsx`). Elle liste les images à faire, avec le prompt à copier. Elle lit `illustrations.json` au build : chaque push sur la branche la met à jour. L'envoi se fait **par lot** (toutes les images d'un coup, dans n'importe quel ordre) vers la collection `illustration_uploads` (`fileName`, `status` : `envoyée`, `attribuée`, `intégrée` ou `refusée` ; `slotId`) |
 | `scripts/preprod-illustrations.mjs` | côté Claude : `pull <dossier>` télécharge les envois et reconnaît chaque image d'après son nom de fichier Midjourney (`illustrations-match.mjs` : début du nom comparé au début de chaque prompt). Puis `assign`, `reject`, `integrated` |
-| `scripts/illustrations.py` | traitement : détourage (rembg s'il est installé (`pip install "rembg[cpu]"`, modèle `isnet-general-use`, ~180 Mo au premier lancement), sinon fond sombre retiré depuis les bords), recadrage, redimensionnement, WebP, écriture dans `target`, `done` daté |
+| `scripts/generate-illustrations.mjs` (6.14.91) | génération par l'API d'images d'OpenAI (`gpt-image-1`) : écrit `<dossier>/<id>.png`, l'entrée de `illustrations.py` ; fonctions pures dans `scripts/illustrations-api.mjs` |
+| `scripts/illustrations.py` | traitement : détourage (sauté si le rendu a déjà un fond transparent ; sinon rembg s'il est installé (`pip install "rembg[cpu]"`, modèle `isnet-general-use`, ~180 Mo au premier lancement), sinon fond sombre retiré depuis les bords), recadrage, redimensionnement, WebP, écriture dans `target`, `done` daté |
 | Page « Atelier d'illustrations » (artifact) | secours, si la pré-prod est arrêtée : https://claude.ai/artifact/8Kp43jpwwjxw5sydUUcccX (`--page` pour la régénérer ; envois dans `uploads`, lus par `ArtifactData`) |
 
 ## En production
@@ -32,6 +34,44 @@ travail **toutes les heures** (minute 57). Elle lance `node scripts/preprod-illu
 commiter ; sinon, elle déroule l'intégration ci-dessous et résume ce qui a été fait. L'utilisateur n'a plus besoin d'écrire « images
 envoyées ». Le traitement ne tourne pas sur le serveur : rembg, le commit et le push demandent la session. On l'arrête ou on change son
 rythme dans les routines de claude.ai.
+
+## Génération par API (6.14.91)
+
+Décision de l'utilisateur (2026-10-07) : toutes les illustrations restantes sont générées par une API officielle, OpenAI `gpt-image-1`.
+Prérequis : la clé dans la variable d'environnement `OPENAI_API_KEY` (jamais dans le dépôt, jamais journalisée) et l'hôte
+`api.openai.com` autorisé dans le réseau de l'environnement. Aucune dépendance npm : `fetch` natif de Node 22.
+
+```bash
+node scripts/generate-illustrations.mjs --dry-run                         # liste, tailles, coût estimé (ni clé ni réseau)
+node scripts/generate-illustrations.mjs --dry-run --prompts --ids <id>    # + le prompt d'API complet
+node scripts/generate-illustrations.mjs --group reliques --limit 3        # génère dans le dossier de travail
+node scripts/generate-illustrations.mjs --ids tech-tech16,tech-tech17 --integrate   # génère puis lance illustrations.py
+```
+
+Options : `--group` (sous-chaîne sans casse ni accents), `--ids a,b`, `--limit N`, `--all` (refaire une image déjà intégrée),
+`--quality low|medium|high` (défaut `medium`), `--n N` (variantes), `--concurrency N` (défaut 3), `--model`, `--style "<texte>"` ou
+`--no-style`, `--out <dossier>` (défaut : `$ILLU_API_OUT`, sinon `<scratchpad>/illu-api`), `--force` (régénérer une image déjà dans le dossier).
+
+Ce que fait le script :
+- **sélection** : emplacements de `scripts/illustrations.json` à `done` vide (89 au 2026-10-07), filtrés ;
+- **prompt** : le prompt Midjourney perd ses paramètres (`--ar`, `--v`, `--style`, `--s`…) et ses « no text » ; il reçoit en tête le
+  **préfixe de style commun** (`STYLE_PREFIX` de `scripts/illustrations-api.mjs` : concept art peint, univers « salvaged-tech », fond
+  spatial sombre, accents cyan `#4be8ff` et or `#ffd86b`) et en fin « No text, no letters, no numbers… » ; un emplacement `cutout`
+  demande un objet isolé sur fond transparent (paramètre `background: "transparent"`, le « dark neutral background » du prompt devient
+  « transparent background ») ;
+- **taille** : la taille d'API la plus proche du `--ar` du prompt (`1024x1024`, `1536x1024`, `1024x1536`). `illustrations.py` recadre
+  ensuite au format final ; un emplacement à hauteur libre (`height` 0, bannières 21:9) est recadré au centre au rapport du `--ar` dès
+  la génération (original dans `brut/`), et le prompt demande alors de garder le sujet au centre ;
+- **appel** : `POST https://api.openai.com/v1/images/generations`, réponse en base64 ; reprise sur 429, 5xx et erreur réseau (attente
+  exponentielle 2 s, 4 s, 8 s… plafonnée à 60 s, ou `retry-after`, 6 essais) ; arrêt du lot sur 401/403 ; une erreur 400 (modération,
+  prompt refusé) passe à l'image suivante ;
+- **sorties** : `<dossier>/<id>.png` (variante 1), `variantes/<id>-<k>.png`, `journal.jsonl` (coût estimé par la grille `PRICES`,
+  coût mesuré d'après `usage`). Une image déjà présente dans le dossier est sautée : on ne paie pas deux fois ;
+- **`--integrate`** : lance `python3 scripts/illustrations.py <dossier>` (le détourage est sauté pour un rendu déjà transparent), puis
+  rappelle le branchement de chaque groupe (étape 3 ci-dessous).
+
+La grille de prix en tête de `scripts/illustrations-api.mjs` est approximative : la vérifier sur la page des prix d'OpenAI avant un gros
+lot. Ensuite, la suite est celle du circuit Midjourney : regarder chaque image, brancher, fiche, validation, commit, push.
 
 ## Côté Claude (intégration)
 

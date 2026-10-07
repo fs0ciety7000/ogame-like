@@ -8,7 +8,7 @@
 
 Les identifiants, tailles, détourage et chemins cibles viennent de scripts/illustrations.json (même source que la page de
 dépôt mobile). Pour chaque image :
-- détourage si `cutout` : rembg s'il est installé, sinon fond sombre retiré par remplissage depuis les bords (les prompts
+- détourage si `cutout` (sauté si le rendu a déjà un fond transparent : API d'images, 6.14.91) : rembg s'il est installé, sinon fond sombre retiré par remplissage depuis les bords (les prompts
   demandent un fond sombre et neutre) ; recadrage sur l'objet avec une marge ;
 - sinon recadrage au centre au format cible ;
 - redimensionnement (Lanczos), WebP à la qualité indiquée, écrit dans `target`.
@@ -83,6 +83,16 @@ def cutout(im: Image.Image) -> tuple[Image.Image, str]:
         return remove_dark_background(im), "fond sombre retiré"
 
 
+def has_transparency(im: Image.Image) -> bool:
+    """6.14.91 : rendu déjà détouré (API d'images, `background: transparent`) : au moins 2 % de pixels transparents. Le
+    détourage est alors sauté (rembg rongerait les bords d'un objet déjà propre)."""
+    if im.mode not in ("RGBA", "LA", "PA") and not (im.mode == "P" and "transparency" in im.info):
+        return False
+    alpha = im.convert("RGBA").getchannel("A")
+    hist = alpha.histogram()
+    return sum(hist[:128]) >= 0.02 * im.width * im.height
+
+
 def fit(im: Image.Image, width: int, height: int, transparent: bool) -> Image.Image:
     if transparent:
         box = im.getchannel("A").point(lambda a: 255 if a > 16 else 0).getbbox() or (0, 0, *im.size)
@@ -134,7 +144,9 @@ def main() -> None:
             continue
         im = Image.open(f)
         how = "opaque"
-        if s["cutout"]:
+        if s["cutout"] and has_transparency(im):
+            im, how = im.convert("RGBA"), "fond déjà transparent"
+        elif s["cutout"]:
             im, how = cutout(im)
         out = fit(im, s["width"], s["height"], s["cutout"])
         target = ROOT / s["target"]
