@@ -268,7 +268,8 @@ export function buildingsUnlockedByTech(techId: string, buildings: { id: string;
   return [...ids];
 }
 
-export const MAX_CONCURRENT_RESEARCH = 4;
+/** 6.9.7 (AU11) : recherches en parallèle au plus (registre « research »). */
+export const RESEARCH_RULES = { maxConcurrent: 4 };
 const COST_GROWTH = 2.7;
 const TIME_GROWTH = 1.67;
 

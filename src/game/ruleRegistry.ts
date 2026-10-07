@@ -19,6 +19,8 @@ import { DIPLOMACY_RULES } from "@/game/diplomacy";
 import { EFFECT_CAP_RULES } from "@/game/effects";
 import { BOSS_REMINDERS } from "@/game/events";
 import { GAZETTE_RULES } from "@/game/gazette";
+import { EXCHANGE_RULES } from "@/game/resources";
+import { RESEARCH_RULES } from "@/game/technologies";
 import { CHAT_ROOM_RULES, GLOBAL_CHAT_RULES, MENTION_RULES, ROOM_EVENT_RULES } from "@/game/globalChat";
 import { GOAL_RULES } from "@/game/goals";
 import { LEAGUE_RULES } from "@/game/leagues";
@@ -90,6 +92,7 @@ export const REGISTERED_RULES = {
   dockTiers: { label: "Cale sèche : paliers de niveau", target: () => DOCK_TIERS },
   effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES },
   eliteBounty: { label: "Proie d'élite", target: () => ELITE_RULES },
+  exchange: { label: "Comptoir d'échange : taux et taxe", target: () => EXCHANGE_RULES },
   gazette: { label: "Gazette", target: () => GAZETTE_RULES },
   globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
   goals: { label: "Objectifs personnels", target: () => GOAL_RULES },
@@ -104,6 +107,7 @@ export const REGISTERED_RULES = {
   polls: { label: "Sondages", target: () => POLL_RULES },
   profile: { label: "Profil", target: () => PROFILE_RULES },
   referral: { label: "Parrainage", target: () => REFERRAL_RULES },
+  research: { label: "Labo : recherches en parallèle", target: () => RESEARCH_RULES },
   rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
   reports: { label: "Signalements", target: () => REPORT_RULES },
   roomEvents: { label: "Événements de salon", target: () => ROOM_EVENT_RULES },

@@ -2,7 +2,7 @@ import { formatInt } from "@/game/format";
 import { atelierLevel, hullPercent, workshopRushCost, workshopUnits } from "@/game/workshop";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { economySnapshot } from "@/game/economy";
-import { MAX_CONCURRENT_RESEARCH } from "@/game/technologies";
+import { RESEARCH_RULES } from "@/game/technologies";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { RESOURCE_LIST } from "@/game/resources";
 import { BOUNTY_RULES, bountyState, viewBounties } from "@/game/bounties";
@@ -53,12 +53,12 @@ export function nextActions(player: PlayerState, queues: QueuesState | null, fle
     if (!building && upgradable) out.push({ kind: "build", priority: 3, title: "Aucun chantier en cours", text: "Tes ouvriers attendent : lance une amélioration.", to: "/game/batiments" });
 
     const researching = queues.activeResearches?.length ?? 0;
-    if (researching < MAX_CONCURRENT_RESEARCH) {
+    if (researching < RESEARCH_RULES.maxConcurrent) {
       out.push({
         kind: "research",
         priority: researching === 0 ? 3 : 5,
         title: researching === 0 ? "Laboratoire à l'arrêt" : "File de recherche libre",
-        text: `${researching} / ${MAX_CONCURRENT_RESEARCH} recherches en cours.`,
+        text: `${researching} / ${RESEARCH_RULES.maxConcurrent} recherches en cours.`,
         to: "/game/labo",
       });
     }

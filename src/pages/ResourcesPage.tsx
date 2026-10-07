@@ -17,7 +17,7 @@ import { factorRows } from "@/components/ui/afford";
 import { Factory } from "lucide-react";
 import type { PlayerState } from "@/types/game";
 import { HudCallout, HudMeter } from "@/components/ui/hud";
-import { EXCHANGE_TAX_PCT, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { EXCHANGE_RULES, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
@@ -116,7 +116,7 @@ export function ResourcesPage() {
         <CardContent className="flex flex-col gap-4">
           <p className="text-xs text-slate-500">
             Ressources communes → rares : taux 0,01. Rares → communes : taux 50. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
-            <span className="font-mono tabular-nums">{Math.round(EXCHANGE_TAX_PCT * 100)} %</span> sur ce que tu reçois, versée au pot commun du serveur.
+            <span className="font-mono tabular-nums">{Math.round(EXCHANGE_RULES.taxPct * 100)} %</span> sur ce que tu reçois, versée au pot commun du serveur.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-3">

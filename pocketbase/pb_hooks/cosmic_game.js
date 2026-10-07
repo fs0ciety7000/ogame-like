@@ -3323,18 +3323,18 @@ var RESOURCE_LIST = [
   { id: "syntheticNanites", name: "Nanites synth\xE9tiques", emoji: "\u{1F916}", rarity: "rare" },
   { id: "aiFragment", name: "Fragment d'IA", emoji: "\u{1F9E0}", rarity: "rare" }
 ];
+var EXCHANGE_RULES = { commonToRare: 0.01, rareToCommon: 50, taxPct: 0.05 };
 function getTradeRate(sellId, buyId) {
   const sell = RESOURCE_LIST.find((r) => r.id === sellId);
   const buy = RESOURCE_LIST.find((r) => r.id === buyId);
   if (!sell || !buy) return 1;
-  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
-  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
+  if (sell.rarity === "common" && buy.rarity === "rare") return EXCHANGE_RULES.commonToRare;
+  if (sell.rarity === "rare" && buy.rarity === "common") return EXCHANGE_RULES.rareToCommon;
   return 1;
 }
-var EXCHANGE_TAX_PCT = 0.05;
 function tradeQuote(sellId, buyId, amount3) {
   const gross = Math.floor(Math.max(0, amount3) * getTradeRate(sellId, buyId));
-  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_TAX_PCT)) : 0;
+  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_RULES.taxPct)) : 0;
   return { gross, tax, net: gross - tax };
 }
 function canAffordAll(resources, costs) {
@@ -3514,7 +3514,7 @@ function buildingsUnlockedByTech(techId, buildings) {
   for (const e3 of tech ? techEffects(tech) : []) if (e3.type === "unlock_buildings" || e3.type === "unlock_hangars") for (const id of (_a = e3.targets) != null ? _a : []) ids.add(id);
   return [...ids];
 }
-var MAX_CONCURRENT_RESEARCH = 4;
+var RESEARCH_RULES = { maxConcurrent: 4 };
 var COST_GROWTH = 2.7;
 var TIME_GROWTH = 1.67;
 function findTech(id) {
@@ -17809,8 +17809,8 @@ function applyAction(s, action) {
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Pr\xE9requis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est d\xE9j\xE0 en cours de recherche.");
-      if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
-        throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
+      if (queues.activeResearches.length >= RESEARCH_RULES.maxConcurrent) {
+        throw new GameActionError(`File de recherche pleine (${RESEARCH_RULES.maxConcurrent}/${RESEARCH_RULES.maxConcurrent}).`);
       }
       const paid = getTechCost(tech, nextLevel);
       const amber = getTechAmberCost(tech);
@@ -20659,6 +20659,7 @@ var REGISTERED_RULES = {
   dockTiers: { label: "Cale s\xE8che : paliers de niveau", target: () => DOCK_TIERS },
   effectCaps: { label: "Bonus : plafonds par grandeur (techno, empire)", target: () => EFFECT_CAP_RULES },
   eliteBounty: { label: "Proie d'\xE9lite", target: () => ELITE_RULES },
+  exchange: { label: "Comptoir d'\xE9change : taux et taxe", target: () => EXCHANGE_RULES },
   gazette: { label: "Gazette", target: () => GAZETTE_RULES },
   globalChat: { label: "Canal global", target: () => GLOBAL_CHAT_RULES },
   goals: { label: "Objectifs personnels", target: () => GOAL_RULES },
@@ -20673,6 +20674,7 @@ var REGISTERED_RULES = {
   polls: { label: "Sondages", target: () => POLL_RULES },
   profile: { label: "Profil", target: () => PROFILE_RULES },
   referral: { label: "Parrainage", target: () => REFERRAL_RULES },
+  research: { label: "Labo : recherches en parall\xE8le", target: () => RESEARCH_RULES },
   rename: { label: "Changement de pseudo", target: () => RENAME_RULES },
   reports: { label: "Signalements", target: () => REPORT_RULES },
   roomEvents: { label: "\xC9v\xE9nements de salon", target: () => ROOM_EVENT_RULES },
@@ -21322,7 +21324,6 @@ function cleanAmounts(raw) {
   return out;
 }
 var POT_DAILY_DAYS = 30;
-var RARE_WEIGHT = 50;
 var dayOf = (now) => new Date(now).toISOString().slice(0, 10);
 function normalizeDaily2(raw) {
   var _a;
@@ -21353,7 +21354,7 @@ function bumpDaily(pot, key, value2, now) {
 function potValue(amounts) {
   return Object.entries(amounts).reduce((a, [k, v]) => {
     var _a;
-    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? RARE_WEIGHT : 1);
+    return a + Math.max(0, Number(v) || 0) * (((_a = RESOURCE_LIST.find((r) => r.id === k)) == null ? void 0 : _a.rarity) === "rare" ? EXCHANGE_RULES.rareToCommon : 1);
   }, 0);
 }
 function normalizeServerPot(raw) {

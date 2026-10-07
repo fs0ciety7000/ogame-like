@@ -1,5 +1,5 @@
 import type { ResourceId } from "@/types/game";
-import { RESOURCE_LIST } from "@/game/resources";
+import { EXCHANGE_RULES, RESOURCE_LIST } from "@/game/resources";
 
 /* =====================================================
    v5.10 : pot commun « Serveur ». Les taxes du marché (offres et ordres
@@ -57,7 +57,6 @@ function cleanAmounts(raw: unknown): Partial<Record<ResourceId, number>> {
 
 export const POT_DAILY_DAYS = 30;
 /** Valeur d'une ressource rare en ressource commune (taux du comptoir). */
-const RARE_WEIGHT = 50;
 
 const dayOf = (now: number) => new Date(now).toISOString().slice(0, 10);
 
@@ -90,7 +89,7 @@ function bumpDaily(pot: ServerPot, key: PotSource | "amber", value: number, now:
 
 /** Valeur en équivalent ressource commune. */
 export function potValue(amounts: Partial<Record<string, number>>): number {
-  return Object.entries(amounts).reduce((a, [k, v]) => a + Math.max(0, Number(v) || 0) * (RESOURCE_LIST.find((r) => r.id === k)?.rarity === "rare" ? RARE_WEIGHT : 1), 0);
+  return Object.entries(amounts).reduce((a, [k, v]) => a + Math.max(0, Number(v) || 0) * (RESOURCE_LIST.find((r) => r.id === k)?.rarity === "rare" ? EXCHANGE_RULES.rareToCommon : 1), 0);
 }
 
 export function normalizeServerPot(raw: unknown): ServerPot {

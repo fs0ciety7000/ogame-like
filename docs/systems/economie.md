@@ -25,3 +25,6 @@ I6 (butin et livraisons arrivent même entrepôt plein).
 ## État (audit 2026-10-06)
 - Entrepôt trop généreux (audit E1, confirmé en production : 115 h de production à l'abri contre 57 h de stock médian). Correctif 5.32 : 8 h à l'abri au plus, carte « Ce que tu risques » sur la page Ressources. Reste à voir (option B) : la soute de l'attaquant borne encore le butin (1,9 M par attaque en moyenne).
 - Beaucoup de monnaies secondaires (voir `commerce-monnaies.md`).
+
+## Revue AU11 (2026-10-07)
+Recherches en parallèle réglables (`research.maxConcurrent`, 6.9.7).

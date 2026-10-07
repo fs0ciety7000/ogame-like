@@ -37,3 +37,4 @@ ouverture), compté seulement si le casino est ouvert.
 Rapport `docs/audit/2026-10-06-au4-commerce.md`. Depuis la 6.9.0, tous les chiffres sont dans `GameRules` et dans Admin → Règles : enchères
 (`auctions`), contrats (`tradeContracts`), cadeaux (`gifts`), concours (`contests`), points du tournoi (`tournamentPoints`), offre de la
 semaine (`weeklyStock`, prix et exemplaires), mécènes (`patrons`) ; marché et PNJ marchand (`market`) ; casino dans Admin → Pot commun.
+Comptoir d'échange (6.9.7) : taux et taxe réglables (`exchange`).

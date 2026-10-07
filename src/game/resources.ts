@@ -34,22 +34,23 @@ export function resourceEmoji(id: string): string {
   return RESOURCE_LIST.find((r) => r.id === id)?.emoji ?? "❔";
 }
 
+/** 6.9.7 (AU11) : comptoir d'échange réglable (registre « exchange ») : taux entre communes et rares, taxe versée au pot commun. */
+export const EXCHANGE_RULES = { commonToRare: 0.01, rareToCommon: 50, taxPct: 0.05 };
+
 export function getTradeRate(sellId: ResourceId, buyId: ResourceId): number {
   const sell = RESOURCE_LIST.find((r) => r.id === sellId);
   const buy = RESOURCE_LIST.find((r) => r.id === buyId);
   if (!sell || !buy) return 1;
-  if (sell.rarity === "common" && buy.rarity === "rare") return 0.01;
-  if (sell.rarity === "rare" && buy.rarity === "common") return 50;
+  if (sell.rarity === "common" && buy.rarity === "rare") return EXCHANGE_RULES.commonToRare;
+  if (sell.rarity === "rare" && buy.rarity === "common") return EXCHANGE_RULES.rareToCommon;
   return 1;
 }
 
-/** 5.26.1 : taxe du comptoir d'échange (part de ce qui est reçu), versée au pot commun. */
-export const EXCHANGE_TAX_PCT = 0.05;
 
 /** Échange au comptoir : brut au taux, taxe (arrondie au supérieur), net reçu. */
 export function tradeQuote(sellId: ResourceId, buyId: ResourceId, amount: number): { gross: number; tax: number; net: number } {
   const gross = Math.floor(Math.max(0, amount) * getTradeRate(sellId, buyId));
-  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_TAX_PCT)) : 0;
+  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_RULES.taxPct)) : 0;
   return { gross, tax, net: gross - tax };
 }
 

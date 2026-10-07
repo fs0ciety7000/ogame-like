@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, MAX_CONCURRENT_RESEARCH, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
+import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, RESEARCH_RULES, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { bountyState } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
@@ -80,7 +80,7 @@ export function LabPage() {
         description="Fais progresser tes technologies."
         right={
           <span className="tabular-mono text-xs text-slate-400">
-            File {queues.activeResearches.length} / {MAX_CONCURRENT_RESEARCH}
+            File {queues.activeResearches.length} / {RESEARCH_RULES.maxConcurrent}
           </span>
         }
       />
@@ -180,7 +180,7 @@ export function LabPage() {
 
               {(() => {
                 const prereqOk = checkPrereqs(selected, levels, plans).valid;
-                const queueFull = queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH && !activeEntry;
+                const queueFull = queues.activeResearches.length >= RESEARCH_RULES.maxConcurrent && !activeEntry;
                 const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
                 return (
                   <>
@@ -191,7 +191,7 @@ export function LabPage() {
                       <BlockedReason tone="block">Prérequis manquants (voir ci-dessus).</BlockedReason>
                     ) : queueFull ? (
                       <BlockedReason tone="block">
-                        {MAX_CONCURRENT_RESEARCH} recherches en cours au plus : attends la fin de l'une d'elles.
+                        {RESEARCH_RULES.maxConcurrent} recherches en cours au plus : attends la fin de l'une d'elles.
                       </BlockedReason>
                     ) : amberLack > 0 ? (
                       <BlockedReason tone="block">Il te manque <AmberAmount value={amberLack} /> : gagne-le en remplissant des primes Kesh'Vaar.</BlockedReason>

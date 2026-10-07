@@ -171,3 +171,4 @@ Succès : Cale pleine, Ferrailleur (100), Démolisseur (1 000). Sans Cale sèche
 | 2026-10-07 | 6.9.4 | Revue AU7 (galaxie et combat) : rappel de flotte confirmé ; distance des repaires et départ différé réglables | `docs/audit/2026-10-07-au7-galaxie-combat.md`, `docs/changes/6.9.4-galaxie-flottes.md` |
 | 2026-10-07 | 6.9.5 | Revue AU8 (état-major et bonus) : plafonds des bonus réglables par grandeur ; Gelée, Phéromone et contrat prioritaire à source unique | `docs/audit/2026-10-07-au8-etat-major-bonus.md`, `docs/changes/6.9.5-plafonds-bonus.md` |
 | 2026-10-07 | 6.9.6 | Revues AU9 (unités) et AU10 (flottes) : invariants tenus, texte d'annulation calculé | `docs/audit/2026-10-07-au9-au10-unites-flottes.md` |
+| 2026-10-07 | 6.9.7 | Revue AU11 (économie) : taux et taxe du comptoir d'échange, recherches en parallèle réglables | `docs/audit/2026-10-07-au11-economie.md`, `docs/changes/6.9.7-economie.md` |

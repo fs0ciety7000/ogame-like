@@ -29,7 +29,7 @@ import {
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
 import { canAffordAll, RESOURCE_LIST, tradeQuote } from "@/game/resources";
-import { MAX_CONCURRENT_RESEARCH, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
+import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
@@ -302,8 +302,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (nextLevel > tech.maxLevel) throw new GameActionError("Niveau maximum atteint.");
       if (!checkPrereqs(tech, player.techLevels, ownedBlueprints(player)).valid) throw new GameActionError("Prérequis non remplis.");
       if (queues.activeResearches.some((r) => r.id === tech.id)) throw new GameActionError("Cette technologie est déjà en cours de recherche.");
-      if (queues.activeResearches.length >= MAX_CONCURRENT_RESEARCH) {
-        throw new GameActionError(`File de recherche pleine (${MAX_CONCURRENT_RESEARCH}/${MAX_CONCURRENT_RESEARCH}).`);
+      if (queues.activeResearches.length >= RESEARCH_RULES.maxConcurrent) {
+        throw new GameActionError(`File de recherche pleine (${RESEARCH_RULES.maxConcurrent}/${RESEARCH_RULES.maxConcurrent}).`);
       }
       const paid = getTechCost(tech, nextLevel);
       // v5.9 : certaines technos coûtent aussi de l'ambre (vérifié avant de payer les ressources).
