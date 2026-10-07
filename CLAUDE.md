@@ -66,6 +66,25 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 
+## Règle n° 4 : un contenu ajouté est un contenu complet
+
+> **Instructions : Pour chaque ajout de contenu, il faut créer succès, alimenter codex, etc.**
+> **Instructions : quand il y a besoin, écris les prompts Midjourney pour la génération d'illustrations.**
+
+Tout nouveau contenu (système, bâtiment, unité, techno, relique, boss, faction, événement, objet du Comptoir…) part avec, dans le même lot
+ou dans le lot suivant de la feuille de route :
+
+- **succès** : au moins un palier d'entrée et un palier de maîtrise (`derivedAchievements` pour un succès lié à un catalogue ou à une
+  règle, mesure lue à l'usage) ;
+- **Codex** : une entrée (`codex.ts`), débloquée par le joueur lui-même ;
+- selon le cas : titre ou bannière, défi du passe, objectif des Chroniques, ligne du Journal, notification ;
+- **illustration** : si une image manque, prompts Midjourney dans `docs/prompts-<version>.md` (style des prompts existants, format et
+  dimensions attendus) et image provisoire dans `public/assets/…`. La fiche du lot le signale, et l'audit suivant le reprend tant que
+  l'image définitive n'est pas arrivée ;
+- changelog joueurs, et billet de devblog pour un contenu important.
+
+La revue de fin de feuille de route vérifie cette liste pour chaque contenu livré.
+
 ## Langue et ton
 
 - Tout en **français** : code commenté, textes du jeu, commits, PR, docs.
@@ -166,6 +185,10 @@ Toujours lire le résultat de l'intégration **avant** de committer.
 - `.claude/settings.json` liste les commandes autorisées sans confirmation (build, tests, git sur `claude/*`, PocketBase local).
   Jamais de règle vers la production ni de push sur `main`.
 - Données de production : lecture seule (GET), extraits gardés hors du dépôt (scratchpad). Seuls des agrégats anonymes entrent dans les docs.
+- **Pré-prod** (`docs/preprod.md`, `test.fs0ciety.org` + `base-test.fs0ciety.org`) : copie nettoyée de la prod (`scripts/preprod-scrub.mjs`).
+  Lectures, essais et écritures y sont permis (mesures Z1, test d'une branche avant PR). Accès par les variables d'environnement
+  `PREPROD_PB_URL`, `PREPROD_PB_ADMIN_EMAIL`, `PREPROD_PB_ADMIN_PASSWORD`, jamais dans le dépôt. Un script qui écrit refuse toute adresse
+  qui n'est pas un serveur de test (`isPreprodHost`). Les e-mails restent coupés là-bas (`COSMIC_MAIL_DISABLED=1`).
 
 ## Méthode de game design
 

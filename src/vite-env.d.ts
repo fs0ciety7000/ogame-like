@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_POCKETBASE_URL: string;
   /** v5.8 : adresse du devblog (https://devblog.fs0ciety.org par défaut). */
   readonly VITE_BLOG_URL?: string;
+  /** 6.14.8 : libellé du serveur de test (pré-prod) ; vide en production. */
+  readonly VITE_SERVER_LABEL?: string;
 }
 
 interface ImportMeta {

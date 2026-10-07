@@ -3822,6 +3822,8 @@ function appUrl(path) {
 }
 
 function mailEnabled() {
+  // 6.14.8 : serveur de test (pré-prod restaurée depuis la prod) : aucun e-mail, même avant le nettoyage des réglages.
+  if ($os.getenv("COSMIC_MAIL_DISABLED") === "1") return false;
   try {
     return !!$app.settings().smtp.enabled;
   } catch (_) {

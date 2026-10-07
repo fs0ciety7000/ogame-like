@@ -14,7 +14,7 @@ Une étape sautée se dit dans la PR.
 | 5 | **Recommandation chiffrée** : formules, paliers, courbes (§4) | `docs/proposals/<système>.md` | **l'utilisateur** |
 | 6 | **Implémentation par lots** : moteur + tests → serveur → UI → **admin : chaque réglage de la fonctionnalité éditable dans le panel** (`GameRules` ou contenu, CLAUDE.md règle n° 2) | commits par lot | CI locale (`CLAUDE.md`) |
 | 7 | **Audit** : grille de `GAME_DESIGN.md` §6 + audit DESIGN.md + mobile | cases cochées dans la PR | — |
-| 8 | **Livraison** : fiche `docs/changes/`, report dans GDD / DESIGN / CLAUDE.md, changelog, billet devblog si besoin, PR, rappel des hooks | fiche + PR | l'utilisateur fusionne |
+| 8 | **Livraison** : fiche `docs/changes/`, report dans GDD / DESIGN / CLAUDE.md, **contenu complet** (succès, Codex, prompts Midjourney si une image manque : CLAUDE.md règle n° 4), changelog, billet devblog si besoin, essai sur la pré-prod si le serveur est touché (`docs/preprod.md`), PR, rappel des hooks | fiche + PR | l'utilisateur fusionne |
 
 Règle : tout ce qui est dans `GameRules` (et les autres contenus de jeu), pour les fonctionnalités existantes et futures, se gère dans le
 panel admin. Une proposition liste les réglages qu'elle ajoute et où l'admin les modifie.

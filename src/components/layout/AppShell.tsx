@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
 import { VacationBanner } from "@/components/layout/VacationBanner";
+import { PreprodBanner } from "@/components/layout/PreprodBanner";
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { PageTip } from "@/components/game/PageTip";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
@@ -216,6 +217,7 @@ export function AppShell() {
       <NavBar />
 
       <div className="flex min-w-0 flex-1 flex-col md:h-screen md:overflow-hidden">
+        <PreprodBanner />
         <MaintenanceBanner />
         <VacationBanner />
         <AnnouncementBanners />
