@@ -93,11 +93,25 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   case « Bascule active ») ; `rhythm.ts`, fonction pure appliquée à la résolution du contenu avec l'heure du moment (serveur à chaque
   requête, client au chargement et à la date). Avant la date, rien ne change (`rythme.test.ts`). À la date, seul un réglage resté à son
   ancien défaut prend la nouvelle valeur ; rien n'est écrit en base.
-- Valeurs : second palier ×4 (9 bâtiments) et 30 h + 24 h par niveau (8 bâtiments de l'Ascension, Cale sèche exclue) ; recherche ×30 dès
-  le niveau 6, 7 jours au plus ; Ascension tous les 30 jours, 10 au plus ; comptoir 1 pour 250 ; missions 0,75 et 400 000 ; lune AE-9.
+- Valeurs : second palier ×4 (9 bâtiments) et **36 h + 27 h** par niveau (8 bâtiments de l'Ascension, Cale sèche exclue ; 30 h + 24 h en
+  6.14.88) ; recherche **×25 dès le niveau 7** (×30 dès le 6 en 6.14.88), 7 jours au plus ; Ascension tous les 30 jours, 10 au plus ; comptoir 1 pour 250 ; missions 0,75 et 400 000 ; lune AE-9.
 - Comptes existants : rien n'est retiré ; un chantier ou une recherche lancé garde sa fin.
 - Mesure (`node scripts/progression-sim.mjs --bascule --prestige --ascend --days 365`, avant → après) : 1re Ascension J10 / J19 / J46 /
   J33 → **J87 / J91 / J126 / J115** (actif, moyen, occasionnel, quotidien) ; Ascensions la 1re année 5 / 5 / 5 / 5 → 6 / 5 / 4 / 4 ;
   jours « fini, sans suite » 324 / 299 / 162 / 227 → **0** ; production perdue 74 / 58 / 64 / 75 % → **2 / 1 / 10 / 9 %**. Écart connu :
   sessions bloquées 26 % (actif) et 50 % (moyen) le mois qui suit la 1re Ascension (fin de l'arbre trop chère pour la production remise à
-  zéro), réglage fin en RL-5. Garde : I29 à 365 jours. Fiche : `docs/changes/6.14.88-bascule-rythme.md`.
+  zéro), corrigé en 6.14.89 (ci-dessous). Garde : I29 à 365 jours. Fiche : `docs/changes/6.14.88-bascule-rythme.md`.
+
+## 6.14.89 (RL-5 avancé) : réglage fin de la bascule, avant la date
+- Cause de l'écart de 6.14.88 : après l'Ascension, l'Entrepôt repart du niveau 1 ; sa capacité (≈ 0,35 à 0,9 Md par ressource aux
+  niveaux 11 à 13) est sous le prix des derniers niveaux de recherche (≈ 0,8 Md d'une ressource) : le labo reste vide jusqu'à sa
+  reconstruction. Remède : l'arbre de l'actif et du moyen se termine **avant** leur 1re Ascension (recherche tardive plus courte, second
+  palier un peu plus long). Garder l'Entrepôt à l'Ascension a été mesuré et écarté (jours sans dépense 6 à 12 par mois).
+- Valeurs visées (groupe `rhythm`, défauts) : `tier2BaseSeconds` 129 600 (36 h), `tier2SecondsPerLevel` 97 200 (27 h ; niveau 20 :
+  279 h), `researchLateFromLevel` 7, `researchLateTimeFactor` 25 ; le reste inchangé. Avant la date, rien ne change ; un réglage de
+  l'admin reste gardé.
+- Mesure (`node scripts/progression-sim.mjs --bascule --prestige --ascend --days 365` ; valeurs de 6.14.88 : préréglage
+  `rythme-6.14.88`) : 1re Ascension J87 / J91 / J126 / J115 → **J91 / J103 / J133 / J122** (actif, moyen, occasionnel, quotidien),
+  dans les bandes du §4.1 ; Ascensions la 1re année 6 / 5 / 4 / 4 → 5 / 5 / 3 / 4 ; sessions bloquées, pire mois 25,8 / 50 / 5 / 6,7 %
+  → **0,8 / 6,7 / 5 / 13,3 %** ; production perdue 2 / 1 / 10 / 9 % → 6 / 1 / 14 / 12 % ; première semaine de l'actif 1,8 % → 0.
+  Garde : I29 à 365 jours sans exception. Fiche : `docs/changes/6.14.89-reglage-fin-rythme.md`.

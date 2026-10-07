@@ -22,16 +22,16 @@ un mur : tu reviens, et tu ne peux rien payer. Le temps, lui, freine sans bloque
 
 | Quoi | Avant | Après |
 |:--|:--|:--|
-| Niveaux 11 à 20 des 8 bâtiments de l'Ascension | 3 h, puis +1 h par niveau (12 h au niveau 20) | **30 h**, puis **+24 h** par niveau (**10 j 6 h** au niveau 20), avant tes réductions |
+| Niveaux 11 à 20 des 8 bâtiments de l'Ascension | 3 h, puis +1 h par niveau (12 h au niveau 20) | **36 h**, puis **+27 h** par niveau (**11 j 15 h** au niveau 20), avant tes réductions |
 | Coût de ces niveaux (Cale sèche comprise) | ×1 | **×4** |
-| Recherches dès le niveau 6 | durée normale | durée **×30**, **7 jours au plus** par niveau, avant tes réductions |
+| Recherches dès le niveau 7 | durée normale | durée **×25**, **7 jours au plus** par niveau, avant tes réductions |
 | Délai entre deux Ascensions | 7 jours | **30 jours** |
 | Ascensions au plus | 5 | **10** (succès jusqu'à l'Ascension X) |
 | Comptoir : ressources rares | 1 pour 100 communes | **1 pour 250** |
 | Missions : gains indexés | 1,5 × durée × production | **0,75 ×** durée × production |
 | Lune : niveaux 2 à 5 | 0,5 M de ferraille au niveau 2, ×2 par niveau | **20 M** au niveau 2, **×3** par niveau ; **2 M** de débris pour 1 % de chance |
 
-Les niveaux 1 à 10 et les recherches jusqu'au niveau 5 ne bougent pas : ta première semaine reste aussi rapide.
+Les niveaux 1 à 10 et les recherches jusqu'au niveau 6 ne bougent pas : ta première semaine reste aussi rapide.
 
 ## Rien n'est retiré
 
@@ -44,12 +44,14 @@ Les niveaux 1 à 10 et les recherches jusqu'au niveau 5 ne bougent pas : ta prem
 
 | Profil | 1re Ascension avant | 1re Ascension après | Ascensions la 1re année | Production perdue sur l'année |
 |:--|:--|:--|:--|:--|
-| 8 sessions par jour | J10 | **≈ J87** | 6 | 74 % → **2 %** |
-| 3 sessions par jour | J19 | **≈ J91** | 5 | 58 % → **1 %** |
-| 1 session par jour | J33 | **≈ J115** | 4 | 75 % → **9 %** |
-| 1 session, un jour sur trois manqué | J46 | **≈ J126** | 4 | 64 % → **10 %** |
+| 8 sessions par jour | J10 | **≈ J91** | 5 | 74 % → **6 %** |
+| 3 sessions par jour | J19 | **≈ J103** | 5 | 58 % → **1 %** |
+| 1 session par jour | J33 | **≈ J122** | 4 | 75 % → **12 %** |
+| 1 session, un jour sur trois manqué | J46 | **≈ J133** | 3 | 64 % → **14 %** |
 
 Ce sont des ordres de grandeur : la simulation ne compte ni combats, ni pillage, ni reliques. Le vrai joueur actif ira un peu plus vite.
+Dans la simulation, aucun mois ne laisse un chantier ou un labo vide faute de moyens plus d'une session sur sept, même juste après
+l'Ascension : tes dernières recherches se terminent avant.
 
 ## Toujours de quoi faire
 

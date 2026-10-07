@@ -146,8 +146,9 @@ describe("Rythme long terme : options du simulateur", () => {
    rythme** (`applyGameContent({}, rhythm.switchAt)`), Ascensions dès que possible et projets de prestige des règles.
    Les bornes à 90 jours ci-dessus mesurent le jeu d'avant la bascule (contenu résolu sans heure), toujours en vigueur jusqu'à
    la date. Bornes de la 1re Ascension : bandes cibles de la proposition, le bas élargi de 10 % (le simulateur donne des ordres
-   de grandeur). Sessions bloquées : ≤ 15 % chaque mois, sauf le mois qui suit la 1re Ascension (écart connu : la fin de l'arbre
-   coûte plus que la production remise à zéro ; mesure de 6.14.88 : 25,8 % actif, 50 % moyen ; réglage fin en RL-5). */
+   de grandeur). Sessions bloquées : ≤ 15 % chaque mois, **y compris** le mois qui suit la 1re Ascension : 6.14.89 (RL-5 avancé) a
+   retiré l'exception (≤ 60 %) de 6.14.88 en réglant les valeurs de la bascule (second palier 36 h + 27 h, recherche tardive dès le
+   niveau 7, ×25) : l'arbre de l'actif et du moyen se termine avant leur 1re Ascension (6.14.88 : 25,8 % actif, 50 % moyen ce mois-là). */
 const LONG_ASCENSION_BOUNDS: Record<string, [number, number]> = {
   actif: [72, 110],
   moyen: [85, 125],
@@ -190,14 +191,11 @@ describe("RL-3 (6.14.88) : rythme sur des mois, 365 jours après la bascule (I29
     }
   });
 
-  it("sessions bloquées ≤ 15 % chaque mois (hors les 30 jours qui suivent la 1re Ascension, ≤ 60 %) ; première semaine presque sans temps mort", () => {
+  it("sessions bloquées ≤ 15 % chaque mois, mois qui suit la 1re Ascension compris ; première semaine presque sans temps mort", () => {
     for (const r of Object.values(long)) {
-      // Les 30 jours qui suivent la 1re Ascension (une ou deux fenêtres de 30 jours).
-      const first = r.ascensionDays[0] ?? Infinity;
-      const after = new Set([Math.floor(first / 30), Math.floor((first + 30) / 30)]);
-      for (const [i, w] of r.windows.entries()) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(after.has(i) ? 60 : 15);
-      // La proposition admet une session sans action sur 56 pour l'actif la première semaine (1,8 %).
-      expect(r.deadSessionsPct.early, r.profile).toBeLessThanOrEqual(2);
+      for (const w of r.windows) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(15);
+      // Cible : moins de 2 % de sessions sans action la première semaine (6.14.89 : 0 pour les 4 profils ; 1,8 % pour l'actif en 6.14.88).
+      expect(r.deadSessionsPct.early, r.profile).toBeLessThan(2);
     }
     const j1 = long.actif.snapshots.find((s) => s.day === 7)!;
     expect(Math.min(...j1.extractors)).toBeGreaterThanOrEqual(8);

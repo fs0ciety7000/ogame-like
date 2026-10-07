@@ -20952,14 +20952,14 @@ var RHYTHM_RULES = {
   announceDays: 7,
   /** Coûts du second palier (niveaux 11 à 20) de chaque bâtiment qui en a un, multipliés (AE-L2, Q97). */
   tier2CostFactor: 4,
-  /** Durée du niveau 11 des 8 bâtiments exigés par l'Ascension (s). */
-  tier2BaseSeconds: 108e3,
-  /** Durée ajoutée par niveau au-delà du 11 (s) : niveau 20 = 246 h. */
-  tier2SecondsPerLevel: 86400,
-  /** Recherche tardive : dès ce niveau… */
-  researchLateFromLevel: 6,
-  /** …durée multipliée par… */
-  researchLateTimeFactor: 30,
+  /** Durée du niveau 11 des 8 bâtiments exigés par l'Ascension (s). 6.14.89 (RL-5) : 36 h (30 h validées en RL-3). */
+  tier2BaseSeconds: 129600,
+  /** Durée ajoutée par niveau au-delà du 11 (s) : niveau 20 = 279 h. 6.14.89 : 27 h (24 h en RL-3). */
+  tier2SecondsPerLevel: 97200,
+  /** Recherche tardive : dès ce niveau… 6.14.89 : 7 (6 en RL-3 : une session sans action sur 56 la première semaine de l'actif). */
+  researchLateFromLevel: 7,
+  /** …durée multipliée par… 6.14.89 : ×25 (×30 en RL-3 : la fin de l'arbre tombait après la 1re Ascension). */
+  researchLateTimeFactor: 25,
   /** …et plafonnée à (s, avant réductions) : 7 jours. */
   researchMaxLevelSeconds: 604800,
   /** Délai entre deux Ascensions (jours). */

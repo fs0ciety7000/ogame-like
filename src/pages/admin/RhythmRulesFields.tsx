@@ -77,10 +77,10 @@ export function RhythmRulesFields({ rules, setRules }: { rules: R; setRules: Set
         </Field>
         <NumberField label="Annonce : jours avant la date" value={rhythm.announceDays} min={0} step={1} onChange={(v) => setRhythm({ announceDays: int(v, 7) })} />
         <NumberField label="Second palier : coûts multipliés par (×)" value={rhythm.tier2CostFactor} min={1} step={0.5} hint="Niveaux 11 à 20 des 9 bâtiments à second palier, si leurs coûts valent encore ceux du code (AE-L2, Q97). 1 = inchangés." onChange={(v) => setRhythm({ tier2CostFactor: pos(v, 4, 1) })} />
-        <NumberField label="Second palier : durée du niveau 11 (h)" value={rhythm.tier2BaseSeconds / 3600} min={0} step={1} hint={`8 bâtiments exigés par l'Ascension (la Cale sèche garde ses durées). Avant : ${RHYTHM_PREVIOUS.tier2BaseSeconds / 3600} h.`} onChange={(v) => setRhythm({ tier2BaseSeconds: Math.round(pos(v, 30) * 3600) })} />
-        <NumberField label="Second palier : durée ajoutée par niveau (h)" value={rhythm.tier2SecondsPerLevel / 3600} min={0} step={1} hint={`Niveau 20 = durée du niveau 11 + 9 × ce nombre. Avant : ${RHYTHM_PREVIOUS.tier2SecondsPerLevel / 3600} h.`} onChange={(v) => setRhythm({ tier2SecondsPerLevel: Math.round(pos(v, 24) * 3600) })} />
-        <NumberField label="Recherche tardive : dès le niveau" value={rhythm.researchLateFromLevel} min={0} step={1} hint="Remplace `research.lateFromLevel` s'il vaut encore 0." onChange={(v) => setRhythm({ researchLateFromLevel: int(v, 6) })} />
-        <NumberField label="Recherche tardive : durée multipliée par (×)" value={rhythm.researchLateTimeFactor} min={1} step={1} hint="Remplace `research.lateTimeFactor` s'il vaut encore 1." onChange={(v) => setRhythm({ researchLateTimeFactor: pos(v, 30, 1) })} />
+        <NumberField label="Second palier : durée du niveau 11 (h)" value={rhythm.tier2BaseSeconds / 3600} min={0} step={1} hint={`8 bâtiments exigés par l'Ascension (la Cale sèche garde ses durées). Avant : ${RHYTHM_PREVIOUS.tier2BaseSeconds / 3600} h. Défaut : 36 h (6.14.89, réglage fin RL-5 ; 30 h en RL-3).`} onChange={(v) => setRhythm({ tier2BaseSeconds: Math.round(pos(v, 36) * 3600) })} />
+        <NumberField label="Second palier : durée ajoutée par niveau (h)" value={rhythm.tier2SecondsPerLevel / 3600} min={0} step={1} hint={`Niveau 20 = durée du niveau 11 + 9 × ce nombre. Avant : ${RHYTHM_PREVIOUS.tier2SecondsPerLevel / 3600} h. Défaut : 27 h (24 h en RL-3).`} onChange={(v) => setRhythm({ tier2SecondsPerLevel: Math.round(pos(v, 27) * 3600) })} />
+        <NumberField label="Recherche tardive : dès le niveau" value={rhythm.researchLateFromLevel} min={0} step={1} hint={`Remplace \`research.lateFromLevel\` s'il vaut encore 0. Défaut : 7 (6.14.89 ; 6 en RL-3) : les niveaux 1 à 6 restent rapides, première semaine sans temps mort.`} onChange={(v) => setRhythm({ researchLateFromLevel: int(v, 7) })} />
+        <NumberField label="Recherche tardive : durée multipliée par (×)" value={rhythm.researchLateTimeFactor} min={1} step={1} hint={`Remplace \`research.lateTimeFactor\` s'il vaut encore 1. Défaut : ×25 (6.14.89 ; ×30 en RL-3) : l'arbre se termine avant la 1re Ascension de l'actif et du moyen.`} onChange={(v) => setRhythm({ researchLateTimeFactor: pos(v, 25, 1) })} />
         <NumberField label="Recherche : durée maximale d'un niveau (h, avant réductions)" value={rhythm.researchMaxLevelSeconds / 3600} min={0} step={1} hint="Remplace `research.maxLevelSeconds` s'il vaut encore 0 (sans plafond)." onChange={(v) => setRhythm({ researchMaxLevelSeconds: Math.round(pos(v, 168) * 3600) })} />
         <NumberField label="Ascension : délai entre deux (jours)" value={rhythm.ascensionCooldownDays} min={0} step={1} hint={`Avant : ${RHYTHM_PREVIOUS.ascensionCooldownDays} jours. Compté depuis la dernière Ascension.`} onChange={(v) => setRhythm({ ascensionCooldownDays: int(v, 30) })} />
         <NumberField label="Ascension : nombre maximal" value={rhythm.maxAscensions} min={RHYTHM_PREVIOUS.maxAscensions} step={1} hint={`Avant : ${RHYTHM_PREVIOUS.maxAscensions}. Ne descend jamais sous l'ancien maximum : personne ne perd une Ascension faite.`} onChange={(v) => setRhythm({ maxAscensions: int(v, 10, RHYTHM_PREVIOUS.maxAscensions) })} />
@@ -115,7 +115,7 @@ export function RhythmRulesFields({ rules, setRules }: { rules: R; setRules: Set
           value={research.lateFromLevel}
           min={0}
           step={1}
-          hint="0 = jamais. Tant qu'il vaut 0, la bascule du rythme (section ci-dessus) le passe à 6 à sa date (les niveaux 1 à 5 restent rapides)."
+          hint={`0 = jamais. Tant qu'il vaut 0, la bascule du rythme (section ci-dessus) le passe à ${rhythm.researchLateFromLevel} à sa date (les niveaux d'avant restent rapides).`}
           onChange={(v) => setResearch({ lateFromLevel: int(v, 0) })}
         />
         <NumberField
@@ -123,7 +123,7 @@ export function RhythmRulesFields({ rules, setRules }: { rules: R; setRules: Set
           value={research.lateTimeFactor}
           min={1}
           step={1}
-          hint="1 = sans effet. Tant qu'il vaut 1, la bascule du rythme le passe à 30 à sa date. Le coût ne change pas."
+          hint={`1 = sans effet. Tant qu'il vaut 1, la bascule du rythme le passe à ${rhythm.researchLateTimeFactor} à sa date. Le coût ne change pas.`}
           onChange={(v) => setResearch({ lateTimeFactor: pos(v, 1, 1) })}
         />
         <NumberField

@@ -3,8 +3,9 @@
 Statut : **livrée** (Q164 à Q171 validées) : RL-1 (recherche réglable, valeurs neutres) en 6.14.84
 (`docs/changes/6.14.84-recherche-reglable.md`), RL-2 (projets de prestige) en 6.14.85 (`docs/changes/6.14.85-projets-de-prestige.md`),
 RL-3 (bascule datée du rythme au 1er novembre 2026, AE-L2 compris) en 6.14.88 (`docs/changes/6.14.88-bascule-rythme.md`). Restent les
-mesures après la bascule (RL-4) et le réglage fin à 8 semaines (RL-5), dont l'écart mesuré en 6.14.88 : sessions bloquées le mois qui suit
-la 1re Ascension (26 % actif, 50 % moyen). Lot RL-0 : Méthode : `docs/WORKFLOW.md` §2. Suite de `docs/proposals/equilibrage-au27.md` (AE-L2, AE-L4, AE-L6).
+mesures après la bascule (RL-4) et le réglage fin à 8 semaines (RL-5). L'écart mesuré en 6.14.88 (sessions bloquées le mois qui suit la
+1re Ascension : 26 % actif, 50 % moyen ; moyen et occasionnel un peu sous leurs bandes) est réglé **avant la date** en 6.14.89 (RL-5
+avancé, Q224, `docs/changes/6.14.89-reglage-fin-rythme.md`) : second palier 36 h + 27 h, recherche tardive dès le niveau 7, ×25. Lot RL-0 : Méthode : `docs/WORKFLOW.md` §2. Suite de `docs/proposals/equilibrage-au27.md` (AE-L2, AE-L4, AE-L6).
 Outil : simulateur de progression `src/game/balance/progressionSim.ts`, étendu par ce lot (horizon libre, Ascensions successives,
 puits de dépense, relevés par fenêtre de 30 jours), garde I29 inchangée. Les variantes de ce document ont tourné dans le scratchpad
 (scripts `rythme/run.mjs`, `variants.mjs`) ; le lot RL-0 les verse dans `scripts/progression-sim.mjs` (mode `--long`).
@@ -173,10 +174,10 @@ de l'admin ; trois champs de recherche et le système de projets sont à coder.
 | Réglage (où dans l'admin) | Avant | Après | Rôle |
 |:--|:--|:--|:--|
 | `upgrade.tier2.baseCost`, `maxCost` des bâtiments à second palier (Contenu → Bâtiments) | ×1 | **×4** (AE-L2, Q97, inchangé) | coût suivant la production |
-| `upgrade.tier2.baseSeconds` des **8 bâtiments exigés par l'Ascension** (Contenu → Bâtiments) | 10 800 (3 h) | **108 000 (30 h)** | niveau 11 en un jour et quart |
-| `upgrade.tier2.secondsPerLevel` des mêmes | 3 600 (1 h) | **86 400 (24 h)** | niveau 20 en 246 h (≈ 10 j) ; tout le palier ≈ 75 j sur 6 chantiers avant réductions (≈ 55 j avec les technos de durée) |
-| `research.lateFromLevel` (Règles → Labo, **nouveau**) | — | **6** | niveaux 1 à 5 inchangés (J1 rapide) |
-| `research.lateTimeFactor` (**nouveau**) | — (1) | **30** | arbre ≈ 90 jours de 4 labos avant réductions |
+| `upgrade.tier2.baseSeconds` des **8 bâtiments exigés par l'Ascension** (Contenu → Bâtiments) | 10 800 (3 h) | **129 600 (36 h)** (6.14.89 ; 108 000 en 6.14.88) | niveau 11 en un jour et demi |
+| `upgrade.tier2.secondsPerLevel` des mêmes | 3 600 (1 h) | **97 200 (27 h)** (6.14.89 ; 86 400 en 6.14.88) | niveau 20 en 279 h (≈ 11,6 j) |
+| `research.lateFromLevel` (Règles → Labo, **nouveau**) | — | **7** (6.14.89 ; 6 en 6.14.88) | niveaux 1 à 6 inchangés (première semaine sans temps mort) |
+| `research.lateTimeFactor` (**nouveau**) | — (1) | **25** (6.14.89 ; 30 en 6.14.88) | arbre de l'actif et du moyen fini avant leur 1re Ascension |
 | `research.maxLevelSeconds` (**nouveau**) | — | **604 800 (7 j)**, avant réductions | aucune recherche de plus d'une semaine |
 | `research.costGrowth`, `research.timeGrowth` (**nouveaux**, constantes du code reprises) | 2,7 / 1,67 (code) | 2,7 / 1,67 | règle n° 2 : plus de constante hors admin |
 | `ascension.cooldownDays` (Règles → Ascension) | 7 | **30** | une Ascension par saison au plus |
@@ -265,10 +266,41 @@ Page Admin → Santé de l'équilibre, par cohorte d'inscription et par quartile
 
 Revue à 8 semaines (comme AE-L7) : les durées et le facteur de recherche se règlent dans l'admin, sans code.
 
+### 5.7 Réglage fin avant la bascule (6.14.89, RL-5 avancé, Q224)
+
+Mesure de 6.14.88 (valeurs du §5.1 d'origine) : sessions bloquées **25,8 %** (actif) et **50 %** (moyen) le mois qui suit la 1re Ascension ;
+1re Ascension du moyen (J90,6) et de l'occasionnel (J126,1) un peu sous leurs bandes ; 1,8 % de sessions sans action la première semaine
+de l'actif. Cause : l'Entrepôt repart du niveau 1 à l'Ascension ; aux niveaux 11 à 13, sa capacité (≈ 0,35 à 0,9 Md par ressource) est
+sous le prix des derniers niveaux de recherche (≈ 0,8 Md d'une ressource) : un labo libre ne peut rien lancer tant que l'Entrepôt n'est
+pas remonté. Il faut donc que l'arbre se termine **avant** la 1re Ascension, ou que l'Ascension garde de quoi payer.
+
+Variantes simulées (365 jours, 4 profils, Ascensions dès que possible, projets de prestige ; scripts temporaires, environ 270 variantes) :
+
+| Variante | Résultat |
+|:--|:--|
+| Recherche tardive seule (dès le 6 ou le 7, ×15 à ×30) | jamais toutes les cibles : moyen bloqué 20 à 41 %, ou quotidien bloqué 20 à 33 % ; moyen et occasionnel restent sous leurs bandes |
+| Second palier seul (30 à 42 h, +24 à +27 h ; dès le 6, ×30) | recule les 1res Ascensions dans les bandes ; le moyen reste bloqué 32 à 57 %, sauf à 42 h + 27 h (toutes les cibles, mais 1,8 % sans action la première semaine de l'actif, et ses voisines 36 h ou +24 h rebloquent le moyen à 33 et 57 %) |
+| Plafond d'un niveau de recherche (5, 6 ou 8 jours) | effet faible et instable (± une session par mois) ; 7 jours gardé |
+| **Entrepôt gardé à l'Ascension** (levier nouveau) | sessions bloquées pas meilleures (quotidien 20 %), et **6 à 12 jours sans dépense** par mois : la réserve d'un entrepôt plein retient les projets de prestige. Écarté |
+| **Dès le niveau 7, ×25, second palier 36 h + 27 h (retenue)** | toutes les cibles (tableau ci-dessous) ; 5 de ses 9 voisines immédiates tiennent aussi (×22, 33 h, +26 h, +28 h, plafond 8 j ; pas : dès le 6, ×28, 40 h, plafond 6 j). Avec d'autres réglages perturbés (coûts ×3,5 ou ×4,5, projets de 10 h), le quotidien passe à 16,7 % : une session de plus |
+| Dès le niveau 6, ×25, second palier 30 h + 27 h (2 valeurs changées) | toutes les cibles aussi, mais 2 de ses 7 voisines seulement (×22, ×28, +26 h, 36 h, dès le 7 échouent) et aucune perturbation (coûts ×3,5 ou ×4,5, plafond 6 ou 8 j, projets 6 ou 10 h) : écartée, trop fragile |
+
+| Profil | 1re Ascension | Ascensions la 1re année | Sessions bloquées (pire mois) | Mois après la 1re Ascension | Production perdue | Sans action J1–7 |
+|:--|:--|:--|:--|:--|:--|:--|
+| Actif | J86,8 → **J91,4** | 6 → 5 | 25,8 → **0,8 %** | 25,8 → **0 %** | 1,7 → 5,6 % | 1,8 → **0 %** |
+| Moyen | J90,6 → **J103** | 5 → 5 | 50 → **6,7 %** | 50 → **0 %** | 0,7 → 1,2 % | 0 → 0 % |
+| Quotidien | J115,1 → **J121,5** | 4 → 4 | 6,7 → **13,3 %** | 6,7 → 13,3 % | 8,9 → 12,3 % | 0 → 0 % |
+| Occasionnel | J126,1 → **J132,5** | 4 → 3 | 5 → **5 %** | 0 → 5 % | 10,1 → 13,6 % | 0 → 0 % |
+
+Arbre complet : J80 / J93 / J161 / J190 (actif, moyen, quotidien, occasionnel). Limites : le quotidien joue 30 sessions par mois et
+l'occasionnel 20 ; une session vaut 3,3 et 5 points, et la marge du quotidien (13,3 % pour 15 %) tient à une session. Le simulateur donne
+des ordres de grandeur : la revue à 8 semaines (§5.6) reste la vraie mesure. Commande : `node scripts/progression-sim.mjs --bascule
+--prestige --ascend --days 365` (après = valeurs du code) ; préréglage `rythme-6.14.88` pour les valeurs d'avant le réglage fin.
+
 ## 6. Invariants
 
-- **I29 (modifié par RL-3, livré en 6.14.88 : bandes du §4.1 avec le bas élargi de 10 %, sessions bloquées ≤ 15 % hors les 30 jours qui
-  suivent la 1re Ascension ; les bornes à 90 jours restent celles du jeu d'avant la bascule, en vigueur jusqu'à sa date)** : en plus des bornes à 90 jours, le simulateur sur 365 jours (règles par défaut, Ascension dès que
+- **I29 (modifié par RL-3, livré en 6.14.88 : bandes du §4.1 avec le bas élargi de 10 %, sessions bloquées ≤ 15 % chaque mois, mois qui
+  suit la 1re Ascension compris depuis 6.14.89 ; les bornes à 90 jours restent celles du jeu d'avant la bascule, en vigueur jusqu'à sa date)** : en plus des bornes à 90 jours, le simulateur sur 365 jours (règles par défaut, Ascension dès que
   possible, projets) garde la 1re Ascension dans les bandes du §4.1, aucun jour « fini, sans suite », les sessions bloquées sous 15 %
   par mois et la production perdue sous 15 % cumulés. Les bornes d'Ascension à 90 jours de `progressionSim.test.ts` changent dans le
   même commit (l'Ascension sort de l'horizon de 90 jours pour tous les profils).
@@ -287,7 +319,7 @@ Revue à 8 semaines (comme AE-L7) : les durées et le facteur de recherche se r�
 | **RL-2** | Projets de prestige (AE-L6) : moteur (`prestige.ts`, I32), serveur (action, classement), interface (chantier, monument), admin (groupe `prestige`), chaîne de contenu complète, sortie « Entrepôt plein ». Utile tout de suite : la production perdue d'aujourd'hui (70 à 90 %) a un débouché | L | 2, **livré (6.14.85)** ; thème de saison, projet d'alliance et défi du passe reportés |
 | **RL-3** (**livré, 6.14.88**) | Bascule du rythme, **AE-L2 compris** : second palier ×4 et comptoir, missions, lune (AE-L2 inchangé) ; durées du second palier 30 h + 24 h ; recherche tardive ×30 plafonnée à 7 j ; Ascension 30 j et maximum 10 (libellés jusqu'à X dans `ascension.ts` et `gazette.ts`, `AscensionCard` à 10 emplacements, succès Ascension II à X, Codex) ; migration des contenus non modifiés ; I29 étendu ; annonce une semaine avant, début de mois ; billet et changelog | M | 3 |
 | **RL-4** | Mesures (§5.6), dans la page Santé de l'équilibre (AE-L4) | M | avec RL-3 |
-| **RL-5** | Après 8 semaines : réglage fin ; suite au-delà de 10 Ascensions ; échelle des rangs (R6) ; entrepôt du début (R7) | S | plus tard |
+| **RL-5** | Après 8 semaines : réglage fin ; suite au-delà de 10 Ascensions ; échelle des rangs (R6) ; entrepôt du début (R7) | S | **livré en partie (6.14.89)** : réglage avant la bascule (§5.7) ; mesures après la bascule, suite au-delà de 10, rangs et entrepôt du début restent |
 
 **AE-L2** : gardé tel que validé (Q97, Q98), **renforcé** par les durées et la recherche. Il part dans RL-3 au lieu d'être livré seul :
 seul, il crée le mur (33 à 65 % de sessions bloquées pour l'actif) puis le vide (244 jours « fini » la première année).

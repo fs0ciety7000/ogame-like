@@ -3406,11 +3406,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await ps.startBuildingUpgrade(bId, "extracteur_ferraille");
       const before = (await admin.collection("queues").getOne(bId)).buildingUpgrades.extracteur_ferraille;
       expect(seconds(before)).toBe(10_800);
-      // Date passée : niveau 11 en 30 h pour un chantier lancé maintenant ; le premier garde sa fin.
+      // Date passée : niveau 11 en 36 h (6.14.89 ; 30 h en 6.14.88) pour un chantier lancé maintenant ; le premier garde sa fin.
       await admin.collection("game_config").update(rulesRec.id, { data: { ...savedRules, rhythm: { switchAt: Date.now() - 60_000 } } });
       await ps.startBuildingUpgrade(bId, "archives_fracturees");
       const q = (await admin.collection("queues").getOne(bId)).buildingUpgrades;
-      expect(seconds(q.archives_fracturees)).toBe(108_000);
+      expect(seconds(q.archives_fracturees)).toBe(129_600);
       expect(q.extracteur_ferraille.endTime).toBe(before.endTime);
     } finally {
       await admin.collection("game_config").update(rulesRec.id, { data: savedRules });

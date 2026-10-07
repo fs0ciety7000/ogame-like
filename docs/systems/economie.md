@@ -15,7 +15,7 @@ Tout ce que le joueur construit se paie en ressources. La production tourne hors
 | Rattrapage | jusqu'à +25 % de production sous 10 % de la médiane des actifs, nul à partir de 50 % |
 | Échange (comptoir) | taxe 5 % au pot commun ; 1 rare pour 100 communes, **1 pour 250** dès la bascule du rythme (1er novembre 2026, `rhythm.exchangeCommonToRare`, 6.14.88) |
 | Missions (gains indexés) | 1,5 × durée × production (référence des rares 150 000), **0,75** et **400 000** dès la bascule du rythme |
-| Second palier des bâtiments (niveaux 11 à 20) | coûts ×4 dès la bascule du rythme (AE-L2, `rhythm.tier2CostFactor`) ; durées 30 h + 24 h par niveau pour les 8 bâtiments de l'Ascension |
+| Second palier des bâtiments (niveaux 11 à 20) | coûts ×4 dès la bascule du rythme (AE-L2, `rhythm.tier2CostFactor`) ; durées 36 h + 27 h par niveau pour les 8 bâtiments de l'Ascension (6.14.89) |
 | Vacances | production × 0,25, 2 à 21 jours, 5 jours entre deux |
 
 ## Code et admin

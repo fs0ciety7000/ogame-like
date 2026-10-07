@@ -18,6 +18,9 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q225 | Rythme après le 1er novembre : niveau 11 en 36 h, +27 h par niveau, recherche tardive dès le niveau 7 ×25 (`docs/changes/6.14.89-reglage-fin-rythme.md`) | 1re Ascension J91 (actif) à J133 (occasionnel) ; plus de mur de recherche après l'Ascension en simulation | valider |
+| Q226 | Marge du joueur quotidien : 13,3 % de sessions bloquées (cible 15 %) (`docs/proposals/rythme-long-terme.md`) | une session par mois sans action utile au pire mois | valider, mesurer en RL-4 |
+| Q227 | Aucun levier nouveau (Entrepôt gardé à l'Ascension écarté) (`docs/proposals/rythme-long-terme.md`) | l'Ascension remet l'Entrepôt au niveau 1, comme avant | valider |
 
 ## 3. Récit
 

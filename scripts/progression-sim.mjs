@@ -13,6 +13,8 @@
 //   node scripts/progression-sim.mjs --bascule --prestige --ascend --days 365   # 6.14.88 (RL-3) : avant = règles d'avant la
 //                                                        # bascule du rythme, après = règles en vigueur après `rhythm.switchAt`
 //                                                        # (projets de prestige des deux côtés avec --prestige)
+//   node scripts/progression-sim.mjs rythme-6.14.88 --bascule --prestige --ascend --days 365   # 6.14.89 (RL-5) : après = valeurs
+//                                                        # visées de 6.14.88 (avant le réglage fin) ; sans préréglage : celles du code
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -37,6 +39,10 @@ const PRESETS = {
   "ae-l2": {
     tier2Factor: 4,
     rules: { exchange: { commonToRare: 0.004 }, economy: { missionProductionMultiplier: 0.75, missionRareProductionRef: 400_000 } },
+  },
+  // Valeurs visées de la bascule du rythme en 6.14.88 (RL-3), avant le réglage fin de 6.14.89 (RL-5) : à lancer avec --bascule.
+  "rythme-6.14.88": {
+    rules: { rhythm: { tier2BaseSeconds: 108_000, tier2SecondsPerLevel: 86_400, researchLateFromLevel: 6, researchLateTimeFactor: 30 } },
   },
 };
 
@@ -166,8 +172,15 @@ if (withPrestige || withAscend) {
   const worst = (r, k) => Math.max(0, ...r.windows.map((w) => w[k]));
   const last = (r) => r.snapshots[r.snapshots.length - 1] ?? { prestigeProjects: 0 };
   console.log(`\nPuits et rythme (${withPrestige ? "après = projets de prestige des règles en vigueur" : "sans projets"}${withAscend ? ", Ascensions dès que possible" : ""}) :`);
-  console.log(row(["Profil", "Projets à la fin", "Prod. perdue (cumul)", "Jours sans dépense (pire mois)", "Jours « fini, sans suite »", "Ascensions (jours)"]));
-  console.log(row(["---", "---", "---", "---", "---", "---"]));
+  console.log(row(["Profil", "Projets à la fin", "Prod. perdue (cumul)", "Jours sans dépense (pire mois)", "Jours « fini, sans suite »", "Ascensions (jours)", "Sessions bloquées (pire mois)", "Mois après la 1re Ascension", "Sans action J1–7"]));
+  console.log(row(["---", "---", "---", "---", "---", "---", "---", "---", "---"]));
+  // 6.14.89 (RL-5) : sessions bloquées, dont les 30 jours qui suivent la 1re Ascension (une ou deux fenêtres de 30 jours).
+  const afterFirst = (r) => {
+    const first = r.ascensionDays[0];
+    if (first === undefined) return "—";
+    const idx = new Set([Math.floor(first / 30), Math.floor((first + 30) / 30)]);
+    return `${Math.max(0, ...r.windows.filter((_, i) => idx.has(i)).map((w) => w.blockedPct))} %`;
+  };
   for (let i = 0; i < before.profiles.length; i++) {
     const a = before.profiles[i];
     const b = result.profiles[i];
@@ -180,6 +193,9 @@ if (withPrestige || withAscend) {
         `${worst(a, "daysWithoutSpend")} → ${worst(b, "daysWithoutSpend")}`,
         `${fin(a)} → ${fin(b)}`,
         `${a.ascensionDays.join(", ") || "—"} → ${b.ascensionDays.join(", ") || "—"}`,
+        `${worst(a, "blockedPct")} % → ${worst(b, "blockedPct")} %`,
+        `${afterFirst(a)} → ${afterFirst(b)}`,
+        `${a.deadSessionsPct.early} % → ${b.deadSessionsPct.early} %`,
       ]),
     );
   }

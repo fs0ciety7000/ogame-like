@@ -10,7 +10,7 @@ Débloque unités et bâtiments, donne des bonus permanents (couche « tech » d
 - Durée du niveau n (avant réductions) : `baseTime × timeGrowth^(n−1)`, `timeGrowth` = **1,67** (`research.timeGrowth`) ; dès le niveau
   `research.lateFromLevel`, × `research.lateTimeFactor` ; au plus `research.maxLevelSeconds`. Défauts neutres depuis 6.14.84 (0, 1, 0 :
   ni recherche tardive ni plafond, mêmes coûts et durées qu'avant). **Bascule du rythme** (6.14.88, 1er novembre 2026, `rhythm.ts`) : un
-  champ resté à ces valeurs neutres passe à **dès le niveau 6, ×30, 7 jours au plus** (réglages `rhythm.researchLate*`, Admin → Règles →
+  champ resté à ces valeurs neutres passe à **dès le niveau 7, ×25, 7 jours au plus** (6.14.89 ; dès le 6, ×30 en 6.14.88) (réglages `rhythm.researchLate*`, Admin → Règles →
   Rythme sur des mois) ; une recherche lancée avant garde sa fin.
 - Fin de partie (tech21 à tech26) : coûts en centaines de milliers de communes + rares, 600 s de base.
 - Plafond des technos de combat (6.6, invariant I15) : attaque et défense des unités ≤ **+150 %** au total pour la couche techno

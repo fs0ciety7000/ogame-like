@@ -53,16 +53,16 @@ describe("6.14.88 (RL-3) bascule du rythme", () => {
     const costBefore = getBuildingUpgradeCost(BUILDINGS.find((x) => x.id === T2)!, 15);
     applyGameContent({}, AT);
     expect(ASCENSION_RULES).toMatchObject({ cooldownDays: 30, maxAscensions: 10 });
-    expect(RESEARCH_RULES).toMatchObject({ lateFromLevel: 6, lateTimeFactor: 30, maxLevelSeconds: 604_800, costGrowth: 2.7, timeGrowth: 1.67 });
+    expect(RESEARCH_RULES).toMatchObject({ lateFromLevel: 7, lateTimeFactor: 25, maxLevelSeconds: 604_800, costGrowth: 2.7, timeGrowth: 1.67 });
     expect(EXCHANGE_RULES.commonToRare).toBe(0.004);
     expect(ECONOMY_RULES).toMatchObject({ missionProductionMultiplier: 0.75, missionRareProductionRef: 400_000 });
     expect(MOON_RULES).toMatchObject({ upgradeCost: { scrap: 20_000_000, energy: 10_000_000 }, costGrowth: 3, debrisPerPercent: 2_000_000 });
-    // Second palier : 30 h au niveau 11, 246 h au niveau 20, pour les 8 bâtiments exigés par l'Ascension.
+    // Second palier : 36 h au niveau 11, 279 h au niveau 20, pour les 8 bâtiments exigés par l'Ascension (6.14.89, RL-5 ; 30 h et 246 h en RL-3).
     const required = BUILDINGS.filter((b) => requiredForAscension(b) && b.upgrade.tier2);
     expect(required).toHaveLength(8);
     for (const b of required) {
-      expect(getBuildingUpgradeTime(b, 11), b.id).toBe(108_000);
-      expect(getBuildingUpgradeTime(b, 20), b.id).toBe(108_000 + 9 * 86_400);
+      expect(getBuildingUpgradeTime(b, 11), b.id).toBe(129_600);
+      expect(getBuildingUpgradeTime(b, 20), b.id).toBe(129_600 + 9 * 97_200);
       // Premier palier inchangé : la première semaine reste celle d'avant.
       const d = defaults.find((x) => x.id === b.id)!;
       expect(getBuildingUpgradeTime(b, 10), b.id).toBe((10 - 1) * d.upgrade.secondsPerLevel);
@@ -78,10 +78,10 @@ describe("6.14.88 (RL-3) bascule du rythme", () => {
     const dock = BUILDINGS.find((x) => x.id === DOCK_BUILDING_ID)!;
     expect(getBuildingUpgradeTime(dock, 11)).toBe(10_800);
     expect(dock.upgrade.tier2!.baseCost.nano).toBe(4 * defaults.find((x) => x.id === DOCK_BUILDING_ID)!.upgrade.tier2!.baseCost.nano!);
-    // Recherche : niveaux 1 à 5 inchangés, ×30 dès le 6, 7 jours au plus avant réductions.
+    // Recherche : niveaux 1 à 6 inchangés, ×25 dès le 7, 7 jours au plus avant réductions (6.14.89 ; dès le 6, ×30 en RL-3).
     const t = TECHNOLOGIES.find((x) => x.maxLevel >= 8 && x.costGrowth === undefined)!;
-    expect(getTechTime(t, 5)).toBe(Math.floor(t.baseTime * Math.pow(1.67, 4)));
-    expect(getTechTime(t, 6)).toBe(Math.min(604_800, Math.floor(t.baseTime * Math.pow(1.67, 5) * 30)));
+    expect(getTechTime(t, 6)).toBe(Math.floor(t.baseTime * Math.pow(1.67, 5)));
+    expect(getTechTime(t, 7)).toBe(Math.min(604_800, Math.floor(t.baseTime * Math.pow(1.67, 6) * 25)));
   });
 
   it("un réglage modifié par l'admin est gardé ; les valeurs visées sont elles-mêmes réglables", () => {
@@ -151,7 +151,7 @@ describe("6.14.88 (RL-3) bascule du rythme", () => {
     expect(announcementOpen(a, rhythmAnnounceAt() - 1)).toBe(false);
     expect(announcementOpen(a, rhythmAnnounceAt())).toBe(true);
     expect(a.eyebrow).toContain("1er novembre");
-    expect(a.features?.[0].text).toContain("30 h");
+    expect(a.features?.[0].text).toContain("36 h");
   });
 
   it("le groupe `rhythm` est dans GameRules et chaque valeur a son champ dans l'admin", () => {
