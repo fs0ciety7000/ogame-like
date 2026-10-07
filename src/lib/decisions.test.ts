@@ -15,7 +15,8 @@ describe("6.14.32 : décisions à valider", () => {
       expect(q.status.length, q.id).toBeGreaterThan(2);
     }
     expect(qs.find((q) => q.id === "Q3")?.open).toBe(false);
-    expect(qs.some((q) => q.open)).toBe(true);
+    // 6.14.45 : toutes les questions peuvent être traitées (aucune ouverte) ; le statut se lit quand même.
+    expect(qs.find((q) => q.id === "Q12")?.status).toMatch(/^écartée/);
   });
 
   it("chaque question ouverte a son conseil dans decisions-a-valider.md", () => {
