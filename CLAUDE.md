@@ -75,6 +75,14 @@ Valable pour toute la session et tout le projet, à chaque demande :
 > reliques, plans et autres ; ajout dans le panel admin ; création de défis, missions ; workflow complet. L'idée est que si on veut ajouter
 > un nouveau vaisseau, une nouvelle tech, un nouveau bâtiment, tout s'enchaîne.**
 
+> **Instructions (2026-10-07) : petite cron pour check les nouvelles illustrations envoyées via img -> détourage webp, copy to assets
+> etc automatiquement.**
+
+Une routine claude.ai horaire (`trig_01YYCSf7tQdBikosym8habog`, minute 57) réveille la session de travail. Elle lance
+`node scripts/preprod-illustrations.mjs check` et, s'il y a des envois sur `test.fs0ciety.org/img`, déroule `docs/illustrations.md` :
+reconnaissance, détourage, WebP, branchement, validation, push et résumé à l'utilisateur. Une nouvelle session vérifie que la routine
+existe et vise la bonne session (`get_trigger`, sinon la recrée) : sans session vivante, les envois attendent.
+
 La liste complète, avec les fichiers de chaque maillon, est la **chaîne de contenu** de `docs/WORKFLOW.md` §7. En bref :
 - contenu et migration ;
 - réglages et admin ;
