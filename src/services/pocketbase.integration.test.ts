@@ -460,6 +460,23 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.32 decisions: only game admins answer and read", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const answer = { qid: "Q1", choice: "valide", note: "", answeredAtMs: Date.now(), answeredBy: bId };
+    await expect(pb.collection("decision_answers").create(answer)).rejects.toBeTruthy();
+    await expect(pb.collection("decision_answers").getFullList()).resolves.toEqual([]);
+    await admin.collection("admins").create({ id: bId, note: "test" });
+    try {
+      const rec = await pb.collection("decision_answers").create(answer);
+      expect(rec).toMatchObject({ qid: "Q1", choice: "valide" });
+      expect((await pb.collection("decision_answers").getFullList()).map((r) => r.id)).toContain(rec.id);
+      await admin.collection("decision_answers").delete(rec.id);
+    } finally {
+      await admin.collection("admins").delete(bId);
+    }
+  });
+
   it("admin routes exist (statistics, season closing)", async () => {
     const stats = await admin.send("/api/cosmic/admin/stats", { method: "GET" });
     expect(stats).toBeTruthy();

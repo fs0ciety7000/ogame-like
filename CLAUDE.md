@@ -63,6 +63,11 @@ Valable pour toute la session et tout le projet, à chaque demande :
 - Une question, un doute, un choix de conception ou d'équilibre que l'utilisateur pourrait vouloir trancher : on prend l'option
   recommandée (la plus prudente pour les données des joueurs), on l'écrit dans `docs/QUESTIONS.md` (date, lot, question, choix fait,
   comment revenir en arrière) et on continue. La fiche du lot renvoie à l'entrée.
+- **Décisions à valider** (consigne du 2026-10-07) : chaque question ouverte de `QUESTIONS.md` apparaît sur la page `/decisions`
+  (`test.fs0ciety.org/decisions`, `empire.fs0ciety.org/decisions`, admins) au déploiement ; on ajoute aussi sa ligne (groupe, effet,
+  conseil) dans `docs/decisions-a-valider.md` (un test l'exige). Les réponses (collection `decision_answers`) se relisent par
+  `node scripts/decisions.mjs` en début de session et à chaque passage de la routine horaire : « valide » → statut « validée » ;
+  « changer » → lot de changement et règle réécrite (instructions, GDD, WORKFLOW). Une question traitée quitte la page.
 - Restent hors du travail automatique : écrire en production, pousser sur `main`, ouvrir une PR, tout secret. Ces points se notent aussi
   dans `docs/QUESTIONS.md`.
 

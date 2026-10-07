@@ -3488,5 +3488,51 @@
         "presentable": false
       }
     ]
+  },
+  {
+    "id": "pbc_ce_decision_ans",
+    "name": "decision_answers",
+    "type": "base",
+    "listRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "viewRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "createRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "updateRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "deleteRule": "(@request.auth.id != \"\" && @collection.admins.id ?= @request.auth.id)",
+    "fields": [
+      {
+        "name": "qid",
+        "type": "text",
+        "required": true,
+        "max": 10,
+        "presentable": false
+      },
+      {
+        "name": "choice",
+        "type": "text",
+        "required": false,
+        "max": 20,
+        "presentable": false
+      },
+      {
+        "name": "note",
+        "type": "text",
+        "required": false,
+        "max": 2000,
+        "presentable": false
+      },
+      {
+        "name": "answeredAtMs",
+        "type": "number",
+        "required": false,
+        "presentable": false
+      },
+      {
+        "name": "answeredBy",
+        "type": "text",
+        "required": false,
+        "max": 30,
+        "presentable": false
+      }
+    ]
   }
 ]

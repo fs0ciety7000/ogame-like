@@ -4,9 +4,10 @@ Lot H29-4 (6.14.28), constat AU29-5. Le 2026-10-07, 24 questions étaient ouvert
 effet et ma recommandation. Réponse rapide possible : « je valide tout sauf Qx, Qy ». Une décision changée devient un lot. Une décision
 validée passe au statut « validée » dans `QUESTIONS.md`.
 
-Page à cocher (mobile, privée) : https://claude.ai/artifact/2f6rJdCknGF6wcvxbpBoxh. Les réponses vont dans le stockage de la page
-(collection `decisions`, une fiche par question : `choice` = `valide` ou `changer`, `note`). Claude les relit avec `ArtifactData` et les
-reporte ici et dans `QUESTIONS.md`. Gabarit : `scripts/decisions-page.html`, rempli depuis ce fichier.
+Page de réponse : **`/decisions`** dans le jeu (`test.fs0ciety.org/decisions`, `empire.fs0ciety.org/decisions` après la mise en
+production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier au build. Les réponses sont gardées dans la collection
+`decision_answers` ; Claude les relit avec `node scripts/decisions.mjs`. **Chaque nouvelle question ouverte ajoute sa ligne ici**
+(groupe, effet, conseil) : un test l'exige. L'artifact « Décisions à valider » de 6.14.28 est remplacé par cette page.
 
 ## 1. Bloquante
 
@@ -51,3 +52,4 @@ reporte ici et dans `QUESTIONS.md`. Gabarit : `scripts/decisions-page.html`, rem
 | Q25 | Préréglages d'effet des 10 unités | valider |
 | Q28 | Illustrations : dépôt `/img`, détourage du Comptoir seulement | valider |
 | Q29 | En prod, `/img` renvoie vers la pré-prod pour les envois | valider, ou me donner un accès en écriture limité à `illustration_uploads` en prod |
+| Q30 | `/decisions` en prod : réponses lues par un jeton de lecture (`PROD_PB_TOKEN`), sinon répondre sur la pré-prod | valider ; ajouter le jeton dans l'environnement quand la prod est à jour |
