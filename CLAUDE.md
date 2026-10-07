@@ -244,6 +244,8 @@ Une arrivée de flotte se force par `forceArrival(id)`, jamais en mettant seulem
 aussitôt et la tâche « à la minute » pourrait le traiter avant l'assertion (6.14.34 : échecs aléatoires v3.5 et v3.9). Une liste lue
 par `[0]` a un `sort` (6.14.21).
 Toujours lire le résultat de l'intégration **avant** de committer.
+Jamais de `npm run build:hooks` (ni d'écriture dans `pocketbase/pb_hooks/`) pendant qu'une intégration tourne : PocketBase recharge ses
+hooks et redémarre, et tous les tests suivants échouent en « ClientResponseError 0 » (6.14.47 : 57 échecs en cascade, 82/82 à la reprise).
 
 ## Livrer
 

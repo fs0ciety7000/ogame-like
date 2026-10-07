@@ -52,7 +52,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 |:--|:--|:--|:--|
 | Cale sèche | 5.28.0 | copie de `atelier_reparation.webp` (même fichier) | `docs/prompts-5.28.md` |
 | Lune (Codex, Légendes) | 6.14.1 | `public/assets/moon/lune.webp` générée par script | `docs/prompts-6.14.md` |
-| 26 technologies (Codex) | 6.14.12 | image commune `TECH_CODEX_IMAGE` (Cargo, Intercepteur, Étoile noire, Bastion faits en 6.14.26 ; tech1 à tech7 en 6.14.40) | `scripts/illustrations.json` |
+| 26 technologies (Codex) | 6.14.12 | image commune `TECH_CODEX_IMAGE` (Cargo, Intercepteur, Étoile noire, Bastion faits en 6.14.26 ; tech1 à tech7 en 6.14.40 ; tech8 à tech10, tech12, tech13 en 6.14.47) | `scripts/illustrations.json` |
 | Annonce 5.7 | 5.7 | copie de `choeur-banner.webp` | `docs/prompts-annonce-5.7.md` |
 | Reliques `sceau_sentinelle`, `plaque_bastion` et deux autres paires | — | deux reliques par image (`relics.ts`) | à écrire si l'image doit être propre à chaque relique |
 

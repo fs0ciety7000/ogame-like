@@ -72,7 +72,7 @@ export const TECH_CODEX_IMAGE = "/assets/buildings/archives_fracturees.webp";
 
 /** 6.14.26 : technos qui ont leur illustration définitive (`public/assets/technologies/<id>.webp`, docs/illustrations.md).
  *  Un id ajouté ici suffit, même sur un contenu personnalisé ; le champ `image` de l'admin reste prioritaire. */
-export const TECH_ART: readonly string[] = ["tech1", "tech2", "tech3", "tech4", "tech5", "tech6", "tech7", "tech11", "tech18", "tech19", "tech28"];
+export const TECH_ART: readonly string[] = ["tech1", "tech2", "tech3", "tech4", "tech5", "tech6", "tech7", "tech8", "tech9", "tech10", "tech11", "tech12", "tech13", "tech18", "tech19", "tech28"];
 
 /** Illustration du Codex d'une techno : image de l'admin, sinon illustration définitive, sinon image provisoire commune. */
 export function techImage(t: Pick<TechDef, "id" | "image">): string {
