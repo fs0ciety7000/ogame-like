@@ -32,6 +32,8 @@ describe("v4.7 cancel", () => {
 
   it("cancels a building upgrade at half time with 40 % back", () => {
     let p = rich();
+    // 6.14.159 (RD-1) : niveau 9 (45 min) : le niveau 2 dure 20 s avec la courbe du départ, dans la minute d'annulation gratuite.
+    p.buildings.extracteur_ferraille = { level: 8, unlocked: true };
     let q = defaultQueues();
     const before = p.resources.scrap;
     ({ p, q } = run(p, q, { type: "upgradeBuilding", buildingId: "extracteur_ferraille" }, NOW));

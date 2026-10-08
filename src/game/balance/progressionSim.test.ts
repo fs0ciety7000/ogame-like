@@ -116,8 +116,11 @@ describe("Rythme long terme : options du simulateur", () => {
     expect(r.ascensionDays.length).toBeLessThanOrEqual(ASCENSION_RULES.maxAscensions);
     for (let i = 1; i < r.ascensionDays.length; i++) expect(r.ascensionDays[i] - r.ascensionDays[i - 1]).toBeGreaterThanOrEqual(ASCENSION_RULES.cooldownDays - 0.01);
     // 6.14.106 : l'Ascension se fait à la session qui suit le jour où tout est au maximum (même jour ou le lendemain).
+    // 6.14.159 (RD-1) : moins de 1,5 jour : avec la courbe du départ, les bâtiments de fin de partie (gardés à l'Ascension)
+    // montent plus tôt, et un de leurs derniers niveaux (jusqu'à 27 h) peut être en cours ; l'Ascension attend la fin des
+    // chantiers (`canAscend`), comme dans le jeu (mesure : 1,3 jour pour l'actif).
     expect(r.ascensionDay!).toBeLessThanOrEqual(r.ascensionDays[0]);
-    expect(r.ascensionDays[0] - r.ascensionDay!).toBeLessThan(1);
+    expect(r.ascensionDays[0] - r.ascensionDay!).toBeLessThan(1.5);
     expect(r.snapshots.at(-1)!.ascensions).toBe(r.ascensionDays.length);
     // Règles par défaut : tout est fait avant J120, puis plus rien à lancer (constat de la proposition).
     expect(r.windows).toHaveLength(4);

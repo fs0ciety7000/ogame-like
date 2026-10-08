@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { ascend, ascensionCount, ASCENSION_RULES, canAscend } from "@/game/ascension";
-import { BUILDINGS, DOCK_BUILDING_ID, getBuildingUpgradeCost, getBuildingUpgradeTime, requiredForAscension } from "@/game/buildings";
+import { BUILD_TIME_RULES, BUILDINGS, DOCK_BUILDING_ID, getBuildingUpgradeCost, getBuildingUpgradeTime, requiredForAscension } from "@/game/buildings";
 import { applyGameContent, defaultGameContent, resolveGameContent, type GameContent } from "@/game/content";
 import { ECONOMY_RULES } from "@/game/economy";
 import { MOON_RULES } from "@/game/moon";
@@ -63,9 +63,11 @@ describe("6.14.88 (RL-3) bascule du rythme", () => {
     for (const b of required) {
       expect(getBuildingUpgradeTime(b, 11), b.id).toBe(129_600);
       expect(getBuildingUpgradeTime(b, 20), b.id).toBe(129_600 + 9 * 97_200);
-      // Premier palier inchangé : la première semaine reste celle d'avant.
+      // Premier palier : coûts inchangés ; durées de la courbe du départ (6.14.159, RD-1) : niveaux 2 à 7 inchangés par la bascule,
+      // jonction lissée au niveau 10 (36 h ÷ 4 = 9 h au lieu de 1 h 30 puis 36 h).
       const d = defaults.find((x) => x.id === b.id)!;
-      expect(getBuildingUpgradeTime(b, 10), b.id).toBe((10 - 1) * d.upgrade.secondsPerLevel);
+      for (let l = 2; l <= 7; l++) expect(getBuildingUpgradeTime(b, l), `${b.id} ${l}`).toBe(getBuildingUpgradeTime(d, l));
+      expect(getBuildingUpgradeTime(b, 10), b.id).toBe(Math.max((10 - 1) * d.upgrade.secondsPerLevel, 129_600 / BUILD_TIME_RULES.junctionMaxRatio));
       expect(getBuildingUpgradeCost(b, 10), b.id).toEqual(getBuildingUpgradeCost(d, 10));
     }
     // Coûts ×4 (AE-L2) sur tout bâtiment à second palier, Cale sèche comprise ; la Cale garde ses durées (§5.1).

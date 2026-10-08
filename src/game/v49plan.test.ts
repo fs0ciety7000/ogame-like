@@ -31,15 +31,16 @@ describe("v4.9 : file planifiée", () => {
     ({ player, queues } = run(player, queues, { type: "planBuilding", buildingId: "extracteur_ferraille" }));
     expect(buildPlan(queues)).toEqual([expect.objectContaining({ buildingId: "extracteur_ferraille", level: 3 })]);
     const scrapBefore = player.resources.scrap;
-    const later = flushState(player, queues, end + 60_000);
+    // 6.14.159 (RD-1) : niveau 3 en 40 s (courbe du départ) : relevé 10 s après la fin, chantier suivant encore en cours.
+    const later = flushState(player, queues, end + 10_000);
     expect(later.player.buildings.extracteur_ferraille.level).toBe(2);
     expect(later.queues.buildingUpgrades.extracteur_ferraille?.startedAtMs).toBe(end);
     expect(buildPlan(later.queues)).toHaveLength(0);
     expect(later.player.resources.scrap).toBeLessThan(scrapBefore + 1e6);
     // Bâtiment occupé : la file garde l'entrée ; un seul emplacement offert.
-    const again = run(later.player, later.queues, { type: "planBuilding", buildingId: "extracteur_ferraille" }, end + 61_000);
+    const again = run(later.player, later.queues, { type: "planBuilding", buildingId: "extracteur_ferraille" }, end + 11_000);
     expect(buildPlan(again.queues)).toEqual([expect.objectContaining({ level: 4 })]);
-    expect(() => run(again.player, again.queues, { type: "planBuilding", buildingId: "extracteur_ferraille" }, end + 62_000)).toThrow(/File pleine/);
+    expect(() => run(again.player, again.queues, { type: "planBuilding", buildingId: "extracteur_ferraille" }, end + 12_000)).toThrow(/File pleine/);
   });
 
   it("sans ressources : attente puis retrait après 24 h ; retrait gratuit", () => {

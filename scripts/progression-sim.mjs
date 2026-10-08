@@ -22,6 +22,10 @@
 //                                                        # --catchup : rattrapage simulé (médiane des 4 profils), écart de production
 //                                                        # et rares obtenues au comptoir affichés ; --apres-bascule : les deux côtés
 //                                                        # sur les règles d'après la bascule du rythme
+//   node scripts/progression-sim.mjs --base lineaire --depart        # 6.14.159 (RD-1) : avant = ancienne durée linéaire des
+//                                                        # bâtiments, après = courbe du départ ; --depart : temps jusqu'aux extracteurs
+//                                                        # niveau 5 et 10, niveaux à J1, J3, J7, et première heure d'un nouveau compte
+//                                                        # connecté sans interruption (ajouter --apres-bascule pour le jeu d'après le 1er novembre)
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -62,6 +66,12 @@ const PRESETS = {
   // Variante étudiée (PB-Q2) : tampon de 4 h.
   "tampon-4h": { rules: { buildingTiers: { storageBufferHours: 4 } } },
   // Valeurs visées de la bascule du rythme en 6.14.88 (RL-3), avant le réglage fin de 6.14.89 (RL-5) : à lancer avec --bascule.
+  // 6.14.159 (RD-1, proposals/rythme-du-depart.md) : ancienne durée linéaire du premier palier, et variantes de la jonction.
+  lineaire: { rules: { buildTime: { enabled: false } } },
+  "jonction-0": { rules: { buildTime: { junctionMaxRatio: 0 } } },
+  "jonction-4": { rules: { buildTime: { junctionMaxRatio: 4 } } },
+  "jonction-6": { rules: { buildTime: { junctionMaxRatio: 6 } } },
+  "depart-60": { rules: { buildTime: { startDivisor: 60 } } },
   "rythme-6.14.88": {
     rules: { rhythm: { tier2BaseSeconds: 108_000, tier2SecondsPerLevel: 86_400, researchLateFromLevel: 6, researchLateTimeFactor: 30 } },
   },
@@ -82,7 +92,8 @@ const withPrestige = args.includes("--prestige");
 const withAscend = args.includes("--ascend");
 const withSwitch = args.includes("--bascule");
 const withCatchup = args.includes("--catchup");
-const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule"].includes(a))[0];
+const withStart = args.includes("--depart");
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule", "--depart"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -140,7 +151,12 @@ function measure(settings, prestige = false) {
   const restore = settings.tier2Factor && settings.tier2Factor !== 1 ? E.scaleTier2Costs(settings.tier2Factor) : () => {};
   try {
     const projects = prestige ? E.prestigeProjectsFromRules() : null;
-    const simOpts = { days, ascend: withAscend, ...(projects ? { prestigeProjects: projects } : {}), milestones: [...new Set([14, 30, days])].filter((d) => d <= days) };
+    const simOpts = {
+      days,
+      ascend: withAscend,
+      ...(projects ? { prestigeProjects: projects } : {}),
+      milestones: [...new Set([...(withStart ? [1, 3, 7] : []), 14, 30, days])].filter((d) => d <= days),
+    };
     const profiles = withCatchup ? E.simulateAllProfilesWithCatchup(simOpts).results : E.simulateAllProfiles(simOpts);
     const pvp = {
       mixedThreshold: E.attackerWinThreshold("mixed"),
@@ -159,7 +175,9 @@ function measure(settings, prestige = false) {
       maxDefeatsPer24h: E.PVP_RULES.maxDefeatsPer24h,
       catchup: [E.CATCHUP_RULES.maxBonus, E.CATCHUP_RULES.fullBelow],
     };
-    return { rules, profiles, pvp };
+    // 6.14.159 (RD-1) : première heure, simulée à part (un nouveau compte connecté sans interruption ; les relevés d'I29 n'en dépendent pas).
+    const opening = withStart ? E.simulateAllProfiles({ days: 1, milestones: [], opening: { minutes: 60, stepSeconds: 10, marks: [1, 5, 15, 30, 60] } })[0].opening : [];
+    return { rules, profiles, pvp, opening };
   } finally {
     restore();
     E.applyGameContent({});
@@ -259,6 +277,23 @@ if (withPrestige || withAscend) {
     return o > 0 ? `×${(prodAt(act, d) / o).toFixed(1)}` : "—";
   };
   if (days >= 30) console.log(`- écart de production actif / occasionnel : J14 ${gap(before.profiles, 14)} → ${gap(result.profiles, 14)} ; J30 ${gap(before.profiles, 30)} → ${gap(result.profiles, 30)}`);
+}
+// 6.14.159 (RD-1) : rythme du départ.
+if (withStart) {
+  const h = (x) => (x === null ? "—" : x < 1 ? `${Math.round(x * 60)} min` : `${x.toFixed(1)} h`);
+  const lv = (r, d) => r.snapshots.find((x) => x.day === d)?.extractors.join("/") ?? "—";
+  console.log(`\nRythme du départ (première heure : nouveau compte connecté sans interruption dès l'inscription) :`);
+  console.log(row(["Profil", "Extracteurs niv. 5", "Extracteurs niv. 10", "J1", "J3", "J7", "Sans action J1–7"]));
+  console.log(row(["---", "---", "---", "---", "---", "---", "---"]));
+  for (let i = 0; i < before.profiles.length; i++) {
+    const a = before.profiles[i];
+    const b = result.profiles[i];
+    console.log(row([a.profile, `${h(a.reachHours.l5)} → ${h(b.reachHours.l5)}`, `${h(a.reachHours.l10)} → ${h(b.reachHours.l10)}`, `${lv(a, 1)} → ${lv(b, 1)}`, `${lv(a, 3)} → ${lv(b, 3)}`, `${lv(a, 7)} → ${lv(b, 7)}`, `${a.deadSessionsPct.early} % → ${b.deadSessionsPct.early} %`]));
+  }
+  const oa = before.opening;
+  const ob = result.opening;
+  console.log(`\nPremière heure (extracteurs ferraille/énergie/nano/données, entrepôt, lancements : chantiers, déblocages et recherches) :`);
+  for (let i = 0; i < ob.length; i++) console.log(`- ${ob[i].minute} min : ${oa[i]?.extractors.join("/") ?? "—"} (entrepôt ${oa[i]?.storageLevel ?? "—"}, ${oa[i]?.launched ?? 0} lancements) → ${ob[i].extractors.join("/")} (entrepôt ${ob[i].storageLevel}, ${ob[i].launched} lancements)`);
 }
 const thr = (x) => (x === null ? "> ×3" : `×${x.toFixed(2)}`);
 const duel = (d) => `${d.outcome}, attaquant −${Math.round(d.attackerLoss * 100)} %, défenseur −${Math.round(d.defenderLoss * 100)} %`;

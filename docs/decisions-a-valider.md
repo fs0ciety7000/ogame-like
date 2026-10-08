@@ -18,6 +18,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q400 | **Départ rapide des bâtiments** : niveau 2 en 20 s, niveau 5 en 3 min, courbe ×2 par niveau jusqu'au niveau 10 (inchangé) (`docs/proposals/rythme-du-depart.md`) | les premières minutes avancent vite ; 1re Ascension inchangée (actif J10 → J11) | valider |
+| Q401 | **Après la bascule** : plus de saut 1 h 30 → 36 h au niveau 11 ; les niveaux 9 et 10 s'allongent (2 h 15, 9 h) (`docs/proposals/rythme-du-depart.md`) | montée régulière au lieu d'un mur | valider |
 
 ## 3. Récit
 
@@ -34,3 +36,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q397 | Suite R4c (L à XL) : objets de règles et catalogues par défaut en modules de données seules (casse le cycle de 53 modules), contenu appliqué par section, puis coque à part ; estimé −1 à −1,5 s sur mobile (`docs/changes/6.14.157-decoupage-entree.md`) | valider |
 | Q398 | Garde des exports de `hooksEntry.ts` : un export compte comme appelé dès qu'un hook contient `.nom` (le bundle passe aussi en paramètre) ; prudente : ne retire jamais un export appelé, peut en laisser passer un inutile (`docs/changes/6.14.158-hooks-allege.md`) | valider |
 | Q399 | Règle proposée pour CLAUDE.md : « un export de `hooksEntry.ts` est appelé par un hook écrit à la main ; `dead-exports.mjs --hooks` les liste, `deadExports.test.ts` échoue sinon » (`docs/changes/6.14.158-hooks-allege.md`) | valider |
+| Q402 | Coûts des niveaux 5 à 8 non touchés (au-delà du niveau 4 ou 5, le coût freine) : mesure d'abord, lot RD-2 avec R10 après le 1er novembre (`docs/proposals/rythme-du-depart.md`) | valider |
+| Q403 | Courbe du départ appliquée à tout contenu (règle globale), sans migration ; retour à l'ancienne formule par la case « Courbe du départ activée » (`docs/proposals/rythme-du-depart.md`) | valider |

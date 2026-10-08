@@ -33,6 +33,7 @@ import { AllRulesEditor } from "@/pages/admin/AllRulesEditor";
 import { PassGenFields } from "@/pages/admin/PassGenFields";
 import { MoonRulesFields } from "@/pages/admin/MoonRulesFields";
 import { BuildingTierRulesFields } from "@/pages/admin/BuildingTierRulesFields";
+import { BuildTimeRulesFields } from "@/pages/admin/BuildTimeRulesFields";
 import { NavUnlockRulesFields } from "@/pages/admin/NavUnlockRulesFields";
 import { ChronicleGenFields } from "@/pages/admin/ChronicleGenFields";
 import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
@@ -310,6 +311,8 @@ export function RulesPanel() {
         </Section>
         {/* 6.14.142 (PB-L1) : paliers des bâtiments de système (entrepôt, Atelier, Fonderie). */}
         <BuildingTierRulesFields rules={rules} setRules={setRules} />
+        {/* 6.14.159 (RD-1) : courbe du départ (durée des premiers niveaux des bâtiments). */}
+        <BuildTimeRulesFields rules={rules} setRules={setRules} />
         <Section title="Rôles par classe et cible prioritaire (5.21)">
           <NumberField
             label="Avantage de classe (0,2 = ±20 %)"

@@ -3,6 +3,7 @@
 ## Échelles
 | Système | Rythme | Chiffres |
 |:--|:--|:--|
+| Bâtiments (départ, 6.14.159) | continu | niveau 2 en **20 s**, niveau 5 en **3 min**, niveau 10 en 1 h 30 (extracteurs) ; ×2 environ par niveau, jonction ×4 avec le second palier (36 h après la bascule) ; nouveau compte : 4 extracteurs au niveau 4 en 5 min ; I49, `docs/proposals/rythme-du-depart.md` |
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyBuildingDiscount,
+  BUILD_TIME_RULES,
   buildingImage,
   getStorageCapacity,
   visualTier,
@@ -94,9 +95,11 @@ describe("getBuildingUpgradeCost / getBuildingUpgradeTime", () => {
         nano: geo(1000, 10_000_000, 8, lvl - 2),
         data: geo(1000, 9_500_000, 8, lvl - 2),
       });
-      expect(getBuildingUpgradeTime(extractor, lvl)).toBe((lvl - 1) * 600);
-      expect(getBuildingUpgradeTime(hangar, lvl)).toBe((lvl - 1) * 900);
-      expect(getBuildingUpgradeTime(atelier, lvl)).toBe((lvl - 1) * 1200);
+      // 6.14.159 (RD-1) : ancienne formule linéaire, courbe du départ coupée (`buildTime.enabled`).
+      const linear = { ...BUILD_TIME_RULES, enabled: false };
+      expect(getBuildingUpgradeTime(extractor, lvl, linear)).toBe((lvl - 1) * 600);
+      expect(getBuildingUpgradeTime(hangar, lvl, linear)).toBe((lvl - 1) * 900);
+      expect(getBuildingUpgradeTime(atelier, lvl, linear)).toBe((lvl - 1) * 1200);
     }
   });
 });

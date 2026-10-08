@@ -30,6 +30,7 @@ avant les nouveautés (lots R1 à R9). Les lots qui attendent une mesure (R10 à
 | R12 | AE-L7 | Boss (`hpFactor`), Ambre des primes, seuils des succès, d'après 8 semaines de santé de l'équilibre en production (AE-10, AE-11, AE-12) | S | après la mise en production (Z0) |
 | R13 | AC-I | Battement de présence à 60 s et `sync` sans écriture inutile (AC-17), après la mesure Z6 | M | après Z6 |
 | R15 | AJ27-11b | Exports de `hooksEntry.ts` que `pocketbase/pb_hooks` n'appelle jamais : recensés et retirés pour alléger le bundle des hooks (suite de 6.14.153, Q381) | S | livré (6.14.158) |
+| R16 | RD-1 | Rythme du départ (demande de l'utilisateur du 2026-10-08) : premiers niveaux des bâtiments en secondes (niveau 2 en 20 s au lieu de 10 min), courbe géométrique continue jusqu'au second palier, jonction ×4 après la bascule au lieu de ×24 ; règles `buildTime` et aperçu dans l'admin ; simulateur de la première heure ; I49 ([proposition](rythme-du-depart.md), Q400 à Q403) | M | livré (6.14.159) |
 | R14 | É30-3 | Illustrations au fil des envois sur `/img` (89 emplacements attendus le 2026-10-08 : 33 portraits, 24 thèmes d'année, 21 icônes de palier, 7 seconds boss, 3 talents, 1 module) | selon envois | en continu |
 
 ## 1. Pourquoi ces lots

@@ -18,6 +18,12 @@ Colonne vertébrale de la progression : production, capacités (entrepôt, hanga
 | Générateur de bouclier | 10 | tech23 | +0,5 %/niv. de bouclier (max 5 %) |
 | Labo de synthèse | 10 | coût | capsules (5 %/niv.) |
 
+Durées (6.14.159, `docs/proposals/rythme-du-depart.md`, invariant I49) : premier palier géométrique, niveau 2 = durée par niveau ÷ 30
+(extracteurs 20 s, Labo de synthèse 3 min, Fonderie 6 min), dernier niveau du premier palier inchangé ((L − 1) × durée par niveau :
+extracteur niv. 10 1 h 30), ×2 environ par niveau entre les deux ; jonction : un niveau dure au moins le suivant ÷ 4 avant le second
+palier (après la bascule : extracteur niv. 9 et 10 en 2 h 15 et 9 h avant les 36 h du niv. 11). Admin → Règles → « Bâtiments : durée
+des premiers niveaux » (`buildTime` : `enabled`, `startDivisor`, `junctionMaxRatio`), aperçu avant / après.
+
 Coûts : géométriques de `baseCost` à `maxCost`, palier 2 à partir du niv. 11 (3 h puis +1 h/niv. ; dès la bascule du rythme, 1er novembre 2026, 6.14.88 : coûts ×4 et, pour les 8 bâtiments exigés par l'Ascension, 36 h puis +27 h/niv., 6.14.89 ; la Cale sèche garde ses durées). File planifiée : 1 à 3 emplacements
 (Fonderie niv. 5 et 10, `buildPlan.slotLevels`). Annulation : 100 % pendant 60 s, puis 80 % du temps restant.
 
@@ -51,8 +57,8 @@ Règle n° 4 du GDD réécrite : deux familles.
   image du bâtiment en attendant).
 
 ## Code et admin
-`buildings.ts`, `buildingTiers.ts` (paliers, choix, source « bâtiment »), `buildPlan.ts`, `cancel.ts`, `BuildingTiers.tsx` (ligne
-« Paliers »). Admin : Contenu → Bâtiments (effets, coûts, prérequis `requires`) ; Règles → « Bâtiments : paliers ».
+`buildings.ts` (courbe du départ `BUILD_TIME_RULES`), `buildingTiers.ts` (paliers, choix, source « bâtiment »), `buildPlan.ts`, `cancel.ts`, `BuildingTiers.tsx` (ligne
+« Paliers »). Admin : Contenu → Bâtiments (effets, coûts, prérequis `requires`) ; Règles → « Bâtiments : paliers » et « Bâtiments : durée des premiers niveaux » (`BuildTimeRulesFields.tsx`).
 
 ## État (audit 2026-10-06)
 - Chantiers : un par bâtiment, en parallèle. Depuis la 5.32, au plus 6 en même temps (+1 à la Fonderie quantique 5 et 10, réglable : `buildingTiers.foundrySlotLevels` depuis 6.14.142, ancienne constante `BUILD_SLOT_BONUS_LEVELS`) ; un chantier lancé avant la limite va à son terme, la file planifiée attend un chantier libre sans expirer. Compteur « Chantiers n / m » sur la page Bâtiments.

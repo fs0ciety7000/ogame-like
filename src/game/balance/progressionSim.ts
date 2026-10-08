@@ -123,6 +123,19 @@ export interface ProgressionOptions {
   catchupMedianByDay?: number[];
   /** 6.14.143 (PB-L2) : paliers de l'entrepôt (tampon du palier 10, `buildingTiers.storageBufferHours`) ; faux : sans tampon. */
   storageTiers?: boolean;
+  /** 6.14.159 (RD-1) : premières minutes d'un nouveau compte, joueur connecté sans interruption dès J0 0 h (il agit à chaque
+   *  pas de `stepSeconds`, 10 s par défaut, qui doit diviser le pas de la simulation). Ces pas ne comptent pas dans les relevés
+   *  de sessions. Niveaux relevés aux minutes `marks`. Absent : pas d'ouverture (repères d'I29 inchangés). */
+  opening?: { minutes: number; stepSeconds?: number; marks?: number[] };
+}
+
+/** 6.14.159 (RD-1) : relevé des premières minutes (option `opening`). */
+export interface ProgressionOpeningMark {
+  minute: number;
+  extractors: number[];
+  storageLevel: number;
+  /** Chantiers lancés depuis l'inscription. */
+  launched: number;
 }
 
 export interface AscensionGateContext {
@@ -232,6 +245,10 @@ export interface ProgressionResult {
   xp: number;
   /** Jour où la place des hangars d'attaque est pleine pour la première fois (puits de flotte). */
   fleetFullDay: number | null;
+  /** 6.14.159 (RD-1) : heures depuis l'inscription jusqu'aux 4 extracteurs au niveau 5, puis 10 (null : pas atteint). */
+  reachHours: { l5: number | null; l10: number | null };
+  /** 6.14.159 (RD-1) : relevés de l'option `opening` (vide sans elle). */
+  opening: ProgressionOpeningMark[];
 }
 
 type Cost = Record<string, number | undefined>;
@@ -251,7 +268,14 @@ const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 :
 /** Simule un profil sur `days` jours avec les règles en vigueur. Déterministe. */
 export function simulateProgression(profile: ProgressionProfile, options: ProgressionOptions = {}): ProgressionResult {
   const days = options.days ?? 90;
-  const step = options.stepSeconds ?? 600;
+  const baseStep = options.stepSeconds ?? 600;
+  // 6.14.159 (RD-1) : ouverture à pas fin, jusqu'à un multiple du pas de la simulation (les heures de session restent alignées).
+  const openStep = options.opening ? Math.max(1, Math.min(baseStep, options.opening.stepSeconds ?? 10)) : baseStep;
+  const openingEnd = options.opening && baseStep % openStep === 0 ? Math.ceil((Math.max(0, options.opening.minutes) * 60) / baseStep) * baseStep : 0;
+  const openingMarks = new Set((options.opening?.marks ?? []).map((m) => Math.round(m * 60)));
+  const opening: ProgressionOpeningMark[] = [];
+  let openingLaunched = 0;
+  const reachHours: { l5: number | null; l10: number | null } = { l5: null, l10: null };
   const useExchange = options.useExchange !== false;
   const milestones = new Set(options.milestones ?? [1, 3, 7, 14, 30, 60, 90]);
   const windowDays = Math.max(1, options.windowDays ?? 30);
@@ -306,6 +330,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   let projectEnd = 0;
   type Win = { sessions: number; blocked: number; noProgress: number; noSpend: number; finished: number; overflow: number; produced: number; days: Map<number, boolean>; spendDays: Map<number, boolean> };
   const wins: Win[] = [];
+  const openingWin: Win = { sessions: 0, blocked: 0, noProgress: 0, noSpend: 0, finished: 0, overflow: 0, produced: 0, days: new Map(), spendDays: new Map() };
   const win = (day: number): Win => (wins[Math.floor(day / windowDays)] ??= { sessions: 0, blocked: 0, noProgress: 0, noSpend: 0, finished: 0, overflow: 0, produced: 0, days: new Map(), spendDays: new Map() });
   const prodFactor = () => 1 + ascensions * ASCENSION_RULES.productionPerAscension;
   const ascBuildFactor = () => Math.max(0.1, 1 - ascensions * ASCENSION_RULES.buildTimePerAscension);
@@ -377,7 +402,9 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   };
   let exchangeT = 0;
 
-  for (let t = 0; t < days * DAY; t += step) {
+  for (let t = 0, step = baseStep; t < days * DAY; t += step) {
+    step = t < openingEnd ? openStep : baseStep;
+    const inOpening = t < openingEnd;
     exchangeT = t;
     // 6.14.106 : développement du jour et rattrapage figé pour la journée (option catchupMedianByDay).
     if (t % DAY === 0) {
@@ -443,7 +470,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     const sec = t % DAY;
     if (sec === 0) expToday = 0;
     const skipped = profile.skipEvery > 0 && day % profile.skipEvery === profile.skipEvery - 1;
-    if (!skipped && profile.sessionHours.some((h) => h * HOUR === sec)) {
+    if (inOpening || (!skipped && profile.sessionHours.some((h) => h * HOUR === sec))) {
       let launched = 0;
       let sunk = 0;
       // Série de connexion, coffre du 7e jour et objectifs du jour (première session du jour).
@@ -604,11 +631,13 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
           if (fleetFullDay === null && capPlaces > 0 && capPlaces - fleetPlaces < space) fleetFullDay = round1(t / DAY);
         }
       }
-      const window = day < 7 ? dead.early : day < 30 ? dead.mid : dead.late;
+      if (inOpening) openingLaunched += launched;
+      // 6.14.159 : les pas de l'ouverture ne sont pas des sessions (relevés inchangés).
+      const window = inOpening ? [0, 0] : day < 7 ? dead.early : day < 30 ? dead.mid : dead.late;
       window[1]++;
       const anyLeft = (Object.keys(bQueue).length < slots && buildLeft) || (Object.keys(rQueue).length < RESEARCH_RULES.maxConcurrent && researchLeft);
       if (launched === 0 && anyLeft) window[0]++;
-      const sw = win(day);
+      const sw = inOpening ? openingWin : win(day);
       sw.sessions++;
       if (launched === 0 && anyLeft) sw.blocked++;
       if (launched === 0) sw.noProgress++;
@@ -618,6 +647,11 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     }
 
     const end = t + step;
+    // 6.14.159 (RD-1) : extracteurs au niveau 5 puis 10 (heures depuis l'inscription), relevés de l'ouverture.
+    const minExtractor = Math.min(...EXTRACTORS.map((id) => effectiveBuildingLevel(buildings, id)));
+    if (reachHours.l5 === null && minExtractor >= 5) reachHours.l5 = Math.round((end / HOUR) * 100) / 100;
+    if (reachHours.l10 === null && minExtractor >= 10) reachHours.l10 = Math.round((end / HOUR) * 100) / 100;
+    if (openingMarks.has(end)) opening.push({ minute: end / 60, extractors: EXTRACTORS.map((id) => effectiveBuildingLevel(buildings, id)), storageLevel: effectiveBuildingLevel(buildings, "entrepot"), launched: openingLaunched });
     if (end % DAY === 0) {
       // « Fini, sans suite » : bâtiments et arbre au maximum, files vides, aucune Ascension possible ce jour-là.
       const canAscendNow = !!options.ascend && ascensions < ASCENSION_RULES.maxAscensions && (lastAscensionT === null || end - lastAscensionT >= ASCENSION_RULES.cooldownDays * DAY);
@@ -685,6 +719,8 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     })),
     xp: Math.round(xp),
     fleetFullDay,
+    reachHours,
+    opening,
   };
 }
 

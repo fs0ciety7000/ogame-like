@@ -10,7 +10,7 @@ import { BALANCE_EXCLUSION_RULES, BALANCE_EXCLUSION_RULES_META } from "@/game/st
 import { BOUNTY_RULES, BOUNTY_RULES_META, BOUNTY_SHOP_RULES, BOUNTY_SHOP_RULES_META, ELITE_RULES, ELITE_RULES_META } from "@/game/bounties";
 import { BUILD_PLAN_RULES, BUILD_PLAN_RULES_META } from "@/game/buildPlan";
 import { BUILDING_TIER_RULES, BUILDING_TIER_RULES_META } from "@/game/buildingTiers";
-import { BUILDING_UNLOCK_COST, buildingUnlockCostMeta, DOCK_TIERS, DOCK_TIERS_META } from "@/game/buildings";
+import { BUILD_TIME_RULES, BUILD_TIME_RULES_META, BUILDING_UNLOCK_COST, buildingUnlockCostMeta, DOCK_TIERS, DOCK_TIERS_META } from "@/game/buildings";
 import { CANCEL_RULES, CANCEL_RULES_META } from "@/game/cancel";
 import { CHALLENGE_RULES, CHALLENGE_RULES_META } from "@/game/challenges";
 import { COALITION_RULES, COALITION_RULES_META } from "@/game/coalition";
@@ -108,6 +108,7 @@ export const REGISTERED_RULES = {
   bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES, meta: () => BOUNTY_RULES_META },
   bountyShop: { label: "Comptoir de la Ruche", target: () => BOUNTY_SHOP_RULES, meta: () => BOUNTY_SHOP_RULES_META },
   buildPlan: { label: "File planifiée des bâtiments", target: () => BUILD_PLAN_RULES, meta: () => BUILD_PLAN_RULES_META },
+  buildTime: { label: "Bâtiments : durée des premiers niveaux (courbe du départ)", target: () => BUILD_TIME_RULES, meta: () => BUILD_TIME_RULES_META },
   // 6.14.142 (PB-L1, proposals/paliers-batiments.md) : paliers des bâtiments de système (niveaux et chiffres de chaque effet).
   buildingTiers: { label: "Bâtiments : paliers (entrepôt, Atelier, Fonderie)", target: () => BUILDING_TIER_RULES, meta: () => BUILDING_TIER_RULES_META },
   buildingUnlockCost: { label: "Bâtiments : coût de déblocage", target: () => BUILDING_UNLOCK_COST, meta: buildingUnlockCostMeta },

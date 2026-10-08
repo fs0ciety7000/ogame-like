@@ -173,7 +173,7 @@ export function BuildingForm({ value: b, onChange, isNew, saved }: { value: Buil
           label="Durée par niveau (s)"
           value={b.upgrade.secondsPerLevel}
           min={0}
-          hint={`Niveau N : (N−1) × cette durée — ex. niv. 2 = ${formatSeconds(b.upgrade.secondsPerLevel)}`}
+          hint={`Niveau 2 : ${formatSeconds(getBuildingUpgradeTime(b, 2))}, puis ×2 environ par niveau jusqu'au dernier niveau du premier palier, qui dure (niveau − 1) × cette durée (Règles → « Bâtiments : durée des premiers niveaux »).`}
           onChange={(v) => set({ upgrade: { ...b.upgrade, secondsPerLevel: v ?? 0 } })}
         />
         <ResourceMapField label="Coût au premier niveau payant" value={b.upgrade.baseCost} onChange={(baseCost) => set({ upgrade: { ...b.upgrade, baseCost } })} />

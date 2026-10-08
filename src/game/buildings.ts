@@ -391,10 +391,56 @@ export function applyBuildingDiscount<T extends Record<string, number | undefine
   return out;
 }
 
-export function getBuildingUpgradeTime(building: BuildingDef, nextLevel: number): number {
+/* 6.14.159 (RD-1, docs/proposals/rythme-du-depart.md) : courbe du départ.
+   Premier palier géométrique au lieu de linéaire : le niveau 2 dure `secondsPerLevel ÷ startDivisor`
+   (20 s pour un extracteur), le dernier niveau du premier palier garde sa durée d'avant
+   ((dernier − 1) × secondsPerLevel : 1 h 30 au niveau 10 d'un extracteur), et chaque niveau entre les deux
+   multiplie la durée par le même facteur (×2 environ). Aucun niveau du premier palier ne dure plus qu'avant.
+   Jonction avec le second palier : un niveau dure au moins le premier niveau du second palier
+   ÷ junctionMaxRatio^(écart de niveaux). Avant la bascule du rythme (3 h au niveau 11), rien ne bouge ;
+   après (36 h), les niveaux 8 à 10 montent en pente (34 min, 2 h 15, 9 h) au lieu d'un saut ×24.
+   La durée est écrite au lancement : un chantier en cours garde sa fin. */
+export const BUILD_TIME_RULES = {
+  /** Décoché : ancienne formule linéaire, (niveau − 1) × durée par niveau. */
+  enabled: true,
+  /** Niveau 2 = durée par niveau du bâtiment ÷ ce nombre (600 s ÷ 30 = 20 s). */
+  startDivisor: 30,
+  /** Jonction : un niveau dure au moins le niveau suivant ÷ ce nombre, en remontant du second palier (0 = sans lissage). */
+  junctionMaxRatio: 4,
+};
+
+/** 6.14.159 : libellé, unité, bornes et aide de chaque réglage (admin ; bornes vérifiées par validateRules). */
+export const BUILD_TIME_RULES_META = {
+  enabled: { label: "Courbe du départ activée", hint: "Décoché : (niveau − 1) × durée par niveau, comme avant la 6.14.159." },
+  startDivisor: { label: "Niveau 2 : durée par niveau divisée par", unit: "×", min: 1, max: 1000, hint: "30 : 600 s → 20 s pour un extracteur, 6 min pour la Fonderie quantique." },
+  junctionMaxRatio: { label: "Jonction avec le second palier : écart maximal entre deux niveaux", unit: "×", min: 0, max: 100, hint: "4 : après la bascule du rythme, niveau 10 en 9 h avant les 36 h du niveau 11. 0 = sans lissage." },
+};
+
+/** Durée d'un niveau du premier palier (courbe du départ, ou ancienne formule linéaire). */
+function firstTierSeconds(building: BuildingDef, nextLevel: number, r: BuildTimeRules): number {
+  const spl = building.upgrade.secondsPerLevel;
+  const linear = (nextLevel - 1) * spl;
+  if (r.enabled === false || !(r.startDivisor > 1) || !(spl > 0) || nextLevel < 2) return linear;
+  const t2 = building.upgrade.tier2;
+  const last = t2 ? Math.min(building.maxLevel, t2.fromLevel - 1) : building.maxLevel;
+  if (last <= 2) return linear;
+  const start = spl / r.startDivisor;
+  const end = (last - 1) * spl;
+  let s = start * Math.pow(end / start, (Math.min(nextLevel, last) - 2) / (last - 2));
+  if (t2 && r.junctionMaxRatio > 1 && t2.fromLevel <= building.maxLevel && t2.baseSeconds > 0) {
+    s = Math.max(s, t2.baseSeconds / Math.pow(r.junctionMaxRatio, t2.fromLevel - nextLevel));
+  }
+  return Math.max(1, Math.round(s));
+}
+
+type BuildTimeRules = typeof BUILD_TIME_RULES;
+
+/** Durée d'un niveau (s, avant réductions). `rules` : réglages de la courbe du départ (en vigueur par défaut ; l'admin passe
+ *  les réglages en cours d'édition pour son aperçu avant / après). */
+export function getBuildingUpgradeTime(building: BuildingDef, nextLevel: number, rules: BuildTimeRules = BUILD_TIME_RULES): number {
   const t2 = tierFor(building, nextLevel);
   if (t2) return t2.baseSeconds + (nextLevel - t2.fromLevel) * t2.secondsPerLevel;
-  return (nextLevel - 1) * building.upgrade.secondsPerLevel;
+  return firstTierSeconds(building, nextLevel, rules);
 }
 
 /** Palier visuel atteint (0 = aucun) : 5, 10, 15 ou 20. */
