@@ -7,7 +7,7 @@ import { linkReferrer, referralGoalLabel, referralWindowText } from "@/game/refe
 import { bountyBoardText, bountyRank, findShopItem } from "@/game/bounties";
 import { dailyOrders } from "@/game/dailyOrders";
 import { allianceBossCallText, allianceBossDurationText } from "@/game/allianceBoss";
-import { MUTATORS, mutatorEffects, MUTATOR_RULES, validateMutatorRules } from "@/game/mutators";
+import { mutatorList, mutatorEffects, MUTATOR_RULES, validateMutatorRules } from "@/game/mutators";
 import { GUIDE_STEPS } from "@/game/advancedGuide";
 import { expeditionRelicChanceText } from "@/game/relics";
 import { CAPSULES } from "@/game/synthesis";
@@ -31,7 +31,7 @@ const NOW = Date.UTC(2026, 9, 7, 12);
 const player = () => ({ ...defaultPlayerState("u1", "Matinal"), uid: "u1", createdAt: null }) as unknown as PlayerState;
 const order = (id: string, p = player()) => dailyOrders(p, NOW).find((o) => o.id === id)!;
 const step = (id: string) => GUIDE_STEPS.find((s) => s.id === id)!.learn;
-const mutator = (id: string) => MUTATORS.find((m) => m.id === id)!;
+const mutator = (id: string) => mutatorList().find((m) => m.id === id)!;
 
 describe("textes de règle vivants (6.14.105, AA4)", () => {
   it("à règles par défaut, les textes sont ceux d'avant le lot", () => {
@@ -53,7 +53,7 @@ describe("textes de règle vivants (6.14.105, AA4)", () => {
     // Comptoir.
     expect(findShopItem("blueprint")?.description).toBe("Débloque le Traqueur Kesh au chantier : rapide, +50 % d'attaque contre tous les PNJ (seigneurs, menaces, primes, boss, Léviathan).");
     // Mutateurs : mêmes phrases et mêmes effets qu'avant.
-    expect(MUTATORS.map((m) => m.description)).toEqual([
+    expect(mutatorList().map((m) => m.description)).toEqual([
       "Les forges tournent à plein : +10 % de production de toutes les ressources.",
       "Les équipes se relaient jour et nuit : −15 % de temps de construction.",
       "Les laboratoires s'emballent : −15 % de temps de recherche.",
@@ -65,7 +65,7 @@ describe("textes de règle vivants (6.14.105, AA4)", () => {
       "Des soutes repensées : +25 % de cargaison pour les flottes.",
       "Les géants sont vulnérables : +15 % de dégâts contre les boss.",
     ]);
-    expect(MUTATORS.map((m) => m.grants.map((g) => g.value))).toEqual([[0.1], [0.15], [0.15], [0.15], [0.1, 0.2], [0.1, 0.1], [0.5], [0.2], [0.25], [0.15]]);
+    expect(mutatorList().map((m) => m.grants.map((g) => g.value))).toEqual([[0.1], [0.15], [0.15], [0.15], [0.1, 0.2], [0.1, 0.1], [0.5], [0.2], [0.25], [0.15]]);
     // Carnet du commandant (astuces de progression).
     expect(step("dailyGoal")).toBe("Chaque jour, 4 objectifs tirés pour toi : ressources rares, XP et jetons. Ils se renouvellent à minuit, heure de Paris, et ta série grimpe si tu fais les 4.");
     expect(step("colonyRoute")).toBe("Une route fait voyager les ressources sans flotte : rapatrier le stock de la colonie, ou la ravitailler depuis ta planète mère. 10 % se perdent en route.");

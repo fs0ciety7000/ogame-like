@@ -42,6 +42,12 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
   « Rendre des ressources ». Remise à zéro de l'XP de tous les joueurs : `resetAllXp`, une transaction. L'admin du jeu n'écrit plus la
   fiche par l'API des collections (règle `players.updateRule`).
 
+- Journal de contenu (6.14.126, I42, Admin → Contenu) : « Ce qui a changé » montre la différence champ par champ entre une version et
+  l'état qui l'a suivie (listes comparées par identifiant, 200 lignes au plus) ; « Revenir pour un seul groupe » remet un groupe de
+  règles sans toucher aux autres ; les réglages du serveur hors sections de contenu (casino, générateurs, annonces, bandeaux, émojis,
+  équipe) ont aussi leurs versions, partie réglée seulement (`SETTINGS_HISTORY`, `contentHistory.ts`) ; l'équipe n'a que l'historique.
+  Chaque retour arrière passe par la garde de contenu du serveur (`assertContentValid`).
+
 ## Technique
 - 17 tâches planifiées côté serveur (`cronAdd` de `cosmic.pb.js`) ; les tâches à la minute, aux 5 et aux 10 min sont des étapes de `CADENCES` (`cosmic_db.js`, 5.29).
 - 6.14.111 (AC-E, I35) : une cadence tient un verrou (`$app.store()`) : elle ne démarre pas tant que la précédente tourne, un passage

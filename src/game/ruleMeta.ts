@@ -107,6 +107,13 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   seasons: {
     firstSeasonId: { label: "Première saison (AAAA-MM)" },
   },
+  // 6.14.125 (AU27, lot AA7, AA-3 et AA-6) : listes système éditables.
+  classes: {
+    defs: { label: "Classes d'empire", hint: "Liste (id, nom, émoji, accroche, effets composés chiffrés, avantages) : une classe livrée retirée revient. Éditeur dédié : Règles → Classes d'empire." },
+  },
+  mutators: {
+    defs: { label: "Mutateurs de saison", hint: "Liste (id, nom, émoji, phrase d'accroche, effets composés chiffrés) ; la description est construite depuis les effets. Éditeur dédié : Règles → Événements et saisons." },
+  },
   alliances: {
     membersPerQuarter: { label: "Places de membres par niveau (effet « places de membres », Quartiers fédérés par défaut)", min: 0 },
     sharedReportsMax: { label: "Rapports partagés gardés", min: 0 },

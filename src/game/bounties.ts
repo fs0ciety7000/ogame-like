@@ -21,6 +21,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
 import { KESH_HUNTER_UNIT, OFFENSIVE_UNITS } from "@/game/units";
+import { DEFAULT_FACTIONS, FACTIONS, type FactionDef, type FactionFugitive } from "@/game/pirates";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
 
@@ -93,30 +94,37 @@ export interface Fugitive {
   crime: string;
 }
 
-export const FUGITIVES: Fugitive[] = [
-  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonnées de la Ruche-Mère à la Confrérie" },
-  { name: "Mira Tessane", factionId: "varan", crime: "a tracé la route du pillage à travers les nébuleuses" },
-  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois œufs royaux à des collectionneurs" },
-  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
-  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme trophées de chasse" },
-  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a piégé l'escorte de la Reine" },
-  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a brisé les sceaux d'ambre du sanctuaire" },
-  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
-  { name: "Frère Anselme Dor", factionId: "inquisition", crime: "a brûlé les archives chantées de la Ruche" },
-  { name: "Sœur Ilvane", factionId: "inquisition", crime: "dissèque des œufs pour l'Aube Blanche" },
-  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a déclaré l'Essaim « hérésie vivante »" },
-  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scellé une couvée dans un reliquaire" },
-  { name: "Rico Vant", factionId: "cartel", crime: "vend des œufs au marché noir de Néon" },
-  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacrée en bijoux" },
-  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant à partir de gelée royale" },
-  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
-  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerrières" },
-  { name: "Skarra", factionId: "meute", crime: "a dévoré un nid entier d'éclaireurs" },
-  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guidé la Meute jusqu'aux couvoirs" },
-  { name: "Fenra Œil-Rouge", factionId: "meute", crime: "chasse les ouvrières pour le sport" },
-  { name: "L'Écho Vashtar", factionId: "choeur", crime: "a réduit au silence le chant de la Reine" },
-  { name: "Maître-Chantre Ilos", factionId: "choeur", crime: "garde un œuf royal dans sa cathédrale" },
-];
+/** 6.14.125 (AU27, lot AA7, constat AA-20) : fugitifs livrés, par faction (repli d'une liste de factions enregistrée avant). */
+// Lu à l'usage (piège « Initialisation des modules » : jamais une constante d'un autre module du moteur au chargement).
+const defaultFugitivesOf = (id: string): FactionFugitive[] => DEFAULT_FACTIONS.find((f) => f.id === id)?.fugitives ?? [];
+
+/** Fugitifs d'une faction : sa fiche, sinon ceux de la faction livrée du même identifiant (migration, admin). */
+export function factionFugitives(f: Pick<FactionDef, "id" | "fugitives">): FactionFugitive[] {
+  return Array.isArray(f.fugitives) ? f.fugitives : defaultFugitivesOf(f.id);
+}
+
+/** Fugitifs livrés d'une faction (copie : migration des factions enregistrées). */
+export function defaultFactionFugitives(id: string): FactionFugitive[] {
+  return structuredClone(defaultFugitivesOf(id));
+}
+
+/**
+ * Tableau des primes : fugitifs de toutes les factions, dans l'ordre des factions (un contrat garde l'indice de son fugitif).
+ * À contenu par défaut, la liste est celle d'avant la 6.14.125. Une faction ajoutée dans l'admin y entre avec ses fugitifs ;
+ * une liste vide (aucun fugitif nulle part) reprend les fugitifs livrés.
+ */
+export function bountyFugitives(): Fugitive[] {
+  const out: Fugitive[] = [];
+  for (const f of FACTIONS) for (const x of factionFugitives(f)) if (x?.name) out.push({ name: x.name, factionId: f.id, crime: x.crime ?? "" });
+  if (out.length > 0) return out;
+  return DEFAULT_FACTIONS.flatMap((f) => (f.fugitives ?? []).map((x) => ({ name: x.name, factionId: f.id, crime: x.crime })));
+}
+
+/** Fugitif d'un contrat (indice gardé par le contrat ; hors liste : le premier). */
+export function fugitiveAt(index: number | undefined): Fugitive {
+  const list = bountyFugitives();
+  return list[index ?? 0] ?? list[0];
+}
 
 export const ELITE_FUGITIVES: Fugitive[] = [
   { name: "Sarghul Vex, le Marchand d'Œufs", factionId: "cartel", crime: "a vendu la couvée royale au plus offrant" },
@@ -306,9 +314,10 @@ export function boardTiers(rank: number): BountyTier[] {
 export function generateBoard(uid: string, slot: number, rank: number, exclude: number[] = []): BountyContract[] {
   const rand = seededRandom(`${uid}:bounty:${slot}`);
   const used = new Set(exclude);
+  const count = bountyFugitives().length;
   return boardTiers(rank).map((tier, i) => {
-    let fugitive = Math.floor(rand() * FUGITIVES.length);
-    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
+    let fugitive = Math.floor(rand() * count);
+    for (let guard = 0; used.has(fugitive) && guard < count; guard++) fugitive = (fugitive + 1) % count;
     used.add(fugitive);
     const t = BOUNTY_RULES.tiers[tier];
     const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
@@ -369,7 +378,7 @@ export function startBounty(player: PlayerState, contractId: string, now: number
   contract.status = "hunting";
   st.doneToday += 1;
   player.bounties = st;
-  return { contract, power, fugitive: FUGITIVES[contract.fugitive] ?? FUGITIVES[0] };
+  return { contract, power, fugitive: fugitiveAt(contract.fugitive) };
 }
 
 export interface BountyHuntOutput {
@@ -399,7 +408,7 @@ export function resolveBountyHunt(
   const st = refreshBounties(bountyState(player), player.uid, now);
   const contract = st.board.find((c) => c.id === contractId);
   const tier: BountyTier = contract?.tier ?? 1;
-  const fugitive = FUGITIVES[contract?.fugitive ?? 0] ?? FUGITIVES[0];
+  const fugitive = fugitiveAt(contract?.fugitive);
   const fx = formationEffects(formation);
   // 5.23 : effets ciblés du joueur contre les PNJ.
   const pve = playerCombatEffects(player, "pve", now);

@@ -1,6 +1,6 @@
 import { getRepairPercent } from "@/game/buildings";
 import { exposureView } from "@/game/economy";
-import { EMPIRE_CLASSES } from "@/game/empireClass";
+import { empireClasses } from "@/game/empireClass";
 import { economySnapshot } from "@/game/economy";
 import { fleetSlots, SLOT_FREE_MISSIONS } from "@/game/fleets";
 import { CLASS_UNIT_IDS, DEFENSIVE_UNITS, ELITE_UNIT_IDS, findUnit } from "@/game/units";
@@ -323,7 +323,7 @@ export function balanceHealth(input: HealthInput, now: number, windowDays = 7): 
   // Classes.
   const prodOf = (p: PlayerState) => Object.values(economySnapshot(p, now).gross).reduce((a: number, b) => a + (b ?? 0), 0) * 3600;
   const production = productionHealth(players, now, prodOf);
-  const rows = EMPIRE_CLASSES.map((c) => {
+  const rows = empireClasses().map((c) => {
     const who = players.filter((p) => p.empireClass?.id === c.id);
     return { id: c.id, name: c.name, players: who.length, sharePct: players.length ? Math.round((who.length / players.length) * 100) : 0, medianProduction: Math.round(median(who.map(prodOf))) };
   });

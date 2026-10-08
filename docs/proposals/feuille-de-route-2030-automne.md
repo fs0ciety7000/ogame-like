@@ -58,8 +58,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 41 | AP-L8 | Nouveau générateur : épisode « nouveauté » pour le contenu récemment ajouté | M | livré (6.14.122) |
 | 42 | AA5 | Rôles d'unités (sonde, recycleur, faiblesse de boss) au lieu d'identifiants en dur | M | livré (6.14.123) |
 | 43 | AA6 | Recherches d'alliance par effets composés (une recherche ajoutée dans l'admin a un effet) | M | livré (6.14.124) |
-| 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | à faire |
-| 45 | AA8 | Historique champ par champ et retour arrière par groupe dans l'admin | M | à faire |
+| 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | livré (6.14.125) |
+| 45 | AA8 | Historique champ par champ et retour arrière par groupe dans l'admin | M | livré (6.14.126 ; carte « Chaîne de contenu » déjà livrée en 6.14.114) |
 | 46 | AJ27-6 | Succès dérivés par unité et par bâtiment | M | à faire |
 | 47 | AJ27-7 | Objectifs paramétrés par contenu (construire telle unité, rechercher telle techno) | L | à faire |
 | 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | à faire |

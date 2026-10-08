@@ -249,3 +249,8 @@ export { allyJumpAllowed, checkJump, gateCooldownMs, gateMinLevel, gateReadyAtMs
 export { canSpendResources, spendAmber, spendResources } from "@/game/spending";
 // 6.14.111 (AU27, lot AC-E) : verrou par cadence, e-mails par lots, échéances décalées après une maintenance.
 export { cadenceBusy, MAIL_QUEUE_KEY, mailQueueState, settleMailBatch, shiftForMaintenance, SERVER_TASK_RULES, takeMailBatch } from "@/game/serverTasks";
+// 6.14.125 (AU27, lot AA7) : migrations « faction-fugitives-6.14.125 » et « mutators-defs-6.14.125 ».
+export { defaultFactionFugitives } from "@/game/bounties";
+export { defaultMutatorDefs } from "@/game/mutators";
+// 6.14.126 (AU27, lot AA8) : historique dans l'admin (réglages serveur suivis, retour arrière d'un groupe de règles).
+export { isSettingsHistoryKey, restoreSettings, rollbackRuleGroup, SETTINGS_HISTORY, settingsSnapshot } from "@/game/contentHistory";

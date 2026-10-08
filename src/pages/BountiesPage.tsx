@@ -35,7 +35,7 @@ import {
   eliteActive,
   eliteRanking,
   eliteReadyAt,
-  FUGITIVES,
+  fugitiveAt,
   fugitivePower,
   KESH,
   KESH_EMOJIS,
@@ -244,7 +244,7 @@ function KeshHero({ st }: { st: BountyState }) {
 function ContractCard({ contract, player, st, onHunt }: { contract: BountyContract; player: PlayerState; st: BountyState; onHunt: (c: BountyContract) => void }) {
   const fleets = useFleetStore((s) => s.fleets);
   const now = Date.now();
-  const fugitive = FUGITIVES[contract.fugitive] ?? FUGITIVES[0];
+  const fugitive = fugitiveAt(contract.fugitive);
   const faction = findFaction(fugitive.factionId);
   const t = BOUNTY_RULES.tiers[contract.tier];
   const rank = bountyRank(st.reputation);
@@ -299,7 +299,7 @@ function BoardTab({ player, st, onHunt }: { player: PlayerState; st: BountyState
   const now = Date.now();
   const rank = bountyRank(st.reputation);
   const hunt = (c: BountyContract) => {
-    const f = FUGITIVES[c.fugitive] ?? FUGITIVES[0];
+    const f = fugitiveAt(c.fugitive);
     onHunt({
       title: `Traque : ${f.name}`,
       intro: `Prime « ${BOUNTY_RULES.tiers[c.tier].label} ». Le fugitif vaut ${Math.round(BOUNTY_RULES.tiers[c.tier].pct * 100)} % de la puissance d'attaque de ta flotte à quai (vaisseaux envoyés compris). Trajet de ${c.minutes} min, retour aussi long.`,

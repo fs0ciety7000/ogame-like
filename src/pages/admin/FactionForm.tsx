@@ -1,3 +1,6 @@
+import { Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { factionFugitives } from "@/game/bounties";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
@@ -13,7 +16,8 @@ const COLORS = [
 ];
 
 export function newFaction(): FactionDef {
-  return { ...structuredClone(DEFAULT_FACTIONS[0]), id: "nouvelle_faction", name: "Nouvelle faction", enabled: false };
+  // 6.14.125 (AA7) : une faction ajoutée n'hérite pas des fugitifs de la Confrérie (on les écrit dans sa fiche).
+  return { ...structuredClone(DEFAULT_FACTIONS[0]), id: "nouvelle_faction", name: "Nouvelle faction", enabled: false, fugitives: [] };
 }
 
 /** Fiche d'une faction hostile : textes, déclencheur, tribut, raid, repaire. */
@@ -26,6 +30,9 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
   const bounty = (patch: Partial<FactionDef["bounty"]>) => set({ bounty: { ...f.bounty, ...patch } });
   const lair = (patch: Partial<FactionDef["lair"]>) => set({ lair: { ...f.lair, ...patch } });
   const num = (v: number | undefined) => v ?? 0;
+  // 6.14.125 (AA7, AA-20) : fugitifs de la faction (tableau des primes Kesh'Vaar).
+  const fugitives = factionFugitives(f);
+  const setFugitives = (next: typeof fugitives) => set({ fugitives: next });
 
   return (
     <div className="flex flex-col gap-3">
@@ -144,6 +151,29 @@ export function FactionForm({ value: f, onChange, isNew }: { value: FactionDef; 
         <NumberField label="Récompense : bonus de chaque rare" value={f.lair.rare} min={0} step={50} onChange={(v) => lair({ rare: num(v) })} />
         <NumberField label="Récompense : XP" value={f.lair.xp} min={0} step={10} onChange={(v) => lair({ xp: num(v) })} />
         <TextField label="Titre décerné" value={f.lair.title} onChange={(v) => lair({ title: v })} />
+      </Section>
+
+      <Section title="Fugitifs (primes Kesh'Vaar)">
+        <p className="text-xs text-slate-500 sm:col-span-2">
+          Coupables du pillage de la Ruche-Mère, traqués au tableau des primes. Une faction sans fugitif n'y apparaît pas. Changer la liste renomme les cibles des contrats déjà au tableau (jusqu'au
+          renouvellement).
+        </p>
+        {fugitives.map((x, i) => (
+          <div key={i} className="grid grid-cols-1 gap-2 border-l border-cyan-glow/20 pl-2 sm:col-span-2 sm:grid-cols-[1fr_2fr_auto]">
+            <TextField label={`Fugitif ${i + 1}`} value={x.name} onChange={(v) => setFugitives(fugitives.map((y, j) => (j === i ? { ...y, name: v } : y)))} />
+            <TextField label="Crime (« a vendu… »)" value={x.crime} onChange={(v) => setFugitives(fugitives.map((y, j) => (j === i ? { ...y, crime: v } : y)))} />
+            <div className="flex items-end">
+              <Button size="sm" variant="ghost" aria-label={`Retirer ${x.name || `le fugitif ${i + 1}`}`} onClick={() => setFugitives(fugitives.filter((_, j) => j !== i))}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        <div className="sm:col-span-2">
+          <Button size="sm" variant="outline" onClick={() => setFugitives([...fugitives, { name: "", crime: "" }])}>
+            <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter un fugitif
+          </Button>
+        </div>
       </Section>
     </div>
   );

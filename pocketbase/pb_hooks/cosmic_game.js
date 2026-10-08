@@ -155,6 +155,7 @@ __export(hooksEntry_exports, {
   SECTOR_COUNT: () => SECTOR_COUNT,
   SERVER_POT_KEY: () => SERVER_POT_KEY,
   SERVER_TASK_RULES: () => SERVER_TASK_RULES,
+  SETTINGS_HISTORY: () => SETTINGS_HISTORY,
   STAFF_KEY: () => STAFF_KEY,
   TERRITORY_RULES: () => TERRITORY_RULES,
   TERRITORY_WAR_KEY: () => TERRITORY_WAR_KEY,
@@ -342,7 +343,9 @@ __export(hooksEntry_exports, {
   declareWar: () => declareWar,
   deepLegMs: () => deepLegMs,
   defaultAllianceEffects: () => defaultAllianceEffects,
+  defaultFactionFugitives: () => defaultFactionFugitives,
   defaultGameContent: () => defaultGameContent,
+  defaultMutatorDefs: () => defaultMutatorDefs,
   defaultQueues: () => defaultQueues,
   defaultUnitRoles: () => defaultUnitRoles,
   depositWarChest: () => depositWarChest,
@@ -434,6 +437,7 @@ __export(hooksEntry_exports, {
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
   isPublic: () => isPublic,
+  isSettingsHistoryKey: () => isSettingsHistoryKey,
   isStaffRole: () => isStaffRole,
   isTerritoryWarActive: () => isTerritoryWarActive,
   isWarlordUid: () => isWarlordUid,
@@ -609,6 +613,7 @@ __export(hooksEntry_exports, {
   resolveLeviathanAssault: () => resolveLeviathanAssault,
   resolvePirateRaid: () => resolvePirateRaid,
   resolveSpyArrival: () => resolveSpyArrival,
+  restoreSettings: () => restoreSettings,
   revealIncoming: () => revealIncoming,
   rollExpeditionEvent: () => rollExpeditionEvent,
   rollLoot: () => rollLoot,
@@ -616,6 +621,7 @@ __export(hooksEntry_exports, {
   rollRareOfficer: () => rollRareOfficer,
   rollRelic: () => rollRelic,
   rollTournament: () => rollTournament,
+  rollbackRuleGroup: () => rollbackRuleGroup,
   roomIcon: () => roomIcon,
   roomIdle: () => roomIdle,
   sagaMonthId: () => sagaMonthId,
@@ -649,6 +655,7 @@ __export(hooksEntry_exports, {
   sectorOf: () => sectorOf,
   sendToWorkshop: () => sendToWorkshop,
   setNameTone: () => setNameTone,
+  settingsSnapshot: () => settingsSnapshot,
   settleAuction: () => settleAuction,
   settleCoalition: () => settleCoalition,
   settleMailBatch: () => settleMailBatch,
@@ -733,231 +740,6 @@ __export(hooksEntry_exports, {
   writeCoalitions: () => writeCoalitions
 });
 module.exports = __toCommonJS(hooksEntry_exports);
-
-// src/game/format.ts
-function formatInt(value2) {
-  const n = Math.round(Number(value2) || 0);
-  const digits = String(Math.abs(n));
-  let out = "";
-  for (let i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
-    out += digits[i];
-  }
-  return n < 0 ? `-${out}` : out;
-}
-function formatDecimal(value2, maxDigits) {
-  const fixed = (Number(value2) || 0).toFixed(maxDigits);
-  const [intPart, frac = ""] = fixed.split(".");
-  const trimmed = frac.replace(/0+$/, "");
-  return formatInt(Number(intPart)) + (trimmed ? `,${trimmed}` : "");
-}
-function describeGain(gain) {
-  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
-  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
-    var _a;
-    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
-  });
-  return parts.length ? parts.join(", ") : "rien";
-}
-function formatHours(hours2) {
-  return `${formatDecimal(hours2, 1)} h`;
-}
-function formatPct(part, digits = 0) {
-  return `${formatDecimal((Number(part) || 0) * 100, digits)} %`;
-}
-
-// src/game/mutators.ts
-var plus = (v) => `+${formatPct(v)}`;
-var minus = (v) => `\u2212${formatPct(v)}`;
-function mutator(id, name, emoji, stats, text) {
-  return {
-    id,
-    name,
-    emoji,
-    get description() {
-      return text(mutatorValues(id));
-    },
-    get grants() {
-      const v = mutatorValues(id);
-      return stats.map((s, i) => __spreadProps(__spreadValues({}, s), { value: v[i] }));
-    }
-  };
-}
-var MUTATORS = [
-  mutator("ruee", "Ru\xE9e industrielle", "\u{1F3ED}", [{ stat: "productionAll" }], (v) => `Les forges tournent \xE0 plein : ${plus(v[0])} de production de toutes les ressources.`),
-  mutator("chantiers", "Chantiers fi\xE9vreux", "\u{1F3D7}\uFE0F", [{ stat: "buildTime" }], (v) => `Les \xE9quipes se relaient jour et nuit : ${minus(v[0])} de temps de construction.`),
-  mutator("savoir", "\xC2ge du savoir", "\u{1F52C}", [{ stat: "researchTime" }], (v) => `Les laboratoires s'emballent : ${minus(v[0])} de temps de recherche.`),
-  mutator("vents", "Vents solaires", "\u2604\uFE0F", [{ stat: "fleetSpeed" }], (v) => `Les courants stellaires portent les flottes : ${minus(v[0])} de temps de vol.`),
-  mutator("guerre", "Saison de guerre", "\u2694\uFE0F", [{ stat: "attack" }, { stat: "loot" }], (v) => `Le secteur s'embrase : ${plus(v[0])} d'attaque et ${plus(v[1])} de butin pill\xE9.`),
-  mutator("rempart", "Saison des remparts", "\u{1F6E1}\uFE0F", [{ stat: "defense" }, { stat: "repair" }], (v) => `Les ing\xE9nieurs renforcent les coques : ${plus(v[0])} de d\xE9fense et ${plus(v[1])} de vaisseaux r\xE9par\xE9s.`),
-  mutator("marchands", "Foire des marchands", "\u{1F4B1}", [{ stat: "tradeTax" }], (v) => `Les comptoirs baissent leurs taxes : ${minus(v[0])} de taxe au march\xE9 et sur les cadeaux.`),
-  mutator("chantiers_navals", "Cadence des arsenaux", "\u{1F680}", [{ stat: "unitTime" }], (v) => `Les arsenaux acc\xE9l\xE8rent : ${minus(v[0])} de temps de production des unit\xE9s.`),
-  mutator("soutes", "Grandes soutes", "\u{1F4E6}", [{ stat: "cargo" }], (v) => `Des soutes repens\xE9es : ${plus(v[0])} de cargaison pour les flottes.`),
-  mutator("chasse", "Grande chasse", "\u{1F40B}", [{ stat: "bossDamage" }], (v) => `Les g\xE9ants sont vuln\xE9rables : ${plus(v[0])} de d\xE9g\xE2ts contre les boss.`)
-];
-var DEFAULT_MUTATOR_VALUES = {
-  ruee: [0.1],
-  chantiers: [0.15],
-  savoir: [0.15],
-  vents: [0.15],
-  guerre: [0.1, 0.2],
-  rempart: [0.1, 0.1],
-  marchands: [0.5],
-  chantiers_navals: [0.2],
-  soutes: [0.25],
-  chasse: [0.15]
-};
-var REDUCTION_STATS = ["buildTime", "researchTime", "fleetSpeed", "unitTime", "tradeTax"];
-var MUTATOR_RULES = {
-  enabled: true,
-  /** Mois (AAAA-MM) → identifiant de mutateur, ou « none ». */
-  overrides: {},
-  /** 6.14.105 (AA4) : force de chaque mutateur, une valeur par effet (0,1 = 10 %). */
-  values: {
-    ruee: [0.1],
-    chantiers: [0.15],
-    savoir: [0.15],
-    vents: [0.15],
-    guerre: [0.1, 0.2],
-    rempart: [0.1, 0.1],
-    marchands: [0.5],
-    chantiers_navals: [0.2],
-    soutes: [0.25],
-    chasse: [0.15]
-  }
-};
-function mutatorValues(id, values = MUTATOR_RULES.values) {
-  var _a;
-  const def4 = (_a = DEFAULT_MUTATOR_VALUES[id]) != null ? _a : [];
-  const set = values == null ? void 0 : values[id];
-  return def4.map((d, i) => {
-    const v = Number(set == null ? void 0 : set[i]);
-    return set && Number.isFinite(v) ? v : d;
-  });
-}
-function mutatorMonthId(now) {
-  const d = new Date(now + 2 * 36e5);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-function hashIndex(seed, n) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return Math.abs(h) % n;
-}
-function prevMonth(monthId) {
-  const [y, m] = monthId.split("-").map(Number);
-  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
-}
-function drawn(monthId) {
-  const i = hashIndex(`mut:${monthId}`, MUTATORS.length);
-  const prev = hashIndex(`mut:${prevMonth(monthId)}`, MUTATORS.length);
-  return MUTATORS[i === prev ? (i + 1) % MUTATORS.length : i];
-}
-function mutatorFor(monthId) {
-  var _a;
-  if (!MUTATOR_RULES.enabled) return null;
-  const forced = MUTATOR_RULES.overrides[monthId];
-  if (forced === "none") return null;
-  if (forced) return (_a = MUTATORS.find((m) => m.id === forced)) != null ? _a : drawn(monthId);
-  return drawn(monthId);
-}
-function activeMutator(now) {
-  return mutatorFor(mutatorMonthId(now));
-}
-function mutatorEffects(now) {
-  const m = activeMutator(now);
-  if (!m) return [];
-  return m.grants.map((g) => ({ stat: g.stat, value: g.value, target: g.target, layer: "empire", source: { kind: "season", id: m.id, label: m.name } }));
-}
-function validateMutatorRules(r) {
-  var _a, _b;
-  if (!r) return [];
-  const errors = [];
-  for (const [month2, id] of Object.entries((_a = r.overrides) != null ? _a : {})) {
-    if (!/^\d{4}-\d{2}$/.test(month2)) errors.push(`Mutateur : mois \xAB ${month2} \xBB invalide (AAAA-MM).`);
-    if (id !== "none" && !MUTATORS.some((m) => m.id === id)) errors.push(`Mutateur : \xAB ${id} \xBB inconnu (${month2}).`);
-  }
-  for (const [id, list] of Object.entries((_b = r.values) != null ? _b : {})) {
-    const m = MUTATORS.find((x) => x.id === id);
-    if (!m) {
-      errors.push(`Mutateur : valeurs de \xAB ${id} \xBB, mutateur inconnu.`);
-      continue;
-    }
-    if (!Array.isArray(list) || list.length !== DEFAULT_MUTATOR_VALUES[id].length) {
-      errors.push(`Mutateur \xAB ${m.name} \xBB : ${DEFAULT_MUTATOR_VALUES[id].length} valeur(s) attendue(s), une par effet.`);
-      continue;
-    }
-    const stats = m.grants.map((g) => g.stat);
-    list.forEach((v, i) => {
-      const max = REDUCTION_STATS.includes(stats[i]) ? 0.9 : 2;
-      if (!(typeof v === "number" && v >= 0 && v <= max)) errors.push(`Mutateur \xAB ${m.name} \xBB : valeur n\xB0 ${i + 1} entre 0 et ${String(max).replace(".", ",")}.`);
-    });
-  }
-  return errors;
-}
-
-// src/game/errors.ts
-var GameActionError = class extends Error {
-};
-
-// src/game/ranks.ts
-var rank = (id, name, family2, xp) => ({ id, name, family: family2, xp, image: `/assets/ranks/${id}.webp` });
-var tiers = (prefix, family2, xps) => [
-  rank(`${prefix}3`, `${family2} III`, family2, xps[0]),
-  rank(`${prefix}2`, `${family2} II`, family2, xps[1]),
-  rank(`${prefix}1`, `${family2} I`, family2, xps[2])
-];
-var DEFAULT_RANKS = [
-  rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
-  ...tiers("fer", "Fer", [100, 250, 500]),
-  ...tiers("bronze", "Bronze", [900, 1400, 2e3]),
-  ...tiers("argent", "Argent", [3e3, 4200, 5600]),
-  ...tiers("or", "Or", [7500, 1e4, 13e3]),
-  ...tiers("platine", "Platine", [17e3, 22e3, 28e3]),
-  ...tiers("emeraude", "\xC9meraude", [36e3, 45e3, 56e3]),
-  ...tiers("diamant", "Diamant", [7e4, 87e3, 107e3]),
-  ...tiers("maitre", "Ma\xEEtre", [13e4, 16e4, 195e3]),
-  rank("grand_maitre", "Grand Ma\xEEtre", "Grand Ma\xEEtre", 24e4),
-  rank("challenger", "Challenger", "Challenger", 32e4),
-  rank("elite", "\xC9lite", "\xC9lite", 42e4)
-];
-var RANKS = [];
-function setRanks(defs) {
-  RANKS.splice(0, RANKS.length, ...[...defs].sort((a, b) => a.xp - b.xp));
-}
-setRanks(structuredClone(DEFAULT_RANKS));
-function getRankIndex(xp) {
-  let index2 = 0;
-  for (let i = 0; i < RANKS.length; i++) {
-    if ((xp != null ? xp : 0) >= RANKS[i].xp) index2 = i;
-  }
-  return index2;
-}
-function getRank(xp) {
-  var _a;
-  return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
-}
-function familyIndex(family2) {
-  return RANKS.findIndex((r) => r.family === family2);
-}
-function validateRanks(defs) {
-  var _a, _b;
-  const errors = [];
-  if (defs.length === 0) return ["Rangs : au moins un rang est n\xE9cessaire."];
-  const seen = /* @__PURE__ */ new Set();
-  for (const r of defs) {
-    const label3 = `Rang ${r.name || r.id}`;
-    if (!/^[a-z0-9_]+$/.test((_a = r.id) != null ? _a : "")) errors.push(`${label3} : identifiant \xAB ${r.id} \xBB invalide (minuscules, chiffres, _).`);
-    if (seen.has(r.id)) errors.push(`${label3} : identifiant en double.`);
-    seen.add(r.id);
-    if (!((_b = r.name) == null ? void 0 : _b.trim())) errors.push(`${label3} : nom manquant.`);
-    if (!(r.xp >= 0)) errors.push(`${label3} : XP requise invalide.`);
-  }
-  if (!defs.some((r) => r.xp === 0)) errors.push("Rangs : il faut un rang \xE0 0 XP (le rang de d\xE9part).");
-  const xps = defs.map((r) => r.xp);
-  if (new Set(xps).size !== xps.length) errors.push("Rangs : deux rangs ont la m\xEAme XP requise.");
-  return errors;
-}
 
 // src/game/effects.ts
 var EFFECT_SCOPE_LABELS = {
@@ -1111,11 +893,268 @@ function validateComposedEffect(c, validTarget) {
   if (c.stat === "hangarCapacity" && c.target && c.target !== "attack" && c.target !== "defense") errors.push("hangar : attack ou defense");
   return errors;
 }
+function valuedEffectMax(stat3) {
+  const info = EFFECT_STATS[stat3];
+  if (!info) return 0;
+  if (info.unit === "level") return 5;
+  if (info.unit === "points") return 20;
+  return info.reduction ? 0.9 : 2;
+}
+function validateValuedEffects(label3, effects, validTarget) {
+  if (!Array.isArray(effects)) return [`${label3} : effets invalides (liste attendue).`];
+  if (effects.length === 0) return [`${label3} : au moins un effet.`];
+  const errors = [];
+  effects.forEach((e3, i) => {
+    for (const m of validateComposedEffect(e3, validTarget)) errors.push(`${label3} : effet n\xB0 ${i + 1}, ${m}.`);
+    if (!(e3 == null ? void 0 : e3.stat) || !(e3.stat in EFFECT_STATS)) return;
+    const max = valuedEffectMax(e3.stat);
+    if (!(typeof e3.value === "number" && Number.isFinite(e3.value) && e3.value >= 0 && e3.value <= max)) errors.push(`${label3} : effet n\xB0 ${i + 1}, valeur entre 0 et ${String(max).replace(".", ",")}.`);
+  });
+  return errors;
+}
 function setTechCombatLimits(cap, perTechMax) {
   TECH_COMBAT_LIMITS.cap = cap;
   TECH_COMBAT_LIMITS.perTechMax = perTechMax;
   EFFECT_STATS.attack.cap = __spreadProps(__spreadValues({}, EFFECT_STATS.attack.cap), { tech: cap });
   EFFECT_STATS.defense.cap = __spreadProps(__spreadValues({}, EFFECT_STATS.defense.cap), { tech: cap });
+}
+
+// src/game/format.ts
+function formatInt(value2) {
+  const n = Math.round(Number(value2) || 0);
+  const digits = String(Math.abs(n));
+  let out = "";
+  for (let i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 === 0) out += "\u202F";
+    out += digits[i];
+  }
+  return n < 0 ? `-${out}` : out;
+}
+function formatDecimal(value2, maxDigits) {
+  const fixed = (Number(value2) || 0).toFixed(maxDigits);
+  const [intPart, frac = ""] = fixed.split(".");
+  const trimmed = frac.replace(/0+$/, "");
+  return formatInt(Number(intPart)) + (trimmed ? `,${trimmed}` : "");
+}
+function describeGain(gain) {
+  const names = { scrap: "ferraille", energy: "\xE9nergie", nano: "nanocomposants", data: "donn\xE9es", reinforcedSteel: "acier renforc\xE9", cyberModule: "modules", syntheticNanites: "nanites", aiFragment: "fragments d'IA" };
+  const parts = Object.entries(gain).filter(([, v]) => (v != null ? v : 0) > 0).map(([k, v]) => {
+    var _a;
+    return `${formatInt(v != null ? v : 0)} ${(_a = names[k]) != null ? _a : k}`;
+  });
+  return parts.length ? parts.join(", ") : "rien";
+}
+function formatHours(hours2) {
+  return `${formatDecimal(hours2, 1)} h`;
+}
+function formatPct(part, digits = 0) {
+  return `${formatDecimal((Number(part) || 0) * 100, digits)} %`;
+}
+
+// src/game/mutators.ts
+var DEFAULT_MUTATOR_DEFS = [
+  { id: "ruee", name: "Ru\xE9e industrielle", emoji: "\u{1F3ED}", flavor: "Les forges tournent \xE0 plein", effects: [{ stat: "productionAll", value: 0.1 }] },
+  { id: "chantiers", name: "Chantiers fi\xE9vreux", emoji: "\u{1F3D7}\uFE0F", flavor: "Les \xE9quipes se relaient jour et nuit", effects: [{ stat: "buildTime", value: 0.15 }] },
+  { id: "savoir", name: "\xC2ge du savoir", emoji: "\u{1F52C}", flavor: "Les laboratoires s'emballent", effects: [{ stat: "researchTime", value: 0.15 }] },
+  { id: "vents", name: "Vents solaires", emoji: "\u2604\uFE0F", flavor: "Les courants stellaires portent les flottes", effects: [{ stat: "fleetSpeed", value: 0.15 }] },
+  { id: "guerre", name: "Saison de guerre", emoji: "\u2694\uFE0F", flavor: "Le secteur s'embrase", effects: [{ stat: "attack", value: 0.1 }, { stat: "loot", value: 0.2 }] },
+  { id: "rempart", name: "Saison des remparts", emoji: "\u{1F6E1}\uFE0F", flavor: "Les ing\xE9nieurs renforcent les coques", effects: [{ stat: "defense", value: 0.1 }, { stat: "repair", value: 0.1 }] },
+  { id: "marchands", name: "Foire des marchands", emoji: "\u{1F4B1}", flavor: "Les comptoirs baissent leurs taxes", effects: [{ stat: "tradeTax", value: 0.5 }] },
+  { id: "chantiers_navals", name: "Cadence des arsenaux", emoji: "\u{1F680}", flavor: "Les arsenaux acc\xE9l\xE8rent", effects: [{ stat: "unitTime", value: 0.2 }] },
+  { id: "soutes", name: "Grandes soutes", emoji: "\u{1F4E6}", flavor: "Des soutes repens\xE9es", effects: [{ stat: "cargo", value: 0.25 }] },
+  { id: "chasse", name: "Grande chasse", emoji: "\u{1F40B}", flavor: "Les g\xE9ants sont vuln\xE9rables", effects: [{ stat: "bossDamage", value: 0.15 }] }
+];
+var STAT_PHRASES = {
+  tradeTax: "taxe au march\xE9 et sur les cadeaux",
+  cargo: "cargaison pour les flottes"
+};
+function mutatorEffectPhrase(e3) {
+  const info = EFFECT_STATS[e3.stat];
+  if (!info) return e3.stat;
+  const v = Number(e3.value) || 0;
+  const sign = info.reduction ? "\u2212" : "+";
+  const amount3 = info.unit === "pct" ? `${sign}${formatPct(v, Math.abs(v * 100 - Math.round(v * 100)) < 1e-9 ? 0 : 1)}` : formatEffectValue(e3.stat, v);
+  const described = describeEffect(e3.stat, v, e3.target, e3.scope);
+  const rest = described.slice(described.indexOf(" \xB7 ") + 3);
+  const label3 = STAT_PHRASES[e3.stat] && !e3.target && (!e3.scope || e3.scope === "all") ? STAT_PHRASES[e3.stat] : rest.replace(/^\S/, (c) => c.toLowerCase());
+  return `${amount3} ${/^[aeiouyéèêâîôûh]/i.test(label3) ? "d'" : "de "}${label3}`;
+}
+function mutatorDescription(m) {
+  var _a, _b, _c;
+  const parts = ((_a = m.effects) != null ? _a : []).map(mutatorEffectPhrase);
+  const list = parts.length <= 1 ? (_b = parts[0]) != null ? _b : "aucun effet" : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
+  return `${((_c = m.flavor) != null ? _c : "").trim() || m.name} : ${list}.`;
+}
+function toDef(e3) {
+  return {
+    id: e3.id,
+    name: e3.name,
+    emoji: e3.emoji,
+    get description() {
+      return mutatorDescription(e3);
+    },
+    get grants() {
+      var _a;
+      return ((_a = e3.effects) != null ? _a : []).map((g) => __spreadProps(__spreadValues({}, g), { value: Number(g.value) || 0 }));
+    }
+  };
+}
+function defaultMutatorDefs(values) {
+  return structuredClone(DEFAULT_MUTATOR_DEFS).map((m) => {
+    const set = values == null ? void 0 : values[m.id];
+    if (!Array.isArray(set)) return m;
+    return __spreadProps(__spreadValues({}, m), { effects: m.effects.map((e3, i) => Number.isFinite(Number(set[i])) && set[i] !== null ? __spreadProps(__spreadValues({}, e3), { value: Number(set[i]) }) : e3) });
+  });
+}
+var MUTATOR_RULES = {
+  enabled: true,
+  /** Mois (AAAA-MM) → identifiant de mutateur, ou « none ». */
+  overrides: {},
+  /** 6.14.125 (AA7) : liste des mutateurs (tirage, effets, textes). Ajouter ou retirer un mutateur change le tirage des mois
+   *  qui ne sont pas imposés (`overrides`). */
+  defs: structuredClone(DEFAULT_MUTATOR_DEFS)
+};
+function mutatorList() {
+  const defs = Array.isArray(MUTATOR_RULES.defs) && MUTATOR_RULES.defs.length > 0 ? MUTATOR_RULES.defs : DEFAULT_MUTATOR_DEFS;
+  return defs.map(toDef);
+}
+function mutatorDefsOf(r) {
+  if (r && Array.isArray(r.defs)) return r.defs;
+  return defaultMutatorDefs(r == null ? void 0 : r.values);
+}
+function mutatorMonthId(now) {
+  const d = new Date(now + 2 * 36e5);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+function hashIndex(seed, n) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return Math.abs(h) % n;
+}
+function prevMonth(monthId) {
+  const [y, m] = monthId.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+function drawn(monthId) {
+  const list = mutatorList();
+  const i = hashIndex(`mut:${monthId}`, list.length);
+  const prev = hashIndex(`mut:${prevMonth(monthId)}`, list.length);
+  return list[i === prev ? (i + 1) % list.length : i];
+}
+function mutatorFor(monthId) {
+  var _a;
+  if (!MUTATOR_RULES.enabled) return null;
+  const forced = MUTATOR_RULES.overrides[monthId];
+  if (forced === "none") return null;
+  if (forced) return (_a = mutatorList().find((m) => m.id === forced)) != null ? _a : drawn(monthId);
+  return drawn(monthId);
+}
+function activeMutator(now) {
+  return mutatorFor(mutatorMonthId(now));
+}
+function mutatorEffects(now) {
+  const m = activeMutator(now);
+  if (!m) return [];
+  return m.grants.map((g) => __spreadProps(__spreadValues({ stat: g.stat, value: g.value, target: g.target }, g.scope && g.scope !== "all" ? { scope: g.scope } : {}), { layer: "empire", source: { kind: "season", id: m.id, label: m.name } }));
+}
+function validateMutatorRules(r, unitIds = /* @__PURE__ */ new Set()) {
+  var _a, _b, _c;
+  if (!r) return [];
+  const errors = [];
+  if (r.defs !== void 0 && !Array.isArray(r.defs)) errors.push("Mutateurs : la liste doit \xEAtre une liste.");
+  const defs = mutatorDefsOf(r);
+  const seen = /* @__PURE__ */ new Set();
+  for (const m of defs) {
+    if (!m || typeof m !== "object") {
+      errors.push("Mutateurs : chaque mutateur est un objet.");
+      continue;
+    }
+    const label3 = `Mutateur \xAB ${m.name || m.id} \xBB`;
+    if (!m.id || !/^[a-z0-9_]{2,32}$/.test(m.id) || m.id === "none") errors.push(`${label3} : identifiant en minuscules, chiffres et _ (2 \xE0 32 caract\xE8res, pas \xAB none \xBB).`);
+    else if (seen.has(m.id)) errors.push(`${label3} : identifiant en double.`);
+    if (m.id) seen.add(m.id);
+    if (!((_a = m.name) == null ? void 0 : _a.trim())) errors.push(`${label3} : nom vide.`);
+    errors.push(...validateValuedEffects(label3, m.effects, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
+  }
+  if (Array.isArray(r.defs) && r.defs.length === 0) errors.push("Mutateurs : au moins un mutateur (ou d\xE9cocher \xAB Une r\xE8gle sp\xE9ciale chaque mois \xBB).");
+  for (const [month2, id] of Object.entries((_b = r.overrides) != null ? _b : {})) {
+    if (!/^\d{4}-\d{2}$/.test(month2)) errors.push(`Mutateur : mois \xAB ${month2} \xBB invalide (AAAA-MM).`);
+    if (id !== "none" && !defs.some((m) => (m == null ? void 0 : m.id) === id)) errors.push(`Mutateur : \xAB ${id} \xBB inconnu (${month2}).`);
+  }
+  if (!Array.isArray(r.defs)) {
+    for (const [id, list] of Object.entries((_c = r.values) != null ? _c : {})) {
+      const m = DEFAULT_MUTATOR_DEFS.find((x) => x.id === id);
+      if (!m) {
+        errors.push(`Mutateur : valeurs de \xAB ${id} \xBB, mutateur inconnu.`);
+        continue;
+      }
+      if (!Array.isArray(list) || list.length !== m.effects.length) errors.push(`Mutateur \xAB ${m.name} \xBB : ${m.effects.length} valeur(s) attendue(s), une par effet.`);
+    }
+  }
+  return errors;
+}
+
+// src/game/errors.ts
+var GameActionError = class extends Error {
+};
+
+// src/game/ranks.ts
+var rank = (id, name, family2, xp) => ({ id, name, family: family2, xp, image: `/assets/ranks/${id}.webp` });
+var tiers = (prefix, family2, xps) => [
+  rank(`${prefix}3`, `${family2} III`, family2, xps[0]),
+  rank(`${prefix}2`, `${family2} II`, family2, xps[1]),
+  rank(`${prefix}1`, `${family2} I`, family2, xps[2])
+];
+var DEFAULT_RANKS = [
+  rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
+  ...tiers("fer", "Fer", [100, 250, 500]),
+  ...tiers("bronze", "Bronze", [900, 1400, 2e3]),
+  ...tiers("argent", "Argent", [3e3, 4200, 5600]),
+  ...tiers("or", "Or", [7500, 1e4, 13e3]),
+  ...tiers("platine", "Platine", [17e3, 22e3, 28e3]),
+  ...tiers("emeraude", "\xC9meraude", [36e3, 45e3, 56e3]),
+  ...tiers("diamant", "Diamant", [7e4, 87e3, 107e3]),
+  ...tiers("maitre", "Ma\xEEtre", [13e4, 16e4, 195e3]),
+  rank("grand_maitre", "Grand Ma\xEEtre", "Grand Ma\xEEtre", 24e4),
+  rank("challenger", "Challenger", "Challenger", 32e4),
+  rank("elite", "\xC9lite", "\xC9lite", 42e4)
+];
+var RANKS = [];
+function setRanks(defs) {
+  RANKS.splice(0, RANKS.length, ...[...defs].sort((a, b) => a.xp - b.xp));
+}
+setRanks(structuredClone(DEFAULT_RANKS));
+function getRankIndex(xp) {
+  let index2 = 0;
+  for (let i = 0; i < RANKS.length; i++) {
+    if ((xp != null ? xp : 0) >= RANKS[i].xp) index2 = i;
+  }
+  return index2;
+}
+function getRank(xp) {
+  var _a;
+  return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
+}
+function familyIndex(family2) {
+  return RANKS.findIndex((r) => r.family === family2);
+}
+function validateRanks(defs) {
+  var _a, _b;
+  const errors = [];
+  if (defs.length === 0) return ["Rangs : au moins un rang est n\xE9cessaire."];
+  const seen = /* @__PURE__ */ new Set();
+  for (const r of defs) {
+    const label3 = `Rang ${r.name || r.id}`;
+    if (!/^[a-z0-9_]+$/.test((_a = r.id) != null ? _a : "")) errors.push(`${label3} : identifiant \xAB ${r.id} \xBB invalide (minuscules, chiffres, _).`);
+    if (seen.has(r.id)) errors.push(`${label3} : identifiant en double.`);
+    seen.add(r.id);
+    if (!((_b = r.name) == null ? void 0 : _b.trim())) errors.push(`${label3} : nom manquant.`);
+    if (!(r.xp >= 0)) errors.push(`${label3} : XP requise invalide.`);
+  }
+  if (!defs.some((r) => r.xp === 0)) errors.push("Rangs : il faut un rang \xE0 0 XP (le rang de d\xE9part).");
+  const xps = defs.map((r) => r.xp);
+  if (new Set(xps).size !== xps.length) errors.push("Rangs : deux rangs ont la m\xEAme XP requise.");
+  return errors;
 }
 
 // src/game/unitClasses.ts
@@ -8487,7 +8526,13 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
-    lair: { name: "Repaire de Varan", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" }
+    lair: { name: "Repaire de Varan", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fl\xE9au de la Confr\xE9rie" },
+    fugitives: [
+      { name: "Korr le Rouilleux", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
+      { name: "Mira Tessane", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
+      { name: "Le Borgne Halvik", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
+      { name: "Drest Oumane", crime: "a ouvert le feu sur les nourrices de la Ruche" }
+    ]
   },
   {
     id: "gravhorn",
@@ -8512,7 +8557,13 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 1.5,
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
-    lair: { name: "Chambre des Contrats", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" }
+    lair: { name: "Chambre des Contrats", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
+    fugitives: [
+      { name: "Vrask Deux-Cornes", crime: "expose des larves comme troph\xE9es de chasse" },
+      { name: "Ulla la Muette", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
+      { name: "Thokk Sang-Gris", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
+      { name: "Brenna Kesh-Tueuse", crime: "porte un collier d'antennes kesh'vaar" }
+    ]
   },
   {
     id: "inquisition",
@@ -8537,7 +8588,13 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" }
+    lair: { name: "Le Scriptorium Orbital", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "H\xE9r\xE9tique" },
+    fugitives: [
+      { name: "Fr\xE8re Anselme Dor", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
+      { name: "S\u0153ur Ilvane", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
+      { name: "Le Diacre Morrow", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
+      { name: "Inquisitrice Talas", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" }
+    ]
   },
   {
     id: "cartel",
@@ -8562,7 +8619,13 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2.5,
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
-    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" }
+    lair: { name: "Le Casino Fant\xF4me", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
+    fugitives: [
+      { name: "Rico Vant", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
+      { name: "Lady Sabre", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
+      { name: "Doc Ferro", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
+      { name: "Les Jumeaux Kalis", crime: "blanchissent les gains du pillage" }
+    ]
   },
   {
     id: "meute",
@@ -8587,7 +8650,13 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 0.75,
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
-    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" }
+    lair: { name: "La Tani\xE8re du Rift", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+    fugitives: [
+      { name: "Grenn Croc-Noir", crime: "collectionne les mandibules des guerri\xE8res" },
+      { name: "Skarra", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
+      { name: "Vieux Loup Odrik", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
+      { name: "Fenra \u0152il-Rouge", crime: "chasse les ouvri\xE8res pour le sport" }
+    ]
   },
   {
     id: "choeur",
@@ -8612,7 +8681,11 @@ var DEFAULT_FACTIONS = [
     raidTravelHours: 2,
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2e3, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
-    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 3, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" }
+    lair: { name: "La Cath\xE9drale du Silence", raidsNeeded: 3, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Ch\u0153ur bris\xE9" },
+    fugitives: [
+      { name: "L'\xC9cho Vashtar", crime: "a r\xE9duit au silence le chant de la Reine" },
+      { name: "Ma\xEEtre-Chantre Ilos", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
+    ]
   }
 ];
 var FACTIONS = [];
@@ -9211,6 +9284,13 @@ function validateFactions(defs) {
     if (!(f.trigger.maxIntervalHours >= f.trigger.minIntervalHours)) errors.push(`${label3} : d\xE9lai maximal inf\xE9rieur au d\xE9lai minimal.`);
     if (!(f.answerHours > 0)) errors.push(`${label3} : d\xE9lai de r\xE9ponse invalide.`);
     if (!(f.lair.raidsNeeded >= 1)) errors.push(`${label3} : nombre de raids avant le repaire invalide.`);
+    if (f.fugitives !== void 0) {
+      if (!Array.isArray(f.fugitives)) errors.push(`${label3} : fugitifs invalides (liste attendue).`);
+      else f.fugitives.forEach((x, i) => {
+        var _a2;
+        if (!x || typeof x !== "object" || !String((_a2 = x.name) != null ? _a2 : "").trim()) errors.push(`${label3} : fugitif n\xB0 ${i + 1} sans nom.`);
+      });
+    }
   }
   return errors;
 }
@@ -10610,30 +10690,31 @@ var KESH = {
   amberIcon: "/assets/bounties/amber.webp",
   story: "Il y a trois cycles, les pirates de la Confr\xE9rie et les traqueurs du Syndicat Gravhorn ont pill\xE9 la Ruche-M\xE8re de Kesh. La Reine est tomb\xE9e, ses \u0153ufs ont \xE9t\xE9 vendus aux quatre coins du secteur.\n\nLes survivants ont pr\xEAt\xE9 le Serment de la Traque : chaque coupable sera retrouv\xE9. Mais l'Essaim est trop affaibli pour chasser seul. Il engage les commandants humains et les paie en Ambre de Ruche, la r\xE9sine sacr\xE9e qui ne se fabrique ni ne s'ach\xE8te.\n\nVashka, Matriarche-Chasseuse, tient le tableau des primes. Plus tu rapportes de proies, plus l'Essaim t'\xE9l\xE8ve dans sa hi\xE9rarchie."
 };
-var FUGITIVES = [
-  { name: "Korr le Rouilleux", factionId: "varan", crime: "a vendu les coordonn\xE9es de la Ruche-M\xE8re \xE0 la Confr\xE9rie" },
-  { name: "Mira Tessane", factionId: "varan", crime: "a trac\xE9 la route du pillage \xE0 travers les n\xE9buleuses" },
-  { name: "Le Borgne Halvik", factionId: "varan", crime: "a revendu trois \u0153ufs royaux \xE0 des collectionneurs" },
-  { name: "Drest Oumane", factionId: "varan", crime: "a ouvert le feu sur les nourrices de la Ruche" },
-  { name: "Vrask Deux-Cornes", factionId: "gravhorn", crime: "expose des larves comme troph\xE9es de chasse" },
-  { name: "Ulla la Muette", factionId: "gravhorn", crime: "a pi\xE9g\xE9 l'escorte de la Reine" },
-  { name: "Thokk Sang-Gris", factionId: "gravhorn", crime: "a bris\xE9 les sceaux d'ambre du sanctuaire" },
-  { name: "Brenna Kesh-Tueuse", factionId: "gravhorn", crime: "porte un collier d'antennes kesh'vaar" },
-  { name: "Fr\xE8re Anselme Dor", factionId: "inquisition", crime: "a br\xFBl\xE9 les archives chant\xE9es de la Ruche" },
-  { name: "S\u0153ur Ilvane", factionId: "inquisition", crime: "diss\xE8que des \u0153ufs pour l'Aube Blanche" },
-  { name: "Le Diacre Morrow", factionId: "inquisition", crime: "a d\xE9clar\xE9 l'Essaim \xAB h\xE9r\xE9sie vivante \xBB" },
-  { name: "Inquisitrice Talas", factionId: "inquisition", crime: "a scell\xE9 une couv\xE9e dans un reliquaire" },
-  { name: "Rico Vant", factionId: "cartel", crime: "vend des \u0153ufs au march\xE9 noir de N\xE9on" },
-  { name: "Lady Sabre", factionId: "cartel", crime: "a fait fondre de l'Ambre sacr\xE9e en bijoux" },
-  { name: "Doc Ferro", factionId: "cartel", crime: "distille un stimulant \xE0 partir de gel\xE9e royale" },
-  { name: "Les Jumeaux Kalis", factionId: "cartel", crime: "blanchissent les gains du pillage" },
-  { name: "Grenn Croc-Noir", factionId: "meute", crime: "collectionne les mandibules des guerri\xE8res" },
-  { name: "Skarra", factionId: "meute", crime: "a d\xE9vor\xE9 un nid entier d'\xE9claireurs" },
-  { name: "Vieux Loup Odrik", factionId: "meute", crime: "a guid\xE9 la Meute jusqu'aux couvoirs" },
-  { name: "Fenra \u0152il-Rouge", factionId: "meute", crime: "chasse les ouvri\xE8res pour le sport" },
-  { name: "L'\xC9cho Vashtar", factionId: "choeur", crime: "a r\xE9duit au silence le chant de la Reine" },
-  { name: "Ma\xEEtre-Chantre Ilos", factionId: "choeur", crime: "garde un \u0153uf royal dans sa cath\xE9drale" }
-];
+var defaultFugitivesOf = (id) => {
+  var _a, _b;
+  return (_b = (_a = DEFAULT_FACTIONS.find((f) => f.id === id)) == null ? void 0 : _a.fugitives) != null ? _b : [];
+};
+function factionFugitives(f) {
+  return Array.isArray(f.fugitives) ? f.fugitives : defaultFugitivesOf(f.id);
+}
+function defaultFactionFugitives(id) {
+  return structuredClone(defaultFugitivesOf(id));
+}
+function bountyFugitives() {
+  var _a;
+  const out = [];
+  for (const f of FACTIONS) for (const x of factionFugitives(f)) if (x == null ? void 0 : x.name) out.push({ name: x.name, factionId: f.id, crime: (_a = x.crime) != null ? _a : "" });
+  if (out.length > 0) return out;
+  return DEFAULT_FACTIONS.flatMap((f) => {
+    var _a2;
+    return ((_a2 = f.fugitives) != null ? _a2 : []).map((x) => ({ name: x.name, factionId: f.id, crime: x.crime }));
+  });
+}
+function fugitiveAt(index2) {
+  var _a;
+  const list = bountyFugitives();
+  return (_a = list[index2 != null ? index2 : 0]) != null ? _a : list[0];
+}
 var ELITE_FUGITIVES = [
   { name: "Sarghul Vex, le Marchand d'\u0152ufs", factionId: "cartel", crime: "a vendu la couv\xE9e royale au plus offrant" },
   { name: "Ka\xEFra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a command\xE9 l'assaut sur la Ruche-M\xE8re" },
@@ -10724,9 +10805,10 @@ function boardTiers(rank2) {
 function generateBoard(uid, slot, rank2, exclude = []) {
   const rand = seededRandom(`${uid}:bounty:${slot}`);
   const used = new Set(exclude);
+  const count2 = bountyFugitives().length;
   return boardTiers(rank2).map((tier, i) => {
-    let fugitive = Math.floor(rand() * FUGITIVES.length);
-    for (let guard = 0; used.has(fugitive) && guard < FUGITIVES.length; guard++) fugitive = (fugitive + 1) % FUGITIVES.length;
+    let fugitive = Math.floor(rand() * count2);
+    for (let guard = 0; used.has(fugitive) && guard < count2; guard++) fugitive = (fugitive + 1) % count2;
     used.add(fugitive);
     const t = BOUNTY_RULES.tiers[tier];
     const minutes = t.minMinutes + Math.round(rand() * (t.maxMinutes - t.minMinutes));
@@ -10759,7 +10841,6 @@ function bountyTarget(contract) {
   return `bounty_${contract.id}`;
 }
 function startBounty(player, contractId, now) {
-  var _a;
   const st = refreshBounties(bountyState(player), player.uid, now);
   const contract = st.board.find((c) => c.id === contractId);
   if (!contract) throw new GameActionError("Ce contrat n'est plus au tableau.");
@@ -10770,16 +10851,16 @@ function startBounty(player, contractId, now) {
   contract.status = "hunting";
   st.doneToday += 1;
   player.bounties = st;
-  return { contract, power, fugitive: (_a = FUGITIVES[contract.fugitive]) != null ? _a : FUGITIVES[0] };
+  return { contract, power, fugitive: fugitiveAt(contract.fugitive) };
 }
 function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, formation) {
-  var _a, _b, _c, _d, _e, _f, _g;
+  var _a, _b, _c, _d, _e;
   const flushed = flushState(__spreadProps(__spreadValues({}, playerIn), { buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }), queuesIn, now);
   const player = flushed.player;
   const st = refreshBounties(bountyState(player), player.uid, now);
   const contract = st.board.find((c) => c.id === contractId);
   const tier = (_a = contract == null ? void 0 : contract.tier) != null ? _a : 1;
-  const fugitive = (_c = FUGITIVES[(_b = contract == null ? void 0 : contract.fugitive) != null ? _b : 0]) != null ? _c : FUGITIVES[0];
+  const fugitive = fugitiveAt(contract == null ? void 0 : contract.fugitive);
   const fx = formationEffects(formation);
   const pve = playerCombatEffects(player, "pve", now);
   const combat = resolveCombat(__spreadProps(__spreadValues({}, fx), {
@@ -10800,7 +10881,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
   applyHull(player, combat.attackerHull);
   sendToWorkshop(player, combat.attackerRecovered, now, "bounty", false);
   const survivors = {};
-  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_d = combat.attackerLosses[id]) != null ? _d : 0) - ((_e = combat.attackerRecovered[id]) != null ? _e : 0));
+  for (const [id, qty] of Object.entries(fleet)) survivors[id] = Math.max(0, qty - ((_b = combat.attackerLosses[id]) != null ? _b : 0) - ((_c = combat.attackerRecovered[id]) != null ? _c : 0));
   const notifications = [...flushed.notifications];
   const success = combat.outcome === "attacker_win";
   const t = BOUNTY_RULES.tiers[tier];
@@ -10821,7 +10902,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     grantCommanderXp(player, "admiral", COMMANDER_XP.bountyWin);
     grantCommanderXp(player, "corsair", COMMANDER_XP.bountyWin);
     addPassPoints(player, "bounty", now);
-    player.victories = ((_f = player.victories) != null ? _f : 0) + 1;
+    player.victories = ((_d = player.victories) != null ? _d : 0) + 1;
     notifications.push(note3(`${fugitive.name} captur\xE9 !`, `Prime \xAB ${t.label} \xBB remplie : +${xp} XP et ${amber} Ambre de Ruche.`, now));
     const rankAfter = bountyRank(st.reputation);
     if (rankAfter > rankBefore) {
@@ -10829,7 +10910,7 @@ function resolveBountyHunt(playerIn, queuesIn, contractId, fleet, power, now, fo
     }
   } else {
     st.failed += 1;
-    player.defeats = ((_g = player.defeats) != null ? _g : 0) + 1;
+    player.defeats = ((_e = player.defeats) != null ? _e : 0) + 1;
     if (contract) {
       contract.tries += 1;
       if (contract.tries > BOUNTY_RULES.retries) st.board = st.board.filter((c) => c.id !== contractId);
@@ -11492,7 +11573,7 @@ function moonEffects(player) {
 }
 
 // src/game/empireClass.ts
-var EMPIRE_CLASSES = [
+var DEFAULT_EMPIRE_CLASSES = [
   {
     id: "industriel",
     name: "Industriel",
@@ -11538,23 +11619,71 @@ var EMPIRE_CLASS_RULES = {
   /** 6.5 : Récolteur, capacité de recyclage en plus de sa soute (0,25 = +25 %). */
   harvesterRecycleBonus: 0.25,
   /** 6.5 : Éclaireur lointain, durée d'expédition en moins (0,15 = −15 %). */
-  scoutExpeditionTime: 0.15
+  scoutExpeditionTime: 0.15,
+  /** 6.14.125 (AA7) : classes proposées (éditeur : Règles → Classes d'empire). Une classe livrée retirée de la liste revient
+   *  à la fusion des règles (des joueurs l'ont choisie). */
+  defs: structuredClone(DEFAULT_EMPIRE_CLASSES)
 };
+function empireClasses() {
+  return Array.isArray(EMPIRE_CLASS_RULES.defs) && EMPIRE_CLASS_RULES.defs.length > 0 ? EMPIRE_CLASS_RULES.defs : DEFAULT_EMPIRE_CLASSES;
+}
+function defaultEmpireClasses() {
+  return structuredClone(DEFAULT_EMPIRE_CLASSES);
+}
+function withDefaultClasses(defs) {
+  const list = Array.isArray(defs) ? defs : [];
+  const ids = new Set(list.map((c) => c == null ? void 0 : c.id));
+  return [...list, ...defaultEmpireClasses().filter((c) => !ids.has(c.id))];
+}
+var PERK_MAX = { buildSlots: 3, fleetSlots: 10, expeditionsPerDay: 5 };
+function validateEmpireClasses(defs, unitIds) {
+  var _a, _b;
+  if (defs === void 0) return [];
+  if (!Array.isArray(defs)) return ["Classes : la liste des classes doit \xEAtre une liste."];
+  const errors = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const c of defs) {
+    if (!c || typeof c !== "object") {
+      errors.push("Classes : chaque classe est un objet.");
+      continue;
+    }
+    const label3 = `Classe \xAB ${c.name || c.id} \xBB`;
+    if (!c.id || !/^[a-z0-9_]{2,32}$/.test(c.id)) errors.push(`${label3} : identifiant en minuscules, chiffres et _ (2 \xE0 32 caract\xE8res).`);
+    else if (seen.has(c.id)) errors.push(`${label3} : identifiant en double.`);
+    if (c.id) seen.add(c.id);
+    if (!((_a = c.name) == null ? void 0 : _a.trim())) errors.push(`${label3} : nom vide.`);
+    errors.push(...validateValuedEffects(label3, c.effects, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
+    for (const [k, max] of Object.entries(PERK_MAX)) {
+      const v = (_b = c.perks) == null ? void 0 : _b[k];
+      if (v === void 0) continue;
+      if (!(Number.isInteger(v) && v >= 0 && v <= max)) errors.push(`${label3} : avantage \xAB ${k} \xBB entier entre 0 et ${max}.`);
+    }
+  }
+  return errors;
+}
 function findEmpireClass(id) {
-  return EMPIRE_CLASSES.find((c) => c.id === id);
+  return empireClasses().find((c) => c.id === id);
 }
 function playerEmpireClass(player) {
   var _a;
   return findEmpireClass((_a = player == null ? void 0 : player.empireClass) == null ? void 0 : _a.id);
 }
 function empireClassPerk(player, perk) {
-  var _a, _b;
-  return Math.max(0, Math.floor((_b = (_a = playerEmpireClass(player)) == null ? void 0 : _a.perks[perk]) != null ? _b : 0));
+  var _a, _b, _c;
+  return Math.max(0, Math.floor((_c = (_b = (_a = playerEmpireClass(player)) == null ? void 0 : _a.perks) == null ? void 0 : _b[perk]) != null ? _c : 0));
 }
 function empireClassEffects(player) {
+  var _a;
   const def4 = playerEmpireClass(player);
   if (!def4) return [];
-  return def4.effects.map((e3) => ({ stat: e3.stat, target: e3.target, value: e3.value, layer: "empire", source: { kind: "class", id: def4.id, label: def4.name } }));
+  return ((_a = def4.effects) != null ? _a : []).map((e3) => __spreadProps(__spreadValues({
+    stat: e3.stat,
+    target: e3.target,
+    value: Number(e3.value) || 0,
+    layer: "empire"
+  }, e3.scope && e3.scope !== "all" ? { scope: e3.scope } : {}), {
+    source: { kind: "class", id: def4.id, label: def4.name }
+  }));
 }
 function empireClassReadyAt(player) {
   const st = player.empireClass;
@@ -20109,6 +20238,7 @@ var AUTO_SEALS = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisi
 var ARCHETYPES = [
   {
     id: "confrerie",
+    factionId: "varan",
     faction: "la Confr\xE9rie du Vide",
     villain: { speaker: "varan" },
     ally: "vashka",
@@ -20124,6 +20254,7 @@ var ARCHETYPES = [
   },
   {
     id: "cartel",
+    factionId: "cartel",
     faction: "le Cartel N\xE9on",
     villain: { speaker: "kor" },
     ally: "nerea",
@@ -20139,6 +20270,7 @@ var ARCHETYPES = [
   },
   {
     id: "choeur",
+    factionId: "choeur",
     faction: "le Ch\u0153ur Silencieux",
     villain: { speaker: "vesper" },
     ally: "ilyon",
@@ -20154,6 +20286,7 @@ var ARCHETYPES = [
   },
   {
     id: "gravhorn",
+    factionId: "gravhorn",
     faction: "le Syndicat Gravhorn",
     villain: { speaker: "kragmor" },
     ally: "lysa",
@@ -20184,6 +20317,7 @@ var ARCHETYPES = [
   },
   {
     id: "inquisition",
+    factionId: "inquisition",
     faction: "l'Inquisition de l'Aube Blanche",
     villain: { as: { name: "Haut-Juge S\xE9raphin Vol", role: "Inquisition de l'Aube Blanche", image: "/assets/story/inquisition.webp", color: "#e8f4ff" } },
     ally: "brannoc",
@@ -20199,6 +20333,7 @@ var ARCHETYPES = [
   },
   {
     id: "meute",
+    factionId: "meute",
     faction: "la Meute d'Ysgrim",
     villain: { as: { name: "Ysgrim Crocs-de-Fer", role: "Meute d'Ysgrim", image: "/assets/story/meute.webp", color: "#ff9a5c" } },
     ally: "brannoc",
@@ -20213,6 +20348,37 @@ var ARCHETYPES = [
     lore: ["Le vaisseau-tani\xE8re d'Ysgrim, h\xE9riss\xE9 de crocs d'abordage. Il ne frappe que les proies isol\xE9es.", "La Meute chasse en cercle ; quand on l'entend hurler, elle est d\xE9j\xE0 l\xE0."]
   }
 ];
+var FACTION_ACCENTS = { ember: "#ff7a45", gold: "#ffd166", cyan: "#7fd1ff", mint: "#7dff9a", danger: "#ff4d6d" };
+function factionArchetype(f) {
+  var _a, _b, _c, _d, _e;
+  const accent = (_a = FACTION_ACCENTS[f.color]) != null ? _a : FACTION_ACCENTS.ember;
+  const paragraphs = String((_b = f.story) != null ? _b : "").split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean);
+  const name = f.name || f.id;
+  return {
+    id: f.id,
+    factionId: f.id,
+    faction: `la faction ${name}`,
+    villain: { as: { name: f.leader || name, role: name, image: f.art, color: accent } },
+    ally: "vashka",
+    accent,
+    themeLabels: [`Couleurs de ${name}`, "Ombre du secteur", "Lueur d'ultimatum"],
+    image: f.banner || f.art,
+    emblem: f.emblem || f.art,
+    fallbackImage: f.art,
+    bossNames: ["Le Vaisseau-amiral", "La Flotte de l'ultimatum", `Le Bras de ${f.enforcer || f.leader || name}`, "La Forteresse noire"],
+    titles: ["Le Grand Ultimatum", "La Liste noire", "Le Tribut de sang", "L'Ombre sur le secteur"],
+    completionTitles: [((_c = f.lair) == null ? void 0 : _c.title) || "Briseur d'ultimatums", "Briseur d'ultimatums", "Rempart du secteur", "Lib\xE9rateur"],
+    lore: paragraphs.length > 0 ? paragraphs.slice(0, 2) : [((_e = (_d = f.ultimatum) == null ? void 0 : _d.quote) == null ? void 0 : _e.replace(/\{pseudo\}/g, "commandant")) || `${name} tient le secteur sous sa menace.`]
+  };
+}
+function chapterArchetypes() {
+  const covered = new Set(ARCHETYPES.flatMap((a) => {
+    var _a;
+    return [a.id, (_a = a.factionId) != null ? _a : a.id];
+  }));
+  const extra = FACTIONS.filter((f) => f && f.enabled !== false && f.id && !covered.has(f.id)).map(factionArchetype);
+  return extra.length > 0 ? [...ARCHETYPES, ...extra] : ARCHETYPES;
+}
 function voiceLine(v, text) {
   return "speaker" in v ? { speaker: v.speaker, text: ucfirst(text) } : { speaker: "vashka", as: v.as, text: ucfirst(text) };
 }
@@ -20362,14 +20528,15 @@ function generateChapter(o) {
   const rng = seededRandom2(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
   const d = o.digest;
   const recent = [...o.existing].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(-2);
+  const archetypes = chapterArchetypes();
   const recentArch = recent.map((m) => {
     var _a2, _b2, _c2;
-    return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
+    return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = archetypes.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
   });
   const gen = chronicleGenRules();
-  const drawn2 = pick2(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
+  const drawn2 = pick2(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
   const themeId = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId).theme : null;
-  const themed = gen.followPassTheme && themeId ? ARCHETYPES.find((a) => a.id === gen.themeArchetypes[themeId]) : void 0;
+  const themed = gen.followPassTheme && themeId ? archetypes.find((a) => a.id === gen.themeArchetypes[themeId]) : void 0;
   const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn2;
   const usedTitles = new Set(o.existing.flatMap((m) => {
     var _a2, _b2;
@@ -23601,7 +23768,8 @@ var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alli
 function generateAllianceSaga(monthId, digest, difficulty, now) {
   var _a;
   const rng = seededRandom2(`saga:${monthId}`);
-  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
+  const archetypes = chapterArchetypes();
+  const arch = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
   const extra = extraObjectives().filter((k) => {
     var _a2;
     return measuredPlayable(k, digest.weeklyMedian) && (!objectivePassive(k) || ((_a2 = digest.weeklyMedian[k]) != null ? _a2 : 0) > 0);
@@ -25043,6 +25211,13 @@ var HISTORICAL_RULES_META = {
   seasons: {
     firstSeasonId: { label: "Premi\xE8re saison (AAAA-MM)" }
   },
+  // 6.14.125 (AU27, lot AA7, AA-3 et AA-6) : listes système éditables.
+  classes: {
+    defs: { label: "Classes d'empire", hint: "Liste (id, nom, \xE9moji, accroche, effets compos\xE9s chiffr\xE9s, avantages) : une classe livr\xE9e retir\xE9e revient. \xC9diteur d\xE9di\xE9 : R\xE8gles \u2192 Classes d'empire." }
+  },
+  mutators: {
+    defs: { label: "Mutateurs de saison", hint: "Liste (id, nom, \xE9moji, phrase d'accroche, effets compos\xE9s chiffr\xE9s) ; la description est construite depuis les effets. \xC9diteur d\xE9di\xE9 : R\xE8gles \u2192 \xC9v\xE9nements et saisons." }
+  },
   alliances: {
     membersPerQuarter: { label: "Places de membres par niveau (effet \xAB places de membres \xBB, Quartiers f\xE9d\xE9r\xE9s par d\xE9faut)", min: 0 },
     sharedReportsMax: { label: "Rapports partag\xE9s gard\xE9s", min: 0 },
@@ -25313,7 +25488,7 @@ var DEFAULT_PVP_RULES = __spreadValues({}, PVP_RULES);
 var DEFAULT_COMBAT_RULES = __spreadValues({}, COMBAT_RULES);
 var DEFAULT_ECONOMY_RULES = __spreadValues({}, ECONOMY_RULES);
 var DEFAULT_FLEET_RULES = __spreadValues({}, FLEET_RULES);
-var DEFAULT_EMPIRE_CLASS_RULES = __spreadValues({}, EMPIRE_CLASS_RULES);
+var DEFAULT_EMPIRE_CLASS_RULES = structuredClone(EMPIRE_CLASS_RULES);
 var DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
 var DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
 var DEFAULT_SPY_RULES = __spreadValues({}, SPY_RULES);
@@ -25377,7 +25552,7 @@ function removedDefaultAchievements(rules) {
   return Array.isArray(list) ? list.filter((x) => typeof x === "string") : [];
 }
 function resolveGameContent(overrides, nowMs) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb, _sb, _tb, _ub, _vb, _wb;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb;
   const defaults = defaultGameContent();
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
@@ -25409,13 +25584,14 @@ function resolveGameContent(overrides, nowMs) {
       combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_p = (_o = overrides.rules) == null ? void 0 : _o.combat) != null ? _p : {}),
       economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_r = (_q = overrides.rules) == null ? void 0 : _q.economy) != null ? _r : {}),
       fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_t = (_s = overrides.rules) == null ? void 0 : _s.fleets) != null ? _t : {}),
-      classes: __spreadValues(__spreadValues({}, defaults.rules.classes), (_v = (_u = overrides.rules) == null ? void 0 : _u.classes) != null ? _v : {}),
-      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_x = (_w = overrides.rules) == null ? void 0 : _w.colonies) != null ? _x : {}),
-      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_z = (_y = overrides.rules) == null ? void 0 : _y.colonyRoutes) != null ? _z : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_B = (_A = overrides.rules) == null ? void 0 : _A.spy) != null ? _B : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_D = (_C = overrides.rules) == null ? void 0 : _C.debris) != null ? _D : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_F = (_E = overrides.rules) == null ? void 0 : _E.patrol) != null ? _F : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_H = (_G = overrides.rules) == null ? void 0 : _G.events) != null ? _H : {}),
+      // 6.14.125 (AA7) : une classe livrée absente de la liste enregistrée revient (des joueurs l'ont peut-être choisie).
+      classes: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.classes), (_v = (_u = overrides.rules) == null ? void 0 : _u.classes) != null ? _v : {}), { defs: withDefaultClasses((_y = (_x = (_w = overrides.rules) == null ? void 0 : _w.classes) == null ? void 0 : _x.defs) != null ? _y : defaults.rules.classes.defs) }),
+      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_A = (_z = overrides.rules) == null ? void 0 : _z.colonies) != null ? _A : {}),
+      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_C = (_B = overrides.rules) == null ? void 0 : _B.colonyRoutes) != null ? _C : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_E = (_D = overrides.rules) == null ? void 0 : _D.spy) != null ? _E : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_G = (_F = overrides.rules) == null ? void 0 : _F.debris) != null ? _G : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_I = (_H = overrides.rules) == null ? void 0 : _H.patrol) != null ? _I : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_K = (_J = overrides.rules) == null ? void 0 : _J.events) != null ? _K : {}),
       seasons: (() => {
         var _a2, _b2, _d2, _e2, _f2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
@@ -25431,50 +25607,58 @@ function resolveGameContent(overrides, nowMs) {
         const ids = new Set(((_c2 = merged.researches) != null ? _c2 : []).map((r) => r.id));
         return __spreadProps(__spreadValues({}, merged), { researches: [...(_d2 = merged.researches) != null ? _d2 : [], ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] });
       })(),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_J = (_I = overrides.rules) == null ? void 0 : _I.pirates) != null ? _J : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_L = (_K = overrides.rules) == null ? void 0 : _K.market) != null ? _L : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_N = (_M = overrides.rules) == null ? void 0 : _M.expeditions) != null ? _N : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_Q = (_P = (_O = overrides.rules) == null ? void 0 : _O.expeditions) == null ? void 0 : _P.weights) != null ? _Q : {})
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_M = (_L = overrides.rules) == null ? void 0 : _L.pirates) != null ? _M : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_O = (_N = overrides.rules) == null ? void 0 : _N.market) != null ? _O : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_Q = (_P = overrides.rules) == null ? void 0 : _P.expeditions) != null ? _Q : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_T = (_S = (_R = overrides.rules) == null ? void 0 : _R.expeditions) == null ? void 0 : _S.weights) != null ? _T : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_S = (_R = overrides.rules) == null ? void 0 : _R.leviathan) != null ? _S : {}),
-      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_U = (_T = overrides.rules) == null ? void 0 : _T.seasonBoss) != null ? _U : {}),
-      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_W = (_V = overrides.rules) == null ? void 0 : _V.allianceBoss) != null ? _W : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_Y = (_X = overrides.rules) == null ? void 0 : _X.wars) != null ? _Y : {}),
-      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (__ = (_Z = overrides.rules) == null ? void 0 : _Z.catchup) != null ? __ : {}),
-      mutators: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), (_aa = (_$ = overrides.rules) == null ? void 0 : _$.mutators) != null ? _aa : {}), { overrides: __spreadValues({}, (_da = (_ca = (_ba = overrides.rules) == null ? void 0 : _ba.mutators) == null ? void 0 : _ca.overrides) != null ? _da : {}), values: __spreadValues(__spreadValues({}, defaults.rules.mutators.values), (_ga = (_fa = (_ea = overrides.rules) == null ? void 0 : _ea.mutators) == null ? void 0 : _fa.values) != null ? _ga : {}) }),
-      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) != null ? _ia : {}), {
-        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_la = (_ka = (_ja = overrides.rules) == null ? void 0 : _ja.territoryWar) == null ? void 0 : _ka.points) != null ? _la : {}),
-        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_oa = (_na = (_ma = overrides.rules) == null ? void 0 : _ma.territoryWar) == null ? void 0 : _na.rewards) != null ? _oa : {})
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_V = (_U = overrides.rules) == null ? void 0 : _U.leviathan) != null ? _V : {}),
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_X = (_W = overrides.rules) == null ? void 0 : _W.seasonBoss) != null ? _X : {}),
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.allianceBoss) != null ? _Z : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_$ = (__ = overrides.rules) == null ? void 0 : __.wars) != null ? _$ : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.catchup) != null ? _ba : {}),
+      // 6.14.125 (AA7, AA-6) : liste des mutateurs (`defs`) ; des règles enregistrées avant, avec l'ancien `values`, donnent les
+      // mutateurs livrés à ces valeurs (repli à la lecture ; migration « mutators-defs-6.14.125 »).
+      mutators: (() => {
+        var _a2, _b2, _d2;
+        const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.mutators) != null ? _b2 : {};
+        const _c2 = o, { values: _values } = _c2, rest = __objRest(_c2, ["values"]);
+        void _values;
+        return __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), rest), { overrides: __spreadValues({}, (_d2 = o.overrides) != null ? _d2 : {}), defs: structuredClone(mutatorDefsOf(o)) });
+      })(),
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_da = (_ca = overrides.rules) == null ? void 0 : _ca.territoryWar) != null ? _da : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ga = (_fa = (_ea = overrides.rules) == null ? void 0 : _ea.territoryWar) == null ? void 0 : _fa.points) != null ? _ga : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ja = (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) == null ? void 0 : _ia.rewards) != null ? _ja : {})
       }),
-      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) != null ? _qa : {}), {
-        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_ta = (_sa = (_ra = overrides.rules) == null ? void 0 : _ra.xpTiers) == null ? void 0 : _sa.tiers) != null ? _ta : {}),
-        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_wa = (_va = (_ua = overrides.rules) == null ? void 0 : _ua.xpTiers) == null ? void 0 : _va.multipliers) != null ? _wa : {})
+      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_la = (_ka = overrides.rules) == null ? void 0 : _ka.xpTiers) != null ? _la : {}), {
+        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_oa = (_na = (_ma = overrides.rules) == null ? void 0 : _ma.xpTiers) == null ? void 0 : _na.tiers) != null ? _oa : {}),
+        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.multipliers) != null ? _ra : {})
       }),
-      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) != null ? _ya : {}), {
-        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_Ba = (_Aa = (_za = overrides.rules) == null ? void 0 : _za.passGen) == null ? void 0 : _Aa.values) != null ? _Ba : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_Ea = (_Da = (_Ca = overrides.rules) == null ? void 0 : _Ca.passGen) == null ? void 0 : _Da.caps) != null ? _Ea : {}),
-        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Ha = (_Ga = (_Fa = overrides.rules) == null ? void 0 : _Fa.passGen) == null ? void 0 : _Ga.weights) != null ? _Ha : {}),
-        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Ka = (_Ja = (_Ia = overrides.rules) == null ? void 0 : _Ia.passGen) == null ? void 0 : _Ja.challengeWeights) != null ? _Ka : {})
+      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.passGen) != null ? _ta : {}), {
+        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_wa = (_va = (_ua = overrides.rules) == null ? void 0 : _ua.passGen) == null ? void 0 : _va.values) != null ? _wa : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_za = (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) == null ? void 0 : _ya.caps) != null ? _za : {}),
+        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Ca = (_Ba = (_Aa = overrides.rules) == null ? void 0 : _Aa.passGen) == null ? void 0 : _Ba.weights) != null ? _Ca : {}),
+        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Fa = (_Ea = (_Da = overrides.rules) == null ? void 0 : _Da.passGen) == null ? void 0 : _Ea.challengeWeights) != null ? _Fa : {})
       }),
-      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_Ma = (_La = overrides.rules) == null ? void 0 : _La.chronicleGen) != null ? _Ma : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Pa = (_Oa = (_Na = overrides.rules) == null ? void 0 : _Na.chronicleGen) == null ? void 0 : _Oa.weights) != null ? _Pa : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Sa = (_Ra = (_Qa = overrides.rules) == null ? void 0 : _Qa.chronicleGen) == null ? void 0 : _Ra.caps) != null ? _Sa : {}),
-        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Va = (_Ua = (_Ta = overrides.rules) == null ? void 0 : _Ta.chronicleGen) == null ? void 0 : _Ua.objectiveWeights) != null ? _Va : {}),
-        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Ya = (_Xa = (_Wa = overrides.rules) == null ? void 0 : _Wa.chronicleGen) == null ? void 0 : _Xa.themeArchetypes) != null ? _Ya : {})
+      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_Ha = (_Ga = overrides.rules) == null ? void 0 : _Ga.chronicleGen) != null ? _Ha : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Ka = (_Ja = (_Ia = overrides.rules) == null ? void 0 : _Ia.chronicleGen) == null ? void 0 : _Ja.weights) != null ? _Ka : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Na = (_Ma = (_La = overrides.rules) == null ? void 0 : _La.chronicleGen) == null ? void 0 : _Ma.caps) != null ? _Na : {}),
+        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Qa = (_Pa = (_Oa = overrides.rules) == null ? void 0 : _Oa.chronicleGen) == null ? void 0 : _Pa.objectiveWeights) != null ? _Qa : {}),
+        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Ta = (_Sa = (_Ra = overrides.rules) == null ? void 0 : _Ra.chronicleGen) == null ? void 0 : _Sa.themeArchetypes) != null ? _Ta : {})
       }),
-      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (__a = (_Za = overrides.rules) == null ? void 0 : _Za.auctions) != null ? __a : {}), {
-        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_bb = (_ab = (_$a = overrides.rules) == null ? void 0 : _$a.auctions) == null ? void 0 : _ab.minStart) != null ? _bb : {})
+      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Va = (_Ua = overrides.rules) == null ? void 0 : _Ua.auctions) != null ? _Va : {}), {
+        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_Ya = (_Xa = (_Wa = overrides.rules) == null ? void 0 : _Wa.auctions) == null ? void 0 : _Xa.minStart) != null ? _Ya : {})
       }),
-      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (_db = (_cb = overrides.rules) == null ? void 0 : _cb.tradeContracts) != null ? _db : {}),
-      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_fb = (_eb = overrides.rules) == null ? void 0 : _eb.gifts) != null ? _fb : {}),
-      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_hb = (_gb = overrides.rules) == null ? void 0 : _gb.contests) != null ? _hb : {}),
-      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_jb = (_ib = overrides.rules) == null ? void 0 : _ib.tournamentPoints) != null ? _jb : {}),
+      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (__a = (_Za = overrides.rules) == null ? void 0 : _Za.tradeContracts) != null ? __a : {}),
+      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_ab = (_$a = overrides.rules) == null ? void 0 : _$a.gifts) != null ? _ab : {}),
+      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_cb = (_bb = overrides.rules) == null ? void 0 : _bb.contests) != null ? _cb : {}),
+      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_eb = (_db = overrides.rules) == null ? void 0 : _db.tournamentPoints) != null ? _eb : {}),
       // 6.14.104 (AA3) : champs simples ajoutés (sac de jetons) gardés ; sous-objets fusionnés champ par champ.
-      weeklyStock: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.weeklyStock), (_lb = (_kb = overrides.rules) == null ? void 0 : _kb.weeklyStock) != null ? _lb : {}), {
-        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_ob = (_nb = (_mb = overrides.rules) == null ? void 0 : _mb.weeklyStock) == null ? void 0 : _nb.prices) != null ? _ob : {}),
-        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_rb = (_qb = (_pb = overrides.rules) == null ? void 0 : _pb.weeklyStock) == null ? void 0 : _qb.quantities) != null ? _rb : {})
+      weeklyStock: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.weeklyStock), (_gb = (_fb = overrides.rules) == null ? void 0 : _fb.weeklyStock) != null ? _gb : {}), {
+        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_jb = (_ib = (_hb = overrides.rules) == null ? void 0 : _hb.weeklyStock) == null ? void 0 : _ib.prices) != null ? _jb : {}),
+        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_mb = (_lb = (_kb = overrides.rules) == null ? void 0 : _kb.weeklyStock) == null ? void 0 : _lb.quantities) != null ? _mb : {})
       }),
-      patrons: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.patrons), (_tb = (_sb = overrides.rules) == null ? void 0 : _sb.patrons) != null ? _tb : {}), { tiers: __spreadValues(__spreadValues({}, defaults.rules.patrons.tiers), (_wb = (_vb = (_ub = overrides.rules) == null ? void 0 : _ub.patrons) == null ? void 0 : _vb.tiers) != null ? _wb : {}) })
+      patrons: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.patrons), (_ob = (_nb = overrides.rules) == null ? void 0 : _nb.patrons) != null ? _ob : {}), { tiers: __spreadValues(__spreadValues({}, defaults.rules.patrons.tiers), (_rb = (_qb = (_pb = overrides.rules) == null ? void 0 : _pb.patrons) == null ? void 0 : _qb.tiers) != null ? _rb : {}) })
     }, Object.fromEntries(
       Object.keys(REGISTERED_RULES).map((k) => {
         var _a2;
@@ -25500,7 +25684,7 @@ setTrackedContentResolver({
   ids: (family2) => (family2 === "unit" ? UNITS : family2 === "research" ? TECHNOLOGIES : BUILDINGS).map((x) => x.id)
 });
 function applyGameContent(overrides, nowMs) {
-  var _a, _b, _d;
+  var _a, _b;
   const content = resolveGameContent(overrides, nowMs);
   setBuildings(content.buildings);
   setUnits(content.units);
@@ -25524,7 +25708,7 @@ function applyGameContent(overrides, nowMs) {
   setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
-  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
+  Object.assign(EMPIRE_CLASS_RULES, structuredClone(content.rules.classes));
   Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
   Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
   Object.assign(SPY_RULES, content.rules.spy);
@@ -25551,7 +25735,7 @@ function applyGameContent(overrides, nowMs) {
   Object.assign(CATCHUP_RULES, content.rules.catchup);
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
-  MUTATOR_RULES.values = __spreadValues(__spreadValues({}, DEFAULT_MUTATOR_RULES.values), (_d = content.rules.mutators.values) != null ? _d : {});
+  MUTATOR_RULES.defs = structuredClone(content.rules.mutators.defs);
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
@@ -25605,7 +25789,7 @@ var RULE_GROUP_LABELS = __spreadValues({
   patrons: "M\xE9c\xE8nes"
 }, Object.fromEntries(Object.entries(REGISTERED_RULES).map(([k, r]) => [k, r.label])));
 function validateRules(rules) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   const errors = [];
   if (!rules || typeof rules !== "object") return ["R\xE8gles : contenu illisible."];
   const defaults = defaultGameContent().rules;
@@ -25654,11 +25838,11 @@ function validateRules(rules) {
   if (sbr.lossMult !== void 0 && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!((_h = merged.leviathan.name) == null ? void 0 : _h.trim())) errors.push("L\xE9viathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
-  errors.push(...validateMutatorRules(merged.mutators));
+  errors.push(...validateMutatorRules(__spreadProps(__spreadValues({}, merged.mutators), { defs: (_i = rules.mutators) == null ? void 0 : _i.defs }), new Set(UNITS.map((u) => u.id))));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
   errors.push(...validatePassGenRules(merged.passGen));
-  errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  errors.push(...validateChronicleGenRules(merged.chronicleGen, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   errors.push(...validateTrackedActionRules(merged.trackedActions));
   errors.push(...validateNoveltyRules(merged.novelty));
   const au = merged.auctions;
@@ -25677,6 +25861,7 @@ function validateRules(rules) {
   const allianceUnitIds = new Set(UNITS.map((u) => u.id));
   errors.push(...validateAllianceEffects("Alliances : recherche", merged.alliances.researches, allianceUnitIds));
   errors.push(...validateAllianceEffects("Alliances : projet", merged.alliances.projects, allianceUnitIds));
+  errors.push(...validateEmpireClasses(merged.classes.defs, allianceUnitIds));
   const terr = merged.territories;
   const terrDef = defaultGameContent().rules.territories;
   if (terr.cols !== terrDef.cols || terr.rows !== terrDef.rows) errors.push(`Territoires d'alliance : la grille reste ${terrDef.cols} \xD7 ${terrDef.rows} (les secteurs en cours en d\xE9pendent).`);
@@ -25698,19 +25883,19 @@ function validateRules(rules) {
   if (!(cb.warlordHullRepairPerHour >= 0 && cb.warlordHullRepairPerHour <= 1)) errors.push("Combat : r\xE9paration horaire des seigneurs entre 0 et 1.");
   if (!(cb.dockScrapRefund >= 0 && cb.dockScrapRefund <= 1)) errors.push("Combat : remboursement du d\xE9mant\xE8lement en Cale s\xE8che entre 0 et 1.");
   if (!(cb.dockAutoSpeedBonus >= 0 && cb.dockAutoSpeedBonus <= 2)) errors.push("Combat : bonus de cadence de la Cale s\xE8che entre 0 et 2.");
-  for (const ev of (_i = merged.events.scheduled) != null ? _i : []) {
+  for (const ev of (_j = merged.events.scheduled) != null ? _j : []) {
     if (ev.repeatWeeks === void 0) continue;
     if (!(Number.isInteger(ev.repeatWeeks) && ev.repeatWeeks >= 1 && ev.repeatWeeks <= 8)) errors.push("\xC9v\xE9nement programm\xE9 : r\xE9currence entre 1 et 8 semaines.");
-    if (!(Number.isInteger(ev.repeatCount) && ((_j = ev.repeatCount) != null ? _j : 0) >= 2 && ((_k = ev.repeatCount) != null ? _k : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
+    if (!(Number.isInteger(ev.repeatCount) && ((_k = ev.repeatCount) != null ? _k : 0) >= 2 && ((_l = ev.repeatCount) != null ? _l : 0) <= 26)) errors.push("\xC9v\xE9nement programm\xE9 : entre 2 et 26 occurrences.");
   }
   const st = merged.streak;
   if (st) {
     if (!Array.isArray(st.hours) || st.hours.length !== 7 || st.hours.some((h) => !Number.isFinite(h) || h < 0)) errors.push("S\xE9rie de connexion : 7 dur\xE9es de production positives (jours 1 \xE0 7).");
     for (const [key, label3] of [["amber", "Ambre"], ["tokens", "jetons"], ["common", "ressources"]]) {
-      const r = (_l = st.chest) == null ? void 0 : _l[key];
+      const r = (_m = st.chest) == null ? void 0 : _m[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`S\xE9rie de connexion : coffre, ${label3} : minimum \u2264 maximum, positifs.`);
     }
-    const ch = (_m = st.chest) == null ? void 0 : _m.commonHours;
+    const ch = (_n = st.chest) == null ? void 0 : _n.commonHours;
     if (ch !== void 0 && (!Array.isArray(ch) || ch.length !== 2 || !(ch[0] >= 0) || !(ch[1] >= ch[0]) || !(ch[1] <= 72)))
       errors.push("S\xE9rie de connexion : coffre, heures de production : 0 \u2264 minimum \u2264 maximum \u2264 72 ([0, 0] : bornes fixes).");
   }
@@ -25807,7 +25992,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
   const errors = [];
   const LIST_SECTIONS = [["buildings", "B\xE2timents"], ["units", "Unit\xE9s"], ["technologies", "Technologies"], ["missions", "Missions"], ["relics", "Reliques"]];
   for (const [key, label3] of LIST_SECTIONS) if (content[key] !== void 0 && !Array.isArray(content[key])) errors.push(`${label3} : la section doit \xEAtre une liste.`);
@@ -25874,6 +26059,7 @@ function validateGameContent(content) {
       if (!Array.isArray(u.roles)) errors.push(`${label3} : r\xF4les invalides (liste attendue).`);
       else for (const r of u.roles) if (!UNIT_ROLE_IDS.includes(r)) errors.push(`${label3} : r\xF4le \xAB ${r} \xBB inconnu.`);
     }
+    if (u.empireClass && !withDefaultClasses((_j = (_i = content.rules) == null ? void 0 : _i.classes) == null ? void 0 : _j.defs).some((c) => c.id === u.empireClass)) errors.push(`${label3} : classe d'empire \xAB ${u.empireClass} \xBB inconnue.`);
   }
   checkIds("Technologies", content.technologies.map((t) => t.id));
   for (const t of content.technologies) {
@@ -25886,7 +26072,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
-    for (const req of Object.keys((_i = t.prereq) != null ? _i : {})) {
+    for (const req of Object.keys((_k = t.prereq) != null ? _k : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
     }
@@ -25911,25 +26097,25 @@ function validateGameContent(content) {
   for (const m of content.missions) {
     const label3 = `Mission ${m.name || m.key}`;
     if (!(m.duration > 0)) errors.push(`${label3} : dur\xE9e doit \xEAtre > 0.`);
-    for (const unitId of Object.keys((_j = m.prereq) != null ? _j : {})) {
+    for (const unitId of Object.keys((_l = m.prereq) != null ? _l : {})) {
       if (!unitIds.has(unitId)) errors.push(`${label3} : unit\xE9 requise \xAB ${unitId} \xBB inexistante.`);
     }
-    const res = __spreadValues({}, (_k = m.reward) != null ? _k : {});
+    const res = __spreadValues({}, (_m = m.reward) != null ? _m : {});
     delete res.xp;
     checkResources(`${label3} (r\xE9compense)`, res);
   }
-  errors.push(...validateFactions((_l = content.factions) != null ? _l : []));
+  errors.push(...validateFactions((_n = content.factions) != null ? _n : []));
   errors.push(...validateWarlords(content.warlords));
   errors.push(...validateSeasonPass(content.seasonPass));
   errors.push(...validateChronicles(content.chronicles));
   errors.push(...validatePassSeasons(content.passSeasons));
-  errors.push(...validateRanks((_m = content.ranks) != null ? _m : []));
-  errors.push(...validateAchievements((_n = content.achievements) != null ? _n : []));
-  errors.push(...validateRelics((_o = content.relics) != null ? _o : [], (_p = content.relicSettings) != null ? _p : defaultRelicSettings()));
-  errors.push(...validateLootTables((_q = content.relicSettings) == null ? void 0 : _q.loot));
-  const cap = (_r = content.relicSettings) == null ? void 0 : _r.lootTokenCap;
+  errors.push(...validateRanks((_o = content.ranks) != null ? _o : []));
+  errors.push(...validateAchievements((_p = content.achievements) != null ? _p : []));
+  errors.push(...validateRelics((_q = content.relics) != null ? _q : [], (_r = content.relicSettings) != null ? _r : defaultRelicSettings()));
+  errors.push(...validateLootTables((_s = content.relicSettings) == null ? void 0 : _s.loot));
+  const cap = (_t = content.relicSettings) == null ? void 0 : _t.lootTokenCap;
   if (cap !== void 0 && !(Number.isInteger(cap) && cap >= 0 && cap <= 500)) errors.push("Butin : plafond hebdomadaire de jetons entier, entre 0 (sans plafond) et 500.");
-  errors.push(...validateTitles((_s = content.titles) != null ? _s : []));
+  errors.push(...validateTitles((_u = content.titles) != null ? _u : []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
   return [...new Set(errors)];
@@ -26748,7 +26934,7 @@ function balanceHealth(input, now, windowDays = 7) {
   });
   const prodOf = (p2) => Object.values(economySnapshot(p2, now).gross).reduce((a, b) => a + (b != null ? b : 0), 0) * 3600;
   const production = productionHealth(players, now, prodOf);
-  const rows = EMPIRE_CLASSES.map((c) => {
+  const rows = empireClasses().map((c) => {
     const who = players.filter((p2) => {
       var _a2;
       return ((_a2 = p2.empireClass) == null ? void 0 : _a2.id) === c.id;
@@ -30632,10 +30818,10 @@ function ecdsa(Point, hash3, ecdsaOpts = {}) {
   function tryParsingSig(sg) {
     let sig = void 0;
     const isHex = typeof sg === "string" || isBytes(sg);
-    const isObj = !isHex && sg !== null && typeof sg === "object" && typeof sg.r === "bigint" && typeof sg.s === "bigint";
-    if (!isHex && !isObj)
+    const isObj2 = !isHex && sg !== null && typeof sg === "object" && typeof sg.r === "bigint" && typeof sg.s === "bigint";
+    if (!isHex && !isObj2)
       throw new Error("invalid signature, expected Uint8Array, hex string or Signature instance");
-    if (isObj) {
+    if (isObj2) {
       sig = new Signature(sg.r, sg.s);
     } else if (isHex) {
       try {
@@ -31484,6 +31670,103 @@ function instrumentHtml(html, pixelUrl, track) {
   const withLinks = html.replace(/href="(https?:\/\/[^"]+)"/g, (m, url2) => url2.includes("/api/cosmic/unsubscribe") ? m : `href="${track(url2.replace(/&amp;/g, "&"))}"`);
   const pixel = `<img src="${pixelUrl}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;">`;
   return withLinks.includes("</body>") ? withLinks.replace("</body>", `${pixel}</body>`) : withLinks + pixel;
+}
+
+// src/game/banners.ts
+var BANNER_KINDS = {
+  info: { label: "Annonce", hint: "Information g\xE9n\xE9rale (cyan)." },
+  event: { label: "\xC9v\xE8nement", hint: "\xC9v\xE8nement en jeu, concours, L\xE9viathan\u2026 (violet)." },
+  alert: { label: "Alerte", hint: "Point d'attention : maintenance pr\xE9vue, bug connu\u2026 (orange)." },
+  critical: { label: "Urgent", hint: "Incident en cours. Ne peut pas \xEAtre masqu\xE9 (rouge)." }
+};
+var BANNER_MAX_LENGTH = 400;
+function normalizeBanners(raw) {
+  const list = Array.isArray(raw) ? raw : [];
+  return list.filter((b) => !!b && typeof b === "object" && typeof b.id === "string").map((b) => {
+    var _a, _b;
+    const kind = Object.keys(BANNER_KINDS).includes(b.kind) ? b.kind : "info";
+    const num13 = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;
+    return {
+      id: String(b.id),
+      kind,
+      text: String((_a = b.text) != null ? _a : "").slice(0, BANNER_MAX_LENGTH),
+      scrolling: b.scrolling === true,
+      dismissible: kind !== "critical" && b.dismissible !== false,
+      public: b.public === true,
+      active: b.active !== false,
+      startsAtMs: num13(b.startsAtMs),
+      endsAtMs: num13(b.endsAtMs),
+      updatedAtMs: (_b = num13(b.updatedAtMs)) != null ? _b : 0
+    };
+  });
+}
+
+// src/game/contentHistory.ts
+var SETTINGS_HISTORY = {
+  casino: { label: "Casino (r\xE9glages)", field: "settings", rollback: true },
+  procedural: { label: "G\xE9n\xE9rateurs (r\xE9glages)", keep: ["log"], rollback: true },
+  announcements: { label: "Annonces", rollback: true },
+  banners: { label: "Bandeaux", rollback: true },
+  emojis: { label: "\xC9mojis", rollback: true },
+  staff: { label: "\xC9quipe (r\xF4les)", rollback: false, why: "Les r\xF4les suivent les administrateurs et les titres des joueurs : change-les dans l'onglet Administrateurs." }
+};
+function isSettingsHistoryKey(key) {
+  return Object.prototype.hasOwnProperty.call(SETTINGS_HISTORY, key);
+}
+function settingsSnapshot(key, data) {
+  var _a;
+  const def4 = SETTINGS_HISTORY[key];
+  if (!def4 || data === null || data === void 0) return data != null ? data : null;
+  if (def4.field) return data && typeof data === "object" ? (_a = data[def4.field]) != null ? _a : null : null;
+  if (def4.keep && data && typeof data === "object" && !Array.isArray(data)) {
+    const out = {};
+    for (const [k, v] of Object.entries(data)) if (!def4.keep.includes(k)) out[k] = v;
+    return out;
+  }
+  return data;
+}
+function restoreSettings(key, current2, snapshot) {
+  var _a;
+  const def4 = SETTINGS_HISTORY[key];
+  if (!def4) return { data: null, errors: [`R\xE9glage \xAB ${key} \xBB sans historique.`] };
+  if (!def4.rollback) return { data: null, errors: [(_a = def4.why) != null ? _a : "Retour arri\xE8re ferm\xE9 pour ce r\xE9glage."] };
+  const cur = current2 && typeof current2 === "object" && !Array.isArray(current2) ? current2 : {};
+  let data;
+  if (def4.field) data = __spreadProps(__spreadValues({}, cur), { [def4.field]: snapshot });
+  else if (def4.keep) {
+    data = __spreadValues({}, snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) ? snapshot : {});
+    for (const k of def4.keep) if (k in cur) data[k] = cur[k];
+  } else data = snapshot;
+  const errors = [];
+  switch (key) {
+    case "casino": {
+      const settings = normalizeCasinoSettings(data.settings);
+      errors.push(...validateCasinoSettings(settings));
+      data = __spreadProps(__spreadValues({}, data), { settings });
+      break;
+    }
+    case "procedural":
+      data = normalizeProcedural(data);
+      break;
+    case "announcements":
+      data = normalizeAnnouncementSettings(data);
+      break;
+    case "banners":
+      data = normalizeBanners(data);
+      break;
+    case "emojis":
+      data = normalizeCustomEmojis(data);
+      break;
+  }
+  return { data, errors };
+}
+var isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+function rollbackRuleGroup(current2, version, group) {
+  const out = __spreadValues({}, isObj(current2) ? current2 : {});
+  const v = isObj(version) ? version : {};
+  if (group in v) out[group] = structuredClone(v[group]);
+  else delete out[group];
+  return out;
 }
 
 // src/server/hooksEntry.ts

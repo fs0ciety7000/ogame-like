@@ -1,7 +1,7 @@
 import { chronicleMonthId, type ChronicleObjective } from "@/game/chronicles";
 import { extraObjectives, measuredPlayable, objectiveLabel, objectivePassive, trackedWeight } from "@/game/trackedActions";
 import { passState } from "@/game/seasonPass";
-import { ACTIVITY_KEYS, ARCHETYPES, baseCount, seededRandom, type WorldDigest } from "@/game/procedural";
+import { ACTIVITY_KEYS, baseCount, chapterArchetypes, seededRandom, type WorldDigest } from "@/game/procedural";
 import { seasonLabel } from "@/game/seasons";
 import type { PlayerState } from "@/types/game";
 
@@ -88,7 +88,9 @@ const SAGA_WINNERS = ["Héros de la saga", "Porte-bannière", "Champion d'allian
 /** Saga du mois, calibrée sur l'activité et la taille des alliances. */
 export function generateAllianceSaga(monthId: string, digest: WorldDigest & { allianceSizeMedian?: number }, difficulty: number, now: number): AllianceSagaDef {
   const rng = seededRandom(`saga:${monthId}`);
-  const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
+  // 6.14.125 (AA7) : archétypes du jeu, plus celui de repli d'une faction ajoutée dans l'admin.
+  const archetypes = chapterArchetypes();
+  const arch = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
   // 6.14.121 (AP-L7) : actions du registre (lune, colonies) en fin de liste, seulement si le serveur les pratique ; poids 0 : retirée.
   const extra = extraObjectives().filter((k) => measuredPlayable(k, digest.weeklyMedian) && (!objectivePassive(k) || (digest.weeklyMedian[k] ?? 0) > 0));
   const pool = [...ACTIVITY_KEYS.filter((k) => k !== "warlordWin" || (digest.weeklyMedian.warlordWin ?? 0) > 0), ...extra].filter((k) => trackedWeight(k) > 0);

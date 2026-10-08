@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { defaultGameContent } from "@/game/content";
 import { defaultAllianceEffects } from "@/game/alliances";
+import { defaultFactionFugitives } from "@/game/bounties";
+import { defaultMutatorDefs } from "@/game/mutators";
 import { CLASS_UNITS, defaultUnitRoles, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
 import { SYNTH_BUILDING_ID } from "@/game/buildings";
 import { PASS_THEME_OLD_IMAGES, PASS_THEMES, SEASON_PORTRAITS } from "@/game/passSeasons";
@@ -244,5 +246,47 @@ describe("AA6 : migration alliance-effects-6.14.124", () => {
     expect(data.alliances.researches).toEqual([{ id: "logistique", perLevel: 0.05, effects: [{ stat: "fleetSpeed" }] }, { id: "industrie", effects: [] }, { id: "maison", perLevel: 1 }]);
     expect(data.alliances.projects).toEqual([{ id: "forge", perLevel: 0.02, effects: [{ stat: "buildTime" }, { stat: "researchTime" }] }]);
     expect(changes).toHaveLength(2);
+  });
+});
+
+/* 6.14.125 (AU27, lot AA7, AA-20 et AA-6) : fugitifs dans la fiche de faction, mutateurs en liste. */
+describe("AA7 : migrations faction-fugitives-6.14.125 et mutators-defs-6.14.125", () => {
+  it("une faction livrée reçoit ses fugitifs ; une faction ajoutée et des fugitifs écrits sont gardés", () => {
+    (globalThis as Record<string, unknown>).loadGame = () => ({ defaultFactionFugitives });
+    const items = [{ id: "varan", name: "Confrérie" }, { id: "choeur", fugitives: [{ name: "X", crime: "y" }] }, { id: "nouvelle", name: "Nouvelle" }];
+    const changes: string[] = [];
+    try {
+      expect(rulesMigration("faction-fugitives-6.14.125").run(items, changes)).toBe(true);
+      expect(rulesMigration("faction-fugitives-6.14.125").run(items, [])).toBe(false);
+      expect(rulesMigration("faction-fugitives-6.14.125").run({}, [])).toBe(false);
+    } finally {
+      delete (globalThis as Record<string, unknown>).loadGame;
+    }
+    expect((items[0] as { fugitives?: unknown[] }).fugitives).toHaveLength(4);
+    expect((items[0] as { fugitives?: { name: string }[] }).fugitives?.[0].name).toBe("Korr le Rouilleux");
+    expect(items[1].fugitives).toEqual([{ name: "X", crime: "y" }]);
+    expect((items[2] as { fugitives?: unknown }).fugitives).toBeUndefined();
+    expect(changes).toEqual(["faction-fugitives-6.14.125 : varan.fugitives"]);
+  });
+
+  it("l'ancien réglage « values » devient la liste « defs » (mêmes valeurs) ; une liste écrite est gardée", () => {
+    (globalThis as Record<string, unknown>).loadGame = () => ({ defaultMutatorDefs });
+    const data = { mutators: { enabled: true, overrides: { "2026-10": "ruee" }, values: { ruee: [0.12], guerre: [0.1, 0.3] } as Record<string, number[]> } } as Record<string, Record<string, unknown>>;
+    const changes: string[] = [];
+    try {
+      expect(rulesMigration("mutators-defs-6.14.125").run(data, changes)).toBe(true);
+      expect(rulesMigration("mutators-defs-6.14.125").run(data, [])).toBe(false);
+      expect(rulesMigration("mutators-defs-6.14.125").run({ mutators: { enabled: true } }, [])).toBe(false);
+    } finally {
+      delete (globalThis as Record<string, unknown>).loadGame;
+    }
+    const defs = data.mutators.defs as { id: string; effects: { value: number }[] }[];
+    expect(defs).toHaveLength(10);
+    expect(defs.find((m) => m.id === "ruee")?.effects.map((e) => e.value)).toEqual([0.12]);
+    expect(defs.find((m) => m.id === "guerre")?.effects.map((e) => e.value)).toEqual([0.1, 0.3]);
+    expect(defs.find((m) => m.id === "vents")?.effects.map((e) => e.value)).toEqual([0.15]);
+    expect(data.mutators.values).toBeUndefined();
+    expect(data.mutators.overrides).toEqual({ "2026-10": "ruee" });
+    expect(changes).toHaveLength(1);
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BUILDINGS } from "@/game/buildings";
 import { buildSlots } from "@/game/buildPlan";
 import { defaultPlayerState } from "@/game/defaults";
-import { EMPIRE_CLASSES, EMPIRE_CLASS_RULES, empireClassEffects, empireClassPrice } from "@/game/empireClass";
+import { empireClasses, EMPIRE_CLASS_RULES, empireClassEffects, empireClassPrice } from "@/game/empireClass";
 import { chooseEmpireClass } from "@/game/empireClassChoose";
 import { expeditionsPerDay } from "@/game/expeditions";
 import { fleetSlots } from "@/game/fleets";
@@ -73,6 +73,6 @@ describe("classes d'empire", () => {
 
   it("chaque classe apparaît dans le rapport d'impact", () => {
     const labels = new Set(effectImpactReport().flatMap((r) => r.sources.filter((s) => s.kind === "class").map((s) => s.label)));
-    for (const c of EMPIRE_CLASSES) expect(labels.has(c.name)).toBe(true);
+    for (const c of empireClasses()) expect(labels.has(c.name)).toBe(true);
   });
 });

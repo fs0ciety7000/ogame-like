@@ -4,8 +4,8 @@ import { seasonPayoutSummary } from "@/game/seasons";
 import { streakWeekSummary } from "@/game/streak";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 import { catchupBonus } from "@/game/catchup";
-import { MUTATOR_RULES, MUTATORS, mutatorFor, mutatorValues } from "@/game/mutators";
-import { EFFECT_STATS } from "@/game/effects";
+import { MUTATOR_RULES, mutatorFor, mutatorList } from "@/game/mutators";
+import { MutatorsEditor } from "@/pages/admin/SystemListsEditors";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
 /* 5.15.9 : série de connexion réglable, et aperçu « avant / après » en direct
@@ -166,7 +166,7 @@ export function CatchupSection({ rules, setRules }: { rules: GameRules; setRules
 }
 
 /** 5.16 : mutateur de saison, mois par mois (tirage automatique ou choix imposé). */
-export function MutatorSection({ rules, setRules }: { rules: GameRules; setRules: SetRules }) {
+export function MutatorSection({ rules, setRules, saved }: { rules: GameRules; setRules: SetRules; saved: GameRules }) {
   const m = rules.mutators;
   const now = new Date();
   const months = Array.from({ length: 4 }, (_, i) => {
@@ -185,13 +185,13 @@ export function MutatorSection({ rules, setRules }: { rules: GameRules; setRules
       <CheckboxField label="Une règle spéciale chaque mois" checked={m.enabled} onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, enabled: v } }))} hint="Effet pour tout le serveur, annoncé sur l'accueil et dans les Chroniques." />
       <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
         {months.map((month) => {
-          const auto = MUTATORS[0] && autoMutator(month);
+          const auto = autoMutator(month, m.defs);
           return (
             <label key={month} className="flex flex-col gap-1 text-xs text-slate-400">
               <span className="font-mono">{month}</span>
               <select value={m.overrides[month] ?? "auto"} onChange={(e) => setOverride(month, e.target.value)} className="h-9 border border-white/10 bg-space-950 px-2 text-sm text-slate-100">
                 <option value="auto">Tirage : {auto ? `${auto.emoji} ${auto.name}` : "—"}</option>
-                {MUTATORS.map((x) => (
+                {(m.defs ?? []).map((x) => (
                   <option key={x.id} value={x.id}>
                     {x.emoji} {x.name}
                   </option>
@@ -202,50 +202,26 @@ export function MutatorSection({ rules, setRules }: { rules: GameRules; setRules
           );
         })}
       </div>
-      <ul className="grid gap-1 text-[11px] text-slate-500 sm:col-span-2">
-        {MUTATORS.map((x) => (
-          <li key={x.id}>
-            {x.emoji} <b className="text-slate-300">{x.name}</b> : {x.description}
-          </li>
-        ))}
-      </ul>
-      {/* 6.14.105 (AA4) : force de chaque mutateur (une valeur par effet) ; la description vue des joueurs suit ces chiffres. */}
-      <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
-        {MUTATORS.map((x) => {
-          const values = mutatorValues(x.id, m.values);
-          return x.grants.map((g, i) => (
-            <NumberField
-              key={`${x.id}-${i}`}
-              label={`${x.emoji} ${x.name} : ${EFFECT_STATS[g.stat]?.label ?? g.stat} (0,1 = 10 %)`}
-              value={values[i]}
-              min={0}
-              step={0.01}
-              onChange={(v) =>
-                setRules((r) => {
-                  const next = [...mutatorValues(x.id, r.mutators.values)];
-                  next[i] = v ?? 0;
-                  return { ...r, mutators: { ...r.mutators, values: { ...r.mutators.values, [x.id]: next } } };
-                })
-              }
-            />
-          ));
-        })}
-      </div>
-      <p className="text-[11px] text-slate-500 sm:col-span-2">Les descriptions ci-dessus suivent les valeurs enregistrées. Réduction de durée ou de taxe : 0,9 au plus ; autres effets : 2 au plus.</p>
+      {/* 6.14.125 (AA7, AA-6) : liste des mutateurs, effets composés chiffrés et textes (la description suit les effets). */}
+      <MutatorsEditor rules={rules} setRules={setRules} savedRules={saved} />
+      <p className="text-[11px] text-slate-500 sm:col-span-2">Ajouter ou retirer un mutateur change le tirage des mois qui ne sont pas imposés : impose le mois en cours pour le garder.</p>
     </Section>
   );
 }
 
-/** Tirage automatique d'un mois, sans tenir compte des choix imposés. */
-function autoMutator(month: string) {
+/** Tirage automatique d'un mois, sans tenir compte des choix imposés (sur la liste en cours d'édition). */
+function autoMutator(month: string, defs: GameRules["mutators"]["defs"]) {
   const saved = { ...MUTATOR_RULES.overrides };
   const enabled = MUTATOR_RULES.enabled;
+  const savedDefs = MUTATOR_RULES.defs;
   MUTATOR_RULES.overrides = {};
   MUTATOR_RULES.enabled = true;
+  if (Array.isArray(defs) && defs.length > 0) MUTATOR_RULES.defs = defs;
   try {
-    return mutatorFor(month);
+    return mutatorFor(month) ?? mutatorList()[0];
   } finally {
     MUTATOR_RULES.overrides = saved;
     MUTATOR_RULES.enabled = enabled;
+    MUTATOR_RULES.defs = savedDefs;
   }
 }

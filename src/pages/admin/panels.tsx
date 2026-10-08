@@ -1,3 +1,4 @@
+import { EmpireClassesEditor } from "@/pages/admin/SystemListsEditors";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rocket, CloudDownload, Download, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react";
@@ -802,6 +803,8 @@ export function RulesPanel() {
             step={0.05}
             onChange={(v) => setRules((r) => ({ ...r, classes: { ...r.classes, scoutExpeditionTime: v ?? 0 } }))}
           />
+          {/* 6.14.125 (AA7, AA-3) : liste des classes, effets composés chiffrés et avantages. */}
+          <EmpireClassesEditor rules={rules} setRules={setRules} savedRules={currentGameContent().rules} />
         </Section>
         <Section title="Colonies">
           <NumberField label="Colonies au plus" value={rules.colonies.maxColonies} min={0} step={1} hint="Une colonie de plus demande un seuil de niveaux en plus (code)." onChange={(v) => setRules((r) => ({ ...r, colonies: { ...r.colonies, maxColonies: Math.round(v ?? 0) } }))} />

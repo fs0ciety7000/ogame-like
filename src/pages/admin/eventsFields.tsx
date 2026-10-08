@@ -218,7 +218,7 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
       </Section>
       <StreakSection rules={rules} setRules={setRules} saved={saved} />
       <CatchupSection rules={rules} setRules={setRules} />
-      <MutatorSection rules={rules} setRules={setRules} />
+      <MutatorSection rules={rules} setRules={setRules} saved={saved} />
       <TerritoryWarSection rules={rules} setRules={setRules} />
       <XpTiersSection rules={rules} setRules={setRules} />
     </>

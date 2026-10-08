@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { DEFAULT_ACHIEVEMENTS, setAchievements } from "@/game/achievements";
 import { CHAIN_KIND_LABELS, CHAIN_LINK_LABELS, chainRowScore, contentChainGaps, contentChainReport, PALETTE_KINDS, type ChainKind } from "@/game/contentChain";
 import { COLONY_SPECS, RARE_DEPOSITS } from "@/game/colonies";
-import { EMPIRE_CLASSES } from "@/game/empireClass";
+import { empireClasses } from "@/game/empireClass";
 import { MODULE_TEMPLATES } from "@/game/modules";
 import { RELICS } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
@@ -76,7 +76,7 @@ describe("6.14.11 : chaîne de contenu", () => {
     expect(count("colony")).toBe(RARE_DEPOSITS.length + COLONY_SPECS.length);
     expect(count("talent")).toBe(TALENTS.length);
     expect(count("module")).toBe(MODULE_TEMPLATES.length);
-    expect(count("class")).toBe(EMPIRE_CLASSES.length);
+    expect(count("class")).toBe(empireClasses().length);
   });
 
   it("aucun maillon manquant hors des manques connus", () => {

@@ -15,7 +15,7 @@ import { COLONY_SPECS, RARE_DEPOSITS, BIOMES } from "@/game/colonies";
 import { recyclerUnitIds } from "@/game/debris";
 import { allEffectPresets } from "@/game/effectCatalog";
 import { parseUnitSelector, selectorMatches } from "@/game/effectTargets";
-import { EMPIRE_CLASSES } from "@/game/empireClass";
+import { empireClasses } from "@/game/empireClass";
 import { probeUnitIds } from "@/game/espionage";
 import { MODULE_FAMILIES, MODULE_TEMPLATES } from "@/game/modules";
 import { RELICS } from "@/game/relics";
@@ -170,7 +170,7 @@ export function unitCarrierSelectors(): string[] {
   for (const r of RELICS) if (!r.disabled && r.effect === "custom" && r.custom?.target) out.push(r.custom.target);
   for (const fam of Object.values(MODULE_FAMILIES)) for (const cls of fam.classes) out.push(`class:${cls}`);
   for (const t of TECHNOLOGIES) for (const e of techEffects(t)) if (e.type === "stat" && e.target) out.push(e.target);
-  for (const c of EMPIRE_CLASSES) for (const e of c.effects) if (e.target) out.push(e.target);
+  for (const c of empireClasses()) for (const e of c.effects) if (e.target) out.push(e.target);
   // Seules les cibles d'unités comptent (une cible de ressource ou « attack » / « defense » vise autre chose).
   return out.filter((s) => parseUnitSelector(s).kind !== "all");
 }
@@ -227,7 +227,7 @@ export function contentChainReport(): ChainRow[] {
   for (const s of COLONY_SPECS) rows.push(row("colony", s.id, s.name, { codex: codex.has(`colony:spec:${s.id}`) }));
   for (const t of TALENTS) rows.push(row("talent", t.id, t.name, { codex: codex.has(`talent:${t.id}`) }));
   for (const m of MODULE_TEMPLATES) rows.push(row("module", m.id, m.name, { codex: codex.has(`module:${m.id}`) }));
-  for (const c of EMPIRE_CLASSES) rows.push(row("class", c.id, c.name, { codex: codex.has(`class:${c.id}`) }));
+  for (const c of empireClasses()) rows.push(row("class", c.id, c.name, { codex: codex.has(`class:${c.id}`) }));
   return rows;
 }
 

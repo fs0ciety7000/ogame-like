@@ -222,7 +222,6 @@ const PENDING_DATES: Record<string, number> = {
   "src/pages/admin/BackupsCard.tsx": 1,
   "src/pages/admin/CasinoAdmin.tsx": 1,
   "src/pages/admin/ChroniclesPanel.tsx": 1,
-  "src/pages/admin/ContentHistoryPanel.tsx": 1,
   "src/pages/admin/ContestsAdmin.tsx": 1,
   "src/pages/admin/LogsPanel.tsx": 1,
   "src/pages/admin/MailPanel.tsx": 3,

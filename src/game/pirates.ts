@@ -101,6 +101,15 @@ export interface FactionDef {
   };
   bounty: { hours: number; rare: number; xp: number; debrisPerPower: number };
   lair: { name: string; raidsNeeded: number; pct: number; rewardHours: number; rare: number; xp: number; title: string };
+  /** 6.14.125 (AU27, lot AA7, constat AA-20) : fugitifs de la faction, traqués pour les Kesh'Vaar (tableau des primes).
+   *  Absent (contenu enregistré avant) : ceux de la faction livrée du même identifiant. */
+  fugitives?: FactionFugitive[];
+}
+
+/** 6.14.125 (AA7) : fugitif d'une faction (nom, crime contre la Ruche, « a vendu… »). */
+export interface FactionFugitive {
+  name: string;
+  crime: string;
 }
 
 /** Taille maximale des pseudos d'un rapport de combat (schéma battle_reports). */
@@ -135,6 +144,12 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 25, debrisPerPower: 1 },
     lair: { name: "Repaire de Varan", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Fléau de la Confrérie" },
+    fugitives: [
+      { name: "Korr le Rouilleux", crime: "a vendu les coordonnées de la Ruche-Mère à la Confrérie" },
+      { name: "Mira Tessane", crime: "a tracé la route du pillage à travers les nébuleuses" },
+      { name: "Le Borgne Halvik", crime: "a revendu trois œufs royaux à des collectionneurs" },
+      { name: "Drest Oumane", crime: "a ouvert le feu sur les nourrices de la Ruche" },
+    ],
   },
   {
     id: "gravhorn",
@@ -164,6 +179,12 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "fleet", basePct: 0.8, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 0, rare: 200, xp: 40, debrisPerPower: 1 },
     lair: { name: "Chambre des Contrats", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Chasseur de chasseurs" },
+    fugitives: [
+      { name: "Vrask Deux-Cornes", crime: "expose des larves comme trophées de chasse" },
+      { name: "Ulla la Muette", crime: "a piégé l'escorte de la Reine" },
+      { name: "Thokk Sang-Gris", crime: "a brisé les sceaux d'ambre du sanctuaire" },
+      { name: "Brenna Kesh-Tueuse", crime: "porte un collier d'antennes kesh'vaar" },
+    ],
   },
   {
     id: "inquisition",
@@ -193,6 +214,12 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "base", basePct: 0.75, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "rare" },
     bounty: { hours: 3, rare: 100, xp: 30, debrisPerPower: 1 },
     lair: { name: "Le Scriptorium Orbital", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Hérétique" },
+    fugitives: [
+      { name: "Frère Anselme Dor", crime: "a brûlé les archives chantées de la Ruche" },
+      { name: "Sœur Ilvane", crime: "dissèque des œufs pour l'Aube Blanche" },
+      { name: "Le Diacre Morrow", crime: "a déclaré l'Essaim « hérésie vivante »" },
+      { name: "Inquisitrice Talas", crime: "a scellé une couvée dans un reliquaire" },
+    ],
   },
   {
     id: "cartel",
@@ -222,6 +249,12 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "base", basePct: 0.7, perNotorietyPct: 0.1, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.2, lootKind: "common" },
     bounty: { hours: 6, rare: 0, xp: 30, debrisPerPower: 1 },
     lair: { name: "Le Casino Fantôme", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Briseur de Cartel" },
+    fugitives: [
+      { name: "Rico Vant", crime: "vend des œufs au marché noir de Néon" },
+      { name: "Lady Sabre", crime: "a fait fondre de l'Ambre sacrée en bijoux" },
+      { name: "Doc Ferro", crime: "distille un stimulant à partir de gelée royale" },
+      { name: "Les Jumeaux Kalis", crime: "blanchissent les gains du pillage" },
+    ],
   },
   {
     id: "meute",
@@ -251,6 +284,12 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "fleet", basePct: 0.75, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 300, floorPerBuildingLevel: 40, lootPct: 0.1, lootKind: "common" },
     bounty: { hours: 4, rare: 0, xp: 40, debrisPerPower: 1 },
     lair: { name: "La Tanière du Rift", raidsNeeded: 3, pct: 1.05, rewardHours: 24, rare: 300, xp: 100, title: "Dompteur de la Meute" },
+    fugitives: [
+      { name: "Grenn Croc-Noir", crime: "collectionne les mandibules des guerrières" },
+      { name: "Skarra", crime: "a dévoré un nid entier d'éclaireurs" },
+      { name: "Vieux Loup Odrik", crime: "a guidé la Meute jusqu'aux couvoirs" },
+      { name: "Fenra Œil-Rouge", crime: "chasse les ouvrières pour le sport" },
+    ],
   },
   {
     id: "choeur",
@@ -280,6 +319,10 @@ export const DEFAULT_FACTIONS: FactionDef[] = [
     raid: { target: "base", basePct: 0.85, perNotorietyPct: 0.12, maxNotoriety: 8, floorPower: 2000, floorPerBuildingLevel: 80, lootPct: 0.15, lootKind: "rare" },
     bounty: { hours: 10, rare: 800, xp: 60, debrisPerPower: 1 },
     lair: { name: "La Cathédrale du Silence", raidsNeeded: 3, pct: 1.15, rewardHours: 36, rare: 1500, xp: 150, title: "Voix du Chœur brisé" },
+    fugitives: [
+      { name: "L'Écho Vashtar", crime: "a réduit au silence le chant de la Reine" },
+      { name: "Maître-Chantre Ilos", crime: "garde un œuf royal dans sa cathédrale" },
+    ],
   },
 ];
 
@@ -1035,6 +1078,13 @@ export function validateFactions(defs: FactionDef[]): string[] {
     if (!(f.trigger.maxIntervalHours >= f.trigger.minIntervalHours)) errors.push(`${label} : délai maximal inférieur au délai minimal.`);
     if (!(f.answerHours > 0)) errors.push(`${label} : délai de réponse invalide.`);
     if (!(f.lair.raidsNeeded >= 1)) errors.push(`${label} : nombre de raids avant le repaire invalide.`);
+    // 6.14.125 (AA7, AA-20) : fugitifs (liste facultative ; chaque fugitif a un nom).
+    if (f.fugitives !== undefined) {
+      if (!Array.isArray(f.fugitives)) errors.push(`${label} : fugitifs invalides (liste attendue).`);
+      else f.fugitives.forEach((x, i) => {
+        if (!x || typeof x !== "object" || !String(x.name ?? "").trim()) errors.push(`${label} : fugitif n° ${i + 1} sans nom.`);
+      });
+    }
   }
   return errors;
 }

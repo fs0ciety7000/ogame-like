@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { activeMutator, MUTATOR_RULES, MUTATORS, mutatorEffects, mutatorFor, validateMutatorRules } from "@/game/mutators";
+import { activeMutator, MUTATOR_RULES, mutatorList, mutatorEffects, mutatorFor, validateMutatorRules } from "@/game/mutators";
 import { empireEffects, playerModifiers } from "@/game/modifiers";
 
 describe("mutateur de saison (5.16)", () => {
@@ -37,6 +37,6 @@ describe("mutateur de saison (5.16)", () => {
     expect(playerModifiers(p, now).productionAll).toBeCloseTo(0.1);
     MUTATOR_RULES.enabled = false;
     expect(playerModifiers(p, now).productionAll).toBe(0);
-    expect(MUTATORS.length).toBeGreaterThanOrEqual(8);
+    expect(mutatorList().length).toBeGreaterThanOrEqual(8);
   });
 });

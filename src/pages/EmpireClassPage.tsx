@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { EmojiIcon } from "@/components/ui/game-icon";
 import { bountyState } from "@/game/bounties";
-import { describeEffect } from "@/game/effects";
-import { EMPIRE_CLASS_RULES, EMPIRE_CLASSES, empireClassPerkLines, empireClassPrice, empireClassReadyAt, playerEmpireClass, type EmpireClassDef } from "@/game/empireClass";
+import { EMPIRE_CLASS_RULES, empireClassCountWord, empireClasses, empireClassEffectLines, empireClassPerkLines, empireClassPrice, empireClassReadyAt, playerEmpireClass, type EmpireClassDef } from "@/game/empireClass";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { cn, formatClock } from "@/lib/utils";
 import { chooseEmpireClass, GameActionError } from "@/services/playerService";
@@ -34,9 +33,9 @@ function ClassCard({ def, current, disabled, price, onPick }: { def: EmpireClass
       </div>
       <p className="text-sm text-slate-300">{def.tagline}</p>
       <ul className="flex flex-col gap-1 text-xs text-slate-300">
-        {def.effects.map((e) => (
-          <li key={`${e.stat}-${e.target ?? ""}`} className="font-mono tabular-nums">
-            {describeEffect(e.stat, e.value, e.target)}
+        {empireClassEffectLines(def).map((line, i) => (
+          <li key={`${i}-${line}`} className="font-mono tabular-nums">
+            {line}
           </li>
         ))}
         {empireClassPerkLines(def).map((line) => (
@@ -71,6 +70,8 @@ export function EmpireClassPage() {
   const readyAt = empireClassReadyAt(player);
   const locked = !!current && readyAt > now;
   const amber = Math.floor(bountyState(player).amber ?? 0);
+  // 6.14.125 (AA7) : classes en vigueur (règles), celles ajoutées dans l'admin comprises.
+  const classes = empireClasses();
 
   const pick = async (def: EmpireClassDef) => {
     const ok = await askConfirm({
@@ -111,9 +112,9 @@ export function EmpireClassPage() {
           Changer de classe : <span className="font-mono tabular-nums">{price}</span> Ambre (tu en as <span className="font-mono tabular-nums">{amber}</span>).
         </HudCallout>
       )}
-      <HudPanel icon={<Compass />} title="Les trois classes" tone="accent">
+      <HudPanel icon={<Compass />} title={`Les ${empireClassCountWord(classes.length)} classes`} tone="accent">
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          {EMPIRE_CLASSES.map((def) => (
+          {classes.map((def) => (
             <ClassCard key={def.id} def={def} current={current?.id === def.id} price={price} disabled={busy || locked || (price > 0 && amber < price)} onPick={() => void pick(def)} />
           ))}
         </ul>

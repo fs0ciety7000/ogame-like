@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
 import { objectiveLabel, type ChronicleObjective } from "@/game/chronicles";
 import { CHRONICLE_GEN_RULES, type ChronicleGenRules } from "@/game/chronicleGen";
-import { ARCHETYPES } from "@/game/procedural";
+import { chapterArchetypes } from "@/game/procedural";
 import { THEME_ROTATION } from "@/game/seasonCatalog";
 import { CheckboxField, NumberField, Section, SelectField } from "@/pages/admin/fields";
 
@@ -15,7 +15,7 @@ const ucfirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export function ChronicleGenFields({ rules, setRules }: { rules: GameRules; setRules: Dispatch<SetStateAction<GameRules>> }) {
   const g: ChronicleGenRules = { ...CHRONICLE_GEN_RULES, ...rules.chronicleGen };
   const set = (patch: Partial<ChronicleGenRules>) => setRules((r) => ({ ...r, chronicleGen: { ...g, ...r.chronicleGen, ...patch } }));
-  const factions = ARCHETYPES.map((a) => ({ value: a.id, label: ucfirst(a.faction) }));
+  const factions = chapterArchetypes().map((a) => ({ value: a.id, label: ucfirst(a.faction) }));
   return (
     <>
       <Section title="Chroniques générées : récompenses et difficulté (6.8.2)">

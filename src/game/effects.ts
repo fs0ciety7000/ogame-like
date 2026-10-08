@@ -357,6 +357,36 @@ export function validateComposedEffect(c: Partial<ComposedEffect> | undefined, v
   return errors;
 }
 
+/** 6.14.125 (AU27, lot AA7) : effet composé chiffré (grandeur × cible × portée + valeur), porté par une classe d'empire ou
+ *  un mutateur de saison (une seule source active à la fois : la valeur est donnée telle quelle, sans niveau). */
+export interface ValuedEffect extends ComposedEffect {
+  value: number;
+}
+
+/** Bornes d'une valeur d'effet chiffré : part (réduction de durée, de coût ou de taxe : 0,9 au plus ; bonus : 2 au plus),
+ *  niveaux (5 au plus), points (20 au plus). */
+export function valuedEffectMax(stat: EffectStat): number {
+  const info = EFFECT_STATS[stat];
+  if (!info) return 0;
+  if (info.unit === "level") return 5;
+  if (info.unit === "points") return 20;
+  return info.reduction ? 0.9 : 2;
+}
+
+/** Erreurs d'une liste d'effets chiffrés (`label` : « Classe Industriel »). Au moins un effet. */
+export function validateValuedEffects(label: string, effects: unknown, validTarget: (sel: string | undefined) => boolean): string[] {
+  if (!Array.isArray(effects)) return [`${label} : effets invalides (liste attendue).`];
+  if (effects.length === 0) return [`${label} : au moins un effet.`];
+  const errors: string[] = [];
+  effects.forEach((e: Partial<ValuedEffect>, i) => {
+    for (const m of validateComposedEffect(e, validTarget)) errors.push(`${label} : effet n° ${i + 1}, ${m}.`);
+    if (!e?.stat || !(e.stat in EFFECT_STATS)) return;
+    const max = valuedEffectMax(e.stat);
+    if (!(typeof e.value === "number" && Number.isFinite(e.value) && e.value >= 0 && e.value <= max)) errors.push(`${label} : effet n° ${i + 1}, valeur entre 0 et ${String(max).replace(".", ",")}.`);
+  });
+  return errors;
+}
+
 /** 6.7.1 : applique les plafonds des technos de combat réglés dans l'administration. */
 export function setTechCombatLimits(cap: number, perTechMax: number): void {
   TECH_COMBAT_LIMITS.cap = cap;

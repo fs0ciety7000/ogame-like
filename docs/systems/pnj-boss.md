@@ -46,3 +46,11 @@ page Boss corrigé sur mobile.
 6.14.107 (AE-L4, AE-10) : la santé de l'équilibre mesure aussi les **heures entre l'ouverture et la mort** des boss abattus
 (médiane et quartiles, par type et tous types réunis, d'après `startMs` et `endedAtMs` du Hall of fame). Cible : 60 à 80 % abattus,
 mort entre 36 et 60 h (seuils `balanceHealth.bossKillLow/High`, `bossKillHoursLow/High`) ; décision `hpFactor` en AE-L7 (Q101).
+
+## 6.14.125 (revue AU27, lot AA7, AA-20)
+- Fugitifs dans la fiche de faction (`FactionDef.fugitives`, Contenu → Factions → « Fugitifs (primes Kesh'Vaar) ») : le tableau des
+  primes les lit dans l'ordre des factions (`bountyFugitives`) ; 22 fugitifs livrés, mêmes indices qu'avant ; une fiche enregistrée
+  sans fugitifs prend ceux de la faction livrée (migration `faction-fugitives-6.14.125`) ; une faction ajoutée apporte les siens.
+  Les fugitifs d'élite restent une liste du code (`ELITE_FUGITIVES`).
+- Archétype de repli (`factionArchetype`, `chapterArchetypes`) : une faction active sans archétype de chapitre peut être l'antagoniste
+  d'un chapitre ou d'une saga, et la faction d'un thème du passe. Reste fermé : l'origine d'un seigneur (`WarlordOrigin`).

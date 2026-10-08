@@ -4,7 +4,7 @@ import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, typ
 import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
 import { TALENT_RULES, TALENTS } from "@/game/talents";
-import { EMPIRE_CLASSES } from "@/game/empireClass";
+import { empireClasses } from "@/game/empireClass";
 import { MODULE_FAMILIES, MODULE_RULES } from "@/game/modules";
 import { TERRITORY_RULES } from "@/game/territories";
 import { effectValuePerLevel, TECH_EFFECT_STAT, techEffects, TECHNOLOGIES } from "@/game/technologies";
@@ -81,8 +81,9 @@ export function effectImpactReport(): ImpactRow[] {
     }
   }
   // 6.0 : classes d'empire (une seule à la fois : chaque ligne montre la classe qui la donne).
-  for (const c of EMPIRE_CLASSES) {
-    for (const e of c.effects) add(e.stat, e.target, "empire", { kind: "class", label: c.name, max: e.value, note: "une classe à la fois" });
+  for (const c of empireClasses()) {
+    // 6.14.125 (AA7) : comme les reliques, un effet qui vise un mode de combat ne se cumule pas dans un même combat.
+    for (const e of c.effects ?? []) if (!e.scope || e.scope === "all") add(e.stat, e.target, "empire", { kind: "class", label: c.name, max: Number(e.value) || 0, note: "une classe à la fois" });
   }
   // 6.13.0 : lune (une par joueur).
   add("shield", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.shieldBonus + Math.max(0, MOON_RULES.shieldPerLevel) * Math.max(0, MOON_RULES.maxLevel - 1), note: `niveau ${MOON_RULES.maxLevel}` });

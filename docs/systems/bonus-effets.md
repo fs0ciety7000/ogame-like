@@ -13,9 +13,9 @@ calculs propres, couche « empire » pour le reste, 6.14.124). Plafonds par stat
 | Modules | 2 emplacements par classe, 7 modèles (inventaire de 30 modules), fusion par 3, 5 préréglages |
 | Capsules (Labo de synthèse) | 5 %/niv., 3 en stock, 12 h actives |
 | Talents | 3 points par Ascension, rang 3 max |
-| Mutateurs | un par mois (ou aucun) ; force réglable par mutateur, une valeur par effet (`mutators.values`, 6.14.105), description construite depuis ces valeurs |
+| Mutateurs | un par mois (ou aucun) ; 6.14.125 : liste éditable (`mutators.defs` : nom, émoji, accroche, effets composés chiffrés), description construite depuis les effets ; l'ancien `mutators.values` (6.14.105) est repris par la migration `mutators-defs-6.14.125` |
 | Alliance (6.14.124) | 5 recherches, 3 projets, effets composés ; couche « alliance » (temps de vol, production, contre-espionnage, bouclier, durées, abri, attaque contre les PNJ ; plafonds 0,5, bouclier 0,15, abri 0,25) ou couche empire |
-| Classe d'empire (6.0) | une au choix : Industriel, Seigneur de guerre, Explorateur ; 3 effets + 1 avantage propre (chantier, emplacements de flotte, expédition) ; changement 100 Ambre / 7 jours |
+| Classe d'empire (6.0) | une au choix : Industriel, Seigneur de guerre, Explorateur ; 3 effets + 1 avantage propre (chantier, emplacements de flotte, expédition) ; changement 100 Ambre / 7 jours ; 6.14.125 : liste éditable (`classes.defs`, effets composés chiffrés et avantages), une classe ajoutée agit, une classe livrée ne se retire pas |
 
 ## Code et admin
 `effects.ts`, `modifiers.ts`, `effectTargets.ts`, `effectCatalog.ts`, `commanders.ts`, `relics.ts`, `modules.ts`, `synthesis.ts`, `talents.ts`, `mutators.ts`, `empireClass.ts`.
@@ -39,3 +39,10 @@ groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.
 - Couche « alliance » (`EffectLayer`) et source « Alliance » (`EffectSourceKind`) : la fiche d'effets du joueur et le rapport d'impact
   montrent les recherches et projets d'alliance ; leurs plafonds sont dans `effectCaps` (clé `alliance`). Les effets d'alliance de
   couche empire entrent par `empireEffects` (I9, I40).
+
+## 6.14.125 (revue AU27, lot AA7)
+- Effet chiffré (`ValuedEffect` : grandeur × cible × portée + valeur, `effects.ts`) porté par une classe d'empire ou un mutateur ; bornes
+  `valuedEffectMax` (part 2, réduction 0,9, niveaux 5, points 20), validation `validateValuedEffects`.
+- Classes (`classes.defs`, Règles → Classes d'empire) et mutateurs (`mutators.defs`, Règles → Événements et saisons) : éditeur commun
+  `SystemListsEditors.tsx` ; la couche empire, les plafonds et le rapport d'impact les lisent comme avant (I9, I41).
+- À contenu par défaut, effets, avantages, tirages et textes identiques à ceux d'avant (`listesSysteme.test.ts`).

@@ -3950,6 +3950,105 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.125 (AA7) : une classe d'empire ajoutée dans l'admin se choisit et agit côté serveur (soute des recycleurs)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = await cfg("rules");
+    const before = await snap(bId);
+    let fleetId = "";
+    try {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      const classes = defaultGameContent().rules.classes;
+      const marchand = { id: "marchand", name: "Marchand", emoji: "", tagline: "Des soutes immenses.", effects: [{ stat: "cargo", value: 1 }], perks: {} };
+      const rules = { ...((keep?.data as object) ?? {}), classes: { ...classes, defs: [...classes.defs, marchand] } };
+      if (keep) await admin.collection("game_config").update(keep.id, { data: rules });
+      else await admin.collection("game_config").create({ key: "rules", data: rules });
+      await admin.collection("players").update(bId, { empireClass: null, allianceResearch: {}, units: { drone_recuperateur: { level: 1, count: 2 } }, vacation: null });
+      // Le serveur reconnaît la classe ajoutée (choix gratuit, premier choix).
+      await ps.chooseEmpireClass("marchand");
+      expect(((await admin.collection("players").getOne(bId)).empireClass as { id: string }).id).toBe("marchand");
+      const field = await admin.collection("debris_fields").getOne(aId).catch(() => null);
+      if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000 });
+      else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
+      const sent = await ps.sendFleet(aId, { drone_recuperateur: 2 }, "recycle");
+      fleetId = sent.id;
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      // Soute de 2 drones : 20, +100 % (classe « Marchand ») = 40 (20 sans la classe).
+      const loot = (await pb.collection("fleets").getOne(sent.id)).loot as Record<string, number>;
+      expect((loot.scrap ?? 0) + (loot.energy ?? 0)).toBe(40);
+    } finally {
+      if (fleetId) await admin.collection("fleets").delete(fleetId).catch(() => {});
+      await admin.collection("debris_fields").delete(aId).catch(() => {});
+      const cur = await cfg("rules");
+      if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
+      else if (cur) await admin.collection("game_config").delete(cur.id);
+      await admin.collection("players").update(bId, { empireClass: before.empireClass ?? null, allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
+    }
+  });
+
+  it("6.14.126 (AA8) : retour arrière d'un seul groupe de règles, gardé par la validation du contenu", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = await cfg("rules");
+    const base = (keep?.data as Record<string, unknown>) ?? {};
+    const latest = async (section: string) => (await admin.collection("content_versions").getList(1, 1, { filter: `section = "${section}"`, sort: "-createdAtMs" })).items[0];
+    try {
+      const write = async (data: object) => {
+        const cur = await cfg("rules");
+        if (cur) await admin.collection("game_config").update(cur.id, { data });
+        else await admin.collection("game_config").create({ key: "rules", data });
+      };
+      const combat = defaultGameContent().rules.combat;
+      const pvp = defaultGameContent().rules.pvp;
+      await write({ ...base, combat: { ...combat, maxRounds: 6 }, pvp: { ...pvp, maxXpRatio: 4 } });
+      await write({ ...base, combat: { ...combat, maxRounds: 9 }, pvp: { ...pvp, maxXpRatio: 5 } });
+      const v = await latest("rules");
+      expect((v.data as { combat: { maxRounds: number } }).combat.maxRounds).toBe(6);
+      const res = await admin.send("/api/cosmic/admin/content/rollback", { method: "POST", body: { versionId: v.id, group: "combat" } });
+      expect(res).toMatchObject({ section: "rules", group: "combat" });
+      const now = (await cfg("rules"))!.data as { combat: { maxRounds: number }; pvp: { maxXpRatio: number } };
+      expect(now.combat.maxRounds).toBe(6);
+      // Les autres groupes gardent leur état actuel.
+      expect(now.pvp.maxXpRatio).toBe(5);
+      expect((await latest("rules")).action).toBe("rollback");
+      // Un groupe seulement pour les règles ; une version devenue invalide est refusée par la garde de contenu.
+      await expect(admin.send("/api/cosmic/admin/content/rollback", { method: "POST", body: { versionId: v.id, group: "combat!" } })).rejects.toMatchObject({ status: 400 });
+      const bad = await admin.collection("content_versions").create({ section: "rules", data: { combat: { ...combat, maxRounds: 99 } }, existed: true, action: "update", actorName: "test", note: "", createdAtMs: Date.now() });
+      await expect(admin.send("/api/cosmic/admin/content/rollback", { method: "POST", body: { versionId: bad.id, group: "combat" } })).rejects.toMatchObject({ status: 400 });
+      expect(((await cfg("rules"))!.data as { combat: { maxRounds: number } }).combat.maxRounds).toBe(6);
+      await admin.collection("content_versions").delete(bad.id);
+    } finally {
+      const cur = await cfg("rules");
+      if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
+      else if (cur) await admin.collection("game_config").delete(cur.id);
+    }
+  });
+
+  it("6.14.126 (AA8) : réglages du casino gardés dans le journal (sans l'état de jeu) et restaurés", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = await cfg("casino");
+    try {
+      const first = await admin.send("/api/cosmic/admin/casino", { method: "POST", body: { action: "settings", settings: { ...(((keep?.data as { settings?: object })?.settings) ?? {}), dailyTokens: 2 } } });
+      expect(first.settings.dailyTokens).toBe(2);
+      await admin.send("/api/cosmic/admin/casino", { method: "POST", body: { action: "settings", settings: { ...first.settings, dailyTokens: 5 } } });
+      const v = (await admin.collection("content_versions").getList(1, 1, { filter: `section = "casino"`, sort: "-createdAtMs" })).items[0];
+      expect(v.data).toMatchObject({ dailyTokens: 2 });
+      // Seuls les réglages : ni les gains récents ni les tours joués.
+      expect(v.data).not.toHaveProperty("recent");
+      expect(v.data).not.toHaveProperty("totalSpins");
+      const spins = ((await cfg("casino"))!.data as { totalSpins?: number }).totalSpins;
+      await admin.send("/api/cosmic/admin/content/rollback", { method: "POST", body: { versionId: v.id } });
+      const now = (await cfg("casino"))!.data as { settings: { dailyTokens: number }; totalSpins?: number };
+      expect(now.settings.dailyTokens).toBe(2);
+      expect(now.totalSpins).toBe(spins);
+    } finally {
+      const cur = await cfg("casino");
+      if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
+      else if (cur) await admin.collection("game_config").delete(cur.id);
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

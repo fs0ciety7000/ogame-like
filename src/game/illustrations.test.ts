@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TECH_ART, TECH_CODEX_IMAGE, techImage } from "@/game/technologies";
 import { DEFAULT_RELICS, relicImage } from "@/game/relics";
-import { EMPIRE_CLASSES } from "@/game/empireClass";
+import { empireClasses } from "@/game/empireClass";
 
 /* 6.14.26 : illustrations intégrées (docs/illustrations.md). Une image marquée intégrée, ou une techno de TECH_ART, a son
    fichier dans public/assets : sinon la carte ou la fiche du Codex afficherait une image cassée. */
@@ -76,6 +76,6 @@ describe("6.14.118 : reliques et classes dans l'atelier d'illustrations", () => 
   });
 
   it("chaque classe d'empire a sa ligne", () => {
-    for (const c of EMPIRE_CLASSES) expect(full.some((s) => s.id === `classe-${c.id}`), c.id).toBe(true);
+    for (const c of empireClasses()) expect(full.some((s) => s.id === `classe-${c.id}`), c.id).toBe(true);
   });
 });

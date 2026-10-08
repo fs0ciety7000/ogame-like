@@ -32,6 +32,7 @@ import {
   type StaticObjective,
 } from "@/game/trackedActions";
 import type { CapsuleType } from "@/game/synthesis";
+import { FACTIONS, type FactionDef } from "@/game/pirates";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -339,6 +340,8 @@ type Voice = { speaker: Speaker } | { as: NonNullable<StoryLine["as"]> };
 
 export interface Archetype {
   id: string;
+  /** 6.14.125 (AA7) : faction hostile (onglet Factions) que l'archétype incarne ; une faction sans archétype reçoit un archétype de repli. */
+  factionId?: string;
   faction: string;
   villain: Voice;
   ally: Speaker;
@@ -361,6 +364,7 @@ export const AUTO_SEALS: string[] = ["confrerie", "cartel", "choeur", "gravhorn"
 export const ARCHETYPES: Archetype[] = [
   {
     id: "confrerie",
+    factionId: "varan",
     faction: "la Confrérie du Vide",
     villain: { speaker: "varan" },
     ally: "vashka",
@@ -376,6 +380,7 @@ export const ARCHETYPES: Archetype[] = [
   },
   {
     id: "cartel",
+    factionId: "cartel",
     faction: "le Cartel Néon",
     villain: { speaker: "kor" },
     ally: "nerea",
@@ -391,6 +396,7 @@ export const ARCHETYPES: Archetype[] = [
   },
   {
     id: "choeur",
+    factionId: "choeur",
     faction: "le Chœur Silencieux",
     villain: { speaker: "vesper" },
     ally: "ilyon",
@@ -406,6 +412,7 @@ export const ARCHETYPES: Archetype[] = [
   },
   {
     id: "gravhorn",
+    factionId: "gravhorn",
     faction: "le Syndicat Gravhorn",
     villain: { speaker: "kragmor" },
     ally: "lysa",
@@ -436,6 +443,7 @@ export const ARCHETYPES: Archetype[] = [
   },
   {
     id: "inquisition",
+    factionId: "inquisition",
     faction: "l'Inquisition de l'Aube Blanche",
     villain: { as: { name: "Haut-Juge Séraphin Vol", role: "Inquisition de l'Aube Blanche", image: "/assets/story/inquisition.webp", color: "#e8f4ff" } },
     ally: "brannoc",
@@ -451,6 +459,7 @@ export const ARCHETYPES: Archetype[] = [
   },
   {
     id: "meute",
+    factionId: "meute",
     faction: "la Meute d'Ysgrim",
     villain: { as: { name: "Ysgrim Crocs-de-Fer", role: "Meute d'Ysgrim", image: "/assets/story/meute.webp", color: "#ff9a5c" } },
     ally: "brannoc",
@@ -465,6 +474,47 @@ export const ARCHETYPES: Archetype[] = [
     lore: ["Le vaisseau-tanière d'Ysgrim, hérissé de crocs d'abordage. Il ne frappe que les proies isolées.", "La Meute chasse en cercle ; quand on l'entend hurler, elle est déjà là."],
   },
 ];
+
+/* ---------- 6.14.125 (AU27, lot AA7, constat AA-20) : archétype de repli d'une faction ajoutée dans l'admin ---------- */
+
+/** Couleur d'accent d'une faction (jeton du thème) → teinte du chapitre (donnée de contenu, comme `accent` des archétypes). */
+const FACTION_ACCENTS: Record<string, string> = { ember: "#ff7a45", gold: "#ffd166", cyan: "#7fd1ff", mint: "#7dff9a", danger: "#ff4d6d" };
+
+/** Archétype construit depuis la fiche d'une faction (chef, exécuteur, repaire, récit, images). */
+export function factionArchetype(f: Pick<FactionDef, "id" | "name" | "leader" | "enforcer" | "art" | "banner" | "emblem" | "color" | "story" | "ultimatum" | "lair">): Archetype {
+  const accent = FACTION_ACCENTS[f.color] ?? FACTION_ACCENTS.ember;
+  const paragraphs = String(f.story ?? "")
+    .split(/\n\s*\n/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const name = f.name || f.id;
+  return {
+    id: f.id,
+    factionId: f.id,
+    faction: `la faction ${name}`,
+    villain: { as: { name: f.leader || name, role: name, image: f.art, color: accent } },
+    ally: "vashka",
+    accent,
+    themeLabels: [`Couleurs de ${name}`, "Ombre du secteur", "Lueur d'ultimatum"],
+    image: f.banner || f.art,
+    emblem: f.emblem || f.art,
+    fallbackImage: f.art,
+    bossNames: ["Le Vaisseau-amiral", "La Flotte de l'ultimatum", `Le Bras de ${f.enforcer || f.leader || name}`, "La Forteresse noire"],
+    titles: ["Le Grand Ultimatum", "La Liste noire", "Le Tribut de sang", "L'Ombre sur le secteur"],
+    completionTitles: [f.lair?.title || "Briseur d'ultimatums", "Briseur d'ultimatums", "Rempart du secteur", "Libérateur"],
+    lore: paragraphs.length > 0 ? paragraphs.slice(0, 2) : [f.ultimatum?.quote?.replace(/\{pseudo\}/g, "commandant") || `${name} tient le secteur sous sa menace.`],
+  };
+}
+
+/**
+ * Archétypes du générateur de chapitres et de sagas : ceux du jeu, puis un archétype de repli pour chaque faction active qui
+ * n'en a pas (faction ajoutée dans l'admin). À factions par défaut, la liste est celle d'avant la 6.14.125 (mêmes tirages).
+ */
+export function chapterArchetypes(): Archetype[] {
+  const covered = new Set(ARCHETYPES.flatMap((a) => [a.id, a.factionId ?? a.id]));
+  const extra = FACTIONS.filter((f) => f && f.enabled !== false && f.id && !covered.has(f.id)).map(factionArchetype);
+  return extra.length > 0 ? [...ARCHETYPES, ...extra] : ARCHETYPES;
+}
 
 function voiceLine(v: Voice, text: string): StoryLine {
   return "speaker" in v ? { speaker: v.speaker, text: ucfirst(text) } : { speaker: "vashka", as: v.as, text: ucfirst(text) };
@@ -642,12 +692,13 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const rng = seededRandom(`${o.monthId}:${o.variant ?? 0}`);
   const d = o.digest;
   const recent = [...o.existing].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(-2);
-  const recentArch = recent.map((m) => m.auto?.archetype ?? ARCHETYPES.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
+  const archetypes = chapterArchetypes();
+  const recentArch = recent.map((m) => m.auto?.archetype ?? archetypes.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
   const gen = chronicleGenRules();
   // Tirage d'abord (la suite du tirage ne dépend pas du thème), puis 6.8.2 : la faction du thème du passe, sauf si elle revient deux mois de suite.
-  const drawn = pick(rng, ARCHETYPES.filter((a) => !recentArch.includes(a.id)));
+  const drawn = pick(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
   const themeId = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId).theme : null;
-  const themed = gen.followPassTheme && themeId ? ARCHETYPES.find((a) => a.id === gen.themeArchetypes[themeId]) : undefined;
+  const themed = gen.followPassTheme && themeId ? archetypes.find((a) => a.id === gen.themeArchetypes[themeId]) : undefined;
   const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
   const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));
   const fresh = (xs: string[]) => pick(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);

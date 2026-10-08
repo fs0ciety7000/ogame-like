@@ -124,17 +124,23 @@ function guardContentConfig(e) {
   const key = e.record.getString("key");
   const game = loadGame();
   if ((game.CONTENT_SECTIONS || []).indexOf(key) < 0) return;
+  // Section actuelle : l'état d'avant la modification.
+  const before = e.record.isNew() ? null : toPlain(e.record.original()).data;
+  assertContentValid($app, game, key, toPlain(e.record).data, e.record.id, before);
+}
+
+/**
+ * 6.14.126 (AU27, lot AA8) : garde de contenu commune à l'enregistrement (`guardContentConfig`) et au retour arrière
+ * (`contentRollback`) : la section `key` qui prendrait la valeur `data` est validée avec les autres sections enregistrées.
+ */
+function assertContentValid(txApp, game, key, data, recordId, before) {
   const stored = {};
-  $app.findAllRecords("game_config").forEach((r) => {
+  txApp.findAllRecords("game_config").forEach((r) => {
     const k = r.getString("key");
-    if (game.CONTENT_SECTIONS.indexOf(k) >= 0 && r.id !== e.record.id) stored[k] = toPlain(r).data;
+    if (game.CONTENT_SECTIONS.indexOf(k) >= 0 && r.id !== recordId) stored[k] = toPlain(r).data;
   });
-  if (!e.record.isNew()) {
-    // Section actuelle : l'état d'avant la modification.
-    const before = toPlain(e.record.original()).data;
-    if (before !== null && before !== undefined) stored[key] = before;
-  }
-  const errors = game.contentSectionErrors(key, toPlain(e.record).data, stored);
+  if (before !== null && before !== undefined) stored[key] = before;
+  const errors = game.contentSectionErrors(key, data, stored);
   if (errors.length > 0) {
     const more = errors.length > 3 ? ` (+${errors.length - 3} autre${errors.length > 4 ? "s" : ""})` : "";
     throw new BadRequestError(`${key === "rules" ? "Règles refusées" : "Contenu refusé"} : ${errors.slice(0, 3).join(" · ")}${more}`);
@@ -3004,6 +3010,8 @@ function adminManage(e) {
       setPlayerStaffTitle(txApp, game, uid, role, wasStaffShown);
       label = `rôle : ${role === "developer" ? "développeur" : "administrateur"}`;
     }
+    // 6.14.126 (AA8) : rôles d'avant gardés dans le journal de contenu (historique seulement : pas de retour arrière).
+    saveSettingsVersion(txApp, game, game.STAFF_KEY, toPlain(staff.rec).data, e, label);
     staff.rec.set("data", { roles });
     txApp.save(staff.rec);
 
@@ -5858,6 +5866,42 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 6.14.125 (AU27, lot AA7, AA-20) : fugitifs écrits dans la fiche de chaque faction livrée (l'admin les voit et les règle) ;
+  // une faction ajoutée ou des fugitifs déjà écrits sont gardés. Même liste qu'avant : le tableau des primes ne change pas.
+  {
+    id: "faction-fugitives-6.14.125",
+    key: "factions",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      const game = loadGame();
+      let touched = false;
+      items.forEach((f) => {
+        if (!f || typeof f !== "object" || Array.isArray(f.fugitives)) return;
+        const list = game.defaultFactionFugitives(f.id);
+        if (!list.length) return;
+        f.fugitives = list;
+        touched = true;
+        changes.push(`faction-fugitives-6.14.125 : ${f.id}.fugitives`);
+      });
+      return touched;
+    },
+  },
+  // 6.14.125 (AA7, AA-6) : l'ancien réglage « values » des mutateurs (6.14.105) devient la liste « defs » (mêmes mutateurs,
+  // mêmes valeurs) ; une liste déjà écrite est gardée. Sans « values », rien n'est écrit (les mutateurs livrés s'appliquent).
+  {
+    id: "mutators-defs-6.14.125",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      const mu = data && data.mutators;
+      if (!mu || typeof mu !== "object" || Array.isArray(mu.defs) || !mu.values || typeof mu.values !== "object") return false;
+      mu.defs = loadGame().defaultMutatorDefs(mu.values);
+      delete mu.values;
+      changes.push("mutators-defs-6.14.125 : mutators.values → mutators.defs");
+      return true;
+    },
+  },
 ];
 
 function canonJson(v) {
@@ -6956,7 +7000,11 @@ function adminProcedural(e) {
     const req = body(e);
     if (req.action === "settings") {
       const next = game.normalizeProcedural(Object.assign({}, settings, req.settings || {}, { log: settings.log }));
-      $app.runInTransaction((txApp) => writeConfig(txApp, game.PROCEDURAL_KEY, next));
+      $app.runInTransaction((txApp) => {
+        // 6.14.126 (AA8) : réglages d'avant gardés dans le journal de contenu (sans le journal des générateurs).
+        if (JSON.stringify(game.settingsSnapshot(game.PROCEDURAL_KEY, settings)) !== JSON.stringify(game.settingsSnapshot(game.PROCEDURAL_KEY, next))) saveSettingsVersion(txApp, game, game.PROCEDURAL_KEY, rec ? toPlain(rec).data : null, e, "");
+        writeConfig(txApp, game.PROCEDURAL_KEY, next);
+      });
       return e.json(200, { settings: next });
     }
     if (req.action === "generate") {
@@ -9571,6 +9619,9 @@ function adminCasino(e) {
       const settings = game.normalizeCasinoSettings(req.settings);
       const errors = game.validateCasinoSettings(settings);
       if (errors.length) throw new BadRequestError(errors.join(" "));
+      // 6.14.126 (AA8) : réglages d'avant gardés dans le journal de contenu (le pot et les tournois ne sont pas gardés).
+      const casinoRec = configRecord(txApp, game.CASINO_KEY);
+      if (JSON.stringify(casino.settings) !== JSON.stringify(settings)) saveSettingsVersion(txApp, game, game.CASINO_KEY, casinoRec ? toPlain(casinoRec).data : null, e, "");
       writeConfig(txApp, game.CASINO_KEY, Object.assign({}, casino, { settings, updatedAtMs: now }));
       bossAdminLog(txApp, e, game.CASINO_KEY, "Casino : réglages", { réglages: { avant: JSON.stringify(casino.settings).slice(0, 300), après: JSON.stringify(settings).slice(0, 300) } }, now);
       out = { settings };
@@ -9622,46 +9673,83 @@ function actorLabel(e) {
   }
 }
 
-/** Avant chaque écriture d'une section de contenu (game_config) : on garde l'état précédent. */
+/** Avant chaque écriture d'une section de contenu (game_config) : on garde l'état précédent.
+ *  6.14.126 (AA8) : aussi les réglages serveur suivis (annonces, bandeaux, émojis… : `SETTINGS_HISTORY`), partie réglage seulement. */
 function snapshotContent(e, action) {
   try {
     const game = loadGame();
     const key = e.record.getString("key");
-    if ((game.CONTENT_SECTIONS || []).indexOf(key) < 0) return;
+    const settings = game.isSettingsHistoryKey(key);
+    if ((game.CONTENT_SECTIONS || []).indexOf(key) < 0 && !settings) return;
     if (action === "create") {
       saveContentVersion($app, key, null, false, action, actorLabel(e), "");
       return;
     }
     const before = toPlain(action === "update" ? e.record.original() : e.record);
-    saveContentVersion($app, key, before.data, true, action, actorLabel(e), "");
+    // Réglage serveur : rien n'est gardé si la partie réglée n'a pas changé (le pot du casino, le journal des générateurs…).
+    if (settings && action === "update" && JSON.stringify(game.settingsSnapshot(key, before.data)) === JSON.stringify(game.settingsSnapshot(key, toPlain(e.record).data))) return;
+    saveContentVersion($app, key, settings ? game.settingsSnapshot(key, before.data) : before.data, true, action, actorLabel(e), "");
   } catch (err) {
     console.log(`[cosmic] instantané de contenu : ${err}`);
   }
 }
 
-/** POST /api/cosmic/admin/content/rollback { versionId } — remet une section dans l'état d'une version. */
+/** 6.14.126 (AA8) : instantané d'un réglage serveur écrit par une route (casino, générateurs, équipe), avant l'écriture.
+ *  `current` : la donnée enregistrée (null : pas encore de réglage, valeurs du code). */
+function saveSettingsVersion(txApp, game, key, current, e, note) {
+  saveContentVersion(txApp, key, current === null || current === undefined ? null : game.settingsSnapshot(key, current), current !== null && current !== undefined, "update", e ? actorLabel(e) : "serveur", note || "");
+}
+
+/** POST /api/cosmic/admin/content/rollback { versionId, group? } — remet une section dans l'état d'une version.
+ *  6.14.126 (AU27, lot AA8, AA-27) : `group` (section « rules » seulement) ne remet que ce groupe de règles, les autres gardent
+ *  leur état actuel ; un réglage serveur suivi (casino, générateurs, annonces…) revient lui aussi, sans toucher à l'état de jeu.
+ *  Le résultat passe par la garde de contenu (`assertContentValid`) : une version devenue invalide est refusée. */
 function contentRollback(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
-  const versionId = String(body(e).versionId || "");
+  const req = body(e);
+  const versionId = String(req.versionId || "");
+  const group = req.group === undefined || req.group === null || req.group === "" ? "" : String(req.group);
   let out = null;
   $app.runInTransaction((txApp) => {
     const v = findOrNull(txApp, "content_versions", versionId);
     if (!v) throw new NotFoundError("Version introuvable.");
     const section = v.getString("section");
-    if ((game.CONTENT_SECTIONS || []).indexOf(section) < 0) throw new BadRequestError("Section inconnue.");
+    const isContent = (game.CONTENT_SECTIONS || []).indexOf(section) >= 0;
+    const isSettings = game.isSettingsHistoryKey(section);
+    if (!isContent && !isSettings) throw new BadRequestError("Section inconnue.");
+    if (group && section !== "rules") throw new BadRequestError("Le retour d'un seul groupe ne vaut que pour les règles.");
+    if (group && !/^[A-Za-z0-9_]{1,60}$/.test(group)) throw new BadRequestError("Groupe de règles invalide.");
     const cur = txApp.findRecordsByFilter("game_config", "key = {:k}", "", 1, 0, { k: section })[0] || null;
+    const curData = cur ? toPlain(cur).data : null;
+    const when = new Date(v.getInt("createdAtMs")).toISOString().slice(0, 16).replace("T", " ");
+    let next;
+    if (isSettings) {
+      const restored = game.restoreSettings(section, curData, v.getBool("existed") ? toPlain(v).data : null);
+      if (restored.errors.length > 0) throw new BadRequestError(`Retour refusé : ${restored.errors.slice(0, 3).join(" · ")}`);
+      next = v.getBool("existed") ? restored.data : null;
+      // Pas encore de réglage à l'époque : la partie réglée revient aux valeurs du code, l'état de jeu reste.
+      if (!v.getBool("existed") && cur) next = game.restoreSettings(section, curData, null).data;
+    } else if (group) {
+      next = game.rollbackRuleGroup(curData, v.getBool("existed") ? toPlain(v).data : {}, group);
+      if (JSON.stringify(next) === JSON.stringify(curData || {})) throw new BadRequestError(`Le groupe « ${group} » est déjà dans cet état.`);
+    } else {
+      next = v.getBool("existed") ? toPlain(v).data : null;
+    }
+    // Garde de contenu : la section restaurée doit être valide avec les autres sections enregistrées.
+    if (isContent && next !== null) assertContentValid(txApp, game, section, next, cur ? cur.id : "", null);
     // L'état actuel est gardé lui aussi : le retour arrière se défait.
-    saveContentVersion(txApp, section, cur ? toPlain(cur).data : null, !!cur, "rollback", actorLabel(e), `avant retour à la version du ${new Date(v.getInt("createdAtMs")).toISOString().slice(0, 16).replace("T", " ")}`);
-    if (v.getBool("existed")) {
+    const note = group ? `avant retour du groupe « ${group} » à la version du ${when}` : `avant retour à la version du ${when}`;
+    saveContentVersion(txApp, section, isSettings && curData !== null ? game.settingsSnapshot(section, curData) : curData, !!cur, "rollback", actorLabel(e), note);
+    if (next !== null) {
       const rec = cur || new Record(txApp.findCollectionByNameOrId("game_config"));
       if (!cur) rec.set("key", section);
-      rec.set("data", toPlain(v).data);
+      rec.set("data", next);
       txApp.save(rec);
     } else if (cur) {
       txApp.delete(cur);
     }
-    out = { section, restored: v.getBool("existed") ? "version" : "valeurs du code" };
+    out = { section, group: group || null, restored: next !== null ? "version" : "valeurs du code" };
   });
   return e.json(200, out);
 }

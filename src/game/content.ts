@@ -20,14 +20,14 @@ import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
 import { FLEET_RULES, PATROL_RULES } from "@/game/fleets";
-import { EMPIRE_CLASS_RULES } from "@/game/empireClass";
+import { EMPIRE_CLASS_RULES, validateEmpireClasses, withDefaultClasses } from "@/game/empireClass";
 import { SPY_RULES } from "@/game/espionage";
 import { DEBRIS_RULES } from "@/game/debris";
 import { EVENT_RULES, validateBossSchedule } from "@/game/events";
 import { SEASON_RULES } from "@/game/seasons";
 import { STREAK_RULES } from "@/game/streak";
 import { CATCHUP_RULES, validateCatchupRules } from "@/game/catchup";
-import { MUTATOR_RULES, validateMutatorRules } from "@/game/mutators";
+import { MUTATOR_RULES, mutatorDefsOf, validateMutatorRules } from "@/game/mutators";
 import { TERRITORY_WAR_RULES, validateTerritoryWarRules } from "@/game/territoryWar";
 import { XP_TIER_RULES, validateXpTierRules } from "@/game/xpTiers";
 import { PASS_GEN_RULES, validatePassGenRules } from "@/game/passGen";
@@ -48,7 +48,7 @@ import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { LEVIATHAN_RULES, SEASON_BOSS_TUNING } from "@/game/leviathan";
 import { WAR_RULES } from "@/game/wars";
-import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
+import { DEFAULT_FACTIONS, FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { driftWarnings, listShapeErrors, shapeErrors } from "@/game/contentShape";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
@@ -168,7 +168,7 @@ const DEFAULT_PVP_RULES = { ...PVP_RULES };
 const DEFAULT_COMBAT_RULES = { ...COMBAT_RULES };
 const DEFAULT_ECONOMY_RULES = { ...ECONOMY_RULES };
 const DEFAULT_FLEET_RULES = { ...FLEET_RULES };
-const DEFAULT_EMPIRE_CLASS_RULES = { ...EMPIRE_CLASS_RULES };
+const DEFAULT_EMPIRE_CLASS_RULES = structuredClone(EMPIRE_CLASS_RULES);
 const DEFAULT_COLONY_RULES = structuredClone(COLONY_RULES);
 const DEFAULT_COLONY_ROUTE_RULES = structuredClone(COLONY_ROUTE_RULES);
 const DEFAULT_SPY_RULES = { ...SPY_RULES };
@@ -271,7 +271,8 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
       combat: { ...defaults.rules.combat, ...(overrides.rules?.combat ?? {}) },
       economy: { ...defaults.rules.economy, ...(overrides.rules?.economy ?? {}) },
       fleets: { ...defaults.rules.fleets, ...(overrides.rules?.fleets ?? {}) },
-      classes: { ...defaults.rules.classes, ...(overrides.rules?.classes ?? {}) },
+      // 6.14.125 (AA7) : une classe livrée absente de la liste enregistrée revient (des joueurs l'ont peut-être choisie).
+      classes: { ...defaults.rules.classes, ...(overrides.rules?.classes ?? {}), defs: withDefaultClasses(overrides.rules?.classes?.defs ?? defaults.rules.classes.defs) },
       colonies: { ...defaults.rules.colonies, ...(overrides.rules?.colonies ?? {}) },
       colonyRoutes: { ...defaults.rules.colonyRoutes, ...(overrides.rules?.colonyRoutes ?? {}) },
       spy: { ...defaults.rules.spy, ...(overrides.rules?.spy ?? {}) },
@@ -305,7 +306,14 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
       allianceBoss: { ...defaults.rules.allianceBoss, ...(overrides.rules?.allianceBoss ?? {}) },
       wars: { ...defaults.rules.wars, ...(overrides.rules?.wars ?? {}) },
       catchup: { ...defaults.rules.catchup, ...(overrides.rules?.catchup ?? {}) },
-      mutators: { ...defaults.rules.mutators, ...(overrides.rules?.mutators ?? {}), overrides: { ...(overrides.rules?.mutators?.overrides ?? {}) }, values: { ...defaults.rules.mutators.values, ...(overrides.rules?.mutators?.values ?? {}) } },
+      // 6.14.125 (AA7, AA-6) : liste des mutateurs (`defs`) ; des règles enregistrées avant, avec l'ancien `values`, donnent les
+      // mutateurs livrés à ces valeurs (repli à la lecture ; migration « mutators-defs-6.14.125 »).
+      mutators: (() => {
+        const o = (overrides.rules?.mutators ?? {}) as Partial<GameRules["mutators"]>;
+        const { values: _values, ...rest } = o;
+        void _values;
+        return { ...defaults.rules.mutators, ...rest, overrides: { ...(o.overrides ?? {}) }, defs: structuredClone(mutatorDefsOf(o)) };
+      })(),
       territoryWar: {
         ...defaults.rules.territoryWar,
         ...(overrides.rules?.territoryWar ?? {}),
@@ -405,7 +413,7 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   setTechCombatLimits(COMBAT_RULES.techCombatCap, COMBAT_RULES.techCombatPerTechMax);
   Object.assign(ECONOMY_RULES, content.rules.economy);
   Object.assign(FLEET_RULES, content.rules.fleets);
-  Object.assign(EMPIRE_CLASS_RULES, content.rules.classes);
+  Object.assign(EMPIRE_CLASS_RULES, structuredClone(content.rules.classes));
   Object.assign(COLONY_RULES, structuredClone(content.rules.colonies));
   Object.assign(COLONY_ROUTE_RULES, structuredClone(content.rules.colonyRoutes));
   Object.assign(SPY_RULES, content.rules.spy);
@@ -434,7 +442,7 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   Object.assign(CATCHUP_RULES, content.rules.catchup);
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = { ...content.rules.mutators.overrides };
-  MUTATOR_RULES.values = { ...DEFAULT_MUTATOR_RULES.values, ...(content.rules.mutators.values ?? {}) };
+  MUTATOR_RULES.defs = structuredClone(content.rules.mutators.defs);
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
@@ -552,11 +560,13 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (sbr.lossMult !== undefined && !(sbr.lossMult >= 0.1 && sbr.lossMult <= 5)) errors.push("Boss de saison : pertes entre 0,1 et 5.");
   if (!merged.leviathan.name?.trim()) errors.push("Léviathan : nom vide.");
   errors.push(...validateCatchupRules(merged.catchup));
-  errors.push(...validateMutatorRules(merged.mutators));
+  // 6.14.125 (AA7) : la liste envoyée, sinon l'ancien réglage `values` appliqué aux mutateurs livrés.
+  errors.push(...validateMutatorRules({ ...merged.mutators, defs: (rules.mutators as Partial<GameRules["mutators"]> | undefined)?.defs }, new Set(UNITS.map((u) => u.id))));
   errors.push(...validateTerritoryWarRules(merged.territoryWar));
   errors.push(...validateXpTierRules(merged.xpTiers));
   errors.push(...validatePassGenRules(merged.passGen));
-  errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  // 6.14.125 (AA7) : une faction en vigueur (archétype de repli) peut aussi être la faction d'un thème.
+  errors.push(...validateChronicleGenRules(merged.chronicleGen, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   // 6.14.121 (AP-L7) : registre des actions suivies (actions et familles connues, poids et quantités bornés).
   errors.push(...validateTrackedActionRules((merged as unknown as { trackedActions?: Parameters<typeof validateTrackedActionRules>[0] }).trackedActions));
   // 6.14.122 (AP-L8) : épisode « nouveauté » (quantités, bibliothèque de textes).
@@ -579,6 +589,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   const allianceUnitIds = new Set(UNITS.map((u) => u.id));
   errors.push(...validateAllianceEffects("Alliances : recherche", merged.alliances.researches, allianceUnitIds));
   errors.push(...validateAllianceEffects("Alliances : projet", merged.alliances.projects, allianceUnitIds));
+  // 6.14.125 (AA7, AA-3) : classes d'empire (identifiants, effets composés chiffrés, avantages).
+  errors.push(...validateEmpireClasses(merged.classes.defs, allianceUnitIds));
   // 6.9.1 : la grille des territoires est figée (l'état des secteurs en dépend).
   const terr = merged.territories as { cols?: number; rows?: number };
   const terrDef = defaultGameContent().rules.territories as { cols?: number; rows?: number };
@@ -804,6 +816,8 @@ export function validateGameContent(content: GameContent): string[] {
       if (!Array.isArray(u.roles)) errors.push(`${label} : rôles invalides (liste attendue).`);
       else for (const r of u.roles) if (!UNIT_ROLE_IDS.includes(r)) errors.push(`${label} : rôle « ${r} » inconnu.`);
     }
+    // 6.14.125 (AA7) : un vaisseau de classe vise une classe en vigueur (livrée ou ajoutée dans l'admin).
+    if (u.empireClass && !withDefaultClasses(content.rules?.classes?.defs).some((c) => c.id === u.empireClass)) errors.push(`${label} : classe d'empire « ${u.empireClass} » inconnue.`);
   }
 
   checkIds("Technologies", content.technologies.map((t) => t.id));
