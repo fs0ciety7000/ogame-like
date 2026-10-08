@@ -392,7 +392,7 @@ export const RARE_DEPOSITS = Object.keys(BIOMES) as RareResourceId[];
 
 /** 6.14.115 (AJ27-5) : biomes qui ont leur illustration définitive (`public/assets/colonies/biome-<id>.webp`, lignes
  *  `colonie-biome-<id>` de `scripts/illustrations.json`, docs/illustrations.md). Un id ajouté ici suffit. */
-export const BIOME_ART: readonly RareResourceId[] = [];
+export const BIOME_ART: readonly RareResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 
 /** Illustration d'un biome (Codex) : définitive si elle existe, sinon l'icône de sa ressource rare (image provisoire). */
 export function biomeImage(id: RareResourceId): string {

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  STYLE_PREFIX,
   API_SIZES,
   PRICES,
   backoffMs,
@@ -30,7 +31,9 @@ describe("6.14.91 : prompt d'API", () => {
   it("retire les paramètres et les « no text » du prompt, ajoute le style et la consigne sans texte", () => {
     const p = toApiPrompt(slot({ prompt: "/imagine prompt: a pirate lair, dark starfield, no text, no letters --ar 1:1 --v 7 --style raw --s 250" }));
     expect(p).not.toMatch(/--|\/imagine|style raw/);
-    expect(p).toMatch(/^Sci-fi strategy game illustration/);
+    expect(p.startsWith(STYLE_PREFIX)).toBe(true);
+    // 6.14.119 : style science-fiction et spatial demandé par l'utilisateur.
+    expect(STYLE_PREFIX).toMatch(/science-fiction space/);
     expect(p).toContain("Subject: a pirate lair, dark starfield.");
     expect(p).toMatch(/No text, no letters, no numbers/);
     expect(p.match(/no text/gi)).toHaveLength(1);
