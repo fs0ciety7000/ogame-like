@@ -75,6 +75,9 @@ export interface SentCampaign {
   sentAtMs: number;
   sent: number;
   failed: number;
+  /** 6.14.111 (AC-7) : destinataires au départ, et encore en file (envoi par lots). */
+  total?: number;
+  pending?: number;
   /** Joueurs ayant ouvert (pixel) ou cliqué au moins une fois. */
   opened: string[];
   clicked: string[];

@@ -68,6 +68,60 @@ function achievementTitle(a: AchievementDef): string {
   return findTitle(a.titleId)?.label ?? a.title;
 }
 
+/** Succès nouvellement remplis : débloqués, récompensés, notifiés. 6.14.110 (AC-20) : appelé au rattrapage et après
+ *  chaque action (`performPlayerAction`), pour qu'un succès gagné par l'action s'affiche tout de suite. */
+export function grantNewAchievements(player: PlayerState, now: number, notifications: NewNotification[]): void {
+  const newAchievements = checkNewAchievements(player);
+  if (newAchievements.length > 0) {
+    player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
+    let totalXp = 0;
+    let totalTokens = 0;
+    const tokensOf = new Map<string, number>();
+    const rewards = new Map<string, Partial<Record<ResourceId, number>>>();
+    const allRewards: Partial<Record<ResourceId, number>> = {};
+    for (const a of newAchievements) {
+      const reward = achievementReward(a, player);
+      rewards.set(a.id, reward);
+      for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) {
+        player.resources[res] = (player.resources[res] ?? 0) + amount;
+        allRewards[res] = (allRewards[res] ?? 0) + amount;
+      }
+      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now, "achievement");
+      totalXp += a.rewardXp;
+      // 5.15 : jetons du casino selon le palier du succès.
+      const tokens = grantTokens(player, ACHIEVEMENT_TOKENS[a.tier] ?? 0);
+      if (tokens > 0) tokensOf.set(a.id, tokens);
+      totalTokens += tokens;
+      // v5.10 : titre du catalogue (titleId) en priorité, sinon libellé libre.
+      grantTitle(player, findTitle(a.titleId)?.label ?? a.title, `achievement:${a.id}`);
+    }
+    // Plusieurs succès d'un coup (rattrapage) : une seule notification.
+    if (newAchievements.length > 3) {
+      notifications.push({
+        kind: "achievement",
+        title: `${newAchievements.length} succès débloqués !`,
+        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP${totalTokens > 0 ? `, +${totalTokens} jeton${totalTokens > 1 ? "s" : ""} du casino` : ""}). Détails sur la page Succès.`,
+        createdAtMs: now,
+        read: false,
+        link: "/game/succes",
+        data: { xp: totalXp || undefined, resources: allRewards },
+      });
+    } else {
+      for (const a of newAchievements) {
+        notifications.push({
+          kind: "achievement",
+          title: "Succès débloqué !",
+          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` · titre « ${achievementTitle(a)} »` : ""}${tokensOf.get(a.id) ? ` · +${tokensOf.get(a.id)} jeton${(tokensOf.get(a.id) ?? 0) > 1 ? "s" : ""} du casino` : ""}`,
+          createdAtMs: now,
+          read: false,
+          link: "/game/succes",
+          data: { xp: a.rewardXp || undefined, resources: rewards.get(a.id) },
+        });
+      }
+    }
+  }
+}
+
 export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: number): FlushResult {
   const player: PlayerState = structuredClone(playerIn);
   const queues: QueuesState = structuredClone(queuesIn);
@@ -261,55 +315,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   }
 
   // --- Succès ---
-  const newAchievements = checkNewAchievements(player);
-  if (newAchievements.length > 0) {
-    player.unlockedAchievements = [...(player.unlockedAchievements ?? []), ...newAchievements.map((a) => a.id)];
-    let totalXp = 0;
-    let totalTokens = 0;
-    const tokensOf = new Map<string, number>();
-    const rewards = new Map<string, Partial<Record<ResourceId, number>>>();
-    const allRewards: Partial<Record<ResourceId, number>> = {};
-    for (const a of newAchievements) {
-      const reward = achievementReward(a, player);
-      rewards.set(a.id, reward);
-      for (const [res, amount] of Object.entries(reward) as [ResourceId, number][]) {
-        player.resources[res] = (player.resources[res] ?? 0) + amount;
-        allRewards[res] = (allRewards[res] ?? 0) + amount;
-      }
-      if (a.rewardXp > 0) applyXpDelta(player, a.rewardXp, now, "achievement");
-      totalXp += a.rewardXp;
-      // 5.15 : jetons du casino selon le palier du succès.
-      const tokens = grantTokens(player, ACHIEVEMENT_TOKENS[a.tier] ?? 0);
-      if (tokens > 0) tokensOf.set(a.id, tokens);
-      totalTokens += tokens;
-      // v5.10 : titre du catalogue (titleId) en priorité, sinon libellé libre.
-      grantTitle(player, findTitle(a.titleId)?.label ?? a.title, `achievement:${a.id}`);
-    }
-    // Plusieurs succès d'un coup (rattrapage) : une seule notification.
-    if (newAchievements.length > 3) {
-      notifications.push({
-        kind: "achievement",
-        title: `${newAchievements.length} succès débloqués !`,
-        message: `${newAchievements.slice(0, 5).map((a) => `${a.emoji} ${a.name}`).join(", ")}${newAchievements.length > 5 ? "…" : ""} (+${formatInt(totalXp)} XP${totalTokens > 0 ? `, +${totalTokens} jeton${totalTokens > 1 ? "s" : ""} du casino` : ""}). Détails sur la page Succès.`,
-        createdAtMs: now,
-        read: false,
-        link: "/game/succes",
-        data: { xp: totalXp || undefined, resources: allRewards },
-      });
-    } else {
-      for (const a of newAchievements) {
-        notifications.push({
-          kind: "achievement",
-          title: "Succès débloqué !",
-          message: `${a.emoji} ${a.name} — ${a.description}${a.rewardXp > 0 ? ` (+${a.rewardXp} XP${a.rewardHours > 0 ? `, ${a.rewardHours} h de production` : ""})` : ""}${achievementTitle(a) ? ` · titre « ${achievementTitle(a)} »` : ""}${tokensOf.get(a.id) ? ` · +${tokensOf.get(a.id)} jeton${(tokensOf.get(a.id) ?? 0) > 1 ? "s" : ""} du casino` : ""}`,
-          createdAtMs: now,
-          read: false,
-          link: "/game/succes",
-          data: { xp: a.rewardXp || undefined, resources: rewards.get(a.id) },
-        });
-      }
-    }
-  }
+  grantNewAchievements(player, now, notifications);
 
   // --- v5.10 : résumé de la semaine écoulée (premier passage du lundi) ---
   const weekRecap = advanceWeeklyRecap(player, now);

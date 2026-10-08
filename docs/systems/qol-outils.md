@@ -5,7 +5,14 @@
   Ton empire (objectif du jour, classe), Colonies (dont route logistique), Reliques et commandants, Ascension.
 - Accueil « que faire maintenant », frise des chantiers, carte Atelier, défis.
 - Objectifs personnels (6), modèles d'actions (12 × 20 étapes), file d'actions globale, file planifiée des bâtiments.
-- « Tout réclamer », notifications groupées et par catégorie, rappels personnels.
+- « Tout réclamer », notifications groupées et par catégorie, rappels personnels. 6.14.110 (AC-D, Q76) : chaque réclamation laisse
+  une ligne déjà lue au Journal avec le gain (ressources, Ambre, jetons, XP), « Tout réclamer » une seule ligne récapitulative ; une
+  ligne déjà lue ne fait pas de toast. Un rappel de flotte laisse une ligne ; l'hôte d'une garnison rappelée est prévenu. Un succès
+  gagné par l'action s'affiche dans la même réponse (I34). 6.14.113 (AC-G, I37) : « Tout réclamer » prend aussi le jeton du jour
+  du casino, la récompense du défi de la semaine et le titre du Codex (contexte lu par le serveur) ; la pastille d'Ordres du jour compte
+  le jeton et le défi quand leurs réglages publics sont chargés (jamais le titre du Codex, comme les catégories Seigneurs et Boss) ;
+  lignes « Jeton du casino » et « Défi de la semaine » quand ils attendent. Page Codex, carte du défi et jeton du casino passent par
+  l'action (un seul chemin) ; chaque sous-action est isolée (rien de versé à moitié).
 - Journal : tout ce qui se termine au rattrapage arrive au Journal, quel que soit le chemin (action, combat, tâche de la nuit, contrat,
   changement de pseudo, remboursement d'enchère) : invariant I24 (6.14.52).
 - Suppression du compte (Réglages → Zone dangereuse) : faite par le serveur, mot de passe revérifié ; alliance quittée (fondateur
@@ -37,6 +44,14 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
 
 ## Technique
 - 17 tâches planifiées côté serveur (`cronAdd` de `cosmic.pb.js`) ; les tâches à la minute, aux 5 et aux 10 min sont des étapes de `CADENCES` (`cosmic_db.js`, 5.29).
+- 6.14.111 (AC-E, I35) : une cadence tient un verrou (`$app.store()`) : elle ne démarre pas tant que la précédente tourne, un passage
+  sauté est compté (Admin → Santé, colonne « Sautés »). Campagnes d'e-mails en file (`mail_queue`, `server_metrics`), envoyées par lots
+  de 50 par minute (étape `cosmic_mail_queue`, dernière de la cadence minute). Factions : contenu lu une fois par passage et
+  identifiants seuls ; flottes : jusqu'à 200 par passage (40 s au plus) ; rattrapage de la nuit et rappels du Comptoir par paquets de
+  100 joueurs. Pendant une maintenance, guerres, Léviathan, boss et guerre de territoire attendent ; leurs échéances sont décalées de
+  sa durée à la fin (Q77). Réglages : groupe `serverTasks` (Admin → Règles → Tous les réglages).
+- 6.14.112 (AC-F) : erreurs du serveur traduites côté client (`src/lib/gameErrors.ts`, `callGame`, `afterSend` de `pocketbase.ts`) :
+  message du jeu gardé, texte clair pour 403, 409, 429, 503 ; une 500 part à l'équipe.
 - Tailles des blocs et temps de chargement : dernière mesure dans `docs/changes/6.14.39-performance-preprod.md`.
 
 ## État (audit 2026-10-06)

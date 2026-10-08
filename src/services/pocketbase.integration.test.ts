@@ -14,6 +14,7 @@ import PocketBase from "pocketbase";
 import { pb } from "@/lib/pocketbase";
 import { loginPlayer, registerPlayer, logout, changePassword } from "@/services/authService";
 import * as ps from "@/services/playerService";
+import { GameActionError } from "@/game/errors";
 import * as tcs from "@/services/tradeContractService";
 import * as al from "@/services/allianceService";
 import * as ms from "@/services/messageService";
@@ -36,7 +37,7 @@ import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/servi
 import { priceBounds } from "@/game/market";
 import { readAllianceSaga, sagaMonthId, sagaOf } from "@/game/allianceSaga";
 import { fetchNpcOpponents } from "@/services/codexService";
-import { CONTRACT_RULES } from "@/game/contracts";
+import { CONTRACT_RULES, contractDay } from "@/game/contracts";
 import { generatePassSeason, nextMonthId } from "@/game/passSeasons";
 import { generateChapter, worldDigest } from "@/game/procedural";
 import { DEFAULT_ACHIEVEMENTS } from "@/game/achievements";
@@ -3655,6 +3656,191 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").delete(cId).catch(() => {});
       await admin.collection("users").delete(cId).catch(() => {});
       await loginPlayer(B.email, B.pw);
+    }
+  });
+
+  it("6.14.110 (AC-D) : dépense comptée, réclamation au Journal, revente comptée, rappel de flotte tracé et allié prévenu", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const now = Date.now();
+    let garrisonId = "";
+    try {
+      await admin.collection("players").update(bId, {
+        resources: { ...RICH, scrap: 2_000_000, energy: 2_000_000 },
+        moon: { name: "Lune d'essai", level: 1, bornAtMs: now - 60_000, fromDebris: 1 },
+        units: { ...before.units, chasseur: { level: 1, count: 10 } },
+        contracts: { day: contractDay(now), items: [{ id: "acd1", type: "spy", target: 1, progress: 1, claimed: false }, { id: "acd2", type: "spend", target: 10_000_000, progress: 0, claimed: false }], streak: 0, lastCompletedDay: null, rerolled: false },
+        stats: { ...(before.stats ?? {}), spent: 0, unitsSold: 0 },
+        vacation: null,
+      });
+      // AC-5 : l'amélioration de la lune passe par le chemin unique (statistique et objectif « Dépenser »).
+      await ps.upgradeMoon();
+      const afterMoon = await snap(bId);
+      expect(afterMoon.moon.level).toBe(2);
+      expect(afterMoon.stats.spent).toBeGreaterThanOrEqual(750_000);
+      expect(afterMoon.contracts.items.find((c: { id: string }) => c.id === "acd2").progress).toBeGreaterThanOrEqual(750_000);
+      // AC-21 : revente comptée.
+      await ps.sellUnit(bId, "chasseur", 3);
+      expect((await snap(bId)).stats.unitsSold).toBe(3);
+      // AC-6 : une ligne déjà lue au Journal, avec le gain.
+      await ps.claimContract("acd1");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Objectif du jour récupéré"` });
+      expect(notes).toHaveLength(1);
+      expect(notes[0].read).toBe(true);
+      expect(notes[0].message).toMatch(/^Objectif du jour : \+/);
+      // AC-12 : garnison de B chez A rappelée ; B garde une trace, A est prévenu.
+      const g = await admin.collection("fleets").create({ ownerUid: bId, ownerPseudo: B.pseudo, targetUid: aId, targetPseudo: A.pseudo, mission: "garrison", units: { chasseur: 2 }, departAtMs: now - 120_000, arriveAtMs: now - 60_000, stationedUntilMs: now + 3600_000, status: "stationed" });
+      garrisonId = g.id;
+      const back = await ps.recallFleet(g.id);
+      expect(back.status).toBe("returning");
+      const mine = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Flotte rappelée"` });
+      expect(mine.length).toBeGreaterThanOrEqual(1);
+      expect(mine[0].read).toBe(true);
+      const host = await admin.collection("notifications").getFullList({ filter: `player_id="${aId}" && title="Garnison rappelée"`, sort: "-createdAtMs" });
+      expect(host.length).toBeGreaterThanOrEqual(1);
+      // Pseudo du moment (un test plus haut renomme B).
+      expect(host[0].message).toContain((await snap(bId)).pseudo);
+      expect(host[0].read).toBe(false);
+    } finally {
+      if (garrisonId) await admin.collection("fleets").delete(garrisonId).catch(() => {});
+      await admin.collection("players").update(bId, { resources: before.resources, moon: before.moon ?? null, units: before.units, contracts: before.contracts ?? null, stats: before.stats ?? {} });
+    }
+  });
+
+  it("6.14.111 (AC-E) : campagne d'e-mails en file, envoyée par lots, chaque destinataire une fois ; échéances décalées après une maintenance", async () => {
+    await ensureAB();
+    const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const rulesBefore = rulesRec.data as Record<string, unknown>;
+    const settingsBefore = await admin.settings.getAll();
+    const userBefore = await admin.collection("users").getOne(bId);
+    const levRec = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
+    try {
+      // Lots d'un e-mail, sans pause ; SMTP « activé » vers une adresse morte : chaque envoi échoue tout de suite.
+      await admin.collection("game_config").update(rulesRec.id, { data: { ...rulesBefore, serverTasks: { mailBatchSize: 1, mailPauseMs: 0 } } });
+      await admin.settings.update({ smtp: { enabled: true, host: "127.0.0.1", port: 9, username: "", password: "" } });
+      await admin.collection("users").update(bId, { verified: true });
+      await admin.collection("players").update(bId, { emailOptOut: false });
+      const count = await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "count" } });
+      expect(count.smtp).toBe(true);
+      expect(count.recipients).toBeGreaterThanOrEqual(1);
+      const t0 = Date.now();
+      const out = await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "send", confirm: "ENVOYER", subject: "Lots", html: "<p>Bonjour {{PSEUDO}}</p>", text: "x", apiUrl: PB_TEST_URL } });
+      // La route rend la main tout de suite (avant : 600 ms par destinataire).
+      expect(Date.now() - t0).toBeLessThan(5000);
+      expect(out.queued).toBe(count.recipients);
+      // Un lot par passage (la cadence minute peut aussi en traiter : on vide la file).
+      let guard = 0;
+      let left = out.queued;
+      while (left > 0 && guard++ < out.queued + 5) left = (await admin.send("/api/cosmic/admin/mail", { method: "POST", body: { action: "tick" } })).queued;
+      expect(left).toBe(0);
+      const hist = (await admin.collection("game_config").getFirstListItem('key="mail_campaigns"')).data as { list: { id: string; sent: number; failed: number; pending?: number; total?: number }[] };
+      const entry = hist.list.find((c) => c.id === out.campaignId)!;
+      expect(entry.total).toBe(out.queued);
+      expect(entry.pending).toBe(0);
+      // Chaque destinataire tenté une seule fois (au plus une fois) : envoyés + échecs = total.
+      expect(entry.sent + entry.failed).toBe(out.queued);
+      // Fiche du joueur jamais réécrite par l'envoi.
+      expect((await snap(bId)).emailOptOut).toBe(false);
+    } finally {
+      await admin.settings.update({ smtp: settingsBefore.smtp });
+      await admin.collection("users").update(bId, { verified: userBefore.verified });
+      await admin.collection("game_config").update(rulesRec.id, { data: rulesBefore });
+    }
+
+    // Q77 : un boss en cours pendant une maintenance voit son échéance décalée de la durée de la coupure.
+    const now = Date.now();
+    const lev = { id: "lev-ace", startMs: now - 3_600_000, endMs: now + 3_600_000, maxHp: 1_000_000, hp: 1_000_000, status: "active", contributions: {}, endedAtMs: 0, rewarded: false, titleHolder: null, timeline: [] };
+    const levId = levRec ? levRec.id : (await admin.collection("game_config").create({ key: "leviathan", data: lev })).id;
+    try {
+      await admin.collection("game_config").update(levId, { data: lev });
+      await admin.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: true, endsAtMs: now + 600_000 } });
+      await wait(1500);
+      await admin.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: false } });
+      const after = (await admin.collection("game_config").getOne(levId)).data as { endMs: number; startMs: number };
+      expect(after.endMs).toBeGreaterThanOrEqual(lev.endMs + 1400);
+      expect(after.startMs).toBe(lev.startMs);
+      const log = await admin.collection("admin_logs").getFirstListItem('action="maintenance"', { sort: "-createdAtMs" });
+      expect((log.changes as { échéancesDécalées?: number }).échéancesDécalées).toBeGreaterThanOrEqual(1);
+    } finally {
+      const m = await admin.collection("game_config").getFirstListItem('key="maintenance"').catch(() => null);
+      if (m && (m.data as { enabled?: boolean }).enabled) await admin.send("/api/cosmic/admin/maintenance", { method: "POST", body: { enabled: false } });
+      if (levRec) await admin.collection("game_config").update(levRec.id, { data: levRec.data });
+      else await admin.collection("game_config").delete(levId);
+    }
+  }, 60_000);
+
+  it("6.14.112 (AC-F) : erreurs traduites côté client ; garde de vacances unique sur les routes qui rapportent", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    // 403 d'une route du jeu : GameActionError avec le message du serveur (avant : erreur brute, « Action impossible. » à l'écran).
+    const forbidden = (await ps.callGame("admin/maintenance", { enabled: false }).catch((err: unknown) => err)) as Error;
+    expect(forbidden).toBeInstanceOf(GameActionError);
+    expect(forbidden.message).toMatch(/administrateurs/);
+    const before = await snap(bId);
+    const now = Date.now();
+    try {
+      await admin.collection("players").update(bId, { vacation: { startedAtMs: now - 60_000, untilMs: now + 3 * 86_400_000 } });
+      // Une seule liste et un seul message : action, casino, Codex, défi, Comptoir, porte de saut.
+      await expect(ps.claimAllRewards()).rejects.toThrow(/vacances/);
+      await expect(pb.send("/api/cosmic/casino", { method: "POST", body: { action: "daily" } })).rejects.toMatchObject({ status: 400, response: { message: expect.stringMatching(/vacances.*casino/) } });
+      await expect(ps.callGame("codex/claim", { category: "units" })).rejects.toThrow(/vacances.*Codex/);
+      await expect(ps.callGame("codex/claim")).rejects.toThrow(/vacances.*titre du Codex/);
+      await expect(ps.callGame("challenge/claim")).rejects.toThrow(/vacances/);
+      await expect(pb.send("/api/cosmic/bounty", { method: "POST", body: { action: "exchange", amount: 1 } })).rejects.toMatchObject({ status: 400, response: { message: expect.stringMatching(/vacances/) } });
+      // Ce que la liste permet passe toujours.
+      await ps.syncPlayer(bId);
+      // L'admin ouvre un geste : la route l'accepte aussitôt (même liste pour tout le serveur).
+      const rulesRec = await admin.collection("game_config").getFirstListItem('key="rules"');
+      const rulesBefore = rulesRec.data as Record<string, unknown>;
+      try {
+        const vac = (rulesBefore.vacation as Record<string, unknown> | undefined) ?? {};
+        await admin.collection("game_config").update(rulesRec.id, { data: { ...rulesBefore, vacation: { ...vac, allowed: ["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide", "casinoDaily"] } } });
+        const daily = await pb.send("/api/cosmic/casino", { method: "POST", body: { action: "daily" } }).catch((err) => err);
+        // Permis : plus de refus « vacances » (le jeton peut déjà avoir été pris : autre refus, sans « vacances »).
+        expect(String(daily?.response?.message ?? "")).not.toMatch(/vacances/);
+      } finally {
+        await admin.collection("game_config").update(rulesRec.id, { data: rulesBefore });
+      }
+    } finally {
+      await admin.collection("players").update(bId, { vacation: before.vacation ?? null, casino: before.casino ?? null });
+    }
+  });
+
+  it("6.14.113 (AC-G) : « Tout réclamer » prend le jeton du casino et la récompense du défi, une seule fois, avec une ligne au Journal", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const existing = await admin.collection("game_config").getFirstListItem('key="challenge"').catch(() => null);
+    const now = Date.now();
+    const previous = { id: "wk-acg", type: "market", target: 1000, startMs: now - 8 * 86_400_000, endMs: now - 86_400_000, total: 1200, contributions: { [bId]: { pseudo: B.pseudo, amount: 1200 } }, status: "done", success: true, claimed: [] };
+    const rec = existing
+      ? await admin.collection("game_config").update(existing.id, { data: { current: null, previous, titleHolder: null } })
+      : await admin.collection("game_config").create({ key: "challenge", data: { current: null, previous, titleHolder: null } });
+    const before = await snap(bId);
+    try {
+      await admin.collection("players").update(bId, { casino: { ...(before.casino ?? {}), tokens: 0, dailyDay: "2000-01-01" }, vacation: null });
+      const aiBefore = (await snap(bId)).resources.aiFragment ?? 0;
+      const out = (await ps.claimAllRewards()) as Record<string, number>;
+      expect(out.challengeClaim).toBe(1);
+      const after = await snap(bId);
+      expect(after.resources.aiFragment).toBeGreaterThan(aiBefore);
+      // Le jeton du jour, si le casino du serveur en donne (réglages par défaut : oui).
+      if (out.casinoDaily) expect(after.casino.tokens).toBeGreaterThanOrEqual(1);
+      // État du défi enregistré dans la même transaction : réclamé une seule fois.
+      expect(((await admin.collection("game_config").getOne(rec.id)).data as { previous: { claimed: string[] } }).previous.claimed).toEqual([bId]);
+      const again = (await ps.claimAllRewards()) as Record<string, number>;
+      expect(again.challengeClaim ?? 0).toBe(0);
+      expect(again.casinoDaily ?? 0).toBe(0);
+      await expect(pb.send("/api/cosmic/challenge/claim", { method: "POST" })).rejects.toMatchObject({ status: 400 });
+      const lines = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Tout réclamé"`, sort: "-createdAtMs" });
+      // Une ligne par « Tout réclamer » (le second passage peut prendre d'autres récompenses prêtes dans la suite complète).
+      const line = lines.find((n) => /récompense du défi/.test(n.message));
+      expect(line).toBeTruthy();
+      expect(line!.read).toBe(true);
+    } finally {
+      if (existing) await admin.collection("game_config").update(rec.id, { data: existing.data });
+      else await admin.collection("game_config").delete(rec.id);
+      await admin.collection("players").update(bId, { casino: before.casino ?? null, resources: before.resources });
     }
   });
 

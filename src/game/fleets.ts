@@ -342,6 +342,26 @@ export function recallFleet(fleet: Fleet, uid: string, now: number): Fleet {
   return { ...fleet, status: "returning", recalled: true, returnAtMs: now + Math.max(0, now - fleet.departAtMs) };
 }
 
+/** 6.14.110 (AU27, lot AC-D, constat AC-12) : traces d'un rappel. Le joueur garde une ligne au Journal (déjà lue : il vient
+ *  de cliquer) ; l'allié qui hébergeait une garnison est prévenu (même modèle que la porte de saut, Q39). */
+export function recallNotices(before: Fleet, after: Fleet, ownerPseudo: string, now: number): { owner: NewNotification; host: { uid: string; notification: NewNotification } | null } {
+  const label = FLEET_MISSION_LABELS[before.mission] ?? "Flotte";
+  const back = Math.max(0, Math.round(((after.returnAtMs ?? now) - now) / 60_000));
+  const target = before.targetPseudo ? ` vers ${before.targetPseudo}` : "";
+  const owner: NewNotification = {
+    kind: "fleet",
+    title: "Flotte rappelée",
+    message: `${label}${target} : demi-tour. Retour dans ${back < 1 ? "moins d'une minute" : `${formatInt(back)} min`}.`,
+    createdAtMs: now,
+    read: true,
+  };
+  const stationedAlly = before.mission === "garrison" && before.status === "stationed" && !!before.targetUid && before.targetUid !== before.ownerUid;
+  const host = stationedAlly
+    ? { uid: before.targetUid, notification: { kind: "alliance", title: "Garnison rappelée", message: `${ownerPseudo || "Ton allié"} a rappelé sa garnison : elle ne défend plus ta planète.`, createdAtMs: now, read: false } as NewNotification }
+    : null;
+  return { owner, host };
+}
+
 /** Retour à la base : survivants et butin rejoignent le propriétaire. */
 export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: number): { owner: PlayerState; notifications: NewNotification[] } {
   for (const [unitId, qty] of Object.entries(fleet.units ?? {})) {

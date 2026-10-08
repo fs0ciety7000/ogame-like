@@ -1,4 +1,5 @@
 import { allianceProductionFactor } from "@/game/alliances";
+import { spendResources } from "@/game/spending";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -493,11 +494,8 @@ export function startColonization(player: PlayerState, nameIn: string, now: numb
   if (homeLevels(player) < next.levels) throw new GameActionError(`Il faut ${next.levels} niveaux de bâtiments cumulés sur ta planète mère (tu en as ${homeLevels(player)}).`);
   const name = String(nameIn ?? "").trim() || `Colonie ${next.slot}`;
   if (name.length > 30) throw new GameActionError("Le nom d'une colonie fait au plus 30 caractères.");
-  const cost = colonyFoundCost();
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
-    if ((player.resources[res] ?? 0) < n) throw new GameActionError("Ressources insuffisantes pour le vaisseau colonial.");
-  }
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] -= n;
+  // 6.14.110 (AC-5) : dépense comptée (objectif « Dépenser », statistique `spent`).
+  spendResources(player, colonyFoundCost(), now, { message: "Ressources insuffisantes pour le vaisseau colonial." });
   player.colonizing = { slot: next.slot, name, endTime: now + COLONY_RULES.foundHours * HOUR };
   return player.colonizing;
 }

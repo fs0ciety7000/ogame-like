@@ -15,6 +15,7 @@ import { AgendaIcon } from "@/components/game/agendaStyle";
 import { describeClaims, pendingClaims } from "@/game/claimAll";
 import { dailyOrders, type DailyOrder, type OrderState } from "@/game/dailyOrders";
 import { useNowTicker } from "@/hooks/useNowTicker";
+import { useClaimContext } from "@/hooks/useClaimContext";
 import { cn, formatDateTime } from "@/lib/utils";
 import { claimAllRewards, GameActionError } from "@/services/playerService";
 import { useFleetStore } from "@/store/fleetStore";
@@ -116,10 +117,11 @@ export function OrdersPage() {
   const now = Date.now();
   const player = usePlayerStore((s) => s.player);
   const expeditionActive = useFleetStore((s) => s.fleets.some((f) => f.mission === "expedition" && f.status !== "done"));
+  const claimCtx = useClaimContext();
   const [busy, setBusy] = useState(false);
   if (!player) return null;
-  const orders = dailyOrders(player, now, { expeditionActive });
-  const pending = pendingClaims(player, now);
+  const orders = dailyOrders(player, now, { expeditionActive, claims: claimCtx });
+  const pending = pendingClaims(player, now, undefined, claimCtx);
   const todo = orders.filter((o) => o.state === "todo").length;
   const done = orders.filter((o) => o.state === "done").length;
 

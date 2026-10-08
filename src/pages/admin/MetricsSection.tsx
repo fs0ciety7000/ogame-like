@@ -141,6 +141,7 @@ export function MetricsSection() {
                   <th className="py-1.5 text-right font-normal">Durée</th>
                   <th className="py-1.5 text-right font-normal">Moy. / max</th>
                   <th className="py-1.5 text-right font-normal">Échecs</th>
+                  <th className="py-1.5 text-right font-normal" title="6.14.111 : passages sautés parce que le précédent tournait encore (verrou de cadence)">Sautés</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -159,6 +160,9 @@ export function MetricsSection() {
                     </td>
                     <td className="py-1.5 text-right font-mono tabular-nums text-slate-400">
                       {c.fails}/{c.runs}
+                    </td>
+                    <td className="py-1.5 text-right font-mono tabular-nums text-slate-400" title={c.lastSkipAtMs ? `Dernier : ${timeAgo(c.lastSkipAtMs)}` : undefined}>
+                      {c.skips ?? 0}
                     </td>
                   </tr>
                 ))}

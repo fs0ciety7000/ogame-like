@@ -1,4 +1,4 @@
-import { pendingClaims } from "@/game/claimAll";
+import { pendingClaims, type ClaimContext } from "@/game/claimAll";
 import { contractDay } from "@/game/contracts";
 import { dailyMissions } from "@/game/dailyMissions";
 import { streakState, streakStatus } from "@/game/streak";
@@ -21,7 +21,7 @@ import type { PlayerState } from "@/types/game";
 export type OrderState = "ready" | "todo" | "done";
 
 export interface DailyOrder {
-  id: "streak" | "daily" | "contracts" | "bounties" | "expedition" | "alliance" | "pass" | "chronicles";
+  id: "streak" | "daily" | "contracts" | "casino" | "challenge" | "bounties" | "expedition" | "alliance" | "pass" | "chronicles";
   label: string;
   /** Rythme affiché : jour, tableau des primes (« 8 h », lu dans BOUNTY_RULES.refreshHours), mois. */
   period: string;
@@ -38,11 +38,13 @@ export interface DailyOrder {
 export interface OrdersContext {
   /** Une expédition est en vol (flottes du joueur). */
   expeditionActive?: boolean;
+  /** 6.14.113 (AC-G) : réglages publics du casino et défi terminé, quand le client les a chargés (sinon non comptés). */
+  claims?: ClaimContext;
 }
 
 /** Ordres du jour, dans l'ordre de la journée. Lecture seule. */
 export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext = {}): DailyOrder[] {
-  const claims = pendingClaims(player, now);
+  const claims = pendingClaims(player, now, undefined, ctx.claims);
   const count = (type: string) => claims.filter((c) => c.type === type).length;
   const out: DailyOrder[] = [];
 
@@ -85,6 +87,28 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
     detail: cReady > 0 ? `${cReady} objectif${cReady > 1 ? "s" : ""} rempli${cReady > 1 ? "s" : ""}.` : items.length ? "Remplis-les en jouant : ressources rares, XP et jetons." : "Ils arrivent à ta prochaine action.",
     link: "/game/ordres#contrats",
     ready: cReady,
+  });
+
+  // 6.14.113 (AC-15) : jeton du jour du casino et défi terminé, lignes affichées seulement quand une récompense attend.
+  if (count("casinoDaily") > 0) out.push({
+    id: "casino",
+    label: "Jeton du casino",
+    period: "jour",
+    state: "ready",
+    value: null,
+    detail: "Le jeton du jour t'attend.",
+    link: "/game/casino",
+    ready: count("casinoDaily"),
+  });
+  if (count("challengeClaim") > 0) out.push({
+    id: "challenge",
+    label: "Défi de la semaine",
+    period: "semaine",
+    state: "ready",
+    value: null,
+    detail: "Ta récompense du défi terminé t'attend.",
+    link: "/game",
+    ready: count("challengeClaim"),
   });
 
   const board = bountyState(player).board ?? [];
@@ -160,7 +184,9 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
   return out;
 }
 
-/** Pastille unique de la barre latérale : toutes les récompenses que « Tout réclamer » peut prendre. */
-export function ordersReadyCount(player: PlayerState, now: number): number {
-  return pendingClaims(player, now).length;
+/** Pastille unique de la barre latérale : toutes les récompenses que « Tout réclamer » peut prendre et que le client peut
+ *  vérifier (6.14.113 : casino et défi si leurs données publiques sont chargées ; le titre du Codex et les catégories
+ *  Seigneurs et Boss restent comptés par le serveur seulement). */
+export function ordersReadyCount(player: PlayerState, now: number, claims?: ClaimContext): number {
+  return pendingClaims(player, now, undefined, claims).length;
 }

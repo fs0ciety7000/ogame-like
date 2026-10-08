@@ -30,6 +30,7 @@ import { PRESTIGE_RULES, PRESTIGE_RULES_META } from "@/game/prestige";
 import { JUMP_GATE_RULES, JUMP_GATE_RULES_META } from "@/game/jumpGate";
 import { RESEARCH_RULES, RESEARCH_RULES_META } from "@/game/technologies";
 import { RHYTHM_RULES, RHYTHM_RULES_META } from "@/game/rhythm";
+import { SERVER_TASK_RULES, SERVER_TASK_RULES_META } from "@/game/serverTasks";
 import { CHAT_ROOM_RULES, CHAT_ROOM_RULES_META, GLOBAL_CHAT_RULES, GLOBAL_CHAT_RULES_META, MENTION_RULES, MENTION_RULES_META, ROOM_EVENT_RULES, ROOM_EVENT_RULES_META } from "@/game/globalChat";
 import { GOAL_RULES, GOAL_RULES_META } from "@/game/goals";
 import { LEAGUE_RULES, LEAGUE_RULES_META } from "@/game/leagues";
@@ -152,6 +153,8 @@ export const REGISTERED_RULES = {
   rename: { label: "Changement de pseudo", target: () => RENAME_RULES, meta: () => RENAME_RULES_META },
   reports: { label: "Signalements", target: () => REPORT_RULES, meta: () => REPORT_RULES_META },
   roomEvents: { label: "Événements de salon", target: () => ROOM_EVENT_RULES, meta: () => ROOM_EVENT_RULES_META },
+  // 6.14.111 (AU27, AC-E) : tâches planifiées (verrou par cadence, e-mails par lots, flottes, maintenance).
+  serverTasks: { label: "Serveur : tâches planifiées (verrou, e-mails par lots, flottes, maintenance)", target: () => SERVER_TASK_RULES, meta: () => SERVER_TASK_RULES_META },
   seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES, meta: () => SEASON_WAR_RULES_META },
   synthesis: { label: "Labo de synthèse", target: () => SYNTH_RULES, meta: () => SYNTH_RULES_META },
   talents: { label: "Talents d'Ascension", target: () => TALENT_RULES, meta: () => TALENT_RULES_META },

@@ -1,4 +1,5 @@
 import { allianceSiegeFactor } from "@/game/alliances";
+import { spendAmber } from "@/game/spending";
 import { playerCombatEffects } from "@/game/effectTargets";
 import { advanceWorkshop, applyHull, atelierLevel, bossAssaultLosses, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { MODULE_RARITIES, modulesState, type ModuleRarity } from "@/game/modules";
@@ -787,7 +788,7 @@ export function buyShopItem(player: PlayerState, queues: QueuesState, itemId: un
       break;
   }
   if (ONE_TIME.includes(item.id)) st.owned = [...st.owned, item.id];
-  st.amber -= item.price;
+  spendAmber(player, st, item.price, "Pas assez d'Ambre.");
   st.history = [...st.history, { atMs: now, item: item.id, amber: item.price }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   return { message };
@@ -816,14 +817,13 @@ export function exchangeAmber(player: PlayerState, amountIn: unknown, now: numbe
     st.exchanged = 0;
   }
   if (amount > BOUNTY_RULES.exchange.weeklyCap - st.exchanged) throw new GameActionError(`Plafond : ${BOUNTY_RULES.exchange.weeklyCap} Ambre échangés par semaine.`);
-  if (amount > st.amber) throw new GameActionError("Pas assez d'Ambre.");
+  spendAmber(player, st, amount, "Pas assez d'Ambre.");
   const gain: Partial<Record<ResourceId, number>> = {};
   for (const r of RESOURCE_LIST) {
     if (r.rarity !== "rare") continue;
     gain[r.id] = amount * BOUNTY_RULES.exchange.rarePerAmber;
     player.resources[r.id] = (player.resources[r.id] ?? 0) + gain[r.id]!;
   }
-  st.amber -= amount;
   st.exchanged += amount;
   player.bounties = st;
   return gain;
@@ -1164,8 +1164,7 @@ export function donateAmber(player: PlayerState, amountIn: unknown, now = 0): nu
   const amount = Math.floor(Number(amountIn));
   if (!(amount >= 1 && amount <= 10_000)) throw new GameActionError("Don entre 1 et 10 000 Ambre.");
   const st = bountyState(player);
-  if (st.amber < amount) throw new GameActionError("Pas assez d'Ambre.");
-  st.amber -= amount;
+  spendAmber(player, st, amount, "Pas assez d'Ambre.");
   st.history = [...st.history, { atMs: now, item: "donate", amber: amount }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   bumpStat(player, "amberDonated", amount);

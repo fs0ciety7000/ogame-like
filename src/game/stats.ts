@@ -87,6 +87,10 @@ export interface PlayerStats {
   hintsBought?: string[];
   /** 5.26.3 : Ambre versée au pot commun (dons, taxe des enchères en Ambre) : badge « Mécène ». */
   amberDonated?: number;
+  /** 6.14.110 (AC-D) : Ambre dépensée (technos, recrutement, indices, Atelier, boutique Kesh, échange, dons, offres, pseudo, classe). */
+  amberSpent?: number;
+  /** 6.14.110 (AC-D, AC-21) : unités revendues (page Unités). */
+  unitsSold?: number;
   /** 5.26.2 : conversations privées archivées (joueur → date d'archivage). */
   archivedChats?: Record<string, number>;
   /** 5.26.1 : messages privés et du canal global envoyés, signalements résolus par l'équipe. */

@@ -1,4 +1,5 @@
 import { bountyState } from "@/game/bounties";
+import { spendAmber } from "@/game/spending";
 import { GameActionError } from "@/game/errors";
 import type { PlayerState } from "@/types/game";
 
@@ -40,8 +41,7 @@ export function renamePlayer(player: PlayerState, raw: unknown, now: number): { 
   const pseudo = cleanNewPseudo(raw);
   if (pseudo === player.pseudo) throw new GameActionError("C'est déjà ton pseudo.");
   const st = bountyState(player);
-  if (st.amber < RENAME_RULES.amber) throw new GameActionError(`Il te faut ${RENAME_RULES.amber} Ambre.`);
-  st.amber -= RENAME_RULES.amber;
+  spendAmber(player, st, RENAME_RULES.amber, `Il te faut ${RENAME_RULES.amber} Ambre.`);
   player.bounties = st;
   player.renamed = { fromPseudo: player.pseudo, atMs: now };
   player.pseudo = pseudo;

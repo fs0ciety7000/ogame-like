@@ -398,3 +398,20 @@ export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "sta
 export function claimCodexCategoryLocal(player: PlayerState, category: unknown, now: number, ctx?: CodexContext): { tokens: number; amber: number } {
   return claimCodexCategory(player, contextEntries(player, now, ctx), category, now);
 }
+
+/** 6.14.113 (AU27, AC-G, AC-15) : titre « Archiviste » prêt ? Il exige 100 % du Codex, Seigneurs et Boss compris : sans `ctx`
+ *  (client), jamais prêt (pas de faux positif sur la pastille) ; le serveur le compte dans « Tout réclamer ». */
+export function codexTitleClaimable(player: CodexPlayer & Pick<PlayerState, "titles">, now: number, ctx?: CodexContext): boolean {
+  if (!ctx) return false;
+  if ((player.titles ?? []).some((t) => t.label === CODEX_TITLE)) return false;
+  return codexProgress(contextEntries(player, now, ctx)).pct >= 100;
+}
+
+/** 6.14.113 (AC-19) : titre du Codex par l'action du joueur (un seul chemin, avec le rattrapage et la garde des vacances). */
+export function claimCodexTitleLocal(player: PlayerState, now: number, ctx?: CodexContext): { title: string } {
+  const entries = contextEntries(player, now, ctx);
+  const progress = codexProgress(entries);
+  if (progress.pct < 100) throw new GameActionError(`Codex complété à ${progress.pct} % : il faut 100 %.`);
+  if (!grantCodexTitle(player, entries)) throw new GameActionError("Titre déjà reçu.");
+  return { title: CODEX_TITLE };
+}

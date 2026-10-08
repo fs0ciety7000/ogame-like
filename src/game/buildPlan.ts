@@ -1,13 +1,12 @@
 import { empireClassPerk } from "@/game/empireClass";
+import { canSpendResources, spendResources } from "@/game/spending";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { recordContract } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
-import { canAffordAll } from "@/game/resources";
 import { ECONOMY_RULES } from "@/game/economy";
-import { bumpStat } from "@/game/stats";
 import type { NewNotification } from "@/game/flush";
-import type { PlayerState, QueuesState, ResourceId, Resources } from "@/types/game";
+import type { PlayerState, QueuesState } from "@/types/game";
 
 /* =====================================================
    v4.9 : file planifiée des bâtiments. Jusqu'à 3 améliorations
@@ -139,14 +138,9 @@ export function advanceBuildPlan(player: PlayerState, queues: QueuesState, now: 
       continue;
     }
     const cost = applyBuildingDiscount(getBuildingUpgradeCost(def, entry.level), playerBuildingDiscount(player));
-    if (canAffordAll(player.resources, cost as Partial<Resources>)) {
-      let total = 0;
-      for (const [res, val] of Object.entries(cost)) {
-        player.resources[res as ResourceId] -= val ?? 0;
-        total += val ?? 0;
-      }
-      recordContract(player, "spend", total, now);
-      bumpStat(player, "spent", total);
+    if (canSpendResources(player, cost)) {
+      // 6.14.110 (AC-5) : même chemin de dépense que les achats directs (plus de copie de `pay`).
+      spendResources(player, cost, now);
       const startAt = Math.min(now, finishedAt[def.id] ?? now);
       queues.buildingUpgrades[def.id as keyof typeof queues.buildingUpgrades] = {
         endTime: startAt + Math.round(getBuildingUpgradeTime(def, entry.level) * playerBuildTimeFactor(player, now)) * 1000,

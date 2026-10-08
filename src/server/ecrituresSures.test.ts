@@ -31,7 +31,7 @@ const FLUSH_WITHOUT_NOTIFY: Record<string, string> = {
 describe("écritures sûres de la fiche joueur (AC-A)", () => {
   it("le balayage trouve les fonctions du serveur", () => {
     expect(fns.size).toBeGreaterThan(300);
-    for (const name of ["catchupTick", "renameRequest", "tradeContractRequest", "adminDeletePlayer", "sendCampaign", "ensureMailTokens", "unsubscribe"]) {
+    for (const name of ["catchupTick", "renameRequest", "tradeContractRequest", "adminDeletePlayer", "queueCampaign", "sendCampaignMail", "mailQueueTick", "ensureMailTokens", "unsubscribe"]) {
       expect(fns.has(name), name).toBe(true);
     }
   });
@@ -57,10 +57,14 @@ describe("écritures sûres de la fiche joueur (AC-A)", () => {
   });
 
   it("AC-1 : la campagne d'e-mails ne sauve jamais une fiche lue avant l'envoi", () => {
-    const send = fns.get("sendCampaign")!;
-    expect(send).not.toMatch(/\.save\((?:player|r\.player)\b/);
+    // 6.14.111 (AC-7) : mise en file puis envoi par lots ; aucune des deux étapes ne sauve une fiche joueur.
+    const queue = fns.get("queueCampaign")!;
+    expect(queue).not.toMatch(/\.save\((?:player|r\.player)\b/);
+    expect(queue).toContain("ensureMailTokens(recipients.list)");
+    const send = fns.get("sendCampaignMail")!;
+    expect(send).not.toMatch(/\.save\(/);
     expect(send).not.toMatch(/\.set\("/);
-    expect(send).toContain("ensureMailTokens(recipients.list)");
+    expect(fns.get("mailQueueTick")).not.toMatch(/\.save\((?:player|rec)\b/);
     expect(fns.get("mailRecipients")).not.toMatch(/\.save\(/);
     // Les jetons manquants sont posés dans une transaction qui relit la fiche, et seulement eux.
     const tokens = fns.get("ensureMailTokens")!;

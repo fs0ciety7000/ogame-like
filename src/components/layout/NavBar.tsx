@@ -28,6 +28,7 @@ import { useAllianceUnreadStore } from "@/store/allianceUnreadStore";
 import { usePactUnreadStore } from "@/services/diplomacyService";
 
 import { ordersReadyCount } from "@/game/dailyOrders";
+import { useClaimContext } from "@/hooks/useClaimContext";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { useReportBadges } from "@/services/reportService";
 import { useUnreadMessageCount } from "@/services/messageService";
@@ -354,7 +355,9 @@ function useBadges(): (to: string) => number {
   const leviathan = useLeviathan();
   const leviathanSeen = useLeviathanSeen((s) => s.ids);
   // 5.30 : pastille unique des récompenses prêtes (série, missions, contrats, passe, Chroniques…), = « Tout réclamer ».
-  const ordersReady = usePlayerStore((s) => (s.player ? ordersReadyCount(s.player, Date.now()) : 0));
+  // 6.14.113 (AC-G) : jeton du casino et défi terminé compris, quand leurs données publiques sont chargées.
+  const claimCtx = useClaimContext();
+  const ordersReady = usePlayerStore((s) => (s.player ? ordersReadyCount(s.player, Date.now(), claimCtx) : 0));
   // Léviathan : pastille tant que le joueur n'a pas ouvert la page pendant cette apparition.
   const leviathanNew = leviathan && isActive(leviathan, Date.now()) && !leviathanSeen.includes(leviathan.id) ? 1 : 0;
   return (to) =>

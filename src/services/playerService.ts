@@ -1,3 +1,5 @@
+import { gameErrorText, isServerFault } from "@/lib/gameErrors";
+import { reportClientError } from "@/services/errorReporter";
 import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
 import { defaultQueues } from "@/game/defaults";
@@ -70,20 +72,24 @@ function queuesFromRecord(record: PbRecord | null | undefined): QueuesState | nu
    bâtiments, unités ni son XP.
 ===================================================== */
 
-/** Appel d'une route du jeu. Une règle non respectée (400) devient une
- *  GameActionError avec le message du serveur, à afficher au joueur. */
+/** Appel d'une route du jeu. Toute erreur devient une GameActionError avec un message français à afficher au joueur :
+ *  le message du serveur (règle non respectée, 400 ; droit, 403 ; conflit, 409 ; trop de demandes, 429 ; maintenance, 503),
+ *  ou un texte clair selon le statut (6.14.112, AC-16 : avant, seuls 400 et 404 étaient traduits). Une erreur du serveur (500)
+ *  part aussi à l'équipe. */
 export async function callGame<T>(path: string, body: Record<string, unknown> = {}): Promise<T> {
   try {
     return await pb.send<T>(`/api/cosmic/${path}`, { method: "POST", body });
   } catch (err) {
-    const status = (err as { status?: number })?.status;
+    const status = Number((err as { status?: number })?.status) || 0;
     const message = (err as { response?: { message?: string } })?.response?.message;
     // 6.14.49 : un 404 du jeu porte un message (« Flotte introuvable. ») ; seul un 404 sans message du jeu veut dire « hooks absents ».
     if (status === 404 && !message?.includes("joueur") && !message?.includes("introuvable")) {
       throw new GameActionError("Serveur de jeu indisponible : les hooks ne sont pas installés (voir README).");
     }
-    if (status === 400 || status === 404) throw new GameActionError(message || "Action impossible.");
-    throw err;
+    if (isServerFault(status)) reportClientError(err, `callGame ${path} : ${status}`);
+    // Requête annulée par le navigateur (page quittée) : pas un message à montrer.
+    if ((err as { isAbort?: boolean })?.isAbort) throw err;
+    throw new GameActionError(gameErrorText(status, message));
   }
 }
 
@@ -406,6 +412,25 @@ async function act<T = void>(action: GameAction): Promise<T> {
 /** 5.26 : action de jeu brute (Planificateur : étapes d'un modèle déjà vérifiées par l'aperçu). */
 export function performGameAction(action: GameAction) {
   return act(action);
+}
+
+/** 6.14.113 (AU27, AC-G, AC-19) : réclamations par l'action du joueur (un seul chemin, comme « Tout réclamer » : rattrapage,
+ *  garde des vacances, ligne au Journal, succès). Les routes historiques (`codex/claim`, `challenge/claim`, jeton du casino)
+ *  passent par la même action côté serveur. */
+export function claimCodexCategoryAction(category: string) {
+  return act<{ tokens: number; amber: number }>({ type: "codexClaim", category });
+}
+
+export function claimCodexTitleAction() {
+  return act<{ title: string }>({ type: "codexTitle" });
+}
+
+export function claimChallengeAction() {
+  return act<{ gain: Partial<Record<string, number>>; tokens?: number }>({ type: "challengeClaim" });
+}
+
+export function claimCasinoDailyAction() {
+  return act<{ added: number; tokens: number }>({ type: "casinoDaily" });
 }
 
 /** Rattrapage de la production (heartbeat, retour sur l'onglet). */

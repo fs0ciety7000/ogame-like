@@ -9,14 +9,15 @@ import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain, formatInt } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
-import { endVacation, onVacation } from "@/game/vacation";
+import { assertNotOnVacation, endVacation, onVacation } from "@/game/vacation";
 import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { ascend } from "@/game/ascension";
 import { buildColonyDefense, renameColony, setColonyRoute, setColonySpec, startColonization, upgradeColonyBuilding } from "@/game/colonies";
 import { claimOnboarding, setOnboardingHidden } from "@/game/onboarding";
 import { claimGuideStep, setGuideHidden } from "@/game/advancedGuide";
-import { pendingClaims } from "@/game/claimAll";
-import { claimCodexCategoryLocal, type CodexContext } from "@/game/codex";
+import { CLAIM_LABELS, describeClaims, pendingClaims, type ClaimAllAction, type ClaimContext } from "@/game/claimAll";
+import { claimCodexCategoryLocal, claimCodexTitleLocal, type CodexContext } from "@/game/codex";
+import { challengeTierIndex, claimChallengeReward } from "@/game/challenges";
 import { setPosture } from "@/game/formations";
 import { bumpStat, parisHour, setStat } from "@/game/stats";
 import { setActiveTitle } from "@/game/seasons";
@@ -29,8 +30,9 @@ import {
   unlockBlocker,
   withMissingBuildings,
 } from "@/game/buildings";
-import { flushState, type NewNotification } from "@/game/flush";
-import { canAffordAll, EXCHANGE_RULES, exchangeRareLeft, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { flushState, grantNewAchievements, type NewNotification } from "@/game/flush";
+import { challengeTokens, claimDailyTokens, grantTokens, playerCasino, tokensLabel } from "@/game/casino";
+import { EXCHANGE_RULES, exchangeRareLeft, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -55,8 +57,9 @@ import { learnTalent, resetTalents } from "@/game/talents";
 import { addSeenAnnouncements } from "@/game/announcements";
 import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
 import { beginPrestige, prestigeStartCost } from "@/game/prestige";
-import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
+import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
+import { spendAmber, spendResources } from "@/game/spending";
 
 /* =====================================================
    Actions de jeu d'un joueur, arbitrées par le serveur
@@ -90,6 +93,9 @@ export type GameAction =
   | { type: "claimOnboarding"; stepId: string }
   | { type: "claimGuide"; stepId: string }
   | { type: "codexClaim"; category: string }
+  | { type: "codexTitle" }
+  | { type: "casinoDaily" }
+  | { type: "challengeClaim" }
   | { type: "claimAll" }
   | { type: "hideGuide"; hidden: boolean }
   | { type: "hideOnboarding"; hidden: boolean }
@@ -148,18 +154,10 @@ function positiveInt(value: unknown, label: string): number {
   return n;
 }
 
+/** 6.14.110 (AC-D) : toute dépense passe par `spendResources` (vérifie, débite, compte `spent` et l'objectif « Dépenser »).
+ *  v5.9 : un cadeau n'est pas une dépense (`spending = false`), sinon deux joueurs se renvoient les mêmes ressources. */
 function pay(player: PlayerState, cost: Partial<Record<string, number>>, now: number, spending = true) {
-  if (!canAffordAll(player.resources, cost as Partial<Resources>)) throw new GameActionError("Ressources insuffisantes.");
-  let total = 0;
-  for (const [res, val] of Object.entries(cost)) {
-    player.resources[res as ResourceId] -= val ?? 0;
-    total += val ?? 0;
-  }
-  // v5.9 : un cadeau n'est pas une dépense (sinon deux joueurs se renvoient
-  // les mêmes ressources pour remplir le contrat « dépenser »).
-  if (!spending) return;
-  recordContract(player, "spend", total, now);
-  bumpStat(player, "spent", total);
+  spendResources(player, cost, now, { count: spending });
 }
 
 /** Unités hors hangar (en vol) augmentées de celles qui gardent leur place à l'Atelier (5.28 : hors Cale sèche).
@@ -193,16 +191,21 @@ interface ActionState {
   unitsAway: Record<string, number>;
   /** 6.14.25 (H29-3) : seigneurs affrontés et boss du Hall of fame (Codex), fournis par le serveur. */
   codex?: CodexContext;
+  /** 6.14.113 (AC-G) : réglages du casino et défi terminé, fournis par le serveur (`actionNeedsClaimContext`). */
+  claims?: ClaimContext;
 }
 
-/** v4.2 : seules ces actions restent possibles pendant les vacances. */
-const VACATION_ACTIONS = new Set(["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"]);
+/** Rend à `target` le contenu de `saved` (même objet : les références tenues par l'appelant restent valables). */
+function restoreInPlace<T extends object>(target: T, saved: T): void {
+  for (const k of Object.keys(target)) if (!(k in saved)) delete (target as Record<string, unknown>)[k];
+  Object.assign(target, saved);
+}
 
 function applyAction(s: ActionState, action: GameAction): unknown {
   const { player, queues, now } = s;
-  if (onVacation(player, now) && !VACATION_ACTIONS.has(String(action?.type))) {
-    throw new GameActionError("Tu es en vacances : reviens d'abord (Paramètres) pour jouer.");
-  }
+  // v4.2 : peu d'actions restent possibles pendant les vacances. 6.14.112 (AC-11) : liste blanche unique, réglable
+  // (`vacation.allowed`), la même que celle des routes du serveur.
+  assertNotOnVacation(player, now, String(action?.type));
   switch (action?.type) {
     case "sync": {
       const elapsedMs = Math.max(0, now - (s.preFlushPlayer.resourcesUpdatedAtMs || now));
@@ -294,13 +297,15 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "sellUnits": {
       const unit = findUnit(action.unitId);
       if (!unit) throw new GameActionError("Unité invalide.");
-      const qty = positiveInt(action.qty, "Quantité");
+      // 6.14.110 (AC-21) : même borne que la construction.
+      const qty = Math.min(positiveInt(action.qty, "Quantité"), MAX_QTY);
       if ((player.units[unit.id]?.count ?? 0) < qty) throw new GameActionError("Tu n'as pas assez d'unités à vendre.");
       player.units[unit.id].count -= qty;
       // 5.23 : revente à la moitié du prix payé aujourd'hui (réductions comprises).
       const each = playerUnitCost(unit, player, now);
       player.resources.scrap += Math.floor(each.scrap * 0.5) * qty;
       player.resources.energy += Math.floor(each.energy * 0.5) * qty;
+      bumpStat(player, "unitsSold", qty);
       return undefined;
     }
 
@@ -321,7 +326,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if (bounty && bounty.amber < amber) throw new GameActionError(`Pas assez d'ambre (${amber} requis).`);
       pay(player, paid, now);
       if (bounty) {
-        bounty.amber -= amber;
+        spendAmber(player, bounty, amber, `Pas assez d'ambre (${amber} requis).`);
         player.bounties = bounty;
       }
       queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid, ...(amber > 0 ? { paidAmber: amber } : {}) });
@@ -392,14 +397,48 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "codexClaim":
       return claimCodexCategoryLocal(player, action.category, now, s.codex);
 
+    // 6.14.113 (AC-19) : titre du Codex par l'action (même chemin que les catégories : rattrapage, vacances, Journal).
+    case "codexTitle":
+      return claimCodexTitleLocal(player, now, s.codex);
+
+    // 6.14.113 (AC-15) : jeton du jour du casino (réglages lus par le serveur).
+    case "casinoDaily": {
+      const settings = s.claims?.casino;
+      if (!settings) throw new GameActionError("Casino indisponible : recharge la page.");
+      const added = claimDailyTokens(player, settings, now);
+      if (added <= 0) throw new GameActionError("Le jeton du jour est déjà récupéré.");
+      return { added, tokens: playerCasino(player).tokens };
+    }
+
+    // 6.14.113 (AC-15) : récompense du défi hebdomadaire. L'état du défi (qui a réclamé) est rendu au serveur dans
+    // `claims.challenge.claimed`, qu'il enregistre dans la même transaction.
+    case "challengeClaim": {
+      const c = s.claims?.challenge;
+      if (!c) throw new GameActionError("Défi indisponible : recharge la page.");
+      const res = claimChallengeReward(c.claimed ?? c.previous, player);
+      const tokens = s.claims?.casino ? grantTokens(player, challengeTokens(s.claims.casino, challengeTierIndex(res.challenge))) : 0;
+      c.claimed = res.challenge;
+      return { gain: res.gain, tokens };
+    }
+
     case "claimAll": {
       // v5.11 : chaque réclamation passe par son action habituelle ; un échec n'arrête pas les autres.
+      // 6.14.113 (AC-14) : chaque sous-action est isolée : un échec rend la fiche (et l'état du défi) d'avant cette
+      // sous-action ; seules les règles du jeu (`GameActionError`) sont tues, une erreur de programmation remonte
+      // (la route échoue, la transaction est annulée : rien n'est crédité à moitié).
       const counts: Partial<Record<string, number>> = {};
-      for (const sub of pendingClaims(player, now, s.codex)) {
+      for (const sub of pendingClaims(player, now, s.codex, s.claims)) {
+        const savedPlayer = structuredClone(player);
+        const savedQueues = structuredClone(queues);
+        const savedChallenge = s.claims?.challenge ? s.claims.challenge.claimed : undefined;
         try {
           applyAction(s, sub);
           counts[sub.type] = (counts[sub.type] ?? 0) + 1;
-        } catch {
+        } catch (err) {
+          restoreInPlace(player, savedPlayer);
+          restoreInPlace(queues, savedQueues);
+          if (s.claims?.challenge) s.claims.challenge.claimed = savedChallenge;
+          if (!(err instanceof GameActionError)) throw err;
           /* déjà réclamé ou plus disponible */
         }
       }
@@ -450,7 +489,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     // 6.14.0 : améliorer sa lune.
     case "moonUpgrade":
-      return upgradeMoon(player);
+      return upgradeMoon(player, now);
 
     // 6.14.85 (RL-2) : projet de prestige, un à la fois (I32) ; payé comme une dépense (objectif « Dépenser »).
     case "prestigeStart": {
@@ -480,8 +519,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
             return;
           }
           const st = bountyState(player);
-          if (st.amber < COMMANDER_RULES.recruitAmber) throw new GameActionError(`Il faut ${COMMANDER_RULES.recruitAmber} Ambre de Ruche (primes Kesh'Vaar).`);
-          st.amber -= COMMANDER_RULES.recruitAmber;
+          spendAmber(player, st, COMMANDER_RULES.recruitAmber, `Il faut ${COMMANDER_RULES.recruitAmber} Ambre de Ruche (primes Kesh'Vaar).`);
           player.bounties = st;
         },
         method,
@@ -522,8 +560,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "achievementHint": {
       const a = checkHintPurchase(player, action.achievementId);
       const st = bountyState(player);
-      if (st.amber < ACHIEVEMENT_HINT_RULES.price) throw new GameActionError(`Il faut ${ACHIEVEMENT_HINT_RULES.price} Ambre de Ruche pour cet indice.`);
-      st.amber -= ACHIEVEMENT_HINT_RULES.price;
+      spendAmber(player, st, ACHIEVEMENT_HINT_RULES.price, `Il faut ${ACHIEVEMENT_HINT_RULES.price} Ambre de Ruche pour cet indice.`);
       player.bounties = st;
       player.stats = { ...(player.stats ?? {}), hintsBought: [...(player.stats?.hintsBought ?? []), a.id] };
       return { hint: achievementHint(a) };
@@ -635,6 +672,65 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 }
 
 /** Rattrape le temps écoulé (production, files terminées) puis applique l'action. */
+/* 6.14.110 (AU27, lot AC-D, constat AC-6 ; Q76 = Q-AC1, option B) : chaque réclamation laisse une ligne au Journal, déjà lue
+   (ni toast ni pastille en plus), et « Tout réclamer » une seule ligne récapitulative. Le gain est mesuré sur la fiche
+   (ressources, Ambre, jetons, XP) : la ligne dit ce que le joueur a vraiment reçu. */
+const CLAIM_NOTE_TITLES: Record<ClaimAllAction["type"], string> = {
+  streakClaim: "Récompense de série récupérée",
+  dailyClaim: "Mission du jour récupérée",
+  chronicleClaim: "Épisode des Chroniques récupéré",
+  claimContract: "Objectif du jour récupéré",
+  passClaim: "Palier du passe récupéré",
+  claimOnboarding: "Objectif de prise en main récupéré",
+  claimGuide: "Objectif du Carnet récupéré",
+  codexClaim: "Récompense du Codex récupérée",
+  casinoDaily: "Jeton du jour du casino récupéré",
+  challengeClaim: "Récompense du défi récupérée",
+  codexTitle: "Titre du Codex reçu",
+};
+
+interface WalletSnapshot {
+  resources: Partial<Record<ResourceId, number>>;
+  amber: number;
+  tokens: number;
+  xp: number;
+}
+
+function walletOf(player: PlayerState): WalletSnapshot {
+  return { resources: { ...player.resources }, amber: bountyState(player).amber, tokens: playerCasino(player).tokens, xp: Number(player.xp) || 0 };
+}
+
+/** Ce que le joueur a gagné entre deux relevés : « 5 000 ferraille, 3 Ambre, 2 jetons du casino, 40 XP ». */
+export function describeWalletGain(before: WalletSnapshot, after: WalletSnapshot): { text: string; resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; xp: number } {
+  const resources: Partial<Record<ResourceId, number>> = {};
+  for (const [k, v] of Object.entries(after.resources) as [ResourceId, number][]) {
+    const d = Math.floor((v ?? 0) - (before.resources[k] ?? 0));
+    if (d > 0) resources[k] = d;
+  }
+  const amber = Math.max(0, after.amber - before.amber);
+  const tokens = Math.max(0, after.tokens - before.tokens);
+  const xp = Math.max(0, after.xp - before.xp);
+  const parts = [Object.keys(resources).length ? describeGain(resources) : "", amber ? `${formatInt(amber)} Ambre` : "", tokens ? tokensLabel(tokens) : "", xp ? `${formatInt(xp)} XP` : ""].filter(Boolean);
+  return { text: parts.join(", "), resources, amber, tokens, xp };
+}
+
+function claimNote(type: ClaimAllAction["type"] | "claimAll", before: WalletSnapshot, player: PlayerState, now: number, counts?: Partial<Record<string, number>>): NewNotification {
+  const gain = describeWalletGain(before, walletOf(player));
+  const what = type === "claimAll" ? describeClaims(counts ?? {}) : CLAIM_LABELS[type][0];
+  const title = type === "claimAll" ? "Tout réclamé" : CLAIM_NOTE_TITLES[type];
+  const message = gain.text ? `${what.charAt(0).toUpperCase()}${what.slice(1)} : +${gain.text}.` : `${what.charAt(0).toUpperCase()}${what.slice(1)} : récompense reçue.`;
+  return {
+    kind: "event",
+    title,
+    message,
+    createdAtMs: now,
+    read: true,
+    data: { resources: gain.resources, ...(gain.xp ? { xp: gain.xp } : {}), ...(gain.amber ? { amber: gain.amber } : {}), ...(gain.tokens ? { tokens: gain.tokens } : {}) },
+  };
+}
+
+const CLAIM_TYPES = new Set<string>(Object.keys(CLAIM_NOTE_TITLES));
+
 export function performPlayerAction(
   playerIn: PlayerState,
   queuesIn: QueuesState,
@@ -646,13 +742,24 @@ export function performPlayerAction(
   awayKnown = false,
   /** 6.14.25 : données du Codex lues par le serveur (`actionNeedsCodex`). */
   codex?: CodexContext,
+  /** 6.14.113 : réglages du casino et défi terminé (`actionNeedsClaimContext`) ; `claims.challenge.claimed` en sortie. */
+  claims?: ClaimContext,
 ): { player: PlayerState; queues: QueuesState; notifications: NewNotification[]; result: unknown } {
   const preFlushPlayer = { ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) };
   const flushed = flushState(preFlushPlayer, queuesIn, now);
+  const type = String(action?.type ?? "");
+  const before = CLAIM_TYPES.has(type) || type === "claimAll" ? walletOf(flushed.player) : null;
   const result = applyAction(
-    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway, codex },
+    { player: flushed.player, queues: flushed.queues, preFlushPlayer, flushNotifications: flushed.notifications, now, unitsAway, codex, claims },
     action,
   );
+  // 6.14.110 (AC-6) : trace de la réclamation au Journal (une ligne, déjà lue) ; « Tout réclamer » sans rien de prêt n'en laisse pas.
+  if (before) {
+    const counts = type === "claimAll" ? ((result ?? {}) as Partial<Record<string, number>>) : undefined;
+    if (!counts || Object.values(counts).some((n) => (n ?? 0) > 0)) flushed.notifications.push(claimNote(type as ClaimAllAction["type"] | "claimAll", before, flushed.player, now, counts));
+  }
+  // 6.14.110 (AC-20) : un succès gagné par l'action (1re recherche, 1er module…) est débloqué tout de suite, pas au rattrapage suivant.
+  if (type !== "sync") grantNewAchievements(flushed.player, now, flushed.notifications);
   // 5.28 : Cale sèche au palier 10 : les vaisseaux prêts rentrent d'eux-mêmes dès qu'une place se libère.
   // Le serveur fournit alors les flottes en vol (`dockAutoCommission` dit quand il doit les lire).
   if (awayKnown) flushed.notifications.push(...autoCommission(flushed.player, flushed.queues, unitsAway, now));
@@ -670,7 +777,12 @@ export function actionNeedsAway(player: Pick<PlayerState, "buildings" | "worksho
 
 /** 6.14.25 (H29-3) : le serveur doit-il lire les seigneurs affrontés et le Hall of fame (Codex) pour cette action ? */
 export function actionNeedsCodex(action: { type?: unknown } | null | undefined): boolean {
-  return action?.type === "claimAll" || action?.type === "codexClaim";
+  return action?.type === "claimAll" || action?.type === "codexClaim" || action?.type === "codexTitle";
+}
+
+/** 6.14.113 (AC-15) : le serveur doit-il lire les réglages du casino et le défi hebdomadaire pour cette action ? */
+export function actionNeedsClaimContext(action: { type?: unknown } | null | undefined): boolean {
+  return action?.type === "claimAll" || action?.type === "casinoDaily" || action?.type === "challengeClaim";
 }
 
 /* ---------- dons de ressources entre joueurs ---------- */
@@ -719,7 +831,7 @@ export function performGift(
 ): GiftOutput {
   if (sender.uid === recipient.uid) throw new GameActionError("Tu ne peux pas t'envoyer des ressources à toi-même !");
   if (recipient.npc) throw new GameActionError("On ne fait pas de cadeau à un seigneur de guerre.");
-  if (onVacation(sender, now)) throw new GameActionError("Tu es en vacances : reviens d'abord pour envoyer des ressources.");
+  assertNotOnVacation(sender, now, "gift");
   const senderWait = giftAgeBlock(sender, now);
   if (senderWait) throw new GameActionError(`Les cadeaux s'ouvrent après ${GIFT_RULES.minAccountDays} jours de jeu (${senderWait}).`);
   const recipientWait = giftAgeBlock(recipient, now);

@@ -1,5 +1,5 @@
 import { pb } from "@/lib/pocketbase";
-import { callGame } from "@/services/playerService";
+import { claimCodexCategoryAction, claimCodexTitleAction } from "@/services/playerService";
 
 /* v4.8 : Codex. Les seigneurs affrontés se lisent dans les rapports de combat du joueur. */
 
@@ -11,11 +11,13 @@ export async function fetchNpcOpponents(uid: string): Promise<string[]> {
   return [...new Set(list.map((r) => (r.attackerUid === uid ? r.defenderUid : r.attackerUid)))];
 }
 
+/** 6.14.113 (AC-19) : par l'action du joueur (avant : route `codex/claim`, sans rattrapage ni garde des vacances). */
 export function claimCodexTitle() {
-  return callGame<{ title: string }>("codex/claim");
+  return claimCodexTitleAction();
 }
 
-/** 5.15.11 : récompense d'une catégorie complète du Codex (jetons, Ambre). */
-export function claimCodexCategoryReward(category: string) {
-  return callGame<{ category: string; tokens: number; amber: number }>("codex/claim", { category });
+/** 5.15.11 : récompense d'une catégorie complète du Codex (jetons, Ambre). 6.14.113 : par l'action du joueur. */
+export async function claimCodexCategoryReward(category: string) {
+  const out = await claimCodexCategoryAction(category);
+  return { category, ...out };
 }

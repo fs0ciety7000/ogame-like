@@ -103,9 +103,11 @@ routerAdd(
         : {};
       // 6.14.25 (H29-3) : « Tout réclamer » et le Codex lisent les seigneurs affrontés et le Hall of fame.
       const codex = game.actionNeedsCodex(action) ? db.codexContext(txApp, game, uid) : undefined;
+      // 6.14.113 (AC-G) : jeton du casino et défi hebdomadaire (réglages et état lus ici, défi réécrit après).
+      const claims = game.actionNeedsClaimContext(action) ? db.claimContext(txApp, game) : undefined;
       let out;
       try {
-        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway, codex);
+        out = game.performPlayerAction(loaded.player, loaded.queues, action, Date.now(), away, needAway, codex, claims);
       } catch (err) {
         throw db.asHttpError(game, err);
       }
@@ -121,6 +123,7 @@ routerAdd(
       db.navOpeningNotice(e, game, out.player, out.notifications, Date.now());
       db.savePlayer(txApp, game, loaded, out.player, out.queues);
       db.notify(txApp, uid, out.notifications);
+      db.saveClaimContext(txApp, game, claims);
       // 5.26.1 : la taxe du comptoir d'échange part au pot commun.
       if (action && action.type === "trade" && out.result && out.result.tax > 0) {
         db.addServerPot(txApp, game, "exchange", { [out.result.taxRes]: out.result.tax }, Date.now());
@@ -282,8 +285,10 @@ routerAdd(
       const rec = db.findOrNull(txApp, "fleets", fleetId);
       if (!rec) throw new NotFoundError("Flotte introuvable.");
       let next;
+      const before = db.toPlain(rec);
+      const now = Date.now();
       try {
-        next = game.recallFleet(db.toPlain(rec), e.auth.id, Date.now());
+        next = game.recallFleet(before, e.auth.id, now);
       } catch (err) {
         throw db.asHttpError(game, err);
       }
@@ -291,6 +296,11 @@ routerAdd(
       rec.set("recalled", true);
       rec.set("returnAtMs", next.returnAtMs);
       txApp.save(rec);
+      // 6.14.110 (AC-12) : trace au Journal du joueur (déjà lue) et alerte à l'allié qui hébergeait la garnison.
+      const ownerRec = db.findOrNull(txApp, "players", e.auth.id);
+      const notes = game.recallNotices(before, next, ownerRec ? ownerRec.getString("pseudo") : "", now);
+      db.notify(txApp, e.auth.id, [notes.owner]);
+      if (notes.host && db.findOrNull(txApp, "players", notes.host.uid)) db.notify(txApp, notes.host.uid, [notes.host.notification]);
       // v3.9 : une prime rappelée redevient disponible au tableau.
       db.releaseBountyOnRecall(txApp, game, next);
       // v5.1 : une livraison rappelée libère le contrat (une autre flotte peut repartir avant l'échéance).

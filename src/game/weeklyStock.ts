@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import { spendAmber } from "@/game/spending";
 import { bountyState, SHOP_HISTORY_MAX } from "@/game/bounties";
 import { addRelic, rollRelic, RELIC_RULES } from "@/game/relics";
 import { addModuleItem, MODULE_RULES, modulesState, rollModulePlan } from "@/game/modules";
@@ -129,7 +130,7 @@ export function buyWeeklyOffer(player: PlayerState, uid: string, rawStock: unkno
     message = `${n} jetons ajoutés à ta réserve du casino.`;
   }
   const st = bountyState(player);
-  st.amber -= offer.price;
+  spendAmber(player, st, offer.price, "Pas assez d'Ambre.");
   st.history = [...st.history, { atMs: now, item: `weekly:${offer.id}`, amber: offer.price }].slice(-SHOP_HISTORY_MAX);
   player.bounties = st;
   return { stock: { ...stock, sold: stock.sold + 1, buyers: [...stock.buyers, uid] }, message };

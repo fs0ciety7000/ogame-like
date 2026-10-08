@@ -1,4 +1,5 @@
 import { bountyState } from "@/game/bounties";
+import { spendAmber } from "@/game/spending";
 import { empireClassPrice, empireClassReadyAt, findEmpireClass, type EmpireClassState } from "@/game/empireClass";
 import { GameActionError } from "@/game/errors";
 import type { PlayerState } from "@/types/game";
@@ -14,8 +15,7 @@ export function chooseEmpireClass(player: PlayerState, idIn: unknown, now: numbe
   const price = empireClassPrice(player);
   if (price > 0) {
     const st = bountyState(player);
-    if ((st.amber ?? 0) < price) throw new GameActionError(`Il te faut ${price} Ambre pour changer de classe.`);
-    st.amber -= price;
+    spendAmber(player, st, price, `Il te faut ${price} Ambre pour changer de classe.`);
     player.bounties = st;
   }
   const next: EmpireClassState = { id: def.id, chosenAtMs: now, changes: cur ? (cur.changes ?? 0) + 1 : 0 };

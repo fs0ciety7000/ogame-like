@@ -19,6 +19,17 @@ export async function fetchCasino(): Promise<CasinoState> {
 const useCasinoStore = create<{ state: CasinoState | null }>(() => ({ state: null }));
 let polling = false;
 
+/** 6.14.113 : état reçu avec le reste de `game_config` (contentService) : la pastille d'Ordres du jour sait si le jeton du
+ *  jour attend, sans requête de plus. */
+export function applyCasinoRecord(data: unknown | null) {
+  useCasinoStore.setState({ state: normalizeCasino(data) });
+}
+
+/** Réglages du casino connus du client (`null` tant qu'ils ne sont pas chargés : rien n'est compté). */
+export function useCasinoSettings(): CasinoSettings | null {
+  return useCasinoStore((s) => s.state?.settings ?? null);
+}
+
 /** Relit l'état du casino (après un tirage, ou toutes les minutes). */
 export function refreshCasino() {
   void fetchCasino().then((state) => useCasinoStore.setState({ state }));
@@ -59,8 +70,10 @@ export function spinSlot(): Promise<SpinResult> {
   return pb.send("/api/cosmic/casino", { method: "POST", body: { action: "spin" } });
 }
 
-export function claimDailyToken(): Promise<{ added: number; tokens: number }> {
-  return pb.send("/api/cosmic/casino", { method: "POST", body: { action: "daily" } });
+/** 6.14.113 (AC-15) : par l'action du joueur (même chemin que « Tout réclamer », ligne au Journal). */
+export async function claimDailyToken(): Promise<{ added: number; tokens: number }> {
+  const { claimCasinoDailyAction } = await import("@/services/playerService");
+  return claimCasinoDailyAction();
 }
 
 export function adminCasinoSettings(settings: CasinoSettings): Promise<{ settings: CasinoSettings }> {

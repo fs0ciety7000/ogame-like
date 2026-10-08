@@ -1,6 +1,7 @@
 import PocketBase, { type RecordSubscription } from "pocketbase";
 import { createSharedSubscriber } from "@/lib/sharedSubscriptions";
 import { markBanned } from "@/store/banStore";
+import { gameErrorText, isGameMessage } from "@/lib/gameErrors";
 
 /** URL du serveur PocketBase (voir .env.example). */
 const pbUrl = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
@@ -16,6 +17,12 @@ pb.autoCancellation(false);
 // 5.26 : un compte banni reçoit 403 « banned » sur toutes ses requêtes : l'écran de suspension prend le relais.
 pb.afterSend = (response, data) => {
   if (response.status === 403 && data && typeof data === "object" && (data as { data?: { banned?: unknown } }).data?.banned) markBanned(String((data as { message?: string }).message ?? "Compte suspendu."));
+  // 6.14.112 (AC-16) : une erreur d'une route du jeu garde le message du serveur (français) ; un message générique de
+  // PocketBase (anglais) ou absent devient un texte clair selon le statut. Les écrans qui affichent `err.message` en profitent.
+  if (response.status >= 400 && data && typeof data === "object" && /\/api\/cosmic\//.test(response.url ?? "")) {
+    const d = data as { message?: unknown };
+    if (!isGameMessage(d.message)) d.message = gameErrorText(response.status, d.message);
+  }
   return data;
 };
 

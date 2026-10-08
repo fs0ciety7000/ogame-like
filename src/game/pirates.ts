@@ -1,4 +1,5 @@
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
+import { spendResources } from "@/game/spending";
 import { edgeParam, playerCombatEffects } from "@/game/effectTargets";
 import { applyHull, sendToWorkshop, withFleet, workshopState } from "@/game/workshop";
 import { ENDGAME_TECH_IDS } from "@/game/technologies";
@@ -405,10 +406,8 @@ export function signTreaty(player: PlayerState, factionId: string, kindIn: unkno
   if ((st.ultimatum && st.ultimatum.expiresAtMs > now) || st.raidUntilMs > now) throw new GameActionError(`${faction.name} est déjà en route ou attend ta réponse : règle d'abord la menace en cours.`);
   if (st.notoriety > TREATY_RULES.maxNotoriety[kind]) throw new GameActionError(`${faction.leader} ne traite pas avec toi : notoriété ${st.notoriety}, il faut ${TREATY_RULES.maxNotoriety[kind]} au plus.`);
   const cost = TREATY_RULES.cost[kind] > 0 ? productionHours(player, TREATY_RULES.cost[kind]) : {};
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
-    if ((player.resources[res] ?? 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour signer.`);
-  }
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - n;
+  // 6.14.110 (AC-5) : dépense comptée.
+  spendResources(player, cost, now, { message: `Il faut ${describeGain(cost)} pour signer.` });
   const treaty: FactionTreaty = { kind, signedAtMs: now, untilMs: now + TREATY_RULES.durationDays * 86400_000 };
   st.treaty = treaty;
   if (kind === "embargo") st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + TREATY_RULES.embargoNotoriety);
@@ -437,13 +436,10 @@ export function locateLair(player: PlayerState, factionId: string, now: number):
   if (st.lairOpen) throw new GameActionError(`${faction.lair.name} est déjà localisé.`);
   if (st.repelled < LAIR_LOCATE_RULES.minRepelled) throw new GameActionError(`Repousse d'abord au moins ${LAIR_LOCATE_RULES.minRepelled} raid de ${faction.name} : tes éclaireurs n'ont aucune piste.`);
   const cost = productionHours(player, LAIR_LOCATE_RULES.costHours);
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
-    if ((player.resources[res] ?? 0) < n) throw new GameActionError(`Il faut ${describeGain(cost)} pour localiser le repaire.`);
-  }
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - n;
+  // 6.14.110 (AC-5) : dépense comptée.
+  spendResources(player, cost, now, { message: `Il faut ${describeGain(cost)} pour localiser le repaire.` });
   st.lairOpen = true;
   setFactionState(player, faction.id, st);
-  void now;
   return { paid: cost };
 }
 

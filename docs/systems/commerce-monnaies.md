@@ -52,3 +52,9 @@ Chiffres des listes fixes réglables, valeurs inchangées (fiche `docs/changes/6
 primes, proie d'élite, série et coffre, passe, Chroniques, Codex, fin de saison, boss, parrainage, recyclage, guide, autres ; les
 remboursements et les ventes aux enchères, simples transferts, ne comptent pas). Admin → Équilibrage → Santé : part de chaque source,
 alerte si les primes dépassent 60 % (`balanceHealth.amberBountySharePct`) ; actifs au plafond du comptoir (Q268).
+
+6.14.110 (AC-D) : l'Ambre se dépense par un seul chemin (`spendAmber`, `spending.ts`) : technos, recrutement, indices, Atelier,
+Comptoir de la Ruche, échange, don au pot commun, offre de la semaine, pseudo, classe. Chaque sortie est comptée dans `stats.amberSpent`
+(la mise d'enchère, rendue si dépassée, ne l'est pas). Invariant I34.
+6.14.113 (AC-G) : le jeton du jour du casino et la récompense du défi de la semaine (jetons du palier compris) se prennent aussi par
+« Tout réclamer » ; le bouton du casino et la carte du défi passent par la même action (ligne au Journal, vacances refusées).

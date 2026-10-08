@@ -26,6 +26,11 @@ export const VACATION_RULES = {
   recentAttackHours: 12,
   /** Retour anticipé possible après 48 h seulement. */
   minStayHours: 48,
+  /** 6.14.112 (AU27, AC-11, Q79 = Q-AC4 option A) : gestes permis pendant les vacances, liste unique pour l'action et les
+   *  routes. Le serveur interroge la garde (`vacationBlock`) pour chaque geste qui rapporte ou dépense ; tout ce qui n'est pas
+   *  ici est refusé. Lecture (phalange sans balayage, Codex, fiches) toujours permise. Clés : type d'action, nom de route,
+   *  `route:geste` (ex. `alliance:deposit`, `bounty:shop`). */
+  allowed: ["sync", "seenAnnouncements", "setTitle", "hideOnboarding", "setProfileStyle", "colonyRename", "vacationEnd", "hideGuide"] as string[],
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -36,6 +41,7 @@ export const VACATION_RULES_META = {
   productionFactor: { label: "Production pendant l'absence", unit: "part", min: 0, max: 1, hint: "0,25 = 25 % de la production normale." },
   recentAttackHours: { label: "Pas d'activation après une attaque subie", unit: "h", min: 0, max: 168 },
   minStayHours: { label: "Retour anticipé possible après", unit: "h", min: 0, max: 336 },
+  allowed: { label: "Gestes permis pendant les vacances (liste blanche unique)", hint: "Types d'action et routes (ex. « sync », « vacationEnd », « casino:daily »). Tout geste qui rapporte ou dépense et n'est pas ici est refusé (Q79)." },
 };
 
 const DAY = 86_400_000;
@@ -44,6 +50,43 @@ const HOUR = 3_600_000;
 export function onVacation(p: Pick<PlayerState, "vacation">, now: number): boolean {
   const v = p.vacation;
   return !!v && !v.endedAtMs && v.startedAtMs <= now && now < v.untilMs;
+}
+
+/** 6.14.112 (AC-11) : ce que le joueur voulait faire, pour un refus clair. Clé absente : « jouer ». */
+const VACATION_VERBS: Record<string, string> = {
+  gift: "envoyer des ressources",
+  "fleet/send": "lancer une flotte",
+  "fleet/jump": "utiliser la porte de saut",
+  "moon/scan": "balayer un agresseur",
+  market: "échanger",
+  auction: "enchérir ou vendre",
+  "trade-contract": "commercer",
+  bounty: "chasser ou acheter au Comptoir",
+  casino: "jouer au casino",
+  casinoDaily: "récupérer le jeton du jour du casino",
+  challengeClaim: "récupérer la récompense du défi",
+  codexClaim: "récupérer une récompense du Codex",
+  codexTitle: "recevoir le titre du Codex",
+  claimAll: "réclamer tes récompenses",
+  pirates: "traiter avec les factions",
+  alliance: "dépenser pour ton alliance",
+  warlords: "défier un seigneur",
+  rename: "changer de pseudo",
+};
+
+/** Garde unique des vacances (action et routes) : `null` si le geste `key` est permis, sinon le message du refus. */
+export function vacationBlock(p: Pick<PlayerState, "vacation">, now: number, key: string): string | null {
+  if (!onVacation(p, now)) return null;
+  const allowed = Array.isArray(VACATION_RULES.allowed) ? VACATION_RULES.allowed : [];
+  if (allowed.includes(key)) return null;
+  const verb = VACATION_VERBS[key] ?? VACATION_VERBS[key.split(":")[0]] ?? "jouer";
+  return `Tu es en vacances : reviens d'abord (Paramètres) pour ${verb}.`;
+}
+
+/** Lève le refus de `vacationBlock` (moteur). */
+export function assertNotOnVacation(p: Pick<PlayerState, "vacation">, now: number, key: string): void {
+  const block = vacationBlock(p, now, key);
+  if (block) throw new GameActionError(block);
 }
 
 export interface VacationContext {

@@ -33,12 +33,15 @@ function call<T>(body: Record<string, unknown>): Promise<T> {
   });
 }
 
-export const mailCount = (segment?: MailSegment) => call<{ recipients: number; optedOut: number; smtp: boolean }>({ action: "count", segment });
+export const mailCount = (segment?: MailSegment) => call<{ recipients: number; optedOut: number; smtp: boolean; queued?: number }>({ action: "count", segment });
 /** 5.16 : envoi programmé (traité toutes les 5 min par le serveur) et annulation. */
 export const mailSchedule = (m: MailBody, sendAtMs: number) => call<{ id: string; sendAtMs: number }>({ action: "schedule", sendAtMs, ...m });
 export const mailUnschedule = (id: string) => call<{ ok: boolean }>({ action: "unschedule", id });
 export const mailTest = (m: MailBody, to?: string) => call<{ sent: number; to: string }>({ action: "test", to, ...m });
-export const mailSend = (m: MailBody) => call<{ sent: number; failed: number; failedPseudos: string[] }>({ action: "send", confirm: "ENVOYER", ...m });
+/** 6.14.111 (AC-7) : la campagne entre en file ; le serveur l'envoie par lots chaque minute. */
+export const mailSend = (m: MailBody) => call<{ queued: number; campaignId: string }>({ action: "send", confirm: "ENVOYER", ...m });
+/** Un lot de la file tout de suite (même chemin que la cadence minute). */
+export const mailQueueTick = () => call<{ sent: number; queued: number }>({ action: "tick" });
 
 /** Préférence du joueur (Réglages). */
 export async function setEmailOptOut(uid: string, optOut: boolean) {

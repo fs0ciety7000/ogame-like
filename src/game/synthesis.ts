@@ -1,4 +1,5 @@
 import { GameActionError } from "@/game/errors";
+import { spendResources } from "@/game/spending";
 import { formatHours, formatInt } from "@/game/format";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { SYNTH_BUILDING, SYNTH_BUILDING_ID } from "@/game/buildings";
@@ -147,10 +148,13 @@ export function craftCapsule(player: PlayerState, typeIn: unknown, levelIn: unkn
   if (st.crafting) throw new GameActionError("Une capsule est déjà en cours de synthèse.");
   if (st.stock[type].length >= SYNTH_RULES.maxStock) throw new GameActionError(`${SYNTH_RULES.maxStock} capsules de ce type en réserve au plus.`);
   const cost = capsuleCost(player, level);
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) {
-    if ((player.resources[res] ?? 0) < n) throw new GameActionError(`Il manque ${formatInt(n - (player.resources[res] ?? 0))} ressources pour cette capsule.`);
-  }
-  for (const [res, n] of Object.entries(cost) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) - n;
+  // 6.14.110 (AC-5) : dépense comptée.
+  spendResources(player, cost, now, {
+    message: (c) => {
+      const missing = (Object.entries(c) as [ResourceId, number][]).find(([res, n]) => (player.resources[res] ?? 0) < n);
+      return `Il manque ${formatInt(missing ? missing[1] - (player.resources[missing[0]] ?? 0) : 0)} ressources pour cette capsule.`;
+    },
+  });
   st.crafting = { type, level, endsAtMs: now + craftSeconds(level) * 1000 };
   player.synthesis = st;
   return st.crafting;

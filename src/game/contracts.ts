@@ -7,6 +7,7 @@ import { formatInt } from "@/game/format";
 import { grantTokens } from "@/game/casino";
 import { parisDay } from "@/game/retention";
 import { NAV_UNLOCK_RULES, navPageOpen } from "@/game/navUnlock";
+import { onSpend } from "@/game/spending";
 
 /* =====================================================
    Contrats quotidiens : 3 objectifs par jour (minuit UTC), tirés au sort
@@ -356,3 +357,6 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
   state.rerolled = true;
   return next;
 }
+
+// 6.14.110 (AC-D) : toute dépense (`spendResources`) compte pour l'objectif du jour « Dépenser ».
+onSpend((player, total, now) => recordContract(player, "spend", total, now));

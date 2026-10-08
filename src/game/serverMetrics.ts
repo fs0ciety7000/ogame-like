@@ -22,6 +22,9 @@ export interface CronRun {
   lastError: string;
   lastErrorAtMs: number;
   everyMs: number;
+  /** 6.14.111 (AC-E) : passages sautés parce que le précédent tournait encore (verrou de cadence). */
+  skips?: number;
+  lastSkipAtMs?: number;
 }
 
 export type CronMetrics = Record<string, CronRun>;
@@ -55,6 +58,8 @@ export function normalizeCronMetrics(raw: unknown): CronMetrics {
       lastError: typeof r.lastError === "string" ? r.lastError.slice(0, 300) : "",
       lastErrorAtMs: n("lastErrorAtMs"),
       everyMs: n("everyMs") || 60_000,
+      skips: n("skips"),
+      lastSkipAtMs: n("lastSkipAtMs"),
     };
   }
   return out;
@@ -73,8 +78,18 @@ export function recordCronRun(metrics: CronMetrics, name: string, spec: string, 
     lastError: error ? error.slice(0, 300) : (prev?.lastError ?? ""),
     lastErrorAtMs: error ? startedAtMs : (prev?.lastErrorAtMs ?? 0),
     everyMs: cronIntervalMs(spec),
+    skips: prev?.skips ?? 0,
+    lastSkipAtMs: prev?.lastSkipAtMs ?? 0,
   };
   return { ...metrics, [name]: run };
+}
+
+/** 6.14.111 (AC-E) : passage sauté (la cadence tournait encore). Le dernier passage réel reste celui d'avant : une cadence
+ *  bloquée finit « en retard » sur la page Santé. */
+export function recordCronSkip(metrics: CronMetrics, name: string, spec: string, now: number): CronMetrics {
+  const prev = metrics[name];
+  const base: CronRun = prev ?? { lastAtMs: 0, lastMs: 0, avgMs: 0, maxMs: 0, runs: 0, fails: 0, lastError: "", lastErrorAtMs: 0, everyMs: cronIntervalMs(spec) };
+  return { ...metrics, [name]: { ...base, skips: (base.skips ?? 0) + 1, lastSkipAtMs: now } };
 }
 
 export type CronStatus = "ok" | "late" | "failing" | "slow";

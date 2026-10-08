@@ -8,6 +8,7 @@ export {
   performPlayerAction,
   actionNeedsAway,
   actionNeedsCodex,
+  actionNeedsClaimContext,
   performGift,
   newPlayerProfile,
   applyLegacyBattleReport,
@@ -15,7 +16,7 @@ export {
 } from "@/game/actions";
 export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";
-export { fleetDelayMs, performLaunch, performFleetReturn, performTransportArrival, recallFleet, patrolTurnaround } from "@/game/fleets";
+export { fleetDelayMs, performLaunch, performFleetReturn, performTransportArrival, recallFleet, recallNotices, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
 export { ALLIANCE_RULES, allianceNextDueMs, allianceStandings, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
 export { stationGarrison, endGarrison, baseReturnUnits, isActiveBase, colonyBaseDefends } from "@/game/fleets";
@@ -137,7 +138,7 @@ export {
 } from "@/game/warlords";
 export { addThreat, dropRank, rankOf, RANK_NAMES, RANK_NUMERALS } from "@/game/warlordRanks";
 export { recordVendettaWin, refreshEliteUnlocks } from "@/game/eliteUnits";
-export { endVacation, onVacation, startVacation, VACATION_RULES } from "@/game/vacation";
+export { assertNotOnVacation, endVacation, onVacation, startVacation, vacationBlock, VACATION_RULES } from "@/game/vacation";
 export { productionHours } from "@/game/pirates";
 export {
   ALLIANCE_BOSS_RULES,
@@ -215,7 +216,7 @@ export { bountyRank } from "@/game/bounties";
 export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
 export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
 export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
-export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
+export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, recordCronSkip, cronIntervalMs, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
 export { upcomingMaintenance } from "@/game/maintenance";
 export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
 export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
@@ -244,3 +245,7 @@ export { addPatronage, PATRONS_KEY } from "@/game/patrons";
 export { addMoonPity, moonPity, playerMoon, moonLevel, MOON_RULES } from "@/game/moon";
 export { alliedThreats, alliesCovered, buildScanReport, checkScan, isAggressor, markScan, PHALANX_RULES, phalanxFeatures, phalanxHidden, phalanxLevel, phalanxRange, piercedText, radarRecipients, radarText, revealIncoming, scanCost, scanReportText } from "@/game/phalanx";
 export { allyJumpAllowed, checkJump, gateCooldownMs, gateMinLevel, gateReadyAtMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markGateSave, markJump } from "@/game/jumpGate";
+// 6.14.110 (AU27, lot AC-D) : un seul chemin de dépense (vendetta côté serveur) ; trace du rappel de flotte.
+export { canSpendResources, spendAmber, spendResources } from "@/game/spending";
+// 6.14.111 (AU27, lot AC-E) : verrou par cadence, e-mails par lots, échéances décalées après une maintenance.
+export { cadenceBusy, MAIL_QUEUE_KEY, mailQueueState, settleMailBatch, shiftForMaintenance, SERVER_TASK_RULES, takeMailBatch } from "@/game/serverTasks";

@@ -43,10 +43,10 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | livré (6.14.107) |
 | 27 | AP-L4 | Succès procéduraux bridés (détenteurs minimum, un palier par mois) | S | livré (6.14.108) |
 | 28 | AP-L5 | Objectifs du jour pondérés et réglables | S | livré (6.14.109) |
-| 29 | AC-D | Dépenses et traces : un seul chemin de dépense, Journal des réclamations, rappel de flotte notifié | M | à faire |
-| 30 | AC-E | Tâches planifiées : verrou par cadence, e-mails par lots | M | à faire |
-| 31 | AC-F | Erreurs traduites (403, 409, 429, 503) et garde de vacances unique | S | à faire |
-| 32 | AC-G | Réclamations groupées (casino du jour, défi, titre du Codex dans « Tout réclamer ») | M | à faire |
+| 29 | AC-D | Dépenses et traces : un seul chemin de dépense, Journal des réclamations, rappel de flotte notifié | M | livré (6.14.110) |
+| 30 | AC-E | Tâches planifiées : verrou par cadence, e-mails par lots | M | livré (6.14.111 ; avec AC-8 allégé et la règle de maintenance Q77) |
+| 31 | AC-F | Erreurs traduites (403, 409, 429, 503) et garde de vacances unique | S | livré (6.14.112) |
+| 32 | AC-G | Réclamations groupées (casino du jour, défi, titre du Codex dans « Tout réclamer ») | M | livré (6.14.113) |
 | 33 | UX-6 | Hiérarchie des pages (Missions, Passe, Alliance, Seigneurs, Codex) | M | livré (6.14.67) |
 | 34 | UX-7 | Tactile et accessibilité (44 px sur écran tactile, `aria-label`, raison des boutons grisés) | M | livré (6.14.68) |
 | 35 | AJ27-4 | Garde de chaîne de contenu par contenu, panneau « Chaîne de contenu » dans l'admin | M | à faire |

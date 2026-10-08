@@ -122,10 +122,12 @@ export function useGameSync(uid: string | null) {
       }
       const incoming = items.filter((item) => !seenNotificationIds.current!.has(item.id)).reverse(); // plus ancienne d'abord
       incoming.forEach((item) => seenNotificationIds.current!.add(item.id));
-      if (incoming.length === 0) return;
+      // 6.14.110 (AC-6, Q76) : une trace écrite déjà lue (réclamation, cadeau envoyé…) va au Journal sans toast.
+      const toToast = incoming.filter((item) => !item.read);
+      if (toToast.length === 0) return;
       // Les notifications d'un même évènement arrivent souvent une par une :
       // on les regroupe sur une courte fenêtre avant de les afficher.
-      pendingToasts.push(...incoming);
+      pendingToasts.push(...toToast);
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(flushToasts, 600);
     });

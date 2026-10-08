@@ -1,4 +1,5 @@
 import { bumpStat } from "@/game/stats";
+import { spendAmber } from "@/game/spending";
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
 import { BUILDINGS, DOCK_TIERS, dockBaseCapacity, dockLevel, effectiveBuildingLevel } from "@/game/buildings";
 import { findUnit } from "@/game/units";
@@ -647,8 +648,7 @@ export function rushWorkshop<W extends { amber: number }>(player: PlayerState, j
   const { amber, jobs } = workshopRushCost(player, jobId);
   if (!jobs.length) throw new GameActionError(jobId ? "Ce lot n'est plus à l'Atelier." : "Aucune unité à l'Atelier.");
   const wallet = walletOf(player);
-  if (wallet.amber < amber) throw new GameActionError(`Il faut ${amber} Ambre de Ruche pour terminer ces réparations.`);
-  wallet.amber -= amber;
+  spendAmber(player, wallet, amber, `Il faut ${amber} Ambre de Ruche pour terminer ces réparations.`);
   saveWallet(player, wallet);
   const st = workshopState(player);
   const ids = new Set(jobs.map((j) => j.id));

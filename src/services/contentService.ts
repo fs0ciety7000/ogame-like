@@ -1,6 +1,8 @@
 import { applyEmojisRecord } from "@/services/emojiService";
 import { EMOJIS_KEY } from "@/game/emojis";
 import { applyChallengeRecord } from "@/services/challengeService";
+import { applyCasinoRecord } from "@/services/casinoService";
+import { CASINO_KEY } from "@/game/casino";
 import { CHALLENGE_KEY } from "@/game/challenges";
 import { applyBannersRecord } from "@/services/bannerService";
 import { BANNERS_KEY } from "@/game/banners";
@@ -63,6 +65,9 @@ function applyRecords(records: ConfigRecord[]) {
   applyAnnouncementsRecord(records.find((r) => (r.key as string) === ANNOUNCEMENTS_KEY)?.data ?? null);
   applyGazetteRecord(records.find((r) => (r.key as string) === GAZETTE_KEY)?.data ?? null);
   applyChallengeRecord(records.find((r) => (r.key as string) === CHALLENGE_KEY)?.data ?? null);
+  // 6.14.113 (AC-G) : réglages du casino pour la pastille d'Ordres du jour (jeton du jour).
+  const casinoRec = records.find((r) => (r.key as string) === CASINO_KEY);
+  if (casinoRec) applyCasinoRecord(casinoRec.data ?? null);
   applyEmojisRecord(records.find((r) => (r.key as string) === EMOJIS_KEY)?.data ?? null);
   const overrides: Partial<GameContent> = {};
   for (const r of records) {

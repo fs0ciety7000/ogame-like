@@ -10,8 +10,9 @@ export function applyChallengeRecord(data: unknown | null) {
 
 /** v5.10 : récupère la récompense du défi terminé (le serveur crédite et note la réclamation). */
 export async function claimChallenge(): Promise<{ gain: Partial<Record<string, number>>; tokens?: number }> {
-  const { callGame } = await import("@/services/playerService");
-  const out = await callGame<{ gain: Partial<Record<string, number>>; tokens?: number }>("challenge/claim");
+  // 6.14.113 (AC-15) : par l'action du joueur (même chemin que « Tout réclamer »).
+  const { claimChallengeAction } = await import("@/services/playerService");
+  const out = await claimChallengeAction();
   const st = useChallengeStore.getState();
   const uid = (await import("@/store/authStore")).useAuthStore.getState().user?.uid;
   if (st.previous && uid) useChallengeStore.setState({ previous: { ...st.previous, claimed: [...(st.previous.claimed ?? []), uid] } });

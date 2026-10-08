@@ -18,6 +18,16 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q279 | Objectif « Dépenser » : Compte maintenant la fondation de colonie et la lune (un seul chemin de dépense) (`docs/changes/6.14.110-depenses-et-traces.md`) | objectif un peu plus facile à remplir | valider |
+| Q280 | Toasts des lignes déjà lues : Aucun toast pour une notification créée déjà lue (réclamations ; effet de bord : cadeau envoyé, défi récupéré) (`docs/changes/6.14.110-depenses-et-traces.md`) | moins de toasts en double | valider |
+| Q281 | Rappel d'une garnison : L'hôte est prévenu même s'il a coupé les évènements d'alliance (`docs/changes/6.14.110-depenses-et-traces.md`) | l'hôte sait que sa défense part | valider |
+| Q282 | Envoi des e-mails : 50 par minute, file `mail_queue`, une fois par joueur (`docs/changes/6.14.111-taches-planifiees.md`) | campagnes étalées, serveur plus léger | valider |
+| Q283 | Maintenance et admin : Routes d'admin permises pendant une maintenance ; guerres, Léviathan, boss et guerre de territoire attendent puis sont décalés (`docs/changes/6.14.111-taches-planifiees.md`) | aucune échéance perdue pendant une coupure | valider |
+| Q284 | Verrou des tâches planifiées : Expire après 2 intervalles (un passage bloqué ne fige pas la cadence) (`docs/changes/6.14.111-taches-planifiees.md`) | aucun | valider |
+| Q285 | **Actions bloquées en vacances** : Liste blanche réglable (`vacation.allowed`) : en plus d'avant, phalange, porte de saut, Comptoir et primes, casino, défi, Codex, factions, changement de pseudo et dépenses d'alliance sont refusés en vacances ; les gestes sociaux d'alliance restent permis (`docs/changes/6.14.112-erreurs-et-vacances.md`) | un joueur en vacances ne réclame plus son jeton de casino ni le défi | à trancher : je recommande de permettre casino, défi et Codex (réclamations sans effet de combat) |
+| Q286 | Erreur 500 : Même message pour les admins et les joueurs (signalée à l'équipe) (`docs/changes/6.14.112-erreurs-et-vacances.md`) | aucun | valider |
+| Q287 | Titre du Codex et pastille : Hors de la pastille d'Ordres du jour (comme Seigneurs et Boss), mais dans « Tout réclamer » (`docs/changes/6.14.113-reclamations-groupees.md`) | pas de pastille fausse | valider |
+| Q288 | Lignes d'Ordres du jour : Jeton du casino et défi affichés seulement quand une récompense attend (`docs/changes/6.14.113-reclamations-groupees.md`) | ordres du jour plus courts | valider |
 | Q274 | Date des anciens paliers générés : Datés au premier passage du générateur : leurs mesures restent fermées 30 jours (`docs/changes/6.14.108-succes-generes-brides.md`) | pas de nouveau palier généré pendant 30 jours | valider |
 | Q275 | Lecture de Q89 (détenteurs minimum) : 3 joueurs **et** 10 % des actifs : le plus exigeant des deux (`docs/changes/6.14.108-succes-generes-brides.md`) | les paliers générés arrivent plus lentement | valider |
 | Q276 | Rareté des succès générés : Restent légendaires ; à revoir avec É30-6 (rythme des succès) (`docs/changes/6.14.108-succes-generes-brides.md`) | aucun | valider |

@@ -21,6 +21,7 @@ import { usePlayerStore } from "@/store/playerStore";
 import { EMAIL_MARKDOWN_TEMPLATE, markdownToEmail } from "@/lib/emailMarkdown";
 import { cn } from "@/lib/utils";
 import { HudPanel } from "@/components/ui/panel";
+import { SERVER_TASK_RULES } from "@/game/serverTasks";
 import {
   MAIL_SEGMENTS,
   segmentLabel,
@@ -198,10 +199,11 @@ export function MailPanel() {
     setResult(null);
     try {
       const out = await mailSend(body);
+      // 6.14.111 (AC-7) : envoi par lots, suivi dans l'historique (colonne « Envoyés »).
       setResult(
-        `${out.sent} e-mail${out.sent > 1 ? "s" : ""} envoyé${out.sent > 1 ? "s" : ""}${out.failed ? ` · ${out.failed} échec(s) : ${out.failedPseudos.join(", ")}` : ""}.`,
+        `${out.queued} e-mail${out.queued > 1 ? "s" : ""} en file : envoi par lots de ${SERVER_TASK_RULES.mailBatchSize} par minute (≈ ${Math.max(1, Math.ceil(out.queued / Math.max(1, SERVER_TASK_RULES.mailBatchSize)))} min). Suivi dans l'historique.`,
       );
-      toast.success("Campagne envoyée.");
+      toast.success("Campagne mise en file.");
       setConfirm("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Envoi impossible.");
@@ -608,6 +610,11 @@ function MailHistory({
               </span>
               <span className="text-right font-mono tabular-nums text-slate-300">
                 {c.sent}
+                {c.pending ? (
+                  <span className="block text-[10px] text-slate-500">
+                    +{c.pending} en file
+                  </span>
+                ) : null}
               </span>
               <span className="text-right font-mono tabular-nums text-mint-glow">
                 {pct(c.opened.length, c.sent)}

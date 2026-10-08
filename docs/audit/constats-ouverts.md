@@ -22,7 +22,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32 (fermés par AA3, 6.14.104 : AA-1, AA-4, AA-7 à AA-11, AA-13, AA-29, AA-32 ; chiffres seuls pour AA-2 et AA-5, sections en AA9 ; AA-12 déjà réglable depuis 6.14.84, surcharge par techno à faire ; fermés par AA4, 6.14.105 : AA-21, AA-22 ; AA-6 en partie, forces des mutateurs réglables, liste et effets composés en AA7), AC-1 à AC-22, AP-1 à AP-16 (fermés : AP-5 par AP-L4, 6.14.108 ; AP-9 par AP-L5, 6.14.109), AD-1 à AD-30, AE-1 à AE-17 sauf AE-2, AE-3, AE-6, AE-7, AE-8 et AE-15 (fermés par AE-L3, 6.14.106 : AE-2 plafond du comptoir, AE-3 coffre indexé, AE-7 défaites par 24 h, AE-15 rattrapage ; mesures livrées par AE-L4, 6.14.107 : AE-5, AE-10, AE-11 et AE-15 se jugent sur la santé de l'équilibre, décisions en AE-L7 après 8 semaines), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
+| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32 (fermés par AA3, 6.14.104 : AA-1, AA-4, AA-7 à AA-11, AA-13, AA-29, AA-32 ; chiffres seuls pour AA-2 et AA-5, sections en AA9 ; AA-12 déjà réglable depuis 6.14.84, surcharge par techno à faire ; fermés par AA4, 6.14.105 : AA-21, AA-22 ; AA-6 en partie, forces des mutateurs réglables, liste et effets composés en AA7), AC-1 à AC-22 (fermés par AC-D à AC-G, 6.14.110 à 6.14.113 : AC-5, AC-6, AC-7, AC-10, AC-11, AC-12, AC-14, AC-15, AC-16, AC-19, AC-20, AC-21 ; AC-8 en grande partie, mesure sur la pré-prod ; restent AC-17, AC-18, AC-22 en AC-H et AC-I), AP-1 à AP-16 (fermés : AP-5 par AP-L4, 6.14.108 ; AP-9 par AP-L5, 6.14.109), AD-1 à AD-30, AE-1 à AE-17 sauf AE-2, AE-3, AE-6, AE-7, AE-8 et AE-15 (fermés par AE-L3, 6.14.106 : AE-2 plafond du comptoir, AE-3 coffre indexé, AE-7 défaites par 24 h, AE-15 rattrapage ; mesures livrées par AE-L4, 6.14.107 : AE-5, AE-10, AE-11 et AE-15 se jugent sur la santé de l'équilibre, décisions en AE-L7 après 8 semaines), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
 | TH-danger | 6.14.96 | Rouge « danger » sous 4,5:1 sur `space-600` dans 7 thèmes (4,1 à 4,45:1 ; 4,5 et plus sur `space-700`) | revue AU28 (avec `theme-audit.mjs`) |
 | É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
 
@@ -58,6 +58,10 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 
 | Id | Comment |
 |:--|:--|
+| AC-5, AC-6, AC-12, AC-20, AC-21 (AU27) | 6.14.110 (AC-D) : un seul chemin de dépense (`spendResources`, `spendAmber`, garde de balayage), réclamations au Journal (Q76), rappel tracé et hôte prévenu, succès après l'action, `unitsSold` (I34) |
+| AC-7, AC-10 (AU27) ; AC-8 en grande partie | 6.14.111 (AC-E) : verrou par cadence, e-mails en file et par lots, tâches allégées (factions, flottes, rattrapage, rappels), échéances suspendues puis décalées après une maintenance (Q77, I35) ; mesure d'AC-8 sur la pré-prod au push |
+| AC-11, AC-16 (AU27) | 6.14.112 (AC-F) : erreurs traduites côté client, garde de vacances unique et réglable (Q79, I36) |
+| AC-14, AC-15, AC-19 (AU27) | 6.14.113 (AC-G) : jeton du casino, défi et titre du Codex dans « Tout réclamer », un seul chemin, sous-actions isolées (I37) |
 | AP-5 (AU27) | 6.14.108 (AP-L4) : paliers de succès générés bridés (3 détenteurs et 10 % des actifs, 1 par mesure tous les 30 jours, 3 par mesure, titre au dernier), réglables (`achievementGen`) ; rien retiré |
 | AP-9 (AU27) | 6.14.109 (AP-L5) : objectifs du jour pondérés (`dailyContracts.weights`, défense 0,5 et raids de faction comptés), quantités réglables |
 | AU28 thèmes | 6.14.90 et 6.14.96 à 6.14.101 : TH-1 à TH-16 corrigés (lots TH-L1 à TH-L7) ; reste le rouge « danger » sur `space-600` (7 thèmes entre 4,1 et 4,5:1), noté pour la revue AU28 |

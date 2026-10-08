@@ -19,7 +19,8 @@ function stepNames(): string[] {
 describe("tâches planifiées par cadence", () => {
   it("chaque étape est unique et n'a plus son propre cronAdd", () => {
     const steps = stepNames();
-    expect(steps.length).toBe(16);
+    // 6.14.111 (AC-E) : + cosmic_mail_queue (campagnes d'e-mails par lots, cadence minute).
+    expect(steps.length).toBe(17);
     expect(new Set(steps).size).toBe(steps.length);
     for (const name of steps) expect(pb.includes(`cronAdd("${name}"`)).toBe(false);
   });
@@ -29,5 +30,32 @@ describe("tâches planifiées par cadence", () => {
     expect(pb).toContain(`cronAdd("cosmic_five", "*/5 * * * *"`);
     expect(pb).toContain(`cronAdd("cosmic_ten", "*/10 * * * *"`);
     expect(db).toContain("module.exports = { cadenceTick,");
+  });
+});
+
+describe("6.14.111 (AC-E) : verrou par cadence et e-mails par lots", () => {
+  const tick = db.slice(db.indexOf("function cadenceTick("), db.indexOf("function readServerMetric("));
+  it("une cadence tient un verrou en mémoire partagée, compte ses passages sautés et le rend à la fin", () => {
+    expect(tick).toContain("game.cadenceBusy(");
+    expect(tick).toContain("game.recordCronSkip(");
+    expect(tick).toContain("$app.store().set(key, now)");
+    expect(tick).toMatch(/finally \{[\s\S]*\$app\.store\(\)\.remove\(key\)/);
+  });
+
+  it("l'envoi des campagnes est la dernière étape de la cadence minute, plus aucune dans la cadence de 5 min", () => {
+    const block = db.slice(db.indexOf("const CADENCES = {"), db.indexOf("function cadenceTick("));
+    const minute = block.slice(block.indexOf("minute:"), block.indexOf("five:"));
+    const five = block.slice(block.indexOf("five:"), block.indexOf("ten:"));
+    expect(minute.lastIndexOf('["cosmic_')).toBe(minute.indexOf('["cosmic_mail_queue"'));
+    expect(five).not.toMatch(/sendCampaign|mailQueueTick/);
+  });
+
+  it("les échéances collectives attendent pendant une maintenance (Q77)", () => {
+    const block = db.slice(db.indexOf("const CADENCES = {"), db.indexOf("function cadenceTick("));
+    for (const step of ["cosmic_wars", "cosmic_leviathan", "cosmic_allianceboss", "cosmic_seasonboss", "cosmic_territory_war"]) {
+      expect(block).toMatch(new RegExp(`\\["${step}", \\(\\) => deadlinesOnHold\\(\\) \\|\\|`));
+    }
+    // Les flottes continuent.
+    expect(block).not.toMatch(/\["cosmic_fleets", \(\) => deadlinesOnHold/);
   });
 });

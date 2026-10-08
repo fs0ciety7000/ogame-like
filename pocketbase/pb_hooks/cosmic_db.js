@@ -38,6 +38,13 @@ function findOrNull(txApp, collection, id) {
   }
 }
 
+/** 6.14.112 (AU27, AC-11, Q79) : garde unique des vacances côté serveur. Le moteur tient la liste blanche
+ *  (`vacation.allowed`, réglable) et le message ; chaque route qui rapporte ou dépense l'interroge avec sa clé. */
+function vacationGuard(game, player, now, key) {
+  const block = game.vacationBlock(player, now, key);
+  if (block) throw new BadRequestError(block);
+}
+
 /** Joueur + files d'attente. La fiche des files est recréée si elle manque. */
 function loadPlayer(txApp, game, uid, missingMessage) {
   const rec = findOrNull(txApp, "players", uid);
@@ -732,7 +739,8 @@ function territoriesTick(now) {
     });
   });
   try {
-    territoryWarTick(now, sectors);
+    // 6.14.111 (AC-10, Q77) : pendant une maintenance, la guerre de territoire attend (échéance décalée à la fin).
+    if (!deadlinesOnHold()) territoryWarTick(now, sectors);
   } catch (err) {
     console.log(`[cosmic] guerre de territoire : ${err}`);
   }
@@ -1192,7 +1200,7 @@ function tradeContractRequest(e) {
     applyContent(txApp, game);
     const now = Date.now();
     const me = loadFlushed(txApp, game, uid);
-    if (game.onVacation(me.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour commercer.");
+    vacationGuard(game, me.player, now, `trade-contract:${action}`);
     let rec = null;
     try {
       if (action === "create") {
@@ -1443,13 +1451,27 @@ function aggressionStats(txApp, uid, now, windowDays) {
 
 /** Passage périodique : listes des factions, ultimatums expirés (raids).
  *  `uid` : un seul joueur ; `force` : identifiant de la faction à forcer. */
+/** 6.14.111 (AC-8) : identifiants des joueurs (hors PNJ) sans lire les fiches entières. */
+function humanPlayerIds() {
+  try {
+    const rows = arrayOf(new DynamicModel({ id: "" }));
+    $app.db().newQuery("SELECT id FROM players WHERE npc = '' OR npc IS NULL").all(rows);
+    return rows.map((r) => r.id);
+  } catch (err) {
+    console.log(`[cosmic] liste des joueurs (repli) : ${err}`);
+    return $app.findRecordsByFilter("players", "npc = ''", "", 0, 0).map((r) => r.id);
+  }
+}
+
 function processPirates(game, now, uid, force) {
-  const recs = uid ? [findOrNull($app, "players", uid)].filter(Boolean) : $app.findRecordsByFilter("players", "npc = ''", "", 0, 0);
+  const ids = uid ? [uid].filter((id) => !!findOrNull($app, "players", id)) : humanPlayerIds();
+  // 6.14.111 (AC-8) : contenu appliqué une fois par passage (avant : une lecture de tout `game_config` par joueur).
+  applyContent($app, game);
   let changed = 0;
-  recs.forEach((candidate) => {
+  ids.forEach((candidateId) => {
+    const candidate = { id: candidateId };
     try {
       $app.runInTransaction((txApp) => {
-        applyContent(txApp, game);
         const rec = txApp.findRecordById("players", candidate.id);
         const player = toPlain(rec);
         player.uid = rec.id;
@@ -1485,6 +1507,7 @@ function piratesRequest(e) {
       const now = Date.now();
       applyContent(txApp, game);
       const loaded = loadPlayer(txApp, game, e.auth.id);
+      vacationGuard(game, loaded.player, now, "pirates:treaty");
       const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
       try {
         out = game.signTreaty(flushed.player, String(req.factionId || ""), req.kind, now);
@@ -1502,6 +1525,7 @@ function piratesRequest(e) {
     const now = Date.now();
     applyContent(txApp, game);
     const loaded = loadPlayer(txApp, game, e.auth.id);
+    vacationGuard(game, loaded.player, now, `pirates:${answer}`);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     let out;
     try {
@@ -1699,20 +1723,40 @@ function resolveFleetReturn(txApp, game, rec, now, quiet) {
 /** Traite les flottes arrivées ou rentrées (une transaction par flotte).
  *  `uid` limite aux flottes d'un joueur (attaquant ou cible). */
 function processDueFleets(game, now, uid) {
+  // 6.14.111 (AC-8) : la tâche minute traite plusieurs paquets de 50 (jusqu'à `serverTasks.fleetsPerPass`, en
+  // `fleetsPassSeconds` au plus) ; le joueur (`uid`) garde un seul paquet. Contenu appliqué une fois par paquet.
+  if (uid) return processDueFleetsBatch(game, now, uid, {});
+  applyContent($app, game);
+  const rules = game.SERVER_TASK_RULES;
+  const started = Date.now();
+  const failed = {};
+  let total = 0;
+  for (;;) {
+    const n = processDueFleetsBatch(game, now, null, failed);
+    total += n;
+    if (n < 50 || total >= Math.max(50, Number(rules.fleetsPerPass) || 200) || Date.now() - started > Math.max(5, Number(rules.fleetsPassSeconds) || 40) * 1000) break;
+  }
+  return total;
+}
+
+/** Un paquet de 50 flottes dues au plus ; `failed` : flottes en erreur pendant ce passage (non reprises, sinon la boucle
+ *  les relirait sans fin). Rend le nombre de flottes nouvelles du paquet. */
+function processDueFleetsBatch(game, now, uid, failed) {
   const scope = uid ? " && (ownerUid = {:u} || targetUid = {:u})" : "";
+  const skip = Object.keys(failed);
   const due = $app.findRecordsByFilter(
     "fleets",
     `((status = "outbound" && arriveAtMs <= {:now}) || (status = "returning" && returnAtMs <= {:now}) || ((status = "stationed" || status = "decision") && stationedUntilMs <= {:now}))${scope}`,
     "arriveAtMs",
-    50,
+    50 + skip.length,
     0,
     { now, u: uid || "" },
-  );
+  ).filter((r) => !failed[r.id]).slice(0, 50);
+  if (uid) applyContent($app, game);
   due.forEach((candidate) => {
     try {
       $app.runInTransaction((txApp) => {
         const rec = txApp.findRecordById("fleets", candidate.id);
-        applyContent(txApp, game);
         const status = rec.getString("status");
         if (status === "outbound" && rec.getFloat("arriveAtMs") <= now) resolveFleetArrival(txApp, game, rec, now);
         else if (status === "returning" && rec.getFloat("returnAtMs") <= now) resolveFleetReturn(txApp, game, rec, now);
@@ -1725,6 +1769,7 @@ function processDueFleets(game, now, uid) {
         }
       });
     } catch (err) {
+      failed[candidate.id] = true;
       console.log(`[cosmic] flotte ${candidate.id} non traitée : ${err}`);
       // v4.9.3 : dernière erreur gardée en mémoire pour l'alerte de l'admin.
       try {
@@ -1821,7 +1866,7 @@ function launchFleetRequest(e) {
     }
     // v3.5 : une attaque ou un espionnage peut viser une colonie (<uid>-c<n>).
     const colonyOwner = mission === "attack" || mission === "spy" ? game.colonyOwnerUid(targetUid) : null;
-    if (game.onVacation(attacker.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour lancer une flotte.");
+    vacationGuard(game, attacker.player, now, "fleet/send");
     if (mission === "attack" || mission === "spy" || mission === "garrison") {
       if (!db.findOrNull(txApp, "players", colonyOwner || targetUid)) throw new NotFoundError("Ce joueur est introuvable.");
       const gone = warlordAbsence(txApp, game, targetUid, now);
@@ -2147,6 +2192,7 @@ function phalanxScanRequest(e) {
     const now = Date.now();
     applyContent(txApp, game);
     const loaded = loadPlayer(txApp, game, uid);
+    vacationGuard(game, loaded.player, now, "moon/scan");
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     const allyUids = allianceMates(txApp, loaded.rec.getString("allianceId"), uid).map((m) => m.uid);
     const aggressorFleets = targetUid === uid ? [] : txApp.findRecordsByFilter("fleets", 'ownerUid = {:t} && mission = "attack" && status = "outbound"', "", 100, 0, { t: targetUid }).map((r) => fleetFromRecord(r, true));
@@ -2185,6 +2231,7 @@ function fleetJumpRequest(e) {
     const rec = findOrNull(txApp, "fleets", fleetId);
     if (!rec || rec.getString("ownerUid") !== uid) throw new NotFoundError("Flotte introuvable.");
     const before = loadPlayer(txApp, game, uid);
+    vacationGuard(game, before.player, now, "fleet/jump");
     const fleet = fleetFromRecord(rec);
     try {
       game.checkJump(before.player, fleet, now);
@@ -2439,6 +2486,8 @@ function allianceRequest(e) {
       if (rec) finishResearchIfDue(txApp, game, rec, now);
     });
     const actor = loadPlayer(txApp, game, uid);
+    // 6.14.112 (AC-11) : en vacances, rien qui dépense pour l'alliance (dépôt, recherche, projet) ; le reste (social) passe.
+    if (["deposit", "research", "project"].indexOf(String(action.type)) >= 0) vacationGuard(game, actor.player, now, `alliance:${action.type}`);
     const flushed = game.flushPlayer(actor.player, actor.queues, now);
     // Alliance disparue ou dont on a été retiré : on repart de zéro.
     const current = actor.player.allianceId ? findOrNull(txApp, "alliances", actor.player.allianceId) : null;
@@ -2676,10 +2725,70 @@ function maintenanceGuard(e) {
   throw new ApiError(503, "Le jeu est en maintenance : réessaie à la réouverture.", { maintenance: true });
 }
 
+/** 6.14.111 (AU27, AC-10, Q77 = Q-AC2 option B) : pendant une maintenance, les échéances collectives (guerres, Léviathan,
+ *  boss d'alliance et de saison, guerre de territoire) attendent ; les flottes continuent. Réglage
+ *  `serverTasks.maintenanceShiftsDeadlines` (vrai par défaut). */
+function deadlinesOnHold() {
+  const game = loadGame();
+  const m = readMaintenance($app, game);
+  if (!m.enabled) return false;
+  try {
+    applyContent($app, game);
+  } catch (_) {
+    /* règles par défaut */
+  }
+  return game.SERVER_TASK_RULES.maintenanceShiftsDeadlines !== false;
+}
+
+/** À la fin d'une maintenance (de `fromMs` à `now`), décale les échéances collectives encore ouvertes au début de la
+ *  coupure (Q77). Rend le nombre d'échéances décalées. */
+function shiftDeadlinesAfterMaintenance(txApp, game, fromMs, now) {
+  applyContent(txApp, game);
+  if (game.SERVER_TASK_RULES.maintenanceShiftsDeadlines === false) return 0;
+  let n = 0;
+  const lev = readLeviathan(txApp, game);
+  const levNext = game.shiftForMaintenance(lev, fromMs, now);
+  if (levNext) {
+    writeLeviathan(txApp, levNext);
+    n++;
+  }
+  const sb = readSeasonBoss(txApp, game);
+  const sbNext = game.shiftForMaintenance(sb, fromMs, now);
+  if (sbNext) {
+    writeSeasonBoss(txApp, game, sbNext);
+    n++;
+  }
+  const tw = readTerritoryWar(txApp, game);
+  const twNext = game.shiftForMaintenance(tw, fromMs, now);
+  if (twNext) {
+    writeConfig(txApp, game.TERRITORY_WAR_KEY, twNext);
+    n++;
+  }
+  txApp.findRecordsByFilter("alliances", "id != ''", "", 0, 0).forEach((rec) => {
+    const boss = readAllianceBoss(game, rec);
+    const next = game.shiftForMaintenance(boss, fromMs, now);
+    if (!next) return;
+    rec.set("boss", next);
+    txApp.save(rec);
+    n++;
+  });
+  txApp.findRecordsByFilter("alliance_wars", 'status != "ended"', "", 0, 0).forEach((rec) => {
+    const war = game.shiftForMaintenance(warJson(rec), fromMs, now, ["preparing", "active"]);
+    if (!war) return;
+    rec.set("startMs", war.startMs);
+    rec.set("endMs", war.endMs);
+    txApp.save(rec);
+    n++;
+  });
+  return n;
+}
+
 /** Enregistre le nouvel état de la maintenance ; à la fin, les ultimatums en
- *  cours sont prolongés de la durée de la coupure. Consigné dans le journal. */
+ *  cours sont prolongés de la durée de la coupure, et les échéances collectives
+ *  décalées (6.14.111, Q77). Consigné dans le journal. */
 function writeMaintenance(txApp, game, previous, next, now, actor) {
   let extended = 0;
+  let shiftedDeadlines = 0;
   if (previous.enabled && !next.enabled && previous.startedAtMs > 0) {
     txApp.findAllRecords("players").forEach((rec) => {
       const shifted = game.extendUltimatums(toPlain(rec).pirates, previous.startedAtMs, now);
@@ -2688,6 +2797,7 @@ function writeMaintenance(txApp, game, previous, next, now, actor) {
       txApp.save(rec);
       extended++;
     });
+    shiftedDeadlines = shiftDeadlinesAfterMaintenance(txApp, game, previous.startedAtMs, now);
   }
   let rec = null;
   try {
@@ -2707,7 +2817,7 @@ function writeMaintenance(txApp, game, previous, next, now, actor) {
     targetCollection: "game_config",
     recordId: rec.id,
     recordLabel: next.enabled ? (previous.enabled ? "maintenance modifiée" : "maintenance activée") : previous.enabled ? (actor.id === "system" ? "maintenance terminée automatiquement" : "maintenance terminée") : next.scheduled ? "maintenance programmée" : "programmation annulée",
-    changes: { avant: previous, après: next, ultimatumsProlongés: extended },
+    changes: { avant: previous, après: next, ultimatumsProlongés: extended, échéancesDécalées: shiftedDeadlines },
     createdAtMs: now,
   });
   txApp.save(log);
@@ -3809,7 +3919,7 @@ function marketCreate(e) {
     applyContent(txApp, game);
     const now = Date.now();
     const seller = loadFlushed(txApp, game, uid);
-    if (game.onVacation(seller.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
+    vacationGuard(game, seller.player, now, "market:create");
     const open = txApp.findRecordsByFilter("market_offers", 'sellerId = {:u} && status = "open"', "", 100, 0, { u: uid }).length;
     let offer;
     try {
@@ -3862,7 +3972,7 @@ function marketAccept(e) {
     if (offer.sellerId === "market_maker") throw new BadRequestError("Cette offre a été retirée du marché.");
     const seller = loadFlushed(txApp, game, offer.sellerId, "Le vendeur n'existe plus.");
     if (seller.loaded.rec.getString("npc")) throw new BadRequestError("Cette offre a été retirée du marché.");
-    if (game.onVacation(buyer.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour échanger.");
+    vacationGuard(game, buyer.player, now, "market:accept");
     buyer.player.allianceId = buyer.loaded.rec.getString("allianceId");
     const buysToday = txApp.findRecordsByFilter("market_offers", "buyerId = {:u} && filledAtMs >= {:t}", "", 200, 0, { u: uid, t: game.utcDayStart(now) }).length;
     // v5.1 : ordre d'achat — livraison partielle, paiement au prorata.
@@ -4885,26 +4995,11 @@ function payUnclaimedChallenge(txApp, game, ch, now) {
 
 /** POST /api/cosmic/challenge/claim — récupère la récompense du défi terminé. */
 function challengeClaim(e) {
+  // 6.14.113 (AC-15) : même chemin que « Tout réclamer » (action `challengeClaim`, ligne lue au Journal).
   const game = loadGame();
-  const uid = e.auth.id;
   let out = null;
   $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const now = Date.now();
-    const state = readChallengeState(txApp, game);
-    const loaded = loadPlayer(txApp, game, uid);
-    const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
-    let res;
-    try {
-      res = game.claimChallengeReward(state.previous, flushed.player);
-    } catch (err) {
-      throw asHttpError(game, err);
-    }
-    const tokens = game.grantTokens(flushed.player, game.challengeTokens(readCasino(txApp, game).settings, game.challengeTierIndex(state.previous)));
-    savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
-    writeChallengeState(txApp, game, Object.assign({}, state, { previous: res.challenge }));
-    notify(txApp, uid, flushed.notifications.concat([{ kind: "event", title: "Récompense du défi récupérée", message: `+${game.describeGain(res.gain)}${tokens ? ` et ${game.tokensLabel(tokens)}` : ""}.`, createdAtMs: now, read: true, link: "/game", data: tokenNotifData({ resources: res.gain }, tokens) }]));
-    out = { gain: res.gain, tokens };
+    out = claimByAction(txApp, game, e.auth.id, { type: "challengeClaim" });
   });
   return e.json(200, out);
 }
@@ -5148,6 +5243,7 @@ function bountyRequest(e) {
     const now = Date.now();
     applyContent(txApp, game);
     const loaded = loadPlayer(txApp, game, uid);
+    vacationGuard(game, loaded.player, now, `bounty:${String(req.action || "")}`);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     const player = flushed.player;
     const queues = flushed.queues;
@@ -5204,17 +5300,29 @@ function bountyRequest(e) {
 function shopRemindersTick(now) {
   const game = loadGame();
   let sent = 0;
-  $app.runInTransaction((txApp) => {
-    txApp.findRecordsByFilter("players", "npc = '' && lastActiveMs > {:t}", "", 0, 0, { t: now - 7 * 86400000 }).forEach((rec) => {
-      const player = { bounties: parseJsonField(rec, "bounties", null) };
-      const out = game.shopReminders(player, now);
-      if (!out.changed) return;
-      rec.set("bounties", player.bounties);
-      txApp.save(rec);
-      notify(txApp, rec.id, out.notifications);
-      sent += out.notifications.length;
+  // 6.14.111 (AC-8) : tri hors transaction (lecture seule), puis une transaction par paquet de joueurs concernés,
+  // fiche relue dedans (I24) ; avant, une seule transaction sur tous les joueurs actifs.
+  const due = $app
+    .findRecordsByFilter("players", "npc = '' && lastActiveMs > {:t}", "", 0, 0, { t: now - 7 * 86400000 })
+    .filter((rec) => game.shopReminders({ bounties: parseJsonField(rec, "bounties", null) }, now).changed)
+    .map((rec) => rec.id);
+  const size = Math.max(1, Math.floor(Number(game.SERVER_TASK_RULES.playersPerTransaction) || 100));
+  for (let i = 0; i < due.length; i += size) {
+    const chunk = due.slice(i, i + size);
+    $app.runInTransaction((txApp) => {
+      chunk.forEach((id) => {
+        const rec = findOrNull(txApp, "players", id);
+        if (!rec) return;
+        const player = { bounties: parseJsonField(rec, "bounties", null) };
+        const out = game.shopReminders(player, now);
+        if (!out.changed) return;
+        rec.set("bounties", player.bounties);
+        txApp.save(rec);
+        notify(txApp, rec.id, out.notifications);
+        sent += out.notifications.length;
+      });
     });
-  });
+  }
   return sent;
 }
 
@@ -6019,29 +6127,41 @@ function balanceHistoryTick(now) {
 function catchupTick(now) {
   const game = loadGame();
   let out = { median: 0, boosted: 0 };
+  // 6.14.111 (AC-8) : lecture des scores hors transaction (lecture seule), puis écritures par paquets de
+  // `serverTasks.playersPerTransaction` joueurs : la tâche de 03:27 ne tient plus le verrou d'écriture sur tous les joueurs.
+  // Chaque fiche est relue dans sa transaction (I24).
+  applyContent($app, game);
+  const recs = $app.findRecordsByFilter("players", "npc = '' && testMode != true", "", 0, 0);
+  const players = recs.map((r) => {
+    const p = toPlain(r);
+    return { uid: r.id, score: game.developmentScore(p), lastActiveMs: r.getInt("lastActiveMs") || r.getInt("resourcesUpdatedAtMs"), had: !!((p.bonuses || {}).catchup) };
+  });
+  const res = game.computeCatchup(players, now);
+  out.median = res.median;
+  const todo = players.filter((p) => res.bonuses[p.uid] || p.had);
+  const size = Math.max(1, Math.floor(Number(game.SERVER_TASK_RULES.playersPerTransaction) || 100));
+  for (let i = 0; i < todo.length; i += size) {
+    const chunk = todo.slice(i, i + size);
+    try {
+      $app.runInTransaction((txApp) => {
+        chunk.forEach((p) => {
+          if (!findOrNull(txApp, "players", p.uid)) return;
+          const next = res.bonuses[p.uid];
+          // Production arrêtée à l'instant avec l'ancien bonus, puis nouveau bonus pour la journée.
+          const loaded = loadPlayer(txApp, game, p.uid);
+          const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
+          flushed.player.bonuses = Object.assign({}, flushed.player.bonuses || {}, { catchup: next });
+          savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
+          // 6.14.52 (AC-4) : ce qui finit au rattrapage de la nuit (files, succès) arrive au Journal comme à une action.
+          notify(txApp, p.uid, flushed.notifications);
+          if (next) out.boosted++;
+        });
+      });
+    } catch (err) {
+      console.log(`[cosmic] rattrapage (paquet ${i / size + 1}) : ${err}`);
+    }
+  }
   $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const recs = txApp.findRecordsByFilter("players", "npc = '' && testMode != true", "", 0, 0);
-    const players = recs.map((r) => {
-      const p = toPlain(r);
-      return { uid: r.id, score: game.developmentScore(p), lastActiveMs: r.getInt("lastActiveMs") || r.getInt("resourcesUpdatedAtMs") };
-    });
-    const res = game.computeCatchup(players, now);
-    out.median = res.median;
-    players.forEach((p) => {
-      const next = res.bonuses[p.uid];
-      const rec = recs.find((r) => r.id === p.uid);
-      const before = ((toPlain(rec).bonuses || {}).catchup) || null;
-      if (!next && !before) return;
-      // Production arrêtée à l'instant avec l'ancien bonus, puis nouveau bonus pour la journée.
-      const loaded = loadPlayer(txApp, game, p.uid);
-      const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
-      flushed.player.bonuses = Object.assign({}, flushed.player.bonuses || {}, { catchup: next });
-      savePlayer(txApp, game, loaded, flushed.player, flushed.queues);
-      // 6.14.52 (AC-4) : ce qui finit au rattrapage de la nuit (files, succès) arrive au Journal comme à une action.
-      notify(txApp, p.uid, flushed.notifications);
-      if (next) out.boosted++;
-    });
     writeConfig(txApp, "catchup", { median: res.median, atMs: now, boosted: out.boosted });
   });
   return out;
@@ -6890,6 +7010,7 @@ function renameRequest(e) {
     applyContent(txApp, game);
     const now = Date.now();
     const me = loadFlushed(txApp, game, uid);
+    vacationGuard(game, me.player, now, "rename");
     try {
       const out = game.renamePlayer(me.player, req.pseudo, now);
       const sameLogin = txApp.findRecordsByFilter("users", "username = {:u} && id != {:id}", "", 1, 0, { u: out.login, id: uid });
@@ -6999,49 +7120,27 @@ function mailFrom(fromName) {
   return { address: meta.senderAddress, name: String(fromName || "").trim() || meta.senderName || "Cosmic Empires" };
 }
 
-/** Envoie une campagne à un segment, avec pixel d'ouverture et liens suivis ; l'inscrit dans l'historique. */
-function sendCampaign(c, actor) {
+/**
+ * 6.14.111 (AU27, AC-7) : une campagne n'est plus envoyée d'un bloc (600 ms par destinataire dans la cadence de 5 min :
+ * 10 min de blocage pour 1 000 joueurs). Elle entre dans une file (`mail_queue`, collection `server_metrics`, lisible par
+ * l'équipe seulement : jamais d'adresse, seulement les identifiants) ; l'étape `cosmic_mail_queue` de la cadence minute
+ * l'envoie par lots (`serverTasks.mailBatchSize`). Jetons de désinscription créés avant (AC-1) ; l'historique compte les
+ * envois au fil des lots. Rend { queued, campaignId }.
+ */
+function queueCampaign(c, actor) {
   const game = loadGame();
   const now = Date.now();
   const recipients = mailRecipients($app, c.segment, now);
-  const tokens = ensureMailTokens(recipients.list);
+  ensureMailTokens(recipients.list);
   const campaignId = `m${now.toString(36)}${$security.randomString(4)}`;
-  const from = mailFrom(c.fromName);
-  let sent = 0;
-  const failed = [];
-  recipients.list.forEach((r, i) => {
-    const player = r.player; // lecture seule : jamais sauvé (AC-1)
-    const pseudo = player.getString("pseudo");
-    try {
-      const token = tokens[player.id];
-      if (!token) throw new Error("joueur introuvable ou jeton manquant");
-      const url = unsubscribeUrl(player.id, token, c.apiUrl);
-      const base = `${c.apiUrl}/api/cosmic/mail`;
-      const pixel = `${base}/o?c=${campaignId}&u=${encodeURIComponent(player.id)}&s=${mailSig(campaignId, player.id, token, "")}`;
-      const track = (link) => `${base}/c?c=${campaignId}&u=${encodeURIComponent(player.id)}&l=${encodeURIComponent(link)}&s=${mailSig(campaignId, player.id, token, link)}`;
-      const html = game.instrumentHtml(personalize(c.html, pseudo, url, true), pixel, track);
-      $app.newMailClient().send(
-        new MailerMessage({
-          from,
-          to: [{ address: r.email }],
-          subject: personalize(c.subject, pseudo, url, false),
-          html,
-          text: personalize(c.text, pseudo, url, false),
-          headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-        }),
-      );
-      sent += 1;
-    } catch (err) {
-      failed.push(pseudo);
-      console.log(`[cosmic] campagne : échec pour ${player.id} : ${err}`);
-    }
-    // Limite du fournisseur (2 envois par seconde chez Resend).
-    if (i < recipients.list.length - 1) sleep(600);
-  });
+  const uids = recipients.list.map((r) => r.player.id);
   $app.runInTransaction((txApp) => {
+    const queue = game.mailQueueState(readServerMetric(txApp, game.MAIL_QUEUE_KEY));
+    const job = { id: campaignId, subject: c.subject, html: c.html, text: c.text, fromName: String(c.fromName || ""), apiUrl: c.apiUrl, createdAtMs: now, uids, total: uids.length, sent: 0, failed: 0, failedPseudos: [] };
+    writeServerMetric(txApp, game.MAIL_QUEUE_KEY, { jobs: queue.jobs.concat([job]) });
     const rec = configRecord(txApp, game.MAIL_CAMPAIGNS_KEY);
     const st = game.campaignsState(rec ? toPlain(rec).data : null);
-    const entry = { id: campaignId, subject: c.subject, segment: game.normalizeSegment(c.segment), sentAtMs: now, sent, failed: failed.length, opened: [], clicked: [] };
+    const entry = { id: campaignId, subject: c.subject, segment: game.normalizeSegment(c.segment), sentAtMs: now, sent: 0, failed: 0, total: uids.length, pending: uids.length, opened: [], clicked: [] };
     writeConfig(txApp, game.MAIL_CAMPAIGNS_KEY, { list: [entry].concat(st.list).slice(0, game.MAIL_HISTORY_MAX) });
   });
   try {
@@ -7053,17 +7152,98 @@ function sendCampaign(c, actor) {
       targetCollection: "emails",
       recordId: campaignId,
       recordLabel: `Campagne e-mail : ${c.subject}`,
-      changes: { envoyés: sent, échecs: failed.length, segment: c.segment },
+      changes: { enFile: uids.length, segment: c.segment },
       createdAtMs: now,
     });
     $app.save(log);
   } catch (_) {
     /* journal facultatif */
   }
-  return { sent, failed: failed.length, failedPseudos: failed, campaignId };
+  return { queued: uids.length, campaignId };
 }
 
-/** POST /api/cosmic/admin/mail { action: "count" | "test" | "send" | "schedule" | "unschedule", subject, html, text, apiUrl, segment?, sendAtMs?, confirm?, dryRun? } */
+/** Un e-mail de campagne à un joueur (adresse relue maintenant ; joueur désinscrit ou supprimé entre-temps : rien). */
+function sendCampaignMail(game, job, uid, from) {
+  const player = findOrNull($app, "players", uid); // lecture seule : jamais sauvé (AC-1)
+  if (!player) return { skipped: true };
+  const pseudo = player.getString("pseudo");
+  if (player.getBool("emailOptOut")) return { skipped: true };
+  const user = findOrNull($app, "users", uid);
+  const email = user && user.getBool("verified") ? user.getString("email") : "";
+  if (!email) return { skipped: true };
+  let token = player.getString("mailToken");
+  if (!token) token = ensureMailTokens([{ player }])[uid] || "";
+  if (!token) return { failed: pseudo };
+  const campaignId = job.id;
+  const url = unsubscribeUrl(uid, token, job.apiUrl);
+  const base = `${job.apiUrl}/api/cosmic/mail`;
+  const pixel = `${base}/o?c=${campaignId}&u=${encodeURIComponent(uid)}&s=${mailSig(campaignId, uid, token, "")}`;
+  const track = (link) => `${base}/c?c=${campaignId}&u=${encodeURIComponent(uid)}&l=${encodeURIComponent(link)}&s=${mailSig(campaignId, uid, token, link)}`;
+  const html = game.instrumentHtml(personalize(job.html, pseudo, url, true), pixel, track);
+  $app.newMailClient().send(
+    new MailerMessage({
+      from,
+      to: [{ address: email }],
+      subject: personalize(job.subject, pseudo, url, false),
+      html,
+      text: personalize(job.text, pseudo, url, false),
+      headers: { "List-Unsubscribe": `<${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+    }),
+  );
+  return { sent: true };
+}
+
+/** 6.14.111 (AC-7) : étape `cosmic_mail_queue` (cadence minute) : un lot de la file. Le lot est retiré de la file avant
+ *  l'envoi (au plus une fois : un arrêt pendant l'envoi perd ce lot, jamais de double envoi). Rend le nombre envoyé. */
+function mailQueueTick(now) {
+  const game = loadGame();
+  // Sans SMTP, la file attend (rien n'est retiré : la campagne partira quand l'envoi sera rétabli).
+  if (!mailEnabled()) return 0;
+  applyContent($app, game);
+  let batch = null;
+  $app.runInTransaction((txApp) => {
+    const queue = game.mailQueueState(readServerMetric(txApp, game.MAIL_QUEUE_KEY));
+    if (!queue.jobs.length) return;
+    const taken = game.takeMailBatch(queue, game.SERVER_TASK_RULES.mailBatchSize);
+    if (!taken.job) {
+      writeServerMetric(txApp, game.MAIL_QUEUE_KEY, { jobs: [] });
+      return;
+    }
+    writeServerMetric(txApp, game.MAIL_QUEUE_KEY, taken.queue);
+    batch = taken;
+  });
+  if (!batch) return 0;
+  const from = mailFrom(batch.job.fromName);
+  const pause = Math.max(0, Math.floor(Number(game.SERVER_TASK_RULES.mailPauseMs) || 0));
+  let sent = 0;
+  const failed = [];
+  batch.uids.forEach((uid, i) => {
+    try {
+      const r = sendCampaignMail(game, batch.job, uid, from);
+      if (r.sent) sent += 1;
+      else if (r.failed) failed.push(r.failed);
+    } catch (err) {
+      failed.push(uid);
+      console.log(`[cosmic] campagne : échec pour ${uid} : ${err}`);
+    }
+    // Limite du fournisseur (2 envois par seconde chez Resend).
+    if (pause > 0 && i < batch.uids.length - 1) sleep(pause);
+  });
+  $app.runInTransaction((txApp) => {
+    const queue = game.mailQueueState(readServerMetric(txApp, game.MAIL_QUEUE_KEY));
+    const settled = game.settleMailBatch(queue, batch.job.id, sent, failed);
+    writeServerMetric(txApp, game.MAIL_QUEUE_KEY, settled.queue);
+    const rest = settled.job ? settled.job.uids.length : 0;
+    const rec = configRecord(txApp, game.MAIL_CAMPAIGNS_KEY);
+    const st = game.campaignsState(rec ? toPlain(rec).data : null);
+    writeConfig(txApp, game.MAIL_CAMPAIGNS_KEY, {
+      list: st.list.map((c) => (c.id === batch.job.id ? Object.assign({}, c, { sent: (c.sent || 0) + sent, failed: (c.failed || 0) + failed.length, pending: rest }) : c)),
+    });
+  });
+  return sent;
+}
+
+/** POST /api/cosmic/admin/mail { action: "count" | "tick" | "test" | "send" | "schedule" | "unschedule", subject, html, text, apiUrl, segment?, sendAtMs?, confirm?, dryRun? } */
 function adminMail(e) {
   if (!isGameAdmin(e)) throw new ForbiddenError("Réservé aux administrateurs du jeu.");
   const game = loadGame();
@@ -7072,7 +7252,16 @@ function adminMail(e) {
   const segment = game.normalizeSegment(req.segment);
   if (action === "count") {
     const recipients = mailRecipients($app, segment);
-    return e.json(200, { recipients: recipients.list.length, optedOut: recipients.optedOut, smtp: mailEnabled() });
+    // 6.14.111 (AC-7) : e-mails encore en file (campagnes envoyées par lots).
+    const queue = game.mailQueueState(readServerMetric($app, game.MAIL_QUEUE_KEY));
+    const queued = queue.jobs.reduce((n, j) => n + j.uids.length, 0);
+    return e.json(200, { recipients: recipients.list.length, optedOut: recipients.optedOut, smtp: mailEnabled(), queued });
+  }
+  if (action === "tick") {
+    // 6.14.111 (AC-7) : un lot de la file tout de suite (admin, tests) ; même chemin que la cadence minute.
+    const sent = mailQueueTick(Date.now());
+    const queue = game.mailQueueState(readServerMetric($app, game.MAIL_QUEUE_KEY));
+    return e.json(200, { sent, queued: queue.jobs.reduce((n, j) => n + j.uids.length, 0) });
   }
   if (action === "unschedule") {
     const id = String(req.id || "");
@@ -7145,7 +7334,8 @@ function adminMail(e) {
     return e.json(200, { sent: 0, failed: 0, recipients: recipients.list.length, tokens: Object.keys(tokens).length, dryRun: true });
   }
   if (!mailEnabled()) throw new BadRequestError("L'envoi d'e-mails n'est pas configuré (SMTP).");
-  return e.json(200, sendCampaign({ subject, html, text, fromName: req.fromName, apiUrl, segment }, actor));
+  // 6.14.111 (AC-7) : mise en file, envoi par lots par la cadence minute (la requête ne bloque plus).
+  return e.json(200, queueCampaign({ subject, html, text, fromName: req.fromName, apiUrl, segment }, actor));
 }
 
 /** 5.16 : tâche planifiée : envoie les campagnes programmées dont l'heure est passée. */
@@ -7162,7 +7352,8 @@ function mailScheduleTick(now) {
     console.log("[cosmic] campagne programmée : SMTP non configuré, envoi annulé.");
     return [];
   }
-  return due.map((c) => sendCampaign(c, { id: "planificateur", name: `Programmée par ${c.createdBy}` }));
+  // 6.14.111 (AC-7) : mise en file (envoi par lots dans la cadence minute).
+  return due.map((c) => queueCampaign(c, { id: "planificateur", name: `Programmée par ${c.createdBy}` }));
 }
 
 /** 5.16 : GET /api/cosmic/mail/o (ouverture, pixel) et /api/cosmic/mail/c (clic, redirection). */
@@ -7272,35 +7463,52 @@ function npcOpponents(app, uid) {
   return Object.keys(uids);
 }
 
+
+/** 6.14.113 (AU27, AC-G, AC-15) : données du serveur pour les réclamations (réglages du casino, défi terminé). */
+function claimContext(txApp, game) {
+  return { casino: readCasino(txApp, game).settings, challenge: { previous: readChallengeState(txApp, game).previous } };
+}
+
+/** Enregistre l'état du défi si une réclamation l'a changé (même transaction que la fiche). */
+function saveClaimContext(txApp, game, ctx) {
+  if (!ctx || !ctx.challenge || !ctx.challenge.claimed) return;
+  const state = readChallengeState(txApp, game);
+  writeChallengeState(txApp, game, Object.assign({}, state, { previous: ctx.challenge.claimed }));
+}
+
+/**
+ * 6.14.113 (AC-19) : une réclamation par sa route historique (`codex/claim`, `challenge/claim`, jeton du casino) passe par
+ * l'action du joueur : même rattrapage, même garde des vacances, même ligne au Journal, mêmes succès que « Tout réclamer ».
+ * Rend le résultat de l'action.
+ */
+function claimByAction(txApp, game, uid, action) {
+  const now = Date.now();
+  applyContent(txApp, game);
+  const loaded = loadPlayer(txApp, game, uid);
+  const codex = game.actionNeedsCodex(action) ? codexContext(txApp, game, uid) : undefined;
+  const claims = game.actionNeedsClaimContext(action) ? claimContext(txApp, game) : undefined;
+  let out;
+  try {
+    out = game.performPlayerAction(loaded.player, loaded.queues, action, now, {}, false, codex, claims);
+  } catch (err) {
+    throw asHttpError(game, err);
+  }
+  savePlayer(txApp, game, loaded, out.player, out.queues);
+  notify(txApp, uid, out.notifications);
+  saveClaimContext(txApp, game, claims);
+  return out.result;
+}
+
 /** POST /api/cosmic/codex/claim : titre « Archiviste » à 100 % du Codex,
  *  ou (5.15.11, `category`) récompense d'une catégorie complète. */
 function codexClaim(e) {
+  // 6.14.113 (AC-19) : un seul chemin pour le Codex : la route passe par l'action (`codexClaim`, `codexTitle`).
   const game = loadGame();
-  const uid = e.auth.id;
   const data = body(e);
   let out = null;
   $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const loaded = loadPlayer(txApp, game, uid);
-    const ctx = codexContext(txApp, game, uid);
-    const entries = game.codexEntries(loaded.player, new Set(ctx.fought), Date.now(), { bossesFought: new Set(ctx.bossesFought) });
-    if (data.category) {
-      let reward;
-      try {
-        reward = game.claimCodexCategory(loaded.player, entries, data.category, Date.now());
-      } catch (err) {
-        throw new BadRequestError(String((err && err.message) || err));
-      }
-      savePlayer(txApp, game, loaded, loaded.player, loaded.queues);
-      out = { category: String(data.category), tokens: reward.tokens, amber: reward.amber };
-      return;
-    }
-    const progress = game.codexProgress(entries);
-    if (progress.pct < 100) throw new BadRequestError(`Codex complété à ${progress.pct} % : il faut 100 %.`);
-    if (!game.grantCodexTitle(loaded.player, entries)) throw new BadRequestError("Titre déjà reçu.");
-    loaded.rec.set("titles", loaded.player.titles);
-    txApp.save(loaded.rec);
-    out = { title: game.CODEX_TITLE };
+    const res = claimByAction(txApp, game, e.auth.id, data.category ? { type: "codexClaim", category: String(data.category) } : { type: "codexTitle" });
+    out = data.category ? Object.assign({ category: String(data.category) }, res) : res;
   });
   return e.json(200, out);
 }
@@ -8323,12 +8531,10 @@ function warlordsRequest(e) {
     if (!findOrNull(txApp, "players", npcUid)) throw new BadRequestError(`${d.name} n'est pas encore arrivé dans le secteur.`);
     const state = readWarlordsState(txApp, game);
     const me = loadFlushed(txApp, game, uid);
-    if (game.onVacation(me.player, now)) throw new BadRequestError("Tu es en vacances.");
+    vacationGuard(game, me.player, now, "warlords:vendetta");
     me.player.allianceId = me.loaded.rec.getString("allianceId");
     const cost = game.productionHours(me.player, game.WARLORD_RULES.vendetta.costHours);
-    Object.keys(cost).forEach((res) => {
-      if ((me.player.resources[res] || 0) < cost[res]) throw new BadRequestError(`Une vendetta coûte ${game.WARLORD_RULES.vendetta.costHours} h de production : il te manque des ressources.`);
-    });
+    if (!game.canSpendResources(me.player, cost)) throw new BadRequestError(`Une vendetta coûte ${game.WARLORD_RULES.vendetta.costHours} h de production : il te manque des ressources.`);
     const npc = loadPlayer(txApp, game, npcUid);
     // 5.26.3 : Jeton de vendetta : rappelle le seigneur en fuite.
     const rt = state.byId[d.id];
@@ -8340,7 +8546,8 @@ function warlordsRequest(e) {
     } catch (err) {
       throw asHttpError(game, err);
     }
-    Object.keys(cost).forEach((res) => (me.player.resources[res] -= cost[res]));
+    // 6.14.110 (AC-D) : un seul chemin de dépense (vérifie, débite, compte l'objectif « Dépenser »).
+    game.spendResources(me.player, cost, now);
     savePlayer(txApp, game, me.loaded, me.player, me.queues);
     notify(txApp, uid, me.notifications);
     if (v.allianceId) notifyAlliance(txApp, v.allianceId, "Vendetta d'alliance", `${me.player.pseudo} déclare une vendetta à ${d.name} : 72 h pour lui détruire ${game.formatInt(v.goal)} de puissance.`, now);
@@ -9172,16 +9379,15 @@ function casinoRequest(e) {
     if (!game.casinoOpen(settings, now) && !isGameAdmin(e)) throw new BadRequestError("Le casino est fermé pour le moment.");
     const loaded = loadPlayer(txApp, game, uid);
     if (loaded.player.npc) throw new ForbiddenError("Réservé aux joueurs.");
+    // Le jeton du jour passe par l'action (`casinoDaily`, garde des vacances de l'action) ; le tirage par la garde de la route.
+    if (action !== "daily") vacationGuard(game, loaded.player, now, `casino:${action}`);
     const flushed = game.flushPlayer(loaded.player, loaded.queues, now);
     const player = flushed.player;
     const notes = flushed.notifications.slice();
 
     if (action === "daily") {
-      const added = game.claimDailyTokens(player, settings, now);
-      if (added <= 0) throw new BadRequestError("Le jeton du jour est déjà récupéré.");
-      savePlayer(txApp, game, loaded, player, flushed.queues);
-      if (notes.length) notify(txApp, uid, notes);
-      out = { added, tokens: game.playerCasino(player).tokens };
+      // 6.14.113 (AC-15) : même chemin que « Tout réclamer » (action `casinoDaily`, ligne lue au Journal).
+      out = claimByAction(txApp, game, uid, { type: "casinoDaily" });
       return;
     }
     if (action !== "spin") throw new BadRequestError("Action inconnue.");
@@ -9485,13 +9691,19 @@ const CADENCES = {
         const n = auctionsTick(Date.now());
         if (n > 0) console.log(`[cosmic] ${n} vente(s) aux enchères close(s)`);
       }],
+      // 6.14.111 (AC-7) : campagnes d'e-mails par lots, en dernier (jamais avant les flottes).
+      ["cosmic_mail_queue", () => {
+        const n = mailQueueTick(Date.now());
+        if (n > 0) console.log(`[cosmic] file d'e-mails : ${n} envoyé(s)`);
+      }],
     ],
   },
   five: {
     spec: "*/5 * * * *",
     steps: [
-      ["cosmic_wars", () => warTick(Date.now())],
-      ["cosmic_leviathan", () => leviathanTick(Date.now())],
+      // 6.14.111 (AC-10, Q77) : échéances collectives suspendues pendant une maintenance (décalées à la fin).
+      ["cosmic_wars", () => deadlinesOnHold() || warTick(Date.now())],
+      ["cosmic_leviathan", () => deadlinesOnHold() || leviathanTick(Date.now())],
       ["cosmic_market", () => {
         const n = expireMarketOffers(Date.now());
         if (n > 0) console.log(`[cosmic] ${n} offre(s) du marché expirée(s)`);
@@ -9501,8 +9713,8 @@ const CADENCES = {
         const out = mailScheduleTick(Date.now());
         if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
       }],
-      ["cosmic_allianceboss", () => allianceBossTick(Date.now())],
-      ["cosmic_seasonboss", () => seasonBossTick(Date.now())],
+      ["cosmic_allianceboss", () => deadlinesOnHold() || allianceBossTick(Date.now())],
+      ["cosmic_seasonboss", () => deadlinesOnHold() || seasonBossTick(Date.now())],
     ],
   },
   ten: {
@@ -9515,7 +9727,7 @@ const CADENCES = {
         processPirates(loadGame(), Date.now(), null);
       }],
       ["cosmic_challenge", () => challengeTick(Date.now())],
-      ["cosmic_territory_war", () => territoryWarTick(Date.now(), null)],
+      ["cosmic_territory_war", () => deadlinesOnHold() || territoryWarTick(Date.now(), null)],
       ["cosmic_elite", () => eliteTick(Date.now())],
       ["cosmic_alliancedaily", () => {
         const n = allianceDailyTick(Date.now());
@@ -9525,10 +9737,51 @@ const CADENCES = {
   },
 };
 
+/**
+ * 6.14.111 (AU27, AC-E) : verrou par cadence. PocketBase lance chaque tâche due dans sa goroutine : sans verrou, une
+ * cadence lente (campagne, milliers de joueurs) chevauchait la suivante. Le verrou vit dans `$app.store()` (mémoire
+ * partagée par toutes les machines goja du serveur) : début du passage en cours. Un verrou plus vieux que
+ * `serverTasks.lockFactor` × l'intervalle est tenu pour mort (arrêt brutal pendant un passage). Un passage sauté est
+ * compté (`skips`, page Santé du serveur). Lecture puis écriture sans atomicité : deux passages d'une même cadence ne
+ * démarrent jamais à la même seconde (une minute d'écart au moins).
+ */
+const CADENCE_LOCK_PREFIX = "cosmic_cadence_lock_";
+
 function cadenceTick(cadence) {
   const c = CADENCES[cadence];
   if (!c) return;
-  for (const [name, fn] of c.steps) timedCron(name, c.spec, fn);
+  const game = loadGame();
+  const key = CADENCE_LOCK_PREFIX + cadence;
+  const now = Date.now();
+  let lockAt = 0;
+  try {
+    lockAt = Number($app.store().get(key)) || 0;
+  } catch (_) {
+    lockAt = 0;
+  }
+  if (game.cadenceBusy(lockAt, now, game.cronIntervalMs(c.spec))) {
+    console.log(`[cosmic] cadence ${cadence} sautée : le passage commencé à ${new Date(lockAt).toISOString()} tourne encore`);
+    try {
+      let m = readCronMetrics(game);
+      c.steps.forEach(([name]) => {
+        m = game.recordCronSkip(m, name, c.spec, now);
+      });
+      $app.store().set(CRON_STORE_KEY, JSON.stringify(m));
+    } catch (_) {
+      /* les métriques ne doivent jamais faire échouer une tâche */
+    }
+    return;
+  }
+  $app.store().set(key, now);
+  try {
+    for (const [name, fn] of c.steps) timedCron(name, c.spec, fn);
+  } finally {
+    try {
+      if (Number($app.store().get(key)) === now) $app.store().remove(key);
+    } catch (_) {
+      /* verrou expiré de lui-même */
+    }
+  }
 }
 
 function readServerMetric(txApp, key) {
@@ -10338,7 +10591,7 @@ function auctionRequest(e) {
     const now = Date.now();
     if (action === "list") {
       const seller = loadFlushed(txApp, game, uid);
-      if (game.onVacation(seller.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour vendre.");
+      vacationGuard(game, seller.player, now, "auction:list");
       const open = txApp.findRecordsByFilter("auctions", 'sellerId = {:u} && status = "open"', "", 50, 0, { u: uid }).length;
       let listing, lot;
       try {
@@ -10424,7 +10677,7 @@ function auctionRequest(e) {
     }
     if (action !== "bid") throw new BadRequestError("Action inconnue.");
     const bidder = loadFlushed(txApp, game, uid);
-    if (game.onVacation(bidder.player, now)) throw new BadRequestError("Tu es en vacances : reviens d'abord pour enchérir.");
+    vacationGuard(game, bidder.player, now, "auction:bid");
     let res;
     try {
       res = game.placeBid(a, uid, bidder.player.pseudo, req.amount, now);
@@ -10544,4 +10797,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, navOpeningNotice, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, recentDefeatsMs, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError, purgePlayer, accountDelete, guardUserDelete };
+module.exports = { cadenceTick, mailQueueTick, queueCampaign, claimContext, saveClaimContext, claimByAction, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, navOpeningNotice, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, recentDefeatsMs, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError, purgePlayer, accountDelete, guardUserDelete };
