@@ -2,6 +2,40 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // 6.14.152 (R4) : joueur connecté sur une page du jeu : contenu du jeu et fiche du joueur demandés tout de suite,
+      // pendant le téléchargement du JavaScript (repris une fois par src/lib/earlyData.ts ; erreur = chemin habituel du SDK).
+      // Placé avant la feuille de style des polices, qui retiendrait ce script jusqu'à son arrivée.
+      (function () {
+        try {
+          if (!/^\/game(\/|$)/.test(location.pathname) || !window.fetch) return;
+          var auth = JSON.parse(localStorage.getItem("pocketbase_auth") || "null");
+          if (!auth || !auth.token || !auth.record || !auth.record.id) return;
+          var base = "%VITE_POCKETBASE_URL%";
+          if (!base || base.charAt(0) === "%") base = "http://127.0.0.1:8090";
+          base = base.replace(/\/+$/, "");
+          var get = function (path) {
+            return fetch(base + path, { headers: { Authorization: auth.token } }).then(function (r) {
+              if (!r.ok) throw new Error(String(r.status));
+              return r.json();
+            });
+          };
+          var id = encodeURIComponent(auth.record.id);
+          var early = { at: Date.now(), uid: auth.record.id };
+          // Même lecture que contentService (archive des Chroniques exclue) ; 1 000 sections ou plus : chemin habituel.
+          early.content = get("/api/collections/game_config/records?page=1&perPage=1000&skipTotal=1&filter=" + encodeURIComponent('key != "chronicles_archive"')).then(function (r) {
+            if (!r || !r.items || r.items.length >= 1000) throw new Error("liste");
+            return r.items;
+          });
+          early.players = get("/api/collections/players/records/" + id);
+          early.queues = get("/api/collections/queues/records/" + id);
+          early.content.catch(function () {});
+          early.players.catch(function () {});
+          early.queues.catch(function () {});
+          window.__cosmicEarly = early;
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/favicon-32.png?v=2.4" />
     <link rel="icon" type="image/png" sizes="64x64" href="/assets/logo/favicon-64.png?v=2.4" />
     <link rel="apple-touch-icon" href="/assets/logo/apple-touch-icon.png?v=2.4" />

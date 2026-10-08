@@ -31,7 +31,9 @@ describe("6.14.116 : performance (É30-5)", () => {
     const app = readFileSync("src/App.tsx", "utf8");
     const routes = [...app.matchAll(/<Route path="([a-z0-9-]+)" element=\{<([A-Za-z]+Page) \/>\}/g)].filter(([, , c]) => new RegExp(`const ${c} = lazyPage`).test(app));
     expect(routes.length).toBeGreaterThan(30);
-    for (const [, path, comp] of routes) expect(app, path).toContain(`"${path}": "${comp}"`);
+    // 6.14.152 (R4) : la table est dans `gameRoutes.ts` (lue aussi par le build).
+    const table = readFileSync("src/lib/gameRoutes.ts", "utf8");
+    for (const [, path, comp] of routes) expect(table, path).toContain(`"${path}": "${comp}"`);
     const html = readFileSync("index.html", "utf8");
     expect(html).not.toMatch(/<main style="[^"]*margin: 64px/);
   });

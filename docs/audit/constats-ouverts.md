@@ -21,13 +21,13 @@ mois (bascule datée au 1er novembre 2026 sur la pré-prod). Z0 (mise en product
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| RV-7 (É30-5) | 6.14.39, 6.14.116, revue AU28 | Performance (pré-prod, 2026-10-08) : LCP mobile Galaxie 7,7 s, Commerce 8,1 s, Alliance 9,7 s, élément peint au rendu de la page (démarrage ≈ 8 s) ; bureau : accueil 4,8 s, Galaxie 5,8 s, Alliance 6,4 s ; pic de décalage du menu au bureau en local | R4 (É30-5b) |
+| RV-7 (É30-5) | 6.14.39, 6.14.116, revue AU28, 6.14.152 | Performance (pré-prod avant 6.14.152, 2026-10-08) : LCP mobile Galaxie 8,5 s, Commerce 8,5 s, Alliance 10,1 s, élément peint au rendu de la page ; chemin critique : fiche du joueur demandée après le premier rendu de la coque, arrivée à 7,6 s sur un réseau saturé. 6.14.152 : contenu, fiche et code de la page demandés par `index.html`, menu en une fois (pic de décalage du bureau réglé : 0,03 → 0,01 en local), fenêtres rares différées ; en local, prêt mobile Galaxie 6,0 → 5,4 s. Reste : mesure de la pré-prod après le push ; au-dessus de 4 s, découpage du bloc d'entrée (1,1 Mo bruts de moteur, taille L) | R4 (É30-5b), en partie |
 | AJ-14 | AU27 jeu et chaîne | Exports morts du moteur ; retrait des missions du jour noté pour Z0 + 30 jours | R5 (AJ27-11) |
 | AA-12, AA-20 (reste), AA-23 (reste), AA-28, AA-31 | AU27 admin | Temps de recherche sans surcharge par techno ; origine d'un seigneur fermée ; défis d'alliance, réserve des missions du jour et archétypes des Chroniques hors sections ; pas d'aperçu avant / après d'un coût ; exclusion des statistiques d'équilibre en dur | R6 (AA-L10) |
 | AA-14 | AU27 admin | Bornes des effets de techno (`EFFECT_MAX_PER_LEVEL`) au code : garde-fou d'équilibre (question AA-Q4) | R6, ou laissé au code |
 | AD (reste d'UX-10) | AU27 design | Admin : arrondis, emoji et dates ; exceptions de l'accueil public, du cockpit et des Succès dans `designSystem.test.ts` | R7 (UX-13) |
 | AE-14 | AU27 équilibrage | Coffre, missions et série versés au-delà de l'entrepôt sans le dire (la production s'arrête ensuite) | R8 (AE-L8) |
-| AD-30 | AU27 design | Chargement de Commerce et d'Alliance : mesuré par la revue AU28 (LCP mobile 8,1 et 9,7 s), même cause que RV-7 | R9 (UX-12), avec R4 |
+| AD-30 | AU27 design | Chargement de Commerce et d'Alliance : LCP mobile 8,5 et 10,1 s sur la pré-prod (même cause que RV-7) ; corrigé avec R4 en 6.14.152 (en local, prêt mobile inchangé à 5,6 s : l'API locale n'était pas le goulot) ; reste la mesure de la pré-prod après le push | R9 (UX-12), avec R4, en partie |
 | RV-8 | revue AU28 | Opacités d'état laissées volontairement sur du texte : message d'un joueur masqué au salon (`opacity-50`), carte « Ta flotte » du simulateur en mode raid, filtre de l'arbre des technos, pages d'admin ; à revoir si un audit les mesure sous 3:1 | revue suivante |
 
 ### Attend des mesures
@@ -77,7 +77,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | AJ-12 (AU27) | 6.14.141 à 6.14.146 (PB-L0 à PB-L5) : paliers des bâtiments de système ; restent les 21 icônes sur `/img` |
 | AC-18, AC-22 en grande partie (AU27) ; AD-coût ; IT-seul | 6.14.135 (AC-H) |
 | AP-7, AP-8, AP-9, AP-10, AP-14 (AU27) | 6.14.109, 6.14.121, 6.14.122, 6.14.136 à 6.14.140 |
-| É30-5 (AU27, 6.14.39), en grande partie | 6.14.116 : décalages mobile 0,22 → 0,04 à 0,08, Codex −5 Mo, page préchargée |
+| É30-5 (AU27, 6.14.39), en grande partie | 6.14.116 : décalages mobile 0,22 → 0,04 à 0,08, Codex −5 Mo, page préchargée ; 6.14.152 : données du démarrage et page demandées par `index.html`, menu en une fois (suite : RV-7) |
 | C2 à C4 (chaîne de contenu) | `contentChain.test.ts` sans manque connu (`KNOWN_GAPS` vide, revue AU28) |
 | Images provisoires (saisons, paliers, doctrines) | 6.14.119 : Clé de soudure et Essaim de nanites détourées ; 6.14.147 : 24 thèmes d'année du passe, 33 portraits de saison, 7 seconds boss des Chroniques, 21 icônes de paliers, 3 doctrines, module signature (images générées par API) |
 | AC-5, AC-6, AC-12, AC-20, AC-21 (AU27) | 6.14.110 (AC-D) : un seul chemin de dépense (`spendResources`, `spendAmber`, garde de balayage), réclamations au Journal (Q76), rappel tracé et hôte prévenu, succès après l'action, `unitsSold` (I34) |

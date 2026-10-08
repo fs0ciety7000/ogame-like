@@ -2,6 +2,7 @@ import { gameErrorText, isServerFault } from "@/lib/gameErrors";
 import { reportClientError } from "@/services/errorReporter";
 import { pb, isNotFound, subscribeRecords, throttle } from "@/lib/pocketbase";
 import { coalesce } from "@/lib/sharedSubscriptions";
+import { earlyOr } from "@/lib/earlyData";
 import { defaultQueues } from "@/game/defaults";
 import { withMissingBuildings } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
@@ -132,8 +133,10 @@ function loadInitial(
   onMissing: (serverAnswered: boolean) => void,
   attempt = 0,
 ) {
-  pb.collection(collection)
-    .getOne<PbRecord>(id)
+  // 6.14.152 (R4) : premier essai = réponse déjà demandée par index.html (earlyData.ts) s'il y en a une.
+  const load = () => pb.collection(collection).getOne<PbRecord>(id);
+  const first = attempt === 0 && (collection === "players" || collection === "queues") ? earlyOr(collection, id, load) : load();
+  first
     .then((rec) => isActive() && onRecord(rec))
     .catch((err) => {
       if (!isActive()) return;

@@ -48,7 +48,7 @@ import { lazyPage } from "@/lib/lazyPage";
 import { WarpOverlay } from "@/components/game/WarpOverlay";
 import { FxLayer } from "@/components/game/FxLayer";
 import { UltimatumDialog } from "@/components/game/PirateUltimatum";
-import { toggleCommandPalette } from "@/store/commandPaletteStore";
+import { toggleCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { useSfxStore, toggleSfx } from "@/store/sfxStore";
 import { playClick } from "@/lib/sfx";
 
@@ -136,6 +136,30 @@ const AnnouncementDialog = lazyPage(() => import("@/components/game/Announcement
 const CommandPalette = lazyPage(() => import("@/components/layout/CommandPalette"), "CommandPalette");
 const ShortcutsDialog = lazyPage(() => import("@/components/layout/ShortcutsDialog"), "ShortcutsDialog");
 
+/** 6.14.152 (R4) : fenêtres rares (rang, retour d'absence, bilan, annonce, Ctrl+K, raccourcis) montées après le premier rendu
+ *  de la page, au premier moment libre (2 s au plus) : leur code (≈ 25 Ko) ne dispute plus le réseau à la page ouverte au
+ *  démarrage. Elles lisent leur état dans leur magasin : rien n'est perdu (Ctrl+K pressé avant les monte aussitôt). */
+function useDeferredExtras(pageReady: boolean): boolean {
+  const [on, setOn] = useState(false);
+  const paletteOpen = useCommandPaletteStore((s) => s.open);
+  useEffect(() => {
+    if (on) return;
+    if (paletteOpen) {
+      setOn(true);
+      return;
+    }
+    if (!pageReady) return;
+    const go = () => setOn(true);
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(go, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(go, 600);
+    return () => clearTimeout(t);
+  }, [on, pageReady, paletteOpen]);
+  return on;
+}
+
 function LazyCombatResult() {
   const shown = useCombatModalStore((s) => s.current !== null);
   const [wanted, setWanted] = useState(false);
@@ -185,6 +209,7 @@ export function AppShell() {
   }, [uidForMessages]);
   useReportBadgeSync(user?.uid ?? null, isAdmin);
   const pendingReports = useReportBadges((s) => s.pendingNew);
+  const extrasOn = useDeferredExtras(!loading && contentLoaded);
   // 6.14.62 (AD-2) : sur téléphone, le titre de l'en-tête s'efface tant que la page affiche le sien (PageHeader).
   const pageHasHeader = usePageHeaderStore((s) => s.mounted > 0);
 
@@ -315,14 +340,16 @@ export function AppShell() {
       <WarpOverlay />
       <RaidAlert />
       <UltimatumDialog />
-      <Suspense fallback={null}>
-        <RankUpCelebration />
-        <AwaySummaryModal />
-        <SeasonReport />
-        <AnnouncementDialog />
-        <CommandPalette />
-        <ShortcutsDialog />
-      </Suspense>
+      {extrasOn && (
+        <Suspense fallback={null}>
+          <RankUpCelebration />
+          <AwaySummaryModal />
+          <SeasonReport />
+          <AnnouncementDialog />
+          <CommandPalette />
+          <ShortcutsDialog />
+        </Suspense>
+      )}
       <FxLayer />
       <FleetReturnFx />
     </div>

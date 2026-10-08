@@ -3,9 +3,11 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import { changelogIndex } from "./changelog-index-plugin";
+import { pagePreload } from "./page-preload-plugin";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), changelogIndex()],
+  // 6.14.152 (R4) : `pagePreload` précharge le code de la page ouverte dès index.html.
+  plugins: [react(), tailwindcss(), changelogIndex(), pagePreload()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

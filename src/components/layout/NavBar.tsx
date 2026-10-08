@@ -302,6 +302,13 @@ function useNavGroups(): NavGroup[] {
   }, [hidden, nav]);
 }
 
+/** 6.14.152 (R4, question 2 de 6.14.116) : groupes du menu rendus en une fois, quand la fiche du joueur est arrivée. Avant, le menu
+ *  complet s'affichait, puis les pages pas encore ouvertes disparaissaient (menu progressif) : le menu bougeait au démarrage
+ *  (pic de décalage au bureau) et se calculait deux fois. Le pied de barre (Compte) reste affiché. */
+function useNavReady(): boolean {
+  return usePlayerStore((s) => !s.loading);
+}
+
 /** Libellé d'une page du menu. */
 function navLabel(to: string): string {
   return NAV_GROUPS.flatMap((g) => g.items).find((i) => i.to === to)?.label ?? to;
@@ -662,19 +669,23 @@ function CompactLink({ item, badge }: { item: NavItem; badge: number }) {
 function CompactSidebar({ badgeOf, onExpand }: { badgeOf: (to: string) => number; onExpand: () => void }) {
   const navGroups = useNavGroups();
   const player = usePlayerStore((s) => s.player);
+  const navReady = useNavReady();
   return (
     <aside className="relative z-30 hidden h-screen w-[4.25rem] shrink-0 flex-col items-stretch border-r border-cyan-glow/10 bg-space-950/80 backdrop-blur-xl md:flex">
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-cyan-glow/50 via-cyan-glow/5 to-violet-glow/40" />
       <Link to="/game" className="mx-auto pb-3 pt-4" title="Cosmic Empires">
         <img src={assetUrl("/assets/logo/logo.webp")} alt="Cosmic Empires" className="h-10 w-10 object-contain drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-cyan-glow)_35%,transparent)]" />
       </Link>
-      {player && (
+      {player ? (
         <Link to="/game/profil" className="mx-auto mb-2" title={`${player.pseudo} · ${getRankLabel(player.xp)}`}>
           <img src={getRankIcon(player.xp)} alt="" className="h-9 w-9 object-contain transition-transform hover:scale-110" />
         </Link>
+      ) : (
+        // 6.14.152 (R4) : place du rang réservée pendant le chargement (le menu ne descend plus de 44 px à l'arrivée du joueur).
+        <span aria-hidden className="mx-auto mb-2 h-9 w-9" />
       )}
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pb-3">
-        {navGroups.slice(0, -1).map((group) => (
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto pb-3" aria-busy={!navReady || undefined}>
+        {navReady && navGroups.slice(0, -1).map((group) => (
           <div key={group.id} className="flex flex-col gap-0.5" style={{ "--nav-accent": group.accent } as React.CSSProperties}>
             <span aria-hidden title={group.label} className="mx-auto my-1.5 h-px w-7 bg-[color-mix(in_srgb,var(--nav-accent)_45%,transparent)]" />
             {group.items.map((item) => (
@@ -741,6 +752,7 @@ function FullscreenSwitch({ className }: { className?: string }) {
 /** Barre latérale (bureau). */
 function Sidebar() {
   const navGroups = useNavGroups();
+  const navReady = useNavReady();
   const badgeOf = useBadges();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [mode, setModeState] = useState(readMode);
@@ -767,8 +779,8 @@ function Sidebar() {
         </div>
       </Link>
       <CommanderCard />
-      <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-3">
-        {navGroups.slice(0, -1).map((group) => (
+      <nav className="mt-3 flex-1 overflow-y-auto px-2 pb-3" aria-busy={!navReady || undefined}>
+        {navReady && navGroups.slice(0, -1).map((group) => (
           <SideGroup
             key={group.id}
             group={group}
@@ -1032,13 +1044,31 @@ function MobileTabBar() {
   );
 }
 
+/** 6.14.152 (R4) : barre latérale (≥ 768 px) ou barre d'onglets (téléphone), selon la largeur ; `null` sans `matchMedia`. */
+function useDesktopNav(): boolean | null {
+  const query = "(min-width: 768px)";
+  const supported = typeof window !== "undefined" && typeof window.matchMedia === "function";
+  const [desktop, setDesktop] = useState(() => (supported ? window.matchMedia(query).matches : null));
+  useEffect(() => {
+    if (!supported) return;
+    const mq = window.matchMedia(query);
+    const on = () => setDesktop(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [supported]);
+  return desktop;
+}
+
 export function NavBar() {
   const nav = useNavUnlock();
   useNavMarks(nav);
+  // 6.14.152 (R4) : une seule des deux navigations est rendue (avant : les deux, l'une cachée par CSS : sur téléphone,
+  // tout le menu latéral et sa carte du commandant étaient calculés au premier rendu pour rien). Les classes `md:` restent.
+  const desktop = useDesktopNav();
   return (
     <NavUnlockContext.Provider value={nav}>
-      <Sidebar />
-      <MobileTabBar />
+      {desktop !== false && <Sidebar />}
+      {desktop !== true && <MobileTabBar />}
     </NavUnlockContext.Provider>
   );
 }

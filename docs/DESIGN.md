@@ -188,6 +188,12 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
   (`loading="lazy"`, `decoding="async"`) ; une scène 3D ne télécharge que ce qui est à l'écran (`HoloCylinder` : la carte de face et
   7 de chaque côté) et n'est pas la vue par défaut sur téléphone ; une animation décorative s'arrête quand rien ne bouge
   (`ParallaxStars`). Mesure : `scripts/preprod-perf.mjs` (`PERF_SHIFTS=1`, `PERF_LCP=1`).
+- Faire (6.14.152, démarrage) : la coque ne rend que la navigation de la largeur courante (barre latérale dès 768 px, barre d'onglets
+  au-dessous) ; les groupes du menu apparaissent en une fois, à l'arrivée de la fiche du joueur (le pied de barre reste), et la place
+  du rang de la barre réduite est réservée ; une fenêtre rare montée dans `AppShell` (annonce, bilan, Ctrl+K…) se monte après le
+  premier rendu de la page (`useDeferredExtras`), en lisant son état dans son magasin. Le contenu du jeu et la fiche du joueur sont
+  demandés par `index.html` (`earlyData.ts`) et le code de la page ouverte y est préchargé (`page-preload-plugin.ts`) : une
+  nouvelle page du jeu s'ajoute à `GAME_ROUTE_PAGES` (`src/lib/gameRoutes.ts`). Mesure : `PERF_TRACE=1`.
 - Faire : libellés en capitales en `font-mono` (ou `hud-eyebrow`) ; les titres en `hud-title`, les boutons et onglets en `font-display`.
 - Faire : `prefers-reduced-motion` est respecté partout (`MotionConfig reducedMotion="user"` dans `App`, pulsations Tailwind coupées).
 - Faire : animer pour signaler un état (alerte qui clignote, balayage = chargement) et respecter `prefers-reduced-motion`.

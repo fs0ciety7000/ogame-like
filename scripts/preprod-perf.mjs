@@ -2,6 +2,7 @@
 //
 //   node scripts/preprod-perf.mjs [--runs 3] [/game /game/galaxie …]
 //   PERF_FRONT_URL=http://127.0.0.1:4173 PREPROD_PB_URL=http://127.0.0.1:8090 … node scripts/preprod-perf.mjs   # build local (6.14.116)
+//   PERF_TRACE=1 : chaque requête (début → fin, Ko) jusqu'au calme du réseau (chemin critique, 6.14.152).
 //
 // Variables : PREPROD_PB_URL, PREPROD_PB_ADMIN_EMAIL, PREPROD_PB_ADMIN_PASSWORD (docs/preprod.md §6). Compte « claude_capture »
 // (mot de passe tiré au hasard, gardé nulle part). Refuse toute adresse qui n'est pas un serveur de test.
@@ -35,13 +36,20 @@ if (!/(^|[.-])(test|preprod)([.-]|$)/.test(host) && host !== "127.0.0.1" && host
 const admin = new PocketBase(URL_);
 admin.autoCancellation(false);
 await admin.collection("_superusers").authWithPassword(PREPROD_PB_ADMIN_EMAIL, PREPROD_PB_ADMIN_PASSWORD);
-const pw = randomBytes(12).toString("hex");
+// 6.14.152 (R4) : compte existant → jeton d'emprunt d'identité (`impersonate`, 2 h), sans réécrire son mot de passe : la mesure
+// n'écrit plus rien sur le serveur (hors synchronisation normale du joueur par le jeu). Compte absent : créé une fois.
 let user = await admin.collection("users").getFirstListItem('username="claude_capture"').catch(() => null);
-if (user) await admin.collection("users").update(user.id, { password: pw, passwordConfirm: pw });
-else user = await admin.collection("users").create({ username: "claude_capture", name: "ClaudeCapture", email: "claude-capture@test.invalid", emailVisibility: false, password: pw, passwordConfirm: pw, verified: true });
-const pb = new PocketBase(URL_);
-const auth = await pb.collection("users").authWithPassword(user.email, pw);
-const stored = JSON.stringify({ token: pb.authStore.token, record: auth.record });
+let stored;
+if (user) {
+  const imp = await admin.collection("users").impersonate(user.id, 7200);
+  stored = JSON.stringify({ token: imp.authStore.token, record: imp.authStore.record });
+} else {
+  const pw = randomBytes(12).toString("hex");
+  user = await admin.collection("users").create({ username: "claude_capture", name: "ClaudeCapture", email: "claude-capture@test.invalid", emailVisibility: false, password: pw, passwordConfirm: pw, verified: true });
+  const pb = new PocketBase(URL_);
+  const auth = await pb.collection("users").authWithPassword(user.email, pw);
+  stored = JSON.stringify({ token: pb.authStore.token, record: auth.record });
+}
 
 const PROFILES = [
   { name: "mobile", viewport: { width: 375, height: 812 }, cpu: 4, net: { latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8 } },
@@ -91,6 +99,19 @@ async function measure(browser, profile, path) {
   const kinds = new Map();
   const bytes = { js: 0, jsCount: 0, all: 0, frozen: false };
   cdp.on("Network.responseReceived", (e) => kinds.set(e.requestId, /javascript/.test(e.response.mimeType) || /\.js(\?|$)/.test(e.response.url)));
+  // 6.14.152 (R4) : PERF_TRACE=1 → chemin critique : chaque requête (début, fin, Ko) jusqu'à « prêt », en ms depuis la navigation.
+  const trace = new Map();
+  let traceT0 = 0;
+  if (process.env.PERF_TRACE) {
+    cdp.on("Network.requestWillBeSent", (e) => {
+      if (!traceT0) traceT0 = e.timestamp;
+      trace.set(e.requestId, { url: e.request.url, start: e.timestamp, end: NaN, kb: 0 });
+    });
+    cdp.on("Network.loadingFinished", (e) => {
+      const t = trace.get(e.requestId);
+      if (t) Object.assign(t, { end: e.timestamp, kb: e.encodedDataLength / 1024 });
+    });
+  }
   cdp.on("Network.loadingFinished", (e) => {
     if (bytes.frozen) return;
     bytes.all += e.encodedDataLength;
@@ -125,6 +146,13 @@ async function measure(browser, profile, path) {
   }));
   if (process.env.PERF_SHIFTS && r.shifts.length) console.error(`${profile.name} ${path} : ${r.shifts.join(" | ")}`);
   if (process.env.PERF_LCP) console.error(`${profile.name} ${path} : LCP ${Math.round(r.lcp)} ms sur ${r.lcpEl}`);
+  if (process.env.PERF_TRACE) {
+    const short = (u) => u.replace(/^https?:\/\/[^/]+/, "").replace(/\?.*$/, (q) => (q.length > 40 ? q.slice(0, 40) + "…" : q));
+    const lines = [...trace.values()]
+      .sort((a, b) => a.start - b.start)
+      .map((t) => `${String(Math.round((t.start - traceT0) * 1000)).padStart(6)} → ${String(Math.round((t.end - traceT0) * 1000)).padStart(6)} ms ${t.kb.toFixed(1).padStart(7)} Ko  ${short(t.url)}`);
+    console.error(`--- ${profile.name} ${path} : requêtes (prêt à ${ready} ms)\n${lines.join("\n")}`);
+  }
   await ctx.close();
   return { ...r, tbt: tbtAtReady, ready, js: bytes.js, jsCount: bytes.jsCount, all: bytes.all };
 }

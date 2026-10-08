@@ -11,6 +11,7 @@ import { applyAnnouncementsRecord } from "@/services/announcementService";
 import { GAZETTE_KEY } from "@/game/gazette";
 import { applyGazetteRecord } from "@/services/gazetteService";
 import { create } from "zustand";
+import { earlyOr } from "@/lib/earlyData";
 import { pb, subscribeRecords } from "@/lib/pocketbase";
 import {
   applyGameContent,
@@ -117,7 +118,8 @@ let started = false;
 export function startContentSync() {
   if (started) return;
   started = true;
-  fetchRecords()
+  // 6.14.152 (R4) : réponse déjà demandée par index.html si elle existe (earlyData.ts), sinon lecture habituelle.
+  earlyOr<ConfigRecord[]>("content", undefined, fetchRecords)
     .then(applyRecords)
     .catch((err) => {
       console.warn("Contenu du jeu indisponible, valeurs par défaut utilisées :", err);
