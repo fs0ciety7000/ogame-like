@@ -38,7 +38,9 @@ export function ResourceHud() {
   const pulse = useFxStore((s) => s.hudPulse);
   const nav = useNavUnlock();
 
-  if (!resources || !player) return null;
+  // 6.14.116 (É30-5) : place réservée pendant le chargement (hauteurs mesurées : 78 px sur téléphone, 125 px de 640 à 767 px,
+  // 89 px au-delà). Avant, la barre apparaissait d'un coup et poussait la page de 78 px (0,08 de CLS sur mobile).
+  if (!resources || !player) return <div aria-hidden className="h-[78px] sm:h-[125px] md:h-[89px]" />;
 
   const history = player.resourceHistory ?? [];
   const economy = economySnapshot({ ...player, resources }, Date.now());

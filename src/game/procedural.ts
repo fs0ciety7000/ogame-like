@@ -1,4 +1,4 @@
-import { ACHIEVEMENTS, METRICS, TIER_REWARDS, type AchievementDef, type AchievementTier } from "@/game/achievements";
+import { ACHIEVEMENTS, METRICS, paceThreshold, TIER_REWARDS, type AchievementDef, type AchievementTier } from "@/game/achievements";
 import {
   chronicleMonthId,
   chronicleOf,
@@ -792,7 +792,9 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
     if (cap > 0 && generated.length >= cap) continue;
     if (cooldownMs > 0 && generated.some((a) => now - (Number.isFinite(a.createdAtMs) ? (a.createdAtMs as number) : now) < cooldownMs)) continue;
     const top = [...list].sort((a, b) => b.threshold - a.threshold)[0];
-    const holders = active.filter((p) => m.value(p) >= top.threshold).length;
+    // 6.14.117 (É30-6) : détenteurs comptés au seuil en jeu (rythme des succès) ; le palier suivant s'écrit sur le seuil écrit.
+    const shown = paceThreshold(top);
+    const holders = active.filter((p) => m.value(p) >= shown).length;
     if (holders === 0 || holders < needed) continue;
     const factor = top.threshold >= r.largeFrom ? r.growthLarge : top.threshold < r.smallBelow ? r.growthSmall : r.growth;
     const threshold = niceNumber(top.threshold * Math.max(1.1, Number(factor) || 2));
@@ -824,7 +826,7 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
         createdAtMs: now,
       },
       holders,
-      reason: `${holders} joueur(s) actif(s) sur ${active.length} ont atteint « ${top.name} » (${formatInt(top.threshold)}, ${needed} demandés) : nouveau palier à ${formatInt(threshold)}.`,
+      reason: `${holders} joueur(s) actif(s) sur ${active.length} ont atteint « ${top.name} » (${formatInt(shown)}, ${needed} demandés) : nouveau palier à ${formatInt(paceThreshold({ ...top, tier, threshold }))}.`,
     });
   }
   return out;

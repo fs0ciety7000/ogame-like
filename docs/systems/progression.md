@@ -148,3 +148,13 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - **Colonies** (6.14.115) : 4 succès dérivés (`colonie_1`, `colonie_all`, `convoyeur_100`, `base_avancee_1`), mesures `coloniesFounded`,
   `coloniesMaxed` (0/1, nombre de colonies lu dans la règle), `colonyConvoys`, `colonyBaseTours` ; catégorie « Colonies » du Codex ;
   section Colonies des Formules. Rien n'est retiré : un succès gagné reste si l'admin relève le nombre de colonies.
+
+## 6.14.117 (É30-6) : rythme des succès
+- **Seuil en jeu** = seuil écrit × facteur de la mesure (`achievementPace.scales`) pour 11 mesures de volume (unités ×10, défenses
+  ×10, unités construites ×3, réparées ×2, missions ×5, record par jour ×20, pillage ×10, recyclage ×10, marché ×200, dons ×200,
+  ultimatums ×2). Le palier bronze garde son seuil (`keepBronze`) ; les mesures bornées (niveaux, technos, rang) ne bougent pas.
+- Appliqué à la lecture (`applyAchievementPace`, après les règles dans `applyGameContent`) : la liste enregistrée, l'admin (Succès :
+  « seuil écrit », le seuil en jeu en aide) et le générateur (`paceThreshold`) gardent le seuil écrit. Texte réécrit (`paceDescription`).
+- Un succès gagné reste gagné. Réglages : Admin → Règles → « Succès : rythme des succès de volume ». Rétro-simulation :
+  `node scripts/achievement-pace-sim.mjs` (pré-prod en lecture seule). Proposition : `docs/proposals/rythme-des-succes.md` ; fiche :
+  `docs/changes/6.14.117-rythme-des-succes.md`.

@@ -121,7 +121,8 @@ Ce que Claude fait ensuite sur la pré-prod :
 - essais de combats, de crons et de migrations ;
 - nettoyage après import ;
 - performance (6.14.39) : `node scripts/preprod-perf.mjs [--runs 3] [/game …]`, chargement à froid en profils mobile (375 px,
-  processeur ×4, 4G lente) et bureau ; `PERF_SHIFTS=1` affiche les éléments qui provoquent des décalages (CLS) ;
+  processeur ×4, 4G lente) et bureau ; `PERF_SHIFTS=1` affiche les éléments qui provoquent des décalages (CLS), `PERF_LCP=1`
+  l'élément retenu pour le LCP (6.14.116) ; `PERF_FRONT_URL` mesure un build local (`vite preview`) avec un PocketBase local ;
 - veille (6.14.39) : `node scripts/preprod-watch.mjs` en arrière-plan, toutes les 2 min, rend la main dès qu'un envoi `/img` ou une
   réponse `/decisions` arrive (CLAUDE.md, règle n° 3) ;
 - documents en direct (6.14.42) : `node scripts/live-docs.mjs push|status|pull`, collection `live_docs` lue par `/decisions` et `/img`

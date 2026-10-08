@@ -413,10 +413,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   it("game content: only admins edit it, and the server applies it in combat", async () => {
     // Connecté en B. Un joueur normal ne peut pas modifier le contenu.
     await expect(pb.collection("game_config").create({ key: "units", data: [] })).rejects.toBeTruthy();
-    expect(await checkIsAdmin(bId)).toBe(false);
+    expect(await checkIsAdmin(bId, { fresh: true })).toBe(false);
 
     await admin.collection("admins").create({ id: bId, note: "test" });
-    expect(await checkIsAdmin(bId)).toBe(true);
+    // 6.14.116 : réponse gardée une minute ; `fresh` relit (droits qui viennent de changer).
+    expect(await checkIsAdmin(bId, { fresh: true })).toBe(true);
 
     // B (admin) met l'attaque du Chasseur à 0 : une attaque de chasseurs
     // contre une base sans défense devient une égalité (rien à détruire, rien à prendre).

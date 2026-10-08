@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.115 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.118 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 181 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 184 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -217,6 +217,9 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.113 : Réclamations groupées : casino du jour, défi et titre du Codex dans « Tout réclamer » (AC-G) (`docs/changes/6.14.113-reclamations-groupees.md`)
 - 6.14.114 : Garde de la chaîne de contenu renforcée et panneau « Chaîne de contenu » (AJ27-4) (`docs/changes/6.14.114-garde-chaine-contenu.md`)
 - 6.14.115 : Colonies dans la chaîne : succès, Codex des biomes et spécialisations, Formules (AJ27-5) (`docs/changes/6.14.115-colonies-chaine.md`)
+- 6.14.116 : Performance mobile : stabilité, page ouverte préchargée, Codex à la demande (É30-5) (`docs/changes/6.14.116-performance-mobile.md`)
+- 6.14.117 : Rythme des succès : seuils en jeu des succès de volume (É30-6) (`docs/changes/6.14.117-rythme-des-succes.md`)
+- 6.14.118 : Reliques à image propre et prompts dans l'atelier d'illustrations (É30-7) (`docs/changes/6.14.118-reliques-images-prompts.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

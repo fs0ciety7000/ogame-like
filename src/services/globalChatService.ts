@@ -123,6 +123,20 @@ export function markGlobalSeen(ms = Date.now()) {
   useGlobalSeen.setState({ seenMs: ms });
 }
 
+/** 6.14.116 (É30-5) : une requête partagée par les composants qui montrent la pastille (barre, menu, en-tête : 7 requêtes
+ *  identiques au démarrage avant) ; réponse gardée 2 s. */
+let unreadShared: { key: string; atMs: number; result: Promise<number> } | null = null;
+function unreadTotal(uid: string, since: number): Promise<number> {
+  const key = `${uid}|${since}`;
+  if (unreadShared && unreadShared.key === key && Date.now() - unreadShared.atMs < 2000) return unreadShared.result;
+  const result = pb
+    .collection("global_messages")
+    .getList(1, 1, { filter: pb.filter("createdAtMs > {:t} && uid != {:u} && masked = false && room = ''", { t: since, u: uid }), fields: "id", requestKey: null })
+    .then((r) => r.totalItems);
+  unreadShared = { key, atMs: Date.now(), result };
+  return result;
+}
+
 /** Nombre de messages des autres joueurs arrivés depuis le dernier passage (99 au plus). */
 export function useGlobalUnreadCount(uid: string | null | undefined): number {
   const seenMs = useGlobalSeen((s) => s.seenMs);
@@ -133,12 +147,11 @@ export function useGlobalUnreadCount(uid: string | null | undefined): number {
     }
     let alive = true;
     // Jamais venu sur le canal : on ne compte que la dernière journée.
-    const since = seenMs || Date.now() - 86_400_000;
+    // 6.14.116 : arrondi à la minute (même requête partagée par toutes les pastilles).
+    const since = seenMs || Math.floor((Date.now() - 86_400_000) / 60_000) * 60_000;
     const refresh = () =>
-      void pb
-        .collection("global_messages")
-        .getList(1, 1, { filter: pb.filter("createdAtMs > {:t} && uid != {:u} && masked = false && room = ''", { t: since, u: uid }), fields: "id", requestKey: null })
-        .then((r) => alive && setCount(Math.min(99, r.totalItems)))
+      void unreadTotal(uid, since)
+        .then((n) => alive && setCount(Math.min(99, n)))
         .catch(() => {});
     refresh();
     const unsubscribe = subscribeRecords<GlobalMessage>("global_messages", "*", coalesce(refresh, 500));

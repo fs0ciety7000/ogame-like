@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
 import { ACHIEVEMENT_GEN_RULES, ACHIEVEMENT_GEN_RULES_META } from "@/game/procedural";
+import { ACHIEVEMENT_PACE_RULES, ACHIEVEMENT_PACE_RULES_META, METRICS, type AchievementMetric } from "@/game/achievements";
 import { CONTRACT_RULES, CONTRACT_RULES_META, type ContractType } from "@/game/contracts";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 
@@ -9,7 +10,9 @@ import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
    objectifs générés.
    - Succès : paliers générés bridés (`achievementGen`) ;
    - Objectifs du jour : poids de tirage, quantités, « Dépenser »,
-     raids de faction (`dailyContracts`).
+     raids de faction (`dailyContracts`) ;
+   - 6.14.117 (É30-6) : rythme des succès (`achievementPace`), facteur du
+     seuil en jeu par mesure de volume.
    Les mêmes champs restent dans « Tous les réglages (avancé) ».
 ===================================================== */
 
@@ -54,8 +57,34 @@ export function GeneratedGoalsFields({ rules, setRules }: { rules: R; setRules: 
     );
   };
 
+  const pace = { ...ACHIEVEMENT_PACE_RULES, ...groupOf(rules, "achievementPace") } as typeof ACHIEVEMENT_PACE_RULES;
+  const scales = { ...ACHIEVEMENT_PACE_RULES.scales, ...((groupOf(rules, "achievementPace").scales ?? {}) as Obj) } as Record<string, number>;
+  const setPace = (patch: Obj) => setRules((r) => ({ ...r, achievementPace: { ...groupOf(r, "achievementPace"), ...patch } }) as R);
+  const setScale = (m: string, v: number) =>
+    setRules((r) => {
+      const g = groupOf(r, "achievementPace");
+      return { ...r, achievementPace: { ...g, scales: { ...((g.scales ?? {}) as Obj), [m]: v } } } as R;
+    });
+
   return (
     <>
+      <Section title="Succès : rythme des succès de volume (6.14.117)">
+        <p className="text-sm text-slate-400 sm:col-span-2">
+          Seuil en jeu = seuil écrit × facteur de la mesure. Un succès déjà gagné reste gagné ; le texte du succès suit le seuil en jeu. 1 = seuil écrit.
+        </p>
+        <CheckboxField label={ACHIEVEMENT_PACE_RULES_META.enabled.label} checked={pace.enabled} hint={ACHIEVEMENT_PACE_RULES_META.enabled.hint} onChange={(v) => setPace({ enabled: v })} />
+        <CheckboxField label={ACHIEVEMENT_PACE_RULES_META.keepBronze.label} checked={pace.keepBronze} hint={ACHIEVEMENT_PACE_RULES_META.keepBronze.hint} onChange={(v) => setPace({ keepBronze: v })} />
+        {Object.keys(scales).map((m) => (
+          <NumberField
+            key={`pace-${m}`}
+            label={`Facteur : ${METRICS[m as AchievementMetric]?.label ?? m}`}
+            value={scales[m]}
+            min={1}
+            step={1}
+            onChange={(v) => setScale(m, Math.min(1000, Math.max(1, v ?? 1)))}
+          />
+        ))}
+      </Section>
       <Section title="Succès générés : rythme et plafond (6.14.108)">
         <p className="text-sm text-slate-400 sm:col-span-2">
           Un palier plus dur n'arrive que si assez de joueurs actifs tiennent le dernier. Les paliers déjà créés restent, même au-delà du plafond.

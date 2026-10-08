@@ -41,6 +41,8 @@ export interface HoloCylinderProps {
 const TILE = 256;
 const CARD = 2.4;
 const MIN_CARDS = 10;
+/** 6.14.116 : cartes chargées de part et d'autre de la carte de face (galerie). */
+const HOLO_WINDOW = 7;
 
 const VERT = /* glsl */ `
   uniform float uRadius;
@@ -153,8 +155,11 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/** Atlas carré : chaque image recadrée au centre (haut privilégié pour les portraits). */
-async function buildAtlas(items: HoloItem[], fill: string): Promise<{ texture: THREE.CanvasTexture; cols: number; rows: number }> {
+/** Atlas carré : chaque image recadrée au centre (haut privilégié pour les portraits).
+ *  6.14.116 (É30-5) : l'atlas naît vide (cases de la couleur de fond) et chaque image s'y dessine à son arrivée ; `request`
+ *  ne charge que les cases demandées (celles proches de la carte de face en galerie), 4 à la fois. Avant, les ~140 fiches du
+ *  Codex étaient toutes téléchargées avant le premier affichage (6 à 8 Mo sur la pré-prod). */
+function createAtlas(items: HoloItem[], fill: string) {
   const cols = Math.ceil(Math.sqrt(items.length));
   const rows = Math.ceil(items.length / cols);
   // Plafond de 4096 px par côté (limite courante des textures sur mobile).
@@ -163,26 +168,70 @@ async function buildAtlas(items: HoloItem[], fill: string): Promise<{ texture: T
   canvas.width = cols * t;
   canvas.height = rows * t;
   const ctx = canvas.getContext("2d")!;
-  const images = await Promise.all(items.map((i) => loadImage(i.image)));
-  images.forEach((img, i) => {
+  ctx.fillStyle = fill;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  const asked = new Set<number>();
+  const queue: number[] = [];
+  let running = 0;
+  let disposed = false;
+  const draw = (i: number, img: HTMLImageElement | null) => {
+    if (disposed || !img) return;
     const x = (i % cols) * t;
     const y = Math.floor(i / cols) * t;
-    ctx.fillStyle = fill;
-    ctx.fillRect(x, y, t, t);
-    if (!img) return;
     const s = Math.min(img.width, img.height);
     const sx = (img.width - s) / 2;
     const sy = img.height > img.width ? 0 : (img.height - s) / 2;
     try {
       ctx.drawImage(img, sx, sy, s, s, x, y, t, t);
+      texture.needsUpdate = true;
     } catch {
       /* image d'un autre domaine sans CORS : case vide */
     }
-  });
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 4;
-  return { texture, cols, rows };
+  };
+  const pump = () => {
+    while (!disposed && running < 4 && queue.length > 0) {
+      const i = queue.shift()!;
+      running++;
+      void loadImage(items[i].image).then((img) => {
+        running--;
+        draw(i, img);
+        pump();
+      });
+    }
+  };
+  /** Demande des cases (dans l'ordre de priorité) ; une case déjà demandée ne l'est pas deux fois. */
+  const request = (indices: number[]) => {
+    for (const i of indices) {
+      if (i < 0 || i >= items.length || asked.has(i)) continue;
+      asked.add(i);
+      queue.push(i);
+    }
+    pump();
+  };
+  return {
+    texture,
+    cols,
+    rows,
+    request,
+    dispose: () => {
+      disposed = true;
+      queue.length = 0;
+      texture.dispose();
+    },
+  };
+}
+
+/** Cases autour de la carte de face (galerie) : la face d'abord, puis de part et d'autre. */
+export function holoWindow(front: number, count: number, around = HOLO_WINDOW): number[] {
+  if (count <= 0) return [];
+  const out = [front % count];
+  for (let d = 1; d <= around && out.length < count; d++) {
+    for (const i of [(((front + d) % count) + count) % count, (((front - d) % count) + count) % count]) if (!out.includes(i)) out.push(i);
+  }
+  return out;
 }
 
 export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, onReelDone, onUnsupported, className }: HoloCylinderProps) {
@@ -257,13 +306,13 @@ export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, on
     for (let i = 0; i < n; i++) mesh.setMatrixAt(i, id);
     scene.add(mesh);
 
-    let disposed = false;
-    void buildAtlas(items, `#${themeColor("--color-space-950", "black").getHexString()}`).then((a) => {
-      if (disposed) return a.texture.dispose();
-      uniforms.uAtlas.value = a.texture;
-      uniforms.uCols.value = a.cols;
-      uniforms.uRows.value = a.rows;
-    });
+    const atlas = createAtlas(items, `#${themeColor("--color-space-950", "black").getHexString()}`);
+    uniforms.uAtlas.value = atlas.texture;
+    uniforms.uCols.value = atlas.cols;
+    uniforms.uRows.value = atlas.rows;
+    // Galerie : les cartes proches de la face seulement (les autres à mesure que l'anneau tourne). Fond et roue : toutes, au fil de l'eau.
+    if (mode === "gallery") atlas.request(holoWindow(0, items.length));
+    else atlas.request(items.map((_, i) => i));
 
     // Rotation : cible + inertie, aimantée sur la carte la plus proche au repos.
     let rot = 0;
@@ -350,6 +399,7 @@ export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, on
       if (f !== lastFront) {
         lastFront = f;
         setFront(f);
+        if (mode === "gallery") atlas.request(holoWindow(f, items.length));
       }
       renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
@@ -364,7 +414,7 @@ export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, on
     ro.observe(el);
 
     return () => {
-      disposed = true;
+      atlas.dispose();
       reel?.kill();
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -376,7 +426,6 @@ export function HoloCylinder({ items, mode = "gallery", onSelect, reelTarget, on
       el.removeEventListener("keydown", onKey);
       geo.dispose();
       mat.dispose();
-      uniforms.uAtlas.value?.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };

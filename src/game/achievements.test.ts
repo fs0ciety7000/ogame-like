@@ -54,7 +54,8 @@ describe("succès (v2.3)", () => {
     bumpStat(p, "traded", 2_000_000);
     expect(ids(p)).toEqual(expect.arrayContaining(["raider", "merchant"]));
     const corsair = ACHIEVEMENTS.find((a) => a.id === "corsair")!;
-    expect(achievementProgress(corsair, p)).toEqual({ value: 150_000, target: 1_000_000, done: false });
+    // 6.14.117 (É30-6) : seuil en jeu = 1 million écrit × 10 (rythme des succès, mesure « loot »).
+    expect(achievementProgress(corsair, p)).toEqual({ value: 150_000, target: 10_000_000, done: false });
     for (let i = 0; i < 10; i++) recordMission(p, "2026-10-01");
     recordMission(p, "2026-10-02");
     expect(p.stats).toMatchObject({ missions: 11, bestMissionDay: 10, missionDayCount: 1 });

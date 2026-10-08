@@ -44,7 +44,9 @@ export function CodexPage() {
   // 5.24 : archives holographiques (cylindre 3D) ou grille classique, choix mémorisé.
   const [view, setView] = useState<"holo" | "grid">(() => {
     try {
-      return (localStorage.getItem(VIEW_KEY) as "holo" | "grid" | null) ?? (hasWebGL() ? "holo" : "grid");
+      // 6.14.116 (É30-5) : par défaut, archives 3D sur grand écran à souris seulement ; sur mobile, la grille (images chargées
+      // à mesure du défilement, sans three.js). Le choix du joueur reste mémorisé.
+      return (localStorage.getItem(VIEW_KEY) as "holo" | "grid" | null) ?? (hasWebGL() && window.matchMedia("(min-width: 1024px) and (pointer: fine)").matches ? "holo" : "grid");
     } catch {
       return "grid";
     }
@@ -111,6 +113,7 @@ export function CodexPage() {
             src={assetUrl(e.image)}
             alt=""
             loading="lazy"
+            decoding="async"
             className={cn("h-full w-full object-cover transition-transform duration-500", e.unlocked ? "group-hover:scale-105" : "scale-110 opacity-25 blur-md grayscale")}
           />
           {!e.unlocked && (

@@ -9,7 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GuestRoute, ProtectedRoute } from "@/routes/ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { MaintenanceGate } from "@/components/layout/MaintenanceGate";
-import { lazyPage } from "@/lib/lazyPage";
+import { lazyPage, preloadPage } from "@/lib/lazyPage";
 
 // Chargées à la demande : chaque page du jeu part dans son propre chunk,
 // pour ne pas alourdir le bundle initial (écran de connexion) avec des
@@ -78,6 +78,61 @@ const MessagesPage = lazyPage(() => import("@/pages/MessagesPage"), "MessagesPag
 const SharedReportPage = lazyPage(() => import("@/pages/SharedReportPage"), "SharedReportPage");
 const JournalPage = lazyPage(() => import("@/pages/JournalPage"), "JournalPage");
 const SettingsPage = lazyPage(() => import("@/pages/SettingsPage"), "SettingsPage");
+
+/** 6.14.116 (É30-5) : page de chaque adresse du jeu (`/game/<segment>`), pour lancer le téléchargement de son code dès le
+ *  démarrage, en parallèle des données (avant : après le chargement du contenu, une seconde de plus sur mobile). */
+const GAME_ROUTE_PAGES: Record<string, string> = {
+  "": "DashboardPage",
+  "ordres": "OrdersPage",
+  "portefeuille": "WalletPage",
+  "classe": "EmpireClassPage",
+  "ressources": "ResourcesPage",
+  "batiments": "BuildingsPage",
+  "unites": "UnitsPage",
+  "labo": "LabPage",
+  "missions": "MissionsPage",
+  "joueurs": "PlayersPage",
+  "galaxie": "GalaxyPage",
+  "combats": "CombatLogPage",
+  "simulateur": "SimulatorPage",
+  "planificateur": "PlannerPage",
+  "commerce": "CommercePage",
+  "uber": "LeviathanPage",
+  "primes": "BountiesPage",
+  "etat-major": "CommandPage",
+  "passe": "SeasonPassPage",
+  "colonies": "ColoniesPage",
+  "statistiques": "EmpireStatsPage",
+  "ascension": "AscensionPage",
+  "prestige": "PrestigePage",
+  "redaction": "BlogEditorPage",
+  "palmares": "HallOfFamePage",
+  "menaces": "ThreatsPage",
+  "seigneurs": "WarlordsPage",
+  "boss": "SeasonBossPage",
+  "hall-of-fame": "BossHallPage",
+  "concours": "ContestsPage",
+  "casino": "CasinoPage",
+  "gazette": "GazettePage",
+  "succes": "AchievementsPage",
+  "alliance": "AlliancePage",
+  "guerre-territoire": "TerritoryWarPage",
+  "profil": "ProfilePage",
+  "reglages": "SettingsPage",
+  "admin": "AdminPage",
+  "journal": "JournalPage",
+  "messages": "MessagesPage",
+  "nouveautes": "ChangelogPage",
+  "annonces": "AnnouncementsPage",
+  "codex": "CodexPage",
+  "chroniques": "ChroniclesPage",
+  "formules": "FormulasPage",
+  "signalements": "ReportsPage",
+};
+if (typeof window !== "undefined") {
+  const m = /^\/game(?:\/([^/?#]*))?/.exec(window.location.pathname);
+  if (m) preloadPage(GAME_ROUTE_PAGES[m[1] ?? ""]);
+}
 
 /** 5.25 : retour visuel global (clics, survols, panneaux) installé une fois. */
 function UiFx() {

@@ -24,7 +24,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 |:--|:--|:--|:--|
 | AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17 (fermés : AJ-10 par AJ27-4, 6.14.114 ; AJ-3 par AJ27-5, 6.14.115 ; AJ-1 : garde par contenu livrée en AJ27-4, manques justifiés dans `KNOWN_GAPS`, succès dérivés en AJ27-6, porteurs « signature » en AJ27-10 ; AJ-9 : maillon `palette` vérifié, Ctrl+K étendu en AJ27-8), AA-1 à AA-32 (fermés par AA3, 6.14.104 : AA-1, AA-4, AA-7 à AA-11, AA-13, AA-29, AA-32 ; chiffres seuls pour AA-2 et AA-5, sections en AA9 ; AA-12 déjà réglable depuis 6.14.84, surcharge par techno à faire ; fermés par AA4, 6.14.105 : AA-21, AA-22 ; AA-6 en partie, forces des mutateurs réglables, liste et effets composés en AA7), AC-1 à AC-22 (fermés par AC-D à AC-G, 6.14.110 à 6.14.113 : AC-5, AC-6, AC-7, AC-10, AC-11, AC-12, AC-14, AC-15, AC-16, AC-19, AC-20, AC-21 ; AC-8 en grande partie, mesure sur la pré-prod ; restent AC-17, AC-18, AC-22 en AC-H et AC-I), AP-1 à AP-16 (fermés : AP-5 par AP-L4, 6.14.108 ; AP-9 par AP-L5, 6.14.109), AD-1 à AD-30, AE-1 à AE-17 sauf AE-2, AE-3, AE-6, AE-7, AE-8 et AE-15 (fermés par AE-L3, 6.14.106 : AE-2 plafond du comptoir, AE-3 coffre indexé, AE-7 défaites par 24 h, AE-15 rattrapage ; mesures livrées par AE-L4, 6.14.107 : AE-5, AE-10, AE-11 et AE-15 se jugent sur la santé de l'équilibre, décisions en AE-L7 après 8 semaines), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
 | TH-danger | 6.14.96 | Rouge « danger » sous 4,5:1 sur `space-600` dans 7 thèmes (4,1 à 4,45:1 ; 4,5 et plus sur `space-700`) | revue AU28 (avec `theme-audit.mjs`) |
-| É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
+| É30-5 (suite) | 6.14.39, 6.14.116 | Après 6.14.116 (mesure locale) : LCP de la Galaxie mobile 4,3 s (seuil 4 s) ; pic intermittent de CLS du menu au bureau (0,43, groupes ajoutés au premier rendu, avant et après) | mesure sur la pré-prod au push ; menu rendu en une fois (question 2 de 6.14.116) |
 
 
 ### Attend des mesures (après la mise en production, puis une nouvelle copie sur la pré-prod)
@@ -34,7 +34,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 | PRG-1 (suite) | AU3, Z1 | Rythme du passe avec le barème actuel (missions à 0) | un mois complet en production, `bySource` (6.8.0) |
 | BOSS-2, ET29-2 | AU2, AU23, Q21 | Cible de taux de boss abattus | 8 semaines en production (3 combats dans la copie) |
 | Z1-c | Z1 | 86 % des joueurs pillables, l'attaquant gagne 74 % des combats JcJ | E1 et E2 (5.32, 6.2), lune et bunker, défense à domicile d'AE-L1 (6.14.72 : seuil ×0,75 → ×0,90 en simulation) en production, 30 jours de mesure |
-| PRG-5, Z1-a | AU3, Z1 | Succès débloqués vite (médiane 70 sur 178 en une semaine) | rythme hebdomadaire (relevé A29-2) |
+| PRG-5, Z1-a, AE-12 | AU3, Z1, AU27 | Succès débloqués vite (médiane 70 sur 178 en une semaine) ; rythme appliqué en 6.14.117 (seuils en jeu des succès de volume, rétro-simulation 38 % → 28 % à J7, 24 à 26 % attendus avec la bascule du rythme) | relevé « succès par semaine » (A29-2) après la mise en production ; réglage fin dans Admin → Règles → « Succès : rythme » |
 | AU28-4, HV28-6, PR29-5, ET29-4 | AU20 à AU23 | Chiffres provisoires : lunes (Q18), paliers bonus du passe, base avancée | ces systèmes en production |
 
 ### Attend l'utilisateur
@@ -53,6 +53,7 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | Contenu | Lot | Image en place | Prompt |
 |:--|:--|:--|:--|
 | Classes d'empire (3), modules (7), spécialisations de colonie (4) | 6.14.93 | fichiers intégrés, pas encore affichés (emoji ou icône) : aucun champ d'image (Q240) | `scripts/illustrations.json` (fait) |
+| Reliques `cle_soudure` et `essaim_nanites` (non détourées) | 6.14.118 | image d'avant 6.14.92 gardée (fond gris, bande sombre) | `scripts/illustrations.json` (fait, attendues sur `/img`) |
 
 ## Fermés depuis le dernier inventaire
 
@@ -64,6 +65,8 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | AC-14, AC-15, AC-19 (AU27) | 6.14.113 (AC-G) : jeton du casino, défi et titre du Codex dans « Tout réclamer », un seul chemin, sous-actions isolées (I37) |
 | AP-5 (AU27) | 6.14.108 (AP-L4) : paliers de succès générés bridés (3 détenteurs et 10 % des actifs, 1 par mesure tous les 30 jours, 3 par mesure, titre au dernier), réglables (`achievementGen`) ; rien retiré |
 | AP-9 (AU27) | 6.14.109 (AP-L5) : objectifs du jour pondérés (`dailyContracts.weights`, défense 0,5 et raids de faction comptés), quantités réglables |
+| É30-5 (AU27, 6.14.39), en grande partie | 6.14.116 : CLS mobile 0,22 → 0,04 à 0,08 (page statique, barre de ressources, carte du commandant), Codex −5 Mo (grille par défaut sur téléphone, archives 3D chargées autour de la face), page ouverte préchargée et requêtes en double retirées (Galaxie mobile : LCP 6,4 → 4,3 s en local) |
+| AJ-15 (AU27), en partie | 6.14.118 (É30-7) : 28 reliques à image propre (vérifié par empreinte, garde `illustrations.test.ts`), 14 lignes de reliques ajoutées à `scripts/illustrations.json` (14 → 28 reliques suivies), prompts des classes et des biomes déjà faits ; restent modules, talents et mutateurs sans image (emoji) |
 | AU28 thèmes | 6.14.90 et 6.14.96 à 6.14.101 : TH-1 à TH-16 corrigés (lots TH-L1 à TH-L7) ; reste le rouge « danger » sur `space-600` (7 thèmes entre 4,1 et 4,5:1), noté pour la revue AU28 |
 | Images provisoires (lot 2) | 6.14.93 : bannières et emblèmes de 5 factions, 3 boss d'alliance, 12 thèmes du passe, 3 portraits de saison, couvertures des billets 50 à 52, 8 en-têtes ; les 129 emplacements de `/img` sont faits |
 | AJ-7 | 6.14.94 : chiffres des fiches et du GDD remis au code (sauvetage 85 %, 24 unités, 147 succès, 7 modèles de modules, 17 tâches), journal §8 trié ; garde `docsCounts.test.ts` |

@@ -14,6 +14,7 @@ import { normalizePlanetLook } from "@/game/planetLook";
 import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import { prestigeState } from "@/game/prestige";
 import { COLONY_RULES } from "@/game/colonies";
+import { formatInt } from "@/game/format";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -487,10 +488,120 @@ export function withDefaultAchievements(stored: AchievementDef[], removed: reado
   return out;
 }
 
+/* ---------- 6.14.117 (É30-6, PRG-5, AE-12) : rythme des succès ---------- */
+
+/**
+ * Seuils « en jeu » des succès de volume (unités, défenses, ressources, missions) : seuil écrit × facteur de la mesure.
+ * Les mesures bornées par le jeu (niveaux, technos, rang, %) ne sont pas touchées : la bascule du rythme (RL-3) les étire.
+ * Le seuil écrit reste dans la liste (admin, générateur) : le facteur s'applique à la lecture, donc 1 = ancien comportement.
+ * Un succès déjà gagné reste gagné (rien ne relit `unlockedAchievements`) ; il n'est pas « repris » si le seuil monte.
+ * Valeurs littérales (CLAUDE.md, initialisation des modules).
+ */
+export const ACHIEVEMENT_PACE_RULES = {
+  /** Décoché : seuils écrits tels quels (ancien comportement). */
+  enabled: true,
+  /** Le premier palier (bronze) garde son seuil écrit : la prise en main reste rapide. */
+  keepBronze: true,
+  /** Facteur par mesure (1 ou absent : seuil écrit). Mesures de volume seulement. */
+  scales: {
+    unitsTotal: 10,
+    defensesTotal: 10,
+    unitsBuilt: 3,
+    unitsRepaired: 2,
+    missions: 5,
+    bestMissionDay: 20,
+    loot: 10,
+    recycled: 10,
+    traded: 200,
+    donated: 200,
+    ultimatums: 2,
+  } as Record<string, number>,
+};
+
+/** 6.14.117 : libellé, unité, bornes et aide (admin, Tous les réglages et Admin → Règles). */
+export const ACHIEVEMENT_PACE_RULES_META = {
+  enabled: { label: "Rythme des succès appliqué", hint: "Décoché : chaque succès se débloque à son seuil écrit (avant la 6.14.117)." },
+  keepBronze: { label: "Palier bronze au seuil écrit", hint: "Le premier succès d'une mesure reste rapide (prise en main) ; les paliers argent et plus suivent le facteur." },
+  scales: { label: "Facteur du seuil par mesure", unit: "×", hint: "Seuil en jeu = seuil écrit × facteur (entre 1 et 1 000). Un succès déjà gagné reste gagné. 1 = seuil écrit." },
+};
+
+/** Arrondi à 2 chiffres significatifs (un facteur décimal ne donne pas 7 499 999). */
+function paceRound(n: number): number {
+  if (!(n > 0)) return 1;
+  const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(n)) - 1));
+  return Math.max(1, Math.round(n / p) * p);
+}
+
+/** Facteur en vigueur pour un succès (1 : seuil écrit). */
+export function achievementPaceScale(a: Pick<AchievementDef, "metric" | "tier">): number {
+  const r = ACHIEVEMENT_PACE_RULES;
+  if (!r.enabled || (r.keepBronze && a.tier === "bronze")) return 1;
+  const f = Number((r.scales ?? {})[a.metric]);
+  return Number.isFinite(f) && f > 1 ? Math.min(1000, f) : 1;
+}
+
+/** Seuil en jeu d'un succès écrit (liste enregistrée, admin, générateur). */
+export function paceThreshold(a: Pick<AchievementDef, "metric" | "tier" | "threshold">): number {
+  const f = achievementPaceScale(a);
+  return f === 1 ? a.threshold : paceRound(a.threshold * f);
+}
+
+const PACE_SEP = "[ \u00a0\u202f]?";
+/** Motif d'un entier écrit avec ou sans séparateur de milliers (« 1 000 », « 1000 », espace fine). */
+function digitsPattern(n: number): string {
+  const d = String(Math.round(n));
+  let out = "";
+  for (let i = 0; i < d.length; i++) {
+    if (i > 0 && (d.length - i) % 3 === 0) out += PACE_SEP;
+    out += d[i];
+  }
+  return out;
+}
+/** « 5 millions », « 2 milliards », « 7,5 milliards » ; null si le nombre ne s'écrit pas ainsi. */
+function bigWords(n: number): string | null {
+  if (n >= 1e9 && n % 1e8 === 0) {
+    const v = n / 1e9;
+    return `${String(v).replace(".", ",")} milliard${v >= 2 ? "s" : ""}`;
+  }
+  if (n >= 1e6 && n % 1e6 === 0) {
+    const v = n / 1e6;
+    return `${formatInt(v)} million${v >= 2 ? "s" : ""}`;
+  }
+  return null;
+}
+
+/** Texte d'un succès dont le seuil change : le nombre écrit est remplacé par le seuil en jeu, dans la même forme. */
+export function paceDescription(text: string, written: number, shown: number): string {
+  if (written === shown || typeof text !== "string") return text;
+  if (written >= 1e6 && written % 1e6 === 0) {
+    const m = new RegExp(`(^|[^0-9])${digitsPattern(written / 1e6)} millions?`).exec(text);
+    if (m) return text.slice(0, m.index) + m[1] + (bigWords(shown) ?? formatInt(shown)) + text.slice(m.index + m[0].length);
+  }
+  const m = new RegExp(`(^|[^0-9])${digitsPattern(written)}(?![0-9])`).exec(text);
+  if (!m) return text;
+  return text.slice(0, m.index) + m[1] + formatInt(shown) + text.slice(m.index + m[0].length);
+}
+
+/** Liste écrite (avant le rythme) : relue quand les règles changent (`applyAchievementPace`). */
+let writtenAchievements: AchievementDef[] = [];
+
+/** 6.14.117 : registre recalculé depuis la liste écrite et les règles en vigueur (appelé après les règles, `applyGameContent`). */
+export function applyAchievementPace(): void {
+  ACHIEVEMENTS.splice(
+    0,
+    ACHIEVEMENTS.length,
+    ...writtenAchievements.map((a) => {
+      const threshold = paceThreshold(a);
+      return threshold === a.threshold ? a : { ...a, threshold, description: paceDescription(a.description, a.threshold, threshold) };
+    }),
+  );
+}
+
 export function setAchievements(defs: AchievementDef[]) {
   // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
   const have = new Set(defs.map((d) => d.id));
-  ACHIEVEMENTS.splice(0, ACHIEVEMENTS.length, ...defs, ...derivedAchievements().filter((d) => !have.has(d.id)));
+  writtenAchievements = [...defs, ...derivedAchievements().filter((d) => !have.has(d.id))];
+  applyAchievementPace();
 }
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
 

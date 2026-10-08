@@ -190,7 +190,7 @@ export function AdminPage() {
   });
 
   useEffect(() => {
-    if (uid) void checkIsAdmin(uid).then(setAllowed);
+    if (uid) void checkIsAdmin(uid, { fresh: true }).then(setAllowed);
   }, [uid]);
 
   if (allowed === null) return null;

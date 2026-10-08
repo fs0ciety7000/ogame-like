@@ -18,6 +18,12 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q295 | Codex sur téléphone : Grille par défaut sur téléphone (la vue 3D téléchargeait 6 Mo avant le premier affichage), 3D au choix (`docs/changes/6.14.116-performance-mobile.md`) | Codex 6,5 Mo → 1,4 Mo sur mobile | valider |
+| Q296 | Pic de décalage au bureau : Reste intermittent (groupes du menu ajoutés au premier rendu) ; proposé : rendre le menu en une fois dans un lot suivant (`docs/changes/6.14.116-performance-mobile.md`) | aucun (visuel) | valider le report |
+| Q297 | **Rythme des succès de volume** : Facteur par mesure appliqué au seuil écrit (unités ×10, défenses ×10, marché ×200, dons ×200…), bronze inchangé, rien de retiré : médiane simulée 76 → 55 succès en une semaine (38 → 28 %) (`docs/proposals/rythme-des-succes.md`) | les succès de volume s'obtiennent plus tard | valider (mesurer après la bascule et la mise en production) |
+| Q298 | Palier bronze : Garde son seuil écrit (premier succès facile à obtenir) (`docs/proposals/rythme-des-succes.md`) | aucun | valider |
+| Q299 | Titres liés à une mesure : Gardent leur seuil (marché 1 million, recyclage 1 million…) (`docs/proposals/rythme-des-succes.md`) | aucun | valider |
+| Q300 | Images des 12 reliques d'avant 6.14.92 : Gardées (pas refaites dans le style des reliques générées par API) (`docs/changes/6.14.118-reliques-images-prompts.md`) | aucun | valider |
 | Q289 | Succès propre exigé par la chaîne : Pour les unités et les bâtiments seulement (22 unités et 11 bâtiments sans succès propre, prévus en AJ27-6) (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun pour l'instant | valider |
 | Q290 | Porteur propre par unité : Exigé : un effet qui vise l'unité elle-même, pas sa classe (23 unités sans, prévues en AJ27-10) (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun pour l'instant | valider |
 | Q291 | Place du panneau « Chaîne de contenu » : Admin → Équilibrage (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun (admin) | valider |

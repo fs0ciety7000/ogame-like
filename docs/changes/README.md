@@ -215,6 +215,9 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.113 | [Réclamations groupées : casino du jour, défi et titre du Codex dans « Tout réclamer » (AC-G)](6.14.113-reclamations-groupees.md) | fonctionnalité (moteur, serveur, interface) + correctif + tests | [chaine-actions](../proposals/chaine-actions.md), lot AC-G (AC-14, AC-15, AC-19) |
 | 6.14.114 | [Garde de la chaîne de contenu renforcée et panneau « Chaîne de contenu » (AJ27-4)](6.14.114-garde-chaine-contenu.md) | fonctionnalité (moteur, admin) + tests | [audit AU27](../audit/2026-10-07-au27-jeu-chaine.md) (AJ-1, AJ-10, AJ-9), QJ1, QJ2 |
 | 6.14.115 | [Colonies dans la chaîne : succès, Codex des biomes et spécialisations, Formules (AJ27-5)](6.14.115-colonies-chaine.md) | ajout (moteur, interface) + tests | [audit AU27](../audit/2026-10-07-au27-jeu-chaine.md) (AJ-3), QJ5 |
+| 6.14.116 | [Performance mobile : stabilité, page ouverte préchargée, Codex à la demande (É30-5)](6.14.116-performance-mobile.md) | ajustement (performance) + outillage + tests | [feuille-de-route-2030-automne](../proposals/feuille-de-route-2030-automne.md), lot 37 (É30-5, mesure 6.14.39) |
+| 6.14.117 | [Rythme des succès : seuils en jeu des succès de volume (É30-6)](6.14.117-rythme-des-succes.md) | ajustement (équilibre) + fonctionnalité (moteur, admin) + outillage + tests | [rythme-des-succes](../proposals/rythme-des-succes.md) (PRG-5, AE-12) |
+| 6.14.118 | [Reliques à image propre et prompts dans l'atelier d'illustrations (É30-7)](6.14.118-reliques-images-prompts.md) | docs (illustrations) + outillage + tests | [audit AU27](../audit/2026-10-07-au27-jeu-chaine.md) (AJ-15) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

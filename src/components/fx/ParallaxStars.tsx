@@ -48,40 +48,67 @@ export function ParallaxStars({ pan }: { pan: { x: number; y: number } }) {
   const reduced = useReducedMotion() ?? false;
   const images = useMemo(() => LAYERS.map((_, i) => layerImage(i)), []);
 
+  // 6.14.116 (É30-5) : la boucle d'animation ne tourne que pendant un mouvement (souris, inclinaison, carte déplacée) et
+  // s'arrête une fois les couches arrivées. Avant, elle repeignait les 3 couches 60 fois par seconde tant que la Galaxie était
+  // ouverte (processeur occupé sur mobile).
+  const kickRef = useRef<() => void>(() => undefined);
   useEffect(() => {
     if (reduced) return;
     let frame = 0;
     const cur = { x: 0, y: 0 };
+    const last = { x: Number.NaN, y: Number.NaN, px: Number.NaN, py: Number.NaN };
     const tick = () => {
+      frame = 0;
       // Lissage : les couches rattrapent doucement la cible.
       cur.x += (pointer.current.x - cur.x) * 0.08;
       cur.y += (pointer.current.y - cur.y) * 0.08;
-      LAYERS.forEach((L, i) => {
-        const el = refs.current[i];
-        if (!el) return;
-        const x = cur.x * L.depth + panRef.current.x * L.pan;
-        const y = cur.y * L.depth + panRef.current.y * L.pan;
-        el.style.backgroundPosition = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
-      });
-      frame = requestAnimationFrame(tick);
+      const px = panRef.current.x;
+      const py = panRef.current.y;
+      const settled = Math.abs(pointer.current.x - cur.x) < 0.002 && Math.abs(pointer.current.y - cur.y) < 0.002;
+      if (settled) {
+        cur.x = pointer.current.x;
+        cur.y = pointer.current.y;
+      }
+      if (cur.x !== last.x || cur.y !== last.y || px !== last.px || py !== last.py) {
+        LAYERS.forEach((L, i) => {
+          const el = refs.current[i];
+          if (!el) return;
+          const x = cur.x * L.depth + px * L.pan;
+          const y = cur.y * L.depth + py * L.pan;
+          el.style.backgroundPosition = `${x.toFixed(1)}px ${y.toFixed(1)}px`;
+        });
+        Object.assign(last, { x: cur.x, y: cur.y, px, py });
+      }
+      if (!settled) frame = requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(tick);
+    const kick = () => {
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    kickRef.current = kick;
+    kick();
 
     const onMove = (e: PointerEvent) => {
       pointer.current = { x: (e.clientX / window.innerWidth - 0.5) * -2, y: (e.clientY / window.innerHeight - 0.5) * -2 };
+      kick();
     };
     const onTilt = (e: DeviceOrientationEvent) => {
       if (e.gamma === null || e.beta === null) return;
       pointer.current = { x: Math.max(-1, Math.min(1, -e.gamma / 30)), y: Math.max(-1, Math.min(1, -(e.beta - 45) / 30)) };
+      kick();
     };
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("deviceorientation", onTilt, { passive: true });
     return () => {
-      cancelAnimationFrame(frame);
+      kickRef.current = () => undefined;
+      if (frame) cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("deviceorientation", onTilt);
     };
   }, [reduced]);
+  // Carte déplacée ou zoomée : une passe d'animation.
+  useEffect(() => {
+    kickRef.current();
+  }, [pan.x, pan.y]);
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">

@@ -576,7 +576,9 @@ function FooterLinks({ badgeOf }: { badgeOf: (to: string) => number }) {
 /** Carte du commandant : emblème, pseudo, rang et progression. */
 function CommanderCard() {
   const player = usePlayerStore((s) => s.player);
-  if (!player) return null;
+  // 6.14.116 (É30-5) : place de la carte réservée pendant le chargement (105 px mesurés) : le menu ne descend plus d'un coup
+  // (0,42 de CLS au bureau).
+  if (!player) return <div aria-hidden className="mx-3 h-[105px]" />;
   const progress = getRankProgress(player.xp);
   return (
     <Link to="/game/profil" className="group relative mx-3 block border border-cyan-glow/15 bg-gradient-to-br from-cyan-glow/[0.07] to-transparent p-3 transition-colors hover:border-cyan-glow/40 hud-cut">

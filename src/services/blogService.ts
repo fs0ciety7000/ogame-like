@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { useAuthStore } from "@/store/authStore";
+import { checkIsAdmin } from "@/services/adminService";
 import { blogPostFromRecord, type BlogAuthorInfo, type BlogPost } from "@/game/blog";
 
 /* =====================================================
@@ -50,7 +51,7 @@ export async function fetchBlogAuthors(): Promise<BlogAuthor[]> {
 export async function checkBlogAccess(uid: string): Promise<{ author: boolean; admin: boolean }> {
   const [author, admin] = await Promise.all([
     pb.collection("blog_authors").getOne(uid, { fields: "id" }).then(() => true, () => false),
-    pb.collection("admins").getOne(uid, { fields: "id" }).then(() => true, () => false),
+    checkIsAdmin(uid),
   ]);
   return { author, admin };
 }

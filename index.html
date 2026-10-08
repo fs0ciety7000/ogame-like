@@ -51,8 +51,10 @@
   </head>
   <body>
     <div id="root">
-      <!-- Remplacé par l'application au chargement ; lu par les robots sans JavaScript (vérification OAuth). -->
-      <main style="max-width: 640px; margin: 64px auto; padding: 0 16px; color: #cbd5e1; font-family: system-ui, sans-serif">
+      <!-- Remplacé par l'application au chargement ; lu par les robots sans JavaScript (vérification OAuth).
+           6.14.116 (É30-5) : marge haute en padding (une marge fusionnait avec celle du body : toute la page remontait de
+           64 px au premier rendu, 0,08 de CLS sur mobile). -->
+      <main style="max-width: 640px; margin: 0 auto; padding: 64px 16px 0; color: #cbd5e1; font-family: system-ui, sans-serif">
         <h1 style="color: #f1f5f9">Cosmic Empires</h1>
         <p>Jeu de stratégie spatiale gratuit dans le navigateur : bâtis ton empire, recherche, combats et alliances en temps réel.</p>
         <p><a href="/confidentialite.html" style="color: #5ee7ff">Politique de confidentialité</a></p>

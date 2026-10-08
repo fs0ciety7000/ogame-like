@@ -19,13 +19,22 @@ import type { AdminEditChanges } from "@/game/adminEdit";
    de jeu d'un joueur ne se modifie que par les routes du serveur (6.14.65).
 ===================================================== */
 
-export async function checkIsAdmin(uid: string): Promise<boolean> {
-  try {
-    await pb.collection("admins").getOne(uid, { fields: "id" });
-    return true;
-  } catch {
-    return false;
-  }
+/** 6.14.116 (É30-5) : une seule requête par compte et par minute (7 composants la posaient au démarrage, 14 requêtes). */
+const adminChecks = new Map<string, { atMs: number; result: Promise<boolean> }>();
+const ADMIN_CHECK_TTL_MS = 60_000;
+
+export function checkIsAdmin(uid: string, options: { fresh?: boolean } = {}): Promise<boolean> {
+  const hit = adminChecks.get(uid);
+  if (!options.fresh && hit && Date.now() - hit.atMs < ADMIN_CHECK_TTL_MS) return hit.result;
+  const result = pb
+    .collection("admins")
+    .getOne(uid, { fields: "id", requestKey: null })
+    .then(
+      () => true,
+      () => false,
+    );
+  adminChecks.set(uid, { atMs: Date.now(), result });
+  return result;
 }
 
 /** true si le joueur connecté est administrateur (false pendant la vérification). */

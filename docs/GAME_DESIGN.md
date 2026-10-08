@@ -374,6 +374,24 @@ Lots AJ27-4 et AJ27-5 de la revue AU27 (`docs/audit/2026-10-07-au27-jeu-chaine.m
 | Codex « Colonies » | 4 biomes, ouverts tous au relevé de la 1re colonie ; 4 spécialisations, ouvertes au 1er choix et gardées après un changement ; récompense de catégorie 5 jetons + 25 Ambre (Admin → Chroniques, comme Unités) | `codexEntries`, `DEFAULT_CODEX_REWARDS.colonies` |
 | Formules | section « Colonies » : fondation, production +bonus, gisement, routes (frais, réserve, ravitaillement), base avancée, spécialisations et biomes, tous lus dans les règles | `FormulasGuide.tsx` |
 
+### 7.12 Rythme des succès : seuils en jeu des succès de volume (6.14.117, `achievements.ts`)
+
+Lot É30-6 (PRG-5, AE-12 ; suite d'AP-L4). Proposition : `docs/proposals/rythme-des-succes.md`. Fiche du domaine :
+`docs/systems/progression.md`.
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Seuil en jeu | **seuil écrit × facteur de la mesure**, arrondi à 2 chiffres significatifs ; appliqué à la lecture (liste enregistrée et paliers générés inchangés) | `achievementPace.scales` (Règles → « Succès : rythme des succès de volume ») |
+| Facteurs | unités possédées ×10, défenses ×10, unités construites ×3, unités réparées ×2, missions ×5, record de missions par jour ×20, pillage ×10, recyclage ×10, échanges au marché ×200, dons au trésor ×200, ultimatums ×2 ; autres mesures ×1 (niveaux, technos, rang, %, oui/non : bornées par le jeu, étirées par la bascule du rythme) | idem (1 à 1 000, mesure connue) |
+| Palier bronze | au seuil écrit (prise en main immédiate) | `achievementPace.keepBronze` |
+| Succès gagné | **jamais repris** : le facteur ne vise que les succès pas encore obtenus | — |
+| Texte | le nombre écrit dans la description est remplacé par le seuil en jeu, dans la même forme (« 50 000 », « 10 millions », « 4 milliards ») | — |
+| Générateur de paliers | détenteurs comptés au seuil en jeu ; palier suivant écrit sur le seuil écrit | — |
+| Ancien comportement | `achievementPace.enabled` décoché (ou facteurs à 1) | `achievementPace.enabled` |
+
+Effet simulé (`scripts/achievement-pace-sim.mjs`, 10 joueurs de la pré-prod à J7,6) : médiane 76 → 55 succès sur 198 (38 % → 28 %) ;
+avec la bascule du rythme (1er novembre 2026), 24 à 26 % attendus (cible AE-12 : 15 à 25 %). Garde : `rythmeSucces6117.test.ts`.
+
 ## 8. Journal des audits
 
 | Date | Version | Constat | Suite |
@@ -512,3 +530,4 @@ Lots AJ27-4 et AJ27-5 de la revue AU27 (`docs/audit/2026-10-07-au27-jeu-chaine.m
 | 2026-10-08 | 6.14.113 | Lot AC-G (AU27, AC-14, AC-15, AC-19) : jeton du casino, défi et titre du Codex dans « Tout réclamer » (contexte du serveur), pastille sans faux positif, un seul chemin par l'action pour le Codex, le défi et le jeton, sous-actions isolées ; invariant I37 | `docs/changes/6.14.113-reclamations-groupees.md` |
 | 2026-10-08 | 6.14.114 | Lot AJ27-4 (AU27, AJ-1, AJ-10) : garde de la chaîne de contenu renforcée (succès propre, porteur propre, Ctrl+K ; colonies, talents, modules, classes d'empire), `KNOWN_GAPS` justifiés lot par lot, panneau Admin → Équilibrage → « Chaîne de contenu » (contenu de l'admin compris) | `docs/changes/6.14.114-garde-chaine-contenu.md`, `contentChain.test.ts` |
 | 2026-10-08 | 6.14.115 | Lot AJ27-5 (AU27, AJ-3) : colonies dans la chaîne : 4 succès (entrée, maîtrise), catégorie « Colonies » du Codex (biomes, spécialisations, récompense réglable), section Colonies des Formules ; 4 lignes d'illustration de biomes | `docs/changes/6.14.115-colonies-chaine.md`, `coloniesChaine.test.ts` |
+| 2026-10-08 | 6.14.117 | Lot É30-6 (PRG-5, AE-12, suite d'AP-L4) : rythme des succès : seuil en jeu = seuil écrit × facteur de la mesure (11 mesures de volume, bronze gardé), texte réécrit, générateur au seuil en jeu, rien de repris ; groupe `achievementPace` et section d'admin ; rétro-simulation 38 % → 28 % à J7,6 | `docs/changes/6.14.117-rythme-des-succes.md`, `docs/proposals/rythme-des-succes.md`, `rythmeSucces6117.test.ts` |

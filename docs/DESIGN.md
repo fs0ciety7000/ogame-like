@@ -181,6 +181,11 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
 - Faire : accueil public et pages mobiles vérifiés à 375 px sans défilement horizontal **ni élément coupé** : `scrollWidth` ne voit
   pas un enfant caché par un parent en `overflow-hidden` ; `scripts/preprod-capture.mjs` liste les éléments dont le bord droit
   dépasse la fenêtre. Une grille mobile a `grid-cols-1` et ses enfants `min-w-0` (6.14.53).
+- Faire (6.14.116, stabilité) : un bloc de la coque (en-tête, barres) qui attend des données réserve sa hauteur pendant le chargement
+  (`ResourceHud` : 78 / 125 / 89 px ; carte du commandant du menu : 105 px) au lieu de rendre `null` puis d'apparaître ; une liste d'images se charge au défilement
+  (`loading="lazy"`, `decoding="async"`) ; une scène 3D ne télécharge que ce qui est à l'écran (`HoloCylinder` : la carte de face et
+  7 de chaque côté) et n'est pas la vue par défaut sur téléphone ; une animation décorative s'arrête quand rien ne bouge
+  (`ParallaxStars`). Mesure : `scripts/preprod-perf.mjs` (`PERF_SHIFTS=1`, `PERF_LCP=1`).
 - Faire : libellés en capitales en `font-mono` (ou `hud-eyebrow`) ; les titres en `hud-title`, les boutons et onglets en `font-display`.
 - Faire : `prefers-reduced-motion` est respecté partout (`MotionConfig reducedMotion="user"` dans `App`, pulsations Tailwind coupées).
 - Faire : animer pour signaler un état (alerte qui clignote, balayage = chargement) et respecter `prefers-reduced-motion`.

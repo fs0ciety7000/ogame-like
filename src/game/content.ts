@@ -50,7 +50,7 @@ import { DEFAULT_FACTIONS, PIRATE_RULES, setFactions, validateFactions, type Fac
 import { RESOURCE_LIST } from "@/game/resources";
 import { driftWarnings, listShapeErrors, shapeErrors } from "@/game/contentShape";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
-import { DEFAULT_ACHIEVEMENTS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
+import { applyAchievementPace, DEFAULT_ACHIEVEMENTS, METRICS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
 
 /* =====================================================
    Contenu du jeu piloté par les données.
@@ -438,6 +438,8 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   Object.assign(WEEKLY_STOCK_RULES, structuredClone(content.rules.weeklyStock));
   Object.assign(PATRON_RULES, structuredClone(content.rules.patrons));
   applyRegisteredRules(content.rules);
+  // 6.14.117 (É30-6) : seuils en jeu des succès, après les règles (le rythme des succès est un groupe du registre).
+  applyAchievementPace();
   current = content;
   return content;
 }
@@ -651,6 +653,11 @@ function validateFixedListNumbers(merged: GameRules): string[] {
   const drawable = cw.filter(([, v]) => num(v) > 0).length;
   if (cw.length > 0 && drawable < (num(dc.perDay) || 1)) errors.push(`Objectifs du jour : au moins ${num(dc.perDay) || 1} types de poids non nul (un par objectif du jour), ${drawable} aujourd'hui.`);
   for (const [id, v] of entries(dc.targets)) if (!(Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 10_000)) errors.push(`Objectifs du jour : quantité de « ${id} » entière, entre 1 et 10 000.`);
+  // 6.14.117 (É30-6) : rythme des succès, un facteur par mesure connue, entre 1 et 1 000.
+  for (const [id, v] of entries((merged.achievementPace as { scales?: unknown }).scales)) {
+    if (!(id in METRICS)) errors.push(`Rythme des succès : mesure inconnue « ${id} ».`);
+    else if (!(num(v) >= 1 && num(v) <= 1000)) errors.push(`Rythme des succès : facteur de « ${id} » entre 1 et 1 000.`);
+  }
   return errors;
 }
 

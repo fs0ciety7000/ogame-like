@@ -51,9 +51,9 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 34 | UX-7 | Tactile et accessibilité (44 px sur écran tactile, `aria-label`, raison des boutons grisés) | M | livré (6.14.68) |
 | 35 | AJ27-4 | Garde de chaîne de contenu par contenu, panneau « Chaîne de contenu » dans l'admin | M | livré (6.14.114) |
 | 36 | AJ27-5 | Colonies dans la chaîne : succès, Codex des biomes, Formules | M | livré (6.14.115) |
-| 37 | É30-5 | Performance : stabilité mobile, LCP de la Galaxie, images du Codex à la demande | M | à faire |
-| 38 | É30-6 | Rythme des succès (avec AP-L4) | M | à faire |
-| 39 | É30-7 | Reliques à image propre et prompts des biomes et classes | S | à faire |
+| 37 | É30-5 | Performance : stabilité mobile, LCP de la Galaxie, images du Codex à la demande | M | livré (6.14.116 ; mesure sur la pré-prod au push) |
+| 38 | É30-6 | Rythme des succès (avec AP-L4) | M | livré (6.14.117 ; `docs/proposals/rythme-des-succes.md`) |
+| 39 | É30-7 | Reliques à image propre et prompts des biomes et classes | S | livré (6.14.118) |
 | 40 | AP-L7 | Nouveau générateur : registre des actions suivies (lune, colonies, nouvelles unités dans les objectifs) | L | à faire |
 | 41 | AP-L8 | Nouveau générateur : épisode « nouveauté » pour le contenu récemment ajouté | M | à faire |
 | 42 | AA5 | Rôles d'unités (sonde, recycleur, faiblesse de boss) au lieu d'identifiants en dur | M | à faire |

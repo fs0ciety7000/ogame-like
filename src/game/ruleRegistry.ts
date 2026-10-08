@@ -1,4 +1,4 @@
-import { ACHIEVEMENT_HINT_RULES, ACHIEVEMENT_HINT_RULES_META, ACHIEVEMENT_LIST_RULES, ACHIEVEMENT_LIST_RULES_META, ACHIEVEMENT_TOKENS, ACHIEVEMENT_TOKENS_META, TIER_REWARDS, TIER_REWARDS_META } from "@/game/achievements";
+import { ACHIEVEMENT_HINT_RULES, ACHIEVEMENT_HINT_RULES_META, ACHIEVEMENT_LIST_RULES, ACHIEVEMENT_LIST_RULES_META, ACHIEVEMENT_PACE_RULES, ACHIEVEMENT_PACE_RULES_META, ACHIEVEMENT_TOKENS, ACHIEVEMENT_TOKENS_META, TIER_REWARDS, TIER_REWARDS_META } from "@/game/achievements";
 import { TEMPLATE_RULES, TEMPLATE_RULES_META } from "@/game/actionTemplates";
 import { ALLIANCE_CHALLENGE_RULES, ALLIANCE_CHALLENGE_RULES_META } from "@/game/allianceChallenge";
 import { ALLIANCE_DAILY_RULES, ALLIANCE_DAILY_RULES_META } from "@/game/allianceDaily";
@@ -119,6 +119,7 @@ export const REGISTERED_RULES = {
   achievementList: { label: "Succès : succès par défaut retirés", target: () => ACHIEVEMENT_LIST_RULES, meta: () => ACHIEVEMENT_LIST_RULES_META },
   // 6.14.108 (AU27, AP-L4) : paliers de succès générés bridés (détenteurs minimum, un par mesure et par mois, plafond, titre).
   achievementGen: { label: "Succès : paliers générés (rythme et plafond)", target: () => ACHIEVEMENT_GEN_RULES, meta: () => ACHIEVEMENT_GEN_RULES_META },
+  achievementPace: { label: "Succès : rythme (seuils en jeu des succès de volume)", target: () => ACHIEVEMENT_PACE_RULES, meta: () => ACHIEVEMENT_PACE_RULES_META },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES, meta: () => PASS_BONUS_RULES_META },
   missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES, meta: () => MISSION_XP_RULES_META },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP, meta: () => COMMANDER_XP_META },
