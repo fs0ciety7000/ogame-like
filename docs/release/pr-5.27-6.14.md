@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.154 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.155 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 219 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 220 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -255,6 +255,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.152 : Démarrage plus rapide (R4 É30-5b, R9 UX-12) (`docs/changes/6.14.152-performance-demarrage.md`)
 - 6.14.153 : Ménage des exports du moteur (R5, AJ27-11) (`docs/changes/6.14.153-menage-exports.md`)
 - 6.14.154 : Admin évolutif, suite : durée par techno, listes du jeu, origines, exclusions, aperçu avant / après (R6, AA-L10) (`docs/changes/6.14.154-admin-evolutif-suite.md`)
+- 6.14.155 : Gains au-delà de l'entrepôt dits au joueur (R8, AE-L8) (`docs/changes/6.14.155-au-dela-entrepot.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

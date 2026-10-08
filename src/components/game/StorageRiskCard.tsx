@@ -5,6 +5,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { ECONOMY_RULES, exposureView } from "@/game/economy";
 import { activeChoice, shelterExtraHours } from "@/game/buildingTiers";
 import { RESOURCE_LIST } from "@/game/resources";
+import { STORAGE_OVERFLOW_RULES, storageOverflowView } from "@/game/storageOverflow";
 import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
 
@@ -18,12 +19,19 @@ export function StorageRiskCard({ player, now }: { player: PlayerState; now: num
   const view = exposureView(player, now);
   const soonChanges = !view.active && view.lines.some((l) => l.protectedSoon < l.protectedNow);
   const date = formatDateTime(view.activeFromMs, "weekday", "server");
+  // 6.14.155 (R8, AE-14) : stock au-delà de l'entrepôt (gardé, production arrêtée), ressource par ressource.
+  const overflow = storageOverflowView(player);
   return (
     <HudPanel icon={<ShieldAlert />} title="Ce que tu risques" tone="ember">
       {soonChanges && (
         <HudCallout tone="ember" className="mb-3 text-sm text-slate-300">
           <strong className="text-slate-100">À partir du {date}</strong> : <span className="font-mono tabular-nums">{ECONOMY_RULES.protectedHours} h</span> de production
           à l'abri au plus. Au-delà, ton stock est pillable : dépense-le ou envoie-le en mission.
+        </HudCallout>
+      )}
+      {overflow.any && STORAGE_OVERFLOW_RULES.cardText && (
+        <HudCallout tone="ember" className="mb-3 text-sm text-slate-300">
+          {STORAGE_OVERFLOW_RULES.cardText}
         </HudCallout>
       )}
       <ul className="flex flex-col gap-2">
@@ -48,6 +56,12 @@ export function StorageRiskCard({ player, now }: { player: PlayerState; now: num
                 pillable <span className="font-mono tabular-nums">{formatCompact(exposed)}</span>
                 {l.hourly > 0 && exposed > 0 && <span className="ml-1 font-mono text-[11px] tabular-nums text-slate-500">({Math.round(exposed / l.hourly)} h de production)</span>}
               </span>
+              {(overflow.over[l.res] ?? 0) > 0 && (
+                <span className="text-ember-glow">
+                  au-delà de l'entrepôt <span className="font-mono tabular-nums">{formatCompact(overflow.over[l.res] ?? 0)}</span>
+                  <span className="ml-1 text-[11px] text-slate-500">(production arrêtée)</span>
+                </span>
+              )}
             </li>
           );
         })}

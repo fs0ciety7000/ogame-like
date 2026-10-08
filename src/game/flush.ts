@@ -16,6 +16,7 @@ import { checkNewTitles, findTitle, grantTitle, titleStyle } from "@/game/titles
 import { bumpStat, recordMission, setStat } from "@/game/stats";
 import { contractDay } from "@/game/contracts";
 import { formatInt } from "@/game/format";
+import { overflowOfGain, overflowSentence } from "@/game/storageOverflow";
 import { applyXpDelta, ensureSeasonRollover } from "@/game/seasons";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { advanceSynthesis, CAPSULES } from "@/game/synthesis";
@@ -285,6 +286,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     const factor = missionRewardFactor(entry.endTime);
     const reward = Object.fromEntries(Object.entries(missionRewards(mission, player)).map(([k, v]) => [k, Math.round(v * factor)]));
     let missionXp = 0;
+    const paid: Partial<Record<ResourceId, number>> = {};
     for (const [res, amount] of Object.entries(reward)) {
       if (res === "xp") {
         // 5.17.1 : un compte test termine ses missions aussitôt : elles ne rapportent pas d'XP.
@@ -292,8 +294,12 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
         if (!player.testMode) missionXp = applyXpDelta(player, amount, now, "mission");
       } else {
         player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + amount;
+        paid[res as ResourceId] = amount;
       }
     }
+    // 6.14.155 (R8, AE-14) : la part versée au-delà de l'entrepôt est dite (versement inchangé, I6).
+    const overflow = overflowOfGain(player, paid);
+    const overLine = overflowSentence(overflow);
     recordContract(player, "missions", 1, now);
     grantCommanderXp(player, "steward", COMMANDER_XP.missionDone);
     addPassPoints(player, "mission", now);
@@ -301,9 +307,10 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     notifications.push({
       kind: "mission",
       title: "Mission terminée",
-      message: `${mission.name} : récompense obtenue${missionXp > 0 ? ` (+${missionXp} XP${missionXp < reward.xp ? ", palier du jour" : ""})` : ""}.`,
+      message: `${mission.name} : récompense obtenue${missionXp > 0 ? ` (+${missionXp} XP${missionXp < reward.xp ? ", palier du jour" : ""})` : ""}.${overLine ? ` ${overLine}` : ""}`,
       createdAtMs: now,
       read: false,
+      ...(overLine ? { data: { overflow } } : {}),
     });
   }
   queues.activeMissions = stillActiveMissions;

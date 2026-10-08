@@ -430,4 +430,6 @@ export interface NotificationData {
   tokens?: number;
   /** v5.12 : illustration (gros lot, ouverture du casino…). */
   image?: string;
+  /** 6.14.155 (R8, AE-14) : part de la récompense versée au-delà de l'entrepôt, par ressource commune. */
+  overflow?: Partial<Record<ResourceId, number>>;
 }

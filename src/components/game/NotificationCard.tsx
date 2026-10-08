@@ -80,7 +80,9 @@ function Details({ n }: { n: GameNotification }) {
   const order = RESOURCE_LIST.map((r) => r.id as string);
   const res = (Object.entries(d.resources ?? {}).filter(([, v]) => (v ?? 0) > 0) as [ResourceId, number][]).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
   const who = d.fromPseudo ? { label: "De", name: d.fromPseudo } : d.toPseudo ? { label: "À", name: d.toPseudo } : null;
-  if (res.length === 0 && !who && !d.amber && !d.xp && !d.relic && !d.tokens) return null;
+  // 6.14.155 (R8, AE-14) : part versée au-delà de l'entrepôt (ember : stock gardé, production arrêtée).
+  const over = (Object.entries(d.overflow ?? {}).filter(([, v]) => (v ?? 0) > 0) as [ResourceId, number][]).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
+  if (res.length === 0 && over.length === 0 && !who && !d.amber && !d.xp && !d.relic && !d.tokens) return null;
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-1">
       {who && (
@@ -105,6 +107,12 @@ function Details({ n }: { n: GameNotification }) {
           <TokenIcon size={14} /> +{d.tokens} jeton{d.tokens > 1 ? "s" : ""}
         </Pill>
       )}
+      {over.length > 0 && <span className="ml-1 text-[11px] text-ember-glow">au-delà de l'entrepôt</span>}
+      {over.map(([id, v]) => (
+        <Pill key={`over-${id}`} tone="ember">
+          <ResourceIcon id={id} /> {formatCompact(v)}
+        </Pill>
+      ))}
     </div>
   );
 }

@@ -18,6 +18,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q389 | **Gains au-delà de l'entrepôt** gardés (rien n'est perdu) et désormais dits au Journal et sur la carte « Ce que tu risques » (`docs/changes/6.14.155-au-dela-entrepot.md`) | le joueur sait pourquoi sa production s'arrête | valider |
 
 ## 3. Récit
 
@@ -35,3 +36,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q384 | Réserve des missions du jour gardée en section éditable alors que `daily.tasks` vaut 0 (sans effet en jeu) (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
 | Q385 | Exclusions des statistiques d'équilibre dans les règles (`balanceExclusion`) plutôt qu'une case par membre du staff (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
 | Q386 | AA-14 : bornes des effets de techno (`EFFECT_MAX_PER_LEVEL`) laissées au code comme garde-fou d'équilibre (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
+| Q387 | Ligne « au-delà de l'entrepôt » au Journal seulement, sans toast (Q76) (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |
+| Q388 | Seuil de la ligne : 1 000 par ressource (`storageOverflow.minAmount`) (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |
+| Q390 | Butin et livraisons non concernés par la ligne « au-delà de l'entrepôt » (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |

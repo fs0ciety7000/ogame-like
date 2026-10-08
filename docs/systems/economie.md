@@ -23,7 +23,8 @@ Tout ce que le joueur construit se paie en ressources. La production tourne hors
 
 ## Invariants
 I6 (butin et livraisons arrivent même entrepôt plein ; le stock au-delà de la capacité est gardé, la production s'arrête) : testé depuis la
-6.14.61 (`fleets.test.ts`, « I6 : entrepôt plein » : retour d'attaque, rapatriement, livraison rappelée, colonie, contrat).
+6.14.61 (`fleets.test.ts`, « I6 : entrepôt plein » : retour d'attaque, rapatriement, livraison rappelée, colonie, contrat). Les récompenses
+suivent la même règle et, depuis 6.14.155, le disent au joueur (`storageOverflow.test.ts`).
 
 ## État (audit 2026-10-06)
 - Entrepôt trop généreux (audit E1, confirmé en production : 115 h de production à l'abri contre 57 h de stock médian). Correctif 5.32 : 8 h à l'abri au plus, carte « Ce que tu risques » sur la page Ressources. Reste à voir (option B) : la soute de l'attaquant borne encore le butin (1,9 M par attaque en moyenne).
@@ -56,3 +57,13 @@ mise, comptoir, butin, tribut, stock de colonie) restent à part, listés dans l
   7,2 / 2,7 / 13,6 / 14,1 % → 7 / 2,5 / 12,6 / 13,9 % (actif, moyen, occasionnel, quotidien, 365 jours après la bascule) ; aucune borne
   d'I29 ne bouge (pire mois de sessions bloquées de l'occasionnel 5 → 10 %, sous la borne de 15 %).
 
+## 6.14.155 (R8, AE-L8, constat AE-14) : gains au-delà de l'entrepôt dits au joueur
+- Règle inchangée (I6) : une récompense (série et coffre du 7e jour, mission, objectif du jour, passe, Chroniques, Codex, défi…) est
+  versée en entier, même au-dessus de la capacité ; rien n'est perdu, la production de la ressource s'arrête tant que le stock dépasse.
+  Le coffre se tire déjà dans la place libre (6.14.106), mais son plancher et la récompense du jour s'y ajoutent.
+- La ligne du Journal (réclamation, `claimNote` d'`actions.ts` ; mission terminée, `flush.ts`) ajoute « Au-delà de l'entrepôt : … »
+  quand une part du gain dépasse la capacité : min(gain, stock après − capacité), ressources communes seules (les rares n'ont pas de
+  plafond) ; montant dans `data.overflow` (pastilles ember de la carte de notification).
+- Carte « Ce que tu risques » (page Ressources) : « au-delà de l'entrepôt X (production arrêtée) » par ressource, et un rappel.
+- Réglages : Admin → Règles → Tous les réglages, groupe « Entrepôt : gains versés au-delà » (`storageOverflow` : `enabled`,
+  `minAmount` 1 000 par ressource, `journalText` avec `{list}`, `cardText`). Code : `storageOverflow.ts`.

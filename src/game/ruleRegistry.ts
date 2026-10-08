@@ -53,6 +53,7 @@ import { REPORT_RULES, REPORT_RULES_META } from "@/game/reports";
 import { PASS_BONUS_RULES, PASS_BONUS_RULES_META, PASS_OVERFLOW, PASS_OVERFLOW_META, PASS_PRESTIGE_RULES, PASS_PRESTIGE_RULES_META } from "@/game/seasonPass";
 import { SEASON_WAR_RULES, SEASON_WAR_RULES_META, WAR_CHEST_RULES, WAR_CHEST_RULES_META } from "@/game/seasonWars";
 import { TUTORIAL_RAID, TUTORIAL_RAID_META } from "@/game/story";
+import { STORAGE_OVERFLOW_RULES, STORAGE_OVERFLOW_RULES_META } from "@/game/storageOverflow";
 import { SYNTH_RULES, SYNTH_RULES_META } from "@/game/synthesis";
 import { TALENT_RULES, TALENT_RULES_META } from "@/game/talents";
 import { TERRITORY_RULES, TERRITORY_RULES_META } from "@/game/territories";
@@ -179,6 +180,8 @@ export const REGISTERED_RULES = {
   roomEvents: { label: "Événements de salon", target: () => ROOM_EVENT_RULES, meta: () => ROOM_EVENT_RULES_META },
   // 6.14.111 (AU27, AC-E) : tâches planifiées (verrou par cadence, e-mails par lots, flottes, maintenance).
   serverTasks: { label: "Serveur : tâches planifiées (verrou, e-mails par lots, flottes, maintenance)", target: () => SERVER_TASK_RULES, meta: () => SERVER_TASK_RULES_META },
+  // 6.14.155 (revue AU28, R8 / AE-L8) : gains versés au-delà de l'entrepôt, dits au joueur (Journal, carte « Ce que tu risques »).
+  storageOverflow: { label: "Entrepôt : gains versés au-delà (Journal, carte « Ce que tu risques »)", target: () => STORAGE_OVERFLOW_RULES, meta: () => STORAGE_OVERFLOW_RULES_META },
   seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES, meta: () => SEASON_WAR_RULES_META },
   synthesis: { label: "Labo de synthèse", target: () => SYNTH_RULES, meta: () => SYNTH_RULES_META },
   talents: { label: "Talents d'Ascension", target: () => TALENT_RULES, meta: () => TALENT_RULES_META },

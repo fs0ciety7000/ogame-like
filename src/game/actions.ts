@@ -8,6 +8,7 @@ import { autoCommission, commissionDocked, hangarLoad, hasWaitingUnits, startWai
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain, formatInt } from "@/game/format";
+import { overflowOfGain, overflowSentence } from "@/game/storageOverflow";
 import { claimChronicle } from "@/game/chronicles";
 import { assertNotOnVacation, endVacation, onVacation } from "@/game/vacation";
 import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
@@ -766,14 +767,18 @@ function claimNote(type: ClaimAllAction["type"] | "claimAll", before: WalletSnap
   const gain = describeWalletGain(before, walletOf(player));
   const what = type === "claimAll" ? describeClaims(counts ?? {}) : CLAIM_LABELS[type][0];
   const title = type === "claimAll" ? "Tout réclamé" : CLAIM_NOTE_TITLES[type];
-  const message = gain.text ? `${what.charAt(0).toUpperCase()}${what.slice(1)} : +${gain.text}.` : `${what.charAt(0).toUpperCase()}${what.slice(1)} : récompense reçue.`;
+  // 6.14.155 (R8, AE-14) : la part versée au-delà de l'entrepôt est dite (versement inchangé, I6).
+  const overflow = overflowOfGain(player, gain.resources);
+  const overLine = overflowSentence(overflow);
+  const base = gain.text ? `${what.charAt(0).toUpperCase()}${what.slice(1)} : +${gain.text}.` : `${what.charAt(0).toUpperCase()}${what.slice(1)} : récompense reçue.`;
+  const message = overLine ? `${base} ${overLine}` : base;
   return {
     kind: "event",
     title,
     message,
     createdAtMs: now,
     read: true,
-    data: { resources: gain.resources, ...(gain.xp ? { xp: gain.xp } : {}), ...(gain.amber ? { amber: gain.amber } : {}), ...(gain.tokens ? { tokens: gain.tokens } : {}) },
+    data: { resources: gain.resources, ...(gain.xp ? { xp: gain.xp } : {}), ...(gain.amber ? { amber: gain.amber } : {}), ...(gain.tokens ? { tokens: gain.tokens } : {}), ...(overLine ? { overflow } : {}) },
   };
 }
 
