@@ -23,7 +23,8 @@ function loadGame() {
  *  sans migration ni redémarrage. */
 function applyContent(txApp, game) {
   const overrides = {};
-  txApp.findAllRecords("game_config").forEach((r) => {
+  // 6.14.149 (AU27, AP-12) : l'archive des Chroniques n'est jamais relue à chaque requête.
+  txApp.findRecordsByFilter("game_config", "key != 'chronicles_archive'", "", 0, 0).forEach((r) => {
     const key = r.getString("key");
     if (game.CONTENT_SECTIONS.indexOf(key) >= 0) overrides[key] = toPlain(r).data;
   });
@@ -6872,36 +6873,68 @@ function proceduralPlayers(txApp) {
 /**
  * Écrit les chapitres manquants et les nouveaux paliers de succès.
  * opts : { force, monthId, variant, achievements } (bouton de l'administration).
+ * 6.14.149 (AU27, AP-16) : chapitre, succès et passe dans trois transactions distinctes (avant : une seule, un chapitre
+ * invalide faisait échouer succès et passes du jour). Chaque étape relit le contenu dans sa transaction et n'écrit que sa
+ * section, en gardant le reste de la configuration (Object.assign) ; une étape en échec est notée au journal du générateur
+ * et n'arrête pas les suivantes. Seule la génération demandée d'un mois (`opts.monthId`) renvoie l'erreur à l'admin.
  */
 function proceduralTick(now, opts) {
   const o = opts || {};
   const game = loadGame();
-  const out = { chapters: [], achievements: [] };
-  $app.runInTransaction((txApp) => {
-    applyContent(txApp, game);
-    const rec = configRecord(txApp, game.PROCEDURAL_KEY);
-    const settings = game.normalizeProcedural(rec ? toPlain(rec).data : null);
-    if (!settings.enabled && !o.force) return;
-    const players = proceduralPlayers(txApp);
-    const content = game.currentGameContent();
-    let months = content.chronicles.months;
-    const targets = o.monthId ? [o.monthId] : settings.chapters && o.achievements !== true ? game.monthsToGenerate(months, now, settings.leadDay) : [];
-    if (targets.length > 0) {
-      const digest = game.worldDigest(players, now);
-      targets.forEach((id) => {
-        const month = game.generateChapter({ monthId: id, digest, existing: months.filter((m) => m.id !== id), settings, now, variant: o.variant || 0 });
-        months = months.filter((m) => m.id !== id).concat([month]).sort((a, b) => (a.id < b.id ? -1 : 1));
-        out.chapters.push({ id, title: month.title, boss: month.boss.name });
-      });
-      const errors = game.validateGameContent(Object.assign({}, content, { chronicles: { months } })).filter((x) => /^Chroniques/.test(x));
-      if (errors.length > 0) throw new Error(`chapitre invalide : ${errors.slice(0, 3).join(" ; ")}`);
-      // 6.8.0 : garde bonus, récompenses du Codex et bibliothèque (avant : seuls les mois étaient réécrits).
-      writeConfig(txApp, "chronicles", Object.assign({}, content.chronicles, { months }));
+  const out = { chapters: [], achievements: [], regenerated: [], passes: [], archived: [], errors: [] };
+  const step = (name, fn) => {
+    try {
+      $app.runInTransaction((txApp) => fn(txApp));
+    } catch (err) {
+      if (o.monthId) throw err;
+      out.errors.push(`${name} : ${String((err && err.message) || err)}`);
     }
-    // 6.14.57 (AU27, AP-3) : chapitres non commencés d'un ancien générateur régénérés (relit le contenu écrit ci-dessus).
-    out.regenerated = [];
-    if (!o.monthId && o.achievements !== true) regenerateOutdatedChapters(txApp, game, players, now, out.regenerated, settings);
-    if (settings.achievements && !o.monthId) {
+  };
+  // Réglages lus une fois (hors transaction, lecture seule) : ils décident des étapes à lancer.
+  applyContent($app, game);
+  const settingsRec = configRecord($app, game.PROCEDURAL_KEY);
+  const settings = game.normalizeProcedural(settingsRec ? toPlain(settingsRec).data : null);
+  if (!settings.enabled && !o.force) return out;
+
+  // 1. Chapitres : mois manquants, chapitres d'un ancien générateur, allègement des mois anciens.
+  if (o.achievements !== true) {
+    step("Chapitres", (txApp) => {
+      applyContent(txApp, game);
+      const players = proceduralPlayers(txApp);
+      const content = game.currentGameContent();
+      let months = content.chronicles.months;
+      const targets = o.monthId ? [o.monthId] : settings.chapters ? game.monthsToGenerate(months, now, settings.leadDay) : [];
+      const written = [];
+      if (targets.length > 0) {
+        const digest = game.worldDigest(players, now);
+        targets.forEach((id) => {
+          const month = game.generateChapter({ monthId: id, digest, existing: months.filter((m) => m.id !== id), library: content.chronicles.library || [], settings, now, variant: o.variant || 0 });
+          months = months.filter((m) => m.id !== id).concat([month]).sort((a, b) => (a.id < b.id ? -1 : 1));
+          written.push({ id, title: month.title, boss: month.boss.name });
+        });
+        const errors = game.validateGameContent(Object.assign({}, content, { chronicles: { months } })).filter((x) => /^Chroniques/.test(x));
+        if (errors.length > 0) throw new Error(`chapitre invalide : ${errors.slice(0, 3).join(" ; ")}`);
+        // 6.8.0 : garde bonus, récompenses du Codex et bibliothèque (avant : seuls les mois étaient réécrits).
+        writeConfig(txApp, "chronicles", Object.assign({}, content.chronicles, { months }));
+      }
+      // 6.14.57 (AU27, AP-3) : chapitres non commencés d'un ancien générateur régénérés (relit le contenu écrit ci-dessus).
+      const regenerated = [];
+      if (!o.monthId) regenerateOutdatedChapters(txApp, game, players, now, regenerated, settings);
+      // 6.14.149 (AU27, AP-12) : mois anciens allégés, copie entière dans l'archive (relit le contenu écrit ci-dessus).
+      const archived = o.monthId ? [] : archiveOldChronicles(txApp, game, now);
+      // Le résultat n'est rendu qu'une fois la transaction réussie (sinon rien n'a été écrit).
+      written.forEach((c) => out.chapters.push(c));
+      regenerated.forEach((l) => out.regenerated.push(l));
+      archived.forEach((id) => out.archived.push(id));
+    });
+  }
+
+  // 2. Succès : nouveaux paliers.
+  if (settings.achievements && !o.monthId) {
+    step("Succès", (txApp) => {
+      applyContent(txApp, game);
+      const players = proceduralPlayers(txApp);
+      const content = game.currentGameContent();
       // 6.14.108 (AU27, AP-L4) : bridé par GameRules.achievementGen (détenteurs minimum, un palier par mesure et par mois,
       // plafond par mesure, titre au dernier). Un palier généré sans date (avant 6.14.108) compte comme créé maintenant, et il
       // est daté une fois dans la liste enregistrée : rien n'est retiré (Q82).
@@ -6921,19 +6954,49 @@ function proceduralTick(now, opts) {
         proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
         if (stamped.changed) out.stamped = true;
       }
-    }
-    // v5.13 : passes de saison — brouillon du mois suivant, publication d'office et annonce au début du mois.
-    out.passes = [];
-    if (settings.pass && o.achievements !== true && !o.monthId) {
-      passSeasonsTick(txApp, game, players, now, out.passes);
-    }
-    const lines = out.chapters.map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`).concat(out.regenerated || []).concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`)).concat(out.passes);
-    if (lines.length > 0) {
-      settings.log = settings.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
-      writeConfig(txApp, game.PROCEDURAL_KEY, settings);
-    }
-  });
+    });
+  }
+
+  // 3. Passes de saison : brouillon du mois suivant, publication d'office et annonce au début du mois (v5.13).
+  if (settings.pass && o.achievements !== true && !o.monthId) {
+    step("Passes", (txApp) => {
+      applyContent(txApp, game);
+      const lines = [];
+      passSeasonsTick(txApp, game, proceduralPlayers(txApp), now, lines);
+      lines.forEach((l) => out.passes.push(l));
+    });
+  }
+
+  // Journal du générateur (sa propre transaction : relit les réglages pour ne pas écraser un réglage changé entre-temps).
+  const lines = out.chapters
+    .map((c) => `Chapitre ${c.id} écrit : « ${c.title} » (${c.boss}).`)
+    .concat(out.regenerated)
+    .concat(out.archived.length > 0 ? [`Chroniques : ${out.archived.length} mois allégé(s) et archivé(s) (${out.archived.join(", ")}).`] : [])
+    .concat(out.achievements.map((a) => `Succès ajouté : ${a.name}. ${a.reason}`))
+    .concat(out.passes)
+    .concat(out.errors.map((x) => `Échec, étape ${x}`));
+  if (lines.length > 0) {
+    $app.runInTransaction((txApp) => {
+      const rec = configRecord(txApp, game.PROCEDURAL_KEY);
+      const fresh = game.normalizeProcedural(rec ? toPlain(rec).data : null);
+      fresh.log = fresh.log.concat(lines.map((text) => ({ atMs: now, text }))).slice(-50);
+      writeConfig(txApp, game.PROCEDURAL_KEY, fresh);
+    });
+  }
   return out;
+}
+
+/** 6.14.149 (AU27, AP-12) : allège les mois des Chroniques de plus de `chronicleGen.archiveAfterMonths` mois et ajoute leur copie
+ *  entière à `chronicles_archive` (hors contenu appliqué). Garde le reste de la configuration des Chroniques (Object.assign). */
+function archiveOldChronicles(txApp, game, now) {
+  applyContent(txApp, game);
+  const content = game.currentGameContent();
+  const res = game.archiveOldMonths(content.chronicles, now, game.chronicleGenRules().archiveAfterMonths);
+  if (!res) return [];
+  const rec = configRecord(txApp, game.CHRONICLES_ARCHIVE_KEY);
+  writeConfig(txApp, game.CHRONICLES_ARCHIVE_KEY, game.mergeChronicleArchive(rec ? toPlain(rec).data : null, res.archived));
+  writeConfig(txApp, "chronicles", Object.assign({}, content.chronicles, { months: res.cfg.months }));
+  return res.archived.map((m) => m.id);
 }
 
 /** v5.13 : passes de saison procéduraux (brouillon à J-leadDay, publication d'office, annonce). */
@@ -7091,6 +7154,8 @@ function adminProcedural(e) {
       return e.json(200, proceduralTick(now, { force: true, monthId, variant: Math.max(0, Math.floor(Number(req.variant) || 0)) }));
     }
     if (req.action === "achievements") return e.json(200, proceduralTick(now, { force: true, achievements: true }));
+    // 6.14.149 : passage complet de la tâche du jour (chapitres, succès, passes), comme le cron de 4 h 29.
+    if (req.action === "tick") return e.json(200, proceduralTick(now, { force: true }));
     // 6.8.0 : reprend un chapitre écrit de la bibliothèque pour un mois (remplace le chapitre généré).
     if (req.action === "useLibrary") {
       const monthId = String(req.monthId || "");
@@ -7101,6 +7166,10 @@ function adminProcedural(e) {
       $app.runInTransaction((txApp) => {
         applyContent(txApp, game);
         const content = game.currentGameContent();
+        // 6.14.149 (AU27, AP-15) : chapitre écrit pour une autre saison : confirmation (comme dans Admin → Chroniques).
+        const chapter = (content.chronicles.library || []).find((m) => m.id === libraryId);
+        const warning = chapter ? game.librarySeasonWarning(chapter, monthId) : null;
+        if (warning && !req.confirmSeason) throw new BadRequestError(`${warning} Confirme pour l'utiliser quand même.`);
         let next;
         try {
           next = game.applyLibraryChapter(content.chronicles, libraryId, monthId);

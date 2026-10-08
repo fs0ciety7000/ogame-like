@@ -56,6 +56,20 @@ export function ChronicleGenFields({ rules, setRules }: { rules: GameRules; setR
             onChange={(v) => set({ objectiveWeights: { ...g.objectiveWeights, [k]: v ?? 0 } })}
           />
         ))}
+        <CheckboxField
+          label="Bibliothèque : récompenses rebudgétées"
+          checked={g.libraryRebudget}
+          onChange={(v) => set({ libraryRebudget: v })}
+          hint="Un chapitre écrit repris pour un mois reçoit des récompenses tirées sous le budget ci-dessus (difficulté 1). Décoché : ses récompenses écrites."
+        />
+        <NumberField
+          label="Mois allégés après (mois)"
+          value={g.archiveAfterMonths}
+          min={0}
+          step={1}
+          hint="Scénario et raisons retirés du calendrier, copie entière dans l'archive ; épisodes, sceau, bannière et Codex gardés. 0 : jamais, sinon 3 au moins."
+          onChange={(v) => set({ archiveAfterMonths: Math.max(0, Math.round(v ?? 12)) })}
+        />
         <CheckboxField label="Faction du chapitre selon le thème du passe" checked={g.followPassTheme} onChange={(v) => set({ followPassTheme: v })} hint="Sauf si elle était déjà là le mois précédent." />
         {THEME_ROTATION.map((t) => (
           <SelectField key={t} label={`Thème « ${t} »`} value={g.themeArchetypes[t] ?? factions[0].value} options={factions} onChange={(v) => set({ themeArchetypes: { ...g.themeArchetypes, [t]: v } })} />

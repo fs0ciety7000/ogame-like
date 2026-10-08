@@ -28,7 +28,7 @@ import { LEVIATHAN_KEY } from "@/game/leviathan";
 import { applyLeviathanRecord } from "@/services/leviathanService";
 import { ELITE_KEY } from "@/game/bounties";
 import { applyEliteRecord } from "@/services/bountyService";
-import { SEASON_BOSS_KEY } from "@/game/chronicles";
+import { CHRONICLES_ARCHIVE_KEY, SEASON_BOSS_KEY } from "@/game/chronicles";
 import { applySeasonBossRecord } from "@/services/seasonBossService";
 
 /* =====================================================
@@ -105,7 +105,8 @@ function scheduleRhythmSwitch(records: ConfigRecord[], rhythm: ReturnType<typeof
 }
 
 async function fetchRecords(): Promise<ConfigRecord[]> {
-  return pb.collection("game_config").getFullList<ConfigRecord>();
+  // 6.14.149 (AU27, AP-12) : l'archive des Chroniques (mois allégés, copie entière) n'est pas téléchargée par le jeu.
+  return pb.collection("game_config").getFullList<ConfigRecord>({ filter: `key != "${CHRONICLES_ARCHIVE_KEY}"` });
 }
 
 let started = false;

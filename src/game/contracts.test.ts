@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chestReward, claimContract, CONTRACT_LABELS, CONTRACT_PAGES, CONTRACT_RULES, contractDay, contractWeight, ensureContracts, openContractTypes, recordContract, rerollContract, seededRandom, streakBonus } from "@/game/contracts";
+import { chestReward, claimContract, CONTRACT_LABELS, CONTRACT_PAGES, CONTRACT_RULES, contractDay, contractWeight, ensureContracts, openContractTypes, recordContract, rerollContract, dailyRandom, streakBonus } from "@/game/contracts";
 import { applyGameContent, defaultGameContent, validateGameContent } from "@/game/content";
 import { defensivePower, findFaction, resolvePirateRaid } from "@/game/pirates";
 import { NAV_SHOW_ALL_ON, NAV_UNLOCK_RULES, navMarkId, navPageOpen } from "@/game/navUnlock";
@@ -185,7 +185,7 @@ describe("6.14.109 : objectifs du jour pondérés (AP-L5)", () => {
 
   /** Tirage d'avant la 6.14.109 (uniforme), recopié pour comparaison. */
   function oldDraw(p: PlayerState, now: number): string[] {
-    const rand = seededRandom(`${p.uid}:${contractDay(now)}`);
+    const rand = dailyRandom(`${p.uid}:${contractDay(now)}`);
     // 6.14.131 (AJ27-7) : les types d'après (poids 0 par défaut) ne sont jamais tirés ; le tirage d'avant ne les connaissait pas.
     const pool = openContractTypes(p, now).filter((t) => (ALL as readonly string[]).includes(t));
     const out: string[] = [];

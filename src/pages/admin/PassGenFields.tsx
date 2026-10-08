@@ -61,6 +61,14 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
           onChange={(v) => setRules((r) => ({ ...r, passRewards: { ...passRewards, monthEffort: v ?? 1 } }))}
         />
         <NumberField label="Production au plus par récompense (h)" value={g.productionMaxHours} min={1} step={1} onChange={(v) => set({ productionMaxHours: v ?? 1 })} />
+        <NumberField
+          label="Reste du budget : réparti sur les derniers paliers ordinaires"
+          value={g.remainderTiers}
+          min={1}
+          step={1}
+          hint="En production, sans dépasser le plafond par récompense (6.14.149)."
+          onChange={(v) => set({ remainderTiers: Math.min(29, Math.max(1, Math.round(v ?? 3))) })}
+        />
         <p className="text-xs text-slate-400 sm:col-span-2">
           Aperçu : palier 1 ≈ <span className="font-mono tabular-nums">{fmt(budgets[0])} h</span>, palier 10 ≈ <span className="font-mono tabular-nums">{fmt(budgets[9])} h</span>, palier 29 ≈{" "}
           <span className="font-mono tabular-nums">{fmt(budgets[28])} h</span>.

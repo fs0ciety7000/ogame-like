@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.148 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.149 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 213 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 214 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -249,6 +249,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.146 : Paliers des bâtiments : succès, Codex, Formules, Ctrl+K et icônes (PB-L5) (`docs/changes/6.14.146-paliers-chaine.md`)
 - 6.14.147 : 89 illustrations de /img (saisons, portraits, seconds boss, paliers, doctrines) (`docs/changes/6.14.147-illustrations-saisons-paliers.md`)
 - 6.14.148 : Revue AU28 : fin de la feuille d'automne 2030 (`docs/changes/6.14.148-revue-au28.md`)
+- 6.14.149 : Hygiène des générateurs (R1, AP-L13) (`docs/changes/6.14.149-hygiene-generateurs.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

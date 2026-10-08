@@ -245,3 +245,11 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   Chroniques du même mois (un chapitre écrit à la main est reconnu à son image de repli), et son titre ne revient pas avant 3 mois.
   Réglages : `allianceSaga.followChapter`, `allianceSaga.noRepeatMonths` (Tous les réglages → « Alliance : saga »). Simulation :
   même faction 48/48 mois, 0 titre répété. Fiche : `docs/changes/6.14.148-revue-au28.md`.
+- **Hygiène des générateurs** (6.14.149, revue AU27, AP-L13) : plus de `month.pass` écrit dès novembre 2026 (passe des passes de
+  saison, I17) ; mois de plus de 12 mois allégés (scénario et raisons retirés, épisodes, sceau, bannière et Codex gardés), copie
+  entière dans `chronicles_archive` (ni relue par requête, ni téléchargée par le jeu ; `chronicleGen.archiveAfterMonths`, 0 : jamais) ;
+  reste du budget du passe réparti sur les 3 derniers paliers ordinaires sous `productionMaxHours` (`passGen.remainderTiers`) ;
+  bibliothèque : saison affichée et confirmée hors saison, récompenses rebudgétées (`chronicleGen.libraryRebudget`), titres comptés
+  par le générateur ; boss mondial de la semaine au rang du catalogue entier (un boss désactivé ne décale plus les autres) ;
+  `contracts.seededRandom` renommé `dailyRandom` ; tâche du jour (chapitres, succès, passes) en trois transactions, action admin
+  `tick` (passage complet). Fiche : `docs/changes/6.14.149-hygiene-generateurs.md`.

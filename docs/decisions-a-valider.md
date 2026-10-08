@@ -20,6 +20,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 |:--|:--|:--|:--|
 | Q361 | **Rouge « danger » éclairci** dans 7 thèmes (4,12 → 4,55:1 sur les panneaux), même teinte (`docs/changes/6.14.148-revue-au28.md`) | alertes plus lisibles | valider |
 | Q362 | **Saga d'alliance sur le chapitre du mois** : même faction, boss et image ; titre non répété sur 3 mois ; réglable dans l'admin (`docs/changes/6.14.148-revue-au28.md`) | saga cohérente avec les Chroniques | valider |
+| Q365 | **Chroniques anciennes allégées** (plus de 12 mois) : la croissance ralentit sans s'arrêter (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
+| Q367 | **Rotation des boss** : un boss désactivé laisse sa semaine au suivant ; calendrier inchangé si tous sont actifs (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
 
 ## 3. Récit
 
@@ -32,3 +34,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 |:--|:--|:--|
 | Q363 | Trois opacités laissées volontairement (message masqué, simulateur en raid, filtre des technos) (`docs/changes/6.14.148-revue-au28.md`) | valider |
 | Q364 | Feuille d'hiver 2031 : les 14 lots repris (R1 à R14) passent avant H31-1 (`docs/proposals/feuille-de-route-2031-hiver.md`) | valider |
+| Q366 | Passes de saison anciens (≈ 7 Ko par mois) laissés tels quels : commandants et bannières en dépendent (I43) (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |
+| Q368 | Chapitre de la bibliothèque placé hors de sa saison : confirmation simple de l'admin plutôt qu'un blocage (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |
+| Q369 | Chapitre écrit à la main sans fin de chapitre : pas de fin générée ajoutée (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |

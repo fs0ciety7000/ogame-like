@@ -2,6 +2,7 @@ import { ACHIEVEMENTS, METRICS, paceThreshold, TIER_REWARDS, type AchievementDef
 import {
   chronicleMonthId,
   chronicleOf,
+  chroniclesConfig,
   chronicleState,
   episodeUnlockMs,
   unlockedEpisodes,
@@ -17,6 +18,7 @@ import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassR
 import { actionPlayable, hasActivityData, passGenRules, percentile, type PassPace } from "@/game/passGen";
 import { budgetEpisodeRewards, chronicleGenRules, objectiveWeight } from "@/game/chronicleGen";
 import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
+import { seededRandom } from "@/game/random";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { chooseNovelty, contentToMeasure, hasContentAccess, NOVELTY_RULES, noveltyTexts } from "@/game/novelty";
@@ -94,22 +96,8 @@ export function normalizeProcedural(raw: unknown): ProceduralSettings {
 
 /* ---------- hasard reproductible ---------- */
 
-function hashSeed(text: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
-export function seededRandom(seed: string): () => number {
-  let a = hashSeed(seed);
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// 6.14.149 : le tirage vit dans random.ts (lu aussi par chronicles.ts) ; réexporté ici pour les appelants d'avant.
+export { seededRandom };
 
 const pick = <T>(rng: () => number, xs: readonly T[]): T => xs[Math.floor(rng() * xs.length) % xs.length];
 const fill = (text: string, vars: Record<string, string | number>) => text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
@@ -739,6 +727,8 @@ export interface GenerateOptions {
   /** Mois déjà écrits (pour éviter les répétitions). */
   existing: ChronicleMonth[];
   settings?: Pick<ProceduralSettings, "pass">;
+  /** 6.14.149 (AU27, AP-15) : chapitres de la bibliothèque, dont les titres comptent comme déjà pris (défaut : bibliothèque en vigueur). */
+  library?: ChronicleMonth[];
   now: number;
   /** Change le tirage (bouton « Régénérer »). */
   variant?: number;
@@ -759,7 +749,9 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const themedId = gen.followPassTheme && themeId ? yearArchetypeFor(themeId, catalog?.year ?? 1, gen.themeArchetypes) : undefined;
   const themed = themedId ? archetypes.find((a) => a.id === themedId) : undefined;
   const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
-  const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));
+  // 6.14.149 (AU27, AP-15) : les titres de la bibliothèque comptent aussi (un chapitre écrit repris ne double pas un titre généré).
+  const library = o.library ?? chroniclesConfig().library ?? [];
+  const usedTitles = new Set([...o.existing, ...library].flatMap((m) => [m.title, m.completion?.title ?? "", m.boss?.name ?? ""]));
   // 6.14.137 (AP-L10) : réserve de l'archétype prise seulement quand ses textes ont tous servi (un seul tirage, comme avant).
   const extras = NARRATIVE_RULES.enabled !== false ? NARRATIVE_RULES.archetypeExtras?.[arch.id] : undefined;
   const fresh = (xs: string[], reserve?: string[]) => {
@@ -870,7 +862,9 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     codex,
     auto,
   };
-  if (o.settings?.pass !== false) {
+  // 6.14.149 (AU27, AP-12) : dès le catalogue (novembre 2026), le passe du mois vient des passes de saison (I17) : `month.pass`
+  // n'est plus lu, donc plus écrit (1,4 Ko par mois). Dernier tirage du chapitre : le reste ne change pas.
+  if (o.settings?.pass !== false && o.monthId < CATALOG_START) {
     const prev = activePass(d.monthId).pointsPerTier || PASS_RULES.pointsPerTier;
     const g = generatePass(rng, d, prev);
     month.pass = g.pass;

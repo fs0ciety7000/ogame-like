@@ -43,6 +43,12 @@ export const CHRONICLE_GEN_RULES = {
   stretchMinWeekly: 0.5,
   /** Poids des actions dans les objectifs (0 : jamais). Les raids repoussés n'entrent que si le serveur en repousse. */
   objectiveWeights: { contract: 1, bounty: 1, raidRepelled: 1, victory: 1, mission: 1, spy: 1, market: 1, warlordWin: 1, bossAssault: 0 } as Record<string, number>,
+  /** 6.14.149 (AU27, AP-15) : chapitre repris de la bibliothèque : récompenses des épisodes et du chapitre retirées sous le
+   *  budget ci-dessus (difficulté 1) ; false : récompenses écrites du chapitre gardées telles quelles. */
+  libraryRebudget: true,
+  /** 6.14.149 (AU27, AP-12) : mois de plus de N mois allégés dans le calendrier (scénario, raisons, passe d'avant le
+   *  catalogue retirés ; épisodes, boss, sceau, bannière et Codex gardés), copie entière dans `chronicles_archive`. 0 : jamais. */
+  archiveAfterMonths: 12,
   /** Faction du chapitre selon le thème du passe du mois (identifiants d'archétypes). */
   followPassTheme: true,
   themeArchetypes: {
@@ -88,6 +94,7 @@ export function validateChronicleGenRules(r: ChronicleGenRules | undefined, arch
   if (!(r.objectiveMinFactor > 0 && r.objectiveMinFactor <= r.objectiveMaxFactor)) e.push(`${L} : bornes des quantités min ≤ max.`);
   if (!(r.completionAmber >= 0)) e.push(`${L} : Ambre du chapitre terminé ≥ 0.`);
   if (!(r.stretchMinWeekly >= 0)) e.push(`${L} : médiane du rebondissement ≥ 0.`);
+  if (!(Number.isInteger(r.archiveAfterMonths) && r.archiveAfterMonths >= 0 && (r.archiveAfterMonths === 0 || r.archiveAfterMonths >= 3))) e.push(`${L} : archivage après 0 (jamais) ou au moins 3 mois.`);
   if (Object.values(r.objectiveWeights ?? {}).filter((v) => Number(v) > 0).length < 4) e.push(`${L} : au moins 4 actions autorisées dans les objectifs.`);
   if (archetypeIds.length)
     for (const [theme, a] of Object.entries(r.themeArchetypes ?? {})) if (!archetypeIds.includes(a)) e.push(`${L} : thème ${theme}, faction « ${a} » inconnue.`);

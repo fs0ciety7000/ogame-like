@@ -538,6 +538,7 @@ cronAdd("cosmic_procedural", "29 4 * * *", () => {
     try {
       const out = require(`${__hooks}/cosmic_db.js`).proceduralTick(Date.now());
       if (out.chapters.length + out.achievements.length > 0) console.log(`[cosmic] générateur : ${out.chapters.map((c) => c.id).join(", ") || "aucun chapitre"}, ${out.achievements.length} succès`);
+      if (out.errors && out.errors.length > 0) console.log(`[cosmic] générateur, étapes en échec : ${out.errors.join(" ; ")}`);
     } catch (err) {
       console.log(`[cosmic] générateur : ${err}`);
     }

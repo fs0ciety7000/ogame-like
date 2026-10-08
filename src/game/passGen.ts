@@ -39,6 +39,9 @@ export const PASS_GEN_RULES = {
   caps: { amber: 350, tokens: 6, dossier: 4, capsules: 10 },
   /** Heures de production au plus par récompense. */
   productionMaxHours: 12,
+  /** 6.14.149 (AU27, AP-16) : reste du budget réparti en production sur ce nombre de derniers paliers ordinaires (hors jalons),
+   *  sans dépasser `productionMaxHours` par récompense ; ce qui ne tient pas est abandonné (sous le budget, jamais au-dessus). */
+  remainderTiers: 3,
   /** Poids de tirage des récompenses (0 : jamais). */
   weights: { production: 3, amber: 3, capsule: 2, dossier: 1, tokens: 1 },
   /** Rythme : jour de fin visé pour le joueur médian, et pas avant ce jour pour le plus actif. */
@@ -100,6 +103,7 @@ export function validatePassGenRules(r: PassGenRules | undefined): string[] {
   if (!(r.topPercentile > 0.5 && r.topPercentile <= 1)) e.push(`${L} : centile du plus actif entre 0,5 et 1.`);
   if (!(r.pointsMin >= 1 && r.pointsMin <= r.pointsMax)) e.push(`${L} : points par palier min ≤ max.`);
   if (!(r.productionMaxHours >= 1)) e.push(`${L} : heures de production par récompense ≥ 1.`);
+  if (!(Number.isInteger(r.remainderTiers) && r.remainderTiers >= 1 && r.remainderTiers <= 29)) e.push(`${L} : reste du budget réparti sur 1 à 29 paliers.`);
   for (const [k, v] of Object.entries(r.values ?? {})) if (!(Number(v) > 0)) e.push(`${L} : valeur « ${k} » > 0.`);
   if (!Object.values(r.challengeWeights ?? {}).some((v) => Number(v) > 0)) e.push(`${L} : au moins une action dans les défis.`);
   if (!(r.challengeMinFactor > 0 && r.challengeMinFactor <= r.challengeMaxFactor)) e.push(`${L} : bornes du rythme des défis min ≤ max.`);
@@ -147,6 +151,32 @@ export function tierBudgets(tiers: number, rules: PassGenRules = passGenRules())
   const w = Array.from({ length: n }, (_, i) => (1 + (rules.curve * i) / Math.max(1, n - 1)) * (rules.milestones.includes(i + 1) ? rules.milestoneBoost : 1));
   const total = w.reduce((a, b) => a + b, 0);
   return w.map((x) => (rules.budgetHours * x) / total);
+}
+
+/** 6.14.149 (AU27, AP-16) : reste du budget en production, réparti sur les `remainderTiers` derniers paliers ordinaires (hors
+ *  jalons ; tous les paliers s'il n'y a que des jalons), sans qu'une récompense dépasse `productionMaxHours`. Avant : tout le
+ *  reste sur le dernier palier (jusqu'à 20 h au palier 29). Ce qui ne tient pas sous le plafond est abandonné. */
+export function spreadRemainder(out: PassReward[][], carry: number, rules: PassGenRules = passGenRules()): void {
+  let left = Math.round(carry);
+  if (left < 1 || out.length === 0) return;
+  const ordinary = out.map((_, i) => i).filter((i) => !rules.milestones.includes(i + 1));
+  const pool = (ordinary.length > 0 ? ordinary : out.map((_, i) => i)).slice(-Math.max(1, Math.floor(rules.remainderTiers ?? 3))).reverse();
+  const cap = Math.max(1, rules.productionMaxHours);
+  // Parts égales (les derniers paliers d'abord pour l'arrondi), puis ce qui reste sous le plafond.
+  const share = pool.map((_, k) => Math.floor(left / pool.length) + (k < left % pool.length ? 1 : 0));
+  for (let pass = 0; pass < 2 && left > 0; pass++) {
+    pool.forEach((i, k) => {
+      if (left <= 0) return;
+      const tier = out[i];
+      const prod = tier.find((r): r is Extract<PassReward, { kind: "production" }> => r.kind === "production");
+      const room = cap - (prod ? prod.hours : 0);
+      const add = Math.min(left, room, pass === 0 ? share[k] : left);
+      if (add < 1) return;
+      if (prod) prod.hours += add;
+      else tier.push({ kind: "production", hours: add });
+      left -= add;
+    });
+  }
 }
 
 /** Paliers 1 à tiers − 1 tirés sous budget ; le dernier est laissé vide (rempli par l'appelant). */
@@ -227,13 +257,7 @@ export function generateBudgetTiers(rng: () => number, tiers = 30, rules: PassGe
     prev = (list.find((r) => r.kind !== "relic")?.kind as PassGenKind | undefined) ?? prev;
     out.push(list);
   }
-  // Reste du budget : en production sur le dernier palier ordinaire.
-  if (carry >= 0.5 && out.length > 0) {
-    const last = out[out.length - 1];
-    const prod = last.find((r): r is Extract<PassReward, { kind: "production" }> => r.kind === "production");
-    if (prod) prod.hours += Math.round(carry);
-    else last.push({ kind: "production", hours: Math.round(carry) });
-  }
+  spreadRemainder(out, carry, rules);
   out.push([]);
   const total = tiersValue(out, rules);
   return {

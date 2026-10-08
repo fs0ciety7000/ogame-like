@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { currentGameContent } from "@/game/content";
-import { chronicleMonthId, applyLibraryChapter, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, objectiveLabel, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { chronicleMonthId, applyLibraryChapter, CHAPTER_SEASON_LABELS, librarySeason, librarySeasonWarning, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, objectiveLabel, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
 import { CODEX_CATEGORIES } from "@/game/codex";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
@@ -275,7 +275,8 @@ function LibrarySection({ cfg, onUse }: { cfg: ChroniclesConfig; onUse: (library
       <p className="hud-title text-sm text-slate-100">Bibliothèque des chapitres écrits</p>
       <p className="text-xs text-slate-400">
         Les mois sont écrits par le générateur (Admin → Générateur). Un chapitre écrit à la main peut remplacer le chapitre d'un mois : choisis le
-        mois, puis enregistre.
+        mois, puis enregistre. Ses récompenses sont tirées sous le budget des chapitres générés (Règles → Chroniques générées), et ses titres
+        ne sont jamais repris par le générateur.
       </p>
       <ul className="flex flex-col gap-1.5">
         {library.map((m) => (
@@ -283,6 +284,7 @@ function LibrarySection({ cfg, onUse }: { cfg: ChroniclesConfig; onUse: (library
             <span className="min-w-0 flex-1 truncate text-slate-200">
               {m.title} <span className="text-slate-500">· {m.boss.name}</span>
             </span>
+            {librarySeason(m) && <Badge>{CHAPTER_SEASON_LABELS[librarySeason(m)!]}</Badge>}
             <input
               aria-label={`Mois pour ${m.title}`}
               className="hud-cut-sm w-24 border border-cyan-glow/15 bg-space-900/80 px-2 py-1 font-mono text-xs tabular-nums text-slate-100"
@@ -293,12 +295,15 @@ function LibrarySection({ cfg, onUse }: { cfg: ChroniclesConfig; onUse: (library
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => {
+              onClick={async () => {
                 const monthId = (targets[m.id] ?? m.id).trim();
                 if (!/^\d{4}-\d{2}$/.test(monthId)) {
                   toast.error("Mois invalide (AAAA-MM).");
                   return;
                 }
+                // 6.14.149 (AP-15) : saison du chapitre différente de celle du mois visé : confirmation.
+                const warning = librarySeasonWarning(m, monthId);
+                if (warning && !(await askConfirm({ title: "Chapitre hors saison", message: warning, confirmLabel: "Utiliser quand même" }))) return;
                 onUse(m.id, monthId);
               }}
             >

@@ -7,6 +7,8 @@ import { computeFullPower } from "@/game/combat";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import { leviathanRanking, seasonBossCooldownHours, type LeviathanState } from "@/game/leviathan";
 import type { StoryLine } from "@/game/story";
+import { budgetEpisodeRewards, chronicleGenRules } from "@/game/chronicleGen";
+import { seededRandom } from "@/game/random";
 import type { PlayerState } from "@/types/game";
 import { isStaticObjective, isTrackedObjective, onTrackedAction, type TrackedKey } from "@/game/trackedActions";
 
@@ -90,6 +92,8 @@ export interface ChronicleMonth {
   /** v5.4 : passe propre à ce mois (sinon le passe commun). */
   pass?: MonthPass;
   auto?: ChapterAuto;
+  /** 6.14.149 (AU27, AP-12) : mois allégé (copie entière dans `chronicles_archive`), instant de l'allègement. */
+  archivedAtMs?: number;
 }
 
 /** 5.15.11 : bonus versé à chaque épisode terminé, et à la fin du chapitre (tous les mois). */
@@ -762,12 +766,51 @@ export function chronicleReadyCount(player: Pick<PlayerState, "chronicle">, now:
   return month.episodes.filter((e, i) => i < open && !st.claimed.includes(i) && (st.progress[i] ?? 0) >= e.objective.count).length;
 }
 
-/** 6.8.0 : reprend un chapitre de la bibliothèque pour un mois (remplace le chapitre généré de ce mois). */
+export type ChapterSeason = "hiver" | "printemps" | "ete" | "automne";
+
+export const CHAPTER_SEASON_LABELS: Record<ChapterSeason, string> = { hiver: "Hiver", printemps: "Printemps", ete: "Été", automne: "Automne" };
+
+/** 6.14.149 (AU27, AP-15) : saison d'un mois (AAAA-MM) : hiver de décembre à février, printemps de mars à mai, etc. */
+export function monthSeason(monthId: string): ChapterSeason | null {
+  const m = /^\d{4}-(\d{2})$/.exec(monthId);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (n < 1 || n > 12) return null;
+  return n === 12 || n <= 2 ? "hiver" : n <= 5 ? "printemps" : n <= 8 ? "ete" : "automne";
+}
+
+/** 6.14.149 : saison pour laquelle un chapitre de la bibliothèque a été écrit (celle du mois de son identifiant). */
+export function librarySeason(chapter: Pick<ChronicleMonth, "id">): ChapterSeason | null {
+  return monthSeason(chapter.id);
+}
+
+/** 6.14.149 : avertissement si un chapitre écrit pour une saison est placé sur un mois d'une autre (null : rien à signaler). */
+export function librarySeasonWarning(chapter: Pick<ChronicleMonth, "id" | "title">, monthId: string): string | null {
+  const from = librarySeason(chapter);
+  const to = monthSeason(monthId);
+  if (!from || !to || from === to) return null;
+  const forSeason: Record<ChapterSeason, string> = { hiver: "l'hiver", printemps: "le printemps", ete: "l'été", automne: "l'automne" };
+  const inSeason: Record<ChapterSeason, string> = { hiver: "en hiver", printemps: "au printemps", ete: "en été", automne: "en automne" };
+  return `« ${chapter.title} » est écrit pour ${forSeason[from]}, et ${monthId} tombe ${inSeason[to]} : ses textes peuvent sonner faux.`;
+}
+
+/** 6.8.0 : reprend un chapitre de la bibliothèque pour un mois (remplace le chapitre généré de ce mois).
+ *  6.14.149 (AU27, AP-15) : récompenses des épisodes et du chapitre retirées sous le budget en vigueur (difficulté 1, graine du
+ *  mois : même résultat sur le client et le serveur), sauf `chronicleGen.libraryRebudget` à false ; le chapitre reste dans la
+ *  bibliothèque (réutilisable), sa saison est signalée par `librarySeasonWarning`. */
 export function applyLibraryChapter(cfg: ChroniclesConfig, libraryId: string, monthId: string): ChroniclesConfig {
   const src = (cfg.library ?? []).find((m) => m.id === libraryId);
   if (!src) throw new Error(`Chapitre « ${libraryId} » absent de la bibliothèque.`);
   const month: ChronicleMonth = { ...structuredClone(src), id: monthId };
   delete month.auto;
+  delete month.archivedAtMs;
+  const gen = chronicleGenRules();
+  if (gen.enabled && gen.libraryRebudget !== false && Array.isArray(month.episodes) && month.episodes.length === 4) {
+    const difficulty = 1;
+    const rewards = budgetEpisodeRewards(seededRandom(`library-rewards:${monthId}:${libraryId}`), difficulty, gen);
+    month.episodes = month.episodes.map((e, i) => ({ ...e, reward: rewards[i] ?? [] }));
+    if (month.completion) month.completion = { ...month.completion, rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] };
+  }
   return { ...cfg, months: [...cfg.months.filter((m) => m.id !== monthId), month].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) };
 }
 
@@ -781,3 +824,36 @@ export function moveWrittenToLibrary(cfg: Partial<ChroniclesConfig>, now: number
   const library = [...(cfg.library ?? []).filter((l) => !moving.some((m) => m.id === l.id)), ...moving];
   return { ...cfg, months: months.filter((m) => !moving.includes(m)), library };
 }
+
+/** 6.14.149 (AU27, AP-12) : mois de plus de `keepMonths` mois (avant le mois en cours, heure de Paris) allégés dans le calendrier :
+ *  scénario (`synopsis`) et raisons du générateur retirés, `pass` retiré dès le catalogue (plus lu depuis I17 ; gardé avant,
+ *  `activePass` le lit encore pour octobre 2026 et avant). Épisodes, boss, sceau, bannière, titre de fin et fiches de Codex
+ *  restent (Codex, sceaux, bannières et anti-répétition des titres les lisent). Les mois allégés reviennent en copie entière
+ *  dans `archived`, à ajouter à `chronicles_archive`. null : rien à alléger (ou `keepMonths` à 0). */
+export function archiveOldMonths(cfg: ChroniclesConfig, now: number, keepMonths: number): { cfg: ChroniclesConfig; archived: ChronicleMonth[] } | null {
+  const keep = Math.floor(Number(keepMonths) || 0);
+  if (keep <= 0) return null;
+  const [y, m] = chronicleMonthId(now).split("-").map(Number);
+  const k = y * 12 + (m - 1) - keep;
+  const cutoff = `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, "0")}`;
+  const old = (cfg.months ?? []).filter((x) => x && x.id < cutoff && !x.archivedAtMs);
+  if (old.length === 0) return null;
+  const slim = (x: ChronicleMonth): ChronicleMonth => {
+    const out: ChronicleMonth = { ...x, archivedAtMs: now };
+    delete out.synopsis;
+    if (x.id >= GENERATED_CHAPTERS_FROM) delete out.pass;
+    if (x.auto) out.auto = { ...x.auto, reasons: [] };
+    return out;
+  };
+  return { cfg: { ...cfg, months: cfg.months.map((x) => (old.includes(x) ? slim(x) : x)) }, archived: old.map((x) => structuredClone(x)) };
+}
+
+/** 6.14.149 : ajoute des mois à l'archive (`chronicles_archive`, hors contenu appliqué), sans doublon (le plus récent gagne). */
+export function mergeChronicleArchive(archive: { months?: ChronicleMonth[] } | null | undefined, months: ChronicleMonth[]): { months: ChronicleMonth[] } {
+  const prev = Array.isArray(archive?.months) ? archive!.months : [];
+  const ids = new Set(months.map((x) => x.id));
+  return { months: [...prev.filter((x) => x && !ids.has(x.id)), ...months].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)) };
+}
+
+/** 6.14.149 : clé `game_config` de l'archive des Chroniques (hors `CONTENT_SECTIONS` : jamais appliquée ni relue par requête). */
+export const CHRONICLES_ARCHIVE_KEY = "chronicles_archive";

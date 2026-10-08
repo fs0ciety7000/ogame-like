@@ -20,7 +20,7 @@ technologie (+10 attaque et défense par niveau, 6.6). « Relancer » une prime 
 ## Boss
 | Boss | Rythme | Points de structure |
 |:--|:--|:--|
-| Boss mondiaux (6 en rotation : Léviathan, Matriarche, Titan de rouille, Spectre du Chœur, Cométophage, Abyssal) | hebdo, 72 h | 4 × puissance d'attaque des actifs |
+| Boss mondiaux (6 en rotation : Léviathan, Matriarche, Titan de rouille, Spectre du Chœur, Cométophage, Abyssal ; 6.14.149 : semaine au rang du catalogue entier, un boss désactivé laisse sa semaine au suivant activé sans décaler les autres) | hebdo, 72 h | 4 × puissance d'attaque des actifs |
 | Boss de saison (chronique) | mardi 18 h, 48 h (6.7) : dernier mardi du mois si le boss mondial est mensuel, sinon chaque mardi libre entre deux boss mondiaux | réglable |
 | Boss d'alliance | appelé (3 h de production), 24 h | 2,5 × puissance des membres |
 Phases : riposte sous 50 %, bouclier et faiblesse sous 25 %. Pertes 8 % par assaut (réparables).

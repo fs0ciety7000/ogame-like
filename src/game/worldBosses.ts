@@ -257,10 +257,21 @@ export function worldBossDay(week: number, minGap = WORLD_BOSS_RULES.minGapDays)
   return days[week];
 }
 
-/** Boss de la semaine n : rotation des six. */
+/** Boss de la semaine n : rotation dans l'ordre fixe du catalogue (boss du code, puis ceux ajoutés dans l'admin).
+ *  6.14.149 (AU27, AP-13) : le rang de la semaine se lit dans le catalogue entier, désactivés compris ; un boss désactivé
+ *  laisse sa semaine au suivant activé. Avant : rang dans la liste des seuls boss activés, si bien que désactiver un boss
+ *  réécrivait tout le calendrier (passé compris). Catalogue entièrement activé (par défaut) : calendrier identique. */
 export function worldBossOfWeek(week: number): WorldBossDef {
-  const list = activeWorldBosses();
-  return list[((week % list.length) + list.length) % list.length];
+  const all = WORLD_BOSSES.length > 0 ? WORLD_BOSSES : DEFAULT_WORLD_BOSSES;
+  const n = all.length;
+  const start = ((week % n) + n) % n;
+  const own = all[start];
+  if (own.enabled !== false) return own;
+  // Semaine d'un boss désactivé : le suivant activé dans l'ordre, sauf ceux des semaines voisines (pas deux fois de suite).
+  const near = [all[(start + n - 1) % n], all[(start + 1) % n]].filter((b) => b.enabled !== false).map((b) => b.id);
+  const on: WorldBossDef[] = [];
+  for (let k = 1; k < n; k++) if (all[(start + k) % n].enabled !== false) on.push(all[(start + k) % n]);
+  return on.find((b) => !near.includes(b.id)) ?? on[0] ?? activeWorldBosses()[0];
 }
 
 /** Semaine (depuis la référence) d'un instant exprimé en heure locale de Paris. */

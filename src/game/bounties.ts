@@ -11,7 +11,7 @@ import { addRelic, relicLabel, rollRelic } from "@/game/relics";
 import { addPassPoints } from "@/game/seasonPass";
 import { getRepairPercent, withMissingBuildings } from "@/game/buildings";
 import { COMBAT_RULES, combatLogOf, computeFleetPower, computeFullPower, pveAttackFactor, resolveCombat, type CombatResult } from "@/game/combat";
-import { contractDay, seededRandom } from "@/game/contracts";
+import { contractDay, dailyRandom } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
 import { flushState, type NewNotification } from "@/game/flush";
 import { formatHours, formatInt, formatPct } from "@/game/format";
@@ -312,7 +312,7 @@ export function boardTiers(rank: number): BountyTier[] {
 
 /** Contrats d'un créneau : mêmes tirages côté client et serveur. */
 export function generateBoard(uid: string, slot: number, rank: number, exclude: number[] = []): BountyContract[] {
-  const rand = seededRandom(`${uid}:bounty:${slot}`);
+  const rand = dailyRandom(`${uid}:bounty:${slot}`);
   const used = new Set(exclude);
   const count = bountyFugitives().length;
   return boardTiers(rank).map((tier, i) => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { applyGameContent, currentGameContent, validateGameContent } from "@/game/content";
 import { contentChainGaps } from "@/game/contentChain";
-import { seededRandom } from "@/game/contracts";
+import { dailyRandom } from "@/game/contracts";
 import { defaultPlayerState } from "@/game/defaults";
 import { effectImpactReport } from "@/game/impact";
 import {
@@ -90,17 +90,17 @@ describe("6.14.133 : plans de module signature", () => {
 
   it("tirage : un plan rare ou mieux sort parfois signature, jamais un commun ; chance nulle : le tirage d'avant", () => {
     SIGNATURE_MODULE_RULES.chance = 1;
-    const sig = rollModulePlan("test", NOW, seededRandom("a"), "rare");
+    const sig = rollModulePlan("test", NOW, dailyRandom("a"), "rare");
     expect(sig.template.startsWith(SIGNATURE_PREFIX)).toBe(true);
     for (let i = 0; i < 50; i++) {
-      const p = rollModulePlan("test", NOW, seededRandom(`c${i}`), "common");
+      const p = rollModulePlan("test", NOW, dailyRandom(`c${i}`), "common");
       if (p.rarity === "common") expect(p.template.startsWith(SIGNATURE_PREFIX)).toBe(false);
     }
     // Chance nulle : même rareté, même modèle, même identifiant qu'un tirage sans plans signature (aucun appel en plus).
     SIGNATURE_MODULE_RULES.chance = 0;
     for (let i = 0; i < 50; i++) {
-      const a = rollModulePlan("test", NOW, seededRandom(`z${i}`), "rare");
-      const rand = seededRandom(`z${i}`);
+      const a = rollModulePlan("test", NOW, dailyRandom(`z${i}`), "rare");
+      const rand = dailyRandom(`z${i}`);
       const pool = MODULE_RARITIES.slice(1);
       let roll = rand() * pool.reduce((s, r) => s + r.weight, 0);
       let rarity = pool[pool.length - 1].id;
@@ -148,7 +148,7 @@ describe("6.14.133 : reliques par source (AJ-11, Q67)", () => {
   it("une relique tombe × 3 plus souvent depuis sa source (Trophée de seigneur en vendetta)", () => {
     const count = (source: string) => {
       let n = 0;
-      for (let i = 0; i < 8000; i++) if (rollRelic(source, NOW, seededRandom(`r${i}`)).template === "trophee_seigneur") n++;
+      for (let i = 0; i < 8000; i++) if (rollRelic(source, NOW, dailyRandom(`r${i}`)).template === "trophee_seigneur") n++;
       return n / 8000;
     };
     const fromWarlord = count("vendetta:x");
@@ -174,15 +174,15 @@ describe("6.14.133 : reliques par source (AJ-11, Q67)", () => {
       const templates = RELICS.filter((t) => !t.disabled && !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
       return templates[Math.floor(rand() * templates.length) % templates.length].id;
     };
-    for (let i = 0; i < 200; i++) expect(rollRelic("admin", NOW, seededRandom(`o${i}`)).template).toBe(old(seededRandom(`o${i}`)));
+    for (let i = 0; i < 200; i++) expect(rollRelic("admin", NOW, dailyRandom(`o${i}`)).template).toBe(old(dailyRandom(`o${i}`)));
     RELIC_SOURCE_RULES.enabled = false;
-    for (let i = 0; i < 200; i++) expect(rollRelic("vendetta:x", NOW, seededRandom(`v${i}`)).template).toBe(old(seededRandom(`v${i}`)));
+    for (let i = 0; i < 200; i++) expect(rollRelic("vendetta:x", NOW, dailyRandom(`v${i}`)).template).toBe(old(dailyRandom(`v${i}`)));
   });
 
   it("poids 0 : jamais tirée au hasard ; liste enregistrée avant 6.14.133 : reprend les sources livrées, une liste vide est gardée", () => {
     const settings = defaultRelicSettings();
     setRelics(DEFAULT_RELICS.map((t) => (t.id === "soute_pliee" ? { ...t, weight: 0 } : t)), settings);
-    for (let i = 0; i < 2000; i++) expect(rollRelic("expedition", NOW, seededRandom(`w${i}`)).template).not.toBe("soute_pliee");
+    for (let i = 0; i < 2000; i++) expect(rollRelic("expedition", NOW, dailyRandom(`w${i}`)).template).not.toBe("soute_pliee");
     setRelics(
       DEFAULT_RELICS.map((t) => {
         const { sources: _s, ...rest } = t;

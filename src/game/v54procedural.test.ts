@@ -50,7 +50,9 @@ describe("v5.4 générateur de chapitres", () => {
     expect(a.completion?.title).toBeTruthy();
     expect(a.codex).toHaveLength(2);
     expect(a.codex![1].text).toContain("Tartiflex");
-    expect(a.pass?.tiers).toHaveLength(30);
+    // 6.14.149 (AP-12) : dès le catalogue (novembre 2026), plus de passe du chapitre (le passe vient des passes de saison).
+    expect(a.pass).toBeUndefined();
+    expect(generateChapter({ ...opts, monthId: "2026-10" }).pass?.tiers).toHaveLength(30);
     // Le contenu généré passe la validation de l'administration.
     const content = currentGameContent();
     content.chronicles.months.push(a);
@@ -67,8 +69,11 @@ describe("v5.4 générateur de chapitres", () => {
     const hard = generateChapter({ monthId: "2027-04", digest: digest({ episodes: digest().episodes.map((e) => ({ ...e, completion: 0.1 })), passFinishedShare: 0.02, passMedianTier: 4 }), existing: [], now: APR_02 });
     expect(easy.auto!.difficulty).toBeGreaterThan(1);
     expect(hard.auto!.difficulty).toBeLessThan(1);
-    expect(easy.pass!.pointsPerTier).toBeGreaterThan(PASS_RULES.pointsPerTier);
-    expect(hard.pass!.pointsPerTier).toBeLessThan(PASS_RULES.pointsPerTier);
+    // Passe du chapitre : seulement avant le catalogue (6.14.149), donc mesuré sur octobre 2026.
+    const easyPass = generateChapter({ monthId: "2026-10", digest: digest(), existing: [], now: APR_02 }).pass!;
+    const hardPass = generateChapter({ monthId: "2026-10", digest: digest({ episodes: digest().episodes.map((e) => ({ ...e, completion: 0.1 })), passFinishedShare: 0.02, passMedianTier: 4 }), existing: [], now: APR_02 }).pass!;
+    expect(easyPass.pointsPerTier).toBeGreaterThan(PASS_RULES.pointsPerTier);
+    expect(hardPass.pointsPerTier).toBeLessThan(PASS_RULES.pointsPerTier);
     // Missions : médiane 10 par semaine → l'objectif suit l'activité réelle.
     const mission = easy.episodes.find((e) => e.objective.type === "mission");
     if (mission) expect(mission.objective.count).toBeGreaterThanOrEqual(10);
@@ -126,7 +131,8 @@ describe("v5.4 chapitre généré en jeu", () => {
   it("6.8.0 : un seul passe par mois — dès novembre 2026, le passe du chapitre n'est plus lu (passe de saison ou passe commun)", () => {
     withGenerated();
     const month = chroniclesConfig().months.find((m) => m.id === "2027-04")!;
-    expect(month.pass).toBeTruthy();
+    // 6.14.149 (AP-12) : plus écrit du tout dès le catalogue.
+    expect(month.pass).toBeUndefined();
     expect(activePass("2027-04").pointsPerTier).toBe(PASS_RULES.pointsPerTier);
     const now = Date.UTC(2027, 3, 25, 12);
     const p = player("Delta", now);

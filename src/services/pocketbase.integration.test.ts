@@ -3204,7 +3204,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const months = (await find())!.data.months as { id: string; auto?: unknown; pass?: { tiers: unknown[] } }[];
       const month = months.find((m) => m.id === "2031-04")!;
       expect(month.auto).toBeTruthy();
-      expect(month.pass?.tiers).toHaveLength(30);
+      // 6.14.149 (AP-12) : dès le catalogue, le passe vient des passes de saison : plus de `month.pass`.
+      expect(month.pass).toBeUndefined();
       await expect(admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2026-10" } })).rejects.toMatchObject({ status: 400 });
     } finally {
       const now = await find();
@@ -3267,6 +3268,52 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     } finally {
       for (const [key, rec] of [["passSeasons", keep.passes], ["chronicles", keep.chronicles], ["procedural", keep.procedural]] as const) {
         const cur = await cfg(key);
+        if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
+    }
+  });
+
+  it("6.14.149 (AP-12, AP-16) : tâche du jour en trois étapes, mois anciens allégés et archivés, reste de la configuration gardé", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keys = ["chronicles", "chronicles_archive", "procedural", "passSeasons", "achievements"] as const;
+    const keep: Record<string, Awaited<ReturnType<typeof cfg>>> = {};
+    for (const k of keys) keep[k] = await cfg(k);
+    const put = async (key: string, data: unknown) => {
+      const rec = await cfg(key);
+      if (rec) await admin.collection("game_config").update(rec.id, { data });
+      else await admin.collection("game_config").create({ key, data });
+    };
+    const now = Date.now();
+    const digest = worldDigest([], now);
+    const oldId = "2024-03";
+    const old = generateChapter({ monthId: oldId, digest, existing: [], now });
+    const bonus = { episode: { tokens: 4, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
+    const chronicles = { ...defaultGameContent().chronicles, bonus };
+    try {
+      await put("chronicles", { ...chronicles, months: [old, ...chronicles.months] });
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "tick" } });
+      expect(out.errors).toEqual([]);
+      expect(out.archived).toContain(oldId);
+      const after = (await cfg("chronicles"))!.data as typeof chronicles;
+      const slim = after.months.find((m) => m.id === oldId)!;
+      expect(slim.archivedAtMs).toBeGreaterThan(0);
+      expect(slim.synopsis).toBeUndefined();
+      expect(slim.episodes).toEqual(JSON.parse(JSON.stringify(old.episodes)));
+      expect(slim.codex).toEqual(JSON.parse(JSON.stringify(old.codex)));
+      expect(after.bonus).toEqual(bonus);
+      expect(after.library).toEqual(JSON.parse(JSON.stringify(chronicles.library)));
+      const archive = (await cfg("chronicles_archive"))!.data as { months: { id: string; synopsis?: string }[] };
+      expect(archive.months.find((m) => m.id === oldId)?.synopsis).toBe(old.synopsis);
+      // Deuxième passage : rien de plus à archiver.
+      const again = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "tick" } });
+      expect(again.archived).toEqual([]);
+      const log = (await cfg("procedural"))!.data as { log: { text: string }[] };
+      expect(log.log.some((l) => /allégé/.test(l.text))).toBe(true);
+    } finally {
+      for (const k of keys) {
+        const rec = keep[k];
+        const cur = await cfg(k);
         if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
         else if (cur) await admin.collection("game_config").delete(cur.id);
       }

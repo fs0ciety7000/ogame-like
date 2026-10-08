@@ -282,8 +282,10 @@ function previousDay(day: string): string {
   return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS);
 }
 
-/** Hachage déterministe (uid + jour) : mêmes contrats sur le client et le serveur. */
-export function seededRandom(seed: string) {
+/** Hachage déterministe (uid + jour) : mêmes contrats sur le client et le serveur.
+ *  6.14.149 (AU27, AP-13) : ex-`seededRandom` de contracts.ts, renommé pour ne plus porter le nom du tirage des générateurs
+ *  (`procedural.seededRandom`, autre algorithme). Même algorithme, mêmes graines : aucun tirage ne change, rien n'est stocké. */
+export function dailyRandom(seed: string) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
   return () => {
@@ -327,7 +329,7 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
     // 6.2 : bascule de 3 à 4 objectifs dans la journée, sans rien retirer.
     if (current.items.length < CONTRACT_RULES.perDay) {
       const used = new Set(current.items.map((c) => c.type));
-      const rand = seededRandom(`${player.uid}:${day}:extra`);
+      const rand = dailyRandom(`${player.uid}:${day}:extra`);
       const pool = drawableTypes(player, now).filter((t) => !used.has(t));
       while (current.items.length < CONTRACT_RULES.perDay && pool.length > 0) {
         const type = pool.splice(drawIndex(pool, rand), 1)[0];
@@ -337,7 +339,7 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
     return current;
   }
 
-  const rand = seededRandom(`${player.uid}:${day}`);
+  const rand = dailyRandom(`${player.uid}:${day}`);
   // I31 : un nouveau jour ne tire que parmi les systèmes ouverts (4 types toujours ouverts : le compte est plein dès J0).
   // 6.14.109 (AP-L5) : et parmi les types de poids > 0, au prorata de leur poids (poids égaux : tirage d'avant).
   const pool = drawableTypes(player, now);
@@ -449,7 +451,7 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
   // I31 : la relance est un nouveau tirage, parmi les systèmes ouverts ; sans autre objectif ouvert, elle reste disponible.
   const pool = drawableTypes(player, now).filter((t) => !used.has(t));
   if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const rand = dailyRandom(`${player.uid}:${state.day}:reroll`);
   const type = pool[drawIndex(pool, rand)];
   const next = makeContract(type, player, state.day, index, rand);
   next.id = `${state.day}-${index}-${type}-r`;

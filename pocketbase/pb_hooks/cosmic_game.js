@@ -87,6 +87,7 @@ __export(hooksEntry_exports, {
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   CHAT_MODERATION_KEYS: () => CHAT_MODERATION_KEYS,
   CHAT_ROOM_RULES: () => CHAT_ROOM_RULES,
+  CHRONICLES_ARCHIVE_KEY: () => CHRONICLES_ARCHIVE_KEY,
   COALITION_RULES: () => COALITION_RULES,
   CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
@@ -222,6 +223,7 @@ __export(hooksEntry_exports, {
   applyStaffTitle: () => applyStaffTitle,
   applyStaffUpdate: () => applyStaffUpdate,
   archiveCoalition: () => archiveCoalition,
+  archiveOldMonths: () => archiveOldMonths,
   ascendantRelic: () => ascendantRelic,
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
@@ -286,6 +288,7 @@ __export(hooksEntry_exports, {
   checkScan: () => checkScan,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
   chestShieldCost: () => chestShieldCost,
+  chronicleGenRules: () => chronicleGenRules,
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
   claimChallengeReward: () => claimChallengeReward,
@@ -454,6 +457,7 @@ __export(hooksEntry_exports, {
   leviathanRanking: () => leviathanRanking,
   leviathanSchedule: () => leviathanSchedule,
   leviathanWindow: () => leviathanWindow,
+  librarySeasonWarning: () => librarySeasonWarning,
   linkReferrer: () => linkReferrer,
   linkedAuctionReasons: () => linkedAuctionReasons,
   lootTokensThisWeek: () => lootTokensThisWeek,
@@ -465,6 +469,7 @@ __export(hooksEntry_exports, {
   markGateSave: () => markGateSave,
   markJump: () => markJump,
   markScan: () => markScan,
+  mergeChronicleArchive: () => mergeChronicleArchive,
   mergeDebris: () => mergeDebris,
   missionRewardFactor: () => missionRewardFactor,
   missionXpCeiling: () => missionXpCeiling,
@@ -1121,8 +1126,16 @@ function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
   return days[week];
 }
 function worldBossOfWeek(week) {
-  const list = activeWorldBosses();
-  return list[(week % list.length + list.length) % list.length];
+  var _a, _b;
+  const all = WORLD_BOSSES.length > 0 ? WORLD_BOSSES : DEFAULT_WORLD_BOSSES;
+  const n = all.length;
+  const start = (week % n + n) % n;
+  const own = all[start];
+  if (own.enabled !== false) return own;
+  const near = [all[(start + n - 1) % n], all[(start + 1) % n]].filter((b) => b.enabled !== false).map((b) => b.id);
+  const on = [];
+  for (let k = 1; k < n; k++) if (all[(start + k) % n].enabled !== false) on.push(all[(start + k) % n]);
+  return (_b = (_a = on.find((b) => !near.includes(b.id))) != null ? _a : on[0]) != null ? _b : activeWorldBosses()[0];
 }
 function weekOfLocal(localMs) {
   return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY));
@@ -10930,6 +10943,395 @@ function endingReminderDue(state, now) {
   return !!state && isActive(state, now) && !state.endingNotified && state.endMs - now <= BOSS_REMINDERS.endingHours * HOUR4;
 }
 
+// src/game/passGen.ts
+var PASS_GEN_RULES = {
+  /** false : ancien gabarit fixe des récompenses (points par palier toujours calculés). */
+  enabled: true,
+  /** Valeur des paliers 1 à 29, en heures de production équivalentes. */
+  budgetHours: 140,
+  /** Le dernier palier ordinaire vaut (1 + courbe) fois le premier. */
+  curve: 2,
+  /** Paliers jalons : valeur multipliée, deux récompenses. */
+  milestones: [5, 10, 15, 20, 25],
+  milestoneBoost: 2.5,
+  /** Reliques données aux paliers indiqués (comptées dans le budget). */
+  rareRelicTiers: [20],
+  epicRelicTiers: [],
+  /** Valeur d'une unité, en heures de production (1 h de production = 1). */
+  values: { amber: 0.1, tokens: 1, dossier: 3, capsule3: 2, capsule4: 3, capsule5: 4, relicRare: 10, relicEpic: 20 },
+  /** Plafonds du mois (paliers 1 à 29). */
+  caps: { amber: 350, tokens: 6, dossier: 4, capsules: 10 },
+  /** Heures de production au plus par récompense. */
+  productionMaxHours: 12,
+  /** 6.14.149 (AU27, AP-16) : reste du budget réparti en production sur ce nombre de derniers paliers ordinaires (hors jalons),
+   *  sans dépasser `productionMaxHours` par récompense ; ce qui ne tient pas est abandonné (sous le budget, jamais au-dessus). */
+  remainderTiers: 3,
+  /** Poids de tirage des récompenses (0 : jamais). */
+  weights: { production: 3, amber: 3, capsule: 2, dossier: 1, tokens: 1 },
+  /** Rythme : jour de fin visé pour le joueur médian, et pas avant ce jour pour le plus actif. */
+  targetMedianDay: 24,
+  targetTopDay: 15,
+  /** Le joueur médian doit finir au plus tard ce jour, quitte à laisser le plus actif finir plus tôt. */
+  latestMedianDay: 28,
+  /** « Plus actif » : ce centile des points par jour (0,9 = 9e décile). */
+  topPercentile: 0.9,
+  pointsMin: 25,
+  pointsMax: 200,
+  /** Poids des actions dans les défis des paliers (0 : jamais). */
+  challengeWeights: { victory: 1, contract: 1, spy: 1, market: 1, bounty: 1, warlordWin: 1, bossAssault: 0.5, raidRepelled: 0, mission: 0 },
+  /** Actions que le joueur ne déclenche pas à volonté : seulement si la médiane du serveur en fait au moins autant par semaine. */
+  passiveKeys: ["warlordWin", "bossAssault", "raidRepelled"],
+  passiveMinWeekly: 0.5,
+  /** 6.14.58 (AU27, AP-2) : rythme d'une action dans les défis = médiane du serveur par semaine, bornée entre ces facteurs de
+   *  sa base ; le plancher ne dépasse jamais la médiane (un défi ne demande pas plus que ce que fait le joueur médian). */
+  challengeMinFactor: 0.5,
+  challengeMaxFactor: 3,
+  /** 6.14.58 (Q-AP3) : sur un serveur mesuré, une action dont la médiane par semaine est sous ce seuil (ou nulle) n'entre pas
+   *  dans les défis (un défi bloque les suivants). Les actions passives demandent en plus `passiveMinWeekly`. */
+  challengeMinWeekly: 0.25,
+  /** 6.14.58 : garde de faisabilité. Si le joueur médian simulé finit après `latestMedianDay` : jusqu'à ce nombre de nouveaux
+   *  tirages des défis, puis seuils réduits par pas jusqu'à ce plancher (part des seuils tirés). */
+  challengeRedraws: 5,
+  challengeReduceStep: 0.1,
+  challengeReduceMin: 0.4
+};
+var DEFAULTS = structuredClone(PASS_GEN_RULES);
+function passGenRules() {
+  var _a, _b, _c, _d;
+  const r = PASS_GEN_RULES;
+  return __spreadProps(__spreadValues(__spreadValues({}, DEFAULTS), r), {
+    values: __spreadValues(__spreadValues({}, DEFAULTS.values), (_a = r.values) != null ? _a : {}),
+    caps: __spreadValues(__spreadValues({}, DEFAULTS.caps), (_b = r.caps) != null ? _b : {}),
+    weights: __spreadValues(__spreadValues({}, DEFAULTS.weights), (_c = r.weights) != null ? _c : {}),
+    challengeWeights: __spreadValues(__spreadValues({}, DEFAULTS.challengeWeights), (_d = r.challengeWeights) != null ? _d : {})
+  });
+}
+function validatePassGenRules(r) {
+  var _a, _b, _c, _d, _e;
+  if (!r) return [];
+  const e3 = [];
+  const L2 = "Passe g\xE9n\xE9r\xE9";
+  if (!(r.budgetHours > 0)) e3.push(`${L2} : budget > 0.`);
+  if (!(r.curve >= 0 && r.curve <= 10)) e3.push(`${L2} : courbe entre 0 et 10.`);
+  if (!(r.milestoneBoost >= 1 && r.milestoneBoost <= 10)) e3.push(`${L2} : renfort des jalons entre 1 et 10.`);
+  for (const t of [...(_a = r.milestones) != null ? _a : [], ...(_b = r.rareRelicTiers) != null ? _b : [], ...(_c = r.epicRelicTiers) != null ? _c : []])
+    if (!(Number.isInteger(t) && t >= 1 && t <= 29)) e3.push(`${L2} : palier ${t} hors des paliers 1 \xE0 29.`);
+  if (!(r.targetTopDay >= 1 && r.targetTopDay <= r.targetMedianDay && r.targetMedianDay <= r.latestMedianDay && r.latestMedianDay <= 31))
+    e3.push(`${L2} : jours cibles dans l'ordre (plus actif \u2264 m\xE9dian \u2264 au plus tard \u2264 31).`);
+  if (!(r.topPercentile > 0.5 && r.topPercentile <= 1)) e3.push(`${L2} : centile du plus actif entre 0,5 et 1.`);
+  if (!(r.pointsMin >= 1 && r.pointsMin <= r.pointsMax)) e3.push(`${L2} : points par palier min \u2264 max.`);
+  if (!(r.productionMaxHours >= 1)) e3.push(`${L2} : heures de production par r\xE9compense \u2265 1.`);
+  if (!(Number.isInteger(r.remainderTiers) && r.remainderTiers >= 1 && r.remainderTiers <= 29)) e3.push(`${L2} : reste du budget r\xE9parti sur 1 \xE0 29 paliers.`);
+  for (const [k, v] of Object.entries((_d = r.values) != null ? _d : {})) if (!(Number(v) > 0)) e3.push(`${L2} : valeur \xAB ${k} \xBB > 0.`);
+  if (!Object.values((_e = r.challengeWeights) != null ? _e : {}).some((v) => Number(v) > 0)) e3.push(`${L2} : au moins une action dans les d\xE9fis.`);
+  if (!(r.challengeMinFactor > 0 && r.challengeMinFactor <= r.challengeMaxFactor)) e3.push(`${L2} : bornes du rythme des d\xE9fis min \u2264 max.`);
+  if (!(r.challengeMinWeekly >= 0)) e3.push(`${L2} : seuil d'entr\xE9e des d\xE9fis \u2265 0.`);
+  if (!(Number.isInteger(r.challengeRedraws) && r.challengeRedraws >= 0 && r.challengeRedraws <= 20)) e3.push(`${L2} : nouveaux tirages des d\xE9fis entre 0 et 20.`);
+  if (!(r.challengeReduceStep > 0 && r.challengeReduceStep < 1 && r.challengeReduceMin > 0 && r.challengeReduceMin <= 1)) e3.push(`${L2} : r\xE9duction des seuils (pas et plancher entre 0 et 1).`);
+  return e3;
+}
+function rewardValue(r, rules = passGenRules()) {
+  const v = rules.values;
+  switch (r.kind) {
+    case "production":
+      return r.hours;
+    case "amber":
+      return r.amount * v.amber;
+    case "tokens":
+      return r.count * v.tokens;
+    case "dossier":
+      return r.count * v.dossier;
+    case "capsule":
+      return r.level >= 5 ? v.capsule5 : r.level >= 4 ? v.capsule4 : v.capsule3;
+    case "relic":
+      return r.rarity === "epic" || r.rarity === "legendary" ? v.relicEpic : v.relicRare;
+    default:
+      return 0;
+  }
+}
+function tiersValue(tiers2, rules = passGenRules()) {
+  return tiers2.reduce((a, t) => a + t.reduce((b, r) => b + rewardValue(r, rules), 0), 0);
+}
+var CAPSULES2 = ["assault", "armor", "decoy", "veil"];
+var capsuleLevel = (t) => t < 10 ? 3 : t < 20 ? 4 : 5;
+function tierBudgets(tiers2, rules = passGenRules()) {
+  const n = Math.max(1, tiers2 - 1);
+  const w = Array.from({ length: n }, (_, i) => (1 + rules.curve * i / Math.max(1, n - 1)) * (rules.milestones.includes(i + 1) ? rules.milestoneBoost : 1));
+  const total2 = w.reduce((a, b) => a + b, 0);
+  return w.map((x) => rules.budgetHours * x / total2);
+}
+function spreadRemainder(out, carry, rules = passGenRules()) {
+  var _a;
+  let left = Math.round(carry);
+  if (left < 1 || out.length === 0) return;
+  const ordinary = out.map((_, i) => i).filter((i) => !rules.milestones.includes(i + 1));
+  const pool = (ordinary.length > 0 ? ordinary : out.map((_, i) => i)).slice(-Math.max(1, Math.floor((_a = rules.remainderTiers) != null ? _a : 3))).reverse();
+  const cap = Math.max(1, rules.productionMaxHours);
+  const share = pool.map((_, k) => Math.floor(left / pool.length) + (k < left % pool.length ? 1 : 0));
+  for (let pass = 0; pass < 2 && left > 0; pass++) {
+    pool.forEach((i, k) => {
+      if (left <= 0) return;
+      const tier = out[i];
+      const prod = tier.find((r) => r.kind === "production");
+      const room = cap - (prod ? prod.hours : 0);
+      const add2 = Math.min(left, room, pass === 0 ? share[k] : left);
+      if (add2 < 1) return;
+      if (prod) prod.hours += add2;
+      else tier.push({ kind: "production", hours: add2 });
+      left -= add2;
+    });
+  }
+}
+function generateBudgetTiers(rng, tiers2 = 30, rules = passGenRules()) {
+  var _a, _b, _c;
+  const budgets = tierBudgets(tiers2, rules);
+  const used = { amber: 0, tokens: 0, dossier: 0, capsules: 0 };
+  const out = [];
+  let carry = 0;
+  let prev = null;
+  let capIdx = Math.floor(rng() * CAPSULES2.length);
+  const v = rules.values;
+  const make = (kind, goal, t) => {
+    if (kind === "production") return { kind, hours: Math.max(1, Math.min(rules.productionMaxHours, Math.round(goal))) };
+    if (kind === "amber") {
+      const left = rules.caps.amber - used.amber;
+      const amount3 = Math.min(left - left % 5, Math.max(5, Math.round(goal / v.amber / 5) * 5));
+      return amount3 >= 5 ? { kind, amount: amount3 } : null;
+    }
+    if (kind === "tokens") {
+      const count2 = Math.min(rules.caps.tokens - used.tokens, Math.max(1, Math.round(goal / v.tokens)));
+      return count2 >= 1 ? { kind, count: count2 } : null;
+    }
+    if (kind === "dossier") {
+      const count2 = Math.min(rules.caps.dossier - used.dossier, Math.max(1, Math.round(goal / v.dossier)));
+      return count2 >= 1 ? { kind, count: count2 } : null;
+    }
+    if (used.capsules >= rules.caps.capsules) return null;
+    return { kind: "capsule", capsule: CAPSULES2[capIdx % CAPSULES2.length], level: capsuleLevel(t) };
+  };
+  const note4 = (r) => {
+    if (r.kind === "amber") used.amber += r.amount;
+    else if (r.kind === "tokens") used.tokens += r.count;
+    else if (r.kind === "dossier") used.dossier += r.count;
+    else if (r.kind === "capsule") {
+      used.capsules += 1;
+      capIdx += 1;
+    }
+  };
+  const draw = (goal, t, exclude) => {
+    var _a2;
+    const kinds = Object.keys(rules.weights).filter((k) => {
+      var _a3;
+      return ((_a3 = rules.weights[k]) != null ? _a3 : 0) > 0 && !exclude.includes(k);
+    });
+    const fits = kinds.filter((k) => {
+      const r = make(k, goal, t);
+      return r !== null && rewardValue(r, rules) <= Math.max(goal * 1.5, 1);
+    });
+    const pool = fits.length > 0 ? fits : ["production"];
+    const total3 = pool.reduce((a, k) => a + rules.weights[k], 0);
+    let x = rng() * total3;
+    return (_a2 = pool.find((k) => (x -= rules.weights[k]) <= 0)) != null ? _a2 : pool[0];
+  };
+  for (let t = 1; t < tiers2; t++) {
+    let goal = budgets[t - 1] + carry;
+    const list = [];
+    for (const [ts, rarity2] of [
+      [rules.rareRelicTiers, "rare"],
+      [rules.epicRelicTiers, "epic"]
+    ]) {
+      if (!ts.includes(t)) continue;
+      const r = { kind: "relic", rarity: rarity2 };
+      list.push(r);
+      goal -= rewardValue(r, rules);
+    }
+    const milestone = rules.milestones.includes(t);
+    const slots = list.length > 0 ? goal > 1 ? 1 : 0 : milestone ? 2 : 1;
+    const taken = prev ? [prev] : [];
+    for (let s = 0; s < slots; s++) {
+      const share = s === 0 && slots === 2 ? goal * 0.6 : goal - list.reduce((a, r2) => a + (r2.kind === "relic" ? 0 : rewardValue(r2, rules)), 0);
+      const kind = draw(share, t, taken);
+      const r = (_a = make(kind, share, t)) != null ? _a : make("production", share, t);
+      note4(r);
+      list.push(r);
+      taken.push(r.kind);
+    }
+    carry = budgets[t - 1] + carry - list.reduce((a, r) => a + rewardValue(r, rules), 0);
+    prev = (_c = (_b = list.find((r) => r.kind !== "relic")) == null ? void 0 : _b.kind) != null ? _c : prev;
+    out.push(list);
+  }
+  spreadRemainder(out, carry, rules);
+  out.push([]);
+  const total2 = tiersValue(out, rules);
+  return {
+    tiers: out,
+    reasons: [
+      `R\xE9compenses tir\xE9es sous budget : ${Math.round(total2)} h de production \xE9quivalentes pour ${rules.budgetHours} h vis\xE9es (paliers 1 \xE0 ${tiers2 - 1}, jalons ${rules.milestones.join(", ")}).`,
+      `Plafonds du mois : ${used.amber} / ${rules.caps.amber} Ambre, ${used.tokens} / ${rules.caps.tokens} jetons, ${used.dossier} / ${rules.caps.dossier} dossiers, ${used.capsules} / ${rules.caps.capsules} capsules.`
+    ]
+  };
+}
+var round5 = (x) => Math.round(x / 5) * 5;
+function computePointsPerTier(pace, tiers2, rules = passGenRules()) {
+  if (!pace || !(pace.median > 0)) return null;
+  const top = Math.max(pace.top, pace.median);
+  const byMedian = pace.median * rules.targetMedianDay / tiers2;
+  const byTop = top * rules.targetTopDay / tiers2;
+  const medianMax = pace.median * rules.latestMedianDay / tiers2;
+  const raw = Math.max(byMedian, Math.min(byTop, medianMax));
+  const rounded = round5(raw) > medianMax ? Math.max(5, Math.floor(medianMax / 5) * 5) : round5(raw);
+  const ppt = Math.max(rules.pointsMin, Math.min(rules.pointsMax, rounded));
+  const reasons = [
+    `Points par jour mesur\xE9s : ${Math.round(pace.median)} (joueur m\xE9dian), ${Math.round(top)} (plus actif, ${Math.round(rules.topPercentile * 100)}e centile).`,
+    `Points par palier : ${ppt} (m\xE9dian au dernier palier vers le jour ${Math.round(tiers2 * ppt / pace.median)}, plus actif vers le jour ${Math.round(tiers2 * ppt / top)} ; cibles ${rules.targetMedianDay} et ${rules.targetTopDay}).`
+  ];
+  if (byTop > medianMax) reasons.push(`Le plus actif va beaucoup plus vite que le m\xE9dian : le m\xE9dian garde sa fin au jour ${rules.latestMedianDay} au plus tard.`);
+  if (ppt !== rounded) reasons.push(`Garde-fou : points par palier born\xE9s entre ${rules.pointsMin} et ${rules.pointsMax}.`);
+  return { ppt, reasons };
+}
+function percentile(xs, p2) {
+  if (xs.length === 0) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p2 * s.length) - 1))];
+}
+function challengePool(weeklyMedian, rules = passGenRules(), theme = null) {
+  const weighted = Object.entries(rules.challengeWeights).map(([k, w]) => [k, Number(w) * trackedWeight(k, theme)]).filter(([, w]) => w > 0);
+  const extra = extraObjectives(theme).filter((k) => !(k in rules.challengeWeights)).map((k) => [k, trackedWeight(k, theme)]).filter(([, w]) => w > 0);
+  const pool = [...weighted, ...extra].filter(([k]) => actionPlayable(k, weeklyMedian, rules));
+  const out = pool.length > 0 ? pool : weighted.filter(([k]) => !rules.passiveKeys.includes(k));
+  return out.map(([k, w]) => ({ key: k, weight: Number(w) }));
+}
+function hasActivityData(weeklyMedian) {
+  return Object.values(weeklyMedian).some((v) => (v != null ? v : 0) > 0);
+}
+function actionPlayable(key, weeklyMedian, rules = passGenRules()) {
+  var _a;
+  const m = (_a = weeklyMedian[key]) != null ? _a : 0;
+  if (objectiveMeasured(key) && !measuredPlayable(key, weeklyMedian)) return false;
+  if (rules.passiveKeys.includes(key) || !isBaseObjective(key) && objectivePassive(key)) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
+  if (!hasActivityData(weeklyMedian)) return true;
+  return m > 0 && m >= rules.challengeMinWeekly;
+}
+
+// src/game/chronicleGen.ts
+var CHRONICLE_GEN_RULES = {
+  /** false : ancien gabarit des récompenses d'épisode (Ambre, capsule, production, dossier). */
+  enabled: true,
+  /** Valeur des 4 épisodes, en heures de production équivalentes (× difficulté du mois). */
+  episodeBudgetHours: 10,
+  /** Le 4e épisode vaut (1 + courbe) fois le 1er. */
+  episodeCurve: 0.5,
+  /** Poids de tirage des récompenses d'épisode (les jetons viennent déjà du bonus des Chroniques). */
+  weights: { production: 2, amber: 2, capsule: 2, dossier: 1, tokens: 0 },
+  /** Plafonds du chapitre (4 épisodes). */
+  caps: { amber: 60, tokens: 0, dossier: 2, capsules: 2 },
+  /** Chapitre terminé : Ambre, et relique épique (sinon rare) à partir de cette difficulté. */
+  completionAmber: 30,
+  completionEpicFrom: 1.2,
+  /** Difficulté : 1 si la part visée des joueurs termine les épisodes ouverts depuis assez longtemps. */
+  difficultyMin: 0.7,
+  difficultyMax: 1.4,
+  targetCompletion: 0.5,
+  matureEpisodeDays: 5,
+  /** Quantité demandée : médiane d'une semaine × difficulté, bornée entre ces facteurs de la base. */
+  objectiveMinFactor: 0.5,
+  objectiveMaxFactor: 3,
+  /** 6.14.58 (AU27, AP-4, Q-AP4) : épisode 3 (« rebondissement ») : action peu pratiquée mais faisable, dont la médiane du
+   *  serveur atteint ce nombre par semaine (0 : la moins pratiquée de toutes, comme avant). */
+  stretchMinWeekly: 0.5,
+  /** Poids des actions dans les objectifs (0 : jamais). Les raids repoussés n'entrent que si le serveur en repousse. */
+  objectiveWeights: { contract: 1, bounty: 1, raidRepelled: 1, victory: 1, mission: 1, spy: 1, market: 1, warlordWin: 1, bossAssault: 0 },
+  /** 6.14.149 (AU27, AP-15) : chapitre repris de la bibliothèque : récompenses des épisodes et du chapitre retirées sous le
+   *  budget ci-dessus (difficulté 1) ; false : récompenses écrites du chapitre gardées telles quelles. */
+  libraryRebudget: true,
+  /** 6.14.149 (AU27, AP-12) : mois de plus de N mois allégés dans le calendrier (scénario, raisons, passe d'avant le
+   *  catalogue retirés ; épisodes, boss, sceau, bannière et Codex gardés), copie entière dans `chronicles_archive`. 0 : jamais. */
+  archiveAfterMonths: 12,
+  /** Faction du chapitre selon le thème du passe du mois (identifiants d'archétypes). */
+  followPassTheme: true,
+  themeArchetypes: {
+    vide: "confrerie",
+    hiver: "choeur",
+    forge: "gravhorn",
+    bazar: "cartel",
+    maree: "confrerie",
+    colonies: "meute",
+    primes: "culte",
+    comete: "cartel",
+    moisson: "culte",
+    archives: "choeur",
+    chantiers: "cartel",
+    rempart: "inquisition"
+  }
+};
+var DEFAULTS2 = structuredClone(CHRONICLE_GEN_RULES);
+function chronicleGenRules() {
+  var _a, _b, _c, _d;
+  const r = CHRONICLE_GEN_RULES;
+  return __spreadProps(__spreadValues(__spreadValues({}, DEFAULTS2), r), {
+    weights: __spreadValues(__spreadValues({}, DEFAULTS2.weights), (_a = r.weights) != null ? _a : {}),
+    caps: __spreadValues(__spreadValues({}, DEFAULTS2.caps), (_b = r.caps) != null ? _b : {}),
+    objectiveWeights: __spreadValues(__spreadValues({}, DEFAULTS2.objectiveWeights), (_c = r.objectiveWeights) != null ? _c : {}),
+    themeArchetypes: __spreadValues(__spreadValues({}, DEFAULTS2.themeArchetypes), (_d = r.themeArchetypes) != null ? _d : {})
+  });
+}
+function validateChronicleGenRules(r, archetypeIds = []) {
+  var _a, _b;
+  if (!r) return [];
+  const e3 = [];
+  const L2 = "Chroniques g\xE9n\xE9r\xE9es";
+  if (!(r.episodeBudgetHours > 0)) e3.push(`${L2} : budget des \xE9pisodes > 0.`);
+  if (!(r.episodeCurve >= 0 && r.episodeCurve <= 10)) e3.push(`${L2} : courbe entre 0 et 10.`);
+  if (!(r.difficultyMin > 0 && r.difficultyMin <= 1 && r.difficultyMax >= 1 && r.difficultyMax <= 5)) e3.push(`${L2} : difficult\xE9 min \u2264 1 \u2264 max (5 au plus).`);
+  if (!(r.targetCompletion > 0 && r.targetCompletion < 1)) e3.push(`${L2} : part vis\xE9e entre 0 et 1.`);
+  if (!(r.objectiveMinFactor > 0 && r.objectiveMinFactor <= r.objectiveMaxFactor)) e3.push(`${L2} : bornes des quantit\xE9s min \u2264 max.`);
+  if (!(r.completionAmber >= 0)) e3.push(`${L2} : Ambre du chapitre termin\xE9 \u2265 0.`);
+  if (!(r.stretchMinWeekly >= 0)) e3.push(`${L2} : m\xE9diane du rebondissement \u2265 0.`);
+  if (!(Number.isInteger(r.archiveAfterMonths) && r.archiveAfterMonths >= 0 && (r.archiveAfterMonths === 0 || r.archiveAfterMonths >= 3))) e3.push(`${L2} : archivage apr\xE8s 0 (jamais) ou au moins 3 mois.`);
+  if (Object.values((_a = r.objectiveWeights) != null ? _a : {}).filter((v) => Number(v) > 0).length < 4) e3.push(`${L2} : au moins 4 actions autoris\xE9es dans les objectifs.`);
+  if (archetypeIds.length) {
+    for (const [theme, a] of Object.entries((_b = r.themeArchetypes) != null ? _b : {})) if (!archetypeIds.includes(a)) e3.push(`${L2} : th\xE8me ${theme}, faction \xAB ${a} \xBB inconnue.`);
+  }
+  return e3;
+}
+function episodeBudgetRules(r, difficulty) {
+  const p2 = passGenRules();
+  return __spreadProps(__spreadValues({}, p2), {
+    budgetHours: r.episodeBudgetHours * difficulty,
+    curve: r.episodeCurve,
+    milestones: [],
+    rareRelicTiers: [],
+    epicRelicTiers: [],
+    weights: r.weights,
+    caps: r.caps
+  });
+}
+function budgetEpisodeRewards(rng, difficulty, r = chronicleGenRules()) {
+  return generateBudgetTiers(rng, 5, episodeBudgetRules(r, difficulty)).tiers.slice(0, 4);
+}
+function objectiveWeight(k, r = chronicleGenRules(), theme) {
+  const own = r.objectiveWeights[k];
+  const g = own === void 0 ? isBaseObjective(k) ? 0 : 1 : Number(own);
+  return Math.max(0, Number.isFinite(g) ? g : 0) * trackedWeight(k, theme);
+}
+
+// src/game/random.ts
+function hashSeed(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+function seededRandom(seed) {
+  let a = hashSeed(seed);
+  return () => {
+    a = a + 1831565813 >>> 0;
+    let t = a;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
 // src/game/chronicles.ts
 var DEFAULT_CHRONICLE_BONUS = { episode: { tokens: 3, amber: 15 }, chapter: { tokens: 10, amber: 50 } };
 var DEFAULT_CODEX_REWARDS = {
@@ -11495,12 +11897,41 @@ function bossEmblems(player) {
   const owned = new Set(((_b = (_a = player.chronicle) == null ? void 0 : _a.emblems) != null ? _b : []).map(String));
   return config.months.map((m) => ({ id: `boss:${m.id}`, label: `Sceau : ${m.boss.name}`, image: m.boss.emblem, unlocked: owned.has(m.id) }));
 }
+function monthSeason(monthId) {
+  const m = /^\d{4}-(\d{2})$/.exec(monthId);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (n < 1 || n > 12) return null;
+  return n === 12 || n <= 2 ? "hiver" : n <= 5 ? "printemps" : n <= 8 ? "ete" : "automne";
+}
+function librarySeason(chapter) {
+  return monthSeason(chapter.id);
+}
+function librarySeasonWarning(chapter, monthId) {
+  const from = librarySeason(chapter);
+  const to = monthSeason(monthId);
+  if (!from || !to || from === to) return null;
+  const forSeason = { hiver: "l'hiver", printemps: "le printemps", ete: "l'\xE9t\xE9", automne: "l'automne" };
+  const inSeason = { hiver: "en hiver", printemps: "au printemps", ete: "en \xE9t\xE9", automne: "en automne" };
+  return `\xAB ${chapter.title} \xBB est \xE9crit pour ${forSeason[from]}, et ${monthId} tombe ${inSeason[to]} : ses textes peuvent sonner faux.`;
+}
 function applyLibraryChapter(cfg, libraryId, monthId) {
   var _a;
   const src = ((_a = cfg.library) != null ? _a : []).find((m) => m.id === libraryId);
   if (!src) throw new Error(`Chapitre \xAB ${libraryId} \xBB absent de la biblioth\xE8que.`);
   const month2 = __spreadProps(__spreadValues({}, structuredClone(src)), { id: monthId });
   delete month2.auto;
+  delete month2.archivedAtMs;
+  const gen = chronicleGenRules();
+  if (gen.enabled && gen.libraryRebudget !== false && Array.isArray(month2.episodes) && month2.episodes.length === 4) {
+    const difficulty = 1;
+    const rewards = budgetEpisodeRewards(seededRandom(`library-rewards:${monthId}:${libraryId}`), difficulty, gen);
+    month2.episodes = month2.episodes.map((e3, i) => {
+      var _a2;
+      return __spreadProps(__spreadValues({}, e3), { reward: (_a2 = rewards[i]) != null ? _a2 : [] });
+    });
+    if (month2.completion) month2.completion = __spreadProps(__spreadValues({}, month2.completion), { rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] });
+  }
   return __spreadProps(__spreadValues({}, cfg), { months: [...cfg.months.filter((m) => m.id !== monthId), month2].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) });
 }
 function moveWrittenToLibrary(cfg, now) {
@@ -11512,6 +11943,30 @@ function moveWrittenToLibrary(cfg, now) {
   const library = [...((_a = cfg.library) != null ? _a : []).filter((l) => !moving.some((m) => m.id === l.id)), ...moving];
   return __spreadProps(__spreadValues({}, cfg), { months: months.filter((m) => !moving.includes(m)), library });
 }
+function archiveOldMonths(cfg, now, keepMonths) {
+  var _a;
+  const keep = Math.floor(Number(keepMonths) || 0);
+  if (keep <= 0) return null;
+  const [y, m] = chronicleMonthId(now).split("-").map(Number);
+  const k = y * 12 + (m - 1) - keep;
+  const cutoff = `${Math.floor(k / 12)}-${String(k % 12 + 1).padStart(2, "0")}`;
+  const old = ((_a = cfg.months) != null ? _a : []).filter((x) => x && x.id < cutoff && !x.archivedAtMs);
+  if (old.length === 0) return null;
+  const slim = (x) => {
+    const out = __spreadProps(__spreadValues({}, x), { archivedAtMs: now });
+    delete out.synopsis;
+    if (x.id >= GENERATED_CHAPTERS_FROM) delete out.pass;
+    if (x.auto) out.auto = __spreadProps(__spreadValues({}, x.auto), { reasons: [] });
+    return out;
+  };
+  return { cfg: __spreadProps(__spreadValues({}, cfg), { months: cfg.months.map((x) => old.includes(x) ? slim(x) : x) }), archived: old.map((x) => structuredClone(x)) };
+}
+function mergeChronicleArchive(archive, months) {
+  const prev = Array.isArray(archive == null ? void 0 : archive.months) ? archive.months : [];
+  const ids = new Set(months.map((x) => x.id));
+  return { months: [...prev.filter((x) => x && !ids.has(x.id)), ...months].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) };
+}
+var CHRONICLES_ARCHIVE_KEY = "chronicles_archive";
 
 // src/game/market.ts
 var MARKET_RULES = {
@@ -11917,7 +12372,7 @@ function boardTiers(rank2) {
   return [1, 2, 2];
 }
 function generateBoard(uid, slot, rank2, exclude = []) {
-  const rand = seededRandom(`${uid}:bounty:${slot}`);
+  const rand = dailyRandom(`${uid}:bounty:${slot}`);
   const used = new Set(exclude);
   const count2 = bountyFugitives().length;
   return boardTiers(rank2).map((tier, i) => {
@@ -15859,7 +16314,7 @@ function contractDay(now) {
 function previousDay(day) {
   return contractDay(Date.parse(`${day}T00:00:00Z`) - DAY_MS2);
 }
-function seededRandom(seed) {
+function dailyRandom(seed) {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
   return () => {
@@ -15896,7 +16351,7 @@ function ensureContracts(player, now) {
   if (current2 && current2.day === day) {
     if (current2.items.length < CONTRACT_RULES.perDay) {
       const used = new Set(current2.items.map((c) => c.type));
-      const rand2 = seededRandom(`${player.uid}:${day}:extra`);
+      const rand2 = dailyRandom(`${player.uid}:${day}:extra`);
       const pool2 = drawableTypes(player, now).filter((t) => !used.has(t));
       while (current2.items.length < CONTRACT_RULES.perDay && pool2.length > 0) {
         const type = pool2.splice(drawIndex(pool2, rand2), 1)[0];
@@ -15905,7 +16360,7 @@ function ensureContracts(player, now) {
     }
     return current2;
   }
-  const rand = seededRandom(`${player.uid}:${day}`);
+  const rand = dailyRandom(`${player.uid}:${day}`);
   const pool = drawableTypes(player, now);
   const items = [];
   for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
@@ -15992,7 +16447,7 @@ function rerollContract(player, contractId, now) {
   const used = new Set(state.items.map((c) => c.type));
   const pool = drawableTypes(player, now).filter((t) => !used.has(t));
   if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
-  const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
+  const rand = dailyRandom(`${player.uid}:${state.day}:reroll`);
   const type = pool[drawIndex(pool, rand)];
   const next = makeContract(type, player, state.day, index2, rand);
   next.id = `${state.day}-${index2}-${type}-r`;
@@ -21294,350 +21749,6 @@ function isCancelTarget(raw) {
   }
 }
 
-// src/game/passGen.ts
-var PASS_GEN_RULES = {
-  /** false : ancien gabarit fixe des récompenses (points par palier toujours calculés). */
-  enabled: true,
-  /** Valeur des paliers 1 à 29, en heures de production équivalentes. */
-  budgetHours: 140,
-  /** Le dernier palier ordinaire vaut (1 + courbe) fois le premier. */
-  curve: 2,
-  /** Paliers jalons : valeur multipliée, deux récompenses. */
-  milestones: [5, 10, 15, 20, 25],
-  milestoneBoost: 2.5,
-  /** Reliques données aux paliers indiqués (comptées dans le budget). */
-  rareRelicTiers: [20],
-  epicRelicTiers: [],
-  /** Valeur d'une unité, en heures de production (1 h de production = 1). */
-  values: { amber: 0.1, tokens: 1, dossier: 3, capsule3: 2, capsule4: 3, capsule5: 4, relicRare: 10, relicEpic: 20 },
-  /** Plafonds du mois (paliers 1 à 29). */
-  caps: { amber: 350, tokens: 6, dossier: 4, capsules: 10 },
-  /** Heures de production au plus par récompense. */
-  productionMaxHours: 12,
-  /** Poids de tirage des récompenses (0 : jamais). */
-  weights: { production: 3, amber: 3, capsule: 2, dossier: 1, tokens: 1 },
-  /** Rythme : jour de fin visé pour le joueur médian, et pas avant ce jour pour le plus actif. */
-  targetMedianDay: 24,
-  targetTopDay: 15,
-  /** Le joueur médian doit finir au plus tard ce jour, quitte à laisser le plus actif finir plus tôt. */
-  latestMedianDay: 28,
-  /** « Plus actif » : ce centile des points par jour (0,9 = 9e décile). */
-  topPercentile: 0.9,
-  pointsMin: 25,
-  pointsMax: 200,
-  /** Poids des actions dans les défis des paliers (0 : jamais). */
-  challengeWeights: { victory: 1, contract: 1, spy: 1, market: 1, bounty: 1, warlordWin: 1, bossAssault: 0.5, raidRepelled: 0, mission: 0 },
-  /** Actions que le joueur ne déclenche pas à volonté : seulement si la médiane du serveur en fait au moins autant par semaine. */
-  passiveKeys: ["warlordWin", "bossAssault", "raidRepelled"],
-  passiveMinWeekly: 0.5,
-  /** 6.14.58 (AU27, AP-2) : rythme d'une action dans les défis = médiane du serveur par semaine, bornée entre ces facteurs de
-   *  sa base ; le plancher ne dépasse jamais la médiane (un défi ne demande pas plus que ce que fait le joueur médian). */
-  challengeMinFactor: 0.5,
-  challengeMaxFactor: 3,
-  /** 6.14.58 (Q-AP3) : sur un serveur mesuré, une action dont la médiane par semaine est sous ce seuil (ou nulle) n'entre pas
-   *  dans les défis (un défi bloque les suivants). Les actions passives demandent en plus `passiveMinWeekly`. */
-  challengeMinWeekly: 0.25,
-  /** 6.14.58 : garde de faisabilité. Si le joueur médian simulé finit après `latestMedianDay` : jusqu'à ce nombre de nouveaux
-   *  tirages des défis, puis seuils réduits par pas jusqu'à ce plancher (part des seuils tirés). */
-  challengeRedraws: 5,
-  challengeReduceStep: 0.1,
-  challengeReduceMin: 0.4
-};
-var DEFAULTS = structuredClone(PASS_GEN_RULES);
-function passGenRules() {
-  var _a, _b, _c, _d;
-  const r = PASS_GEN_RULES;
-  return __spreadProps(__spreadValues(__spreadValues({}, DEFAULTS), r), {
-    values: __spreadValues(__spreadValues({}, DEFAULTS.values), (_a = r.values) != null ? _a : {}),
-    caps: __spreadValues(__spreadValues({}, DEFAULTS.caps), (_b = r.caps) != null ? _b : {}),
-    weights: __spreadValues(__spreadValues({}, DEFAULTS.weights), (_c = r.weights) != null ? _c : {}),
-    challengeWeights: __spreadValues(__spreadValues({}, DEFAULTS.challengeWeights), (_d = r.challengeWeights) != null ? _d : {})
-  });
-}
-function validatePassGenRules(r) {
-  var _a, _b, _c, _d, _e;
-  if (!r) return [];
-  const e3 = [];
-  const L2 = "Passe g\xE9n\xE9r\xE9";
-  if (!(r.budgetHours > 0)) e3.push(`${L2} : budget > 0.`);
-  if (!(r.curve >= 0 && r.curve <= 10)) e3.push(`${L2} : courbe entre 0 et 10.`);
-  if (!(r.milestoneBoost >= 1 && r.milestoneBoost <= 10)) e3.push(`${L2} : renfort des jalons entre 1 et 10.`);
-  for (const t of [...(_a = r.milestones) != null ? _a : [], ...(_b = r.rareRelicTiers) != null ? _b : [], ...(_c = r.epicRelicTiers) != null ? _c : []])
-    if (!(Number.isInteger(t) && t >= 1 && t <= 29)) e3.push(`${L2} : palier ${t} hors des paliers 1 \xE0 29.`);
-  if (!(r.targetTopDay >= 1 && r.targetTopDay <= r.targetMedianDay && r.targetMedianDay <= r.latestMedianDay && r.latestMedianDay <= 31))
-    e3.push(`${L2} : jours cibles dans l'ordre (plus actif \u2264 m\xE9dian \u2264 au plus tard \u2264 31).`);
-  if (!(r.topPercentile > 0.5 && r.topPercentile <= 1)) e3.push(`${L2} : centile du plus actif entre 0,5 et 1.`);
-  if (!(r.pointsMin >= 1 && r.pointsMin <= r.pointsMax)) e3.push(`${L2} : points par palier min \u2264 max.`);
-  if (!(r.productionMaxHours >= 1)) e3.push(`${L2} : heures de production par r\xE9compense \u2265 1.`);
-  for (const [k, v] of Object.entries((_d = r.values) != null ? _d : {})) if (!(Number(v) > 0)) e3.push(`${L2} : valeur \xAB ${k} \xBB > 0.`);
-  if (!Object.values((_e = r.challengeWeights) != null ? _e : {}).some((v) => Number(v) > 0)) e3.push(`${L2} : au moins une action dans les d\xE9fis.`);
-  if (!(r.challengeMinFactor > 0 && r.challengeMinFactor <= r.challengeMaxFactor)) e3.push(`${L2} : bornes du rythme des d\xE9fis min \u2264 max.`);
-  if (!(r.challengeMinWeekly >= 0)) e3.push(`${L2} : seuil d'entr\xE9e des d\xE9fis \u2265 0.`);
-  if (!(Number.isInteger(r.challengeRedraws) && r.challengeRedraws >= 0 && r.challengeRedraws <= 20)) e3.push(`${L2} : nouveaux tirages des d\xE9fis entre 0 et 20.`);
-  if (!(r.challengeReduceStep > 0 && r.challengeReduceStep < 1 && r.challengeReduceMin > 0 && r.challengeReduceMin <= 1)) e3.push(`${L2} : r\xE9duction des seuils (pas et plancher entre 0 et 1).`);
-  return e3;
-}
-function rewardValue(r, rules = passGenRules()) {
-  const v = rules.values;
-  switch (r.kind) {
-    case "production":
-      return r.hours;
-    case "amber":
-      return r.amount * v.amber;
-    case "tokens":
-      return r.count * v.tokens;
-    case "dossier":
-      return r.count * v.dossier;
-    case "capsule":
-      return r.level >= 5 ? v.capsule5 : r.level >= 4 ? v.capsule4 : v.capsule3;
-    case "relic":
-      return r.rarity === "epic" || r.rarity === "legendary" ? v.relicEpic : v.relicRare;
-    default:
-      return 0;
-  }
-}
-function tiersValue(tiers2, rules = passGenRules()) {
-  return tiers2.reduce((a, t) => a + t.reduce((b, r) => b + rewardValue(r, rules), 0), 0);
-}
-var CAPSULES2 = ["assault", "armor", "decoy", "veil"];
-var capsuleLevel = (t) => t < 10 ? 3 : t < 20 ? 4 : 5;
-function tierBudgets(tiers2, rules = passGenRules()) {
-  const n = Math.max(1, tiers2 - 1);
-  const w = Array.from({ length: n }, (_, i) => (1 + rules.curve * i / Math.max(1, n - 1)) * (rules.milestones.includes(i + 1) ? rules.milestoneBoost : 1));
-  const total2 = w.reduce((a, b) => a + b, 0);
-  return w.map((x) => rules.budgetHours * x / total2);
-}
-function generateBudgetTiers(rng, tiers2 = 30, rules = passGenRules()) {
-  var _a, _b, _c;
-  const budgets = tierBudgets(tiers2, rules);
-  const used = { amber: 0, tokens: 0, dossier: 0, capsules: 0 };
-  const out = [];
-  let carry = 0;
-  let prev = null;
-  let capIdx = Math.floor(rng() * CAPSULES2.length);
-  const v = rules.values;
-  const make = (kind, goal, t) => {
-    if (kind === "production") return { kind, hours: Math.max(1, Math.min(rules.productionMaxHours, Math.round(goal))) };
-    if (kind === "amber") {
-      const left = rules.caps.amber - used.amber;
-      const amount3 = Math.min(left - left % 5, Math.max(5, Math.round(goal / v.amber / 5) * 5));
-      return amount3 >= 5 ? { kind, amount: amount3 } : null;
-    }
-    if (kind === "tokens") {
-      const count2 = Math.min(rules.caps.tokens - used.tokens, Math.max(1, Math.round(goal / v.tokens)));
-      return count2 >= 1 ? { kind, count: count2 } : null;
-    }
-    if (kind === "dossier") {
-      const count2 = Math.min(rules.caps.dossier - used.dossier, Math.max(1, Math.round(goal / v.dossier)));
-      return count2 >= 1 ? { kind, count: count2 } : null;
-    }
-    if (used.capsules >= rules.caps.capsules) return null;
-    return { kind: "capsule", capsule: CAPSULES2[capIdx % CAPSULES2.length], level: capsuleLevel(t) };
-  };
-  const note4 = (r) => {
-    if (r.kind === "amber") used.amber += r.amount;
-    else if (r.kind === "tokens") used.tokens += r.count;
-    else if (r.kind === "dossier") used.dossier += r.count;
-    else if (r.kind === "capsule") {
-      used.capsules += 1;
-      capIdx += 1;
-    }
-  };
-  const draw = (goal, t, exclude) => {
-    var _a2;
-    const kinds = Object.keys(rules.weights).filter((k) => {
-      var _a3;
-      return ((_a3 = rules.weights[k]) != null ? _a3 : 0) > 0 && !exclude.includes(k);
-    });
-    const fits = kinds.filter((k) => {
-      const r = make(k, goal, t);
-      return r !== null && rewardValue(r, rules) <= Math.max(goal * 1.5, 1);
-    });
-    const pool = fits.length > 0 ? fits : ["production"];
-    const total3 = pool.reduce((a, k) => a + rules.weights[k], 0);
-    let x = rng() * total3;
-    return (_a2 = pool.find((k) => (x -= rules.weights[k]) <= 0)) != null ? _a2 : pool[0];
-  };
-  for (let t = 1; t < tiers2; t++) {
-    let goal = budgets[t - 1] + carry;
-    const list = [];
-    for (const [ts, rarity2] of [
-      [rules.rareRelicTiers, "rare"],
-      [rules.epicRelicTiers, "epic"]
-    ]) {
-      if (!ts.includes(t)) continue;
-      const r = { kind: "relic", rarity: rarity2 };
-      list.push(r);
-      goal -= rewardValue(r, rules);
-    }
-    const milestone = rules.milestones.includes(t);
-    const slots = list.length > 0 ? goal > 1 ? 1 : 0 : milestone ? 2 : 1;
-    const taken = prev ? [prev] : [];
-    for (let s = 0; s < slots; s++) {
-      const share = s === 0 && slots === 2 ? goal * 0.6 : goal - list.reduce((a, r2) => a + (r2.kind === "relic" ? 0 : rewardValue(r2, rules)), 0);
-      const kind = draw(share, t, taken);
-      const r = (_a = make(kind, share, t)) != null ? _a : make("production", share, t);
-      note4(r);
-      list.push(r);
-      taken.push(r.kind);
-    }
-    carry = budgets[t - 1] + carry - list.reduce((a, r) => a + rewardValue(r, rules), 0);
-    prev = (_c = (_b = list.find((r) => r.kind !== "relic")) == null ? void 0 : _b.kind) != null ? _c : prev;
-    out.push(list);
-  }
-  if (carry >= 0.5 && out.length > 0) {
-    const last = out[out.length - 1];
-    const prod = last.find((r) => r.kind === "production");
-    if (prod) prod.hours += Math.round(carry);
-    else last.push({ kind: "production", hours: Math.round(carry) });
-  }
-  out.push([]);
-  const total2 = tiersValue(out, rules);
-  return {
-    tiers: out,
-    reasons: [
-      `R\xE9compenses tir\xE9es sous budget : ${Math.round(total2)} h de production \xE9quivalentes pour ${rules.budgetHours} h vis\xE9es (paliers 1 \xE0 ${tiers2 - 1}, jalons ${rules.milestones.join(", ")}).`,
-      `Plafonds du mois : ${used.amber} / ${rules.caps.amber} Ambre, ${used.tokens} / ${rules.caps.tokens} jetons, ${used.dossier} / ${rules.caps.dossier} dossiers, ${used.capsules} / ${rules.caps.capsules} capsules.`
-    ]
-  };
-}
-var round5 = (x) => Math.round(x / 5) * 5;
-function computePointsPerTier(pace, tiers2, rules = passGenRules()) {
-  if (!pace || !(pace.median > 0)) return null;
-  const top = Math.max(pace.top, pace.median);
-  const byMedian = pace.median * rules.targetMedianDay / tiers2;
-  const byTop = top * rules.targetTopDay / tiers2;
-  const medianMax = pace.median * rules.latestMedianDay / tiers2;
-  const raw = Math.max(byMedian, Math.min(byTop, medianMax));
-  const rounded = round5(raw) > medianMax ? Math.max(5, Math.floor(medianMax / 5) * 5) : round5(raw);
-  const ppt = Math.max(rules.pointsMin, Math.min(rules.pointsMax, rounded));
-  const reasons = [
-    `Points par jour mesur\xE9s : ${Math.round(pace.median)} (joueur m\xE9dian), ${Math.round(top)} (plus actif, ${Math.round(rules.topPercentile * 100)}e centile).`,
-    `Points par palier : ${ppt} (m\xE9dian au dernier palier vers le jour ${Math.round(tiers2 * ppt / pace.median)}, plus actif vers le jour ${Math.round(tiers2 * ppt / top)} ; cibles ${rules.targetMedianDay} et ${rules.targetTopDay}).`
-  ];
-  if (byTop > medianMax) reasons.push(`Le plus actif va beaucoup plus vite que le m\xE9dian : le m\xE9dian garde sa fin au jour ${rules.latestMedianDay} au plus tard.`);
-  if (ppt !== rounded) reasons.push(`Garde-fou : points par palier born\xE9s entre ${rules.pointsMin} et ${rules.pointsMax}.`);
-  return { ppt, reasons };
-}
-function percentile(xs, p2) {
-  if (xs.length === 0) return 0;
-  const s = [...xs].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(p2 * s.length) - 1))];
-}
-function challengePool(weeklyMedian, rules = passGenRules(), theme = null) {
-  const weighted = Object.entries(rules.challengeWeights).map(([k, w]) => [k, Number(w) * trackedWeight(k, theme)]).filter(([, w]) => w > 0);
-  const extra = extraObjectives(theme).filter((k) => !(k in rules.challengeWeights)).map((k) => [k, trackedWeight(k, theme)]).filter(([, w]) => w > 0);
-  const pool = [...weighted, ...extra].filter(([k]) => actionPlayable(k, weeklyMedian, rules));
-  const out = pool.length > 0 ? pool : weighted.filter(([k]) => !rules.passiveKeys.includes(k));
-  return out.map(([k, w]) => ({ key: k, weight: Number(w) }));
-}
-function hasActivityData(weeklyMedian) {
-  return Object.values(weeklyMedian).some((v) => (v != null ? v : 0) > 0);
-}
-function actionPlayable(key, weeklyMedian, rules = passGenRules()) {
-  var _a;
-  const m = (_a = weeklyMedian[key]) != null ? _a : 0;
-  if (objectiveMeasured(key) && !measuredPlayable(key, weeklyMedian)) return false;
-  if (rules.passiveKeys.includes(key) || !isBaseObjective(key) && objectivePassive(key)) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
-  if (!hasActivityData(weeklyMedian)) return true;
-  return m > 0 && m >= rules.challengeMinWeekly;
-}
-
-// src/game/chronicleGen.ts
-var CHRONICLE_GEN_RULES = {
-  /** false : ancien gabarit des récompenses d'épisode (Ambre, capsule, production, dossier). */
-  enabled: true,
-  /** Valeur des 4 épisodes, en heures de production équivalentes (× difficulté du mois). */
-  episodeBudgetHours: 10,
-  /** Le 4e épisode vaut (1 + courbe) fois le 1er. */
-  episodeCurve: 0.5,
-  /** Poids de tirage des récompenses d'épisode (les jetons viennent déjà du bonus des Chroniques). */
-  weights: { production: 2, amber: 2, capsule: 2, dossier: 1, tokens: 0 },
-  /** Plafonds du chapitre (4 épisodes). */
-  caps: { amber: 60, tokens: 0, dossier: 2, capsules: 2 },
-  /** Chapitre terminé : Ambre, et relique épique (sinon rare) à partir de cette difficulté. */
-  completionAmber: 30,
-  completionEpicFrom: 1.2,
-  /** Difficulté : 1 si la part visée des joueurs termine les épisodes ouverts depuis assez longtemps. */
-  difficultyMin: 0.7,
-  difficultyMax: 1.4,
-  targetCompletion: 0.5,
-  matureEpisodeDays: 5,
-  /** Quantité demandée : médiane d'une semaine × difficulté, bornée entre ces facteurs de la base. */
-  objectiveMinFactor: 0.5,
-  objectiveMaxFactor: 3,
-  /** 6.14.58 (AU27, AP-4, Q-AP4) : épisode 3 (« rebondissement ») : action peu pratiquée mais faisable, dont la médiane du
-   *  serveur atteint ce nombre par semaine (0 : la moins pratiquée de toutes, comme avant). */
-  stretchMinWeekly: 0.5,
-  /** Poids des actions dans les objectifs (0 : jamais). Les raids repoussés n'entrent que si le serveur en repousse. */
-  objectiveWeights: { contract: 1, bounty: 1, raidRepelled: 1, victory: 1, mission: 1, spy: 1, market: 1, warlordWin: 1, bossAssault: 0 },
-  /** Faction du chapitre selon le thème du passe du mois (identifiants d'archétypes). */
-  followPassTheme: true,
-  themeArchetypes: {
-    vide: "confrerie",
-    hiver: "choeur",
-    forge: "gravhorn",
-    bazar: "cartel",
-    maree: "confrerie",
-    colonies: "meute",
-    primes: "culte",
-    comete: "cartel",
-    moisson: "culte",
-    archives: "choeur",
-    chantiers: "cartel",
-    rempart: "inquisition"
-  }
-};
-var DEFAULTS2 = structuredClone(CHRONICLE_GEN_RULES);
-function chronicleGenRules() {
-  var _a, _b, _c, _d;
-  const r = CHRONICLE_GEN_RULES;
-  return __spreadProps(__spreadValues(__spreadValues({}, DEFAULTS2), r), {
-    weights: __spreadValues(__spreadValues({}, DEFAULTS2.weights), (_a = r.weights) != null ? _a : {}),
-    caps: __spreadValues(__spreadValues({}, DEFAULTS2.caps), (_b = r.caps) != null ? _b : {}),
-    objectiveWeights: __spreadValues(__spreadValues({}, DEFAULTS2.objectiveWeights), (_c = r.objectiveWeights) != null ? _c : {}),
-    themeArchetypes: __spreadValues(__spreadValues({}, DEFAULTS2.themeArchetypes), (_d = r.themeArchetypes) != null ? _d : {})
-  });
-}
-function validateChronicleGenRules(r, archetypeIds = []) {
-  var _a, _b;
-  if (!r) return [];
-  const e3 = [];
-  const L2 = "Chroniques g\xE9n\xE9r\xE9es";
-  if (!(r.episodeBudgetHours > 0)) e3.push(`${L2} : budget des \xE9pisodes > 0.`);
-  if (!(r.episodeCurve >= 0 && r.episodeCurve <= 10)) e3.push(`${L2} : courbe entre 0 et 10.`);
-  if (!(r.difficultyMin > 0 && r.difficultyMin <= 1 && r.difficultyMax >= 1 && r.difficultyMax <= 5)) e3.push(`${L2} : difficult\xE9 min \u2264 1 \u2264 max (5 au plus).`);
-  if (!(r.targetCompletion > 0 && r.targetCompletion < 1)) e3.push(`${L2} : part vis\xE9e entre 0 et 1.`);
-  if (!(r.objectiveMinFactor > 0 && r.objectiveMinFactor <= r.objectiveMaxFactor)) e3.push(`${L2} : bornes des quantit\xE9s min \u2264 max.`);
-  if (!(r.completionAmber >= 0)) e3.push(`${L2} : Ambre du chapitre termin\xE9 \u2265 0.`);
-  if (!(r.stretchMinWeekly >= 0)) e3.push(`${L2} : m\xE9diane du rebondissement \u2265 0.`);
-  if (Object.values((_a = r.objectiveWeights) != null ? _a : {}).filter((v) => Number(v) > 0).length < 4) e3.push(`${L2} : au moins 4 actions autoris\xE9es dans les objectifs.`);
-  if (archetypeIds.length) {
-    for (const [theme, a] of Object.entries((_b = r.themeArchetypes) != null ? _b : {})) if (!archetypeIds.includes(a)) e3.push(`${L2} : th\xE8me ${theme}, faction \xAB ${a} \xBB inconnue.`);
-  }
-  return e3;
-}
-function episodeBudgetRules(r, difficulty) {
-  const p2 = passGenRules();
-  return __spreadProps(__spreadValues({}, p2), {
-    budgetHours: r.episodeBudgetHours * difficulty,
-    curve: r.episodeCurve,
-    milestones: [],
-    rareRelicTiers: [],
-    epicRelicTiers: [],
-    weights: r.weights,
-    caps: r.caps
-  });
-}
-function budgetEpisodeRewards(rng, difficulty, r = chronicleGenRules()) {
-  return generateBudgetTiers(rng, 5, episodeBudgetRules(r, difficulty)).tiers.slice(0, 4);
-}
-function objectiveWeight(k, r = chronicleGenRules(), theme) {
-  const own = r.objectiveWeights[k];
-  const g = own === void 0 ? isBaseObjective(k) ? 0 : 1 : Number(own);
-  return Math.max(0, Number.isFinite(g) ? g : 0) * trackedWeight(k, theme);
-}
-
 // src/game/narrative.ts
 var NARRATIVE_RULES = {
   /** Faux : textes et tirages d'avant la 6.14.137. */
@@ -21879,21 +21990,6 @@ function normalizeProcedural(raw) {
     leadDay: Math.min(28, Math.max(1, Math.floor(Number(r.leadDay) || DEFAULT_PROCEDURAL.leadDay))),
     regenerateOutdated: bool(r.regenerateOutdated, DEFAULT_PROCEDURAL.regenerateOutdated),
     log: (Array.isArray(r.log) ? r.log : []).filter((l) => l && typeof l.text === "string").slice(-50)
-  };
-}
-function hashSeed(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-function seededRandom2(seed) {
-  let a = hashSeed(seed);
-  return () => {
-    a = a + 1831565813 >>> 0;
-    let t = a;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
 }
 var pick2 = (rng, xs) => xs[Math.floor(rng() * xs.length) % xs.length];
@@ -22410,8 +22506,8 @@ function archivesText(d, label3) {
   return parts.join(" ");
 }
 function generateChapter(o) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
-  const rng = seededRandom2(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+  const rng = seededRandom(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
   const d = o.digest;
   const recent = [...o.existing].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(-2);
   const archetypes = chapterArchetypes();
@@ -22426,11 +22522,12 @@ function generateChapter(o) {
   const themedId = gen.followPassTheme && themeId ? yearArchetypeFor(themeId, (_b = catalog == null ? void 0 : catalog.year) != null ? _b : 1, gen.themeArchetypes) : void 0;
   const themed = themedId ? archetypes.find((a) => a.id === themedId) : void 0;
   const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
-  const usedTitles = new Set(o.existing.flatMap((m) => {
-    var _a2, _b2;
-    return [m.title, (_b2 = (_a2 = m.completion) == null ? void 0 : _a2.title) != null ? _b2 : "", m.boss.name];
+  const library = (_d = (_c = o.library) != null ? _c : chroniclesConfig().library) != null ? _d : [];
+  const usedTitles = new Set([...o.existing, ...library].flatMap((m) => {
+    var _a2, _b2, _c2, _d2;
+    return [m.title, (_b2 = (_a2 = m.completion) == null ? void 0 : _a2.title) != null ? _b2 : "", (_d2 = (_c2 = m.boss) == null ? void 0 : _c2.name) != null ? _d2 : ""];
   }));
-  const extras = NARRATIVE_RULES.enabled !== false ? (_c = NARRATIVE_RULES.archetypeExtras) == null ? void 0 : _c[arch.id] : void 0;
+  const extras = NARRATIVE_RULES.enabled !== false ? (_e = NARRATIVE_RULES.archetypeExtras) == null ? void 0 : _e[arch.id] : void 0;
   const fresh = (xs, reserve) => {
     const left = xs.filter((x) => !usedTitles.has(x));
     const spare = left.length > 0 ? [] : textList(reserve).filter((x) => !usedTitles.has(x));
@@ -22441,11 +22538,11 @@ function generateChapter(o) {
   const completionTitle = fresh(arch.completionTitles, extras == null ? void 0 : extras.completionTitles);
   const banks = textBanks(o.monthId, o.existing);
   const { value: difficulty, reasons } = chapterDifficulty(d);
-  const previousTypes = ((_e = (_d = recent.at(-1)) == null ? void 0 : _d.episodes) != null ? _e : []).map((e3) => e3.objective.type);
+  const previousTypes = ((_g = (_f = recent.at(-1)) == null ? void 0 : _f.episodes) != null ? _g : []).map((e3) => e3.objective.type);
   const types = chooseObjectives(rng, d, previousTypes, themeId);
   const template = episodeRewards(rng, difficulty);
-  const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom2(`chapter-rewards:${o.monthId}:${(_f = o.variant) != null ? _f : 0}`), difficulty, gen) : template;
-  if (themed) reasons.push(arch === themed ? `Faction du th\xE8me du passe (${themeId}, ann\xE9e ${(_g = catalog == null ? void 0 : catalog.year) != null ? _g : 1}) : ${arch.faction}.` : `Le th\xE8me du passe (${themeId}) appelait ${themed.faction}, d\xE9j\xE0 l\xE0 le mois dernier : faction tir\xE9e au sort.`);
+  const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom(`chapter-rewards:${o.monthId}:${(_h = o.variant) != null ? _h : 0}`), difficulty, gen) : template;
+  if (themed) reasons.push(arch === themed ? `Faction du th\xE8me du passe (${themeId}, ann\xE9e ${(_i = catalog == null ? void 0 : catalog.year) != null ? _i : 1}) : ${arch.faction}.` : `Le th\xE8me du passe (${themeId}) appelait ${themed.faction}, d\xE9j\xE0 l\xE0 le mois dernier : faction tir\xE9e au sort.`);
   if (gen.enabled) reasons.push(`R\xE9compenses des \xE9pisodes tir\xE9es sous budget : ${round2(gen.episodeBudgetHours * difficulty)} h de production \xE9quivalentes (\xD7${difficulty}).`);
   const vars = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = /* @__PURE__ */ new Set();
@@ -22486,7 +22583,7 @@ function generateChapter(o) {
   if (nov.pick) {
     const p2 = nov.pick;
     const i = p2.episode - 1;
-    const nrng = seededRandom2(`novelty:${o.monthId}:${(_h = o.variant) != null ? _h : 0}`);
+    const nrng = seededRandom(`novelty:${o.monthId}:${(_j = o.variant) != null ? _j : 0}`);
     const texts = noveltyTexts(parseContentObjective(p2.key).family, NOVELTY_RULES);
     const ep = episodes[i];
     const titles = texts.titles.filter((t) => !episodes.some((e3, j) => j !== i && e3.title === t));
@@ -22515,7 +22612,7 @@ function generateChapter(o) {
     activePlayers: d.activePlayers,
     reasons,
     generator: GENERATOR_VERSION.chapter,
-    variant: Math.max(0, Math.floor((_i = o.variant) != null ? _i : 0))
+    variant: Math.max(0, Math.floor((_k = o.variant) != null ? _k : 0))
   }, novelty ? { novelty } : {});
   const month2 = {
     id: o.monthId,
@@ -22530,12 +22627,12 @@ function generateChapter(o) {
       lore: pick2(rng, arch.lore)
     },
     episodes,
-    synopsis: fill(`${pick2(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_j = heroLine(rng, d, vars, banks.fresh(banks.heroes))) != null ? _j : "")}`.trim(), vars),
+    synopsis: fill(`${pick2(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_l = heroLine(rng, d, vars, banks.fresh(banks.heroes))) != null ? _l : "")}`.trim(), vars),
     completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] },
     codex,
     auto
   };
-  if (((_k = o.settings) == null ? void 0 : _k.pass) !== false) {
+  if (((_m = o.settings) == null ? void 0 : _m.pass) !== false && o.monthId < CATALOG_START) {
     const prev = activePass(d.monthId).pointsPerTier || PASS_RULES.pointsPerTier;
     const g = generatePass(rng, d, prev);
     month2.pass = g.pass;
@@ -22966,7 +23063,7 @@ function fitChallenges(season, d, redraw, rules = passGenRules()) {
 function redrawChallenges(season, d, variant, k) {
   var _a, _b;
   const theme = (_b = (_a = PASS_THEMES.find((t) => t.id === season.theme.id)) != null ? _a : PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme)) != null ? _b : PASS_THEMES[0];
-  const rng = seededRandom2(`challenges:${season.id}:${variant}:redraw${k}`);
+  const rng = seededRandom(`challenges:${season.id}:${variant}:redraw${k}`);
   const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
   return gen(rng, shuffle(rng, theme.focus), d, season.tiers.length, theme.id);
 }
@@ -23405,7 +23502,7 @@ function hasFullChallenges(s) {
 function regenerateChallenges(season, digest, variant = 0) {
   var _a, _b;
   const theme = (_b = (_a = PASS_THEMES.find((t) => t.id === season.theme.id)) != null ? _a : PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme)) != null ? _b : PASS_THEMES[0];
-  const rng = seededRandom2(`challenges:${season.id}:${variant}`);
+  const rng = seededRandom(`challenges:${season.id}:${variant}`);
   const focus = shuffle(rng, theme.focus);
   const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
   return __spreadProps(__spreadValues({}, season), { requirements: gen(rng, focus, digest, season.tiers.length, theme.id) });
@@ -23413,7 +23510,7 @@ function regenerateChallenges(season, digest, variant = 0) {
 function generatePassSeason(o) {
   var _a, _b, _c, _d, _e;
   const variant = Math.max(0, Math.floor((_a = o.variant) != null ? _a : 0));
-  const rng = seededRandom2(`pass:${o.monthId}:${variant}`);
+  const rng = seededRandom(`pass:${o.monthId}:${variant}`);
   const entry = catalogEntryFor(o.monthId);
   const theme = (_b = PASS_THEMES.find((t) => t.id === entry.theme)) != null ? _b : PASS_THEMES[0];
   const name = entry.name;
@@ -23438,7 +23535,7 @@ function generatePassSeason(o) {
   const reasons = [];
   let tiers2 = g.pass.tiers.map((t) => t.map((r) => __spreadValues({}, r)));
   if (rules.enabled) {
-    const b = generateBudgetTiers(seededRandom2(`passgen:${o.monthId}:${variant}`), tiers2.length, rules);
+    const b = generateBudgetTiers(seededRandom(`passgen:${o.monthId}:${variant}`), tiers2.length, rules);
     tiers2 = b.tiers;
     reasons.push(...b.reasons);
   } else reasons.push(`R\xE9compenses : gabarit fixe (budget d\xE9sactiv\xE9), ${Math.round(tiersValue(tiers2.slice(0, -1), rules))} h de production \xE9quivalentes.`);
@@ -25917,7 +26014,7 @@ var SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande Coa
 var SAGA_WINNERS = ["H\xE9ros de la saga", "Porte-banni\xE8re", "Champion d'alliance", "Fer de lance"];
 function generateAllianceSaga(monthId, digest, difficulty, now, opts = {}) {
   var _a, _b, _c, _d, _e, _f;
-  const rng = seededRandom2(`saga:${monthId}`);
+  const rng = seededRandom(`saga:${monthId}`);
   const archetypes = chapterArchetypes();
   const drawn = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
   const chapter = ALLIANCE_SAGA_RULES.followChapter ? opts.chapter !== void 0 ? opts.chapter : (_a = chroniclesConfig().months.find((m) => m.id === monthId)) != null ? _a : null : null;
