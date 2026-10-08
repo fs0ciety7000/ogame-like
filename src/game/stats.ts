@@ -106,6 +106,11 @@ export interface PlayerStats {
   phalanxScans?: number;
   gateJumps?: number;
   gateSaves?: number;
+  /** 6.14.115 (AJ27-5) : convois de route logistique arrivés, bases avancées tenues jusqu'au bout, spécialisations de colonie
+   *  déjà choisies (Codex des colonies : une fiche reste ouverte après un changement). */
+  colonyConvoys?: number;
+  colonyBaseTours?: number;
+  colonySpecsUsed?: string[];
   /** 6.14.107 (AE-L4) : traces de la santé de l'équilibre, en taille fixe (`healthTrace.ts`) : Ambre gagnée par source
    *  (semaine en cours et précédente), production perdue à entrepôt plein (idem), dernier coffre du 7e jour, 1re Ascension. */
   amberWeek?: import("@/game/healthTrace").AmberWeekTrace;

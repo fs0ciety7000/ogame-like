@@ -1,5 +1,6 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { spendResources } from "@/game/spending";
+import { bumpStat, playerStats } from "@/game/stats";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -216,6 +217,8 @@ export function runColonyRoute(colony: Colony, player: PlayerState, now: number)
   const to = supply ? colony.resources : player.resources;
   for (const [res, n] of Object.entries(taken) as [ResourceId, number][]) from[res] = (from[res] ?? 0) - n;
   for (const [res, n] of Object.entries(delivered) as [ResourceId, number][]) to[res] = (to[res] ?? 0) + n;
+  // 6.14.115 (AJ27-5) : un convoi arrivé (non vide) compte pour le succès « Convoyeur ».
+  if (Object.values(delivered).some((n) => (n ?? 0) > 0)) bumpStat(player, "colonyConvoys");
   const every = Math.max(1, route.everyHours) * 3_600_000;
   // Prochain convoi aligné sur la cadence, jamais dans le passé.
   const missed = Math.floor((now - route.nextAtMs) / every);
@@ -306,6 +309,14 @@ export const COLONY_SPECS: ColonySpecDef[] = [
   colonySpec("depot", "Dépôt logistique", "📦", (f) => `Entrepôt ${signedPct(f.storage)} : la colonie stocke plus longtemps sans perte.`, ["storage"]),
 ];
 
+/** 6.14.115 (AJ27-5) : récit de chaque spécialisation (fiche du Codex) ; les chiffres viennent du résumé, lu dans les règles. */
+export const COLONY_SPEC_LORE: Record<ColonySpecId, string> = {
+  forge: "Les cheminées ne s'éteignent jamais. On y coule le métal jour et nuit, et la colonie entière sent la limaille chaude. Le gisement rare, lui, attend son tour : ici, on produit d'abord ce qui sert tout de suite.",
+  extraction: "Des puits forés si profond que les équipes y descendent pour des semaines. Chaque benne qui remonte vaut une fortune, et les extracteurs de surface tournent au ralenti pour laisser l'énergie aux foreuses.",
+  bastion: "Des remparts de roche fondue, des dômes de bouclier, et des batteries qui sortent des ateliers plus vite qu'ailleurs. La colonie produit moins : elle a mieux à faire que de s'enrichir, elle tient.",
+  depot: "Des silos à perte de vue, alignés comme des tours de garde. Rien ne se perd, tout attend le prochain convoi. Les logisticiens disent qu'une colonie pleine vaut mieux qu'une colonie riche.",
+};
+
 export const COLONY_SPEC_RULES = {
   /** Délai entre deux changements (le premier choix est libre). */
   changeCooldownMs: 7 * 24 * 3600_000,
@@ -349,6 +360,9 @@ export function setColonySpec(player: PlayerState, colonyIdIn: string, specIn: s
   if (ready > now) throw new GameActionError(`Changement possible dans ${Math.ceil((ready - now) / 3600_000)} h.`);
   colony.spec = spec.id;
   colony.specChangedAtMs = now;
+  // 6.14.115 (AJ27-5) : la fiche du Codex de la spécialisation reste ouverte après un changement.
+  const used = playerStats(player).colonySpecsUsed ?? [];
+  if (!used.includes(spec.id)) player.stats = { ...(player.stats ?? {}), colonySpecsUsed: [...used, spec.id] };
   return colony;
 }
 
@@ -375,6 +389,20 @@ export const BIOMES: Record<RareResourceId, { name: string; deposit: string; lor
 };
 
 export const RARE_DEPOSITS = Object.keys(BIOMES) as RareResourceId[];
+
+/** 6.14.115 (AJ27-5) : biomes qui ont leur illustration définitive (`public/assets/colonies/biome-<id>.webp`, lignes
+ *  `colonie-biome-<id>` de `scripts/illustrations.json`, docs/illustrations.md). Un id ajouté ici suffit. */
+export const BIOME_ART: readonly RareResourceId[] = [];
+
+/** Illustration d'un biome (Codex) : définitive si elle existe, sinon l'icône de sa ressource rare (image provisoire). */
+export function biomeImage(id: RareResourceId): string {
+  return BIOME_ART.includes(id) ? `/assets/colonies/biome-${id}.webp` : `/assets/icons/${id}.webp`;
+}
+
+/** 6.14.115 (AJ27-5) : illustration d'une spécialisation (lignes `colonie-<id>`, intégrées le 2026-10-07). */
+export function colonySpecImage(id: ColonySpecId): string {
+  return `/assets/colonies/${id}.webp`;
+}
 
 export const DEPOSIT_RULES = {
   /** Production par seconde, niveaux 1 à 15. */

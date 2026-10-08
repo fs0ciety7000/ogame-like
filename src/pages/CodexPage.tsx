@@ -130,7 +130,7 @@ export function CodexPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader eyebrow="Cosmic Empires / Archives" title="Codex" description="L'encyclopédie du secteur. Chaque rencontre ajoute une fiche : factions, seigneurs, boss, unités, bâtiments, technologies et Chroniques." />
+      <PageHeader eyebrow="Cosmic Empires / Archives" title="Codex" description="L'encyclopédie du secteur. Chaque rencontre ajoute une fiche : factions, seigneurs, boss, unités, bâtiments, technologies, colonies et Chroniques." />
       <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
         <BookOpen className="hidden h-8 w-8 shrink-0 text-gold-glow sm:block" />
         <div className="flex-1">

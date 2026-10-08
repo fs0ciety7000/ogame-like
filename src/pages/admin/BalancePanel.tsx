@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AmberBudgetCard } from "@/pages/admin/AmberBudgetCard";
+import { ContentChainSection } from "@/pages/admin/ContentChainSection";
 import { NumberInput } from "@/components/ui/number-input";
 import { useSearchParams } from "react-router-dom";
 import { AlertOctagon, AlertTriangle, ArrowRight, Info, RefreshCw, Scale, Wand2 } from "lucide-react";
@@ -268,6 +269,9 @@ export function BalancePanel() {
           <BalanceHistory history={live.history ?? []} onSnapshot={() => void load()} />
         </Section>
       )}
+
+      {/* 6.14.114 (AJ27-4) : chaîne de contenu, contenu ajouté dans l'admin compris. */}
+      <ContentChainSection />
 
       <CombatUnitAudit />
 

@@ -15,7 +15,9 @@ cover: /assets/blog/articles/6-14/codex-complet-et-illustrations.webp
 - **Bâtiments** : 13 fiches, chacune débloquée quand tu construis le bâtiment.
 - **Technologies** : 30 fiches, chacune débloquée à ton premier niveau de recherche.
 - Une catégorie complète rapporte **5 jetons et 25 Ambre**, comme les Unités.
-- Le pourcentage du Codex baisse avec ces 43 fiches. Le titre « Archiviste » déjà gagné reste à toi.
+- **Colonies** : 4 biomes, ouverts par le relevé de ta première colonie, et 4 spécialisations, chacune ouverte la première fois que tu la
+  choisis. Même récompense de catégorie. Quatre succès suivent tes colonies : Terres neuves, Empire des mondes, Convoyeur et Avant-poste tenu.
+- Le pourcentage du Codex baisse avec ces 51 fiches. Le titre « Archiviste » déjà gagné reste à toi.
 
 ## « Tout réclamer » prend le Codex
 

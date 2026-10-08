@@ -105,7 +105,10 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
      mois ajouté à `SEASON_PORTRAITS` (`passSeasons.ts`) ; saisons déjà écrites : migration `run` sur `passSeasons`.
    - **En-têtes** (6.14.93) : `backdrop="/assets/headers/<page>.webp"` du `PageHeader` de la page.
    - **Devblog** : `cover:` du billet dans `content/blog/` ; un billet déjà publié se règle dans Admin → Devblog.
-   - **Classes, modules, spécialisations de colonie** : pas encore de champ d'image (Q240), le fichier attend son lot d'affichage.
+   - **Classes, modules** : pas encore de champ d'image (Q240), le fichier attend son lot d'affichage. **Spécialisations de colonie** :
+     fiches du Codex depuis 6.14.115 (`colonySpecImage`, même nom de fichier).
+   - **Biomes de colonie** (6.14.115) : `colonie-biome-<id>` → ajouter l'identifiant de la ressource rare à `BIOME_ART` (`colonies.ts`) ;
+     la fiche du Codex quitte alors l'icône de la ressource (image provisoire) pour `/assets/colonies/biome-<id>.webp`.
    - **Prestige** (6.14.85) : `prestige-monument` → remplacer la valeur de `PRESTIGE_IMAGE` (`src/game/prestige.ts`, image provisoire
      `/assets/buildings/fonderie_quantique.webp`) par `/assets/prestige/monument.webp` : page Prestige et fiche du Codex suivent.
 4. Fiche `docs/changes/`, validation, commit, push. `node scripts/preprod-illustrations.mjs integrated <id> …`. Vérifier sur la pré-prod

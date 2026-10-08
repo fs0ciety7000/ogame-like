@@ -32,7 +32,7 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 | **Base avancée** | Colonies | Stationne une flotte sur une colonie, jusqu'à 14 jours |
 | **Ordres du jour** | Menu | Toutes tes corvées au même endroit, et **Tout réclamer** en un clic |
 | **Passe et Chroniques** | Passe | Un passe à ton rythme (fini au plus tard le 28 pour un joueur régulier, défis calés sur le serveur), des paliers bonus après le dernier, un chapitre par mois |
-| **Codex** | Codex | Bâtiments et technologies ont leur fiche ; 5 jetons et 25 Ambre par catégorie complète |
+| **Codex** | Codex | Bâtiments, technologies et colonies (biomes, spécialisations) ont leur fiche ; 5 jetons et 25 Ambre par catégorie complète ; 4 succès de colonies |
 | **Projets de prestige** | Empire → Prestige | Dès tes 4 extracteurs au niveau 10, ta production en trop bâtit des monuments : 8 h de production, 8 h de chantier, un à la fois, 8 points de prestige, un classement et un monument sur ta fiche. Aucun bonus : le prestige se voit |
 
 ## Combat et équilibre

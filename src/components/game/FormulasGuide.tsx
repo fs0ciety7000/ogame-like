@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
-import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
+import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Globe2, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, requiredForAscension } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
@@ -28,6 +28,8 @@ import { ROLE_EFFECTS } from "@/game/commanders";
 import { EFFECT_CAP_RULES } from "@/game/effects";
 import { CHRONICLE_GEN_RULES } from "@/game/chronicleGen";
 import { RHYTHM_RULES, rhythmPhase } from "@/game/rhythm";
+import { BIOMES, colonyBiome, colonyDepositPerSecond, COLONY_ROUTE_RULES, COLONY_RULES, COLONY_SPECS, depositLevel, DEPOSIT_RULES, findColonySpec, homeLevels, RARE_DEPOSITS } from "@/game/colonies";
+import { COLONY_BASE_RULES } from "@/game/fleets";
 import { PRESTIGE_RULES, prestigeCost, prestigeHours, prestigeMonument, prestigeState, prestigeUnlocked } from "@/game/prestige";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { cn, formatCompact, formatDateTime, formatDecimal } from "@/lib/utils";
@@ -82,6 +84,7 @@ export const FORMULA_SECTIONS = [
   { id: "ascension", label: "Ascension et rythme", icon: Hourglass },
   { id: "lune", label: "Lune et phalange", icon: Moon },
   { id: "prestige", label: "Prestige", icon: Landmark },
+  { id: "colonies", label: "Colonies", icon: Globe2 },
   { id: "gains", label: "Missions et gains", icon: Coins },
   { id: "bonus", label: "Bonus", icon: Sparkles },
   { id: "passe", label: "Passe et Chroniques", icon: Ticket },
@@ -494,6 +497,38 @@ récompense = ${PRESTIGE_RULES.pointsPerProject} points de prestige par projet ;
               value={Object.entries(prestigeCost(p)).map(([res, v]) => `${n(v ?? 0)} ${resName(res).toLowerCase()}`).join(", ") || "—"}
               hint={prestigeUnlocked(p) ? `${formatDecimal(prestigeHours(p), 1)} h de ta production` : "extracteurs pas encore au niveau requis"}
             />
+          </Mine>
+        )}
+      </Block>
+
+      {/* 6.14.115 (AJ27-5, AJ-3) : colonies, chiffres lus dans les règles (Admin → Règles → Colonies). */}
+      <Block id="colonies" title="Colonies" icon={Globe2} intro={`Jusqu'à ${COLONY_RULES.maxColonies} colonies en plus de ta planète mère. Chacune a son stock, ses extracteurs, son gisement rare et ses défenses ; les ressources rejoignent la planète mère par transport ou par route logistique.`}>
+        <Formula>
+          {`fondation : ${COLONY_RULES.levelsRequired.map((l) => formatCompact(l)).join(" puis ")} niveaux de bâtiments sur la planète mère
+coût = ${formatCompact(COLONY_RULES.foundCommonCost)} par ressource commune + ${formatCompact(COLONY_RULES.foundRareCost)} par ressource rare ; voyage ${formatDecimal(COLONY_RULES.foundHours, 1)} h ; stock de départ ${formatCompact(COLONY_RULES.startStock)}
+extracteurs et entrepôt au départ = min(${COLONY_RULES.foundationMax}, ${pct(COLONY_RULES.foundationShare)} du niveau sur la planète mère)
+production d'une colonie = production d'un extracteur × (1 + ${pct(COLONY_RULES.productionBonus)}) × spécialisation ; niveau ${COLONY_RULES.maxLevel} au plus
+gisement rare = ${formatDecimal(DEPOSIT_RULES.perSecond[0] ?? 0, 2)} à ${formatDecimal(DEPOSIT_RULES.perSecond[DEPOSIT_RULES.perSecond.length - 1] ?? 0, 2)} par seconde (niveaux 1 à ${DEPOSIT_RULES.perSecond.length}) × spécialisation
+route logistique : un convoi toutes les ${COLONY_ROUTE_RULES.intervals.join(", ")} h ; ${pct(COLONY_ROUTE_RULES.feePct)} perdus en route ; réserve gardée jusqu'à ${pct(COLONY_ROUTE_RULES.maxKeepPct)} de l'entrepôt ; jamais au-delà de l'entrepôt de la planète mère
+ravitaillement : la planète mère garde ${pct(COLONY_ROUTE_RULES.supplyHomeReservePct)} de son entrepôt
+base avancée : ${COLONY_BASE_RULES.maxDays} j au plus, une par colonie`}
+        </Formula>
+        <Table head={["Spécialisation", "Effet"]} rows={COLONY_SPECS.map((sp) => [`${sp.emoji} ${sp.name}`, sp.summary])} />
+        <Table head={["Biome", "Gisement", "Ressource"]} rows={RARE_DEPOSITS.map((b) => [BIOMES[b].name, BIOMES[b].deposit, resName(b)])} />
+        {p && (
+          <Mine>
+            {(p.colonies ?? []).length === 0 ? (
+              <Row label="Niveaux de bâtiments" value={n(homeLevels(p))} hint={`${n(COLONY_RULES.levelsRequired[0] ?? 0)} pour ta première colonie`} />
+            ) : (
+              (p.colonies ?? []).map((c) => (
+                <Row
+                  key={c.id}
+                  label={c.name}
+                  value={`${n(colonyDepositPerSecond(c) * 3600)} ${resName(colonyBiome(c)).toLowerCase()}/h`}
+                  hint={`${BIOMES[colonyBiome(c)].name} · gisement niv. ${depositLevel(c)}${c.spec ? ` · ${findColonySpec(c.spec)?.name ?? c.spec}` : ""}${c.route ? ` · convoi toutes les ${c.route.everyHours} h` : ""}`}
+                />
+              ))
+            )}
           </Mine>
         )}
       </Block>

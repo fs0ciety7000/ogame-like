@@ -6,6 +6,7 @@ import { chroniclesConfig, chronicleMonthId, codexRewards, episodeUnlockMs } fro
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import type { BossHistoryEntry } from "@/game/bossHistory";
 import { GameActionError } from "@/game/errors";
+import { formatDecimal } from "@/game/format";
 import { grantPassReward } from "@/game/seasonPass";
 import { PERSONALITY_LABELS, TIER_LABELS } from "@/game/warlords";
 import { WORLD_BOSSES } from "@/game/worldBosses";
@@ -16,6 +17,7 @@ import { describeTechEffect, TECHNOLOGIES, techEffects, techImage } from "@/game
 import { RESOURCE_LIST } from "@/game/resources";
 import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
 import { COMMANDERS, commandersState } from "@/game/commanders";
+import { BIOMES, biomeImage, colonyBiome, COLONY_SPEC_LORE, COLONY_SPECS, colonySpecImage, DEPOSIT_RULES, RARE_DEPOSITS } from "@/game/colonies";
 import { warlordUid, warlordsConfig } from "@/game/warlords";
 import type { PlayerState } from "@/types/game";
 
@@ -33,7 +35,7 @@ import type { PlayerState } from "@/types/game";
 
 export const CODEX_TITLE = "Archiviste";
 
-export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "buildings" | "technologies" | "relics" | "officers" | "chronicles" | "legends";
+export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "buildings" | "technologies" | "colonies" | "relics" | "officers" | "chronicles" | "legends";
 
 export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string }[] = [
   { id: "factions", label: "Factions", hint: "Débloquée au premier ultimatum reçu." },
@@ -43,6 +45,8 @@ export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string 
   // 6.14.12 (C2) : bâtiments construits et technos recherchées.
   { id: "buildings", label: "Bâtiments", hint: "Débloqué une fois construit." },
   { id: "technologies", label: "Technologies", hint: "Débloquée une fois recherchée." },
+  // 6.14.115 (AJ27-5, QJ5) : biomes (relevé du secteur à la première colonie) et spécialisations (choisie une fois).
+  { id: "colonies", label: "Colonies", hint: "Biomes : à ta première colonie. Spécialisation : choisie une fois." },
   // 5.15.12 : reliques possédées et officiers recrutés.
   { id: "relics", label: "Reliques", hint: "Débloquée en possédant cette relique." },
   { id: "officers", label: "Officiers", hint: "Débloqué en recrutant cet officier." },
@@ -87,7 +91,7 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 const resourceName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige" | "colonies">>;
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -310,6 +314,41 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       text: t.desc,
       unlocked: (player.techLevels?.[t.id] ?? 0) >= 1,
       facts: [{ label: "Niveau max", value: String(t.maxLevel) }, ...effects.slice(0, 2).map((value) => ({ label: "Au niveau 1", value }))],
+    });
+  }
+  // 6.14.115 (AJ27-5, AJ-3) : colonies. Biomes ouverts par le relevé de la première colonie (deux colonies au plus : chaque biome
+  // doit rester accessible), spécialisations ouvertes au premier choix et gardées après un changement.
+  const colonies = player.colonies ?? [];
+  const specsUsed = new Set([...((player.stats as { colonySpecsUsed?: string[] } | undefined)?.colonySpecsUsed ?? []), ...colonies.map((c) => c.spec).filter((x): x is NonNullable<typeof x> => !!x)]);
+  const perSecond = DEPOSIT_RULES.perSecond;
+  for (const b of RARE_DEPOSITS) {
+    const mine = colonies.filter((c) => colonyBiome(c) === b).map((c) => c.name);
+    out.push({
+      id: `colony:biome:${b}`,
+      category: "colonies",
+      name: BIOMES[b].name,
+      subtitle: `Biome · ${resourceName(b)}`,
+      image: biomeImage(b),
+      text: BIOMES[b].lore,
+      unlocked: colonies.length > 0,
+      color: BIOMES[b].tone,
+      facts: [
+        { label: "Gisement", value: BIOMES[b].deposit },
+        ...(perSecond.length > 0 ? [{ label: "Extraction", value: `${formatDecimal(perSecond[0], 2)} à ${formatDecimal(perSecond[perSecond.length - 1], 2)} ${resourceName(b).toLowerCase()} par seconde (niveaux 1 à ${perSecond.length})` }] : []),
+        ...(mine.length > 0 ? [{ label: "Tes colonies", value: mine.join(", ") }] : []),
+      ],
+    });
+  }
+  for (const sp of COLONY_SPECS) {
+    out.push({
+      id: `colony:spec:${sp.id}`,
+      category: "colonies",
+      name: sp.name,
+      subtitle: "Spécialisation de colonie",
+      image: colonySpecImage(sp.id),
+      text: COLONY_SPEC_LORE[sp.id] ?? sp.summary,
+      unlocked: specsUsed.has(sp.id),
+      facts: [{ label: "Effet", value: sp.summary }],
     });
   }
   return out;

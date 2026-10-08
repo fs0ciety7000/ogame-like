@@ -1226,6 +1226,54 @@
    "done": "2026-10-07"
   },
   {
+   "id": "colonie-biome-reinforcedSteel",
+   "group": "Colonies",
+   "name": "Biome : Monde ferreux (Codex)",
+   "target": "public/assets/colonies/biome-reinforcedSteel.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "a rust-red iron colony world with a metal-saturated core, steel ridges breaking through the crust, a lone deep mine shaft glowing cold blue-grey, sci-fi colony biome card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "colonie-biome-cyberModule",
+   "group": "Colonies",
+   "name": "Biome : Cimetière d'épaves (Codex)",
+   "target": "public/assets/colonies/biome-cyberModule.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "a colony world littered with crashed starship wrecks half buried in grey dust, salvage cranes and faint cyan lights flickering in old hulls, sci-fi colony biome card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "colonie-biome-syntheticNanites",
+   "group": "Colonies",
+   "name": "Biome : Marais de nanites (Codex)",
+   "target": "public/assets/colonies/biome-syntheticNanites.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "a swamp colony world drowned in a living grey-green nanite mist, hive-like harvesting towers rising from the haze, soft mint glow, sci-fi colony biome card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "colonie-biome-aiFragment",
+   "group": "Colonies",
+   "name": "Biome : Nécropole d'IA (Codex)",
+   "target": "public/assets/colonies/biome-aiFragment.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "a colony world of ruined machine cities, toppled server monoliths and excavated glowing violet cores, quiet dead-civilization atmosphere, sci-fi colony biome card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
    "id": "passe-theme-vide",
    "group": "Passe de saison",
    "name": "Thème « L'Appel du Vide » (en-tête du passe)",

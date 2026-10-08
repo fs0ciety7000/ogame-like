@@ -49,8 +49,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 32 | AC-G | Réclamations groupées (casino du jour, défi, titre du Codex dans « Tout réclamer ») | M | livré (6.14.113) |
 | 33 | UX-6 | Hiérarchie des pages (Missions, Passe, Alliance, Seigneurs, Codex) | M | livré (6.14.67) |
 | 34 | UX-7 | Tactile et accessibilité (44 px sur écran tactile, `aria-label`, raison des boutons grisés) | M | livré (6.14.68) |
-| 35 | AJ27-4 | Garde de chaîne de contenu par contenu, panneau « Chaîne de contenu » dans l'admin | M | à faire |
-| 36 | AJ27-5 | Colonies dans la chaîne : succès, Codex des biomes, Formules | M | à faire |
+| 35 | AJ27-4 | Garde de chaîne de contenu par contenu, panneau « Chaîne de contenu » dans l'admin | M | livré (6.14.114) |
+| 36 | AJ27-5 | Colonies dans la chaîne : succès, Codex des biomes, Formules | M | livré (6.14.115) |
 | 37 | É30-5 | Performance : stabilité mobile, LCP de la Galaxie, images du Codex à la demande | M | à faire |
 | 38 | É30-6 | Rythme des succès (avec AP-L4) | M | à faire |
 | 39 | É30-7 | Reliques à image propre et prompts des biomes et classes | S | à faire |

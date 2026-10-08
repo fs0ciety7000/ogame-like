@@ -11,10 +11,10 @@
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 ; tirage pondéré (6.14.109 : « Repousser une attaque » 0,5, raids de faction comptés) |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons ; chaque ressource commune : **6 à 18 h de production** du joueur depuis la 6.14.106, tirées à part, dans la place libre de l'entrepôt, au moins 2 M ; 2 M à 12 M en 6.14.72, 45 M à 280 M avant ; `streak.chest.commonHours`, [0, 0] = bornes fixes, Q99) |
-| Succès | continu | 147 succès par défaut (76 écrits et 71 dérivés des catalogues ; 178 sur la copie de la prod en Z1 ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
+| Succès | continu | 151 succès par défaut (76 écrits et 75 dérivés des catalogues ; 6.14.115 : 4 succès de colonies, « Terres neuves », « Empire des mondes », « Convoyeur », « Avant-poste tenu » ; 178 sur la copie de la prod en Z1 ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
 | Ascension | ≥ 7 jours, puis **≥ 30 jours** dès la bascule du rythme (1er novembre 2026, 6.14.88) | 5 au plus, puis **10** ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent ; succès Ascension I, II, V et X. 1re Ascension (simulateur) : avant la bascule J10 (actif), J19 (moyen), J46 (occasionnel), J33 (quotidien) ; après **J87, J91, J126, J115** (cibles de `proposals/rythme-long-terme.md` §4.1 : J80–110, J95–125, J130–180, J110–150) |
 | Projets de prestige (6.14.85) | un à la fois, 8 h | ouverts quand les 4 extracteurs sont au niveau **10** ; coût **8 h** de production commune du moment (extracteurs × technos), durée **8 h** ; **8 points** par projet, monument de la fiche publique (Stèle à 1 projet … Merveille du secteur à 1 000), classement « Prestige », succès 1 / 10 / 100 (titre « Bâtisseur d'éternité ») / 1 000 (secret) ; **aucun bonus** (Q168, I32) ; Admin → Règles → Projets de prestige |
-| Codex, titres, bannières | collection | 10 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché) ; récompense par catégorie complète (Unités, Bâtiments, Technologies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
+| Codex, titres, bannières | collection | 11 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché ; 6.14.115 : Colonies, 4 biomes ouverts à la première colonie et 4 spécialisations ouvertes au premier choix) ; récompense par catégorie complète (Unités, Bâtiments, Technologies, Colonies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
 
 ## Code et admin
 `seasons.ts`, `leagues.ts`, `seasonPass.ts`, `passSeasons.ts`, `chronicles.ts`, `challenges.ts`, `contracts.ts`, `dailyMissions.ts`,
@@ -140,3 +140,11 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   (`defenseCountsFactionRaids`) ; poids tous égaux : tirage d'avant, même graine ; quantités et « Dépenser » réglables (`targets`,
   `spendHours`, `spendMin`, valeurs d'avant). Menu progressif (I31) inchangé : une page fermée n'est jamais tirée. Réglages :
   Admin → Règles → « Objectifs du jour : tirage et quantités ». Fiche : `docs/changes/6.14.109-objectifs-du-jour-ponderes.md`.
+
+## 6.14.114 et 6.14.115 (revue AU27, lots AJ27-4 et AJ27-5)
+- **Chaîne de contenu** (6.14.114) : la garde (`contentChain.ts`) vérifie aussi le succès propre (unités et bâtiments, QJ1), le porteur
+  propre (unités), la recherche Ctrl+K, et couvre colonies, talents, modules et classes d'empire. Bilan dans Admin → Équilibrage →
+  « Chaîne de contenu », contenu de l'admin compris. Manques connus : `KNOWN_GAPS` de `contentChain.test.ts`, chacun avec son lot.
+- **Colonies** (6.14.115) : 4 succès dérivés (`colonie_1`, `colonie_all`, `convoyeur_100`, `base_avancee_1`), mesures `coloniesFounded`,
+  `coloniesMaxed` (0/1, nombre de colonies lu dans la règle), `colonyConvoys`, `colonyBaseTours` ; catégorie « Colonies » du Codex ;
+  section Colonies des Formules. Rien n'est retiré : un succès gagné reste si l'admin relève le nombre de colonies.

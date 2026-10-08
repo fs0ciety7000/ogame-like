@@ -18,6 +18,12 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q289 | Succès propre exigé par la chaîne : Pour les unités et les bâtiments seulement (22 unités et 11 bâtiments sans succès propre, prévus en AJ27-6) (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun pour l'instant | valider |
+| Q290 | Porteur propre par unité : Exigé : un effet qui vise l'unité elle-même, pas sa classe (23 unités sans, prévues en AJ27-10) (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun pour l'instant | valider |
+| Q291 | Place du panneau « Chaîne de contenu » : Admin → Équilibrage (`docs/changes/6.14.114-garde-chaine-contenu.md`) | aucun (admin) | valider |
+| Q292 | Codex des biomes : Les 4 biomes s'ouvrent à la fondation de la première colonie (2 colonies au plus et un biome au hasard : sinon, catégorie impossible à compléter) (`docs/changes/6.14.115-colonies-chaine.md`) | la catégorie Colonies peut se compléter | valider |
+| Q293 | Récompense de la catégorie Colonies du Codex : 5 jetons et 25 Ambre (barème des autres catégories) (`docs/changes/6.14.115-colonies-chaine.md`) | +25 Ambre une fois | valider |
+| Q294 | Succès « Convoyeur » : 100 convois arrivés, palier argent (`docs/changes/6.14.115-colonies-chaine.md`) | aucun | valider |
 | Q279 | Objectif « Dépenser » : Compte maintenant la fondation de colonie et la lune (un seul chemin de dépense) (`docs/changes/6.14.110-depenses-et-traces.md`) | objectif un peu plus facile à remplir | valider |
 | Q280 | Toasts des lignes déjà lues : Aucun toast pour une notification créée déjà lue (réclamations ; effet de bord : cadeau envoyé, défi récupéré) (`docs/changes/6.14.110-depenses-et-traces.md`) | moins de toasts en double | valider |
 | Q281 | Rappel d'une garnison : L'hôte est prévenu même s'il a coupé les évènements d'alliance (`docs/changes/6.14.110-depenses-et-traces.md`) | l'hôte sait que sa défense part | valider |

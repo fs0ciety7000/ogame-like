@@ -167,7 +167,11 @@ Exemple : un nouveau vaisseau « Corvette ».
 - Défi de passe « construire 20 corvettes » et prime Kesh'Vaar ; présence dans les tables de butin.
 - Simulateur ; changelog, prompts et image.
 
-Garde (6.14.11, `docs/proposals/chaine-contenu.md`) : `contentChainReport()` (`src/game/contentChain.ts`) donne, pour chaque unité,
-bâtiment, techno, relique et boss, l'état des maillons 5 à 7 (Codex, succès d'entrée et de maîtrise, préréglage d'effet de l'unité, porteur
-d'effet). `contentChain.test.ts` échoue sur un manque absent de `KNOWN_GAPS` et sur un manque connu déjà comblé. Les autres maillons
-(image, changelog, pré-prod…) restent cochés dans la fiche du lot.
+Garde (6.14.11, renforcée en 6.14.114, `docs/proposals/chaine-contenu.md`) : `contentChainReport()` (`src/game/contentChain.ts`) donne,
+pour chaque unité, bâtiment, techno, relique, boss, colonie (biome, spécialisation), talent, module et classe d'empire, l'état des maillons
+vérifiables : Codex, succès d'entrée et de maîtrise, **succès propre** (unités et bâtiments : une mesure qui ne compte que ce contenu,
+`chainOwnMetrics`), préréglage d'effet de l'unité, porteur d'effet, **porteur propre** (unités : cible `unit:<id>`, une classe ne suffit
+pas), **recherche Ctrl+K** (`PALETTE_KINDS`, tenu avec `CommandPalette.tsx`). `contentChain.test.ts` échoue sur un manque absent de
+`KNOWN_GAPS` et sur un manque connu déjà comblé ; chaque manque connu cite son lot. Le même bilan s'affiche dans Admin → Équilibrage →
+« Chaîne de contenu », contenu ajouté dans l'admin compris, avec un lien vers l'onglet où régler chaque manque. Les autres maillons
+(image, défi, changelog, pré-prod…) restent cochés dans la fiche du lot.

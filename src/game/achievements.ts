@@ -13,6 +13,7 @@ import { GameActionError } from "@/game/errors";
 import { normalizePlanetLook } from "@/game/planetLook";
 import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import { prestigeState } from "@/game/prestige";
+import { COLONY_RULES } from "@/game/colonies";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -236,6 +237,17 @@ export const METRICS = {
   phalanxScans: { label: "Balayages de phalange", value: (p: PlayerState) => playerStats(p).phalanxScans ?? 0 },
   gateJumps: { label: "Sauts par la porte de saut", value: (p: PlayerState) => playerStats(p).gateJumps ?? 0 },
   gateSaves: { label: "Attaques repoussées juste après un saut (sauvetages)", value: (p: PlayerState) => playerStats(p).gateSaves ?? 0 },
+  // 6.14.115 (AJ27-5) : colonies (le nombre maximal se lit à l'usage : il est réglable).
+  coloniesFounded: { label: "Colonies fondées", value: (p: PlayerState) => (p.colonies ?? []).length },
+  coloniesMaxed: {
+    label: "Toutes les colonies permises fondées (0/1)",
+    value: (p: PlayerState) => {
+      const max = Math.floor(Number(COLONY_RULES.maxColonies) || 0);
+      return max > 0 && (p.colonies ?? []).length >= max ? 1 : 0;
+    },
+  },
+  colonyConvoys: { label: "Convois de route logistique arrivés", value: (p: PlayerState) => playerStats(p).colonyConvoys ?? 0 },
+  colonyBaseTours: { label: "Bases avancées tenues jusqu'au bout de leur séjour", value: (p: PlayerState) => playerStats(p).colonyBaseTours ?? 0 },
   /** Défi d'alliance « Les vigies » : garnisons envoyées et balayages (avec ou sans lune, Q40). */
   vigil: { label: "Garnisons envoyées et balayages de phalange", value: (p: PlayerState) => (playerStats(p).garrisons ?? 0) + (playerStats(p).phalanxScans ?? 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
@@ -408,6 +420,11 @@ export function derivedAchievements(): AchievementDef[] {
     def("porte_25", "flotte", "or", "gateJumps", 25, "Maître du seuil", "Rapatrier 25 flottes par la porte de saut.", "🗝️", { auto: true, title: "Gardien du seuil", titleId: "gardien_seuil" }),
     def("porte_sauvetage", "combat", "or", "gateSaves", 1, "Retour fracassant", "Repousser une attaque avec une flotte rentrée par la porte de saut juste avant l'impact.", "💥", { auto: true, secret: true }),
     // 6.14.14 (C4) : boss d'alliance (chaîne de contenu), palier complet lu à l'usage (allianceBossAll).
+    // 6.14.115 (AJ27-5, AU27 AJ-3) : colonies (entrée, maîtrise : toutes les colonies, convois, base avancée tenue).
+    def("colonie_1", "construction", "argent", "coloniesFounded", 1, "Terres neuves", "Fonder ta première colonie.", "🪐", { auto: true }),
+    def("colonie_all", "construction", "or", "coloniesMaxed", 1, "Empire des mondes", "Fonder toutes les colonies permises.", "🌍", { auto: true }),
+    def("convoyeur_100", "logistique", "argent", "colonyConvoys", 100, "Convoyeur", "Faire arriver 100 convois de route logistique.", "🚚", { auto: true }),
+    def("base_avancee_1", "combat", "or", "colonyBaseTours", 1, "Avant-poste tenu", "Tenir une base avancée sur une colonie jusqu'au bout de son séjour.", "🏰", { auto: true }),
     def("boss_alliance_1", "alliance", "argent", "allianceBossTypes", 1, "Frappe d'alliance", "Abattre un boss d'alliance en y prenant ta part.", "🛡️", { auto: true }),
     def("boss_alliance_all", "alliance", "or", "allianceBossAll", 1, "Trophées d'alliance", "Abattre chaque boss d'alliance au moins une fois.", "🏆", { auto: true, secret: true }),
     def("vendetta_3", "combat", "legendaire", "warlordsBeaten", 5, "Fin des seigneurs", "Vaincre 5 seigneurs différents en vendetta.", "💀", { auto: true }),

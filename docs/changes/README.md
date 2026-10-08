@@ -213,6 +213,8 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.111 | [Tâches planifiées : verrou par cadence, e-mails par lots, tâches allégées, échéances après une maintenance (AC-E)](6.14.111-taches-planifiees.md) | correctif + fonctionnalité (serveur, moteur, admin) + tests | [chaine-actions](../proposals/chaine-actions.md), lot AC-E (AC-7, AC-8, AC-10), Q77 |
 | 6.14.112 | [Erreurs traduites et garde de vacances unique (AC-F)](6.14.112-erreurs-et-vacances.md) | correctif (client, serveur, moteur) + admin + tests | [chaine-actions](../proposals/chaine-actions.md), lot AC-F (AC-11, AC-16), Q79 |
 | 6.14.113 | [Réclamations groupées : casino du jour, défi et titre du Codex dans « Tout réclamer » (AC-G)](6.14.113-reclamations-groupees.md) | fonctionnalité (moteur, serveur, interface) + correctif + tests | [chaine-actions](../proposals/chaine-actions.md), lot AC-G (AC-14, AC-15, AC-19) |
+| 6.14.114 | [Garde de la chaîne de contenu renforcée et panneau « Chaîne de contenu » (AJ27-4)](6.14.114-garde-chaine-contenu.md) | fonctionnalité (moteur, admin) + tests | [audit AU27](../audit/2026-10-07-au27-jeu-chaine.md) (AJ-1, AJ-10, AJ-9), QJ1, QJ2 |
+| 6.14.115 | [Colonies dans la chaîne : succès, Codex des biomes et spécialisations, Formules (AJ27-5)](6.14.115-colonies-chaine.md) | ajout (moteur, interface) + tests | [audit AU27](../audit/2026-10-07-au27-jeu-chaine.md) (AJ-3), QJ5 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

@@ -379,6 +379,8 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     owner.resources[res as ResourceId] = (owner.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   }
   const lootTotal = Object.values(fleet.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
+  // 6.14.115 (AJ27-5) : base avancée restée jusqu'au bout de son séjour (ni levée, ni rapatriée par la porte de saut).
+  if (fleet.mission === "colonybase" && (fleet.durationMs ?? 0) > 0 && (fleet.stationedUntilMs ?? 0) >= fleet.arriveAtMs + (fleet.durationMs ?? 0) && now >= (fleet.stationedUntilMs ?? 0)) bumpStat(owner, "colonyBaseTours");
   if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
   else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
   return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false, ...(lootTotal > 0 ? { data: { resources: fleet.loot ?? undefined } } : {}) }] };

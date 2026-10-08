@@ -359,6 +359,21 @@ palier par mesure et par mois, 3 au total par famille. Objectifs du jour sur un 
 le tirage du jour en cours n'est jamais refait (I31). Garde : `progression6108.test.ts`, `contracts.test.ts` (« 6.14.109 »),
 `reglages671.test.ts`, intégration « 6.14.108 (AP-L4) ».
 
+### 7.11 Chaîne de contenu : garde renforcée et colonies (6.14.114 et 6.14.115, `contentChain.ts`, `codex.ts`, `achievements.ts`)
+
+Lots AJ27-4 et AJ27-5 de la revue AU27 (`docs/audit/2026-10-07-au27-jeu-chaine.md`, AJ-1, AJ-3, AJ-10). Fiches du domaine :
+`docs/systems/progression.md`, `docs/systems/colonies.md` ; méthode : `docs/WORKFLOW.md` §7.
+
+| Règle | Valeur | Où |
+|:--|:--|:--|
+| Maillons vérifiés | Codex, succès d'entrée, de maîtrise et **propre** (unités et bâtiments, QJ1), préréglage d'effet (unités), porteur d'effet et **porteur propre** (unités : cible `unit:<id>`), **recherche Ctrl+K** | `contentChainReport`, `contentChain.test.ts` |
+| Types couverts | unités, bâtiments, technos, reliques, boss (mondiaux, d'alliance, de chronique), **colonies** (4 biomes, 4 spécialisations), **talents**, **modules**, **classes d'empire** | idem |
+| Manques connus | chacun cite son lot (AJ27-6 succès dérivés, AJ27-8 Ctrl+K, AJ27-9 Codex Doctrines et Arsenal, AJ27-10 porteurs « signature ») ; un manque comblé sort de la liste | `KNOWN_GAPS` |
+| Bilan dans l'admin | Admin → Équilibrage → « Chaîne de contenu » : par type, contenus incomplets, maillons présents (vert) et manquants (rouge), lien vers l'onglet où le régler ; contenu ajouté dans l'admin compris | `ContentChainSection.tsx` |
+| Succès des colonies | « Terres neuves » (1re colonie, argent), « Empire des mondes » (toutes les colonies permises, or, nombre lu à l'usage), « Convoyeur » (100 convois arrivés, argent), « Avant-poste tenu » (base avancée restée jusqu'au bout, or) ; réglables dans Admin → Succès ; rien n'est retiré si la règle change | `derivedAchievements`, mesures `coloniesFounded`, `coloniesMaxed`, `colonyConvoys`, `colonyBaseTours` |
+| Codex « Colonies » | 4 biomes, ouverts tous au relevé de la 1re colonie ; 4 spécialisations, ouvertes au 1er choix et gardées après un changement ; récompense de catégorie 5 jetons + 25 Ambre (Admin → Chroniques, comme Unités) | `codexEntries`, `DEFAULT_CODEX_REWARDS.colonies` |
+| Formules | section « Colonies » : fondation, production +bonus, gisement, routes (frais, réserve, ravitaillement), base avancée, spécialisations et biomes, tous lus dans les règles | `FormulasGuide.tsx` |
+
 ## 8. Journal des audits
 
 | Date | Version | Constat | Suite |
@@ -495,3 +510,5 @@ le tirage du jour en cours n'est jamais refait (I31). Garde : `progression6108.t
 | 2026-10-08 | 6.14.111 | Lot AC-E (AU27, AC-7, AC-8, AC-10, Q77) : verrou par cadence (passages sautés comptés), campagnes d'e-mails en file et par lots de 50 par minute, factions, flottes (200 par passage), rattrapage de la nuit et rappels du Comptoir allégés (contenu lu une fois, paquets de 100 joueurs), échéances collectives suspendues pendant une maintenance puis décalées ; groupe `serverTasks` ; invariant I35 | `docs/changes/6.14.111-taches-planifiees.md` |
 | 2026-10-08 | 6.14.112 | Lot AC-F (AU27, AC-11, AC-16, Q79) : erreurs du serveur traduites côté client (message du jeu gardé, texte clair pour 403, 409, 429, 503, 500 signalée), garde de vacances unique (`vacation.allowed`, `vacationBlock`, `vacationGuard`) sur toutes les routes qui rapportent ou dépensent ; invariant I36 | `docs/changes/6.14.112-erreurs-et-vacances.md` |
 | 2026-10-08 | 6.14.113 | Lot AC-G (AU27, AC-14, AC-15, AC-19) : jeton du casino, défi et titre du Codex dans « Tout réclamer » (contexte du serveur), pastille sans faux positif, un seul chemin par l'action pour le Codex, le défi et le jeton, sous-actions isolées ; invariant I37 | `docs/changes/6.14.113-reclamations-groupees.md` |
+| 2026-10-08 | 6.14.114 | Lot AJ27-4 (AU27, AJ-1, AJ-10) : garde de la chaîne de contenu renforcée (succès propre, porteur propre, Ctrl+K ; colonies, talents, modules, classes d'empire), `KNOWN_GAPS` justifiés lot par lot, panneau Admin → Équilibrage → « Chaîne de contenu » (contenu de l'admin compris) | `docs/changes/6.14.114-garde-chaine-contenu.md`, `contentChain.test.ts` |
+| 2026-10-08 | 6.14.115 | Lot AJ27-5 (AU27, AJ-3) : colonies dans la chaîne : 4 succès (entrée, maîtrise), catégorie « Colonies » du Codex (biomes, spécialisations, récompense réglable), section Colonies des Formules ; 4 lignes d'illustration de biomes | `docs/changes/6.14.115-colonies-chaine.md`, `coloniesChaine.test.ts` |
