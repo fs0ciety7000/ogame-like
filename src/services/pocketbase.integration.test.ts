@@ -3845,7 +3845,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
-  it("6.14.119 (AP-L7) et 6.14.120 (AP-L8) : action suivie comptée par le serveur ; épisode « nouveauté » écrit sans écraser la configuration", async () => {
+  it("6.14.121 (AP-L7) et 6.14.122 (AP-L8) : action suivie comptée par le serveur ; épisode « nouveauté » écrit sans écraser la configuration", async () => {
     await ensureAB();
     await loginPlayer(B.email, B.pw);
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;

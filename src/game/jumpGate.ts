@@ -140,7 +140,7 @@ export function markJump(player: PlayerState, now: number): number {
   const readyAtMs = now + ms;
   player.moon = { ...m, gateReadyAtMs: readyAtMs, lastJumpAtMs: now };
   bumpStat(player, "gateJumps");
-  // 6.14.119 (AP-L7) : action suivie (épisodes, défis du passe, saga, objectif du jour « porte de saut »).
+  // 6.14.121 (AP-L7) : action suivie (épisodes, défis du passe, saga, objectif du jour « porte de saut »).
   trackAction(player, "gateJump", now);
   return readyAtMs;
 }
@@ -170,5 +170,5 @@ export function markGateSave(player: PlayerState, now: number): boolean {
   return true;
 }
 
-// 6.14.119 (AP-L7) : l'objectif du jour « Ramener une flotte par la porte de saut » n'est proposé qu'à un joueur dont la porte est ouverte.
+// 6.14.121 (AP-L7) : l'objectif du jour « Ramener une flotte par la porte de saut » n'est proposé qu'à un joueur dont la porte est ouverte.
 setActionAvailability("gateJump", (p) => JUMP_GATE_RULES.enabled === true && gateUnlocked(p));

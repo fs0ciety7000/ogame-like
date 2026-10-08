@@ -430,7 +430,7 @@ export function moonPanelVisible(p: PlayerState | null | undefined): boolean {
 /** Page où l'on agit pour un objectif du passe ou des Chroniques (« J'y vais », ouverture par l'intention). */
 export const OBJECTIVE_PAGES: Record<StaticObjective, string> = Object.fromEntries(STATIC_OBJECTIVES.map((k) => [k, TRACKED_ACTIONS[k].page])) as Record<StaticObjective, string>;
 
-/** 6.14.119 (AP-L7) : page d'une action suivie, celles par contenu comprises (`unit:<id>` → Unités…), lue dans le registre. */
+/** 6.14.121 (AP-L7) : page d'une action suivie, celles par contenu comprises (`unit:<id>` → Unités…), lue dans le registre. */
 export function objectiveGoPage(k: ChronicleObjective): string | undefined {
   return objectivePage(k);
 }

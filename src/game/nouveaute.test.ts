@@ -7,7 +7,7 @@ import { generateChapter, worldDigest, type WorldDigest } from "@/game/procedura
 import { contentObjective, trackAction } from "@/game/trackedActions";
 import type { PlayerState } from "@/types/game";
 
-/* 6.14.120 (AU27, lot AP-L8, constat AP-10) : épisode « nouveauté » des Chroniques générées. */
+/* 6.14.122 (AU27, lot AP-L8, constat AP-10) : épisode « nouveauté » des Chroniques générées. */
 
 const OCT_20 = Date.UTC(2026, 9, 20, 12);
 const DAY = 86_400_000;
@@ -39,7 +39,7 @@ const strip = (m: ChronicleMonth) => m.episodes.map((e, i) => (i === 1 ? null : 
 
 afterEach(() => applyGameContent({}));
 
-describe("6.14.120 : choix du contenu nouveau", () => {
+describe("6.14.122 : choix du contenu nouveau", () => {
   it("aucun contenu daté (règles et contenu par défaut) : pas d'épisode « nouveauté », chapitre inchangé", () => {
     expect(recentContent("2026-12")).toEqual([]);
     const m = gen("2026-12", digest({ [KEY]: 1 }));
@@ -106,7 +106,7 @@ describe("6.14.120 : choix du contenu nouveau", () => {
   });
 });
 
-describe("6.14.120 : mois écrits, bibliothèque, comptage, réglages", () => {
+describe("6.14.122 : mois écrits, bibliothèque, comptage, réglages", () => {
   it("mois déjà écrit inchangé ; un chapitre de la bibliothèque ne reçoit pas d'épisode « nouveauté »", () => {
     const written = gen("2026-12", digest({ [KEY]: 1 }));
     const snapshot = JSON.stringify(written);
@@ -145,10 +145,10 @@ describe("6.14.120 : mois écrits, bibliothèque, comptage, réglages", () => {
     expect(bad).toMatch(/ordre « unit » avec \{name\}/);
   });
 
-  it("garde : un contenu par défaut ajouté après la 6.14.120 porte sa date d'ajout (`addedOn`)", () => {
+  it("garde : un contenu par défaut ajouté après la 6.14.122 porte sa date d'ajout (`addedOn`)", () => {
     const d = defaultGameContent();
     const undated = [...d.units, ...d.technologies, ...d.buildings].filter((x) => !(x as { addedOn?: string }).addedOn);
-    // 67 contenus d'avant la 6.14.120 (24 unités, 30 technos, 13 bâtiments) : ce nombre ne monte plus.
+    // 67 contenus d'avant la 6.14.122 (24 unités, 30 technos, 13 bâtiments) : ce nombre ne monte plus.
     expect(undated.length, "nouveau contenu sans `addedOn` : ajoute sa date d'ajout (épisode « nouveauté »)").toBeLessThanOrEqual(67);
   });
 

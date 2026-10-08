@@ -143,7 +143,7 @@ export const REGISTERED_RULES = {
   messages: { label: "Messagerie privée", target: () => MESSAGE_RULES, meta: () => MESSAGE_RULES_META },
   moduleCost: { label: "Modules : coût de fabrication", target: () => MODULE_BUILD_COST, meta: () => MODULE_BUILD_COST_META },
   modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES, meta: () => MODULE_RULES_META },
-  // 6.14.120 (AU27, AP-L8) : épisode « nouveauté » des Chroniques générées (fréquence, durée, quantités, bibliothèque de textes).
+  // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » des Chroniques générées (fréquence, durée, quantités, bibliothèque de textes).
   novelty: { label: "Chroniques : épisode « nouveauté » (contenu récent)", target: () => NOVELTY_RULES, meta: () => NOVELTY_RULES_META },
   officerTuning: { label: "Officiers : second rôle des commandants de saison, Phéromone", target: () => OFFICER_TUNING_RULES, meta: () => OFFICER_TUNING_RULES_META },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW, meta: () => PASS_OVERFLOW_META },
@@ -163,7 +163,7 @@ export const REGISTERED_RULES = {
   seasonWars: { label: "Guerres de saison", target: () => SEASON_WAR_RULES, meta: () => SEASON_WAR_RULES_META },
   synthesis: { label: "Labo de synthèse", target: () => SYNTH_RULES, meta: () => SYNTH_RULES_META },
   talents: { label: "Talents d'Ascension", target: () => TALENT_RULES, meta: () => TALENT_RULES_META },
-  // 6.14.119 (AU27, AP-L7) : registre des actions suivies (poids dans les tirages, familles par contenu, seuil des actions mesurées).
+  // 6.14.121 (AU27, AP-L7) : registre des actions suivies (poids dans les tirages, familles par contenu, seuil des actions mesurées).
   trackedActions: { label: "Objectifs générés : actions suivies (registre)", target: () => TRACKED_ACTION_RULES, meta: () => TRACKED_ACTION_RULES_META },
   territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES, meta: () => TERRITORY_RULES_META },
   treaties: { label: "Traités avec les factions", target: () => TREATY_RULES, meta: () => TREATY_RULES_META },

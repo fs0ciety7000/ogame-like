@@ -22,13 +22,16 @@ export const PRICES = {
 export const TOKEN_PRICES = { textInput: 5, imageInput: 10, imageOutput: 40 };
 
 /**
- * Préfixe de style commun : cohérence de la série, repris des prompts de scripts/illustrations.json et de docs/prompts-*.md
- * (concept art peint, univers « salvaged-tech », fond spatial sombre, accents cyan #4be8ff et or #ffd86b, lumière volumétrique).
+ * Préfixe de style commun : cohérence de la série, repris des prompts de scripts/illustrations.json et de docs/prompts-*.md.
+ * 6.14.119 (demande de l'utilisateur, 2026-10-08) : plus science-fiction et spatial : technologie avancée, coques et alliages
+ * futuristes, hologrammes, étoiles et nébuleuses, plus d'aspect médiéval ou fantasy ; accents cyan #4be8ff et or #ffd86b gardés.
  * Réglable par --style "<texte>" ou coupé par --no-style.
  */
 export const STYLE_PREFIX =
-  "Sci-fi strategy game illustration for a dark space empire game, painterly digital concept art, salvaged-tech aesthetic, " +
-  "dark deep-space palette with cyan (#4be8ff) and warm gold (#ffd86b) accents, volumetric light, muted grading, high detail.";
+  "High-end science-fiction space strategy game illustration, cinematic digital concept art in the style of AAA space games, " +
+  "advanced futuristic technology, sleek armored alloys and starship-grade materials, glowing energy conduits and holographic details, " +
+  "deep-space setting with stars, nebulae and distant planets, cyan (#4be8ff) and warm gold (#ffd86b) accent lighting, " +
+  "volumetric light, crisp detail; no medieval or fantasy look.";
 
 /** Consigne toujours ajoutée en fin de prompt. */
 export const NO_TEXT = "No text, no letters, no numbers, no logos, no watermark.";

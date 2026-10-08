@@ -180,7 +180,7 @@ export function ChroniclesPanel() {
                   value={e.objective.type}
                   options={[
                     ...Object.entries(OBJECTIVE_LABELS).map(([value, label]) => ({ value: value as ChronicleObjective, label })),
-                    // 6.14.119 (AP-L7) : action par contenu (épisode « nouveauté ») : gardée dans la liste.
+                    // 6.14.121 (AP-L7) : action par contenu (épisode « nouveauté ») : gardée dans la liste.
                     ...(e.objective.type in OBJECTIVE_LABELS ? [] : [{ value: e.objective.type, label: objectiveLabel(e.objective.type) }]),
                   ]}
                   onChange={(v) => setMonth({ episodes: month.episodes.map((x, j) => (j === i ? { ...x, objective: { ...x.objective, type: v } } : x)) })}

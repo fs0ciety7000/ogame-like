@@ -221,7 +221,7 @@ export function runColonyRoute(colony: Colony, player: PlayerState, now: number)
   // 6.14.115 (AJ27-5) : un convoi arrivé (non vide) compte pour le succès « Convoyeur ».
   if (Object.values(delivered).some((n) => (n ?? 0) > 0)) {
     bumpStat(player, "colonyConvoys");
-    // 6.14.119 (AP-L7) : action suivie (épisodes, défis du passe, saga, objectif du jour « convoi »).
+    // 6.14.121 (AP-L7) : action suivie (épisodes, défis du passe, saga, objectif du jour « convoi »).
     trackAction(player, "colonyConvoy", now);
   }
   const every = Math.max(1, route.everyHours) * 3_600_000;
@@ -368,7 +368,7 @@ export function setColonySpec(player: PlayerState, colonyIdIn: string, specIn: s
   // 6.14.115 (AJ27-5) : la fiche du Codex de la spécialisation reste ouverte après un changement.
   const used = playerStats(player).colonySpecsUsed ?? [];
   if (!used.includes(spec.id)) player.stats = { ...(player.stats ?? {}), colonySpecsUsed: [...used, spec.id] };
-  // 6.14.119 (AP-L7) : action suivie.
+  // 6.14.121 (AP-L7) : action suivie.
   trackAction(player, "colonySpec", now);
   return colony;
 }
@@ -399,7 +399,7 @@ export const RARE_DEPOSITS = Object.keys(BIOMES) as RareResourceId[];
 
 /** 6.14.115 (AJ27-5) : biomes qui ont leur illustration définitive (`public/assets/colonies/biome-<id>.webp`, lignes
  *  `colonie-biome-<id>` de `scripts/illustrations.json`, docs/illustrations.md). Un id ajouté ici suffit. */
-export const BIOME_ART: readonly RareResourceId[] = [];
+export const BIOME_ART: readonly RareResourceId[] = ["reinforcedSteel", "cyberModule", "syntheticNanites", "aiFragment"];
 
 /** Illustration d'un biome (Codex) : définitive si elle existe, sinon l'icône de sa ressource rare (image provisoire). */
 export function biomeImage(id: RareResourceId): string {
@@ -795,5 +795,5 @@ export function deliverToColony(colony: Colony, cargo: Partial<Record<ResourceId
   for (const [r, n] of Object.entries(cargo) as [ResourceId, number][]) colony.resources[r] = (colony.resources[r] ?? 0) + (n ?? 0);
 }
 
-// 6.14.119 (AP-L7) : l'objectif du jour « convoi de colonie » n'est proposé qu'à un joueur dont une colonie a une route logistique.
+// 6.14.121 (AP-L7) : l'objectif du jour « convoi de colonie » n'est proposé qu'à un joueur dont une colonie a une route logistique.
 setActionAvailability("colonyConvoy", (p) => (p.colonies ?? []).some((c) => !!c?.route));

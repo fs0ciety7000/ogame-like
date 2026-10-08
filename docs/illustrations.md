@@ -55,8 +55,9 @@ Options : `--group` (sous-chaîne sans casse ni accents), `--ids a,b`, `--limit 
 Ce que fait le script :
 - **sélection** : emplacements de `scripts/illustrations.json` à `done` vide (89 au 2026-10-07), filtrés ;
 - **prompt** : le prompt Midjourney perd ses paramètres (`--ar`, `--v`, `--style`, `--s`…) et ses « no text » ; il reçoit en tête le
-  **préfixe de style commun** (`STYLE_PREFIX` de `scripts/illustrations-api.mjs` : concept art peint, univers « salvaged-tech », fond
-  spatial sombre, accents cyan `#4be8ff` et or `#ffd86b`) et en fin « No text, no letters, no numbers… » ; un emplacement `cutout`
+  **préfixe de style commun** (`STYLE_PREFIX` de `scripts/illustrations-api.mjs`, réécrit en 6.14.119 à la demande de l'utilisateur :
+  concept art de jeu spatial haut de gamme, technologie avancée, alliages futuristes, hologrammes, étoiles et nébuleuses, rien de
+  médiéval ni de fantasy ; accents cyan `#4be8ff` et or `#ffd86b`) et en fin « No text, no letters, no numbers… » ; un emplacement `cutout`
   demande un objet isolé sur fond transparent (paramètre `background: "transparent"`, le « dark neutral background » du prompt devient
   « transparent background ») ;
 - **taille** : la taille d'API la plus proche du `--ar` du prompt (`1024x1024`, `1536x1024`, `1024x1536`). `illustrations.py` recadre

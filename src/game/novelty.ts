@@ -5,14 +5,14 @@ import { CONTENT_FAMILIES, contentName, contentObjective, parseContentObjective,
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
-   6.14.120 (AU27, lot AP-L8, constat AP-10) : épisode « nouveauté ».
+   6.14.122 (AU27, lot AP-L8, constat AP-10) : épisode « nouveauté ».
 
    Un contenu ajouté récemment (unité, techno, bâtiment : date d'ajout
    `addedOn` dans sa fiche, réglable dans l'admin) prend un épisode du
    chapitre suivant des Chroniques : « Le chantier a un nouveau plan :
    Récolteur. Construis-en 5. » L'objectif est l'action par contenu du
    registre des actions suivies (`unit:<id>`, `research:<id>`,
-   `building:<id>`, 6.14.119), comptée dès le lancement.
+   `building:<id>`, 6.14.121), comptée dès le lancement.
    - Fréquence, durée de « nouveauté », épisode remplacé, quantités, part
      des joueurs actifs qui doivent y avoir accès : GameRules.novelty.
    - Textes : bibliothèque réglable (titres, accroches, ordres par famille).

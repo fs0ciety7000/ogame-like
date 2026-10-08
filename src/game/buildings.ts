@@ -40,7 +40,7 @@ export type VisualTier = (typeof VISUAL_TIERS)[number];
 
 export interface BuildingDef {
   id: BuildingId;
-  /** 6.14.120 (AP-L8) : date d'ajout (AAAA-MM-JJ) : un contenu récent prend l'épisode « nouveauté » du chapitre suivant. */
+  /** 6.14.122 (AP-L8) : date d'ajout (AAAA-MM-JJ) : un contenu récent prend l'épisode « nouveauté » du chapitre suivant. */
   addedOn?: string;
   name: string;
   description: string;

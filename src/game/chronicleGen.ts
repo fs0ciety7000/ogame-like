@@ -116,7 +116,7 @@ export function budgetEpisodeRewards(rng: () => number, difficulty: number, r: C
 
 /** Actions autorisées dans les objectifs et leur poids. */
 export function objectiveWeight(k: ChronicleObjective, r: ChronicleGenRules = chronicleGenRules()): number {
-  // 6.14.119 (AP-L7) : × poids global du registre des actions suivies (1 par défaut : rien ne change pour les 9 d'avant). Une
+  // 6.14.121 (AP-L7) : × poids global du registre des actions suivies (1 par défaut : rien ne change pour les 9 d'avant). Une
   // action du registre absente de la table des Chroniques y vaut 1 ; une action d'avant absente, 0 (comme avant).
   const own = r.objectiveWeights[k];
   const g = own === undefined ? (isBaseObjective(k) ? 0 : 1) : Number(own);

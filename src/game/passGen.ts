@@ -287,7 +287,7 @@ export function percentile(xs: number[], p: number): number {
 
 /** Actions des défis et leur poids : poids > 0, et les actions passives seulement si le serveur les pratique. */
 export function challengePool(weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): { key: ChronicleObjective; weight: number }[] {
-  // 6.14.119 (AP-L7) : poids × poids global du registre (1 par défaut) ; actions du registre absentes de la table ajoutées en fin
+  // 6.14.121 (AP-L7) : poids × poids global du registre (1 par défaut) ; actions du registre absentes de la table ajoutées en fin
   // de liste (poids du registre), jouables seulement si le serveur les pratique : sans mesure, la liste d'avant.
   const weighted = Object.entries(rules.challengeWeights)
     .map(([k, w]) => [k, Number(w) * trackedWeight(k as ChronicleObjective)] as [string, number])
@@ -312,7 +312,7 @@ export function hasActivityData(weeklyMedian: Partial<Record<ChronicleObjective,
  *  demande une médiane non nulle et d'au moins `challengeMinWeekly`. Sans mesure (serveur neuf) : actions actives seulement. */
 export function actionPlayable(key: ChronicleObjective, weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): boolean {
   const m = weeklyMedian[key] ?? 0;
-  // 6.14.119 (AP-L7) : action du registre « mesurée » (lune, colonies, contenus) : médiane d'au moins `trackedActions.measuredMinWeekly`.
+  // 6.14.121 (AP-L7) : action du registre « mesurée » (lune, colonies, contenus) : médiane d'au moins `trackedActions.measuredMinWeekly`.
   if (objectiveMeasured(key) && !measuredPlayable(key, weeklyMedian)) return false;
   if (rules.passiveKeys.includes(key) || (!isBaseObjective(key) && objectivePassive(key))) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
   if (!hasActivityData(weeklyMedian)) return true;

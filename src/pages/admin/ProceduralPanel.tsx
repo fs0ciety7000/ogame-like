@@ -33,7 +33,7 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
 
-/** 6.14.119 (AP-L7) : une action du registre peut-elle entrer dans un tirage commun ce mois-ci ? */
+/** 6.14.121 (AP-L7) : une action du registre peut-elle entrer dans un tirage commun ce mois-ci ? */
 function drawStatus(k: StaticObjective, weekly: Partial<Record<string, number>>): string {
   if (trackedWeight(k) <= 0) return "non (poids 0)";
   if (!TRACKED_ACTIONS[k].measured) return "oui";

@@ -5,12 +5,12 @@ import { CONTENT_FAMILIES, CONTENT_FAMILY_TEXTS, STATIC_OBJECTIVES, TRACKED_ACTI
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
 
 /* =====================================================
-   6.14.119 (AU27, lot AP-L7) : registre des actions suivies.
+   6.14.121 (AU27, lot AP-L7) : registre des actions suivies.
    Une ligne par action : poids dans les tirages communs (Chroniques,
    défis du passe, saga) et quantité de base d'une semaine ; la page et
    le système viennent du registre (code). Familles par contenu (unité,
    techno, bâtiment) : poids 0 par défaut, servies par l'épisode
-   « nouveauté » (6.14.120). Les mêmes champs restent dans « Tous les
+   « nouveauté » (6.14.122). Les mêmes champs restent dans « Tous les
    réglages (avancé) » (groupes `trackedActions` et `chapterBaseCounts`).
 ===================================================== */
 
@@ -43,7 +43,7 @@ export function TrackedActionsFields({ rules, setRules }: { rules: R; setRules: 
   const setBase = (k: string, v: number) => setRules((r) => ({ ...r, chapterBaseCounts: { ...groupOf(r, "chapterBaseCounts"), [k]: v } }) as R);
 
   return (
-    <Section title="Actions suivies : registre des objectifs générés (6.14.119)">
+    <Section title="Actions suivies : registre des objectifs générés (6.14.121)">
       <p className="text-sm text-slate-400 sm:col-span-2">
         Les Chroniques, les défis du passe, la saga d'alliance et les objectifs du jour tirent leurs objectifs dans ce registre. Une action « mesurée » (lune, colonies) n'entre dans un
         tirage commun que si le joueur médian du serveur la pratique : sa page lui est ouverte. Un mois déjà écrit ne change pas.

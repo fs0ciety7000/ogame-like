@@ -132,12 +132,12 @@ function median(xs: number[]): number {
 
 export const ACTIVITY_KEYS: ChronicleObjective[] = ["contract", "bounty", "raidRepelled", "victory", "mission", "spy", "market", "warlordWin"];
 
-/** 6.14.119 (AP-L7) : actions des archives et des héros du mois : celles d'avant, puis lune et colonies (registre). */
+/** 6.14.121 (AP-L7) : actions des archives et des héros du mois : celles d'avant, puis lune et colonies (registre). */
 function storyKeys(): ChronicleObjective[] {
   return [...ACTIVITY_KEYS, ...NEW_OBJECTIVES];
 }
 
-/** 6.14.119 : actions mesurées dans la photographie du monde : celles d'avant, les assauts de boss, le registre et les contenus pratiqués. */
+/** 6.14.121 : actions mesurées dans la photographie du monde : celles d'avant, les assauts de boss, le registre et les contenus pratiqués. */
 function digestKeys(passes: { activity?: Record<string, number> }[]): ChronicleObjective[] {
   const keys: ChronicleObjective[] = [...ACTIVITY_KEYS, "bossAssault", ...NEW_OBJECTIVES];
   const seen = new Set<string>(keys);
@@ -170,7 +170,7 @@ export interface WorldDigest {
   allianceSizeMedian?: number;
   /** 6.8.1 : points de passe par jour (joueur médian, plus actif), jusqu'au dernier palier pour ceux qui l'ont atteint. */
   passPace?: PassPace;
-  /** 6.14.120 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu récent (épisode « nouveauté »). */
+  /** 6.14.122 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu récent (épisode « nouveauté »). */
   access?: Record<string, number>;
 }
 
@@ -194,7 +194,7 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
   const totals: WorldDigest["totals"] = {};
   const heroes: WorldDigest["heroes"] = {};
   // 6.8.1 : les assauts de boss aussi (défis des paliers), sans entrer dans les objectifs des chapitres.
-  // 6.14.119 (AP-L7) : et les actions du registre (lune, colonies, contenus pratiqués), mesurées avant d'entrer dans un tirage.
+  // 6.14.121 (AP-L7) : et les actions du registre (lune, colonies, contenus pratiqués), mesurées avant d'entrer dans un tirage.
   for (const k of digestKeys(passes)) {
     const counts = passes.map((s) => s.activity?.[k] ?? 0);
     totals[k] = counts.reduce((a, b) => a + b, 0);
@@ -229,13 +229,13 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     passFinishedShare: share(tiers.filter((t) => t >= passTiers).length),
     chapterShare: month ? share(states.filter((s) => month.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
     passPace: passPace(passes, monthId, observedDays, now),
-    // 6.14.120 (AP-L8) : accès des joueurs actifs aux contenus datés récents (unité débloquée, techno ouverte, bâtiment ouvert).
+    // 6.14.122 (AP-L8) : accès des joueurs actifs aux contenus datés récents (unité débloquée, techno ouverte, bâtiment ouvert).
     access: contentAccess(active, now),
     allianceSizeMedian: median(Object.values(active.reduce<Record<string, number>>((acc, p) => (p.allianceId ? { ...acc, [p.allianceId]: (acc[p.allianceId] ?? 0) + 1 } : acc), {}))),
   };
 }
 
-/** 6.14.120 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu daté récent (absent : aucun contenu daté). */
+/** 6.14.122 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu daté récent (absent : aucun contenu daté). */
 function contentAccess(active: DigestPlayer[], now: number): Record<string, number> | undefined {
   const keys = contentToMeasure(now);
   if (keys.length === 0 || active.length === 0) return undefined;
@@ -270,7 +270,7 @@ export const BASE_COUNTS: Record<StaticObjective, number> = {
   spy: 3,
   market: 3,
   warlordWin: 1,
-  // 6.14.119 (AP-L7) : actions du registre (une semaine de jeu d'un joueur qui les pratique).
+  // 6.14.121 (AP-L7) : actions du registre (une semaine de jeu d'un joueur qui les pratique).
   moonUpgrade: 1,
   phalanxScan: 1,
   gateJump: 2,
@@ -279,7 +279,7 @@ export const BASE_COUNTS: Record<StaticObjective, number> = {
   colonySpec: 1,
 };
 
-/** 6.14.119 : quantité de base d'une action (registre, ou famille par contenu : `trackedActions.familyBase`). */
+/** 6.14.121 : quantité de base d'une action (registre, ou famille par contenu : `trackedActions.familyBase`). */
 export function baseCount(k: ChronicleObjective): number {
   const c = parseContentObjective(k);
   if (c) return familyBase(c.family);
@@ -298,12 +298,12 @@ export const BASE_COUNTS_META = {
   spy: { label: "Espionnages", min: 0, max: 100 },
   market: { label: "Échanges au marché", min: 0, max: 100 },
   warlordWin: { label: "Victoires contre un seigneur", min: 0, max: 100 },
-  moonUpgrade: { label: "Améliorations de lune (6.14.119)", min: 0, max: 100 },
-  phalanxScan: { label: "Balayages de phalange (6.14.119)", min: 0, max: 100 },
-  gateJump: { label: "Sauts par la porte (6.14.119)", min: 0, max: 100 },
-  colonyConvoy: { label: "Convois de colonie arrivés (6.14.119)", min: 0, max: 100 },
-  colonyBase: { label: "Bases avancées tenues (6.14.119)", min: 0, max: 100 },
-  colonySpec: { label: "Colonies spécialisées (6.14.119)", min: 0, max: 100 },
+  moonUpgrade: { label: "Améliorations de lune (6.14.121)", min: 0, max: 100 },
+  phalanxScan: { label: "Balayages de phalange (6.14.121)", min: 0, max: 100 },
+  gateJump: { label: "Sauts par la porte (6.14.121)", min: 0, max: 100 },
+  colonyConvoy: { label: "Convois de colonie arrivés (6.14.121)", min: 0, max: 100 },
+  colonyBase: { label: "Bases avancées tenues (6.14.121)", min: 0, max: 100 },
+  colonySpec: { label: "Colonies spécialisées (6.14.121)", min: 0, max: 100 },
 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
@@ -533,7 +533,7 @@ function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string
 function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[]): ChronicleObjective[] {
   // 6.14.58 (AU27, AP-4) : seuil des actions passives unifié avec le passe (raids, seigneurs : médiane ≥ passiveMinWeekly).
   const passive = passGenRules().passiveKeys;
-  // 6.14.119 (AP-L7) : actions du registre ajoutées en fin de liste, seulement si le serveur les pratique (médiane ≥
+  // 6.14.121 (AP-L7) : actions du registre ajoutées en fin de liste, seulement si le serveur les pratique (médiane ≥
   // `trackedActions.measuredMinWeekly`) : sans mesure, la liste et le tirage d'avant ne changent pas.
   const extra = extraObjectives().filter((k) => measuredPlayable(k, d.weeklyMedian) && actionPlayable(k, d.weeklyMedian) && objectiveWeight(k) > 0);
   const playable = [...ACTIVITY_KEYS.filter((k) => !passive.includes(k) || actionPlayable(k, d.weeklyMedian)), ...extra];
@@ -681,7 +681,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     return { title: epTitle, lines, objective: { type, count }, reward: rewards[i] };
   });
   reasons.push(...types.map((t, i) => `Épisode ${i + 1} : ${objectiveLabel(t).toLowerCase()} × ${episodes[i].objective.count} (médiane ${d.weeklyMedian[t] ?? 0} par semaine, base ${baseCount(t)}).`));
-  // 6.14.120 (AU27, AP-L8) : épisode « nouveauté » : un contenu ajouté récemment prend un épisode (sa propre graine : le reste du
+  // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » : un contenu ajouté récemment prend un épisode (sa propre graine : le reste du
   // chapitre ne change pas ; aucun contenu daté récent : rien ne change).
   const nov = chooseNovelty(o.monthId, o.existing, d.access, d.activePlayers);
   if (nov.reason) reasons.push(nov.reason);

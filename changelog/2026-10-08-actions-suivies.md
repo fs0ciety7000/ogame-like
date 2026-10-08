@@ -1,6 +1,6 @@
 ---
-version: 6.14.119
-iteration: 193
+version: 6.14.121
+iteration: 194
 date: 2026-10-08
 title: Lune et colonies dans les objectifs
 ---

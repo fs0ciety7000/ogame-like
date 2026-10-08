@@ -293,7 +293,7 @@ export function markScan(player: PlayerState, now: number): { cost: number; read
   const readyAtMs = now + phalanxFeatures(phalanxLevel(player)).scanCooldownMs;
   player.moon = { ...m, scanReadyAtMs: readyAtMs };
   bumpStat(player, "phalanxScans");
-  // 6.14.119 (AP-L7) : action suivie (épisodes, défis du passe, saga).
+  // 6.14.121 (AP-L7) : action suivie (épisodes, défis du passe, saga).
   trackAction(player, "phalanxScan", now);
   return { cost, readyAtMs };
 }

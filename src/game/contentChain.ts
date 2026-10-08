@@ -102,7 +102,7 @@ export const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMe
 };
 
 /**
- * 6.14.119 (AU27, AP-L7) : maillon « objectif » (WORKFLOW §7, n° 9). Actions du registre des actions suivies (`trackedActions.ts`)
+ * 6.14.121 (AU27, AP-L7) : maillon « objectif » (WORKFLOW §7, n° 9). Actions du registre des actions suivies (`trackedActions.ts`)
  * qui font jouer chaque type de contenu dans les objectifs générés (Chroniques, passe, saga, objectifs du jour). Une famille par
  * contenu (`unit`, `building`, `research`) couvre d'office tout contenu ajouté. `null` : sans objet.
  */

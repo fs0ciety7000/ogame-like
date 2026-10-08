@@ -32,7 +32,7 @@ import {
 import { CHAIN_TRACKED_ACTIONS } from "@/game/contentChain";
 import type { PlayerState } from "@/types/game";
 
-/* 6.14.119 (AU27, lot AP-L7, constat AP-10) : registre des actions suivies. */
+/* 6.14.121 (AU27, lot AP-L7, constat AP-10) : registre des actions suivies. */
 
 const OCT_20 = Date.UTC(2026, 9, 20, 12);
 const NOW = Date.UTC(2026, 9, 8, 12);
@@ -60,7 +60,7 @@ const setRules = (patch: Record<string, unknown>) => applyGameContent({ rules: {
 
 afterEach(() => applyGameContent({}));
 
-describe("6.14.119 : le registre", () => {
+describe("6.14.121 : le registre", () => {
   it("chaque action a un libellé, un verbe, deux ordres, une base, une page du menu et un système", () => {
     for (const k of STATIC_OBJECTIVES) {
       const d = TRACKED_ACTIONS[k];
@@ -128,9 +128,9 @@ describe("6.14.119 : le registre", () => {
   });
 });
 
-describe("6.14.119 : tirages communs (Chroniques, défis du passe, saga)", () => {
-  it("graine stable : sans mesure des nouvelles actions, mêmes chapitres, mêmes sagas qu'avant la 6.14.119", () => {
-    // Valeurs relevées avec le générateur d'avant la 6.14.119 (même graine, même photographie du monde).
+describe("6.14.121 : tirages communs (Chroniques, défis du passe, saga)", () => {
+  it("graine stable : sans mesure des nouvelles actions, mêmes chapitres, mêmes sagas qu'avant la 6.14.121", () => {
+    // Valeurs relevées avec le générateur d'avant la 6.14.121 (même graine, même photographie du monde).
     const ch = (m: string, v: number, d: WorldDigest) => generateChapter({ monthId: m, digest: d, existing: [], now: OCT_20, variant: v });
     expect(ch("2026-12", 0, digest(MEASURED)).episodes.map((e) => [e.objective.type, e.objective.count])).toEqual([["raidRepelled", 1], ["warlordWin", 1], ["bounty", 2], ["market", 3]]);
     expect(ch("2027-04", 1, digest(MEASURED)).episodes.map((e) => [e.objective.type, e.objective.count])).toEqual([["victory", 3], ["warlordWin", 1], ["bounty", 2], ["contract", 4]]);
@@ -188,7 +188,7 @@ function moonPlayer(uid: string, patch: Partial<PlayerState> = {}): PlayerState 
   return p;
 }
 
-describe("6.14.119 : objectifs du jour du registre", () => {
+describe("6.14.121 : objectifs du jour du registre", () => {
   it("porte de saut : proposée seulement à un joueur dont la porte est ouverte et la page Galaxie ouverte", () => {
     const vet = (uid: string) => moonPlayer(uid, { announcementsSeen: [NAV_SHOW_ALL_ON] });
     expect(openContractTypes(vet("a"), NOW)).toContain("gate_jump");
@@ -218,7 +218,7 @@ describe("6.14.119 : objectifs du jour du registre", () => {
 
 /* ---------- comptage ---------- */
 
-describe("6.14.119 : les actions sont comptées (activité du mois, épisode, objectif du jour)", () => {
+describe("6.14.121 : les actions sont comptées (activité du mois, épisode, objectif du jour)", () => {
   it("saut, balayage, amélioration de lune : activité du mois et objectif du jour « porte de saut »", () => {
     const p = moonPlayer("j", { announcementsSeen: [NAV_SHOW_ALL_ON] });
     p.resources = { ...p.resources, energy: 1e12, scrap: 1e12, nano: 1e12, data: 1e12 } as PlayerState["resources"];

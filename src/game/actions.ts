@@ -259,7 +259,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       pay(player, paid, now);
       queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000, startedAtMs: now, paid };
       recordContract(player, "upgrade_building", 1, now);
-      // 6.14.119 (AP-L7) : action par contenu (épisode « nouveauté », objectifs paramétrés).
+      // 6.14.121 (AP-L7) : action par contenu (épisode « nouveauté », objectifs paramétrés).
       trackAction(player, contentObjective("building", def.id), now);
       return undefined;
     }

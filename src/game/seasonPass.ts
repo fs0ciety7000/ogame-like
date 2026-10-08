@@ -61,7 +61,7 @@ export type PassReward =
   | { kind: "cosmetic" };
 
 /** Actions suivies dans le mois (objectifs des Chroniques, prérequis des passes). */
-/** 6.14.119 (AP-L7) : libellés lus dans le registre des actions suivies (`trackedActions.ts`), les 9 d'avant et ceux de la
+/** 6.14.121 (AP-L7) : libellés lus dans le registre des actions suivies (`trackedActions.ts`), les 9 d'avant et ceux de la
  *  lune et des colonies. Une action par contenu (`unit:<id>`…) : `objectiveLabel`. */
 export const OBJECTIVE_LABELS: Record<StaticObjective, string> = staticObjectiveLabels();
 export { objectiveLabel };

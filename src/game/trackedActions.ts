@@ -1,7 +1,7 @@
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
-   6.14.119 (AU27, lot AP-L7, constat AP-10) : registre des actions suivies.
+   6.14.121 (AU27, lot AP-L7, constat AP-10) : registre des actions suivies.
 
    Une seule liste des actions mesurables que les générateurs d'objectifs
    peuvent tirer : épisodes des Chroniques, défis du passe, saga d'alliance
@@ -15,15 +15,15 @@ import type { PlayerState } from "@/types/game";
    Les 9 actions d'avant gardent leur ordre et leur poids 1 : à activité
    égale, les tirages ne changent pas. Les familles par contenu
    (`unit:<id>`, `research:<id>`, `building:<id>`) sont comptées dès
-   6.14.119 et servent l'épisode « nouveauté » (6.14.120, AP-L8) ; leur
+   6.14.121 et servent l'épisode « nouveauté » (6.14.122, AP-L8) ; leur
    poids dans les tirages communs reste 0 (objectifs paramétrés : AJ27-7).
    Module feuille : aucun import à l'exécution (pas de cycle). Les noms des
    contenus viennent d'un résolveur posé par content.ts.
 ===================================================== */
 
-/** Les 9 actions d'avant 6.14.119 (ordre des tirages d'origine). */
+/** Les 9 actions d'avant 6.14.121 (ordre des tirages d'origine). */
 export type BaseObjective = "contract" | "bounty" | "raidRepelled" | "victory" | "bossAssault" | "mission" | "spy" | "market" | "warlordWin";
-/** 6.14.119 : lune, phalange, porte de saut, colonies. */
+/** 6.14.121 : lune, phalange, porte de saut, colonies. */
 export type NewObjective = "moonUpgrade" | "phalanxScan" | "gateJump" | "colonyConvoy" | "colonyBase" | "colonySpec";
 export type StaticObjective = BaseObjective | NewObjective;
 /** Familles par contenu : une action par unité, techno ou bâtiment. */
@@ -78,19 +78,19 @@ export const TRACKED_ACTIONS: Record<StaticObjective, TrackedActionDef> = {
   spy: def("spy", "espionnage", "Sondes d'espionnage lancées", "lancé {n} sondes", ["Sonde le secteur : {count} sonde{s}, et nous saurons qui leur parle.", "Je veux des yeux partout. Lance {count} sonde{s} d'espionnage."], "/game/galaxie"),
   market: def("market", "commerce", "Offres achetées au marché", "conclu {n} achats au marché", ["Les marchands parlent quand on leur achète. {count} achat{s} au marché.", "Suis l'argent : achète {count} offre{s} au marché et regarde qui vend."], "/game/commerce"),
   warlordWin: def("warlordWin", "seigneurs", "Seigneurs de guerre pillés", "pillé {n} seigneurs de guerre", ["Les seigneurs de guerre leur servent de rabatteurs. Pille-en {count}.", "Frappe {count} seigneur{s} de guerre : qu'ils sachent ce que coûte la trahison."], "/game/seigneurs", { passive: true }),
-  // 6.14.119 (AP-L7) : lune, phalange, porte de saut.
-  moonUpgrade: def("moonUpgrade", "lune", "Améliorations de lune", "amélioré {n} fois leur lune", ["Ta lune peut voir plus loin. Améliore-la {count} fois.", "Renforce ta lune : {count} amélioration{s}, et rien ne nous échappera."], "/game/statistiques", { measured: true, since: "6.14.119" }),
-  phalanxScan: def("phalanxScan", "lune", "Balayages de phalange", "lancé {n} balayages de phalange", ["Ceux qui t'attaquent se croient invisibles. Balaie-les {count} fois à la phalange.", "Quand ils viennent, ta phalange doit parler : {count} balayage{s}."], "/game/menaces", { passive: true, measured: true, since: "6.14.119" }),
-  gateJump: def("gateJump", "lune", "Sauts par la porte", "fait {n} sauts par la porte", ["La porte de saut raccourcit tout. Ramène {count} flotte{s} par elle.", "Use la porte : {count} saut{s}, et nos flottes seront partout à temps."], "/game/galaxie", { measured: true, since: "6.14.119", contract: "gate_jump" }),
-  // 6.14.119 (AP-L7) : colonies (convois, base avancée, spécialisation).
-  colonyConvoy: def("colonyConvoy", "colonies", "Convois de colonie arrivés", "fait arriver {n} convois de colonie", ["Nos colonies doivent nourrir l'effort. Fais arriver {count} convoi{s}.", "Chaque convoi compte : {count} arrivée{s} sur tes routes de colonie."], "/game/colonies", { measured: true, since: "6.14.119", contract: "colony_convoy" }),
-  colonyBase: def("colonyBase", "colonies", "Bases avancées tenues", "tenu {n} bases avancées", ["Tiens un avant-poste : {count} base{s} avancée{s} jusqu'au bout de leur séjour.", "Une base avancée qui tient vaut une flotte. Tiens-en {count}."], "/game/colonies", { measured: true, since: "6.14.119" }),
-  colonySpec: def("colonySpec", "colonies", "Colonies spécialisées", "spécialisé {n} colonies", ["Donne une vocation à tes mondes : spécialise {count} colonie{s}.", "Chaque colonie doit choisir sa voie : {count} spécialisation{s}."], "/game/colonies", { measured: true, since: "6.14.119" }),
+  // 6.14.121 (AP-L7) : lune, phalange, porte de saut.
+  moonUpgrade: def("moonUpgrade", "lune", "Améliorations de lune", "amélioré {n} fois leur lune", ["Ta lune peut voir plus loin. Améliore-la {count} fois.", "Renforce ta lune : {count} amélioration{s}, et rien ne nous échappera."], "/game/statistiques", { measured: true, since: "6.14.121" }),
+  phalanxScan: def("phalanxScan", "lune", "Balayages de phalange", "lancé {n} balayages de phalange", ["Ceux qui t'attaquent se croient invisibles. Balaie-les {count} fois à la phalange.", "Quand ils viennent, ta phalange doit parler : {count} balayage{s}."], "/game/menaces", { passive: true, measured: true, since: "6.14.121" }),
+  gateJump: def("gateJump", "lune", "Sauts par la porte", "fait {n} sauts par la porte", ["La porte de saut raccourcit tout. Ramène {count} flotte{s} par elle.", "Use la porte : {count} saut{s}, et nos flottes seront partout à temps."], "/game/galaxie", { measured: true, since: "6.14.121", contract: "gate_jump" }),
+  // 6.14.121 (AP-L7) : colonies (convois, base avancée, spécialisation).
+  colonyConvoy: def("colonyConvoy", "colonies", "Convois de colonie arrivés", "fait arriver {n} convois de colonie", ["Nos colonies doivent nourrir l'effort. Fais arriver {count} convoi{s}.", "Chaque convoi compte : {count} arrivée{s} sur tes routes de colonie."], "/game/colonies", { measured: true, since: "6.14.121", contract: "colony_convoy" }),
+  colonyBase: def("colonyBase", "colonies", "Bases avancées tenues", "tenu {n} bases avancées", ["Tiens un avant-poste : {count} base{s} avancée{s} jusqu'au bout de leur séjour.", "Une base avancée qui tient vaut une flotte. Tiens-en {count}."], "/game/colonies", { measured: true, since: "6.14.121" }),
+  colonySpec: def("colonySpec", "colonies", "Colonies spécialisées", "spécialisé {n} colonies", ["Donne une vocation à tes mondes : spécialise {count} colonie{s}.", "Chaque colonie doit choisir sa voie : {count} spécialisation{s}."], "/game/colonies", { measured: true, since: "6.14.121" }),
 };
 
-/** Ordre d'origine des 9 actions (tirages d'avant 6.14.119). */
+/** Ordre d'origine des 9 actions (tirages d'avant 6.14.121). */
 export const BASE_OBJECTIVES: BaseObjective[] = ["contract", "bounty", "raidRepelled", "victory", "bossAssault", "mission", "spy", "market", "warlordWin"];
-/** Actions entrées en 6.14.119, dans l'ordre où les générateurs les ajoutent (toujours après celles d'avant). */
+/** Actions entrées en 6.14.121, dans l'ordre où les générateurs les ajoutent (toujours après celles d'avant). */
 export const NEW_OBJECTIVES: NewObjective[] = ["moonUpgrade", "phalanxScan", "gateJump", "colonyConvoy", "colonyBase", "colonySpec"];
 export const STATIC_OBJECTIVES: StaticObjective[] = [...BASE_OBJECTIVES, ...NEW_OBJECTIVES];
 export const CONTENT_FAMILIES: ContentFamily[] = ["unit", "research", "building"];
@@ -135,7 +135,7 @@ export const TRACKED_ACTION_RULES = {
 
 /** Libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const TRACKED_ACTION_RULES_META = {
-  enabled: { label: "Actions suivies 6.14.119 dans les tirages", hint: "Décoché : Chroniques, passe, saga et objectifs du jour ne tirent que les actions d'avant la 6.14.119 (lune, phalange, porte de saut et colonies restent comptées)." },
+  enabled: { label: "Actions suivies 6.14.121 dans les tirages", hint: "Décoché : Chroniques, passe, saga et objectifs du jour ne tirent que les actions d'avant la 6.14.121 (lune, phalange, porte de saut et colonies restent comptées)." },
   weights: { label: "Poids de chaque action dans les tirages communs", hint: "Multiplie le poids propre au générateur (Chroniques, défis du passe, saga). 0 = jamais tirée ; 1 = normal." },
   familyWeights: { label: "Poids des familles par contenu (unité, techno, bâtiment)", hint: "0 = jamais dans les tirages communs : ces actions servent l'épisode « nouveauté ». Objectifs paramétrés : lot AJ27-7." },
   familyBase: { label: "Quantité de base d'une famille par contenu (une semaine)", hint: "unit : unités lancées ; research : niveaux de recherche lancés ; building : améliorations lancées." },
@@ -273,7 +273,7 @@ export function familyBase(family: ContentFamily): number {
   return Number.isFinite(n) && n >= 1 ? n : 1;
 }
 
-/** Les actions 6.14.119 entrent-elles dans les tirages ? */
+/** Les actions 6.14.121 entrent-elles dans les tirages ? */
 export function trackedActionsEnabled(): boolean {
   return TRACKED_ACTION_RULES.enabled !== false;
 }

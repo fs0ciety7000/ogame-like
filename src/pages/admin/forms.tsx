@@ -74,7 +74,7 @@ function PreviewTable({ headers, rows }: { headers: string[]; rows: (string | nu
 
 /* ---------------- Bâtiments ---------------- */
 
-/** 6.14.120 (AP-L8) : date du jour (AAAA-MM-JJ) : un contenu créé dans l'admin est « nouveau » (épisode « nouveauté »). */
+/** 6.14.122 (AP-L8) : date du jour (AAAA-MM-JJ) : un contenu créé dans l'admin est « nouveau » (épisode « nouveauté »). */
 const today = () => new Date().toISOString().slice(0, 10);
 const ADDED_ON_HINT = "AAAA-MM-JJ. Un contenu ajouté depuis peu prend l'épisode « nouveauté » du chapitre suivant des Chroniques (Règles → Épisode « nouveauté »). Vide : jamais mis en avant.";
 

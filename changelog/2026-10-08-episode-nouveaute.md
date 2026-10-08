@@ -1,6 +1,6 @@
 ---
-version: 6.14.120
-iteration: 194
+version: 6.14.122
+iteration: 195
 date: 2026-10-08
 title: Un épisode pour chaque nouveauté
 ---

@@ -149,7 +149,7 @@ export function advanceBuildPlan(player: PlayerState, queues: QueuesState, now: 
         paid: cost,
       };
       recordContract(player, "upgrade_building", 1, now);
-      // 6.14.119 (AP-L7) : action par contenu, comme une amélioration lancée à la main.
+      // 6.14.121 (AP-L7) : action par contenu, comme une amélioration lancée à la main.
       trackAction(player, contentObjective("building", def.id), now);
       notes.push({ kind: "building", title: "File planifiée", message: `${def.name} niveau ${entry.level} : amélioration lancée.`, createdAtMs: now, read: false });
       continue;

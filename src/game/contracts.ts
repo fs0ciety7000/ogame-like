@@ -29,7 +29,7 @@ export type ContractType =
   // 6.2 (lot N) : objectifs repris des missions du jour.
   | "spy"
   | "market"
-  // 6.14.119 (AP-L7) : actions du registre des actions suivies (porte de saut, convoi de colonie), proposées seulement au
+  // 6.14.121 (AP-L7) : actions du registre des actions suivies (porte de saut, convoi de colonie), proposées seulement au
   // joueur qui peut les faire (porte ouverte, route de colonie).
   | "gate_jump"
   | "colony_convoy";
@@ -78,7 +78,7 @@ export const CONTRACT_RULES = {
     spend: 1,
     spy: 1,
     market: 1,
-    // 6.14.119 (AP-L7) : tirés seulement pour un joueur qui peut les faire ; un compte sans lune ni route tire comme avant.
+    // 6.14.121 (AP-L7) : tirés seulement pour un joueur qui peut les faire ; un compte sans lune ni route tire comme avant.
     gate_jump: 0.5,
     colony_convoy: 0.5,
   } as Record<ContractType, number>,
@@ -171,7 +171,7 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
   colony_convoy: (n) => `Faire arriver ${n} convoi${n > 1 ? "s" : ""} de colonie`,
 };
 
-/** 6.14.119 : les types du registre des actions suivies viennent après ceux d'avant (ordre de tirage d'origine inchangé). */
+/** 6.14.121 : les types du registre des actions suivies viennent après ceux d'avant (ordre de tirage d'origine inchangé). */
 const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy"];
 /* 6.14.79 (DP-L4, invariant I31, Q158) : un objectif d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur
    (menu progressif, `navUnlock`). Page(s) où l'objectif se fait ; un type absent se fait sur une page toujours visible
@@ -183,15 +183,15 @@ export const CONTRACT_PAGES: Partial<Record<ContractType, string[]>> = {
   gift: ["/game/commerce"],
   spy: ["/game/galaxie"],
   market: ["/game/commerce"],
-  // 6.14.119 (AP-L7) : page déclarée par le registre des actions suivies.
+  // 6.14.121 (AP-L7) : page déclarée par le registre des actions suivies.
   gate_jump: [TRACKED_ACTIONS.gateJump.page],
   colony_convoy: [TRACKED_ACTIONS.colonyConvoy.page],
 };
 
 /** Types d'objectifs que le joueur peut tirer (tous si `navUnlock.filterContracts` est à faux ou hors du menu progressif). */
 export function openContractTypes(player: PlayerState, now: number): ContractType[] {
-  // 6.14.119 (AP-L7) : un type du registre n'est proposé que si le joueur peut faire l'action (porte ouverte, route de colonie),
-  // et que les actions 6.14.119 sont actives (`trackedActions.enabled`).
+  // 6.14.121 (AP-L7) : un type du registre n'est proposé que si le joueur peut faire l'action (porte ouverte, route de colonie),
+  // et que les actions 6.14.121 sont actives (`trackedActions.enabled`).
   const doable = ALL_TYPES.filter((t) => {
     const action = actionOfContract(t);
     return !action || (trackedActionsEnabled() && actionAvailable(action as StaticObjective, player));
@@ -382,7 +382,7 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
 
 // 6.14.110 (AC-D) : toute dépense (`spendResources`) compte pour l'objectif du jour « Dépenser ».
 onSpend((player, total, now) => recordContract(player, "spend", total, now));
-// 6.14.119 (AP-L7) : une action du registre liée à un objectif du jour le fait avancer.
+// 6.14.121 (AP-L7) : une action du registre liée à un objectif du jour le fait avancer.
 onTrackedAction("contracts", (player, key, now, times) => {
   const type = typeof key === "string" && key in TRACKED_ACTIONS ? TRACKED_ACTIONS[key as StaticObjective].contract : undefined;
   if (type) recordContract(player, type as ContractType, times, now);

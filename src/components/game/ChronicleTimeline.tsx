@@ -104,7 +104,7 @@ export function ChronicleTimeline({
                 )}
               </div>
               <p className="font-display text-sm text-slate-100">{e.title}</p>
-              {/* 6.14.120 (AP-L8) : épisode « nouveauté » (contenu ajouté récemment). */}
+              {/* 6.14.122 (AP-L8) : épisode « nouveauté » (contenu ajouté récemment). */}
               {month.auto?.novelty?.episode === i + 1 && (
                 <div className="flex">
                   <HudChip size="sm" tone="violet" className="normal-case tracking-normal" title={`Ajouté le ${month.auto.novelty.addedOn}`}>

@@ -19,13 +19,13 @@ import { isStaticObjective, isTrackedObjective, onTrackedAction, type TrackedKey
    teinte du mois. Contenu modifiable depuis l'administration.
 ===================================================== */
 
-/** 6.14.119 (AP-L7) : toute action du registre des actions suivies (`trackedActions.ts`) : les 9 d'avant, lune, phalange,
+/** 6.14.121 (AP-L7) : toute action du registre des actions suivies (`trackedActions.ts`) : les 9 d'avant, lune, phalange,
  *  porte de saut, colonies, et une action par contenu (`unit:<id>`, `research:<id>`, `building:<id>`). */
 export type ChronicleObjective = TrackedKey;
 
 /** v5.13 : libellés rangés dans seasonPass.ts (prérequis des paliers), ré-exportés ici. */
 export { OBJECTIVE_LABELS };
-/** 6.14.119 (AP-L7) : libellé de toute action suivie (registre et contenus). */
+/** 6.14.121 (AP-L7) : libellé de toute action suivie (registre et contenus). */
 export { objectiveLabel } from "@/game/trackedActions";
 
 export interface ChronicleEpisode {
@@ -60,7 +60,7 @@ export interface ChapterAuto {
   variant?: number;
   /** 6.14.57 : retouché à la main dans l'admin : jamais régénéré d'office. */
   editedAtMs?: number;
-  /** 6.14.120 (AP-L8) : contenu mis en avant par l'épisode « nouveauté » (action, date d'ajout, épisode 1 à 4). */
+  /** 6.14.122 (AP-L8) : contenu mis en avant par l'épisode « nouveauté » (action, date d'ajout, épisode 1 à 4). */
   novelty?: { key: string; addedOn: string; episode: number };
 }
 
@@ -620,7 +620,7 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
 onPassPoints((player, source, now, times) => {
   if (isStaticObjective(source)) recordChronicle(player, source, now, times);
 });
-// 6.14.119 (AP-L7) : une action du registre comptée ailleurs (lune, colonies, contenus) avance les épisodes et l'activité du mois.
+// 6.14.121 (AP-L7) : une action du registre comptée ailleurs (lune, colonies, contenus) avance les épisodes et l'activité du mois.
 onTrackedAction("chronicles", (player, key, now, times) => recordChronicle(player, key, now, times));
 
 /* ---------- boss de saison ---------- */

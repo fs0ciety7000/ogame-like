@@ -6,7 +6,7 @@ import { CONTENT_FAMILIES, objectiveLabel, type ContentFamily } from "@/game/tra
 import { CheckboxField, NumberField, Section, TextAreaField } from "@/pages/admin/fields";
 
 /* =====================================================
-   6.14.120 (AU27, lot AP-L8) : épisode « nouveauté » des Chroniques
+   6.14.122 (AU27, lot AP-L8) : épisode « nouveauté » des Chroniques
    générées. Un contenu daté (« Ajouté le » dans sa fiche) prend un
    épisode du chapitre suivant. Fréquence, durée, épisode, quantités,
    part des joueurs qui y ont accès, et bibliothèque de textes (une ligne
@@ -60,7 +60,7 @@ export function NoveltyFields({ rules, setRules }: { rules: R; setRules: SetRule
   };
 
   return (
-    <Section title="Chroniques : épisode « nouveauté » (6.14.120)">
+    <Section title="Chroniques : épisode « nouveauté » (6.14.122)">
       <p className="text-sm text-slate-400 sm:col-span-2">
         Un contenu daté (« Ajouté le » dans sa fiche : Unités, Technologies, Bâtiments) prend un épisode du chapitre suivant, s'il est accessible à assez de joueurs. Un contenu n'est mis en
         avant qu'une fois. Un mois déjà écrit ne change pas.{" "}

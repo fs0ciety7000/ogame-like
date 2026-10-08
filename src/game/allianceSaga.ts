@@ -89,7 +89,7 @@ const SAGA_WINNERS = ["Héros de la saga", "Porte-bannière", "Champion d'allian
 export function generateAllianceSaga(monthId: string, digest: WorldDigest & { allianceSizeMedian?: number }, difficulty: number, now: number): AllianceSagaDef {
   const rng = seededRandom(`saga:${monthId}`);
   const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
-  // 6.14.119 (AP-L7) : actions du registre (lune, colonies) en fin de liste, seulement si le serveur les pratique ; poids 0 : retirée.
+  // 6.14.121 (AP-L7) : actions du registre (lune, colonies) en fin de liste, seulement si le serveur les pratique ; poids 0 : retirée.
   const extra = extraObjectives().filter((k) => measuredPlayable(k, digest.weeklyMedian) && (!objectivePassive(k) || (digest.weeklyMedian[k] ?? 0) > 0));
   const pool = [...ACTIVITY_KEYS.filter((k) => k !== "warlordWin" || (digest.weeklyMedian.warlordWin ?? 0) > 0), ...extra].filter((k) => trackedWeight(k) > 0);
   const chosen: ChronicleObjective[] = [];

@@ -1003,9 +1003,9 @@ export function RulesPanel() {
         <ChronicleGenFields rules={rules} setRules={setRules} />
         {/* 6.14.108 et 6.14.109 (AP-L4, AP-L5) : paliers de succès générés, objectifs du jour pondérés. */}
         <GeneratedGoalsFields rules={rules} setRules={setRules} />
-        {/* 6.14.119 (AP-L7) : registre des actions suivies (poids, quantités de base, familles par contenu). */}
+        {/* 6.14.121 (AP-L7) : registre des actions suivies (poids, quantités de base, familles par contenu). */}
         <TrackedActionsFields rules={rules} setRules={setRules} />
-        {/* 6.14.120 (AP-L8) : épisode « nouveauté » (contenu récent). */}
+        {/* 6.14.122 (AP-L8) : épisode « nouveauté » (contenu récent). */}
         <NoveltyFields rules={rules} setRules={setRules} />
         <CommerceRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.84 et 6.14.85 (RL-1, RL-2) : Labo (coûts et durées des recherches) et projets de prestige. */}

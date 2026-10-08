@@ -34,7 +34,7 @@ const TYPE_LABELS: Record<ContractType, string> = {
   spend: "Dépenser des ressources",
   spy: "Lancer des sondes",
   market: "Acheter au marché",
-  // 6.14.119 (AP-L7) : proposés seulement au joueur qui peut les faire (porte ouverte, route de colonie).
+  // 6.14.121 (AP-L7) : proposés seulement au joueur qui peut les faire (porte ouverte, route de colonie).
   gate_jump: "Porte de saut (joueur à porte ouverte)",
   colony_convoy: "Convoi de colonie (joueur avec une route)",
 };
