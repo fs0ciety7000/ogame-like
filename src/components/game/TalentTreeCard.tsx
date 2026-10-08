@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { RotateCcw, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TALENT_BRANCHES, TALENT_RULES, TALENTS, talentPoints, talentState } from "@/game/talents";
+import { TALENT_BRANCHES, TALENT_RULES, TALENTS, talentDescription, talentPoints, talentState, type TalentDef } from "@/game/talents";
+import { EFFECT_STATS } from "@/game/effects";
 import { currentSeasonId } from "@/game/seasons";
 import { GameActionError, learnTalent, resetTalents } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -12,8 +13,14 @@ import { askConfirm } from "@/components/ui/confirm-dialog";
 
 /* v5.1 : arbre de talents d'Ascension — 3 points par ascension, 3 branches de 5 talents, 3 rangs. */
 
-function fmt(perRank: number, rank: number, spy: boolean): string {
-  return spy ? `+${(perRank * rank).toFixed(1).replace(".", ",")} niv.` : `+${Math.round(perRank * rank * 100)} %`;
+/** 6.14.127 (AA9) : valeur du premier effet du talent (fiche de contenu) au rang donné. */
+function fmt(t: TalentDef, rank: number): string {
+  const e = t.effects?.[0];
+  const v = (Number(e?.value) || 0) * rank;
+  const unit = e ? EFFECT_STATS[e.stat]?.unit : "pct";
+  if (unit === "level") return `+${v.toFixed(1).replace(".", ",")} niv.`;
+  if (unit === "points") return `+${Math.round(v)} pt${Math.round(v) > 1 ? "s" : ""}`;
+  return `+${Math.round(v * 100)} %`;
 }
 
 export function TalentTreeCard() {
@@ -63,10 +70,10 @@ export function TalentTreeCard() {
         {TALENT_BRANCHES.map((b) => (
           <div key={b.id} className="flex flex-col gap-2 border border-white/[0.06] bg-white/[0.015] p-3" style={{ "--branch": b.color } as React.CSSProperties}>
             <p className="hud-eyebrow text-[11px] text-[var(--branch)]">{b.name}</p>
-            {TALENTS.filter((t) => t.branch === b.id).map((t) => {
+            {TALENTS.filter((t) => t.branch === b.id && (!t.retired || (st.ranks[t.id] ?? 0) > 0)).map((t) => {
               const rank = st.ranks[t.id] ?? 0;
-              const max = rank >= TALENT_RULES.maxRank;
-              const spy = t.effect.kind === "spyLevel";
+              // 6.14.127 (AA9) : un talent retiré reste affiché pour qui y a des rangs (effet gardé), sans nouveau rang.
+              const max = rank >= TALENT_RULES.maxRank || !!t.retired;
               return (
                 <button
                   key={t.id}
@@ -79,13 +86,13 @@ export function TalentTreeCard() {
                     !max && pts.free > 0 && "hover:border-[var(--branch)]",
                     (max || pts.free <= 0) && "cursor-default",
                   )}
-                  title={max ? "Rang maximum" : pts.free <= 0 ? "Aucun point libre" : `Rang ${rank + 1} : ${fmt(t.perRank, rank + 1, spy)}`}
+                  title={t.retired ? "Talent retiré : tes rangs gardent leur effet" : max ? "Rang maximum" : pts.free <= 0 ? "Aucun point libre" : `Rang ${rank + 1} : ${fmt(t, rank + 1)}`}
                 >
                   <span className="flex items-center gap-2">
                     <span className="flex-1 text-sm font-semibold text-slate-100">{t.name}</span>
-                    <span className="font-mono text-[11px] text-[var(--branch)]">{rank > 0 ? fmt(t.perRank, rank, spy) : "—"}</span>
+                    <span className="font-mono text-[11px] text-[var(--branch)]">{rank > 0 ? fmt(t, rank) : "—"}</span>
                   </span>
-                  <span className="text-[11px] text-slate-500">{t.description}</span>
+                  <span className="text-[11px] text-slate-500">{talentDescription(t)}</span>
                   <span className="flex gap-1">
                     {Array.from({ length: TALENT_RULES.maxRank }, (_, i) => (
                       <span key={i} className={cn("h-1.5 flex-1", i < rank ? "bg-[var(--branch)] shadow-[0_0_6px_var(--branch)]" : "bg-white/[0.07]")} />

@@ -117,8 +117,8 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
   Garde : I29 à 365 jours sans exception. Fiche : `docs/changes/6.14.89-reglage-fin-rythme.md`.
 
 ## 6.14.104 (revue AU27, lot AA3)
-Valeurs inchangées, réglables (Admin → Règles, sections « 6.14.104 ») : valeur par rang des 15 talents (`talents.perRank`, 0,02 ; réseau
-0,2), jetons et part de placement des 6 divisions (`leagues.tiers`, total des parts = 100 %, contrôlé), objectif par joueur actif des 6
+Valeurs inchangées, réglables (Admin → Règles, sections « 6.14.104 ») : valeur par rang des 15 talents (0,02 ; réseau 0,2 ; depuis
+6.14.127 dans la section `talents`, Admin → Talents), jetons et part de placement des 6 divisions (`leagues.tiers`, total des parts = 100 %, contrôlé), objectif par joueur actif des 6
 défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'une capsule (`passOverflow.capsuleAmber`, 15).
 
 ## 6.14.107 (AE-L4) : mesures de progression dans la santé de l'équilibre
@@ -176,3 +176,11 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   s'il est accessible à 50 % des joueurs actifs ; un contenu une seule fois ; graine propre (le reste du chapitre ne change pas) ;
   bibliothèque de textes réglable ; mention « Nouveauté » sur l'épisode. Admin → Règles → « Épisode nouveauté » (`novelty`).
   Garde : 67 contenus d'avant sans date, ce nombre ne monte plus. Fiche : `docs/changes/6.14.122-episode-nouveaute.md`.
+
+## 6.14.127 et 6.14.128 (revue AU27, lot AA9)
+- **Talents d'Ascension** en section de contenu (`talents`, Admin → Talents) : branche, effets composés par rang, « Retiré » (ne
+  s'apprend plus, rangs gardés) ; un talent enregistré ne se supprime pas (I43). Fiche : `docs/changes/6.14.127-talents-modules.md`.
+- **Catalogue du passe** en sections (`passThemes`, `seasonCatalog`, Admin → Catalogue du passe) : l'ordre des thèmes est la
+  rotation mensuelle (thèmes retirés exclus), cycle = thèmes × années (36 par défaut), une saison par thème en rotation et par année
+  (garde du serveur). Un passe déjà écrit garde sa copie du thème ; la bannière d'un passe terminé prend le nom et la couleur du passe
+  publié. Succès « Trois ans de campagne » : palier 36 gardé. Fiche : `docs/changes/6.14.128-catalogue-passe.md`.

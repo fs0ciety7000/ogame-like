@@ -80,7 +80,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 58 | UX-10 | Hygiène et gardes du design system | M | livré (6.14.83, `docs/changes/6.14.83-hygiene-design.md`) ; exceptions du menu, de l'en-tête, des Réglages et des `useEffect` de l'admin retirées en 6.14.86 ; restent admin (arrondis, emoji, dates), accueil, cockpit, Succès |
 | 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | livré (6.14.86, `docs/changes/6.14.86-finitions-interface.md`) |
 | 60 | AC-H | Ménage, boutons « Lancer maintenant », test « tour des actions » | M | à faire |
-| 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | à faire |
+| 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | livré (6.14.127 et 6.14.128 ; `docs/changes/6.14.127-talents-modules.md`, `docs/changes/6.14.128-catalogue-passe.md`) |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition) | L | à faire |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
 | 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | livré (6.14.97) |

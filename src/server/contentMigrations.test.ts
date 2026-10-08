@@ -4,6 +4,8 @@ import { defaultGameContent } from "@/game/content";
 import { defaultAllianceEffects } from "@/game/alliances";
 import { defaultFactionFugitives } from "@/game/bounties";
 import { defaultMutatorDefs } from "@/game/mutators";
+import { withDefaultTalents } from "@/game/talents";
+import { withDefaultModuleFamilies } from "@/game/modules";
 import { CLASS_UNITS, defaultUnitRoles, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
 import { SYNTH_BUILDING_ID } from "@/game/buildings";
 import { PASS_THEME_OLD_IMAGES, PASS_THEMES, SEASON_PORTRAITS } from "@/game/passSeasons";
@@ -288,5 +290,84 @@ describe("AA7 : migrations faction-fugitives-6.14.125 et mutators-defs-6.14.125"
     expect(data.mutators.values).toBeUndefined();
     expect(data.mutators.overrides).toEqual({ "2026-10": "ruee" });
     expect(changes).toHaveLength(1);
+  });
+});
+
+/* 6.14.127 (AU27, lot AA9, AA-2 et AA-5) : talents et familles de modules en sections ; les anciens chiffres des règles les créent. */
+describe("AA9 : migrations talents-section-6.14.127 et module-families-6.14.127", () => {
+  type Saved = { key?: string; data?: unknown };
+  const fakeEnv = (existing: string[]) => {
+    const saved: Saved[] = [];
+    const g = globalThis as Record<string, unknown>;
+    g.loadGame = () => ({ withDefaultTalents, withDefaultModuleFamilies });
+    g.configRecord = (_tx: unknown, key: string) => (existing.includes(key) ? { key } : null);
+    g.Record = class {
+      v: Saved = {};
+      set(k: "key" | "data", value: unknown) {
+        (this.v as Record<string, unknown>)[k] = value;
+      }
+    };
+    const txApp = { findCollectionByNameOrId: () => ({}), save: (r: { v: Saved }) => saved.push(r.v) };
+    const cleanup = () => {
+      for (const k of ["loadGame", "configRecord", "Record"]) delete g[k];
+    };
+    return { saved, txApp, cleanup };
+  };
+  const run = (id: string, data: unknown, changes: string[], txApp: unknown) => (rulesMigration(id).run as (d: unknown, c: string[], t: unknown) => boolean)(data, changes, txApp);
+
+  it("talents.perRank crée la section « talents » (mêmes valeurs) et quitte les règles ; une section écrite l'emporte", () => {
+    const env = fakeEnv([]);
+    const data = { talents: { maxRank: 3, perRank: { assaut: 0.03, reseau: 0.4 } } } as Record<string, Record<string, unknown>>;
+    const changes: string[] = [];
+    try {
+      expect(run("talents-section-6.14.127", data, changes, env.txApp)).toBe(true);
+      expect(run("talents-section-6.14.127", data, [], env.txApp)).toBe(false);
+    } finally {
+      env.cleanup();
+    }
+    expect(data.talents).toEqual({ maxRank: 3 });
+    expect(env.saved).toHaveLength(1);
+    expect(env.saved[0].key).toBe("talents");
+    const list = env.saved[0].data as { id: string; effects: { value: number }[] }[];
+    expect(list).toHaveLength(15);
+    expect(list.find((t) => t.id === "assaut")?.effects[0].value).toBe(0.03);
+    expect(list.find((t) => t.id === "reseau")?.effects[0].value).toBe(0.4);
+    expect(list.find((t) => t.id === "rempart")?.effects[0].value).toBe(0.02);
+    const env2 = fakeEnv(["talents"]);
+    const data2 = { talents: { perRank: { assaut: 0.03 } } } as Record<string, Record<string, unknown>>;
+    try {
+      expect(run("talents-section-6.14.127", data2, [], env2.txApp)).toBe(true);
+    } finally {
+      env2.cleanup();
+    }
+    expect(env2.saved).toHaveLength(0);
+    expect(data2.talents).toEqual({});
+  });
+
+  it("modules.familyValues crée la section « moduleFamilies » ; poids et recyclage restent dans les règles", () => {
+    const env = fakeEnv([]);
+    const data = { modules: { rarityWeights: { legendary: 4 }, familyValues: { armement: { epic: 0.12 } } } } as Record<string, Record<string, unknown>>;
+    try {
+      expect(run("module-families-6.14.127", data, [], env.txApp)).toBe(true);
+      expect(run("module-families-6.14.127", data, [], env.txApp)).toBe(false);
+    } finally {
+      env.cleanup();
+    }
+    expect(data.modules).toEqual({ rarityWeights: { legendary: 4 } });
+    const list = env.saved[0].data as { id: string; values: Record<string, number> }[];
+    expect(env.saved[0].key).toBe("moduleFamilies");
+    expect(list.find((f) => f.id === "armement")?.values).toEqual({ common: 0.04, rare: 0.07, epic: 0.12, legendary: 0.16 });
+    expect(list.find((f) => f.id === "voile")?.values).toEqual({ common: 1, rare: 2, epic: 3, legendary: 4 });
+  });
+
+  it("les éléments livrés des trois sections ont leur entrée appendFromDefaults (I27)", () => {
+    const mig = migrated();
+    const d = defaultGameContent();
+    expect(mig.talents).toEqual(d.talents.map((t) => t.id));
+    expect(mig.moduleFamilies).toEqual(d.moduleFamilies.map((f) => f.id));
+    expect(mig.moduleTemplates).toEqual(d.moduleTemplates.map((t) => t.id));
+    // 6.14.128 : thèmes et catalogue du passe.
+    expect(mig.passThemes).toEqual(d.passThemes.map((t) => t.id));
+    expect([...mig.seasonCatalog].sort()).toEqual(d.seasonCatalog.map((e) => e.id).sort());
   });
 });

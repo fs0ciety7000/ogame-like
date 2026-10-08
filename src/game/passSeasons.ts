@@ -7,7 +7,8 @@ import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { challengePool, computePointsPerTier, generateBudgetTiers, passGenRules, tiersValue, type PassGenRules } from "@/game/passGen";
 import { defaultSimProfiles, profileFromMedian, simulatePass } from "@/game/passSimulator";
-import { CATALOG_START, catalogEntryFor, catalogIndex, illustrationPrompt, portraitPrompt, THEME_PRIMARY } from "@/game/seasonCatalog";
+import { CATALOG_START, catalogCycle, catalogEntryFor, catalogIndex, DEFAULT_THEME_PRIMARY, DEFAULT_THEME_ROTATION, illustrationPrompt, portraitPrompt, THEME_PRIMARY, type SeasonCatalogEntry } from "@/game/seasonCatalog";
+import type { CommanderId } from "@/game/commanders";
 
 /* =====================================================
    v5.13 : passes de saison procéduraux. Chaque mois, le moteur écrit un
@@ -339,8 +340,15 @@ export function defaultPassSeasonsConfig(): PassSeasonsConfig {
 
 /* ---------- thèmes ---------- */
 
-interface PassTheme {
+/** 6.14.128 (AU27, lot AA9, constat AA-23) : thème du passe, fiche de la section `passThemes` (Admin → Catalogue du passe).
+ *  L'ordre de la liste est celui de la rotation mensuelle ; un thème retiré quitte la rotation (les passes déjà écrits gardent
+ *  leur copie du thème). */
+export interface PassTheme {
   id: string;
+  /** Rôle principal du commandant de saison du thème. */
+  primary: CommanderId;
+  /** Retiré de la rotation (les mois suivants prennent les autres thèmes). */
+  retired?: boolean;
   accent: string;
   image: string;
   mentor: Speaker;
@@ -373,7 +381,7 @@ export const PASS_THEME_OLD_IMAGES: Record<string, string> = {
   moisson: "/assets/chronicles/2027-03-boss.webp",
 };
 
-export const PASS_THEMES: PassTheme[] = [
+const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
   {
     id: "maree",
     accent: "#4be8ff",
@@ -557,6 +565,76 @@ export const PASS_THEMES: PassTheme[] = [
   },
 ];
 
+/** Thèmes livrés, dans l'ordre de la rotation (douze). */
+export const DEFAULT_PASS_THEMES: PassTheme[] = DEFAULT_THEME_ROTATION.map((id) => RAW_PASS_THEMES.find((t) => t.id === id)!)
+  .concat(RAW_PASS_THEMES.filter((t) => !(DEFAULT_THEME_ROTATION as readonly string[]).includes(t.id)))
+  .map((t) => ({ ...t, primary: DEFAULT_THEME_PRIMARY[t.id] }));
+
+/** Thèmes en vigueur (posés par `setPassThemes`, depuis `applyGameContent`). */
+export const PASS_THEMES: PassTheme[] = structuredClone(DEFAULT_PASS_THEMES);
+
+export function setPassThemes(list: PassTheme[]): void {
+  PASS_THEMES.splice(0, PASS_THEMES.length, ...list);
+}
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const textList = (v: unknown) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
+
+/** 6.14.128 (AA9) : erreurs des sections `passThemes` et `seasonCatalog` : fiches complètes, une saison par thème en rotation
+ *  et par année du catalogue (sinon un mois tomberait sur une saison d'une autre année). */
+export function validatePassCatalog(themes: unknown, entries: unknown): string[] {
+  if (!Array.isArray(themes)) return ["Thèmes du passe : la section doit être une liste."];
+  if (!Array.isArray(entries)) return ["Catalogue des saisons : la section doit être une liste."];
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const t of themes as Partial<PassTheme>[]) {
+    const label = `Thème du passe ${t?.id ?? "?"}`;
+    if (!t || typeof t.id !== "string" || !/^[A-Za-z0-9_]+$/.test(t.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (ids.has(t.id)) errors.push(`Thèmes du passe : identifiant « ${t.id} » en double.`);
+    else ids.add(t.id);
+    if (!t) continue;
+    if (typeof t.accent !== "string" || !HEX.test(t.accent)) errors.push(`${label} : couleur « ${String(t.accent)} » invalide (#rrggbb).`);
+    if (typeof t.image !== "string") errors.push(`${label} : image manquante.`);
+    for (const k of ["mentor", "rival"] as const) if (!(String(t[k]) in STORY_SPEAKERS)) errors.push(`${label} : ${k === "mentor" ? "mentor" : "rival"} « ${String(t[k])} » inconnu.`);
+    if (!COMMANDER_ROLES.includes(t.primary as CommanderId)) errors.push(`${label} : rôle principal « ${String(t.primary)} » inconnu.`);
+    if (!Array.isArray(t.focus) || t.focus.length === 0 || t.focus.some((k) => !isTrackedObjective(k))) errors.push(`${label} : actions mises en avant inconnues ou absentes.`);
+    for (const k of ["beats", "rivalLines"] as const) {
+      const v = t[k] as unknown;
+      if (!Array.isArray(v) || v.length !== 4 || !v.every(textList)) errors.push(`${label} : ${k === "beats" ? "répliques du mentor" : "répliques du rival"} : quatre temps, au moins une réplique chacun.`);
+    }
+    if (t.retired !== undefined && typeof t.retired !== "boolean") errors.push(`${label} : « retiré » doit être oui ou non.`);
+  }
+  const active = (themes as Partial<PassTheme>[]).filter((t) => t && !t.retired && typeof t.id === "string").map((t) => t.id as string);
+  if (active.length === 0) errors.push("Thèmes du passe : au moins un thème en rotation.");
+  const entryIds = new Set<string>();
+  const slots = new Set<string>();
+  let years = 1;
+  for (const e of entries as Partial<SeasonCatalogEntry>[]) {
+    const label = `Saison du catalogue ${e?.name || e?.id || "?"}`;
+    if (!e || typeof e.id !== "string" || !/^[A-Za-z0-9_]+$/.test(e.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (entryIds.has(e.id)) errors.push(`Catalogue des saisons : identifiant « ${e.id} » en double.`);
+    else entryIds.add(e.id);
+    if (!e) continue;
+    if (!ids.has(String(e.theme))) errors.push(`${label} : thème « ${String(e.theme)} » inconnu.`);
+    if (!(Number.isInteger(e.year) && (e.year as number) >= 1 && (e.year as number) <= 10)) errors.push(`${label} : année entière entre 1 et 10.`);
+    else {
+      years = Math.max(years, e.year as number);
+      const slot = `${e.theme}:${e.year}`;
+      if (slots.has(slot)) errors.push(`${label} : deux saisons pour « ${String(e.theme)} », année ${e.year}.`);
+      slots.add(slot);
+    }
+    for (const k of ["name", "tagline", "synopsis", "scene"] as const) if (typeof e[k] !== "string" || (k === "name" && !e[k]!.trim())) errors.push(`${label} : « ${k} » manquant.`);
+    const c = e.commander as Partial<SeasonCatalogEntry["commander"]> | undefined;
+    if (!c || typeof c !== "object") errors.push(`${label} : commandant manquant.`);
+    else {
+      for (const k of ["name", "title", "lore", "look"] as const) if (typeof c[k] !== "string" || (k === "name" && !c[k]!.trim())) errors.push(`${label} : commandant, « ${k} » manquant.`);
+      if (!COMMANDER_ROLES.includes(c.secondary as CommanderId)) errors.push(`${label} : second rôle « ${String(c.secondary)} » inconnu.`);
+    }
+  }
+  for (const id of active) for (let y = 1; y <= years; y++) if (!slots.has(`${id}:${y}`)) errors.push(`Catalogue des saisons : aucune saison pour le thème « ${id} », année ${y} (${years} années au catalogue).`);
+  return errors;
+}
+
 /* ---------- génération ---------- */
 
 const pick = <T>(rng: () => number, xs: T[]): T => xs[Math.min(xs.length - 1, Math.floor(rng() * xs.length))];
@@ -639,7 +717,7 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   let pointsPerTier = computed?.ppt ?? g.pass.pointsPerTier;
   reasons.push(...(computed?.reasons ?? [...g.reasons, "Pas encore de points par jour mesurés : ajustement sur la part de joueurs qui ont fini."]));
   const focus = shuffle(rng, theme.focus);
-  reasons.push(`Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`);
+  reasons.push(`Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`);
   let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length);
   // 6.14.58 (AU27, AP-2) : défis faisables pour le joueur médian avant tout le reste (nouveaux tirages, puis seuils réduits).
   const fit = fitChallenges({ pointsPerTier, tiers, requirements, challengeMode: "cumulative" }, o.digest, (k) =>

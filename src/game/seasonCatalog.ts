@@ -12,13 +12,14 @@ import type { CommanderId } from "@/game/commanders";
 /** Premier mois du catalogue (saison 1, année 1). */
 export const CATALOG_START = "2026-11";
 
-/** Ordre des thèmes, à partir de CATALOG_START (un par mois). */
-export const THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"] as const;
+/** Ordre des thèmes livrés, à partir de CATALOG_START (un par mois). */
+export const DEFAULT_THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"] as const;
 
-export type RotationThemeId = (typeof THEME_ROTATION)[number];
+/** 6.14.128 (AA9) : un thème ajouté dans l'admin (section `passThemes`) a son propre identifiant. */
+export type RotationThemeId = string;
 
-/** Rôle principal du commandant de chaque thème : les douze rôles, une fois chacun. */
-export const THEME_PRIMARY: Record<RotationThemeId, CommanderId> = {
+/** Rôle principal du commandant de chaque thème livré : les douze rôles, une fois chacun. */
+export const DEFAULT_THEME_PRIMARY: Record<string, CommanderId> = {
   vide: "logistician",
   hiver: "warden",
   forge: "engineer",
@@ -44,6 +45,8 @@ export interface CatalogCommander {
 }
 
 export interface SeasonCatalogEntry {
+  /** 6.14.128 (AA9) : identifiant de la fiche (`<thème>_<année>` pour les fiches livrées). */
+  id: string;
   theme: RotationThemeId;
   /** 1, 2 ou 3. */
   year: number;
@@ -56,9 +59,10 @@ export interface SeasonCatalogEntry {
   scene: string;
 }
 
-const E = (theme: RotationThemeId, year: number, name: string, tagline: string, synopsis: string, commander: CatalogCommander, scene: string): SeasonCatalogEntry => ({ theme, year, name, tagline, synopsis, commander, scene });
+const E = (theme: RotationThemeId, year: number, name: string, tagline: string, synopsis: string, commander: CatalogCommander, scene: string): SeasonCatalogEntry => ({ id: `${theme}_${year}`, theme, year, name, tagline, synopsis, commander, scene });
 
-export const SEASON_CATALOG: SeasonCatalogEntry[] = [
+/** Catalogue livré (36 saisons). */
+export const DEFAULT_SEASON_CATALOG: SeasonCatalogEntry[] = [
   // ---------- L'Appel du Vide (Logisticienne) ----------
   E("vide", 1, "L'Appel du Vide", "Au-delà des cartes, des routes à ouvrir.", "Un signal venu d'au-delà des franges appelle les flottes. {mentor} veut ouvrir une route avant que {rival} ne la ferme.", { name: "Ilka Morrow", title: "Éclaireuse des franges", secondary: "spy", lore: "{commander} a cartographié trois nébuleuses que tout le monde disait infranchissables.", look: "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind" }, "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind"),
   E("vide", 2, "Au-delà des franges", "Chaque route ouverte est une colonie promise.", "Les routes ouvertes l'an dernier mènent à des mondes inconnus. {mentor} veut y installer des colons ; {rival} y voit des proies.", { name: "Corentin Vash", title: "Maître des routes", secondary: "governor", lore: "{commander} a mené le premier convoi de colons au-delà du Voile, sans perdre un seul vaisseau.", look: "a calm convoy master in a long travel coat, route holograms around his hands, colony ships glowing behind" }, "a long convoy of colony ships threading a glowing corridor between two magenta nebulae, a green world on the horizon"),
@@ -120,6 +124,35 @@ export const SEASON_CATALOG: SeasonCatalogEntry[] = [
   E("rempart", 3, "Ligne de fer", "Tenir le front, puis abattre le colosse.", "Derrière les vagues ennemies avance un colosse de siège. {mentor} veut une ligne qui tienne et des chasseurs qui frappent ; {rival} veut tout raser.", { name: "Osric Keld", title: "Maître des Remparts", secondary: "hunter", lore: "{commander} a attendu qu'un colosse de siège soit au pied de ses murs pour l'abattre d'une seule salve.", look: "an imposing iron-clad strategist with a long war cloak, siege cannon behind, colossal siege beast on the horizon" }, "an iron defensive line of battleships facing a colossal siege beast, blue shields and heavy cannon fire"),
 ];
 
+/* ---------- 6.14.128 (AU27, lot AA9, constat AA-23) : catalogue en vigueur ---------- */
+
+/** Thèmes en rotation (ordre de la section `passThemes`, thèmes retirés exclus), posés par `setSeasonCatalog`. */
+export const THEME_ROTATION: RotationThemeId[] = [...DEFAULT_THEME_ROTATION];
+
+/** Rôle principal du commandant de chaque thème en vigueur (retirés compris : passes déjà écrits). */
+export const THEME_PRIMARY: Record<RotationThemeId, CommanderId> = { ...DEFAULT_THEME_PRIMARY };
+
+/** Saisons du catalogue en vigueur (section `seasonCatalog`). */
+export const SEASON_CATALOG: SeasonCatalogEntry[] = structuredClone(DEFAULT_SEASON_CATALOG);
+
+/** 6.14.128 (AA9) : pose le catalogue en vigueur (depuis `applyGameContent`) : thèmes dans l'ordre de la rotation. */
+export function setSeasonCatalog(themes: { id: string; primary: CommanderId; retired?: boolean }[], entries: SeasonCatalogEntry[]): void {
+  THEME_ROTATION.splice(0, THEME_ROTATION.length, ...themes.filter((t) => !t.retired).map((t) => t.id));
+  for (const k of Object.keys(THEME_PRIMARY)) delete THEME_PRIMARY[k];
+  for (const t of themes) THEME_PRIMARY[t.id] = t.primary;
+  SEASON_CATALOG.splice(0, SEASON_CATALOG.length, ...entries);
+}
+
+/** Années du catalogue (la plus grande année écrite ; 3 pour le catalogue livré). */
+export function catalogYears(): number {
+  return Math.max(1, ...SEASON_CATALOG.map((e) => Math.floor(Number(e.year)) || 1));
+}
+
+/** Saisons d'un cycle : thèmes en rotation × années (36 pour le catalogue livré). */
+export function catalogCycle(): number {
+  return Math.max(1, THEME_ROTATION.length) * catalogYears();
+}
+
 /* ---------- rotation ---------- */
 
 function monthIndex(monthId: string): number {
@@ -127,18 +160,23 @@ function monthIndex(monthId: string): number {
   return y * 12 + (m - 1);
 }
 
-/** Rang du mois dans le catalogue (0 à 35), en boucle tous les trois ans. */
+/** Rang du mois dans le catalogue (0 à 35 pour le catalogue livré), en boucle à chaque cycle. */
 export function catalogIndex(monthId: string): number {
+  const cycle = catalogCycle();
   const n = monthIndex(monthId) - monthIndex(CATALOG_START);
-  return ((n % 36) + 36) % 36;
+  return ((n % cycle) + cycle) % cycle;
 }
 
-/** Entrée du catalogue pour un mois (AAAA-MM). */
+/** Entrée du catalogue pour un mois (AAAA-MM). 6.14.128 : repli sur l'année la plus proche du même thème, puis sur la
+ *  première saison (la garde de contenu exige une saison par thème et par année). */
 export function catalogEntryFor(monthId: string): SeasonCatalogEntry {
   const i = catalogIndex(monthId);
-  const theme = THEME_ROTATION[i % 12];
-  const year = Math.floor(i / 12) + 1;
-  return SEASON_CATALOG.find((e) => e.theme === theme && e.year === year)!;
+  const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
+  const theme = rotation[i % rotation.length];
+  const year = Math.floor(i / rotation.length) + 1;
+  const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
+  const same = list.filter((e) => e.theme === theme);
+  return same.find((e) => e.year === year) ?? same.sort((a, b) => Math.abs(a.year - year) - Math.abs(b.year - year))[0] ?? list[0];
 }
 
 /** Prompt Midjourney de l'illustration du thème (en-tête de la page du passe). */

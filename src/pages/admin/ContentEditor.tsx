@@ -10,7 +10,7 @@ import { currentGameContent, defaultGameContent, validateGameContent, type GameC
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
-type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles";
+type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles" | "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog";
 type Item<S extends ListSection> = GameContent[S][number];
 
 /** 6.14.56 (AU27, AP-1) : succès du code retirés exprès (GameRules.achievementList). Sans cette note, le complément des
@@ -35,6 +35,7 @@ export function ContentEditor<S extends ListSection>({
   setId,
   createItem,
   renderForm,
+  lockSaved,
 }: {
   section: S;
   title: string;
@@ -43,6 +44,8 @@ export function ContentEditor<S extends ListSection>({
   setId: (item: Item<S>, id: string) => Item<S>;
   createItem: () => Item<S>;
   renderForm: (item: Item<S>, onChange: (next: Item<S>) => void, isNew: boolean) => ReactNode;
+  /** 6.14.127 (AA9, I43) : un élément enregistré ne se supprime pas (le serveur le refuse) ; ce texte remplace « Supprimer ». */
+  lockSaved?: string;
 }) {
   const customized = useContentStore((s) => s.customized.includes(section));
   const [saved, setSaved] = useState<Item<S>[]>(() => currentGameContent()[section] as Item<S>[]);
@@ -65,6 +68,10 @@ export function ContentEditor<S extends ListSection>({
 
   // v5.14.2 : éléments absents du code (ajoutés depuis l'administration).
   const codeIds = useMemo(() => new Set((defaultGameContent()[section] as Item<S>[]).map(getId)), [section, getId]);
+  /** 6.14.127 (AA9) : élément enregistré d'une section sans retrait (talents, modules) : il se retire, il ne se supprime pas. */
+  const locked = (item: Item<S> | undefined) => !!lockSaved && !!item && (codeIds.has(getId(item)) || saved.some((x) => getId(x) === getId(item)));
+  // « Valeurs par défaut » effacerait les éléments ajoutés et enregistrés (détenus par des joueurs).
+  const savedAdded = !!lockSaved && saved.some((x) => !codeIds.has(getId(x)));
 
   /** Supprime un élément et enregistre aussitôt (refusé si d'autres éléments en dépendent). */
   const remove = async (index: number) => {
@@ -173,7 +180,7 @@ export function ContentEditor<S extends ListSection>({
           <Button variant="outline" size="sm" disabled={!dirty || busy} onClick={() => setDraft(saved)}>
             <Undo2 className="mr-1 h-3.5 w-3.5" /> Annuler
           </Button>
-          <Button variant="ghost" size="sm" disabled={busy || !customized} onClick={() => void restoreDefaults()}>
+          <Button variant="ghost" size="sm" disabled={busy || !customized || savedAdded} title={savedAdded ? "Des éléments ajoutés sont enregistrés : retire-les plutôt." : undefined} onClick={() => void restoreDefaults()}>
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Valeurs par défaut
           </Button>
           <Button size="sm" disabled={!dirty || busy} onClick={() => void save()}>
@@ -211,9 +218,11 @@ export function ContentEditor<S extends ListSection>({
                     <span className="font-mono text-[10px] text-slate-500">{getId(item)}</span>
                   </span>
                 </button>
-                <button type="button" title="Supprimer" aria-label={`Supprimer ${getLabel(item)}`} disabled={busy} onClick={() => void remove(index)} className="shrink-0 p-1 text-slate-600 hover:text-danger-glow">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {!locked(item) && (
+                  <button type="button" title="Supprimer" aria-label={`Supprimer ${getLabel(item)}`} disabled={busy} onClick={() => void remove(index)} className="shrink-0 p-1 text-slate-600 hover:text-danger-glow">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -225,15 +234,13 @@ export function ContentEditor<S extends ListSection>({
             <>
               {renderForm(current, update, newIds.has(getId(current)))}
               <div className="flex justify-end border-t border-white/5 pt-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-danger-glow"
-                  disabled={busy}
-                  onClick={() => void remove(selected)}
-                >
-                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer
-                </Button>
+                {locked(current) ? (
+                  <p className="min-w-0 text-[11px] text-slate-500">{lockSaved}</p>
+                ) : (
+                  <Button variant="ghost" size="sm" className="text-danger-glow" disabled={busy} onClick={() => void remove(selected)}>
+                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Supprimer
+                  </Button>
+                )}
               </div>
             </>
           ) : (

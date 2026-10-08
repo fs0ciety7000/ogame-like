@@ -39,7 +39,7 @@ import {
   UserCog,
   HeartPulse,
   ChevronDown,
-  Search, MessageSquareOff } from "lucide-react";
+  Search, MessageSquareOff, Cpu, Stars } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -64,6 +64,8 @@ import { PlayersPanel, RulesPanel, ToolsPanel } from "@/pages/admin/panels";
 import { FactionForm, newFaction } from "@/pages/admin/FactionForm";
 import { newRank, RankForm } from "@/pages/admin/RankForm";
 import { newRelic, RelicForm, RelicSettingsCard, relicListLabel } from "@/pages/admin/RelicForm";
+import { CatalogEntryForm, newCatalogEntry, newPassTheme, PassThemeForm } from "@/pages/admin/PassCatalogForms";
+import { ModuleFamilyForm, ModuleTemplateForm, newModuleFamily, newModuleTemplate, newTalent, RETIRE_HINT, TalentForm } from "@/pages/admin/TalentModuleForms";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
@@ -130,11 +132,14 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     label: "Saison & progression",
     items: [
       { id: "seasonPass", label: "Passe", icon: Ticket, hint: "Paliers du passe et points par action." },
+      { id: "passCatalog", label: "Catalogue du passe", icon: CalendarRange, hint: "Thèmes du passe (rotation mensuelle, répliques, commandant) et saisons du catalogue, une par thème et par année (6.14.128)." },
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
       { id: "titles", label: "Titres", icon: Crown, hint: "Catalogue des titres : libellé, rareté, icône, déblocage automatique ; décernés aussi par les succès." },
       { id: "relics", label: "Reliques", icon: Gem, hint: "Reliques : effets, images, raretés, tirage, fusion, recyclage et tables de butin des combats." },
+      { id: "talents", label: "Talents", icon: Stars, hint: "Talents d'Ascension : branche, effets par rang, ajout et retrait (6.14.127)." },
+      { id: "modules", label: "Modules", icon: Cpu, hint: "Modules de vaisseaux : familles (effet, classes, valeur par rareté) et modèles (tirage, retrait) (6.14.127)." },
       { id: "officers", label: "Officiers", icon: UserCog, hint: "Douze rôles : noms, effets par niveau, recrutement, chances de trouver un officier rare." },
     ],
   },
@@ -459,6 +464,64 @@ export function AdminPage() {
               renderForm={(t, onChange, isNew) => <RelicForm value={t} onChange={onChange} isNew={isNew} />}
             />
             <RelicSettingsCard />
+          </div>
+        </TabsContent>
+        <TabsContent value="passCatalog">
+          <div className="flex flex-col gap-6">
+            <ContentEditor
+              section="passThemes"
+              title="Thèmes du passe"
+              getId={(t) => t.id}
+              getLabel={(t) => `${t.id}${t.retired ? " (retiré)" : ""}`}
+              setId={(t, id) => ({ ...t, id })}
+              createItem={newPassTheme}
+              renderForm={(t, onChange, isNew) => <PassThemeForm value={t} onChange={onChange} isNew={isNew} />}
+            />
+            <ContentEditor
+              section="seasonCatalog"
+              title="Saisons du catalogue"
+              getId={(e) => e.id}
+              getLabel={(e) => `${e.name} · ${e.theme}, an ${e.year}`}
+              setId={(e, id) => ({ ...e, id })}
+              createItem={newCatalogEntry}
+              renderForm={(e, onChange, isNew) => <CatalogEntryForm value={e} onChange={onChange} isNew={isNew} />}
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="talents">
+          <ContentEditor
+            section="talents"
+            title="Talents"
+            getId={(t) => t.id}
+            getLabel={(t) => `${t.name}${t.retired ? " (retiré)" : ""}`}
+            setId={(t, id) => ({ ...t, id })}
+            createItem={newTalent}
+            lockSaved={RETIRE_HINT}
+            renderForm={(t, onChange, isNew) => <TalentForm value={t} onChange={onChange} isNew={isNew} />}
+          />
+        </TabsContent>
+        <TabsContent value="modules">
+          <div className="flex flex-col gap-6">
+            <ContentEditor
+              section="moduleTemplates"
+              title="Modèles de modules"
+              getId={(t) => t.id}
+              getLabel={(t) => `${t.name}${t.retired ? " (retiré)" : ""}`}
+              setId={(t, id) => ({ ...t, id })}
+              createItem={newModuleTemplate}
+              lockSaved={RETIRE_HINT}
+              renderForm={(t, onChange, isNew) => <ModuleTemplateForm value={t} onChange={onChange} isNew={isNew} />}
+            />
+            <ContentEditor
+              section="moduleFamilies"
+              title="Familles de modules"
+              getId={(f) => f.id}
+              getLabel={(f) => f.label}
+              setId={(f, id) => ({ ...f, id })}
+              createItem={newModuleFamily}
+              lockSaved="Enregistrée : des modèles et des modules de joueurs y sont attachés, elle reste."
+              renderForm={(f, onChange, isNew) => <ModuleFamilyForm value={f} onChange={onChange} isNew={isNew} />}
+            />
           </div>
         </TabsContent>
         <TabsContent value="achievements">

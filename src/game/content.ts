@@ -8,7 +8,8 @@ import { DEFAULT_TITLES, setTitles, validateTitles, withLateDefaults, type Title
 import { setLootTables, validateLootTables } from "@/game/loot";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
-import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
+import { DEFAULT_PASS_THEMES, defaultPassSeasonsConfig, setPassSeasons, setPassThemes, validatePassCatalog, validatePassSeasons, type PassSeasonsConfig, type PassTheme } from "@/game/passSeasons";
+import { DEFAULT_SEASON_CATALOG, setSeasonCatalog, type SeasonCatalogEntry } from "@/game/seasonCatalog";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_ROLE_IDS, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
@@ -51,6 +52,9 @@ import { WAR_RULES } from "@/game/wars";
 import { DEFAULT_FACTIONS, FACTIONS, PIRATE_RULES, setFactions, validateFactions, type FactionDef } from "@/game/pirates";
 import { RESOURCE_LIST } from "@/game/resources";
 import { driftWarnings, listShapeErrors, shapeErrors } from "@/game/contentShape";
+import { DEFAULT_TALENTS, setTalents, validateTalents, withDefaultTalents, type TalentDef } from "@/game/talents";
+import { DEFAULT_MODULE_FAMILIES, DEFAULT_MODULE_TEMPLATES, setModuleContent, validateModuleContent, withDefaultModuleFamilies, withDefaultModuleTemplates, type ModuleFamilyDef, type ModuleTemplate } from "@/game/modules";
+import { isUnitSelector } from "@/game/effects";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
 import { applyAchievementPace, DEFAULT_ACHIEVEMENTS, METRICS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
 
@@ -140,10 +144,22 @@ export interface GameContent {
   worldBosses: WorldBossDef[];
   /** v5.14 : officiers (noms, effets par niveau, recrutement, officiers rares). */
   officers: OfficersConfig;
+  /** 6.14.127 (AA9) : talents d'Ascension (branche, effets composés par rang, retrait). */
+  talents: TalentDef[];
+  /** 6.14.127 (AA9) : familles de modules (grandeur, classes, valeur par rareté) et modèles (famille, retrait du tirage). */
+  moduleFamilies: ModuleFamilyDef[];
+  moduleTemplates: ModuleTemplate[];
+  /** 6.14.128 (AA9) : thèmes du passe (ordre = rotation mensuelle) et catalogue des saisons (une par thème et par année). */
+  passThemes: PassTheme[];
+  seasonCatalog: SeasonCatalogEntry[];
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog"];
+
+/** 6.14.127 (AU27, AA9, invariant I43) : sections dont un élément enregistré ne se supprime pas (des joueurs le détiennent :
+ *  rangs de talent, plans et modules) ; on le retire (`retired`), et un élément livré absent revient à la fusion. */
+export const NO_REMOVAL_SECTIONS: ContentSection[] = ["talents", "moduleFamilies", "moduleTemplates"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -205,6 +221,17 @@ const DEFAULT_WAR_RULES = { ...WAR_RULES };
 
 /** Copie profonde du contenu par défaut (celui du code). */
 export function defaultGameContent(): GameContent {
+  // 6.14.128 (AA9) : listes de texte (catalogue du passe, talents, modules) copiées à part : `resolveGameContent` les lit sans
+  // copie (le serveur applique le contenu à chaque action ; une copie de 40 Ko de plus y coûtait).
+  return { ...baseDefaultContent(), ...structuredClone(textListDefaults()) };
+}
+
+function textListDefaults(): Pick<GameContent, "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog"> {
+  return { talents: DEFAULT_TALENTS, moduleFamilies: DEFAULT_MODULE_FAMILIES, moduleTemplates: DEFAULT_MODULE_TEMPLATES, passThemes: DEFAULT_PASS_THEMES, seasonCatalog: DEFAULT_SEASON_CATALOG };
+}
+
+/** Contenu par défaut, copie profonde, sans les listes de `textListDefaults`. */
+function baseDefaultContent(): Omit<GameContent, "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog"> {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
@@ -241,7 +268,8 @@ function removedDefaultAchievements(rules: Partial<GameRules> | undefined): stri
 
 /** 6.14.59 (AA1) : contenu complet fusionné avec les défauts, **sans l'appliquer** (pur : sert aussi à la validation serveur). */
 export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: number): GameContent {
-  const defaults = defaultGameContent();
+  // 6.14.128 : listes de texte livrées lues sans copie (jamais modifiées : posées telles quelles par les `set…`).
+  const defaults = { ...baseDefaultContent(), ...textListDefaults() } as GameContent;
   const content: GameContent = {
     buildings: withFixedBuildings(overrides.buildings ?? defaults.buildings),
     units: withFixedUnits(overrides.units ?? defaults.units),
@@ -259,6 +287,14 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
     titles: overrides.titles ?? defaults.titles,
     worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
     officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
+    // 6.14.127 (AA9) : un élément livré absent revient ; sans section enregistrée, les anciens réglages (6.14.104) de
+    // `rules.talents.perRank` et `rules.modules.familyValues` donnent les valeurs (migrations « …-6.14.127 »).
+    talents: withDefaultTalents(overrides.talents, (overrides.rules as { talents?: { perRank?: unknown } } | undefined)?.talents?.perRank),
+    moduleFamilies: withDefaultModuleFamilies(overrides.moduleFamilies, (overrides.rules as { modules?: { familyValues?: unknown } } | undefined)?.modules?.familyValues),
+    moduleTemplates: withDefaultModuleTemplates(overrides.moduleTemplates),
+    // 6.14.128 (AA9) : liste enregistrée telle quelle (un thème ou une saison se retire ; les passes écrits gardent leur copie).
+    passThemes: Array.isArray(overrides.passThemes) ? overrides.passThemes : defaults.passThemes,
+    seasonCatalog: Array.isArray(overrides.seasonCatalog) ? overrides.seasonCatalog : defaults.seasonCatalog,
     relicSettings: {
       ...defaults.relicSettings,
       ...(overrides.relicSettings ?? {}),
@@ -371,6 +407,9 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
       })(),
     },
   };
+  // 6.14.127 (AA9) : anciens chiffres des talents et des familles de modules, passés dans leurs sections.
+  delete (content.rules.talents as Record<string, unknown>).perRank;
+  delete (content.rules.modules as Record<string, unknown>).familyValues;
   // 6.14.88 (RL-3) : bascule datée du rythme, seulement quand l'heure est donnée (serveur, client) : sans heure (tests,
   // validation de l'admin), le contenu enregistré tel quel.
   return nowMs === undefined ? content : applyRhythmSwitch(content, defaults.buildings, nowMs);
@@ -395,6 +434,12 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
+  // 6.14.127 (AA9) : talents et modules (lus par la chaîne de contenu et le rapport d'impact).
+  setTalents(content.talents);
+  setModuleContent(content.moduleFamilies, content.moduleTemplates);
+  // 6.14.128 (AA9) : catalogue du passe (rotation, rôles, saisons) avant les passes et les chapitres générés.
+  setPassThemes(content.passThemes);
+  setSeasonCatalog(content.passThemes, content.seasonCatalog);
   // v5.14 : officiers et boss mondiaux d'abord (succès et titres dérivés en dépendent).
   setOfficers(content.officers);
   setWorldBosses(content.worldBosses);
@@ -648,19 +693,11 @@ function validateFixedListNumbers(merged: GameRules): string[] {
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
   const entries = (o: unknown) => Object.entries(o && typeof o === "object" ? (o as Record<string, unknown>) : {});
   for (const [id, v] of entries(merged.bountyShop.prices)) if (!(num(v) >= 1 && num(v) <= 100_000)) errors.push(`Comptoir de la Ruche : prix de « ${id} » entre 1 et 100 000 Ambre.`);
-  for (const [id, v] of entries(merged.talents.perRank)) {
-    const max = id === "reseau" ? 2 : 0.25;
-    if (!(num(v) >= 0 && num(v) <= max)) errors.push(`Talents d'Ascension : valeur par rang de « ${id} » entre 0 et ${String(max).replace(".", ",")}.`);
-  }
   for (const [id, f] of entries(merged.colonySpec.specs))
     for (const [k, v] of entries(f)) if (!(num(v) >= 0.1 && num(v) <= 5)) errors.push(`Colonies : spécialisation « ${id} », multiplicateur « ${k} » entre 0,1 et 5.`);
   const weights = entries(merged.modules.rarityWeights);
   if (weights.some(([, v]) => !(num(v) >= 0)) || !(weights.reduce((a, [, v]) => a + (num(v) || 0), 0) > 0)) errors.push("Modules de vaisseaux : poids de rareté positifs, au moins un non nul.");
   for (const [id, v] of entries(merged.modules.recycleAmber)) if (!(num(v) >= 0 && num(v) <= 10_000)) errors.push(`Modules de vaisseaux : Ambre de recyclage « ${id} » entre 0 et 10 000.`);
-  for (const [fam, vals] of entries(merged.modules.familyValues)) {
-    const max = fam === "voile" ? 20 : 1;
-    for (const [r, v] of entries(vals)) if (!(num(v) >= 0 && num(v) <= max)) errors.push(`Modules de vaisseaux : valeur « ${fam} / ${r} » entre 0 et ${max}.`);
-  }
   const tiers = entries(merged.leagues.tiers) as [string, { tokens?: unknown; placementPct?: unknown }][];
   for (const [id, t] of tiers) {
     if (!(Number.isInteger(num(t?.tokens)) && num(t?.tokens) >= 0 && num(t?.tokens) <= 100)) errors.push(`Divisions : jetons de « ${id} » entiers, entre 0 et 100.`);
@@ -875,6 +912,11 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateTitles(content.titles ?? []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
+  // 6.14.127 (AA9) : talents et modules (sections absentes d'un contenu partiel : défauts).
+  errors.push(...validateTalents(content.talents ?? DEFAULT_TALENTS, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
+  errors.push(...validateModuleContent(content.moduleFamilies ?? DEFAULT_MODULE_FAMILIES, content.moduleTemplates ?? DEFAULT_MODULE_TEMPLATES));
+  // 6.14.128 (AA9) : thèmes et catalogue du passe.
+  errors.push(...validatePassCatalog(content.passThemes ?? DEFAULT_PASS_THEMES, content.seasonCatalog ?? DEFAULT_SEASON_CATALOG));
 
   return [...new Set(errors)];
 }
@@ -898,6 +940,11 @@ export const CONTENT_SECTION_LABELS: Record<ContentSection, string> = {
   titles: "Titres",
   worldBosses: "Boss mondiaux",
   officers: "Officiers",
+  talents: "Talents",
+  moduleFamilies: "Familles de modules",
+  moduleTemplates: "Modèles de modules",
+  passThemes: "Thèmes du passe",
+  seasonCatalog: "Catalogue des saisons",
 };
 
 /**
@@ -929,7 +976,20 @@ export function contentSectionErrors(section: string, data: unknown, stored: Par
   if (Array.isArray(defaultValue) !== Array.isArray(data)) return [`${label} : la section doit être ${Array.isArray(defaultValue) ? "une liste" : "un objet"}.`];
   const before = check(stored);
   const after = check({ ...stored, [section]: data } as Partial<GameContent>);
-  return after.filter((e) => !before.includes(e));
+  return [...removedIdErrors(section, data, stored), ...after.filter((e) => !before.includes(e))];
+}
+
+/** 6.14.127 (AA9, I43) : un élément enregistré d'une section `NO_REMOVAL_SECTIONS` ne disparaît pas (le retirer, `retired`). */
+function removedIdErrors(section: string, data: unknown, stored: Partial<GameContent>): string[] {
+  if (!(NO_REMOVAL_SECTIONS as string[]).includes(section) || !Array.isArray(data)) return [];
+  const before = (stored as Record<string, unknown>)[section];
+  if (!Array.isArray(before)) return [];
+  const kept = new Set((data as { id?: unknown }[]).map((x) => x?.id));
+  const label = CONTENT_SECTION_LABELS[section as ContentSection] ?? section;
+  return (before as { id?: unknown }[])
+    .map((x) => x?.id)
+    .filter((id): id is string => typeof id === "string" && !kept.has(id))
+    .map((id) => `${label} : « ${id} » est enregistré et peut être détenu par des joueurs : retire-le du jeu (case « Retiré ») au lieu de le supprimer.`);
 }
 
 /**

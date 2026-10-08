@@ -29,9 +29,9 @@ Admin : éditeur d'effets composables, rapport d'impact.
 Plafonds par grandeur et couche réglables (`effectCaps`, 6.9.5), lus par `effectCap()` ; attaque et défense des technos : `combat.techCombatCap`. Gelée : `economy.keshBoostPct` ; Phéromone et second rôle des commandants de saison : `officerTuning`.
 
 ## 6.14.104 (revue AU27, lot AA3)
-Modules : poids du tirage (60 / 28 / 10 / 2), Ambre de recyclage (1 / 3 / 8 / 20) et valeurs par famille et rareté (+3 % à +18 % ;
-voile 1 à 4) dans `modules.rarityWeights`, `recycleAmber`, `familyValues`. Barèmes des préréglages d'effets (aide à l'édition) :
-groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.
+Modules : poids du tirage (60 / 28 / 10 / 2) et Ambre de recyclage (1 / 3 / 8 / 20) dans `modules.rarityWeights` et `recycleAmber` ;
+les valeurs par famille et rareté (+3 % à +18 % ; voile 1 à 4) sont passées dans la section `moduleFamilies` en 6.14.127. Barèmes
+des préréglages d'effets (aide à l'édition) : groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.
 
 ## 6.14.123 et 6.14.124 (revue AU27, lots AA5 et AA6)
 - Préréglages d'effets : une unité ajoutée dans l'admin a ses préréglages générés (`generatedUnitPresets` : « Armement » si elle
@@ -46,3 +46,15 @@ groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.
 - Classes (`classes.defs`, Règles → Classes d'empire) et mutateurs (`mutators.defs`, Règles → Événements et saisons) : éditeur commun
   `SystemListsEditors.tsx` ; la couche empire, les plafonds et le rapport d'impact les lisent comme avant (I9, I41).
 - À contenu par défaut, effets, avantages, tirages et textes identiques à ceux d'avant (`listesSysteme.test.ts`).
+
+## 6.14.127 (revue AU27, lot AA9)
+- **Talents** : section de contenu `talents` (Admin → Talents) ; chaque talent porte ses effets composés (grandeur × cible × portée),
+  valeur **par rang** (part 0,25, niveaux 2, points 5 au plus) ; source « talent », couche empire, plafonds inchangés. Un talent
+  ajouté s'apprend et agit (serveur compris) ; un talent enregistré ne se supprime pas : « Retiré », il ne s'apprend plus et ses rangs
+  gardent leur effet (I43). Texte : « {value} » = valeur par rang du premier effet.
+- **Modules** : sections `moduleFamilies` (grandeur, classes où elle se monte, valeur par rareté, tournure du texte ; une grandeur
+  qui vise des unités vise la classe où le module est monté) et `moduleTemplates` (famille, texte, « Retiré du tirage »), Admin →
+  Modules. Raretés, poids et recyclage restent dans les règles (`modules`). 5 familles et 7 modèles livrés.
+- Anciens réglages (`talents.perRank`, `modules.familyValues`) : lus en repli, puis repris dans les sections par les migrations
+  `talents-section-6.14.127` et `module-families-6.14.127`. Valeurs identiques à contenu par défaut. Fiche :
+  `docs/changes/6.14.127-talents-modules.md`.

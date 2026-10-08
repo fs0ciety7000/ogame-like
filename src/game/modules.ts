@@ -1,5 +1,5 @@
 import { GameActionError } from "@/game/errors";
-import type { EffectGrant, EffectStat } from "@/game/effects";
+import { describeEffect, EFFECT_STATS, type EffectGrant, type EffectStat } from "@/game/effects";
 import type { UnitClass } from "@/game/unitClasses";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -15,13 +15,33 @@ import type { PlayerState, ResourceId } from "@/types/game";
 ===================================================== */
 
 export type ModuleRarity = "common" | "rare" | "epic" | "legendary";
-export type ModuleFamily = "armement" | "blindage" | "soute" | "propulsion" | "voile";
+/** 6.14.127 (AA9) : identifiant d'une famille (section `moduleFamilies` ; livrées : armement, blindage, soute, propulsion, voile). */
+export type ModuleFamily = string;
 
+/** 6.14.127 (AU27, lot AA9, constat AA-5) : modèle de module, fiche de la section `moduleTemplates` (Admin → Modules). Un modèle
+ *  enregistré ne se supprime pas : on le **retire** (`retired`) : il ne sort plus au tirage, les plans et modules déjà trouvés
+ *  gardent leur effet (invariant I43). */
 export interface ModuleTemplate {
   id: string;
   name: string;
   family: ModuleFamily;
   description: string;
+  /** Retiré du tirage : plus aucun plan de ce modèle ne tombe ; ceux qu'ont les joueurs restent valables. */
+  retired?: boolean;
+}
+
+/** 6.14.127 (AA9) : famille de modules, fiche de la section `moduleFamilies` : effet composé (grandeur ; une grandeur qui vise des
+ *  unités vise la classe où le module est monté), classes où il se monte, valeur par rareté, tournure du texte. */
+export interface ModuleFamilyDef {
+  id: string;
+  label: string;
+  stat: EffectStat;
+  /** Classes d'unités où la famille se monte (Faible, Moyen, Fort, Soutien). */
+  classes: UnitClass[];
+  /** Valeur par rareté (0,04 = +4 % ; grandeur en niveaux : niveaux). */
+  values: Record<ModuleRarity, number>;
+  /** Texte de l'effet : « {pct} » (« 11 % »), « {value} » (nombre), « {x} » (« x » au-delà de 1). Vide : texte du circuit d'effets. */
+  phrase?: string;
 }
 
 export interface ModuleItem {
@@ -59,14 +79,6 @@ export const MODULE_RULES = {
   rarityWeights: { common: 60, rare: 28, epic: 10, legendary: 2 } as Record<ModuleRarity, number>,
   /** 6.14.104 (AA3, AA-5) : Ambre rendue au recyclage d'un plan, par rareté. */
   recycleAmber: { common: 1, rare: 3, epic: 8, legendary: 20 } as Record<ModuleRarity, number>,
-  /** 6.14.104 (AA3, AA-5) : valeur d'un module par famille et rareté (0,04 = +4 % ; voile : niveaux de contre-espionnage). */
-  familyValues: {
-    armement: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
-    blindage: { common: 0.05, rare: 0.08, epic: 0.12, legendary: 0.18 },
-    soute: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
-    propulsion: { common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 },
-    voile: { common: 1, rare: 2, epic: 3, legendary: 4 },
-  } as Record<ModuleFamily, Record<ModuleRarity, number>>,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -77,7 +89,6 @@ export const MODULE_RULES_META = {
   maxPresets: { label: "Préréglages de modules", min: 0, max: 20 },
   rarityWeights: { label: "Tirage d'un plan : poids de chaque rareté", hint: "Poids relatifs (60 / 28 / 10 / 2 = 60 % de communs). Au moins un poids positif." },
   recycleAmber: { label: "Recyclage d'un plan : Ambre par rareté", unit: "Ambre" },
-  familyValues: { label: "Valeur d'un module par famille et rareté", hint: "0,04 = +4 % (entre 0 et 1) ; voile furtif : niveaux de contre-espionnage (entre 0 et 20). Les plafonds d'effets s'appliquent toujours." },
 };
 
 type ModuleTone = "neutral" | "accent" | "violet" | "gold";
@@ -105,27 +116,26 @@ export const MODULE_RARITIES: { id: ModuleRarity; label: string; weight: number;
   rarity("legendary", "Légendaire", "gold"),
 ];
 
-/** 6.14.104 (AA3, AA-5) : valeurs lues dans MODULE_RULES.familyValues ; familles, stats et classes en dur. */
-const family = (id: ModuleFamily, label: string, stat: EffectStat, classes: UnitClass[], unit: "pct" | "level") => ({
+const familyDef = (id: string, label: string, stat: EffectStat, classes: UnitClass[], values: [number, number, number, number], phrase: string): ModuleFamilyDef => ({
+  id,
   label,
   stat,
   classes,
-  get values(): Record<ModuleRarity, number> {
-    const v = MODULE_RULES.familyValues[id] ?? {};
-    return { common: nonNegative(v.common), rare: nonNegative(v.rare), epic: nonNegative(v.epic), legendary: nonNegative(v.legendary) };
-  },
-  unit,
+  values: { common: values[0], rare: values[1], epic: values[2], legendary: values[3] },
+  phrase,
 });
 
-export const MODULE_FAMILIES: Record<ModuleFamily, { label: string; stat: EffectStat; classes: UnitClass[]; values: Record<ModuleRarity, number>; unit: "pct" | "level" }> = {
-  armement: family("armement", "Armement", "unitAttack", ["light", "medium", "heavy"], "pct"),
-  blindage: family("blindage", "Blindage", "unitHp", ["light", "medium", "heavy"], "pct"),
-  soute: family("soute", "Soute", "cargo", ["support"], "pct"),
-  propulsion: family("propulsion", "Propulsion", "fleetSpeed", ["support"], "pct"),
-  voile: family("voile", "Voile furtif", "counterSpy", ["support"], "level"),
-};
+/** Familles livrées (valeurs de 6.14.104). */
+export const DEFAULT_MODULE_FAMILIES: ModuleFamilyDef[] = [
+  familyDef("armement", "Armement", "unitAttack", ["light", "medium", "heavy"], [0.04, 0.07, 0.11, 0.16], "+{pct} d'attaque de la classe"),
+  familyDef("blindage", "Blindage", "unitHp", ["light", "medium", "heavy"], [0.05, 0.08, 0.12, 0.18], "+{pct} de points de vie de la classe"),
+  familyDef("soute", "Soute", "cargo", ["support"], [0.04, 0.07, 0.11, 0.16], "+{pct} de soute"),
+  familyDef("propulsion", "Propulsion", "fleetSpeed", ["support"], [0.03, 0.05, 0.08, 0.12], "−{pct} de temps de vol"),
+  familyDef("voile", "Voile furtif", "counterSpy", ["support"], [1, 2, 3, 4], "+{value} niveau{x} de contre-espionnage"),
+];
 
-export const MODULE_TEMPLATES: ModuleTemplate[] = [
+/** Modèles livrés (7). */
+export const DEFAULT_MODULE_TEMPLATES: ModuleTemplate[] = [
   { id: "canons_surcharges", name: "Canons surchargés", family: "armement", description: "Batteries poussées au-delà des normes : plus de dégâts, plus de chaleur." },
   { id: "matrice_de_visee", name: "Matrice de visée", family: "armement", description: "Calculateur balistique récupéré sur une épave pirate." },
   { id: "blindage_reactif", name: "Blindage réactif", family: "blindage", description: "Plaques qui explosent vers l'extérieur sous l'impact." },
@@ -134,6 +144,113 @@ export const MODULE_TEMPLATES: ModuleTemplate[] = [
   { id: "post_combustion", name: "Post-combustion", family: "propulsion", description: "Réacteurs gavés de carburant instable : on arrive plus tôt." },
   { id: "voile_furtif", name: "Voile furtif", family: "voile", description: "Brouille les sondes adverses autour de la flotte de soutien." },
 ];
+
+export interface ModuleFamilyInfo extends ModuleFamilyDef {
+  /** pct : valeur en part ; level : niveaux (ou points). */
+  unit: "pct" | "level";
+}
+
+const familyInfo = (d: ModuleFamilyDef): ModuleFamilyInfo => ({
+  ...structuredClone(d),
+  values: { common: nonNegative(d.values?.common), rare: nonNegative(d.values?.rare), epic: nonNegative(d.values?.epic), legendary: nonNegative(d.values?.legendary) },
+  unit: EFFECT_STATS[d.stat]?.unit === "pct" ? "pct" : "level",
+});
+
+/** Familles en vigueur, par identifiant (posées par `setModuleContent`). */
+export const MODULE_FAMILIES: Record<ModuleFamily, ModuleFamilyInfo> = Object.fromEntries(DEFAULT_MODULE_FAMILIES.map((f) => [f.id, familyInfo(f)]));
+
+/** Modèles en vigueur (posés par `setModuleContent`). */
+export const MODULE_TEMPLATES: ModuleTemplate[] = structuredClone(DEFAULT_MODULE_TEMPLATES);
+
+/** 6.14.127 (AA9) : pose les familles et modèles en vigueur (depuis `applyGameContent`). */
+export function setModuleContent(families: ModuleFamilyDef[], templates: ModuleTemplate[]): void {
+  for (const k of Object.keys(MODULE_FAMILIES)) delete MODULE_FAMILIES[k];
+  for (const f of families) MODULE_FAMILIES[f.id] = familyInfo(f);
+  MODULE_TEMPLATES.splice(0, MODULE_TEMPLATES.length, ...templates);
+}
+
+/** Liste enregistrée complétée des éléments livrés absents (un élément livré se retire, il ne disparaît pas). */
+function withDefaults<T extends { id: string }>(list: unknown, defaults: T[]): T[] {
+  const saved = Array.isArray(list) ? (list as T[]).filter((x) => !!x && typeof x === "object") : [];
+  const ids = new Set(saved.map((x) => x.id));
+  return [...saved, ...defaults.filter((d) => !ids.has(d.id))];
+}
+
+/** 6.14.127 (AA9) : familles enregistrées + familles livrées absentes. `legacyValues` : ancien `rules.modules.familyValues`
+ *  (6.14.104), lu tant que la section n'est pas enregistrée (migration « module-families-6.14.127 »). */
+export function withDefaultModuleFamilies(list: unknown, legacyValues?: unknown): ModuleFamilyDef[] {
+  const out = withDefaults(list, DEFAULT_MODULE_FAMILIES);
+  if (Array.isArray(list) || !legacyValues || typeof legacyValues !== "object") return out;
+  const legacy = legacyValues as Record<string, Record<string, unknown>>;
+  return out.map((f) => {
+    const v = legacy[f.id];
+    if (!v || typeof v !== "object") return f;
+    const values = { ...f.values };
+    for (const r of ["common", "rare", "epic", "legendary"] as ModuleRarity[]) if (v[r] !== undefined) values[r] = nonNegative(v[r]);
+    return { ...f, values };
+  });
+}
+
+export function withDefaultModuleTemplates(list: unknown): ModuleTemplate[] {
+  return withDefaults(list, DEFAULT_MODULE_TEMPLATES);
+}
+
+/** Valeur d'un module au plus : grandeur en part 1 (+100 %), en niveaux ou en points 20. */
+export function moduleValueMax(stat: EffectStat): number {
+  return EFFECT_STATS[stat]?.unit === "pct" ? 1 : 20;
+}
+
+const CLASS_LABELS: Record<UnitClass, string> = { support: "Soutien", light: "Faible", medium: "Moyen", heavy: "Fort" };
+
+/** « le Soutien », « les classes Faible, Moyen ou Fort ». */
+export function moduleClassesText(classes: UnitClass[]): string {
+  if (classes.length === 1) return classes[0] === "support" ? "le Soutien" : `la classe ${CLASS_LABELS[classes[0]]}`;
+  const names = classes.map((c) => CLASS_LABELS[c] ?? c);
+  return `les classes ${names.slice(0, -1).join(", ")} ou ${names[names.length - 1]}`;
+}
+
+/** Erreurs des sections `moduleFamilies` et `moduleTemplates`. */
+export function validateModuleContent(families: unknown, templates: unknown): string[] {
+  const errors: string[] = [];
+  if (!Array.isArray(families)) return ["Familles de modules : la section doit être une liste."];
+  if (!Array.isArray(templates)) return ["Modèles de modules : la section doit être une liste."];
+  const famIds = new Set<string>();
+  for (const f of families as Partial<ModuleFamilyDef>[]) {
+    const label = `Famille de modules ${f?.label || f?.id || "?"}`;
+    if (!f || typeof f.id !== "string" || !/^[A-Za-z0-9_]+$/.test(f.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (famIds.has(f.id)) errors.push(`Familles de modules : identifiant « ${f.id} » en double.`);
+    else famIds.add(f.id);
+    if (!f) continue;
+    if (typeof f.label !== "string" || !f.label.trim()) errors.push(`${label} : nom manquant.`);
+    if (!f.stat || !(f.stat in EFFECT_STATS)) {
+      errors.push(`${label} : grandeur « ${String(f.stat)} » inconnue.`);
+      continue;
+    }
+    if (f.stat === "production" || f.stat === "hangarCapacity") errors.push(`${label} : cette grandeur demande une cible (ressource ou hangar), choisis-en une autre.`);
+    if (!Array.isArray(f.classes) || f.classes.length === 0 || f.classes.some((c) => !MODULE_CLASSES.includes(c))) errors.push(`${label} : au moins une classe (light, medium, heavy, support).`);
+    else if (new Set(f.classes).size !== f.classes.length) errors.push(`${label} : classe en double.`);
+    const max = moduleValueMax(f.stat);
+    for (const r of ["common", "rare", "epic", "legendary"] as ModuleRarity[]) {
+      const v = f.values?.[r];
+      if (!(typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max)) errors.push(`${label} : valeur « ${r} » entre 0 et ${max}.`);
+    }
+    if (f.phrase !== undefined && typeof f.phrase !== "string") errors.push(`${label} : tournure du texte invalide.`);
+  }
+  const tplIds = new Set<string>();
+  for (const t of templates as Partial<ModuleTemplate>[]) {
+    const label = `Modèle de module ${t?.name || t?.id || "?"}`;
+    if (!t || typeof t.id !== "string" || !/^[A-Za-z0-9_]+$/.test(t.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (tplIds.has(t.id)) errors.push(`Modèles de modules : identifiant « ${t.id} » en double.`);
+    else tplIds.add(t.id);
+    if (!t) continue;
+    if (typeof t.name !== "string" || !t.name.trim()) errors.push(`${label} : nom manquant.`);
+    if (typeof t.description !== "string") errors.push(`${label} : texte manquant.`);
+    if (!famIds.has(String(t.family))) errors.push(`${label} : famille « ${String(t.family)} » inconnue.`);
+    if (t.retired !== undefined && typeof t.retired !== "boolean") errors.push(`${label} : « retiré » doit être oui ou non.`);
+  }
+  if (!(templates as Partial<ModuleTemplate>[]).some((t) => t && !t.retired)) errors.push("Modèles de modules : au moins un modèle non retiré (le tirage des plans en a besoin).");
+  return errors;
+}
 
 export const MODULE_BUILD_COST: Record<ModuleRarity, Partial<Record<ResourceId, number>>> = {
   common: { scrap: 20_000, energy: 10_000, nano: 5_000 },
@@ -160,25 +277,27 @@ export function moduleRarity(id: ModuleRarity) {
 
 export function moduleValue(item: Pick<ModuleItem, "template" | "rarity">): number {
   const t = findModuleTemplate(item.template);
-  return t ? MODULE_FAMILIES[t.family].values[item.rarity] ?? 0 : 0;
+  return t ? (MODULE_FAMILIES[t.family]?.values[item.rarity] ?? 0) : 0;
 }
 
 export function moduleLabel(item: Pick<ModuleItem, "template" | "rarity">): string {
   return `${findModuleTemplate(item.template)?.name ?? item.template} (${moduleRarity(item.rarity).label.toLowerCase()})`;
 }
 
-/** « +11 % d'attaque » / « +2 niveaux de contre-espionnage ». */
+/** « +11 % d'attaque » / « +2 niveaux de contre-espionnage » (tournure de la famille). */
 export function describeModule(item: Pick<ModuleItem, "template" | "rarity">): string {
   const t = findModuleTemplate(item.template);
-  if (!t) return "";
+  const fam = t ? MODULE_FAMILIES[t.family] : undefined;
+  if (!t || !fam) return "";
   const v = moduleValue(item);
-  const fam = MODULE_FAMILIES[t.family];
-  if (fam.unit === "level") return `+${v} niveau${v > 1 ? "x" : ""} de contre-espionnage`;
-  const pct = `${Math.round(v * 100)} %`;
-  if (t.family === "armement") return `+${pct} d'attaque de la classe`;
-  if (t.family === "blindage") return `+${pct} de points de vie de la classe`;
-  if (t.family === "soute") return `+${pct} de soute`;
-  return `−${pct} de temps de vol`;
+  if (!fam.phrase) return describeEffect(fam.stat, v).replace(" · ", " ");
+  return fam.phrase
+    .split("{pct}")
+    .join(`${Math.round(v * 100)} %`)
+    .split("{value}")
+    .join(String(v).replace(".", ","))
+    .split("{x}")
+    .join(v > 1 ? "x" : "");
 }
 
 const emptySlots = (): ModulesState["slots"] => ({ light: [null, null], medium: [null, null], heavy: [null, null], support: [null, null] });
@@ -223,8 +342,9 @@ export function moduleEffects(player: Pick<PlayerState, "modules">): EffectGrant
       const t = item ? findModuleTemplate(item.template) : undefined;
       if (!item || !t) continue;
       const fam = MODULE_FAMILIES[t.family];
-      if (!fam.classes.includes(cls)) continue;
-      out.push({ stat: fam.stat, ...(fam.stat === "unitAttack" || fam.stat === "unitHp" ? { target: `class:${cls}` } : {}), value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } });
+      if (!fam || !fam.classes.includes(cls)) continue;
+      // 6.14.127 (AA9) : une grandeur qui vise des unités vise la classe où le module est monté.
+      out.push({ stat: fam.stat, ...(EFFECT_STATS[fam.stat]?.unitTarget ? { target: `class:${cls}` } : {}), value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } });
     }
   }
   return out;
@@ -247,7 +367,10 @@ export function rollModulePlan(source: string, now: number, random: () => number
       break;
     }
   }
-  const template = MODULE_TEMPLATES[Math.floor(random() * MODULE_TEMPLATES.length) % MODULE_TEMPLATES.length].id;
+  // 6.14.127 (AA9) : un modèle retiré ne sort plus (repli sur toute la liste si tous le sont : la garde de contenu l'interdit).
+  const active = MODULE_TEMPLATES.filter((t) => !t.retired);
+  const drawable = active.length > 0 ? active : MODULE_TEMPLATES;
+  const template = drawable[Math.floor(random() * drawable.length) % drawable.length].id;
   return { id: newId(now, random), template, rarity, built: false, foundAtMs: now, source };
 }
 
@@ -284,7 +407,8 @@ export function mountModule(player: PlayerState, id: unknown, cls: unknown, slot
   const c = String(cls) as UnitClass;
   if (!MODULE_CLASSES.includes(c)) throw new GameActionError("Classe inconnue.");
   const fam = MODULE_FAMILIES[findModuleTemplate(item.template)!.family];
-  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${fam.classes.length === 1 ? "le Soutien" : "les classes Faible, Moyen ou Fort"}.`);
+  if (!fam) throw new GameActionError("Famille de module inconnue.");
+  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${moduleClassesText(fam.classes)}.`);
   const i = Math.floor(Number(slot));
   if (!(i >= 0 && i < MODULE_RULES.slotsPerClass)) throw new GameActionError("Emplacement invalide.");
   // Déjà monté ailleurs : il change de place.
@@ -389,7 +513,7 @@ export function applyModulePreset(player: PlayerState, index: unknown): { missin
       if (!id) return null;
       const item = st.items.find((m) => m.id === id);
       const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template)!.family] : null;
-      if (!item || !built.has(id) || used.has(id) || !fam!.classes.includes(cls)) {
+      if (!item || !fam || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
         missing += 1;
         return null;
       }

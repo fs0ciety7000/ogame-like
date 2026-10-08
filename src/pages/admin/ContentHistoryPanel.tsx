@@ -47,6 +47,13 @@ const SECTION_LABELS: Record<string, string> = {
   titles: "Titres",
   worldBosses: "Boss mondiaux",
   officers: "Officiers",
+  // 6.14.127 (AA9) : talents et modules en sections de contenu.
+  talents: "Talents",
+  moduleFamilies: "Familles de modules",
+  moduleTemplates: "Modèles de modules",
+  // 6.14.128 (AA9) : catalogue du passe.
+  passThemes: "Thèmes du passe",
+  seasonCatalog: "Catalogue des saisons",
   // 6.14.126 (AA8) : réglages serveur suivis.
   ...Object.fromEntries(Object.entries(SETTINGS_HISTORY).map(([k, d]) => [k, d.label])),
 };

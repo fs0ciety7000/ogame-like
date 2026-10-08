@@ -4,8 +4,7 @@ import { SHOP_ITEMS } from "@/game/bounties";
 import { CHALLENGE_TYPES, type ChallengeType } from "@/game/challenges";
 import { COLONY_SPECS } from "@/game/colonies";
 import { LEAGUE_TIERS } from "@/game/leagues";
-import { MODULE_FAMILIES, MODULE_RARITIES, type ModuleFamily } from "@/game/modules";
-import { TALENTS } from "@/game/talents";
+import { MODULE_RARITIES } from "@/game/modules";
 import { NumberField, Section } from "@/pages/admin/fields";
 import { BALANCE_HEALTH_RULES, BALANCE_HEALTH_RULES_META } from "@/game/balance/healthRules";
 
@@ -48,11 +47,9 @@ const BUDGET_TARGETS: Record<string, string> = { relic: "relique (×)", tech: "t
 
 export function FixedListRulesFields({ rules, setRules }: { rules: R; setRules: SetRules }) {
   const prices = mapOf(rules, "bountyShop", "prices");
-  const perRank = mapOf(rules, "talents", "perRank");
   const specs = (groupOf(rules, "colonySpec").specs ?? {}) as Record<string, Record<string, number>>;
   const weights = mapOf(rules, "modules", "rarityWeights");
   const recycle = mapOf(rules, "modules", "recycleAmber");
-  const familyValues = (groupOf(rules, "modules").familyValues ?? {}) as Record<string, Record<string, number>>;
   const tiers = (groupOf(rules, "leagues").tiers ?? {}) as Record<string, { tokens: number; placementPct: number }>;
   const perActive = mapOf(rules, "weeklyChallenge", "perActive");
   const budgets = (groupOf(rules, "effectPresets").budgets ?? {}) as Record<string, Record<string, number>>;
@@ -69,18 +66,7 @@ export function FixedListRulesFields({ rules, setRules }: { rules: R; setRules: 
           <NumberField key={i.id} label={`${i.name} (Ambre)`} value={prices[i.id]} min={1} step={10} onChange={(v) => setIn(setRules, "bountyShop", "prices", i.id, Math.max(1, Math.round(v ?? 1)))} />
         ))}
       </Section>
-      <Section title="Talents d'Ascension : valeur par rang (6.14.104)">
-        {TALENTS.map((t) => (
-          <NumberField
-            key={t.id}
-            label={t.effect.kind === "spyLevel" ? `${t.name} (niveaux d'espionnage par rang)` : `${t.name} (0,02 = +2 % par rang)`}
-            value={perRank[t.id]}
-            min={0}
-            step={t.effect.kind === "spyLevel" ? 0.1 : 0.005}
-            onChange={(v) => setIn(setRules, "talents", "perRank", t.id, Math.max(0, v ?? 0))}
-          />
-        ))}
-      </Section>
+      <p className="text-sm text-slate-400">Talents d'Ascension et valeurs des familles de modules : onglets « Talents » et « Modules » (6.14.127).</p>
       <Section title="Colonies : spécialisations (6.14.104)">
         <p className="text-sm text-slate-400 sm:col-span-2">Multiplicateurs : 1 = sans effet, 1,25 = +25 %, 0,7 en durée = 30 % plus rapide. Le résumé affiché au joueur suit les chiffres.</p>
         {COLONY_SPECS.flatMap((sp) =>
@@ -89,25 +75,13 @@ export function FixedListRulesFields({ rules, setRules }: { rules: R; setRules: 
           )),
         )}
       </Section>
-      <Section title="Modules de vaisseaux : tirage et valeurs (6.14.104)">
+      <Section title="Modules de vaisseaux : tirage et recyclage (6.14.104)">
         {MODULE_RARITIES.map((r) => (
           <NumberField key={`w-${r.id}`} label={`Poids du tirage : ${r.label.toLowerCase()}`} value={weights[r.id]} min={0} step={1} onChange={(v) => setIn(setRules, "modules", "rarityWeights", r.id, Math.max(0, v ?? 0))} />
         ))}
         {MODULE_RARITIES.map((r) => (
           <NumberField key={`a-${r.id}`} label={`Recyclage d'un plan ${r.label.toLowerCase()} (Ambre)`} value={recycle[r.id]} min={0} step={1} onChange={(v) => setIn(setRules, "modules", "recycleAmber", r.id, Math.max(0, Math.round(v ?? 0)))} />
         ))}
-        {(Object.keys(MODULE_FAMILIES) as ModuleFamily[]).flatMap((fam) =>
-          MODULE_RARITIES.map((r) => (
-            <NumberField
-              key={`v-${fam}-${r.id}`}
-              label={`${MODULE_FAMILIES[fam].label}, ${r.label.toLowerCase()} ${MODULE_FAMILIES[fam].unit === "level" ? "(niveaux)" : "(0,04 = +4 %)"}`}
-              value={familyValues[fam]?.[r.id]}
-              min={0}
-              step={MODULE_FAMILIES[fam].unit === "level" ? 1 : 0.01}
-              onChange={(v) => setIn(setRules, "modules", "familyValues", fam, Math.max(0, v ?? 0), r.id)}
-            />
-          )),
-        )}
       </Section>
       <Section title="Divisions : jetons et placement (6.14.104)">
         <p className="text-sm text-slate-400 sm:col-span-2">

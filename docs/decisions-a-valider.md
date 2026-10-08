@@ -18,6 +18,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q323 | Retirer au lieu de supprimer : Un talent ou un modèle de module enregistré ne se supprime plus : case « Retiré » (une suppression effaçait les plans détenus) (`docs/changes/6.14.127-talents-modules.md`) | aucun plan ni module perdu | valider |
+| Q324 | Talent retiré : Ne s'apprend plus, mais les rangs déjà pris gardent leur effet (pas de points rendus) (`docs/changes/6.14.127-talents-modules.md`) | aucun pour un joueur qui l'avait | valider |
+| Q325 | Bornes et branches des talents : Valeur par rang ≤ 0,25 pour une part, ≤ 2 niveaux, ≤ 5 points ; branches de talents fixes (`docs/changes/6.14.127-talents-modules.md`) | aucun | valider |
+| Q326 | Rotation des thèmes du passe : L'ordre de la liste fait la rotation ; ajouter ou retirer un thème décale les mois suivants (un passe déjà écrit garde son thème) (`docs/changes/6.14.128-catalogue-passe.md`) | aucun à contenu par défaut | valider |
+| Q327 | Succès « Trois ans de campagne » et bannière : Palier fixe de 36 mois ; la bannière d'un passe terminé prend le nom et la couleur du passe publié (`docs/changes/6.14.128-catalogue-passe.md`) | bannière fidèle au passe joué | valider |
 | Q315 | Classes d'empire dans les règles : `rules.classes.defs`, effets composés ; une classe livrée ne peut pas être retirée (des joueurs l'ont choisie) (`docs/changes/6.14.125-listes-systeme.md`) | aucun à contenu par défaut | valider |
 | Q316 | Mutateurs en liste libre : Le tirage des mois non imposés suit la liste éditée (`docs/changes/6.14.125-listes-systeme.md`) | aucun à contenu par défaut | valider |
 | Q317 | Fugitifs : Rangés dans la fiche de faction, repérés par leur indice ; les fugitifs d'élite restent dans le code (`docs/changes/6.14.125-listes-systeme.md`) | aucun | valider |

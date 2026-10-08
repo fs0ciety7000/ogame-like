@@ -70,13 +70,15 @@ export function effectImpactReport(): ImpactRow[] {
     if (m) add(m.stat, m.target, "empire", { kind: "relic", label: t.name, max: best(!!t.mythicOnly) * (m.scale ?? 1), note: t.mythicOnly ? "mythique" : "légendaire" });
   }
   // Talents d'Ascension : rang maximal.
+  // 6.14.127 (AA9) : effets composés de chaque talent (valeur par rang × rang maximal) ; un talent retiré compte encore (rangs
+  // gardés) ; comme les reliques, un effet qui vise un mode de combat ne se cumule pas dans un même combat.
   for (const t of TALENTS) {
-    add(t.effect.kind as EffectStat, t.effect.kind === "production" ? t.effect.res : undefined, "empire", { kind: "talent", label: t.name, max: t.perRank * TALENT_RULES.maxRank, note: `rang ${TALENT_RULES.maxRank}` });
+    for (const e of t.effects ?? []) if (!e.scope || e.scope === "all") add(e.stat, e.target || undefined, "empire", { kind: "talent", label: t.name, max: (Number(e.value) || 0) * TALENT_RULES.maxRank, note: `rang ${TALENT_RULES.maxRank}` });
   }
   // 5.26 : modules de vaisseaux, deux légendaires montés sur chaque classe permise.
   for (const fam of Object.values(MODULE_FAMILIES)) {
     for (const cls of fam.classes) {
-      const target = fam.stat === "unitAttack" || fam.stat === "unitHp" ? `class:${cls}` : undefined;
+      const target = EFFECT_STATS[fam.stat]?.unitTarget ? `class:${cls}` : undefined;
       add(fam.stat, target, "empire", { kind: "module", label: fam.label, max: fam.values.legendary * MODULE_RULES.slotsPerClass, note: `${MODULE_RULES.slotsPerClass} légendaires` });
     }
   }

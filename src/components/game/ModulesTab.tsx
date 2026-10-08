@@ -34,11 +34,12 @@ import type { PlayerState, ResourceId, Resources } from "@/types/game";
 /* 5.26 : modules de vaisseaux (État-major). Plans tombés au combat →
    fabrication → montage sur une classe (deux emplacements par classe). */
 
-const FAMILY_ICONS: Record<ModuleFamily, typeof Swords> = { armement: Swords, blindage: Shield, soute: Package, propulsion: Rocket, voile: EyeOff };
+/** 6.14.127 (AA9) : une famille ajoutée dans l'admin prend l'icône générique. */
+const FAMILY_ICONS: Partial<Record<ModuleFamily, typeof Swords>> = { armement: Swords, blindage: Shield, soute: Package, propulsion: Rocket, voile: EyeOff };
 
 function ModuleIcon({ item, className }: { item: Pick<ModuleItem, "template" | "rarity">; className?: string }) {
   const t = findModuleTemplate(item.template);
-  const Icon = t ? FAMILY_ICONS[t.family] : Boxes;
+  const Icon = (t ? FAMILY_ICONS[t.family] : undefined) ?? Boxes;
   const color = HUD_TONE[moduleRarity(item.rarity).tone];
   return (
     <span className={cn("hud-cut-sm grid shrink-0 place-items-center border", className)} style={{ borderColor: `color-mix(in srgb, ${color} 50%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
@@ -88,7 +89,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
   };
 
   return (
-    <div className="grid items-start gap-4 xl:grid-cols-2">
+    <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-2">
       <HudPanel icon={<Boxes />} title="Emplacements par classe" tone="mint" aside={<span className="font-mono text-xs text-slate-500">{MODULE_RULES.slotsPerClass} par classe</span>}>
         <p className="text-xs text-slate-400">Choisis un emplacement, puis « Monter » sur un module fabriqué. Armement et blindage vont sur Faible, Moyen ou Fort ; soute, propulsion et voile sur le Soutien.</p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -198,6 +199,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
           {sorted.map((item) => {
             const t = findModuleTemplate(item.template)!;
             const fam = MODULE_FAMILIES[t.family];
+            if (!fam) return null;
             const r = moduleRarity(item.rarity);
             const where = mountedOn(st, item.id);
             const cost = MODULE_BUILD_COST[item.rarity];
@@ -249,7 +251,7 @@ export function ModulesTab({ player }: { player: PlayerState }) {
                       title={fits ? undefined : `${fam.label} : pas sur la classe ${UNIT_CLASS_LABELS[sel.cls]}`}
                       onClick={() => void act(() => mountShipModule(item.id, sel.cls, sel.slot), () => `${t.name} monté sur ${UNIT_CLASS_LABELS[sel.cls]}.`)}
                     >
-                      {fits ? `Monter (${UNIT_CLASS_LABELS[sel.cls]} ${sel.slot + 1})` : fam.classes.length === 1 ? "Soutien seulement" : "Pas sur le Soutien"}
+                      {fits ? `Monter (${UNIT_CLASS_LABELS[sel.cls]} ${sel.slot + 1})` : fam.classes.length === 1 && fam.classes[0] === "support" ? "Soutien seulement" : sel.cls === "support" ? "Pas sur le Soutien" : "Pas sur cette classe"}
                     </Button>
                   )}
                   {!item.built && (

@@ -1,6 +1,6 @@
 import { WORLD_BOSSES } from "@/game/worldBosses";
 import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
-import { PASS_THEMES } from "@/game/passSeasons";
+import { PASS_THEMES, publishedPassSeason } from "@/game/passSeasons";
 import { bossEmblems, chroniclesConfig } from "@/game/chronicles";
 import { GameActionError } from "@/game/errors";
 import { bountyState, KESH } from "@/game/bounties";
@@ -89,14 +89,18 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
     })),
     // v4.1 : parrainage et passes de saison terminés.
     { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'à Bronze I", unlocked: (p.referral?.recruits ?? 0) > 0 },
-    ...(p.seasonPass?.completed ?? []).map((seasonId, i) => ({
-      id: `pass:${seasonId}`,
-      // v5.14 : nom et couleur du thème du catalogue pour les passes générés.
-      label: seasonId >= CATALOG_START ? `Passe « ${catalogEntryFor(seasonId).name} »` : `Passe ${seasonLabel(seasonId)}`,
-      gradient: seasonId >= CATALOG_START ? passThemeGradient(catalogEntryFor(seasonId).theme) : PASS_GRADIENTS[i % PASS_GRADIENTS.length],
-      hint: "Terminer le passe de saison",
-      unlocked: true,
-    })),
+    ...(p.seasonPass?.completed ?? []).map((seasonId, i) => {
+      // v5.14 : nom et couleur du thème du catalogue pour les passes générés. 6.14.128 (AA9) : ceux du passe publié d'abord
+      // (sa copie du thème) : un catalogue retouché dans l'admin ne renomme pas la bannière d'un passe terminé.
+      const pub = seasonId >= CATALOG_START ? publishedPassSeason(seasonId) : null;
+      return {
+        id: `pass:${seasonId}`,
+        label: seasonId >= CATALOG_START ? `Passe « ${pub?.theme.name || catalogEntryFor(seasonId).name} »` : `Passe ${seasonLabel(seasonId)}`,
+        gradient: seasonId >= CATALOG_START ? (pub?.theme.accent ? accentGradient(pub.theme.accent) : passThemeGradient(catalogEntryFor(seasonId).theme)) : PASS_GRADIENTS[i % PASS_GRADIENTS.length],
+        hint: "Terminer le passe de saison",
+        unlocked: true,
+      };
+    }),
     // v5.4 : une bannière par chapitre des Chroniques terminé.
     ...chroniclesConfig()
       .months.filter((m) => m.completion)
@@ -110,9 +114,12 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
   ];
 }
 
-function passThemeGradient(themeId: string): string {
-  const accent = PASS_THEMES.find((t) => t.id === themeId)?.accent ?? "#4be8ff";
+function accentGradient(accent: string): string {
   return `linear-gradient(120deg,#05070f 0%,${accent}44 45%,${accent} 100%)`;
+}
+
+function passThemeGradient(themeId: string): string {
+  return accentGradient(PASS_THEMES.find((t) => t.id === themeId)?.accent ?? "#4be8ff");
 }
 
 const PASS_GRADIENTS = [

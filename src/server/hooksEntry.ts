@@ -252,5 +252,8 @@ export { cadenceBusy, MAIL_QUEUE_KEY, mailQueueState, settleMailBatch, shiftForM
 // 6.14.125 (AU27, lot AA7) : migrations « faction-fugitives-6.14.125 » et « mutators-defs-6.14.125 ».
 export { defaultFactionFugitives } from "@/game/bounties";
 export { defaultMutatorDefs } from "@/game/mutators";
+// 6.14.127 (AA9) : migrations « talents-section-6.14.127 » et « module-families-6.14.127 ».
+export { withDefaultTalents } from "@/game/talents";
+export { withDefaultModuleFamilies } from "@/game/modules";
 // 6.14.126 (AU27, lot AA8) : historique dans l'admin (réglages serveur suivis, retour arrière d'un groupe de règles).
 export { isSettingsHistoryKey, restoreSettings, rollbackRuleGroup, SETTINGS_HISTORY, settingsSnapshot } from "@/game/contentHistory";

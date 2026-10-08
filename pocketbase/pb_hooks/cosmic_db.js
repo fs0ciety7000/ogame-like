@@ -5902,6 +5902,80 @@ const CONTENT_MIGRATIONS = [
       return true;
     },
   },
+  // 6.14.127 (AU27, lot AA9) : talents et modules en sections de contenu. Les anciens chiffres des règles (6.14.104 :
+  // `talents.perRank`, `modules.familyValues`) passent dans leurs sections (créées avec les éléments livrés à ces valeurs, si
+  // elles n'existent pas encore ; une section déjà écrite l'emporte), puis quittent les règles. Le moteur lit l'ancien réglage
+  // en repli tant que cette migration n'est pas passée (`withDefaultTalents`, `withDefaultModuleFamilies`).
+  {
+    id: "talents-section-6.14.127",
+    key: "rules",
+    patches: [],
+    run(data, changes, txApp) {
+      const t = data && data.talents;
+      if (!t || typeof t !== "object" || !t.perRank || typeof t.perRank !== "object") return false;
+      if (!configRecord(txApp, "talents")) {
+        const rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+        rec.set("key", "talents");
+        rec.set("data", loadGame().withDefaultTalents(undefined, t.perRank));
+        txApp.save(rec);
+        changes.push("talents-section-6.14.127 : section « talents » créée (valeurs par rang reprises des règles)");
+      }
+      delete t.perRank;
+      changes.push("talents-section-6.14.127 : talents.perRank retiré des règles");
+      return true;
+    },
+  },
+  {
+    id: "module-families-6.14.127",
+    key: "rules",
+    patches: [],
+    run(data, changes, txApp) {
+      const m = data && data.modules;
+      if (!m || typeof m !== "object" || !m.familyValues || typeof m.familyValues !== "object") return false;
+      if (!configRecord(txApp, "moduleFamilies")) {
+        const rec = new Record(txApp.findCollectionByNameOrId("game_config"));
+        rec.set("key", "moduleFamilies");
+        rec.set("data", loadGame().withDefaultModuleFamilies(undefined, m.familyValues));
+        txApp.save(rec);
+        changes.push("module-families-6.14.127 : section « moduleFamilies » créée (valeurs reprises des règles)");
+      }
+      delete m.familyValues;
+      changes.push("module-families-6.14.127 : modules.familyValues retiré des règles");
+      return true;
+    },
+  },
+  // 6.14.127 (I27) : éléments livrés ajoutés aux listes personnalisées (le moteur les fait aussi revenir à la fusion).
+  {
+    id: "talents-6.14.127",
+    key: "talents",
+    patches: [],
+    appendFromDefaults: ["rendement", "fonderies", "reacteurs", "nanoforges", "archivistes", "assaut", "rempart", "ateliers", "sentinelles", "reseau", "chantiers", "laboratoires", "entrepots", "soutes", "intendance"],
+  },
+  {
+    id: "module-families-list-6.14.127",
+    key: "moduleFamilies",
+    patches: [],
+    appendFromDefaults: ["armement", "blindage", "soute", "propulsion", "voile"],
+  },
+  {
+    id: "module-templates-6.14.127",
+    key: "moduleTemplates",
+    patches: [],
+    appendFromDefaults: ["canons_surcharges", "matrice_de_visee", "blindage_reactif", "champ_dissipateur", "soute_modulaire", "post_combustion", "voile_furtif"],
+  },
+  // 6.14.128 (AA9) : thèmes et catalogue du passe en sections (listes enregistrées telles quelles, un thème se retire).
+  {
+    id: "pass-themes-6.14.128",
+    key: "passThemes",
+    patches: [],
+    appendFromDefaults: ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"],
+  },
+  {
+    id: "season-catalog-6.14.128",
+    key: "seasonCatalog",
+    patches: [],
+    appendFromDefaults: ["vide_1", "vide_2", "vide_3", "hiver_1", "hiver_2", "hiver_3", "forge_1", "forge_2", "forge_3", "bazar_1", "bazar_2", "bazar_3", "maree_1", "maree_2", "maree_3", "colonies_1", "colonies_2", "colonies_3", "primes_1", "primes_2", "primes_3", "comete_1", "comete_2", "comete_3", "moisson_1", "moisson_2", "moisson_3", "archives_1", "archives_2", "archives_3", "chantiers_1", "chantiers_2", "chantiers_3", "rempart_1", "rempart_2", "rempart_3"],
+  },
 ];
 
 function canonJson(v) {

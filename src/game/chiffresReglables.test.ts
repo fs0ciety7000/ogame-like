@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { applyGameContent, currentGameContent, defaultGameContent, validateRules } from "@/game/content";
+import { applyGameContent, currentGameContent, defaultGameContent, validateGameContent, validateRules } from "@/game/content";
 import { BOUNTY_SHOP_RULES, findShopItem, nextPatronTier, PATRON_TIERS, patronTier, SHOP_ITEMS } from "@/game/bounties";
-import { TALENTS, TALENT_RULES, talentEffects } from "@/game/talents";
+import { DEFAULT_TALENTS, TALENTS, talentDescription, talentEffects } from "@/game/talents";
 import { COLONY_SPECS, colonySpecEffects } from "@/game/colonies";
 import { MODULE_FAMILIES, MODULE_RARITIES, moduleValue } from "@/game/modules";
 import { LEAGUE_TIERS } from "@/game/leagues";
@@ -61,7 +61,8 @@ const BUDGETS = {
 describe("6.14.104 AA3 : chiffres des listes fixes réglables, défauts inchangés", () => {
   it("les défauts des règles valent les anciens chiffres du code", () => {
     expect(BOUNTY_SHOP_RULES.prices).toEqual(SHOP_PRICES);
-    expect(TALENT_RULES.perRank).toEqual(TALENT_PER_RANK);
+    // 6.14.127 (AA9) : valeurs par rang dans la section « talents » (effets composés).
+    expect(Object.fromEntries(DEFAULT_TALENTS.map((t) => [t.id, t.effects[0].value]))).toEqual(TALENT_PER_RANK);
     expect((REGISTERED_RULES.colonySpec.target() as { specs: unknown }).specs).toEqual(SPECS);
     expect(WEEKLY_STOCK_RULES.tokensBag).toBe(25);
     expect(PATRON_RULES.tiers).toEqual(PATRONS);
@@ -72,7 +73,7 @@ describe("6.14.104 AA3 : chiffres des listes fixes réglables, défauts inchang�
 
   it("les listes lisent les mêmes chiffres qu'avant (prix, valeurs, textes)", () => {
     expect(Object.fromEntries(SHOP_ITEMS.map((i) => [i.id, i.price]))).toEqual(SHOP_PRICES);
-    expect(Object.fromEntries(TALENTS.map((t) => [t.id, t.perRank]))).toEqual(TALENT_PER_RANK);
+    expect(Object.fromEntries(TALENTS.map((t) => [t.id, t.effects[0].value]))).toEqual(TALENT_PER_RANK);
     for (const s of COLONY_SPECS) expect(colonySpecEffects({ spec: s.id }), s.id).toEqual({ production: 1, deposit: 1, storage: 1, hangar: 1, defenseTime: 1, ...SPECS[s.id] });
     expect(Object.fromEntries(MODULE_RARITIES.map((r) => [r.id, [r.weight, r.recycleAmber]]))).toEqual(RARITY);
     expect(Object.fromEntries(Object.entries(MODULE_FAMILIES).map(([k, f]) => [k, f.values]))).toEqual(FAMILY_VALUES);
@@ -97,7 +98,7 @@ describe("6.14.104 AA3 : chiffres des listes fixes réglables, défauts inchang�
       "Hangar de défense +50 % et défenses 30 % plus rapides, production −10 %.",
       "Entrepôt +60 % : la colonie stocke plus longtemps sans perte.",
     ]);
-    expect(TALENTS.find((t) => t.id === "reseau")?.description).toBe("Niveau d'espionnage (+0,2 par rang).");
+    expect(talentDescription(TALENTS.find((t) => t.id === "reseau")!)).toBe("Niveau d'espionnage (+0,2 par rang).");
     expect(WEEKLY_OFFERS.find((o) => o.id === "tokens")?.description).toBe("25 jetons pour la machine à sous du pot commun.");
   });
 
@@ -121,7 +122,8 @@ describe("6.14.104 AA3 : chiffres des listes fixes réglables, défauts inchang�
     expect(findShopItem("boost")?.price).toBe(99);
     expect(findShopItem("boost")?.description).toBe("Production +30 % pendant 12 h (cumulable dans le temps).");
     expect(findShopItem("accelerator")?.price).toBe(30); // le reste des prix garde son défaut
-    expect(TALENTS.find((t) => t.id === "assaut")?.perRank).toBe(0.03);
+    // 6.14.127 (AA9) : ancien réglage `rules.talents.perRank` lu tant que la section « talents » n'est pas enregistrée.
+    expect(TALENTS.find((t) => t.id === "assaut")?.effects[0].value).toBe(0.03);
     expect(talentEffects({ talents: { ranks: { assaut: 2 } } } as never)[0].value).toBeCloseTo(0.06);
     expect(colonySpecEffects({ spec: "forge" })).toMatchObject({ production: 1.3, deposit: 0.8 });
     expect(COLONY_SPECS[0].summary).toBe("Ressources communes +30 %, gisement rare −20 %.");
@@ -153,7 +155,8 @@ describe("6.14.104 AA3 : chiffres des listes fixes réglables, défauts inchang�
     const errs = (patch: Record<string, unknown>) => validateRules({ ...r, ...patch } as never).join(" ");
     expect(validateRules(defaultGameContent().rules)).toEqual([]);
     expect(errs({ bountyShop: { ...r.bountyShop, prices: { ...(r.bountyShop.prices as object), boost: 0 } } })).toMatch(/prix de « boost »/);
-    expect(errs({ talents: { ...r.talents, perRank: { ...(r.talents.perRank as object), assaut: 0.5 } } })).toMatch(/« assaut » entre 0 et 0,25/);
+    const talents = DEFAULT_TALENTS.map((t) => (t.id === "assaut" ? { ...t, effects: [{ ...t.effects[0], value: 0.5 }] } : t));
+    expect(validateGameContent({ ...currentGameContent(), talents }).join(" ")).toMatch(/Doctrine d'assaut : effet n° 1, valeur par rang entre 0 et 0,25/);
     expect(errs({ colonySpec: { ...r.colonySpec, specs: { ...(r.colonySpec.specs as object), depot: { storage: 9 } } } })).toMatch(/« depot », multiplicateur « storage »/);
     expect(errs({ modules: { ...r.modules, rarityWeights: { common: 0, rare: 0, epic: 0, legendary: 0 } } })).toMatch(/au moins un non nul/);
     expect(errs({ leagues: { ...r.leagues, tiers: { ...(r.leagues.tiers as object), bronze: { tokens: 1, placementPct: 0.5 } } } })).toMatch(/elles doivent faire 100 %/);

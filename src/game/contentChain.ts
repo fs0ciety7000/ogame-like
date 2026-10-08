@@ -164,13 +164,15 @@ function activeMetrics(): Set<string> {
 }
 
 /** Cibles d'unités des porteurs d'effets en vigueur : reliques composées, modules (par classe), technos à effet composé,
- *  classes d'empire à effet ciblé. */
+ *  classes d'empire et talents à effet ciblé. */
 export function unitCarrierSelectors(): string[] {
   const out: string[] = [];
   for (const r of RELICS) if (!r.disabled && r.effect === "custom" && r.custom?.target) out.push(r.custom.target);
   for (const fam of Object.values(MODULE_FAMILIES)) for (const cls of fam.classes) out.push(`class:${cls}`);
   for (const t of TECHNOLOGIES) for (const e of techEffects(t)) if (e.type === "stat" && e.target) out.push(e.target);
   for (const c of empireClasses()) for (const e of c.effects) if (e.target) out.push(e.target);
+  // 6.14.127 (AA9) : un talent à effet composé ciblé (ajouté dans l'admin) porte aussi un effet d'unité.
+  for (const t of TALENTS) for (const e of t.effects ?? []) if (e.target) out.push(e.target);
   // Seules les cibles d'unités comptent (une cible de ressource ou « attack » / « defense » vise autre chose).
   return out.filter((s) => parseUnitSelector(s).kind !== "all");
 }

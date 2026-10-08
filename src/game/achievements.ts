@@ -1,5 +1,5 @@
 import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/game/commanders";
-import { SEASON_CATALOG } from "@/game/seasonCatalog";
+import { DEFAULT_SEASON_CATALOG } from "@/game/seasonCatalog";
 import { WORLD_BOSSES } from "@/game/worldBosses";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import { BUILDINGS, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
@@ -373,7 +373,7 @@ export function derivedAchievements(): AchievementDef[] {
     def("officier_rare_all", "prestige", "legendaire", "rareOfficers", rare, "État-major complet", `Réunir les ${rare} officiers rares.`, "🏅", { auto: true, secret: true }),
     def("commandant_saison_1", "prestige", "argent", "seasonCommanders", 1, "Fin de saison", "Gagner un commandant de saison au dernier palier d'un passe.", "🎟️", { auto: true }),
     def("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une année de passes", "Gagner douze commandants de saison.", "📅", { auto: true }),
-    def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "🗓️", { auto: true, secret: true }),
+    def("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", DEFAULT_SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${DEFAULT_SEASON_CATALOG.length} commandants du catalogue.`, "🗓️", { auto: true, secret: true }),
     def("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux différents.", "🐉", { auto: true }),
     def("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "📜", { auto: true }),
     // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).

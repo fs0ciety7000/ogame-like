@@ -732,6 +732,8 @@ __export(hooksEntry_exports, {
   watchersFor: () => watchersFor,
   weekWindow: () => weekWindow,
   windowMs: () => windowMs,
+  withDefaultModuleFamilies: () => withDefaultModuleFamilies,
+  withDefaultTalents: () => withDefaultTalents,
   worldBossForStart: () => worldBossForStart,
   worldBossName: () => worldBossName,
   worldBossOf: () => worldBossOf,
@@ -1099,11 +1101,11 @@ var GameActionError = class extends Error {
 };
 
 // src/game/ranks.ts
-var rank = (id, name, family2, xp) => ({ id, name, family: family2, xp, image: `/assets/ranks/${id}.webp` });
-var tiers = (prefix, family2, xps) => [
-  rank(`${prefix}3`, `${family2} III`, family2, xps[0]),
-  rank(`${prefix}2`, `${family2} II`, family2, xps[1]),
-  rank(`${prefix}1`, `${family2} I`, family2, xps[2])
+var rank = (id, name, family, xp) => ({ id, name, family, xp, image: `/assets/ranks/${id}.webp` });
+var tiers = (prefix, family, xps) => [
+  rank(`${prefix}3`, `${family} III`, family, xps[0]),
+  rank(`${prefix}2`, `${family} II`, family, xps[1]),
+  rank(`${prefix}1`, `${family} I`, family, xps[2])
 ];
 var DEFAULT_RANKS = [
   rank("non_classe", "Non class\xE9", "Non class\xE9", 0),
@@ -1135,8 +1137,8 @@ function getRank(xp) {
   var _a;
   return (_a = RANKS[getRankIndex(xp)]) != null ? _a : DEFAULT_RANKS[0];
 }
-function familyIndex(family2) {
-  return RANKS.findIndex((r) => r.family === family2);
+function familyIndex(family) {
+  return RANKS.findIndex((r) => r.family === family);
 }
 function validateRanks(defs) {
   var _a, _b;
@@ -1535,8 +1537,8 @@ function commanderLevel(xp) {
 }
 function commanderSlots(player) {
   var _a;
-  const family2 = familyIndex(COMMANDER_RULES.extraSlotFamily);
-  return COMMANDER_RULES.slots + (family2 >= 0 && getRankIndex((_a = player.xp) != null ? _a : 0) >= family2 ? 1 : 0);
+  const family = familyIndex(COMMANDER_RULES.extraSlotFamily);
+  return COMMANDER_RULES.slots + (family >= 0 && getRankIndex((_a = player.xp) != null ? _a : 0) >= family ? 1 : 0);
 }
 function activeLevels(player) {
   var _a, _b;
@@ -2119,15 +2121,7 @@ var MODULE_RULES = {
   /** 6.14.104 (AA3, AA-5) : poids du tirage de rareté d'un plan (relatifs). */
   rarityWeights: { common: 60, rare: 28, epic: 10, legendary: 2 },
   /** 6.14.104 (AA3, AA-5) : Ambre rendue au recyclage d'un plan, par rareté. */
-  recycleAmber: { common: 1, rare: 3, epic: 8, legendary: 20 },
-  /** 6.14.104 (AA3, AA-5) : valeur d'un module par famille et rareté (0,04 = +4 % ; voile : niveaux de contre-espionnage). */
-  familyValues: {
-    armement: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
-    blindage: { common: 0.05, rare: 0.08, epic: 0.12, legendary: 0.18 },
-    soute: { common: 0.04, rare: 0.07, epic: 0.11, legendary: 0.16 },
-    propulsion: { common: 0.03, rare: 0.05, epic: 0.08, legendary: 0.12 },
-    voile: { common: 1, rare: 2, epic: 3, legendary: 4 }
-  }
+  recycleAmber: { common: 1, rare: 3, epic: 8, legendary: 20 }
 };
 var MODULE_RULES_META = {
   slotsPerClass: { label: "Emplacements de module par classe", min: 0, max: 6, hint: "En baisser vide les emplacements en trop." },
@@ -2135,8 +2129,7 @@ var MODULE_RULES_META = {
   fuseCount: { label: "Plans identiques pour une fusion", min: 2, max: 10 },
   maxPresets: { label: "Pr\xE9r\xE9glages de modules", min: 0, max: 20 },
   rarityWeights: { label: "Tirage d'un plan : poids de chaque raret\xE9", hint: "Poids relatifs (60 / 28 / 10 / 2 = 60 % de communs). Au moins un poids positif." },
-  recycleAmber: { label: "Recyclage d'un plan : Ambre par raret\xE9", unit: "Ambre" },
-  familyValues: { label: "Valeur d'un module par famille et raret\xE9", hint: "0,04 = +4 % (entre 0 et 1) ; voile furtif : niveaux de contre-espionnage (entre 0 et 20). Les plafonds d'effets s'appliquent toujours." }
+  recycleAmber: { label: "Recyclage d'un plan : Ambre par raret\xE9", unit: "Ambre" }
 };
 var nonNegative = (v) => {
   const n = Number(v);
@@ -2159,25 +2152,22 @@ var MODULE_RARITIES = [
   rarity("epic", "\xC9pique", "violet"),
   rarity("legendary", "L\xE9gendaire", "gold")
 ];
-var family = (id, label3, stat3, classes, unit) => ({
+var familyDef = (id, label3, stat3, classes, values, phrase) => ({
+  id,
   label: label3,
   stat: stat3,
   classes,
-  get values() {
-    var _a;
-    const v = (_a = MODULE_RULES.familyValues[id]) != null ? _a : {};
-    return { common: nonNegative(v.common), rare: nonNegative(v.rare), epic: nonNegative(v.epic), legendary: nonNegative(v.legendary) };
-  },
-  unit
+  values: { common: values[0], rare: values[1], epic: values[2], legendary: values[3] },
+  phrase
 });
-var MODULE_FAMILIES = {
-  armement: family("armement", "Armement", "unitAttack", ["light", "medium", "heavy"], "pct"),
-  blindage: family("blindage", "Blindage", "unitHp", ["light", "medium", "heavy"], "pct"),
-  soute: family("soute", "Soute", "cargo", ["support"], "pct"),
-  propulsion: family("propulsion", "Propulsion", "fleetSpeed", ["support"], "pct"),
-  voile: family("voile", "Voile furtif", "counterSpy", ["support"], "level")
-};
-var MODULE_TEMPLATES = [
+var DEFAULT_MODULE_FAMILIES = [
+  familyDef("armement", "Armement", "unitAttack", ["light", "medium", "heavy"], [0.04, 0.07, 0.11, 0.16], "+{pct} d'attaque de la classe"),
+  familyDef("blindage", "Blindage", "unitHp", ["light", "medium", "heavy"], [0.05, 0.08, 0.12, 0.18], "+{pct} de points de vie de la classe"),
+  familyDef("soute", "Soute", "cargo", ["support"], [0.04, 0.07, 0.11, 0.16], "+{pct} de soute"),
+  familyDef("propulsion", "Propulsion", "fleetSpeed", ["support"], [0.03, 0.05, 0.08, 0.12], "\u2212{pct} de temps de vol"),
+  familyDef("voile", "Voile furtif", "counterSpy", ["support"], [1, 2, 3, 4], "+{value} niveau{x} de contre-espionnage")
+];
+var DEFAULT_MODULE_TEMPLATES = [
   { id: "canons_surcharges", name: "Canons surcharg\xE9s", family: "armement", description: "Batteries pouss\xE9es au-del\xE0 des normes : plus de d\xE9g\xE2ts, plus de chaleur." },
   { id: "matrice_de_visee", name: "Matrice de vis\xE9e", family: "armement", description: "Calculateur balistique r\xE9cup\xE9r\xE9 sur une \xE9pave pirate." },
   { id: "blindage_reactif", name: "Blindage r\xE9actif", family: "blindage", description: "Plaques qui explosent vers l'ext\xE9rieur sous l'impact." },
@@ -2186,6 +2176,95 @@ var MODULE_TEMPLATES = [
   { id: "post_combustion", name: "Post-combustion", family: "propulsion", description: "R\xE9acteurs gav\xE9s de carburant instable : on arrive plus t\xF4t." },
   { id: "voile_furtif", name: "Voile furtif", family: "voile", description: "Brouille les sondes adverses autour de la flotte de soutien." }
 ];
+var familyInfo = (d) => {
+  var _a, _b, _c, _d, _e;
+  return __spreadProps(__spreadValues({}, structuredClone(d)), {
+    values: { common: nonNegative((_a = d.values) == null ? void 0 : _a.common), rare: nonNegative((_b = d.values) == null ? void 0 : _b.rare), epic: nonNegative((_c = d.values) == null ? void 0 : _c.epic), legendary: nonNegative((_d = d.values) == null ? void 0 : _d.legendary) },
+    unit: ((_e = EFFECT_STATS[d.stat]) == null ? void 0 : _e.unit) === "pct" ? "pct" : "level"
+  });
+};
+var MODULE_FAMILIES = Object.fromEntries(DEFAULT_MODULE_FAMILIES.map((f) => [f.id, familyInfo(f)]));
+var MODULE_TEMPLATES = structuredClone(DEFAULT_MODULE_TEMPLATES);
+function setModuleContent(families, templates) {
+  for (const k of Object.keys(MODULE_FAMILIES)) delete MODULE_FAMILIES[k];
+  for (const f of families) MODULE_FAMILIES[f.id] = familyInfo(f);
+  MODULE_TEMPLATES.splice(0, MODULE_TEMPLATES.length, ...templates);
+}
+function withDefaults(list, defaults) {
+  const saved = Array.isArray(list) ? list.filter((x) => !!x && typeof x === "object") : [];
+  const ids = new Set(saved.map((x) => x.id));
+  return [...saved, ...defaults.filter((d) => !ids.has(d.id))];
+}
+function withDefaultModuleFamilies(list, legacyValues) {
+  const out = withDefaults(list, DEFAULT_MODULE_FAMILIES);
+  if (Array.isArray(list) || !legacyValues || typeof legacyValues !== "object") return out;
+  const legacy = legacyValues;
+  return out.map((f) => {
+    const v = legacy[f.id];
+    if (!v || typeof v !== "object") return f;
+    const values = __spreadValues({}, f.values);
+    for (const r of ["common", "rare", "epic", "legendary"]) if (v[r] !== void 0) values[r] = nonNegative(v[r]);
+    return __spreadProps(__spreadValues({}, f), { values });
+  });
+}
+function withDefaultModuleTemplates(list) {
+  return withDefaults(list, DEFAULT_MODULE_TEMPLATES);
+}
+function moduleValueMax(stat3) {
+  var _a;
+  return ((_a = EFFECT_STATS[stat3]) == null ? void 0 : _a.unit) === "pct" ? 1 : 20;
+}
+var CLASS_LABELS = { support: "Soutien", light: "Faible", medium: "Moyen", heavy: "Fort" };
+function moduleClassesText(classes) {
+  if (classes.length === 1) return classes[0] === "support" ? "le Soutien" : `la classe ${CLASS_LABELS[classes[0]]}`;
+  const names = classes.map((c) => {
+    var _a;
+    return (_a = CLASS_LABELS[c]) != null ? _a : c;
+  });
+  return `les classes ${names.slice(0, -1).join(", ")} ou ${names[names.length - 1]}`;
+}
+function validateModuleContent(families, templates) {
+  var _a;
+  const errors = [];
+  if (!Array.isArray(families)) return ["Familles de modules : la section doit \xEAtre une liste."];
+  if (!Array.isArray(templates)) return ["Mod\xE8les de modules : la section doit \xEAtre une liste."];
+  const famIds = /* @__PURE__ */ new Set();
+  for (const f of families) {
+    const label3 = `Famille de modules ${(f == null ? void 0 : f.label) || (f == null ? void 0 : f.id) || "?"}`;
+    if (!f || typeof f.id !== "string" || !/^[A-Za-z0-9_]+$/.test(f.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (famIds.has(f.id)) errors.push(`Familles de modules : identifiant \xAB ${f.id} \xBB en double.`);
+    else famIds.add(f.id);
+    if (!f) continue;
+    if (typeof f.label !== "string" || !f.label.trim()) errors.push(`${label3} : nom manquant.`);
+    if (!f.stat || !(f.stat in EFFECT_STATS)) {
+      errors.push(`${label3} : grandeur \xAB ${String(f.stat)} \xBB inconnue.`);
+      continue;
+    }
+    if (f.stat === "production" || f.stat === "hangarCapacity") errors.push(`${label3} : cette grandeur demande une cible (ressource ou hangar), choisis-en une autre.`);
+    if (!Array.isArray(f.classes) || f.classes.length === 0 || f.classes.some((c) => !MODULE_CLASSES.includes(c))) errors.push(`${label3} : au moins une classe (light, medium, heavy, support).`);
+    else if (new Set(f.classes).size !== f.classes.length) errors.push(`${label3} : classe en double.`);
+    const max = moduleValueMax(f.stat);
+    for (const r of ["common", "rare", "epic", "legendary"]) {
+      const v = (_a = f.values) == null ? void 0 : _a[r];
+      if (!(typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max)) errors.push(`${label3} : valeur \xAB ${r} \xBB entre 0 et ${max}.`);
+    }
+    if (f.phrase !== void 0 && typeof f.phrase !== "string") errors.push(`${label3} : tournure du texte invalide.`);
+  }
+  const tplIds = /* @__PURE__ */ new Set();
+  for (const t of templates) {
+    const label3 = `Mod\xE8le de module ${(t == null ? void 0 : t.name) || (t == null ? void 0 : t.id) || "?"}`;
+    if (!t || typeof t.id !== "string" || !/^[A-Za-z0-9_]+$/.test(t.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (tplIds.has(t.id)) errors.push(`Mod\xE8les de modules : identifiant \xAB ${t.id} \xBB en double.`);
+    else tplIds.add(t.id);
+    if (!t) continue;
+    if (typeof t.name !== "string" || !t.name.trim()) errors.push(`${label3} : nom manquant.`);
+    if (typeof t.description !== "string") errors.push(`${label3} : texte manquant.`);
+    if (!famIds.has(String(t.family))) errors.push(`${label3} : famille \xAB ${String(t.family)} \xBB inconnue.`);
+    if (t.retired !== void 0 && typeof t.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
+  }
+  if (!templates.some((t) => t && !t.retired)) errors.push("Mod\xE8les de modules : au moins un mod\xE8le non retir\xE9 (le tirage des plans en a besoin).");
+  return errors;
+}
 var MODULE_BUILD_COST = {
   common: { scrap: 2e4, energy: 1e4, nano: 5e3 },
   rare: { scrap: 6e4, energy: 3e4, nano: 15e3 },
@@ -2206,9 +2285,9 @@ function moduleRarity(id) {
   return (_a = MODULE_RARITIES.find((r) => r.id === id)) != null ? _a : MODULE_RARITIES[0];
 }
 function moduleValue(item) {
-  var _a;
+  var _a, _b;
   const t = findModuleTemplate(item.template);
-  return t ? (_a = MODULE_FAMILIES[t.family].values[item.rarity]) != null ? _a : 0 : 0;
+  return t ? (_b = (_a = MODULE_FAMILIES[t.family]) == null ? void 0 : _a.values[item.rarity]) != null ? _b : 0 : 0;
 }
 function moduleLabel(item) {
   var _a, _b;
@@ -2238,6 +2317,7 @@ function modulesState(player) {
   return presets.length ? { items, slots, presets } : { items, slots };
 }
 function moduleEffects(player) {
+  var _a;
   const st = modulesState(player);
   const out = [];
   for (const cls of MODULE_CLASSES) {
@@ -2246,8 +2326,8 @@ function moduleEffects(player) {
       const t = item ? findModuleTemplate(item.template) : void 0;
       if (!item || !t) continue;
       const fam = MODULE_FAMILIES[t.family];
-      if (!fam.classes.includes(cls)) continue;
-      out.push(__spreadProps(__spreadValues({ stat: fam.stat }, fam.stat === "unitAttack" || fam.stat === "unitHp" ? { target: `class:${cls}` } : {}), { value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } }));
+      if (!fam || !fam.classes.includes(cls)) continue;
+      out.push(__spreadProps(__spreadValues({ stat: fam.stat }, ((_a = EFFECT_STATS[fam.stat]) == null ? void 0 : _a.unitTarget) ? { target: `class:${cls}` } : {}), { value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } }));
     }
   }
   return out;
@@ -2267,7 +2347,9 @@ function rollModulePlan(source, now, random = Math.random, minRarity = "common")
       break;
     }
   }
-  const template = MODULE_TEMPLATES[Math.floor(random() * MODULE_TEMPLATES.length) % MODULE_TEMPLATES.length].id;
+  const active = MODULE_TEMPLATES.filter((t) => !t.retired);
+  const drawable = active.length > 0 ? active : MODULE_TEMPLATES;
+  const template = drawable[Math.floor(random() * drawable.length) % drawable.length].id;
   return { id: newId2(now, random), template, rarity: rarity2, built: false, foundAtMs: now, source };
 }
 function addModuleItem(player, item) {
@@ -2298,7 +2380,8 @@ function mountModule(player, id, cls, slot) {
   const c = String(cls);
   if (!MODULE_CLASSES.includes(c)) throw new GameActionError("Classe inconnue.");
   const fam = MODULE_FAMILIES[findModuleTemplate(item.template).family];
-  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${fam.classes.length === 1 ? "le Soutien" : "les classes Faible, Moyen ou Fort"}.`);
+  if (!fam) throw new GameActionError("Famille de module inconnue.");
+  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${moduleClassesText(fam.classes)}.`);
   const i = Math.floor(Number(slot));
   if (!(i >= 0 && i < MODULE_RULES.slotsPerClass)) throw new GameActionError("Emplacement invalide.");
   for (const k of MODULE_CLASSES) st.slots[k] = st.slots[k].map((s) => s === item.id ? null : s);
@@ -2368,7 +2451,7 @@ function applyModulePreset(player, index2) {
       if (!id) return null;
       const item = st.items.find((m) => m.id === id);
       const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template).family] : null;
-      if (!item || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
+      if (!item || !fam || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
         missing += 1;
         return null;
       }
@@ -5226,8 +5309,8 @@ function isStaticObjective(k) {
 function isBaseObjective(k) {
   return typeof k === "string" && BASE_OBJECTIVES.includes(k);
 }
-function contentObjective(family2, id) {
-  return `${family2}:${id}`;
+function contentObjective(family, id) {
+  return `${family}:${id}`;
 }
 function parseContentObjective(k) {
   if (typeof k !== "string") return null;
@@ -5241,13 +5324,13 @@ var resolver = null;
 function setTrackedContentResolver(r) {
   resolver = r;
 }
-function contentName(family2, id) {
+function contentName(family, id) {
   var _a;
-  return (_a = resolver == null ? void 0 : resolver.name(family2, id)) != null ? _a : id;
+  return (_a = resolver == null ? void 0 : resolver.name(family, id)) != null ? _a : id;
 }
-function contentIds(family2) {
+function contentIds(family) {
   var _a;
-  return (_a = resolver == null ? void 0 : resolver.ids(family2)) != null ? _a : [];
+  return (_a = resolver == null ? void 0 : resolver.ids(family)) != null ? _a : [];
 }
 var fillName = (text, name) => text.split("{name}").join(name);
 function objectiveLabel(k) {
@@ -5283,9 +5366,9 @@ function trackedWeight(k) {
   if (!Number.isFinite(w)) return c ? 0 : 1;
   return Math.max(0, w);
 }
-function familyBase(family2) {
+function familyBase(family) {
   var _a;
-  const n = Number((_a = TRACKED_ACTION_RULES.familyBase) == null ? void 0 : _a[family2]);
+  const n = Number((_a = TRACKED_ACTION_RULES.familyBase) == null ? void 0 : _a[family]);
   return Number.isFinite(n) && n >= 1 ? n : 1;
 }
 function trackedActionsEnabled() {
@@ -7989,8 +8072,8 @@ function describeLoot(drop) {
 
 // src/game/seasonCatalog.ts
 var CATALOG_START = "2026-11";
-var THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"];
-var THEME_PRIMARY = {
+var DEFAULT_THEME_ROTATION = ["vide", "hiver", "forge", "bazar", "maree", "colonies", "primes", "comete", "moisson", "archives", "chantiers", "rempart"];
+var DEFAULT_THEME_PRIMARY = {
   vide: "logistician",
   hiver: "warden",
   forge: "engineer",
@@ -8004,8 +8087,8 @@ var THEME_PRIMARY = {
   chantiers: "mechanic",
   rempart: "strategist"
 };
-var E = (theme, year, name, tagline, synopsis, commander, scene) => ({ theme, year, name, tagline, synopsis, commander, scene });
-var SEASON_CATALOG = [
+var E = (theme, year, name, tagline, synopsis, commander, scene) => ({ id: `${theme}_${year}`, theme, year, name, tagline, synopsis, commander, scene });
+var DEFAULT_SEASON_CATALOG = [
   // ---------- L'Appel du Vide (Logisticienne) ----------
   E("vide", 1, "L'Appel du Vide", "Au-del\xE0 des cartes, des routes \xE0 ouvrir.", "Un signal venu d'au-del\xE0 des franges appelle les flottes. {mentor} veut ouvrir une route avant que {rival} ne la ferme.", { name: "Ilka Morrow", title: "\xC9claireuse des franges", secondary: "spy", lore: "{commander} a cartographi\xE9 trois n\xE9buleuses que tout le monde disait infranchissables.", look: "a lean deep-space scout woman with star-map tattoos glowing magenta, worn explorer gear, nebula behind" }, "a lone scout ship crossing a vast magenta nebula toward a faint signal beacon, tiny convoy lights following far behind"),
   E("vide", 2, "Au-del\xE0 des franges", "Chaque route ouverte est une colonie promise.", "Les routes ouvertes l'an dernier m\xE8nent \xE0 des mondes inconnus. {mentor} veut y installer des colons ; {rival} y voit des proies.", { name: "Corentin Vash", title: "Ma\xEEtre des routes", secondary: "governor", lore: "{commander} a men\xE9 le premier convoi de colons au-del\xE0 du Voile, sans perdre un seul vaisseau.", look: "a calm convoy master in a long travel coat, route holograms around his hands, colony ships glowing behind" }, "a long convoy of colony ships threading a glowing corridor between two magenta nebulae, a green world on the horizon"),
@@ -8055,19 +8138,39 @@ var SEASON_CATALOG = [
   E("rempart", 2, "Les Murs de Vashka", "Un mur r\xE9par\xE9 est un mur qui tient.", "Les murs ont tenu, mais ils sont fissur\xE9s. {mentor} veut les relever avant la prochaine vague ; {rival} masse ses b\xE9liers.", { name: "Irsa Stenn", title: "Gardienne de la Ligne", secondary: "mechanic", lore: "{commander} r\xE9pare un bouclier sous le feu ennemi comme d'autres reprisent une chaussette.", look: "a tough defensive commander with a repair tool and shield emitter, scorched blue armor, cracked fortress wall behind" }, "repair crews welding a cracked fortress wall in orbit while defensive batteries fire at incoming rams, blue and ember light"),
   E("rempart", 3, "Ligne de fer", "Tenir le front, puis abattre le colosse.", "Derri\xE8re les vagues ennemies avance un colosse de si\xE8ge. {mentor} veut une ligne qui tienne et des chasseurs qui frappent ; {rival} veut tout raser.", { name: "Osric Keld", title: "Ma\xEEtre des Remparts", secondary: "hunter", lore: "{commander} a attendu qu'un colosse de si\xE8ge soit au pied de ses murs pour l'abattre d'une seule salve.", look: "an imposing iron-clad strategist with a long war cloak, siege cannon behind, colossal siege beast on the horizon" }, "an iron defensive line of battleships facing a colossal siege beast, blue shields and heavy cannon fire")
 ];
+var THEME_ROTATION = [...DEFAULT_THEME_ROTATION];
+var THEME_PRIMARY = __spreadValues({}, DEFAULT_THEME_PRIMARY);
+var SEASON_CATALOG = structuredClone(DEFAULT_SEASON_CATALOG);
+function setSeasonCatalog(themes, entries) {
+  THEME_ROTATION.splice(0, THEME_ROTATION.length, ...themes.filter((t) => !t.retired).map((t) => t.id));
+  for (const k of Object.keys(THEME_PRIMARY)) delete THEME_PRIMARY[k];
+  for (const t of themes) THEME_PRIMARY[t.id] = t.primary;
+  SEASON_CATALOG.splice(0, SEASON_CATALOG.length, ...entries);
+}
+function catalogYears() {
+  return Math.max(1, ...SEASON_CATALOG.map((e3) => Math.floor(Number(e3.year)) || 1));
+}
+function catalogCycle() {
+  return Math.max(1, THEME_ROTATION.length) * catalogYears();
+}
 function monthIndex(monthId) {
   const [y, m] = monthId.split("-").map(Number);
   return y * 12 + (m - 1);
 }
 function catalogIndex(monthId) {
+  const cycle = catalogCycle();
   const n = monthIndex(monthId) - monthIndex(CATALOG_START);
-  return (n % 36 + 36) % 36;
+  return (n % cycle + cycle) % cycle;
 }
 function catalogEntryFor(monthId) {
+  var _a, _b;
   const i = catalogIndex(monthId);
-  const theme = THEME_ROTATION[i % 12];
-  const year = Math.floor(i / 12) + 1;
-  return SEASON_CATALOG.find((e3) => e3.theme === theme && e3.year === year);
+  const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
+  const theme = rotation[i % rotation.length];
+  const year = Math.floor(i / rotation.length) + 1;
+  const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
+  const same = list.filter((e3) => e3.theme === theme);
+  return (_b = (_a = same.find((e3) => e3.year === year)) != null ? _a : same.sort((a, b) => Math.abs(a.year - year) - Math.abs(b.year - year))[0]) != null ? _b : list[0];
 }
 function illustrationPrompt(e3, accent) {
   return `/imagine prompt: sci-fi strategy game key art, ${e3.scene}, cinematic wide shot, dark deep-space palette with ${accent} accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250`;
@@ -15332,7 +15435,7 @@ function derivedAchievements() {
     def2("officier_rare_all", "prestige", "legendaire", "rareOfficers", rare, "\xC9tat-major complet", `R\xE9unir les ${rare} officiers rares.`, "\u{1F3C5}", { auto: true, secret: true }),
     def2("commandant_saison_1", "prestige", "argent", "seasonCommanders", 1, "Fin de saison", "Gagner un commandant de saison au dernier palier d'un passe.", "\u{1F39F}\uFE0F", { auto: true }),
     def2("commandant_saison_12", "prestige", "or", "seasonCommanders", 12, "Une ann\xE9e de passes", "Gagner douze commandants de saison.", "\u{1F4C5}", { auto: true }),
-    def2("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${SEASON_CATALOG.length} commandants du catalogue.`, "\u{1F5D3}\uFE0F", { auto: true, secret: true }),
+    def2("commandant_saison_all", "prestige", "legendaire", "seasonCommanders", DEFAULT_SEASON_CATALOG.length, "Trois ans de campagne", `Gagner les ${DEFAULT_SEASON_CATALOG.length} commandants du catalogue.`, "\u{1F5D3}\uFE0F", { auto: true, secret: true }),
     def2("boss_mondiaux_3", "combat", "or", "worldBossTypes", Math.min(3, bosses), "Chasseur de colosses", "Abattre trois boss mondiaux diff\xE9rents.", "\u{1F409}", { auto: true }),
     def2("boss_mondiaux_all", "combat", "legendaire", "worldBossTypes", bosses, "Bestiaire complet", `Abattre les ${bosses} boss mondiaux.`, "\u{1F4DC}", { auto: true }),
     // v5.14.2 : le gros lot du casino, seul succès mythique (titre « Main d'or », bannière et emblème du 777, entrée du codex).
@@ -16310,65 +16413,86 @@ function setActiveTitle(player, label3) {
 // src/game/talents.ts
 var TALENT_RULES = {
   pointsPerAscension: 3,
-  maxRank: 3,
-  /** 6.14.104 (AA3, AA-2) : valeur par rang de chaque talent (0,02 = +2 % ; réseau : niveaux d'espionnage). Ids et effets en dur. */
-  perRank: {
-    rendement: 0.02,
-    fonderies: 0.02,
-    reacteurs: 0.02,
-    nanoforges: 0.02,
-    archivistes: 0.02,
-    assaut: 0.02,
-    rempart: 0.02,
-    ateliers: 0.02,
-    sentinelles: 0.02,
-    reseau: 0.2,
-    chantiers: 0.02,
-    laboratoires: 0.02,
-    entrepots: 0.02,
-    soutes: 0.02,
-    intendance: 0.02
-  }
+  maxRank: 3
 };
 var TALENT_RULES_META = {
   pointsPerAscension: { label: "Points de talent par Ascension", min: 0, max: 20 },
-  maxRank: { label: "Rang maximal d'un talent", min: 1, max: 10, hint: "En baisser ne retire pas les rangs d\xE9j\xE0 pris." },
-  perRank: { label: "Valeur par rang de chaque talent", hint: "0,02 = +2 % par rang (entre 0 et 0,25). R\xE9seau d'informateurs : niveaux d'espionnage par rang (entre 0 et 2). Les plafonds d'effets s'appliquent toujours." }
+  maxRank: { label: "Rang maximal d'un talent", min: 1, max: 10, hint: "En baisser ne retire pas les rangs d\xE9j\xE0 pris." }
 };
-var decimalText = (n) => String(Math.round(n * 1e3) / 1e3).replace(".", ",");
-var talent = (id, branch, name, description, effect) => ({
-  id,
-  branch,
-  name,
-  get description() {
-    return typeof description === "function" ? description() : description;
-  },
-  effect,
-  get perRank() {
-    const v = Number(TALENT_RULES.perRank[id]);
-    return Number.isFinite(v) && v >= 0 ? v : 0;
-  }
-});
-var TALENTS = [
-  talent("rendement", "economie", "Rendement imp\xE9rial", "Production de toutes les ressources.", { kind: "productionAll" }),
-  talent("fonderies", "economie", "Fonderies profondes", "Production de ferraille.", { kind: "production", res: "scrap" }),
-  talent("reacteurs", "economie", "R\xE9acteurs stabilis\xE9s", "Production d'\xE9nergie instable.", { kind: "production", res: "energy" }),
-  talent("nanoforges", "economie", "Nanoforges", "Production de nanocomposants.", { kind: "production", res: "nano" }),
-  talent("archivistes", "economie", "Archivistes", "Production de donn\xE9es anciennes.", { kind: "production", res: "data" }),
-  talent("assaut", "guerre", "Doctrine d'assaut", "Attaque de tes flottes.", { kind: "attack" }),
-  talent("rempart", "guerre", "Rempart", "D\xE9fense de tes unit\xE9s.", { kind: "defense" }),
-  talent("ateliers", "guerre", "Ateliers de campagne", "Vaisseaux r\xE9par\xE9s apr\xE8s un combat.", { kind: "repair" }),
-  talent("sentinelles", "guerre", "Sentinelles", "Chances de rep\xE9rer l'espionnage adverse.", { kind: "detection" }),
-  talent("reseau", "guerre", "R\xE9seau d'informateurs", () => {
-    var _a;
-    return `Niveau d'espionnage (+${decimalText((_a = TALENT_RULES.perRank.reseau) != null ? _a : 0)} par rang).`;
-  }, { kind: "spyLevel" }),
-  talent("chantiers", "logistique", "Chantiers rapides", "Dur\xE9e de construction des b\xE2timents.", { kind: "buildTime" }),
-  talent("laboratoires", "logistique", "Laboratoires", "Dur\xE9e des recherches.", { kind: "researchTime" }),
-  talent("entrepots", "logistique", "Entrep\xF4ts \xE9tendus", "Capacit\xE9 des entrep\xF4ts.", { kind: "storage" }),
-  talent("soutes", "logistique", "Soutes renforc\xE9es", "Capacit\xE9 de transport des flottes.", { kind: "cargo" }),
-  talent("intendance", "logistique", "Intendance", "Production de toutes les ressources (logistique).", { kind: "productionAll" })
+var TALENT_BRANCHES = [
+  { id: "economie", name: "\xC9conomie", color: "var(--color-mint-glow)" },
+  { id: "guerre", name: "Guerre", color: "var(--color-danger-glow)" },
+  { id: "logistique", name: "Logistique", color: "var(--color-cyan-glow)" }
 ];
+var decimalText = (n) => String(Math.round(n * 1e3) / 1e3).replace(".", ",");
+var talent = (id, branch, name, description, effect) => ({ id, branch, name, description, effects: [effect] });
+var DEFAULT_TALENTS = [
+  talent("rendement", "economie", "Rendement imp\xE9rial", "Production de toutes les ressources.", { stat: "productionAll", value: 0.02 }),
+  talent("fonderies", "economie", "Fonderies profondes", "Production de ferraille.", { stat: "production", target: "scrap", value: 0.02 }),
+  talent("reacteurs", "economie", "R\xE9acteurs stabilis\xE9s", "Production d'\xE9nergie instable.", { stat: "production", target: "energy", value: 0.02 }),
+  talent("nanoforges", "economie", "Nanoforges", "Production de nanocomposants.", { stat: "production", target: "nano", value: 0.02 }),
+  talent("archivistes", "economie", "Archivistes", "Production de donn\xE9es anciennes.", { stat: "production", target: "data", value: 0.02 }),
+  talent("assaut", "guerre", "Doctrine d'assaut", "Attaque de tes flottes.", { stat: "attack", value: 0.02 }),
+  talent("rempart", "guerre", "Rempart", "D\xE9fense de tes unit\xE9s.", { stat: "defense", value: 0.02 }),
+  talent("ateliers", "guerre", "Ateliers de campagne", "Vaisseaux r\xE9par\xE9s apr\xE8s un combat.", { stat: "repair", value: 0.02 }),
+  talent("sentinelles", "guerre", "Sentinelles", "Chances de rep\xE9rer l'espionnage adverse.", { stat: "detection", value: 0.02 }),
+  talent("reseau", "guerre", "R\xE9seau d'informateurs", "Niveau d'espionnage (+{value} par rang).", { stat: "spyLevel", value: 0.2 }),
+  talent("chantiers", "logistique", "Chantiers rapides", "Dur\xE9e de construction des b\xE2timents.", { stat: "buildTime", value: 0.02 }),
+  talent("laboratoires", "logistique", "Laboratoires", "Dur\xE9e des recherches.", { stat: "researchTime", value: 0.02 }),
+  talent("entrepots", "logistique", "Entrep\xF4ts \xE9tendus", "Capacit\xE9 des entrep\xF4ts.", { stat: "storage", value: 0.02 }),
+  talent("soutes", "logistique", "Soutes renforc\xE9es", "Capacit\xE9 de transport des flottes.", { stat: "cargo", value: 0.02 }),
+  talent("intendance", "logistique", "Intendance", "Production de toutes les ressources (logistique).", { stat: "productionAll", value: 0.02 })
+];
+var TALENTS = structuredClone(DEFAULT_TALENTS);
+function setTalents(defs) {
+  TALENTS.splice(0, TALENTS.length, ...defs);
+}
+function findTalent(id) {
+  return TALENTS.find((t) => t.id === id);
+}
+function withDefaultTalents(list, legacyPerRank) {
+  const saved = Array.isArray(list) ? list.filter((t) => !!t && typeof t === "object") : null;
+  const ids = new Set((saved != null ? saved : []).map((t) => t.id));
+  const legacy = legacyPerRank && typeof legacyPerRank === "object" ? legacyPerRank : {};
+  const fromCode = DEFAULT_TALENTS.filter((t) => !ids.has(t.id)).map((t) => {
+    if (saved || legacy[t.id] === void 0) return t;
+    const v = Number(legacy[t.id]);
+    return __spreadProps(__spreadValues({}, t), { effects: t.effects.map((e3) => __spreadProps(__spreadValues({}, e3), { value: Number.isFinite(v) && v >= 0 ? v : 0 })) });
+  });
+  return [...saved != null ? saved : [], ...fromCode];
+}
+function talentValueMax(stat3) {
+  const info = EFFECT_STATS[stat3];
+  if (!info) return 0;
+  return info.unit === "level" ? 2 : info.unit === "points" ? 5 : 0.25;
+}
+function validateTalents(list, validTarget) {
+  if (!Array.isArray(list)) return ["Talents : la section doit \xEAtre une liste."];
+  const errors = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const t of list) {
+    const label3 = `Talent ${(t == null ? void 0 : t.name) || (t == null ? void 0 : t.id) || "?"}`;
+    if (!t || typeof t.id !== "string" || !/^[A-Za-z0-9_]+$/.test(t.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (seen.has(t.id)) errors.push(`Talents : identifiant \xAB ${t.id} \xBB en double.`);
+    else seen.add(t.id);
+    if (!t) continue;
+    if (!TALENT_BRANCHES.some((b) => b.id === t.branch)) errors.push(`${label3} : branche \xAB ${String(t.branch)} \xBB inconnue (economie, guerre, logistique).`);
+    if (typeof t.name !== "string" || !t.name.trim()) errors.push(`${label3} : nom manquant.`);
+    if (typeof t.description !== "string") errors.push(`${label3} : texte manquant.`);
+    if (t.retired !== void 0 && typeof t.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
+    if (!Array.isArray(t.effects) || t.effects.length === 0) {
+      errors.push(`${label3} : au moins un effet.`);
+      continue;
+    }
+    t.effects.forEach((e3, i) => {
+      for (const m of validateComposedEffect(e3, validTarget)) errors.push(`${label3} : effet n\xB0 ${i + 1}, ${m}.`);
+      if (!(e3 == null ? void 0 : e3.stat) || !(e3.stat in EFFECT_STATS)) return;
+      const max = talentValueMax(e3.stat);
+      if (!(typeof e3.value === "number" && Number.isFinite(e3.value) && e3.value >= 0 && e3.value <= max)) errors.push(`${label3} : effet n\xB0 ${i + 1}, valeur par rang entre 0 et ${decimalText(max)}.`);
+    });
+  }
+  return errors;
+}
 function talentState(player) {
   var _a, _b;
   const raw = (_a = player.talents) != null ? _a : {};
@@ -16387,8 +16511,9 @@ function talentPoints(player) {
 }
 function learnTalent(player, talentId) {
   var _a, _b;
-  const def4 = TALENTS.find((t) => t.id === talentId);
+  const def4 = findTalent(talentId);
   if (!def4) throw new GameActionError("Talent inconnu.");
+  if (def4.retired) throw new GameActionError("Ce talent n'est plus propos\xE9 : tes rangs gardent leur effet, mais il ne s'apprend plus.");
   const st = talentState(player);
   if (((_a = st.ranks[def4.id]) != null ? _a : 0) >= TALENT_RULES.maxRank) throw new GameActionError("Ce talent est d\xE9j\xE0 au rang maximum.");
   if (talentPoints(player).free <= 0) throw new GameActionError(`Aucun point de talent disponible : chaque Ascension en donne ${TALENT_RULES.pointsPerAscension}.`);
@@ -16412,17 +16537,23 @@ function talentBonuses(player) {
     return ((_a = st.ranks[t.id]) != null ? _a : 0) > 0;
   }).map((def4) => {
     var _a;
-    return { def: def4, value: def4.perRank * ((_a = st.ranks[def4.id]) != null ? _a : 0) };
+    return { def: def4, rank: (_a = st.ranks[def4.id]) != null ? _a : 0 };
   });
 }
 function talentEffects(player) {
-  return talentBonuses(player).map(({ def: def4, value: value2 }) => ({
-    stat: def4.effect.kind,
-    target: def4.effect.kind === "production" ? def4.effect.res : void 0,
-    value: value2,
-    layer: "empire",
-    source: { kind: "talent", id: def4.id, label: def4.name }
-  }));
+  return talentBonuses(player).flatMap(
+    ({ def: def4, rank: rank2 }) => {
+      var _a;
+      return ((_a = def4.effects) != null ? _a : []).map((e3) => __spreadProps(__spreadValues({
+        stat: e3.stat,
+        target: e3.target || void 0
+      }, e3.scope && e3.scope !== "all" ? { scope: e3.scope } : {}), {
+        value: (Number(e3.value) || 0) * rank2,
+        layer: "empire",
+        source: { kind: "talent", id: def4.id, label: def4.name }
+      }));
+    }
+  );
 }
 
 // src/game/modifiers.ts
@@ -19921,8 +20052,8 @@ function addedOnError(v) {
   if (typeof v !== "string" || !DATE.test(v) || !Number.isFinite(Date.parse(`${v}T00:00:00Z`))) return "date d'ajout au format AAAA-MM-JJ";
   return null;
 }
-function familyDefs(family2) {
-  return family2 === "unit" ? UNITS : family2 === "research" ? TECHNOLOGIES : BUILDINGS;
+function familyDefs(family) {
+  return family === "unit" ? UNITS : family === "research" ? TECHNOLOGIES : BUILDINGS;
 }
 function monthStartMs(monthId) {
   const [y, m] = monthId.split("-").map(Number);
@@ -20002,8 +20133,8 @@ function chooseNovelty(monthId, existing, access, activePlayers, r = NOVELTY_RUL
       skipped.push(`${name} (${Math.round(share * 100)} % y ont acc\xE8s)`);
       continue;
     }
-    const family2 = parseContentObjective(c.key).family;
-    const count2 = Math.max(1, Math.floor(Number((_b = r.counts) == null ? void 0 : _b[family2]) || 1));
+    const family = parseContentObjective(c.key).family;
+    const count2 = Math.max(1, Math.floor(Number((_b = r.counts) == null ? void 0 : _b[family]) || 1));
     const episode = Math.min(4, Math.max(1, Math.floor(Number(r.episode) || 2)));
     return {
       pick: { key: c.key, addedOn: c.addedOn, name, count: count2, episode, reason: `Nouveaut\xE9 : ${name} (ajout\xE9 le ${c.addedOn}, ${Math.round(share * 100)} % des joueurs actifs y ont acc\xE8s) prend l'\xE9pisode ${episode}.` },
@@ -20012,14 +20143,14 @@ function chooseNovelty(monthId, existing, access, activePlayers, r = NOVELTY_RUL
   }
   return { pick: null, reason: skipped.length > 0 ? `Nouveaut\xE9 : contenu trop peu accessible (moins de ${Math.round(minShare * 100)} %) : ${skipped.join(", ")}.` : null };
 }
-function noveltyTexts(family2, r = NOVELTY_RULES) {
+function noveltyTexts(family, r = NOVELTY_RULES) {
   var _a, _b, _c, _d;
   const d = DEFAULT_TEXTS;
   const ok = (xs, fallback) => Array.isArray(xs) && xs.some((x) => typeof x === "string" && x.trim()) ? xs.filter((x) => typeof x === "string" && x.trim()) : fallback;
   return {
     titles: ok((_a = r.texts) == null ? void 0 : _a.titles, d.titles),
     hooks: ok((_b = r.texts) == null ? void 0 : _b.hooks, d.hooks),
-    orders: ok((_d = (_c = r.texts) == null ? void 0 : _c.orders) == null ? void 0 : _d[family2], d.orders[family2])
+    orders: ok((_d = (_c = r.texts) == null ? void 0 : _c.orders) == null ? void 0 : _d[family], d.orders[family])
   };
 }
 var DEFAULT_TEXTS = structuredClone(NOVELTY_RULES.texts);
@@ -21101,7 +21232,7 @@ var PASS_THEME_OLD_IMAGES = {
   chantiers: "/assets/blog/articles/5-10/couverture.webp",
   moisson: "/assets/chronicles/2027-03-boss.webp"
 };
-var PASS_THEMES = [
+var RAW_PASS_THEMES = [
   {
     id: "maree",
     accent: "#4be8ff",
@@ -21284,6 +21415,66 @@ var PASS_THEMES = [
     rivalLines: [["Tant de r\xE9serves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos r\xE9serves la nourriront."], ["Vos greniers sont bien gard\xE9s. Pour cette saison."]]
   }
 ];
+var DEFAULT_PASS_THEMES = DEFAULT_THEME_ROTATION.map((id) => RAW_PASS_THEMES.find((t) => t.id === id)).concat(RAW_PASS_THEMES.filter((t) => !DEFAULT_THEME_ROTATION.includes(t.id))).map((t) => __spreadProps(__spreadValues({}, t), { primary: DEFAULT_THEME_PRIMARY[t.id] }));
+var PASS_THEMES = structuredClone(DEFAULT_PASS_THEMES);
+function setPassThemes(list) {
+  PASS_THEMES.splice(0, PASS_THEMES.length, ...list);
+}
+var HEX = /^#[0-9a-fA-F]{6}$/;
+var textList = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
+function validatePassCatalog(themes, entries) {
+  var _a;
+  if (!Array.isArray(themes)) return ["Th\xE8mes du passe : la section doit \xEAtre une liste."];
+  if (!Array.isArray(entries)) return ["Catalogue des saisons : la section doit \xEAtre une liste."];
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const t of themes) {
+    const label3 = `Th\xE8me du passe ${(_a = t == null ? void 0 : t.id) != null ? _a : "?"}`;
+    if (!t || typeof t.id !== "string" || !/^[A-Za-z0-9_]+$/.test(t.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (ids.has(t.id)) errors.push(`Th\xE8mes du passe : identifiant \xAB ${t.id} \xBB en double.`);
+    else ids.add(t.id);
+    if (!t) continue;
+    if (typeof t.accent !== "string" || !HEX.test(t.accent)) errors.push(`${label3} : couleur \xAB ${String(t.accent)} \xBB invalide (#rrggbb).`);
+    if (typeof t.image !== "string") errors.push(`${label3} : image manquante.`);
+    for (const k of ["mentor", "rival"]) if (!(String(t[k]) in STORY_SPEAKERS)) errors.push(`${label3} : ${k === "mentor" ? "mentor" : "rival"} \xAB ${String(t[k])} \xBB inconnu.`);
+    if (!COMMANDER_ROLES.includes(t.primary)) errors.push(`${label3} : r\xF4le principal \xAB ${String(t.primary)} \xBB inconnu.`);
+    if (!Array.isArray(t.focus) || t.focus.length === 0 || t.focus.some((k) => !isTrackedObjective(k))) errors.push(`${label3} : actions mises en avant inconnues ou absentes.`);
+    for (const k of ["beats", "rivalLines"]) {
+      const v = t[k];
+      if (!Array.isArray(v) || v.length !== 4 || !v.every(textList)) errors.push(`${label3} : ${k === "beats" ? "r\xE9pliques du mentor" : "r\xE9pliques du rival"} : quatre temps, au moins une r\xE9plique chacun.`);
+    }
+    if (t.retired !== void 0 && typeof t.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
+  }
+  const active = themes.filter((t) => t && !t.retired && typeof t.id === "string").map((t) => t.id);
+  if (active.length === 0) errors.push("Th\xE8mes du passe : au moins un th\xE8me en rotation.");
+  const entryIds = /* @__PURE__ */ new Set();
+  const slots = /* @__PURE__ */ new Set();
+  let years = 1;
+  for (const e3 of entries) {
+    const label3 = `Saison du catalogue ${(e3 == null ? void 0 : e3.name) || (e3 == null ? void 0 : e3.id) || "?"}`;
+    if (!e3 || typeof e3.id !== "string" || !/^[A-Za-z0-9_]+$/.test(e3.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (entryIds.has(e3.id)) errors.push(`Catalogue des saisons : identifiant \xAB ${e3.id} \xBB en double.`);
+    else entryIds.add(e3.id);
+    if (!e3) continue;
+    if (!ids.has(String(e3.theme))) errors.push(`${label3} : th\xE8me \xAB ${String(e3.theme)} \xBB inconnu.`);
+    if (!(Number.isInteger(e3.year) && e3.year >= 1 && e3.year <= 10)) errors.push(`${label3} : ann\xE9e enti\xE8re entre 1 et 10.`);
+    else {
+      years = Math.max(years, e3.year);
+      const slot = `${e3.theme}:${e3.year}`;
+      if (slots.has(slot)) errors.push(`${label3} : deux saisons pour \xAB ${String(e3.theme)} \xBB, ann\xE9e ${e3.year}.`);
+      slots.add(slot);
+    }
+    for (const k of ["name", "tagline", "synopsis", "scene"]) if (typeof e3[k] !== "string" || k === "name" && !e3[k].trim()) errors.push(`${label3} : \xAB ${k} \xBB manquant.`);
+    const c = e3.commander;
+    if (!c || typeof c !== "object") errors.push(`${label3} : commandant manquant.`);
+    else {
+      for (const k of ["name", "title", "lore", "look"]) if (typeof c[k] !== "string" || k === "name" && !c[k].trim()) errors.push(`${label3} : commandant, \xAB ${k} \xBB manquant.`);
+      if (!COMMANDER_ROLES.includes(c.secondary)) errors.push(`${label3} : second r\xF4le \xAB ${String(c.secondary)} \xBB inconnu.`);
+    }
+  }
+  for (const id of active) for (let y = 1; y <= years; y++) if (!slots.has(`${id}:${y}`)) errors.push(`Catalogue des saisons : aucune saison pour le th\xE8me \xAB ${id} \xBB, ann\xE9e ${y} (${years} ann\xE9es au catalogue).`);
+  return errors;
+}
 var pick3 = (rng, xs) => xs[Math.min(xs.length - 1, Math.floor(rng() * xs.length))];
 var fill2 = (t, vars) => t.replace(/\{(\w+)\}/g, (_, k) => {
   var _a;
@@ -21349,7 +21540,7 @@ function generatePassSeason(o) {
   let pointsPerTier = (_d = computed == null ? void 0 : computed.ppt) != null ? _d : g.pass.pointsPerTier;
   reasons.push(...(_e = computed == null ? void 0 : computed.reasons) != null ? _e : [...g.reasons, "Pas encore de points par jour mesur\xE9s : ajustement sur la part de joueurs qui ont fini."]);
   const focus = shuffle(rng, theme.focus);
-  reasons.push(`Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur 36).`);
+  reasons.push(`Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`);
   let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers2.length);
   const fit = fitChallenges(
     { pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" },
@@ -21472,6 +21663,10 @@ function setPassSeasons(cfg) {
   PUBLISHED.splice(0, PUBLISHED.length, ...published);
 }
 var PUBLISHED = [];
+function publishedPassSeason(seasonId) {
+  var _a;
+  return (_a = PUBLISHED.find((s) => s.id === seasonId)) != null ? _a : null;
+}
 function findPassSeason(cfg, id) {
   var _a;
   return (_a = cfg.seasons.find((s) => s.id === id)) != null ? _a : null;
@@ -21550,14 +21745,16 @@ function bannerOptions(p2) {
     }),
     // v4.1 : parrainage et passes de saison terminés.
     { id: "recruteur", label: "Recruteur", gradient: "linear-gradient(120deg,#1a1405 0%,#6b4d0e 45%,#ffd86b88 100%)", hint: "Parrainer un joueur jusqu'\xE0 Bronze I", unlocked: ((_b = (_a = p2.referral) == null ? void 0 : _a.recruits) != null ? _b : 0) > 0 },
-    ...((_d = (_c = p2.seasonPass) == null ? void 0 : _c.completed) != null ? _d : []).map((seasonId, i) => ({
-      id: `pass:${seasonId}`,
-      // v5.14 : nom et couleur du thème du catalogue pour les passes générés.
-      label: seasonId >= CATALOG_START ? `Passe \xAB ${catalogEntryFor(seasonId).name} \xBB` : `Passe ${seasonLabel(seasonId)}`,
-      gradient: seasonId >= CATALOG_START ? passThemeGradient(catalogEntryFor(seasonId).theme) : PASS_GRADIENTS[i % PASS_GRADIENTS.length],
-      hint: "Terminer le passe de saison",
-      unlocked: true
-    })),
+    ...((_d = (_c = p2.seasonPass) == null ? void 0 : _c.completed) != null ? _d : []).map((seasonId, i) => {
+      const pub = seasonId >= CATALOG_START ? publishedPassSeason(seasonId) : null;
+      return {
+        id: `pass:${seasonId}`,
+        label: seasonId >= CATALOG_START ? `Passe \xAB ${(pub == null ? void 0 : pub.theme.name) || catalogEntryFor(seasonId).name} \xBB` : `Passe ${seasonLabel(seasonId)}`,
+        gradient: seasonId >= CATALOG_START ? (pub == null ? void 0 : pub.theme.accent) ? accentGradient(pub.theme.accent) : passThemeGradient(catalogEntryFor(seasonId).theme) : PASS_GRADIENTS[i % PASS_GRADIENTS.length],
+        hint: "Terminer le passe de saison",
+        unlocked: true
+      };
+    }),
     // v5.4 : une bannière par chapitre des Chroniques terminé.
     ...chroniclesConfig().months.filter((m) => m.completion).map((m) => {
       var _a2, _b2;
@@ -21571,10 +21768,12 @@ function bannerOptions(p2) {
     })
   ];
 }
+function accentGradient(accent) {
+  return `linear-gradient(120deg,#05070f 0%,${accent}44 45%,${accent} 100%)`;
+}
 function passThemeGradient(themeId) {
   var _a, _b;
-  const accent = (_b = (_a = PASS_THEMES.find((t) => t.id === themeId)) == null ? void 0 : _a.accent) != null ? _b : "#4be8ff";
-  return `linear-gradient(120deg,#05070f 0%,${accent}44 45%,${accent} 100%)`;
+  return accentGradient((_b = (_a = PASS_THEMES.find((t) => t.id === themeId)) == null ? void 0 : _a.accent) != null ? _b : "#4be8ff");
 }
 var PASS_GRADIENTS = [
   "linear-gradient(120deg,#05101a 0%,#0e4d6b 40%,#4be8ff 70%,#a78bfa 100%)",
@@ -22338,8 +22537,8 @@ function computeGameStats(players, queues, reports, now, windowDays = 7, balance
   const families = /* @__PURE__ */ new Map();
   players.forEach((p2) => {
     var _a, _b;
-    const family2 = getRank((_a = p2.xp) != null ? _a : 0).family;
-    families.set(family2, ((_b = families.get(family2)) != null ? _b : 0) + 1);
+    const family = getRank((_a = p2.xp) != null ? _a : 0).family;
+    families.set(family, ((_b = families.get(family)) != null ? _b : 0) + 1);
   });
   const rates = players.map((p2) => {
     var _a, _b;
@@ -22600,8 +22799,8 @@ function computeBalance(players, reports, now, windowDays) {
   players.forEach((p2) => {
     var _a2, _b2;
     if (!p2.createdAtMs) return;
-    const family2 = getRank((_a2 = p2.xp) != null ? _a2 : 0).family;
-    byFamily.set(family2, [...(_b2 = byFamily.get(family2)) != null ? _b2 : [], (now - p2.createdAtMs) / DAY12]);
+    const family = getRank((_a2 = p2.xp) != null ? _a2 : 0).family;
+    byFamily.set(family, [...(_b2 = byFamily.get(family)) != null ? _b2 : [], (now - p2.createdAtMs) / DAY12]);
   });
   const rankAge = [...byFamily.entries()].map(([label3, ages]) => ({ label: label3, players: ages.length, medianDays: round1(median4(ages)) })).sort((a, b) => familyIndex(a.label) - familyIndex(b.label));
   const dom = /* @__PURE__ */ new Map();
@@ -24113,10 +24312,10 @@ var EFFECT_PRESET_RULES_META = {
     hint: "Par bar\xE8me (unit : une unit\xE9 ; group : une classe ; wide : une cat\xE9gorie ; edge : effet tr\xE8s large ; elite : unit\xE9s d'\xE9lite), valeur sugg\xE9r\xE9e pour une relique (multiplicateur du bonus de raret\xE9), une techno et un officier (par niveau). Simple aide \xE0 l'\xE9dition : aucun effet en jeu ne change."
   }
 };
-var p = (id, name, family2, effect, suggest, idea) => ({
+var p = (id, name, family, effect, suggest, idea) => ({
   id,
   name,
-  family: family2,
+  family,
   effect,
   // Barème nommé : lu à l'usage dans EFFECT_PRESET_RULES (copie) ; barème propre au préréglage : valeurs en dur.
   get suggest() {
@@ -25469,7 +25668,8 @@ function listShapeErrors(section, itemLabel, value2, defaults) {
 }
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog"];
+var NO_REMOVAL_SECTIONS = ["talents", "moduleFamilies", "moduleTemplates"];
 function withFixedUnits(units) {
   const out = units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? [...units] : [...units, KESH_HUNTER_UNIT];
   for (const e3 of ELITE_UNITS) {
@@ -25522,6 +25722,12 @@ var DEFAULT_SEASON_BOSS_RULES = __spreadValues({}, SEASON_BOSS_RULES);
 var DEFAULT_ALLIANCE_BOSS_RULES = __spreadProps(__spreadValues({}, ALLIANCE_BOSS_RULES), { bosses: DEFAULT_ALLIANCE_BOSSES.map((b) => __spreadValues({}, b)) });
 var DEFAULT_WAR_RULES = __spreadValues({}, WAR_RULES);
 function defaultGameContent() {
+  return __spreadValues(__spreadValues({}, baseDefaultContent()), structuredClone(textListDefaults()));
+}
+function textListDefaults() {
+  return { talents: DEFAULT_TALENTS, moduleFamilies: DEFAULT_MODULE_FAMILIES, moduleTemplates: DEFAULT_MODULE_TEMPLATES, passThemes: DEFAULT_PASS_THEMES, seasonCatalog: DEFAULT_SEASON_CATALOG };
+}
+function baseDefaultContent() {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
@@ -25552,8 +25758,8 @@ function removedDefaultAchievements(rules) {
   return Array.isArray(list) ? list.filter((x) => typeof x === "string") : [];
 }
 function resolveGameContent(overrides, nowMs) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb;
-  const defaults = defaultGameContent();
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K, _L, _M, _N, _O, _P, _Q, _R, _S, _T, _U, _V, _W, _X, _Y, _Z, __, _$, _aa, _ba, _ca, _da, _ea, _fa, _ga, _ha, _ia, _ja, _ka, _la, _ma, _na, _oa, _pa, _qa, _ra, _sa, _ta, _ua, _va, _wa, _xa, _ya, _za, _Aa, _Ba, _Ca, _Da, _Ea, _Fa, _Ga, _Ha, _Ia, _Ja, _Ka, _La, _Ma, _Na, _Oa, _Pa, _Qa, _Ra, _Sa, _Ta, _Ua, _Va, _Wa, _Xa, _Ya, _Za, __a, _$a, _ab, _bb, _cb, _db, _eb, _fb, _gb, _hb, _ib, _jb, _kb, _lb, _mb, _nb, _ob, _pb, _qb, _rb, _sb, _tb, _ub, _vb;
+  const defaults = __spreadValues(__spreadValues({}, baseDefaultContent()), textListDefaults());
   const content = {
     buildings: withFixedBuildings((_a = overrides.buildings) != null ? _a : defaults.buildings),
     units: withFixedUnits((_b = overrides.units) != null ? _b : defaults.units),
@@ -25571,7 +25777,15 @@ function resolveGameContent(overrides, nowMs) {
     titles: (_k = overrides.titles) != null ? _k : defaults.titles,
     worldBosses: Array.isArray(overrides.worldBosses) ? overrides.worldBosses : defaults.worldBosses,
     officers: overrides.officers && typeof overrides.officers === "object" ? overrides.officers : defaults.officers,
-    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_l = overrides.relicSettings) != null ? _l : {}), {
+    // 6.14.127 (AA9) : un élément livré absent revient ; sans section enregistrée, les anciens réglages (6.14.104) de
+    // `rules.talents.perRank` et `rules.modules.familyValues` donnent les valeurs (migrations « …-6.14.127 »).
+    talents: withDefaultTalents(overrides.talents, (_m = (_l = overrides.rules) == null ? void 0 : _l.talents) == null ? void 0 : _m.perRank),
+    moduleFamilies: withDefaultModuleFamilies(overrides.moduleFamilies, (_o = (_n = overrides.rules) == null ? void 0 : _n.modules) == null ? void 0 : _o.familyValues),
+    moduleTemplates: withDefaultModuleTemplates(overrides.moduleTemplates),
+    // 6.14.128 (AA9) : liste enregistrée telle quelle (un thème ou une saison se retire ; les passes écrits gardent leur copie).
+    passThemes: Array.isArray(overrides.passThemes) ? overrides.passThemes : defaults.passThemes,
+    seasonCatalog: Array.isArray(overrides.seasonCatalog) ? overrides.seasonCatalog : defaults.seasonCatalog,
+    relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_p = overrides.relicSettings) != null ? _p : {}), {
       rarities: Object.fromEntries(
         Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
           var _a2, _b2, _c2;
@@ -25580,18 +25794,18 @@ function resolveGameContent(overrides, nowMs) {
       )
     }),
     rules: __spreadProps(__spreadValues({
-      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_n = (_m = overrides.rules) == null ? void 0 : _m.pvp) != null ? _n : {}),
-      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_p = (_o = overrides.rules) == null ? void 0 : _o.combat) != null ? _p : {}),
-      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_r = (_q = overrides.rules) == null ? void 0 : _q.economy) != null ? _r : {}),
-      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_t = (_s = overrides.rules) == null ? void 0 : _s.fleets) != null ? _t : {}),
+      pvp: __spreadValues(__spreadValues({}, defaults.rules.pvp), (_r = (_q = overrides.rules) == null ? void 0 : _q.pvp) != null ? _r : {}),
+      combat: __spreadValues(__spreadValues({}, defaults.rules.combat), (_t = (_s = overrides.rules) == null ? void 0 : _s.combat) != null ? _t : {}),
+      economy: __spreadValues(__spreadValues({}, defaults.rules.economy), (_v = (_u = overrides.rules) == null ? void 0 : _u.economy) != null ? _v : {}),
+      fleets: __spreadValues(__spreadValues({}, defaults.rules.fleets), (_x = (_w = overrides.rules) == null ? void 0 : _w.fleets) != null ? _x : {}),
       // 6.14.125 (AA7) : une classe livrée absente de la liste enregistrée revient (des joueurs l'ont peut-être choisie).
-      classes: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.classes), (_v = (_u = overrides.rules) == null ? void 0 : _u.classes) != null ? _v : {}), { defs: withDefaultClasses((_y = (_x = (_w = overrides.rules) == null ? void 0 : _w.classes) == null ? void 0 : _x.defs) != null ? _y : defaults.rules.classes.defs) }),
-      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_A = (_z = overrides.rules) == null ? void 0 : _z.colonies) != null ? _A : {}),
-      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_C = (_B = overrides.rules) == null ? void 0 : _B.colonyRoutes) != null ? _C : {}),
-      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_E = (_D = overrides.rules) == null ? void 0 : _D.spy) != null ? _E : {}),
-      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_G = (_F = overrides.rules) == null ? void 0 : _F.debris) != null ? _G : {}),
-      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_I = (_H = overrides.rules) == null ? void 0 : _H.patrol) != null ? _I : {}),
-      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_K = (_J = overrides.rules) == null ? void 0 : _J.events) != null ? _K : {}),
+      classes: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.classes), (_z = (_y = overrides.rules) == null ? void 0 : _y.classes) != null ? _z : {}), { defs: withDefaultClasses((_C = (_B = (_A = overrides.rules) == null ? void 0 : _A.classes) == null ? void 0 : _B.defs) != null ? _C : defaults.rules.classes.defs) }),
+      colonies: __spreadValues(__spreadValues({}, defaults.rules.colonies), (_E = (_D = overrides.rules) == null ? void 0 : _D.colonies) != null ? _E : {}),
+      colonyRoutes: __spreadValues(__spreadValues({}, defaults.rules.colonyRoutes), (_G = (_F = overrides.rules) == null ? void 0 : _F.colonyRoutes) != null ? _G : {}),
+      spy: __spreadValues(__spreadValues({}, defaults.rules.spy), (_I = (_H = overrides.rules) == null ? void 0 : _H.spy) != null ? _I : {}),
+      debris: __spreadValues(__spreadValues({}, defaults.rules.debris), (_K = (_J = overrides.rules) == null ? void 0 : _J.debris) != null ? _K : {}),
+      patrol: __spreadValues(__spreadValues({}, defaults.rules.patrol), (_M = (_L = overrides.rules) == null ? void 0 : _L.patrol) != null ? _M : {}),
+      events: __spreadValues(__spreadValues({}, defaults.rules.events), (_O = (_N = overrides.rules) == null ? void 0 : _N.events) != null ? _O : {}),
       seasons: (() => {
         var _a2, _b2, _d2, _e2, _f2;
         const o = (_b2 = (_a2 = overrides.rules) == null ? void 0 : _a2.seasons) != null ? _b2 : {};
@@ -25607,16 +25821,16 @@ function resolveGameContent(overrides, nowMs) {
         const ids = new Set(((_c2 = merged.researches) != null ? _c2 : []).map((r) => r.id));
         return __spreadProps(__spreadValues({}, merged), { researches: [...(_d2 = merged.researches) != null ? _d2 : [], ...defaults.rules.alliances.researches.filter((r) => !ids.has(r.id))] });
       })(),
-      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_M = (_L = overrides.rules) == null ? void 0 : _L.pirates) != null ? _M : {}),
-      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_O = (_N = overrides.rules) == null ? void 0 : _N.market) != null ? _O : {}),
-      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_Q = (_P = overrides.rules) == null ? void 0 : _P.expeditions) != null ? _Q : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_T = (_S = (_R = overrides.rules) == null ? void 0 : _R.expeditions) == null ? void 0 : _S.weights) != null ? _T : {})
+      pirates: __spreadValues(__spreadValues({}, defaults.rules.pirates), (_Q = (_P = overrides.rules) == null ? void 0 : _P.pirates) != null ? _Q : {}),
+      market: __spreadValues(__spreadValues({}, defaults.rules.market), (_S = (_R = overrides.rules) == null ? void 0 : _R.market) != null ? _S : {}),
+      expeditions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.expeditions), (_U = (_T = overrides.rules) == null ? void 0 : _T.expeditions) != null ? _U : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.expeditions.weights), (_X = (_W = (_V = overrides.rules) == null ? void 0 : _V.expeditions) == null ? void 0 : _W.weights) != null ? _X : {})
       }),
-      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_V = (_U = overrides.rules) == null ? void 0 : _U.leviathan) != null ? _V : {}),
-      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_X = (_W = overrides.rules) == null ? void 0 : _W.seasonBoss) != null ? _X : {}),
-      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.allianceBoss) != null ? _Z : {}),
-      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_$ = (__ = overrides.rules) == null ? void 0 : __.wars) != null ? _$ : {}),
-      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.catchup) != null ? _ba : {}),
+      leviathan: __spreadValues(__spreadValues({}, defaults.rules.leviathan), (_Z = (_Y = overrides.rules) == null ? void 0 : _Y.leviathan) != null ? _Z : {}),
+      seasonBoss: __spreadValues(__spreadValues({}, defaults.rules.seasonBoss), (_$ = (__ = overrides.rules) == null ? void 0 : __.seasonBoss) != null ? _$ : {}),
+      allianceBoss: __spreadValues(__spreadValues({}, defaults.rules.allianceBoss), (_ba = (_aa = overrides.rules) == null ? void 0 : _aa.allianceBoss) != null ? _ba : {}),
+      wars: __spreadValues(__spreadValues({}, defaults.rules.wars), (_da = (_ca = overrides.rules) == null ? void 0 : _ca.wars) != null ? _da : {}),
+      catchup: __spreadValues(__spreadValues({}, defaults.rules.catchup), (_fa = (_ea = overrides.rules) == null ? void 0 : _ea.catchup) != null ? _fa : {}),
       // 6.14.125 (AA7, AA-6) : liste des mutateurs (`defs`) ; des règles enregistrées avant, avec l'ancien `values`, donnent les
       // mutateurs livrés à ces valeurs (repli à la lecture ; migration « mutators-defs-6.14.125 »).
       mutators: (() => {
@@ -25626,39 +25840,39 @@ function resolveGameContent(overrides, nowMs) {
         void _values;
         return __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.mutators), rest), { overrides: __spreadValues({}, (_d2 = o.overrides) != null ? _d2 : {}), defs: structuredClone(mutatorDefsOf(o)) });
       })(),
-      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_da = (_ca = overrides.rules) == null ? void 0 : _ca.territoryWar) != null ? _da : {}), {
-        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ga = (_fa = (_ea = overrides.rules) == null ? void 0 : _ea.territoryWar) == null ? void 0 : _fa.points) != null ? _ga : {}),
-        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_ja = (_ia = (_ha = overrides.rules) == null ? void 0 : _ha.territoryWar) == null ? void 0 : _ia.rewards) != null ? _ja : {})
+      territoryWar: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.territoryWar), (_ha = (_ga = overrides.rules) == null ? void 0 : _ga.territoryWar) != null ? _ha : {}), {
+        points: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.points), (_ka = (_ja = (_ia = overrides.rules) == null ? void 0 : _ia.territoryWar) == null ? void 0 : _ja.points) != null ? _ka : {}),
+        rewards: __spreadValues(__spreadValues({}, defaults.rules.territoryWar.rewards), (_na = (_ma = (_la = overrides.rules) == null ? void 0 : _la.territoryWar) == null ? void 0 : _ma.rewards) != null ? _na : {})
       }),
-      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_la = (_ka = overrides.rules) == null ? void 0 : _ka.xpTiers) != null ? _la : {}), {
-        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_oa = (_na = (_ma = overrides.rules) == null ? void 0 : _ma.xpTiers) == null ? void 0 : _na.tiers) != null ? _oa : {}),
-        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_ra = (_qa = (_pa = overrides.rules) == null ? void 0 : _pa.xpTiers) == null ? void 0 : _qa.multipliers) != null ? _ra : {})
+      xpTiers: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.xpTiers), (_pa = (_oa = overrides.rules) == null ? void 0 : _oa.xpTiers) != null ? _pa : {}), {
+        tiers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.tiers), (_sa = (_ra = (_qa = overrides.rules) == null ? void 0 : _qa.xpTiers) == null ? void 0 : _ra.tiers) != null ? _sa : {}),
+        multipliers: __spreadValues(__spreadValues({}, defaults.rules.xpTiers.multipliers), (_va = (_ua = (_ta = overrides.rules) == null ? void 0 : _ta.xpTiers) == null ? void 0 : _ua.multipliers) != null ? _va : {})
       }),
-      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_ta = (_sa = overrides.rules) == null ? void 0 : _sa.passGen) != null ? _ta : {}), {
-        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_wa = (_va = (_ua = overrides.rules) == null ? void 0 : _ua.passGen) == null ? void 0 : _va.values) != null ? _wa : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_za = (_ya = (_xa = overrides.rules) == null ? void 0 : _xa.passGen) == null ? void 0 : _ya.caps) != null ? _za : {}),
-        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Ca = (_Ba = (_Aa = overrides.rules) == null ? void 0 : _Aa.passGen) == null ? void 0 : _Ba.weights) != null ? _Ca : {}),
-        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Fa = (_Ea = (_Da = overrides.rules) == null ? void 0 : _Da.passGen) == null ? void 0 : _Ea.challengeWeights) != null ? _Fa : {})
+      passGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.passGen), (_xa = (_wa = overrides.rules) == null ? void 0 : _wa.passGen) != null ? _xa : {}), {
+        values: __spreadValues(__spreadValues({}, defaults.rules.passGen.values), (_Aa = (_za = (_ya = overrides.rules) == null ? void 0 : _ya.passGen) == null ? void 0 : _za.values) != null ? _Aa : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.passGen.caps), (_Da = (_Ca = (_Ba = overrides.rules) == null ? void 0 : _Ba.passGen) == null ? void 0 : _Ca.caps) != null ? _Da : {}),
+        weights: __spreadValues(__spreadValues({}, defaults.rules.passGen.weights), (_Ga = (_Fa = (_Ea = overrides.rules) == null ? void 0 : _Ea.passGen) == null ? void 0 : _Fa.weights) != null ? _Ga : {}),
+        challengeWeights: __spreadValues(__spreadValues({}, defaults.rules.passGen.challengeWeights), (_Ja = (_Ia = (_Ha = overrides.rules) == null ? void 0 : _Ha.passGen) == null ? void 0 : _Ia.challengeWeights) != null ? _Ja : {})
       }),
-      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_Ha = (_Ga = overrides.rules) == null ? void 0 : _Ga.chronicleGen) != null ? _Ha : {}), {
-        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Ka = (_Ja = (_Ia = overrides.rules) == null ? void 0 : _Ia.chronicleGen) == null ? void 0 : _Ja.weights) != null ? _Ka : {}),
-        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Na = (_Ma = (_La = overrides.rules) == null ? void 0 : _La.chronicleGen) == null ? void 0 : _Ma.caps) != null ? _Na : {}),
-        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Qa = (_Pa = (_Oa = overrides.rules) == null ? void 0 : _Oa.chronicleGen) == null ? void 0 : _Pa.objectiveWeights) != null ? _Qa : {}),
-        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Ta = (_Sa = (_Ra = overrides.rules) == null ? void 0 : _Ra.chronicleGen) == null ? void 0 : _Sa.themeArchetypes) != null ? _Ta : {})
+      chronicleGen: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.chronicleGen), (_La = (_Ka = overrides.rules) == null ? void 0 : _Ka.chronicleGen) != null ? _La : {}), {
+        weights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.weights), (_Oa = (_Na = (_Ma = overrides.rules) == null ? void 0 : _Ma.chronicleGen) == null ? void 0 : _Na.weights) != null ? _Oa : {}),
+        caps: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.caps), (_Ra = (_Qa = (_Pa = overrides.rules) == null ? void 0 : _Pa.chronicleGen) == null ? void 0 : _Qa.caps) != null ? _Ra : {}),
+        objectiveWeights: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.objectiveWeights), (_Ua = (_Ta = (_Sa = overrides.rules) == null ? void 0 : _Sa.chronicleGen) == null ? void 0 : _Ta.objectiveWeights) != null ? _Ua : {}),
+        themeArchetypes: __spreadValues(__spreadValues({}, defaults.rules.chronicleGen.themeArchetypes), (_Xa = (_Wa = (_Va = overrides.rules) == null ? void 0 : _Va.chronicleGen) == null ? void 0 : _Wa.themeArchetypes) != null ? _Xa : {})
       }),
-      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Va = (_Ua = overrides.rules) == null ? void 0 : _Ua.auctions) != null ? _Va : {}), {
-        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_Ya = (_Xa = (_Wa = overrides.rules) == null ? void 0 : _Wa.auctions) == null ? void 0 : _Xa.minStart) != null ? _Ya : {})
+      auctions: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.auctions), (_Za = (_Ya = overrides.rules) == null ? void 0 : _Ya.auctions) != null ? _Za : {}), {
+        minStart: __spreadValues(__spreadValues({}, defaults.rules.auctions.minStart), (_ab = (_$a = (__a = overrides.rules) == null ? void 0 : __a.auctions) == null ? void 0 : _$a.minStart) != null ? _ab : {})
       }),
-      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (__a = (_Za = overrides.rules) == null ? void 0 : _Za.tradeContracts) != null ? __a : {}),
-      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_ab = (_$a = overrides.rules) == null ? void 0 : _$a.gifts) != null ? _ab : {}),
-      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_cb = (_bb = overrides.rules) == null ? void 0 : _bb.contests) != null ? _cb : {}),
-      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_eb = (_db = overrides.rules) == null ? void 0 : _db.tournamentPoints) != null ? _eb : {}),
+      tradeContracts: __spreadValues(__spreadValues({}, defaults.rules.tradeContracts), (_cb = (_bb = overrides.rules) == null ? void 0 : _bb.tradeContracts) != null ? _cb : {}),
+      gifts: __spreadValues(__spreadValues({}, defaults.rules.gifts), (_eb = (_db = overrides.rules) == null ? void 0 : _db.gifts) != null ? _eb : {}),
+      contests: __spreadValues(__spreadValues({}, defaults.rules.contests), (_gb = (_fb = overrides.rules) == null ? void 0 : _fb.contests) != null ? _gb : {}),
+      tournamentPoints: __spreadValues(__spreadValues({}, defaults.rules.tournamentPoints), (_ib = (_hb = overrides.rules) == null ? void 0 : _hb.tournamentPoints) != null ? _ib : {}),
       // 6.14.104 (AA3) : champs simples ajoutés (sac de jetons) gardés ; sous-objets fusionnés champ par champ.
-      weeklyStock: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.weeklyStock), (_gb = (_fb = overrides.rules) == null ? void 0 : _fb.weeklyStock) != null ? _gb : {}), {
-        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_jb = (_ib = (_hb = overrides.rules) == null ? void 0 : _hb.weeklyStock) == null ? void 0 : _ib.prices) != null ? _jb : {}),
-        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_mb = (_lb = (_kb = overrides.rules) == null ? void 0 : _kb.weeklyStock) == null ? void 0 : _lb.quantities) != null ? _mb : {})
+      weeklyStock: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.weeklyStock), (_kb = (_jb = overrides.rules) == null ? void 0 : _jb.weeklyStock) != null ? _kb : {}), {
+        prices: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.prices), (_nb = (_mb = (_lb = overrides.rules) == null ? void 0 : _lb.weeklyStock) == null ? void 0 : _mb.prices) != null ? _nb : {}),
+        quantities: __spreadValues(__spreadValues({}, defaults.rules.weeklyStock.quantities), (_qb = (_pb = (_ob = overrides.rules) == null ? void 0 : _ob.weeklyStock) == null ? void 0 : _pb.quantities) != null ? _qb : {})
       }),
-      patrons: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.patrons), (_ob = (_nb = overrides.rules) == null ? void 0 : _nb.patrons) != null ? _ob : {}), { tiers: __spreadValues(__spreadValues({}, defaults.rules.patrons.tiers), (_rb = (_qb = (_pb = overrides.rules) == null ? void 0 : _pb.patrons) == null ? void 0 : _qb.tiers) != null ? _rb : {}) })
+      patrons: __spreadProps(__spreadValues(__spreadValues({}, defaults.rules.patrons), (_sb = (_rb = overrides.rules) == null ? void 0 : _rb.patrons) != null ? _sb : {}), { tiers: __spreadValues(__spreadValues({}, defaults.rules.patrons.tiers), (_vb = (_ub = (_tb = overrides.rules) == null ? void 0 : _tb.patrons) == null ? void 0 : _ub.tiers) != null ? _vb : {}) })
     }, Object.fromEntries(
       Object.keys(REGISTERED_RULES).map((k) => {
         var _a2;
@@ -25674,14 +25888,16 @@ function resolveGameContent(overrides, nowMs) {
       })()
     })
   };
+  delete content.rules.talents.perRank;
+  delete content.rules.modules.familyValues;
   return nowMs === void 0 ? content : applyRhythmSwitch(content, defaults.buildings, nowMs);
 }
 setTrackedContentResolver({
-  name: (family2, id) => {
+  name: (family, id) => {
     var _a, _b, _c, _d;
-    return (_d = family2 === "unit" ? (_a = findUnit(id)) == null ? void 0 : _a.name : family2 === "research" ? (_b = findTech(id)) == null ? void 0 : _b.nom : (_c = findBuilding(id)) == null ? void 0 : _c.name) != null ? _d : null;
+    return (_d = family === "unit" ? (_a = findUnit(id)) == null ? void 0 : _a.name : family === "research" ? (_b = findTech(id)) == null ? void 0 : _b.nom : (_c = findBuilding(id)) == null ? void 0 : _c.name) != null ? _d : null;
   },
-  ids: (family2) => (family2 === "unit" ? UNITS : family2 === "research" ? TECHNOLOGIES : BUILDINGS).map((x) => x.id)
+  ids: (family) => (family === "unit" ? UNITS : family === "research" ? TECHNOLOGIES : BUILDINGS).map((x) => x.id)
 });
 function applyGameContent(overrides, nowMs) {
   var _a, _b;
@@ -25693,6 +25909,10 @@ function applyGameContent(overrides, nowMs) {
   setMissions(content.missions);
   setFactions(content.factions);
   setRanks(content.ranks);
+  setTalents(content.talents);
+  setModuleContent(content.moduleFamilies, content.moduleTemplates);
+  setPassThemes(content.passThemes);
+  setSeasonCatalog(content.passThemes, content.seasonCatalog);
   setOfficers(content.officers);
   setWorldBosses(content.worldBosses);
   setAchievements(content.achievements);
@@ -25908,19 +26128,11 @@ function validateFixedListNumbers(merged) {
   const num13 = (v) => typeof v === "number" && Number.isFinite(v) ? v : NaN;
   const entries = (o) => Object.entries(o && typeof o === "object" ? o : {});
   for (const [id, v] of entries(merged.bountyShop.prices)) if (!(num13(v) >= 1 && num13(v) <= 1e5)) errors.push(`Comptoir de la Ruche : prix de \xAB ${id} \xBB entre 1 et 100 000 Ambre.`);
-  for (const [id, v] of entries(merged.talents.perRank)) {
-    const max = id === "reseau" ? 2 : 0.25;
-    if (!(num13(v) >= 0 && num13(v) <= max)) errors.push(`Talents d'Ascension : valeur par rang de \xAB ${id} \xBB entre 0 et ${String(max).replace(".", ",")}.`);
-  }
   for (const [id, f] of entries(merged.colonySpec.specs))
     for (const [k, v] of entries(f)) if (!(num13(v) >= 0.1 && num13(v) <= 5)) errors.push(`Colonies : sp\xE9cialisation \xAB ${id} \xBB, multiplicateur \xAB ${k} \xBB entre 0,1 et 5.`);
   const weights = entries(merged.modules.rarityWeights);
   if (weights.some(([, v]) => !(num13(v) >= 0)) || !(weights.reduce((a, [, v]) => a + (num13(v) || 0), 0) > 0)) errors.push("Modules de vaisseaux : poids de raret\xE9 positifs, au moins un non nul.");
   for (const [id, v] of entries(merged.modules.recycleAmber)) if (!(num13(v) >= 0 && num13(v) <= 1e4)) errors.push(`Modules de vaisseaux : Ambre de recyclage \xAB ${id} \xBB entre 0 et 10 000.`);
-  for (const [fam, vals] of entries(merged.modules.familyValues)) {
-    const max = fam === "voile" ? 20 : 1;
-    for (const [r, v] of entries(vals)) if (!(num13(v) >= 0 && num13(v) <= max)) errors.push(`Modules de vaisseaux : valeur \xAB ${fam} / ${r} \xBB entre 0 et ${max}.`);
-  }
   const tiers2 = entries(merged.leagues.tiers);
   for (const [id, t] of tiers2) {
     if (!(Number.isInteger(num13(t == null ? void 0 : t.tokens)) && num13(t == null ? void 0 : t.tokens) >= 0 && num13(t == null ? void 0 : t.tokens) <= 100)) errors.push(`Divisions : jetons de \xAB ${id} \xBB entiers, entre 0 et 100.`);
@@ -25992,7 +26204,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
   const errors = [];
   const LIST_SECTIONS = [["buildings", "B\xE2timents"], ["units", "Unit\xE9s"], ["technologies", "Technologies"], ["missions", "Missions"], ["relics", "Reliques"]];
   for (const [key, label3] of LIST_SECTIONS) if (content[key] !== void 0 && !Array.isArray(content[key])) errors.push(`${label3} : la section doit \xEAtre une liste.`);
@@ -26118,6 +26330,9 @@ function validateGameContent(content) {
   errors.push(...validateTitles((_u = content.titles) != null ? _u : []));
   errors.push(...validateWorldBosses(content.worldBosses));
   errors.push(...validateOfficers(content.officers));
+  errors.push(...validateTalents((_v = content.talents) != null ? _v : DEFAULT_TALENTS, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
+  errors.push(...validateModuleContent((_w = content.moduleFamilies) != null ? _w : DEFAULT_MODULE_FAMILIES, (_x = content.moduleTemplates) != null ? _x : DEFAULT_MODULE_TEMPLATES));
+  errors.push(...validatePassCatalog((_y = content.passThemes) != null ? _y : DEFAULT_PASS_THEMES, (_z = content.seasonCatalog) != null ? _z : DEFAULT_SEASON_CATALOG));
   return [...new Set(errors)];
 }
 var CONTENT_SECTION_LABELS = {
@@ -26137,7 +26352,12 @@ var CONTENT_SECTION_LABELS = {
   relicSettings: "R\xE9glages des reliques",
   titles: "Titres",
   worldBosses: "Boss mondiaux",
-  officers: "Officiers"
+  officers: "Officiers",
+  talents: "Talents",
+  moduleFamilies: "Familles de modules",
+  moduleTemplates: "Mod\xE8les de modules",
+  passThemes: "Th\xE8mes du passe",
+  seasonCatalog: "Catalogue des saisons"
 };
 function contentSectionErrors(section, data, stored) {
   var _a;
@@ -26158,7 +26378,16 @@ function contentSectionErrors(section, data, stored) {
   if (Array.isArray(defaultValue) !== Array.isArray(data)) return [`${label3} : la section doit \xEAtre ${Array.isArray(defaultValue) ? "une liste" : "un objet"}.`];
   const before = check2(stored);
   const after = check2(__spreadProps(__spreadValues({}, stored), { [section]: data }));
-  return after.filter((e3) => !before.includes(e3));
+  return [...removedIdErrors(section, data, stored), ...after.filter((e3) => !before.includes(e3))];
+}
+function removedIdErrors(section, data, stored) {
+  var _a;
+  if (!NO_REMOVAL_SECTIONS.includes(section) || !Array.isArray(data)) return [];
+  const before = stored[section];
+  if (!Array.isArray(before)) return [];
+  const kept = new Set(data.map((x) => x == null ? void 0 : x.id));
+  const label3 = (_a = CONTENT_SECTION_LABELS[section]) != null ? _a : section;
+  return before.map((x) => x == null ? void 0 : x.id).filter((id) => typeof id === "string" && !kept.has(id)).map((id) => `${label3} : \xAB ${id} \xBB est enregistr\xE9 et peut \xEAtre d\xE9tenu par des joueurs : retire-le du jeu (case \xAB Retir\xE9 \xBB) au lieu de le supprimer.`);
 }
 
 // src/game/staff.ts

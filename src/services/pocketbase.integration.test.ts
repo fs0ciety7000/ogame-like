@@ -3988,6 +3988,92 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.127 (AA9) : un talent ajouté dans l'admin s'apprend et agit côté serveur ; la garde refuse un élément invalide ou supprimé", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keepTalents = await cfg("talents");
+    const keepTemplates = await cfg("moduleTemplates");
+    const before = await snap(bId);
+    let fleetId = "";
+    const write = async (key: string, data: unknown) => {
+      const cur = await cfg(key);
+      if (cur) return admin.collection("game_config").update(cur.id, { data });
+      return admin.collection("game_config").create({ key, data });
+    };
+    try {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      const d = defaultGameContent();
+      const commerce = { id: "commerce", branch: "logistique", name: "Commerce", description: "Soute des flottes.", effects: [{ stat: "cargo", value: 0.25 }] };
+      // Garde du serveur : un talent invalide (branche inconnue) est refusé, rien n'est écrit.
+      await expect(write("talents", [...d.talents, { ...commerce, branch: "magie" }])).rejects.toMatchObject({ status: 400 });
+      await write("talents", [...d.talents, commerce]);
+      // Un talent enregistré ne se supprime pas (des joueurs y ont des rangs) : on le retire.
+      await expect(write("talents", d.talents)).rejects.toMatchObject({ status: 400 });
+      // Un modèle de module d'une famille inconnue est refusé.
+      await expect(write("moduleTemplates", [...d.moduleTemplates, { id: "pince", name: "Pince", family: "grappin", description: "" }])).rejects.toMatchObject({ status: 400 });
+      await admin.collection("players").update(bId, { ascensions: 1, talents: { ranks: {} }, empireClass: null, allianceResearch: {}, units: { drone_recuperateur: { level: 1, count: 2 } }, vacation: null });
+      // Le serveur reconnaît le talent ajouté : deux rangs = +50 % de soute.
+      await ps.learnTalent("commerce");
+      await ps.learnTalent("commerce");
+      expect(((await admin.collection("players").getOne(bId)).talents as { ranks: Record<string, number> }).ranks.commerce).toBe(2);
+      const field = await admin.collection("debris_fields").getOne(aId).catch(() => null);
+      if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000 });
+      else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
+      const sent = await ps.sendFleet(aId, { drone_recuperateur: 2 }, "recycle");
+      fleetId = sent.id;
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      // Soute de 2 drones : 20, +50 % (talent « Commerce », rang 2) = 30.
+      const loot = (await pb.collection("fleets").getOne(sent.id)).loot as Record<string, number>;
+      expect((loot.scrap ?? 0) + (loot.energy ?? 0)).toBe(30);
+      // Retiré : il ne s'apprend plus (rangs gardés).
+      await write("talents", [...d.talents, { ...commerce, retired: true }]);
+      await admin.collection("players").update(bId, { ascensions: 2 });
+      await expect(ps.learnTalent("commerce")).rejects.toThrow(/n'est plus proposé/);
+    } finally {
+      if (fleetId) await admin.collection("fleets").delete(fleetId).catch(() => {});
+      await admin.collection("debris_fields").delete(aId).catch(() => {});
+      for (const [key, keep] of [["talents", keepTalents], ["moduleTemplates", keepTemplates]] as const) {
+        // Supprimer puis recréer : remettre l'ancienne liste par une mise à jour retirerait « commerce » (refusé par la garde).
+        const cur = await cfg(key);
+        if (cur) await admin.collection("game_config").delete(cur.id);
+        if (keep) await admin.collection("game_config").create({ key, data: keep.data });
+      }
+      await admin.collection("players").update(bId, { ascensions: before.ascensions ?? 0, talents: before.talents ?? {}, empireClass: before.empireClass ?? null, allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
+    }
+  });
+
+  it("6.14.128 (AA9) : un thème du passe ajouté dans l'admin entre dans la rotation du générateur ; la garde refuse un thème sans saisons", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { passThemes: await cfg("passThemes"), seasonCatalog: await cfg("seasonCatalog"), passSeasons: await cfg("passSeasons") };
+    const write = async (key: string, data: unknown) => {
+      const cur = await cfg(key);
+      if (cur) return admin.collection("game_config").update(cur.id, { data });
+      return admin.collection("game_config").create({ key, data });
+    };
+    try {
+      const d = defaultGameContent();
+      const theme = { ...d.passThemes[0], id: "nebuleuse", accent: "#33ccaa", image: "/assets/pass/theme-nebuleuse.webp", primary: "engineer" };
+      const entries = [1, 2, 3].map((year) => ({ ...d.seasonCatalog[0], id: `nebuleuse_${year}`, theme: "nebuleuse", year, name: `Nébuleuse ${year}`, commander: { ...d.seasonCatalog[0].commander, name: `Ondine ${year}` } }));
+      // Garde : un thème en rotation sans ses trois saisons est refusé.
+      await expect(write("passThemes", [...d.passThemes, theme])).rejects.toMatchObject({ status: 400 });
+      // Thème d'abord retiré, puis ses saisons, puis il entre dans la rotation (13e thème : novembre 2027).
+      await write("passThemes", [...d.passThemes, { ...theme, retired: true }]);
+      await write("seasonCatalog", [...d.seasonCatalog, ...entries]);
+      await write("passThemes", [...d.passThemes, theme]);
+      const res = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeason", monthId: "2027-11" } });
+      expect(res.season.theme).toMatchObject({ id: "nebuleuse", name: "Nébuleuse 1", accent: "#33ccaa" });
+      expect(res.season.commander).toMatchObject({ name: "Ondine 1", primary: "engineer" });
+    } finally {
+      for (const [key, rec] of Object.entries(keep)) {
+        const cur = await cfg(key);
+        if (cur) await admin.collection("game_config").delete(cur.id);
+        if (rec) await admin.collection("game_config").create({ key, data: rec.data });
+      }
+    }
+  });
+
   it("6.14.126 (AA8) : retour arrière d'un seul groupe de règles, gardé par la validation du contenu", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
     const keep = await cfg("rules");
