@@ -86,8 +86,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 63b | PB-L1 | Paliers : groupe `buildingTiers` et section d'admin, source d'effets « bâtiment », choix du joueur (24 h), ligne « Paliers » des cartes, invariant | M | livré (6.14.142) |
 | 63c | PB-L2 | Paliers de l'entrepôt (ressource prioritaire, tampon de 2 h, Négoce ou Convoi, abri de 12 h) | M | livré (6.14.143) |
 | 63d | PB-L3 | Paliers de l'Atelier (Cale sèche affichée, réparation éclair, classe spécialisée, accélération de 2 h par jour) | M | livré (6.14.144) |
-| 63e | PB-L4 | Paliers des hangars (baies modulaires, file d'attente et I2 réécrit, spécialisations, signatures ; mesure JcJ) | L | à faire |
-| 63f | PB-L5 | Paliers : chaîne de contenu (succès « Architecte » et « Bâtisseur avisé », Codex, Formules, Ctrl+K, changelog, billet, images) | S | à faire |
+| 63e | PB-L4 | Paliers des hangars (baies modulaires, file d'attente et I2 réécrit, spécialisations, signatures ; mesure JcJ) | L | livré (6.14.145) |
+| 63f | PB-L5 | Paliers : chaîne de contenu (succès « Architecte » et « Bâtisseur avisé », Codex, Formules, Ctrl+K, changelog, billet, images) | S | livré (6.14.146) |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
 | 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | livré (6.14.97) |
 | 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | livré (6.14.98) |

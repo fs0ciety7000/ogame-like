@@ -6,7 +6,7 @@ import { findTech } from "@/game/technologies";
 import { findUnit, getUnitBuildTime } from "@/game/units";
 import { playerMoon } from "@/game/moon";
 import { prestigeState } from "@/game/prestige";
-import type { PlayerState, QueuesState } from "@/types/game";
+import type { PlayerState, QueuesState, UnitQueueEntry } from "@/types/game";
 import type { Fleet } from "@/game/fleets";
 
 /* =====================================================
@@ -87,8 +87,10 @@ export function upcomingEvents(
 
   // Files d'unités : seule la première a une date de fin, les suivantes
   // s'enchaînent. On annonce la fin de toute la file.
-  for (const [category, queue] of Object.entries(queues.unitQueues ?? {})) {
-    if (!queue || queue.length === 0) continue;
+  for (const [category, all] of Object.entries(queues.unitQueues ?? {})) {
+    // 6.14.145 (PB-L4) : une commande en attente d'une place n'a pas de date de fin.
+    const queue = ((all ?? []) as UnitQueueEntry[]).filter((e) => !e.wait);
+    if (queue.length === 0) continue;
     let end = queue[0].endTime ?? now;
     for (const item of queue.slice(1)) {
       const unit = findUnit(item.unitId);

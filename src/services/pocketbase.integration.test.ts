@@ -3558,7 +3558,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       }
       await admin.collection("queues").update(bId, { buildingUpgrades: {} });
     }
-  });
+    // 6.14.145 : délai explicite. À 5 s (défaut), le test expirait pendant ses réécritures du contenu : son `finally` tournait encore
+    // pendant le test suivant (« 6.14.88 (RL-3) ») et vidait la file de chantiers qu'il venait de lancer (échec en cascade).
+  }, 30_000);
 
   it("6.14.88 (RL-3) : la bascule du rythme prend effet à sa date sur le serveur ; un chantier lancé avant garde sa fin", async () => {
     await ensureAB();
@@ -4437,6 +4439,79 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { buildings: before.buildings, units: before.units, workshop: null, buildingChoices: null, testMode: before.testMode ?? false });
     }
   }, 30_000);
+
+  it("6.14.145 (PB-L4) : paliers des hangars — file d'attente et capacité tenues par le serveur, baies, spécialisation, Pont de lancement", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const qBefore = await admin.collection("queues").getOne(bId).catch(() => null);
+    const created: string[] = [];
+    const placesOf = (units: Record<string, { count: number }>, cat: string) =>
+      Object.entries(units ?? {}).reduce((a, [id, u]) => a + (findUnit(id)?.category === cat ? (u?.count ?? 0) * (findUnit(id)?.hangarSpace ?? 1) : 0), 0);
+    try {
+      // Vols de B : ils comptent dans le hangar (I8) ; aucun pour ce test.
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status!="done"` })) await admin.collection("fleets").delete(f.id);
+      await admin.collection("queues").update(bId, { unitQueues: { attack: [], defense: [] } });
+      await admin.collection("players").update(bId, {
+        buildings: { ...before.buildings, hangar_attaque: { level: 10, unlocked: true }, hangar_defense: { level: 15, unlocked: true } },
+        units: { chasseur: { level: 1, count: 9990 }, roquette: { level: 1, count: 0 } },
+        resources: { ...RICH, scrap: 1e9, energy: 1e9 },
+        techLevels: {},
+        workshop: null,
+        buildingChoices: null,
+        vacation: null,
+        testMode: false,
+      });
+      // File d'attente (palier 10) : 20 places libres, 10 chasseurs démarrent, 20 attendent (payés), rien au-delà de la capacité.
+      const out = (await ps.enqueueUnitBuild(bId, "chasseur", 30)) as { waiting: number; started: number };
+      expect(out).toEqual({ waiting: 20, started: 10 });
+      let q = await admin.collection("queues").getOne(bId);
+      const attack = q.unitQueues.attack as { unitId: string; endTime: number | null; wait?: boolean }[];
+      expect(attack.filter((e) => !e.wait)).toHaveLength(10);
+      expect(attack.filter((e) => e.wait)).toHaveLength(20);
+      expect(attack.every((e, i) => !e.wait || attack.slice(i).every((x) => x.wait))).toBe(true);
+      // Joueur « hors ligne » : 100 chasseurs perdus libèrent 200 places ; la tâche des 5 minutes démarre la file.
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 9890 }, roquette: { level: 1, count: 0 } } });
+      await admin.send("/api/cosmic/admin/run-task", { method: "POST", body: { name: "cosmic_hangar_queue" } });
+      q = await admin.collection("queues").getOne(bId);
+      expect((q.unitQueues.attack as { wait?: boolean }[]).filter((e) => e.wait)).toHaveLength(0);
+      let p = await snap(bId);
+      const queued = (q.unitQueues.attack as { unitId: string }[]).reduce((a, e) => a + (findUnit(e.unitId)?.hangarSpace ?? 1), 0);
+      expect(placesOf(p.units, "attack") + queued).toBeLessThanOrEqual(20_000);
+      // Écriture directe de la file par le client : refusée (le serveur fait autorité).
+      await expect(pb.collection("queues").update(bId, { unitQueues: { attack: [], defense: [] } })).rejects.toBeTruthy();
+      // Baies modulaires (palier 5) : prêter des places du hangar d'attaque plein est refusé (surcharge) ; celui de défense, accepté.
+      await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 9990 }, roquette: { level: 1, count: 0 } } });
+      await admin.collection("queues").update(bId, { unitQueues: { attack: [], defense: [] } });
+      await expect(ps.chooseBuildingTier("hangarAttack.lend", "lend")).rejects.toThrow(/surcharge/);
+      await ps.chooseBuildingTier("hangarDefense.lend", "lend");
+      expect((await snap(bId)).buildingChoices?.["hangarDefense.lend"]?.v).toBe("lend");
+      // Prêt reçu : 3 000 places de plus au hangar d'attaque (10 % de 15 × 2 000) : 1 510 chasseurs entrent sans attendre.
+      const more = (await ps.enqueueUnitBuild(bId, "chasseur", 1520)) as { waiting?: number } | null;
+      expect(more?.waiting).toBe(10);
+      // Spécialisation (palier 15) enregistrée par le serveur ; palier 15 du hangar d'attaque pas atteint : refus.
+      await ps.chooseBuildingTier("hangarDefense.spec", "upkeep");
+      await expect(ps.chooseBuildingTier("hangarAttack.spec", "deck")).rejects.toThrow(/niveau 15/);
+      // Pont de lancement (palier 20) : 10 flottes en vol, la 11e passe au hangar 20, pas au 19.
+      await admin.collection("queues").update(bId, { unitQueues: { attack: [], defense: [] } });
+      for (let i = 0; i < 10; i++) {
+        const f = await admin.collection("fleets").create({ ownerUid: bId, ownerPseudo: B.pseudo, targetUid: bId, targetPseudo: B.pseudo, mission: "patrol", units: { chasseur: 1 }, departAtMs: Date.now(), arriveAtMs: Date.now() + 6 * 3600_000, status: "outbound" });
+        created.push(f.id);
+      }
+      await admin.collection("players").update(bId, { buildings: { ...before.buildings, hangar_attaque: { level: 19, unlocked: true }, hangar_defense: { level: 15, unlocked: true } }, units: { chasseur: { level: 1, count: 100 } } });
+      await expect(ps.sendFleet(bId, { chasseur: 10 }, "patrol", { minutes: 30 })).rejects.toThrow(/emplacements/);
+      await admin.collection("players").update(bId, { buildings: { ...before.buildings, hangar_attaque: { level: 20, unlocked: true }, hangar_defense: { level: 15, unlocked: true } } });
+      const sent = await ps.sendFleet(bId, { chasseur: 10 }, "patrol", { minutes: 30 });
+      created.push(sent.id);
+      await expect(ps.sendFleet(bId, { chasseur: 10 }, "patrol", { minutes: 30 })).rejects.toThrow(/11 \/ 11/);
+      p = await snap(bId);
+      expect(p.units.chasseur.count).toBe(90);
+    } finally {
+      for (const id of created) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("queues").update(bId, { unitQueues: qBefore?.unitQueues ?? { attack: [], defense: [] } }).catch(() => undefined);
+      await admin.collection("players").update(bId, { buildings: before.buildings, units: before.units, resources: before.resources, techLevels: before.techLevels, workshop: null, buildingChoices: null, testMode: before.testMode ?? false });
+    }
+  }, 60_000);
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

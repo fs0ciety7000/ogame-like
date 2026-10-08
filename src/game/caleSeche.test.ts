@@ -54,6 +54,30 @@ describe("5.27.2 hangars : calcul unique et surcharge", () => {
     expect(() => performPlayerAction(p, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 1 }, NOW)).toThrow(/surcharge/);
   });
 
+  it("I2 (réécrit en 6.14.145) : la file du chantier compte les commandes démarrées ; une commande en attente (palier 10) ne prend sa place qu'à son démarrage, toujours sous la capacité", () => {
+    // Hangar 10 : 20 000 places, 9 990 chasseurs (2 places chacun, 19 980 places) : 20 places libres, 10 chasseurs.
+    const p = player(0, { hangar: 10, chasseurs: 9990 });
+    p.resources = { ...p.resources, scrap: 1e9, energy: 1e9 };
+    const out = performPlayerAction(p, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 20 }, NOW, {}, true);
+    const q = out.queues;
+    expect(q.unitQueues.attack.filter((e) => !e.wait)).toHaveLength(10);
+    expect(q.unitQueues.attack.filter((e) => e.wait)).toHaveLength(10);
+    const load = hangarLoad(out.player, q, {}, "attack", NOW);
+    expect(load.queue).toBe(20);
+    expect(load.waiting).toBe(20);
+    expect(load.used).toBeLessThanOrEqual(load.capacity);
+    // À chaque rattrapage, rien n'entre au-delà de la capacité : les 10 démarrées sortent, les autres attendent.
+    const later = performPlayerAction(out.player, q, { type: "sync" }, NOW + 24 * HOUR, {}, true);
+    const after = hangarLoad(later.player, later.queues, {}, "attack", NOW + 24 * HOUR);
+    expect(later.player.units.chasseur.count).toBe(10000);
+    expect(after.used).toBeLessThanOrEqual(after.capacity);
+    expect(after.waiting).toBe(20);
+    // Sans le palier 10, la commande sans place est refusée comme avant.
+    const small = player(0, { hangar: 9, chasseurs: 8995 });
+    small.resources = { ...small.resources, scrap: 1e9, energy: 1e9 };
+    expect(() => performPlayerAction(small, defaultQueues(), { type: "buildUnits", unitId: "chasseur", qty: 20 }, NOW, {}, true)).toThrow(/insuffisante/);
+  });
+
   it("C5 : la tech « Extension des hangars » s'applique aussi au hangar de défense des colonies", () => {
     const p = player(0);
     p.techLevels = { ...p.techLevels, tech26: 10 };

@@ -17,8 +17,11 @@ import { MODULE_TEMPLATES } from "@/game/modules";
 import { RELICS, relicImage } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
 import { WORLD_BOSSES } from "@/game/worldBosses";
+import { BUILD_PLAN_RULES } from "@/game/buildPlan";
+import { BUILDINGS } from "@/game/buildings";
+import { buildingTierView, TIER_ROLE_LABELS } from "@/game/buildingTiers";
 
-export type PaletteContentKind = "relic" | "worldBoss" | "allianceBoss" | "seasonBoss" | "colony" | "talent" | "module" | "class" | "officer";
+export type PaletteContentKind = "relic" | "worldBoss" | "allianceBoss" | "seasonBoss" | "colony" | "talent" | "module" | "class" | "officer" | "tier";
 
 export interface PaletteContentEntry {
   kind: PaletteContentKind;
@@ -44,6 +47,7 @@ export const PALETTE_CONTENT_LABELS: Record<PaletteContentKind, string> = {
   module: "Module de vaisseau",
   class: "Classe d'empire",
   officer: "Officier",
+  tier: "Palier de bâtiment",
 };
 
 /** Mois « AAAA-MM » (UTC) d'un instant. */
@@ -73,6 +77,13 @@ export function paletteContentEntries(nowMs: number): PaletteContentEntry[] {
   for (const m of MODULE_TEMPLATES) out.push({ kind: "module", id: m.id, label: m.name, sublabel: L.module, to: "/game/etat-major?onglet=modules" });
   for (const c of empireClasses()) out.push({ kind: "class", id: c.id, label: c.name, sublabel: L.class, to: "/game/classe" });
   for (const c of allCommanders()) out.push({ kind: "officer", id: c.id, label: c.name, sublabel: c.title ? `${L.officer} · ${c.title}` : L.officer, to: "/game/etat-major?onglet=commanders", image: c.portrait, keywords: c.title });
+  // 6.14.146 (PB-L5) : paliers des bâtiments de système (nom du palier, « palier », rôle et bâtiment cherchés).
+  for (const b of BUILDINGS) {
+    const view = buildingTierView(b, {}, BUILD_PLAN_RULES.slotBuilding);
+    for (const t of view?.tiers ?? []) {
+      out.push({ kind: "tier", id: `${b.id}:${t.index}`, label: t.name, sublabel: `${L.tier} · ${b.name} niv. ${t.level}`, to: "/game/batiments", image: t.image ?? b.image, keywords: `palier ${TIER_ROLE_LABELS[t.role]} ${b.name}` });
+    }
+  }
   return out;
 }
 

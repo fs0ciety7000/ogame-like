@@ -12,16 +12,30 @@ Puissance militaire (attaque, défense) et logistique (cargo, drones, sondes). B
 - Rôles (6.14.123, I39) : sonde, recycleur, transport, soutien, faiblesse de boss, contre-espionnage, lus à la place des identifiants.
 - Une file par catégorie (attaque, défense).
 
-- Paliers des hangars (règle n° 4 réécrite, 6.14.141) : bâtiments **de système**, paliers prévus au lot PB-L4
-  (`docs/proposals/paliers-batiments.md` §5.4 : baies modulaires, file d'attente, spécialisations, +1 emplacement de flotte,
-  Casemates). Le moteur commun (`buildingTiers.ts`, 6.14.142) les accueillera par une famille de plus ; d'ici là, ligne « Paliers »
-  absente de leur carte.
+- Paliers des hangars (6.14.145, PB-L4, `docs/proposals/paliers-batiments.md` §5.4 ; GDD §7.23, I2 réécrit, I47) :
+
+| Palier | Hangar d'attaque | Hangar de défense | Réglage (`buildingTiers`) |
+|:--|:--|:--|:--|
+| 5 · Choix | baies modulaires : prêter 10 % de ses places au hangar de défense | idem, vers le hangar d'attaque | `hangarLendShare` (0,1) |
+| 10 · Confort | file d'attente : une commande sans place attend (payée), démarre dès qu'une place se libère, au plus 5 commandes | idem | `hangarWaitingQueueMax` (5) |
+| 15 · Spécialisation | Pont d'envol (vaisseaux −10 % de temps) ou Réacteurs (temps de vol −5 %) | Tourelles en série (défenses −10 % de temps) ou Entretien réduit (énergie des défenses −20 %) | `hangarSpecUnitTime` (0,1), `hangarSpecFleetSpeed` (0,05), `hangarSpecUpkeep` (0,2) |
+| 20 · Signature | Pont de lancement : +1 emplacement de flotte (10 → 11) | Casemates : défenses reconstruites 60 → 70 % (planète mère) | `hangarFleetSlots` (1), `hangarDefenseRebuildBonus` (0,1) |
+
+  - **File d'attente** : la part d'une commande qui n'a pas de place entre en fin de file (`wait`), payée, hors capacité ; elle
+    démarre unité par unité, dans l'ordre, quand le serveur a lu les flottes en vol : à chaque action du joueur, ou par la tâche des
+    5 minutes `cosmic_hangar_queue` (joueur hors ligne ; jamais en vacances). Rien n'entre au-delà de la capacité (I2). Une commande
+    plus grande que le hangar est refusée ; annulée, une commande en attente est remboursée en entier. Page Unités : jauge « en
+    attente d'une place », ligne par commande avec « Annuler », bouton « Commander » quand une part attendra.
+  - **Baies modulaires** : capacité prêtée ou reçue calculée dans `playerUnitCapacity` (I5), planète mère seulement ; un prêt ou sa
+    reprise qui créerait une surcharge est refusé (I4). Jauge : « baies : +N places ».
+  - Niveaux des paliers : `hangarAttackLevels`, `hangarDefenseLevels` (5, 10, 15, 20). Hangars gardés à l'Ascension : paliers acquis
+    une fois.
 
 ## Code et admin
-`units.ts`, `unitClasses.ts`, `hangar.ts`, `eliteUnits.ts`, `UnitsPage.tsx`. Admin : Contenu → Unités ; Équilibrage (audit des unités).
+`units.ts`, `unitClasses.ts`, `hangar.ts` (capacité, baies, file d'attente), `buildingTiers.ts` (paliers), `eliteUnits.ts`, `UnitsPage.tsx`. Admin : Contenu → Unités ; Équilibrage (audit des unités) ; Règles → « Bâtiments : paliers ».
 
 ## Invariants
-I2, I3, I4, I5, I39 (GDD §4).
+I2 (réécrit en 6.14.145), I3, I4, I5, I39, I46, I47 (GDD §4).
 
 ## État (audit 2026-10-06)
 - Épave d'expédition : corrigée en 5.28.1 (C1), les vaisseaux trouvés passent par les « prêts ».

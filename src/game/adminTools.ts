@@ -34,7 +34,8 @@ export function finishAllTimers(queues: QueuesState, now: number): FinishReport 
   }
   for (const category of ["attack", "defense"] as const) {
     for (const e of queues.unitQueues?.[category] ?? []) {
-      if (e.endTime === null || e.endTime > now) {
+      // 6.14.145 (PB-L4) : une commande en attente d'une place reste en attente (I2).
+      if (!e.wait && (e.endTime === null || e.endTime > now)) {
         e.endTime = now;
         out.units++;
       }

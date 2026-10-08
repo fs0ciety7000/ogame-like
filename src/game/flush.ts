@@ -211,6 +211,8 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
     let guard = 0;
     while (queue.length > 0 && guard++ < 2000) {
       const front = queue[0];
+      // 6.14.145 (PB-L4, I2) : une commande en attente d'une place ne démarre que par `startWaitingUnits` (place vérifiée).
+      if (front.wait) break;
       if (front.endTime === null) {
         const u = findUnit(front.unitId);
         front.endTime = now + (u ? getUnitBuildTime(u, player.techLevels, player) : 0) * 1000;
@@ -228,7 +230,7 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
       const completedEndTime = front.endTime;
       queue.shift();
 
-      if (queue.length > 0 && queue[0].endTime === null) {
+      if (queue.length > 0 && queue[0].endTime === null && !queue[0].wait) {
         const nu = findUnit(queue[0].unitId);
         // Chaîné depuis la fin programmée de l'unité précédente (pas "now") :
         // si le joueur était hors-ligne longtemps, plusieurs unités en file

@@ -26,22 +26,29 @@ Règle n° 4 du GDD réécrite : deux familles.
 
 | Famille | Bâtiments | Paliers |
 |:--|:--|:--|
-| **Système** (capacité ou service) | Entrepôt, Atelier de réparation, Cale sèche, Fonderie quantique (chantiers) ; hangars au lot PB-L4 | un effet nouveau à chaque palier : choix (5), confort (10), spécialisation (15), signature (20) ; 5 et 10 pour un bâtiment à 10 niveaux |
+| **Système** (capacité ou service) | Entrepôt, Atelier de réparation, Cale sèche, Fonderie quantique (chantiers), hangars d'attaque et de défense (6.14.145) | un effet nouveau à chaque palier : choix (5), confort (10), spécialisation (15), signature (20) ; 5 et 10 pour un bâtiment à 10 niveaux |
 | **Courbe** | 4 extracteurs, Fonderie et Synthétiseur (production), Générateur de bouclier, Labo de synthèse | jalons seulement : image du palier (`tierImages`), succès (« Maître » au 20), Codex ; jamais un bond de production (I29) |
 
 | Bâtiment | 5 · Choix | 10 · Confort | 15 · Spécialisation | 20 · Signature |
 |:--|:--|:--|:--|:--|
 | Entrepôt (6.14.143) | ressource prioritaire : abri 8 h → 12 h | tampon : 2 h de production en trop gardées, versées dès que la place se libère | Négoce (taxe du comptoir −2 points) ou Convoi (soute des flottes +10 %) | entrepôt orbital : abri de 12 h pour les 4 ressources (16 h pour la prioritaire) |
 | Atelier (6.14.144) | Cale sèche ouverte (prérequis de la Cale, affiché comme palier) | premiers soins : un lot de 15 min ou moins rentre aussitôt | atelier spécialisé : une classe réparée 50 % plus vite | réparation d'urgence : 2 h de réparation offertes une fois par jour |
+| Hangar d'attaque (6.14.145) | baies modulaires : prêter 10 % de ses places au hangar de défense | file d'attente : 5 commandes payées attendent une place | Pont d'envol (vaisseaux −10 % de temps) ou Réacteurs (vol −5 %) | Pont de lancement : +1 emplacement de flotte |
+| Hangar de défense (6.14.145) | baies modulaires : prêter 10 % de ses places au hangar d'attaque | file d'attente : 5 commandes payées attendent une place | Tourelles en série (défenses −10 % de temps) ou Entretien réduit (énergie des défenses −20 %) | Casemates : défenses reconstruites 60 → 70 % |
 | Cale sèche (5.28) | Triage | remise automatique, Atelier +10 % | priorités | Cale orbitale |
 | Fonderie quantique | +1 chantier | +1 chantier | — | — |
 
 - Niveaux et chiffres : Admin → Règles → « Bâtiments : paliers » (groupe `buildingTiers` : `storageLevels`, `repairLevels`,
-  `foundrySlotLevels`, `choiceCooldownHours`, chiffres de chaque effet). La Cale sèche garde `dockTiers`.
+  `foundrySlotLevels`, `hangarAttackLevels`, `hangarDefenseLevels`, `choiceCooldownHours`, chiffres de chaque effet). La Cale sèche garde `dockTiers`.
 - Palier atteint au **niveau effectif** (bâtiment débloqué). Choix sur la carte du bâtiment (ligne « Paliers », bouton « Choisir » /
   « Changer »), premier choix libre, puis un changement par 24 h ; enregistrés dans `buildingChoices` (action serveur `buildingChoice`).
-- L'entrepôt et l'Atelier repartent au niveau 1 à l'Ascension : leurs paliers se rejouent, les choix restent enregistrés.
+- L'entrepôt et l'Atelier repartent au niveau 1 à l'Ascension : leurs paliers se rejouent, les choix restent enregistrés. Les
+  hangars sont gardés : leurs paliers sont acquis une fois (6.14.145, fiche `unites-hangars.md`).
 - Aucune migration : un joueur au-dessus d'un palier le reçoit au déploiement ; choix vides au départ.
+- Chaîne de contenu (6.14.146) : succès « Première signature », « Architecte » (titre « Grand architecte »), « Premier plan »,
+  « Bâtisseur avisé » ; paliers sur la fiche Codex du bâtiment ; Formules → Paliers ; Ctrl+K (type « Palier de bâtiment ») ; icônes
+  `public/assets/tiers/<famille>-<rôle>.webp` (lignes `palier-*` de `scripts/illustrations.json`, `TIER_ART` une fois intégrées ;
+  image du bâtiment en attendant).
 
 ## Code et admin
 `buildings.ts`, `buildingTiers.ts` (paliers, choix, source « bâtiment »), `buildPlan.ts`, `cancel.ts`, `BuildingTiers.tsx` (ligne

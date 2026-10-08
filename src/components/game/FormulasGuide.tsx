@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NumberInput } from "@/components/ui/number-input";
-import { Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Globe2, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
+import { Building2, Calculator, Coins, Crosshair, Factory, FlaskConical, Gauge, Globe2, Hourglass, Landmark, Moon, Shield, Skull, Sparkles, Swords, Ticket, Warehouse, Zap } from "lucide-react";
 import { useContentStore } from "@/services/contentService";
 import { BUILDINGS, effectiveBuildingLevel, getStorageCapacity, requiredForAscension } from "@/game/buildings";
 import { playerUnitCapacity } from "@/game/hangar";
@@ -32,6 +32,8 @@ import { RHYTHM_RULES, rhythmPhase } from "@/game/rhythm";
 import { BIOMES, colonyBiome, colonyDepositPerSecond, COLONY_ROUTE_RULES, COLONY_RULES, COLONY_SPECS, depositLevel, DEPOSIT_RULES, findColonySpec, homeLevels, RARE_DEPOSITS } from "@/game/colonies";
 import { COLONY_BASE_RULES } from "@/game/fleets";
 import { PRESTIGE_RULES, prestigeCost, prestigeHours, prestigeMonument, prestigeState, prestigeUnlocked } from "@/game/prestige";
+import { BUILDING_TIER_RULES, tierFormulaRows } from "@/game/buildingTiers";
+import { BUILD_PLAN_RULES } from "@/game/buildPlan";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { cn, formatCompact, formatDateTime, formatDecimal } from "@/lib/utils";
 
@@ -83,6 +85,7 @@ export const FORMULA_SECTIONS = [
   { id: "ascension", label: "Ascension et rythme", icon: Hourglass },
   { id: "lune", label: "Lune et phalange", icon: Moon },
   { id: "prestige", label: "Prestige", icon: Landmark },
+  { id: "paliers", label: "Paliers", icon: Building2 },
   { id: "colonies", label: "Colonies", icon: Globe2 },
   { id: "gains", label: "Missions et gains", icon: Coins },
   { id: "bonus", label: "Bonus", icon: Sparkles },
@@ -524,6 +527,16 @@ récompense = ${PRESTIGE_RULES.pointsPerProject} points de prestige par projet ;
             />
           </Mine>
         )}
+      </Block>
+
+      {/* 6.14.146 (PB-L5) : paliers des bâtiments de système, textes et niveaux lus dans les règles (Admin → Règles → « Bâtiments : paliers »). */}
+      <Block id="paliers" title="Paliers des bâtiments" icon={Building2} intro="Un bâtiment de système (entrepôt, Atelier, hangars, Cale sèche, Fonderie quantique) gagne un effet nouveau à chaque palier : choix, confort, spécialisation, signature. Les bâtiments de production n'ont que des jalons (image, succès, Codex).">
+        <Formula>
+          {`palier atteint = niveau effectif du bâtiment (débloqué) ≥ niveau du palier
+choix (paliers 5 et 15) : premier choix libre, puis un changement toutes les ${formatDecimal(Math.max(0, BUILDING_TIER_RULES.choiceCooldownHours), 0)} h
+entrepôt et Atelier repartent au niveau 1 à l'Ascension (paliers rejoués) ; hangars, Cale sèche gardés`}
+        </Formula>
+        <Lines items={tierFormulaRows(BUILD_PLAN_RULES.slotBuilding, p?.buildings).map((r) => ({ key: r.key, title: r.title, tag: p ? `${r.reached} / ${r.lines.length} · ${r.tag}` : r.tag, lines: r.lines }))} />
       </Block>
 
       {/* 6.14.115 (AJ27-5, AJ-3) : colonies, chiffres lus dans les règles (Admin → Règles → Colonies). */}

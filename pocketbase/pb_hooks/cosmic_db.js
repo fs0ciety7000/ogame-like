@@ -9888,6 +9888,46 @@ function timedCron(name, spec, fn) {
   return { ms: Date.now() - started, error };
 }
 
+/**
+ * 6.14.145 (PB-L4, palier 10 des hangars) : file d'attente. Les commandes en attente d'une place démarrent dès qu'une
+ * place se libère, même joueur hors ligne (fin d'amélioration du hangar, pertes, Cale sèche). Fiche relue et écrite dans
+ * la transaction (I24), flottes en vol lues (I8), rien d'écrit si rien ne démarre. Rend le nombre de joueurs servis.
+ */
+function hangarQueueTick(now) {
+  const game = loadGame();
+  let recs = [];
+  try {
+    recs = $app.findRecordsByFilter("queues", "unitQueues ~ '\"wait\":true'", "", 200, 0);
+  } catch (err) {
+    console.log(`[cosmic] file d'attente des hangars : ${err}`);
+    return 0;
+  }
+  let n = 0;
+  recs.forEach((q) => {
+    const uid = q.id;
+    try {
+      $app.runInTransaction((txApp) => {
+        applyContent(txApp, game);
+        if (!findOrNull(txApp, "players", uid)) return;
+        const f = loadFlushed(txApp, game, uid);
+        if (game.onVacation(f.player, now) || !game.hasWaitingUnits(f.queues)) return;
+        const away = game.unitsAwayOf(
+          txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => fleetFromRecord(r)),
+          uid,
+        );
+        const started = game.startWaitingUnits(f.player, f.queues, away, now);
+        if (!started.length) return;
+        savePlayer(txApp, game, f.loaded, f.player, f.queues);
+        notify(txApp, uid, f.notifications.concat(started));
+        n += 1;
+      });
+    } catch (err) {
+      console.log(`[cosmic] file d'attente des hangars (${uid}) : ${err}`);
+    }
+  });
+  return n;
+}
+
 /* 5.29 (P3) : les tâches de même cadence passent dans une seule tâche planifiée (une machine goja réveillée
    au lieu de plusieurs). Chaque étape garde son nom, ses métriques et son isolement d'erreur (timedCron) :
    la page Santé du serveur les liste comme avant. L'ordre compte : les flottes passent en premier. */
@@ -9930,6 +9970,11 @@ const CADENCES = {
         if (out.length) console.log(`[cosmic] campagnes programmées envoyées : ${out.length}`);
       }],
       ["cosmic_allianceboss", () => deadlinesOnHold() || allianceBossTick(Date.now())],
+      // 6.14.145 (PB-L4) : file d'attente des hangars (joueurs hors ligne).
+      ["cosmic_hangar_queue", () => {
+        const n = hangarQueueTick(Date.now());
+        if (n > 0) console.log(`[cosmic] file d'attente des hangars : ${n} joueur(s)`);
+      }],
       ["cosmic_seasonboss", () => deadlinesOnHold() || seasonBossTick(Date.now())],
     ],
   },

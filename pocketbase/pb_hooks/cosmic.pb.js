@@ -94,7 +94,7 @@ routerAdd(
       const loaded = db.loadPlayer(txApp, game, uid);
       // Vaisseaux en mission : ils reviendront, le hangar doit les compter.
       // 5.28 : aussi pour la remise en service des vaisseaux prêts de la Cale sèche.
-      const needAway = game.actionNeedsAway(loaded.player, action);
+      const needAway = game.actionNeedsAway(loaded.player, action, loaded.queues);
       const away = needAway
         ? game.unitsAwayOf(
             txApp.findRecordsByFilter("fleets", 'ownerUid = {:u} && status != "done"', "", 200, 0, { u: uid }).map((r) => db.fleetFromRecord(r)),

@@ -24,7 +24,8 @@ import { UnitSpecButton } from "@/components/game/UnitSpecSheet";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { hangarLoad, type HangarLoad } from "@/game/hangar";
+import { hangarLoad, waitingOrders, type HangarLoad } from "@/game/hangar";
+import { hangarWaitingMax } from "@/game/buildingTiers";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { findUnit, getUnitBuildTime, scaleUnitCost, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
@@ -80,9 +81,16 @@ export function UnitsPage() {
       const n = qty(unitId);
       const def = findUnit(unitId);
       const ahead = def ? queues?.unitQueues[def.category].filter((e) => e.unitId !== unitId).length ?? 0 : 0;
-      await enqueueUnitBuild(uid, unitId, n);
-      toast.success(`${n} × ${def?.name ?? unitId} ajouté${n > 1 ? "s" : ""} à la file`, {
-        description: ahead > 0 ? "Les unités d'une même catégorie se construisent l'une après l'autre : elles démarreront après la file en cours." : undefined,
+      const out = (await enqueueUnitBuild(uid, unitId, n)) as { waiting?: number } | null | undefined;
+      const waiting = Math.max(0, Number(out?.waiting) || 0);
+      // 6.14.145 (PB-L4) : file d'attente du hangar (palier 10) : ce qui n'a pas de place attend, payé.
+      toast.success(waiting > 0 ? `${n} × ${def?.name ?? unitId} commandé${n > 1 ? "s" : ""}` : `${n} × ${def?.name ?? unitId} ajouté${n > 1 ? "s" : ""} à la file`, {
+        description:
+          waiting > 0
+            ? `${formatNumber(waiting)} attend${waiting > 1 ? "ent" : ""} une place libre au hangar et démarrer${waiting > 1 ? "ont" : "a"} dès qu'une place se libère.`
+            : ahead > 0
+              ? "Les unités d'une même catégorie se construisent l'une après l'autre : elles démarreront après la file en cours."
+              : undefined,
       });
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
@@ -137,6 +145,8 @@ export function UnitsPage() {
                 <p className="tabular-mono text-xs text-slate-500">
                   {formatNumber(l.used)} / {formatNumber(l.capacity)} places
                   {l.queue > 0 && <span className="text-mint-glow"> (dont {formatNumber(l.queue)} en file)</span>}
+                  {l.waiting > 0 && <span className="text-cyan-glow"> ; {formatNumber(l.waiting)} en attente d'une place</span>}
+                  {l.lent !== 0 && <span className="text-slate-400"> ; baies : {l.lent > 0 ? "+" : "−"}{formatNumber(Math.abs(l.lent))} places</span>}
                   {l.away > 0 && <span className="text-gold-glow"> (dont {formatNumber(l.away)} en vol)</span>}
                   {l.workshop > 0 && <span className="text-ember-glow"> (dont {formatNumber(l.workshop)} à l'Atelier)</span>}
                 </p>
@@ -242,7 +252,11 @@ export function UnitsPage() {
           const isLocked = data.level <= 0;
           const buildTime = getUnitBuildTime(unit, player.techLevels, player);
           const queue = queues.unitQueues[unit.category];
-          const isBuildingThis = queue.length > 0 && queue[0].unitId === unit.id;
+          const isBuildingThis = queue.length > 0 && !queue[0].wait && queue[0].unitId === unit.id;
+          // 6.14.145 (PB-L4) : file d'attente du hangar (palier 10).
+          const waitMax = hangarWaitingMax(player.buildings, unit.category);
+          const orders = waitingOrders(queue);
+          const myWaiting = orders.filter((o) => o.unitId === unit.id);
           const hangarLabel = unit.category === "attack" ? "d'attaque" : "de défense";
           const freeSpace = Math.max(0, capacity(unit.category) - built(unit.category) - reserved(unit.category));
           const neededSpace = qty(unit.id) * unit.hangarSpace;
@@ -251,7 +265,7 @@ export function UnitsPage() {
           if (isBuildingThis) {
             let count = 0;
             for (const entry of queue) {
-              if (entry.unitId === unit.id) count++;
+              if (entry.unitId === unit.id && !entry.wait) count++;
               else break;
             }
             const remaining = Math.max(0, Math.floor(((queue[0].endTime ?? now) - now) / 1000)) + (count - 1) * buildTime;
@@ -262,7 +276,7 @@ export function UnitsPage() {
           // par catégorie) : on affiche ce qui passe avant et le délai.
           let waitingInfo: { count: number; startsIn: number; before: string } | null = null;
           if (!isBuildingThis) {
-            const firstIndex = queue.findIndex((e) => e.unitId === unit.id);
+            const firstIndex = queue.findIndex((e) => e.unitId === unit.id && !e.wait);
             if (firstIndex > 0) {
               let startsIn = Math.max(0, Math.floor(((queue[0].endTime ?? now) - now) / 1000));
               for (const e of queue.slice(1, firstIndex)) {
@@ -270,7 +284,7 @@ export function UnitsPage() {
                 startsIn += u ? getUnitBuildTime(u, player.techLevels, player) : 0;
               }
               waitingInfo = {
-                count: queue.filter((e) => e.unitId === unit.id).length,
+                count: queue.filter((e) => e.unitId === unit.id && !e.wait).length,
                 startsIn,
                 before: findUnit(queue[0].unitId)?.name ?? queue[0].unitId,
               };
@@ -486,9 +500,17 @@ export function UnitsPage() {
                           <span>
                             <GameIcon name="duration" /> {waitingInfo.count} en attente derrière {waitingInfo.before} — début dans {formatDuration(waitingInfo.startsIn)}
                           </span>
-                          <CancelJobButton target={{ kind: "units", category: unit.category, index: queue.findIndex((e) => e.unitId === unit.id) }} compact className="ml-auto" />
+                          <CancelJobButton target={{ kind: "units", category: unit.category, index: queue.findIndex((e) => e.unitId === unit.id && !e.wait) }} compact className="ml-auto" />
                         </p>
                       ) : null}
+                      {myWaiting.map((o) => (
+                        <p key={o.index} className="flex flex-wrap items-center gap-x-2 text-xs text-cyan-glow" title="File d'attente du hangar : payée à la commande, la production démarre dès qu'une place se libère.">
+                          <span>
+                            <GameIcon name="duration" /> <span className="font-mono tabular-nums">{formatNumber(o.count)}</span> en attente d'une place ({formatNumber(o.places)} place{o.places > 1 ? "s" : ""})
+                          </span>
+                          <CancelJobButton target={{ kind: "units", category: unit.category, index: o.index }} compact className="ml-auto" />
+                        </p>
+                      ))}
 
                       <div className="mt-auto">
                         <div className="flex items-baseline justify-between font-mono text-[11px] tracking-[0.12em]">
@@ -503,19 +525,27 @@ export function UnitsPage() {
                           tone={neededSpace > freeSpace ? "var(--color-danger-glow)" : undefined}
                         />
                       </div>
-                      <QtyStepper value={qty(unit.id)} onChange={(v) => setQty(unit.id, v)} max={Math.max(1, Math.floor(freeSpace / unit.hangarSpace))} />
+                      <QtyStepper value={qty(unit.id)} onChange={(v) => setQty(unit.id, v)} max={Math.max(1, Math.floor((waitMax > 0 ? capacity(unit.category) : freeSpace) / unit.hangarSpace))} />
                       {(() => {
                         const each = playerUnitCost(unit, player);
                         const batch = scaleUnitCost(each, qty(unit.id));
                         const wait = secondsToAfford(batch, player.resources, rates);
-                        const noRoom = neededSpace > freeSpace;
+                        // 6.14.145 (PB-L4) : au palier 10, ce qui dépasse la place libre attend (jusqu'à `waitMax` commandes).
+                        const anyWaiting = orders.length > 0;
+                        const fitQty = anyWaiting ? 0 : Math.min(qty(unit.id), Math.floor(freeSpace / unit.hangarSpace));
+                        const restQty = qty(unit.id) - fitQty;
+                        const lastOrder = orders[orders.length - 1];
+                        const merges = !!lastOrder && lastOrder.unitId === unit.id && lastOrder.index + lastOrder.count === queue.length;
+                        const canWait = waitMax > 0 && (merges || orders.length < waitMax) && (merges ? lastOrder.places : 0) + restQty * unit.hangarSpace <= capacity(unit.category);
+                        const willWait = restQty > 0 && canWait;
+                        const noRoom = restQty > 0 && !canWait;
                         // 6.5 : un vaisseau de classe ne se construit plus après un changement de classe (il reste et vole).
                         const classBlock = classUnitBlocker(player, unit);
                         return (
                           <div>
                             <div className="flex gap-2">
                               <Button className="flex-1" disabled={pending === unit.id || noRoom || wait > 0 || !!classBlock} onClick={() => void handleBuild(unit.id)}>
-                                Construire ×{formatNumber(qty(unit.id))}
+                                {willWait ? `Commander ×${formatNumber(qty(unit.id))}` : `Construire ×${formatNumber(qty(unit.id))}`}
                               </Button>
                               <Button variant="outline" disabled={pending === unit.id || data.count === 0} onClick={() => void handleSell(unit.id)}>
                                 Vendre
@@ -523,6 +553,10 @@ export function UnitsPage() {
                             </div>
                             {classBlock ? (
                               <BlockedReason tone="block">{classBlock} Tes vaisseaux déjà construits restent à toi.</BlockedReason>
+                            ) : noRoom && waitMax > 0 ? (
+                              <BlockedReason tone="block">
+                                File d'attente du hangar {hangarLabel} pleine ({formatNumber(orders.length)} / {formatNumber(waitMax)} commandes) ou commande plus grande que le hangar. Attends qu'une place se libère.
+                              </BlockedReason>
                             ) : noRoom ? (
                               <BlockedReason tone="block">
                                 Hangar {hangarLabel} trop petit : {formatNumber(neededSpace)} places demandées pour {formatNumber(freeSpace)} libres. Réduis la quantité ou{" "}
@@ -533,6 +567,10 @@ export function UnitsPage() {
                               </BlockedReason>
                             ) : wait > 0 ? (
                               <BlockedReason>{affordText(wait)}</BlockedReason>
+                            ) : willWait ? (
+                              <p className="mt-1.5 text-xs text-cyan-glow">
+                                File d'attente : <span className="font-mono tabular-nums">{formatNumber(restQty)}</span> attendr{restQty > 1 ? "ont" : "a"} une place libre (payé{restQty > 1 ? "s" : ""} à la commande).
+                              </p>
                             ) : null}
                           </div>
                         );

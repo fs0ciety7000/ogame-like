@@ -7,6 +7,7 @@ import { BUILD_PLAN_RULES } from "@/game/buildPlan";
 import type { BuildingDef } from "@/game/buildings";
 import { chooseBuildingTier, GameActionError } from "@/services/playerService";
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/assets";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -64,6 +65,7 @@ export function BuildingTiers({ view, player, now }: { view: BuildingTierView; p
           return (
             <li key={t.index} className="flex flex-col gap-1">
               <div className="flex min-w-0 items-start gap-2" title={t.text}>
+                {t.image && <img src={assetUrl(t.image)} alt="" loading="lazy" className={cn("h-6 w-6 shrink-0 object-contain", !t.reached && "opacity-50 grayscale")} />}
                 <HudChip size="sm" tone={tone} className={cn("shrink-0", !t.reached && !t.next && "opacity-60")}>
                   <span className="tabular-nums">niv. {t.level}</span>
                 </HudChip>

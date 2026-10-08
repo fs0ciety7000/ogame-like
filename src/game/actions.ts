@@ -4,7 +4,7 @@ import { assertEliteBuildable } from "@/game/eliteUnits";
 import { assertClassUnitBuildable } from "@/game/classUnits";
 import { playerModifiers } from "@/game/modifiers";
 import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, freeRushWorkshop, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
-import { autoCommission, commissionDocked, hangarLoad } from "@/game/hangar";
+import { autoCommission, commissionDocked, hangarLoad, hasWaitingUnits, startWaitingUnits, waitingOrders } from "@/game/hangar";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
 import { describeGain, formatInt } from "@/game/format";
@@ -60,7 +60,7 @@ import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
 import { beginPrestige, prestigeStartCost } from "@/game/prestige";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
-import { exchangeTaxCut, setBuildingChoice } from "@/game/buildingTiers";
+import { exchangeTaxCut, hangarWaitingMax, setBuildingChoice } from "@/game/buildingTiers";
 import { spendAmber, spendResources } from "@/game/spending";
 
 /* =====================================================
@@ -278,15 +278,30 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       if ((player.units[unit.id]?.level ?? 0) <= 0) throw new GameActionError("Cette unité doit d'abord être débloquée via le Labo.");
 
       const category = unit.category;
+      const queue = queues.unitQueues[category];
+      // 6.14.145 (PB-L4) : une commande déjà en attente démarre d'abord si une place s'est libérée (ordre de la file).
+      s.flushNotifications.push(...startWaitingUnits(player, queues, s.unitsAway ?? {}, now));
       // 5.20 : les unités à l'Atelier gardent leur place (5.28 : sauf en Cale sèche). 5.27.2 : calcul unique (hangar.ts).
       const load = hangarLoad(player, queues, s.unitsAway ?? {}, category, now);
-      if (load.used + qty * unit.hangarSpace > load.capacity) {
-        const name = category === "attack" ? "d'attaque" : "de défense";
+      // 6.14.145 (PB-L4, I2 réécrit) : au palier 10 du hangar, ce qui n'a pas de place attend dans la file (payé), sans prendre de place.
+      const waitMax = hangarWaitingMax(player.buildings, category);
+      const fit = queue.some((e) => e.wait) ? 0 : Math.min(qty, Math.floor(load.free / Math.max(1, unit.hangarSpace)));
+      const rest = qty - fit;
+      const name = category === "attack" ? "d'attaque" : "de défense";
+      if (rest > 0 && waitMax <= 0) {
         throw new GameActionError(
           load.overflow > 0
             ? `Hangar ${name} en surcharge (${load.overflow} place${load.overflow > 1 ? "s" : ""} de trop) : améliore le hangar, démantèle ou envoie des vaisseaux en mission.`
             : `Capacité du hangar ${name} insuffisante.`,
         );
+      }
+      if (rest > 0) {
+        const orders = waitingOrders(queue);
+        const last = orders[orders.length - 1];
+        const merges = !!last && last.unitId === unit.id && last.index + last.count === queue.length;
+        if (!merges && orders.length >= waitMax) throw new GameActionError(`File d'attente du hangar ${name} pleine (${orders.length} / ${waitMax} commandes) : attends qu'une place se libère.`);
+        const waitingPlaces = (merges ? last.places : 0) + rest * unit.hangarSpace;
+        if (waitingPlaces > load.capacity) throw new GameActionError(`Commande trop grande : ${formatInt(waitingPlaces)} places en attente pour un hangar ${name} de ${formatInt(load.capacity)} places.`);
       }
 
       // 5.23 : réductions de coût ciblées (reliques, technos, officiers).
@@ -294,10 +309,11 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       pay(player, scaleUnitCost(each, qty), now);
       recordContract(player, "build_units", qty, now);
       trackAction(player, contentObjective("unit", unit.id), now, qty);
-      const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
-      for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
-      if (wasEmpty) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels, player) * 1000;
+      for (let i = 0; i < fit; i++) queue.push({ unitId: unit.id, endTime: null });
+      for (let i = 0; i < rest; i++) queue.push({ unitId: unit.id, endTime: null, wait: true });
+      if (wasEmpty && queue[0] && !queue[0].wait) queue[0].endTime = now + getUnitBuildTime(unit, player.techLevels, player) * 1000;
+      if (rest > 0) return { waiting: rest, started: fit };
       return undefined;
     }
 
@@ -658,6 +674,21 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
     case "buildingChoice":
       // 6.14.142 (PB-L1) : choix d'un palier de bâtiment (palier atteint, option connue, un changement par 24 h ; le premier est libre).
+      if (action.slot === "hangarAttack.lend" || action.slot === "hangarDefense.lend") {
+        // 6.14.145 (PB-L4, baies modulaires) : un prêt ou sa reprise qui mettrait un hangar en surcharge est refusé (I4, I5).
+        const away = s.unitsAway ?? {};
+        const overflow = () => ({ attack: hangarLoad(player, queues, away, "attack", now).overflow, defense: hangarLoad(player, queues, away, "defense", now).overflow });
+        const before = overflow();
+        const saved = player.buildingChoices;
+        const out = setBuildingChoice(player, action.slot, action.value, now);
+        const after = overflow();
+        const hit = after.attack > before.attack ? "d'attaque" : after.defense > before.defense ? "de défense" : null;
+        if (hit) {
+          player.buildingChoices = saved;
+          throw new GameActionError(`Ce changement mettrait le hangar ${hit} en surcharge : libère d'abord des places.`);
+        }
+        return out;
+      }
       return setBuildingChoice(player, action.slot, action.value, now);
 
     case "dockCommission": {
@@ -780,14 +811,19 @@ export function performPlayerAction(
   // 5.28 : Cale sèche au palier 10 : les vaisseaux prêts rentrent d'eux-mêmes dès qu'une place se libère.
   // Le serveur fournit alors les flottes en vol (`dockAutoCommission` dit quand il doit les lire).
   if (awayKnown) flushed.notifications.push(...autoCommission(flushed.player, flushed.queues, unitsAway, now));
+  // 6.14.145 (PB-L4) : file d'attente des hangars, les commandes en attente démarrent dès qu'une place se libère (flottes en vol lues).
+  if (awayKnown && !onVacation(flushed.player, now)) flushed.notifications.push(...startWaitingUnits(flushed.player, flushed.queues, unitsAway, now));
   return { player: flushed.player, queues: flushed.queues, notifications: flushed.notifications, result };
 }
 
 /** 5.28 : le serveur doit-il lire les flottes en vol pour cette action ? (construction, remise en service,
  *  ou Cale sèche au palier 10 avec des vaisseaux à l'Atelier, qui peuvent devenir prêts au rattrapage.) */
-export function actionNeedsAway(player: Pick<PlayerState, "buildings" | "workshop">, action: { type?: unknown } | null | undefined): boolean {
+export function actionNeedsAway(player: Pick<PlayerState, "buildings" | "workshop">, action: { type?: unknown; slot?: unknown } | null | undefined, queues?: Pick<QueuesState, "unitQueues"> | null): boolean {
   const type = action?.type;
   if (type === "buildUnits" || type === "dockCommission") return true;
+  // 6.14.145 (PB-L4) : prêt des baies modulaires (surcharge refusée) et commandes en attente d'une place.
+  if (type === "buildingChoice" && typeof action?.slot === "string" && action.slot.endsWith(".lend")) return true;
+  if (hasWaitingUnits(queues)) return true;
   const w = player.workshop;
   return dockTier(player, "auto") && ((w?.jobs?.length ?? 0) > 0 || Object.keys(w?.ready ?? {}).length > 0);
 }

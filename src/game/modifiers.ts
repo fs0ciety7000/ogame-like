@@ -50,6 +50,8 @@ export interface Modifiers {
   tradeTax: number;
   /** 5.28.1 : réductions d'entretien de la flotte et de coût des bâtiments (couche empire). */
   fleetUpkeep: number;
+  /** 6.14.145 (PB-L4, Entretien réduit) : réduction d'entretien des défenses seules (`fleetUpkeep` ciblé « cat:defense »). */
+  fleetUpkeepDefense: number;
   buildingDiscount: number;
   /** 6.14.44 : portée de la phalange (+ %) et recharge de la porte de saut (− %), couche empire. */
   phalanxRange: number;
@@ -60,7 +62,7 @@ type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
-  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0, fleetUpkeep: 0, buildingDiscount: 0, phalanxRange: 0, jumpGateCooldown: 0 };
+  return { attack: 0, defense: 0, buildTime: 0, researchTime: 0, productionAll: 0, production: {}, storage: 0, spyLevel: 0, detection: 0, repair: 0, repairSpeed: 0, cargo: 0, bossDamage: 0, fleetSpeed: 0, unitTime: 0, loot: 0, protectedStorage: 0, counterSpy: 0, tradeTax: 0, fleetUpkeep: 0, fleetUpkeepDefense: 0, buildingDiscount: 0, phalanxRange: 0, jumpGateCooldown: 0 };
 }
 
 /** v5.14 : tous les effets de la couche empire (officiers, reliques, talents,
@@ -122,7 +124,9 @@ export function modifiersFrom(grants: readonly EffectGrant[], scope?: EffectScop
   m.protectedStorage = sum("protectedStorage");
   m.counterSpy = sum("counterSpy");
   m.tradeTax = sum("tradeTax");
-  m.fleetUpkeep = sum("fleetUpkeep");
+  // 6.14.145 (PB-L4) : un entretien ciblé (« cat:defense ») ne vaut que pour sa catégorie.
+  m.fleetUpkeep = effectTotal(grants.filter((g) => !(g.stat === "fleetUpkeep" && g.target)), "empire", "fleetUpkeep", { scope });
+  m.fleetUpkeepDefense = effectTotal(grants, "empire", "fleetUpkeep", { scope, target: "cat:defense" });
   m.buildingDiscount = sum("buildingDiscount");
   m.phalanxRange = sum("phalanxRange");
   m.jumpGateCooldown = sum("jumpGateCooldown");

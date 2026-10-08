@@ -1,3 +1,4 @@
+import { defenseRebuildBonus } from "@/game/buildingTiers";
 import { addMoonPity, MOON_RULES, moonLevel, playerMoon, rollMoon } from "@/game/moon";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { applyHull, sendToWorkshop, workshopState } from "@/game/workshop";
@@ -224,6 +225,8 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderUnits: attacker.npc ? (def.units ?? {}) : withoutElite(def.units ?? {}),
     defenderTechLevels: def.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(def.buildings), owner),
+    // 6.14.145 (PB-L4) : Casemates (hangar de défense 20) de la planète mère.
+    defenseRebuildBonus: colony ? 0 : defenseRebuildBonus(owner.buildings),
     defenderShieldPct: mods?.shieldIgnored ? 0 : baseShield + (mods?.shieldBonus ?? 0) + defFx.shield,
     // 5.20 : dégâts conservés (planète mère ; pas les colonies). 5.21 : seigneurs de guerre compris.
     attackerHull: workshopState(attacker).hull,

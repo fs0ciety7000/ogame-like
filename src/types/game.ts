@@ -37,6 +37,8 @@ export type BuildingUpgrades = Partial<Record<BuildingId, BuildingUpgradeEntry>>
 export interface UnitQueueEntry {
   unitId: string;
   endTime: number | null;
+  /** 6.14.145 (PB-L4, palier 10 des hangars) : commande payée en attente d'une place (hors capacité jusqu'à son démarrage). */
+  wait?: boolean;
 }
 export interface UnitQueues {
   attack: UnitQueueEntry[];

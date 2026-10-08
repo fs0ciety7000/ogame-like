@@ -455,7 +455,8 @@ export function unplanBuilding(index: number) {
 }
 
 export function enqueueUnitBuild(_uid: string, unitId: string, qty: number) {
-  return act({ type: "buildUnits", unitId, qty });
+  // 6.14.145 (PB-L4) : `{ waiting, started }` quand une part de la commande attend une place (file d'attente du hangar).
+  return act<{ waiting?: number; started?: number } | null>({ type: "buildUnits", unitId, qty });
 }
 
 export function sellUnit(_uid: string, unitId: string, qty: number) {

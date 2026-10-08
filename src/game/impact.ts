@@ -99,7 +99,7 @@ export function effectImpactReport(): ImpactRow[] {
   add("shield", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.shieldBonus + Math.max(0, MOON_RULES.shieldPerLevel) * Math.max(0, MOON_RULES.maxLevel - 1), note: `niveau ${MOON_RULES.maxLevel}` });
   add("protectedStorage", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.protectedStorageBonus, note: "une lune" });
   // 6.14.142 (PB-L1) : paliers des bâtiments de système (un choix à la fois).
-  for (const b of buildingTierEffectMaxima()) add(b.stat, undefined, "empire", { kind: "building", label: b.label, max: b.max, note: b.note });
+  for (const b of buildingTierEffectMaxima()) add(b.stat, b.target, "empire", { kind: "building", label: b.label, max: b.max, note: b.note });
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });
   // 6.14.124 (AA6) : recherches et projets d'alliance au niveau maximal (couche alliance, ou couche empire pour les autres effets).

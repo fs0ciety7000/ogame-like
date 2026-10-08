@@ -58,4 +58,10 @@ l'Ascension : tes dernières recherches se terminent avant.
 Tes chantiers tournent des jours : ta production en trop part dans les **projets de prestige** (Empire → Prestige). 8 h de
 production, 8 h de chantier, un monument sur ta fiche. Aucun bonus : le prestige se voit.
 
+Et tes bâtiments de système ont des **paliers** à viser (6.14.141 à 6.14.146) : aux niveaux 5, 10, 15 et 20, l'entrepôt, l'Atelier
+et les deux hangars gagnent un effet nouveau, pas seulement « un peu plus ». Un choix au 5, un confort au 10 (le tampon de 2 h de
+l'entrepôt, la file d'attente des hangars), une spécialisation au 15, une signature au 20 (abri de 12 h, 2 h de réparation offertes
+par jour, +1 emplacement de flotte, 70 % des défenses reconstruites). Avant ta première Ascension, la plus longue attente entre deux
+nouveautés de tes bâtiments tombe à **20 à 29 jours** selon ton rythme (30 à 39 avant). Tout est dans **Formules → Paliers**.
+
 Toutes les formules sont à jour dans **Formules → Ascension et rythme**. Une question, un doute : **Signaler**, chaque retour est lu.

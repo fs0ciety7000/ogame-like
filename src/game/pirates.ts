@@ -1,3 +1,4 @@
+import { defenseRebuildBonus } from "@/game/buildingTiers";
 import { describeLoot, lootDifficulty, rollLoot } from "@/game/loot";
 import { spendResources } from "@/game/spending";
 import { edgeParam, playerCombatEffects } from "@/game/effectTargets";
@@ -835,6 +836,8 @@ export function resolvePirateRaid(
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: withRepairBonus(getRepairPercent(player.buildings), player),
+    // 6.14.145 (PB-L4) : Casemates (hangar de défense 20).
+    defenseRebuildBonus: defenseRebuildBonus(player.buildings),
     defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)) + pve.shield,
     defenderResources: {},
     garrisons,

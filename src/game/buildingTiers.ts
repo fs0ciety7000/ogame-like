@@ -1,5 +1,6 @@
 import { BUILDINGS, DOCK_TIERS, effectiveBuildingLevel, findBuilding, type BuildingDef } from "@/game/buildings";
 import type { EffectGrant } from "@/game/effects";
+import { COMBAT_RULES } from "@/game/combat";
 import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError } from "@/game/errors";
 import { formatDecimal, formatHours, formatPct } from "@/game/format";
@@ -60,6 +61,25 @@ export const BUILDING_TIER_RULES = {
   workshopFreeRushPerDay: 1,
   /** Atelier 20 : durée de réparation offerte par accélération (s). */
   workshopFreeRushSeconds: 7200,
+  /** 6.14.145 (PB-L4) : niveaux des paliers du hangar d'attaque (baies, file d'attente, spécialisation, signature). */
+  hangarAttackLevels: [5, 10, 15, 20],
+  /** Niveaux des paliers du hangar de défense. */
+  hangarDefenseLevels: [5, 10, 15, 20],
+  /** Hangars 5, baies modulaires : part des places d'un hangar prêtée à l'autre (0,1 = 10 %). */
+  hangarLendShare: 0.1,
+  /** Hangars 10 : commandes au plus en attente d'une place, par hangar (0 : pas de file d'attente). */
+  hangarWaitingQueueMax: 5,
+  /** Hangar d'attaque 15, Pont d'envol, et hangar de défense 15, Tourelles en série : temps de construction en moins (0,1 = −10 %). */
+  hangarSpecUnitTime: 0.1,
+  /** Hangar d'attaque 15, Réacteurs : temps de vol en moins (0,05 = −5 %). 6.14.145 : 10 % prévus, ramenés à 5 % pour que le
+   *  maximum théorique de la couche empire (Propulsion 24 % + Logisticienne 20 % + Réacteurs) reste sous son plafond de 50 %. */
+  hangarSpecFleetSpeed: 0.05,
+  /** Hangar de défense 15, Entretien réduit : énergie d'entretien des défenses en moins (0,2 = −20 %). */
+  hangarSpecUpkeep: 0.2,
+  /** Hangar d'attaque 20, Pont de lancement : emplacements de flotte en plus. */
+  hangarFleetSlots: 1,
+  /** Hangar de défense 20, Casemates : part des défenses détruites reconstruites en plus (0,1 : 60 % → 70 %). */
+  hangarDefenseRebuildBonus: 0.1,
 };
 
 /** Libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -77,19 +97,28 @@ export const BUILDING_TIER_RULES_META = {
   workshopClassSpeed: { label: "Atelier 15 : réparation plus rapide de la classe choisie", unit: "part", min: 0, max: 5, hint: "0,5 = 50 % plus vite." },
   workshopFreeRushPerDay: { label: "Atelier 20 : accélérations gratuites par jour", min: 0, max: 10, hint: "Jour de Paris ; 0 = aucune." },
   workshopFreeRushSeconds: { label: "Atelier 20 : réparation offerte par accélération", unit: "s", min: 0, max: 86_400, hint: "7 200 = 2 h (12 Ambre au tarif par défaut)." },
+  hangarAttackLevels: { label: "Hangar d'attaque : niveaux des paliers (baies, file d'attente, spécialisation, signature)", unit: "niveau", hint: "4 niveaux croissants." },
+  hangarDefenseLevels: { label: "Hangar de défense : niveaux des paliers (baies, file d'attente, spécialisation, signature)", unit: "niveau", hint: "4 niveaux croissants." },
+  hangarLendShare: { label: "Hangars 5, baies modulaires : part des places prêtée à l'autre hangar", unit: "part", min: 0, max: 0.5, hint: "0,1 = 10 % des places du hangar prêteur. Un prêt ou sa reprise qui créerait une surcharge est refusé." },
+  hangarWaitingQueueMax: { label: "Hangars 10 : commandes en attente d'une place, au plus", min: 0, max: 20, hint: "Par hangar. 0 = pas de file d'attente (commande refusée sans place, comme avant)." },
+  hangarSpecUnitTime: { label: "Hangars 15, Pont d'envol / Tourelles en série : temps de construction en moins", unit: "part", min: 0, max: 0.5, hint: "0,1 = −10 % (couche empire, plafond des réductions ciblées)." },
+  hangarSpecFleetSpeed: { label: "Hangar d'attaque 15, Réacteurs : temps de vol en moins", unit: "part", min: 0, max: 0.5, hint: "0,05 = −5 % (couche empire, plafond 50 % : au-delà de 6 %, le maximum théorique le dépasse)." },
+  hangarSpecUpkeep: { label: "Hangar de défense 15, Entretien réduit : entretien des défenses en moins", unit: "part", min: 0, max: 0.5, hint: "0,2 = −20 % de l'énergie d'entretien des défenses seulement." },
+  hangarFleetSlots: { label: "Hangar d'attaque 20, Pont de lancement : emplacements de flotte en plus", min: 0, max: 5, hint: "10 → 11 par défaut." },
+  hangarDefenseRebuildBonus: { label: "Hangar de défense 20, Casemates : défenses reconstruites en plus", unit: "part", min: 0, max: 0.4, hint: "0,1 = 60 % → 70 % (référence OGame : 70 %). Mesure JcJ : fiche 6.14.145." },
 };
 
 /* ---------- familles et paliers ---------- */
 
 /** Famille d'un bâtiment de système (paliers d'effet). `dock` et `foundry` gardent leurs règles propres (DOCK_TIERS, chantiers). */
-export type TierFamily = "storage" | "repair" | "dock" | "foundry";
+export type TierFamily = "storage" | "repair" | "dock" | "foundry" | "hangarAttack" | "hangarDefense";
 export type TierRole = "choice" | "comfort" | "spec" | "signature";
 
 export const TIER_ROLE_LABELS: Record<TierRole, string> = { choice: "Choix", comfort: "Confort", spec: "Spécialisation", signature: "Signature" };
 const ROLES: TierRole[] = ["choice", "comfort", "spec", "signature"];
 
 /** Choix d'un palier : la ressource prioritaire (entrepôt 5), Négoce ou Convoi (entrepôt 15), la classe de l'Atelier (15). */
-export type ChoiceSlot = "storage.priority" | "storage.spec" | "workshop.class";
+export type ChoiceSlot = "storage.priority" | "storage.spec" | "workshop.class" | "hangarAttack.lend" | "hangarDefense.lend" | "hangarAttack.spec" | "hangarDefense.spec";
 export interface BuildingChoiceEntry {
   /** Valeur choisie. */
   v: string;
@@ -112,6 +141,24 @@ export interface BuildingTierDef {
   /** Texte joueur, construit depuis les règles en vigueur. */
   text: string;
   slot?: ChoiceSlot;
+  /** 6.14.146 (PB-L5) : icône du palier (définitive si livrée, sinon l'image du bâtiment : image provisoire). */
+  image?: string;
+}
+
+/** 6.14.146 (PB-L5) : icônes de palier livrées (`public/assets/tiers/<clé>.webp`, `scripts/illustrations.json`, lignes
+ *  « palier-<clé> »). Une clé ajoutée ici quand son rendu est intégré (`docs/illustrations.md`) ; les autres gardent l'image
+ *  du bâtiment. */
+export const TIER_ART: string[] = [];
+
+/** Clé de l'icône d'un palier : `<famille>-<rôle>` (la Fonderie : une icône pour tous ses chantiers). */
+export function tierIconKey(family: TierFamily, index: number): string {
+  return family === "foundry" ? "foundry-slot" : `${family}-${ROLES[index] ?? "signature"}`;
+}
+
+/** Icône d'un palier : définitive si livrée, sinon `fallback` (image du bâtiment). */
+export function tierImage(family: TierFamily, index: number, fallback?: string): string | undefined {
+  const key = tierIconKey(family, index);
+  return TIER_ART.includes(key) ? `/assets/tiers/${key}.webp` : fallback;
 }
 
 const COMMON_IDS: ResourceId[] = ["scrap", "energy", "nano", "data"];
@@ -127,6 +174,11 @@ function cleanLevels(raw: unknown, size: number): number[] {
 /** Bâtiment d'une famille (le premier qui porte l'effet) ; `foundry` : bâtiment qui ouvre les chantiers (`foundryId`). */
 function familyDef(family: TierFamily, foundryId?: string): BuildingDef | undefined {
   if (family === "foundry") return foundryId ? findBuilding(foundryId) : undefined;
+  // 6.14.145 (PB-L4) : un hangar par catégorie, visé par son effet (contenu personnalisé).
+  if (family === "hangarAttack" || family === "hangarDefense") {
+    const cat = family === "hangarAttack" ? "attack" : "defense";
+    return BUILDINGS.find((b) => b.effect?.type === "hangar" && b.effect.category === cat);
+  }
   return BUILDINGS.find((b) => b.effect?.type === family);
 }
 
@@ -134,6 +186,7 @@ function familyDef(family: TierFamily, foundryId?: string): BuildingDef | undefi
 export function tierFamily(def: Pick<BuildingDef, "id" | "effect">, foundryId?: string): TierFamily | null {
   const t = def.effect?.type;
   if (t === "storage" || t === "repair" || t === "dock") return t;
+  if (t === "hangar" && def.effect?.type === "hangar") return def.effect.category === "attack" ? "hangarAttack" : "hangarDefense";
   if (foundryId && def.id === foundryId) return "foundry";
   return null;
 }
@@ -156,6 +209,8 @@ export function familyTierLevels(family: TierFamily): number[] {
     if (atelier && dock?.requires?.building === atelier.id && levels.length) levels[0] = Math.max(1, Math.floor(dock.requires.level));
     return levels;
   }
+  if (family === "hangarAttack") return cleanLevels(R.hangarAttackLevels, 4);
+  if (family === "hangarDefense") return cleanLevels(R.hangarDefenseLevels, 4);
   if (family === "dock") return [DOCK_TIERS.triage, DOCK_TIERS.auto, DOCK_TIERS.priority, DOCK_TIERS.orbital];
   return cleanLevels(R.foundrySlotLevels, 10);
 }
@@ -167,7 +222,7 @@ export function tierReached(buildings: Buildings | undefined, family: TierFamily
 }
 
 /** Paliers d'une famille, textes construits depuis les règles en vigueur (6.14.105 : un texte ne recopie jamais un chiffre). */
-export function familyTiers(family: TierFamily): BuildingTierDef[] {
+export function familyTiers(family: TierFamily, foundryId?: string): BuildingTierDef[] {
   const R = BUILDING_TIER_RULES;
   const levels = familyTierLevels(family);
   const tier = (index: number, name: string, text: string, slot?: ChoiceSlot): BuildingTierDef | null =>
@@ -198,10 +253,27 @@ export function familyTiers(family: TierFamily): BuildingTierDef[] {
       tier(2, "Priorités", "Choisis la classe réparée en premier."),
       tier(3, "Cale orbitale", "Des vaisseaux sauvés en plus à chaque combat."),
     ];
+  } else if (family === "hangarAttack" || family === "hangarDefense") {
+    const attack = family === "hangarAttack";
+    const other = attack ? "de défense" : "d'attaque";
+    const wait = Math.max(0, Math.floor(Number(R.hangarWaitingQueueMax) || 0));
+    const slots = Math.max(0, Math.floor(Number(R.hangarFleetSlots) || 0));
+    const base = Math.max(0, Number(COMBAT_RULES.defenseRebuildPct) || 0);
+    out = [
+      tier(0, "Baies modulaires", `Tu peux prêter ${formatPct(Math.max(0, R.hangarLendShare))} des places de ce hangar au hangar ${other}.`, attack ? "hangarAttack.lend" : "hangarDefense.lend"),
+      tier(1, "File d'attente", `Hangar plein ? Jusqu'à ${wait} commande${wait > 1 ? "s" : ""} attend${wait > 1 ? "ent" : ""} une place libre, payée${wait > 1 ? "s" : ""} à la commande, et démarre${wait > 1 ? "nt" : ""} dès qu'une place se libère.`),
+      attack
+        ? tier(2, "Pont d'envol ou Réacteurs", `Au choix : Pont d'envol (vaisseaux construits ${formatPct(Math.max(0, R.hangarSpecUnitTime))} plus vite) ou Réacteurs (temps de vol −${formatPct(Math.max(0, R.hangarSpecFleetSpeed))}).`, "hangarAttack.spec")
+        : tier(2, "Tourelles ou Entretien", `Au choix : Tourelles en série (défenses construites ${formatPct(Math.max(0, R.hangarSpecUnitTime))} plus vite) ou Entretien réduit (énergie des défenses −${formatPct(Math.max(0, R.hangarSpecUpkeep))}).`, "hangarDefense.spec"),
+      attack
+        ? tier(3, "Pont de lancement", `+${slots} emplacement${slots > 1 ? "s" : ""} de flotte.`)
+        : tier(3, "Casemates", `Après un combat, ${formatPct(Math.min(1, base + Math.max(0, R.hangarDefenseRebuildBonus)))} des défenses détruites sont reconstruites (au lieu de ${formatPct(base)}).`),
+    ];
   } else {
     out = levels.map((_, i) => tier(i, `Chantier ${i + 1}`, "+1 chantier de bâtiment en parallèle."));
   }
-  return out.filter((t): t is BuildingTierDef => !!t);
+  const fallback = familyDef(family, foundryId)?.image;
+  return out.filter((t): t is BuildingTierDef => !!t).map((t) => ({ ...t, image: tierImage(family, t.index, fallback) }));
 }
 
 /** « 15 min », « 2 h », « 1 h 30 » (sans Intl). */
@@ -234,7 +306,32 @@ const SLOTS: Record<ChoiceSlot, { family: TierFamily; index: number; options: ()
     index: 2,
     options: () => CLASS_IDS.map((id) => ({ id, label: UNIT_CLASS_LABELS[id], text: `Classe ${UNIT_CLASS_LABELS[id]} réparée ${formatPct(Math.max(0, BUILDING_TIER_RULES.workshopClassSpeed))} plus vite.` })),
   },
+  "hangarAttack.lend": { family: "hangarAttack", index: 0, options: () => lendOptions("défense") },
+  "hangarDefense.lend": { family: "hangarDefense", index: 0, options: () => lendOptions("attaque") },
+  "hangarAttack.spec": {
+    family: "hangarAttack",
+    index: 2,
+    options: () => [
+      { id: "deck", label: "Pont d'envol", text: `Vaisseaux construits ${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarSpecUnitTime))} plus vite.` },
+      { id: "engines", label: "Réacteurs", text: `Temps de vol −${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarSpecFleetSpeed))}.` },
+    ],
+  },
+  "hangarDefense.spec": {
+    family: "hangarDefense",
+    index: 2,
+    options: () => [
+      { id: "turrets", label: "Tourelles en série", text: `Défenses construites ${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarSpecUnitTime))} plus vite.` },
+      { id: "upkeep", label: "Entretien réduit", text: `Énergie d'entretien des défenses −${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarSpecUpkeep))}.` },
+    ],
+  },
 };
+
+function lendOptions(to: string): TierOption[] {
+  return [
+    { id: "keep", label: "Garder", text: "Ce hangar garde toutes ses places." },
+    { id: "lend", label: `Prêter au hangar ${to === "défense" ? "de défense" : "d'attaque"}`, text: `${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarLendShare))} des places de ce hangar passent au hangar ${to === "défense" ? "de défense" : "d'attaque"}.` },
+  ];
+}
 
 export const CHOICE_SLOTS = Object.keys(SLOTS) as ChoiceSlot[];
 
@@ -277,7 +374,7 @@ export function choiceCooldownLeftMs(player: ChoicePlayer | null | undefined, sl
   return Math.max(0, e.at + cd - now);
 }
 
-const FAMILY_NAMES: Record<TierFamily, string> = { storage: "de l'Entrepôt", repair: "de l'Atelier de réparation", dock: "de la Cale sèche", foundry: "de la Fonderie quantique" };
+const FAMILY_NAMES: Record<TierFamily, string> = { storage: "de l'Entrepôt", repair: "de l'Atelier de réparation", dock: "de la Cale sèche", foundry: "de la Fonderie quantique", hangarAttack: "du Hangar d'attaque", hangarDefense: "du Hangar de défense" };
 
 /** Action serveur `buildingChoice` : enregistre un choix de palier (palier atteint, valeur connue, délai respecté). */
 export function setBuildingChoice(player: PlayerState, slotIn: unknown, valueIn: unknown, now: number): { slot: ChoiceSlot; value: string; label: string } {
@@ -313,12 +410,37 @@ export function buildingTierEffects(player: ChoicePlayer | null | undefined): Ef
     const def = familyDef("storage");
     out.push({ stat: "cargo", value: convoy, layer: "empire", source: { kind: "building", id: def?.id ?? "storage", label: `${def?.name ?? "Entrepôt"} : Convoi` } });
   }
+  // 6.14.145 (PB-L4) : spécialisations des hangars (palier 15).
+  const R = BUILDING_TIER_RULES;
+  const att = familyDef("hangarAttack");
+  const dfn = familyDef("hangarDefense");
+  const src = (def: BuildingDef | undefined, fallback: string, name: string) => ({ kind: "building" as const, id: def?.id ?? fallback, label: `${def?.name ?? fallback} : ${name}` });
+  const unitTime = Math.max(0, Number(R.hangarSpecUnitTime) || 0);
+  const attackSpec = activeChoice(player, "hangarAttack.spec");
+  if (attackSpec === "deck" && unitTime > 0) out.push({ stat: "unitBuildTime", target: "cat:attack", value: unitTime, layer: "empire", source: src(att, "Hangar d'attaque", "Pont d'envol") });
+  const speed = Math.max(0, Number(R.hangarSpecFleetSpeed) || 0);
+  if (attackSpec === "engines" && speed > 0) out.push({ stat: "fleetSpeed", value: speed, layer: "empire", source: src(att, "Hangar d'attaque", "Réacteurs") });
+  const defenseSpec = activeChoice(player, "hangarDefense.spec");
+  if (defenseSpec === "turrets" && unitTime > 0) out.push({ stat: "unitBuildTime", target: "cat:defense", value: unitTime, layer: "empire", source: src(dfn, "Hangar de défense", "Tourelles en série") });
+  const upkeep = Math.max(0, Number(R.hangarSpecUpkeep) || 0);
+  if (defenseSpec === "upkeep" && upkeep > 0) out.push({ stat: "fleetUpkeep", target: "cat:defense", value: upkeep, layer: "empire", source: src(dfn, "Hangar de défense", "Entretien réduit") });
   return out;
 }
 
 /** Plus grande valeur que la source « bâtiment » peut donner, par grandeur (rapport d'impact de l'admin). */
-export function buildingTierEffectMaxima(): { stat: "cargo"; label: string; max: number; note: string }[] {
-  return [{ stat: "cargo", label: "Entrepôt : Convoi", max: Math.max(0, Number(BUILDING_TIER_RULES.storageConvoyCargo) || 0), note: `palier ${familyTierLevels("storage")[2] ?? "?"}` }];
+export function buildingTierEffectMaxima(): { stat: "cargo" | "unitBuildTime" | "fleetSpeed" | "fleetUpkeep"; target?: string; label: string; max: number; note: string }[] {
+  const R = BUILDING_TIER_RULES;
+  const att = `palier ${familyTierLevels("hangarAttack")[2] ?? "?"}`;
+  const dfn = `palier ${familyTierLevels("hangarDefense")[2] ?? "?"}`;
+  const n = (x: unknown) => Math.max(0, Number(x) || 0);
+  return [
+    { stat: "cargo", label: "Entrepôt : Convoi", max: n(R.storageConvoyCargo), note: `palier ${familyTierLevels("storage")[2] ?? "?"}` },
+    // 6.14.145 (PB-L4) : un choix par hangar (Pont d'envol ou Réacteurs ; Tourelles ou Entretien).
+    { stat: "unitBuildTime", target: "cat:attack", label: "Hangar d'attaque : Pont d'envol", max: n(R.hangarSpecUnitTime), note: att },
+    { stat: "fleetSpeed", label: "Hangar d'attaque : Réacteurs", max: n(R.hangarSpecFleetSpeed), note: att },
+    { stat: "unitBuildTime", target: "cat:defense", label: "Hangar de défense : Tourelles en série", max: n(R.hangarSpecUnitTime), note: dfn },
+    { stat: "fleetUpkeep", target: "cat:defense", label: "Hangar de défense : Entretien réduit", max: n(R.hangarSpecUpkeep), note: dfn },
+  ];
 }
 
 /* ---------- lecteurs de l'entrepôt (PB-L2) ---------- */
@@ -361,6 +483,72 @@ export function freeRushAllowance(buildings: Buildings | undefined): { perDay: n
   return { perDay: Math.max(0, Math.floor(Number(BUILDING_TIER_RULES.workshopFreeRushPerDay) || 0)), seconds: Math.max(0, Number(BUILDING_TIER_RULES.workshopFreeRushSeconds) || 0) };
 }
 
+/* ---------- lecteurs des hangars (PB-L4) ---------- */
+
+/** Part des places prêtée par le hangar `from` à l'autre (palier 5, choix « Prêter » ; 0 sinon). La capacité reste calculée
+ *  dans `hangar.ts` (`playerUnitCapacity`, I5). */
+export function hangarLendShareOf(player: ChoicePlayer | null | undefined, from: "attack" | "defense"): number {
+  const slot: ChoiceSlot = from === "attack" ? "hangarAttack.lend" : "hangarDefense.lend";
+  return activeChoice(player, slot) === "lend" ? Math.min(0.5, Math.max(0, Number(BUILDING_TIER_RULES.hangarLendShare) || 0)) : 0;
+}
+
+/** Commandes au plus en attente d'une place dans ce hangar (palier 10 ; 0 : pas de file d'attente). */
+export function hangarWaitingMax(buildings: Buildings | undefined, category: "attack" | "defense"): number {
+  return tierReached(buildings, category === "attack" ? "hangarAttack" : "hangarDefense", 1) ? Math.max(0, Math.floor(Number(BUILDING_TIER_RULES.hangarWaitingQueueMax) || 0)) : 0;
+}
+
+/** Emplacements de flotte en plus (hangar d'attaque, palier 20). */
+export function hangarFleetSlotBonus(buildings: Buildings | undefined): number {
+  return tierReached(buildings, "hangarAttack", 3) ? Math.max(0, Math.floor(Number(BUILDING_TIER_RULES.hangarFleetSlots) || 0)) : 0;
+}
+
+/** Part des défenses reconstruites en plus après un combat (hangar de défense, palier 20 ; 0 sinon). */
+export function defenseRebuildBonus(buildings: Buildings | undefined): number {
+  return tierReached(buildings, "hangarDefense", 3) ? Math.max(0, Number(BUILDING_TIER_RULES.hangarDefenseRebuildBonus) || 0) : 0;
+}
+
+/* ---------- succès des paliers (PB-L5, 6.14.146) ---------- */
+
+/** Bâtiments de système à 4 paliers (signature au 4e) : entrepôt, Atelier, deux hangars. */
+export const SIGNATURE_FAMILIES: TierFamily[] = ["storage", "repair", "hangarAttack", "hangarDefense"];
+/** Choix des paliers de spécialisation (15). */
+export const SPEC_SLOTS: ChoiceSlot[] = ["storage.spec", "workshop.class", "hangarAttack.spec", "hangarDefense.spec"];
+
+/** Signatures (dernier palier) atteintes en ce moment parmi les bâtiments de système (succès « Architecte »). */
+export function signatureTiersReached(player: ChoicePlayer | null | undefined): number {
+  return SIGNATURE_FAMILIES.filter((f) => {
+    const levels = familyTierLevels(f);
+    return levels.length > 0 && tierReached(player?.buildings, f, levels.length - 1);
+  }).length;
+}
+
+/** Choix de spécialisation faits (enregistrés, même palier perdu à l'Ascension ; succès « Bâtisseur avisé »). */
+export function specChoicesMade(player: ChoicePlayer | null | undefined): number {
+  return SPEC_SLOTS.filter((slot) => !!savedChoice(player, slot)).length;
+}
+
+/** 6.14.146 (PB-L5) : lignes de la section « Paliers » des Formules (et de la palette) : bâtiment, niveaux, effets lus dans les règles.
+ *  `foundryId` : bâtiment des chantiers (`BUILD_PLAN_RULES.slotBuilding`). `buildings` : niveaux du joueur (palier atteint). */
+export function tierFormulaRows(foundryId?: string, buildings?: Buildings): { key: string; family: TierFamily; title: string; tag: string; lines: string[]; reached: number }[] {
+  const families: TierFamily[] = ["storage", "repair", "hangarAttack", "hangarDefense", "dock", "foundry"];
+  const out: { key: string; family: TierFamily; title: string; tag: string; lines: string[]; reached: number }[] = [];
+  for (const f of families) {
+    const def = familyDef(f, foundryId);
+    const tiers = familyTiers(f, foundryId);
+    if (!def || !tiers.length) continue;
+    const level = buildings ? familyLevel(buildings, f, foundryId) : 0;
+    out.push({
+      key: f,
+      family: f,
+      title: def.name,
+      tag: `niv. ${tiers.map((t) => t.level).join(" · ")}`,
+      lines: tiers.map((t) => `${t.level} · ${TIER_ROLE_LABELS[t.role]} — ${t.name} : ${t.text}`),
+      reached: tiers.filter((t) => level >= t.level).length,
+    });
+  }
+  return out;
+}
+
 /* ---------- vue d'une carte de bâtiment ---------- */
 
 export interface BuildingTierView {
@@ -381,7 +569,7 @@ export function buildingTierView(def: Pick<BuildingDef, "id" | "effect">, player
   const owner = familyDef(family, foundryId);
   if (owner && owner.id !== def.id) return null;
   const level = familyLevel(player.buildings, family, foundryId);
-  const defs = familyTiers(family);
+  const defs = familyTiers(family, foundryId);
   let next: BuildingTierDef | null = null;
   const tiers = defs.map((t) => {
     const reached = level >= t.level;
@@ -405,6 +593,8 @@ export function validateBuildingTierRules(r: Partial<typeof BUILDING_TIER_RULES>
     ["storageLevels", "Entrepôt", 4],
     ["repairLevels", "Atelier", 4],
     ["foundrySlotLevels", "Fonderie quantique", null],
+    ["hangarAttackLevels", "Hangar d'attaque", 4],
+    ["hangarDefenseLevels", "Hangar de défense", 4],
   ];
   for (const [key, name, size] of lists) {
     const v = r[key] as unknown;

@@ -50,7 +50,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | # | Invariant | Où | Test |
 |:--|:--|:--|:--|
 | I1 | Unités conservées : base + en vol + Atelier + prêts + pertes = avant combat | `attack.ts`, `pirates.ts`, `bounties.ts`, `workshop.ts` | `workshop.test.ts`, `attack.test.ts`, `caleSeche.test.ts` |
-| I2 | **Places de hangar** : base + en vol + Atelier hors Cale sèche + file ≤ capacité, **à chaque construction** ; en cale ≤ postes | `actions.ts` (`buildUnits`) via `hangarLoad` | `actions.test.ts`, `caleSeche.test.ts` |
+| I2 | **Places de hangar** (réécrit en 6.14.145, PB-L4) : base + en vol + Atelier hors Cale sèche + file **démarrée** du chantier ≤ capacité, **à chaque construction et à chaque démarrage** ; une commande en attente (file d'attente, palier 10 des hangars : `wait`) est payée mais hors capacité et ne prend sa place qu'à son démarrage (`startWaitingUnits`, flottes en vol lues) ; rien n'entre au-delà de la capacité ; en cale ≤ postes | `actions.ts` (`buildUnits`), `hangar.ts` (`hangarLoad`, `startWaitingUnits`), `flush.ts`, `cosmic_db.js` (`hangarQueueTick`) | `actions.test.ts`, `caleSeche.test.ts` (I2), `paliersHangars.test.ts`, intégration « 6.14.145 (PB-L4) » |
 | I3 | Aucun ajout d'unités hors construction, retour de flotte, fin de réparation ou remise en service (qui vérifie la place) ; une récompense en vaisseaux (épave d'expédition) passe par les « prêts » | tout `src/game` + migrations | `caleSeche.test.ts` (I3), `expeditions.test.ts` |
 | I4 | La capacité ne baisse jamais sous la flotte sans état « surcharge » visible ; l'Ascension garde hangars et Cale sèche | `ascension.ts` (`keptOnAscension`) | `ascension.test.ts`, `caleSeche.test.ts` (I4) |
 | I5 | Places et capacité des hangars : une seule fonction (`hangarLoad`, `playerUnitCapacity` dans `hangar.ts`) | client, serveur, Statistiques | `caleSeche.test.ts` (I5, garde sur `getUnitCapacity(`) |
@@ -95,6 +95,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I44 | Mutateurs sans répétition (6.14.136) : le mois d'un mutateur est le mois de Paris (heure d'été et d'hiver, `parisOffsetMs`, comme les Chroniques) ; avant `mutators.noRepeatFrom` (2027-01), l'ancien tirage (jamais deux mois de suite) : un mois passé, en cours ou annoncé ne change pas ; ensuite, aucun mutateur des `noRepeatMonths` mois précédents (6, plafonné au nombre de mutateurs moins un ; mois imposés compris, « aucun » ne retient rien), ceux absents de la fenêtre de fraîcheur (`freshMonths`, 12) d'abord, l'ancien tirage gardé s'il reste permis ; déterministe (client et serveur d'accord) ; 12 mois glissants : 10 mutateurs distincts au moins avec la liste livrée | `mutators.ts` (`mutatorMonthId`, `mutatorFor`, `autoMutatorFor`) | `mutators.test.ts`, `listesSysteme.test.ts` |
 | I45 | Contenu généré frais (6.14.137 à 6.14.139) : les banques de textes (`narrative` : titres d'acte, accroches, répliques, lignes de héros, ordres, réserve de titres par faction) consomment l'aléa comme avant (un tirage par choix) : titre, boss, objectifs et récompenses d'un chapitre ne changent pas ; un texte lu dans les `narrative.noRepeatMonths` derniers mois écrits n'est repris que si tous ont servi ; la réserve d'une faction ne sert qu'une fois ses titres d'origine pris ; la n-ième réplique d'un jalon du passe sert l'année n du catalogue ; `GENERATOR_VERSION` inchangé : aucun mois écrit n'est régénéré (I17) ; au-delà du cycle écrit (36 mois livrés), une saison générée prolonge la saison écrite du même rang (`seasonGen`) : nom, commandant et paire de rôles jamais vus sur 8 tours, avant le cycle les saisons écrites à l'identique ; un passe écrit garde sa copie (I43) ; images de saison (année, second boss) prises seulement quand leur fichier est déclaré (`SEASON_THEME_ART`, `AUTO_ART_2`) | `narrative.ts`, `procedural.ts` (`textBanks`, `autoBossImage`), `passSeasons.ts` (`seasonThemeImage`), `seasonCatalog.ts` (`catalogEntryFor`, `generatedSeasonEntry`) | `varieteNarrative.test.ts`, `saisonsGenerees.test.ts`, `seasonCatalog.test.ts`, `illustrations.test.ts` |
 | I46 | Paliers des bâtiments de système (6.14.142 à 6.14.144, `docs/proposals/paliers-batiments.md`) : un effet de palier vient du niveau **effectif** (bâtiment débloqué) et, pour un palier à choix, du choix enregistré (`buildingChoices`) ; il passe par la source « bâtiment » du circuit d'effets (`buildingTierEffects`, couche empire : Convoi) ou par un lecteur de `buildingTiers.ts` (abri, tampon, taxe du comptoir, Atelier), et reste sous les plafonds (abri ≤ règle de capacité, taxe ≥ 0, soute en couche empire) ; un choix change au plus une fois par `choiceCooldownHours` (le premier est libre) et seulement palier atteint ; aucun changement de choix ni de réglage ne détruit d'unité ni de ressource (tampon gardé versé même sans palier ni réglage ; lots de l'Atelier rendus comme d'habitude : prêts en Cale sèche ou au hangar où ils avaient leur place, I3, I4) ; le tampon de l'entrepôt est le même au serveur (rattrapage hors ligne) et au client, il n'est ni pillable ni compté en production perdue ; un bâtiment de courbe n'a que des jalons (aucun effet de palier sur la production, I29) ; aucune migration : les choix commencent vides | `buildingTiers.ts`, `economy.ts` (`advanceEconomy`, `protectedAmount`), `workshop.ts` (`firstAid`, `freeRushWorkshop`), `resources.ts` (`tradeQuote`), `modifiers.ts` (`empireEffects`) | `paliersBatiments.test.ts`, `storageRisk.test.ts`, `healthAeL4.test.ts`, `tourActions.test.ts`, `progressionSim.test.ts` (I29), intégration « 6.14.142 (PB-L1) », « 6.14.143 (PB-L2) », « 6.14.144 (PB-L3) » |
+| I47 | File d'attente et paliers des hangars (6.14.145, PB-L4) : une commande en attente reste en fin de file, après toutes les entrées démarrées ; elle démarre unité par unité, dans l'ordre, sans en sauter une, seulement quand le serveur a lu les flottes en vol (action du joueur ou tâche des 5 minutes `cosmic_hangar_queue`) et jamais pendant les vacances ; ni le rattrapage, ni « tout terminer » (compte test, admin) ne la démarrent ; au plus `hangarWaitingQueueMax` commandes par hangar, chacune ≤ la capacité ; annulée, elle est remboursée en entier. Baies modulaires : la capacité prêtée ou reçue est calculée dans `playerUnitCapacity` seule (I5), planète mère seulement ; un prêt ou sa reprise qui augmenterait la surcharge d'un hangar est refusé ; un réglage changé ne détruit rien (surcharge visible, I4). Spécialisations par le circuit d'effets (source « bâtiment », couche empire, sous les plafonds) ; Pont de lancement et Casemates par lecteur (`hangarFleetSlotBonus`, `defenseRebuildBonus`), Casemates sur la planète mère seulement | `hangar.ts`, `buildingTiers.ts`, `actions.ts`, `fleets.ts` (`fleetSlots`), `combat.ts` (`defenseRebuildBonus`), `economy.ts` (`getFleetUpkeep`) | `paliersHangars.test.ts`, `caleSeche.test.ts` (I2), `derived.test.ts`, intégration « 6.14.145 (PB-L4) » |
 
 ## 5. Règles de conception
 
@@ -133,8 +134,10 @@ systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres
 ### 7.1 Hangars (`hangar.ts`)
 
 - Capacité = Σ (niveau × places par niveau) des bâtiments « hangar » × (1 + technologies, dont Extension des hangars) × (1 + effets d'empire `hangarCapacity`).
-- Places occupées = à quai + en vol + à l'Atelier hors Cale sèche + file du chantier (`hangarLoad`).
-- Surcharge (occupé > capacité) : rien n'est détruit ; la construction de la catégorie est refusée et la page Unités propose trois sorties (améliorer, envoyer une flotte, vendre / démanteler).
+- Places occupées = à quai + en vol + à l'Atelier hors Cale sèche + file **démarrée** du chantier (`hangarLoad`) ; 6.14.145 : une commande
+  en attente d'une place (palier 10) est payée mais hors capacité jusqu'à son démarrage (I2, I47).
+- Paliers (6.14.145, §7.23) : baies modulaires (5), file d'attente (10), spécialisation (15), Pont de lancement ou Casemates (20).
+- Surcharge (occupé > capacité) : rien n'est détruit ; la construction de la catégorie est refusée (6.14.145 : au palier 10, la commande attend dans la file sans prendre de place) et la page Unités propose trois sorties (améliorer, envoyer une flotte, vendre / démanteler).
 - Conservés à l'Ascension (avec la Cale sèche et les bâtiments légendaires). Colonies : hangar de défense propre, mêmes technologies, effets de portée « colonies ».
 
 ### 7.2 Atelier de réparation (`workshop.ts`)
@@ -582,10 +585,9 @@ Simulation : `node scripts/procedural-sim.mjs --months 48 --base avant-ap` (prof
 48/48, mutateurs distincts sur 12 mois glissants 7 → 10. Gardes : `mutators.test.ts` (I44), `varieteNarrative.test.ts`,
 `saisonsGenerees.test.ts`, `illustrations.test.ts` (I45).
 
-### 7.23 Paliers des bâtiments de système (6.14.141 à 6.14.144, `buildingTiers.ts`)
+### 7.23 Paliers des bâtiments de système (6.14.141 à 6.14.146, `buildingTiers.ts`)
 
-Proposition validée `docs/proposals/paliers-batiments.md` (option D, Q336 à Q343), lots PB-L0 à PB-L3 ; hangars (PB-L4) et chaîne de
-contenu (PB-L5) à venir. Fiche du domaine : `docs/systems/batiments.md`. Règle n° 4 (§5) réécrite : bâtiments de système à paliers,
+Proposition livrée `docs/proposals/paliers-batiments.md` (option D, Q336 à Q343), lots PB-L0 à PB-L5. Fiche du domaine : `docs/systems/batiments.md`. Règle n° 4 (§5) réécrite : bâtiments de système à paliers,
 bâtiments de courbe à jalons.
 
 | Palier | Entrepôt (repart au niv. 1 à l'Ascension) | Atelier de réparation (idem) |
@@ -595,17 +597,31 @@ bâtiments de courbe à jalons.
 | 15 · Spécialisation | au choix : Négoce (taxe du comptoir −2 points) ou Convoi (soute des flottes +10 %, circuit d'effets) | une classe choisie réparée 50 % plus vite |
 | 20 · Signature | entrepôt orbital : abri de 12 h pour les 4 ressources (16 h pour la prioritaire) | réparation d'urgence : 2 h offertes une fois par jour |
 
+| Palier | Hangar d'attaque (gardé à l'Ascension) | Hangar de défense (idem) |
+|:--|:--|:--|
+| 5 · Choix | baies modulaires : prêter 10 % de ses places au hangar de défense | baies modulaires : prêter 10 % de ses places au hangar d'attaque |
+| 10 · Confort | file d'attente : jusqu'à 5 commandes payées attendent une place et démarrent dès qu'elle se libère | idem |
+| 15 · Spécialisation | au choix : Pont d'envol (vaisseaux −10 % de temps) ou Réacteurs (temps de vol −5 %) | au choix : Tourelles en série (défenses −10 % de temps) ou Entretien réduit (énergie des défenses −20 %) |
+| 20 · Signature | Pont de lancement : +1 emplacement de flotte (10 → 11) | Casemates : défenses reconstruites 60 → 70 % (planète mère) |
+
 | Règle | Valeur par défaut | Réglage (admin) |
 |:--|:--|:--|
-| Niveaux des paliers | entrepôt et Atelier 5, 10, 15, 20 ; Fonderie quantique 5, 10 (chantiers) ; Cale sèche : `dockTiers` | Règles → « Bâtiments : paliers » (`buildingTiers.storageLevels`, `repairLevels`, `foundrySlotLevels`) |
+| Niveaux des paliers | entrepôt, Atelier et hangars 5, 10, 15, 20 ; Fonderie quantique 5, 10 (chantiers) ; Cale sèche : `dockTiers` | Règles → « Bâtiments : paliers » (`buildingTiers.storageLevels`, `repairLevels`, `foundrySlotLevels`, `hangarAttackLevels`, `hangarDefenseLevels`) |
 | Changer un choix | premier choix libre, puis une fois par 24 h, gratuit, palier atteint | `choiceCooldownHours` |
-| Chiffres des effets | +4 h, 2 h, −0,02, +0,1, +4 h ; 900 s, +50 %, 1 par jour, 7 200 s | même section |
-| Ligne « Paliers » | carte de chaque bâtiment de système : atteint (vert), prochain (cyan), verrouillé (gris) ; choix sur la carte, palier atteint | — |
+| Chiffres des effets | +4 h, 2 h, −0,02, +0,1, +4 h ; 900 s, +50 %, 1 par jour, 7 200 s ; hangars : 0,1 prêté, 5 commandes, −0,1 (temps), −0,05 (vol), −0,2 (entretien des défenses), +1 emplacement, +0,1 reconstruit | même section (`hangarLendShare`, `hangarWaitingQueueMax`, `hangarSpecUnitTime`, `hangarSpecFleetSpeed`, `hangarSpecUpkeep`, `hangarFleetSlots`, `hangarDefenseRebuildBonus`) |
+| Ligne « Paliers » | carte de chaque bâtiment de système : atteint (vert), prochain (cyan), verrouillé (gris) ; choix sur la carte, palier atteint ; icône de chaque palier (6.14.146 : image du bâtiment tant que la sienne manque, `TIER_ART`) | — |
+| Chaîne de contenu (6.14.146) | succès « Première signature » (un palier signature), « Architecte » (les 4 paliers signature de l'entrepôt, de l'Atelier et des hangars en même temps ; titre « Grand architecte »), « Premier plan » (un choix de spécialisation), « Bâtisseur avisé » (un choix à chacun des 4 paliers 15) ; un succès gagné reste ; Codex (paliers sur la fiche du bâtiment), Formules → Paliers, Ctrl+K (« palier », nom du palier), 21 icônes sur `/img` | Contenu → Succès (seuils) ; niveaux et textes lus dans `buildingTiers` |
 
 Mesure d'I29 (`node scripts/progression-sim.mjs --base sans-paliers --apres-bascule --prestige --ascend --days 365`) : 1re Ascension
 inchangée (J91,5 / J103,3 / J132,8 / J121,8), production perdue 7,2 / 2,7 / 13,6 / 14,1 % → 7 / 2,5 / 12,6 / 13,9 % (actif, moyen,
 occasionnel, quotidien), jours sans dépense inchangés, pire mois de sessions bloquées inchangé sauf l'occasionnel 5 → 10 % (une
 session sur vingt ; borne 15 %). Aucune borne ne bouge. Garde : `paliersBatiments.test.ts` (I46).
+
+Mesure JcJ des hangars (6.14.145, `pvpBudget.ts`, budget égal, techno 50 %) : seuils de victoire de l'attaquant inchangés avec les
+Casemates (mixte ×0,9, défenses seules ×2,35 ≥ ×2) ; la reconstruction joue après le combat : la part de la dépense en défenses
+perdue pour de bon baisse d'un quart (défenses seules au seuil : 17,8 % → 13,4 % ; mixte à dépense égale : 20,4 % → 15,3 %).
+Réacteurs ramenés de −10 % à −5 % : au-delà de 6 %, le maximum théorique du temps de vol en couche empire (Propulsion 24 % +
+Logisticienne 20 %) dépasserait son plafond de 50 %. Garde : `paliersHangars.test.ts` (I47).
 
 ## 8. Journal des audits
 
@@ -766,3 +782,5 @@ session sur vingt ; borne 15 %). Aucune borne ne bouge. Garde : `paliersBatiment
 | 2026-10-08 | 6.14.142 | Lot PB-L1 (AJ-12, Q342, Q343) : moteur commun des paliers (`buildingTiers` réglable, ancien `BUILD_SLOT_BONUS_LEVELS` compris), source « bâtiment » du circuit d'effets, choix du joueur (24 h), ligne « Paliers » des cartes ; invariant I46 | `docs/changes/6.14.142-paliers-moteur.md`, `paliersBatiments.test.ts` |
 | 2026-10-08 | 6.14.143 | Lot PB-L2 (Q337, Q338) : paliers de l'entrepôt (ressource prioritaire, tampon de 2 h, Négoce ou Convoi, entrepôt orbital) ; I29 mesuré, aucune borne ne bouge | `docs/changes/6.14.143-paliers-entrepot.md`, `paliersBatiments.test.ts`, `progressionSim.test.ts` |
 | 2026-10-08 | 6.14.144 | Lot PB-L3 (Q339) : paliers de l'Atelier (Cale sèche affichée, premiers soins, classe spécialisée, réparation d'urgence quotidienne) | `docs/changes/6.14.144-paliers-atelier.md`, `paliersBatiments.test.ts` |
+| 2026-10-08 | 6.14.145 | Lot PB-L4 (Q340, Q341) : paliers des hangars (baies modulaires, file d'attente façon Clash of Clans, Pont d'envol / Réacteurs, Tourelles / Entretien, Pont de lancement, Casemates) ; I2 réécrit, invariant I47 ; JcJ mesuré (seuils inchangés, perte nette en défenses −25 %) | `docs/changes/6.14.145-paliers-hangars.md`, `paliersHangars.test.ts`, `caleSeche.test.ts` |
+| 2026-10-08 | 6.14.146 | Lot PB-L5 : chaîne de contenu des paliers (4 succès dont « Architecte » et « Bâtisseur avisé », titre, Codex, Formules → Paliers, Ctrl+K, 21 icônes de palier sur `/img`, changelog, billets 49 et 54) ; proposition livrée, AJ-12 fermé | `docs/changes/6.14.146-paliers-chaine.md`, `paliersChaine.test.ts` |

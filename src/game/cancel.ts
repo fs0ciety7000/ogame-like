@@ -78,20 +78,22 @@ export interface CancelQuote {
 export function unitGroupAt(queue: UnitQueueEntry[], index: number): { start: number; count: number } | null {
   if (index < 0 || index >= queue.length) return null;
   const unitId = queue[index].unitId;
+  // 6.14.145 (PB-L4) : une commande en attente d'une place est un lot à part.
+  const wait = !!queue[index].wait;
   let start = index;
-  while (start > 0 && queue[start - 1].unitId === unitId) start--;
+  while (start > 0 && queue[start - 1].unitId === unitId && !!queue[start - 1].wait === wait) start--;
   let end = index;
-  while (end + 1 < queue.length && queue[end + 1].unitId === unitId) end++;
+  while (end + 1 < queue.length && queue[end + 1].unitId === unitId && !!queue[end + 1].wait === wait) end++;
   return { start, count: end - start + 1 };
 }
 
 /** Lots d'une file (affichage) : type, quantité, premier index, en cours ou non. */
-export function unitGroups(queue: UnitQueueEntry[]): { unitId: string; index: number; count: number; running: boolean }[] {
-  const groups: { unitId: string; index: number; count: number; running: boolean }[] = [];
+export function unitGroups(queue: UnitQueueEntry[]): { unitId: string; index: number; count: number; running: boolean; waiting: boolean }[] {
+  const groups: { unitId: string; index: number; count: number; running: boolean; waiting: boolean }[] = [];
   queue.forEach((e, i) => {
     const last = groups[groups.length - 1];
-    if (last && last.unitId === e.unitId) last.count++;
-    else groups.push({ unitId: e.unitId, index: i, count: 1, running: false });
+    if (last && last.unitId === e.unitId && last.waiting === !!e.wait) last.count++;
+    else groups.push({ unitId: e.unitId, index: i, count: 1, running: false, waiting: !!e.wait });
   });
   if (groups[0] && queue[0]?.endTime) groups[0].running = true;
   return groups;
@@ -192,7 +194,7 @@ export function performCancel(player: PlayerState, queues: QueuesState, target: 
       const wasRunning = group.start === 0 && !!queue[0]?.endTime;
       queue.splice(group.start, group.count);
       // La file reprend aussitôt avec le lot suivant.
-      if (wasRunning && queue[0] && !queue[0].endTime) {
+      if (wasRunning && queue[0] && !queue[0].endTime && !queue[0].wait) {
         const next = findUnit(queue[0].unitId);
         queue[0].endTime = now + (next ? getUnitBuildTime(next, player.techLevels, player) : 0) * 1000;
       }

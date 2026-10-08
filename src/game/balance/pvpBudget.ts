@@ -57,10 +57,12 @@ export interface BudgetDuel {
   /** Part perdue par l'attaquant et par le défenseur (0 à 1). */
   attackerLoss: number;
   defenderLoss: number;
+  /** 6.14.145 (PB-L4) : part de la dépense en défenses perdue pour de bon (après la reconstruction gratuite), 0 à 1. */
+  defenseNetLoss: number;
 }
 
 /** Un combat : l'attaquant dépense `ratio` fois ce qu'a dépensé le défenseur. */
-export function budgetDuel(ratio: number, setup: DefenderSetup = "mixed", opts: { shieldPct?: number; posture?: string } = {}): BudgetDuel {
+export function budgetDuel(ratio: number, setup: DefenderSetup = "mixed", opts: { shieldPct?: number; posture?: string; defenseRebuildBonus?: number } = {}): BudgetDuel {
   const M = PVP_BUDGET_MODEL;
   const tech = techProfile(M.techFraction);
   const fleet = buy(M.attacker, M.budget * ratio);
@@ -74,14 +76,22 @@ export function budgetDuel(ratio: number, setup: DefenderSetup = "mixed", opts: 
     fleet,
     { units: defUnits, techLevels: tech, shieldPct: opts.shieldPct ?? M.shieldPct, repairPct: M.repairPct, resources: { scrap: M.defenderStock } },
     1,
-    { posture: opts.posture },
+    { posture: opts.posture, defenseRebuildBonus: opts.defenseRebuildBonus },
   );
   const c = res.combat;
-  return { ratio, outcome: c.outcome, attackerLoss: c.attackerLossPercent, defenderLoss: c.defenderLossPercent };
+  let spent = 0;
+  let lost = 0;
+  for (const [id, u] of Object.entries(defUnits)) {
+    const def = findUnit(id);
+    if (!def || def.category !== "defense") continue;
+    spent += u.count * costValue(def.cost);
+    lost += (c.defenderLosses[id] ?? 0) * costValue(def.cost);
+  }
+  return { ratio, outcome: c.outcome, attackerLoss: c.attackerLossPercent, defenderLoss: c.defenderLossPercent, defenseNetLoss: spent > 0 ? lost / spent : 0 };
 }
 
 /** Plus petit rapport de dépense qui donne la victoire à l'attaquant (null : pas avant `ratioMax`). */
-export function attackerWinThreshold(setup: DefenderSetup = "mixed", opts: { shieldPct?: number; posture?: string } = {}): number | null {
+export function attackerWinThreshold(setup: DefenderSetup = "mixed", opts: { shieldPct?: number; posture?: string; defenseRebuildBonus?: number } = {}): number | null {
   const M = PVP_BUDGET_MODEL;
   const steps = Math.round((M.ratioMax - M.ratioMin) / M.ratioStep);
   for (let i = 0; i <= steps; i++) {

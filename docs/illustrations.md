@@ -119,6 +119,9 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
      la fiche du Codex quitte alors l'icône de la ressource (image provisoire) pour `/assets/colonies/biome-<id>.webp`.
    - **Prestige** (6.14.85) : `prestige-monument` → remplacer la valeur de `PRESTIGE_IMAGE` (`src/game/prestige.ts`, image provisoire
      `/assets/buildings/fonderie_quantique.webp`) par `/assets/prestige/monument.webp` : page Prestige et fiche du Codex suivent.
+   - **Paliers de bâtiments** (6.14.146) : `palier-<famille>-<rôle>` → ajouter la clé `<famille>-<rôle>` (ou `foundry-slot`) à
+     `TIER_ART` (`src/game/buildingTiers.ts`) : la ligne « Paliers » de la carte et Ctrl+K quittent l'image du bâtiment (provisoire)
+     pour `/assets/tiers/<clé>.webp`.
 4. Fiche `docs/changes/`, validation, commit, push. `node scripts/preprod-illustrations.mjs integrated <id> …`. Vérifier sur la pré-prod
    (`scripts/preprod-capture.mjs` ; 4e argument : textes jusqu'où défiler pour capturer un contenu bas dans la page).
 

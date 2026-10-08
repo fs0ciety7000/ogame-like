@@ -35,6 +35,7 @@ const CONTENT_ICONS: Record<PaletteContentKind, typeof Gem> = {
   module: Puzzle,
   class: Compass,
   officer: Medal,
+  tier: Building2,
 };
 
 interface PaletteItem {

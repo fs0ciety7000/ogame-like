@@ -13,6 +13,8 @@ import { WORLD_BOSSES } from "@/game/worldBosses";
 import { FACTIONS } from "@/game/pirates";
 import { UNITS } from "@/game/units";
 import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/buildings";
+import { buildingTierView } from "@/game/buildingTiers";
+import { BUILD_PLAN_RULES } from "@/game/buildPlan";
 import { describeTechEffect, TECHNOLOGIES, techEffects, techImage } from "@/game/technologies";
 import { RESOURCE_LIST } from "@/game/resources";
 import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
@@ -410,7 +412,12 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       image: b.image,
       text: b.description,
       unlocked: !!player.buildings && effectiveBuildingLevel(player.buildings, b.id) >= 1,
-      facts: [{ label: "Niveau max", value: String(b.maxLevel) }, ...(prod ? [{ label: "Produit", value: prod }] : [])],
+      // 6.14.146 (PB-L5) : paliers d'un bâtiment de système (niveau et nom, lus dans les règles).
+      facts: [
+        { label: "Niveau max", value: String(b.maxLevel) },
+        ...(prod ? [{ label: "Produit", value: prod }] : []),
+        ...(buildingTierView(b, {}, BUILD_PLAN_RULES.slotBuilding)?.tiers.map((t) => ({ label: `Palier ${t.level}`, value: t.name })) ?? []),
+      ],
     });
   }
   for (const t of TECHNOLOGIES) {

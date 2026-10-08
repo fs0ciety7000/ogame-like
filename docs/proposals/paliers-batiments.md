@@ -1,7 +1,12 @@
 # Proposition : paliers des bâtiments (entrepôt, Atelier, hangars) et règle n° 4 réécrite
 
-Statut : **validée** (2026-10-08, option D et PB-Q1 à PB-Q8 validées sur `/decisions`, Q336 à Q343) ; lots PB-L0 à PB-L5 dans la feuille d'automne 2030 (6.14.134, fiche [`docs/changes/6.14.134-proposition-paliers-batiments.md`](../changes/6.14.134-proposition-paliers-batiments.md)).
-**Livrée en partie** (branche de travail) : PB-L0 (6.14.141, [`fiche`](../changes/6.14.141-regle-paliers.md)), PB-L1 (6.14.142, [`fiche`](../changes/6.14.142-paliers-moteur.md)), PB-L2 (6.14.143, [`fiche`](../changes/6.14.143-paliers-entrepot.md)), PB-L3 (6.14.144, [`fiche`](../changes/6.14.144-paliers-atelier.md)) ; restent PB-L4 (hangars) et PB-L5 (chaîne de contenu). Invariant : I46 (le §6 parlait d'« I44 », numéro déjà pris).
+Statut : **livrée** (branche de travail, 2026-10-08) : PB-L0 (6.14.141, [`fiche`](../changes/6.14.141-regle-paliers.md)), PB-L1 (6.14.142,
+[`fiche`](../changes/6.14.142-paliers-moteur.md)), PB-L2 (6.14.143, [`fiche`](../changes/6.14.143-paliers-entrepot.md)), PB-L3 (6.14.144,
+[`fiche`](../changes/6.14.144-paliers-atelier.md)), PB-L4 (6.14.145, [`fiche`](../changes/6.14.145-paliers-hangars.md)), PB-L5 (6.14.146,
+[`fiche`](../changes/6.14.146-paliers-chaine.md)). Validée le 2026-10-08 (option D et PB-Q1 à PB-Q8 sur `/decisions`, Q336 à Q343) ;
+lots dans la feuille d'automne 2030 (6.14.134, fiche [`docs/changes/6.14.134-proposition-paliers-batiments.md`](../changes/6.14.134-proposition-paliers-batiments.md)).
+Invariants : I46 (le §6 parlait d'« I44 », numéro déjà pris) et I47 (file d'attente et paliers des hangars) ; I2 réécrit en 6.14.145.
+Écart au §5.4 : Réacteurs à −5 % au lieu de −10 % (plafond de 50 % du temps de vol en couche empire, fiche 6.14.145).
 Lot AJ27-12 de la feuille de route `feuille-de-route-2030-automne.md` (lot 63), constat AJ-12 de la revue AU27
 (`docs/audit/2026-10-07-au27-jeu-chaine.md`). Les questions PB-Q1 à PB-Q8 (§8) sont tranchées : options recommandées retenues.
 

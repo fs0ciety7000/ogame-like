@@ -19,8 +19,8 @@ function stepNames(): string[] {
 describe("tâches planifiées par cadence", () => {
   it("chaque étape est unique et n'a plus son propre cronAdd", () => {
     const steps = stepNames();
-    // 6.14.111 (AC-E) : + cosmic_mail_queue (campagnes d'e-mails par lots, cadence minute).
-    expect(steps.length).toBe(17);
+    // 6.14.111 (AC-E) : + cosmic_mail_queue (campagnes d'e-mails par lots, cadence minute). 6.14.145 (PB-L4) : + cosmic_hangar_queue.
+    expect(steps.length).toBe(18);
     expect(new Set(steps).size).toBe(steps.length);
     for (const name of steps) expect(pb.includes(`cronAdd("${name}"`)).toBe(false);
   });

@@ -17,6 +17,7 @@ import { COLONY_RULES } from "@/game/colonies";
 import { formatInt } from "@/game/format";
 import { TALENT_BRANCHES, TALENT_RULES, TALENTS, talentState } from "@/game/talents";
 import { empireClasses } from "@/game/empireClass";
+import { SIGNATURE_FAMILIES, signatureTiersReached, SPEC_SLOTS, specChoicesMade } from "@/game/buildingTiers";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -231,6 +232,23 @@ export const METRICS = {
   prestigeProjects: { label: "Projets de prestige achevés", value: (p: PlayerState) => prestigeState(p).projects },
   // 6.14.3 : lunes (le niveau maximal se lit à l'usage : il est réglable).
   moonLevel: { label: "Niveau de la lune (0 sans lune)", value: (p: PlayerState) => (playerMoon(p) ? moonLevel(playerMoon(p)) : 0) },
+  // 6.14.146 (PB-L5) : paliers des bâtiments de système (le nombre se lit à l'usage : familles et niveaux réglables).
+  systemSignatures: {
+    label: "Bâtiments de système à leur palier signature, en même temps (0 à 4 : entrepôt, Atelier, deux hangars)",
+    value: (p: PlayerState) => signatureTiersReached(p),
+  },
+  allSystemSignatures: {
+    label: "Les 4 bâtiments de système à leur palier signature en même temps (0/1)",
+    value: (p: PlayerState) => (signatureTiersReached(p) >= SIGNATURE_FAMILIES.length ? 1 : 0),
+  },
+  specChoices: {
+    label: "Choix de spécialisation faits aux paliers 15 (0 à 4)",
+    value: (p: PlayerState) => specChoicesMade(p),
+  },
+  allSpecChoices: {
+    label: "Un choix fait à chaque palier de spécialisation (0/1)",
+    value: (p: PlayerState) => (specChoicesMade(p) >= SPEC_SLOTS.length ? 1 : 0),
+  },
   moonMaxed: {
     label: "Lune au niveau maximal (0/1)",
     value: (p: PlayerState) => {
@@ -466,6 +484,11 @@ export function derivedAchievements(): AchievementDef[] {
     // 6.14.3 (P29-1, Q20) : lunes.
     def("lune_1", "combat", "argent", "moonLevel", 1, "Clair de lune", "Voir naître une lune au-dessus de ta planète mère.", "🌙", { auto: true, secret: true }),
     def("lune_max", "prestige", "or", "moonMaxed", 1, "Lune pleine", "Amener ta lune au niveau maximal.", "🌕", { auto: true }),
+    // 6.14.146 (PB-L5, proposals/paliers-batiments.md §7) : paliers des bâtiments de système (entrée, maîtrise avec titre).
+    def("palier_1", "construction", "bronze", "systemSignatures", 1, "Première signature", "Amener un bâtiment de système (entrepôt, Atelier, hangar) à son palier signature.", "🏗️", { auto: true }),
+    def("architecte", "construction", "or", "allSystemSignatures", 1, "Architecte", "Tenir en même temps les paliers signature de l'entrepôt, de l'Atelier et des deux hangars.", "📐", { auto: true, title: "Grand architecte", titleId: "grand_architecte" }),
+    def("specialiste_1", "construction", "bronze", "specChoices", 1, "Premier plan", "Faire un choix à un palier de spécialisation (niveau 15).", "📝", { auto: true }),
+    def("batisseur_avise", "construction", "argent", "allSpecChoices", 1, "Bâtisseur avisé", "Faire un choix au palier de spécialisation de l'entrepôt, de l'Atelier et des deux hangars.", "🧭", { auto: true }),
     // 6.14.85 (RL-2, proposals/rythme-long-terme.md §5.2) : projets de prestige (entrée, paliers, maîtrise avec titre, secret).
     def("prestige_1", "prestige", "bronze", "prestigeProjects", 1, "Première pierre", "Achever un projet de prestige.", "🏛️", { auto: true }),
     def("prestige_10", "prestige", "argent", "prestigeProjects", 10, "Obélisque", "Achever 10 projets de prestige.", "🗿", { auto: true }),

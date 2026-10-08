@@ -450,6 +450,8 @@ export function resolveCombat(params: {
   classEdge?: { attacker?: { bonus?: number; cancel?: boolean }; defender?: { bonus?: number; cancel?: boolean } };
   /** 5.23 : effets ciblés par unité de chaque camp (les garnisons gardent les leurs, sans bonus). */
   unitBonus?: { attacker?: UnitBonus; defender?: UnitBonus };
+  /** 6.14.145 (PB-L4, Casemates : palier 20 du hangar de défense) : part des défenses reconstruites en plus de `defenseRebuildPct`. */
+  defenseRebuildBonus?: number;
 }): CombatResult {
   const { attackerUnits, attackerTechLevels, attackerRepairPct, fleet, defenderUnits, defenderTechLevels, defenderRepairPct, defenderResources } = params;
   const R = COMBAT_RULES;
@@ -593,7 +595,8 @@ export function resolveCombat(params: {
       return;
     }
     const isDefense = t.owner === "defense";
-    const recovered = Math.floor(rawLost * (isDefense ? R.defenseRebuildPct : defenderRepairPct));
+    const rebuild = Math.min(1, Math.max(0, R.defenseRebuildPct + Math.max(0, params.defenseRebuildBonus ?? 0)));
+    const recovered = Math.floor(rawLost * (isDefense ? rebuild : defenderRepairPct));
     defenderLosses[t.id] = rawLost - recovered;
     defenderRecovered[t.id] = recovered;
     if (isDefense && recovered > 0) defenderRebuilt[t.id] = recovered;

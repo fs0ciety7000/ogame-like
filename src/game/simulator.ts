@@ -1,3 +1,4 @@
+import { defenseRebuildBonus } from "@/game/buildingTiers";
 import { COMBAT_RULES, getShieldPercent, pveAttackFactor, resolveCombat, type CombatGarrison, type CombatResult } from "@/game/combat";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { workshopState } from "@/game/workshop";
@@ -63,7 +64,7 @@ export function cleanFleet(fleet: Record<string, number>): Record<string, number
 }
 
 /** Bac à sable : deux camps saisis librement. */
-export function simulateSandbox(attacker: SimSide, fleet: Record<string, number>, defender: SimSide, lootMultiplier = 1, opts: { formation?: string; posture?: string } = {}): SimOutcome {
+export function simulateSandbox(attacker: SimSide, fleet: Record<string, number>, defender: SimSide, lootMultiplier = 1, opts: { formation?: string; posture?: string; defenseRebuildBonus?: number } = {}): SimOutcome {
   const posture = postureEffects(opts.posture);
   const combat = resolveCombat({
     ...formationEffects(opts.formation),
@@ -79,6 +80,7 @@ export function simulateSandbox(attacker: SimSide, fleet: Record<string, number>
     defenderShieldPct: defender.shieldPct ?? 0,
     defenderResources: defender.resources ?? {},
     lootMultiplier,
+    ...(opts.defenseRebuildBonus ? { defenseRebuildBonus: opts.defenseRebuildBonus } : {}),
   });
   return outcome(combat, []);
 }
@@ -149,6 +151,8 @@ export function simulateAgainstReport(
     defenderUnits: units,
     defenderTechLevels: techLevels,
     defenderRepairPct: getRepairPercent(buildings),
+    // 6.14.145 (PB-L4) : Casemates de la cible (niveau du hangar de défense relevé par les sondes).
+    defenseRebuildBonus: defenseRebuildBonus(buildings),
     defenderShieldPct: lord?.shieldIgnored ? 0 : getShieldPercent(buildings) + (lord?.shieldBonus ?? 0),
     defenderResources: resources,
     garrisons,
@@ -210,6 +214,7 @@ export function simulateRaid(player: PlayerState, faction: FactionDef, notoriety
     defenderUnits,
     defenderTechLevels: player.techLevels ?? {},
     defenderRepairPct: getRepairPercent(player.buildings),
+    defenseRebuildBonus: defenseRebuildBonus(player.buildings),
     defenderShieldPct: getShieldPercent(player.buildings, allianceShieldBonus(player.allianceResearch)) + pve.shield,
     defenderResources: {},
     homeFleetFactor: posture.homeFleetFactor,
