@@ -10,7 +10,6 @@ import { onVacation } from "@/game/vacation";
 import { DEFENSIVE_UNITS, findUnit, hasUnitRole, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
 import { isProbeUnit } from "@/game/espionage";
 import { UNIT_AUDIT_RULES, unitClasses } from "@/game/unitClasses";
-import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { overallHull } from "@/game/workshop";
 import { setVendettaTitlesResolver } from "@/game/eliteUnits";
@@ -169,7 +168,7 @@ const ORIGIN_ART: Record<WarlordOrigin, { label: string; art: string; emblem: st
   leviathan: { label: "Culte du Léviathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" },
 };
 
-export function warlordOrigin(origin: WarlordOrigin) {
+function warlordOrigin(origin: WarlordOrigin) {
   return ORIGIN_ART[origin] ?? ORIGIN_ART.kesh;
 }
 
@@ -292,7 +291,7 @@ export const DEFAULT_WARLORDS: WarlordDef[] = [
   }),
 ];
 
-export const DEFAULT_WARLORD_SETTINGS: WarlordSettings = { enabled: true, attackFrequency: 1, powerFactor: 1 };
+const DEFAULT_WARLORD_SETTINGS: WarlordSettings = { enabled: true, attackFrequency: 1, powerFactor: 1 };
 
 let config: WarlordsConfig = { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS) };
 
@@ -391,7 +390,7 @@ function median(values: number[]): number {
 
 /** Repères tirés des joueurs actifs (jamais des seigneurs eux-mêmes). */
 /** 5.22.1 : maximum sans valeurs aberrantes (un compte très au-dessus du suivant ne fixe pas la barre). */
-export function robustMax(values: number[], ratio = WARLORD_RULES.outlierRatio): number {
+function robustMax(values: number[], ratio = WARLORD_RULES.outlierRatio): number {
   const sorted = values.filter((v) => v > 0).sort((a, b) => b - a);
   while (sorted.length > 1 && sorted[0] > sorted[1] * ratio) sorted.shift();
   return sorted[0] ?? 0;
@@ -440,7 +439,7 @@ export function warlordTargetPower(d: WarlordDef, ref: WarlordReference, setting
   return Math.max(WARLORD_RULES.minPower, Math.round(Math.min(target, cap)));
 }
 
-export function warlordTargetXp(d: WarlordDef, ref: WarlordReference): number {
+function warlordTargetXp(d: WarlordDef, ref: WarlordReference): number {
   const base = d.tier === "strong" ? ref.maxXp : ref.medianXp;
   return Math.max(500, Math.round(base * tierFactor(d)));
 }
@@ -965,7 +964,7 @@ function rankFields(d: WarlordDef, rt: WarlordRuntime | undefined): Pick<Warlord
 }
 
 /** 5.22 : titres de vendetta déjà décernés contre une personnalité (déblocage des unités d'élite, rétroactif). */
-export function vendettaTitlesFor(personality: WarlordPersonality): string[] {
+function vendettaTitlesFor(personality: WarlordPersonality): string[] {
   return config.defs.filter((d) => d.personality === personality).flatMap((d) => [vendettaTitle(d), vendettaTitle(d, 5)]);
 }
 setVendettaTitlesResolver(vendettaTitlesFor);

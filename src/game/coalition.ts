@@ -87,7 +87,7 @@ export function writeCoalitions(state: WarlordsState, c: CoalitionState): void {
   (state as WarlordsState & { coalitions?: CoalitionState }).coalitions = c;
 }
 
-export function activeCoalition(c: CoalitionState, now: number): Coalition | null {
+function activeCoalition(c: CoalitionState, now: number): Coalition | null {
   return c.coalition && c.coalition.status === "active" && now < c.coalition.endsAtMs ? c.coalition : null;
 }
 
@@ -165,7 +165,7 @@ export function coalitionRanking(co: Coalition): { uid: string; pseudo: string; 
     .sort((a, b) => b.damage - a.damage);
 }
 
-export function coalitionTitle(d: Pick<WarlordDef, "name">): string {
+function coalitionTitle(d: Pick<WarlordDef, "name">): string {
   return `Briseur de ${d.name.split(",")[0]}`;
 }
 

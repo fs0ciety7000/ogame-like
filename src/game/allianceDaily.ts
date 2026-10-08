@@ -45,10 +45,10 @@ export const ALLIANCE_DAILY_RULES_META = {
 };
 
 export type DailyKind = "treasury" | "missions" | "power" | "research";
-export const DAILY_KINDS: DailyKind[] = ["treasury", "missions", "power", "research"];
+const DAILY_KINDS: DailyKind[] = ["treasury", "missions", "power", "research"];
 
 /** Compteur suivi pour chaque objectif. */
-export const DAILY_STAT: Record<DailyKind, keyof PlayerStats> = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
+const DAILY_STAT: Record<DailyKind, keyof PlayerStats> = { treasury: "donated", missions: "missions", power: "powerDestroyed", research: "researchStarted" };
 
 export const DAILY_LABEL: Record<DailyKind, string> = {
   treasury: "Ressources versées au trésor",

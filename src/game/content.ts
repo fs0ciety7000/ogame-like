@@ -750,7 +750,7 @@ function validateFixedListNumbers(merged: GameRules): string[] {
  * 6.14.104 (AU27, AA3, Q260) : bornes croisées entre deux champs d'un même groupe (minimum ≤ maximum, seuils dans l'ordre).
  * `strict` : le premier doit être strictement inférieur au second.
  */
-export const CROSS_BOUNDS: { group: string; low: string; high: string; strict?: boolean }[] = [
+const CROSS_BOUNDS: { group: string; low: string; high: string; strict?: boolean }[] = [
   { group: "warlords", low: "travelMinHours", high: "travelMaxHours" },
   { group: "chatRooms", low: "nameMin", high: "nameMax" },
   { group: "rename", low: "minLength", high: "maxLength" },
@@ -942,7 +942,7 @@ export function validateGameContent(content: GameContent): string[] {
 }
 
 /** 6.14.59 (AA1) : libellés des sections de contenu (messages de refus du serveur). */
-export const CONTENT_SECTION_LABELS: Record<ContentSection, string> = {
+const CONTENT_SECTION_LABELS: Record<ContentSection, string> = {
   buildings: "Bâtiments",
   units: "Unités",
   technologies: "Technologies",

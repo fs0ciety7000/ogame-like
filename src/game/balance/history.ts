@@ -11,7 +11,7 @@ import { combatTypeCounts, isPvpReport, type CombatKind } from "@/game/balance/c
 ===================================================== */
 
 export const BALANCE_HISTORY_KEY = "balance_history";
-export const BALANCE_HISTORY_DAYS = 180;
+const BALANCE_HISTORY_DAYS = 180;
 
 export interface BalanceSnapshot {
   /** « 2026-10-03 » (UTC). */

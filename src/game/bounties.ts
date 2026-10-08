@@ -126,7 +126,7 @@ export function fugitiveAt(index: number | undefined): Fugitive {
   return list[index ?? 0] ?? list[0];
 }
 
-export const ELITE_FUGITIVES: Fugitive[] = [
+const ELITE_FUGITIVES: Fugitive[] = [
   { name: "Sarghul Vex, le Marchand d'Œufs", factionId: "cartel", crime: "a vendu la couvée royale au plus offrant" },
   { name: "Kaïra Voss, la Briseuse de Ruche", factionId: "varan", crime: "a commandé l'assaut sur la Ruche-Mère" },
   { name: "L'Archiviste Pâle", factionId: "inquisition", crime: "détient le dernier œuf de la Reine" },
@@ -192,7 +192,7 @@ export interface ShopHistoryEntry {
 
 export const SHOP_HISTORY_MAX = 30;
 
-export function emptyBountyState(): BountyState {
+function emptyBountyState(): BountyState {
   return {
     amber: 0,
     amberEarned: 0,
@@ -295,7 +295,7 @@ export function amberFor(tier: BountyTier, rank: number): number {
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
-export function boardSlot(now: number): number {
+function boardSlot(now: number): number {
   return Math.floor(now / (BOUNTY_RULES.refreshHours * HOUR));
 }
 
@@ -304,7 +304,7 @@ export function nextRefreshMs(now: number): number {
 }
 
 /** Niveaux proposés selon le rang : 3 contrats, un 4e (élite) au rang 5. */
-export function boardTiers(rank: number): BountyTier[] {
+function boardTiers(rank: number): BountyTier[] {
   if (rank >= BOUNTY_RULES.tiers[4].minRank) return [1, 2, 3, 4];
   if (rank >= BOUNTY_RULES.tiers[3].minRank) return [1, 2, 3];
   return [1, 2, 2];
@@ -327,7 +327,7 @@ export function generateBoard(uid: string, slot: number, rank: number, exclude: 
 
 /** Renouvelle le tableau (nouveau créneau) et le compteur du jour. Les
  *  contrats en cours de traque sont conservés. Modifie `st`. */
-export function refreshBounties(st: BountyState, uid: string, now: number): BountyState {
+function refreshBounties(st: BountyState, uid: string, now: number): BountyState {
   const day = contractDay(now);
   if (st.day !== day) {
     st.day = day;
@@ -350,7 +350,7 @@ export function viewBounties(player: Pick<PlayerState, "uid" | "bounties">, now:
 /* ---------- lancement et combat ---------- */
 
 /** Puissance d'attaque de la flotte du joueur (vaisseaux à quai). */
-export function hunterPower(player: Pick<PlayerState, "units" | "techLevels">): number {
+function hunterPower(player: Pick<PlayerState, "units" | "techLevels">): number {
   return computeFullPower(player.units ?? {}, player.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]);
 }
 
@@ -810,11 +810,6 @@ function weekId(now: number): string {
   return new Date(midnight - ((day + 6) % 7) * DAY).toISOString().slice(0, 10);
 }
 
-export function exchangeLeft(player: Pick<PlayerState, "bounties">, now: number): number {
-  const st = bountyState(player);
-  return BOUNTY_RULES.exchange.weeklyCap - (st.exchangeWeek === weekId(now) ? st.exchanged : 0);
-}
-
 /** Échange d'Ambre contre des ressources rares (sens unique). */
 export function exchangeAmber(player: PlayerState, amountIn: unknown, now: number): Partial<Record<ResourceId, number>> {
   const amount = Math.floor(Number(amountIn));
@@ -839,10 +834,6 @@ export function exchangeAmber(player: PlayerState, amountIn: unknown, now: numbe
 }
 
 /* ---------- effets des objets ---------- */
-
-export function bountyBoostEnd(player: Pick<PlayerState, "bounties">): number {
-  return num((player.bounties as Partial<BountyState> | undefined)?.boostUntilMs);
-}
 
 export function shieldUntil(player: Pick<PlayerState, "bounties">): number {
   return num((player.bounties as Partial<BountyState> | undefined)?.shieldUntilMs);
@@ -1134,11 +1125,6 @@ export function setNameTone(player: PlayerState, tone: unknown): string {
   return id;
 }
 
-/** Phéromone active (XP des officiers +25 %). */
-export function pheromoneActive(player: Pick<PlayerState, "bounties">, now: number): boolean {
-  return bountyState(player).pheromoneUntilMs > now;
-}
-
 /* Badge « Mécène » : Ambre versée au pot commun (dons, taxe des enchères en Ambre). */
 export type PatronTierId = "bronze" | "argent" | "or" | "grand";
 /** 6.14.104 (AA3, AA-9) : seuil de chaque palier lu dans PATRON_RULES.tiers (admin, Mécènes) ; ids, noms et couleurs en dur. */
@@ -1181,7 +1167,7 @@ export function donateAmber(player: PlayerState, amountIn: unknown, now = 0): nu
 }
 
 /* 5.27 : rappel une heure avant la fin de la phéromone et du voile de chitine. */
-export const SHOP_REMINDER_LEAD_MS = 3600_000;
+const SHOP_REMINDER_LEAD_MS = 3600_000;
 
 /** Notifications de fin prochaine (une seule fois par effet) ; changed : bounties à enregistrer. */
 export function shopReminders(player: Pick<PlayerState, "bounties">, now: number): { changed: boolean; notifications: NewNotification[] } {

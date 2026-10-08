@@ -36,8 +36,8 @@ export interface OnboardingStep {
 }
 
 /** Rang au-delà duquel un joueur est considéré comme avancé. */
-export const ONBOARDING_RANK = "fer2";
-export const ONBOARDING_TITLE = "Recrue";
+const ONBOARDING_RANK = "fer2";
+const ONBOARDING_TITLE = "Recrue";
 
 const level = (p: PlayerState, id: string) => (p.buildings?.[id]?.unlocked ? (p.buildings[id].level ?? 0) : 0);
 const count = (p: PlayerState, id: string) => p.units?.[id]?.count ?? 0;

@@ -33,7 +33,7 @@ function write(uid: string, presets: FleetPreset[]) {
   }
 }
 
-export const useFleetPresetStore = create<{ byUid: Record<string, FleetPreset[]> }>(() => ({ byUid: {} }));
+const useFleetPresetStore = create<{ byUid: Record<string, FleetPreset[]> }>(() => ({ byUid: {} }));
 
 const EMPTY: FleetPreset[] = [];
 

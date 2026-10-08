@@ -50,7 +50,7 @@ export interface HealthInput {
 }
 
 /** 6.14.6 (BOSS-2) : fenêtre de la mesure des boss (8 semaines : un boss mondial par semaine en alternance). */
-export const BOSS_HEALTH_WINDOW_DAYS = 56;
+const BOSS_HEALTH_WINDOW_DAYS = 56;
 
 export interface BossHealthRow {
   kind: BossKind;
@@ -632,7 +632,7 @@ const fr = (x: number) => String(x).replace(".", ",");
 const P = (part: number) => Math.round((Number(part) || 0) * 1000) / 10;
 
 /** Mesures comparées aux seuils réglables (`BALANCE_HEALTH_RULES`) ; une mesure sans donnée n'alerte pas. */
-export function healthAlerts(h: Omit<BalanceHealth, "alerts">): HealthAlert[] {
+function healthAlerts(h: Omit<BalanceHealth, "alerts">): HealthAlert[] {
   const R = BALANCE_HEALTH_RULES;
   const out: HealthAlert[] = [];
   const bounty = h.amber.last.bySource.find((r) => r.source === "bounties")?.sharePct ?? 0;

@@ -56,10 +56,6 @@ export function removeReminder(id: string): void {
   useRemindersStore.setState({ list: next });
 }
 
-export function hasOnlineReminder(uid: string): boolean {
-  return useRemindersStore.getState().list.some((r) => r.kind === "online" && r.uid === uid);
-}
-
 /** Ressource commune la plus remplie (part de l'entrepôt), ou null. */
 export function fullestStorage(player: Parameters<typeof economySnapshot>[0]): { res: string; pct: number } | null {
   const snap = economySnapshot(player, Date.now());

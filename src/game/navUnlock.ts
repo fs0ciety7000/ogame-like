@@ -253,7 +253,7 @@ function tipMarkId(page: string): string {
   return `tip:${navMarkId(page).slice(4)}`;
 }
 
-export function rankXp(id: string | undefined): number {
+function rankXp(id: string | undefined): number {
   if (!id) return Infinity;
   const r = RANKS.find((x) => x.id === id);
   // Rang inconnu (supprimé dans l'admin) : la page est ouverte (le plus prudent pour le joueur).
@@ -265,13 +265,13 @@ export function rankName(id: string | undefined): string {
 }
 
 /** L'option « Tout afficher » est-elle active ? (dernière des deux marques posées) */
-export function navShowAll(p: Pick<PlayerState, "announcementsSeen"> | null | undefined): boolean {
+function navShowAll(p: Pick<PlayerState, "announcementsSeen"> | null | undefined): boolean {
   const seen = p?.announcementsSeen ?? [];
   return seen.lastIndexOf(NAV_SHOW_ALL_ON) > seen.lastIndexOf(NAV_SHOW_ALL_OFF);
 }
 
 /** Compte « existant » au sens de Q103 : créé avant la date (date absente : ancien compte) et au moins au rang vétéran. */
-export function navVeteran(p: Pick<PlayerState, "createdAtMs" | "xp">): boolean {
+function navVeteran(p: Pick<PlayerState, "createdAtMs" | "xp">): boolean {
   const created = Number(p.createdAtMs) || 0;
   const from = Number(NAV_UNLOCK_RULES.newAccountsFrom) || 0;
   return created < from && (Number(p.xp) || 0) >= rankXp(NAV_UNLOCK_RULES.veteranRank);
@@ -346,7 +346,7 @@ export function navPageMarked(p: Pick<PlayerState, "announcementsSeen">, page: s
 }
 
 /** Pourquoi une page est ouverte (premier déclencheur trouvé), ou null si elle est fermée. */
-export function navOpenReason(p: PlayerState, page: string, ctx: NavContext, signals = navSignals(p, ctx)): "always" | "mark" | "signal" | "step" | "rank" | null {
+function navOpenReason(p: PlayerState, page: string, ctx: NavContext, signals = navSignals(p, ctx)): "always" | "mark" | "signal" | "step" | "rank" | null {
   const rule = NAV_UNLOCK_RULES.pages[navPath(page)];
   if (!rule) return "always";
   if (navPageMarked(p, page)) return "mark";
@@ -521,7 +521,7 @@ export function navPagesOpenedByStep(p: PlayerState, step: string, ctx: NavConte
 ===================================================== */
 
 /** « Galaxie », « Galaxie et Alliance », « Missions, Combats et Menaces ». */
-export function navPageList(pages: string[]): string {
+function navPageList(pages: string[]): string {
   const labels = pages.map(navPageLabel);
   if (labels.length <= 1) return labels.join("");
   return `${labels.slice(0, -1).join(", ")} et ${labels[labels.length - 1]}`;

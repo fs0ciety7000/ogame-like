@@ -300,7 +300,7 @@ export function activePass(seasonId: string = currentSeasonId()): MonthPass {
 }
 
 /** v5.14.1 : prérequis d'un palier du passe d'une saison. */
-export function passTierReqs(seasonId: string, tier: number): PassRequirement[] {
+function passTierReqs(seasonId: string, tier: number): PassRequirement[] {
   return normalizeTierReqs(activePass(seasonId).requirements?.[String(tier)]);
 }
 
@@ -422,7 +422,7 @@ export const PASS_BONUS_RULES_META = {
 };
 
 /** Paliers bonus versés pour un surplus donné (moteur pur, voir passBonusProgress pour l'affichage). */
-export function settlePassBonus(st: PassState, extra: number): number {
+function settlePassBonus(st: PassState, extra: number): number {
   const r = PASS_BONUS_RULES;
   if (!r.enabled || !(extra > 0) || !(r.points > 0)) return 0;
   const done = st.bonusTiers ?? 0;
@@ -482,7 +482,7 @@ export function passPrestigeProgress(st: Pick<PassState, "seasonId" | "prestigeP
 
 /** Ajoute des points de prestige (surplus après le dernier palier) ; tous les paliers atteints : la saison rejoint `prestiged`.
  *  Renvoie le nombre de paliers de prestige franchis. */
-export function settlePassPrestige(st: PassState, extra: number): number {
+function settlePassPrestige(st: PassState, extra: number): number {
   const size = passPrestigeSize(st.seasonId);
   if (!(size > 0) || !(extra > 0)) return 0;
   const before = passPrestigeProgress(st)!;

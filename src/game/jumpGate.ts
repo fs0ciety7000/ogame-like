@@ -98,7 +98,7 @@ export function gateReadyAtMs(player: Pick<GatePlayer, "moon"> | null | undefine
 }
 
 /** Raison du refus d'un saut, ou null s'il est permis (I23). */
-export function jumpRefusal(
+function jumpRefusal(
   player: GatePlayer & Pick<PlayerState, "uid">,
   fleet: Pick<Fleet, "ownerUid" | "mission" | "status"> & { loot?: Fleet["loot"] },
   now: number,

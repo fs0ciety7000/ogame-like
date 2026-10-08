@@ -609,7 +609,7 @@ function advanceTarget(target: PlayerState, now: number): PlayerState {
 
 /** Transport (v3.5) : livraison (chargée sur la planète mère) ou collecte
  *  (chargée à l'arrivée sur la colonie, rapportée au retour). */
-export function launchTransport(owner: PlayerState, raw: Record<string, unknown>, req: { colonyId?: unknown; direction?: unknown; cargo?: unknown }, now: number): LaunchOutput {
+function launchTransport(owner: PlayerState, raw: Record<string, unknown>, req: { colonyId?: unknown; direction?: unknown; cargo?: unknown }, now: number): LaunchOutput {
   const colony = colonyOf(owner, String(req.colonyId ?? ""));
   if (!colony) throw new GameActionError("Colonie introuvable.");
   const direction: TransportDirection = req.direction === "collect" ? "collect" : "deliver";
@@ -636,7 +636,7 @@ export function launchTransport(owner: PlayerState, raw: Record<string, unknown>
 }
 
 /** v5.1 : livraison d'un contrat entre joueurs — cargaison chargée au départ, arrivée avant l'échéance. */
-export function launchDelivery(
+function launchDelivery(
   owner: PlayerState,
   client: PlayerState,
   raw: Record<string, unknown>,
@@ -731,7 +731,7 @@ export function launchSpy(owner: PlayerState, target: PlayerState, raw: Record<s
 }
 
 /** Recyclage : Drones récupérateurs vers un champ de débris encore présent. */
-export function launchRecycle(owner: PlayerState, field: DebrisField | null, raw: Record<string, unknown>, now: number): LaunchOutput {
+function launchRecycle(owner: PlayerState, field: DebrisField | null, raw: Record<string, unknown>, now: number): LaunchOutput {
   if (!field || field.expiresAtMs <= now || debrisTotal(field) <= 0) throw new GameActionError("Ce champ de débris n'existe plus.");
   const units = takeUnits(owner, raw, isRecyclerUnit, "Seuls les Drones récupérateurs et les Récolteurs peuvent recycler.");
   const speed = fleetSpeed(owner.units, units);
@@ -754,7 +754,7 @@ export function patrolEnergyCost(units: PlayerState["units"], fleet: Record<stri
 
 /** Mode fuite : la flotte quitte la base (elle ne défend plus) et revient
  *  au bout de la durée choisie. Rappel possible jusqu'à mi-parcours. */
-export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, minutes: number, now: number): LaunchOutput {
+function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, minutes: number, now: number): LaunchOutput {
   const duration = Math.round(Number(minutes));
   if (!(duration >= PATROL_RULES.minMinutes && duration <= PATROL_RULES.maxMinutes)) {
     throw new GameActionError(`La patrouille dure entre ${PATROL_RULES.minMinutes} min et ${Math.round(PATROL_RULES.maxMinutes / 60)} h.`);
@@ -778,7 +778,7 @@ export function launchPatrol(owner: PlayerState, raw: Record<string, unknown>, m
 
 /** Garnison : la flotte part stationner chez un membre de son alliance et
  *  combat à ses côtés s'il est attaqué. Entretien payé au départ. */
-export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Record<string, unknown>, hoursIn: number, garrisonsAtHost: number, now: number): LaunchOutput {
+function launchGarrison(owner: PlayerState, host: PlayerState, raw: Record<string, unknown>, hoursIn: number, garrisonsAtHost: number, now: number): LaunchOutput {
   if (owner.uid === host.uid) throw new GameActionError("Tu ne peux pas stationner chez toi : utilise la patrouille.");
   if (!owner.allianceId || owner.allianceId !== host.allianceId) throw new GameActionError("Tu ne peux stationner que chez un membre de ton alliance.");
   const hours = Math.round(Number(hoursIn));
@@ -819,7 +819,7 @@ export function launchGarrison(owner: PlayerState, host: PlayerState, raw: Recor
 /* ---------- 6.10.0 : base avancée sur une colonie (proposals/flotte-basee.md) ---------- */
 
 /** La flotte vole jusqu'à sa colonie et y stationne au plus `maxDays` jours. */
-export function launchColonyBase(owner: PlayerState, raw: Record<string, unknown>, colonyId: string, basesAtColony: number, now: number): LaunchOutput {
+function launchColonyBase(owner: PlayerState, raw: Record<string, unknown>, colonyId: string, basesAtColony: number, now: number): LaunchOutput {
   const r = COLONY_BASE_RULES;
   if (!r.enabled) throw new GameActionError("Les bases avancées sont fermées pour le moment.");
   const colony = colonyOf(owner, colonyId);
@@ -839,7 +839,7 @@ export function isActiveBase(f: Pick<Fleet, "mission" | "status" | "ownerUid" | 
 }
 
 /** Vaisseaux pris dans la base pour une attaque (jamais plus qu'elle n'en contient : invariant I20). */
-export function takeFromBase(owner: PlayerState, base: Fleet, raw: Record<string, unknown>, now: number): Record<string, number> {
+function takeFromBase(owner: PlayerState, base: Fleet, raw: Record<string, unknown>, now: number): Record<string, number> {
   if (!isActiveBase(base, owner.uid, now) || !base.base?.colonyId) throw new GameActionError("Cette base avancée n'est plus en place.");
   if (!colonyOf(owner, base.base.colonyId)) throw new GameActionError("Colonie introuvable.");
   const units: Record<string, number> = {};
@@ -863,7 +863,7 @@ export function baseReturnUnits(fleet: Pick<Fleet, "units" | "base" | "ownerUid"
 }
 
 /** Assaut du repaire d'une faction (PvE) : sa puissance est fixée au départ. */
-export function launchLair(owner: PlayerState, target: string, raw: Record<string, unknown>, now: number): LaunchOutput {
+function launchLair(owner: PlayerState, target: string, raw: Record<string, unknown>, now: number): LaunchOutput {
   const faction = findFaction(factionOfLair(target));
   checkLairLaunch(faction, owner, raw);
   const power = lairPower(faction!, owner);
@@ -947,7 +947,7 @@ export function performFleetReturn(
 }
 
 /** 5.23 : missions dont le décollage peut être programmé, et délai maximal. */
-export const SCHEDULABLE_MISSIONS: FleetMission[] = ["attack", "spy", "transport", "recycle", "garrison"];
+const SCHEDULABLE_MISSIONS: FleetMission[] = ["attack", "spy", "transport", "recycle", "garrison"];
 
 /** 5.23 : délai de décollage demandé (minutes entières), borné ; 0 si la mission ne s'y prête pas. */
 export function fleetDelayMs(mission: string, minutes: unknown): number {

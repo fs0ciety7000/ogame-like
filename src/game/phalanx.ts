@@ -255,7 +255,7 @@ export function isAggressor(player: MoonPlayer & { uid: string }, targetUid: str
 }
 
 /** Raison du refus d'un balayage, ou null s'il est permis. */
-export function scanRefusal(
+function scanRefusal(
   player: MoonPlayer & Pick<PlayerState, "uid"> & Partial<Pick<PlayerState, "resources" | "buildings" | "techLevels">>,
   targetUid: string,
   fleets: readonly ScanFleet[],

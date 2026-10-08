@@ -232,7 +232,7 @@ export function contentName(family: ContentFamily, id: string): string {
   return resolver?.name(family, id) ?? id;
 }
 
-export function contentIds(family: ContentFamily): string[] {
+function contentIds(family: ContentFamily): string[] {
   return resolver?.ids(family) ?? [];
 }
 
@@ -262,12 +262,6 @@ export function objectivePage(k: TrackedKey | string): string | undefined {
   if (isStaticObjective(k)) return TRACKED_ACTIONS[k].page;
   const c = parseContentObjective(k);
   return c ? CONTENT_FAMILY_TEXTS[c.family].page : undefined;
-}
-
-export function objectiveSystem(k: TrackedKey): string {
-  if (isStaticObjective(k)) return TRACKED_ACTIONS[k].system;
-  const c = parseContentObjective(k);
-  return c ? CONTENT_FAMILY_TEXTS[c.family].system : "";
 }
 
 export function objectivePassive(k: TrackedKey): boolean {

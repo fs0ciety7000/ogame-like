@@ -58,7 +58,7 @@ export interface CombatKindStat {
   status: "low" | "ok" | "high" | "none";
 }
 
-export function playerWon(kind: CombatKind, outcome: string): boolean {
+function playerWon(kind: CombatKind, outcome: string): boolean {
   return COMBAT_KINDS[kind].side === "attack" ? outcome === "attacker_win" : outcome !== "attacker_win";
 }
 

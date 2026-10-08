@@ -6553,7 +6553,6 @@ function lendOptions(to) {
     { id: "lend", label: `Pr\xEAter au hangar ${to === "d\xE9fense" ? "de d\xE9fense" : "d'attaque"}`, text: `${formatPct(Math.max(0, BUILDING_TIER_RULES.hangarLendShare))} des places de ce hangar passent au hangar ${to === "d\xE9fense" ? "de d\xE9fense" : "d'attaque"}.` }
   ];
 }
-var CHOICE_SLOTS = Object.keys(SLOTS);
 function isChoiceSlot(x) {
   return typeof x === "string" && Object.prototype.hasOwnProperty.call(SLOTS, x);
 }

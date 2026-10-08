@@ -44,7 +44,7 @@ export function normalizePoll(raw: unknown): Poll | null {
   return { question, options, closesAtMs: Number.isFinite(closes) && closes > 0 ? closes : null, showResults: r.showResults === "always" ? "always" : "after_vote" };
 }
 
-export function pollOpen(poll: Poll, now: number): boolean {
+function pollOpen(poll: Poll, now: number): boolean {
   return poll.closesAtMs === null || now < poll.closesAtMs;
 }
 

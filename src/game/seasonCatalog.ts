@@ -148,7 +148,7 @@ export function setSeasonCatalog(themes: { id: string; primary: CommanderId; ret
 }
 
 /** Années du catalogue (la plus grande année écrite ; 3 pour le catalogue livré). */
-export function catalogYears(): number {
+function catalogYears(): number {
   return Math.max(1, ...SEASON_CATALOG.map((e) => Math.floor(Number(e.year)) || 1));
 }
 

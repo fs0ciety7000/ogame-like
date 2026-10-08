@@ -56,7 +56,7 @@ const HOUR = 3600;
 const DAY = 86_400;
 
 /** Hypothèses du modèle (pas des règles du jeu : elles ne vont pas dans l'admin). */
-export const PROGRESSION_SIM_MODEL = {
+const PROGRESSION_SIM_MODEL = {
   /** Expédition moyenne : gisement (35 %) de 2 h de production commune… */
   expeditionDepositShare: 0.35,
   expeditionDepositHours: 2,
@@ -730,11 +730,4 @@ export function scaleTier2Costs(factor: number): () => void {
       const s = saved[i];
       if (s) b.upgrade.tier2 = s;
     });
-}
-
-/** Jour de 1re Ascension et autres repères, sous une forme courte (script, fiches). */
-export function progressionSummary(r: ProgressionResult): string {
-  const d = (x: number | null) => (x === null ? `> J${r.days}` : `J${x}`);
-  const missions = r.incomeShareFromJ14.missions ?? 0;
-  return `${r.profile} : Ascension ${d(r.ascensionDay)}, arbre complet ${d(r.techCompleteDay)}, production perdue ${r.lostPct} %, missions ${missions} % des gains (J14+), coffre ${r.firstChest ? `${r.firstChest.hoursOfProduction} h de production (J${r.firstChest.day})` : "jamais"}`;
 }

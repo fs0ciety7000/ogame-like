@@ -57,7 +57,7 @@ const stat = (p: LookPlayer, key: string): number => Number((p.stats as Record<s
 const bossesKilled = (p: LookPlayer): number => ((p.stats as { worldBossKilled?: string[] } | undefined)?.worldBossKilled ?? []).length + (stat(p, "leviathanKills") > 0 ? 1 : 0);
 const free = () => true;
 
-export const PLANET_PALETTES: Record<string, PlanetPalette> = {
+const PLANET_PALETTES: Record<string, PlanetPalette> = {
   ocean: { ocean: "var(--color-cyan-glow)", land: "var(--color-slate-500)" },
   dunes: { ocean: "var(--color-gold-glow)", land: "var(--color-ember-glow)" },
   glacier: { ocean: "var(--color-slate-300)", land: "var(--color-cyan-glow)" },

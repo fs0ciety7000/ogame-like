@@ -4,7 +4,7 @@
 ===================================================== */
 
 /** Version des emblèmes (cache des navigateurs). */
-export const RANK_ASSET_VERSION = "2.3";
+const RANK_ASSET_VERSION = "2.3";
 
 export interface RankDef {
   id: string;

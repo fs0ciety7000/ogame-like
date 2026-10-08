@@ -36,7 +36,7 @@ export const POSTURES: FormationDef<PostureId>[] = [
 export function isFormation(v: unknown): v is FormationId {
   return FORMATIONS.some((f) => f.id === v);
 }
-export function isPosture(v: unknown): v is PostureId {
+function isPosture(v: unknown): v is PostureId {
   return POSTURES.some((p) => p.id === v);
 }
 

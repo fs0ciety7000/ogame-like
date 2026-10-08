@@ -137,7 +137,7 @@ export function allianceBossCost(members: Pick<PlayerState, "buildings" | "techL
   return cost;
 }
 
-export function allianceBossHp(activeMembers: Pick<PlayerState, "units" | "techLevels">[]): number {
+function allianceBossHp(activeMembers: Pick<PlayerState, "units" | "techLevels">[]): number {
   const power = activeMembers.reduce((a, p) => a + computeFullPower(p.units ?? {}, p.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]), 0);
   return Math.max(ALLIANCE_BOSS_RULES.minHp, Math.round(power * ALLIANCE_BOSS_RULES.hpFactor));
 }

@@ -341,7 +341,7 @@ export function signatureUnits(): string[] {
 }
 
 /** Unité visée par un modèle signature (`sig_<unité>`), null sinon. */
-export function signatureUnitOf(templateId: string): string | null {
+function signatureUnitOf(templateId: string): string | null {
   return typeof templateId === "string" && templateId.startsWith(SIGNATURE_PREFIX) && templateId.length > SIGNATURE_PREFIX.length ? templateId.slice(SIGNATURE_PREFIX.length) : null;
 }
 
@@ -506,7 +506,7 @@ export function rollModulePlan(source: string, now: number, random: () => number
 }
 
 /** 6.14.132 (AJ27-9) : modèle de module déjà trouvé (Codex « Arsenal »), gardé après un recyclage ou une vente. */
-export function markModuleSeen(player: Pick<PlayerState, "stats">, template: string): void {
+function markModuleSeen(player: Pick<PlayerState, "stats">, template: string): void {
   const seen = Array.isArray(player.stats?.moduleTemplatesSeen) ? player.stats!.moduleTemplatesSeen : [];
   if (!seen.includes(template)) player.stats = { ...(player.stats ?? {}), moduleTemplatesSeen: [...seen, template] } as PlayerState["stats"];
 }

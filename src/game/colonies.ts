@@ -1,8 +1,6 @@
-import { allianceProductionFactor } from "@/game/alliances";
 import { spendResources } from "@/game/spending";
 import { bumpStat, playerStats } from "@/game/stats";
 import { setActionAvailability, trackAction } from "@/game/trackedActions";
-import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { playerUnitCapacity } from "@/game/hangar";
@@ -63,7 +61,7 @@ export function foundationLevel(homeLevel: number): number {
 }
 
 /** v5.10 : relève les extracteurs et l'entrepôt d'une colonie au niveau de fondation (jamais à la baisse). */
-export function applyFoundation(colony: Colony, home: Buildings | undefined): void {
+function applyFoundation(colony: Colony, home: Buildings | undefined): void {
   for (const id of foundationBuildingIds()) {
     const target = foundationLevel(home?.[id]?.level ?? 0);
     const cur = colony.buildings[id]?.level ?? 1;

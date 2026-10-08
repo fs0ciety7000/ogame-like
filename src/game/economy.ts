@@ -184,7 +184,7 @@ export function advanceResources(input: EconomyInput, elapsedSeconds: number, st
 
 /** 6.14.143 (PB-L2) : tampon de l'entrepôt par ressource commune (copie propre). */
 export type StorageBuffer = Partial<Record<ResourceId, number>>;
-export function cleanBuffer(raw: unknown): StorageBuffer {
+function cleanBuffer(raw: unknown): StorageBuffer {
   const out: StorageBuffer = {};
   if (!raw || typeof raw !== "object") return out;
   for (const r of COMMON_RESOURCES) {

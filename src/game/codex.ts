@@ -105,12 +105,12 @@ const resourceName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.nam
 type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige" | "colonies" | "talents" | "modules" | "empireClass">>;
 
 /** 6.14.132 (AJ27-9) : image d'une branche de talents (provisoire jusqu'au rendu, `scripts/illustrations.json`). */
-export function talentBranchImage(branch: string): string {
+function talentBranchImage(branch: string): string {
   return `/assets/talents/${branch}.webp`;
 }
 
 /** 6.14.132 : image d'une classe d'empire (classe livrée : son image ; ajoutée dans l'admin : l'insigne d'Ascension). */
-export function empireClassImage(id: string): string {
+function empireClassImage(id: string): string {
   return defaultEmpireClasses().some((c) => c.id === id) ? `/assets/classes/${id}.webp` : "/assets/ascension/insigne.webp";
 }
 
@@ -497,7 +497,7 @@ export function grantCodexTitle(player: PlayerState, entries: CodexEntry[]): boo
 
 /** Jetons et Ambre d'une catégorie terminée (une fois), réglables dans l'admin (onglet Chroniques).
  *  Les Chroniques, toujours ouvertes, ne paient pas par défaut. */
-export function codexCategoryReward(category: CodexCategory): { tokens: number; amber: number } {
+function codexCategoryReward(category: CodexCategory): { tokens: number; amber: number } {
   return codexRewards()[category] ?? { tokens: 0, amber: 0 };
 }
 
@@ -545,10 +545,6 @@ export function codexClaimableCategories(player: CodexPlayer & Pick<PlayerState,
     const st = codexCategoryState(player, entries, c.id);
     return st.complete && !st.claimed && (st.reward.tokens > 0 || st.reward.amber > 0);
   }).map((c) => c.id);
-}
-
-export function codexClaimableCount(player: CodexPlayer & Pick<PlayerState, "stats">, now: number): number {
-  return codexClaimableCategories(player, now).length;
 }
 
 /** 6.14.17 (Z1-2) : réclamation depuis « Tout réclamer » (action du joueur). 6.14.25 : le serveur fournit `ctx`, les

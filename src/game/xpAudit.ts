@@ -30,7 +30,7 @@ export const XP_SOURCE_LABELS: Record<XpSource, string> = {
 const HOUR = 3600_000;
 const LEDGER_HOURS = 8 * 24;
 
-export const hourIndex = (ms: number) => Math.floor(ms / HOUR);
+const hourIndex = (ms: number) => Math.floor(ms / HOUR);
 
 /** Inscrit un gain (ou une perte) d'XP au registre horaire. */
 export function recordXp(player: Pick<PlayerState, "stats">, source: XpSource, delta: number, now: number): void {

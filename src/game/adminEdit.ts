@@ -36,7 +36,7 @@ export interface AdminEditChanges {
 export type AdminEditable = Pick<PlayerState, "xp" | "resources" | "buildings" | "units" | "techLevels"> & { seasonXp?: number };
 
 /** Valeurs par défaut d'une entrée absente, communes à l'éditeur et au serveur. */
-export const ADMIN_EDIT_DEFAULTS = {
+const ADMIN_EDIT_DEFAULTS = {
   building: { level: 1, unlocked: false },
   unit: { level: 0, count: 0 },
   tech: 0,

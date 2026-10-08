@@ -14,7 +14,7 @@ export interface PaletteTab {
 
 const tab = (page: string, pageLabel: string, id: string, label: string, keywords?: string): PaletteTab => ({ page, pageLabel, label, to: `${page}?onglet=${id}`, keywords });
 
-export const PALETTE_TABS: PaletteTab[] = [
+const PALETTE_TABS: PaletteTab[] = [
   tab("/game/commerce", "Commerce", "marche", "Marché", "offres ordres achat"),
   tab("/game/commerce", "Commerce", "contrats", "Contrats", "livraison"),
   tab("/game/commerce", "Commerce", "encheres", "Enchères", "hôtel vente relique plan alerte cote"),

@@ -427,7 +427,7 @@ const WRITTEN_CHAPTERS: ChroniclesConfig = {
   ],
 };
 
-export const DEFAULT_CHRONICLES: ChroniclesConfig = {
+const DEFAULT_CHRONICLES: ChroniclesConfig = {
   months: WRITTEN_CHAPTERS.months.filter((m) => m.id < GENERATED_CHAPTERS_FROM),
   library: WRITTEN_CHAPTERS.months.filter((m) => m.id >= GENERATED_CHAPTERS_FROM),
 };
@@ -706,7 +706,7 @@ export function seasonBossWindow(now: number, includeUpcoming = false): { id: st
   return { id: w.fixed ? `boss-${monthId}-d${w.startMs}` : weekly ? `boss-${monthId}-w${w.startMs}` : `boss-${monthId}`, monthId, startMs: w.startMs, endMs: w.endMs };
 }
 
-export function seasonBossHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {
+function seasonBossHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {
   const power = activePlayers.reduce((a, p) => a + computeFullPower(p.units ?? {}, p.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]), 0);
   return Math.max(SEASON_BOSS_RULES.minHp, Math.round(power * SEASON_BOSS_RULES.hpFactor));
 }
@@ -755,15 +755,6 @@ export function grantSeasonBossReward(state: LeviathanState, player: PlayerState
 export function bossEmblems(player: Pick<PlayerState, "chronicle">): { id: string; label: string; image: string; unlocked: boolean }[] {
   const owned = new Set(((player.chronicle as ChronicleState | undefined)?.emblems ?? []).map(String));
   return config.months.map((m) => ({ id: `boss:${m.id}`, label: `Sceau : ${m.boss.name}`, image: m.boss.emblem, unlocked: owned.has(m.id) }));
-}
-
-/** 5.15.12 : épisodes ouverts dont l'objectif est atteint mais pas encore terminés (pastille du menu). */
-export function chronicleReadyCount(player: Pick<PlayerState, "chronicle">, now: number): number {
-  const month = chronicleOf(now);
-  if (!month) return 0;
-  const st = chronicleState(player, now);
-  const open = unlockedEpisodes(now);
-  return month.episodes.filter((e, i) => i < open && !st.claimed.includes(i) && (st.progress[i] ?? 0) >= e.objective.count).length;
 }
 
 export type ChapterSeason = "hiver" | "printemps" | "ete" | "automne";

@@ -54,7 +54,7 @@ function footer(site: BlogSite): string {
 }
 
 /** Icône illustrée de la catégorie (public/assets/blog/<id>.webp), l'emoji tant qu'elle n'existe pas. */
-export function categoryIcon(site: BlogSite, catId: string): string {
+function categoryIcon(site: BlogSite, catId: string): string {
   const c = blogCategory(catId);
   return `<img class="cat-ico" src="${site.gameUrl}/assets/blog/${c.id}.webp" alt="" onerror="this.replaceWith(document.createTextNode('${c.emoji}'))">`;
 }

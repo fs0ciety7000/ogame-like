@@ -355,7 +355,7 @@ export function liveFindings(live: LiveBalance): Proposal[] {
   return out;
 }
 
-export const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
+const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
 
 /** Toutes les propositions, les plus graves d'abord. */
 export function allProposals(live: LiveBalance | null): Proposal[] {

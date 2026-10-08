@@ -34,3 +34,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q377 | Préchargement tôt gardé malgré un premier affichage (FCP) mobile +0,25 s (1,3 → 1,55 s), contre une page affichée plus tôt (`docs/changes/6.14.152-performance-demarrage.md`) | valider |
 | Q378 | Fenêtres rares (annonce, bilan, Ctrl+K, raccourcis, rang) montées après la page, 2 s au plus (`docs/changes/6.14.152-performance-demarrage.md`) | valider |
 | Q379 | Découpage du bloc d'entrée (lot L) décidé après la mesure sur la pré-prod, seulement si le LCP mobile dépasse encore 4 s (`docs/changes/6.14.152-performance-demarrage.md`) | valider |
+| Q380 | Règle proposée pour CLAUDE.md : « un export que rien ne lit hors de son module n'est pas exporté ; `scripts/dead-exports.mjs` les liste, `deadExports.test.ts` échoue sinon » (`docs/changes/6.14.153-menage-exports.md`) | valider |
+| Q381 | Recenser aussi les exports de `hooksEntry.ts` jamais appelés par `pocketbase/pb_hooks` (bundle plus léger) (`docs/changes/6.14.153-menage-exports.md`) | valider |

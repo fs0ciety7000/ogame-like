@@ -23,7 +23,7 @@ export const CLASS_UNIT_RULES = {
 };
 
 export const HARVESTER_ID = "recolteur";
-export const SCOUT_ID = "eclaireur_lointain";
+const SCOUT_ID = "eclaireur_lointain";
 
 function classUnits(): UnitDef[] {
   return CLASS_UNITS.map((c) => findUnit(c.id) ?? c);

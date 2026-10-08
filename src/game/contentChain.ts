@@ -86,7 +86,7 @@ export const CHAIN_LINK_ADMIN_TAB: Record<ChainLink, string | null> = {
  * Mesures de succès qui couvrent chaque type de contenu : la mesure compte les contenus du registre en vigueur, donc un
  * contenu ajouté y entre sans autre code. Liste vide = maillon manquant pour tout le type ; `null` = sans objet.
  */
-export const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMetric[]; mastery: AchievementMetric[] | null }> = {
+const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMetric[]; mastery: AchievementMetric[] | null }> = {
   unit: { entry: ["unitTypesPct"], mastery: ["maxUnitLevel"] },
   building: { entry: ["buildingsUnlockedPct"], mastery: ["maxBuildingLevel", "minBuildingLevel"] },
   tech: { entry: ["techCount"], mastery: ["techsMaxedPct", "maxTechLevel"] },
@@ -128,7 +128,7 @@ export const CHAIN_TRACKED_ACTIONS: Record<ChainKind, string[] | null> = {
  * Une mesure ajoutée ici pour un contenu, ou un succès à mesure ciblée qui le vise (succès dérivés par unité et par bâtiment,
  * 6.14.129), comble son maillon « succès propre ».
  */
-export function chainOwnMetrics(): Record<string, AchievementMetric[]> {
+function chainOwnMetrics(): Record<string, AchievementMetric[]> {
   // 6.14.123 (AA5) : chaque unité au rôle « sonde » ou « recycleur » (repli : identifiants des règles).
   const out: Record<string, AchievementMetric[]> = {};
   for (const id of probeUnitIds()) out[`unit:${id}`] = ["spies"];
@@ -182,7 +182,7 @@ function ownAchievementTargets(): Set<string> {
 
 /** Cibles d'unités des porteurs d'effets en vigueur : reliques composées, modules (par classe, et signature par unité), technos à effet composé,
  *  classes d'empire et talents à effet ciblé. */
-export function unitCarrierSelectors(): string[] {
+function unitCarrierSelectors(): string[] {
   const out: string[] = [];
   for (const r of RELICS) if (!r.disabled && r.effect === "custom" && r.custom?.target) out.push(r.custom.target);
   for (const fam of Object.values(MODULE_FAMILIES)) for (const cls of fam.classes) out.push(`class:${cls}`);

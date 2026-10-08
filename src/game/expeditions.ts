@@ -8,7 +8,7 @@ import { addRelic, expeditionRelicChance, relicLabel, rollRelic } from "@/game/r
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { getRepairPercent } from "@/game/buildings";
 import { GameActionError } from "@/game/errors";
-import { describeGain, formatInt } from "@/game/format";
+import { describeGain } from "@/game/format";
 export { describeGain };
 import { formationEffects } from "@/game/formations";
 import { activeTreaty, FACTIONS, hasTreaty, pirateState, productionHours, setFactionState, TREATY_RULES } from "@/game/pirates";

@@ -28,7 +28,7 @@ export interface ScheduledMaintenance {
 }
 
 /** 5.26 : bandeau d'annonce affiché aux joueurs dans les 24 h qui précèdent. */
-export const MAINTENANCE_NOTICE_MS = 24 * 3600_000;
+const MAINTENANCE_NOTICE_MS = 24 * 3600_000;
 
 export const MAINTENANCE_KEY = "maintenance";
 

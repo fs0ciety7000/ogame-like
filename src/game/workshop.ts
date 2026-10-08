@@ -140,7 +140,7 @@ export interface DockAllocation {
 }
 
 /** Répartition des lots entre cale et hangar : les prêts d'abord, puis les lots par ordre d'arrivée. */
-export function allocateDock(st: Pick<PlayerWorkshop, "jobs" | "ready">, capacity: number): DockAllocation {
+function allocateDock(st: Pick<PlayerWorkshop, "jobs" | "ready">, capacity: number): DockAllocation {
   const ready = { ...(st.ready ?? {}) };
   let used = 0;
   for (const [id, n] of Object.entries(ready)) used += n * spaceOf(id);
@@ -329,7 +329,7 @@ export function workshopSpeedBonus(player: RatePlayer): number {
 }
 
 /** 5.21 : PV par seconde ajoutés par les vaisseaux-ateliers à quai. */
-export function repairShipRate(player: Partial<Pick<PlayerState, "units">>): number {
+function repairShipRate(player: Partial<Pick<PlayerState, "units">>): number {
   let out = 0;
   for (const [id, u] of Object.entries(player.units ?? {})) {
     const per = findUnit(id)?.workshopHpPerSec ?? 0;
@@ -354,7 +354,7 @@ export function workshopUnits(player: Pick<PlayerState, "workshop">): Record<str
 }
 
 /** PV maximum d'un type (stock à la base, unités à l'Atelier exclues). */
-export function hullMax(player: Pick<PlayerState, "units" | "techLevels">, unitId: string): number {
+function hullMax(player: Pick<PlayerState, "units" | "techLevels">, unitId: string): number {
   const count = player.units?.[unitId]?.count ?? 0;
   return count > 0 ? count * unitBaseHp(player.units ?? {}, player.techLevels ?? {}, unitId) : 0;
 }

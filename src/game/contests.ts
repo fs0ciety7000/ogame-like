@@ -107,7 +107,7 @@ export function contestPhase(c: Contest, now: number): "scheduled" | "running" |
   return now < c.endMs ? "running" : "ending";
 }
 
-export function metricValue(c: Pick<Contest, "metric">, player: PlayerState): number {
+function metricValue(c: Pick<Contest, "metric">, player: PlayerState): number {
   const m = METRICS[c.metric];
   return m ? Math.max(0, Number(m.value(player)) || 0) : 0;
 }

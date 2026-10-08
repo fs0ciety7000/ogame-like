@@ -1,4 +1,4 @@
-import { ACHIEVEMENTS, METRICS, paceThreshold, TIER_REWARDS, type AchievementDef, type AchievementTier } from "@/game/achievements";
+import { METRICS, paceThreshold, TIER_REWARDS, type AchievementDef, type AchievementTier } from "@/game/achievements";
 import {
   chronicleMonthId,
   chronicleOf,
@@ -78,7 +78,7 @@ export interface ProceduralSettings {
   log: { atMs: number; text: string }[];
 }
 
-export const DEFAULT_PROCEDURAL: ProceduralSettings = { enabled: true, chapters: true, pass: true, achievements: true, leadDay: 20, regenerateOutdated: true, log: [] };
+const DEFAULT_PROCEDURAL: ProceduralSettings = { enabled: true, chapters: true, pass: true, achievements: true, leadDay: 20, regenerateOutdated: true, log: [] };
 
 export function normalizeProcedural(raw: unknown): ProceduralSettings {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<ProceduralSettings>;
@@ -488,7 +488,7 @@ export const ARCHETYPES: Archetype[] = [
 const FACTION_ACCENTS: Record<string, string> = { ember: "#ff7a45", gold: "#ffd166", cyan: "#7fd1ff", mint: "#7dff9a", danger: "#ff4d6d" };
 
 /** Archétype construit depuis la fiche d'une faction (chef, exécuteur, repaire, récit, images). */
-export function factionArchetype(f: Pick<FactionDef, "id" | "name" | "leader" | "enforcer" | "art" | "banner" | "emblem" | "color" | "story" | "ultimatum" | "lair">): Archetype {
+function factionArchetype(f: Pick<FactionDef, "id" | "name" | "leader" | "enforcer" | "art" | "banner" | "emblem" | "color" | "story" | "ultimatum" | "lair">): Archetype {
   const accent = FACTION_ACCENTS[f.color] ?? FACTION_ACCENTS.ember;
   const paragraphs = String(f.story ?? "")
     .split(/\n\s*\n/)
@@ -1042,9 +1042,4 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
     });
   }
   return out;
-}
-
-/** Succès actuels (pour l'aperçu côté client). */
-export function currentAchievements(): AchievementDef[] {
-  return ACHIEVEMENTS;
 }

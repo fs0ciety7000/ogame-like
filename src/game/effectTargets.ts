@@ -16,8 +16,6 @@ import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClass
    reliques, technologies et officiers parlent ce même vocabulaire.
 ===================================================== */
 
-export type UnitSelector = string;
-
 const CATEGORY_LABELS: Record<string, string> = { attack: "Vaisseaux", defense: "Défenses" };
 
 export function parseUnitSelector(sel: string | undefined): { kind: "all" | "unit" | "class" | "cat"; value: string } {
@@ -32,7 +30,7 @@ export function validUnitSelector(sel: string | undefined): boolean {
   return isUnitSelector(sel, (id) => !!findUnit(id));
 }
 
-export function unitSelectorLabel(sel: string | undefined): string {
+function unitSelectorLabel(sel: string | undefined): string {
   const p = parseUnitSelector(sel);
   if (p.kind === "unit") return findUnit(p.value)?.name ?? p.value;
   if (p.kind === "class") return `Classe ${UNIT_CLASS_LABELS[p.value as UnitClass] ?? p.value}`;
@@ -95,7 +93,7 @@ export function combatEffects(grants: readonly EffectGrant[], scope: EffectScope
 }
 
 /** Coût d'une unité, réductions ciblées comprises (au plus −20 % par couche). */
-export function unitCostFor(unit: UnitDef, grants: readonly EffectGrant[]): UnitCost {
+function unitCostFor(unit: UnitDef, grants: readonly EffectGrant[]): UnitCost {
   const k = Math.max(0, 1 - unitEffect(grants, "unitCost", unit.id));
   // 6.14.123 (AA5, AA-17) : chaque ressource du coût (une unité de fin de partie peut coûter une ressource rare).
   return scaleUnitCost(unit.cost, k, Math.ceil);

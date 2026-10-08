@@ -43,7 +43,7 @@ export interface ScheduledEvent {
 }
 
 /** 5.16 : occurrences d'un événement programmé (récurrence comprise). */
-export function scheduledOccurrences(s: ScheduledEvent): { startMs: number; endMs: number }[] {
+function scheduledOccurrences(s: ScheduledEvent): { startMs: number; endMs: number }[] {
   const weeks = Math.floor(Number(s.repeatWeeks) || 0);
   const count = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
   const out: { startMs: number; endMs: number }[] = [];
@@ -153,7 +153,7 @@ export function parisLocalToUtc(localMs: number): number {
   return localMs - parisOffsetMs(localMs - 2 * HOUR);
 }
 
-export function findEventType(id: string): EventType | undefined {
+function findEventType(id: string): EventType | undefined {
   return EVENT_RULES.types.find((t) => t.id === id);
 }
 
@@ -221,7 +221,7 @@ export interface BossSchedule {
 
 export const MAX_BOSS_DATES = 24;
 
-export function onWeekend(w: { nth: number; lastOfMonth: boolean }, which: BossWeekend | undefined): boolean {
+function onWeekend(w: { nth: number; lastOfMonth: boolean }, which: BossWeekend | undefined): boolean {
   if (which === "last") return w.lastOfMonth;
   return w.nth === NTH[which ?? "first"];
 }

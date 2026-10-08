@@ -113,7 +113,7 @@ function initial(): ThemeId {
 
 export const useThemeStore = create<{ theme: ThemeId }>(() => ({ theme: initial() }));
 
-export function applyTheme(theme: ThemeId) {
+function applyTheme(theme: ThemeId) {
   document.documentElement.dataset.theme = theme;
   // 5.24 : lire le style avant la fin du chargement force une mise en page
   // (avertissement Firefox, risque de flash sans style) : on attend `load`.

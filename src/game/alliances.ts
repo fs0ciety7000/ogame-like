@@ -116,7 +116,7 @@ export type AllianceLevels = Record<string, number>;
 
 const RESOURCE_IDS = new Set<string>(RESOURCE_LIST.map((r) => r.id));
 
-export function findAllianceResearch(id: string): AllianceResearchDef | undefined {
+function findAllianceResearch(id: string): AllianceResearchDef | undefined {
   return ALLIANCE_RULES.researches.find((r) => r.id === id);
 }
 
@@ -150,7 +150,7 @@ export function defaultAllianceEffects(kind: "research" | "project", id: string)
  * contre les PNJ, la Batterie de siège (boss, primes, repaires). Toute autre grandeur (soute, butin, attaque d'une classe…)
  * entre dans la couche empire, avec les officiers et les reliques : une recherche ajoutée dans l'admin a toujours un effet.
  */
-export const ALLIANCE_LAYER_READERS: { stat: EffectStat; scope: EffectScope; label?: string }[] = [
+const ALLIANCE_LAYER_READERS: { stat: EffectStat; scope: EffectScope; label?: string }[] = [
   { stat: "fleetSpeed", scope: "all" },
   { stat: "productionAll", scope: "all" },
   { stat: "counterSpy", scope: "all" },
@@ -270,16 +270,10 @@ export function allianceShieldBonus(levels: AllianceLevels | undefined | null): 
 /* ---------- bonus des projets (v3.3, appliqués aux membres) ---------- */
 
 /** Clé du niveau d'un projet dans les niveaux recopiés chez les membres. */
-export const projectKey = (id: string) => `projet_${id}`;
+const projectKey = (id: string) => `projet_${id}`;
 
-export function findAllianceProject(id: string): AllianceProjectDef | undefined {
+function findAllianceProject(id: string): AllianceProjectDef | undefined {
   return ALLIANCE_RULES.projects.find((p) => p.id === id);
-}
-
-/** Niveau d'un projet d'après les niveaux d'un membre (allianceResearch). */
-export function memberProjectLevel(levels: AllianceLevels | undefined | null, id: string): number {
-  const def = findAllianceProject(id);
-  return Math.max(0, Math.min(def?.maxLevel ?? 0, Math.floor(Number(levels?.[projectKey(id)]) || 0)));
 }
 
 /** Multiplicateur des durées de construction (0,9 = −10 %). 6.14.124 : durées des constructions et des recherches lues à part. */
@@ -515,7 +509,7 @@ export function projectState(alliance: Pick<Alliance, "projects">, id: string): 
 }
 
 /** Niveaux recopiés chez chaque membre : recherches et projets. */
-export function memberLevels(alliance: Pick<Alliance, "research" | "projects"> | null): AllianceLevels {
+function memberLevels(alliance: Pick<Alliance, "research" | "projects"> | null): AllianceLevels {
   const out: AllianceLevels = { ...(alliance?.research ?? {}) };
   for (const def of ALLIANCE_RULES.projects) {
     const level = alliance ? projectState(alliance, def.id).level : 0;
@@ -525,7 +519,7 @@ export function memberLevels(alliance: Pick<Alliance, "research" | "projects"> |
 }
 
 /** Valeur d'un versement (une rare vaut 100 communes), pour le classement des contributeurs. */
-export function contributionValue(amounts: Partial<Record<ResourceId, number>>): number {
+function contributionValue(amounts: Partial<Record<ResourceId, number>>): number {
   return Object.entries(amounts).reduce((a, [res, n]) => a + (n ?? 0) * (RESOURCE_LIST.find((r) => r.id === res)?.rarity === "rare" ? 100 : 1), 0);
 }
 
@@ -592,7 +586,7 @@ export function fundAllianceProject(
 }
 
 /** Paliers dont la construction est terminée. */
-export function completeAllianceProjects(alliance: Alliance, now: number): { alliance: Alliance; completed: { id: string; level: number }[] } {
+function completeAllianceProjects(alliance: Alliance, now: number): { alliance: Alliance; completed: { id: string; level: number }[] } {
   const completed: { id: string; level: number }[] = [];
   const projects = { ...(alliance.projects ?? {}) };
   for (const def of ALLIANCE_RULES.projects) {

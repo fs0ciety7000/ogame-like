@@ -114,7 +114,7 @@ export function relicSourceOf(source: string): RelicSource | null {
 }
 
 /** Poids d'un modèle pour un tirage depuis `source` (1 par défaut ; × le facteur depuis l'une de ses sources). */
-export function relicDrawWeight(t: Pick<RelicTemplate, "sources" | "weight">, source: RelicSource | null): number {
+function relicDrawWeight(t: Pick<RelicTemplate, "sources" | "weight">, source: RelicSource | null): number {
   const w = t.weight === undefined ? 1 : Number(t.weight);
   const base = Number.isFinite(w) ? Math.max(0, w) : 1;
   const boost = Number(RELIC_SOURCE_RULES.sourceBoost);
@@ -164,7 +164,7 @@ export const DEFAULT_RELICS: RelicTemplate[] = [
 export const RELICS: RelicTemplate[] = DEFAULT_RELICS.map((t) => ({ ...t }));
 
 /** Valeurs par défaut des raretés (bonus, poids de tirage, recyclage). */
-export const DEFAULT_RARITY_VALUES: Record<RelicRarity, { pct: number; weight: number; recycle: number }> = Object.fromEntries(
+const DEFAULT_RARITY_VALUES: Record<RelicRarity, { pct: number; weight: number; recycle: number }> = Object.fromEntries(
   RARITIES.map((r) => [r.id, { pct: r.pct, weight: r.weight, recycle: r.recycle }]),
 ) as Record<RelicRarity, { pct: number; weight: number; recycle: number }>;
 
@@ -299,7 +299,7 @@ export function validateRelics(defs: RelicTemplate[], settings: RelicSettings): 
 }
 
 /** Relique mythique de la saison pour le vainqueur. */
-export function mythicRelic(seasonId: string, now: number, random: () => number = Math.random): RelicItem {
+function mythicRelic(seasonId: string, now: number, random: () => number = Math.random): RelicItem {
   return { id: newId(now, random), template: mythicFor(seasonId).template.id, rarity: "mythic", foundAtMs: now, source: `mythic:${seasonId}` };
 }
 
@@ -447,13 +447,6 @@ export function relicEffects(player: Pick<PlayerState, "relics" | "ascensions">)
   }
   return out;
 }
-
-export const PRODUCTION_EFFECT: Partial<Record<RelicEffect, ResourceId>> = {
-  production_scrap: "scrap",
-  production_energy: "energy",
-  production_nano: "nano",
-  production_data: "data",
-};
 
 function newId(now: number, random: () => number): string {
   return `${now.toString(36)}${Math.floor(random() * 1e9).toString(36)}`;

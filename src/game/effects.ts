@@ -115,13 +115,13 @@ export const TECH_REDUCTION_CAP = 0.75;
 /** 6.6 : plafond de l'attaque et de la défense de toutes les unités données par les technologies. */
 export const TECH_COMBAT_CAP = 1.5;
 /** 6.6 : une seule technologie ne donne pas plus que ceci d'attaque ou de défense à son niveau maximal. */
-export const TECH_COMBAT_PER_TECH_MAX = 1;
+const TECH_COMBAT_PER_TECH_MAX = 1;
 /** 6.7.1 : valeurs en vigueur (Admin → Règles → Combat : `techCombatCap`, `techCombatPerTechMax`). */
 export const TECH_COMBAT_LIMITS = { cap: TECH_COMBAT_CAP, perTechMax: TECH_COMBAT_PER_TECH_MAX };
 /** Plafond des réductions de durée de la couche empire. */
-export const EMPIRE_TIME_CAP = 0.5;
+const EMPIRE_TIME_CAP = 0.5;
 /** 5.28.1 : plafond des réductions de coût et d'entretien de la couche empire (reliques, officiers, modules). */
-export const EMPIRE_COST_CAP = 0.5;
+const EMPIRE_COST_CAP = 0.5;
 
 /** 5.23 : portées d'un effet de combat. */
 const COMBAT_SCOPES: EffectScope[] = ["all", "pvp", "pve", "warlord"];
@@ -335,7 +335,7 @@ export function describeEffect(stat: EffectStat, value: number, target?: string,
 }
 
 /** Sélecteurs de groupes d'unités (voir effectTargets.ts). */
-export const UNIT_GROUP_SELECTORS = ["cat:attack", "cat:defense", "class:light", "class:medium", "class:heavy", "class:support"];
+const UNIT_GROUP_SELECTORS = ["cat:attack", "cat:defense", "class:light", "class:medium", "class:heavy", "class:support"];
 
 /** Sélecteur d'unités bien formé (vide : toutes les unités). */
 export function isUnitSelector(sel: string | undefined, hasUnit: (id: string) => boolean): boolean {

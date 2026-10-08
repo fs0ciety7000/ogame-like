@@ -182,7 +182,7 @@ export interface AuthData {
   publicKey?: Uint8Array;
 }
 
-export function parseAuthData(data: Uint8Array): AuthData {
+function parseAuthData(data: Uint8Array): AuthData {
   if (data.length < 37) throw new PasskeyError("Données d'authentification trop courtes.");
   const flags = data[32];
   const out: AuthData = {
@@ -205,8 +205,8 @@ export function parseAuthData(data: Uint8Array): AuthData {
 
 /* ---------- clés COSE et signatures ---------- */
 
-export const COSE_ES256 = -7;
-export const COSE_RS256 = -257;
+const COSE_ES256 = -7;
+const COSE_RS256 = -257;
 
 interface CoseKey {
   alg: number;
@@ -216,7 +216,7 @@ interface CoseKey {
   e?: Uint8Array;
 }
 
-export function parseCoseKey(bytes: Uint8Array): CoseKey {
+function parseCoseKey(bytes: Uint8Array): CoseKey {
   const { value } = cborDecode(bytes);
   if (!(value instanceof Map)) throw new PasskeyError("Clé publique illisible.");
   const kty = value.get(1);
@@ -283,7 +283,7 @@ function verifyRs256(key: CoseKey, message: Uint8Array, signature: Uint8Array): 
   return sameBytes(em, expected);
 }
 
-export function verifySignature(coseKey: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean {
+function verifySignature(coseKey: Uint8Array, message: Uint8Array, signature: Uint8Array): boolean {
   const key = parseCoseKey(coseKey);
   if (key.alg === COSE_ES256) {
     const point = concat(new Uint8Array([4]), key.x!, key.y!);

@@ -88,11 +88,11 @@ export interface GameReport {
   affected?: string[];
 }
 
-export function isReportCategory(v: unknown): v is ReportCategory {
+function isReportCategory(v: unknown): v is ReportCategory {
   return REPORT_CATEGORIES.some((c) => c.id === v);
 }
 
-export function isReportStatus(v: unknown): v is ReportStatus {
+function isReportStatus(v: unknown): v is ReportStatus {
   return REPORT_STATUSES.some((s) => s.id === v);
 }
 

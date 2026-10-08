@@ -749,7 +749,7 @@ function walletOf(player: PlayerState): WalletSnapshot {
 }
 
 /** Ce que le joueur a gagné entre deux relevés : « 5 000 ferraille, 3 Ambre, 2 jetons du casino, 40 XP ». */
-export function describeWalletGain(before: WalletSnapshot, after: WalletSnapshot): { text: string; resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; xp: number } {
+function describeWalletGain(before: WalletSnapshot, after: WalletSnapshot): { text: string; resources: Partial<Record<ResourceId, number>>; amber: number; tokens: number; xp: number } {
   const resources: Partial<Record<ResourceId, number>> = {};
   for (const [k, v] of Object.entries(after.resources) as [ResourceId, number][]) {
     const d = Math.floor((v ?? 0) - (before.resources[k] ?? 0));

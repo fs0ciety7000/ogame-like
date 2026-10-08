@@ -152,12 +152,6 @@ export function contractWeight(type: ContractType): number {
   return Number.isFinite(w) ? Math.max(0, w) : 1;
 }
 
-/** 6.14.109 : part de chance d'un type au premier tirage d'un compte où tout est ouvert (aide de l'admin). */
-export function contractDrawShare(type: ContractType): number {
-  const total = ALL_TYPES.reduce((a, t) => a + contractWeight(t), 0);
-  return total > 0 ? contractWeight(type) / total : 0;
-}
-
 /**
  * 6.14.109 (AP-L5) : index tiré dans `pool` (types de poids > 0). Poids tous égaux : `floor(rand() × taille)`, le tirage d'avant
  * (un seul appel à `rand`, même graine, même résultat) ; sinon tirage pondéré, un seul appel aussi.
@@ -203,7 +197,7 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
 /* ---------- 6.14.131 (AU27, AJ27-7) : objectifs paramétrés par contenu ---------- */
 
 /** Famille du registre des actions suivies d'un type paramétré (null : type ordinaire). */
-export const CONTENT_CONTRACT_FAMILY: Partial<Record<ContractType, ContentFamily>> = { unit_content: "unit", research_content: "research", building_content: "building" };
+const CONTENT_CONTRACT_FAMILY: Partial<Record<ContractType, ContentFamily>> = { unit_content: "unit", research_content: "research", building_content: "building" };
 
 /** Textes des types paramétrés : `{n}` (quantité), `{name}` (contenu visé). */
 const CONTENT_CONTRACT_TEXT: Record<ContentFamily, (n: number, name: string) => string> = {
@@ -228,11 +222,6 @@ export function contractContentCandidates(player: PlayerState, family: ContentFa
   if (family === "unit") return UNITS.filter((u) => !u.elite && hasContentAccess(p, contentObjective("unit", u.id))).map((u) => u.id);
   if (family === "research") return TECHNOLOGIES.filter((t) => (Number(p.techLevels[t.id]) || 0) < t.maxLevel && hasContentAccess(p, contentObjective("research", t.id))).map((t) => t.id);
   return BUILDINGS.filter((b) => (Number(p.buildings[b.id as keyof PlayerState["buildings"]]?.level) || 0) < b.maxLevel && hasContentAccess(p, contentObjective("building", b.id))).map((b) => b.id);
-}
-
-/** Type conditionnel (proposé seulement à certains joueurs) : il ne compte pas dans le minimum de types de l'admin. */
-export function conditionalContractType(type: string): boolean {
-  return actionOfContract(type) !== null || type in CONTENT_CONTRACT_FAMILY;
 }
 
 /** 6.14.121 : les types du registre des actions suivies viennent après ceux d'avant (ordre de tirage d'origine inchangé). */

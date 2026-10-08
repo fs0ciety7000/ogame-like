@@ -255,7 +255,7 @@ export function bossPhase(state: LeviathanState | null, now: number): BossPhase 
 }
 
 /** Points de structure : facteur × puissance d'attaque de toute la flotte des joueurs actifs. */
-export function leviathanHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {
+function leviathanHp(activePlayers: Pick<PlayerState, "units" | "techLevels">[]): number {
   const power = activePlayers.reduce((a, p) => a + computeFullPower(p.units ?? {}, p.techLevels ?? {}, OFFENSIVE_UNITS, ["attack"]), 0);
   return Math.max(LEVIATHAN_RULES.minHp, Math.round(power * LEVIATHAN_RULES.hpFactor));
 }
@@ -286,7 +286,7 @@ export function checkLeviathanLaunch(state: LeviathanState | null, uid: string, 
  *  recopiés ici par content.ts). Absents : ceux du boss mondial. */
 export const SEASON_BOSS_TUNING: { cooldownHours?: number; flightMinutes?: number; lossMult?: number; weakness?: string[] } = {};
 
-export const isSeasonBossState = (state: Pick<LeviathanState, "id"> | null | undefined): boolean => !!state?.id?.startsWith("boss-");
+const isSeasonBossState = (state: Pick<LeviathanState, "id"> | null | undefined): boolean => !!state?.id?.startsWith("boss-");
 export const seasonBossCooldownHours = (): number => SEASON_BOSS_TUNING.cooldownHours ?? LEVIATHAN_RULES.cooldownHours;
 export const seasonBossFlightMinutes = (): number => SEASON_BOSS_TUNING.flightMinutes ?? LEVIATHAN_RULES.flightMinutes;
 
@@ -349,7 +349,7 @@ export function bossWeakness(state: Pick<LeviathanState, "id"> & { bossId?: stri
   return list.length ? list[h % list.length] : "";
 }
 
-export const BOSS_PHASE_INFO: Record<BossFightPhase, { name: string; desc: string }> = {
+const BOSS_PHASE_INFO: Record<BossFightPhase, { name: string; desc: string }> = {
   1: { name: "Assaut", desc: "Le colosse encaisse sans broncher." },
   2: { name: "Riposte", desc: `Blessé, il riposte : pertes ×${BOSS_PHASE_RULES.riposteLossFactor} à chaque assaut.` },
   3: { name: "Carapace fissurée", desc: `Il se replie derrière un bouclier (−${Math.round((1 - BOSS_PHASE_RULES.shieldDamageFactor) * 100)} % de dégâts), mais sa faiblesse est exposée : +${Math.round((BOSS_PHASE_RULES.weaknessFactor - 1) * 100)} % de dégâts pour ce type de vaisseau.` },

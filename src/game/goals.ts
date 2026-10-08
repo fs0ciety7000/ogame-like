@@ -65,7 +65,7 @@ export interface GoalPlan {
   label: string;
 }
 
-export function goalLabel(goal: Pick<Goal, "kind" | "target" | "value">): string {
+function goalLabel(goal: Pick<Goal, "kind" | "target" | "value">): string {
   if (goal.kind === "building") return `${findBuilding(goal.target)?.name ?? goal.target} niveau ${goal.value}`;
   if (goal.kind === "tech") return `${findTech(goal.target)?.nom ?? goal.target} niveau ${goal.value}`;
   if (goal.kind === "unitLevel") return `${findUnit(goal.target)?.name ?? goal.target} niveau ${goal.value}`;

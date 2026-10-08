@@ -26,16 +26,16 @@ export function setVendettaTitlesResolver(fn: (p: ElitePersonality) => string[])
 }
 
 /** Technologies pas encore au niveau maximal. */
-export function missingTechs(player: Pick<PlayerState, "techLevels">): { id: string; nom: string; level: number; max: number }[] {
+function missingTechs(player: Pick<PlayerState, "techLevels">): { id: string; nom: string; level: number; max: number }[] {
   return TECHNOLOGIES.filter((t) => (player.techLevels?.[t.id] ?? 0) < t.maxLevel).map((t) => ({ id: t.id, nom: t.nom, level: player.techLevels?.[t.id] ?? 0, max: t.maxLevel }));
 }
 
-export function labComplete(player: Pick<PlayerState, "techLevels">): boolean {
+function labComplete(player: Pick<PlayerState, "techLevels">): boolean {
   return missingTechs(player).length === 0;
 }
 
 /** Vendettas gagnées contre une personnalité (compteur 5.22, ou titres « Tombeur de … » plus anciens). */
-export function vendettasWonAgainst(player: Pick<PlayerState, "stats" | "titles">, personality: ElitePersonality, titlesOf: (p: ElitePersonality) => string[] = titlesResolver): number {
+function vendettasWonAgainst(player: Pick<PlayerState, "stats" | "titles">, personality: ElitePersonality, titlesOf: (p: ElitePersonality) => string[] = titlesResolver): number {
   const counted = player.stats?.vendettaWins?.[personality] ?? 0;
   if (counted > 0) return counted;
   const labels = titlesOf(personality);

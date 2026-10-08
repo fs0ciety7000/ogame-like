@@ -19,7 +19,7 @@ import { escapeHtml } from "@/game/blogMarkdown";
    [[Libellé du bouton|https://…]] pour un bouton. {{PSEUDO}} est remplacé
    par le pseudo de chaque joueur. */
 
-export const EMAIL_SITE = "https://empire.fs0ciety.org";
+const EMAIL_SITE = "https://empire.fs0ciety.org";
 
 const C = {
   page: "#03040a",

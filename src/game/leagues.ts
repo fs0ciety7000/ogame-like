@@ -79,7 +79,7 @@ export const LEAGUE_RULES_META = {
 const WEEK_MS = 7 * 24 * 3600 * 1000;
 
 /** Début de la semaine (lundi 0 h UTC) contenant `now`. */
-export function leagueWeekStart(now: number): number {
+function leagueWeekStart(now: number): number {
   const d = new Date(now);
   const day = (d.getUTCDay() + 6) % 7; // lundi = 0
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - day);

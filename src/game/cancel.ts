@@ -75,7 +75,7 @@ export interface CancelQuote {
 }
 
 /** Lot d'unités : entrées consécutives du même type à partir de `index`. */
-export function unitGroupAt(queue: UnitQueueEntry[], index: number): { start: number; count: number } | null {
+function unitGroupAt(queue: UnitQueueEntry[], index: number): { start: number; count: number } | null {
   if (index < 0 || index >= queue.length) return null;
   const unitId = queue[index].unitId;
   // 6.14.145 (PB-L4) : une commande en attente d'une place est un lot à part.

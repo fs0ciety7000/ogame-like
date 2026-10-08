@@ -66,7 +66,7 @@ export function token(name: string, fallback = "currentColor"): string {
 }
 
 /** Jeu de caractères des textes brouillés (façon terminal de bord). */
-export const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&/<>▮▯";
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&/<>▮▯";
 
 /** Glitch RVB d'un élément cliqué : séparation des couleurs + secousse (140 ms). */
 export async function glitch(el: HTMLElement) {

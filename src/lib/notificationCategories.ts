@@ -87,7 +87,7 @@ export function notificationLink(n: { kind: NotificationKind; link?: string | nu
 
 /* v5.11 : regroupement dans la cloche — des notifications consécutives de même
    type et de même titre, à moins de 6 h d'écart, forment un seul groupe dépliable. */
-export const GROUP_WINDOW_MS = 6 * 3600_000;
+const GROUP_WINDOW_MS = 6 * 3600_000;
 
 export interface NotificationGroup<T> {
   key: string;

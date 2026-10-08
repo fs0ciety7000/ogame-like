@@ -26,9 +26,6 @@ export interface RuleFieldMeta {
   hint?: string;
 }
 
-/** Métadonnées d'un groupe : une entrée par champ de premier niveau. */
-export type RuleMeta<T = Record<string, unknown>> = { readonly [K in keyof T]?: RuleFieldMeta };
-
 /** Unités connues et leur libellé long (aide de l'admin). */
 export const RULE_UNIT_LABELS: Record<string, string> = {
   h: "heures",

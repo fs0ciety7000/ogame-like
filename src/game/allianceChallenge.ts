@@ -79,7 +79,7 @@ export function normalizeAllianceChallenge(raw: unknown, now: number): AllianceC
 }
 
 /** Semaine qui suit `weekId` (lundi suivant). */
-export function nextAllianceWeekId(weekId: string): string {
+function nextAllianceWeekId(weekId: string): string {
   return allianceWeekId(Date.parse(`${weekId}T12:00:00Z`) + 7 * 24 * 3600_000);
 }
 

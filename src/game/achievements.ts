@@ -321,12 +321,12 @@ export type AchievementMetric = keyof typeof METRICS;
  * 6.14.129 (AJ27-6) : mesures qui comptent un contenu précis (le succès porte `target`). Hors des concours, titres, défis
  * d'alliance et paliers générés (une mesure sans cible vaut 0) ; le brouillard des paliers les range par mesure **et** cible.
  */
-export const TARGETED_METRICS: readonly AchievementMetric[] = ["unitOwned", "unitMastery", "buildingLevel"];
+const TARGETED_METRICS: readonly AchievementMetric[] = ["unitOwned", "unitMastery", "buildingLevel"];
 export function isTargetedMetric(m: string): boolean {
   return (TARGETED_METRICS as readonly string[]).includes(m);
 }
 /** Famille d'un succès : sa mesure, et son contenu visé pour une mesure ciblée (brouillard, palier précédent). */
-export function achievementFamily(a: Pick<AchievementDef, "metric" | "target">): string {
+function achievementFamily(a: Pick<AchievementDef, "metric" | "target">): string {
   return a.target && isTargetedMetric(a.metric) ? `${a.metric}:${a.target}` : a.metric;
 }
 

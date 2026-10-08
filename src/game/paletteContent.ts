@@ -37,7 +37,7 @@ export interface PaletteContentEntry {
 }
 
 /** Libellé de chaque type (sous-titre de la palette). */
-export const PALETTE_CONTENT_LABELS: Record<PaletteContentKind, string> = {
+const PALETTE_CONTENT_LABELS: Record<PaletteContentKind, string> = {
   relic: "Relique",
   worldBoss: "Boss mondial",
   allianceBoss: "Boss d'alliance",

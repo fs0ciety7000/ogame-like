@@ -283,7 +283,7 @@ function computeEndgame(
 }
 
 /** Unité qui pèse le plus dans la puissance d'attaque d'une flotte. */
-export function dominantUnit(fleet: Record<string, number>): string | null {
+function dominantUnit(fleet: Record<string, number>): string | null {
   let best: string | null = null;
   let bestPower = 0;
   for (const [id, qty] of Object.entries(fleet)) {

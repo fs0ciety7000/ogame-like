@@ -32,9 +32,6 @@ pb.afterSend = (response, data) => {
  *  coupe pas les autres écrans abonnés au même topic. */
 const shared = createSharedSubscriber<RecordSubscription<{ id: string }>>((key, err) => console.error(`Abonnement ${key} impossible :`, err));
 
-/** 5.26 : flux temps réel ouverts et écrans abonnés (diagnostic, Web Vitals). */
-export const realtimeStats = shared.stats;
-
 export function subscribeRecords<T = Record<string, unknown>>(
   collection: string,
   topic: string,

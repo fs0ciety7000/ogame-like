@@ -154,7 +154,7 @@ export interface CasinoHistoryEntry {
   resources: Partial<Record<ResourceId, number>>;
 }
 
-export const CASINO_HISTORY_MAX = 20;
+const CASINO_HISTORY_MAX = 20;
 
 export interface CasinoWeek {
   id: string;
@@ -331,7 +331,7 @@ function parisWeekend(now: number): boolean {
 }
 
 /** 6.7 : ouvertures hebdomadaires autour de `now` (semaine précédente, en cours, suivante), dans l'ordre. */
-export function casinoWeeklyWindows(s: Pick<CasinoSettings, "weekly">, now: number): { startMs: number; endMs: number }[] {
+function casinoWeeklyWindows(s: Pick<CasinoSettings, "weekly">, now: number): { startMs: number; endMs: number }[] {
   return weeklyWindowsOf(s.weekly, now);
 }
 

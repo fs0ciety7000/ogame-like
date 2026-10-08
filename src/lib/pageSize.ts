@@ -4,7 +4,7 @@ import { create } from "zustand";
    (Réglages), mémorisé sur l'appareil. 5 par défaut (5.26.1). */
 
 export const PAGE_SIZES = [5, 10, 15, 20, 50] as const;
-export const DEFAULT_PAGE_SIZE = 5;
+const DEFAULT_PAGE_SIZE = 5;
 const KEY = "cosmic-empires:page-size";
 
 function initial(): number {

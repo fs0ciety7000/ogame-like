@@ -6,7 +6,7 @@ import { pb } from "@/lib/pocketbase";
    `node scripts/live-docs.mjs push`, sans commit ni redéploiement. Les pages /decisions et /img lisent la version en direct
    quand elle existe, sinon celle du build. */
 
-export const LIVE_DOCS = "live_docs";
+const LIVE_DOCS = "live_docs";
 
 export interface LiveDocs {
   /** Contenu par chemin du dépôt (« docs/QUESTIONS.md »). */

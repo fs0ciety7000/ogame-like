@@ -156,7 +156,7 @@ export function tierIconKey(family: TierFamily, index: number): string {
 }
 
 /** Icône d'un palier : définitive si livrée, sinon `fallback` (image du bâtiment). */
-export function tierImage(family: TierFamily, index: number, fallback?: string): string | undefined {
+function tierImage(family: TierFamily, index: number, fallback?: string): string | undefined {
   const key = tierIconKey(family, index);
   return TIER_ART.includes(key) ? `/assets/tiers/${key}.webp` : fallback;
 }
@@ -192,7 +192,7 @@ export function tierFamily(def: Pick<BuildingDef, "id" | "effect">, foundryId?: 
 }
 
 /** Niveau effectif du bâtiment d'une famille (0 : absent ou verrouillé). */
-export function familyLevel(buildings: Buildings | undefined, family: TierFamily, foundryId?: string): number {
+function familyLevel(buildings: Buildings | undefined, family: TierFamily, foundryId?: string): number {
   const def = familyDef(family, foundryId);
   return def ? effectiveBuildingLevel(buildings ?? {}, def.id) : 0;
 }
@@ -333,9 +333,7 @@ function lendOptions(to: string): TierOption[] {
   ];
 }
 
-export const CHOICE_SLOTS = Object.keys(SLOTS) as ChoiceSlot[];
-
-export function isChoiceSlot(x: unknown): x is ChoiceSlot {
+function isChoiceSlot(x: unknown): x is ChoiceSlot {
   return typeof x === "string" && Object.prototype.hasOwnProperty.call(SLOTS, x);
 }
 
@@ -362,7 +360,7 @@ export function activeChoice(player: ChoicePlayer | null | undefined, slot: Choi
 }
 
 /** Choix enregistré (même si le palier n'est plus atteint, après une Ascension), pour l'affichage. */
-export function savedChoice(player: ChoicePlayer | null | undefined, slot: ChoiceSlot): string | null {
+function savedChoice(player: ChoicePlayer | null | undefined, slot: ChoiceSlot): string | null {
   return entryOf(player, slot)?.v ?? null;
 }
 

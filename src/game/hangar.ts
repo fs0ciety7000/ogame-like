@@ -56,7 +56,7 @@ export function playerUnitCapacity(player: CapacityPlayer, category: HangarCateg
 }
 
 /** 6.14.145 : places prêtées (négatif) ou reçues (positif) par les baies modulaires (affichage). */
-export function hangarLent(player: CapacityPlayer, category: HangarCategory, now: number = Date.now()): number {
+function hangarLent(player: CapacityPlayer, category: HangarCategory, now: number = Date.now()): number {
   const own = ownUnitCapacity(player, category, now, "home", player.buildings);
   return lentPlaces(player, category, now, own, player.buildings);
 }

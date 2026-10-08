@@ -13,7 +13,7 @@ export interface ChangelogBadge {
   color: string;
 }
 
-export const CHANGELOG_BADGES: ChangelogBadge[] = [
+const CHANGELOG_BADGES: ChangelogBadge[] = [
   { id: "new", label: "Nouveau", plural: "Nouveautés", color: "var(--color-mint-glow)" },
   { id: "improvement", label: "Amélioration", plural: "Améliorations", color: "var(--color-cyan-glow)" },
   { id: "fix", label: "Fix", plural: "Corrections", color: "var(--color-ember-glow)" },
@@ -45,7 +45,7 @@ function key(text: string): string {
     .trim();
 }
 
-export function changelogBadge(id: ChangelogBadgeId): ChangelogBadge {
+function changelogBadge(id: ChangelogBadgeId): ChangelogBadge {
   return CHANGELOG_BADGES.find((b) => b.id === id)!;
 }
 

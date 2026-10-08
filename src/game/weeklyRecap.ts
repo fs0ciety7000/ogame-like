@@ -34,7 +34,7 @@ export function weekIdOf(now: number): string {
   return new Date(monday).toISOString().slice(0, 10);
 }
 
-export function weeklySnapshot(player: PlayerState, weekId: string): WeeklySnapshot {
+function weeklySnapshot(player: PlayerState, weekId: string): WeeklySnapshot {
   const s = player.stats ?? {};
   return {
     weekId,
@@ -51,7 +51,7 @@ export function weeklySnapshot(player: PlayerState, weekId: string): WeeklySnaps
 }
 
 /** Activité notable dans un résumé (sinon : pas de notification). */
-export function recapHasActivity(r: WeeklyRecap): boolean {
+function recapHasActivity(r: WeeklyRecap): boolean {
   return r.loot > 0 || r.victories > 0 || r.missions > 0 || r.xp > 0 || r.achievements > 0 || r.titles > 0 || r.contracts > 0 || r.expeditions > 0;
 }
 

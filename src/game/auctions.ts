@@ -150,7 +150,7 @@ export function lotRarity(kind: AuctionKind, rarity: string): { label: string; t
   return { label, tone };
 }
 
-export function lotKnown(kind: AuctionKind, item: { template?: string }): boolean {
+function lotKnown(kind: AuctionKind, item: { template?: string }): boolean {
   return kind === "relic" ? !!findTemplate(item.template) : !!findModuleTemplate(String(item.template));
 }
 
@@ -337,7 +337,7 @@ export function validateWatch(raw: unknown, count: number): AuctionWatch {
   return { kind, minRarity, template };
 }
 
-export function watchMatches(w: Pick<AuctionWatch, "kind" | "minRarity" | "template">, kind: AuctionKind, item: { template?: string; rarity?: string }): boolean {
+function watchMatches(w: Pick<AuctionWatch, "kind" | "minRarity" | "template">, kind: AuctionKind, item: { template?: string; rarity?: string }): boolean {
   if (w.kind !== "any" && w.kind !== kind) return false;
   if ((RARITY_RANK[String(item.rarity)] ?? -1) < (RARITY_RANK[w.minRarity] ?? 99)) return false;
   return !w.template || w.template === item.template;

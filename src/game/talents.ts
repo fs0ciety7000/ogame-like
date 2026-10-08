@@ -81,7 +81,7 @@ export function setTalents(defs: TalentDef[]): void {
   TALENTS.splice(0, TALENTS.length, ...defs);
 }
 
-export function findTalent(id: unknown): TalentDef | undefined {
+function findTalent(id: unknown): TalentDef | undefined {
   return TALENTS.find((t) => t.id === id);
 }
 
@@ -193,7 +193,7 @@ export function resetTalents(player: PlayerState, now: number): TalentState {
 }
 
 /** Talents appris et leur rang (lus par l'interface). */
-export function talentBonuses(player: Pick<PlayerState, "talents">): { def: TalentDef; rank: number }[] {
+function talentBonuses(player: Pick<PlayerState, "talents">): { def: TalentDef; rank: number }[] {
   const st = talentState(player);
   return TALENTS.filter((t) => (st.ranks[t.id] ?? 0) > 0).map((def) => ({ def, rank: st.ranks[def.id] ?? 0 }));
 }

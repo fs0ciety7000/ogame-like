@@ -163,9 +163,3 @@ export function endVacation(player: PlayerState, queues: QueuesState, at: number
   if (player.synthesis?.crafting) player.synthesis.crafting.endsAtMs += shift;
   player.vacation = { ...v, endedAtMs: end };
 }
-
-export function vacationLabel(v: VacationState | null | undefined, now: number): string | null {
-  if (!v || v.endedAtMs || now >= v.untilMs || now < v.startedAtMs) return null;
-  const days = Math.ceil((v.untilMs - now) / DAY);
-  return `En vacances (encore ${days} j)`;
-}

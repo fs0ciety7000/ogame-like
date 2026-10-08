@@ -45,7 +45,7 @@ export function challengeSize(tier: number): number {
 }
 
 /** Difficulté d'un palier : de ×0,4 (palier 1) à ×2,5 (palier 30) des valeurs de base. */
-export function challengeRamp(tier: number, tiers = 30): number {
+function challengeRamp(tier: number, tiers = 30): number {
   return 0.4 + (2.1 * (tier - 1)) / Math.max(1, tiers - 1);
 }
 
@@ -125,7 +125,7 @@ export function generateTierChallenges(rng: () => number, focus: ChronicleObject
 
 /** 5.15.4 : jour du mois où le joueur médian doit avoir relevé le dernier défi (mode cumulé).
  *  6.8.1 : réglable (GameRules.passGen.targetMedianDay, 24 par défaut). */
-export function passTargetDay(): number {
+function passTargetDay(): number {
   return passGenRules().targetMedianDay;
 }
 
@@ -141,7 +141,7 @@ export function weeklyRate(key: ChronicleObjective, d: Pick<WorldDigest, "weekly
 }
 
 /** Jour cible de chaque palier (cumul de la difficulté, dernier palier : PASS_TARGET_DAY). */
-export function tierTargetDays(tiers: number): number[] {
+function tierTargetDays(tiers: number): number[] {
   const w = Array.from({ length: tiers }, (_, i) => challengeRamp(i + 1, tiers));
   const total = w.reduce((a, b) => a + b, 0);
   let acc = 0;
@@ -155,7 +155,7 @@ export function tierTargetDays(tiers: number): number[] {
  *  joueur médian a fait au jour cible du palier ; une action trop rare n'apparaît que
  *  lorsqu'elle est atteignable. Toujours une ou plusieurs actions par palier, jamais
  *  celles du palier précédent, jamais deux fois le même défi. */
-export function generateCumulativeChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number, themeId: string | null = null): Record<string, PassRequirement[]> {
+function generateCumulativeChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number, themeId: string | null = null): Record<string, PassRequirement[]> {
   // 6.8.1 : actions et poids réglables (passGen.challengeWeights) ; une action passive n'entre que si le serveur la pratique.
   // 6.14.131 (AJ27-7) : le thème du passe active ses objectifs paramétrés (`trackedActions.themeWeights`).
   const weights = new Map(challengePool(d.weeklyMedian, undefined, themeId).map((x) => [x.key, x.weight]));
@@ -202,7 +202,7 @@ const paceRank = (p: Pace) => p.medianDay ?? 999;
 const dayText = (day: number | null) => (day === null ? "après la fin du mois" : `le jour ${day}`);
 
 /** Seuils réduits au prorata (au moins 1), dans l'ordre des paliers : un total cumulé ne baisse jamais d'un palier au suivant. */
-export function scaleRequirements(req: Record<string, PassRequirement[]>, factor: number): Record<string, PassRequirement[]> {
+function scaleRequirements(req: Record<string, PassRequirement[]>, factor: number): Record<string, PassRequirement[]> {
   const last: Record<string, number> = {};
   const out: Record<string, PassRequirement[]> = {};
   for (const t of Object.keys(req).sort((a, b) => Number(a) - Number(b)))
@@ -217,7 +217,7 @@ export function scaleRequirements(req: Record<string, PassRequirement[]>, factor
 /** Garde de faisabilité des défis : si le joueur médian simulé finit après `latestMedianDay`, nouveaux tirages des défis
  *  (`redraw(1…challengeRedraws)`), puis seuils réduits par pas de `challengeReduceStep` jusqu'à `challengeReduceMin`.
  *  Rend les défis gardés, la simulation et les lignes de « Pourquoi ces chiffres ». */
-export function fitChallenges(
+function fitChallenges(
   season: PaceSeason,
   d: Pick<WorldDigest, "weeklyMedian" | "passPace">,
   redraw: (k: number) => Record<string, PassRequirement[]>,

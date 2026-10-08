@@ -63,7 +63,7 @@ export interface MoonState {
 }
 
 /** Noms tirés au sort (affichés tels quels). */
-export const MOON_NAMES = ["Séléné", "Phœbé", "Nyx", "Callisto", "Io", "Thalassa", "Mimas", "Ananké", "Kallichore", "Hélikè", "Méthone", "Pandore"];
+const MOON_NAMES = ["Séléné", "Phœbé", "Nyx", "Callisto", "Io", "Thalassa", "Mimas", "Ananké", "Kallichore", "Hélikè", "Méthone", "Pandore"];
 
 /** Chance (0 à maxChance) qu'un combat laissant `debris` fasse naître une lune. */
 export function moonChance(debris: number): number {

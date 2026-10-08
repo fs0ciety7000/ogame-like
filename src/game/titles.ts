@@ -101,7 +101,7 @@ export function findTitle(id: string | undefined | null): TitleDef | undefined {
 }
 
 /** Fiche du catalogue pour un libellé gagné (titres de saison, de boss… : absents → null). */
-export function titleByLabel(label: string | undefined | null): TitleDef | null {
+function titleByLabel(label: string | undefined | null): TitleDef | null {
   return label ? (BY_LABEL.get(label.toLowerCase()) ?? null) : null;
 }
 

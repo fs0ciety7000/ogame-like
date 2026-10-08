@@ -31,10 +31,6 @@ export const RESOURCE_LABELS: Record<string, string> = {
   aiFragment: "fragment d'IA",
 };
 
-export function resourceEmoji(id: string): string {
-  return RESOURCE_LIST.find((r) => r.id === id)?.emoji ?? "❔";
-}
-
 /** 6.9.7 (AU11) : comptoir d'échange réglable (registre « exchange ») : taux entre communes et rares, taxe versée au pot commun.
  *  6.14.106 (AU27, AE-L3, Q98) : `weeklyRareCap`, ressources rares reçues au comptoir par semaine (lundi 00 h UTC), toutes
  *  réunies, après taxe ; 0 = sans plafond. */

@@ -50,7 +50,7 @@ export interface XpDayState {
 }
 
 /** Seuils d'une source à cet instant (bonus d'événement compris pour les missions). */
-export function tierThresholds(source: XpSource, now: number, rules: XpTierRules = XP_TIER_RULES): [number, number] | null {
+function tierThresholds(source: XpSource, now: number, rules: XpTierRules = XP_TIER_RULES): [number, number] | null {
   const t = (rules.tiers as Partial<Record<XpSource, [number, number]>>)[source];
   if (!t) return null;
   const scale = source === "mission" && rules.eventScaling ? Math.max(1, missionRewardFactor(now)) : 1;

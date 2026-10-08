@@ -27,7 +27,7 @@ export interface PatronsState {
   last: { month: string; top: PatronEntry[] } | null;
 }
 
-export const monthKey = (now: number) => new Date(now).toISOString().slice(0, 7);
+const monthKey = (now: number) => new Date(now).toISOString().slice(0, 7);
 
 /** Classement du mois, du plus généreux au moins généreux. */
 export function topPatrons(state: PatronsState, n = PATRON_RULES.top): PatronEntry[] {

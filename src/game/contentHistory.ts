@@ -107,7 +107,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 
 const byId = (v: unknown[]): boolean => v.length > 0 && v.every((x) => isObj(x) && typeof x.id === "string" && x.id !== "");
 
 /** Valeur courte (80 caractères au plus) pour le journal. */
-export function shortJson(v: unknown, max = 80): string {
+function shortJson(v: unknown, max = 80): string {
   if (v === undefined) return "—";
   const text = typeof v === "string" ? `« ${v} »` : JSON.stringify(v);
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;

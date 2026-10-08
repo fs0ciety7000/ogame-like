@@ -74,7 +74,6 @@ export const DEFAULT_RANK_RULES: WarlordRankRules = {
 
 export const RANK_NUMERALS = ["I", "II", "III", "IV", "V"] as const;
 export const RANK_NAMES = ["Chef de bande", "Seigneur", "Seigneur de guerre", "Tyran", "Seigneur Ascendant"] as const;
-export const MAX_RANK: WarlordRank = 5;
 
 /** Unité d'élite qui contre chaque trait. */
 export const ELITE_COUNTER: Record<EliteTarget, string> = {
@@ -151,7 +150,7 @@ export function rankForThreat(threat: number, rules: WarlordRankRules): WarlordR
 }
 
 /** Menace minimale d'un rang (début de palier). */
-export function threatFloor(rank: number, rules: WarlordRankRules): number {
+function threatFloor(rank: number, rules: WarlordRankRules): number {
   return rank <= 1 ? 0 : (rules.thresholds[Math.min(4, rank) - 2] ?? 0);
 }
 
@@ -230,7 +229,7 @@ export function traitSummary(personality: WarlordPersonality, rank: number, rule
 }
 
 /** Le trait est-il contré par ce camp (unités d'élite en nombre suffisant) ? */
-export function countersTrait(personality: WarlordPersonality, units: Record<string, number>, rules: WarlordRankRules): boolean {
+function countersTrait(personality: WarlordPersonality, units: Record<string, number>, rules: WarlordRankRules): boolean {
   const id = ELITE_COUNTER[personality as EliteTarget];
   return !!id && (units[id] ?? 0) >= rules.eliteMinCount;
 }

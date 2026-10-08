@@ -10,7 +10,7 @@ import type { PlayerState } from "@/types/game";
 ===================================================== */
 
 const DAY = 24 * 3600_000;
-export const ACTIVITY_DAYS_KEPT = 60;
+const ACTIVITY_DAYS_KEPT = 60;
 /** v4.6 : « en ligne » = synchro réelle depuis moins de 5 min (écrite toutes les 2 min). */
 export const PRESENCE_WRITE_MS = 2 * 60_000;
 export const ONLINE_MS = 5 * 60_000;

@@ -546,7 +546,7 @@ function hours(h: number): number {
   return h * 3600_000;
 }
 
-export function nextListDelay(faction: FactionDef, random: () => number): number {
+function nextListDelay(faction: FactionDef, random: () => number): number {
   const span = Math.max(0, faction.trigger.maxIntervalHours - faction.trigger.minIntervalHours);
   return hours(faction.trigger.minIntervalHours + random() * span);
 }
@@ -609,7 +609,7 @@ export function storageFillPct(player: PlayerState): number {
   return Math.floor((Math.max(...COMMON_RESOURCES.map((r) => player.resources?.[r] ?? 0)) / cap) * 100);
 }
 
-export function totalTechLevels(player: Pick<PlayerState, "techLevels">): number {
+function totalTechLevels(player: Pick<PlayerState, "techLevels">): number {
   return Object.values(player.techLevels ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
 }
 

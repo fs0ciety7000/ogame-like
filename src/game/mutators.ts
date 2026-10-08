@@ -53,7 +53,7 @@ const STAT_PHRASES: Partial<Record<EffectStat, string>> = {
 };
 
 /** « +10 % de production de toutes les ressources », « −15 % de temps de vol », « +10 % d'attaque ». Sans Intl (goja). */
-export function mutatorEffectPhrase(e: ValuedEffect): string {
+function mutatorEffectPhrase(e: ValuedEffect): string {
   const info = EFFECT_STATS[e.stat];
   if (!info) return e.stat;
   const v = Number(e.value) || 0;

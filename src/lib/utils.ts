@@ -103,7 +103,7 @@ const DATE_STYLES = {
 export type DateTimeStyle = keyof typeof DATE_STYLES;
 
 /** Fuseau des rendez-vous du serveur (boss, maintenance, casino, Chroniques, agenda) : l'heure de Paris, la même pour tous. */
-export const SERVER_TIME_ZONE = "Europe/Paris";
+const SERVER_TIME_ZONE = "Europe/Paris";
 
 /**
  * Date ou heure en français. `zone` : `"local"` (défaut) pour un moment propre au joueur (arrivée d'une flotte,

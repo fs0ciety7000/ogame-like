@@ -594,7 +594,7 @@ export interface OfficersConfig {
   rareDrop?: Partial<typeof RARE_OFFICER_RULES>;
 }
 
-export const OFFICER_RULE_KEYS = ["slots", "recruitAmber", "recruitProductionHours", "swapCooldownHours", "dossierXp", "anomalyPerLevel"] as const;
+const OFFICER_RULE_KEYS = ["slots", "recruitAmber", "recruitProductionHours", "swapCooldownHours", "dossierXp", "anomalyPerLevel"] as const;
 
 const DEFAULT_ROLE_EFFECTS: Record<CommanderId, RoleEffect[]> = JSON.parse(JSON.stringify(ROLE_EFFECTS));
 const DEFAULT_COMMANDER_RULES = { ...COMMANDER_RULES };

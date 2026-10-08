@@ -161,7 +161,7 @@ export function sanitizeVitals(raw: unknown): VitalsSample | null {
   return { route: route || "/", device: r.device === "m" ? "m" : "d", values };
 }
 
-export function dayKey(now: number): string {
+function dayKey(now: number): string {
   return new Date(now).toISOString().slice(0, 10);
 }
 

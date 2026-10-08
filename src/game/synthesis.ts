@@ -161,7 +161,7 @@ export function craftCapsule(player: PlayerState, typeIn: unknown, levelIn: unkn
 }
 
 /** Prend la capsule la plus forte d'un type (ou d'un niveau précis). Renvoie son bonus en %. */
-export function takeCapsule(player: PlayerState, type: CapsuleType, levelIn?: unknown): number {
+function takeCapsule(player: PlayerState, type: CapsuleType, levelIn?: unknown): number {
   const st = synthesisState(player);
   const stock = [...st.stock[type]].sort((a, b) => b - a);
   if (stock.length === 0) throw new GameActionError(`Aucune capsule « ${CAPSULES[type].name} » en réserve.`);
@@ -269,10 +269,4 @@ export function clearDecoy(player: PlayerState, fleetId: string): void {
   delete next[fleetId];
   st.decoys = next;
   player.synthesis = st;
-}
-
-/** Composition réelle d'une flotte du joueur (le leurre ne trompe que l'adversaire). */
-export function realFleetUnits(player: Pick<PlayerState, "synthesis"> | null | undefined, fleet: { id: string; units: Record<string, number> }): Record<string, number> {
-  const decoy = player ? synthesisState(player).decoys[fleet.id] : undefined;
-  return decoy ?? fleet.units ?? {};
 }

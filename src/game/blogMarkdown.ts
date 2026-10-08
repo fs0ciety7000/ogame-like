@@ -70,7 +70,7 @@ const KEYWORDS: Record<string, string[]> = {
 const LANG_ALIASES: Record<string, string> = { javascript: "js", typescript: "ts", tsx: "ts", jsx: "js", sh: "bash", shell: "bash", zsh: "bash", jsonc: "json" };
 
 /** Coloration minimale : commentaires, chaînes, nombres, mots-clés, méthodes HTTP. */
-export function highlight(code: string, langRaw: string): string {
+function highlight(code: string, langRaw: string): string {
   const lang = LANG_ALIASES[langRaw] ?? langRaw;
   const words = new Set([...(KEYWORDS[lang] ?? []), ...(lang === "ts" ? KEYWORDS.js : [])]);
   const commentRe = lang === "bash" ? /#[^\n]*/y : lang === "css" || lang === "html" ? /\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/y : /\/\/[^\n]*|\/\*[\s\S]*?\*\//y;

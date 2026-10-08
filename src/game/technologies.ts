@@ -359,7 +359,7 @@ export interface PrereqCheck {
 export const BLUEPRINT_UNITS = new Map<string, string>();
 
 /** Unités à plan qu'une techno débloque : il faut posséder le plan pour la rechercher. */
-export function blueprintsRequiredBy(tech: TechDef): string[] {
+function blueprintsRequiredBy(tech: TechDef): string[] {
   return techEffects(tech)
     .filter((e) => e.type === "unlock_next_level" && e.target && BLUEPRINT_UNITS.has(e.target))
     .map((e) => e.target!);

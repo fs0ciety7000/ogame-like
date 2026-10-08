@@ -15,7 +15,7 @@ import type { CombatOutcome, Units } from "@/types/game";
    appliqué (`node scripts/progression-sim.mjs`).
 ===================================================== */
 
-export const PVP_BUDGET_MODEL = {
+const PVP_BUDGET_MODEL = {
   budget: 20_000_000,
   unitLevel: 6,
   techFraction: 0.5,
