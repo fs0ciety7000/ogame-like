@@ -1,9 +1,9 @@
 # Proposition : chaîne des actions, écritures sûres de la fiche joueur
 
-Statut : **lots AC-A à AC-G livrés** (6.14.52, `docs/changes/6.14.52-ecritures-sures.md` ; 6.14.65,
+Statut : **lots AC-A à AC-H livrés** (6.14.52, `docs/changes/6.14.52-ecritures-sures.md` ; 6.14.65,
 `docs/changes/6.14.65-edition-admin-serveur.md` ; 6.14.66, `docs/changes/6.14.66-suppression-compte-serveur.md` ; 6.14.110 à 6.14.113,
 `docs/changes/6.14.110-depenses-et-traces.md`, `6.14.111-taches-planifiees.md`, `6.14.112-erreurs-et-vacances.md`,
-`6.14.113-reclamations-groupees.md`) ; `feuille-de-route-2030-automne.md`, lots 1, 8, 9 et 29 à 32. Restent AC-H et AC-I. Source : revue AU27, `docs/audit/2026-10-07-au27-chaine-actions.md`
+`6.14.113-reclamations-groupees.md` ; 6.14.135, `6.14.135-menage-tour-actions.md`) ; `feuille-de-route-2030-automne.md`, lots 1, 8, 9, 29 à 32 et 60. Reste AC-I. Source : revue AU27, `docs/audit/2026-10-07-au27-chaine-actions.md`
 (constats AC-1 à AC-22, §8 lots). Version brève du plan de `docs/WORKFLOW.md` §2 : ces corrections touchent les données des joueurs.
 
 ## 1. Constat (vu par le joueur)
@@ -101,8 +101,9 @@ notifications du rattrapage dans les 4 chemins, comme le chemin normal. Pour AC-
 | **AC-E : tâches planifiées** | verrou par cadence ; e-mails par lots ; tâches allégées ; échéances et maintenance | AC-7, AC-8, AC-10 | livré (6.14.111) |
 | **AC-F : erreurs et vacances** | erreurs traduites ; garde de vacances unique | AC-11, AC-16 | livré (6.14.112) |
 | **AC-G : réclamations groupées** | casino, défi, titre du Codex dans « Tout réclamer » ; un seul chemin ; sous-actions isolées | AC-14, AC-15, AC-19 | livré (6.14.113) |
+| **AC-H : ménage et tests** | comptage sur la pré-prod puis retrait de `gift/claim` et de l'alias `attack` (rapports anciens gardés : 4 non vus) ; « Lancer maintenant » des étapes de cadence ; tour des actions (moteur, 66 actions ; serveur, 21 actions) | AC-18, AC-22 | livré (6.14.135) |
 
-Les lots AC-H (ménage et tests) et AC-I (heartbeat, après la mesure Z6) suivent la feuille de route d'automne 2030.
+Le lot AC-I (heartbeat, après la mesure Z6) suit la feuille de route d'automne 2030.
 
 ## 8. Questions ouvertes
 

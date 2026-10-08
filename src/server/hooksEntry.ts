@@ -12,7 +12,6 @@ export {
   performGift,
   newPlayerProfile,
   applyLegacyBattleReport,
-  applyLegacyGift,
 } from "@/game/actions";
 export { GameActionError } from "@/game/errors";
 export { computeGameStats } from "@/game/analytics";

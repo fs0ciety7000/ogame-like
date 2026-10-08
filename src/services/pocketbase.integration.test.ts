@@ -42,6 +42,11 @@ import { CONTRACT_RULES, contractDay } from "@/game/contracts";
 import { generatePassSeason, nextMonthId } from "@/game/passSeasons";
 import { generateChapter, worldDigest } from "@/game/procedural";
 import { DEFAULT_ACHIEVEMENTS } from "@/game/achievements";
+import type { GameAction } from "@/game/actions";
+import { COLONY_SPECS, foundColony } from "@/game/colonies";
+import { MODULE_TEMPLATES, moduleMountClasses } from "@/game/modules";
+import { empireClasses } from "@/game/empireClass";
+import { MISSIONS } from "@/game/missions";
 import { chronicleMonthId } from "@/game/chronicles";
 
 const suffix = Math.random().toString(36).slice(2, 7);
@@ -294,16 +299,11 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     ).rejects.toThrow(/insuffisantes/);
   });
 
-  it("legacy gifts (old system) are credited once", async () => {
-    const gift = await admin.collection("resource_gifts").create({
-      fromUid: aId, fromPseudo: A.pseudo, toUid: bId, toPseudo: B.pseudo, resources: { scrap: 700 }, timestamp: Date.now(), claimed: false,
-    });
-    const before = (await snap(bId))!.resources.scrap;
-    await Promise.all([ps.claimResourceGift(bId, gift.id), ps.claimResourceGift(bId, gift.id)]);
-    await ps.claimResourceGift(bId, gift.id);
-    const after = (await snap(bId))!.resources.scrap;
-    expect(after - before).toBeGreaterThanOrEqual(700);
-    expect(after - before).toBeLessThan(1400);
+  it("6.14.135 (AC-18) : les chemins de l'ancien système sont retirés (gift/claim, alias attack)", async () => {
+    for (const route of ["/api/cosmic/gift/claim", "/api/cosmic/attack"]) {
+      const status = await pb.send(route, { method: "POST", body: {} }).then(() => 200, (err: { status?: number }) => err.status ?? 0);
+      expect(status, route).toBe(404);
+    }
   });
 
   it("fleet recall: the ships turn around before impact", async () => {
@@ -2759,7 +2759,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       if (st) await admin.collection("game_config").delete(st.id);
       await loginPlayer(B.email, B.pw);
     }
-  });
+    // 6.14.135 : 5,5 à 5,7 s mesurées seul, au départ comme à l'arrivée du lot (limite de 5 s par défaut dépassée).
+  }, 20_000);
 
   it("v4.3 chronicles: episode claimed, season boss assault, rewards on stop, admin pass", async () => {
     await withoutPassSeasons(async () => {
@@ -3860,7 +3861,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const now = Date.now();
     try {
       // AP-L7 : l'amélioration de la lune, faite par le serveur, entre dans l'activité du mois (défis du passe, saga, médianes).
-      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 2_000_000, energy: 2_000_000 }, moon: { name: "Lune d'essai", level: 1, bornAtMs: now - 60_000, fromDebris: 1 }, vacation: null });
+      // 6.14.135 (IT-seul) : B compte parmi les joueurs actifs (`lastActiveMs`), sinon, lancé seul, le générateur ne voit aucun
+      // joueur actif et n'écrit pas d'épisode « nouveauté » (la suite complète l'avait rendu actif par ses tests précédents).
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 2_000_000, energy: 2_000_000 }, moon: { name: "Lune d'essai", level: 1, bornAtMs: now - 60_000, fromDebris: 1 }, vacation: null, lastActiveMs: now });
       const was = Number(before.seasonPass?.activity?.moonUpgrade ?? 0);
       await ps.upgradeMoon();
       const after = await snap(bId);
@@ -4169,6 +4172,108 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
       else if (cur) await admin.collection("game_config").delete(cur.id);
     }
+  });
+
+  it("6.14.135 (AC-H) : tour des actions jamais jouées contre le serveur (fiche relue, rien de négatif)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const now = Date.now();
+    const tpl = MODULE_TEMPLATES.find((t) => !t.unit && moduleMountClasses(t).length > 0)!;
+    const cls = moduleMountClasses(tpl)[0];
+    const plan = (id: string, built = false) => ({ id, template: tpl.id, rarity: "common", built, foundAtMs: now - 1000, source: "test" });
+    const secret = DEFAULT_ACHIEVEMENTS.find((a) => a.secret && a.enabled)!;
+    const missionKey = Object.keys(MISSIONS)[0];
+    const colony = foundColony(bId, { slot: 1, name: "Tour", endTime: now - 86_400_000 }, now - 30 * 86_400_000, before.buildings);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- fiche brute relue par l'admin
+    const negatives = (p: any): string[] => {
+      const bad: string[] = [];
+      for (const [k, v] of Object.entries(p.resources ?? {})) if (!(Number(v) >= 0)) bad.push(`${k}=${v}`);
+      for (const [k, u] of Object.entries(p.units ?? {})) if (!(Number((u as { count?: number })?.count ?? 0) >= 0)) bad.push(`unité ${k}`);
+      if (!(Number(p.bounties?.amber ?? 0) >= 0)) bad.push("Ambre");
+      return bad;
+    };
+    try {
+      await admin.collection("players").update(bId, {
+        resources: { ...RICH, scrap: 5_000_000, energy: 5_000_000, nano: 5_000_000, data: 5_000_000 },
+        // Les vaisseaux demandés par la première mission, plus 10 chasseurs (revente).
+        units: { ...(before.units ?? {}), ...Object.fromEntries(Object.entries(MISSIONS[missionKey].prereq).map(([id, n]) => [id, { level: 1, count: n + (id === "chasseur" ? 10 : 0) }])), ...(MISSIONS[missionKey].prereq.chasseur ? {} : { chasseur: { level: 1, count: 10 } }) },
+        vacation: null,
+        ascensions: 1,
+        talents: {},
+        empireClass: null,
+        bounties: { ...(before.bounties ?? {}), amber: 5000 },
+        modules: { items: [plan("m1"), plan("m2"), plan("m3"), plan("m4"), plan("m5")], slots: { light: [null, null], medium: [null, null], heavy: [null, null], support: [null, null] } },
+        colonies: [colony],
+        contracts: { day: contractDay(now), items: [{ id: "c1", type: "spy", target: 1, progress: 0, claimed: false }, { id: "c2", type: "trade", target: 1, progress: 0, claimed: false }], streak: 0, lastCompletedDay: null, rerolled: false },
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- fiche brute relue par l'admin
+      const steps: [GameAction, (p: any) => void][] = [
+        [{ type: "sellUnits", unitId: "chasseur", qty: 2 }, (p) => expect(p.stats?.unitsSold ?? 0).toBeGreaterThanOrEqual(2)],
+        [{ type: "rerollContract", contractId: "c1" }, (p) => expect(p.contracts.rerolled).toBe(true)],
+        [{ type: "hideGuide", hidden: true }, (p) => expect(p.onboarding?.advancedHidden).toBe(true)],
+        [{ type: "chatArchive", with: "autre", archived: true }, (p) => expect(JSON.stringify(p.stats?.archivedChats ?? null)).toContain("autre")],
+        [{ type: "moduleBuild", moduleId: "m1" }, (p) => expect(p.modules.items.find((m: { id: string }) => m.id === "m1").built).toBe(true)],
+        [{ type: "moduleMount", moduleId: "m1", cls, slot: 0 }, (p) => expect(p.modules.slots[cls][0]).toBe("m1")],
+        [{ type: "modulePresetSave", name: "Tour" }, (p) => expect(p.modules.presets).toHaveLength(1)],
+        [{ type: "moduleUnmount", cls, slot: 0 }, (p) => expect(p.modules.slots[cls][0]).toBeNull()],
+        [{ type: "modulePresetApply", index: 0 }, (p) => expect(p.modules.slots[cls][0]).toBe("m1")],
+        [{ type: "modulePresetDelete", index: 0 }, (p) => expect(p.modules.presets ?? []).toHaveLength(0)],
+        [{ type: "moduleRecycle", moduleId: "m2" }, (p) => expect(p.modules.items.some((m: { id: string }) => m.id === "m2")).toBe(false)],
+        [{ type: "moduleFuse", moduleIds: ["m3", "m4", "m5"] }, (p) => expect(p.modules.items.filter((m: { template: string }) => m.template === tpl.id)).toHaveLength(2)],
+        [{ type: "talentLearn", talentId: "rendement" }, (p) => expect(p.talents.ranks.rendement).toBe(1)],
+        [{ type: "talentReset" }, (p) => expect(Object.keys(p.talents.ranks)).toHaveLength(0)],
+        [{ type: "colonyRename", colonyId: colony.id, name: "Tour II" }, (p) => expect(p.colonies[0].name).toBe("Tour II")],
+        [{ type: "colonySpec", colonyId: colony.id, spec: COLONY_SPECS[0].id }, (p) => expect(p.colonies[0].spec).toBe(COLONY_SPECS[0].id)],
+        [{ type: "colonyRoute", colonyId: colony.id, everyHours: 6, keepPct: 20 }, (p) => expect(p.colonies[0].route).toBeTruthy()],
+        [{ type: "empireClass", classId: empireClasses()[0].id }, (p) => expect(p.empireClass?.id).toBe(empireClasses()[0].id)],
+        [{ type: "achievementHint", achievementId: secret.id }, (p) => expect(p.stats?.hintsBought).toContain(secret.id)],
+        [{ type: "mission", missionKey }, () => undefined],
+        [{ type: "claimAll" }, () => undefined],
+      ];
+      for (const [action, check] of steps) {
+        const prev = await snap(bId);
+        await ps.performGameAction(action).catch((err) => {
+          throw new Error(`${action.type} : ${err?.message ?? err}`);
+        });
+        const p = await snap(bId);
+        expect(negatives(p), action.type).toEqual([]);
+        check(p);
+        // Dépense comptée : ce qui sort des ressources est compté dans `stats.spent` (6.14.110), au rattrapage près.
+        const spent = Number(p.stats?.spent ?? 0) - Number(prev.stats?.spent ?? 0);
+        expect(spent, action.type).toBeGreaterThanOrEqual(0);
+      }
+      const q = await admin.collection("queues").getOne(bId);
+      expect((q.activeMissions as { key: string }[]).map((m) => m.key)).toContain(missionKey);
+      // Mission du jour : fusionnée dans les objectifs du jour depuis 6.2, refus propre.
+      await expect(ps.performGameAction({ type: "dailyClaim", index: 0 })).rejects.toThrow(/Mission inconnue/);
+    } finally {
+      await admin.collection("players").update(bId, {
+        resources: before.resources, units: before.units, vacation: before.vacation ?? null, ascensions: before.ascensions ?? 0, talents: before.talents ?? null,
+        empireClass: before.empireClass ?? null, bounties: before.bounties ?? null, modules: before.modules ?? null, colonies: before.colonies ?? [],
+        contracts: before.contracts ?? null, onboarding: before.onboarding ?? null, stats: before.stats ?? {},
+      });
+      await admin.collection("queues").update(bId, { activeMissions: [] });
+    }
+  }, 60_000);
+
+  it("6.14.135 (AC-H) : « Lancer maintenant » une tâche planifiée (admin seulement, verrou, métriques, journal)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    // Un joueur ne lance rien.
+    await expect(pb.send("/api/cosmic/admin/run-task", { method: "POST", body: { name: "cosmic_auctions" } })).rejects.toMatchObject({ status: 403 });
+    // Une tâche hors des cadences est refusée.
+    await expect(admin.send("/api/cosmic/admin/run-task", { method: "POST", body: { name: "cosmic_catchup" } })).rejects.toMatchObject({ status: 400 });
+    const metrics = await admin.send("/api/cosmic/admin/metrics", {});
+    expect((metrics.runnable as { name: string }[]).map((r) => r.name)).toContain("cosmic_auctions");
+    const out = await admin.send("/api/cosmic/admin/run-task", { method: "POST", body: { name: "cosmic_auctions" } });
+    expect(out).toMatchObject({ name: "cosmic_auctions", cadence: "minute", error: null });
+    const after = await admin.send("/api/cosmic/admin/metrics", {});
+    const row = (after.crons as { name: string; runs: number }[]).find((c) => c.name === "cosmic_auctions");
+    expect(row?.runs ?? 0).toBeGreaterThanOrEqual(1);
+    const logs = await admin.collection("admin_logs").getList(1, 5, { filter: `action = "run" && recordId = "cosmic_auctions"`, sort: "-createdAtMs" });
+    expect(logs.items.length).toBeGreaterThanOrEqual(1);
+    expect(logs.items[0].targetCollection).toBe("server_tasks");
   });
 
   it("changes password and keeps the session", async () => {

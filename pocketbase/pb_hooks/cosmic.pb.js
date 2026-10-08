@@ -190,37 +190,8 @@ routerAdd(
   $apis.requireAuth("users"),
 );
 
-/**
- * POST /api/cosmic/gift/claim  { giftId }
- * Dons envoyés avec l'ancien système (débités à l'envoi, pas encore crédités).
- */
-routerAdd(
-  "POST",
-  "/api/cosmic/gift/claim",
-  (e) => {
-    const db = require(`${__hooks}/cosmic_db.js`);
-    const game = db.loadGame();
-    const uid = e.auth.id;
-    const giftId = String(db.body(e).giftId || "");
-    let claimed = false;
-
-    $app.runInTransaction((txApp) => {
-      const gift = db.findOrNull(txApp, "resource_gifts", giftId);
-      if (!gift || gift.getString("toUid") !== uid || gift.getBool("claimed")) return;
-      db.applyContent(txApp, game);
-      const loaded = db.loadPlayer(txApp, game, uid);
-      const out = game.applyLegacyGift(loaded.player, loaded.queues, db.toPlain(gift), Date.now());
-      gift.set("claimed", true);
-      txApp.save(gift);
-      db.savePlayer(txApp, game, loaded, out.player, out.queues);
-      db.notify(txApp, uid, out.notifications);
-      claimed = true;
-    });
-
-    return e.json(200, { claimed });
-  },
-  $apis.requireAuth("users"),
-);
+/* 6.14.135 (AU27, AC-18) : route `gift/claim` retirée (dons de l'ancien système : 0 non réclamé sur la copie de la
+   production, et un don créé depuis l'économie serveur naît réclamé). */
 
 /**
  * POST /api/cosmic/report/seen  { reportId }
@@ -261,13 +232,12 @@ routerAdd(
 /**
  * POST /api/cosmic/fleet/send  { targetUid, fleet: { unitId: quantité } }
  *   + mission : "attack" (défaut), "spy", "recycle" (targetUid = champ de débris) ou "patrol" (minutes)
- * (et POST /api/cosmic/attack, ancien nom)
  *
  * Décollage d'une flotte d'attaque : protections vérifiées maintenant,
  * vaisseaux retirés de la base, combat résolu à l'arrivée (tâche minute).
  */
 routerAdd("POST", "/api/cosmic/fleet/send", (e) => require(`${__hooks}/cosmic_db.js`).launchFleetRequest(e), $apis.requireAuth("users"));
-routerAdd("POST", "/api/cosmic/attack", (e) => require(`${__hooks}/cosmic_db.js`).launchFleetRequest(e), $apis.requireAuth("users"));
+// 6.14.135 (AC-18) : alias `POST /api/cosmic/attack` retiré (aucun appel depuis 5.x : le client passe par `fleet/send`).
 
 /**
  * POST /api/cosmic/fleet/recall  { fleetId }
@@ -748,6 +718,8 @@ routerAdd("POST", "/api/cosmic/admin/backups/r2", (e) => require(`${__hooks}/cos
 /** 5.26 : mesures de performance des navigateurs, métriques d'exploitation (équipe) et statut public. */
 routerAdd("POST", "/api/cosmic/vitals", (e) => require(`${__hooks}/cosmic_db.js`).vitalsRequest(e), $apis.requireAuth("users"));
 routerAdd("GET", "/api/cosmic/admin/metrics", (e) => require(`${__hooks}/cosmic_db.js`).adminMetrics(e), $apis.requireAuth("users", "_superusers"));
+/** 6.14.135 (AC-H) : POST /api/cosmic/admin/run-task { name } — « Lancer maintenant » une étape de cadence (verrou de sa cadence, journal). */
+routerAdd("POST", "/api/cosmic/admin/run-task", (e) => require(`${__hooks}/cosmic_db.js`).adminRunTask(e), $apis.requireAuth("users", "_superusers"));
 routerAdd("GET", "/api/cosmic/status", (e) => require(`${__hooks}/cosmic_db.js`).publicStatus(e));
 
 /** POST /api/cosmic/admin/maintenance { enabled, message?, version?, endsAtMs? } — administrateurs. */

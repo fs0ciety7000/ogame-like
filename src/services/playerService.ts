@@ -16,7 +16,6 @@ import type {
   GameNotification,
   PlayerState,
   QueuesState,
-  ResourceGift,
   ResourceId,
   Resources,
   SpyReport,
@@ -579,20 +578,7 @@ export async function sendResourceGift(params: {
   await callGame("gift", { toUid, resources: positive });
 }
 
-/** Dons envoyés avec l'ancien système (débités à l'envoi, pas encore crédités). */
-export function subscribePendingGifts(uid: string, cb: (gifts: ResourceGift[]) => void): () => void {
-  const filter = pb.filter("toUid = {:uid} && claimed = false", { uid });
-  return subscribeList(
-    "resource_gifts",
-    pb.filter("toUid = {:uid}", { uid }),
-    () => pb.collection("resource_gifts").getFullList<ResourceGift>({ filter }),
-    cb,
-  );
-}
-
-export function claimResourceGift(_uid: string, giftId: string) {
-  return once(`gift:${giftId}`, () => callGame("gift/claim", { giftId }));
-}
+/* 6.14.135 (AC-18) : `subscribePendingGifts` et `claimResourceGift` retirés (dons de l'ancien système, plus aucun en attente). */
 
 /* =====================================================
    Combat

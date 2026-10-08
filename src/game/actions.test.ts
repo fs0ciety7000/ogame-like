@@ -1,6 +1,6 @@
 import { findUnit } from "@/game/units";
 import { describe, expect, it } from "vitest";
-import { applyLegacyBattleReport, applyLegacyGift, newPlayerProfile, performGift, performPlayerAction } from "@/game/actions";
+import { applyLegacyBattleReport, newPlayerProfile, performGift, performPlayerAction } from "@/game/actions";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { GameActionError } from "@/game/errors";
 import { getUnitCapacity } from "@/game/buildings";
@@ -111,12 +111,5 @@ describe("profiles and legacy records", () => {
     expect(out.player.resources.scrap).toBe(700);
     expect(out.player.xp).toBe(90);
     expect(out.player.defeats).toBe(1);
-  });
-
-  it("credits an old gift", () => {
-    const p = player("d");
-    const out = applyLegacyGift(p, defaultQueues(), { fromPseudo: "A", resources: { scrap: 50, bogus: 999 } }, NOW);
-    expect(out.player.resources.scrap).toBe(p.resources.scrap + 50);
-    expect(out.notifications[0].kind).toBe("gift");
   });
 });

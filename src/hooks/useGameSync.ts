@@ -3,13 +3,11 @@ import { Bell } from "lucide-react";
 import { notificationStyle } from "@/components/game/NotificationCard";
 import { toast } from "sonner";
 import {
-  claimResourceGift,
   ensurePlayerDoc,
   GameActionError,
   processBattleReportForDefender,
   subscribeNotifications,
   subscribePendingBattleReports,
-  subscribePendingGifts,
   subscribePlayer,
   subscribeQueues,
   subscribeFleets,
@@ -85,7 +83,6 @@ async function safeSyncPlayer(uid: string, playtimeDeltaSeconds = 0): Promise<Aw
  *  de combat reçus. */
 export function useGameSync(uid: string | null) {
   const processingReports = useRef<Set<string>>(new Set());
-  const processingGifts = useRef<Set<string>>(new Set());
   const lastHeartbeatAt = useRef<number>(Date.now());
   const seenNotificationIds = useRef<Set<string> | null>(null);
   // Navigation depuis les toasts (référence stable pour l'abonnement).
@@ -193,16 +190,7 @@ export function useGameSync(uid: string | null) {
       });
     });
 
-    const unsubGifts = subscribePendingGifts(uid, (gifts) => {
-      gifts.forEach((gift) => {
-        if (processingGifts.current.has(gift.id)) return;
-        processingGifts.current.add(gift.id);
-
-        claimResourceGift(uid, gift.id)
-          .catch((err) => console.error("Erreur de réception du don de ressources :", err))
-          .finally(() => processingGifts.current.delete(gift.id));
-      });
-    });
+    // 6.14.135 (AC-18) : plus d'abonnement aux dons de l'ancien système (aucun en attente, route `gift/claim` retirée).
 
     // Flottes : à l'arrivée d'une de mes flottes, le serveur y attache le
     // rapport de combat ; on l'affiche une fois (pas au premier chargement).
@@ -239,7 +227,6 @@ export function useGameSync(uid: string | null) {
       unsubNotifications();
       if (toastTimer) clearTimeout(toastTimer);
       unsubBattleReports();
-      unsubGifts();
       unsubFleets();
       setFleets([]);
       clearInterval(heartbeat);

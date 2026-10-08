@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { SkeletonList } from "@/components/ui/skeleton";
 import { HudPanel, PagedList, EmptyAction } from "@/components/ui/panel";
 import { toast } from "sonner";
@@ -76,11 +76,14 @@ function AmountsText({ res }: { res: Amounts | null | undefined }) {
   const entries = Object.entries(res ?? {}).filter(([, v]) => (v ?? 0) > 0);
   return (
     <>
+      {/* 6.14.135 (AD-coût) : séparateur hors du bloc insécable, sinon aucune coupure possible entre deux montants (débordement à 375 px). */}
       {entries.map(([k, v], i) => (
-        <span key={k} className="whitespace-nowrap">
+        <Fragment key={k}>
           {i > 0 && " · "}
-          <ResourceIcon id={k} /> {formatCompact(v ?? 0)}
-        </span>
+          <span className="whitespace-nowrap">
+            <ResourceIcon id={k} /> {formatCompact(v ?? 0)}
+          </span>
+        </Fragment>
       ))}
     </>
   );

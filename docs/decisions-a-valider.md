@@ -18,6 +18,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q344 | Rapports de combat anciens (4 jamais vus, un seul défenseur sur la pré-prod) : Chemin gardé jusqu'à zéro, recompté à chaque copie de la pré-prod (`docs/changes/6.14.135-menage-tour-actions.md`) | aucun | valider |
+| Q345 | « Lancer maintenant » des tâches horaires et de nuit : Cadences seulement (ces tâches n'ont pas de verrou) (`docs/changes/6.14.135-menage-tour-actions.md`) | aucun (admin) | valider |
 | Q336 | Proposé (pas lancé) : **Option des paliers des bâtiments** — D : règle n° 4 réécrite en deux familles (bâtiments de système avec paliers d'effet aux niveaux 5, 10, 15, 20 ; bâtiments de courbe avec jalons seulement) ; paliers pour l'entrepôt, l'Atelier et les hangars ; I29 intact en simulation (`docs/proposals/paliers-batiments.md`) | attente sans nouveauté avant la 1re Ascension : 30–39 j → 20–29 j | valider (lance les lots PB-L0 à PB-L5) |
 | Q337 | Proposé (pas lancé) : Tampon de l'entrepôt (niveau 10) — 2 h de production en trop gardées (`docs/proposals/paliers-batiments.md`) | production perdue −0,2 à −0,3 point | valider |
 | Q338 | Proposé (pas lancé) : Signature de l'entrepôt (niveau 20) — Abri de 12 h pour les 4 ressources (`docs/proposals/paliers-batiments.md`) | moins de pillage pour un entrepôt maximal | valider (à mesurer en JcJ au lot) |

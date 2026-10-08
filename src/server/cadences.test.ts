@@ -59,3 +59,35 @@ describe("6.14.111 (AC-E) : verrou par cadence et e-mails par lots", () => {
     expect(block).not.toMatch(/\["cosmic_fleets", \(\) => deadlinesOnHold/);
   });
 });
+
+describe("6.14.135 (AC-H) : « Lancer maintenant » une étape de cadence", () => {
+  const fn = db.slice(db.indexOf("function adminRunTask("), db.indexOf("function readServerMetric("));
+  it("route admin protégée, étapes des cadences seulement", () => {
+    expect(pb).toContain('routerAdd("POST", "/api/cosmic/admin/run-task"');
+    expect(fn).toContain('if (!isGameAdmin(e)) throw new ForbiddenError(');
+    expect(fn).toMatch(/CADENCES\[c\]\.steps\.forEach/);
+    expect(fn).toContain("BadRequestError(");
+    expect(db).toMatch(/module\.exports = \{[^}]*\badminRunTask\b/);
+  });
+
+  it("respecte le verrou de sa cadence (6.14.111) : refus 409 si elle tourne, verrou pris puis rendu", () => {
+    expect(fn).toContain("CADENCE_LOCK_PREFIX + cadence");
+    expect(fn).toContain("game.cadenceBusy(");
+    expect(fn).toContain("e.json(409");
+    expect(fn).toContain("$app.store().set(key, now)");
+    expect(fn).toMatch(/finally \{[\s\S]*\$app\.store\(\)\.remove\(key\)/);
+    // Le passage est mesuré comme un passage planifié (métriques, page Santé).
+    expect(fn).toContain("timedCron(name, c.spec, step[1])");
+  });
+
+  it("laisse une ligne au journal d'administration", () => {
+    expect(fn).toContain('findCollectionByNameOrId("admin_logs")');
+    expect(fn).toContain('action: "run"');
+    expect(fn).toContain('targetCollection: "server_tasks"');
+  });
+
+  it("la page Santé reçoit la liste des étapes lançables", () => {
+    const metrics = db.slice(db.indexOf("function adminMetrics("), db.indexOf("function publicStatus("));
+    expect(metrics).toContain("runnable: runnableTasks()");
+  });
+});

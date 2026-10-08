@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
-import { Activity, Gauge, RefreshCw } from "lucide-react";
+import { Activity, Gauge, Play, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { HudPanel } from "@/components/ui/panel";
 import { HudChip, StatTile, type HudTone } from "@/components/ui/hud";
 import { Button } from "@/components/ui/button";
+import { askConfirm } from "@/components/ui/confirm-dialog";
 import { pb } from "@/lib/pocketbase";
 import { formatNumber, timeAgo } from "@/lib/utils";
 import { VITALS, type CronRun, type CronStatus, type VitalsReport } from "@/game/serverMetrics";
 
 /* 5.26 : exploitation : tâches planifiées (durée, retard, échecs), Web Vitals
    mesurés chez les joueurs (75e centile sur 7 jours), flottes bloquées et
-   e-mails programmés. */
+   e-mails programmés. 6.14.135 (AC-H) : « Lancer maintenant » pour chaque
+   étape des cadences (verrou de la cadence respecté, ligne au journal). */
 
 interface Metrics {
   now: number;
@@ -19,6 +22,17 @@ interface Metrics {
   stuckFleets: number;
   mailScheduled: number;
   logicVersion: string;
+  /** 6.14.135 : étapes des cadences lançables tout de suite (absent avec des hooks plus anciens). */
+  runnable?: { name: string; cadence: string; spec: string }[];
+}
+
+type CronRow = (CronRun & { name: string; status: CronStatus }) | { name: string; status: null };
+
+/** Tâches mesurées, puis étapes lançables pas encore passées depuis le démarrage. */
+function cronRows(m: Metrics): CronRow[] {
+  const seen = new Set(m.crons.map((c) => c.name));
+  const pending: CronRow[] = (m.runnable ?? []).filter((r) => !seen.has(r.name)).map((r) => ({ name: r.name, status: null }));
+  return [...m.crons, ...pending];
 }
 
 const CRON_TONE: Record<CronStatus, { tone: HudTone; label: string }> = {
@@ -42,6 +56,7 @@ export function MetricsSection() {
   const [m, setM] = useState<Metrics | null>(null);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState<string | null>(null);
   const load = async () => {
     setBusy(true);
     try {
@@ -55,6 +70,27 @@ export function MetricsSection() {
   useEffect(() => {
     void load();
   }, []);
+  const runNow = async (name: string) => {
+    const short = name.replace(/^cosmic_/, "");
+    const ok = await askConfirm({
+      title: `Lancer « ${short} » maintenant ?`,
+      message: "Le passage tourne tout de suite, comme à son heure. Refusé si sa cadence tourne déjà. Il laisse une ligne au journal d'administration.",
+      confirmLabel: "Lancer",
+      tone: "ember",
+    });
+    if (!ok) return;
+    setRunning(name);
+    try {
+      const out = await pb.send<{ ms: number; error: string | null }>("/api/cosmic/admin/run-task", { method: "POST", body: { name }, requestKey: null });
+      if (out.error) toast.error(`${short} : ${out.error}`);
+      else toast.success(`${short} : passage fait en ${formatNumber(out.ms)} ms.`);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Lancement impossible.");
+    }
+    setRunning(null);
+  };
+  const runnable = new Set((m?.runnable ?? []).map((r) => r.name));
 
   if (error) return <HudPanel icon={<Activity />} title="Exploitation">Route absente : mets à jour les hooks (Outils).</HudPanel>;
   const s = m?.cronSummary;
@@ -128,7 +164,7 @@ export function MetricsSection() {
       </HudPanel>
 
       <HudPanel icon={<Activity />} title="Tâches planifiées" aside={<span className="text-[11px] text-slate-500">mesures depuis le dernier démarrage du serveur</span>}>
-        {!m || m.crons.length === 0 ? (
+        {!m || cronRows(m).length === 0 ? (
           <p className="text-xs text-slate-500">Aucune mesure encore : les tâches s'enregistrent à leur prochain passage.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -145,25 +181,51 @@ export function MetricsSection() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {m.crons.map((c) => (
-                  <tr key={c.name} title={c.lastError || undefined}>
-                    <td className="py-1.5 font-mono text-slate-300">{c.name.replace(/^cosmic_/, "")}</td>
-                    <td className="py-1.5">
-                      <HudChip size="sm" tone={CRON_TONE[c.status].tone}>
-                        {CRON_TONE[c.status].label}
-                      </HudChip>
+                {cronRows(m).map((c) => (
+                  <tr key={c.name} title={(c.status && c.lastError) || undefined}>
+                    <td className="py-1.5 font-mono text-slate-300">
+                      {/* 6.14.135 : bouton dans la 1re colonne, visible à 375 px sans faire défiler le tableau. */}
+                      <span className="flex items-center gap-1">
+                        {runnable.size > 0 && !runnable.has(c.name) && <span className="w-9 shrink-0" title="Tâche horaire ou de nuit : pas de lancement d'ici" />}
+                        {runnable.has(c.name) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={running !== null}
+                            aria-label={`Lancer ${c.name.replace(/^cosmic_/, "")} maintenant`}
+                            title="Lancer maintenant"
+                            onClick={() => void runNow(c.name)}
+                          >
+                            <Play className={running === c.name ? "h-3.5 w-3.5 animate-pulse" : "h-3.5 w-3.5"} />
+                          </Button>
+                        )}
+                        {c.name.replace(/^cosmic_/, "")}
+                      </span>
                     </td>
-                    <td className="py-1.5 text-right font-mono text-slate-400">{timeAgo(c.lastAtMs)}</td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-slate-100">{formatNumber(c.lastMs)} ms</td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-slate-400">
-                      {formatNumber(c.avgMs)} / {formatNumber(c.maxMs)}
-                    </td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-slate-400">
-                      {c.fails}/{c.runs}
-                    </td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-slate-400" title={c.lastSkipAtMs ? `Dernier : ${timeAgo(c.lastSkipAtMs)}` : undefined}>
-                      {c.skips ?? 0}
-                    </td>
+                    {c.status ? (
+                      <>
+                        <td className="py-1.5">
+                          <HudChip size="sm" tone={CRON_TONE[c.status].tone}>
+                            {CRON_TONE[c.status].label}
+                          </HudChip>
+                        </td>
+                        <td className="whitespace-nowrap py-1.5 text-right font-mono text-slate-400">{timeAgo(c.lastAtMs)}</td>
+                        <td className="py-1.5 text-right font-mono tabular-nums text-slate-100">{formatNumber(c.lastMs)} ms</td>
+                        <td className="py-1.5 text-right font-mono tabular-nums text-slate-400">
+                          {formatNumber(c.avgMs)} / {formatNumber(c.maxMs)}
+                        </td>
+                        <td className="py-1.5 text-right font-mono tabular-nums text-slate-400">
+                          {c.fails}/{c.runs}
+                        </td>
+                        <td className="py-1.5 text-right font-mono tabular-nums text-slate-400" title={c.lastSkipAtMs ? `Dernier : ${timeAgo(c.lastSkipAtMs)}` : undefined}>
+                          {c.skips ?? 0}
+                        </td>
+                      </>
+                    ) : (
+                      <td colSpan={6} className="whitespace-nowrap py-1.5 text-slate-500">
+                        pas encore passée depuis le démarrage
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

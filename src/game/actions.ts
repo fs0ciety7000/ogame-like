@@ -907,7 +907,9 @@ export function newPlayerProfile(uid: string, rawPseudo: unknown, now: number): 
   return { player, queues: defaultQueues() };
 }
 
-/* ---------- anciens rapports et dons (avant l'économie côté serveur) ---------- */
+/* ---------- anciens rapports (avant l'économie côté serveur) ----------
+   6.14.135 (AC-18) : les dons de l'ancien système (`applyLegacyGift`, route `gift/claim`) sont retirés : aucun
+   non réclamé sur la copie de la production. Les anciens rapports restent : 4 encore non vus (2026-10-08). */
 
 /** Rapport de combat vu par le défenseur. Les rapports récents ont déjà été
  *  appliqués au moment du combat ; les anciens (defenderApplied absent)
@@ -937,22 +939,5 @@ export function applyLegacyBattleReport(
     createdAtMs: now,
     read: false,
   });
-  return { player, queues, notifications };
-}
-
-/** Don envoyé avec l'ancien système (débité à l'envoi, crédité à la réception). */
-export function applyLegacyGift(
-  playerIn: PlayerState,
-  queuesIn: QueuesState,
-  gift: { fromPseudo: string; resources: Record<string, unknown> | null },
-  now: number,
-): { player: PlayerState; queues: QueuesState; notifications: NewNotification[] } {
-  const { player, queues, notifications } = flushState({ ...playerIn, buildings: withMissingBuildings(playerIn.buildings, playerIn.resources) }, queuesIn, now);
-  for (const [res, amt] of Object.entries(gift.resources ?? {})) {
-    const n = Math.floor(Number(amt));
-    if (RESOURCE_IDS.has(res) && Number.isFinite(n) && n > 0) player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + n;
-  }
-  const received = Object.fromEntries(Object.entries(gift.resources ?? {}).map(([k, v]) => [k, Math.floor(Number(v)) || 0]).filter(([k, v]) => RESOURCE_IDS.has(k as string) && (v as number) > 0)) as Partial<Record<ResourceId, number>>;
-  notifications.push({ kind: "gift", title: `Cadeau de ${gift.fromPseudo}`, message: `${gift.fromPseudo} t'a envoyé ${describeGain(received)}.`, createdAtMs: now, read: false, data: { resources: received, fromPseudo: gift.fromPseudo } });
   return { player, queues, notifications };
 }

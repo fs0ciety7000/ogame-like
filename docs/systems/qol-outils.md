@@ -56,6 +56,10 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
   identifiants seuls ; flottes : jusqu'à 200 par passage (40 s au plus) ; rattrapage de la nuit et rappels du Comptoir par paquets de
   100 joueurs. Pendant une maintenance, guerres, Léviathan, boss et guerre de territoire attendent ; leurs échéances sont décalées de
   sa durée à la fin (Q77). Réglages : groupe `serverTasks` (Admin → Règles → Tous les réglages).
+- 6.14.135 (AC-H) : **« Lancer maintenant »** (Admin → Santé du serveur, ▷ devant chaque étape de cadence, confirmation) : route
+  `admin/run-task`, verrou de la cadence (refus si elle tourne), passage mesuré et ligne au journal d'administration. Les tâches
+  horaires et de nuit gardent leur heure. Chemins anciens retirés : `gift/claim` (dons d'avant l'économie serveur) et l'alias
+  `POST /api/cosmic/attack`. Tour des actions : `tourActions.test.ts` (chaque action du registre, invariants I34).
 - 6.14.112 (AC-F) : erreurs du serveur traduites côté client (`src/lib/gameErrors.ts`, `callGame`, `afterSend` de `pocketbase.ts`) :
   message du jeu gardé, texte clair pour 403, 409, 429, 503 ; une 500 part à l'équipe.
 - Tailles des blocs et temps de chargement : dernière mesure dans `docs/changes/6.14.39-performance-preprod.md`.
