@@ -56,6 +56,7 @@ import { addSeenAnnouncements } from "@/game/announcements";
 import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
 import { beginPrestige, prestigeStartCost } from "@/game/prestige";
 import type { BattleReport, PlayerState, QueuesState, Resources, ResourceId } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 /* =====================================================
    Actions de jeu d'un joueur, arbitrées par le serveur
@@ -513,6 +514,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const st = bountyState(player);
       st.amber += out.amber;
       player.bounties = st;
+      noteAmber(player, "recycle", out.amber, now);
       return { amber: out.amber };
     }
 
@@ -547,6 +549,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const st = bountyState(player);
       st.amber += amber;
       player.bounties = st;
+      noteAmber(player, "recycle", amber, now);
       return { amber };
     }
 

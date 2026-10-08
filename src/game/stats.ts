@@ -102,6 +102,12 @@ export interface PlayerStats {
   phalanxScans?: number;
   gateJumps?: number;
   gateSaves?: number;
+  /** 6.14.107 (AE-L4) : traces de la santé de l'équilibre, en taille fixe (`healthTrace.ts`) : Ambre gagnée par source
+   *  (semaine en cours et précédente), production perdue à entrepôt plein (idem), dernier coffre du 7e jour, 1re Ascension. */
+  amberWeek?: import("@/game/healthTrace").AmberWeekTrace;
+  prodLoss?: import("@/game/healthTrace").ProductionLossTrace;
+  lastChest?: import("@/game/healthTrace").ChestTrace;
+  firstAscensionAtMs?: number;
 }
 
 type CounterKey = { [K in keyof PlayerStats]-?: PlayerStats[K] extends number | undefined ? K : never }[keyof PlayerStats];

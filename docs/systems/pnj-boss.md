@@ -42,3 +42,7 @@ Constats BOSS-1 à BOSS-5 dans `docs/audit/2026-10-06-au2-boss.md` : structure d
 (mesuré depuis la 6.14.6 : Admin → Équilibrage → Santé de l'équilibre, boss abattus par type sur 56 jours, participants et dégâts
 médians, lus dans le Hall of fame), calendrier chargé en fin de semaine (lot V, livré en 6.7.0 : boss de la chronique le mardi, tournoi le mercredi) ; décompte de la
 page Boss corrigé sur mobile.
+
+6.14.107 (AE-L4, AE-10) : la santé de l'équilibre mesure aussi les **heures entre l'ouverture et la mort** des boss abattus
+(médiane et quartiles, par type et tous types réunis, d'après `startMs` et `endedAtMs` du Hall of fame). Cible : 60 à 80 % abattus,
+mort entre 36 et 60 h (seuils `balanceHealth.bossKillLow/High`, `bossKillHoursLow/High`) ; décision `hpFactor` en AE-L7 (Q101).

@@ -7,6 +7,7 @@ import { LEAGUE_TIERS } from "@/game/leagues";
 import { MODULE_FAMILIES, MODULE_RARITIES, type ModuleFamily } from "@/game/modules";
 import { TALENTS } from "@/game/talents";
 import { NumberField, Section } from "@/pages/admin/fields";
+import { BALANCE_HEALTH_RULES, BALANCE_HEALTH_RULES_META } from "@/game/balance/healthRules";
 
 /* =====================================================
    6.14.104 (AU27, lot AA3 : constats AA-1, AA-2, AA-4, AA-5, AA-7, AA-8,
@@ -57,6 +58,7 @@ export function FixedListRulesFields({ rules, setRules }: { rules: R; setRules: 
   const budgets = (groupOf(rules, "effectPresets").budgets ?? {}) as Record<string, Record<string, number>>;
   const passOverflow = groupOf(rules, "passOverflow");
   const audit = groupOf(rules, "unitAudit");
+  const health = groupOf(rules, "balanceHealth");
   const placement = Object.values(tiers).reduce((a, t) => a + (Number(t?.placementPct) || 0), 0);
   const setTop = (group: string, key: string, v: number) => setRules((r) => ({ ...r, [group]: { ...groupOf(r, group), [key]: v } }) as R);
 
@@ -132,6 +134,23 @@ export function FixedListRulesFields({ rules, setRules }: { rules: R; setRules: 
         <NumberField label="JcJ : victoires des attaquants, bas de la zone cible (%)" value={audit.pvpAttackLow as number} min={0} step={1} onChange={(v) => setTop("unitAudit", "pvpAttackLow", v ?? 40)} />
         <NumberField label="JcJ : victoires des attaquants, haut de la zone cible (%)" value={audit.pvpAttackHigh as number} min={0} step={1} onChange={(v) => setTop("unitAudit", "pvpAttackHigh", v ?? 65)} />
         <NumberField label="Valeur d'une ressource rare (en ressources communes)" value={audit.rareValue as number} min={1} step={5} onChange={(v) => setTop("unitAudit", "rareValue", v ?? 50)} />
+      </Section>
+      {/* 6.14.107 (AU27, AE-L4) : seuils d'alerte de la santé de l'équilibre (Admin → Équilibrage), aucun effet en jeu. */}
+      <Section title="Santé de l'équilibre : seuils d'alerte (6.14.107)">
+        {(Object.keys(BALANCE_HEALTH_RULES_META) as (keyof typeof BALANCE_HEALTH_RULES_META)[]).map((k) => {
+          const m: { label: string; unit?: string; min?: number; max?: number } = BALANCE_HEALTH_RULES_META[k];
+          return (
+            <NumberField
+              key={k}
+              label={`${m.label}${m.unit ? ` (${m.unit})` : ""}`}
+              value={health[k] as number}
+              min={m.min}
+              hint={(BALANCE_HEALTH_RULES_META[k] as { hint?: string }).hint}
+              step={m.unit === "×" ? 0.1 : m.unit === "part" ? 0.01 : 1}
+              onChange={(v) => setTop("balanceHealth", k, Math.min(m.max ?? Infinity, Math.max(m.min ?? 0, v ?? BALANCE_HEALTH_RULES[k])))}
+            />
+          );
+        })}
       </Section>
     </>
   );

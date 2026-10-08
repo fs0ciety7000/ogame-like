@@ -7,6 +7,7 @@ import { withMissingBuildings } from "@/game/buildings";
 import { formatInt } from "@/game/format";
 import { GameActionError } from "@/game/errors";
 import type { PlayerState, PlayerTitle, QueuesState, ResourceId } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 const SEASON_MONTHS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -213,6 +214,7 @@ export function performSeasonReward(
   if (amber > 0) {
     const b = (player.bounties ?? {}) as { amber?: number; amberEarned?: number };
     player.bounties = { ...(player.bounties ?? {}), amber: (Number(b.amber) || 0) + amber, amberEarned: (Number(b.amberEarned) || 0) + amber } as PlayerState["bounties"];
+    noteAmber(player, "season", amber, now);
   }
   let titleText = "";
   if (reward.title) {

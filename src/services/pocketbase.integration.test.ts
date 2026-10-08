@@ -3125,6 +3125,57 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(live.health?.bosses?.rows.map((r: { kind: string }) => r.kind)).toEqual(["leviathan", "seasonboss", "allianceboss"]);
   });
 
+  it("6.14.107 (AE-L4): balance health reports amber by source, ascension, lost production and AE-L3 follow-ups, admin only", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    await expect(pb.send("/api/cosmic/admin/balance", { method: "GET" })).rejects.toMatchObject({ status: 403 });
+    const before = await admin.collection("players").getOne(bId);
+    const now = Date.now();
+    const d = new Date(now);
+    const monday = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - ((d.getUTCDay() + 6) % 7) * 86_400_000;
+    const week = new Date(monday).toISOString().slice(0, 10);
+    const lastWeek = new Date(monday - 7 * 86_400_000).toISOString().slice(0, 10);
+    try {
+      // Traces fabriquées (taille fixe) : Ambre de la semaine passée, production perdue, coffre, 1re Ascension.
+      await admin.collection("players").update(bId, {
+        lastActiveMs: now,
+        stats: {
+          ...(before.stats ?? {}),
+          amberWeek: { week, by: { pass: 5 }, prev: { week: lastWeek, by: { bounties: 777000, codex: 3000 } } },
+          prodLoss: { week, pot: 1000, lost: 10, prev: { week: lastWeek, pot: 1000, lost: 250 } },
+          lastChest: { atMs: now - 3_600_000, common: 8_000_000, floors: 4, n: 4 },
+          firstAscensionAtMs: now - 3 * 86_400_000,
+        },
+        ascensions: 1,
+        ascendedAtMs: now - 3 * 86_400_000,
+        createdAtMs: now - 45 * 86_400_000,
+      });
+      const live = await admin.send("/api/cosmic/admin/balance", { method: "GET" });
+      const h = live.health;
+      expect(h.amber.lastWeek).toBe(lastWeek);
+      expect(h.amber.last.total).toBeGreaterThanOrEqual(780000);
+      expect(h.amber.last.bySource.find((r: { source: string }) => r.source === "bounties").total).toBeGreaterThanOrEqual(777000);
+      expect(h.ascension.measured).toBeGreaterThanOrEqual(1);
+      expect(h.ascension.medianDay).not.toBeNull();
+      expect(h.production.measured).toBeGreaterThanOrEqual(1);
+      expect(h.production.lostQ3Pct).toBeGreaterThanOrEqual(0);
+      expect(h.choices.chest.count).toBeGreaterThanOrEqual(1);
+      expect(h.choices.exchange).toHaveProperty("atCapPct");
+      expect(h.choices.defeats.windowDays).toBe(7);
+      expect(h.bosses.total).toHaveProperty("medianKillHours");
+      expect(Array.isArray(h.alerts)).toBe(true);
+      expect(h.alerts.some((a: { id: string }) => a.id === "amberBounties")).toBe(true);
+    } finally {
+      await admin.collection("players").update(bId, {
+        stats: before.stats ?? null,
+        ascensions: before.ascensions ?? 0,
+        ascendedAtMs: before.ascendedAtMs ?? 0,
+        createdAtMs: before.createdAtMs ?? 0,
+        lastActiveMs: before.lastActiveMs ?? 0,
+      });
+    }
+  });
+
   it("v5.4: generator writes a chapter, never replaces a hand-written month, refused to players", async () => {
     await loginPlayer(B.email, B.pw);
     await expect(pb.send("/api/cosmic/admin/procedural", { method: "GET" })).rejects.toMatchObject({ status: 403 });

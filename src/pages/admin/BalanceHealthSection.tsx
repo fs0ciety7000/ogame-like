@@ -22,6 +22,8 @@ const PASS_SOURCE_LABELS: Record<string, string> = {
 };
 
 const h = (x: number) => `${String(x).replace(".", ",")} h`;
+const hh = (x: number | null | undefined) => (x == null ? "—" : h(x));
+const fr = (x: number) => String(x).replace(".", ",");
 
 export function BalanceHealthSection({ health, achievementsPace }: { health: BalanceHealth; achievementsPace?: number | null }) {
   const e = health.exposure;
@@ -110,6 +112,8 @@ export function BalanceHealthSection({ health, achievementsPace }: { health: Bal
           />
         )}
       </div>
+      {/* 6.14.107 (AE-L4) : Ambre par source, boss, Ascension, production perdue, écart de production, choix d'AE-L3. */}
+      <AeL4Section health={health} />
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
         <span>Alliances ({health.alliances.count}) :</span>
         {health.alliances.sizes.length ? (
@@ -152,12 +156,17 @@ export function BalanceHealthSection({ health, achievementsPace }: { health: Bal
               key={r.kind}
               size="sm"
               tone={r.fought === 0 ? "neutral" : r.winPct >= 50 ? "mint" : "ember"}
-              title={r.fought ? `Participants (médiane) : ${r.medianParticipants} · dégâts (médiane) : ${r.medianDamagePct} % des PV` : "Aucun combat terminé sur la période"}
+              title={
+                r.fought
+                  ? `Participants (médiane) : ${r.medianParticipants} · dégâts (médiane) : ${r.medianDamagePct} % des PV${r.medianKillHours != null ? ` · mort en ${hh(r.medianKillHours)} (médiane ; ${hh(r.q1KillHours)} à ${hh(r.q3KillHours)})` : ""}`
+                  : "Aucun combat terminé sur la période"
+              }
             >
               {r.label}{" "}
               <span className="ml-1 font-mono tabular-nums">
                 {r.won}/{r.fought}
                 {r.fought ? ` · ${r.winPct} %` : ""}
+                {r.medianKillHours != null ? ` · ${hh(r.medianKillHours)}` : ""}
               </span>
             </HudChip>
           ))}
@@ -195,6 +204,95 @@ function UnitRows({ label, tone, rows }: { label: string; tone: "accent" | "viol
           ))
       ) : (
         <span className="text-slate-500">aucun</span>
+      )}
+    </div>
+  );
+}
+
+/** 6.14.107 (AU27, lot AE-L4) : mesures complétées et alertes (seuils dans Admin → Règles, « Santé de l'équilibre : seuils »). */
+function AeL4Section({ health }: { health: BalanceHealth }) {
+  const { amber, ascension, production, choices, alerts, bosses } = health;
+  if (!amber || !ascension || !production || !choices) return null;
+  const late = alerts?.filter((a) => !a.ok) ?? [];
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <StatTile
+          size="sm"
+          tone="gold"
+          label="Ambre (semaine passée)"
+          value={formatCompact(amber.last.total)}
+          sub={`${amber.last.earners} joueurs · ${formatCompact(amber.last.medianPerPlayer)} médiane · ${formatCompact(amber.last.p90PerPlayer)} 9e décile · cette semaine ${formatCompact(amber.current.total)}`}
+        />
+        <StatTile
+          size="sm"
+          tone={bosses?.total.medianKillHours != null ? (alerts?.find((a) => a.id === "bossHours")?.ok === false ? "ember" : "mint") : "neutral"}
+          label={`Boss : mort (${bosses?.windowDays ?? 56} j)`}
+          value={hh(bosses?.total.medianKillHours)}
+          sub={bosses ? `médiane · ${bosses.total.won}/${bosses.total.fought} abattus (${bosses.total.winPct} %) · ${hh(bosses.total.q1KillHours)} à ${hh(bosses.total.q3KillHours)}` : "non relevé"}
+        />
+        <StatTile
+          size="sm"
+          tone="violet"
+          label="1re Ascension"
+          value={ascension.medianDay != null ? `J${fr(ascension.medianDay)}` : "—"}
+          sub={`médiane · J${ascension.q1Day != null ? fr(ascension.q1Day) : "—"} à J${ascension.q3Day != null ? fr(ascension.q3Day) : "—"} · ${ascension.ascended} actifs (${ascension.sharePct} %)`}
+        />
+        <StatTile
+          size="sm"
+          tone={production.lostMedianPct != null && alerts?.find((a) => a.id === "productionLost")?.ok === false ? "ember" : "mint"}
+          label="Production perdue"
+          value={production.lostMedianPct != null ? `${fr(production.lostMedianPct)} %` : "—"}
+          sub={`entrepôt plein · médiane de ${production.measured} joueurs · ${production.lostQ1Pct != null ? fr(production.lostQ1Pct) : "—"} à ${production.lostQ3Pct != null ? fr(production.lostQ3Pct) : "—"} %`}
+        />
+        <StatTile
+          size="sm"
+          tone={alerts?.find((a) => a.id === "productionSpread")?.ok === false ? "ember" : "accent"}
+          label="Écart de production"
+          value={production.spreadRatio != null ? `×${fr(production.spreadRatio)}` : "—"}
+          sub={`Q1 ${formatCompact(production.q1)} · médiane ${formatCompact(production.median)} · Q3 ${formatCompact(production.q3)} / h`}
+        />
+        <StatTile
+          size="sm"
+          tone="gold"
+          label={`Coffre du 7e jour (${choices.chest.windowDays} j)`}
+          value={choices.chest.count ? formatCompact(choices.chest.medianCommon) : "—"}
+          sub={`médiane de ${choices.chest.count} coffres · ${choices.chest.allFloorPct} % tout au plancher · ${choices.chest.anyFloorPct} % en partie`}
+        />
+        <StatTile
+          size="sm"
+          tone="accent"
+          label="Plafond du comptoir"
+          value={choices.exchange.cap > 0 ? `${choices.exchange.atCap} au plafond` : "sans plafond"}
+          sub={`${choices.exchange.atCapPct} % des actifs · ${choices.exchange.nearCap} à 80 % · ${choices.exchange.users} l'ont utilisé cette semaine`}
+        />
+        <StatTile
+          size="sm"
+          tone="danger"
+          label={`Protections (${choices.defeats.windowDays} j)`}
+          value={`${choices.defeats.protections}`}
+          sub={`après ${choices.defeats.max} défaites en 24 h · ${choices.defeats.players} actifs (${choices.defeats.sharePct} %)`}
+        />
+      </div>
+      {amber.last.bySource.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>Ambre par source (semaine du {amber.lastWeek}) :</span>
+          {amber.last.bySource.map((r) => (
+            <HudChip key={r.source} size="sm" tone="gold" title={`${formatCompact(r.total)} Ambre`}>
+              {r.label} <span className="ml-1 font-mono tabular-nums">{r.sharePct} %</span>
+            </HudChip>
+          ))}
+        </div>
+      )}
+      {alerts && alerts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <span>Alertes{late.length ? ` (${late.length})` : ""} :</span>
+          {alerts.map((a) => (
+            <HudChip key={a.id} size="sm" tone={a.ok ? "mint" : "ember"} title={`Cible : ${a.target}`} className="max-w-full whitespace-normal">
+              {a.label} <span className="ml-1 font-mono tabular-nums">{a.value}</span>
+            </HudChip>
+          ))}
+        </div>
       )}
     </div>
   );

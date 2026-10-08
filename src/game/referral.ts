@@ -3,6 +3,7 @@ import { bountyState } from "@/game/bounties";
 import { formatHours } from "@/game/format";
 import { getRankLabel } from "@/game/ranks";
 import type { PlayerState } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 /* =====================================================
    Parrainage (v4.1) : chaque joueur partage un lien. Le filleul se
@@ -92,11 +93,13 @@ export function grantReferral(sponsor: PlayerState, recruit: PlayerState, now: n
   const rb = bountyState(recruit);
   rb.amber += REFERRAL_RULES.amberRecruit;
   recruit.bounties = rb;
+  noteAmber(recruit, "referral", REFERRAL_RULES.amberRecruit, now);
   recruit.referral = { ...r, rewarded: true };
   if (!capped) {
     const sb = bountyState(sponsor);
     sb.amber += REFERRAL_RULES.amberSponsor;
     sponsor.bounties = sb;
+    noteAmber(sponsor, "referral", REFERRAL_RULES.amberSponsor, now);
     sponsor.referral = { ...s, recruits: (s.recruits ?? 0) + 1, monthly: { ...s.monthly, [m]: (s.monthly?.[m] ?? 0) + 1 } };
   }
   return { capped };

@@ -364,7 +364,7 @@ export function claimCodexCategory(player: PlayerState, entries: CodexEntry[], c
   if (st.claimed) throw new GameActionError("Récompense déjà reçue.");
   if (!st.complete) throw new GameActionError(`Catégorie incomplète (${st.unlocked} / ${st.total}).`);
   if (st.reward.tokens > 0) grantPassReward(player, { kind: "tokens", count: st.reward.tokens }, "codex", now);
-  if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now);
+  if (st.reward.amber > 0) grantPassReward(player, { kind: "amber", amount: st.reward.amber }, "codex", now, Math.random, "codex");
   player.stats = { ...(player.stats ?? {}), codexClaimed: [...codexClaimedCategories(player), id] } as PlayerState["stats"];
   return st.reward;
 }

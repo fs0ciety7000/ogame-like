@@ -21,6 +21,7 @@ import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
 import { KESH_HUNTER_UNIT, OFFENSIVE_UNITS } from "@/game/units";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 /* =====================================================
    Chasseurs de primes (v3.9) : les Kesh'Vaar, essaim insectoïde allié,
@@ -433,6 +434,7 @@ export function resolveBountyHunt(
     xp = t.xp;
     st.amber += amber;
     st.amberEarned += amber;
+    noteAmber(player, "bounties", amber, now);
     st.reputation += t.rep;
     st.completed += 1;
     st.board = st.board.filter((c) => c.id !== contractId);
@@ -1041,6 +1043,7 @@ export function grantEliteReward(state: EliteHunt, player: PlayerState, now: num
   const st = bountyState(player);
   st.amber += r.amber;
   st.amberEarned += r.amber;
+  noteAmber(player, "elite", r.amber, now);
   st.reputation += r.rep;
   player.bounties = st;
   const xp = applyXpDelta(player, r.xp, now, "bounty");

@@ -11,6 +11,7 @@ import { CAPSULES, SYNTH_RULES, synthesisState, type CapsuleType } from "@/game/
 import { currentSeasonId, seasonLabel } from "@/game/seasons";
 import { CATALOG_START } from "@/game/seasonCatalog";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { noteAmber, type AmberSource } from "@/game/healthTrace";
 
 /* =====================================================
    Passe de saison (v4.1) : gratuit, un par mois, 30 paliers de 40 points.
@@ -473,6 +474,7 @@ export function addPassPoints(player: PlayerState, source: PassSource, now: numb
       const b = bountyState(player);
       b.amber += amber;
       player.bounties = b;
+      noteAmber(player, "pass", amber, now);
       return amber;
     }
   }
@@ -519,7 +521,7 @@ export function describePassReward(r: PassReward, seasonId?: string): string {
 const RARITY_LABELS: Record<RelicRarity, string> = { common: "commune", rare: "rare", epic: "épique", legendary: "légendaire", mythic: "mythique" };
 
 /** Applique une récompense de passe (paliers, épisodes et chapitres). Renvoie son libellé. */
-export function grantPassReward(player: PlayerState, r: PassReward, seasonId: string, now: number, random: () => number = Math.random): string {
+export function grantPassReward(player: PlayerState, r: PassReward, seasonId: string, now: number, random: () => number = Math.random, amberSource: AmberSource = "pass"): string {
   if (r.kind === "production") {
     for (const [res, n] of Object.entries(productionHours(player, r.hours)) as [ResourceId, number][]) player.resources[res] = (player.resources[res] ?? 0) + n;
     return describePassReward(r);
@@ -528,6 +530,7 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     const b = bountyState(player);
     b.amber += r.amount;
     player.bounties = b;
+    noteAmber(player, amberSource, r.amount, now);
     return describePassReward(r);
   }
   if (r.kind === "dossier") {
@@ -545,6 +548,7 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     const capsuleAmber = Math.max(0, Math.floor(Number(PASS_OVERFLOW.capsuleAmber) || 0));
     b.amber += capsuleAmber;
     player.bounties = b;
+    noteAmber(player, amberSource, capsuleAmber, now);
     return `${capsuleAmber} Ambre (réserve de capsules pleine)`;
   }
   if (r.kind === "tokens") {
@@ -565,6 +569,7 @@ export function grantPassReward(player: PlayerState, r: PassReward, seasonId: st
     const b = bountyState(player);
     b.amber += 40;
     player.bounties = b;
+    noteAmber(player, amberSource, 40, now);
     return "40 Ambre (collection de reliques pleine)";
   }
   const title = passTitle(seasonId);

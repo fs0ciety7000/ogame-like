@@ -206,6 +206,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.104 | [Chiffres en dur rendus réglables, valeurs inchangées (AA3)](6.14.104-chiffres-reglables.md) | refactoring (moteur et admin) + test | [audit AU27](../audit/2026-10-07-au27-admin-evolutif.md) (AA-1 à AA-13, AA-29, AA-32), Q260 |
 | 6.14.105 | [Textes de règle vivants : construits depuis les règles en vigueur (AA4)](6.14.105-textes-de-regle-vivants.md) | refactoring (moteur, serveur, interface) + test | [audit AU27](../audit/2026-10-07-au27-admin-evolutif.md) (AA-21, AA-22, AA-6 en partie) |
 | 6.14.106 | [Plafonds d'équilibre dans le moteur : coffre indexé, comptoir plafonné, défaites par 24 h, rattrapage (AE-L3)](6.14.106-plafonds-equilibre.md) | ajustement (équilibre) + fonctionnalité (moteur, serveur, admin) + tests | [équilibrage AU27](../proposals/equilibrage-au27.md) (AE-2, AE-3, AE-7, AE-15), Q98, Q99 |
+| 6.14.107 | [Santé de l'équilibre complétée : Ambre par source, boss, 1re Ascension, production perdue, quartiles, suivi d'AE-L3 (AE-L4)](6.14.107-sante-equilibre-completee.md) | ajout (admin) + traces (moteur) + tests | [équilibrage AU27](../proposals/equilibrage-au27.md) (AE-5, AE-10, AE-11, AE-15), Q267 à Q269 |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

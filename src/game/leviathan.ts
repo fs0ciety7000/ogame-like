@@ -13,6 +13,7 @@ import { bumpStat } from "@/game/stats";
 import { bountyState } from "@/game/bounties";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 /* =====================================================
    Boss mondial « Le Léviathan » (v3.1) : le premier week-end de chaque
@@ -526,6 +527,7 @@ export function grantLeviathanReward(state: LeviathanState, player: PlayerState,
     const b = bountyState(player);
     b.amber += amber;
     player.bounties = b;
+    noteAmber(player, "boss", amber);
     return { gain, title, amber };
   }
   return { gain, title };

@@ -120,3 +120,10 @@ série, succès débloqués vite. Décisions : `docs/proposals/progression.md`.
 Valeurs inchangées, réglables (Admin → Règles, sections « 6.14.104 ») : valeur par rang des 15 talents (`talents.perRank`, 0,02 ; réseau
 0,2), jetons et part de placement des 6 divisions (`leagues.tiers`, total des parts = 100 %, contrôlé), objectif par joueur actif des 6
 défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'une capsule (`passOverflow.capsuleAmber`, 15).
+
+## 6.14.107 (AE-L4) : mesures de progression dans la santé de l'équilibre
+- Jour de la 1re Ascension : date gardée à la 1re Ascension (`stats.firstAscensionAtMs`) ; un compte d'avant 6.14.107 à une seule
+  Ascension est lu par `ascendedAtMs`, au-delà il est écarté (non mesuré). Cible J35 à J90 (seuils `balanceHealth.ascensionDayLow/High`).
+- Production perdue à entrepôt plein : relevée à chaque production (`flushState`), semaine en cours et précédente (`stats.prodLoss`) ;
+  médiane et quartiles des actifs, cible ≤ 20 % (AE-5). Écart de production entre quartiles (Q3 ÷ Q1), cible ≤ ×5 (AE-15).
+- Ambre gagnée par source et par semaine (`stats.amberWeek`) : 12 sources, base de la décision AE-L7 (Ambre des primes, Q102).

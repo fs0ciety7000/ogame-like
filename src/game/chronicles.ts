@@ -582,12 +582,12 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
   const overflowAmber = addPassPoints(player, "chronicle", now);
   // 5.15.11 : bonus de l'épisode (jetons, Ambre) avant sa récompense propre.
   const bonus = chronicleBonus();
-  const gained = [...bonusRewards(bonus.episode), ...(e.reward ?? [])].map((r) => grantPassReward(player, r, month.id, now, random));
+  const gained = [...bonusRewards(bonus.episode), ...(e.reward ?? [])].map((r) => grantPassReward(player, r, month.id, now, random, "chronicles"));
   // 5.18 : passe déjà terminé : les 40 points deviennent 40 Ambre.
   if (overflowAmber > 0) gained.unshift(`${overflowAmber} Ambre (passe terminé)`);
   // v5.4 : chapitre terminé : titre, bannière et récompense de fin.
   const chapter = month.episodes.every((_, k) => st.claimed.includes(k));
-  if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month.id, now, random)));
+  if (chapter) gained.push(...bonusRewards(bonus.chapter).map((r) => grantPassReward(player, r, month.id, now, random, "chronicles")));
   if (chapter && month.completion) {
     const after = chronicleState(player, now);
     if (!after.chapters.includes(month.id)) after.chapters = [...after.chapters, month.id];
@@ -598,7 +598,7 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
       gained.push(`Titre « ${title} »`);
     }
     gained.push(`Bannière « ${month.title} »`);
-    gained.push(...month.completion.rewards.map((r) => grantPassReward(player, r, month.id, now, random)));
+    gained.push(...month.completion.rewards.map((r) => grantPassReward(player, r, month.id, now, random, "chronicles")));
   } else if (chapter) {
     const after = chronicleState(player, now);
     if (!after.chapters.includes(month.id)) after.chapters = [...after.chapters, month.id];

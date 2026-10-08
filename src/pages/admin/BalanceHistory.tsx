@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Camera } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { BalanceSnapshot } from "@/game/balance/history";
+import { amberWeeksFromHistory, type BalanceSnapshot } from "@/game/balance/history";
+import { BALANCE_HEALTH_RULES } from "@/game/balance/healthRules";
+import { AMBER_SOURCE_LABELS, AMBER_SOURCES } from "@/game/healthTrace";
 import { pvpAttackBand } from "@/game/balance/diagnostics";
 import { COMBAT_KINDS, type CombatKind } from "@/game/balance/combatTypes";
 import { adminBalanceSnapshot } from "@/services/adminService";
@@ -74,6 +76,38 @@ export function buildSeries(h: BalanceSnapshot[]): Series[] {
     { id: "ach", title: "Succès obtenus par le joueur médian", hint: "part du catalogue ; une hausse rapide annonce un manque d'objectifs longs", unit: "%", points: h.map((s) => s.achievementsPct ?? null), floor0: true },
     { id: "slots", title: "Joueurs à court d'emplacements de flotte", hint: "au-delà de 20 %, envisager des emplacements à débloquer (O.2)", unit: "%", points: h.map((s) => s.fullSlotsPct ?? null), ref: 20, floor0: true },
     { id: "routes", title: "Routes de colonies", hint: "toutes routes ; le ravitaillement est dans le tableau", unit: "", points: h.map((s) => s.routes ?? null), floor0: true },
+    // 6.14.107 (AE-L4) : santé complétée (photos depuis la 6.14.107 ; seuils dans Admin → Règles).
+    { id: "amber", title: "Ambre gagnée la semaine passée (actifs)", hint: "toutes sources ; le détail par source est sous les courbes", unit: "", points: h.map((s) => s.amberTotal ?? null), floor0: true },
+    {
+      id: "bossHours",
+      title: "Boss : heures avant la mort (médiane)",
+      hint: `56 jours, boss abattus ; zone cible ${BALANCE_HEALTH_RULES.bossKillHoursLow}–${BALANCE_HEALTH_RULES.bossKillHoursHigh} h`,
+      unit: "",
+      points: h.map((s) => s.bossKillHours ?? null),
+      band: [BALANCE_HEALTH_RULES.bossKillHoursLow, BALANCE_HEALTH_RULES.bossKillHoursHigh],
+      floor0: true,
+    },
+    {
+      id: "ascension",
+      title: "Jour médian de la 1re Ascension",
+      hint: `jours après l'inscription ; zone cible J${BALANCE_HEALTH_RULES.ascensionDayLow}–J${BALANCE_HEALTH_RULES.ascensionDayHigh}`,
+      unit: "",
+      points: h.map((s) => s.ascensionDay ?? null),
+      band: [BALANCE_HEALTH_RULES.ascensionDayLow, BALANCE_HEALTH_RULES.ascensionDayHigh],
+      floor0: true,
+    },
+    { id: "lost", title: "Production perdue, entrepôt plein (médiane)", hint: `au-delà de ${Math.round(BALANCE_HEALTH_RULES.productionLostPct * 100)} %, trop-plein (AE-5)`, unit: "%", points: h.map((s) => s.productionLostPct ?? null), ref: BALANCE_HEALTH_RULES.productionLostPct * 100, floor0: true },
+    {
+      id: "spread",
+      title: "Écart de production Q3 ÷ Q1",
+      hint: `au-delà de ×${String(BALANCE_HEALTH_RULES.productionSpreadRatio).replace(".", ",")}, effet boule de neige (AE-15)`,
+      unit: "×",
+      points: h.map((s) => (s.productionQ1 && s.productionQ3 ? s.productionQ3 / s.productionQ1 : null)),
+      ref: BALANCE_HEALTH_RULES.productionSpreadRatio,
+      floor0: true,
+    },
+    { id: "chest", title: "Coffres du 7e jour tout au plancher", hint: "Q267 : coffre coupé à la place libre de l'entrepôt", unit: "%", points: h.map((s) => s.chestFloorPct ?? null), ref: BALANCE_HEALTH_RULES.chestFloorPct * 100, floor0: true },
+    { id: "exchange", title: "Actifs au plafond du comptoir", hint: "Q268 : semaine en cours au moment de la photo", unit: "%", points: h.map((s) => s.exchangeAtCapPct ?? null), ref: BALANCE_HEALTH_RULES.exchangeCapPlayersPct * 100, floor0: true },
     {
       id: "warlord",
       title: "Seigneur le plus fort ÷ meilleure défense",
@@ -193,6 +227,7 @@ export function BalanceHistory({ history, onSnapshot }: { history: BalanceSnapsh
               );
             })}
           </div>
+          <AmberWeeksTable history={history} />
           <details className="text-xs text-slate-400">
             <summary className="cursor-pointer">Voir les chiffres</summary>
             <div className="mt-2 overflow-x-auto">
@@ -233,5 +268,45 @@ export function BalanceHistory({ history, onSnapshot }: { history: BalanceSnapsh
         </>
       )}
     </div>
+  );
+}
+
+/** 6.14.107 (AE-L4, AE-11) : Ambre gagnée par semaine et par source (une ligne par semaine, d'après les photos). */
+function AmberWeeksTable({ history }: { history: BalanceSnapshot[] }) {
+  const weeks = useMemo(() => amberWeeksFromHistory(history), [history]);
+  if (weeks.length === 0) return null;
+  const sources = AMBER_SOURCES.filter((k) => weeks.some((w) => (w.bySource[k] ?? 0) > 0));
+  return (
+    <details className="text-xs text-slate-400">
+      <summary className="cursor-pointer">Ambre par semaine et par source ({weeks.length} semaine{weeks.length > 1 ? "s" : ""})</summary>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[480px] text-left">
+          <thead className="text-slate-500">
+            <tr>
+              <th className="py-1 pr-3 font-normal">Semaine du</th>
+              <th className="py-1 pr-3 font-normal">Total</th>
+              {sources.map((k) => (
+                <th key={k} className="py-1 pr-3 font-normal">
+                  {AMBER_SOURCE_LABELS[k]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="font-mono tabular-nums text-slate-200">
+            {weeks.map((w) => (
+              <tr key={w.week} className="border-t border-white/5">
+                <td className="py-1 pr-3">{w.week}</td>
+                <td className="pr-3">{formatCompact(w.total)}</td>
+                {sources.map((k) => (
+                  <td key={k} className="pr-3">
+                    {w.total > 0 ? `${Math.round(((w.bySource[k] ?? 0) / w.total) * 100)} %` : "—"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   );
 }

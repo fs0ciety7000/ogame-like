@@ -40,7 +40,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
 | 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | livré en partie (6.14.89, réglage avant bascule ; mesures après la bascule restent) |
 | 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | livré (6.14.106) |
-| 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | à faire |
+| 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | livré (6.14.107) |
 | 27 | AP-L4 | Succès procéduraux bridés (détenteurs minimum, un palier par mois) | S | à faire |
 | 28 | AP-L5 | Objectifs du jour pondérés et réglables | S | à faire |
 | 29 | AC-D | Dépenses et traces : un seul chemin de dépense, Journal des réclamations, rappel de flotte notifié | M | à faire |

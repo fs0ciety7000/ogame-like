@@ -49,6 +49,13 @@ seigneurs, e-mails (l'envoi « à blanc » crée les jetons de désinscription m
   suppression de `players` et `queues` réservées aux admins, recopiées au démarrage (`SCHEMA_RULE_SYNC`) : `proposals/chaine-actions.md`.
 
 ## 6.14.104 (revue AU27, lot AA3)
+Santé de l'équilibre complétée en 6.14.107 (AE-L4) : Admin → Équilibrage → Santé ajoute l'Ambre de la semaine passée par source
+(12 sources, médiane et 9e décile par joueur), les heures avant la mort des boss abattus, le jour de la 1re Ascension (médiane et
+quartiles), la production perdue à entrepôt plein, les quartiles de production horaire (Q3 ÷ Q1), le coffre du 7e jour (médiane, part
+au plancher), les actifs au plafond du comptoir et les protections après défaites, avec une liste d'alertes ; l'historique quotidien
+garde ces mesures et un tableau « Ambre par semaine et par source ». Traces de taille fixe dans `stats` (`healthTrace.ts`), calculs
+dans `balance/health.ts`. Seuils d'alerte dans le groupe `balanceHealth` (Admin → Règles → « Santé de l'équilibre : seuils d'alerte »).
+
 Seuils des outils d'équilibrage dans le groupe `unitAudit` : alerte des seigneurs (×1,5 le 2e joueur), zone cible JcJ (40 à 65 %
 de victoires des attaquants), valeur d'une rare (50) (Admin → Règles → « Outils d'équilibrage : seuils »). `validateRules` contrôle
 aussi les paires de réglages (`CROSS_BOUNDS`, `content.ts`) : minimum ≤ maximum, seuils dans l'ordre (Q260).

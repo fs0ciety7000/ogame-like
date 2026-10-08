@@ -5,6 +5,7 @@ import { productionHours } from "@/game/pirates";
 import { storageCapacityOf } from "@/game/economy";
 import { parisDay } from "@/game/retention";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { noteAmber, noteChest } from "@/game/healthTrace";
 
 /* =====================================================
    v5.3 : série de connexion quotidienne. Une récompense par jour (heure de
@@ -140,7 +141,10 @@ export function claimStreak(
     b.amber += amber;
     b.amberEarned = (b.amberEarned ?? 0) + amber;
     player.bounties = b;
+    noteAmber(player, "streak", amber, now);
   }
+  // 6.14.107 (AE-L4) : dernier coffre du 7e jour (santé de l'équilibre : montant, tirages au plancher, Q267).
+  if (chest) noteChest(player, chest.resources, STREAK_RULES.chest.common[0], now);
   const tokens = reward.tokens + (chest?.tokens ?? 0);
   if (tokens > 0) grantTokens(player, tokens);
   player.streak = { count, lastDay: status.today, best: Math.max(st.best, count), total: st.total + 1 };

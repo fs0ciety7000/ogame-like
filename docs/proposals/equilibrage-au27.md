@@ -2,7 +2,8 @@
 
 Statut : **en cours**. Lots AE-L0 (6.14.71, `docs/changes/6.14.71-proposition-equilibrage.md`) et AE-L1 (6.14.72,
 `docs/changes/6.14.72-reglages-surs.md`) livrés ; AE-L2 livré dans la bascule du rythme (6.14.88, `docs/changes/6.14.88-bascule-rythme.md`) ;
-AE-L3 livré (6.14.106, `docs/changes/6.14.106-plafonds-equilibre.md`) ; AE-L4 à AE-L7 dans la feuille de route d'automne 2030.
+AE-L3 livré (6.14.106, `docs/changes/6.14.106-plafonds-equilibre.md`) ; AE-L4 livré (6.14.107,
+`docs/changes/6.14.107-sante-equilibre-completee.md`) ; AE-L5 à AE-L7 dans la feuille de route d'automne 2030.
 Source : audit `docs/audit/2026-10-07-au27-equilibrage.md` (constats AE-1 à AE-17). Décisions : Q97 à Q103 de `docs/QUESTIONS.md`
 (questions AE-Q1 à AE-Q7), **validées** par l'utilisateur le 2026-10-07 : les options recommandées s'appliquent.
 Méthode : `docs/WORKFLOW.md` §2. Outil : `node scripts/progression-sim.mjs` (simulateur versé dans le dépôt par AE-L0).
@@ -128,6 +129,11 @@ change ses bornes d'Ascension dans le même lot (I29).
   4 défaites par 24 h, vérifiées au décollage et à l'arrivée ; rattrapage 0,5 / 0,2 (hors couche empire : I14 intact). Invariant I33.
 - **AE-L4** : santé de l'équilibre : Ambre gagnée par source et par semaine, temps avant la mort des boss, jour de la 1re Ascension,
   production perdue, écart de production entre quartiles.
+  **Livré en 6.14.107** : Admin → Équilibrage → Santé (et photo quotidienne) montre l'Ambre de la semaine passée par source (12 sources,
+  trace `stats.amberWeek`), les heures avant la mort des boss abattus (médiane et quartiles, par type et au total), le jour de la
+  1re Ascension (`stats.firstAscensionAtMs`), la production perdue à entrepôt plein (`stats.prodLoss`, relevée à chaque production),
+  les quartiles de production horaire (Q3 ÷ Q1), le coffre du 7e jour (`stats.lastChest`, Q267), les actifs au plafond du comptoir
+  (Q268) et les protections après 4 défaites (Q269). Seuils d'alerte réglables (groupe `balanceHealth`). AE-L7 lit ces mesures.
 - **AE-L5** : ouverture progressive du menu (`navUnlock`), comptes existants au-delà de Fer II tout ouverts (Q103).
 - **AE-L6** : puits de dépense permanent (projets de prestige payés en heures de production), proposition à part.
 - **AE-L7** : après 8 semaines de mesures : boss (`hpFactor`, Q101), Ambre des primes réduite d'un tiers (Q102), seuils des succès.
@@ -147,7 +153,7 @@ change ses bornes d'Ascension dans le même lot (I29).
 | AE-L1 | Réglages sûrs (§5.1), défauts du code et migration `rules-6.14.72` des règles enregistrées ; changelog | 6.14.72 | livré (essai sur la pré-prod au prochain push) |
 | AE-L2 | Progression (§5.2) : livrée dans la bascule du rythme (RL-3), datée au 1er novembre 2026 ; au lieu d'une migration, les valeurs restées au défaut basculent à la date (`rhythm.ts`), billet 54 et annonce une semaine avant | 6.14.88 | livré |
 | AE-L3 | Moteur : coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h, rattrapage | 6.14.106 | livré (`docs/changes/6.14.106-plafonds-equilibre.md`) |
-| AE-L4 | Santé de l'équilibre | — | à faire |
+| AE-L4 | Santé de l'équilibre : Ambre par source, boss, 1re Ascension, production perdue, quartiles, suivi Q267 à Q269 | 6.14.107 | livré (`docs/changes/6.14.107-sante-equilibre-completee.md`) |
 | AE-L5 | Menu progressif | — | à faire |
 | AE-L6 | Puits de dépense | — | à faire |
 | AE-L7 | Après 8 semaines de mesures | — | plus tard |

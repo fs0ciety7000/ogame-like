@@ -47,3 +47,8 @@ Chiffres des listes fixes réglables, valeurs inchangées (fiche `docs/changes/6
   Les descriptions lisent les règles (accélérateur, Gelée `economy.keshBoostPct` et `boostHours`, Voile, dossier, analgésique, réserve `maxCharges`).
 - **Offre de la semaine** : sac de jetons (25) dans `weeklyStock.tokensBag` ; **mécènes** : paliers du badge (25, 100, 500, 2 000 Ambre)
   dans `patrons.tiers` (croissants, contrôlés) ; **enchères** : `auctions.maxStart` (10¹²) a son champ (Admin → Règles → Commerce).
+
+6.14.107 (AE-L4) : l'Ambre gagnée est comptée par source et par semaine (`stats.amberWeek`, semaine en cours et précédente :
+primes, proie d'élite, série et coffre, passe, Chroniques, Codex, fin de saison, boss, parrainage, recyclage, guide, autres ; les
+remboursements et les ventes aux enchères, simples transferts, ne comptent pas). Admin → Équilibrage → Santé : part de chaque source,
+alerte si les primes dépassent 60 % (`balanceHealth.amberBountySharePct`) ; actifs au plafond du comptoir (Q268).

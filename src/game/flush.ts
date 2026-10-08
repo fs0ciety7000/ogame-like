@@ -25,6 +25,7 @@ import { endVacation, VACATION_RULES } from "@/game/vacation";
 import { syncClassUnits } from "@/game/classUnits";
 import { advanceBuildPlan } from "@/game/buildPlan";
 import { advancePrestige } from "@/game/prestige";
+import { noteProductionLoss } from "@/game/healthTrace";
 import type { GameNotification, PlayerState, QueuesState, ResourceId } from "@/types/game";
 
 /** Unité liée à une technologie (effet unlock_next_level), calculée à la
@@ -100,7 +101,10 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   // --- Production continue ---
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1000);
   // Production, plafond de l'entrepôt, entretien de flotte et panne d'énergie.
+  const beforeProduction = player.resources;
   player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1000);
+  // 6.14.107 (AE-L4) : production perdue à entrepôt plein (santé de l'équilibre, deux semaines au plus).
+  noteProductionLoss(player, beforeProduction, player.resources, elapsedSeconds, now - elapsedSeconds * 1000, now);
   ensureContracts(player, now);
   // 6.2 (lot N) : missions du jour fusionnées ; celles faites mais pas réclamées sont payées une fois.
   const legacyTokens = settleLegacyDaily(player, now);

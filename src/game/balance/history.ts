@@ -49,6 +49,22 @@ export interface BalanceSnapshot {
   /** 6.8.0 (AU3) : part des joueurs au dernier palier du passe, part des succès du joueur médian. */
   passFinishedPct?: number;
   achievementsPct?: number;
+  /** 6.14.107 (AE-L4) : Ambre de la semaine précédente (lundi `amberWeek`) : total et par source, chez les actifs. */
+  amberWeek?: string;
+  amberTotal?: number;
+  amberBySource?: Record<string, number>;
+  /** 6.14.107 : boss abattus (%, 56 j) et heures avant la mort (médiane ; null : aucun). */
+  bossKillPct?: number;
+  bossKillHours?: number | null;
+  /** 6.14.107 : jour médian de la 1re Ascension, production perdue (médiane, %), quartiles de production horaire. */
+  ascensionDay?: number | null;
+  productionLostPct?: number | null;
+  productionQ1?: number;
+  productionQ3?: number;
+  /** 6.14.107 : suivi des choix d'AE-L3 : coffres au plancher (%), actifs au plafond du comptoir (%), protections (7 j). */
+  chestFloorPct?: number;
+  exchangeAtCapPct?: number;
+  defeatProtections?: number;
 }
 
 type Report = Pick<BattleReport, "attackerUid" | "defenderUid" | "outcome" | "timestamp">;
@@ -96,6 +112,21 @@ export function balanceSnapshot(live: LiveBalance, reports: Report[], now: numbe
           supplyRoutes: live.health.colonies.supply,
           passFinishedPct: live.health.pass.finishedPct,
           achievementsPct: live.health.achievements.medianPct,
+          ...(live.health.amber
+            ? {
+                amberWeek: live.health.amber.lastWeek,
+                amberTotal: live.health.amber.last.total,
+                amberBySource: Object.fromEntries(live.health.amber.last.bySource.map((r) => [r.source, r.total])),
+              }
+            : {}),
+          ...(live.health.bosses?.total ? { bossKillPct: live.health.bosses.total.winPct, bossKillHours: live.health.bosses.total.medianKillHours } : {}),
+          ...(live.health.ascension ? { ascensionDay: live.health.ascension.medianDay } : {}),
+          ...(live.health.production
+            ? { productionLostPct: live.health.production.lostMedianPct, productionQ1: live.health.production.q1, productionQ3: live.health.production.q3 }
+            : {}),
+          ...(live.health.choices
+            ? { chestFloorPct: live.health.choices.chest.allFloorPct, exchangeAtCapPct: live.health.choices.exchange.atCapPct, defeatProtections: live.health.choices.defeats.protections }
+            : {}),
         }
       : {}),
   };
@@ -135,4 +166,15 @@ export function periodRaidRepelPct(history: BalanceSnapshot[], days = 7): { pct:
   const lost = last.raidsLost - first.raidsLost;
   if (won + lost <= 0) return null;
   return { pct: Math.round((won / (won + lost)) * 100), raids: won + lost };
+}
+
+/** 6.14.107 (AE-L4) : Ambre gagnée par semaine et par source, une ligne par semaine (la photo la plus récente de chaque
+ *  semaine), de la plus récente à la plus ancienne. */
+export function amberWeeksFromHistory(history: BalanceSnapshot[] | null | undefined): { week: string; total: number; bySource: Record<string, number> }[] {
+  const byWeek = new Map<string, { week: string; total: number; bySource: Record<string, number> }>();
+  for (const s of Array.isArray(history) ? history : []) {
+    if (!s || typeof s.amberWeek !== "string" || !s.amberWeek) continue;
+    byWeek.set(s.amberWeek, { week: s.amberWeek, total: Number(s.amberTotal) || 0, bySource: { ...(s.amberBySource ?? {}) } });
+  }
+  return [...byWeek.values()].sort((a, b) => (a.week < b.week ? 1 : -1));
 }

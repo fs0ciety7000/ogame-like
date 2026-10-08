@@ -1,7 +1,8 @@
 import { BUILDINGS, keptOnAscension, requiredForAscension } from "@/game/buildings";
 import { defaultResources } from "@/game/defaults";
 import { GameActionError } from "@/game/errors";
-import { bumpStat } from "@/game/stats";
+import { bumpStat, setStat } from "@/game/stats";
+import { firstAscensionAtMs } from "@/game/healthTrace";
 import type { PlayerState, QueuesState } from "@/types/game";
 
 /* =====================================================
@@ -107,7 +108,10 @@ export function ascend(player: PlayerState, queues: QueuesState, now: number): v
   }
   player.resources = defaultResources();
   player.resourceHistory = [];
+  // 6.14.107 (AE-L4) : date de la 1re Ascension, gardée une fois (santé de l'équilibre).
+  const first = ascensionCount(player) === 0 ? now : firstAscensionAtMs(player);
   player.ascensions = ascensionCount(player) + 1;
   player.ascendedAtMs = now;
   bumpStat(player, "ascensions");
+  if (first !== null && !(Number(player.stats?.firstAscensionAtMs) > 0)) setStat(player, "firstAscensionAtMs", first);
 }

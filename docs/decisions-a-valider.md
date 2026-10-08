@@ -38,3 +38,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q271 | Ambre par source : Remboursements et ventes aux enchères exclus (un transfert ne crée pas d'Ambre) (`docs/changes/6.14.107-sante-equilibre-completee.md`) | valider |
+| Q272 | Seuils d'alerte de santé par défaut : Primes ≤ 60 % de l'Ambre, 9e décile ≤ ×2, boss abattus 60 à 80 % et morts en 36 à 60 h, **1re Ascension J35 à J90**, production perdue ≤ 20 %, Q3 ÷ Q1 ≤ ×5, coffres au plancher ≤ 50 %, plafond du comptoir ≤ 10 % des actifs, protégés ≤ 5 % (`docs/changes/6.14.107-sante-equilibre-completee.md`) | changer la bande de la 1re Ascension en J80 à J180 à la bascule ; valider le reste |
+| Q273 | Comptage des protections : Comme le serveur (`recentDefeatsMs`) : défaites contre les raids de faction comprises (`docs/changes/6.14.107-sante-equilibre-completee.md`) | valider |

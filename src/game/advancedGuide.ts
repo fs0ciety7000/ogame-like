@@ -12,6 +12,7 @@ import { playerMoon } from "@/game/moon";
 import { playerStats } from "@/game/stats";
 import { TALENT_RULES, talentPoints } from "@/game/talents";
 import type { PlayerState, ResourceId } from "@/types/game";
+import { noteAmber } from "@/game/healthTrace";
 
 /* =====================================================
    v5.11 : tutoriel avancé, le « Carnet du commandant ». Après la prise en
@@ -216,6 +217,7 @@ export function claimGuideStep(player: PlayerState, stepId: string): { resources
     const st = bountyState(player);
     st.amber += step.amber;
     player.bounties = st;
+    noteAmber(player, "guide", step.amber);
   }
   const next = [...claimed, step.id];
   player.onboarding = { ...onboardingState(player), advanced: next };
