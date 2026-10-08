@@ -19,12 +19,35 @@ Colonne vertébrale de la progression : production, capacités (entrepôt, hanga
 | Labo de synthèse | 10 | coût | capsules (5 %/niv.) |
 
 Coûts : géométriques de `baseCost` à `maxCost`, palier 2 à partir du niv. 11 (3 h puis +1 h/niv. ; dès la bascule du rythme, 1er novembre 2026, 6.14.88 : coûts ×4 et, pour les 8 bâtiments exigés par l'Ascension, 36 h puis +27 h/niv., 6.14.89 ; la Cale sèche garde ses durées). File planifiée : 1 à 3 emplacements
-(Fonderie niv. 5 et 10). Annulation : 100 % pendant 60 s, puis 80 % du temps restant.
+(Fonderie niv. 5 et 10, `buildPlan.slotLevels`). Annulation : 100 % pendant 60 s, puis 80 % du temps restant.
+
+## Familles et paliers (6.14.141 à 6.14.144, `docs/proposals/paliers-batiments.md`)
+Règle n° 4 du GDD réécrite : deux familles.
+
+| Famille | Bâtiments | Paliers |
+|:--|:--|:--|
+| **Système** (capacité ou service) | Entrepôt, Atelier de réparation, Cale sèche, Fonderie quantique (chantiers) ; hangars au lot PB-L4 | un effet nouveau à chaque palier : choix (5), confort (10), spécialisation (15), signature (20) ; 5 et 10 pour un bâtiment à 10 niveaux |
+| **Courbe** | 4 extracteurs, Fonderie et Synthétiseur (production), Générateur de bouclier, Labo de synthèse | jalons seulement : image du palier (`tierImages`), succès (« Maître » au 20), Codex ; jamais un bond de production (I29) |
+
+| Bâtiment | 5 · Choix | 10 · Confort | 15 · Spécialisation | 20 · Signature |
+|:--|:--|:--|:--|:--|
+| Entrepôt (6.14.143) | ressource prioritaire : abri 8 h → 12 h | tampon : 2 h de production en trop gardées, versées dès que la place se libère | Négoce (taxe du comptoir −2 points) ou Convoi (soute des flottes +10 %) | entrepôt orbital : abri de 12 h pour les 4 ressources (16 h pour la prioritaire) |
+| Atelier (6.14.144) | Cale sèche ouverte (prérequis de la Cale, affiché comme palier) | premiers soins : un lot de 15 min ou moins rentre aussitôt | atelier spécialisé : une classe réparée 50 % plus vite | réparation d'urgence : 2 h de réparation offertes une fois par jour |
+| Cale sèche (5.28) | Triage | remise automatique, Atelier +10 % | priorités | Cale orbitale |
+| Fonderie quantique | +1 chantier | +1 chantier | — | — |
+
+- Niveaux et chiffres : Admin → Règles → « Bâtiments : paliers » (groupe `buildingTiers` : `storageLevels`, `repairLevels`,
+  `foundrySlotLevels`, `choiceCooldownHours`, chiffres de chaque effet). La Cale sèche garde `dockTiers`.
+- Palier atteint au **niveau effectif** (bâtiment débloqué). Choix sur la carte du bâtiment (ligne « Paliers », bouton « Choisir » /
+  « Changer »), premier choix libre, puis un changement par 24 h ; enregistrés dans `buildingChoices` (action serveur `buildingChoice`).
+- L'entrepôt et l'Atelier repartent au niveau 1 à l'Ascension : leurs paliers se rejouent, les choix restent enregistrés.
+- Aucune migration : un joueur au-dessus d'un palier le reçoit au déploiement ; choix vides au départ.
 
 ## Code et admin
-`buildings.ts`, `buildPlan.ts`, `cancel.ts`. Admin : Contenu → Bâtiments (effets, coûts, prérequis `requires`).
+`buildings.ts`, `buildingTiers.ts` (paliers, choix, source « bâtiment »), `buildPlan.ts`, `cancel.ts`, `BuildingTiers.tsx` (ligne
+« Paliers »). Admin : Contenu → Bâtiments (effets, coûts, prérequis `requires`) ; Règles → « Bâtiments : paliers ».
 
 ## État (audit 2026-10-06)
-- Chantiers : un par bâtiment, en parallèle. Depuis la 5.32, au plus 6 en même temps (+1 à la Fonderie quantique 5 et 10, réglable) ; un chantier lancé avant la limite va à son terme, la file planifiée attend un chantier libre sans expirer. Compteur « Chantiers n / m » sur la page Bâtiments.
+- Chantiers : un par bâtiment, en parallèle. Depuis la 5.32, au plus 6 en même temps (+1 à la Fonderie quantique 5 et 10, réglable : `buildingTiers.foundrySlotLevels` depuis 6.14.142, ancienne constante `BUILD_SLOT_BONUS_LEVELS`) ; un chantier lancé avant la limite va à son terme, la file planifiée attend un chantier libre sans expirer. Compteur « Chantiers n / m » sur la page Bâtiments.
 - ~~`homeLevels` compte les bâtiments verrouillés~~ : corrigé en 5.28.1 (C3).
 - Rabais de coût : technologies × couche empire (`playerBuildingDiscount`, plafond empire 50 %) depuis la 5.28.1.

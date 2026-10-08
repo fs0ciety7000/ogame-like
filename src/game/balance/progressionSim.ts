@@ -1,4 +1,5 @@
 import { ASCENSION_RULES } from "@/game/ascension";
+import { storageBufferHours } from "@/game/buildingTiers";
 import { rawUnitCapacity } from "@/game/hangar";
 import { applyBuildingDiscount, BUILDINGS, defaultBuildings, effectiveBuildingLevel, getBuildingUpgradeCost, getBuildingUpgradeTime, getStorageCapacity, keptOnAscension, requiredForAscension } from "@/game/buildings";
 import { buildSlots } from "@/game/buildPlan";
@@ -120,6 +121,8 @@ export interface ProgressionOptions {
   /** 6.14.106 (AE-L3, AE-15) : médiane du développement (niveaux de bâtiments + technos) de la population, jour par jour ;
    *  le rattrapage (`CATCHUP_RULES`) est alors appliqué à la production, figé pour la journée. Absent : pas de rattrapage. */
   catchupMedianByDay?: number[];
+  /** 6.14.143 (PB-L2) : paliers de l'entrepôt (tampon du palier 10, `buildingTiers.storageBufferHours`) ; faux : sans tampon. */
+  storageTiers?: boolean;
 }
 
 export interface AscensionGateContext {
@@ -273,6 +276,8 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   let expToday = 0;
   let overflow = 0;
   let produced = 0;
+  // 6.14.143 (PB-L2) : tampon de l'entrepôt (palier 10), par ressource commune.
+  const buffer: Record<string, number> = {};
   let exchanged = 0;
   let exchangedRare = 0;
   const rareByWeek: number[] = [];
@@ -409,6 +414,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     const rates = catchupF === 1 ? ratesNow() : (Object.fromEntries(Object.entries(ratesNow()).map(([k, v]) => [k, (v ?? 0) * catchupF])) as ReturnType<typeof ratesNow>);
     const cap = getStorageCapacity(buildings, tech);
     const w = win(Math.floor(t / DAY));
+    const bufHours = options.storageTiers === false ? 0 : storageBufferHours(buildings);
     for (const [k, rate] of Object.entries(rates)) {
       const g = (rate ?? 0) * step;
       if (isRare(k)) {
@@ -418,9 +424,18 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       produced += g;
       w.produced += g;
       if (t >= 14 * DAY) income.production = (income.production ?? 0) + g;
+      // Le tampon se verse d'abord dans la place libre, puis garde la production en trop (même règle que le jeu, economy.ts).
+      if ((buffer[k] ?? 0) > 0 && (res[k] ?? 0) < cap) {
+        const move = Math.min(buffer[k], cap - (res[k] ?? 0));
+        res[k] += move;
+        buffer[k] -= move;
+      }
       const kept = Math.min(Math.max(0, cap - (res[k] ?? 0)), g);
-      overflow += g - kept;
-      w.overflow += g - kept;
+      const over = g - kept;
+      const held = bufHours > 0 ? Math.max(0, Math.min(over, (rate ?? 0) * bufHours * HOUR - (buffer[k] ?? 0))) : 0;
+      if (held > 0) buffer[k] = (buffer[k] ?? 0) + held;
+      overflow += over - held;
+      w.overflow += over - held;
       res[k] += kept;
     }
 

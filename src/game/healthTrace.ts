@@ -105,7 +105,7 @@ export function amberWeeks(player: Pick<PlayerState, "stats">, now: number): { w
 /** Production perdue à entrepôt plein sur un intervalle de production (`before` → `after`, `elapsedSeconds` à partir de
  *  `startMs`). Une ressource commune (hors énergie) qui finit au plafond a perdu ce que sa production brute aurait dû
  *  ajouter au-delà du gain réel. Le calcul de la production ne se fait que dans ce cas (rien à payer sinon). */
-export function noteProductionLoss(player: PlayerState, before: Partial<Resources>, after: Partial<Resources>, elapsedSeconds: number, startMs: number, now: number): void {
+export function noteProductionLoss(player: PlayerState, before: Partial<Resources>, after: Partial<Resources>, elapsedSeconds: number, startMs: number, now: number, buffered?: Partial<Record<string, number>>): void {
   if (!(elapsedSeconds > 0)) return;
   const ids = COMMON_RESOURCES.filter((r) => r !== "energy");
   let pot = 0;
@@ -120,9 +120,10 @@ export function noteProductionLoss(player: PlayerState, before: Partial<Resource
     let wasted = 0;
     if (a >= capacity) {
       if (gross === null) gross = economySnapshot({ ...player, resources: before as Resources }, startMs).gross;
-      wasted = Math.max(0, num(gross[id]) * elapsedSeconds - gain);
+      // 6.14.143 (PB-L2) : la production gardée en tampon n'est pas perdue.
+      wasted = Math.max(0, num(gross[id]) * elapsedSeconds - gain - num(buffered?.[id]));
     }
-    pot += gain + wasted;
+    pot += gain + wasted + num(buffered?.[id]);
     lost += wasted;
   }
   if (!(pot > 0)) return;

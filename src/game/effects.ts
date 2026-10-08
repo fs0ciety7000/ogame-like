@@ -72,7 +72,7 @@ export const EFFECT_SCOPE_LABELS: Record<EffectScope, string> = {
   warlord: "Contre les seigneurs",
 };
 
-export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class" | "moon" | "alliance";
+export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class" | "moon" | "alliance" | "building";
 
 export interface EffectSourceRef {
   kind: EffectSourceKind;
@@ -209,6 +209,8 @@ export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
   class: "Classe d'empire",
   moon: "Lune",
   alliance: "Alliance",
+  // 6.14.142 (PB-L1) : paliers des bâtiments de système (Entrepôt 15 : Convoi).
+  building: "Palier de bâtiment",
 };
 
 export interface SumOptions {

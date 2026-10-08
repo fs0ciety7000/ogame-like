@@ -6,6 +6,7 @@ import { recordContract } from "@/game/contracts";
 import { contentObjective, trackAction } from "@/game/trackedActions";
 import { GameActionError } from "@/game/errors";
 import { ECONOMY_RULES } from "@/game/economy";
+import { familyTierLevels } from "@/game/buildingTiers";
 import type { NewNotification } from "@/game/flush";
 import type { PlayerState, QueuesState } from "@/types/game";
 
@@ -33,14 +34,17 @@ export const BUILD_PLAN_RULES_META = {
 
 /* 5.32 (proposals/constructeurs.md, option C) : chantiers de bâtiments en parallèle. 6 de base (réglable :
    ECONOMY_RULES.buildSlotsBase), +1 à la Fonderie quantique niveau 5, +1 au niveau 10. Un chantier déjà en cours
-   au-delà de la limite (avant la 5.32) va à son terme ; seul le lancement suivant attend. */
-export const BUILD_SLOT_BONUS_LEVELS = [5, 10];
+   au-delà de la limite (avant la 5.32) va à son terme ; seul le lancement suivant attend.
+   6.14.142 (PB-L1) : les niveaux sont un réglage (`buildingTiers.foundrySlotLevels`, ancien `BUILD_SLOT_BONUS_LEVELS`). */
+export function buildSlotBonusLevels(): number[] {
+  return familyTierLevels("foundry");
+}
 
 export function buildSlots(player: Pick<PlayerState, "buildings"> & Partial<Pick<PlayerState, "empireClass">>): number {
   const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
   const level = s?.unlocked ? s.level ?? 0 : 0;
   // 6.0 : +1 pour la classe Industriel.
-  return Math.max(1, Math.floor(ECONOMY_RULES.buildSlotsBase)) + BUILD_SLOT_BONUS_LEVELS.filter((l) => level >= l).length + empireClassPerk(player, "buildSlots");
+  return Math.max(1, Math.floor(ECONOMY_RULES.buildSlotsBase)) + buildSlotBonusLevels().filter((l) => level >= l).length + empireClassPerk(player, "buildSlots");
 }
 
 export function activeBuildCount(queues: Pick<QueuesState, "buildingUpgrades">): number {
@@ -53,7 +57,7 @@ export function buildSlotBlocker(player: Pick<PlayerState, "buildings"> & Partia
   if (activeBuildCount(queues) < slots) return null;
   const s = player.buildings[BUILD_PLAN_RULES.slotBuilding];
   const level = s?.unlocked ? s.level ?? 0 : 0;
-  const next = BUILD_SLOT_BONUS_LEVELS.find((l) => level < l);
+  const next = buildSlotBonusLevels().find((l) => level < l);
   return `Tous tes chantiers sont occupés (${slots} / ${slots}). ${next !== undefined ? `Un chantier de plus s'ouvre avec la Fonderie quantique niveau ${next}. ` : ""}Programme l'amélioration : elle démarrera dès qu'un chantier se libère.`;
 }
 

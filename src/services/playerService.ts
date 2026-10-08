@@ -900,6 +900,16 @@ export function dockScrap(unitId: string, qty: number) {
 }
 
 /** 5.28 : réglages du Triage et de l'ordre de réparation. */
+/** 6.14.144 (PB-L3) : réparation d'urgence gratuite (palier 20 de l'Atelier). */
+export function freeRushWorkshop() {
+  return act<{ seconds: number; units: Record<string, number>; ready: Record<string, number>; left: number }>({ type: "workshopFreeRush" });
+}
+
+/** 6.14.142 (PB-L1) : choix d'un palier de bâtiment (ressource prioritaire, Négoce ou Convoi, classe de l'Atelier). */
+export function chooseBuildingTier(slot: string, value: string) {
+  return act<{ slot: string; value: string; label: string }>({ type: "buildingChoice", slot, value });
+}
+
 export function dockSettings(settings: { policy?: string; priority?: string }) {
   return act({ type: "dockSettings", ...settings });
 }

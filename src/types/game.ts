@@ -150,6 +150,10 @@ export interface PlayerState {
   prestige?: import("@/game/prestige").PrestigeState | null;
   /** 6.14.106 (AE-L3, Q98) : ressources rares reçues au comptoir cette semaine (plafond `exchange.weeklyRareCap`). */
   exchangeWeek?: import("@/game/resources").ExchangeWeekState | null;
+  /** 6.14.142 (PB-L1) : choix des paliers de bâtiments (ressource prioritaire, Négoce ou Convoi, classe de l'Atelier), un changement par 24 h. */
+  buildingChoices?: import("@/game/buildingTiers").BuildingChoices | null;
+  /** 6.14.143 (PB-L2) : tampon de l'entrepôt (palier 10), production gardée quand l'entrepôt est plein, par ressource commune. */
+  storageBuffer?: Partial<Record<ResourceId, number>> | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;

@@ -6,15 +6,17 @@ import { Button } from "@/components/ui/button";
 import { AmberAmount } from "@/components/ui/amber";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { bountyState } from "@/game/bounties";
-import { GameActionError, rushWorkshop } from "@/services/playerService";
+import { freeRushWorkshop, GameActionError, rushWorkshop } from "@/services/playerService";
+import { BuildingTiers, tierViewOf } from "@/components/game/BuildingTiers";
+import { formatMinutes } from "@/game/buildingTiers";
 import { Clock, Gauge, LifeBuoy, ShieldAlert, Wrench } from "lucide-react";
 import { Card, HudBrackets } from "@/components/ui/card";
 import { EmptyState, HUD_TONE, HudCallout, HudChip, HudMeter, HudTag, StatTile, type HudTone } from "@/components/ui/hud";
-import { getRepairPercent } from "@/game/buildings";
+import { BUILDINGS, getRepairPercent } from "@/game/buildings";
 import { COMBAT_RULES } from "@/game/combat";
 import { withRepairBonus } from "@/game/modifiers";
 import { findUnit } from "@/game/units";
-import { WORKSHOP_SOURCE_LABELS, workshopRushCost, workshopSpeedBonus, workshopView } from "@/game/workshop";
+import { WORKSHOP_SOURCE_LABELS, workshopFreeRushLeft, workshopRushCost, workshopSpeedBonus, workshopView } from "@/game/workshop";
 import { assetUrl } from "@/lib/assets";
 import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -60,6 +62,24 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
   const amber = bountyState(player).amber;
   const speed = workshopSpeedBonus(player);
   const [busyRush, setBusyRush] = useState<string | null>(null);
+  // 6.14.142 à 6.14.144 (PB-L1, PB-L3) : paliers de l'Atelier (Cale sèche, premiers soins, classe, réparation d'urgence).
+  const atelierDef = BUILDINGS.find((b) => b.effect?.type === "repair");
+  const tiers = atelierDef && view.level > 0 ? tierViewOf(atelierDef, player) : null;
+  const free = workshopFreeRushLeft(player, now);
+
+  // 6.14.144 (PB-L3, palier 20) : réparation d'urgence gratuite, une fois par jour.
+  async function freeRush() {
+    setBusyRush("free");
+    try {
+      const out = await freeRushWorkshop();
+      const back = Object.values(out.units).reduce((a, b) => a + b, 0) + Object.values(out.ready).reduce((a, b) => a + b, 0);
+      toast.success(`Réparation d'urgence : ${formatMinutes(out.seconds)} de réparation offertes${back > 0 ? `, ${formatNumber(back)} unité${back > 1 ? "s" : ""} réparée${back > 1 ? "s" : ""}` : ""}.`);
+    } catch (err) {
+      toast.error(err instanceof GameActionError ? err.message : "Réparation d'urgence impossible pour le moment.");
+    } finally {
+      setBusyRush(null);
+    }
+  }
 
   // 5.21 : terminer un lot (ou toute la file) contre de l'Ambre.
   async function rush(jobId?: string) {
@@ -147,11 +167,22 @@ export function WorkshopPanel({ player, now }: { player: PlayerState; now: numbe
         )}
       </HudCallout>
 
+      {tiers && (
+        <Card className="p-4">
+          <BuildingTiers view={tiers} player={player} now={now} />
+        </Card>
+      )}
+
       <DockPanel player={player} view={view} />
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="hud-eyebrow text-[11px] text-slate-400">File de réparation</h3>
+          {view.jobs.length > 0 && free.left > 0 && (
+            <Button size="sm" variant="secondary" disabled={!!busyRush} onClick={() => void freeRush()} title="Palier Signature de l'Atelier : une fois par jour, sans Ambre.">
+              <LifeBuoy className="h-3.5 w-3.5" /> Urgence · {formatMinutes(free.seconds)} offertes
+            </Button>
+          )}
           {view.jobs.length > 1 && (
             <Button size="sm" variant="outline" disabled={!!busyRush || amber < workshopRushCost(player).amber} onClick={() => rush()}>
               <Wrench className="h-3.5 w-3.5" /> Tout terminer · <AmberAmount value={workshopRushCost(player).amber} className="font-mono" />

@@ -11,6 +11,7 @@ import { empireEffects, playerModifiers } from "@/game/modifiers";
 import type { EffectScope } from "@/game/effects";
 import { techBonus, techEffectCap, techReductionFactor } from "@/game/technologies";
 import { catchupFactorAt, catchupUntil } from "@/game/catchup";
+import { shelterExtraHours, storageBufferHours } from "@/game/buildingTiers";
 
 /* =====================================================
    Économie continue : production, plafond de l'entrepôt, entretien de
@@ -169,10 +170,54 @@ function addCapped(stock: number, gain: number, cap: number): number {
   return Math.min(cap, stock + gain);
 }
 
-/** Ressources après `elapsedSeconds` de production continue. */
+/** Ressources après `elapsedSeconds` de production continue (sans tampon de l'entrepôt : voir `advanceEconomy`). */
 export function advanceResources(input: EconomyInput, elapsedSeconds: number, startMs?: number): Resources {
+  return advanceWith(input, elapsedSeconds, startMs, null);
+}
+
+/** 6.14.143 (PB-L2) : tampon de l'entrepôt par ressource commune (copie propre). */
+export type StorageBuffer = Partial<Record<ResourceId, number>>;
+export function cleanBuffer(raw: unknown): StorageBuffer {
+  const out: StorageBuffer = {};
+  if (!raw || typeof raw !== "object") return out;
+  for (const r of COMMON_RESOURCES) {
+    const v = Number((raw as Record<string, unknown>)[r]);
+    if (Number.isFinite(v) && v > 0) out[r] = v;
+  }
+  return out;
+}
+
+export interface EconomyAdvance {
+  resources: Resources;
+  /** Tampon après l'avance (vide sans palier ni reste). */
+  buffer: StorageBuffer;
+  /** Production mise en tampon pendant l'avance (santé de l'équilibre : ce n'est pas une perte). */
+  buffered: StorageBuffer;
+}
+
+/**
+ * 6.14.143 (PB-L2, palier 10 de l'entrepôt) : avance avec le tampon. Le tampon se verse d'abord dans la place libre ; la production
+ * qui dépasse l'entrepôt y entre, jusqu'à `buildingTiers.storageBufferHours` heures de production de la ressource. Même calcul au
+ * serveur (rattrapage hors ligne, `flushState`) et au client (compteurs en direct). Un tampon gardé sans le palier (Ascension) se
+ * verse encore, mais ne se remplit plus.
+ */
+export function advanceEconomy(input: EconomyInput & { storageBuffer?: StorageBuffer | null }, elapsedSeconds: number, startMs?: number): EconomyAdvance {
+  const buffer = cleanBuffer(input.storageBuffer);
+  const buffered: StorageBuffer = {};
+  const resources = advanceWith(input, elapsedSeconds, startMs, { buffer, buffered, hours: storageBufferHours(input.buildings) });
+  for (const k of Object.keys(buffer) as ResourceId[]) if (!((buffer[k] ?? 0) >= 0.5)) delete buffer[k];
+  return { resources, buffer, buffered };
+}
+
+interface BufferState {
+  buffer: StorageBuffer;
+  buffered: StorageBuffer;
+  hours: number;
+}
+
+function advanceWith(input: EconomyInput, elapsedSeconds: number, startMs: number | undefined, buf: BufferState | null): Resources {
   // Avec `startMs`, les bonus d'événements s'appliquent sur leur seule durée.
-  if (startMs === undefined || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {});
+  if (startMs === undefined || elapsedSeconds <= 0) return advanceSegment(input, elapsedSeconds, {}, false, 1, buf);
   const endMs = startMs + elapsedSeconds * 1000;
   let resources = input.resources;
   let at = startMs;
@@ -189,13 +234,13 @@ export function advanceResources(input: EconomyInput, elapsedSeconds: number, st
   ].sort((a, b) => a - b);
   for (const cut of cuts) {
     if (cut <= at) continue;
-    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at), at < freeUntil, boostAt(input, at));
+    resources = advanceSegment({ ...input, resources }, (cut - at) / 1000, productionMultipliers(at), at < freeUntil, boostAt(input, at), buf);
     at = cut;
   }
   return resources as Resources;
 }
 
-function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>, upkeepFree = false, boost = 1): Resources {
+function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers: Partial<Record<string, number>>, upkeepFree = false, boost = 1, buf: BufferState | null = null): Resources {
   const out = { ...input.resources } as Resources;
   if (elapsedSeconds <= 0) return out;
 
@@ -203,6 +248,30 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
   const upkeep = upkeepFree ? 0 : getFleetUpkeep(input.units, input.techLevels, playerModifiers(input, Date.now(), input.effectScope).fleetUpkeep);
   const capacity = storageCapacityOf(input);
   const capOf = (res: ResourceId) => (COMMON_RESOURCES.includes(res) ? capacity : Infinity);
+
+  // 6.14.143 (PB-L2) : le tampon se verse d'abord dans la place libre.
+  if (buf && Number.isFinite(capacity)) {
+    for (const r of COMMON_RESOURCES) {
+      const held = buf.buffer[r] ?? 0;
+      const room = capacity - (out[r] ?? 0);
+      if (!(held > 0) || !(room > 0)) continue;
+      const move = Math.min(held, room);
+      out[r] = (out[r] ?? 0) + move;
+      buf.buffer[r] = held - move;
+    }
+  }
+  /** La production qui dépasse l'entrepôt entre au tampon (au plus `hours` heures de production de la ressource). */
+  const keep = (res: ResourceId, before: number, gain: number, after: number, ratePerSecond: number) => {
+    if (!buf || !(buf.hours > 0) || !(gain > 0) || !Number.isFinite(capacity)) return;
+    const over = Math.max(0, before + gain - Math.max(after, before));
+    if (!(over > 0)) return;
+    const max = Math.max(0, ratePerSecond) * buf.hours * 3600;
+    const held = buf.buffer[res] ?? 0;
+    const add = Math.max(0, Math.min(over, max - held));
+    if (!(add > 0)) return;
+    buf.buffer[res] = held + add;
+    buf.buffered[res] = (buf.buffered[res] ?? 0) + add;
+  };
 
   // Énergie : production moins entretien. Si elle baisse, on calcule
   // l'instant où le stock tombe à zéro : au-delà, c'est la panne.
@@ -213,6 +282,7 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
   const outageSeconds = elapsedSeconds - normalSeconds;
 
   out.energy = addCapped(energyStock, energyNet * normalSeconds, capOf("energy"));
+  keep("energy", energyStock, energyNet * normalSeconds, out.energy, energyNet);
   if (outageSeconds > 0) out.energy = 0;
 
   for (const r of RESOURCE_LIST) {
@@ -220,7 +290,9 @@ function advanceSegment(input: EconomyInput, elapsedSeconds: number, multipliers
     const rate = gross[r.id] ?? 0;
     if (!rate) continue;
     const gain = rate * normalSeconds + rate * ECONOMY_RULES.outageProductionFactor * outageSeconds;
-    out[r.id] = addCapped(out[r.id] ?? 0, gain, capOf(r.id));
+    const before = out[r.id] ?? 0;
+    out[r.id] = addCapped(before, gain, capOf(r.id));
+    if (COMMON_RESOURCES.includes(r.id)) keep(r.id, before, gain, out[r.id], rate);
   }
   return out;
 }
@@ -231,7 +303,9 @@ export function protectedAmount(buildings: Buildings, res: ResourceId, techLevel
   // 5.32 : au plus `protectedHours` heures de production de la ressource, jamais sous le plancher ni au-dessus de la règle de capacité.
   const hours = ECONOMY_RULES.protectedHours;
   if (!(hours > 0) || now < ECONOMY_RULES.protectedHoursFromMs) return byCapacity;
-  return Math.min(byCapacity, Math.max(ECONOMY_RULES.protectedFloor, Math.floor(hourlyProduction(buildings, res, techLevels) * hours)));
+  // 6.14.143 (PB-L2) : paliers de l'entrepôt (ressource prioritaire au 5, entrepôt orbital au 20), toujours sous la règle de capacité.
+  const extra = shelterExtraHours(player ? { ...player, buildings } : { buildings }, res);
+  return Math.min(byCapacity, Math.max(ECONOMY_RULES.protectedFloor, Math.floor(hourlyProduction(buildings, res, techLevels) * (hours + extra))));
 }
 
 /** Production horaire d'une ressource par les bâtiments et les technologies (hors bonus temporaires). */

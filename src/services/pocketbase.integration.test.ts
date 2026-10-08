@@ -48,6 +48,8 @@ import { MODULE_TEMPLATES, moduleMountClasses } from "@/game/modules";
 import { empireClasses } from "@/game/empireClass";
 import { MISSIONS } from "@/game/missions";
 import { chronicleMonthId } from "@/game/chronicles";
+import { hourlyProduction, storageCapacityOf } from "@/game/economy";
+import { tradeQuote } from "@/game/resources";
 
 const suffix = Math.random().toString(36).slice(2, 7);
 const A = { pseudo: `Alpha_${suffix}`, email: `a${suffix}@test.dev`, pw: "motdepasse1" };
@@ -1231,7 +1233,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const before = await snap(bId);
     await admin.collection("players").update(bId, {
       units: { chasseur: { level: 1, count: 100 } },
-      buildings: { ...before!.buildings, atelier_reparation: { level: 10, unlocked: true } },
+      // 6.14.144 (PB-L3) : niveau 9, sous les premiers soins (palier 10) qui rendraient aussitôt ces petits lots.
+      buildings: { ...before!.buildings, atelier_reparation: { level: 9, unlocked: true } },
       workshop: null,
       testMode: false,
       resources: RICH,
@@ -4308,6 +4311,132 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     expect(logs.items.length).toBeGreaterThanOrEqual(1);
     expect(logs.items[0].targetCollection).toBe("server_tasks");
   });
+
+  it("6.14.142 (PB-L1) : choix de palier enregistré par le serveur, un changement par 24 h, palier requis, réglages gardés par la validation", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    try {
+      await admin.collection("players").update(bId, { buildings: { ...before.buildings, entrepot: { level: 4, unlocked: true } }, buildingChoices: null, vacation: null });
+      await expect(ps.chooseBuildingTier("storage.priority", "nano")).rejects.toThrow(/niveau 5/);
+      await admin.collection("players").update(bId, { buildings: { ...before.buildings, entrepot: { level: 5, unlocked: true } } });
+      // Premier choix libre.
+      expect((await ps.chooseBuildingTier("storage.priority", "nano")).value).toBe("nano");
+      expect((await snap(bId)).buildingChoices?.["storage.priority"]?.v).toBe("nano");
+      // Changement dans les 24 h : refusé par le serveur.
+      await expect(ps.chooseBuildingTier("storage.priority", "scrap")).rejects.toThrow(/changer ce choix dans/);
+      // Un client ne peut pas écrire ses choix lui-même.
+      await expect(pb.collection("players").update(bId, { buildingChoices: { "storage.priority": { v: "scrap", at: 0 } } })).rejects.toBeTruthy();
+      // 24 h plus tard : changement accepté.
+      await admin.collection("players").update(bId, { buildingChoices: { "storage.priority": { v: "nano", at: Date.now() - 25 * 3600_000 } } });
+      expect((await ps.chooseBuildingTier("storage.priority", "scrap")).value).toBe("scrap");
+      // Palier 15 pas atteint : refus.
+      await expect(ps.chooseBuildingTier("storage.spec", "trade")).rejects.toThrow(/niveau 15/);
+    } finally {
+      await admin.collection("players").update(bId, { buildings: before.buildings, buildingChoices: null });
+    }
+    // Réglages : la validation du serveur refuse des niveaux qui ne montent pas.
+    await admin.collection("admins").create({ id: bId, note: "test 6.14.142" });
+    try {
+      const d = defaultGameContent();
+      await expect(saveContentSection("rules", { ...d.rules, buildingTiers: { ...(d.rules as unknown as { buildingTiers: object }).buildingTiers, storageLevels: [10, 5, 15, 20] } } as never)).rejects.toBeTruthy();
+      await saveContentSection("rules", { ...d.rules, buildingTiers: { ...(d.rules as unknown as { buildingTiers: object }).buildingTiers, storageBufferHours: 1 } } as never);
+    } finally {
+      await resetContentSection("rules");
+      await admin.collection("admins").delete(bId);
+    }
+  }, 30_000);
+
+  it("6.14.143 (PB-L2) : abri de la ressource prioritaire et de l'entrepôt orbital, tampon au rattrapage et Négoce, appliqués par le serveur", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const buildings = { ...before.buildings, entrepot: { level: 20, unlocked: true }, extracteur_ferraille: { level: 12, unlocked: true }, extracteur_nanocomposants: { level: 12, unlocked: true } };
+    // L'abri en heures de production (5.32) s'active le 13 octobre 2026 : on l'avance pour le test (règles restaurées à la fin).
+    // (Un test précédent a pu retirer la section « rules » : elle est alors créée puis retirée.)
+    const found = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
+    const savedData = (found?.data as Record<string, unknown> | undefined) ?? null;
+    const rulesId: string = found ? found.id : (await admin.collection("game_config").create({ key: "rules", data: {} })).id;
+    await admin.collection("game_config").update(rulesId, { data: { ...(savedData ?? {}), economy: { ...((savedData?.economy as object) ?? {}), protectedHoursFromMs: 0 } } });
+    try {
+      // Abri : tribut du Cartel Néon = 15 % du stock exposé, calculé par le serveur. Stocks égaux, production égale :
+      // la ressource prioritaire (16 h à l'abri à l'entrepôt 20) paie 4 h de production de moins que la ferraille (12 h).
+      const stock = 2_000_000_000;
+      await admin.collection("players").update(bId, { buildings, buildingChoices: null, storageBuffer: null, pirates: null, vacation: null, createdAtMs: MONTH_AGO(), resources: { ...RICH, scrap: stock, nano: stock, energy: stock, data: stock } });
+      await ps.chooseBuildingTier("storage.priority", "nano");
+      expect((await admin.send("/api/cosmic/admin/pirates", { method: "POST", body: { uid: bId, factionId: "cartel", force: true } })).changed).toBe(1);
+      const p = await snap(bId);
+      const tribute = p.pirates.cartel.ultimatum.tribute as Record<string, number>;
+      const perHour = hourlyProduction(p.buildings, "scrap", p.techLevels);
+      expect(hourlyProduction(p.buildings, "nano", p.techLevels)).toBeCloseTo(perHour, 0);
+      expect(tribute.scrap - tribute.nano).toBeGreaterThanOrEqual(Math.floor(0.15 * 4 * perHour) - 3);
+      expect(tribute.scrap - tribute.nano).toBeLessThanOrEqual(Math.ceil(0.15 * 4 * perHour) + 3);
+      await admin.collection("players").update(bId, { pirates: null });
+
+      // Tampon (palier 10) : 3 h d'absence entrepôt plein, au plus 2 h de production gardées, versées à la dépense suivante.
+      const cap = storageCapacityOf({ ...p, buildings });
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: cap }, storageBuffer: null, resourcesUpdatedAtMs: Date.now() - 3 * 3600_000 });
+      await ps.syncPlayer("");
+      const buffered = await snap(bId);
+      expect(buffered.resources.scrap).toBe(cap);
+      expect(buffered.storageBuffer?.scrap).toBeGreaterThan(1.9 * perHour);
+      expect(buffered.storageBuffer?.scrap).toBeLessThanOrEqual(2 * perHour + 1);
+      await admin.collection("players").update(bId, { resources: { ...buffered.resources, scrap: cap - perHour } });
+      await ps.syncPlayer("");
+      const poured = await snap(bId);
+      expect(poured.resources.scrap).toBeGreaterThanOrEqual(cap - 1000);
+      expect(poured.storageBuffer?.scrap ?? 0).toBeLessThan(buffered.storageBuffer.scrap);
+
+      // Négoce (palier 15) : taxe du comptoir −2 points, appliquée par le serveur.
+      await ps.chooseBuildingTier("storage.spec", "trade");
+      await admin.collection("players").update(bId, { resources: { ...RICH, reinforcedSteel: 100_000 } });
+      const traded = await ps.tradeResources(bId, "reinforcedSteel", "scrap", 100_000);
+      expect(traded.tax).toBe(tradeQuote("reinforcedSteel", "scrap", 100_000, 0.02).tax);
+      expect(traded.tax).toBeLessThan(tradeQuote("reinforcedSteel", "scrap", 100_000).tax);
+    } finally {
+      if (savedData) await admin.collection("game_config").update(rulesId, { data: savedData });
+      else await admin.collection("game_config").delete(rulesId);
+      await admin.collection("players").update(bId, { buildings: before.buildings, resources: before.resources, buildingChoices: null, storageBuffer: null, pirates: null, createdAtMs: before.createdAtMs });
+    }
+  }, 30_000);
+
+  it("6.14.144 (PB-L3) : premiers soins, classe de l'Atelier et réparation d'urgence quotidienne, appliqués par le serveur", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const now = Date.now();
+    const job = (id: string, count: number, hp: number) => ({ id, unitId: "chasseur", count, hpTotal: hp, hpLeft: hp, source: "raid", addedAtMs: now });
+    try {
+      await admin.collection("players").update(bId, {
+        buildings: { ...before.buildings, atelier_reparation: { level: 20, unlocked: true } },
+        units: { chasseur: { level: 1, count: 10 } },
+        workshop: { updatedAtMs: now, jobs: [job("gros", 5000, 50_000_000), job("petit", 3, 100)], hull: {} },
+        buildingChoices: null,
+        vacation: null,
+        testMode: false,
+      });
+      // Premiers soins (palier 10) : le petit lot rentre au rattrapage, le gros reste.
+      await ps.syncPlayer("");
+      let p = await snap(bId);
+      expect(p.workshop.jobs.map((j: { id: string }) => j.id)).toEqual(["gros"]);
+      expect(p.units.chasseur.count).toBe(13);
+      // Atelier spécialisé (palier 15) : classe enregistrée par le serveur.
+      const cls = unitClasses().chasseur;
+      await ps.chooseBuildingTier("workshop.class", cls);
+      expect((await snap(bId)).buildingChoices?.["workshop.class"]?.v).toBe(cls);
+      // Réparation d'urgence (palier 20) : 2 h offertes, une fois par jour.
+      const hpBefore = (await snap(bId)).workshop.jobs[0].hpLeft;
+      const rush = await ps.freeRushWorkshop();
+      expect(rush.seconds).toBe(7200);
+      p = await snap(bId);
+      expect(p.workshop.freeRush?.used).toBe(1);
+      expect(p.workshop.jobs[0].hpLeft).toBeLessThan(hpBefore - 7000 * 172);
+      await expect(ps.freeRushWorkshop()).rejects.toThrow(/demain/);
+      expect(p.units.chasseur.count + p.workshop.jobs[0].count).toBe(13 + 5000);
+    } finally {
+      await admin.collection("players").update(bId, { buildings: before.buildings, units: before.units, workshop: null, buildingChoices: null, testMode: before.testMode ?? false });
+    }
+  }, 30_000);
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

@@ -75,12 +75,25 @@ describe("traces de la santé (healthTrace)", () => {
 
   it("flush : un entrepôt plein laisse une trace de production perdue", () => {
     const p = player("a");
+    // 6.14.143 (PB-L2) : sous le palier du tampon (entrepôt 10), toute la production en trop est perdue.
+    p.buildings.entrepot = { level: 9, unlocked: true };
     const cap = storageCapacityOf(p);
     for (const k of ["scrap", "nano", "data"]) (p.resources as Record<string, number>)[k] = cap;
     p.resourcesUpdatedAtMs = NOW - 3_600_000;
     const out = flushState(p, emptyQueues(), NOW);
     expect(out.player.stats?.prodLoss?.lost).toBeGreaterThan(0);
     expect(productionLossShare(out.player, NOW)).toBeCloseTo(1, 5);
+  });
+
+  it("6.14.143 (PB-L2) : le tampon de l'entrepôt (palier 10) n'est pas une perte", () => {
+    const p = player("a");
+    const cap = storageCapacityOf(p);
+    for (const k of ["scrap", "nano", "data"]) (p.resources as Record<string, number>)[k] = cap;
+    p.resourcesUpdatedAtMs = NOW - 4 * 3_600_000;
+    const out = flushState(p, emptyQueues(), NOW);
+    // 4 h à entrepôt plein : 2 h gardées en tampon, 2 h perdues.
+    expect(out.player.storageBuffer?.scrap).toBeGreaterThan(0);
+    expect(productionLossShare(out.player, NOW)).toBeCloseTo(0.5, 1);
   });
 
   it("coffre du 7e jour : montant et tirages au plancher gardés à la réclamation", () => {

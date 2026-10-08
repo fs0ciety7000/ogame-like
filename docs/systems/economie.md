@@ -10,7 +10,7 @@ Tout ce que le joueur construit se paie en ressources. La production tourne hors
 | Ressources rares | Acier renforcé, Module cybernétique, Nanites synthétiques, Fragment d'IA |
 | Production d'un extracteur | niv. 1 : 2/s, niv. 10 : 500/s, niv. 20 : 4 657/s (≈ 16,8 M/h) |
 | Rares | bâtiments de fin de partie (1 à 10/s), gisements de colonie (0,1 à 3/s), missions, expéditions, pirates, primes, contrats |
-| Entrepôt | capacité = 2 M × 1,6^niveau par ressource commune. À l'abri du pillage : 10 % de la capacité (+ technologies, Bastion, au plus 75 %) et, **à partir du 13 octobre 2026 (5.32)**, au plus 8 h de production de la ressource, avec un plancher de 500 k (réglages : Règles → Économie) |
+| Entrepôt | capacité = 2 M × 1,6^niveau par ressource commune. À l'abri du pillage : 10 % de la capacité (+ technologies, Bastion, au plus 75 %) et, **à partir du 13 octobre 2026 (5.32)**, au plus 8 h de production de la ressource, avec un plancher de 500 k (réglages : Règles → Économie). **Paliers (6.14.143)** : ressource prioritaire au 5 (+4 h : 12 h), entrepôt orbital au 20 (+4 h pour les 4 ressources : 12 h, 16 h pour la prioritaire), toujours sous la règle de capacité ; tampon au 10 (2 h de production en trop gardées hors pillage, versées dès que la place se libère, aussi au rattrapage hors ligne et dans les compteurs du client) ; Négoce au 15 (taxe du comptoir 5 → 3 %) ou Convoi (soute +10 %, circuit d'effets) ; réglages : Règles → « Bâtiments : paliers » |
 | Entretien de flotte | énergie : 0,015/s par place d'attaque, 0,0075/s par place de défense ; panne d'énergie = autres productions × 0,5 |
 | Rattrapage | jusqu'à **+50 %** de production sous **20 %** de la médiane des actifs (6.14.106, AE-15 ; +25 % sous 10 % avant), dégressif, nul à partir de 50 % ; hors couche empire (I14 intact), validé à +100 % au plus ; migration `rules-6.14.106` des règles restées aux anciens défauts |
 | Échange (comptoir) | taxe 5 % au pot commun ; 1 rare pour 100 communes, **1 pour 250** dès la bascule du rythme (1er novembre 2026, `rhythm.exchangeCommonToRare`, 6.14.88) |
@@ -46,3 +46,13 @@ Toute dépense de ressources de la planète mère passe par `spendResources` (`s
 objectif du jour « Dépenser ». La fondation d'une colonie, la lune, les capsules, les traités, la localisation d'un repaire, la file
 planifiée et la vendetta y passent désormais (avant : débit à la main, dépense non comptée). Les transferts (marché, cargaison, dépôt,
 mise, comptoir, butin, tribut, stock de colonie) restent à part, listés dans la garde `spending.test.ts` (invariant I34).
+
+## 6.14.143 (PB-L2, `docs/proposals/paliers-batiments.md`) : paliers de l'entrepôt
+- Tampon (palier 10) : `advanceEconomy` (economy.ts), même calcul au serveur (`flushState`, rattrapage hors ligne) et au client
+  (`useLiveResources`, jauge « Tampon : 1 h 40 en attente » de la page Ressources). Le tampon n'est pas pillable et n'est pas compté
+  comme production perdue (santé de l'équilibre) ; champ joueur `storageBuffer`. Un tampon gardé sans le palier (Ascension) se verse
+  encore mais ne se remplit plus ; un réglage à 0 h ne le détruit pas (I46).
+- Simulateur (`progressionSim.ts`, option `storageTiers`, préréglage `sans-paliers` de `progression-sim.mjs`) : production perdue
+  7,2 / 2,7 / 13,6 / 14,1 % → 7 / 2,5 / 12,6 / 13,9 % (actif, moyen, occasionnel, quotidien, 365 jours après la bascule) ; aucune borne
+  d'I29 ne bouge (pire mois de sessions bloquées de l'occasionnel 5 → 10 %, sous la borne de 15 %).
+

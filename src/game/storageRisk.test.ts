@@ -1,3 +1,4 @@
+import { shelterExtraHours } from "@/game/buildingTiers";
 import { describe, expect, it } from "vitest";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { BUILDINGS } from "@/game/buildings";
@@ -29,7 +30,8 @@ describe("5.32 entrepôt : au plus 8 h de production à l'abri", () => {
   it("après l'activation : min(capacité, max(plancher, 8 h de production)), jamais au-dessus de la règle de capacité", () => {
     const p = endgame();
     const cap = capacityProtected(p.buildings, "scrap", p.techLevels, undefined, p);
-    const eight = Math.floor(hourlyProduction(p.buildings, "scrap", p.techLevels) * ECONOMY_RULES.protectedHours);
+    // 6.14.143 (PB-L2) : entrepôt 20 = palier « Entrepôt orbital » (+4 h pour les 4 ressources), toujours sous la règle de capacité.
+    const eight = Math.floor(hourlyProduction(p.buildings, "scrap", p.techLevels) * (ECONOMY_RULES.protectedHours + shelterExtraHours(p, "scrap")));
     const now = protectedAmount(p.buildings, "scrap", p.techLevels, undefined, p, AFTER);
     expect(now).toBe(Math.min(cap, Math.max(ECONOMY_RULES.protectedFloor, eight)));
     expect(now).toBeLessThanOrEqual(cap);

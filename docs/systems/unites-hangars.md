@@ -12,6 +12,11 @@ Puissance militaire (attaque, défense) et logistique (cargo, drones, sondes). B
 - Rôles (6.14.123, I39) : sonde, recycleur, transport, soutien, faiblesse de boss, contre-espionnage, lus à la place des identifiants.
 - Une file par catégorie (attaque, défense).
 
+- Paliers des hangars (règle n° 4 réécrite, 6.14.141) : bâtiments **de système**, paliers prévus au lot PB-L4
+  (`docs/proposals/paliers-batiments.md` §5.4 : baies modulaires, file d'attente, spécialisations, +1 emplacement de flotte,
+  Casemates). Le moteur commun (`buildingTiers.ts`, 6.14.142) les accueillera par une famille de plus ; d'ici là, ligne « Paliers »
+  absente de leur carte.
+
 ## Code et admin
 `units.ts`, `unitClasses.ts`, `hangar.ts`, `eliteUnits.ts`, `UnitsPage.tsx`. Admin : Contenu → Unités ; Équilibrage (audit des unités).
 

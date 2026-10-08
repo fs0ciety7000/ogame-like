@@ -1,4 +1,4 @@
-import { advanceResources, economySnapshot } from "@/game/economy";
+import { advanceEconomy, economySnapshot } from "@/game/economy";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /** Gains « ponctuels » entre deux états du joueur venus du serveur : ce qui
@@ -6,7 +6,8 @@ import type { PlayerState, ResourceId } from "@/types/game";
  *  don, pillage, échange, vente…). Sert aux micro-animations. */
 export function discreteGains(prev: PlayerState, next: PlayerState): Partial<Record<ResourceId, number>> {
   const elapsed = Math.max(0, ((next.resourcesUpdatedAtMs ?? 0) - (prev.resourcesUpdatedAtMs ?? 0)) / 1000);
-  const expectedAll = advanceResources(prev, elapsed);
+  // 6.14.143 : tampon de l'entrepôt compris (sa vidange n'est pas un gain ponctuel).
+  const expectedAll = advanceEconomy(prev, elapsed).resources;
   const prevRate = economySnapshot(prev).gross;
   const nextRate = economySnapshot(next).gross;
   const gains: Partial<Record<ResourceId, number>> = {};

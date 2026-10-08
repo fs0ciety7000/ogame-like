@@ -15,6 +15,8 @@
 //                                                        # (projets de prestige des deux côtés avec --prestige)
 //   node scripts/progression-sim.mjs rythme-6.14.88 --bascule --prestige --ascend --days 365   # 6.14.89 (RL-5) : après = valeurs
 //                                                        # visées de 6.14.88 (avant le réglage fin) ; sans préréglage : celles du code
+//   node scripts/progression-sim.mjs --base sans-paliers --apres-bascule --prestige --ascend --days 365   # 6.14.143 (PB-L2) :
+//                                                        # avant = sans tampon de l'entrepôt, après = paliers en vigueur (I29)
 //   node scripts/progression-sim.mjs --base avant-ae-l3 --catchup   # 6.14.106 (AE-L3) : avant = règles d'avant le lot
 //                                                        # (coffre fixe, comptoir et défaites sans plafond, rattrapage 0,25 / 0,1) ;
 //                                                        # --catchup : rattrapage simulé (médiane des 4 profils), écart de production
@@ -54,6 +56,11 @@ const PRESETS = {
     tier2Factor: 4,
     rules: { exchange: { commonToRare: 0.004 }, economy: { missionProductionMultiplier: 0.75, missionRareProductionRef: 400_000 } },
   },
+  // 6.14.143 (PB-L2) : sans les paliers de l'entrepôt dans le modèle (tampon du palier 10 à 0 h). Mesure d'I29 :
+  //   node scripts/progression-sim.mjs --base sans-paliers --apres-bascule --prestige --ascend --days 365
+  "sans-paliers": { rules: { buildingTiers: { storageBufferHours: 0 } } },
+  // Variante étudiée (PB-Q2) : tampon de 4 h.
+  "tampon-4h": { rules: { buildingTiers: { storageBufferHours: 4 } } },
   // Valeurs visées de la bascule du rythme en 6.14.88 (RL-3), avant le réglage fin de 6.14.89 (RL-5) : à lancer avec --bascule.
   "rythme-6.14.88": {
     rules: { rhythm: { tier2BaseSeconds: 108_000, tier2SecondsPerLevel: 86_400, researchLateFromLevel: 6, researchLateTimeFactor: 30 } },

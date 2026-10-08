@@ -104,11 +104,15 @@ export function getTradeRate(sellId: ResourceId, buyId: ResourceId): number {
 }
 
 
-/** Échange au comptoir : brut au taux, taxe (arrondie au supérieur), net reçu. */
-export function tradeQuote(sellId: ResourceId, buyId: ResourceId, amount: number): { gross: number; tax: number; net: number } {
+/** Échange au comptoir : brut au taux, taxe (arrondie au supérieur), net reçu. 6.14.143 (PB-L2) : `taxCut`, points de taxe en moins
+ *  (Négoce, palier 15 de l'entrepôt : `exchangeTaxCut(joueur)`), la taxe ne descend pas sous 0. */
+export function tradeQuote(sellId: ResourceId, buyId: ResourceId, amount: number, taxCut = 0): { gross: number; tax: number; net: number; taxPct: number } {
   const gross = Math.floor(Math.max(0, amount) * getTradeRate(sellId, buyId));
-  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * EXCHANGE_RULES.taxPct)) : 0;
-  return { gross, tax, net: gross - tax };
+  const cut = Math.max(0, Number(taxCut) || 0);
+  // Arrondi au millionième : 0,05 − 0,02 donne 0,030000000000000002 en virgule flottante.
+  const taxPct = cut > 0 ? Math.max(0, Math.round((EXCHANGE_RULES.taxPct - cut) * 1e6) / 1e6) : EXCHANGE_RULES.taxPct;
+  const tax = gross > 0 ? Math.min(gross, Math.ceil(gross * taxPct)) : 0;
+  return { gross, tax, net: gross - tax, taxPct };
 }
 
 export function canAffordAll(resources: Resources, costs: Partial<Resources>): boolean {

@@ -39,7 +39,8 @@ import { ECONOMY_RULES } from "@/game/economy";
 import { GameActionError, planBuilding, startBuildingUpgrade, unlockBuilding } from "@/services/playerService";
 import { UpgradeCompare } from "@/components/game/UpgradeCompare";
 import { BuildPlanCard } from "@/components/game/BuildPlanCard";
-import { activeBuildCount, buildPlan, buildSlots, nextPlannedLevel, planSlots } from "@/game/buildPlan";
+import { activeBuildCount, buildPlan, buildSlotBonusLevels, buildSlots, nextPlannedLevel, planSlots } from "@/game/buildPlan";
+import { BuildingTiers, NextTierLine, tierViewOf } from "@/components/game/BuildingTiers";
 import { RESOURCE_LIST } from "@/game/resources";
 import type { BuildingId, ResourceId } from "@/types/game";
 import { LevelPulse, LevelUpBurst } from "@/components/ui/level-up-burst";
@@ -164,7 +165,7 @@ export function BuildingsPage() {
       <BuildPlanCard player={player} queues={queues} now={now} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         {/* 5.32 : chantiers en parallèle (proposals/constructeurs.md). */}
-        <HudChip size="sm" tone={activeBuildCount(queues) >= buildSlots(player) ? "ember" : "neutral"} title="Améliorations de bâtiments menées en même temps. +1 à la Fonderie quantique 5 et 10.">
+        <HudChip size="sm" tone={activeBuildCount(queues) >= buildSlots(player) ? "ember" : "neutral"} title={`Améliorations de bâtiments menées en même temps. +1 à la Fonderie quantique ${buildSlotBonusLevels().join(" et ")}.`}>
           Chantiers <span className="font-mono tabular-nums">{activeBuildCount(queues)} / {buildSlots(player)}</span>
         </HudChip>
         <div className="flex items-center gap-1.5">
@@ -200,6 +201,8 @@ export function BuildingsPage() {
           const productionResource = PRODUCTION_RESOURCE_BY_BUILDING[building.id];
           const nearlyDone = !!activeUpgrade && activeUpgrade.endTime - now < 10_000;
           const plannable = nextPlannedLevel(player, queues, building.id);
+          // 6.14.142 (PB-L1) : paliers d'un bâtiment de système (null : bâtiment de courbe).
+          const tierView = isLocked ? null : tierViewOf(building, player);
           const planButton =
             // Utile quand le chantier est occupé ou que les ressources manquent ; sinon, « Améliorer » suffit.
             !isLocked && !planFull && plannable <= building.maxLevel && (activeUpgrade || !Object.entries(cost).every(([r, n]) => (player.resources[r as ResourceId] ?? 0) >= (n ?? 0))) ? (
@@ -346,6 +349,7 @@ export function BuildingsPage() {
                   {!isLocked && building.effect?.type === "hangar" && (
                     <p className="border-l-2 border-cyan-glow bg-cyan-glow/[0.05] px-2.5 py-2 text-xs text-slate-300"><GameIcon name="fleet" /> {formatCompact(building.effect.perLevel * level)} places de hangar</p>
                   )}
+                  {tierView && <BuildingTiers view={tierView} player={player} now={now} />}
 
                   <div className="mt-auto">
                     {isLocked && unlockBlocker(building, player.buildings) ? (
@@ -417,6 +421,7 @@ export function BuildingsPage() {
                                 </span>
                               </UpgradeCompare>
                               {wait > 0 && <BlockedReason>{affordText(wait)}</BlockedReason>}
+                              <NextTierLine view={tierView} />
                             </>
                           );
                         })()}

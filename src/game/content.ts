@@ -9,6 +9,7 @@ import { setLootTables, validateLootTables } from "@/game/loot";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { DEFAULT_PASS_THEMES, defaultPassSeasonsConfig, setPassSeasons, setPassThemes, validatePassCatalog, validatePassSeasons, type PassSeasonsConfig, type PassTheme } from "@/game/passSeasons";
+import { validateBuildingTierRules } from "@/game/buildingTiers";
 import { DEFAULT_SEASON_CATALOG, setSeasonCatalog, validateSeasonGenRules, type SeasonCatalogEntry } from "@/game/seasonCatalog";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
@@ -624,6 +625,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateNoveltyRules((merged as unknown as { novelty?: Parameters<typeof validateNoveltyRules>[0] }).novelty));
   // 6.14.139 (AP-L12) : saisons générées au-delà du cycle (listes non vides, titres par rôle).
   errors.push(...validateSeasonGenRules((merged as unknown as { seasonGen?: Parameters<typeof validateSeasonGenRules>[0] }).seasonGen));
+  // 6.14.142 (PB-L1) : niveaux des paliers des bâtiments.
+  errors.push(...validateBuildingTierRules((merged as unknown as { buildingTiers?: Parameters<typeof validateBuildingTierRules>[0] }).buildingTiers));
   // 6.14.137 (AP-L10) : banques de textes (quatre actes, listes non vides, factions connues).
   errors.push(...validateNarrativeRules((merged as unknown as { narrative?: Parameters<typeof validateNarrativeRules>[0] }).narrative, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   // 6.9.0 (AU4) : commerce.

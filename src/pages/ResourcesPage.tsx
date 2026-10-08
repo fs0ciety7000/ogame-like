@@ -11,7 +11,8 @@ import { StorageRiskCard } from "@/components/game/StorageRiskCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
-import { economySnapshot, productionBreakdown } from "@/game/economy";
+import { advanceEconomy, economySnapshot, hourlyProduction, productionBreakdown } from "@/game/economy";
+import { exchangeTaxCut, formatMinutes, storageBufferHours } from "@/game/buildingTiers";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { factorRows } from "@/components/ui/afford";
 import { Factory } from "lucide-react";
@@ -39,7 +40,11 @@ export function ResourcesPage() {
   if (!resources || !player) return null;
   const economy = economySnapshot({ ...player, resources }, Date.now());
 
-  const quote = tradeQuote(sellId, buyId, amount);
+  // 6.14.143 (PB-L2) : Négoce (palier 15 de l'entrepôt) : taxe du comptoir réduite, comme au serveur.
+  const quote = tradeQuote(sellId, buyId, amount, exchangeTaxCut(player));
+  // 6.14.143 (PB-L2) : tampon de l'entrepôt (palier 10), au même instant que les compteurs.
+  const bufferHours = storageBufferHours(player.buildings);
+  const buffer = advanceEconomy(player, Math.max(0, (Date.now() - player.resourcesUpdatedAtMs) / 1000), player.resourcesUpdatedAtMs).buffer;
   const buyRes = RESOURCE_LIST.find((r) => r.id === buyId)!;
   // 6.14.106 (AE-L3, Q98) : plafond hebdomadaire des rares reçues contre des communes (lu dans la règle).
   const capLabel = exchangeCapLabel(formatCompact);
@@ -106,6 +111,9 @@ export function ResourcesPage() {
                     percent={(resources[res.id] / economy.capacity) * 100}
                     tone={economy.full.includes(res.id) ? "var(--color-ember-glow)" : undefined}
                   />
+                  {(bufferHours > 0 || (buffer[res.id] ?? 0) > 0) && (
+                    <BufferLine amount={buffer[res.id] ?? 0} hourly={hourlyProduction(player.buildings, res.id, player.techLevels)} maxHours={bufferHours} />
+                  )}
                 </div>
               )}
               {res.rarity === "rare" && <p className="relative mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-gold-glow/70">Ressource rare</p>}
@@ -125,7 +133,8 @@ export function ResourcesPage() {
           <p className="text-xs text-slate-500">
             Ressources communes → rares : <span className="font-mono tabular-nums">1</span> rare pour <span className="font-mono tabular-nums">{formatNumber(perRare)}</span> communes. Rares → communes :{" "}
             <span className="font-mono tabular-nums">{formatDecimal(EXCHANGE_RULES.rareToCommon, 2)}</span> communes par rare. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
-            <span className="font-mono tabular-nums">{Math.round(EXCHANGE_RULES.taxPct * 100)} %</span> sur ce que tu reçois, versée au pot commun du serveur.
+            <span className="font-mono tabular-nums">{formatDecimal(quote.taxPct * 100, 1)} %</span> sur ce que tu reçois, versée au pot commun du serveur
+            {quote.taxPct < EXCHANGE_RULES.taxPct && <span className="text-mint-glow"> (Négoce de l'entrepôt)</span>}.
           </p>
           {capLabel && (
             <p className="text-xs text-slate-400">
@@ -177,6 +186,17 @@ export function ResourcesPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** 6.14.143 (PB-L2) : jauge du tampon de l'entrepôt, « Tampon : 1 h 40 en attente ». */
+function BufferLine({ amount, hourly, maxHours }: { amount: number; hourly: number; maxHours: number }) {
+  const held = hourly > 0 ? (amount / hourly) * 3600 : 0;
+  return (
+    <p className="mt-1 font-mono text-[11px] text-slate-500" title="Entrepôt plein : le tampon garde la production en trop et la verse dès que tu fais de la place.">
+      Tampon : <span className={amount > 0 ? "tabular-nums text-cyan-glow" : "tabular-nums"}>{amount > 0 ? `${formatMinutes(held)} en attente` : "vide"}</span>
+      {maxHours > 0 && <span className="tabular-nums"> / {formatMinutes(maxHours * 3600)}</span>}
+    </p>
   );
 }
 

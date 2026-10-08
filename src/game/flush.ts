@@ -3,7 +3,7 @@ import { finishAllTimers } from "@/game/adminTools";
 import { advanceWorkshop } from "@/game/workshop";
 import { advanceColonies } from "@/game/colonies";
 import { BUILDINGS, findBuilding } from "@/game/buildings";
-import { advanceResources, missionRewards } from "@/game/economy";
+import { advanceEconomy, advanceResources, missionRewards } from "@/game/economy";
 import { ensureContracts, recordContract } from "@/game/contracts";
 import { settleLegacyDaily } from "@/game/dailyMissions";
 import { MISSIONS } from "@/game/missions";
@@ -156,9 +156,13 @@ export function flushState(playerIn: PlayerState, queuesIn: QueuesState, now: nu
   const elapsedSeconds = Math.max(0, (now - (player.resourcesUpdatedAtMs || now)) / 1000);
   // Production, plafond de l'entrepôt, entretien de flotte et panne d'énergie.
   const beforeProduction = player.resources;
-  player.resources = advanceResources(player, elapsedSeconds, now - elapsedSeconds * 1000);
-  // 6.14.107 (AE-L4) : production perdue à entrepôt plein (santé de l'équilibre, deux semaines au plus).
-  noteProductionLoss(player, beforeProduction, player.resources, elapsedSeconds, now - elapsedSeconds * 1000, now);
+  // 6.14.143 (PB-L2) : avec le tampon de l'entrepôt (palier 10), rempli et versé aussi pendant l'absence.
+  const advanced = advanceEconomy(player, elapsedSeconds, now - elapsedSeconds * 1000);
+  player.resources = advanced.resources;
+  if (Object.keys(advanced.buffer).length) player.storageBuffer = advanced.buffer;
+  else if (player.storageBuffer && Object.keys(player.storageBuffer).length) player.storageBuffer = null;
+  // 6.14.107 (AE-L4) : production perdue à entrepôt plein (santé de l'équilibre, deux semaines au plus) ; le tampon n'est pas une perte.
+  noteProductionLoss(player, beforeProduction, player.resources, elapsedSeconds, now - elapsedSeconds * 1000, now, advanced.buffered);
   ensureContracts(player, now);
   // 6.2 (lot N) : missions du jour fusionnées ; celles faites mais pas réclamées sont payées une fois.
   const legacyTokens = settleLegacyDaily(player, now);

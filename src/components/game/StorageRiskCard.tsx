@@ -3,6 +3,7 @@ import { HudPanel } from "@/components/ui/panel";
 import { HudCallout } from "@/components/ui/hud";
 import { ResourceIcon } from "@/components/ui/game-icon";
 import { ECONOMY_RULES, exposureView } from "@/game/economy";
+import { activeChoice, shelterExtraHours } from "@/game/buildingTiers";
 import { RESOURCE_LIST } from "@/game/resources";
 import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
@@ -33,6 +34,12 @@ export function StorageRiskCard({ player, now }: { player: PlayerState; now: num
             <li key={l.res} className="glass-panel hud-cut-sm flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 text-sm">
               <span className="flex min-w-[9rem] items-center gap-2 text-slate-100">
                 <ResourceIcon id={l.res} /> {nameOf(l.res)}
+                {/* 6.14.143 (PB-L2) : ressource prioritaire (entrepôt 5) et entrepôt orbital (entrepôt 20). */}
+                {shelterExtraHours(player, l.res) > 0 && (
+                  <span className="font-mono text-[11px] tabular-nums text-mint-glow" title={activeChoice(player, "storage.priority") === l.res ? "Ressource prioritaire de l'entrepôt" : "Entrepôt orbital"}>
+                    {ECONOMY_RULES.protectedHours + shelterExtraHours(player, l.res)} h
+                  </span>
+                )}
               </span>
               <span className="text-mint-glow">
                 à l'abri <span className="font-mono tabular-nums">{formatCompact(Math.min(l.stock, shown))}</span>

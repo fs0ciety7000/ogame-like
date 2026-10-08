@@ -9,6 +9,8 @@ import { effectTotal } from "@/game/effects";
 import { allEffects } from "@/game/modifiers";
 import type { NewNotification } from "@/game/flush";
 import { GameActionError } from "@/game/errors";
+import { firstAidSeconds, freeRushAllowance, workshopClassFactor } from "@/game/buildingTiers";
+import { parisDay } from "@/game/retention";
 import type { PlayerState, ResourceId, Units } from "@/types/game";
 
 /* =====================================================
@@ -82,6 +84,8 @@ export interface PlayerWorkshop {
   priority?: DockPriority;
   /** 5.28 : dernier démantèlement automatique (affiché dans la Cale sèche). */
   lastScrap?: { atMs: number; units: Record<string, number>; refund: { scrap: number; energy: number } } | null;
+  /** 6.14.144 (PB-L3, palier 20 de l'Atelier) : accélérations gratuites utilisées, par jour de Paris. */
+  freeRush?: { day: string; used: number } | null;
 }
 
 const ATELIER_ID = "atelier_reparation";
@@ -105,6 +109,7 @@ export function workshopState(player: Pick<PlayerState, "workshop">): PlayerWork
   if (w?.policy && POLICIES.includes(w.policy) && w.policy !== "repair") out.policy = w.policy;
   if (w?.priority && PRIORITIES.includes(w.priority) && w.priority !== "arrival") out.priority = w.priority;
   if (w?.lastScrap && typeof w.lastScrap === "object") out.lastScrap = w.lastScrap;
+  if (w?.freeRush && typeof w.freeRush === "object" && typeof w.freeRush.day === "string") out.freeRush = { day: w.freeRush.day, used: Math.max(0, Math.floor(Number(w.freeRush.used) || 0)) };
   return out;
 }
 
@@ -506,20 +511,18 @@ export function advanceWorkshop(player: PlayerState, now: number, instant = fals
   }
   const st = workshopState(player);
   const since = st.updatedAtMs || now;
-  let budget = instant ? Infinity : Math.max(0, (now - since) / 1000) * workshopRate(player);
+  const rate = workshopRate(player);
+  let budget = instant ? Infinity : Math.max(0, (now - since) / 1000) * rate;
   st.updatedAtMs = now;
   orderJobs(st, player);
   const capacity = dockCapacity(player, now);
   const done: Record<string, number> = {};
   const docked: Record<string, number> = {};
-  while (st.jobs.length && budget > 0) {
-    const job = st.jobs[0];
-    const spend = Math.min(budget, job.hpLeft);
-    job.hpLeft -= spend;
-    budget -= spend;
-    if (job.hpLeft > 0.5) break;
-    finishJob(player, st, job, capacity, done, docked);
-  }
+  const factorOf = jobFactors(player);
+  // 6.14.144 (PB-L3) : premiers soins (palier 10) avant et après le temps écoulé.
+  firstAid(player, st, rate, factorOf, capacity, done, docked);
+  budget = spendOnJobs(player, st, budget, factorOf, capacity, done, docked);
+  firstAid(player, st, rate, factorOf, capacity, done, docked);
   // Puis les coques abîmées, les plus atteintes d'abord.
   const hullIds = Object.keys(st.hull).sort((a, b) => (st.hull[b] ?? 0) - (st.hull[a] ?? 0));
   for (const id of hullIds) {
@@ -539,6 +542,38 @@ export function advanceWorkshop(player: PlayerState, now: number, instant = fals
   // 5.26.1 : succès « unités réparées ».
   bumpStat(player, "unitsRepaired", Object.values(done).reduce((a, b) => a + b, 0) + Object.values(docked).reduce((a, b) => a + b, 0));
   return repairNotes(done, docked, now);
+}
+
+/** 6.14.144 (PB-L3, palier 15) : multiplicateur de cadence de chaque lot (classe choisie à l'Atelier spécialisé, sinon 1). */
+function jobFactors(player: PlayerState): (job: WorkshopJob) => number {
+  const classes = unitClasses();
+  return (job) => workshopClassFactor(player, classes[job.unitId]);
+}
+
+/** Dépense un budget de PV sur la file, dans l'ordre (classe choisie : ses PV coûtent moins de budget). Rend le budget restant. */
+function spendOnJobs(player: PlayerState, st: PlayerWorkshop, budgetIn: number, factorOf: (job: WorkshopJob) => number, capacity: number, done: Record<string, number>, docked: Record<string, number>): number {
+  let budget = budgetIn;
+  while (st.jobs.length && budget > 0) {
+    const job = st.jobs[0];
+    const f = Math.max(1, factorOf(job));
+    const spend = Math.min(budget, job.hpLeft / f);
+    job.hpLeft -= spend * f;
+    budget -= spend;
+    if (job.hpLeft > 0.5) break;
+    finishJob(player, st, job, capacity, done, docked);
+  }
+  return budget;
+}
+
+/** 6.14.144 (PB-L3, palier 10, « Premiers soins ») : un lot dont la réparation restante tient sous le seuil rentre aussitôt. */
+function firstAid(player: PlayerState, st: PlayerWorkshop, rate: number, factorOf: (job: WorkshopJob) => number, capacity: number, done: Record<string, number>, docked: Record<string, number>): void {
+  const limit = firstAidSeconds(player.buildings);
+  if (!(limit > 0) || !(rate > 0)) return;
+  for (const job of [...st.jobs]) {
+    if (job.hpLeft / (rate * Math.max(1, factorOf(job))) > limit) continue;
+    job.hpLeft = 0;
+    finishJob(player, st, job, capacity, done, docked);
+  }
 }
 
 /** Lot terminé : la part posée en Cale sèche devient « prête », le reste rentre au hangar (il y avait sa place). */
@@ -577,13 +612,17 @@ export interface WorkshopEta {
 export function workshopEta(player: PlayerState, now: number): WorkshopEta {
   const st = workshopState(player);
   const rate = workshopRate(player);
-  // Avance déjà acquise depuis la dernière mise à jour.
+  // Avance déjà acquise depuis la dernière mise à jour (en budget : PV de cadence).
   let carry = Math.max(0, (now - (st.updatedAtMs || now)) / 1000) * rate;
   let t = now;
+  // 6.14.144 (PB-L3) : classe choisie réparée plus vite (palier 15), premiers soins (palier 10).
+  const factorOf = jobFactors(player);
+  const aid = firstAidSeconds(player.buildings);
   const jobs = st.jobs.map((job) => {
-    const left = Math.max(0, job.hpLeft - carry);
-    carry = Math.max(0, carry - job.hpLeft);
-    t += (left / rate) * 1000;
+    const need = job.hpLeft / Math.max(1, factorOf(job));
+    const left = Math.max(0, need - carry);
+    carry = Math.max(0, carry - need);
+    if (!(aid > 0 && left / rate <= aid)) t += (left / rate) * 1000;
     return { job, endsAtMs: t };
   });
   const hullLeft = Math.max(0, Object.entries(st.hull).reduce((s, [id, hp]) => s + ((player.units[id]?.count ?? 0) > 0 ? hp : 0), 0) - carry);
@@ -636,7 +675,9 @@ export function workshopView(player: PlayerState, now: number): WorkshopView {
 export function workshopRushCost(player: RatePlayer & Pick<PlayerState, "workshop">, jobId?: string): { amber: number; seconds: number; jobs: WorkshopJob[] } {
   const st = workshopState(player);
   const jobs = jobId ? st.jobs.filter((j) => j.id === jobId) : st.jobs;
-  const hp = jobs.reduce((a, j) => a + Math.max(0, j.hpLeft), 0);
+  // 6.14.144 (PB-L3) : la classe choisie à l'Atelier spécialisé coûte moins de temps, donc moins d'Ambre.
+  const classes = unitClasses();
+  const hp = jobs.reduce((a, j) => a + Math.max(0, j.hpLeft) / Math.max(1, workshopClassFactor(player, classes[j.unitId])), 0);
   const seconds = Math.ceil(hp / Math.max(0.01, workshopRate(player)));
   const amber = jobs.length ? Math.max(1, Math.ceil(seconds / Math.max(1, COMBAT_RULES.workshopRushSecondsPerAmber))) : 0;
   return { amber, seconds, jobs };
@@ -660,4 +701,42 @@ export function rushWorkshop<W extends { amber: number }>(player: PlayerState, j
   player.workshop = st;
   bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0) + Object.values(ready).reduce((a, b) => a + b, 0));
   return { amber, units, ready };
+}
+
+/* ---------- 6.14.144 (PB-L3, palier 20 de l'Atelier) : réparation d'urgence gratuite ---------- */
+
+/** Accélérations gratuites restantes aujourd'hui (jour de Paris) et durée offerte par accélération. */
+export function workshopFreeRushLeft(player: Pick<PlayerState, "buildings" | "workshop">, now: number): { left: number; perDay: number; seconds: number } {
+  const { perDay, seconds } = freeRushAllowance(player.buildings);
+  if (!(perDay > 0) || !(seconds > 0)) return { left: 0, perDay, seconds };
+  const fr = workshopState(player).freeRush;
+  const used = fr && fr.day === parisDay(now) ? fr.used : 0;
+  return { left: Math.max(0, perDay - used), perDay, seconds };
+}
+
+/**
+ * Action serveur `workshopFreeRush` : avance la file de l'Atelier de `workshopFreeRushSeconds` de réparation, sans Ambre, une fois
+ * par jour (réglable). Les lots terminés rentrent comme d'habitude (prêts en Cale sèche ou au hangar, où ils avaient leur place) ;
+ * le reste du budget répare les coques. Rien n'est créé : les unités viennent de la file (I3, I4).
+ */
+export function freeRushWorkshop(player: PlayerState, now: number): { seconds: number; units: Record<string, number>; ready: Record<string, number>; left: number } {
+  const allow = workshopFreeRushLeft(player, now);
+  if (!(allow.perDay > 0) || !(allow.seconds > 0)) throw new GameActionError("La réparation d'urgence gratuite s'ouvre au palier Signature de l'Atelier de réparation.");
+  if (allow.left <= 0) throw new GameActionError("Réparation d'urgence déjà utilisée aujourd'hui : la prochaine est offerte demain.");
+  const st = workshopState(player);
+  if (!st.jobs.length) throw new GameActionError("Aucune unité à l'Atelier.");
+  const rate = workshopRate(player);
+  const capacity = dockCapacity(player, now);
+  const units: Record<string, number> = {};
+  const ready: Record<string, number> = {};
+  const factorOf = jobFactors(player);
+  orderJobs(st, player);
+  spendOnJobs(player, st, allow.seconds * rate, factorOf, capacity, units, ready);
+  firstAid(player, st, rate, factorOf, capacity, units, ready);
+  const day = parisDay(now);
+  st.freeRush = { day, used: (st.freeRush && st.freeRush.day === day ? st.freeRush.used : 0) + 1 };
+  if (!st.updatedAtMs) st.updatedAtMs = now;
+  player.workshop = st;
+  bumpStat(player, "unitsRepaired", Object.values(units).reduce((a, b) => a + b, 0) + Object.values(ready).reduce((a, b) => a + b, 0));
+  return { seconds: allow.seconds, units, ready, left: allow.left - 1 };
 }

@@ -3,7 +3,7 @@ import { upgradeMoon } from "@/game/moonUpgrade";
 import { assertEliteBuildable } from "@/game/eliteUnits";
 import { assertClassUnitBuildable } from "@/game/classUnits";
 import { playerModifiers } from "@/game/modifiers";
-import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
+import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, freeRushWorkshop, rushWorkshop, setDockSettings, workshopHangarUnits } from "@/game/workshop";
 import { autoCommission, commissionDocked, hangarLoad } from "@/game/hangar";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
@@ -60,6 +60,7 @@ import { addPlanned, buildSlotBlocker, removePlanned } from "@/game/buildPlan";
 import { beginPrestige, prestigeStartCost } from "@/game/prestige";
 import type { BattleReport, PlayerState, QueuesState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
+import { exchangeTaxCut, setBuildingChoice } from "@/game/buildingTiers";
 import { spendAmber, spendResources } from "@/game/spending";
 
 /* =====================================================
@@ -77,6 +78,8 @@ export type GameAction =
   | { type: "dockCommission"; unitId?: string }
   | { type: "dockScrap"; unitId: string; qty: number }
   | { type: "dockSettings"; policy?: string; priority?: string }
+  | { type: "workshopFreeRush" }
+  | { type: "buildingChoice"; slot: string; value: string }
   | { type: "chronicleClaim"; episode: number }
   | { type: "dailyClaim"; index: number }
   | { type: "cancel"; target: CancelTarget }
@@ -357,7 +360,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const amount = positiveInt(action.amount, "Montant");
       if ((player.resources[sellId] ?? 0) < amount) throw new GameActionError("Pas assez de ressources à échanger.");
       // 5.26.1 : taxe sur ce qui est reçu, versée au pot commun par le serveur.
-      const quote = tradeQuote(sellId, buyId, amount);
+      // 6.14.143 (PB-L2) : Négoce (palier 15 de l'entrepôt) : taxe du comptoir réduite.
+      const quote = tradeQuote(sellId, buyId, amount, exchangeTaxCut(player));
       if (quote.net <= 0) throw new GameActionError("Quantité trop faible pour cet échange.");
       // 6.14.106 (AE-L3, Q98) : plafond hebdomadaire des rares reçues contre des communes (le serveur fait autorité).
       const rareTrade = isCommonToRare(sellId, buyId);
@@ -647,6 +651,14 @@ function applyAction(s: ActionState, action: GameAction): unknown {
     case "workshopRush":
       // 5.21 : terminer un lot de réparation (ou toute la file) contre de l'Ambre.
       return rushWorkshop(player, typeof action.jobId === "string" && action.jobId ? action.jobId : undefined, now, bountyState, (p, w) => (p.bounties = w));
+
+    case "workshopFreeRush":
+      // 6.14.144 (PB-L3, palier 20 de l'Atelier) : réparation d'urgence gratuite, une fois par jour.
+      return freeRushWorkshop(player, now);
+
+    case "buildingChoice":
+      // 6.14.142 (PB-L1) : choix d'un palier de bâtiment (palier atteint, option connue, un changement par 24 h ; le premier est libre).
+      return setBuildingChoice(player, action.slot, action.value, now);
 
     case "dockCommission": {
       // 5.28 : remettre en service les vaisseaux prêts de la Cale sèche (places libres du hangar).

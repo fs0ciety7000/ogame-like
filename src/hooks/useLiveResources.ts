@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { advanceResources, economySnapshot } from "@/game/economy";
+import { advanceEconomy, economySnapshot } from "@/game/economy";
 import type { PlayerState, Resources } from "@/types/game";
 
 /** Ressources affichées côté client, incrémentées en douceur chaque seconde
@@ -15,8 +15,8 @@ export function useLiveResources(player: PlayerState | null): Resources | null {
 
     const baseAt = player.resourcesUpdatedAtMs;
 
-    // Même calcul que le serveur : plafond de l'entrepôt, entretien, panne.
-    const tick = () => setDisplay(advanceResources(player, (Date.now() - baseAt) / 1000, baseAt));
+    // Même calcul que le serveur : plafond de l'entrepôt, entretien, panne ; 6.14.143 : tampon de l'entrepôt (palier 10).
+    const tick = () => setDisplay(advanceEconomy(player, (Date.now() - baseAt) / 1000, baseAt).resources);
 
     tick();
     const id = setInterval(tick, 1000);

@@ -417,6 +417,20 @@
         "required": false,
         "maxSize": 1000,
         "presentable": false
+      },
+      {
+        "name": "buildingChoices",
+        "type": "json",
+        "required": false,
+        "maxSize": 2000,
+        "presentable": false
+      },
+      {
+        "name": "storageBuffer",
+        "type": "json",
+        "required": false,
+        "maxSize": 1000,
+        "presentable": false
       }
     ],
     "indexes": [

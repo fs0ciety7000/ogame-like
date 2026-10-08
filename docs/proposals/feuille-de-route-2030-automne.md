@@ -82,10 +82,10 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 60 | AC-H | Ménage, boutons « Lancer maintenant », test « tour des actions » | M | livré (6.14.135, `docs/changes/6.14.135-menage-tour-actions.md`) |
 | 62 | AA9 | Talents, modules, catalogues en sections de contenu | L | livré (6.14.127 et 6.14.128 ; `docs/changes/6.14.127-talents-modules.md`, `docs/changes/6.14.128-catalogue-passe.md`) |
 | 63 | AJ27-12 | Paliers des bâtiments (proposition, `docs/proposals/paliers-batiments.md`, questions PB-Q1 à PB-Q8) | L | livré (6.14.134, proposition ; lots à valider) |
-| 63a | PB-L0 | Paliers des bâtiments : règle n° 4 réécrite (bâtiments de système, bâtiments de courbe) dans le GDD, `WORKFLOW.md` et les fiches (`docs/proposals/paliers-batiments.md`, Q336) | S | à faire |
-| 63b | PB-L1 | Paliers : groupe `buildingTiers` et section d'admin, source d'effets « bâtiment », choix du joueur (24 h), ligne « Paliers » des cartes, invariant | M | à faire |
-| 63c | PB-L2 | Paliers de l'entrepôt (ressource prioritaire, tampon de 2 h, Négoce ou Convoi, abri de 12 h) | M | à faire |
-| 63d | PB-L3 | Paliers de l'Atelier (Cale sèche affichée, réparation éclair, classe spécialisée, accélération de 2 h par jour) | M | à faire |
+| 63a | PB-L0 | Paliers des bâtiments : règle n° 4 réécrite (bâtiments de système, bâtiments de courbe) dans le GDD, `WORKFLOW.md` et les fiches (`docs/proposals/paliers-batiments.md`, Q336) | S | livré (6.14.141) |
+| 63b | PB-L1 | Paliers : groupe `buildingTiers` et section d'admin, source d'effets « bâtiment », choix du joueur (24 h), ligne « Paliers » des cartes, invariant | M | livré (6.14.142) |
+| 63c | PB-L2 | Paliers de l'entrepôt (ressource prioritaire, tampon de 2 h, Négoce ou Convoi, abri de 12 h) | M | livré (6.14.143) |
+| 63d | PB-L3 | Paliers de l'Atelier (Cale sèche affichée, réparation éclair, classe spécialisée, accélération de 2 h par jour) | M | livré (6.14.144) |
 | 63e | PB-L4 | Paliers des hangars (baies modulaires, file d'attente et I2 réécrit, spécialisations, signatures ; mesure JcJ) | L | à faire |
 | 63f | PB-L5 | Paliers : chaîne de contenu (succès « Architecte » et « Bâtisseur avisé », Codex, Formules, Ctrl+K, changelog, billet, images) | S | à faire |
 | 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |

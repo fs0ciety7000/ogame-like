@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.140 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.144 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 205 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 209 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -241,6 +241,10 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.138 : Illustrations de saison : thèmes d'année, portraits, seconds boss (AP-L11) (`docs/changes/6.14.138-illustrations-saison.md`)
 - 6.14.139 : Catalogue des saisons au-delà de 36 mois : saisons générées (AP-L12) (`docs/changes/6.14.139-catalogue-prolonge.md`)
 - 6.14.140 : Outil `procedural-sim.mjs` : simulation des générateurs (AP-L14) (`docs/changes/6.14.140-procedural-sim.md`)
+- 6.14.141 : Règle n° 4 réécrite : bâtiments de système à paliers, bâtiments de courbe à jalons (PB-L0) (`docs/changes/6.14.141-regle-paliers.md`)
+- 6.14.142 : Paliers des bâtiments : moteur commun, choix du joueur et ligne « Paliers » (PB-L1) (`docs/changes/6.14.142-paliers-moteur.md`)
+- 6.14.143 : Paliers de l'Entrepôt : ressource prioritaire, tampon, Négoce ou Convoi, entrepôt orbital (PB-L2) (`docs/changes/6.14.143-paliers-entrepot.md`)
+- 6.14.144 : Paliers de l'Atelier : Cale sèche affichée, premiers soins, classe spécialisée, réparation d'urgence (PB-L3) (`docs/changes/6.14.144-paliers-atelier.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

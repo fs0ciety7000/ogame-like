@@ -67,7 +67,9 @@ Références habituelles :
 ### 4.1 Courbes
 
 - **Coût** : géométrique, `base × croissance^(niveau−1)`, plafonné par `maxCost` (déjà le format des bâtiments).
-- **Effet** : linéaire par niveau, avec **paliers** qualitatifs aux niveaux 5, 10, 15, 20 (format `bonusFromLevel` / `tier2`).
+- **Effet** : linéaire par niveau. Un bâtiment **de système** (capacité ou service) ajoute des **paliers** qualitatifs aux niveaux 5, 10,
+  15, 20 (§4.2, réglables : groupe `buildingTiers`) ; un bâtiment **de courbe** (production, bouclier, capsules) n'a que des **jalons**
+  (image, succès, Codex), jamais un bond de production : sa courbe porte l'équilibre d'I29 (GDD §5, règle n° 4, réécrite en 6.14.141).
 - **Temps** : `secondsPerLevel × niveau`, réduit par les bonus ; viser 5 min (niv. 1), environ 2 h (niv. 10), environ 1 j (niv. 20).
 - Vérifier chaque courbe dans le simulateur admin (« et si ») et l'historique d'équilibrage avant de fixer les chiffres.
 - Un lot qui touche un générateur (Chroniques, passe, catalogue des saisons, saga d'alliance, mutateurs) lance
@@ -77,13 +79,33 @@ Références habituelles :
 
 ### 4.2 Paliers (modèle)
 
+Deux familles de bâtiments (6.14.141, `docs/proposals/paliers-batiments.md`) :
+
+- **Bâtiments de système** (une capacité ou un service) : un effet nouveau à chaque palier, selon le modèle ci-dessous. Aujourd'hui :
+  entrepôt, Atelier de réparation, Cale sèche, Fonderie quantique (chantiers en plus aux niveaux 5 et 10) ; les hangars arrivent au lot
+  PB-L4. Un bâtiment à 10 niveaux a ses paliers aux niveaux 5 et 10.
+- **Bâtiments de courbe** (production : extracteurs ; bouclier ; capsules) : la courbe seule, et des **jalons** aux mêmes niveaux (image
+  du palier, `tierImages` ; succès « Maître » au niveau 20 ; Codex). Pas d'effet de palier sur la production : elle est calée par I29.
+
 | Niveau | Rôle du palier | Exemple |
 |:--|:--|:--|
 | 1 | le système existe, version minimale | la cale sèche accueille les vaisseaux sauvés |
-| 5 | premier **choix** donné au joueur | trier : réparer ou démanteler |
-| 10 | **confort** (automatisme, file) | remise en service automatique, deuxième poste |
-| 15 | **spécialisation** | priorité par classe, cocon |
-| 20 | **signature** visible (prestige, effet fort) | cale orbitale : +sauvetage |
+| 5 | premier **choix** donné au joueur | trier : réparer ou démanteler ; ressource prioritaire de l'entrepôt |
+| 10 | **confort** (automatisme, file) | remise en service automatique ; tampon de l'entrepôt ; premiers soins de l'Atelier |
+| 15 | **spécialisation** (un choix entre deux voies) | priorité par classe ; Négoce ou Convoi ; classe de l'Atelier |
+| 20 | **signature** visible (prestige, effet fort) | cale orbitale : +sauvetage ; entrepôt orbital ; réparation d'urgence quotidienne |
+
+Règles d'écriture d'un palier :
+
+- chaque chiffre est un réglage du groupe `buildingTiers` (registre des règles, section « Bâtiments : paliers » de l'admin), niveaux compris ;
+- un palier vient du **niveau effectif** (bâtiment débloqué) ; un palier atteint par un chantier compte à la fin du chantier ;
+- un choix (palier 5 ou 15) se fait sur la carte du bâtiment une fois le palier atteint (rien dans la barre latérale), le premier est
+  libre, puis un changement gratuit par `choiceCooldownHours` (24 h) ; sans choix, le palier n'a pas d'effet (« à choisir ») ;
+- un palier chiffré passe par la source « bâtiment » du circuit d'effets (`buildingTierEffects`) ou par un lecteur de `buildingTiers.ts`,
+  et reste sous les plafonds (invariant I46) ;
+- un bâtiment remis au niveau 1 à l'Ascension (entrepôt, Atelier) rejoue ses paliers ; ses choix restent enregistrés et reprennent effet
+  au palier ;
+- aucune migration : un joueur déjà au-dessus d'un palier le reçoit au déploiement.
 
 ### 4.3 Chaîne de déblocage
 

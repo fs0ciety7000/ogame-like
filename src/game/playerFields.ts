@@ -54,6 +54,9 @@ export const GAME_FIELDS = [
   "prestige",
   // 6.14.106 (AE-L3) : compteur hebdomadaire du comptoir.
   "exchangeWeek",
+  // 6.14.142 (PB-L1) : choix des paliers de bâtiments ; 6.14.143 (PB-L2) : tampon de l'entrepôt.
+  "buildingChoices",
+  "storageBuffer",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"] as const;

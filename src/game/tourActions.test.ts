@@ -215,7 +215,8 @@ const SCENARIOS: Record<string, Scenario> = {
   },
   dailyClaim: { action: { type: "dailyClaim", index: 0 }, refused: { match: /Mission inconnue/, why: "missions du jour fusionnées dans les objectifs du jour depuis 6.2 (`DAILY_RULES.tasks` = 0) : refus propre vérifié" } },
   cancel: { prep: (p, q) => play(p, q, { type: "upgradeBuilding", buildingId: "extracteur_ferraille" }), action: { type: "cancel", target: { kind: "building", id: "extracteur_ferraille" } } },
-  workshopRush: { prep: (p) => sendToWorkshop(p, { chasseur: 3 }, NOW, "raid", true), action: { type: "workshopRush" } },
+  // 6.14.144 (PB-L3) : lots assez gros pour échapper aux premiers soins de l'Atelier (palier 10, fiche riche).
+  workshopRush: { prep: (p) => bigWorkshopLot(p), action: { type: "workshopRush" } },
   dockCommission: {
     prep: (p) => {
       // Cale sèche sous le palier de remise automatique : les vaisseaux prêts attendent le bouton.
@@ -226,10 +227,29 @@ const SCENARIOS: Record<string, Scenario> = {
     },
     action: { type: "dockCommission" },
   },
-  dockScrap: { prep: (p) => sendToWorkshop(p, { chasseur: 3 }, NOW, "raid", true), action: { type: "dockScrap", unitId: "chasseur", qty: 1 } },
+  dockScrap: { prep: (p) => bigWorkshopLot(p), action: { type: "dockScrap", unitId: "chasseur", qty: 1 } },
   dockSettings: { action: { type: "dockSettings", policy: "repair" } },
+  // 6.14.142 (PB-L1) : choix d'un palier (entrepôt 5 : ressource prioritaire).
+  buildingChoice: {
+    prep: (p) => (p.buildings.entrepot = { level: 5, unlocked: true }),
+    action: { type: "buildingChoice", slot: "storage.priority", value: "nano" },
+  },
+  // 6.14.144 (PB-L3) : réparation d'urgence gratuite (Atelier 20).
+  workshopFreeRush: {
+    prep: (p) => {
+      p.buildings.atelier_reparation = { level: 20, unlocked: true };
+      bigWorkshopLot(p);
+    },
+    action: { type: "workshopFreeRush" },
+  },
   vacationEnd: { prep: (p) => (p.vacation = { startedAtMs: NOW - 3 * 86_400_000, untilMs: NOW + 4 * 86_400_000 } as unknown as PlayerState["vacation"]), action: { type: "vacationEnd" } },
 };
+
+/** 6.14.144 (PB-L3) : lot de réparation plus long que les premiers soins (palier 10 de l'Atelier) : il reste en file. */
+function bigWorkshopLot(p: PlayerState): void {
+  p.units.chasseur = { level: 1, count: 50_000 };
+  sendToWorkshop(p, { chasseur: 50_000 }, NOW, "raid", true);
+}
 
 /** Ressources qui sortent sans être une dépense (6.14.110 : transferts hors `spendResources`). */
 const TRANSFERS: Record<string, string> = {

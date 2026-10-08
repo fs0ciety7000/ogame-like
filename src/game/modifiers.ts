@@ -9,6 +9,7 @@ import { moonEffects } from "@/game/moon";
 import { synthesisEffects } from "@/game/synthesis";
 import { allianceEffectGrants, allianceEmpireEffects } from "@/game/alliances";
 import { techEffectGrants } from "@/game/technologies";
+import { buildingTierEffects } from "@/game/buildingTiers";
 import { effectSheet, effectTotal, rawEffectTotal, type EffectGrant, type EffectScope, type EffectSheetLine } from "@/game/effects";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -55,7 +56,7 @@ export interface Modifiers {
   jumpGateCooldown: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass" | "moon" | "allianceResearch">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass" | "moon" | "allianceResearch" | "buildings" | "buildingChoices">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
@@ -81,6 +82,8 @@ export function empireEffects(player: ModPlayer | null | undefined, now: number 
     ...mutatorEffects(now),
     // 6.14.124 (AA6, AA-15) : recherches et projets d'alliance dont l'effet n'a pas de calcul d'alliance propre (soute, butin…).
     ...allianceEmpireEffects(player.allianceResearch),
+    // 6.14.142 (PB-L1) : paliers des bâtiments de système (Entrepôt 15 : Convoi), niveau effectif et choix du joueur (I46).
+    ...buildingTierEffects(player),
   ];
 }
 

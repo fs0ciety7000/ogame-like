@@ -94,6 +94,7 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 | I43 | Talents, modules et catalogue du passe en sections de contenu (6.14.127 et 6.14.128) : un talent donne ses effets composés (grandeur × cible × portée), valeur par rang × rang (couche empire, source « talent ») ; un module donne l'effet de sa famille (grandeur, valeur par rareté ; une grandeur qui vise des unités vise la classe où il est monté), jamais un effet lié à l'identifiant ; un talent, une famille ou un modèle **enregistré ne se supprime pas** (garde du serveur : on le retire, `retired`) et un élément livré absent revient à la fusion ; un talent retiré ne s'apprend plus, un modèle retiré ne sort plus au tirage, les rangs, plans et modules déjà détenus gardent leur effet ; sans section enregistrée, les anciens réglages `talents.perRank` et `modules.familyValues` donnent les valeurs (migrations `talents-section-6.14.127`, `module-families-6.14.127`) ; la rotation mensuelle suit l'ordre de `passThemes` (thèmes retirés exclus), cycle = thèmes × années, chaque thème en rotation a une saison par année (`seasonCatalog`) ; un passe écrit garde sa copie du thème (bannière d'un passe terminé comprise). 6.14.133 (AJ27-10) : seul le plan « signature » (`sig_<unité>`, modèle généré depuis son unité) vise une unité ; il se résout toujours, même unité retirée ou plans coupés (il reste dans l'inventaire, sans effet sans unité) | `talents.ts`, `modules.ts`, `seasonCatalog.ts`, `passSeasons.ts`, `content.ts` (`NO_REMOVAL_SECTIONS`, `contentSectionErrors`) | `sectionsTalentsModules.test.ts`, `catalogueSections.test.ts`, `contentMigrations.test.ts`, `porteursSignature6133.test.ts`, intégrations « 6.14.127 (AA9) », « 6.14.128 (AA9) » et « 6.14.131 à 6.14.133 » |
 | I44 | Mutateurs sans répétition (6.14.136) : le mois d'un mutateur est le mois de Paris (heure d'été et d'hiver, `parisOffsetMs`, comme les Chroniques) ; avant `mutators.noRepeatFrom` (2027-01), l'ancien tirage (jamais deux mois de suite) : un mois passé, en cours ou annoncé ne change pas ; ensuite, aucun mutateur des `noRepeatMonths` mois précédents (6, plafonné au nombre de mutateurs moins un ; mois imposés compris, « aucun » ne retient rien), ceux absents de la fenêtre de fraîcheur (`freshMonths`, 12) d'abord, l'ancien tirage gardé s'il reste permis ; déterministe (client et serveur d'accord) ; 12 mois glissants : 10 mutateurs distincts au moins avec la liste livrée | `mutators.ts` (`mutatorMonthId`, `mutatorFor`, `autoMutatorFor`) | `mutators.test.ts`, `listesSysteme.test.ts` |
 | I45 | Contenu généré frais (6.14.137 à 6.14.139) : les banques de textes (`narrative` : titres d'acte, accroches, répliques, lignes de héros, ordres, réserve de titres par faction) consomment l'aléa comme avant (un tirage par choix) : titre, boss, objectifs et récompenses d'un chapitre ne changent pas ; un texte lu dans les `narrative.noRepeatMonths` derniers mois écrits n'est repris que si tous ont servi ; la réserve d'une faction ne sert qu'une fois ses titres d'origine pris ; la n-ième réplique d'un jalon du passe sert l'année n du catalogue ; `GENERATOR_VERSION` inchangé : aucun mois écrit n'est régénéré (I17) ; au-delà du cycle écrit (36 mois livrés), une saison générée prolonge la saison écrite du même rang (`seasonGen`) : nom, commandant et paire de rôles jamais vus sur 8 tours, avant le cycle les saisons écrites à l'identique ; un passe écrit garde sa copie (I43) ; images de saison (année, second boss) prises seulement quand leur fichier est déclaré (`SEASON_THEME_ART`, `AUTO_ART_2`) | `narrative.ts`, `procedural.ts` (`textBanks`, `autoBossImage`), `passSeasons.ts` (`seasonThemeImage`), `seasonCatalog.ts` (`catalogEntryFor`, `generatedSeasonEntry`) | `varieteNarrative.test.ts`, `saisonsGenerees.test.ts`, `seasonCatalog.test.ts`, `illustrations.test.ts` |
+| I46 | Paliers des bâtiments de système (6.14.142 à 6.14.144, `docs/proposals/paliers-batiments.md`) : un effet de palier vient du niveau **effectif** (bâtiment débloqué) et, pour un palier à choix, du choix enregistré (`buildingChoices`) ; il passe par la source « bâtiment » du circuit d'effets (`buildingTierEffects`, couche empire : Convoi) ou par un lecteur de `buildingTiers.ts` (abri, tampon, taxe du comptoir, Atelier), et reste sous les plafonds (abri ≤ règle de capacité, taxe ≥ 0, soute en couche empire) ; un choix change au plus une fois par `choiceCooldownHours` (le premier est libre) et seulement palier atteint ; aucun changement de choix ni de réglage ne détruit d'unité ni de ressource (tampon gardé versé même sans palier ni réglage ; lots de l'Atelier rendus comme d'habitude : prêts en Cale sèche ou au hangar où ils avaient leur place, I3, I4) ; le tampon de l'entrepôt est le même au serveur (rattrapage hors ligne) et au client, il n'est ni pillable ni compté en production perdue ; un bâtiment de courbe n'a que des jalons (aucun effet de palier sur la production, I29) ; aucune migration : les choix commencent vides | `buildingTiers.ts`, `economy.ts` (`advanceEconomy`, `protectedAmount`), `workshop.ts` (`firstAid`, `freeRushWorkshop`), `resources.ts` (`tradeQuote`), `modifiers.ts` (`empireEffects`) | `paliersBatiments.test.ts`, `storageRisk.test.ts`, `healthAeL4.test.ts`, `tourActions.test.ts`, `progressionSim.test.ts` (I29), intégration « 6.14.142 (PB-L1) », « 6.14.143 (PB-L2) », « 6.14.144 (PB-L3) » |
 
 ## 5. Règles de conception
 
@@ -102,7 +103,13 @@ Chaque invariant a (ou doit avoir) un test. Si une fonctionnalité doit en viole
 2. **Un état bloquant porte un compte à rebours ou une action.** « Atelier : 3 h 12 » ou « Réparer maintenant (40 Ambre) ».
 3. **Le joueur choisit ce qu'il perd.** Quand le moteur doit trancher (place manquante, ressource insuffisante), il propose un choix par défaut
    réglable plutôt que de détruire en silence.
-4. **Paliers lisibles.** Un bâtiment gagne un effet nouveau aux niveaux 5, 10, 15, 20 (voir `WORKFLOW.md` §4), pas seulement +x %.
+4. **Paliers lisibles** (réécrite en 6.14.141, `docs/proposals/paliers-batiments.md`, option D, Q336). Un bâtiment **de système** (une
+   capacité ou un service : entrepôt, Atelier de réparation, hangars, Cale sèche, Fonderie quantique, et tout bâtiment de système ajouté)
+   gagne un effet nouveau à chaque palier : niveaux 5, 10, 15 et 20 par défaut (5 et 10 pour un bâtiment à 10 niveaux), réglables dans
+   l'admin (`buildingTiers`). Rôle de chaque palier : **choix** (5), **confort** (10), **spécialisation** (15), **signature** (20)
+   (`WORKFLOW.md` §4.2). Un bâtiment **de courbe** (production : extracteurs, Fonderie et Synthétiseur pour leur production ; bouclier ;
+   capsules) suit sa courbe : ses paliers sont des **jalons** (image du palier, succès, Codex), jamais un bond de production (I29). Un
+   nouveau bâtiment déclare sa famille ; la carte de chaque bâtiment de système montre sa ligne « Paliers » (atteint, prochain, verrouillé).
 5. **Pas de double peine.** Une défaite coûte une fois : pertes OU immobilisation longue, pas les deux à pleine force.
 6. **Les migrations sont du game design.** Rendre 10 000 vaisseaux d'un coup change l'équilibre autant qu'un patch. Elles respectent les plafonds.
 
@@ -135,6 +142,7 @@ systèmes refondus récemment. Une fiche par système : rôle, règles, chiffres
 - Sauve une part des unités détruites (5 %/niv. jusqu'au 10, puis 2 %/niv. ; 70 % au niv. 20 ; plafond global 85 % avec les bonus, réglable : `combat.repairCap`).
 - Répare en PV/s : 30 au niv. 1, +25 %/niv. ; d'abord la file (lots), puis les coques. Accélérations : Nanoréparation, Mécanicien, Clé de soudure, Vaisseaux-ateliers, Ambre, Analgésique.
 - Un lot gardé au hangar rentre dès qu'il est réparé (il avait sa place). Un lot en Cale sèche devient « prêt ».
+- Paliers (6.14.144, §7.23) : Cale sèche ouverte (5), premiers soins (10), classe spécialisée (15), réparation d'urgence quotidienne (20).
 
 ### 7.3 Cale sèche (5.28, `cale_seche`)
 
@@ -574,6 +582,31 @@ Simulation : `node scripts/procedural-sim.mjs --months 48 --base avant-ap` (prof
 48/48, mutateurs distincts sur 12 mois glissants 7 → 10. Gardes : `mutators.test.ts` (I44), `varieteNarrative.test.ts`,
 `saisonsGenerees.test.ts`, `illustrations.test.ts` (I45).
 
+### 7.23 Paliers des bâtiments de système (6.14.141 à 6.14.144, `buildingTiers.ts`)
+
+Proposition validée `docs/proposals/paliers-batiments.md` (option D, Q336 à Q343), lots PB-L0 à PB-L3 ; hangars (PB-L4) et chaîne de
+contenu (PB-L5) à venir. Fiche du domaine : `docs/systems/batiments.md`. Règle n° 4 (§5) réécrite : bâtiments de système à paliers,
+bâtiments de courbe à jalons.
+
+| Palier | Entrepôt (repart au niv. 1 à l'Ascension) | Atelier de réparation (idem) |
+|:--|:--|:--|
+| 5 · Choix | ressource prioritaire : son abri passe de 8 h à 12 h de production | Cale sèche ouverte (prérequis de la Cale, affiché) |
+| 10 · Confort | tampon : 2 h de production en trop gardées, versées dès que la place se libère (serveur, hors ligne, client) | premiers soins : un lot de 15 min ou moins rentre aussitôt |
+| 15 · Spécialisation | au choix : Négoce (taxe du comptoir −2 points) ou Convoi (soute des flottes +10 %, circuit d'effets) | une classe choisie réparée 50 % plus vite |
+| 20 · Signature | entrepôt orbital : abri de 12 h pour les 4 ressources (16 h pour la prioritaire) | réparation d'urgence : 2 h offertes une fois par jour |
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Niveaux des paliers | entrepôt et Atelier 5, 10, 15, 20 ; Fonderie quantique 5, 10 (chantiers) ; Cale sèche : `dockTiers` | Règles → « Bâtiments : paliers » (`buildingTiers.storageLevels`, `repairLevels`, `foundrySlotLevels`) |
+| Changer un choix | premier choix libre, puis une fois par 24 h, gratuit, palier atteint | `choiceCooldownHours` |
+| Chiffres des effets | +4 h, 2 h, −0,02, +0,1, +4 h ; 900 s, +50 %, 1 par jour, 7 200 s | même section |
+| Ligne « Paliers » | carte de chaque bâtiment de système : atteint (vert), prochain (cyan), verrouillé (gris) ; choix sur la carte, palier atteint | — |
+
+Mesure d'I29 (`node scripts/progression-sim.mjs --base sans-paliers --apres-bascule --prestige --ascend --days 365`) : 1re Ascension
+inchangée (J91,5 / J103,3 / J132,8 / J121,8), production perdue 7,2 / 2,7 / 13,6 / 14,1 % → 7 / 2,5 / 12,6 / 13,9 % (actif, moyen,
+occasionnel, quotidien), jours sans dépense inchangés, pire mois de sessions bloquées inchangé sauf l'occasionnel 5 → 10 % (une
+session sur vingt ; borne 15 %). Aucune borne ne bouge. Garde : `paliersBatiments.test.ts` (I46).
+
 ## 8. Journal des audits
 
 | Date | Version | Constat | Suite |
@@ -729,3 +762,7 @@ Simulation : `node scripts/procedural-sim.mjs --months 48 --base avant-ap` (prof
 | 2026-10-08 | 6.14.138 | Lot AP-L11 (AU27, AP-7, AP-8) : 64 lignes d'illustration (24 thèmes d'année, 33 portraits, 7 seconds boss), images provisoires dans le code, le générateur choisit l'image de l'année et le second boss une fois branchés | `docs/changes/6.14.138-illustrations-saison.md`, `illustrations.test.ts` |
 | 2026-10-08 | 6.14.139 | Lot AP-L12 (AU27, AP-8, Q-AP5) : saisons générées au-delà du cycle écrit (nom, commandant, paire de rôles inédits), réglables, brouillons relus comme les autres ; I45 | `docs/changes/6.14.139-catalogue-prolonge.md`, `saisonsGenerees.test.ts` |
 | 2026-10-08 | 6.14.140 | Lot AP-L14 (AU27) : `scripts/procedural-sim.mjs` (Chroniques, passe, saga, mutateurs, catalogue sur N mois ; avant / après) ; constats : saga sur une autre faction que le chapitre 46/48 mois et titre répété d'un mois sur l'autre 10 fois sur 48 (AP-L6, plus tard) | `docs/changes/6.14.140-procedural-sim.md` |
+| 2026-10-08 | 6.14.141 | Lot PB-L0 (AJ-12, Q336) : règle n° 4 réécrite en deux familles (bâtiments de système à paliers d'effet, bâtiments de courbe à jalons) ; `WORKFLOW.md` §4.1 et §4.2, fiches systèmes | `docs/changes/6.14.141-regle-paliers.md` |
+| 2026-10-08 | 6.14.142 | Lot PB-L1 (AJ-12, Q342, Q343) : moteur commun des paliers (`buildingTiers` réglable, ancien `BUILD_SLOT_BONUS_LEVELS` compris), source « bâtiment » du circuit d'effets, choix du joueur (24 h), ligne « Paliers » des cartes ; invariant I46 | `docs/changes/6.14.142-paliers-moteur.md`, `paliersBatiments.test.ts` |
+| 2026-10-08 | 6.14.143 | Lot PB-L2 (Q337, Q338) : paliers de l'entrepôt (ressource prioritaire, tampon de 2 h, Négoce ou Convoi, entrepôt orbital) ; I29 mesuré, aucune borne ne bouge | `docs/changes/6.14.143-paliers-entrepot.md`, `paliersBatiments.test.ts`, `progressionSim.test.ts` |
+| 2026-10-08 | 6.14.144 | Lot PB-L3 (Q339) : paliers de l'Atelier (Cale sèche affichée, premiers soins, classe spécialisée, réparation d'urgence quotidienne) | `docs/changes/6.14.144-paliers-atelier.md`, `paliersBatiments.test.ts` |

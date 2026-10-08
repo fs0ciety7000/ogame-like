@@ -23,6 +23,7 @@ const SOURCE_TONE: Record<EffectSourceKind, HudTone> = {
   class: "gold",
   moon: "violet",
   alliance: "ember",
+  building: "accent",
 };
 
 const GROUPS: { id: EffectStatInfo["group"]; label: string }[] = [
