@@ -1,5 +1,5 @@
 import { defaultBuildings } from "@/game/buildings";
-import { currentSeasonId } from "@/game/seasons";
+import { currentSeasonId } from "@/game/seasonId";
 import type { PlayerState, QueuesState, Resources } from "@/types/game";
 
 export function defaultResources(): Resources {

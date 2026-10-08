@@ -1,4 +1,4 @@
-import { AscensionStars } from "@/components/game/AscensionCard";
+import { AscensionStars } from "@/components/game/AscensionStars";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
 import { HudChip, LevelTicks, StatTile, EmptyState } from "@/components/ui/hud";

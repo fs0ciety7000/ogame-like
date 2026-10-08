@@ -65,7 +65,9 @@ const median = (xs) => {
 };
 
 async function measure(browser, profile, path) {
-  const ctx = await browser.newContext({ viewport: profile.viewport });
+  // 6.14.157 (R4b) : build local servi en HTTP/2 (`https://127.0.0.1…`, certificat de test) : comme la pré-prod et la production,
+  // sans la file de 6 connexions du HTTP/1.1 qui pénalise un code découpé en nombreux fichiers.
+  const ctx = await browser.newContext({ viewport: profile.viewport, ignoreHTTPSErrors: /^https:\/\/(127\.0\.0\.1|localhost)[:/]/.test(FRONT) });
   await ctx.addInitScript((s) => {
     localStorage.setItem("cosmic-empires:theme", "constellation");
     if (location.pathname !== "/") localStorage.setItem("pocketbase_auth", s);
@@ -129,7 +131,9 @@ async function measure(browser, profile, path) {
   let ready = NaN;
   let tbtAtReady = NaN;
   try {
-    await page.locator("h1:visible, h2:visible").first().waitFor({ state: "visible", timeout: 60000 });
+    // 6.14.157 (R4b) : hors de la page statique d'`index.html` (lue par les robots), qui peut rester affichée après « load »
+    // quand le premier rendu attend la coque du jeu.
+    await page.waitForFunction(() => !document.querySelector("#root > main[style]") && [...document.querySelectorAll("h1, h2")].some((h) => h.getClientRects().length > 0 && getComputedStyle(h).visibility !== "hidden"), null, { timeout: 60000, polling: 50 });
     ready = Date.now() - t0;
     tbtAtReady = await page.evaluate(() => window.__perf.tbt);
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});

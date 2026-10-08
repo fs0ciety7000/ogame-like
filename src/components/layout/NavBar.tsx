@@ -1,5 +1,5 @@
 import { PlayerName } from "@/components/ui/player-name";
-import { AscensionStars } from "@/components/game/AscensionCard";
+import { AscensionStars } from "@/components/game/AscensionStars";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { isActive, type BossPhase } from "@/game/leviathan";
 import { useLeviathan } from "@/services/leviathanService";
@@ -35,7 +35,7 @@ import { useUnreadMessageCount } from "@/services/messageService";
 import { useGlobalUnreadCount } from "@/services/globalChatService";
 import { useAuthStore } from "@/store/authStore";
 import { useFleetStore } from "@/store/fleetStore";
-import { isHostile } from "@/components/game/FleetsPanel";
+import { isHostile } from "@/components/game/hostileFleets";
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { NAV_UNLOCK_RULES, navClosedPages, navCondition, navMarkId, navOpenPages, navPageMarked, navPagesOpenedByStep, navStatus, nextNavOpening, type NavContext, type NavNextOpening, type NavStatus } from "@/game/navUnlock";
 

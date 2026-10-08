@@ -1,4 +1,4 @@
-import { AscensionStars } from "@/components/game/AscensionCard";
+import { AscensionStars } from "@/components/game/AscensionStars";
 import { motion, useReducedMotion } from "framer-motion";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
 import { AnimatedNumber } from "@/components/ui/animated-number";

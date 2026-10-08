@@ -1,5 +1,4 @@
 import { PlayerName } from "@/components/ui/player-name";
-import { targetsPlayer } from "@/game/fleets";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CornerUpLeft, Crosshair, DoorOpen, FlaskConical, Package, Recycle, RotateCcw, Rocket, Satellite, Shield, Skull, Wind, Zap, type LucideIcon } from "lucide-react";
@@ -29,16 +28,7 @@ import { bountyState } from "@/game/bounties";
 import { usePlayerStore } from "@/store/playerStore";
 import { EmojiText, GameIcon } from "@/components/ui/game-icon";
 import { HudChip } from "@/components/ui/hud";
-
-/** Flotte hostile : une attaque d'un autre joueur, encore en approche. */
-export function isHostile(f: Fleet, uid: string | undefined): boolean {
-  return (
-    targetsPlayer(f, uid) &&
-    f.ownerUid !== uid &&
-    f.status === "outbound" &&
-    ((f.mission ?? "attack") === "attack" || f.mission === "pirate")
-  );
-}
+import { isHostile } from "@/components/game/hostileFleets";
 
 /** 6.14.82 (UX-9, AD-16) : icône lucide par mission (plus d'emoji, qui changeaient de rendu selon le système). */
 const FLEET_LABEL_ICON: Partial<Record<NonNullable<Fleet["mission"]>, LucideIcon>> = {
@@ -436,32 +426,5 @@ export function FleetsPanel({
       )}
       <PatrolDialog open={patrolOpen} onClose={() => setPatrolOpen(false)} />
     </Card>
-  );
-}
-
-/** Pastille de l'en-tête : flottes hostiles en approche. */
-export function HostileFleetAlert() {
-  useNowTicker();
-  const fleets = useFleetStore((s) => s.fleets);
-  const uid = useAuthStore((s) => s.user?.uid);
-  const [patrolOpen, setPatrolOpen] = useState(false);
-  const incoming = fleets.filter((f) => isHostile(f, uid));
-  if (incoming.length === 0) return null;
-  const next = Math.min(...incoming.map((f) => f.arriveAtMs));
-  return (
-    <div className="flex items-center gap-1">
-      <HudChip asChild tone="danger" alert title="Flottes hostiles en approche">
-        <Link to="/game/galaxie">
-          <AlertTriangle />
-          {incoming.length > 1 ? `${incoming.length} flottes hostiles` : "Flotte hostile"} · {formatClock(Math.max(0, Math.floor((next - Date.now()) / 1000)))}
-        </Link>
-      </HudChip>
-      <HudChip asChild tone="danger" title="Mode fuite : mettre la flotte à l'abri en patrouille">
-        <button type="button" onClick={() => setPatrolOpen(true)}>
-          <Wind /> Fuir
-        </button>
-      </HudChip>
-      <PatrolDialog open={patrolOpen} onClose={() => setPatrolOpen(false)} />
-    </div>
   );
 }

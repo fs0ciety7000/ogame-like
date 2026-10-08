@@ -28,3 +28,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
+| Q394 | Découpage du bloc d'entrée (coque du jeu à part) essayé, mesuré et non gardé : aucun gain sur Galaxie, Commerce et Alliance (le moteur entier est lu avant la page), FCP +0,4 s (`docs/changes/6.14.157-decoupage-entree.md`) | valider |
+| Q395 | Règle `manualChunks` de CLAUDE.md : permettre un bloc « moteur » limité à ce qu'atteint `content.ts` (déjà au démarrage) (`docs/changes/6.14.157-decoupage-entree.md`) | valider |
+| Q396 | Alerte de raid et passage de palier montés après la page (2 s au plus, rien de perdu) (`docs/changes/6.14.157-decoupage-entree.md`) | valider |
+| Q397 | Suite R4c (L à XL) : objets de règles et catalogues par défaut en modules de données seules (casse le cycle de 53 modules), contenu appliqué par section, puis coque à part ; estimé −1 à −1,5 s sur mobile (`docs/changes/6.14.157-decoupage-entree.md`) | valider |

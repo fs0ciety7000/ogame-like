@@ -7,7 +7,7 @@ import { AlertTriangle, Orbit, ScanSearch, Wind, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
 import { PatrolDialog } from "@/components/game/MissionDialogs";
-import { isHostile } from "@/components/game/FleetsPanel";
+import { isHostile } from "@/components/game/hostileFleets";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";

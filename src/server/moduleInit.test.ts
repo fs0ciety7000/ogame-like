@@ -12,7 +12,9 @@ import { build } from "esbuild";
  * Formules, officiers…), ces registres peuvent ne pas être prêts. Vitest charge les modules autrement que le navigateur et le
  * bundle des hooks : on empaquette ici avec esbuild (comme l'appli) en commençant par chaque module, puis on applique le contenu.
  */
-const ENTRIES = ["@/game/formulasRegistry", "@/game/paletteContent", "@/game/commanders", "@/game/units", "@/game/contentChain", "@/game/achievements"];
+// 6.14.157 (R4b) : points de départ ajoutés pour un découpage du bloc d'entrée (moteur chargé à part, essayé dans le lot) :
+// selon ce que la coque ou le contenu importe d'abord, le moteur commence par les saisons, la sauvegarde, l'économie ou les défauts.
+const ENTRIES = ["@/game/formulasRegistry", "@/game/paletteContent", "@/game/commanders", "@/game/units", "@/game/contentChain", "@/game/achievements", "@/game/seasons", "@/game/flush", "@/game/economy", "@/game/defaults"];
 
 describe("chargement du moteur quel que soit le premier module importé", () => {
   it.each(ENTRIES)("en commençant par %s", async (first) => {

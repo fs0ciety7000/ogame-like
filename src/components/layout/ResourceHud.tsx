@@ -8,7 +8,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { motion } from "framer-motion";
 import { useFxStore } from "@/store/fxStore";
 import { economySnapshot, productionBonuses } from "@/game/economy";
-import { HostileFleetAlert } from "@/components/game/FleetsPanel";
+import { HostileFleetAlert } from "@/components/game/hostileFleets";
 import { EventBadge } from "@/components/game/EventBanner";
 import { StreakBadge } from "@/components/game/StreakBadge";
 import { UltimatumBadge } from "@/components/game/PirateUltimatum";

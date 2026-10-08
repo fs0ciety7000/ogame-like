@@ -9,7 +9,7 @@ import { CockpitViewport, type ViewportFleet } from "@/components/cockpit/Cockpi
 import { useAgenda } from "@/components/game/AgendaCard";
 import { useHiddenRoutes } from "@/components/layout/NavBar";
 import { navPath } from "@/game/navUnlock";
-import { isHostile } from "@/components/game/FleetsPanel";
+import { isHostile } from "@/components/game/hostileFleets";
 import { usePlayerStore } from "@/store/playerStore";
 import { useFleetStore } from "@/store/fleetStore";
 import { useAuthStore } from "@/store/authStore";

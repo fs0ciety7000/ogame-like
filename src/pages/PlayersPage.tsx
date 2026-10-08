@@ -7,7 +7,7 @@ import { TitleBadge } from "@/components/game/TitleBadge";
 import { OnlineDot } from "@/components/ui/online-dot";
 import { PlayerName } from "@/components/ui/player-name";
 import { PlayerAvatar } from "@/components/ui/player-avatar";
-import { AscensionStars } from "@/components/game/AscensionCard";
+import { AscensionStars } from "@/components/game/AscensionStars";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { RankChip } from "@/components/game/LeaderboardPodium";

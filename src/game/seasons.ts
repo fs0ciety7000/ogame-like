@@ -9,25 +9,10 @@ import { GameActionError } from "@/game/errors";
 import type { PlayerState, PlayerTitle, QueuesState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
 
-const SEASON_MONTHS = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-
-/** Une saison = un mois calendaire (UTC, pour rester déterministe côté
- *  client quel que soit le fuseau horaire du joueur). Pas de Cloud
- *  Function ni de tâche planifiée : chaque client détecte lui-même le
- *  changement de saison à son prochain flush et réinitialise son propre
- *  compteur — cohérent avec le reste de l'architecture 100% client. */
-export function currentSeasonId(now: number = Date.now()): string {
-  const d = new Date(now);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-export function seasonLabel(seasonId: string): string {
-  const [year, month] = seasonId.split("-").map(Number);
-  return `${SEASON_MONTHS[(month ?? 1) - 1] ?? "?"} ${year ?? ""}`.trim();
-}
+// 6.14.157 (R4b) : identifiant et nom de la saison dans `seasonId.ts` (module sans import), lus par `defaults.ts`
+// (`playerService`) sans charger tout le moteur (`seasons` → `flush`).
+export { currentSeasonId, seasonLabel } from "@/game/seasonId";
+import { currentSeasonId, SEASON_MONTHS, seasonLabel } from "@/game/seasonId";
 
 /** Remet à zéro le compteur saisonnier si la saison a changé depuis le
  *  dernier flush de ce joueur — appelé à chaque flush, même sans gain
@@ -91,12 +76,10 @@ export const SEASON_RULES: {
   firstSeasonId: "2026-09",
 };
 
-const MONTHS_LOWER = SEASON_MONTHS.map((m) => m.toLowerCase());
-
 /** « du mois d'octobre 2026 », « du mois de novembre 2026 » (élision devant une voyelle). */
 export function seasonMonthPhrase(seasonId: string): string {
   const [year, month] = seasonId.split("-").map(Number);
-  const name = MONTHS_LOWER[(month ?? 1) - 1] ?? "?";
+  const name = SEASON_MONTHS[(month ?? 1) - 1]?.toLowerCase() ?? "?";
   return `${/^[aeiouyéè]/.test(name) ? "d'" : "de "}${name} ${year ?? ""}`.trim();
 }
 

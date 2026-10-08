@@ -22,12 +22,10 @@ import { Starfield } from "@/components/layout/Starfield";
 import { Nebula } from "@/components/layout/Nebula";
 import { BossLiveStrip, SeasonGlow } from "@/components/layout/SeasonGlow";
 import { Snowfall } from "@/components/fx/Snowfall";
-import { TierUpOverlay } from "@/components/fx/TierUpOverlay";
 import { useAmbience } from "@/hooks/useAmbience";
 import { checkTierUps } from "@/store/tierUpStore";
 import { SchematicGrid } from "@/components/layout/SchematicGrid";
 import { NavBar, ALL_NAV_ITEMS } from "@/components/layout/NavBar";
-import { RaidAlert } from "@/components/game/RaidAlert";
 import { ResourceHud } from "@/components/layout/ResourceHud";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { fullscreenSupported, isFullscreen, toggleFullscreen } from "@/lib/fullscreen";
@@ -135,6 +133,10 @@ const SeasonReport = lazyPage(() => import("@/components/game/SeasonReport"), "S
 const AnnouncementDialog = lazyPage(() => import("@/components/game/Announcement"), "AnnouncementDialog");
 const CommandPalette = lazyPage(() => import("@/components/layout/CommandPalette"), "CommandPalette");
 const ShortcutsDialog = lazyPage(() => import("@/components/layout/ShortcutsDialog"), "ShortcutsDialog");
+// 6.14.157 (R4b) : alerte de raid (avec la fenêtre « Fuir ») et passage de palier, dans le même groupe différé : leur code ne
+// retarde plus la page ouverte. Ils lisent leur état dans leur magasin (flottes, paliers) : rien n'est perdu.
+const RaidAlert = lazyPage(() => import("@/components/game/RaidAlert"), "RaidAlert");
+const TierUpOverlay = lazyPage(() => import("@/components/fx/TierUpOverlay"), "TierUpOverlay");
 
 /** 6.14.152 (R4) : fenêtres rares (rang, retour d'absence, bilan, annonce, Ctrl+K, raccourcis) montées après le premier rendu
  *  de la page, au premier moment libre (2 s au plus) : leur code (≈ 25 Ko) ne dispute plus le réseau à la page ouverte au
@@ -243,7 +245,6 @@ export function AppShell() {
       <Nebula />
       <SeasonGlow />
       <Snowfall />
-      <TierUpOverlay />
       <Starfield count={80} />
       <NavBar />
 
@@ -338,7 +339,6 @@ export function AppShell() {
 
       <LazyCombatResult />
       <WarpOverlay />
-      <RaidAlert />
       <UltimatumDialog />
       {extrasOn && (
         <Suspense fallback={null}>
@@ -348,6 +348,8 @@ export function AppShell() {
           <AnnouncementDialog />
           <CommandPalette />
           <ShortcutsDialog />
+          <TierUpOverlay />
+          <RaidAlert />
         </Suspense>
       )}
       <FxLayer />

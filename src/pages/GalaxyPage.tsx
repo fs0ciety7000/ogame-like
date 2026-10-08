@@ -24,7 +24,7 @@ import { formatClock, formatCompact, formatDuration, formatNumber, timeAgo, form
 import { useAuthStore } from "@/store/authStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { ThreatGauge } from "@/components/game/ThreatGauge";
-import { isHostile } from "@/components/game/FleetsPanel";
+import { isHostile } from "@/components/game/hostileFleets";
 import { useFleetStore } from "@/store/fleetStore";
 import { SpyModal } from "@/components/game/SpyModal";
 import { AttackModal } from "@/components/game/AttackModal";

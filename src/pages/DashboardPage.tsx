@@ -40,7 +40,7 @@ import { AgendaCard } from "@/components/game/AgendaCard";
 import { BUILDINGS, effectiveBuildingLevel } from "@/game/buildings";
 import { GameIcon, ResourceIcon } from "@/components/ui/game-icon";
 import { useFleetStore } from "@/store/fleetStore";
-import { isHostile } from "@/components/game/FleetsPanel";
+import { isHostile } from "@/components/game/hostileFleets";
 import { activeVeil, synthesisState, synthLevel } from "@/game/synthesis";
 import { commandersState } from "@/game/commanders";
 import { equippedRelics } from "@/game/relics";

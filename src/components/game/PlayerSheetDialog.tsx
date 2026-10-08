@@ -23,7 +23,7 @@ import { FollowOnlineButton } from "@/components/game/RemindersCard";
 import { OnlineDot, useIsOnline } from "@/components/ui/online-dot";
 import { useDirectoryStore } from "@/store/directoryStore";
 import { PlayerName } from "@/components/ui/player-name";
-import { AscensionStars } from "@/components/game/AscensionCard";
+import { AscensionStars } from "@/components/game/AscensionStars";
 import { fetchPlayerSheet, type PlayerSheet } from "@/services/playerService";
 import { useLeviathan } from "@/services/leviathanService";
 import { leviathanRanking } from "@/game/leviathan";
