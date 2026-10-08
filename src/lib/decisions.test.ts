@@ -48,7 +48,7 @@ describe("6.14.32 : décisions à valider", () => {
     const files = readdirSync("docs/proposals").filter((f) => f.endsWith(".md"));
     const roadmaps = files.filter((f) => f.startsWith("feuille-de-route-")).map((f) => parseRoadmap(`docs/proposals/${f}`, readFileSync(`docs/proposals/${f}`, "utf8")));
     const { current, past } = splitRoadmaps(roadmaps);
-    expect(current?.file).toBe("docs/proposals/feuille-de-route-2030-automne.md");
+    expect(current?.file).toBe("docs/proposals/feuille-de-route-2031-hiver.md"); // 6.14.147 (revue AU28) : hiver 2031 après automne 2030
     expect(past.length).toBe(roadmaps.length - 1);
     expect(current!.lots.length).toBeGreaterThan(3);
     // Chaque lot a un identifiant de réponse distinct qui tient dans le champ `qid` (10 caractères).

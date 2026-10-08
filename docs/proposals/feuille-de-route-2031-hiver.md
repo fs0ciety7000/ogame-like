@@ -1,10 +1,33 @@
 # Proposition : feuille de route d'hiver 2031 (nouveautés, références Clash of Clans, OGame et jeux mobiles)
 
-Statut : **validée** (2026-10-07, les 18 lots validés sur `/decisions`, Q241 à Q258) ; elle prend la suite de la feuille d'automne
-2030 quand celle-ci est finie (les lots L auront d'abord leur proposition détaillée). Avant validation : chaque lot a sa question (Q241 à Q258) sur
-`/decisions`, avec « valide », « changer » ou une note pour demander des détails. Un lot validé entre dans la feuille de route suivante,
-après celle d'automne 2030, qui continue d'ici là. Un lot pour lequel tu demandes des détails reçoit sa propre proposition chiffrée
-(`docs/proposals/<système>.md`, plan de `docs/WORKFLOW.md` §2) avant tout code.
+Statut : **en cours** (2026-10-08, ouverte par la revue AU28 qui clôt la feuille d'automne 2030 :
+`docs/changes/6.14.147-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`). Les 18 lots H31-* ont été validés sur
+`/decisions` le 2026-10-07 (Q241 à Q258) ; les lots L reçoivent d'abord leur proposition détaillée (`docs/proposals/<système>.md`,
+plan de `docs/WORKFLOW.md` §2) avant tout code. En tête (§0) : les lots nouveaux de la revue AU28 et les lots reportés de l'automne,
+dont ceux qui attendent des mesures (après la bascule du rythme du 1er novembre 2026 ou après la mise en production). Chaque lot se
+valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/decisions`.
+
+## 0. Lots de la revue AU28 et lots reportés de l'automne 2030
+
+Règle de `WORKFLOW.md` §5 : un constat « faisable seul » ne reste pas ouvert plus d'une feuille de route ; ceux de l'automne passent donc
+avant les nouveautés (lots R1 à R9). Les lots qui attendent une mesure (R10 à R13) et les illustrations (R14) restent visibles ici et se font à leur date.
+
+| # | Lot | Contenu | Taille | État |
+|:--|:--|:--|:--|:--|
+| R1 | AP-L13 | Hygiène des générateurs : `month.pass` plus généré dès novembre 2026, mois de plus de 12 mois archivés, rotation des boss par identifiant, `contracts.seededRandom` renommé, reste du budget du passe réparti, chapitre, succès et passe dans trois transactions, bibliothèque (saison, rebudget, titres comptés) ; constats AP-12, AP-13, AP-15, AP-16 | S | à faire |
+| R2 | AP-L15 | Rythme du plus actif au passe (AP-11 : dernier palier au jour 10 sur le profil réel, 13 sur le profil typique, 24 mois sur 24 avant la cible du jour 15) : paliers de prestige cosmétiques après le 30, sans budget ; proposition courte d'abord | M | à faire |
+| R3 | IT-L1 | Fiabilité de l'intégration (constat RV-6) : une écriture de section de contenu coûte 0,7 à 2,2 s (garde serveur) ; délai explicite pour chaque test qui écrit plus de 3 sections, mesure de durée par test dans `itest-local.sh`, rattrapage avant toute mesure d'écart d'XP ou de ressources ; trouver le test qui supprime en route l'enregistrement des règles rapides de la suite (404 en fin de suite) ; 14 routes du joueur sans intégration (reste d'AC-22) | S | à faire |
+| R4 | É30-5b | Performance (constat RV-7) : LCP mobile au-dessus de 4 s sur Galaxie (7,7 s), Commerce (8,1 s) et Alliance (9,7 s) sur la pré-prod, élément peint au rendu de la page (≈ 8 s) : page affichée avant la fin de la synchronisation de l'état, menu rendu en une fois (question 2 de 6.14.116) | M | à faire |
+| R5 | AJ27-11 | Ménage du moteur : exports morts (15 relevés en AU27) ; le retrait des missions du jour attend Z0 + 30 jours | S | à faire (exports) |
+| R6 | AA-L10 | Reste de l'évolutivité AU27 : surcharge du temps de recherche par techno (AA-12), défis d'alliance, réserve des missions du jour et archétypes des Chroniques en sections (reste d'AA-23), origine d'un seigneur (reste d'AA-20), exclusion des statistiques d'équilibre réglable (AA-31), aperçu avant / après d'un coût ou d'une durée (AA-28) | M | à faire |
+| R7 | UX-13 | Restes de l'hygiène du design (UX-10) : arrondis, emoji et dates de l'admin ; exceptions de l'accueil public, du cockpit et des Succès retirées de `designSystem.test.ts` | S | à faire |
+| R8 | AE-L8 | Gains versés au-delà de l'entrepôt dits au joueur (AE-14) : coffre, missions et série au-dessus de la capacité, ligne « au-delà de l'entrepôt » dans la notification et la carte « Ce que tu risques » | S | à faire |
+| R9 | UX-12 | Chargement de Commerce et d'Alliance (AD-30) : mesuré par la revue AU28 (LCP mobile 8,1 et 9,7 s, même cause que la Galaxie) ; correction avec R4, puis nouvelle mesure | S | mesuré (6.14.147), à corriger avec R4 |
+| R10 | RL-4 | Mesures après la bascule du rythme : sessions bloquées, production perdue, jour des Ascensions (`progression-sim.mjs` comparé à la santé de l'équilibre) | S | après le 1er novembre 2026 |
+| R11 | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 (le réglage d'avant bascule est fait, 6.14.89) | S | après RL-4 et 8 semaines |
+| R12 | AE-L7 | Boss (`hpFactor`), Ambre des primes, seuils des succès, d'après 8 semaines de santé de l'équilibre en production (AE-10, AE-11, AE-12) | S | après la mise en production (Z0) |
+| R13 | AC-I | Battement de présence à 60 s et `sync` sans écriture inutile (AC-17), après la mesure Z6 | M | après Z6 |
+| R14 | É30-3 | Illustrations au fil des envois sur `/img` (89 emplacements attendus le 2026-10-08 : 33 portraits, 24 thèmes d'année, 21 icônes de palier, 7 seconds boss, 3 talents, 1 module) | selon envois | en continu |
 
 ## 1. Pourquoi ces lots
 

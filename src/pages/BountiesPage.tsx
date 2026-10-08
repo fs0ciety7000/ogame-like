@@ -574,7 +574,7 @@ function ShopItemCard({ item, player, st }: { item: ShopItem; player: PlayerStat
     }
   };
   return (
-    <Card className={cn("flex min-w-0 flex-col gap-3 p-5", owned && "opacity-80")}>
+    <Card className={cn("flex min-w-0 flex-col gap-3 p-5", owned && "border-mint-glow/30")}>
       <div className="flex items-start gap-3">
         {item.id === "blueprint" ? (
           <img src={assetUrl(KESH_HUNTER_UNIT.image)} alt="" className="h-12 w-12 shrink-0 object-contain" />
@@ -684,7 +684,7 @@ function NameTonePicker({ current }: { current: string }) {
     <div className="flex flex-wrap gap-1" role="group" aria-label="Couleur de pseudo">
       {NAME_TONES.map((t) => (
         <HudChip key={t.id} size="sm" tone={t.id as HudTone} asChild>
-          <button type="button" disabled={busy} onClick={() => void pick(t.id)} aria-pressed={current === t.id} className={cn(current !== t.id && "opacity-60")}>
+          <button type="button" disabled={busy} onClick={() => void pick(t.id)} aria-pressed={current === t.id} className={cn(current === t.id && "ring-1 ring-cyan-glow/70")}>
             {t.label}
           </button>
         </HudChip>

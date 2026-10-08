@@ -54,6 +54,9 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
 - **Portefeuille** : chaque chiffre expliqué, d'où il vient.
 - **Recherches d'alliance** : chaque effet écrit en clair (« −5 % · Temps de vol par niveau ») et visible sur ta fiche d'effets.
   Les valeurs ne changent pas (6.14.124).
+- **Lisible dans les 13 thèmes** : rouge « danger » au contraste conseillé partout, états (verrouillé, fait, absent) marqués par
+  la bordure et la couleur, plus par un voile gris (6.14.147).
+- **Saga d'alliance** : même faction, même boss et même image que le chapitre des Chroniques du mois (6.14.147).
 - Confirmations avant les départs et les demi-tours irréversibles.
 - **Journal complet** : ce qui se termine pendant le rattrapage de la nuit, un changement de pseudo ou un contrat de commerce arrive au
   Journal. Et l'envoi des e-mails ne peut plus effacer ce que tu joues au même moment.

@@ -6410,7 +6410,8 @@ function allianceSagaTick(now) {
     let def = game.sagaOf(state, monthId);
     if (!def) {
       const digest = game.worldDigest(players, now);
-      def = game.generateAllianceSaga(monthId, digest, game.chapterDifficulty(digest).value, now);
+      // 6.14.147 (AP-L6) : chapitre du mois lu par le moteur (contenu appliqué), titres des sagas précédentes écartés.
+      def = game.generateAllianceSaga(monthId, digest, game.chapterDifficulty(digest).value, now, { recentTitles: state.sagas.map((s) => s.title) });
       state.sagas = state.sagas.concat([def]).slice(-12);
       out.generated = monthId;
     }

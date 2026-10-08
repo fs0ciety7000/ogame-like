@@ -161,7 +161,7 @@ export function WarlordsPage() {
             const v = w.vendetta;
             return (
               <motion.div key={w.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <Card className={cn("relative flex h-full flex-col overflow-hidden p-0 sm:flex-row", gone && "opacity-60")} style={{ boxShadow: `inset 3px 0 0 ${w.color}` }}>
+                <Card className={cn("relative flex h-full flex-col overflow-hidden p-0 sm:flex-row", gone && "border-dashed")} style={{ boxShadow: `inset 3px 0 0 ${w.color}` }}>
                   <TiltPortrait glow="var(--color-ember-glow)" className="h-28 w-full shrink-0 sm:h-auto sm:w-40">
                     <Portrait w={w} className="h-full w-full" />
                   </TiltPortrait>

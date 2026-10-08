@@ -578,12 +578,14 @@ Fiche du domaine : `docs/systems/progression.md`.
 | Répliques des jalons du passe | trois jeux (un par année du catalogue) ; année 4 et suivantes : en boucle | Catalogue du passe → Thèmes (répliques des quatre temps) ; `narrative.passLinesByYear` |
 | Images de saison | illustration de l'année (`theme-<thème>-<année>.webp`) si déclarée, sinon celle du thème ; second boss (`<faction>-boss-2.webp`) pour le 2e et le 4e nom ; portraits des 36 commandants (sinon portrait du rôle) | Catalogue du passe → Saisons → « Image de l'en-tête » ; branchement : `docs/illustrations.md` |
 | Saisons générées | après le cycle écrit : nom écrit + sous-titre, commandant (prénom et nom sans répétition, genre alterné, titre du rôle), second rôle jamais pris par le thème, scénario et scène de la saison écrite prolongée | Règles → « Catalogue du passe : saisons générées » (`seasonGen`), aperçu des 12 premières |
+| Saga d'alliance (6.14.147, AP-L6) | faction, boss et image du chapitre des Chroniques du même mois (chapitre écrit à la main : reconnu à son image de repli ; sans chapitre : tirage d'avant) ; titre non repris avant 3 mois ; objectifs inchangés | Tous les réglages → « Alliance : saga » (`allianceSaga.followChapter`, `noRepeatMonths`) |
 
 Simulation : `node scripts/procedural-sim.mjs --months 48 --base avant-ap` (profils réel, typique, vide, bruité). Mesures du lot
 (48 mois, profil typique, avant → après) : répliques distinctes sur 12 mois 56 % → 100 % (réel : 55 % → 97 %), titres d'épisode
 18/48 → 48/48, titres de chapitre 28/48 → 47/48 (première répétition 2028-06 → 2030-09), noms de saison et commandants 36/48 →
 48/48, mutateurs distincts sur 12 mois glissants 7 → 10. Gardes : `mutators.test.ts` (I44), `varieteNarrative.test.ts`,
-`saisonsGenerees.test.ts`, `illustrations.test.ts` (I45).
+`saisonsGenerees.test.ts`, `illustrations.test.ts` (I45). Saga (revue AU28, 6.14.147) : même faction que le chapitre 2/48 → 48/48
+mois, titres répétés d'un mois sur l'autre 10/48 → 0 ; garde `v55saga.test.ts`.
 
 ### 7.23 Paliers des bâtiments de système (6.14.141 à 6.14.146, `buildingTiers.ts`)
 
@@ -622,6 +624,12 @@ Casemates (mixte ×0,9, défenses seules ×2,35 ≥ ×2) ; la reconstruction jou
 perdue pour de bon baisse d'un quart (défenses seules au seuil : 17,8 % → 13,4 % ; mixte à dépense égale : 20,4 % → 15,3 %).
 Réacteurs ramenés de −10 % à −5 % : au-delà de 6 %, le maximum théorique du temps de vol en couche empire (Propulsion 24 % +
 Logisticienne 20 %) dépasserait son plafond de 50 %. Garde : `paliersHangars.test.ts` (I47).
+
+Colonies et PNJ (grille §6, revue AU28, 6.14.147) : les paliers viennent des bâtiments de la planète mère. Écarts voulus : pas de
+tampon de 2 h dans les colonies (leur avance reste `advanceResources`), Casemates sur la planète mère seulement (une colonie attaquée
+garde 60 %), pas de prêt de places pour le hangar de défense d'une colonie. Les seigneurs suivent la règle des joueurs : leurs
+bâtiments montent au niveau moyen des actifs (× 0,8 à 1,25, `warlords.buildingFactor`), donc leurs paliers sans choix (Casemates,
+entrepôt orbital) jouent comme pour un joueur ; ils ne font jamais de choix (ni ressource prioritaire, ni spécialisation).
 
 ## 8. Journal des audits
 
@@ -784,3 +792,4 @@ Logisticienne 20 %) dépasserait son plafond de 50 %. Garde : `paliersHangars.te
 | 2026-10-08 | 6.14.144 | Lot PB-L3 (Q339) : paliers de l'Atelier (Cale sèche affichée, premiers soins, classe spécialisée, réparation d'urgence quotidienne) | `docs/changes/6.14.144-paliers-atelier.md`, `paliersBatiments.test.ts` |
 | 2026-10-08 | 6.14.145 | Lot PB-L4 (Q340, Q341) : paliers des hangars (baies modulaires, file d'attente façon Clash of Clans, Pont d'envol / Réacteurs, Tourelles / Entretien, Pont de lancement, Casemates) ; I2 réécrit, invariant I47 ; JcJ mesuré (seuils inchangés, perte nette en défenses −25 %) | `docs/changes/6.14.145-paliers-hangars.md`, `paliersHangars.test.ts`, `caleSeche.test.ts` |
 | 2026-10-08 | 6.14.146 | Lot PB-L5 : chaîne de contenu des paliers (4 succès dont « Architecte » et « Bâtisseur avisé », titre, Codex, Formules → Paliers, Ctrl+K, 21 icônes de palier sur `/img`, changelog, billets 49 et 54) ; proposition livrée, AJ-12 fermé | `docs/changes/6.14.146-paliers-chaine.md`, `paliersChaine.test.ts` |
+| 2026-10-08 | 6.14.147 | Revue AU28 (fin de la feuille d'automne 2030) : bilan des 90 lots, grille §6, audit des 13 thèmes (textes sous 4,5:1 hors admin 0,57 à 0,65 %, hausse sur Bâtiments corrigée), rouge « danger » ≥ 4,5:1 sur `space-600` dans les 13 thèmes, opacités d'état retirées de 7 fichiers, saga alignée sur le chapitre (AP-L6), échec intermittent « legacy battle reports » expliqué ; feuille d'hiver 2031 en cours avec 14 lots repris en tête | `docs/audit/2026-10-08-au28-revue.md`, `docs/changes/6.14.147-revue-au28.md` |

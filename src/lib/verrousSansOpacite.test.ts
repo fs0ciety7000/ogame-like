@@ -10,6 +10,15 @@ const FILES = [
   "src/pages/BuildingsPage.tsx",
   "src/components/ui/hud.tsx",
   "src/components/ui/afford.tsx",
+  // 6.14.147 (revue AU28) : balayage de fin de feuille de route ; restent volontaires : message masqué du salon (choix du
+  // joueur), carte « Ta flotte » du simulateur en mode raid, filtre de l'arbre des
+  // technos, pages d'admin.
+  "src/components/game/BuildingTiers.tsx",
+  "src/components/game/AgendaCard.tsx",
+  "src/components/game/ChronicleTimeline.tsx",
+  "src/pages/OrdersPage.tsx",
+  "src/pages/WarlordsPage.tsx",
+  "src/pages/BountiesPage.tsx",
 ];
 
 describe("verrous et manques sans opacité sur le texte (TH-L1)", () => {

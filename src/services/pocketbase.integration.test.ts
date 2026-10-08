@@ -106,9 +106,10 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   afterAll(async () => {
     if (savedRules) await admin.collection("game_config").update(savedRules.id, { data: savedRules.data });
-    if (createdRulesId) await admin.collection("game_config").delete(createdRulesId);
+    // 6.14.147 (revue AU28) : l'enregistrement créé au départ peut avoir été supprimé en route (404 signalé à chaque passage).
+    if (createdRulesId) await admin.collection("game_config").delete(createdRulesId).catch(() => undefined);
     if (savedFactions) await admin.collection("game_config").update(savedFactions.id, { data: savedFactions.data });
-    if (createdFactionsId) await admin.collection("game_config").delete(createdFactionsId);
+    if (createdFactionsId) await admin.collection("game_config").delete(createdFactionsId).catch(() => undefined);
   });
 
   const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -403,13 +404,18 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now() - 5000,
       outcome: "defender_win", defenderLosses: {}, loot: null, defenderProcessed: false, defenderXpDelta: 3,
     });
+    // 6.14.147 (revue AU28, constat IT-délais) : `report/seen` rattrape d'abord la fiche (flushState : missions rentrées, succès
+    // dus, chantiers finis). Selon que la tâche « à la minute » avait déjà rattrapé B ou non, ces gains tombaient dans l'écart mesuré
+    // (+25 XP d'un succès d'argent, échec intermittent). On rattrape B avant la mesure : seul le rapport reste dans l'écart.
+    await ps.syncPlayer("");
     const before = (await snap(bId))!;
     const seen = await ps.processBattleReportForDefender(bId, rep.id);
     expect(seen?.id).toBe(rep.id);
     const after = (await snap(bId))!;
     expect(after.victories).toBe(before.victories + 1);
+    const newly = ((after.unlockedAchievements ?? []) as string[]).filter((id) => !((before.unlockedAchievements ?? []) as string[]).includes(id));
     // 5.18 : l'XP de défense passe par le bonus au jeu actif (×1,25).
-    expect(after.xp).toBe(before.xp + Math.round(3 * (XP_TIER_RULES.multipliers.defense ?? 1)));
+    expect(after.xp, `succès débloqués pendant la mesure : ${newly.join(", ") || "aucun"}`).toBe(before.xp + Math.round(3 * (XP_TIER_RULES.multipliers.defense ?? 1)));
     expect(await ps.processBattleReportForDefender(bId, rep.id)).toBeNull();
   });
 

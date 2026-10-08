@@ -54,3 +54,34 @@ describe("v5.5 saga d'alliance", () => {
     expect(readAllianceSaga("x")).toEqual({ sagas: [], standing: null, closed: [] });
   });
 });
+
+describe("6.14.147 (AU28, AP-L6) : saga alignée sur le chapitre du mois", () => {
+  const chapter = (archetype: string) => ({ auto: { archetype } as never, boss: { name: "Le Grand Brasier", title: "", image: "/assets/chronicles/auto/confrerie-boss-2.webp", emblem: "", fallbackImage: "", lore: "" } });
+
+  it("faction, boss et image du chapitre ; tirage d'avant sans chapitre ou réglage décoché", () => {
+    const s = generateAllianceSaga("2027-03", digest(), 1, NOW, { chapter: chapter("confrerie") });
+    expect(s.bossName).toBe("Le Grand Brasier");
+    expect(s.image).toBe("/assets/chronicles/auto/confrerie-boss-2.webp");
+    expect(s.lore).toContain("le Grand Brasier");
+    const free = generateAllianceSaga("2027-03", digest(), 1, NOW, { chapter: null });
+    ALLIANCE_SAGA_RULES.followChapter = false;
+    try {
+      expect(generateAllianceSaga("2027-03", digest(), 1, NOW, { chapter: chapter("confrerie") })).toEqual(free);
+    } finally {
+      ALLIANCE_SAGA_RULES.followChapter = true;
+    }
+  });
+
+  it("un titre ne revient pas avant noRepeatMonths mois ; objectifs inchangés", () => {
+    const titles: string[] = [];
+    for (let m = 1; m <= 24; m++) {
+      const id = `2027-${String(((m - 1) % 12) + 1).padStart(2, "0")}${m > 12 ? "b" : ""}`;
+      titles.push(generateAllianceSaga(id, digest(), 1, NOW, { chapter: null, recentTitles: titles }).title);
+    }
+    for (let i = 0; i < titles.length; i++) for (let k = 1; k <= ALLIANCE_SAGA_RULES.noRepeatMonths; k++) if (i - k >= 0) expect(titles[i], `mois ${i}`).not.toBe(titles[i - k]);
+    const a = generateAllianceSaga("2027-03", digest(), 1, NOW, { chapter: null });
+    const b = generateAllianceSaga("2027-03", digest(), 1, NOW, { chapter: null, recentTitles: [a.title] });
+    expect(b.title).not.toBe(a.title);
+    expect(b.objectives).toEqual(a.objectives);
+  });
+});

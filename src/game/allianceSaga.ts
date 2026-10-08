@@ -1,4 +1,4 @@
-import { chronicleMonthId, type ChronicleObjective } from "@/game/chronicles";
+import { chronicleMonthId, chroniclesConfig, type ChronicleMonth, type ChronicleObjective } from "@/game/chronicles";
 import { extraObjectives, measuredPlayable, objectiveLabel, objectivePassive, trackedWeight } from "@/game/trackedActions";
 import { passState } from "@/game/seasonPass";
 import { ACTIVITY_KEYS, baseCount, chapterArchetypes, seededRandom, type WorldDigest } from "@/game/procedural";
@@ -27,6 +27,10 @@ export const ALLIANCE_SAGA_RULES = {
   /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
   weeks: 4,
   share: 0.6,
+  /** 6.14.147 (AU28, AP-L6, constat AP-6) : la saga suit la faction et le boss du chapitre des Chroniques du même mois. */
+  followChapter: true,
+  /** 6.14.147 (AP-L6) : un titre de saga ne revient pas avant ce nombre de mois (0 : tirage libre, comme avant). */
+  noRepeatMonths: 3,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -37,6 +41,8 @@ export const ALLIANCE_SAGA_RULES_META = {
   rewardHours: { label: "Podium : heures de production versées au trésor (1re, 2e, 3e)", unit: "h" },
   weeks: { label: "Durée de référence de l'objectif", unit: "semaines", min: 1, max: 12, hint: "Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × part." },
   share: { label: "Part de l'effort médian visée", unit: "×", min: 0.05, max: 5 },
+  followChapter: { label: "Saga sur la faction du chapitre du mois", hint: "Décoché : faction tirée à part (avant la 6.14.147), au risque de trois histoires différentes le même mois." },
+  noRepeatMonths: { label: "Titre de saga non repris avant", unit: "mois", min: 0, max: 5, hint: "0 : tirage libre. Au plus 5 (6 titres)." },
 };
 
 export interface AllianceSagaDef {
@@ -86,11 +92,22 @@ const SAGA_TITLES = ["L'Alliance des cendres", "Le Serment commun", "La Grande C
 const SAGA_WINNERS = ["Héros de la saga", "Porte-bannière", "Champion d'alliance", "Fer de lance"];
 
 /** Saga du mois, calibrée sur l'activité et la taille des alliances. */
-export function generateAllianceSaga(monthId: string, digest: WorldDigest & { allianceSizeMedian?: number }, difficulty: number, now: number): AllianceSagaDef {
+export function generateAllianceSaga(
+  monthId: string,
+  digest: WorldDigest & { allianceSizeMedian?: number },
+  difficulty: number,
+  now: number,
+  /** 6.14.147 (AP-L6) : chapitre du mois (absent : lu dans la configuration des Chroniques) et titres des sagas précédentes. */
+  opts: { chapter?: Pick<ChronicleMonth, "auto" | "boss"> | null; recentTitles?: string[] } = {},
+): AllianceSagaDef {
   const rng = seededRandom(`saga:${monthId}`);
   // 6.14.125 (AA7) : archétypes du jeu, plus celui de repli d'une faction ajoutée dans l'admin.
   const archetypes = chapterArchetypes();
-  const arch = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
+  const drawn = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
+  // 6.14.147 (AP-L6, AP-6) : faction, boss et image du chapitre du mois ; un chapitre écrit à la main se reconnaît à son image de repli.
+  const chapter = ALLIANCE_SAGA_RULES.followChapter ? (opts.chapter !== undefined ? opts.chapter : (chroniclesConfig().months.find((m) => m.id === monthId) ?? null)) : null;
+  const chapterArch = chapter ? archetypes.find((a) => a.id === chapter.auto?.archetype) ?? archetypes.find((a) => a.fallbackImage === chapter.boss?.fallbackImage) : undefined;
+  const arch = chapterArch ?? drawn;
   // 6.14.121 (AP-L7) : actions du registre (lune, colonies) en fin de liste, seulement si le serveur les pratique ; poids 0 : retirée.
   const extra = extraObjectives().filter((k) => measuredPlayable(k, digest.weeklyMedian) && (!objectivePassive(k) || (digest.weeklyMedian[k] ?? 0) > 0));
   const pool = [...ACTIVITY_KEYS.filter((k) => k !== "warlordWin" || (digest.weeklyMedian.warlordWin ?? 0) > 0), ...extra].filter((k) => trackedWeight(k) > 0);
@@ -101,13 +118,19 @@ export function generateAllianceSaga(monthId: string, digest: WorldDigest & { al
     const weekly = Math.max(digest.weeklyMedian[type] ?? 0, baseCount(type) / 2);
     return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
   });
-  const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
+  const drawnBoss = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
+  const bossName = chapterArch && chapter?.boss?.name ? chapter.boss.name : drawnBoss;
+  // 6.14.147 (AP-L6) : titres des derniers mois écartés (même tirage qu'avant quand rien n'est écarté).
+  const gap = Math.min(Math.max(0, Math.floor(ALLIANCE_SAGA_RULES.noRepeatMonths)), SAGA_TITLES.length - 1);
+  const recent = new Set(gap > 0 ? (opts.recentTitles ?? []).slice(-gap) : []);
+  const titles = SAGA_TITLES.filter((t) => !recent.has(t));
+  const title = titles[Math.floor(rng() * titles.length)];
   return {
     monthId,
-    title: SAGA_TITLES[Math.floor(rng() * SAGA_TITLES.length)],
+    title,
     lore: `${seasonLabel(monthId)} : ${arch.faction} lance ${bossName.replace(/^(Le|La|Les)(?=\s)|^L'/, (a) => a.toLowerCase())} contre le secteur. Seules les alliances qui tiennent ensemble auront leur nom gravé dans les archives.`,
     bossName,
-    image: arch.image,
+    image: chapterArch && chapter?.boss?.image ? chapter.boss.image : arch.image,
     accent: arch.accent,
     objectives,
     winnerTitle: `${SAGA_WINNERS[Math.floor(rng() * SAGA_WINNERS.length)]} (${seasonLabel(monthId).toLowerCase()})`,

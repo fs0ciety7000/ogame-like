@@ -1,9 +1,12 @@
 # Proposition : feuille de route d'automne 2030
 
-Statut : **en cours** (2026-10-07, clôture d'AU27 : `docs/changes/6.14.51-revue-au27.md`). Construite à partir des sept audits AU27
-(`docs/audit/2026-10-07-au27-*.md`). Ordre : sûreté des données, puis ce que les joueurs voient, puis l'évolutivité (règle n° 2 :
-« tout ajustable via l'admin, le jeu évolutif »), puis la profondeur. Les choix de conception sont Q64 à Q103 (`/decisions`). Chaque
-lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/decisions`.
+Statut : livrée (2026-10-08, revue de fin AU28 : `docs/changes/6.14.147-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`).
+Construite le 2026-10-07 à partir des sept audits AU27 (`docs/audit/2026-10-07-au27-*.md`, clôture d'AU27 : `docs/changes/6.14.51-revue-au27.md`).
+Ordre suivi : sûreté des données, puis ce que les joueurs voient, puis l'évolutivité (règle n° 2), puis la profondeur. Choix de
+conception : Q64 à Q103. Bilan : 84 lignes livrées sur 90 (revue AU28 comprise, plus AP-L6 livré dans la revue), 2 livrées en partie
+(RL-0, RL-5), Z0 écartée (Q12), le reste reporté dans la feuille d'hiver 2031
+(`docs/proposals/feuille-de-route-2031-hiver.md`, §0), qui prend la suite : RL-4 et la fin de RL-5 (après la bascule du 1er novembre
+2026), AE-L7 (après la mise en production), AC-I (après Z6), AP-L13, AJ27-11, UX-12 et É30-3 (illustrations, en continu).
 
 ## Planning
 
@@ -37,7 +40,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 24b | RL-1 | Recherche : champs `lateFromLevel`, `lateTimeFactor`, `maxLevelSeconds`, `costGrowth`, `timeGrowth` réglables dans l'admin, valeurs neutres d'abord | S | livré (6.14.84) |
 | 24c | RL-2 | Projets de prestige (groupe `prestige`, 8 h de production, récompense visible seulement) avec toute la chaîne de contenu (remplace AE-L6) | M | livré (6.14.85) ; reportés : thème de saison, défi d'alliance et défi du passe (voir la fiche) |
 | 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | livré (6.14.88 ; bascule datée au 1er novembre 2026, annonce en attente de son image `annonce-rythme`) |
-| 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
+| 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | reporté : feuille d'hiver 2031, lot R10 (après le 1er novembre 2026) |
 | 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | livré en partie (6.14.89, réglage avant bascule ; mesures après la bascule restent) |
 | 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | livré (6.14.106) |
 | 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | livré (6.14.107) |
@@ -88,7 +91,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 63d | PB-L3 | Paliers de l'Atelier (Cale sèche affichée, réparation éclair, classe spécialisée, accélération de 2 h par jour) | M | livré (6.14.144) |
 | 63e | PB-L4 | Paliers des hangars (baies modulaires, file d'attente et I2 réécrit, spécialisations, signatures ; mesure JcJ) | L | livré (6.14.145) |
 | 63f | PB-L5 | Paliers : chaîne de contenu (succès « Architecte » et « Bâtisseur avisé », Codex, Formules, Ctrl+K, changelog, billet, images) | S | livré (6.14.146) |
-| 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | en continu |
+| 64 | É30-3 | Illustrations : intégration au fil des envois (127 emplacements sur `/img`) | selon envois | reporté : feuille d'hiver 2031, lot R14 (en continu ; 89 emplacements attendus le 2026-10-08) |
 | 65a | TH-L1 | Verrous sans opacité (Passe, « manque X » des Bâtiments), contraste ≥ 4,5:1 (AU28 thèmes) | S | livré (6.14.97) |
 | 65b | TH-L2 | Titres longs (coupure au mot) et libellés du menu « Plus » dans les thèmes à Inter | S | livré (6.14.98) |
 | 65c | TH-L3 | Catégorie « Production » en neutre (ember réservé à l'attention) | S | livré (6.14.96) |
@@ -96,6 +99,6 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q233) | M | livré (6.14.100) |
 | 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q234) | M | livré (6.14.101) |
 | 65g | TH-L7 | `scripts/theme-audit.mjs` à chaque revue de fin de feuille de route (Q237) | S | livré (6.14.99) |
-| 65 | AU28 | Revue, même grille, audit des 13 thèmes (`theme-audit.mjs`, WORKFLOW §5) | M | fin des lots |
-| — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | plus tard |
+| 65 | AU28 | Revue, même grille, audit des 13 thèmes (`theme-audit.mjs`, WORKFLOW §5) | M | livré (6.14.147, `docs/changes/6.14.147-revue-au28.md`) |
+| — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | AP-L6 livré dans la revue (6.14.147) ; les autres reportés : feuille d'hiver 2031, lots R1, R5, R9, R12, R13 |
 | — | Z0 | Mise en production | — | écartée pour l'instant (Q12) |

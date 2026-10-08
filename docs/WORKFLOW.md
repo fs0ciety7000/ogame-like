@@ -151,7 +151,13 @@ Une règle devenue fausse est réécrite, pas contournée.
 - audit visuel des 13 thèmes avec `scripts/theme-audit.mjs` (montage isolé décrit en tête du script, jamais la production) ; on compare
   la part de textes sous 4,5:1 et les éléments coupés à `measures.json` de la revue précédente : toute hausse devient un constat ;
 - balayage des opacités d'état sur du texte (règle DESIGN.md de 6.14.97) hors des fichiers déjà gardés par `verrousSansOpacite.test.ts` ;
-- les captures livrées restent en thème Constellation ; les 13 thèmes servent à l'audit.
+- les captures livrées restent en thème Constellation ; les 13 thèmes servent à l'audit ;
+- deux passages de `theme-audit.mjs` quand la revue corrige quelque chose : build d'avant, puis build corrigé (second `vite preview`
+  sur un autre port, `AUDIT_FRONT`), chacun dans son dossier de sortie ; `python3 scripts/theme-audit-compare.py <avant> <après>`
+  liste les hausses, et `--resume` garde le relevé compact dans `docs/audit/<date>-<revue>-themes-mesures.json`, base de la revue
+  suivante (le dossier de captures reste hors dépôt) (6.14.147) ;
+- performance (`preprod-perf.mjs`) : la mesure qui compte est celle de la pré-prod ; en local, un compte neuf voit la modale d'annonce,
+  qui devient l'élément du LCP (`PERF_LCP=1` pour le vérifier) (6.14.147).
 
 ## 6. Lots et PR
 

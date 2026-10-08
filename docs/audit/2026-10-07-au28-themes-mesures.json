@@ -1,0 +1,2485 @@
+{
+ "atlas": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 39,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "aurora": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 115,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 40,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 30,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 107,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 77,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 42,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2096,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 143,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 167,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 73,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 62,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 139,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 109,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 75,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2161,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "cockpit": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "constellation": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "holo": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "ishimura": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 39,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 75,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "matrice": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "netrunner": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 72,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "omni": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "signal": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "spartan": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "tactique": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ },
+ "voyageur": {
+  "accueil-public-mobile": {
+   "total": 15,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-mobile": {
+   "total": 111,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-mobile": {
+   "total": 116,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-mobile": {
+   "total": 41,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-mobile": {
+   "total": 31,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-mobile": {
+   "total": 108,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-mobile": {
+   "total": 78,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-mobile": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-mobile": {
+   "total": 43,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "menu-plus-mobile": {
+   "total": 34,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-mobile": {
+   "total": 2097,
+   "low": 12,
+   "small": 608,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "accueil-public-desktop": {
+   "total": 22,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "game-desktop": {
+   "total": 144,
+   "low": 5,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "batiments-desktop": {
+   "total": 168,
+   "low": 4,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "galaxie-desktop": {
+   "total": 74,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "alliance-desktop": {
+   "total": 63,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 1,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "passe-desktop": {
+   "total": 140,
+   "low": 28,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "codex-desktop": {
+   "total": 110,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "confirmation-desktop": {
+   "total": 4,
+   "low": 0,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "toast-desktop": {
+   "total": 76,
+   "low": 1,
+   "small": 0,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  },
+  "admin-regles-desktop": {
+   "total": 2162,
+   "low": 18,
+   "small": 614,
+   "cutN": 0,
+   "trunc": 0,
+   "textCut": 0,
+   "hscroll": 0
+  }
+ }
+}

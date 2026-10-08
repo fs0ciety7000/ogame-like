@@ -89,7 +89,7 @@ export function ChronicleTimeline({
               initial={reduce ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: reduce ? 0 : i * 0.07 }}
-              className={cn("hud-cut-sm flex flex-col gap-2 border bg-white/[0.02] p-3", done ? "border-mint-glow/30" : ready ? "border-gold-glow/60" : "border-white/10", locked && "opacity-60")}
+              className={cn("hud-cut-sm flex flex-col gap-2 border bg-white/[0.02] p-3", done ? "border-mint-glow/30" : ready ? "border-gold-glow/60" : "border-white/10", locked && "border-dashed")}
             >
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
