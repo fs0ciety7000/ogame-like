@@ -26,12 +26,17 @@ import * as rs from "@/services/referralService";
 import * as vcs from "@/services/victoryCardService";
 import * as ws from "@/services/warlordService";
 import * as sbs from "@/services/seasonBossService";
+import * as gcs from "@/services/globalChatService";
+import * as pls from "@/services/pollService";
+import * as pks from "@/services/passkeyService";
 import { bountyState, viewBounties } from "@/game/bounties";
 import { resetContentSection, saveContentSection } from "@/services/contentService";
 import { checkIsAdmin } from "@/services/adminService";
 import { defaultGameContent } from "@/game/content";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
 import { XP_TIER_RULES } from "@/game/xpTiers";
+import { PASS_BONUS_RULES } from "@/game/seasonPass";
+import { currentSeasonId } from "@/game/seasons";
 import { DEFAULT_FACTIONS, type FactionDef } from "@/game/pirates";
 import { getBuildingUpgradeTime, findBuilding, getUnitCapacity, keptOnAscension } from "@/game/buildings";
 import { acceptMarketOffer, createMarketOffer, fetchMarketTrades } from "@/services/marketService";
@@ -48,6 +53,8 @@ import { MODULE_TEMPLATES, moduleMountClasses } from "@/game/modules";
 import { empireClasses } from "@/game/empireClass";
 import { MISSIONS } from "@/game/missions";
 import { chronicleMonthId } from "@/game/chronicles";
+import { dailyPhase } from "@/game/allianceDaily";
+import { parisDay } from "@/game/retention";
 import { hourlyProduction, storageCapacityOf } from "@/game/economy";
 import { tradeQuote } from "@/game/resources";
 
@@ -106,8 +113,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   afterAll(async () => {
     if (savedRules) await admin.collection("game_config").update(savedRules.id, { data: savedRules.data });
-    // 6.14.148 (revue AU28) : l'enregistrement créé au départ peut avoir été supprimé en route (404 signalé à chaque passage).
-    if (createdRulesId) await admin.collection("game_config").delete(createdRulesId).catch(() => undefined);
+    // 6.14.151 (R3) : plus de 404 ici, la cause est corrigée (`keepSection` au lieu d'une remise à zéro de la section) ;
+    // un enregistrement disparu en route fait de nouveau échouer la fin de suite.
+    if (createdRulesId) await admin.collection("game_config").delete(createdRulesId);
     if (savedFactions) await admin.collection("game_config").update(savedFactions.id, { data: savedFactions.data });
     if (createdFactionsId) await admin.collection("game_config").delete(createdFactionsId).catch(() => undefined);
   });
@@ -123,6 +131,37 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     } finally {
       if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
     }
+  };
+
+  /** 6.14.151 (R3, constat RV-6) : garde une section de `game_config` et rend la fonction qui la remet telle quelle (même
+   *  identifiant). Jamais `resetContentSection` sur une section posée par la suite (règles rapides, factions) : il supprime
+   *  l'enregistrement, et les tests suivants tournaient avec les vols et l'espionnage par défaut (404 en fin de suite,
+   *  6.14.131 à 6.14.142 en cause). Garde : `integrationHygiene.test.ts`. */
+  const keepSection = async (key: string) => {
+    const find = async () => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const kept = await find();
+    return async () => {
+      const cur = await find();
+      if (!kept) {
+        if (cur) await admin.collection("game_config").delete(cur.id);
+        return;
+      }
+      if (cur && cur.id === kept.id) {
+        await admin.collection("game_config").update(cur.id, { data: kept.data });
+        return;
+      }
+      if (cur) await admin.collection("game_config").delete(cur.id);
+      await admin.collection("game_config").create({ id: kept.id, key, data: kept.data });
+    };
+  };
+
+  /** 6.14.151 (R3) : rattrape un joueur par le serveur (missions rentrées, succès dus, chantiers finis) avant de mesurer un
+   *  écart d'XP ou de ressources, puis rend la main au joueur `back` (B par défaut). Sans lui, ce que verse le rattrapage de
+   *  l'action mesurée tombe dans l'écart selon que la tâche « à la minute » est passée ou non (6.14.148, « legacy battle reports »). */
+  const catchUp = async (who: { email: string; pw: string }, back: { email: string; pw: string } = B) => {
+    await loginPlayer(who.email, who.pw);
+    await ps.syncPlayer("");
+    await loginPlayer(back.email, back.pw);
   };
 
   /** Fiche complète d'un joueur, lue par le superuser (les joueurs ne
@@ -350,6 +389,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     await expect(ps.sendFleet(bId, { chasseur: 5 })).rejects.toThrow(/débute/);
 
     await admin.collection("players").update(bId, { createdAtMs: MONTH_AGO() });
+    // 6.14.151 (R3) : B rattrapé avant la mesure de l'écart d'XP du défenseur (puis la main revient à A).
+    await catchUp(B, A);
     const bBefore = (await snap(bId))!;
 
     // La flotte part : les vaisseaux quittent la base, B la voit arriver.
@@ -459,6 +500,8 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       // L'admin du jeu n'écrit plus la fiche directement (règle d'API), même avec un motif.
       await expect(pb.collection("players").update(aId, { xp: (before.xp ?? 0) + 1, adminReason: "écriture directe" })).rejects.toBeTruthy();
       // Fiche « ouverte » par l'admin : 1 000 ferraille, 4 chasseurs. Le joueur dépense et construit entre-temps.
+      // 6.14.151 (R3) : A rattrapé avant la mesure (succès dus versés maintenant, pas dans l'écart d'XP mesuré).
+      await catchUp(A);
       const opened = await snap(aId);
       await admin.collection("players").update(aId, { resources: { ...opened.resources, scrap: 600 }, units: { ...opened.units, chasseur: { level: 1, count: 10 } } });
       // Motif obligatoire.
@@ -1235,6 +1278,46 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 60_000);
 
+  it("6.14.151 (R3) : un assaut de boss sauve toute la fiche (jetons des paliers bonus du passe, Chroniques), pas seulement le passe", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    const now = Date.now();
+    // Passe du mois déjà au maximum : les 5 points de l'assaut passent en surplus et franchissent les paliers bonus
+    // (1 jeton de casino par tranche de 120 points). Avant 6.14.151, la route ne sauvait que `commanders` et `seasonPass` :
+    // le palier bonus était noté, mais le jeton (champ `casino`) se perdait.
+    const pass = { seasonId: currentSeasonId(now), points: 1_000_000, claimed: [], loginDay: "", completed: [], activity: {}, bonusPoints: 0, bonusTiers: 0 };
+    await admin.collection("players").update(bId, { units: { chasseur: { level: 1, count: 20 } }, resources: RICH, vacation: null, casino: null, seasonPass: pass, workshop: null });
+    const fleets: string[] = [];
+    try {
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "start" } });
+      const sent = await ps.sendFleet("", { chasseur: 10 }, "leviathan");
+      fleets.push(sent.id);
+      // Mesure après le départ (rattrapage fait par l'envoi) : seuls l'assaut et ses suites tombent dans l'écart.
+      const sentState = await snap(bId);
+      const tokens0 = Number(sentState.casino?.tokens ?? 0);
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"');
+      expect(cfg.data.contributions[bId].damage).toBeGreaterThan(0);
+      const after = await snap(bId);
+      const tiers = Number(after.seasonPass?.bonusTiers ?? 0) - Number(sentState.seasonPass?.bonusTiers ?? 0);
+      expect(tiers).toBeGreaterThan(0);
+      expect(Number(after.seasonPass?.activity?.bossAssault ?? 0)).toBe(1);
+      // Le jeton du palier bonus est bien arrivé avec le passe (même transaction, invariant I24). Les succès bronze et argent
+      // ne donnent pas de jeton ; un succès d'un palier supérieur débloqué pendant la mesure serait nommé ici.
+      const newly = ((after.unlockedAchievements ?? []) as string[]).filter((id) => !((sentState.unlockedAchievements ?? []) as string[]).includes(id));
+      expect(Number(after.casino?.tokens ?? 0), `succès débloqués pendant la mesure : ${newly.join(", ") || "aucun"}`).toBe(tokens0 + tiers * PASS_BONUS_RULES.tokens);
+    } finally {
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.send("/api/cosmic/admin/leviathan", { method: "POST", body: { action: "stop" } }).catch(() => undefined);
+      const cfg = await admin.collection("game_config").getFirstListItem('key="leviathan"').catch(() => null);
+      if (cfg) await admin.collection("game_config").delete(cfg.id);
+      await admin.collection("players").update(bId, { units: before.units, resources: before.resources, casino: before.casino ?? null, seasonPass: before.seasonPass ?? null, workshop: before.workshop ?? null, commanders: before.commanders ?? null, chronicle: before.chronicle ?? null, stats: before.stats ?? {} });
+    }
+  }, 30_000);
+
   it("5.21 Atelier: a boss assault sends saved ships to the workshop, damages hulls, and the workshop returns them", async () => {
     const before = await snap(bId);
     await admin.collection("players").update(bId, {
@@ -1543,7 +1626,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else await admin.collection("game_config").delete(cur.id);
       }
     }
-  });
+  }, 30_000);
 
   /** 6.14.48 (É30-1b) : lune de test (niveau donné, recharges prêtes). */
   const testMoon = (level: number) => ({ name: "Nyx", level, bornAtMs: Date.now() - 60_000, fromDebris: 1 });
@@ -2318,7 +2401,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { titles: [], activeTitle: "" });
       for (const n of await admin.collection("notifications").getFullList({ filter: `title~"Défi de la semaine"` })) await admin.collection("notifications").delete(n.id);
     }
-  });
+  }, 30_000);
 
   it("v3.9 bounties: hunt paid in amber, shop items, Kesh emojis, beacon and weekly elite", async () => {
     await loginPlayer(B.email, B.pw);
@@ -2823,7 +2906,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { units: bBefore.units, seasonPass: null, chronicle: null, bounties: bBefore.bounties, relics: null, titles: bBefore.titles ?? null });
     }
     });
-  });
+  }, 30_000);
 
   it("v4.6 social: presence, alliance boss called and killed, typing signal, gazette", async () => {
     const aClient = new PocketBase(PB_TEST_URL);
@@ -2981,6 +3064,16 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     let daily = (await admin.collection("alliances").getOne(allianceId)).daily;
     expect(daily.status).toBe("voting");
     expect(daily.proposals).toHaveLength(3);
+    // 6.14.151 (R3, reste d'AC-22) : vote par la route du joueur. B (membre, ou sans alliance lancé seul) est refusé ;
+    // A (fondateur) vote pour l'objectif 0 pendant la fenêtre de 8 h à 11 h (heure de Paris), refusé en dehors.
+    await expect(al.voteAllianceDaily(0)).rejects.toThrow(/fondateur et les officiers|pas d'alliance/);
+    await loginPlayer(A.email, A.pw);
+    if (dailyPhase(Date.now()) === "voting" && daily.day === parisDay(Date.now())) {
+      expect(((await al.voteAllianceDaily(0)) as { votes: Record<string, number> }).votes[aId]).toBe(0);
+    } else {
+      await expect(al.voteAllianceDaily(0)).rejects.toThrow(/vote est ouvert/);
+    }
+    await loginPlayer(B.email, B.pw);
     await admin.send("/api/cosmic/admin/alliance-daily", { method: "POST", body: { now: at(11) } });
     daily = (await admin.collection("alliances").getOne(allianceId)).daily;
     expect(daily.status === "active" || daily.status === "done").toBe(true);
@@ -3191,7 +3284,12 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
   });
 
   it("v5.4: generator writes a chapter, never replaces a hand-written month, refused to players", async () => {
+    // 6.14.151 (R3) : autonome (`-t`) : A et B créés au besoin, B compté parmi les joueurs actifs de la semaine (le résumé
+    // du monde lit `lastActiveMs`) ; lancé seul, il échouait sur « activePlayers > 0 ».
+    await ensureAB();
     await loginPlayer(B.email, B.pw);
+    const bBefore = await snap(bId);
+    await admin.collection("players").update(bId, { lastActiveMs: Date.now() });
     await expect(pb.send("/api/cosmic/admin/procedural", { method: "GET" })).rejects.toMatchObject({ status: 403 });
     const find = async () => (await admin.collection("game_config").getFullList({ filter: 'key = "chronicles"' }))[0] ?? null;
     const before = await find();
@@ -3211,6 +3309,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       const now = await find();
       if (before) await admin.collection("game_config").update(before.id, { data: before.data });
       else if (now) await admin.collection("game_config").delete(now.id);
+      await admin.collection("players").update(bId, { lastActiveMs: Number(bBefore?.lastActiveMs ?? 0) });
     }
   });
 
@@ -3272,7 +3371,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else if (cur) await admin.collection("game_config").delete(cur.id);
       }
     }
-  });
+  }, 30_000);
 
   it("6.14.149 (AP-12, AP-16) : tâche du jour en trois étapes, mois anciens allégés et archivés, reste de la configuration gardé", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -3318,7 +3417,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else if (cur) await admin.collection("game_config").delete(cur.id);
       }
     }
-  });
+  }, 30_000);
 
   it("6.14.108 (AP-L4) : paliers de succès générés datés et bridés, rien de retiré", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -3354,7 +3453,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else if (cur) await admin.collection("game_config").delete(cur.id);
       }
     }
-  });
+  }, 30_000);
 
   it("v5.5: admin player actions (test account, finish all, officers, grant with reason), refused to players", async () => {
     await loginPlayer(B.email, B.pw);
@@ -3903,7 +4002,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       else await admin.collection("game_config").delete(rec.id);
       await admin.collection("players").update(bId, { casino: before.casino ?? null, resources: before.resources });
     }
-  });
+  }, 30_000);
 
   it("6.14.121 (AP-L7) et 6.14.122 (AP-L8) : action suivie comptée par le serveur ; épisode « nouveauté » écrit sans écraser la configuration", async () => {
     await ensureAB();
@@ -3945,13 +4044,14 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       }
       await admin.collection("players").update(bId, { resources: before.resources, moon: before.moon ?? null, seasonPass: before.seasonPass ?? null, stats: before.stats ?? {} });
     }
-  });
+  }, 30_000);
 
   it("6.14.131 à 6.14.133 (AJ27-7, AJ27-9, AJ27-10) : réglages acceptés par le serveur, talent retenu pour le Codex, plan signature monté", async () => {
     await ensureAB();
     await loginPlayer(B.email, B.pw);
     const before = await snap(bId);
     await admin.collection("admins").create({ id: bId, note: "test 6.14.133" });
+    const restoreRules = await keepSection("rules");
     try {
       // AJ27-7 et AJ27-10 : poids par thème, plans signature et sources des reliques passent la validation du serveur.
       const d = defaultGameContent();
@@ -3976,7 +4076,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(after.modules?.slots?.[cls]?.[0]).toBe("msig1");
       expect(after.stats?.moduleTemplatesSeen ?? []).toEqual(expect.any(Array));
     } finally {
-      await resetContentSection("rules");
+      await restoreRules();
       await admin.collection("admins").delete(bId);
       await admin.collection("players").update(bId, { ascensions: before.ascensions ?? 0, talents: before.talents ?? null, modules: before.modules ?? null, resources: before.resources, stats: before.stats ?? {} });
     }
@@ -4011,7 +4111,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       else if (cur) await admin.collection("game_config").delete(cur.id);
       await admin.collection("players").update(bId, { units: before.units ?? {} });
     }
-  });
+  }, 30_000);
 
   it("6.14.124 (AA6) : une recherche d'alliance ajoutée dans l'admin agit côté serveur (soute des recycleurs)", async () => {
     await ensureAB();
@@ -4045,7 +4145,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       else if (cur) await admin.collection("game_config").delete(cur.id);
       await admin.collection("players").update(bId, { allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
     }
-  });
+  }, 30_000);
 
   it("6.14.125 (AA7) : une classe d'empire ajoutée dans l'admin se choisit et agit côté serveur (soute des recycleurs)", async () => {
     await ensureAB();
@@ -4083,7 +4183,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       else if (cur) await admin.collection("game_config").delete(cur.id);
       await admin.collection("players").update(bId, { empireClass: before.empireClass ?? null, allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
     }
-  });
+  }, 30_000);
 
   it("6.14.127 (AA9) : un talent ajouté dans l'admin s'apprend et agit côté serveur ; la garde refuse un élément invalide ou supprimé", async () => {
     await ensureAB();
@@ -4139,7 +4239,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       }
       await admin.collection("players").update(bId, { ascensions: before.ascensions ?? 0, talents: before.talents ?? {}, empireClass: before.empireClass ?? null, allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
     }
-  });
+  }, 30_000);
 
   it("6.14.128 (AA9) : un thème du passe ajouté dans l'admin entre dans la rotation du générateur ; la garde refuse un thème sans saisons", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -4169,7 +4269,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         if (rec) await admin.collection("game_config").create({ key, data: rec.data });
       }
     }
-  });
+  }, 30_000);
 
   it("6.14.136 à 6.14.139 (AP-L9 à AP-L12) : réglages des mutateurs, des banques de textes et des saisons générées gardés par le serveur et lus par le générateur", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -4202,7 +4302,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
         else if (cur) await admin.collection("game_config").delete(cur.id);
       }
     }
-  });
+  }, 30_000);
 
   it("6.14.126 (AA8) : retour arrière d'un seul groupe de règles, gardé par la validation du contenu", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -4239,7 +4339,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
       else if (cur) await admin.collection("game_config").delete(cur.id);
     }
-  });
+  }, 30_000);
 
   it("6.14.126 (AA8) : réglages du casino gardés dans le journal (sans l'état de jeu) et restaurés", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
@@ -4392,12 +4492,13 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
     // Réglages : la validation du serveur refuse des niveaux qui ne montent pas.
     await admin.collection("admins").create({ id: bId, note: "test 6.14.142" });
+    const restoreRules = await keepSection("rules");
     try {
       const d = defaultGameContent();
       await expect(saveContentSection("rules", { ...d.rules, buildingTiers: { ...(d.rules as unknown as { buildingTiers: object }).buildingTiers, storageLevels: [10, 5, 15, 20] } } as never)).rejects.toBeTruthy();
       await saveContentSection("rules", { ...d.rules, buildingTiers: { ...(d.rules as unknown as { buildingTiers: object }).buildingTiers, storageBufferHours: 1 } } as never);
     } finally {
-      await resetContentSection("rules");
+      await restoreRules();
       await admin.collection("admins").delete(bId);
     }
   }, 30_000);
@@ -4408,7 +4509,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     const before = await snap(bId);
     const buildings = { ...before.buildings, entrepot: { level: 20, unlocked: true }, extracteur_ferraille: { level: 12, unlocked: true }, extracteur_nanocomposants: { level: 12, unlocked: true } };
     // L'abri en heures de production (5.32) s'active le 13 octobre 2026 : on l'avance pour le test (règles restaurées à la fin).
-    // (Un test précédent a pu retirer la section « rules » : elle est alors créée puis retirée.)
+    // (Sur une base sans section « rules », elle est créée puis retirée ; 6.14.151 : plus aucun test ne la retire en route.)
     const found = await admin.collection("game_config").getFirstListItem('key="rules"').catch(() => null);
     const savedData = (found?.data as Record<string, unknown> | undefined) ?? null;
     const rulesId: string = found ? found.id : (await admin.collection("game_config").create({ key: "rules", data: {} })).id;
@@ -4565,6 +4666,119 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { buildings: before.buildings, units: before.units, resources: before.resources, techLevels: before.techLevels, workshop: null, buildingChoices: null, testMode: before.testMode ?? false });
     }
   }, 60_000);
+
+  it("6.14.151 (R3, reste d'AC-22) : routes du joueur jamais jouées contre le serveur (canal global, salons, sondage, enchères, signalement vu, passkey, mesures)", async () => {
+    await ensureAB();
+    const now = Date.now();
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const keepPolls = await keepSection("announcements");
+    const created: { col: string; id: string }[] = [];
+    try {
+      // Lectures publiques et du joueur.
+      const anon = new PocketBase(PB_TEST_URL);
+      expect((await anon.send<{ version: string }>("/api/cosmic/version", { method: "GET" })).version).toBeTruthy();
+      expect(await anon.send("/api/cosmic/status", { method: "GET" })).toBeTruthy();
+      await loginPlayer(B.email, B.pw);
+      expect((await pb.send<{ ban: unknown }>("/api/cosmic/ban/me", { method: "GET" })).ban ?? null).toBeNull();
+
+      // Mesures du navigateur : un échantillon valide est gardé, un échantillon vide refusé.
+      expect(await pb.send("/api/cosmic/vitals", { method: "POST", body: { route: "/game/galaxie/12", device: "m", values: { lcp: 2100, cls: 0.02 } } })).toEqual({ ok: true });
+      await expect(pb.send("/api/cosmic/vitals", { method: "POST", body: { values: {} } })).rejects.toMatchObject({ status: 400 });
+      const vitals = await admin.collection("server_metrics").getFirstListItem('key="web_vitals"');
+      expect(JSON.stringify(vitals.data)).toContain("/game/galaxie/:");
+
+      // Messagerie : « en train d'écrire » vers un autre joueur, jamais vers soi.
+      expect(await pb.send("/api/cosmic/messages/typing", { method: "POST", body: { to: aId } })).toEqual({ ok: true });
+      expect(await pb.send("/api/cosmic/messages/typing", { method: "POST", body: { to: bId } })).toEqual({ ok: false });
+
+      // Canal global et salon : B écrit et ouvre un salon ; A y écrit, réagit et signale ; B épingle le message de A.
+      await gcs.sendGlobalMessage(`Bonjour du test R3 ${suffix}`);
+      const bMsg = await admin.collection("global_messages").getFirstListItem(`uid="${bId}"`, { sort: "-createdAtMs" });
+      created.push({ col: "global_messages", id: bMsg.id });
+      expect(bMsg.text).toContain("test R3");
+      expect((await snap(bId)).stats?.globalMessages ?? 0).toBe((bBefore.stats?.globalMessages ?? 0) + 1);
+      const room = await gcs.createChatRoom(`Salon R3 ${suffix}`, "Essai de l'intégration");
+      created.push({ col: "chat_rooms", id: room.id });
+      await expect(gcs.reportGlobalMessage(bMsg.id)).rejects.toThrow(/propre message/);
+      await loginPlayer(A.email, A.pw);
+      await gcs.sendGlobalMessage("Message de A dans le salon", room.id);
+      const aMsg = await admin.collection("global_messages").getFirstListItem(`uid="${aId}" && room="${room.id}"`, { sort: "-createdAtMs" });
+      created.push({ col: "global_messages", id: aMsg.id });
+      expect((await gcs.reactGlobalMessage(bMsg.id, "👍")).reactions["👍"]).toEqual([aId]);
+      await expect(gcs.reactGlobalMessage(bMsg.id, "🍕")).rejects.toBeTruthy();
+      expect(await gcs.reportGlobalMessage(bMsg.id)).toMatchObject({ hidden: false });
+      expect((await admin.collection("global_messages").getOne(bMsg.id)).reporters).toEqual([aId]);
+      await expect(gcs.pinRoomMessage(room.id, aMsg.id)).rejects.toThrow(/créateur/);
+      await loginPlayer(B.email, B.pw);
+      await gcs.pinRoomMessage(room.id, aMsg.id);
+      expect((await admin.collection("chat_rooms").getOne(room.id)).pinnedId).toBe(aMsg.id);
+
+      // Sondage d'une annonce : vote, changement de vote, choix refusé, résultats.
+      const polls = await admin.collection("game_config").getFullList({ filter: 'key = "announcements"' });
+      const poll = { id: `r3-sondage-${suffix}`, title: "Sondage d'essai", text: "Essai", createdAtMs: now, poll: { question: "Une question ?", options: ["Oui", "Non"], closesAtMs: null, showResults: "always" } };
+      const data = { custom: [poll], schedule: {} };
+      if (polls[0]) await admin.collection("game_config").update(polls[0].id, { data });
+      else await admin.collection("game_config").create({ key: "announcements", data });
+      expect(await pls.votePoll(poll.id, 1)).toMatchObject({ counts: [0, 1], total: 1, mine: 1 });
+      expect(await pls.votePoll(poll.id, 0)).toMatchObject({ counts: [1, 0], total: 1, mine: 0 });
+      await expect(pls.votePoll(poll.id, 5)).rejects.toThrow(/Choix invalide/);
+      expect(await pls.fetchPollResults(poll.id)).toMatchObject({ total: 1, mine: 0 });
+      await expect(pls.fetchPollResults("sondage-inconnu")).rejects.toMatchObject({ status: 404 });
+      for (const v of await admin.collection("poll_votes").getFullList({ filter: `pollId = "${poll.id}"` })) created.push({ col: "poll_votes", id: v.id });
+
+      // Enchères : B met une relique en vente, A suit les ventes et enchérit, la vente avec une enchère ne s'annule plus.
+      const relic = { id: `r3${suffix}`, template: "engrenage_varan", rarity: "rare", foundAtMs: now, source: "test" };
+      await admin.collection("players").update(bId, { relics: { items: [relic], slots: [], aegisWeek: "" }, vacation: null });
+      const lot = await pb.send<{ id: string; status: string }>("/api/cosmic/auction", { method: "POST", body: { action: "list", kind: "relic", itemId: relic.id, res: "scrap", startPrice: 100, durationH: 6 } });
+      created.push({ col: "auctions", id: lot.id });
+      expect(lot.status).toBe("open");
+      expect(((await snap(bId)).relics?.items ?? []).some((r: { id: string }) => r.id === relic.id)).toBe(false);
+      await loginPlayer(A.email, A.pw);
+      await admin.collection("players").update(aId, { resources: RICH, vacation: null });
+      const watch = await pb.send<{ id: string }>("/api/cosmic/auction", { method: "POST", body: { action: "watch", watch: { kind: "relic", minRarity: "rare" } } });
+      expect(await pb.send("/api/cosmic/auction", { method: "POST", body: { action: "unwatch", id: watch.id } })).toEqual({ ok: true });
+      await expect(pb.send("/api/cosmic/auction", { method: "POST", body: { action: "bid", id: lot.id, amount: 50 } })).rejects.toMatchObject({ status: 400 });
+      // Rattrapage d'abord (règle du lot) : sinon la production accumulée depuis la mise à jour de l'admin tombe dans l'écart.
+      await catchUp(A, A);
+      const scrap0 = (await snap(aId)).resources.scrap;
+      const bid = await pb.send<{ bid: number; bidderId: string }>("/api/cosmic/auction", { method: "POST", body: { action: "bid", id: lot.id, amount: 100 } });
+      expect(bid).toMatchObject({ bid: 100, bidderId: aId });
+      // La mise est retirée de A (au plus quelques secondes de production en plus).
+      const scrap1 = (await snap(aId)).resources.scrap;
+      expect(scrap1).toBeGreaterThanOrEqual(scrap0 - 100);
+      expect(scrap1).toBeLessThan(scrap0 - 50);
+      await loginPlayer(B.email, B.pw);
+      await expect(pb.send("/api/cosmic/auction", { method: "POST", body: { action: "cancel", id: lot.id } })).rejects.toThrow(/ne s'annule plus/);
+
+      // Signalement : « vu » par son auteur seulement.
+      const form = new FormData();
+      form.append("reporterId", bId);
+      form.append("category", "display");
+      form.append("title", "Essai R3");
+      form.append("description", "Signalement d'essai pour la route « vu ».");
+      const report = await pb.collection("reports").create(form);
+      created.push({ col: "reports", id: report.id });
+      // (`reportService` touche au thème du document au chargement : la route est appelée directement.)
+      expect(await pb.send("/api/cosmic/reports/seen", { method: "POST", body: { id: report.id } })).toEqual({ ok: true });
+      expect((await admin.collection("reports").getOne(report.id)).reporterSeenAtMs).toBeGreaterThan(now - 1000);
+
+      // Passkey : renommée par son propriétaire seulement (l'enregistrement WebAuthn lui-même demande un navigateur).
+      const key = await admin.collection("passkeys").create({ user: bId, credentialId: `cred-r3-${suffix}`, publicKey: "cle-essai", alg: -7, signCount: 0, name: "Ancien nom", transports: [], createdAtMs: now });
+      created.push({ col: "passkeys", id: key.id });
+      expect((await pks.renamePasskey(key.id, "  Téléphone   de B ")).name).toBe("Téléphone de B");
+      await loginPlayer(A.email, A.pw);
+      await expect(pks.renamePasskey(key.id, "Volé")).rejects.toMatchObject({ status: 400 });
+      await expect(pb.send("/api/cosmic/reports/seen", { method: "POST", body: { id: report.id } })).rejects.toMatchObject({ status: 404 });
+    } finally {
+      for (const c of created.reverse()) await admin.collection(c.col).delete(c.id).catch(() => undefined);
+      for (const w of await admin.collection("auction_watches").getFullList({ filter: `uid = "${aId}"` })) await admin.collection("auction_watches").delete(w.id);
+      await keepPolls();
+      await admin.collection("players").update(aId, { resources: aBefore.resources });
+      await admin.collection("players").update(bId, { relics: bBefore.relics ?? null, stats: bBefore.stats ?? {} });
+      await loginPlayer(B.email, B.pw);
+    }
+  }, 30_000);
 
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");

@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 /* 6.14.52 (AC-A, revue AU27) : écritures sûres de la fiche joueur dans les hooks.
    - AC-4 : un rattrapage sauvé (`loadFlushed`, `game.flushPlayer`) écrit ses notifications dans la même fonction ;
    - AC-1, AC-9 : aucune fiche lue hors transaction n'est réécrite (`$app.save` d'un joueur, `bumpPlayerStat($app, …)`) ;
-   - AC-13 : un raid de faction a toujours une date de départ. */
+   - AC-13 : un raid de faction a toujours une date de départ ;
+   - 6.14.151 (R3) : une récompense versée par le serveur (passe, jetons, butin, relique, Ambre) sauve la fiche entière. */
 
 const db = readFileSync("pocketbase/pb_hooks/cosmic_db.js", "utf8");
 const pb = readFileSync("pocketbase/pb_hooks/cosmic.pb.js", "utf8");
@@ -87,6 +88,21 @@ describe("écritures sûres de la fiche joueur (AC-A)", () => {
     expect(offenders).toEqual([]);
     expect(db).not.toMatch(/bumpPlayerStat\(\$app\b/);
     expect(fns.get("unsubscribe")).toContain("runInTransaction");
+  });
+
+  it("6.14.151 (R3) : une fonction qui verse une récompense sauve la fiche entière (savePlayer), jamais champ par champ", () => {
+    // `addPassPoints` touche `seasonPass`, mais aussi `casino` (jetons des paliers bonus), `bounties` et `stats` (Ambre de
+    // dépassement) et `chronicle` (épisodes) : les assauts de boss ne sauvaient que `commanders` et `seasonPass`.
+    const reward = /game\.(?:addPassPoints|grantTokens|rollLoot|addRelic|addAmber)\(/;
+    const rewarding = [...fns].filter(([, body]) => reward.test(body));
+    expect(rewarding.length).toBeGreaterThan(15);
+    const partial = rewarding.filter(([, body]) => !/savePlayer\(/.test(body)).map(([name]) => name);
+    expect(partial).toEqual([]);
+    for (const name of ["leviathanArrival", "eliteArrival", "seasonBossArrival", "allianceBossArrival"]) {
+      expect(fns.get(name), name).toContain("savePlayer(txApp, game, owner, owner.player, owner.queues)");
+    }
+    // Les champs que le passe modifie ne s'écrivent jamais seuls.
+    expect(db).not.toMatch(/\.set\("(?:seasonPass|casino|chronicle)"/);
   });
 
   it("AC-13 : chaque raid de faction reçoit l'heure de départ", () => {

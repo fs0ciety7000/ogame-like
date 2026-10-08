@@ -24,6 +24,9 @@ technologie (+10 attaque et défense par niveau, 6.6). « Relancer » une prime 
 | Boss de saison (chronique) | mardi 18 h, 48 h (6.7) : dernier mardi du mois si le boss mondial est mensuel, sinon chaque mardi libre entre deux boss mondiaux | réglable |
 | Boss d'alliance | appelé (3 h de production), 24 h | 2,5 × puissance des membres |
 Phases : riposte sous 50 %, bouclier et faiblesse sous 25 %. Pertes 8 % par assaut (réparables).
+Chaque assaut qui touche (Léviathan, proie d'élite, boss de saison, boss d'alliance) : XP des officiers en poste (amiral, chasseur), 5 points de
+passe ; la fiche entière est sauvée dans la transaction de l'arrivée (6.14.151, I24) : jetons des paliers bonus, Ambre de dépassement
+et épisodes des Chroniques nés de ces points ne se perdent plus.
 
 ## Code et admin
 `pirates.ts`, `warlords.ts`, `warlordRanks.ts`, `coalition.ts`, `bounties.ts`, `leviathan.ts`, `worldBosses.ts`, `allianceBoss.ts`, `chronicles.ts`.

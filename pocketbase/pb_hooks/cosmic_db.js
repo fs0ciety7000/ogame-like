@@ -3715,9 +3715,9 @@ function leviathanArrival(txApp, game, rec, now) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
-    owner.rec.set("commanders", owner.player.commanders || null);
-    owner.rec.set("seasonPass", owner.player.seasonPass || null);
-    txApp.save(owner.rec);
+    // 6.14.151 (R3) : fiche entière, lue dans cette transaction (I24). Le passe touche aussi `casino` (jetons des paliers
+    // bonus), `bounties` et `stats` (Ambre de dépassement), `chronicle` (épisodes) : les sauver un par un en perdait.
+    savePlayer(txApp, game, owner, owner.player, owner.queues);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   notify(txApp, fleet.ownerUid, [
@@ -5171,9 +5171,9 @@ function eliteArrival(txApp, game, rec, now) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
-    owner.rec.set("commanders", owner.player.commanders || null);
-    owner.rec.set("seasonPass", owner.player.seasonPass || null);
-    txApp.save(owner.rec);
+    // 6.14.151 (R3) : fiche entière, lue dans cette transaction (I24). Le passe touche aussi `casino` (jetons des paliers
+    // bonus), `bounties` et `stats` (Ambre de dépassement), `chronicle` (épisodes) : les sauver un par un en perdait.
+    savePlayer(txApp, game, owner, owner.player, owner.queues);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   const name = game.describeElite(state).name;
@@ -8990,10 +8990,9 @@ function seasonBossArrival(txApp, game, rec, now) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
-    owner.rec.set("commanders", owner.player.commanders || null);
-    owner.rec.set("seasonPass", owner.player.seasonPass || null);
-    owner.rec.set("chronicle", owner.player.chronicle || null);
-    txApp.save(owner.rec);
+    // 6.14.151 (R3) : fiche entière, lue dans cette transaction (I24). Le passe touche aussi `casino` (jetons des paliers
+    // bonus), `bounties` et `stats` (Ambre de dépassement), `chronicle` (épisodes) : les sauver un par un en perdait.
+    savePlayer(txApp, game, owner, owner.player, owner.queues);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   notify(txApp, fleet.ownerUid, [
@@ -9289,10 +9288,9 @@ function allianceBossArrival(txApp, game, rec, now) {
     game.grantCommanderXp(owner.player, "admiral", game.COMMANDER_XP.bossAssault);
     game.grantCommanderXp(owner.player, "hunter", game.COMMANDER_XP.bossAssault);
     game.addPassPoints(owner.player, "bossAssault", now);
-    owner.rec.set("commanders", owner.player.commanders || null);
-    owner.rec.set("seasonPass", owner.player.seasonPass || null);
-    owner.rec.set("chronicle", owner.player.chronicle || null);
-    txApp.save(owner.rec);
+    // 6.14.151 (R3) : fiche entière, lue dans cette transaction (I24). Le passe touche aussi `casino` (jetons des paliers
+    // bonus), `bounties` et `stats` (Ambre de dépassement), `chronicle` (épisodes) : les sauver un par un en perdait.
+    savePlayer(txApp, game, owner, owner.player, owner.queues);
   }
   const lost = Object.keys(res.lost).reduce((a, k) => a + res.lost[k], 0);
   notify(txApp, fleet.ownerUid, [

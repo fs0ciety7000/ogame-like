@@ -21,6 +21,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q365 | **Chroniques anciennes allégées** (plus de 12 mois) : la croissance ralentit sans s'arrêter (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
 | Q367 | **Rotation des boss** : un boss désactivé laisse sa semaine au suivant ; calendrier inchangé si tous sont actifs (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
 | Q370 | **Prestige du passe** : 10 paliers cosmétiques après le palier 30 (bannière de saison, succès « Au-delà du passe »), sans ressource (`docs/changes/6.14.150-rythme-du-passe.md`) | le plus actif a encore un objectif jusqu'au jour 23 environ | valider |
+| Q374 | **Jetons perdus après un assaut de boss** (avant 6.14.151) non rendus : impossible à compter sans journal (`docs/changes/6.14.151-fiabilite-integration.md`) | au plus 10 jetons par mois pour un passe fini ; corrigé pour la suite | valider |
 
 ## 3. Récit
 
@@ -37,3 +38,4 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q371 | Palier de prestige de taille fixe (4 paliers du passe) plutôt que calé sur le rythme du plus actif (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |
 | Q372 | Aucune notification au passage d'un palier de prestige (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |
 | Q373 | Succès « Au-delà du passe » au palier argent (XP seule) plutôt qu'or (2 h de production) (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |
+| Q375 | Délai fixe de 30 s pour les tests d'intégration qui écrivent plus de 3 sections (`docs/changes/6.14.151-fiabilite-integration.md`) | valider |

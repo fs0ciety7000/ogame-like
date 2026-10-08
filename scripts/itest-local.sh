@@ -3,6 +3,7 @@
 # base vierge dans .pb/, hooks du dépôt, schéma, puis la suite d'intégration. Identifiants locaux de la CI, jamais ceux d'un serveur.
 #   bash scripts/itest-local.sh            # toute la suite
 #   bash scripts/itest-local.sh -t "lune"  # un test (il doit appeler ensureAB(), CLAUDE.md)
+#   ITEST_TOP=30 bash scripts/itest-local.sh  # tableau des 30 tests les plus lents (12 par défaut, rapport dans .pb/)
 set -u
 cd "$(dirname "$0")/.."
 PB_VERSION="${PB_VERSION:-0.36.0}"
@@ -24,5 +25,13 @@ rm -rf .pb/pb_migrations
 COSMIC_HOOKS_AUTOUPDATE=0 nohup .pb/pocketbase serve --http 127.0.0.1:8090 --dir .pb/pb_data --hooksDir pocketbase/pb_hooks > .pb/pb.log 2>&1 &
 for i in $(seq 1 30); do curl -sf 127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done
 PB_URL=http://127.0.0.1:8090 PB_ADMIN_EMAIL="$EMAIL" PB_ADMIN_PASSWORD="$PASS" node pocketbase/setup.mjs >/dev/null 2>&1
+# 6.14.151 (R3) : rapport JSON de vitest à côté de la sortie habituelle, puis les tests les plus lents (durée par test).
+REPORT=.pb/itest-durations.json
+rm -f "$REPORT"
 PB_TEST_URL=http://127.0.0.1:8090 PB_TEST_ADMIN_EMAIL="$EMAIL" PB_TEST_ADMIN_PASSWORD="$PASS" \
-  npx vitest run src/services/pocketbase.integration.test.ts "$@" 2>&1 | grep -E "×|→|Tests |integration.test.ts:[0-9]+"
+  npx vitest run src/services/pocketbase.integration.test.ts --reporter=default --reporter=json --outputFile.json="$REPORT" "$@" 2>&1 \
+  | grep -E "×|→|Tests |integration.test.ts:[0-9]+|FAIL |Error: "
+STATUS=${PIPESTATUS[0]}
+node scripts/itest-durations.mjs "$REPORT" "${ITEST_TOP:-12}"
+# Code de sortie de vitest (un échec se voit aussi dans `$?`, pas seulement à l'écran).
+exit "$STATUS"
