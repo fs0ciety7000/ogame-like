@@ -24,8 +24,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q349 | Illustrations de saison : 64 lignes sur `/img` d'un coup (thèmes des années 2 et 3, portraits de février 2027 à octobre 2029, seconds boss) ; un brouillon déjà écrit garde l'image du thème (`docs/changes/6.14.138-illustrations-saison.md`) | plus d'images à produire sur `/img` | valider |
 | Q350 | Saisons au-delà de 36 mois : Générées dès novembre 2029 en prolongeant la saison du même rang (sous-titre, nouveau commandant, second rôle), puis relues ; portraits des commandants générés (`docs/changes/6.14.139-catalogue-prolonge.md`) | pas de répétition visible sur 96 mois | valider |
 | Q351 | Outil `procedural-sim.mjs` : Lancé à la main (revue de fin de feuille de route) (`docs/changes/6.14.140-procedural-sim.md`) | aucun | valider |
-| Q344 | Rapports de combat anciens (4 jamais vus, un seul défenseur sur la pré-prod) : Chemin gardé jusqu'à zéro, recompté à chaque copie de la pré-prod (`docs/changes/6.14.135-menage-tour-actions.md`) | aucun | valider |
-| Q345 | « Lancer maintenant » des tâches horaires et de nuit : Cadences seulement (ces tâches n'ont pas de verrou) (`docs/changes/6.14.135-menage-tour-actions.md`) | aucun (admin) | valider |
 
 ## 3. Récit
 
