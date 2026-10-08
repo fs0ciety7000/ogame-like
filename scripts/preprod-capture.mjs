@@ -3,6 +3,8 @@
 //   node scripts/preprod-capture.mjs /game/codex <dossier de sortie> ["Onglet 1,Onglet 2"] ["Texte 1,Texte 2"]
 //
 // 6.14.100 : variable CAPTURE_THEME (ex. netrunner) pour capturer un autre thème que Constellation.
+// 6.14.150 : variable CAPTURE_APP_URL quand l'interface n'est pas servie par PocketBase (essai local : Vite lancé avec
+// VITE_POCKETBASE_URL=http://127.0.0.1:8090, puis CAPTURE_APP_URL=http://127.0.0.1:5199 et PREPROD_PB_URL=http://127.0.0.1:8090).
 // 6.14.93 : le 4e argument (textes séparés par des virgules) fait défiler jusqu'à chaque texte, après le dernier onglet, et
 // ajoute une capture par texte (`<page>-vue-<texte>-<largeur>.png`) : contenu sous la ligne de flottaison.
 //
@@ -88,7 +90,7 @@ for (const [name, viewport] of [["mobile", { width: 375, height: 812 }], ["deskt
   // Jamais de requête vers la production depuis une capture.
   await ctx.route(/(base|empire)\.fs0ciety\.org/, (r) => r.abort());
   const page = await ctx.newPage();
-  await page.goto(URL_ + path, { waitUntil: "load", timeout: 60000 });
+  await page.goto((process.env.CAPTURE_APP_URL || URL_).replace(/\/$/, "") + path, { waitUntil: "load", timeout: 60000 });
   await page.waitForTimeout(8000);
   await dismiss(page);
   await page.screenshot({ path: `${out}/${slug}-${name}.png` });

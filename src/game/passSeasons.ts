@@ -2,11 +2,11 @@ import { COMMANDER_ROLES, setSeasonCommanders, type SeasonCommanderDef } from "@
 import type { ChronicleObjective } from "@/game/chronicles";
 import { isTrackedObjective, objectiveLabel } from "@/game/trackedActions";
 import { baseCount, generatePass, GENERATOR_VERSION, seededRandom, type WorldDigest } from "@/game/procedural";
-import { normalizeTierReqs, PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
+import { normalizeTierReqs, PASS_PRESTIGE_RULES, PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { challengePool, computePointsPerTier, generateBudgetTiers, passGenRules, tiersValue, type PassGenRules } from "@/game/passGen";
-import { defaultSimProfiles, profileFromMedian, simulatePass } from "@/game/passSimulator";
+import { defaultSimProfiles, profileFromMedian, profilePointsPerDay, simulatePass } from "@/game/passSimulator";
 import { NARRATIVE_RULES } from "@/game/narrative";
 import { CATALOG_START, catalogCycle, catalogEntryFor, catalogIndex, DEFAULT_THEME_PRIMARY, DEFAULT_THEME_ROTATION, illustrationPrompt, portraitPrompt, THEME_PRIMARY, type SeasonCatalogEntry } from "@/game/seasonCatalog";
 import type { CommanderId } from "@/game/commanders";
@@ -887,6 +887,23 @@ export function passPaceCheck(season: Pick<PassSeason, "pointsPerTier" | "tiers"
   const top = { ...median, id: "top", label: "Plus actif", weekly: Object.fromEntries(Object.entries(median.weekly).map(([k, v]) => [k, (v ?? 0) * ratio])) };
   const run = (p: typeof median, ppd?: number) => simulatePass(season, ppd ? { ...p, pointsPerDay: ppd } : p, 31, 62).finishDay;
   return { medianDay: run(median, pace?.median), topDay: pace ? run(top, Math.max(pace.top, pace.median)) : run(defActive) };
+}
+
+/** 6.14.150 : points par jour du plus actif retenus par `passPaceCheck` (mesure du serveur, sinon profil « Assidu »). */
+export function topPointsPerDay(d: Pick<WorldDigest, "passPace">): number {
+  return d.passPace ? Math.max(d.passPace.top, d.passPace.median) : profilePointsPerDay(defaultSimProfiles()[2]);
+}
+
+/** 6.14.150 (AP-11) : jour où le plus actif atteint le dernier palier de prestige (points au-delà du maximum du passe, au même
+ *  rythme ; jamais avant son dernier palier). Undefined : prestige désactivé ; null : pas dans les 62 jours. */
+export function prestigeDay(season: Pick<PassSeason, "pointsPerTier" | "tiers">, topDay: number | null, pointsPerDay: number): number | null | undefined {
+  const r = PASS_PRESTIGE_RULES;
+  if (!r.enabled || !(r.tiers >= 1) || !(r.tierFactor > 0)) return undefined;
+  if (topDay === null || !(pointsPerDay > 0)) return null;
+  const size = Math.max(1, Math.round(r.tierFactor * season.pointsPerTier));
+  const total = season.tiers.length * season.pointsPerTier + Math.floor(r.tiers) * size;
+  const day = Math.max(topDay, Math.ceil(total / pointsPerDay - 1e-9));
+  return day > 62 ? null : day;
 }
 
 /* ---------- validation, application ---------- */

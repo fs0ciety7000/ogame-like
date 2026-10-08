@@ -3,7 +3,7 @@ import type { GameRules } from "@/game/content";
 import { objectiveLabel, type ChronicleObjective } from "@/game/chronicles";
 import { PASS_GEN_RULES, tierBudgets, type PassGenRules } from "@/game/passGen";
 import { PASS_REWARD_RULES } from "@/game/passSeasons";
-import { PASS_BONUS_RULES } from "@/game/seasonPass";
+import { PASS_BONUS_RULES, PASS_PRESTIGE_RULES } from "@/game/seasonPass";
 import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
 
 /* 6.8.1 : réglages du passe généré (GameRules.passGen) : budget des récompenses, plafonds, rythme, défis. */
@@ -32,6 +32,9 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
   const passRewards = { ...PASS_REWARD_RULES, ...(rules.passRewards as Partial<typeof PASS_REWARD_RULES>) };
   const bonus = { ...PASS_BONUS_RULES, ...(rules.passBonus as Partial<typeof PASS_BONUS_RULES>) };
   const setBonus = (patch: Partial<typeof PASS_BONUS_RULES>) => setRules((r) => ({ ...r, passBonus: { ...bonus, ...patch } }));
+  // 6.14.150 (AP-11) : paliers de prestige cosmétiques.
+  const prestige = { ...PASS_PRESTIGE_RULES, ...(rules.passPrestige as Partial<typeof PASS_PRESTIGE_RULES>) };
+  const setPrestige = (patch: Partial<typeof PASS_PRESTIGE_RULES>) => setRules((r) => ({ ...r, passPrestige: { ...prestige, ...patch } }));
   const set = (patch: Partial<PassGenRules>) => setRules((r) => ({ ...r, passGen: { ...g, ...r.passGen, ...patch } }));
   const budgets = tierBudgets(30, g);
   const fmt = (x: number) => String(Math.round(x * 10) / 10).replace(".", ",");
@@ -88,6 +91,23 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
         <NumberField label="Points par palier bonus" value={bonus.points} min={1} step={10} onChange={(v) => setBonus({ points: Math.max(1, Math.round(v ?? 120)) })} />
         <NumberField label="Jetons de casino par palier bonus" value={bonus.tokens} min={0} step={1} onChange={(v) => setBonus({ tokens: Math.max(0, Math.round(v ?? 1)) })} />
         <NumberField label="Paliers bonus par mois au plus" value={bonus.maxPerMonth} min={0} step={1} onChange={(v) => setBonus({ maxPerMonth: Math.max(0, Math.round(v ?? 10)) })} />
+      </Section>
+      <Section title="Passe : paliers de prestige (6.14.150)">
+        <CheckboxField
+          label="Paliers de prestige actifs"
+          checked={prestige.enabled}
+          hint="Cosmétiques, sans ressources : tout point gagné après le dernier palier avance le prestige du mois ; tous atteints, une bannière."
+          onChange={(v) => setPrestige({ enabled: v })}
+        />
+        <NumberField label="Paliers de prestige par mois" value={prestige.tiers} min={0} step={1} onChange={(v) => setPrestige({ tiers: Math.min(50, Math.max(0, Math.round(v ?? 10))) })} />
+        <NumberField
+          label="Taille d'un palier de prestige (paliers du passe)"
+          value={prestige.tierFactor}
+          min={0.5}
+          step={0.5}
+          hint="Points d'un palier de prestige = ce nombre × points par palier du mois. 4 : le plus actif finit vers le jour 23 (profil réel) à 29 (typique)."
+          onChange={(v) => setPrestige({ tierFactor: Math.min(50, Math.max(0.5, v ?? 4)) })}
+        />
       </Section>
       <Section title="Passe généré : rythme et défis (6.8.1)">
         <NumberField label="Jour de fin visé (joueur médian)" value={g.targetMedianDay} min={1} step={1} onChange={(v) => set({ targetMedianDay: Math.round(v ?? 24) })} />

@@ -464,6 +464,7 @@ export const ACHIEVEMENT_PAGES: Record<string, string> = {
   maxNotoriety: "/game/menaces",
   evasions: "/game/menaces",
   passesCompleted: "/game/passe",
+  passesPrestiged: "/game/passe",
   chaptersCompleted: "/game/chroniques",
   bossSeals: "/game/boss",
   leviathanKills: "/game/uber",

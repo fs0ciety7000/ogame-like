@@ -101,6 +101,18 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
         unlocked: true,
       };
     }),
+    // 6.14.150 (AP-11) : une bannière par passe au prestige complet (couleur du thème, bord or).
+    ...(p.seasonPass?.prestiged ?? []).map((seasonId) => {
+      const pub = seasonId >= CATALOG_START ? publishedPassSeason(seasonId) : null;
+      const accent = seasonId >= CATALOG_START ? pub?.theme.accent || PASS_THEMES.find((t) => t.id === catalogEntryFor(seasonId).theme)?.accent || "#4be8ff" : "#4be8ff";
+      return {
+        id: `prestige:${seasonId}`,
+        label: seasonId >= CATALOG_START ? `Prestige « ${pub?.theme.name || catalogEntryFor(seasonId).name} »` : `Prestige ${seasonLabel(seasonId)}`,
+        gradient: prestigeGradient(accent),
+        hint: "Atteindre tous les paliers de prestige du passe",
+        unlocked: true,
+      };
+    }),
     // v5.4 : une bannière par chapitre des Chroniques terminé.
     ...chroniclesConfig()
       .months.filter((m) => m.completion)
@@ -116,6 +128,10 @@ export function bannerOptions(p: StylePlayer): CosmeticOption[] {
 
 function accentGradient(accent: string): string {
   return `linear-gradient(120deg,#05070f 0%,${accent}44 45%,${accent} 100%)`;
+}
+
+function prestigeGradient(accent: string): string {
+  return `linear-gradient(120deg,#05070f 0%,${accent}55 40%,${accent} 70%,#ffd86b 100%)`;
 }
 
 function passThemeGradient(themeId: string): string {

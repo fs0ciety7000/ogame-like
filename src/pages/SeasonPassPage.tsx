@@ -3,13 +3,13 @@ import { FoldSection } from "@/components/ui/panel";
 import { useState } from "react";
 import { RewardReveal } from "@/components/game/RewardReveal";
 import { toast } from "sonner";
-import { Check, Gift, Lock, Ticket } from "lucide-react";
+import { Check, Gift, Lock, Star, Ticket } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passPrestigeProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -225,6 +225,7 @@ export function SeasonPassPage() {
           );
         })}
       </div>
+      <PrestigeCard progress={passPrestigeProgress(st)} finished={st.points >= max} tiers={tiers} done={(st.prestiged ?? []).includes(st.seasonId)} />
       <FoldSection id="pass-sources" title="Gagner des points" tone="accent" defaultOpen={false}>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
           {SOURCES.map(([k, label]) => (
@@ -258,6 +259,41 @@ export function SeasonPassPage() {
         Palier {tiers} : {pass.tiers[tiers - 1].map((r) => describePassReward(r, st.seasonId)).join(", ")}. Le titre « {passTitle(st.seasonId)} » et la bannière de la saison sont gardés pour toujours.
       </p>
     </div>
+  );
+}
+
+/** 6.14.150 (AP-11, proposals/rythme-du-passe.md) : paliers de prestige après le dernier palier, cosmétiques (rien à réclamer). */
+function PrestigeCard({ progress, finished, tiers, done }: { progress: ReturnType<typeof passPrestigeProgress>; finished: boolean; tiers: number; done: boolean }) {
+  if (!progress) return null;
+  const { level, max, into, size } = progress;
+  const sub = !finished
+    ? `Après le palier ${tiers}, chaque point gagné fait monter ton prestige.`
+    : level >= max
+      ? "Prestige complet : la bannière de prestige de la saison est dans ton profil."
+      : `${into} / ${size} points vers le prestige ${level + 1}`;
+  return (
+    <Card className={cn("flex flex-col gap-2 p-4", finished && "border-gold-glow/40")}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="hud-eyebrow text-[11px] text-gold-glow">Prestige · après le palier {tiers}</p>
+        <span className="font-mono text-sm tabular-nums text-slate-200">
+          {level} / {max}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1" role="img" aria-label={`Prestige ${level} sur ${max}`}>
+        {Array.from({ length: max }, (_, i) => (
+          <Star key={i} className={cn("h-4 w-4", i < level ? "fill-current text-gold-glow" : "text-slate-600")} />
+        ))}
+      </div>
+      {finished && level < max && (
+        <div className="h-1.5 w-full overflow-hidden bg-white/5" role="progressbar" aria-label="Points de prestige" aria-valuemin={0} aria-valuemax={size} aria-valuenow={into}>
+          <div className="h-full bg-gold-glow transition-all" style={{ width: `${(into / size) * 100}%` }} />
+        </div>
+      )}
+      <p className="text-xs text-slate-300">{sub}</p>
+      <p className="text-xs text-slate-500">
+        Cosmétique : rien à réclamer, aucune ressource. {done ? "Bannière gagnée ce mois-ci." : `Les ${max} paliers atteints : une bannière de prestige aux couleurs de la saison, gardée pour toujours.`}
+      </p>
+    </Card>
   );
 }
 

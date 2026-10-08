@@ -177,6 +177,8 @@ export const METRICS = {
   chaptersCompleted: { label: "Chapitres des Chroniques terminés", value: (p: PlayerState) => ((p.chronicle as { chapters?: string[] } | undefined)?.chapters ?? []).length },
   bossSeals: { label: "Sceaux de boss de saison", value: (p: PlayerState) => ((p.chronicle as { emblems?: string[] } | undefined)?.emblems ?? []).length },
   passesCompleted: { label: "Passes de saison terminés", value: (p: PlayerState) => ((p.seasonPass as { completed?: string[] } | undefined)?.completed ?? []).length },
+  // 6.14.150 (AP-11) : passes dont tous les paliers de prestige sont atteints.
+  passesPrestiged: { label: "Passes au prestige complet", value: (p: PlayerState) => ((p.seasonPass as { prestiged?: string[] } | undefined)?.prestiged ?? []).length },
   playtimeHours: { label: "Heures de jeu", value: (p: PlayerState) => Math.floor((p.playtimeSeconds ?? 0) / 3600) },
   // v5.14 : collections tirées des catalogues (officiers rares, commandants de saison, boss mondiaux).
   rareOfficers: { label: "Officiers rares dans l'état-major", value: (p: PlayerState) => Object.keys(commandersState(p).roster).filter((id) => findCommander(id)?.rare).length },
@@ -432,6 +434,8 @@ export const DEFAULT_ACHIEVEMENTS: AchievementDef[] = [
   def("chapter_keeper", "prestige", "argent", "chaptersCompleted", 3, "Gardien des Chroniques", "Termine 3 chapitres des Chroniques.", "📚"),
   def("seal_bearer", "prestige", "argent", "bossSeals", 1, "Porte-sceau", "Participe à la chute d'un boss de saison.", "🔱"),
   def("pass_finisher", "prestige", "or", "passesCompleted", 1, "Jusqu'au bout", "Termine un passe de saison.", "🎟️"),
+  // 6.14.150 (AP-11) : prestige du passe (palier argent : XP seule, sans ressources).
+  def("pass_prestige", "prestige", "argent", "passesPrestiged", 1, "Au-delà du passe", "Atteins tous les paliers de prestige d'un passe.", "🌟"),
 ];
 
 /** Registre courant (remplacé par applyGameContent). */

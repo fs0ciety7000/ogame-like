@@ -13,7 +13,7 @@ import { FACTIONS, PIRATE_RULES, pirateState, raidPower } from "@/game/pirates";
 import { computeCombatXp, PVP_RULES } from "@/game/pvp";
 import { DEBRIS_RULES } from "@/game/debris";
 import { RESOURCE_LIST } from "@/game/resources";
-import { activePass, PASS_POINTS } from "@/game/seasonPass";
+import { activePass, PASS_POINTS, PASS_PRESTIGE_RULES, passPrestigeSize } from "@/game/seasonPass";
 import { currentSeasonId } from "@/game/seasons";
 import { UNITS, UNIT_BASE_STATS, OFFENSIVE_UNITS } from "@/game/units";
 import { WARLORD_RULES } from "@/game/warlords";
@@ -628,6 +628,13 @@ ressources rares = récompense × max(1 + niveaux de bâtiments ÷ ${ECONOMY_RUL
         <Table head={["Action", "Points"]} rows={Object.entries(PASS_POINTS).map(([k, v]) => [PASS_LABELS[k] ?? k, `+${v}`])} />
         <p>
           Ce mois-ci : {pass.tiers.length} paliers de {pass.pointsPerTier} points.
+          {PASS_PRESTIGE_RULES.enabled && PASS_PRESTIGE_RULES.tiers > 0 && (
+            <>
+              {" "}
+              Ensuite, {PASS_PRESTIGE_RULES.tiers} paliers de prestige de <span className="font-mono tabular-nums">{passPrestigeSize(currentSeasonId(now))}</span> points
+              (cosmétiques, sans ressources) : tous atteints, une bannière de prestige.
+            </>
+          )}
         </p>
         <Formula>
           {`chapitre généré :

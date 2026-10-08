@@ -20,7 +20,7 @@
 //                du rebondissement (chronicleGen.stretchMinWeekly), ou nulle.
 //   Passe      : noms de saison, commandants et paires de rôles distincts, première répétition, répliques des jalons distinctes ;
 //                faisabilité : jour de fin simulé du joueur médian et du plus actif (passPaceCheck), mois où le médian dépasse
-//                passGen.latestMedianDay.
+//                passGen.latestMedianDay ; jour du dernier palier de prestige du plus actif (6.14.150, `topPrestigeDay`).
 //   Saga       : titres répétés deux mois de suite, faction identique à celle du chapitre du mois.
 //   Mutateurs  : minimum de mutateurs distincts sur 12 mois glissants, écart minimal entre deux retours.
 //
@@ -86,7 +86,7 @@ await build({
     contents: `
       export { applyGameContent } from "@/game/content";
       export { generateChapter } from "@/game/procedural";
-      export { generatePassSeason, passPaceCheck } from "@/game/passSeasons";
+      export { generatePassSeason, passPaceCheck, prestigeDay, topPointsPerDay } from "@/game/passSeasons";
       export { generateAllianceSaga } from "@/game/allianceSaga";
       export { mutatorFor } from "@/game/mutators";
       export { catalogEntryFor, THEME_PRIMARY } from "@/game/seasonCatalog";
@@ -212,6 +212,11 @@ function simulate(p) {
     topDay: stats(paces.map((x) => x.topDay)),
     medianLate: paces.filter((x) => x.medianDay === null || x.medianDay > pg.latestMedianDay).length,
     topEarly: paces.filter((x) => x.topDay !== null && x.topDay < pg.targetTopDay).length,
+    // 6.14.150 (AP-11) : jour du dernier palier de prestige du plus actif (absent : prestige désactivé).
+    ...(() => {
+      const days = passes.map((s, i) => E.prestigeDay(s, paces[i].topDay, E.topPointsPerDay(digest(p, s.id))));
+      return days.some((x) => x === undefined) ? {} : { topPrestigeDay: stats(days) };
+    })(),
   };
 
   // 6.14.148 (AP-L6) : la saga lit le chapitre du mois et les titres des sagas précédentes, comme le serveur.

@@ -30,9 +30,9 @@ const ids = (p: PlayerState) => checkNewAchievements(p).map((a) => a.id);
 describe("succès (v2.3)", () => {
   beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
 
-  it("has 76 valid achievements, keeping the 8 historical ids", () => {
-    // 76 succès de base + les succès dérivés des catalogues (v5.14) + ceux par unité et par bâtiment (6.14.129).
-    expect(ACHIEVEMENTS).toHaveLength(76 + derivedAchievements().length + contentAchievements().length);
+  it("has 77 valid achievements, keeping the 8 historical ids", () => {
+    // 77 succès de base (6.14.150 : prestige du passe) + les succès dérivés des catalogues (v5.14) + ceux par unité et par bâtiment (6.14.129).
+    expect(ACHIEVEMENTS).toHaveLength(77 + derivedAchievements().length + contentAchievements().length);
     expect(validateAchievements(DEFAULT_ACHIEVEMENTS)).toEqual([]);
     for (const id of ["first_blood", "veteran", "architect", "expansion", "researcher", "commander", "fleet", "tireless"]) {
       expect(ACHIEVEMENTS.some((a) => a.id === id)).toBe(true);

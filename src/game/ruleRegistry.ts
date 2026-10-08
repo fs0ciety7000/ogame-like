@@ -49,7 +49,7 @@ import { PROFILE_RULES, PROFILE_RULES_META } from "@/game/profile";
 import { REFERRAL_RULES, REFERRAL_RULES_META } from "@/game/referral";
 import { RENAME_RULES, RENAME_RULES_META } from "@/game/rename";
 import { REPORT_RULES, REPORT_RULES_META } from "@/game/reports";
-import { PASS_BONUS_RULES, PASS_BONUS_RULES_META, PASS_OVERFLOW, PASS_OVERFLOW_META } from "@/game/seasonPass";
+import { PASS_BONUS_RULES, PASS_BONUS_RULES_META, PASS_OVERFLOW, PASS_OVERFLOW_META, PASS_PRESTIGE_RULES, PASS_PRESTIGE_RULES_META } from "@/game/seasonPass";
 import { SEASON_WAR_RULES, SEASON_WAR_RULES_META, WAR_CHEST_RULES, WAR_CHEST_RULES_META } from "@/game/seasonWars";
 import { TUTORIAL_RAID, TUTORIAL_RAID_META } from "@/game/story";
 import { SYNTH_RULES, SYNTH_RULES_META } from "@/game/synthesis";
@@ -131,6 +131,8 @@ export const REGISTERED_RULES = {
   // 6.14.129 (AJ27-6) : succès dérivés par unité et par bâtiment (seuils, palier, récompense, textes, activation).
   contentAchievements: { label: "Succès : par unité et par bâtiment", target: () => CONTENT_ACHIEVEMENT_RULES, meta: () => CONTENT_ACHIEVEMENT_RULES_META },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES, meta: () => PASS_BONUS_RULES_META },
+  // 6.14.150 (AP-11, proposals/rythme-du-passe.md) : prestige cosmétique après le dernier palier.
+  passPrestige: { label: "Passe : paliers de prestige (cosmétiques)", target: () => PASS_PRESTIGE_RULES, meta: () => PASS_PRESTIGE_RULES_META },
   missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES, meta: () => MISSION_XP_RULES_META },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP, meta: () => COMMANDER_XP_META },
   dailyContracts: { label: "Objectifs du jour", target: () => CONTRACT_RULES, meta: () => CONTRACT_RULES_META },

@@ -22,6 +22,7 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q362 | **Saga d'alliance sur le chapitre du mois** : même faction, boss et image ; titre non répété sur 3 mois ; réglable dans l'admin (`docs/changes/6.14.148-revue-au28.md`) | saga cohérente avec les Chroniques | valider |
 | Q365 | **Chroniques anciennes allégées** (plus de 12 mois) : la croissance ralentit sans s'arrêter (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
 | Q367 | **Rotation des boss** : un boss désactivé laisse sa semaine au suivant ; calendrier inchangé si tous sont actifs (`docs/changes/6.14.149-hygiene-generateurs.md`) | aucun avec les réglages par défaut | valider |
+| Q370 | **Prestige du passe** : 10 paliers cosmétiques après le palier 30 (bannière de saison, succès « Au-delà du passe »), sans ressource (`docs/changes/6.14.150-rythme-du-passe.md`) | le plus actif a encore un objectif jusqu'au jour 23 environ | valider |
 
 ## 3. Récit
 
@@ -37,3 +38,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q366 | Passes de saison anciens (≈ 7 Ko par mois) laissés tels quels : commandants et bannières en dépendent (I43) (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |
 | Q368 | Chapitre de la bibliothèque placé hors de sa saison : confirmation simple de l'admin plutôt qu'un blocage (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |
 | Q369 | Chapitre écrit à la main sans fin de chapitre : pas de fin générée ajoutée (`docs/changes/6.14.149-hygiene-generateurs.md`) | valider |
+| Q371 | Palier de prestige de taille fixe (4 paliers du passe) plutôt que calé sur le rythme du plus actif (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |
+| Q372 | Aucune notification au passage d'un palier de prestige (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |
+| Q373 | Succès « Au-delà du passe » au palier argent (XP seule) plutôt qu'or (2 h de production) (`docs/changes/6.14.150-rythme-du-passe.md`) | valider |

@@ -188,6 +188,11 @@ export interface PassState {
   /** 6.11.0 (PRG-2, Z3) : points gagnés après le dernier palier et paliers bonus déjà versés ce mois. */
   bonusPoints?: number;
   bonusTiers?: number;
+  /** 6.14.150 (AP-11, proposals/rythme-du-passe.md) : points gagnés après le dernier palier, comptés pour le prestige du mois
+   *  (cosmétique, plafonnés à la valeur de tous les paliers de prestige). */
+  prestigePoints?: number;
+  /** 6.14.150 : saisons dont tous les paliers de prestige sont atteints (bannière gardée, comme `completed`). */
+  prestiged?: string[];
 }
 
 export function passTitle(seasonId: string): string {
@@ -200,7 +205,10 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
   const raw = (player.seasonPass ?? {}) as Partial<PassState>;
   const seasonId = currentSeasonId(now);
   const completed = Array.isArray(raw.completed) ? raw.completed.map(String) : [];
-  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {} };
+  // 6.14.150 : les saisons au prestige complet restent d'un mois sur l'autre (bannières).
+  const prestiged = Array.isArray(raw.prestiged) ? raw.prestiged.map(String) : [];
+  const keep = prestiged.length ? { prestiged } : {};
+  if (raw.seasonId !== seasonId) return { seasonId, points: 0, claimed: [], loginDay: "", completed, activity: {}, ...keep };
   const activity: Record<string, number> = {};
   for (const [k, v] of Object.entries(raw.activity ?? {})) if (Number(v) > 0) activity[k] = Number(v);
   const challenge: Record<string, number> = {};
@@ -223,6 +231,8 @@ export function passState(player: Pick<PlayerState, "seasonPass">, now: number):
     ...(Number(raw.finishedAtMs) > 0 ? { finishedAtMs: Number(raw.finishedAtMs) } : {}),
     ...(Number(raw.bonusPoints) > 0 ? { bonusPoints: Math.floor(Number(raw.bonusPoints)) } : {}),
     ...(Number(raw.bonusTiers) > 0 ? { bonusTiers: Math.floor(Number(raw.bonusTiers)) } : {}),
+    ...(Number(raw.prestigePoints) > 0 ? { prestigePoints: Math.floor(Number(raw.prestigePoints)) } : {}),
+    ...keep,
   };
 }
 
@@ -432,6 +442,56 @@ export function passBonusProgress(st: PassState): { tiers: number; max: number; 
   return { tiers, max: r.maxPerMonth, into: tiers >= r.maxPerMonth ? r.points : (st.bonusPoints ?? 0) - tiers * r.points, size: r.points, tokens: r.tokens };
 }
 
+/** 6.14.150 (AP-11, lot R2, proposals/rythme-du-passe.md) : paliers de prestige après le dernier palier, cosmétiques et sans
+ *  budget (rien à réclamer, aucune ressource). Un palier de prestige vaut `tierFactor` paliers du passe du mois ; tous atteints, la
+ *  saison donne une bannière de prestige. Défaut : 10 paliers de 4 paliers (le plus actif finit vers le jour 25 à 30). */
+export const PASS_PRESTIGE_RULES = {
+  enabled: true,
+  tiers: 10,
+  tierFactor: 4,
+};
+
+export const PASS_PRESTIGE_RULES_META = {
+  enabled: { label: "Paliers de prestige après le dernier palier (cosmétiques)" },
+  tiers: { label: "Paliers de prestige par mois", min: 0, max: 50 },
+  tierFactor: {
+    label: "Taille d'un palier de prestige",
+    unit: "paliers du passe",
+    min: 0.5,
+    max: 50,
+    hint: "Points d'un palier de prestige = ce nombre × points par palier du passe du mois (4 × 60 = 240 points).",
+  },
+};
+
+/** Points d'un palier de prestige pour le passe d'un mois (0 : prestige désactivé). */
+export function passPrestigeSize(seasonId: string): number {
+  const r = PASS_PRESTIGE_RULES;
+  if (!r.enabled || !(r.tiers >= 1) || !(r.tierFactor > 0)) return 0;
+  return Math.max(1, Math.round(r.tierFactor * activePass(seasonId).pointsPerTier));
+}
+
+/** Avancée du prestige du mois (null : désactivé). `level` paliers atteints sur `max`, `into` / `size` vers le suivant. */
+export function passPrestigeProgress(st: Pick<PassState, "seasonId" | "prestigePoints">): { level: number; max: number; into: number; size: number } | null {
+  const size = passPrestigeSize(st.seasonId);
+  if (!(size > 0)) return null;
+  const max = Math.floor(PASS_PRESTIGE_RULES.tiers);
+  const pts = Math.max(0, st.prestigePoints ?? 0);
+  const level = Math.min(max, Math.floor(pts / size));
+  return { level, max, into: level >= max ? size : pts - level * size, size };
+}
+
+/** Ajoute des points de prestige (surplus après le dernier palier) ; tous les paliers atteints : la saison rejoint `prestiged`.
+ *  Renvoie le nombre de paliers de prestige franchis. */
+export function settlePassPrestige(st: PassState, extra: number): number {
+  const size = passPrestigeSize(st.seasonId);
+  if (!(size > 0) || !(extra > 0)) return 0;
+  const before = passPrestigeProgress(st)!;
+  st.prestigePoints = Math.min(before.max * size, (st.prestigePoints ?? 0) + Math.floor(extra));
+  const after = passPrestigeProgress(st)!;
+  if (after.level >= after.max && !(st.prestiged ?? []).includes(st.seasonId)) st.prestiged = [...(st.prestiged ?? []), st.seasonId];
+  return after.level - before.level;
+}
+
 export const PASS_OVERFLOW = {
   /** Sources rapportant au moins ce nombre de points (petits gains réguliers exclus). */
   minPoints: 40,
@@ -461,6 +521,8 @@ export function addPassPoints(player: PlayerState, source: PassSource, now: numb
   // 6.11.0 (Z3) : tout surplus avance les paliers bonus (jetons de casino, plafonnés par mois).
   const bonus = settlePassBonus(st, overflow);
   if (bonus > 0) grantTokens(player, bonus * PASS_BONUS_RULES.tokens);
+  // 6.14.150 (AP-11) : le même surplus avance le prestige du mois (cosmétique, tout dans `seasonPass`).
+  settlePassPrestige(st, overflow);
   player.seasonPass = st;
   if (overflow > 0 && PASS_POINTS[source] >= PASS_OVERFLOW.minPoints) {
     const amber = Math.floor(overflow * PASS_OVERFLOW.amberPerPoint);
