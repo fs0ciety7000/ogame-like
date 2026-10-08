@@ -1,6 +1,9 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 // @ts-expect-error — module JS sans types (outil de recensement des exports morts)
-import { exportedNames, findDeadExports, stripComments } from "../../scripts/dead-exports.mjs";
+import { exportedNames, findDeadExports, findUnusedHookExports, stripComments } from "../../scripts/dead-exports.mjs";
 
 /* 6.14.153 (lot R5, AJ27-11, constat AJ-14) : garde des exports morts du moteur et de src/lib.
  * Un export que rien ne lit ailleurs (pages, services, tests, src/server/hooksEntry.ts qui alimente cosmic_db.js, scripts/, e2e/,
@@ -48,5 +51,48 @@ describe("exports morts (6.14.153, AJ27-11)", () => {
       return [...r.dead, ...r.local];
     });
     for (const key of Object.keys(ALLOWED)) expect(all).toContain(key);
+  });
+});
+
+/* 6.14.158 (lot R15, AJ27-11b) : le bundle des hooks n'embarque que ce que les hooks écrits à la main appellent.
+ * Tout export de src/server/hooksEntry.ts est appelé (`.nom`) par cosmic_db.js, cosmic.pb.js, cosmic_sync.js ou
+ * cosmic_updater.pb.js, hors exceptions ; tout `game.nom` (ou `loadGame().nom`) appelé dans ces hooks est exporté.
+ * Recensement : `node scripts/dead-exports.mjs --hooks`. */
+type HooksReport = { total: number; unused: string[]; missing: string[]; dynamic: string[] };
+
+/** Exports de hooksEntry.ts gardés sans appel des hooks : `nom` → raison. */
+const HOOKS_ALLOWED: Record<string, string> = {};
+
+describe("exports de hooksEntry.ts (6.14.158, AJ27-11b)", () => {
+  const res = findUnusedHookExports() as HooksReport;
+
+  it("tout export est appelé par un hook écrit à la main, hors exceptions", () => {
+    expect(res.total).toBeGreaterThan(500);
+    expect(res.unused.filter((n) => !HOOKS_ALLOWED[n])).toEqual([]);
+    for (const key of Object.keys(HOOKS_ALLOWED)) expect(res.unused).toContain(key);
+  });
+
+  it("tout nom appelé sur le bundle (game.nom, loadGame().nom) est exporté par hooksEntry.ts", () => {
+    expect(res.missing).toEqual([]);
+  });
+
+  it("aucun accès dynamique au bundle (game[x]) : la garde ne saurait pas le lire", () => {
+    expect(res.dynamic).toEqual([]);
+  });
+
+  it("l'outil repère un export jamais appelé, un appel non exporté et un accès dynamique", () => {
+    const root = mkdtempSync(join(tmpdir(), "hooks-exports-"));
+    mkdirSync(join(root, "src/server"), { recursive: true });
+    mkdirSync(join(root, "pocketbase/pb_hooks"), { recursive: true });
+    writeFileSync(join(root, "src/server/hooksEntry.ts"), 'export { a, b } from "@/game/x";\nexport function c() {}\n');
+    writeFileSync(
+      join(root, "pocketbase/pb_hooks/cosmic_db.js"),
+      "function f(game, g) { game.a(); g.c(); loadGame().z(); return game[k]; }\n// game.b() en commentaire ne compte pas\n",
+    );
+    const r = findUnusedHookExports({ root }) as HooksReport;
+    expect(r.total).toBe(3);
+    expect(r.unused).toEqual(["b"]);
+    expect(r.missing).toEqual(["cosmic_db.js:z"]);
+    expect(r.dynamic).toEqual(["cosmic_db.js:1"]);
   });
 });

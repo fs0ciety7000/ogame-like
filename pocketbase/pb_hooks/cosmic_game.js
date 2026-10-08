@@ -59,7 +59,6 @@ var __publicField = (obj, key, value2) => __defNormalProp(obj, typeof key !== "s
 // src/server/hooksEntry.ts
 var hooksEntry_exports = {};
 __export(hooksEntry_exports, {
-  ACHIEVEMENT_XP_ALERT: () => ACHIEVEMENT_XP_ALERT,
   ALLIANCE_BOSS_RULES: () => ALLIANCE_BOSS_RULES,
   ALLIANCE_CHALLENGE_KEY: () => ALLIANCE_CHALLENGE_KEY,
   ALLIANCE_CHALLENGE_RULES: () => ALLIANCE_CHALLENGE_RULES,
@@ -70,7 +69,6 @@ __export(hooksEntry_exports, {
   ANNOUNCEMENTS_KEY: () => ANNOUNCEMENTS_KEY,
   ANOMALY_RULES: () => ANOMALY_RULES,
   AUCTION_HISTORY_KEY: () => AUCTION_HISTORY_KEY,
-  AUCTION_RULES: () => AUCTION_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
   BALANCE_HISTORY_KEY: () => BALANCE_HISTORY_KEY,
@@ -78,19 +76,15 @@ __export(hooksEntry_exports, {
   BLOG_JS: () => BLOG_JS,
   BLOG_WELCOME: () => BLOG_WELCOME,
   BOSS_HISTORY_KEY: () => BOSS_HISTORY_KEY,
-  BOSS_REMINDERS: () => BOSS_REMINDERS,
   CAPSULES: () => CAPSULES,
   CASINO_KEY: () => CASINO_KEY,
   CHALLENGE_KEY: () => CHALLENGE_KEY,
   CHALLENGE_RULES: () => CHALLENGE_RULES,
   CHALLENGE_TYPES: () => CHALLENGE_TYPES,
   CHAT_MODERATION_KEYS: () => CHAT_MODERATION_KEYS,
-  CHAT_ROOM_RULES: () => CHAT_ROOM_RULES,
   CHRONICLES_ARCHIVE_KEY: () => CHRONICLES_ARCHIVE_KEY,
   COALITION_RULES: () => COALITION_RULES,
-  CODEX_TITLE: () => CODEX_TITLE,
   COMMANDER_XP: () => COMMANDER_XP,
-  COMMON_RESOURCES: () => COMMON_RESOURCES,
   CONTENT_SECTIONS: () => CONTENT_SECTIONS,
   CONTESTS_KEY: () => CONTESTS_KEY,
   DEFAULT_STAFF_BY_PSEUDO: () => DEFAULT_STAFF_BY_PSEUDO,
@@ -103,7 +97,6 @@ __export(hooksEntry_exports, {
   GAME_EMOJIS: () => GAME_EMOJIS,
   GAME_FIELDS: () => GAME_FIELDS,
   GAZETTE_KEY: () => GAZETTE_KEY,
-  GENERATOR_VERSION: () => GENERATOR_VERSION,
   GLOBAL_CHAT_RULES: () => GLOBAL_CHAT_RULES,
   GameActionError: () => GameActionError,
   JUMP_GATE_RULES: () => JUMP_GATE_RULES,
@@ -113,19 +106,15 @@ __export(hooksEntry_exports, {
   LEVIATHAN_KEY: () => LEVIATHAN_KEY,
   LEVIATHAN_RULES: () => LEVIATHAN_RULES,
   LOGIC_VERSION: () => LOGIC_VERSION,
-  LOOT_TABLES: () => LOOT_TABLES,
   MAIL_CAMPAIGNS_KEY: () => MAIL_CAMPAIGNS_KEY,
   MAIL_HISTORY_MAX: () => MAIL_HISTORY_MAX,
   MAIL_QUEUE_KEY: () => MAIL_QUEUE_KEY,
   MAIL_SCHEDULE_KEY: () => MAIL_SCHEDULE_KEY,
   MAIL_SCHEDULE_MAX: () => MAIL_SCHEDULE_MAX,
   MAINTENANCE_KEY: () => MAINTENANCE_KEY,
-  MARKET_RULES: () => MARKET_RULES,
-  MESSAGE_RULES: () => MESSAGE_RULES,
   METRICS_KEYS: () => METRICS_KEYS,
   MISSIONS: () => MISSIONS,
   MODERATION_KEYS: () => MODERATION_KEYS,
-  MOON_RULES: () => MOON_RULES,
   OFFENSIVE_UNITS: () => OFFENSIVE_UNITS,
   ONLINE_MS: () => ONLINE_MS,
   PASSKEY_RULES: () => PASSKEY_RULES,
@@ -136,38 +125,28 @@ __export(hooksEntry_exports, {
   PB_SCHEMA: () => PB_SCHEMA,
   PHALANX_RULES: () => PHALANX_RULES,
   PIRATE_OWNER_UID: () => PIRATE_OWNER_UID,
-  PIRATE_RULES: () => PIRATE_RULES,
   PROCEDURAL_KEY: () => PROCEDURAL_KEY,
   PVP_RULES: () => PVP_RULES,
   PasskeyError: () => PasskeyError,
   QUEUE_FIELDS: () => QUEUE_FIELDS,
-  RANK_NAMES: () => RANK_NAMES,
-  RANK_NUMERALS: () => RANK_NUMERALS,
   RARE_OFFICER_RULES: () => RARE_OFFICER_RULES,
   REFERRAL_RULES: () => REFERRAL_RULES,
-  RENAME_RULES: () => RENAME_RULES,
   RESOURCE_LIST: () => RESOURCE_LIST,
   SEASON_BOSS_KEY: () => SEASON_BOSS_KEY,
   SEASON_BOSS_RULES: () => SEASON_BOSS_RULES,
   SEASON_PORTRAITS: () => SEASON_PORTRAITS,
   SEASON_RULES: () => SEASON_RULES,
   SEASON_WAR_RULES: () => SEASON_WAR_RULES,
-  SECTOR_COUNT: () => SECTOR_COUNT,
   SERVER_POT_KEY: () => SERVER_POT_KEY,
   SERVER_TASK_RULES: () => SERVER_TASK_RULES,
-  SETTINGS_HISTORY: () => SETTINGS_HISTORY,
   STAFF_KEY: () => STAFF_KEY,
-  TERRITORY_RULES: () => TERRITORY_RULES,
   TERRITORY_WAR_KEY: () => TERRITORY_WAR_KEY,
   TERRITORY_WAR_RULES: () => TERRITORY_WAR_RULES,
-  TRADE_CONTRACT_RULES: () => TRADE_CONTRACT_RULES,
   TUTORIAL_RAID: () => TUTORIAL_RAID,
-  VACATION_RULES: () => VACATION_RULES,
   WARLORD_RULES: () => WARLORD_RULES,
   WAR_CHEST_RULES: () => WAR_CHEST_RULES,
   WAR_RULES: () => WAR_RULES,
   WEEKLY_STOCK_KEY: () => WEEKLY_STOCK_KEY,
-  XP_SOURCE_LABELS: () => XP_SOURCE_LABELS,
   acceptOffer: () => acceptOffer,
   acceptTradeContract: () => acceptTradeContract,
   achievementXpAlert: () => achievementXpAlert,
@@ -177,21 +156,18 @@ __export(hooksEntry_exports, {
   activeBan: () => activeBan,
   activeMute: () => activeMute,
   activeUltimatum: () => activeUltimatum,
-  activeVendetta: () => activeVendetta,
   activeWarBetween: () => activeWarBetween,
   activityProfile: () => activityProfile,
   adaptWarlord: () => adaptWarlord,
   addAmberToPot: () => addAmberToPot,
   addCapsule: () => addCapsule,
   addContribution: () => addContribution,
-  addMoonPity: () => addMoonPity,
   addOccurrence: () => addOccurrence,
   addPassPoints: () => addPassPoints,
   addPatronage: () => addPatronage,
   addRelic: () => addRelic,
   addReport: () => addReport,
   addReportComment: () => addReportComment,
-  addSeasonPower: () => addSeasonPower,
   addThreat: () => addThreat,
   addToPot: () => addToPot,
   addVitals: () => addVitals,
@@ -207,9 +183,7 @@ __export(hooksEntry_exports, {
   allianceStandings: () => allianceStandings,
   allianceWeekId: () => allianceWeekId,
   alliedThreats: () => alliedThreats,
-  alliesCovered: () => alliesCovered,
   allowedWhileBanned: () => allowedWhileBanned,
-  allyJumpAllowed: () => allyJumpAllowed,
   anomalyChance: () => anomalyChance,
   answerPact: () => answerPact,
   answerUltimatum: () => answerUltimatum,
@@ -226,7 +200,6 @@ __export(hooksEntry_exports, {
   ascendantRelic: () => ascendantRelic,
   assertKeshEmojis: () => assertKeshEmojis,
   assertMessageQuota: () => assertMessageQuota,
-  assertNotOnVacation: () => assertNotOnVacation,
   assertReportQuota: () => assertReportQuota,
   auditFlags: () => auditFlags,
   autoCommission: () => autoCommission,
@@ -243,7 +216,6 @@ __export(hooksEntry_exports, {
   bestTotals: () => bestTotals,
   bindingPactBetween: () => bindingPactBetween,
   blogPostFromRecord: () => blogPostFromRecord,
-  bossEndLabel: () => bossEndLabel,
   bossHistoryEntry: () => bossHistoryEntry,
   bossMonthOf: () => bossMonthOf,
   bossTokens: () => bossTokens,
@@ -254,14 +226,12 @@ __export(hooksEntry_exports, {
   breakPact: () => breakPact,
   broadcastTargets: () => broadcastTargets,
   buildScanReport: () => buildScanReport,
-  buyOrderPaid: () => buyOrderPaid,
   buyShopItem: () => buyShopItem,
   buyWeeklyOffer: () => buyWeeklyOffer,
   cadenceBusy: () => cadenceBusy,
   callAllianceBoss: () => callAllianceBoss,
   campaignsState: () => campaignsState,
   canCancel: () => canCancel,
-  canDiplomacy: () => canDiplomacy,
   canDiplomacyIn: () => canDiplomacyIn,
   canGoDeeper: () => canGoDeeper,
   canMessage: () => canMessage,
@@ -269,7 +239,6 @@ __export(hooksEntry_exports, {
   cancelTradeContract: () => cancelTradeContract,
   casinoOpen: () => casinoOpen,
   casinoOpeningId: () => casinoOpeningId,
-  challengeClaimable: () => challengeClaimable,
   challengeFromBytes: () => challengeFromBytes,
   challengeMetrics: () => challengeMetrics,
   challengeRanking: () => challengeRanking,
@@ -277,7 +246,6 @@ __export(hooksEntry_exports, {
   challengeTier: () => challengeTier,
   challengeTierIndex: () => challengeTierIndex,
   challengeTokens: () => challengeTokens,
-  championTitle: () => championTitle,
   chapterDifficulty: () => chapterDifficulty,
   checkAllianceBossLaunch: () => checkAllianceBossLaunch,
   checkCoalitionTrigger: () => checkCoalitionTrigger,
@@ -286,13 +254,9 @@ __export(hooksEntry_exports, {
   checkLeviathanLaunch: () => checkLeviathanLaunch,
   checkScan: () => checkScan,
   checkSeasonBossLaunch: () => checkSeasonBossLaunch,
-  chestShieldCost: () => chestShieldCost,
   chronicleGenRules: () => chronicleGenRules,
   chronicleMonthId: () => chronicleMonthId,
   chroniclesConfig: () => chroniclesConfig,
-  claimChallengeReward: () => claimChallengeReward,
-  claimCodexCategory: () => claimCodexCategory,
-  claimDailyTokens: () => claimDailyTokens,
   cleanDeviceId: () => cleanDeviceId,
   cleanGlobalMessage: () => cleanGlobalMessage,
   cleanNewPseudo: () => cleanNewPseudo,
@@ -304,8 +268,6 @@ __export(hooksEntry_exports, {
   closeLeviathan: () => closeLeviathan,
   closeTerritoryWar: () => closeTerritoryWar,
   coalitionRanking: () => coalitionRanking,
-  codexEntries: () => codexEntries,
-  codexProgress: () => codexProgress,
   collectDebris: () => collectDebris,
   colonyBaseDefends: () => colonyBaseDefends,
   colonyOwnerUid: () => colonyOwnerUid,
@@ -325,7 +287,6 @@ __export(hooksEntry_exports, {
   contestPhase: () => contestPhase,
   contestPrizes: () => contestPrizes,
   contestPurse: () => contestPurse,
-  contractDeposit: () => contractDeposit,
   countsForBalance: () => countsForBalance,
   createOffer: () => createOffer,
   createTradeContract: () => createTradeContract,
@@ -333,7 +294,6 @@ __export(hooksEntry_exports, {
   cronIntervalMs: () => cronIntervalMs,
   cronStatus: () => cronStatus,
   cronSummary: () => cronSummary,
-  currencyLabel: () => currencyLabel,
   currentGameContent: () => currentGameContent,
   currentSeasonId: () => currentSeasonId,
   dailyMemberOf: () => dailyMemberOf,
@@ -367,9 +327,7 @@ __export(hooksEntry_exports, {
   empirePower: () => empirePower,
   empowerWarlord: () => empowerWarlord,
   emptyRuntime: () => emptyRuntime,
-  emptyServerPot: () => emptyServerPot,
   endGarrison: () => endGarrison,
-  endVacation: () => endVacation,
   endingReminderDue: () => endingReminderDue,
   ensureFeasiblePass: () => ensureFeasiblePass,
   episodeUnlockMs: () => episodeUnlockMs,
@@ -378,7 +336,6 @@ __export(hooksEntry_exports, {
   eveReminderDue: () => eveReminderDue,
   exchangeAmber: () => exchangeAmber,
   expeditionDepth: () => expeditionDepth,
-  expeditionRelicChance: () => expeditionRelicChance,
   extendUltimatums: () => extendUltimatums,
   factionOfLair: () => factionOfLair,
   failTradeContract: () => failTradeContract,
@@ -409,7 +366,6 @@ __export(hooksEntry_exports, {
   generateAllianceSaga: () => generateAllianceSaga,
   generateChapter: () => generateChapter,
   generatePassSeason: () => generatePassSeason,
-  getProductionRatesPerSecond: () => getProductionRatesPerSecond,
   giftTax: () => giftTax,
   githubIssueBody: () => githubIssueBody,
   giveLot: () => giveLot,
@@ -418,7 +374,6 @@ __export(hooksEntry_exports, {
   grantChallengeReward: () => grantChallengeReward,
   grantChestShield: () => grantChestShield,
   grantCoalitionReward: () => grantCoalitionReward,
-  grantCodexTitle: () => grantCodexTitle,
   grantCommanderXp: () => grantCommanderXp,
   grantEliteReward: () => grantEliteReward,
   grantLeagueTitle: () => grantLeagueTitle,
@@ -432,18 +387,13 @@ __export(hooksEntry_exports, {
   hasFullChallenges: () => hasFullChallenges,
   hasWaitingUnits: () => hasWaitingUnits,
   inSegment: () => inSegment,
-  inVendetta: () => inVendetta,
   inferKilledBy: () => inferKilledBy,
   instrumentHtml: () => instrumentHtml,
-  isActiveBase: () => isActiveBase,
-  isAggressor: () => isAggressor,
   isFormation: () => isFormation,
   isLeviathanWeek: () => isLeviathanWeek,
-  isPublic: () => isPublic,
   isSettingsHistoryKey: () => isSettingsHistoryKey,
   isStaffRole: () => isStaffRole,
   isTerritoryWarActive: () => isTerritoryWarActive,
-  isWarlordUid: () => isWarlordUid,
   jackpotAmounts: () => jackpotAmounts,
   jumpMissions: () => jumpMissions,
   jumpText: () => jumpText,
@@ -451,7 +401,6 @@ __export(hooksEntry_exports, {
   leagueInfo: () => leagueInfo,
   leagueTick: () => leagueTick,
   leagueWeekLabel: () => leagueWeekLabel,
-  ledgerCovers: () => ledgerCovers,
   ledgerSince: () => ledgerSince,
   ledgerTotals: () => ledgerTotals,
   leviathanRanking: () => leviathanRanking,
@@ -460,7 +409,6 @@ __export(hooksEntry_exports, {
   librarySeasonWarning: () => librarySeasonWarning,
   linkReferrer: () => linkReferrer,
   linkedAuctionReasons: () => linkedAuctionReasons,
-  lootTokensThisWeek: () => lootTokensThisWeek,
   lossesPower: () => lossesPower,
   mailQueueState: () => mailQueueState,
   maintenanceShouldAutoEnd: () => maintenanceShouldAutoEnd,
@@ -475,17 +423,13 @@ __export(hooksEntry_exports, {
   missionXpCeiling: () => missionXpCeiling,
   monthsToGenerate: () => monthsToGenerate,
   moonLevel: () => moonLevel,
-  moonPity: () => moonPity,
   moveWrittenToLibrary: () => moveWrittenToLibrary,
-  mythicFor: () => mythicFor,
   nameToneOf: () => nameToneOf,
-  navOpenPages: () => navOpenPages,
   navOpeningNotice: () => navOpeningNotice,
   nearestWarlord: () => nearestWarlord,
   newPlayerProfile: () => newPlayerProfile,
   nextAttackDelayMs: () => nextAttackDelayMs,
   nextMaintenance: () => nextMaintenance,
-  nextMonthId: () => nextMonthId,
   normalizeAllianceBoss: () => normalizeAllianceBoss,
   normalizeAllianceChallenge: () => normalizeAllianceChallenge,
   normalizeAnnouncementSettings: () => normalizeAnnouncementSettings,
@@ -512,7 +456,6 @@ __export(hooksEntry_exports, {
   notifSource: () => notifSource,
   notifXp: () => notifXp,
   offerDeeper: () => offerDeeper,
-  offerReserved: () => offerReserved,
   onVacation: () => onVacation,
   openTerritoryWar: () => openTerritoryWar,
   openVendetta: () => openVendetta,
@@ -583,7 +526,6 @@ __export(hooksEntry_exports, {
   recordSale: () => recordSale,
   recordVendettaDamage: () => recordVendettaDamage,
   recordVendettaWin: () => recordVendettaWin,
-  recordWarlordHistory: () => recordWarlordHistory,
   recordWin: () => recordWin,
   recyclerCapacity: () => recyclerCapacity,
   reelsFor: () => reelsFor,
@@ -648,7 +590,6 @@ __export(hooksEntry_exports, {
   scoreSpin: () => scoreSpin,
   scoreTerritoryWar: () => scoreTerritoryWar,
   seasonBossFlightMinutes: () => seasonBossFlightMinutes,
-  seasonBossSchedule: () => seasonBossSchedule,
   seasonBossWindow: () => seasonBossWindow,
   seasonPowerOf: () => seasonPowerOf,
   seasonRewardFor: () => seasonRewardFor,
@@ -674,7 +615,6 @@ __export(hooksEntry_exports, {
   spawnElite: () => spawnElite,
   spawnLeviathan: () => spawnLeviathan,
   spawnSeasonBoss: () => spawnSeasonBoss,
-  spendAmber: () => spendAmber,
   spendResources: () => spendResources,
   stampGeneratedTiers: () => stampGeneratedTiers,
   startAllianceChallengeWeek: () => startAllianceChallengeWeek,
@@ -712,7 +652,6 @@ __export(hooksEntry_exports, {
   validateListing: () => validateListing,
   validateRoom: () => validateRoom,
   validateRoomEvent: () => validateRoomEvent,
-  validateRules: () => validateRules,
   validateVote: () => validateVote,
   validateWatch: () => validateWatch,
   vendettaTitle: () => vendettaTitle,
@@ -1331,10 +1270,6 @@ function hourLabel(h) {
   const hh = Math.floor(h);
   const mm = Math.round((h - hh) * 60);
   return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
-}
-function bossEndLabel(s) {
-  const end = s.startHour + s.durationHours;
-  return `${DAY_NAMES[((typeof s.weekday === "number" ? s.weekday : 5) + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
 }
 var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
 function parisWhenLabel(ms) {
@@ -3384,17 +3319,6 @@ function hasPrerequisites(mission, units) {
 }
 
 // src/game/xpAudit.ts
-var XP_SOURCE_LABELS = {
-  mission: "Missions",
-  attack: "Attaques",
-  defense: "D\xE9fenses",
-  expedition: "Exp\xE9ditions",
-  bounty: "Primes",
-  pirate: "Factions",
-  achievement: "Succ\xE8s",
-  contract: "Contrats",
-  other: "Autre"
-};
 var HOUR2 = 36e5;
 var LEDGER_HOURS = 8 * 24;
 var hourIndex = (ms) => Math.floor(ms / HOUR2);
@@ -5192,9 +5116,6 @@ var ALLIANCE_RULES = {
     { id: "bastion", name: "Bastion f\xE9d\xE9ral", emoji: "\u{1F3F0}", description: "Met \xE0 l'abri du pillage une part suppl\xE9mentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5, effects: [{ stat: "protectedStorage" }] }
   ]
 };
-function canDiplomacy(role) {
-  return role === "founder" || role === "officer" || role === "diplomat";
-}
 function canDiplomacyIn(alliance, uid) {
   return hasAlliancePerm(alliance, uid, "diplomacy");
 }
@@ -15192,11 +15113,6 @@ function phalanxRange(player) {
   const mods = playerModifiers(player);
   return phalanxFeatures(level2).range * (1 + Math.max(0, mods.phalanxRange));
 }
-function alliesCovered(moonOwner, targets) {
-  const range = phalanxRange(moonOwner);
-  if (!(range > 0)) return [];
-  return targets.map((t) => ({ t, d: distanceBetween(moonOwner.uid, t.uid) })).filter((x) => x.d <= range).sort((a, b) => a.d - b.d).map((x) => x.t);
-}
 function radarRecipients(fleet, targetAllianceId, candidates, opts = {}) {
   if (!PHALANX_RULES.enabled || PHALANX_RULES.radar !== true || opts.attackerNpc) return [];
   if (fleet.mission !== "attack" || !targetAllianceId) return [];
@@ -15439,10 +15355,6 @@ var MISSION_PHRASE = { patrol: "ta patrouille", garrison: "ta garnison", colonyb
 function jumpText(mission, readyAtMs, now) {
   var _a;
   return { title: "Saut r\xE9ussi", message: `Saut r\xE9ussi : ${(_a = MISSION_PHRASE[mission]) != null ? _a : "ta flotte"} est \xE0 quai. Prochain saut dans ${formatWait2(readyAtMs - now)}.` };
-}
-function allyJumpAllowed(player) {
-  const m = playerMoon(player);
-  return !!m && JUMP_GATE_RULES.enabled === true && JUMP_GATE_RULES.allyJump === true && moonLevel(m) >= Math.max(1, Math.floor(num6(JUMP_GATE_RULES.allyJumpMinMoonLevel, 5)));
 }
 function markGateSave(player, now) {
   const m = playerMoon(player);
@@ -16001,15 +15913,6 @@ function navOpenReason(p2, page, ctx, signals = navSignals(p2, ctx)) {
 function navPageOpen(p2, page, ctx) {
   if (navStatus(p2, ctx) !== "progressive") return true;
   return navOpenReason(p2, page, ctx) !== null;
-}
-function navClosedPages(p2, ctx) {
-  if (navStatus(p2, ctx) !== "progressive") return [];
-  const signals = navSignals(p2, ctx);
-  return Object.keys(NAV_UNLOCK_RULES.pages).filter((page) => navOpenReason(p2, page, ctx, signals) === null);
-}
-function navOpenPages(p2, ctx) {
-  const closed = new Set(navClosedPages(p2, ctx));
-  return new Set(Object.keys(NAV_UNLOCK_RULES.pages).filter((page) => !closed.has(page)));
 }
 function moonPanelVisible(p2) {
   if (!p2) return false;
@@ -19677,7 +19580,6 @@ var DEFAULT_RANK_RULES = {
   ascendant: { goalFactor: 1.5, allianceOnly: true },
   eliteMinCount: 1
 };
-var RANK_NUMERALS = ["I", "II", "III", "IV", "V"];
 var RANK_NAMES = ["Chef de bande", "Seigneur", "Seigneur de guerre", "Tyran", "Seigneur Ascendant"];
 var ELITE_COUNTER = {
   opportunist: "chasse_fantome",
@@ -20096,9 +19998,6 @@ function findWarlord(id) {
 }
 function warlordByUid(uid) {
   return config2.defs.find((d) => warlordUid(d.id) === uid);
-}
-function isWarlordUid(uid) {
-  return !!uid && uid.startsWith("npc") && !!warlordByUid(uid);
 }
 function validateWarlords(cfg) {
   var _a, _b;
@@ -28878,9 +28777,6 @@ var POT_SOURCE_LABELS = {
   donation: "Dons des m\xE9c\xE8nes",
   admin: "Administration"
 };
-function emptyServerPot() {
-  return { resources: {}, totals: {}, amber: 0, amberTotal: 0, log: [], updatedAtMs: 0 };
-}
 function cleanAmounts(raw) {
   const out = {};
   if (!raw || typeof raw !== "object") return out;

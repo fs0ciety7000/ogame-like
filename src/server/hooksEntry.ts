@@ -18,24 +18,24 @@ export { computeGameStats } from "@/game/analytics";
 export { fleetDelayMs, performLaunch, performFleetReturn, performTransportArrival, recallFleet, recallNotices, patrolTurnaround } from "@/game/fleets";
 export { resolveSpyArrival } from "@/game/espionage";
 export { ALLIANCE_RULES, allianceNextDueMs, allianceStandings, defaultAllianceEffects, finishAllianceResearch, performAllianceAction } from "@/game/alliances";
-export { stationGarrison, endGarrison, baseReturnUnits, isActiveBase, colonyBaseDefends } from "@/game/fleets";
+export { stationGarrison, endGarrison, baseReturnUnits, colonyBaseDefends } from "@/game/fleets";
 export { currentSeasonId, performSeasonReward, previousSeasonId, seasonRewardFor, seasonStandings, seasonXpFor, SEASON_RULES } from "@/game/seasons";
 export { collectDebris, debrisKey, debrisTotal, mergeDebris, recyclerCapacity } from "@/game/debris";
 export { defaultQueues } from "@/game/defaults";
 export { parseResetOptions, resetPlayerState } from "@/game/reset";
-export { activeUltimatum, answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID, PIRATE_RULES, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";
+export { activeUltimatum, answerUltimatum, FACTIONS, factionOfLair, findFaction, PIRATE_OWNER_UID, pirateTick, resolveLairAssault, resolvePirateRaid } from "@/game/pirates";
 export { GAME_FIELDS, QUEUE_FIELDS } from "@/game/playerFields";
 export { PVP_RULES } from "@/game/pvp";
 export { applyGameContent, CONTENT_SECTIONS } from "@/game/content";
 export { applyStaffTitle, countsForBalance, DEFAULT_STAFF_BY_PSEUDO, isStaffRole, normalizeStaff, STAFF_KEY } from "@/game/staff";
 export { addReportComment, applyStaffUpdate, assertReportQuota, githubIssueBody, reportStatusLabel, sanitizeNewReport } from "@/game/reports";
 export { addOccurrence, AUTO_ERROR_RULES, AUTO_REPORTER_ID, autoReportDescription, autoReportTitle, errorKey, errorQuotaKey, sanitizeClientError } from "@/game/errorReports";
-export { acceptOffer, buyOrderPaid, createOffer, describeAmount, fillBuyOrder, MARKET_RULES, offerReserved, refundOffer, utcDayStart } from "@/game/market";
+export { acceptOffer, createOffer, describeAmount, fillBuyOrder, refundOffer, utcDayStart } from "@/game/market";
 export { RESOURCE_LIST } from "@/game/resources";
-export { addAmberToPot, addToPot, emptyServerPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
+export { addAmberToPot, addToPot, giftTax, normalizeServerPot, SERVER_POT_KEY, takeAmberFromPot, takeFromPot } from "@/game/serverPot";
 export { isFormation } from "@/game/formations";
-export { assertMessageQuota, MESSAGE_RULES, sanitizeMessageText } from "@/game/messages";
-export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeClaimable, challengeRewardees, challengeTier, challengeTierIndex, claimChallengeReward, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
+export { assertMessageQuota, sanitizeMessageText } from "@/game/messages";
+export { addContribution, CHALLENGE_KEY, CHALLENGE_RULES, CHALLENGE_TYPES, challengeMetrics, challengeRanking, challengeRewardees, challengeTier, challengeTierIndex, grantChallengeReward, unclaimedRewardees, isLeviathanWeek, normalizeChallengeState, removeChallengeTitle, startChallenge, weekWindow } from "@/game/challenges";
 export { BOSS_HISTORY_KEY, bossHistoryEntry, normalizeBossHistory, pushBossHistory } from "@/game/bossHistory";
 export { answerPact, bindingPactBetween, breakPact, DIPLOMACY_RULES, pactOpen, proposePact, sanitizePactMessage } from "@/game/diplomacy";
 export { activeWarBetween, concludeWar, declareWar, scoreBattle, surrender, WAR_RULES, warSeasonBonuses, warTreasuryReward } from "@/game/wars";
@@ -85,22 +85,21 @@ export {
 export { beaconReturn, bountyIdOf, unitsAwayOf } from "@/game/fleets";
 export { anomalyChance, COMMANDER_XP, grantCommanderXp, RARE_OFFICER_RULES, rollRareOfficer, adminGrantOfficer } from "@/game/commanders";
 export { clearDecoy, recordDecoy } from "@/game/synthesis";
-export { addRelic, expeditionRelicChance, grantMythicRelic, makeRelic, mythicFor, relicLabel, rollRelic } from "@/game/relics";
+export { addRelic, grantMythicRelic, makeRelic, relicLabel, rollRelic } from "@/game/relics";
 export { addCapsule, CAPSULES } from "@/game/synthesis";
-export { describeLoot, LOOT_TABLES, rollLoot } from "@/game/loot";
+export { describeLoot, rollLoot } from "@/game/loot";
 export { publicShowcase } from "@/game/profile";
 export { addPassPoints, PASS_POINTS } from "@/game/seasonPass";
 export { grantReferral, linkReferrer, referralDue, REFERRAL_RULES } from "@/game/referral";
 export { TUTORIAL_RAID } from "@/game/story";
 // 6.14.79 (DP-L4) : notification « Nouveau : … » du menu progressif (route des actions, dans la transaction : I24).
-export { navOpeningNotice, navOpenPages } from "@/game/navUnlock";
+export { navOpeningNotice } from "@/game/navUnlock";
 
 /** v4.1 : puissance du raid scripté de Varan (un quart de la défense, gagné à coup sûr). */
 export function tutorialRaidPower(player: PlayerState): number {
   return Math.max(TUTORIAL_RAID_RULES.minPower, Math.round(homeDefensePower(player.units ?? {}, player.techLevels ?? {}) * TUTORIAL_RAID_RULES.powerPct));
 }
 export {
-  activeVendetta,
   canMessage,
   emptyRuntime,
   empirePower,
@@ -108,9 +107,6 @@ export {
   growWarlord,
   adaptWarlord,
   warlordPowerAlerts,
-  recordWarlordHistory,
-  inVendetta,
-  isWarlordUid,
   lossesPower,
   nearestWarlord,
   nextAttackDelayMs,
@@ -135,9 +131,9 @@ export {
   warlordRankRules,
   ascendantRelic,
 } from "@/game/warlords";
-export { addThreat, dropRank, rankOf, RANK_NAMES, RANK_NUMERALS } from "@/game/warlordRanks";
+export { addThreat, dropRank, rankOf } from "@/game/warlordRanks";
 export { recordVendettaWin, refreshEliteUnlocks } from "@/game/eliteUnits";
-export { assertNotOnVacation, endVacation, onVacation, startVacation, vacationBlock, VACATION_RULES } from "@/game/vacation";
+export { onVacation, startVacation, vacationBlock } from "@/game/vacation";
 export { productionHours } from "@/game/pirates";
 export {
   ALLIANCE_BOSS_RULES,
@@ -169,37 +165,34 @@ export {
   grantSeasonBossReward,
   SEASON_BOSS_KEY,
   SEASON_BOSS_RULES,
-  seasonBossSchedule,
   seasonBossWindow,
   spawnSeasonBoss,
 } from "@/game/chronicles";
-export { bossesFoughtBy, claimCodexCategory, CODEX_TITLE, codexEntries, codexProgress, foughtWarlords, grantCodexTitle } from "@/game/codex";
+export { bossesFoughtBy, foughtWarlords } from "@/game/codex";
 export { ALLIANCE_DAILY_RULES, dailyMemberOf, dailyPhase, dailyTreasuryBonus, previousSummary, proposeDaily, readDaily, startDaily, updateDailyProgress, voteDaily } from "@/game/allianceDaily";
 export { parisDay } from "@/game/retention";
-export { allianceRole, canDiplomacy, canDiplomacyIn, removeMember } from "@/game/alliances";
-export { acceptTradeContract, cancelTradeContract, completeTradeContract, contractDeposit, createTradeContract, failTradeContract, TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
-export { computeTerritories, SECTOR_COUNT, sectorLabel, sectorOf, TERRITORY_RULES } from "@/game/territories";
+export { allianceRole, canDiplomacyIn, removeMember } from "@/game/alliances";
+export { acceptTradeContract, cancelTradeContract, completeTradeContract, createTradeContract, failTradeContract } from "@/game/tradeContracts";
+export { computeTerritories, sectorLabel, sectorOf } from "@/game/territories";
 export { closeTerritoryWar, isTerritoryWarActive, normalizeTerritoryWar, openTerritoryWar, scoreHoldHour, scoreTerritoryWar, TERRITORY_WAR_KEY, TERRITORY_WAR_RULES, territoryWarRewards, territoryWarWindow } from "@/game/territoryWar";
-export { addSeasonPower, chestShieldCost, depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
-export { cleanNewPseudo, pseudoLogin, RENAME_RULES, renamePlayer } from "@/game/rename";
+export { depositWarChest, grantChestShield, readWarChest, SEASON_WAR_RULES, seasonPowerOf, seasonWarPoints, seasonWarStandings, WAR_CHEST_RULES } from "@/game/seasonWars";
+export { cleanNewPseudo, pseudoLogin, renamePlayer } from "@/game/rename";
 export { computeLiveBalance } from "@/game/balance/diagnostics";
 export { balanceHealth } from "@/game/balance/health";
-export { currentGameContent, validateGameContent, validateRules, contentSectionErrors } from "@/game/content";
+export { currentGameContent, validateGameContent, contentSectionErrors } from "@/game/content";
 export { episodeUnlockMs } from "@/game/chronicles";
-export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
-export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, outdatedPassDrafts, PASS_SEASONS_SECTION, PASS_THEME_OLD_IMAGES, SEASON_PORTRAITS, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
+export { bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
+export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, outdatedPassDrafts, PASS_SEASONS_SECTION, PASS_THEME_OLD_IMAGES, SEASON_PORTRAITS, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
 export { moveWrittenToLibrary, applyLibraryChapter, archiveOldMonths, mergeChronicleArchive, librarySeasonWarning, CHRONICLES_ARCHIVE_KEY } from "@/game/chronicles";
 export { chronicleGenRules } from "@/game/chronicleGen";
-export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, GENERATOR_VERSION, PROCEDURAL_KEY, proposeAchievementTiers, stampGeneratedTiers, worldDigest } from "@/game/procedural";
+export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, PROCEDURAL_KEY, proposeAchievementTiers, stampGeneratedTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { applyAdminEdit } from "@/game/adminEdit";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";
 export { defaultGameContent } from "@/game/content";
-export { getProductionRatesPerSecond } from "@/game/production";
-export { COMMON_RESOURCES } from "@/game/economy";
 export { ALLIANCE_SAGA_KEY, ALLIANCE_SAGA_RULES, generateAllianceSaga, readAllianceSaga, sagaMonthId, sagaOf, sagaPoints, sagaProgress, sagaStandings } from "@/game/allianceSaga";
 // v5.8 : devblog (pages rendues par PocketBase).
-export { blogPostFromRecord, publicPosts, shortHash, slugify, isPublic } from "@/game/blog";
+export { blogPostFromRecord, publicPosts, shortHash, slugify } from "@/game/blog";
 export { renderBlogList, renderBlogPost, renderBlogNotFound, renderBlogRss, renderBlogSitemap, renderBlogRobots } from "@/game/blogPages";
 export { BLOG_CSS, BLOG_JS } from "@/game/blogStyles";
 export { GAME_EMOJIS, normalizeCustomEmojis, EMOJIS_KEY } from "@/game/emojis";
@@ -213,23 +206,22 @@ export { allianceWeekId } from "@/game/allianceBoss";
 // 6.14.105 (AA4) : textes de règle construits depuis les règles (AA-21) et rang de l'Essaim lu dans BOUNTY_RULES.ranks (AA-22).
 export { allianceBossCallText, allianceBossDurationText } from "@/game/allianceBoss";
 export { bountyRank } from "@/game/bounties";
-export { championTitle, grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
-export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, claimDailyTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
+export { grantLeagueTitle, leagueInfo, LEAGUES_KEY, leagueTick, leagueWeekLabel, normalizeLeagues } from "@/game/leagues";
+export { applySpin, bossTokens, CASINO_KEY, casinoOpen, casinoOpeningId, challengeTokens, giveTitle, grantTokens, removeTitle, rollTournament, scoreSpin, tokensLabel, tournamentResult, jackpotAmounts, normalizeCasino, normalizeCasinoSettings, playerCasino, recordWin, reelsFor, rollOutcome, validateCasinoSettings } from "@/game/casino";
 export { LOGIC_VERSION, PB_SCHEMA } from "@/game/logicVersion";
 export { addVitals, cronStatus, cronSummary, normalizeCronMetrics, recordCronRun, recordCronSkip, cronIntervalMs, sanitizeVitals, vitalsReport, METRICS_KEYS } from "@/game/serverMetrics";
 export { upcomingMaintenance } from "@/game/maintenance";
 export { activeBan, allowedWhileBanned, banMessage, banPlayer, MODERATION_KEYS, normalizeBans, pruneBans, unbanPlayer } from "@/game/moderation";
 export { ANNOUNCEMENTS_KEY, findPoll, normalizeAnnouncementSettings } from "@/game/announcements";
 export { tally, validateVote } from "@/game/polls";
-export { activeMute, addReport, CHAT_MODERATION_KEYS, CHAT_ROOM_RULES, KESH_REACTION, parseMentions, roomIcon, roomIdle, validateRoomEvent, toggleReaction, validateRoom, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
+export { activeMute, addReport, CHAT_MODERATION_KEYS, KESH_REACTION, parseMentions, roomIcon, roomIdle, validateRoomEvent, toggleReaction, validateRoom, cleanGlobalMessage, filterText, GLOBAL_CHAT_RULES, normalizeFilter, normalizeMutes, rateLimitError } from "@/game/globalChat";
 
 export { computeCatchup, developmentScore } from "@/game/catchup";
-export { lootTokensThisWeek } from "@/game/loot";
 export { campaignsState, inSegment, instrumentHtml, MAIL_CAMPAIGNS_KEY, MAIL_HISTORY_MAX, MAIL_SCHEDULE_KEY, MAIL_SCHEDULE_MAX, normalizeSegment, scheduleState, trackCampaign } from "@/game/mailSegments";
 export { canGoDeeper, deepLegMs, expeditionDepth, offerDeeper, resolveDeeper } from "@/game/expeditions";
 export { signTreaty } from "@/game/pirates";
 // 5.17.1 : audit de l'XP et de l'activité des joueurs (administration).
-export { achievementXpAlert, ACHIEVEMENT_XP_ALERT, activityProfile, auditFlags, battlePairs, bestTotals, ledgerCovers, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs, XP_SOURCE_LABELS } from "@/game/xpAudit";
+export { achievementXpAlert, activityProfile, auditFlags, battlePairs, bestTotals, ledgerSince, ledgerTotals, missionXpCeiling, notifSource, notifXp, percentiles, windowMs } from "@/game/xpAudit";
 export { MISSIONS } from "@/game/missions";
 export { missionRewardFactor } from "@/game/events";
 export { ONLINE_MS } from "@/game/retention";
@@ -238,15 +230,15 @@ export { adminSetAmber } from "@/game/bounties";
 export { applyBossWear, sendToWorkshop } from "@/game/workshop";
 export { autoCommission, dockAutoCommission, hasWaitingUnits, startWaitingUnits } from "@/game/hangar";
 export { defaultUnitRoles, findUnit, OFFENSIVE_UNITS } from "@/game/units";
-export { AUCTION_HISTORY_KEY, AUCTION_RULES, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, currencyLabel, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
+export { AUCTION_HISTORY_KEY, canCancel, cleanDeviceId, linkedAuctionReasons, creditBid, normalizeAuctionHistory, recordSale, validateWatch, watchersFor, recordAuctionStat, debitBid, giveLot, placeBid, settleAuction, takeLot, validateListing } from "@/game/auctions";
 export { buyWeeklyOffer, WEEKLY_STOCK_KEY } from "@/game/weeklyStock";
 export { addPatronage, PATRONS_KEY } from "@/game/patrons";
 // 6.14.44 (É30-1a, proposals/phalange-porte-de-saut.md) : phalange, porte de saut et pitié lunaire (routes au lot É30-1b).
-export { addMoonPity, moonPity, playerMoon, moonLevel, MOON_RULES } from "@/game/moon";
-export { alliedThreats, alliesCovered, buildScanReport, checkScan, isAggressor, markScan, PHALANX_RULES, phalanxFeatures, phalanxHidden, phalanxLevel, phalanxRange, piercedText, radarRecipients, radarText, revealIncoming, scanCost, scanReportText } from "@/game/phalanx";
-export { allyJumpAllowed, checkJump, gateCooldownMs, gateMinLevel, gateReadyAtMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markGateSave, markJump } from "@/game/jumpGate";
+export { playerMoon, moonLevel } from "@/game/moon";
+export { alliedThreats, buildScanReport, checkScan, markScan, PHALANX_RULES, phalanxFeatures, phalanxHidden, phalanxLevel, phalanxRange, piercedText, radarRecipients, radarText, revealIncoming, scanCost, scanReportText } from "@/game/phalanx";
+export { checkJump, gateCooldownMs, gateMinLevel, gateReadyAtMs, gateUnlocked, JUMP_GATE_RULES, jumpedFleet, jumpMissions, jumpText, markGateSave, markJump } from "@/game/jumpGate";
 // 6.14.110 (AU27, lot AC-D) : un seul chemin de dépense (vendetta côté serveur) ; trace du rappel de flotte.
-export { canSpendResources, spendAmber, spendResources } from "@/game/spending";
+export { canSpendResources, spendResources } from "@/game/spending";
 // 6.14.111 (AU27, lot AC-E) : verrou par cadence, e-mails par lots, échéances décalées après une maintenance.
 export { cadenceBusy, MAIL_QUEUE_KEY, mailQueueState, settleMailBatch, shiftForMaintenance, SERVER_TASK_RULES, takeMailBatch } from "@/game/serverTasks";
 // 6.14.125 (AU27, lot AA7) : migrations « faction-fugitives-6.14.125 » et « mutators-defs-6.14.125 ».
@@ -256,4 +248,4 @@ export { defaultMutatorDefs } from "@/game/mutators";
 export { withDefaultTalents } from "@/game/talents";
 export { withDefaultModuleFamilies } from "@/game/modules";
 // 6.14.126 (AU27, lot AA8) : historique dans l'admin (réglages serveur suivis, retour arrière d'un groupe de règles).
-export { isSettingsHistoryKey, restoreSettings, rollbackRuleGroup, SETTINGS_HISTORY, settingsSnapshot } from "@/game/contentHistory";
+export { isSettingsHistoryKey, restoreSettings, rollbackRuleGroup, settingsSnapshot } from "@/game/contentHistory";

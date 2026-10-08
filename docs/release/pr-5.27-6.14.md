@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.157 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.158 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 222 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 223 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -258,6 +258,7 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.155 : Gains au-delà de l'entrepôt dits au joueur (R8, AE-L8) (`docs/changes/6.14.155-au-dela-entrepot.md`)
 - 6.14.156 : Hygiène du design, restes : admin, cockpit, accueil, Succès (R7, UX-13) (`docs/changes/6.14.156-hygiene-design.md`)
 - 6.14.157 : Bloc d'entrée : analyse, découpage essayé et mesuré, fenêtres de la coque à la demande (R4b, É30-5c) (`docs/changes/6.14.157-decoupage-entree.md`)
+- 6.14.158 : Bundle des hooks allégé : exports de `hooksEntry.ts` jamais appelés (R15, AJ27-11b) (`docs/changes/6.14.158-hooks-allege.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

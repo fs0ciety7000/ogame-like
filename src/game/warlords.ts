@@ -846,7 +846,7 @@ export function canMessage(state: WarlordsState, warlordId: string, uid: string,
   return now - (state.lastMsg[`${warlordId}:${uid}`] ?? 0) >= WARLORD_RULES.messageEveryHours * 3600_000;
 }
 
-export function activeVendetta(state: WarlordsState, warlordId: string, now: number): Vendetta | null {
+function activeVendetta(state: WarlordsState, warlordId: string, now: number): Vendetta | null {
   return state.vendettas.find((v) => v.warlordId === warlordId && v.status === "active" && now < v.endsAtMs) ?? null;
 }
 
@@ -894,7 +894,7 @@ export function openVendetta(
 }
 
 /** Ce joueur compte-t-il pour cette vendetta ? */
-export function inVendetta(v: Vendetta, uid: string, allianceId: string | null | undefined): boolean {
+function inVendetta(v: Vendetta, uid: string, allianceId: string | null | undefined): boolean {
   return v.ownerUid === uid || (!!v.allianceId && v.allianceId === allianceId);
 }
 

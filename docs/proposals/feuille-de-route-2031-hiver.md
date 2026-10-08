@@ -29,7 +29,7 @@ avant les nouveautés (lots R1 à R9). Les lots qui attendent une mesure (R10 à
 | R11 | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 (le réglage d'avant bascule est fait, 6.14.89) | S | après RL-4 et 8 semaines |
 | R12 | AE-L7 | Boss (`hpFactor`), Ambre des primes, seuils des succès, d'après 8 semaines de santé de l'équilibre en production (AE-10, AE-11, AE-12) | S | après la mise en production (Z0) |
 | R13 | AC-I | Battement de présence à 60 s et `sync` sans écriture inutile (AC-17), après la mesure Z6 | M | après Z6 |
-| R15 | AJ27-11b | Exports de `hooksEntry.ts` que `pocketbase/pb_hooks` n'appelle jamais : recensés et retirés pour alléger le bundle des hooks (suite de 6.14.153, Q381) | S | à faire |
+| R15 | AJ27-11b | Exports de `hooksEntry.ts` que `pocketbase/pb_hooks` n'appelle jamais : recensés et retirés pour alléger le bundle des hooks (suite de 6.14.153, Q381) | S | livré (6.14.158) |
 | R14 | É30-3 | Illustrations au fil des envois sur `/img` (89 emplacements attendus le 2026-10-08 : 33 portraits, 24 thèmes d'année, 21 icônes de palier, 7 seconds boss, 3 talents, 1 module) | selon envois | en continu |
 
 ## 1. Pourquoi ces lots

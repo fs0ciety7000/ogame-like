@@ -13,6 +13,7 @@
  *     un type lu seulement dans son module n'est pas compté (il décrit souvent une signature publique).
  *
  * Usage : node scripts/dead-exports.mjs [--dir src/game] [--json]
+ *         node scripts/dead-exports.mjs --hooks [--json]   (exports de hooksEntry.ts face aux hooks, 6.14.158)
  * La garde `src/game/deadExports.test.ts` appelle `findDeadExports` et échoue sur tout nouveau candidat.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -162,8 +163,60 @@ export function findDeadExports(opts = {}) {
   return { dead: dead.sort(), local: local.sort(), total };
 }
 
+/** Hooks écrits à la main qui appellent le bundle (`cosmic_game.js`, généré, n'en fait pas partie). */
+export const HAND_HOOKS = ["cosmic_db.js", "cosmic.pb.js", "cosmic_sync.js", "cosmic_updater.pb.js"];
+
+/**
+ * 6.14.158 (lot R15, AJ27-11b) : exports de `src/server/hooksEntry.ts` face aux hooks écrits à la main.
+ * - `unused` : exports qu'aucun hook n'appelle (aucun accès `.nom`, quel que soit l'objet : le bundle circule sous
+ *   `game`, `g`, `loadGame()`…) ; ils grossissent le bundle pour rien ;
+ * - `missing` : noms appelés sur le bundle (`game.nom`, `loadGame().nom`, `require(…cosmic_game.js).nom`) que
+ *   `hooksEntry.ts` n'exporte pas (`undefined` à l'exécution dans goja).
+ * Un accès dynamique (`game[x]`) n'est pas lu : il n'y en a pas, la garde le vérifie (`dynamic`).
+ * @param {{ root?: string }} [opts]
+ * @returns {{ total: number, unused: string[], missing: string[], dynamic: string[] }}
+ */
+export function findUnusedHookExports(opts = {}) {
+  const root = opts.root ?? ROOT;
+  const names = exportedNames(stripComments(readFileSync(join(root, "src/server/hooksEntry.ts"), "utf8"))).map((e) => e.name);
+  const exported = new Set(names);
+  const member = new Set();
+  const missing = new Set();
+  const dynamic = [];
+  for (const f of HAND_HOOKS) {
+    let text;
+    try {
+      text = stripComments(readFileSync(join(root, "pocketbase/pb_hooks", f), "utf8"));
+    } catch {
+      continue;
+    }
+    let m;
+    const anyMember = /\.\s*([A-Za-z_$][A-Za-z0-9_$]*)/g;
+    while ((m = anyMember.exec(text)) !== null) member.add(m[1]);
+    const onBundle = /(?:\bgame|loadGame\(\)|cosmic_game\.js`\))\s*\.\s*([A-Za-z_$][A-Za-z0-9_$]*)/g;
+    while ((m = onBundle.exec(text)) !== null) if (!exported.has(m[1])) missing.add(`${f}:${m[1]}`);
+    const dyn = /(?:\bgame|loadGame\(\))\s*\[/g;
+    while ((m = dyn.exec(text)) !== null) dynamic.push(`${f}:${text.slice(0, m.index).split("\n").length}`);
+  }
+  return { total: names.length, unused: names.filter((n) => !member.has(n)).sort(), missing: [...missing].sort(), dynamic };
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
+  if (args.includes("--hooks")) {
+    const res = findUnusedHookExports();
+    if (args.includes("--json")) console.log(JSON.stringify(res, null, 2));
+    else {
+      console.log(`${res.total} exports dans src/server/hooksEntry.ts.`);
+      console.log(`\nJamais appelés par les hooks écrits à la main : ${res.unused.length}`);
+      for (const e of res.unused) console.log(`  ${e}`);
+      console.log(`\nAppelés sur le bundle mais non exportés : ${res.missing.length}`);
+      for (const e of res.missing) console.log(`  ${e}`);
+      console.log(`\nAccès dynamiques au bundle (game[…]) : ${res.dynamic.length}`);
+      for (const e of res.dynamic) console.log(`  ${e}`);
+    }
+    process.exit(0);
+  }
   const dirIdx = args.indexOf("--dir");
   const dir = dirIdx >= 0 ? args[dirIdx + 1] : "src/game";
   const res = findDeadExports({ dir });
