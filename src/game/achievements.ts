@@ -46,6 +46,8 @@ export interface AchievementDef {
   titleId?: string;
   /** v5.4 : palier ajouté par le générateur. */
   auto?: boolean;
+  /** 6.14.108 (AP-L4) : instant de création d'un palier généré (délai entre deux paliers d'une mesure). */
+  createdAtMs?: number;
 }
 
 export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire", mythique: "Mythique" };

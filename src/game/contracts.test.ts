@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { chestReward, claimContract, CONTRACT_PAGES, contractDay, ensureContracts, openContractTypes, recordContract, rerollContract, streakBonus } from "@/game/contracts";
-import { applyGameContent } from "@/game/content";
+import { chestReward, claimContract, CONTRACT_LABELS, CONTRACT_PAGES, CONTRACT_RULES, contractDay, contractWeight, ensureContracts, openContractTypes, recordContract, rerollContract, seededRandom, streakBonus } from "@/game/contracts";
+import { applyGameContent, defaultGameContent, validateGameContent } from "@/game/content";
+import { defensivePower, findFaction, resolvePirateRaid } from "@/game/pirates";
 import { NAV_SHOW_ALL_ON, NAV_UNLOCK_RULES, navMarkId, navPageOpen } from "@/game/navUnlock";
 import { RANKS } from "@/game/ranks";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
@@ -170,5 +171,119 @@ describe("6.14.79 (DP-L4) objectifs du jour parmi les systèmes ouverts (I31)", 
     expect(p.contracts!.rerolled).toBe(false);
     p.announcementsSeen = [navMarkId("/game/missions")];
     expect(rerollContract(p, c.id, FROM + 2000).type).toBe("missions");
+  });
+});
+
+/* 6.14.109 (AU27, lot AP-L5, constat AP-9, Q87) : objectifs du jour pondérés et réglables. */
+describe("6.14.109 : objectifs du jour pondérés (AP-L5)", () => {
+  const ALL = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"] as const;
+  const equal = Object.fromEntries(ALL.map((t) => [t, 1]));
+  /** Compte dont tout le menu est ouvert (« Tout afficher ») : les 10 types sont tirables. */
+  const vet = (uid: string) => player({ uid, announcementsSeen: [NAV_SHOW_ALL_ON] });
+
+  /** Tirage d'avant la 6.14.109 (uniforme), recopié pour comparaison. */
+  function oldDraw(p: PlayerState, now: number): string[] {
+    const rand = seededRandom(`${p.uid}:${contractDay(now)}`);
+    const pool = openContractTypes(p, now);
+    const out: string[] = [];
+    for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
+    return out;
+  }
+
+  it("poids tous égaux : même graine, même tirage qu'avant (300 joueurs-jours)", () => {
+    try {
+      applyGameContent({ rules: { dailyContracts: { weights: equal } } } as never);
+      for (let u = 0; u < 30; u++)
+        for (let d = 0; d < 10; d++) {
+          const p = player({ uid: `joueur${u}` });
+          const now = T0 + d * DAY;
+          expect(ensureContracts(p, now).items.map((c) => c.type)).toEqual(oldDraw(p, now));
+        }
+    } finally {
+      applyGameContent({});
+    }
+  });
+
+  it("poids 0 : jamais tiré, ni au tirage ni à la relance ; défaut : « Repousser » deux fois moins souvent", () => {
+    const count = (type: string) => {
+      let n = 0;
+      for (let u = 0; u < 400; u++) if (ensureContracts(vet(`j${u}`), T0).items.some((c) => c.type === type)) n++;
+      return n;
+    };
+    expect(CONTRACT_RULES.weights.win_defense).toBe(0.5);
+    const defense = count("win_defense");
+    const research = count("research");
+    expect(defense).toBeLessThan(research * 0.75);
+    expect(defense).toBeGreaterThan(0);
+    try {
+      applyGameContent({ rules: { dailyContracts: { weights: { win_defense: 0, gift: 0 } } } } as never);
+      expect(contractWeight("win_defense")).toBe(0);
+      expect(contractWeight("research")).toBe(1);
+      expect(count("win_defense")).toBe(0);
+      expect(count("gift")).toBe(0);
+      for (let u = 0; u < 100; u++) {
+        const p = vet(`r${u}`);
+        const [c] = ensureContracts(p, T0).items;
+        expect(["win_defense", "gift"]).not.toContain(rerollContract(p, c.id, T0).type);
+      }
+    } finally {
+      applyGameContent({});
+    }
+  });
+
+  it("I31 garde la main : une page fermée n'est jamais tirée, même de gros poids", () => {
+    const FROM = Date.parse("2026-11-01T10:00:00Z");
+    try {
+      applyGameContent({ rules: { dailyContracts: { weights: { ...equal, missions: 50, market: 50 } } } } as never);
+      const p = player({ uid: "neuf", createdAtMs: FROM, xp: 0, stats: {}, announcementsSeen: [] } as Partial<PlayerState>);
+      const types = ensureContracts(p, FROM + 2000).items.map((c) => c.type);
+      for (const t of types) expect((CONTRACT_PAGES[t] ?? []).every((page) => navPageOpen(p, page, { now: FROM + 2000 }))).toBe(true);
+    } finally {
+      applyGameContent({});
+    }
+  });
+
+  it("quantités lues dans la règle ; « Dépenser » suit les heures de production ; libellé de la défense lu dans la règle", () => {
+    try {
+      applyGameContent({ rules: { dailyContracts: { weights: { ...equal, research: 0, upgrade_building: 0, win_attack: 0, win_defense: 0, missions: 0, gift: 0, spy: 0, market: 0 }, targets: { build_units: 35 }, spendMin: 7000 } } } as never);
+      // Moins de types que d'objectifs : validation refusée, mais le tirage reste sûr (2 objectifs).
+      const items = ensureContracts(player({ uid: "q" }), T0).items;
+      expect(items.map((c) => c.type).sort()).toEqual(["build_units", "spend"]);
+      expect(items.find((c) => c.type === "build_units")!.target).toBe(35);
+      expect(items.find((c) => c.type === "spend")!.target).toBeGreaterThanOrEqual(7000);
+      expect(CONTRACT_LABELS.win_defense(1)).toBe("Repousser 1 attaque (joueur ou raid de faction)");
+      applyGameContent({ rules: { dailyContracts: { defenseCountsFactionRaids: false } } } as never);
+      expect(CONTRACT_LABELS.win_defense(2)).toBe("Repousser 2 attaques");
+      const d = defaultGameContent();
+      const bad = validateGameContent({ ...d, rules: { ...d.rules, dailyContracts: { ...d.rules.dailyContracts, weights: { ...equal, research: -1 }, targets: { build_units: 0 } } } }).join(" ");
+      expect(bad).toMatch(/poids de « research »/);
+      expect(bad).toMatch(/quantité de « build_units »/);
+      const few = validateGameContent({ ...d, rules: { ...d.rules, dailyContracts: { ...d.rules.dailyContracts, weights: { ...equal, research: 0, upgrade_building: 0, win_attack: 0, win_defense: 0, missions: 0, gift: 0, spy: 0 } } } }).join(" ");
+      expect(few).toMatch(/au moins 4 types/);
+    } finally {
+      applyGameContent({});
+    }
+  });
+
+  it("un raid de faction repoussé compte pour « Repousser une attaque » (Q87), sauf réglage contraire", () => {
+    const NOW = T0;
+    const varan = findFaction("varan")!;
+    const fort = () => {
+      const p = player({ uid: "fort", units: { canon_plasma: { level: 3, count: 200 } } } as Partial<PlayerState>);
+      p.contracts = { day: contractDay(NOW), streak: 0, lastCompletedDay: null, rerolled: false, items: [{ id: "d", type: "win_defense", target: 1, progress: 0, claimed: false }] };
+      return p;
+    };
+    const p = fort();
+    const out = resolvePirateRaid(varan, p, defaultQueues(), Math.round(defensivePower(p) * 0.5), [], NOW);
+    expect(out.combat.outcome).toBe("defender_win");
+    expect(out.player.contracts!.items[0].progress).toBe(1);
+    try {
+      applyGameContent({ rules: { dailyContracts: { defenseCountsFactionRaids: false } } } as never);
+      const q = fort();
+      const out2 = resolvePirateRaid(varan, q, defaultQueues(), Math.round(defensivePower(q) * 0.5), [], NOW);
+      expect(out2.player.contracts!.items[0].progress).toBe(0);
+    } finally {
+      applyGameContent({});
+    }
   });
 });

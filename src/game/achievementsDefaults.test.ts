@@ -60,6 +60,8 @@ describe("succès par défaut toujours présents", () => {
   it("le générateur de paliers n'écrit plus la liste entière (cosmic_db.js)", () => {
     const src = readFileSync("pocketbase/pb_hooks/cosmic_db.js", "utf8");
     expect(src).not.toMatch(/writeConfig\(txApp, "achievements", content\.achievements\.concat/);
-    expect(src).toMatch(/const base = Array\.isArray\(storedList\) \? storedList : content\.achievements;/);
+    // 6.14.108 (AP-L4) : la liste enregistrée, paliers générés datés (`stampGeneratedTiers`), sinon la liste du contenu.
+    expect(src).toMatch(/Array\.isArray\(storedList\) \? game\.stampGeneratedTiers\(storedList, now\)/);
+    expect(src).toMatch(/const base = stamped\.list \|\| content\.achievements;/);
   });
 });

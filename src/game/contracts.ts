@@ -59,6 +59,37 @@ export const CONTRACT_RULES = {
   allDoneTokens: 1,
   chestRare: 1500,
   chestXp: 150,
+  /** 6.14.109 (AU27, AP-L5, constat AP-9, Q87) : poids de tirage par type (0 = jamais tiré, 1 = normal). Tous égaux : tirage
+   *  uniforme, identique à celui d'avant (même graine, même résultat). « Repousser une attaque » est passif : 0,5. */
+  weights: {
+    upgrade_building: 1,
+    research: 1,
+    build_units: 1,
+    win_attack: 1,
+    win_defense: 0.5,
+    missions: 1,
+    gift: 1,
+    spend: 1,
+    spy: 1,
+    market: 1,
+  } as Record<ContractType, number>,
+  /** 6.14.109 (AP-L5) : quantité demandée par type (avant : `targetFor` en dur) ; « Dépenser » suit `spendHours` et `spendMin`. */
+  targets: {
+    upgrade_building: 1,
+    research: 1,
+    build_units: 20,
+    win_attack: 1,
+    win_defense: 1,
+    missions: 2,
+    gift: 1,
+    spy: 2,
+    market: 1,
+  } as Partial<Record<ContractType, number>>,
+  /** « Dépenser » : heures de production commune du joueur, au moins `spendMin` (arrondi au millier). */
+  spendHours: 1,
+  spendMin: 5000,
+  /** 6.14.109 (Q87) : un raid de faction repoussé compte aussi pour « Repousser une attaque ». */
+  defenseCountsFactionRaids: true,
 };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -73,14 +104,53 @@ export const CONTRACT_RULES_META = {
   allDoneTokens: { label: "Jetons en plus quand tous sont faits", unit: "jetons", min: 0, max: 20 },
   chestRare: { label: "Coffre : chaque ressource rare", min: 0, max: 10_000_000 },
   chestXp: { label: "Coffre : XP", unit: "XP", min: 0, max: 100_000 },
+  weights: { label: "Poids de tirage par type", hint: "0 = jamais tiré, 1 = normal, 2 = deux fois plus souvent. Tous égaux : tirage uniforme (celui d'avant la 6.14.109). Un type dont la page est fermée au joueur n'est jamais tiré (I31)." },
+  targets: { label: "Quantité demandée par type", hint: "Nombre d'actions à faire dans la journée (« Dépenser » : voir les heures de production)." },
+  spendHours: { label: "« Dépenser » : heures de production commune", unit: "h", min: 0.1, max: 48 },
+  spendMin: { label: "« Dépenser » : au moins", min: 0, max: 100_000_000 },
+  defenseCountsFactionRaids: { label: "Un raid de faction repoussé compte pour « Repousser une attaque »", hint: "Décoché : seule une attaque de joueur ou de seigneur repoussée compte (avant la 6.14.109)." },
 };
+
+/** 6.14.109 (AP-L5) : poids de tirage d'un type (réglage absent ou illisible : 1). */
+export function contractWeight(type: ContractType): number {
+  const w = Number((CONTRACT_RULES.weights as Partial<Record<ContractType, number>> | undefined)?.[type]);
+  return Number.isFinite(w) ? Math.max(0, w) : 1;
+}
+
+/** 6.14.109 : part de chance d'un type au premier tirage d'un compte où tout est ouvert (aide de l'admin). */
+export function contractDrawShare(type: ContractType): number {
+  const total = ALL_TYPES.reduce((a, t) => a + contractWeight(t), 0);
+  return total > 0 ? contractWeight(type) / total : 0;
+}
+
+/**
+ * 6.14.109 (AP-L5) : index tiré dans `pool` (types de poids > 0). Poids tous égaux : `floor(rand() × taille)`, le tirage d'avant
+ * (un seul appel à `rand`, même graine, même résultat) ; sinon tirage pondéré, un seul appel aussi.
+ */
+function drawIndex(pool: ContractType[], rand: () => number): number {
+  const w = pool.map(contractWeight);
+  if (w.every((x) => x === w[0])) return Math.floor(rand() * pool.length);
+  const total = w.reduce((a, x) => a + x, 0);
+  let r = rand() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= w[i];
+    if (r < 0) return i;
+  }
+  return pool.length - 1;
+}
+
+/** Types tirables : ouverts pour le joueur (I31) et de poids > 0. */
+function drawableTypes(player: PlayerState, now: number): ContractType[] {
+  return openContractTypes(player, now).filter((t) => contractWeight(t) > 0);
+}
 
 export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> = {
   upgrade_building: (n) => `Lancer ${n} amélioration${n > 1 ? "s" : ""} de bâtiment`,
   research: (n) => `Lancer ${n} recherche${n > 1 ? "s" : ""}`,
   build_units: (n) => `Construire ${n} unités`,
   win_attack: (n) => `Gagner ${n} attaque${n > 1 ? "s" : ""}`,
-  win_defense: (n) => `Repousser ${n} attaque${n > 1 ? "s" : ""}`,
+  // 6.14.109 (Q87) : le libellé dit si les raids de faction comptent (lu dans la règle à l'usage).
+  win_defense: (n) => `Repousser ${n} attaque${n > 1 ? "s" : ""}${CONTRACT_RULES.defenseCountsFactionRaids ? ` (joueur ou raid de faction)` : ""}`,
   missions: (n) => `Terminer ${n} missions`,
   gift: (n) => `Envoyer ${n} don${n > 1 ? "s" : ""} de ressources`,
   spend: (n) => `Dépenser ${formatInt(n)} ressources`,
@@ -131,23 +201,17 @@ export function seededRandom(seed: string) {
   };
 }
 
+/** 6.14.109 (AP-L5) : quantité demandée, lue dans `CONTRACT_RULES.targets` (avant : en dur, mêmes valeurs). */
 function targetFor(type: ContractType, player: PlayerState): number {
-  switch (type) {
-    case "build_units":
-      return 20;
-    case "missions":
-      return 2;
-    case "spy":
-      return 2;
-    case "spend": {
-      // Une heure de production commune, au minimum 5 000.
-      const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
-      const perHour = ((rates.scrap ?? 0) + (rates.energy ?? 0) + (rates.nano ?? 0) + (rates.data ?? 0)) * 3600;
-      return Math.max(5000, Math.round(perHour / 1000) * 1000);
-    }
-    default:
-      return 1;
+  if (type === "spend") {
+    // `spendHours` heures de production commune, au minimum `spendMin` (défaut : 1 h, 5 000).
+    const rates = getProductionRatesPerSecond(player.buildings, player.techLevels);
+    const perHour = ((rates.scrap ?? 0) + (rates.energy ?? 0) + (rates.nano ?? 0) + (rates.data ?? 0)) * 3600;
+    const hours = Math.max(0, Number(CONTRACT_RULES.spendHours) || 0);
+    return Math.max(Math.max(0, Number(CONTRACT_RULES.spendMin) || 0), Math.round((perHour * hours) / 1000) * 1000, 1);
   }
+  const t = Number(CONTRACT_RULES.targets?.[type]);
+  return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 1;
 }
 
 function makeContract(type: ContractType, player: PlayerState, day: string, index: number): Contract {
@@ -163,9 +227,9 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
     if (current.items.length < CONTRACT_RULES.perDay) {
       const used = new Set(current.items.map((c) => c.type));
       const rand = seededRandom(`${player.uid}:${day}:extra`);
-      const pool = openContractTypes(player, now).filter((t) => !used.has(t));
+      const pool = drawableTypes(player, now).filter((t) => !used.has(t));
       while (current.items.length < CONTRACT_RULES.perDay && pool.length > 0) {
-        const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+        const type = pool.splice(drawIndex(pool, rand), 1)[0];
         current.items.push(makeContract(type, player, day, current.items.length));
       }
     }
@@ -174,10 +238,11 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
 
   const rand = seededRandom(`${player.uid}:${day}`);
   // I31 : un nouveau jour ne tire que parmi les systèmes ouverts (4 types toujours ouverts : le compte est plein dès J0).
-  const pool = openContractTypes(player, now);
+  // 6.14.109 (AP-L5) : et parmi les types de poids > 0, au prorata de leur poids (poids égaux : tirage d'avant).
+  const pool = drawableTypes(player, now);
   const items: Contract[] = [];
   for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
-    const type = pool.splice(Math.floor(rand() * pool.length), 1)[0];
+    const type = pool.splice(drawIndex(pool, rand), 1)[0];
     items.push(makeContract(type, player, day, i));
   }
   // Série interrompue si la veille n'a pas été complétée.
@@ -281,10 +346,10 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
   if (state.items[index].claimed) throw new GameActionError("Ce contrat est déjà terminé.");
   const used = new Set(state.items.map((c) => c.type));
   // I31 : la relance est un nouveau tirage, parmi les systèmes ouverts ; sans autre objectif ouvert, elle reste disponible.
-  const pool = openContractTypes(player, now).filter((t) => !used.has(t));
+  const pool = drawableTypes(player, now).filter((t) => !used.has(t));
   if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
   const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
-  const type = pool[Math.floor(rand() * pool.length)];
+  const type = pool[drawIndex(pool, rand)];
   const next = makeContract(type, player, state.day, index);
   next.id = `${state.day}-${index}-${type}-r`;
   state.items[index] = next;

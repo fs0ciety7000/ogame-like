@@ -18,6 +18,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q274 | Date des anciens paliers générés : Datés au premier passage du générateur : leurs mesures restent fermées 30 jours (`docs/changes/6.14.108-succes-generes-brides.md`) | pas de nouveau palier généré pendant 30 jours | valider |
+| Q275 | Lecture de Q89 (détenteurs minimum) : 3 joueurs **et** 10 % des actifs : le plus exigeant des deux (`docs/changes/6.14.108-succes-generes-brides.md`) | les paliers générés arrivent plus lentement | valider |
+| Q276 | Rareté des succès générés : Restent légendaires ; à revoir avec É30-6 (rythme des succès) (`docs/changes/6.14.108-succes-generes-brides.md`) | aucun | valider |
+| Q277 | Poids des objectifs « Envoyer un don » et « Gagner une attaque » : Laissés à 1 (seule la défense passe à 0,5) (`docs/changes/6.14.109-objectifs-du-jour-ponderes.md`) | aucun | valider |
+| Q278 | Libellé de l'objectif de défense : « Repousser 1 attaque (joueur ou raid de faction) », qui passe à la ligne à 375 px (`docs/changes/6.14.109-objectifs-du-jour-ponderes.md`) | le joueur sait qu'un raid de faction compte | valider |
 | Q267 | Coffre de 6 à 18 h de production par ressource, coupé à la place libre de l'entrepôt, plancher 2 M ; à entrepôt plein, seulement 2 M (`docs/changes/6.14.106-plafonds-equilibre.md`) | actif 28 M → 709 M, moyen → 270 M ; quotidien à entrepôt presque plein 28 M → 8 M | valider (le quotidien perd au coffre, à surveiller en AE-L4) |
 | Q268 | `exchange.weeklyRareCap` = 30 M de rares par semaine (lundi 00 h UTC), à resserrer après les mesures d'AE-L4 (`docs/changes/6.14.106-plafonds-equilibre.md`) | semaine la plus forte de l'actif 58 M → 30 M | valider |
 | Q269 | S'applique aussi contre les seigneurs de guerre (pas contre les raids de faction) (`docs/changes/6.14.106-plafonds-equilibre.md`) | un joueur battu 4 fois souffle, même face aux seigneurs | valider |

@@ -644,6 +644,13 @@ function validateFixedListNumbers(merged: GameRules): string[] {
   const order = ["bronze", "argent", "or", "grand"] as const;
   if (!order.every((k, i) => num(patronTiers[k]) >= 1 && (i === 0 || num(patronTiers[k]) > num(patronTiers[order[i - 1]])))) errors.push("Mécènes : paliers du badge croissants (bronze < argent < or < grand), 1 Ambre au moins.");
   for (const [id, b] of entries(merged.effectPresets.budgets)) for (const [k, v] of entries(b)) if (!(num(v) >= 0)) errors.push(`Préréglages d'effets : barème « ${id} », « ${k} » positif.`);
+  // 6.14.109 (AU27, AP-L5) : poids et quantités des objectifs du jour.
+  const dc = merged.dailyContracts as { weights?: unknown; targets?: unknown; perDay?: unknown };
+  const cw = entries(dc.weights);
+  for (const [id, v] of cw) if (!(num(v) >= 0 && num(v) <= 100)) errors.push(`Objectifs du jour : poids de « ${id} » entre 0 et 100.`);
+  const drawable = cw.filter(([, v]) => num(v) > 0).length;
+  if (cw.length > 0 && drawable < (num(dc.perDay) || 1)) errors.push(`Objectifs du jour : au moins ${num(dc.perDay) || 1} types de poids non nul (un par objectif du jour), ${drawable} aujourd'hui.`);
+  for (const [id, v] of entries(dc.targets)) if (!(Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 10_000)) errors.push(`Objectifs du jour : quantité de « ${id} » entière, entre 1 et 10 000.`);
   return errors;
 }
 

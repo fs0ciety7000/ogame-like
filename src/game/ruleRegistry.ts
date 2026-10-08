@@ -41,7 +41,7 @@ import { PASS_REWARD_RULES, PASS_REWARD_RULES_META } from "@/game/passSeasons";
 import { MODULE_BUILD_COST, MODULE_BUILD_COST_META, MODULE_RULES, MODULE_RULES_META } from "@/game/modules";
 import { TREATY_RULES, TREATY_RULES_META } from "@/game/pirates";
 import { POLL_RULES, POLL_RULES_META } from "@/game/polls";
-import { BASE_COUNTS, BASE_COUNTS_META } from "@/game/procedural";
+import { ACHIEVEMENT_GEN_RULES, ACHIEVEMENT_GEN_RULES_META, BASE_COUNTS, BASE_COUNTS_META } from "@/game/procedural";
 import { PROFILE_RULES, PROFILE_RULES_META } from "@/game/profile";
 import { REFERRAL_RULES, REFERRAL_RULES_META } from "@/game/referral";
 import { RENAME_RULES, RENAME_RULES_META } from "@/game/rename";
@@ -116,6 +116,8 @@ export const REGISTERED_RULES = {
   achievementHint: { label: "Succès : prix d'un indice", target: () => ACHIEVEMENT_HINT_RULES, meta: () => ACHIEVEMENT_HINT_RULES_META },
   // 6.14.56 (AU27, AP-1) : succès du code retirés exprès (les autres succès par défaut absents de la liste sont complétés).
   achievementList: { label: "Succès : succès par défaut retirés", target: () => ACHIEVEMENT_LIST_RULES, meta: () => ACHIEVEMENT_LIST_RULES_META },
+  // 6.14.108 (AU27, AP-L4) : paliers de succès générés bridés (détenteurs minimum, un par mesure et par mois, plafond, titre).
+  achievementGen: { label: "Succès : paliers générés (rythme et plafond)", target: () => ACHIEVEMENT_GEN_RULES, meta: () => ACHIEVEMENT_GEN_RULES_META },
   passBonus: { label: "Passe : paliers bonus après le dernier palier", target: () => PASS_BONUS_RULES, meta: () => PASS_BONUS_RULES_META },
   missionXp: { label: "Missions : XP suggérée par heure (éditeur)", target: () => MISSION_XP_RULES, meta: () => MISSION_XP_RULES_META },
   commanderXp: { label: "Officiers : XP par action", target: () => COMMANDER_XP, meta: () => COMMANDER_XP_META },

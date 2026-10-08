@@ -140,9 +140,13 @@ describe("v5.4 chapitre généré en jeu", () => {
 describe("v5.4 paliers de succès générés", () => {
   it("ajoute le palier suivant quand un joueur atteint le dernier", () => {
     const now = OCT_25;
-    const p = player("Echo", now);
-    p.victories = 1500;
-    const out = proposeAchievementTiers(DEFAULT_ACHIEVEMENTS, [p], now);
+    // 6.14.108 (AP-L4) : 3 détenteurs au moins (achievementGen.minHolders).
+    const ps = ["Echo", "Delta", "Kilo"].map((n) => {
+      const p = player(n, now);
+      p.victories = 1500;
+      return p;
+    });
+    const out = proposeAchievementTiers(DEFAULT_ACHIEVEMENTS, ps, now);
     const v = out.find((o) => o.def.metric === "victories");
     expect(v?.def.threshold).toBe(1500);
     expect(v?.def.id).toBe("eternal_conqueror_auto1");

@@ -39,6 +39,7 @@ import { fetchNpcOpponents } from "@/services/codexService";
 import { CONTRACT_RULES } from "@/game/contracts";
 import { generatePassSeason, nextMonthId } from "@/game/passSeasons";
 import { generateChapter, worldDigest } from "@/game/procedural";
+import { DEFAULT_ACHIEVEMENTS } from "@/game/achievements";
 import { chronicleMonthId } from "@/game/chronicles";
 
 const suffix = Math.random().toString(36).slice(2, 7);
@@ -3252,6 +3253,42 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       expect(again.lines.some((l: string) => /ancien générateur/.test(l))).toBe(false);
     } finally {
       for (const [key, rec] of [["passSeasons", keep.passes], ["chronicles", keep.chronicles], ["procedural", keep.procedural]] as const) {
+        const cur = await cfg(key);
+        if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
+    }
+  });
+
+  it("6.14.108 (AP-L4) : paliers de succès générés datés et bridés, rien de retiré", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { achievements: await cfg("achievements"), procedural: await cfg("procedural") };
+    const put = async (key: string, data: unknown) => {
+      const rec = await cfg(key);
+      if (rec) await admin.collection("game_config").update(rec.id, { data });
+      else await admin.collection("game_config").create({ key, data });
+    };
+    // Palier écrit par le générateur d'avant 6.14.108 : sans date.
+    const base = DEFAULT_ACHIEVEMENTS.find((a) => a.id === "eternal_conqueror")!;
+    const legacy = { ...base, id: "eternal_conqueror_auto1", name: "Conquérant éternel II", threshold: 1500, auto: true, title: "Conquérant éternel II" };
+    try {
+      await put("achievements", [legacy]);
+      const before = Date.now();
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
+      // Serveur de test (moins de 3 joueurs actifs au dernier palier) : aucun nouveau palier.
+      expect(out.achievements).toEqual([]);
+      expect(out.stamped).toBe(true);
+      const stored = (await cfg("achievements"))!.data as { id: string; createdAtMs?: number; title?: string }[];
+      const kept = stored.find((a) => a.id === legacy.id)!;
+      expect(kept).toBeTruthy();
+      expect(kept.title).toBe(legacy.title);
+      expect(kept.createdAtMs).toBeGreaterThanOrEqual(before);
+      // Deuxième passage : déjà daté, rien d'écrit.
+      const again = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "achievements" } });
+      expect(again.stamped).toBeUndefined();
+      expect(((await cfg("achievements"))!.data as { id: string; createdAtMs?: number }[]).find((a) => a.id === legacy.id)!.createdAtMs).toBe(kept.createdAtMs);
+    } finally {
+      for (const [key, rec] of [["achievements", keep.achievements], ["procedural", keep.procedural]] as const) {
         const cur = await cfg(key);
         if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
         else if (cur) await admin.collection("game_config").delete(cur.id);

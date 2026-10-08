@@ -5,6 +5,7 @@ import { ENDGAME_TECH_IDS } from "@/game/technologies";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { addPassPoints } from "@/game/seasonPass";
+import { CONTRACT_RULES, recordContract } from "@/game/contracts";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { flushState, type NewNotification } from "@/game/flush";
@@ -853,6 +854,8 @@ export function resolvePirateRaid(
     grantCommanderXp(player, "strategist", COMMANDER_XP.raidRepelled);
     grantCommanderXp(player, "warden", COMMANDER_XP.raidRepelled);
     addPassPoints(player, "raidRepelled", now);
+    // 6.14.109 (AU27, AP-L5, Q87) : un raid de faction repoussé compte aussi pour l'objectif du jour « Repousser une attaque ».
+    if (CONTRACT_RULES.defenseCountsFactionRaids) recordContract(player, "win_defense", 1, now);
     st.notoriety = Math.min(faction.raid.maxNotoriety, st.notoriety + 1);
     player.victories = (player.victories ?? 0) + 1;
     const lairNow = !st.lairOpen && st.repelled >= faction.lair.raidsNeeded;

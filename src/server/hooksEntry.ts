@@ -189,7 +189,7 @@ export { episodeUnlockMs } from "@/game/chronicles";
 export { BOSS_REMINDERS, bossEndLabel, bossWindows, eveReminderDue, parisRelativeLabel, parisWhenLabel } from "@/game/events";
 export { autoDraftMonths, ensureFeasiblePass, findPassSeason, generatePassSeason, hasFullChallenges, regenerateChallenges, nextMonthId, outdatedPassDrafts, PASS_SEASONS_SECTION, PASS_THEME_OLD_IMAGES, SEASON_PORTRAITS, passSeasonAllowed, publishPassSeason, upsertPassSeason } from "@/game/passSeasons";
 export { moveWrittenToLibrary, applyLibraryChapter } from "@/game/chronicles";
-export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, GENERATOR_VERSION, PROCEDURAL_KEY, proposeAchievementTiers, worldDigest } from "@/game/procedural";
+export { chapterDifficulty, parisDayOfMonth, generateChapter, monthsToGenerate, normalizeProcedural, outdatedChapters, GENERATOR_VERSION, PROCEDURAL_KEY, proposeAchievementTiers, stampGeneratedTiers, worldDigest } from "@/game/procedural";
 export { clearOfficerCooldowns, finishAllTimers, grantResources } from "@/game/adminTools";
 export { applyAdminEdit } from "@/game/adminEdit";
 export { BALANCE_HISTORY_KEY, balanceSnapshot, pushSnapshot } from "@/game/balance/history";

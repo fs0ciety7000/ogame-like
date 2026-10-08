@@ -5,6 +5,8 @@ import { COMBAT_RULES } from "@/game/combat";
 import { LAIR_LOCATE_RULES } from "@/game/pirates";
 import { CLASS_UNIT_RULES } from "@/game/classUnits";
 import { COLONY_ROUTE_RULES, COLONY_RULES } from "@/game/colonies";
+import { CONTRACT_RULES } from "@/game/contracts";
+import { ACHIEVEMENT_GEN_RULES } from "@/game/procedural";
 
 /* 6.7.1 : les chiffres ajoutés en 6.4–6.6 se règlent dans l'administration (Règles) et le moteur les applique. */
 
@@ -59,6 +61,19 @@ describe("6.7.1 : réglages admin", () => {
     const errors = validateGameContent(bad).join(" ");
     expect(errors).toMatch(/plafond total/);
     expect(errors).toMatch(/file de défense/);
+  });
+
+  it("6.14.108 et 6.14.109 (AP-L4, AP-L5) : paliers de succès générés et objectifs du jour, réglages appliqués champ par champ", () => {
+    applyGameContent({ rules: { achievementGen: { cooldownDays: 7 }, dailyContracts: { weights: { win_defense: 2 }, targets: { missions: 3 } } } } as never);
+    expect(ACHIEVEMENT_GEN_RULES.cooldownDays).toBe(7);
+    expect(ACHIEVEMENT_GEN_RULES.minHolders).toBe(3);
+    expect(CONTRACT_RULES.weights.win_defense).toBe(2);
+    expect(CONTRACT_RULES.weights.research).toBe(1);
+    expect(CONTRACT_RULES.targets.missions).toBe(3);
+    expect(CONTRACT_RULES.targets.build_units).toBe(20);
+    applyGameContent({});
+    expect(CONTRACT_RULES.weights.win_defense).toBe(0.5);
+    expect(ACHIEVEMENT_GEN_RULES.cooldownDays).toBe(30);
   });
 });
 

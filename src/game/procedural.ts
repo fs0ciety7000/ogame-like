@@ -13,7 +13,7 @@ import {
   type ChronicleObjective,
 } from "@/game/chronicles";
 import { parisOffsetMs } from "@/game/events";
-import { formatInt } from "@/game/format";
+import { formatInt, formatPct } from "@/game/format";
 import { activePass, passState, passTier, PASS_RULES, type MonthPass, type PassReward } from "@/game/seasonPass";
 import { actionPlayable, hasActivityData, passGenRules, percentile, type PassPace } from "@/game/passGen";
 import { budgetEpisodeRewards, chronicleGenRules, objectiveWeight } from "@/game/chronicleGen";
@@ -687,6 +687,75 @@ export function monthsToGenerate(existing: Pick<ChronicleMonth, "id">[], now: nu
 const NO_EXTENSION = new Set(["maxBuildingLevel", "minBuildingLevel", "maxTechLevel", "maxUnitLevel", "allianceBossTypes"]);
 const NEXT_TIER: Record<AchievementTier, AchievementTier> = { bronze: "argent", argent: "or", or: "legendaire", legendaire: "legendaire", mythique: "mythique" };
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+const DAY_MS_ACH = 86_400_000;
+/** Identifiant d'un palier écrit par le générateur (`<succès>_auto<n>`), à distinguer des succès dérivés marqués `auto`. */
+const GENERATED_TIER_ID = /_auto\d+$/;
+
+/* 6.14.108 (AU27, AP-L4, constat AP-5, Q82 et Q89) : paliers de succès générés bridés. Avant : un seul détenteur suffisait, un
+   palier par mesure et par jour, toujours légendaire avec titre (47 paliers en 3 jours sur la pré-prod, 37 titres). Les paliers déjà
+   créés restent (données des joueurs) : le bridage ne vaut que pour la suite. Valeurs littérales (initialisation des modules). */
+export const ACHIEVEMENT_GEN_RULES = {
+  /** Détenteurs minimum du dernier palier avant d'en générer un nouveau (joueurs actifs). */
+  minHolders: 3,
+  /** Part minimum des joueurs actifs qui détiennent le dernier palier (la plus exigeante des deux règles s'applique). */
+  minHoldersShare: 0.1,
+  /** Jours sans activité au-delà desquels un joueur ne compte plus parmi les actifs. */
+  activeDays: 14,
+  /** Jours entre deux paliers générés d'une même mesure (30 = un par mois). 0 = sans délai. */
+  cooldownDays: 30,
+  /** Paliers générés au plus par mesure (famille). 0 = sans plafond. */
+  maxAutoPerFamily: 3,
+  /** Titre décerné au dernier palier générable de la famille seulement (sinon : à chaque palier légendaire, comme avant). */
+  titleOnLastOnly: true,
+  /** Seuil du palier suivant : × `growthSmall` sous `smallBelow`, × `growthLarge` à partir de `largeFrom`, × `growth` entre les deux. */
+  growthSmall: 3,
+  smallBelow: 5,
+  growth: 2,
+  growthLarge: 1.5,
+  largeFrom: 100,
+};
+
+/** 6.14.108 : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages et Admin → Règles). */
+export const ACHIEVEMENT_GEN_RULES_META = {
+  minHolders: { label: "Détenteurs minimum du dernier palier", unit: "joueurs", min: 1, max: 1000, hint: "Joueurs actifs qui doivent tenir le dernier palier avant qu'un palier plus dur soit généré." },
+  minHoldersShare: { label: "Part minimum des actifs au dernier palier", unit: "part", min: 0, max: 1, hint: "0,1 = 10 % des joueurs actifs. La plus exigeante des deux règles (nombre ou part) s'applique." },
+  activeDays: { label: "Joueur actif : connecté depuis moins de", unit: "j", min: 1, max: 90 },
+  cooldownDays: { label: "Délai entre deux paliers d'une même mesure", unit: "j", min: 0, max: 365, hint: "30 = un palier par mois au plus. 0 = sans délai (ancien comportement : un par jour)." },
+  maxAutoPerFamily: { label: "Paliers générés au plus par mesure", min: 0, max: 50, hint: "0 = sans plafond. Les paliers déjà créés restent, même au-delà." },
+  titleOnLastOnly: { label: "Titre au dernier palier générable seulement", hint: "Décoché : chaque palier légendaire généré donne un titre (ancien comportement)." },
+  growthSmall: { label: "Seuil suivant : multiplicateur des petits seuils", unit: "×", min: 1.1, max: 10 },
+  smallBelow: { label: "Petit seuil : en dessous de", min: 1, max: 1000 },
+  growth: { label: "Seuil suivant : multiplicateur courant", unit: "×", min: 1.1, max: 10 },
+  growthLarge: { label: "Seuil suivant : multiplicateur des grands seuils", unit: "×", min: 1.1, max: 10 },
+  largeFrom: { label: "Grand seuil : à partir de", min: 1, max: 1_000_000 },
+};
+
+/** 6.14.108 : détenteurs demandés pour `active` joueurs actifs (nombre ou part, la plus exigeante). */
+export function achievementHoldersNeeded(active: number): number {
+  const r = ACHIEVEMENT_GEN_RULES;
+  return Math.max(1, Math.floor(Number(r.minHolders) || 1), Math.ceil(Math.max(0, Number(r.minHoldersShare) || 0) * Math.max(0, active)));
+}
+
+/** 6.14.108 : règle du générateur de paliers, en une phrase (admin : Générateur), lue dans les règles en vigueur. */
+export function achievementGenText(): string {
+  const r = ACHIEVEMENT_GEN_RULES;
+  const share = Number(r.minHoldersShare) > 0 ? ` (et au moins ${formatPct(r.minHoldersShare)} des actifs)` : "";
+  const pace = Number(r.cooldownDays) > 0 ? `un palier par mesure tous les ${formatInt(r.cooldownDays)} jours au plus` : "sans délai entre deux paliers";
+  const cap = Number(r.maxAutoPerFamily) > 0 ? `, ${formatInt(r.maxAutoPerFamily)} par mesure au plus` : "";
+  const title = r.titleOnLastOnly ? (Number(r.maxAutoPerFamily) > 0 ? ", titre au dernier seulement" : ", sans titre") : ", titre à chaque palier légendaire";
+  return `Ajoute le palier suivant quand ${formatInt(Math.max(1, Number(r.minHolders) || 1))} joueur(s) actif(s)${share} ont atteint le dernier ; ${pace}${cap}${title}.`;
+}
+
+/** 6.14.108 : palier généré sans date (écrit avant 6.14.108) → daté de `now` ; les autres tels quels. `changed` : au moins un daté. */
+export function stampGeneratedTiers<T extends { id?: string; createdAtMs?: number }>(defs: T[], now: number): { list: T[]; changed: boolean } {
+  let changed = false;
+  const list = defs.map((a) => {
+    if (!a || typeof a.id !== "string" || !GENERATED_TIER_ID.test(a.id) || Number.isFinite(a.createdAtMs)) return a;
+    changed = true;
+    return { ...a, createdAtMs: now };
+  });
+  return { list, changed };
+}
 
 function niceNumber(x: number): number {
   const p = 10 ** Math.max(0, Math.floor(Math.log10(x)) - 1);
@@ -700,28 +769,42 @@ export interface AchievementProposal {
 }
 
 /**
- * Pour chaque mesure dont le dernier palier est atteint par au moins un
- * joueur actif, propose le palier suivant (×2, ×1,5 au-delà de 100).
+ * Pour chaque mesure dont le dernier palier est atteint par assez de joueurs actifs, propose le palier suivant
+ * (×2, ×3 sous 5, ×1,5 à partir de 100 : `ACHIEVEMENT_GEN_RULES`).
+ * 6.14.108 (AP-L4) : détenteurs minimum, délai entre deux paliers d'une mesure (un palier sans date compte comme créé à `now`),
+ * plafond par mesure, titre au dernier palier générable.
  */
 export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerState[], now: number): AchievementProposal[] {
-  const active = players.filter((p) => !p.npc && now - (p.lastActiveMs ?? p.resourcesUpdatedAtMs ?? 0) < 14 * 86_400_000);
+  const r = ACHIEVEMENT_GEN_RULES;
+  const activeMs = Math.max(1, Number(r.activeDays) || 14) * DAY_MS_ACH;
+  const active = players.filter((p) => !p.npc && now - (p.lastActiveMs ?? p.resourcesUpdatedAtMs ?? 0) < activeMs);
+  const needed = achievementHoldersNeeded(active.length);
+  const cooldownMs = Math.max(0, Number(r.cooldownDays) || 0) * DAY_MS_ACH;
+  const cap = Math.max(0, Math.floor(Number(r.maxAutoPerFamily) || 0));
   const out: AchievementProposal[] = [];
   const byMetric = new Map<string, AchievementDef[]>();
   for (const a of defs.filter((x) => x.enabled)) byMetric.set(a.metric, [...(byMetric.get(a.metric) ?? []), a]);
   for (const [metric, list] of byMetric) {
     const m = METRICS[metric as keyof typeof METRICS];
     if (!m || NO_EXTENSION.has(metric) || /\((%|0\/1)\)/.test(m.label)) continue;
+    // Paliers déjà générés pour cette mesure (activés ou non).
+    const generated = defs.filter((a) => a.metric === metric && GENERATED_TIER_ID.test(a.id));
+    if (cap > 0 && generated.length >= cap) continue;
+    if (cooldownMs > 0 && generated.some((a) => now - (Number.isFinite(a.createdAtMs) ? (a.createdAtMs as number) : now) < cooldownMs)) continue;
     const top = [...list].sort((a, b) => b.threshold - a.threshold)[0];
     const holders = active.filter((p) => m.value(p) >= top.threshold).length;
-    if (holders === 0) continue;
-    const threshold = niceNumber(top.threshold * (top.threshold >= 100 ? 1.5 : top.threshold < 5 ? 3 : 2));
+    if (holders === 0 || holders < needed) continue;
+    const factor = top.threshold >= r.largeFrom ? r.growthLarge : top.threshold < r.smallBelow ? r.growthSmall : r.growth;
+    const threshold = niceNumber(top.threshold * Math.max(1.1, Number(factor) || 2));
     const autoCount = list.filter((a) => a.auto).length;
     const baseName = top.name.replace(/\s+[IVX]+$/, "");
     const level = autoCount + 2;
     const tier = NEXT_TIER[top.tier];
-    const r = TIER_REWARDS[tier];
+    const rw = TIER_REWARDS[tier];
     const id = `${top.id.replace(/_auto\d+$/, "")}_auto${autoCount + 1}`;
     if (defs.some((a) => a.id === id)) continue;
+    const isLast = cap > 0 && generated.length + 1 >= cap;
+    const titled = tier === "legendaire" && (!r.titleOnLastOnly || isLast);
     out.push({
       def: {
         id,
@@ -734,13 +817,14 @@ export function proposeAchievementTiers(defs: AchievementDef[], players: PlayerS
         metric: top.metric,
         threshold,
         secret: false,
-        rewardXp: r.xp,
-        rewardHours: r.hours,
-        title: tier === "legendaire" ? `${baseName} ${ROMAN[level] ?? level}` : "",
+        rewardXp: rw.xp,
+        rewardHours: rw.hours,
+        title: titled ? `${baseName} ${ROMAN[level] ?? level}` : "",
         auto: true,
+        createdAtMs: now,
       },
       holders,
-      reason: `${holders} joueur(s) ont atteint « ${top.name} » (${formatInt(top.threshold)}) : nouveau palier à ${formatInt(threshold)}.`,
+      reason: `${holders} joueur(s) actif(s) sur ${active.length} ont atteint « ${top.name} » (${formatInt(top.threshold)}, ${needed} demandés) : nouveau palier à ${formatInt(threshold)}.`,
     });
   }
   return out;

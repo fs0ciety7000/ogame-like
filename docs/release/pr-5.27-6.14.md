@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.107 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.109 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 173 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 175 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -209,6 +209,8 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.105 : Textes de règle vivants : construits depuis les règles en vigueur (AA4) (`docs/changes/6.14.105-textes-de-regle-vivants.md`)
 - 6.14.106 : Plafonds d'équilibre dans le moteur : coffre indexé, comptoir plafonné, défaites par 24 h, rattrapage (AE-L3) (`docs/changes/6.14.106-plafonds-equilibre.md`)
 - 6.14.107 : Santé de l'équilibre complétée : Ambre par source, boss, 1re Ascension, production perdue, quartiles, suivi d'AE-L3 (AE-L4) (`docs/changes/6.14.107-sante-equilibre-completee.md`)
+- 6.14.108 : Succès générés bridés : détenteurs minimum, un palier par mois, plafond par mesure (AP-L4) (`docs/changes/6.14.108-succes-generes-brides.md`)
+- 6.14.109 : Objectifs du jour pondérés et réglables (AP-L5) (`docs/changes/6.14.109-objectifs-du-jour-ponderes.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

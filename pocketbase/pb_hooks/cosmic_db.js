@@ -6611,19 +6611,24 @@ function proceduralTick(now, opts) {
     out.regenerated = [];
     if (!o.monthId && o.achievements !== true) regenerateOutdatedChapters(txApp, game, players, now, out.regenerated, settings);
     if (settings.achievements && !o.monthId) {
+      // 6.14.108 (AU27, AP-L4) : bridé par GameRules.achievementGen (détenteurs minimum, un palier par mesure et par mois,
+      // plafond par mesure, titre au dernier). Un palier généré sans date (avant 6.14.108) compte comme créé maintenant, et il
+      // est daté une fois dans la liste enregistrée : rien n'est retiré (Q82).
       const proposals = game.proposeAchievementTiers(content.achievements, players, now);
-      if (proposals.length > 0) {
+      const stored = configRecord(txApp, "achievements");
+      const storedList = stored ? toPlain(stored).data : null;
+      const stamped = Array.isArray(storedList) ? game.stampGeneratedTiers(storedList, now) : { list: null, changed: false };
+      if (proposals.length > 0 || stamped.changed) {
         // 6.14.56 (AU27, AP-1) : n'ajoute que les nouveaux paliers à la liste enregistrée (le reste tel quel). Avant, la
         // liste entière était réécrite et figeait les succès par défaut : ceux ajoutés au code ensuite manquaient.
-        const stored = configRecord(txApp, "achievements");
-        const storedList = stored ? toPlain(stored).data : null;
-        const base = Array.isArray(storedList) ? storedList : content.achievements;
+        const base = stamped.list || content.achievements;
         const known = {};
         base.forEach((a) => {
           if (a && a.id) known[a.id] = true;
         });
         writeConfig(txApp, "achievements", base.concat(proposals.map((p) => p.def).filter((d) => !known[d.id])));
         proposals.forEach((p) => out.achievements.push({ id: p.def.id, name: p.def.name, reason: p.reason }));
+        if (stamped.changed) out.stamped = true;
       }
     }
     // v5.13 : passes de saison — brouillon du mois suivant, publication d'office et annonce au début du mois.

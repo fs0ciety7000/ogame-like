@@ -8,7 +8,7 @@ import { HudTag } from "@/components/ui/hud";
 import { adminProcedural, adminProceduralAchievements, adminProceduralGenerate, adminProceduralSettings, type ProceduralOverview, type ProceduralResult } from "@/services/adminService";
 import { OBJECTIVE_LABELS, type ChronicleMonth } from "@/game/chronicles";
 import { describePassReward } from "@/game/seasonPass";
-import { ACTIVITY_KEYS, type ProceduralSettings } from "@/game/procedural";
+import { achievementGenText, ACTIVITY_KEYS, type ProceduralSettings } from "@/game/procedural";
 import { STORY_SPEAKERS } from "@/game/story";
 import { seasonLabel } from "@/game/seasons";
 import { timeAgo } from "@/lib/utils";
@@ -186,7 +186,7 @@ export function ProceduralPanel() {
           <Toggle label="Génération automatique" hint="Désactivée : rien n'est écrit seul, les boutons ci-dessous restent utilisables." checked={settings.enabled} onChange={(v) => void saveSettings({ enabled: v })} />
           <Toggle label="Chapitres des Chroniques" hint="Scénario, objectifs, boss, récompenses, titre, bannière, Codex." checked={settings.chapters} onChange={(v) => void saveSettings({ chapters: v })} />
           <Toggle label="Passe propre à chaque chapitre" hint="Points par palier ajustés selon la réussite du mois, paliers variés." checked={settings.pass} onChange={(v) => void saveSettings({ pass: v })} />
-          <Toggle label="Paliers de succès" hint="Ajoute le palier suivant quand un joueur a atteint le dernier." checked={settings.achievements} onChange={(v) => void saveSettings({ achievements: v })} />
+          <Toggle label="Paliers de succès" hint={achievementGenText()} checked={settings.achievements} onChange={(v) => void saveSettings({ achievements: v })} />
           <Toggle
             label="Régénérer ce qu'a écrit un ancien générateur"
             hint="Brouillons de passe et chapitres pas encore ouverts, s'ils ne sont pas retouchés. Jamais un passe publié ni un chapitre commencé."
