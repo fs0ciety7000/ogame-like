@@ -56,4 +56,15 @@ mort entre 36 et 60 h (seuils `balanceHealth.bossKillLow/High`, `bossKillHoursLo
   sans fugitifs prend ceux de la faction livrée (migration `faction-fugitives-6.14.125`) ; une faction ajoutée apporte les siens.
   Les fugitifs d'élite restent une liste du code (`ELITE_FUGITIVES`).
 - Archétype de repli (`factionArchetype`, `chapterArchetypes`) : une faction active sans archétype de chapitre peut être l'antagoniste
-  d'un chapitre ou d'une saga, et la faction d'un thème du passe. Reste fermé : l'origine d'un seigneur (`WarlordOrigin`).
+  d'un chapitre ou d'une saga, et la faction d'un thème du passe. L'origine d'un seigneur est ouverte depuis 6.14.154 (ci-dessous).
+
+## 6.14.154 (revue AU27, lot R6, AA-L10 : AA-20 et AA-23, restes)
+- Origines des seigneurs ouvertes (`WarlordsConfig.origins`, `withDefaultOrigins`, `warlordOrigins`) : les cinq livrées (Kesh'Vaar
+  renégats, Déserteurs du Chœur, Anciens de la Confrérie, Mercenaires Gravhorn, Culte du Léviathan) gardent leurs valeurs et se
+  règlent (étiquette, image de repli, sceau, couleur) ; une origine ajoutée se choisit dans la fiche du seigneur (Admin → Seigneurs →
+  Origines, puis « Origine »). Garde : origine inconnue, identifiant, couleur ou chemin d'image invalides refusés (`validateWarlords`).
+  L'origine ne sert qu'à l'affichage (fiche publique : étiquette, image de repli, couleur).
+- Archétypes des Chroniques en section de contenu (`chronicleArchetypes`, Admin → Listes du jeu) : liste livrée (7) par défaut,
+  enregistrée telle quelle ; « Retiré du tirage » sort un archétype des chapitres et des sagas (sa faction ne reçoit pas d'archétype
+  de repli) ; les chapitres écrits gardent leur copie. Les listes d'illustrations (`AUTO_ART`, `AUTO_ART_2`, `AUTO_SEALS`) restent au
+  code (fichiers présents) : un archétype ajouté prend ses propres images.

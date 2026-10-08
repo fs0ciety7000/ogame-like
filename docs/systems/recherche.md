@@ -7,7 +7,8 @@ Débloque unités et bâtiments, donne des bonus permanents (couche « tech » d
 - 30 technologies, jusqu'à 4 recherches en parallèle (`research.maxConcurrent`).
 - Coût du niveau n : `baseCost × costGrowth^(n−1)` ; `costGrowth` = **2,7** (`research.costGrowth`), sauf croissance propre à la
   techno (1,9 à 2,4 pour les récentes, Contenu → Technologies).
-- Durée du niveau n (avant réductions) : `baseTime × timeGrowth^(n−1)`, `timeGrowth` = **1,67** (`research.timeGrowth`) ; dès le niveau
+- Durée du niveau n (avant réductions) : `baseTime × timeGrowth^(n−1)`, `timeGrowth` = **1,67** (`research.timeGrowth`), sauf croissance
+  propre à la techno (6.14.154, `TechDef.timeGrowth`, 1 à 5, Contenu → Technologies ; aucune techno livrée n'en a) ; dès le niveau
   `research.lateFromLevel`, × `research.lateTimeFactor` ; au plus `research.maxLevelSeconds`. Défauts neutres depuis 6.14.84 (0, 1, 0 :
   ni recherche tardive ni plafond, mêmes coûts et durées qu'avant). **Bascule du rythme** (6.14.88, 1er novembre 2026, `rhythm.ts`) : un
   champ resté à ces valeurs neutres passe à **dès le niveau 7, ×25, 7 jours au plus** (6.14.89 ; dès le 6, ×30 en 6.14.88) (réglages `rhythm.researchLate*`, Admin → Règles →

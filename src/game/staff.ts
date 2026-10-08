@@ -17,9 +17,45 @@ export const STAFF_TITLE_SEASON = "staff";
 /** Rôles de départ, appliqués une seule fois aux administrateurs existants. */
 export const DEFAULT_STAFF_BY_PSEUDO: Record<string, StaffRole> = { Nicotine: "developer", Tartiflex: "admin" };
 
-/** 5.22.1 : comptes d'essai de l'équipe (sans rôle affiché) écartés des références d'équilibrage,
- *  en plus des membres de l'équipe et des comptes en mode test. */
-export const BALANCE_EXCLUDED_PSEUDOS = ["Tartiflex", "Nicotine", "Tomdindon"];
+/**
+ * 5.22.1 : comptes écartés des références d'équilibrage (puissance des seigneurs, outil d'équilibrage, « Et si ? ») :
+ * comptes d'essai de l'équipe (pseudos, sans rôle affiché), membres de l'équipe, administrateurs et comptes en mode test.
+ * 6.14.154 (AU27, R6, constat AA-31) : réglable (registre « balanceExclusion », Admin → Administrateurs) ; valeurs par
+ * défaut : celles d'avant (mêmes comptes écartés).
+ */
+export const BALANCE_EXCLUSION_RULES = {
+  /** Pseudos écartés (casse exacte), en plus de l'équipe et des comptes de test. */
+  pseudos: ["Tartiflex", "Nicotine", "Tomdindon"] as string[],
+  /** Membres de l'équipe (rôle Développeur ou Administrateur) et comptes de la collection `admins` écartés. */
+  excludeStaff: true,
+  /** Comptes en mode test écartés. */
+  excludeTestMode: true,
+};
+
+export const BALANCE_EXCLUSION_RULES_META = {
+  pseudos: { label: "Pseudos écartés des statistiques d'équilibre", hint: "Comptes d'essai de l'équipe, sans rôle affiché (casse exacte)." },
+  excludeStaff: { label: "Écarter l'équipe et les administrateurs", hint: "Leurs empires sont souvent gonflés pour les essais." },
+  excludeTestMode: { label: "Écarter les comptes en mode test" },
+};
+
+/** Ce joueur sert-il de référence d'équilibrage ? `staffUids` : équipe et administrateurs (lus par le serveur). */
+export function countsForBalance(p: { uid: string; pseudo?: string; testMode?: boolean }, staffUids: Record<string, boolean>): boolean {
+  const r = BALANCE_EXCLUSION_RULES;
+  if (r.excludeStaff !== false && staffUids[p.uid]) return false;
+  if (r.excludeTestMode !== false && p.testMode) return false;
+  return !(Array.isArray(r.pseudos) ? r.pseudos : []).includes(String(p.pseudo ?? ""));
+}
+
+/** Erreurs du groupe « balanceExclusion » : liste de pseudos non vides, sans doublon. */
+export function validateBalanceExclusion(r: Partial<typeof BALANCE_EXCLUSION_RULES> | undefined): string[] {
+  if (!r) return [];
+  const e: string[] = [];
+  if (r.pseudos !== undefined) {
+    if (!Array.isArray(r.pseudos) || r.pseudos.some((x) => typeof x !== "string" || !x.trim())) e.push("Équilibrage : pseudos écartés, une liste de pseudos non vides.");
+    else if (new Set(r.pseudos).size !== r.pseudos.length) e.push("Équilibrage : pseudo écarté en double.");
+  }
+  return e;
+}
 
 export interface StaffState {
   roles: Record<string, StaffRole>;

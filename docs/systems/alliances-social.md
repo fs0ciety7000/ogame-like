@@ -59,3 +59,10 @@ Constat AA-15 (`docs/audit/2026-10-07-au27-admin-evolutif.md`). Fiche du lot : `
 - Admin → Règles → Événements et saisons : éditeurs « Recherches d'alliance » et « Projets d'alliance » (nom, émoji, description,
   valeur par niveau, niveau maximal, effets) et « Places de membres par niveau ». Règles enregistrées avant : effets ajoutés par la
   migration `alliance-effects-6.14.124` (mêmes valeurs) et même repli à la lecture.
+
+## 6.14.154 (revue AU27, lot R6 : reste d'AA-23)
+- Défis d'alliance de la semaine en section de contenu (`allianceChallenges`, Admin → Listes du jeu) : 7 défis livrés, même rotation
+  (ordre de la liste, défis retirés exclus : `allianceChallengeRotation`) ; un défi ajouté (nom, emoji, mesure parmi les mesures des
+  succès, texte) entre dans la rotation et décale les semaines suivantes ; un défi enregistré **ne se supprime pas** (garde du serveur,
+  `NO_REMOVAL_SECTIONS`) : on le retire de la rotation, et la semaine en cours comme le podium passé gardent son nom
+  (`findAllianceChallenge` lit aussi les retirés) ; un défi livré absent d'une liste revient, retiré.

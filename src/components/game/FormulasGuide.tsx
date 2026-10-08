@@ -445,7 +445,7 @@ seigneur de guerre : attaque avec ${pct(WARLORD_RULES.attackPowerMin)} à ${pct(
       <Block id="recherche" title="Recherche" icon={FlaskConical} intro="Chaque niveau d'une technologie coûte et dure plus que le précédent. Les réductions de durée (technos, officiers, reliques, talents) s'appliquent ensuite.">
         <Formula>
           {`coût du niveau n = coût de base × ${formatDecimal(RESEARCH_RULES.costGrowth, 2)}^(n − 1)   (sauf croissance propre à la techno)
-durée du niveau n = durée de base × ${formatDecimal(RESEARCH_RULES.timeGrowth, 2)}^(n − 1)${RESEARCH_RULES.lateFromLevel > 0 ? `
+durée du niveau n = durée de base × ${formatDecimal(RESEARCH_RULES.timeGrowth, 2)}^(n − 1)   (sauf croissance propre à la techno)${RESEARCH_RULES.lateFromLevel > 0 ? `
 dès le niveau ${RESEARCH_RULES.lateFromLevel} : durée × ${formatDecimal(RESEARCH_RULES.lateTimeFactor, 2)}` : ""}${RESEARCH_RULES.maxLevelSeconds > 0 ? `
 durée d'un niveau : ${formatWait(RESEARCH_RULES.maxLevelSeconds * 1000)} au plus, avant les réductions` : ""}
 recherches en parallèle : ${RESEARCH_RULES.maxConcurrent}`}

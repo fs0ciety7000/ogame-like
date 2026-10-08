@@ -269,3 +269,10 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - Page du passe : carte « Prestige » sous la grille (10 étoiles, barre vers le palier suivant). Réglages : Admin → Règles → Passe
   généré → « Passe : paliers de prestige » (`passPrestige` : actif, nombre de paliers, taille en paliers du passe).
   Fiche : `docs/changes/6.14.150-rythme-du-passe.md`.
+
+## 6.14.154 (revue AU27, lot R6 : reste d'AA-23)
+- Réserve des missions du jour en section de contenu (`dailyMissionPool`, Admin → Listes du jeu) : 5 tâches livrées (missions ×2,
+  espionnages ×2, victoire, contrat, marché), mêmes tirages ; une tâche = une action suivie du registre (sans les actions par contenu)
+  et une quantité de 1 à 50 ; au moins une tâche. Le tirage n'agit que si `daily.tasks` > 0 (0 depuis 6.2 : la réserve paie seulement
+  les journées d'avant la fusion dans les objectifs du jour).
+- Archétypes des Chroniques en section : voir `docs/systems/pnj-boss.md`.

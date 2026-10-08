@@ -58,6 +58,8 @@ export interface TechDef {
   /** Ancien format : un seul effet. */
   effect?: TechEffect;
   costGrowth?: number;
+  /** 6.14.154 (AU27, R6, constat AA-12) : croissance propre de la durée par niveau (absente : `research.timeGrowth`, 1,67). */
+  timeGrowth?: number;
   /** v5.9 : ambre (monnaie des Kesh'Vaar) demandé à chaque niveau, en plus des ressources. */
   amberCost?: number;
   prereq: Record<string, number>;
@@ -292,7 +294,7 @@ export const RESEARCH_RULES = {
   maxConcurrent: 4,
   /** Coût d'un niveau = coût de base × costGrowth^(niveau − 1) (une techno peut avoir sa propre croissance). */
   costGrowth: 2.7,
-  /** Durée d'un niveau = durée de base × timeGrowth^(niveau − 1). */
+  /** Durée d'un niveau = durée de base × timeGrowth^(niveau − 1) (6.14.154 : une techno peut avoir sa propre croissance). */
   timeGrowth: 1.67,
   /** Recherche tardive : à partir de ce niveau, la durée est multipliée par `lateTimeFactor` (0 = jamais). */
   lateFromLevel: 0,
@@ -306,7 +308,7 @@ export const RESEARCH_RULES = {
 export const RESEARCH_RULES_META = {
   maxConcurrent: { label: "Recherches en parallèle", min: 1, max: 10 },
   costGrowth: { label: "Croissance du coût par niveau", unit: "×", min: 1, max: 5, hint: "Coût = coût de base × croissance^(niveau − 1) ; une techno peut avoir la sienne." },
-  timeGrowth: { label: "Croissance de la durée par niveau", unit: "×", min: 1, max: 5 },
+  timeGrowth: { label: "Croissance de la durée par niveau", unit: "×", min: 1, max: 5, hint: "Durée = durée de base × croissance^(niveau − 1) ; une techno peut avoir la sienne (6.14.154)." },
   lateFromLevel: { label: "Recherche tardive : dès le niveau", unit: "niveau", min: 0, max: 50, hint: "0 = jamais. Passe à 7 à la bascule du rythme." },
   lateTimeFactor: { label: "Recherche tardive : durée multipliée par", unit: "×", min: 1, max: 100, hint: "1 = sans effet. Passe à 25 à la bascule du rythme." },
   maxLevelSeconds: { label: "Durée maximale d'un niveau", unit: "s", min: 0, max: 31_536_000, hint: "Avant réductions ; 0 = sans plafond. 604 800 (7 j) à la bascule du rythme." },
@@ -338,9 +340,17 @@ export function getTechAmberCost(tech: Pick<TechDef, "amberCost">): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
 
+/** 6.14.154 (AA-12) : bornes de la croissance propre de la durée d'une techno : celles du réglage commun. */
+export const TECH_GROWTH_BOUNDS = { get min() { return RESEARCH_RULES_META.timeGrowth.min; }, get max() { return RESEARCH_RULES_META.timeGrowth.max; } };
+
+/** Croissance de la durée d'une techno : la sienne (6.14.154, AA-12), sinon le réglage commun `research.timeGrowth`. */
+export function techTimeGrowth(tech: Pick<TechDef, "timeGrowth">): number {
+  return researchRule(tech.timeGrowth, researchRule(RESEARCH_RULES.timeGrowth, 1.67));
+}
+
 /** Durée d'un niveau (secondes, avant les réductions) : croissance, puis facteur des niveaux tardifs, puis plafond (RL-1). */
 export function getTechTime(tech: TechDef, level: number): number {
-  let seconds = tech.baseTime * Math.pow(researchRule(RESEARCH_RULES.timeGrowth, 1.67), level - 1);
+  let seconds = tech.baseTime * Math.pow(techTimeGrowth(tech), level - 1);
   const lateFrom = Math.floor(Number(RESEARCH_RULES.lateFromLevel) || 0);
   if (lateFrom > 0 && level >= lateFrom) seconds *= researchRule(RESEARCH_RULES.lateTimeFactor, 1);
   const cap = Number(RESEARCH_RULES.maxLevelSeconds) || 0;

@@ -28,7 +28,19 @@ import { addThreat, ELITE_COUNTER, normalizeRankRules, RANK_NAMES, rankOf, rankP
 
 export type WarlordPersonality = "aggressive" | "opportunist" | "builder" | "merchant";
 export type WarlordTier = "weak" | "medium" | "strong";
-export type WarlordOrigin = "kesh" | "choeur" | "confrerie" | "gravhorn" | "leviathan";
+/** 6.14.154 (AU27, R6, reste d'AA-20) : origine ouverte : les cinq livrées ou une origine ajoutée dans l'admin
+ *  (`WarlordsConfig.origins`). Elle donne l'étiquette, l'image de repli et la couleur de la fiche publique. */
+export type WarlordOrigin = string;
+
+export interface WarlordOriginDef {
+  id: string;
+  label: string;
+  /** Image de repli du portrait (fiche publique). */
+  art: string;
+  emblem: string;
+  /** Couleur de la fiche (#rrggbb). */
+  color: string;
+}
 export type WarlordLineKey = "contact" | "raided" | "won" | "repelled" | "vendettaOpen" | "vendettaWon" | "vendettaLost" | "market" | "reply";
 
 export interface WarlordDef {
@@ -58,6 +70,8 @@ export interface WarlordSettings {
 export interface WarlordsConfig {
   settings: WarlordSettings;
   defs: WarlordDef[];
+  /** 6.14.154 (R6) : origines (livrées, champs réglables, puis ajoutées). Absent : les cinq livrées. */
+  origins?: WarlordOriginDef[];
 }
 
 export const WARLORD_RULES = {
@@ -160,16 +174,31 @@ export const WARLORD_RULES_META = {
   vendetta: { label: "Vendetta", hint: "costHours, durationHours, goalFactor, powerLoss, awayDays, passPoints, minShare." },
 };
 
-const ORIGIN_ART: Record<WarlordOrigin, { label: string; art: string; emblem: string; color: string }> = {
-  kesh: { label: "Kesh'Vaar renégats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
-  choeur: { label: "Déserteurs du Chœur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
-  confrerie: { label: "Anciens de la Confrérie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan-emblem.webp", color: "#ff7a45" },
-  gravhorn: { label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn-emblem.webp", color: "#f2c94c" },
-  leviathan: { label: "Culte du Léviathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" },
-};
+/** Origines livrées (la première sert de repli à une origine inconnue). */
+export const DEFAULT_WARLORD_ORIGINS: WarlordOriginDef[] = [
+  { id: "kesh", label: "Kesh'Vaar renégats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
+  { id: "choeur", label: "Déserteurs du Chœur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
+  { id: "confrerie", label: "Anciens de la Confrérie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan-emblem.webp", color: "#ff7a45" },
+  { id: "gravhorn", label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn-emblem.webp", color: "#f2c94c" },
+  { id: "leviathan", label: "Culte du Léviathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" },
+];
 
-function warlordOrigin(origin: WarlordOrigin) {
-  return ORIGIN_ART[origin] ?? ORIGIN_ART.kesh;
+/** Origines d'une configuration : les livrées (champs réglés gardés), puis les ajoutées. Sans liste : les livrées. */
+export function withDefaultOrigins(list: unknown): WarlordOriginDef[] {
+  const saved = Array.isArray(list) ? (list as WarlordOriginDef[]).filter((o) => o && typeof o.id === "string") : [];
+  const byId = new Map(saved.map((o) => [o.id, o]));
+  const delivered = DEFAULT_WARLORD_ORIGINS.map((d) => ({ ...d, ...(byId.get(d.id) ?? {}), id: d.id }));
+  return [...delivered, ...saved.filter((o) => !DEFAULT_WARLORD_ORIGINS.some((d) => d.id === o.id))];
+}
+
+/** Origines en vigueur (posées par `setWarlords`). */
+export function warlordOrigins(): WarlordOriginDef[] {
+  return config.origins ?? DEFAULT_WARLORD_ORIGINS;
+}
+
+function warlordOrigin(origin: WarlordOrigin): WarlordOriginDef {
+  const list = warlordOrigins();
+  return list.find((o) => o.id === origin) ?? list[0];
 }
 
 export const PERSONALITY_LABELS: Record<WarlordPersonality, string> = {
@@ -293,7 +322,7 @@ export const DEFAULT_WARLORDS: WarlordDef[] = [
 
 const DEFAULT_WARLORD_SETTINGS: WarlordSettings = { enabled: true, attackFrequency: 1, powerFactor: 1 };
 
-let config: WarlordsConfig = { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS) };
+let config: WarlordsConfig = { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS), origins: structuredClone(DEFAULT_WARLORD_ORIGINS) };
 
 /** Applique la configuration (contenu « warlords » de l'administration). */
 export function setWarlords(next: Partial<WarlordsConfig> | null | undefined): void {
@@ -305,6 +334,8 @@ export function setWarlords(next: Partial<WarlordsConfig> | null | undefined): v
       const o = overrides.get(d.id);
       return o ? { ...d, ...o, id: d.id, lines: { ...d.lines, ...(o.lines ?? {}) } } : structuredClone(d);
     }),
+    // 6.14.154 (R6) : origines livrées réglables, origines ajoutées.
+    origins: structuredClone(withDefaultOrigins(next?.origins)),
   };
 }
 
@@ -318,7 +349,7 @@ export function warlordRankRules(settings: WarlordSettings = config.settings): W
 }
 
 export function defaultWarlordsConfig(): WarlordsConfig {
-  return { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS) };
+  return { settings: { ...DEFAULT_WARLORD_SETTINGS }, defs: structuredClone(DEFAULT_WARLORDS), origins: structuredClone(DEFAULT_WARLORD_ORIGINS) };
 }
 
 export function findWarlord(id: string): WarlordDef | undefined {
@@ -341,8 +372,22 @@ export function validateWarlords(cfg: Partial<WarlordsConfig> | undefined): stri
     if (!(s.powerFactor > 0 && s.powerFactor <= 5)) errors.push("Seigneurs : facteur de puissance entre 0 et 5.");
     errors.push(...validateRankRules(s.ranks));
   }
+  // 6.14.154 (R6) : origines ajoutées (identifiant, libellé, images, couleur) et origine de chaque seigneur.
+  const originIds = new Set<string>();
+  for (const o of Array.isArray(cfg?.origins) ? cfg.origins : []) {
+    const label = `Origine ${o?.id ?? "?"}`;
+    if (!o || typeof o.id !== "string" || !/^[A-Za-z0-9_]+$/.test(o.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (originIds.has(o.id)) errors.push(`Seigneurs : origine « ${o.id} » en double.`);
+    else originIds.add(o.id);
+    if (!o) continue;
+    if (typeof o.label !== "string" || !o.label.trim()) errors.push(`${label} : libellé manquant.`);
+    for (const k of ["art", "emblem"] as const) if (typeof o[k] !== "string" || !o[k].startsWith("/")) errors.push(`${label} : image « ${k} » : un chemin qui commence par « / ».`);
+    if (typeof o.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(o.color)) errors.push(`${label} : couleur « ${String(o.color)} » invalide (#rrggbb).`);
+  }
+  const knownOrigins = new Set(withDefaultOrigins(cfg?.origins).map((o) => o.id));
   for (const d of cfg?.defs ?? []) {
     if (!DEFAULT_WARLORDS.some((w) => w.id === d.id)) errors.push(`Seigneurs : « ${d.id} » inconnu.`);
+    if (d.origin !== undefined && !knownOrigins.has(d.origin)) errors.push(`Seigneur ${d.id} : origine « ${String(d.origin)} » inconnue.`);
     if (d.name !== undefined && !String(d.name).trim()) errors.push(`Seigneur ${d.id} : nom vide.`);
     if (d.personality && !(d.personality in PERSONALITY_LABELS)) errors.push(`Seigneur ${d.id} : personnalité inconnue.`);
     if (d.tier && !(d.tier in TIER_LABELS)) errors.push(`Seigneur ${d.id} : palier inconnu.`);

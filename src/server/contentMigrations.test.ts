@@ -369,5 +369,9 @@ describe("AA9 : migrations talents-section-6.14.127 et module-families-6.14.127"
     // 6.14.128 : thèmes et catalogue du passe.
     expect(mig.passThemes).toEqual(d.passThemes.map((t) => t.id));
     expect([...mig.seasonCatalog].sort()).toEqual(d.seasonCatalog.map((e) => e.id).sort());
+    // 6.14.154 (R6) : défis d'alliance, réserve des missions du jour, archétypes des Chroniques.
+    expect(mig.allianceChallenges).toEqual(d.allianceChallenges.map((c) => c.id));
+    expect(mig.dailyMissionPool).toEqual(d.dailyMissionPool.map((e) => e.id));
+    expect(mig.chronicleArchetypes).toEqual(d.chronicleArchetypes.map((a) => a.id));
   });
 });

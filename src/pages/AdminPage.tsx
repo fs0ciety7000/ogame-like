@@ -39,7 +39,7 @@ import {
   UserCog,
   HeartPulse,
   ChevronDown,
-  Search, MessageSquareOff, Cpu, Stars } from "lucide-react";
+  Search, MessageSquareOff, Cpu, Stars, ListOrdered } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -67,6 +67,8 @@ import { newRelic, RelicForm, RelicSettingsCard, relicListLabel } from "@/pages/
 import { CatalogEntryForm, newCatalogEntry, newPassTheme, PassThemeForm } from "@/pages/admin/PassCatalogForms";
 import { ModuleFamilyForm, ModuleTemplateForm, newModuleFamily, newModuleTemplate, newTalent, RETIRE_HINT, TalentForm } from "@/pages/admin/TalentModuleForms";
 import { AchievementForm, newAchievement } from "@/pages/admin/AchievementForm";
+import { AllianceChallengeForm, ArchetypeForm, CHALLENGE_LOCK_HINT, DailyPoolForm, newAllianceChallenge, newArchetype, newDailyPoolEntry } from "@/pages/admin/GameListForms";
+import { objectiveLabel } from "@/game/trackedActions";
 import { StatsPanel } from "@/pages/admin/StatsPanel";
 import { WarlordsPanel } from "@/pages/admin/WarlordsPanel";
 import { PassPanel } from "@/pages/admin/PassPanel";
@@ -133,6 +135,7 @@ const NAV: { label: string; items: NavEntry[] }[] = [
     items: [
       { id: "seasonPass", label: "Passe", icon: Ticket, hint: "Paliers du passe et points par action." },
       { id: "passCatalog", label: "Catalogue du passe", icon: CalendarRange, hint: "Thèmes du passe (rotation mensuelle, répliques, commandant) et saisons du catalogue, une par thème et par année (6.14.128)." },
+      { id: "gameLists", label: "Listes du jeu", icon: ListOrdered, hint: "Défis d'alliance (rotation hebdomadaire), réserve des missions du jour et archétypes des Chroniques générées : ajout, retrait, textes (6.14.154)." },
       { id: "chronicles", label: "Chroniques", icon: BookOpen, hint: "Arcs mensuels : épisodes, objectifs, boss de saison et teinte du mois." },
       { id: "procedural", label: "Générateur", icon: Sparkles, hint: "Chapitres écrits automatiquement selon l'activité des joueurs : scénario, récompenses, titres, bannières, Codex, passe et succès." },
       { id: "achievements", label: "Succès", icon: Award, hint: "Conditions, paliers et récompenses." },
@@ -313,8 +316,9 @@ export function AdminPage() {
           {active && (
             <div className="mb-3 flex items-baseline gap-3 border-b border-white/5 pb-2">
               <active.icon className="h-4 w-4 self-center text-cyan-glow" />
-              <h2 className="hud-title text-lg text-slate-100">{active.label}</h2>
-              <p className="truncate text-xs text-slate-500">{active.hint}</p>
+              {/* 6.14.154 : titre jamais coupé mot à mot à 375 px (l'aide se tronque). */}
+              <h2 className="hud-title shrink-0 text-lg text-slate-100">{active.label}</h2>
+              <p className="min-w-0 truncate text-xs text-slate-500">{active.hint}</p>
             </div>
           )}
         <TabsContent value="health">
@@ -373,7 +377,7 @@ export function AdminPage() {
             getLabel={(b) => b.name}
             setId={(b, id) => ({ ...b, id })}
             createItem={newBuilding}
-            renderForm={(b, onChange, isNew) => <BuildingForm value={b} onChange={onChange} isNew={isNew} />}
+            renderForm={(b, onChange, isNew, saved) => <BuildingForm value={b} onChange={onChange} isNew={isNew} saved={saved} />}
           />
         </TabsContent>
         <TabsContent value="units">
@@ -384,7 +388,7 @@ export function AdminPage() {
             getLabel={(u) => u.name}
             setId={(u, id) => ({ ...u, id })}
             createItem={newUnit}
-            renderForm={(u, onChange, isNew) => <UnitForm value={u} onChange={onChange} isNew={isNew} />}
+            renderForm={(u, onChange, isNew, saved) => <UnitForm value={u} onChange={onChange} isNew={isNew} saved={saved} />}
           />
         </TabsContent>
         <TabsContent value="technologies">
@@ -395,7 +399,7 @@ export function AdminPage() {
             getLabel={(t) => t.nom}
             setId={(t, id) => ({ ...t, id })}
             createItem={newTech}
-            renderForm={(t, onChange, isNew) => <TechForm value={t} onChange={onChange} isNew={isNew} />}
+            renderForm={(t, onChange, isNew, saved) => <TechForm value={t} onChange={onChange} isNew={isNew} saved={saved} />}
           />
         </TabsContent>
         <TabsContent value="missions">
@@ -485,6 +489,38 @@ export function AdminPage() {
               setId={(e, id) => ({ ...e, id })}
               createItem={newCatalogEntry}
               renderForm={(e, onChange, isNew) => <CatalogEntryForm value={e} onChange={onChange} isNew={isNew} />}
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="gameLists">
+          <div className="flex flex-col gap-6">
+            <ContentEditor
+              section="allianceChallenges"
+              title="Défis d'alliance"
+              getId={(c) => c.id}
+              getLabel={(c) => `${c.emoji} ${c.name}${c.retired ? " (retiré)" : ""}`}
+              setId={(c, id) => ({ ...c, id })}
+              createItem={newAllianceChallenge}
+              lockSaved={CHALLENGE_LOCK_HINT}
+              renderForm={(c, onChange, isNew) => <AllianceChallengeForm value={c} onChange={onChange} isNew={isNew} />}
+            />
+            <ContentEditor
+              section="dailyMissionPool"
+              title="Missions du jour : réserve"
+              getId={(e) => e.id}
+              getLabel={(e) => `${objectiveLabel(e.id)} × ${e.count}`}
+              setId={(e, id) => ({ ...e, id: id as typeof e.id })}
+              createItem={newDailyPoolEntry}
+              renderForm={(e, onChange, isNew) => <DailyPoolForm value={e} onChange={onChange} isNew={isNew} />}
+            />
+            <ContentEditor
+              section="chronicleArchetypes"
+              title="Archétypes des Chroniques"
+              getId={(a) => a.id}
+              getLabel={(a) => `${a.faction}${a.retired ? " (retiré)" : ""}`}
+              setId={(a, id) => ({ ...a, id })}
+              createItem={newArchetype}
+              renderForm={(a, onChange, isNew) => <ArchetypeForm value={a} onChange={onChange} isNew={isNew} />}
             />
           </div>
         </TabsContent>

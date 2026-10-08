@@ -14,7 +14,7 @@ import { DEFAULT_SEASON_CATALOG, setSeasonCatalog, validateSeasonGenRules, type 
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_ROLE_IDS, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
-import { DEFAULT_TECHNOLOGIES, findTech, setTechnologies, TECH_EFFECT_LABELS, techEffects, TECHNOLOGIES, validateTechEffect, type TechDef } from "@/game/technologies";
+import { DEFAULT_TECHNOLOGIES, findTech, setTechnologies, TECH_EFFECT_LABELS, TECH_GROWTH_BOUNDS, techEffects, TECHNOLOGIES, validateTechEffect, type TechDef } from "@/game/technologies";
 import { actionOfContract, setTrackedContentResolver, validateTrackedActionRules } from "@/game/trackedActions";
 import { addedOnError, validateNoveltyRules } from "@/game/novelty";
 import { validateNarrativeRules } from "@/game/narrative";
@@ -35,7 +35,10 @@ import { TERRITORY_WAR_RULES, validateTerritoryWarRules } from "@/game/territory
 import { XP_TIER_RULES, validateXpTierRules } from "@/game/xpTiers";
 import { PASS_GEN_RULES, validatePassGenRules } from "@/game/passGen";
 import { CHRONICLE_GEN_RULES, validateChronicleGenRules } from "@/game/chronicleGen";
-import { ARCHETYPES } from "@/game/procedural";
+import { ARCHETYPES, DEFAULT_ARCHETYPES, setArchetypes, validateArchetypes, type Archetype } from "@/game/procedural";
+import { DEFAULT_ALLIANCE_CHALLENGES, setAllianceChallenges, validateAllianceChallenges, withDefaultAllianceChallenges, type AllianceChallengeDef } from "@/game/allianceChallenge";
+import { validateBalanceExclusion } from "@/game/staff";
+import { DEFAULT_DAILY_POOL, setDailyPool, validateDailyPool, type DailyPoolEntry } from "@/game/dailyMissions";
 import { AUCTION_RULES } from "@/game/auctions";
 import { TRADE_CONTRACT_RULES } from "@/game/tradeContracts";
 import { GIFT_RULES } from "@/game/actions";
@@ -154,14 +157,19 @@ export interface GameContent {
   /** 6.14.128 (AA9) : thèmes du passe (ordre = rotation mensuelle) et catalogue des saisons (une par thème et par année). */
   passThemes: PassTheme[];
   seasonCatalog: SeasonCatalogEntry[];
+  /** 6.14.154 (AU27, R6, reste d'AA-23) : défis d'alliance (ordre = rotation hebdomadaire), réserve des missions du jour et
+   *  archétypes des Chroniques générées, listes du code devenues sections (Admin → Listes du jeu). */
+  allianceChallenges: AllianceChallengeDef[];
+  dailyMissionPool: DailyPoolEntry[];
+  chronicleArchetypes: Archetype[];
 }
 
 export type ContentSection = keyof GameContent;
-export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog"];
+export const CONTENT_SECTIONS: ContentSection[] = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog", "allianceChallenges", "dailyMissionPool", "chronicleArchetypes"];
 
 /** 6.14.127 (AU27, AA9, invariant I43) : sections dont un élément enregistré ne se supprime pas (des joueurs le détiennent :
  *  rangs de talent, plans et modules) ; on le retire (`retired`), et un élément livré absent revient à la fusion. */
-export const NO_REMOVAL_SECTIONS: ContentSection[] = ["talents", "moduleFamilies", "moduleTemplates"];
+export const NO_REMOVAL_SECTIONS: ContentSection[] = ["talents", "moduleFamilies", "moduleTemplates", "allianceChallenges"];
 
 /** v3.9 : le Traqueur Kesh existe toujours (plan du Comptoir), même si la
  *  liste des unités a été personnalisée avant son arrivée. */
@@ -228,12 +236,23 @@ export function defaultGameContent(): GameContent {
   return { ...baseDefaultContent(), ...structuredClone(textListDefaults()) };
 }
 
-function textListDefaults(): Pick<GameContent, "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog"> {
-  return { talents: DEFAULT_TALENTS, moduleFamilies: DEFAULT_MODULE_FAMILIES, moduleTemplates: DEFAULT_MODULE_TEMPLATES, passThemes: DEFAULT_PASS_THEMES, seasonCatalog: DEFAULT_SEASON_CATALOG };
+type TextListSection = "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog" | "allianceChallenges" | "dailyMissionPool" | "chronicleArchetypes";
+
+function textListDefaults(): Pick<GameContent, TextListSection> {
+  return {
+    talents: DEFAULT_TALENTS,
+    moduleFamilies: DEFAULT_MODULE_FAMILIES,
+    moduleTemplates: DEFAULT_MODULE_TEMPLATES,
+    passThemes: DEFAULT_PASS_THEMES,
+    seasonCatalog: DEFAULT_SEASON_CATALOG,
+    allianceChallenges: DEFAULT_ALLIANCE_CHALLENGES,
+    dailyMissionPool: DEFAULT_DAILY_POOL,
+    chronicleArchetypes: DEFAULT_ARCHETYPES,
+  };
 }
 
 /** Contenu par défaut, copie profonde, sans les listes de `textListDefaults`. */
-function baseDefaultContent(): Omit<GameContent, "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog"> {
+function baseDefaultContent(): Omit<GameContent, TextListSection> {
   return structuredClone({
     buildings: DEFAULT_BUILDINGS,
     units: DEFAULT_UNITS,
@@ -297,6 +316,10 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
     // 6.14.128 (AA9) : liste enregistrée telle quelle (un thème ou une saison se retire ; les passes écrits gardent leur copie).
     passThemes: Array.isArray(overrides.passThemes) ? overrides.passThemes : defaults.passThemes,
     seasonCatalog: Array.isArray(overrides.seasonCatalog) ? overrides.seasonCatalog : defaults.seasonCatalog,
+    // 6.14.154 (R6) : un défi livré absent revient retiré (I43) ; réserve et archétypes enregistrés tels quels.
+    allianceChallenges: withDefaultAllianceChallenges(overrides.allianceChallenges),
+    dailyMissionPool: Array.isArray(overrides.dailyMissionPool) ? overrides.dailyMissionPool : defaults.dailyMissionPool,
+    chronicleArchetypes: Array.isArray(overrides.chronicleArchetypes) ? overrides.chronicleArchetypes : defaults.chronicleArchetypes,
     relicSettings: {
       ...defaults.relicSettings,
       ...(overrides.relicSettings ?? {}),
@@ -442,6 +465,10 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   // 6.14.128 (AA9) : catalogue du passe (rotation, rôles, saisons) avant les passes et les chapitres générés.
   setPassThemes(content.passThemes);
   setSeasonCatalog(content.passThemes, content.seasonCatalog);
+  // 6.14.154 (R6) : défis d'alliance, réserve des missions du jour, archétypes des Chroniques (avant les chapitres).
+  setAllianceChallenges(content.allianceChallenges);
+  setDailyPool(content.dailyMissionPool);
+  setArchetypes(content.chronicleArchetypes);
   // v5.14 : officiers et boss mondiaux d'abord (succès et titres dérivés en dépendent).
   setOfficers(content.officers);
   setWorldBosses(content.worldBosses);
@@ -625,6 +652,8 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateNoveltyRules((merged as unknown as { novelty?: Parameters<typeof validateNoveltyRules>[0] }).novelty));
   // 6.14.139 (AP-L12) : saisons générées au-delà du cycle (listes non vides, titres par rôle).
   errors.push(...validateSeasonGenRules((merged as unknown as { seasonGen?: Parameters<typeof validateSeasonGenRules>[0] }).seasonGen));
+  // 6.14.154 (R6, AA-31) : comptes écartés des statistiques d'équilibre.
+  errors.push(...validateBalanceExclusion((merged as unknown as { balanceExclusion?: Parameters<typeof validateBalanceExclusion>[0] }).balanceExclusion));
   // 6.14.142 (PB-L1) : niveaux des paliers des bâtiments.
   errors.push(...validateBuildingTierRules((merged as unknown as { buildingTiers?: Parameters<typeof validateBuildingTierRules>[0] }).buildingTiers));
   // 6.14.137 (AP-L10) : banques de textes (quatre actes, listes non vides, factions connues).
@@ -883,6 +912,8 @@ export function validateGameContent(content: GameContent): string[] {
     } else if (t.effect !== undefined && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label} : effet « ${t.effect} » inconnu.`);
     checkResources(`${label} (coût)`, t.baseCost);
     if (t.amberCost !== undefined && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label} : ambre par niveau invalide.`);
+    // 6.14.154 (AA-12) : croissance propre de la durée, dans les bornes du réglage commun.
+    if (t.timeGrowth !== undefined && !(Number.isFinite(t.timeGrowth) && t.timeGrowth >= TECH_GROWTH_BOUNDS.min && t.timeGrowth <= TECH_GROWTH_BOUNDS.max)) errors.push(`${label} : croissance de la durée entre ${TECH_GROWTH_BOUNDS.min} et ${TECH_GROWTH_BOUNDS.max}.`);
     for (const req of Object.keys(t.prereq ?? {})) {
       if (!techIds.has(req)) errors.push(`${label} : prérequis « ${req} » inexistant.`);
       if (req === t.id) errors.push(`${label} : ne peut pas être son propre prérequis.`);
@@ -937,6 +968,10 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...validateSignatureRules((content.rules as { signatureModules?: Parameters<typeof validateSignatureRules>[0] } | undefined)?.signatureModules, (content.moduleFamilies ?? DEFAULT_MODULE_FAMILIES).map((f) => f.id)));
   // 6.14.128 (AA9) : thèmes et catalogue du passe.
   errors.push(...validatePassCatalog(content.passThemes ?? DEFAULT_PASS_THEMES, content.seasonCatalog ?? DEFAULT_SEASON_CATALOG));
+  // 6.14.154 (R6) : listes du jeu (défis d'alliance, missions du jour, archétypes).
+  errors.push(...validateAllianceChallenges(content.allianceChallenges ?? DEFAULT_ALLIANCE_CHALLENGES));
+  errors.push(...validateDailyPool(content.dailyMissionPool ?? DEFAULT_DAILY_POOL));
+  errors.push(...validateArchetypes(content.chronicleArchetypes ?? DEFAULT_ARCHETYPES));
 
   return [...new Set(errors)];
 }
@@ -965,6 +1000,9 @@ const CONTENT_SECTION_LABELS: Record<ContentSection, string> = {
   moduleTemplates: "Modèles de modules",
   passThemes: "Thèmes du passe",
   seasonCatalog: "Catalogue des saisons",
+  allianceChallenges: "Défis d'alliance",
+  dailyMissionPool: "Missions du jour (réserve)",
+  chronicleArchetypes: "Archétypes des Chroniques",
 };
 
 /**

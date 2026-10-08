@@ -12,6 +12,7 @@ import { adminListAdmins, adminListPlayers, adminManageAdmin, type AdminPlayer, 
 import { cn, formatNumber } from "@/lib/utils";
 import { StaffBadge } from "@/components/ui/staff-badge";
 import { STAFF_LABELS, STAFF_ROLES, type StaffRole } from "@/game/staff";
+import { BalanceExclusionCard } from "@/pages/admin/BalanceExclusionCard";
 
 /** Administrateurs du jeu : liste, ajout d'un joueur, retrait. */
 export function AdminsPanel() {
@@ -173,6 +174,9 @@ export function AdminsPanel() {
           <ShieldPlus className="h-4 w-4" /> Nommer administrateur
         </Button>
       </Card>
+
+      {/* 6.14.154 (AU27, R6, AA-31) : comptes écartés des statistiques d'équilibre, réglables. */}
+      <BalanceExclusionCard />
 
       <Dialog open={removing !== null} onOpenChange={(o) => !o && setRemoving(null)}>
         <DialogContent>

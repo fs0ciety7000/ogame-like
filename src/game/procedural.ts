@@ -348,6 +348,8 @@ export interface Archetype {
   titles: string[];
   completionTitles: string[];
   lore: string[];
+  /** 6.14.154 (AU27, R6, reste d'AA-23) : hors du tirage des chapitres et des sagas (la fiche reste pour les chapitres écrits). */
+  retired?: boolean;
 }
 
 /** Archétypes dont l'illustration du boss existe (public/assets/chronicles/auto/<id>-boss.webp). */
@@ -368,7 +370,9 @@ export function autoBossImage(arch: Pick<Archetype, "id" | "bossNames" | "image"
 /** 5.16 : archétypes dont le sceau existe (public/assets/chronicles/auto/<id>-sceau.webp), indépendamment du boss. */
 export const AUTO_SEALS: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 
-export const ARCHETYPES: Archetype[] = [
+/** 6.14.154 (AU27, R6, reste d'AA-23) : archétypes livrés ; ceux en vigueur sont la section de contenu `chronicleArchetypes`
+ *  (Admin → Listes du jeu), posée par `applyGameContent` (`setArchetypes`). */
+export const DEFAULT_ARCHETYPES: Archetype[] = [
   {
     id: "confrerie",
     factionId: "varan",
@@ -482,6 +486,47 @@ export const ARCHETYPES: Archetype[] = [
   },
 ];
 
+/** Archétypes en vigueur (section `chronicleArchetypes`). */
+export const ARCHETYPES: Archetype[] = structuredClone(DEFAULT_ARCHETYPES);
+
+export function setArchetypes(list: Archetype[]): void {
+  ARCHETYPES.splice(0, ARCHETYPES.length, ...list);
+}
+
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+const isTextList = (v: unknown) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
+const isPath = (v: unknown) => typeof v === "string" && v.startsWith("/");
+
+/** 6.14.154 : erreurs de la section `chronicleArchetypes` (garde du serveur et éditeur). */
+export function validateArchetypes(list: unknown): string[] {
+  if (!Array.isArray(list)) return ["Archétypes des Chroniques : la section doit être une liste."];
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const a of list as Partial<Archetype>[]) {
+    const label = `Archétype ${a?.id ?? "?"}`;
+    if (!a || typeof a.id !== "string" || !/^[A-Za-z0-9_]+$/.test(a.id)) errors.push(`${label} : identifiant invalide (lettres, chiffres, _).`);
+    else if (ids.has(a.id)) errors.push(`Archétypes des Chroniques : identifiant « ${a.id} » en double.`);
+    else ids.add(a.id);
+    if (!a) continue;
+    if (typeof a.faction !== "string" || !a.faction.trim()) errors.push(`${label} : nom de la faction manquant.`);
+    if (a.factionId !== undefined && typeof a.factionId !== "string") errors.push(`${label} : faction liée invalide.`);
+    const v = a.villain as Partial<{ speaker: string; as: { name?: unknown; role?: unknown; image?: unknown; color?: unknown } }> | undefined;
+    if (!v || typeof v !== "object") errors.push(`${label} : méchant manquant.`);
+    else if ("speaker" in v) {
+      if (!(String(v.speaker) in STORY_SPEAKERS)) errors.push(`${label} : méchant « ${String(v.speaker)} » inconnu.`);
+    } else if (!v.as || typeof v.as !== "object" || typeof v.as.name !== "string" || !v.as.name.trim() || typeof v.as.role !== "string" || !isPath(v.as.image) || typeof v.as.color !== "string" || !HEX_COLOR.test(v.as.color)) {
+      errors.push(`${label} : méchant propre incomplet (nom, rôle, portrait « /… », couleur #rrggbb).`);
+    }
+    if (!(String(a.ally) in STORY_SPEAKERS)) errors.push(`${label} : allié « ${String(a.ally)} » inconnu.`);
+    if (typeof a.accent !== "string" || !HEX_COLOR.test(a.accent)) errors.push(`${label} : couleur « ${String(a.accent)} » invalide (#rrggbb).`);
+    for (const k of ["image", "emblem", "fallbackImage"] as const) if (!isPath(a[k])) errors.push(`${label} : image « ${k} » : un chemin qui commence par « / ».`);
+    for (const k of ["themeLabels", "bossNames", "titles", "completionTitles", "lore"] as const) if (!isTextList(a[k])) errors.push(`${label} : « ${k} » : au moins une ligne.`);
+    if (a.retired !== undefined && typeof a.retired !== "boolean") errors.push(`${label} : « retiré » doit être oui ou non.`);
+  }
+  if (!(list as Partial<Archetype>[]).some((a) => a && !a.retired)) errors.push("Archétypes des Chroniques : au moins un archétype tiré.");
+  return errors;
+}
+
 /* ---------- 6.14.125 (AU27, lot AA7, constat AA-20) : archétype de repli d'une faction ajoutée dans l'admin ---------- */
 
 /** Couleur d'accent d'une faction (jeton du thème) → teinte du chapitre (donnée de contenu, comme `accent` des archétypes). */
@@ -520,7 +565,9 @@ function factionArchetype(f: Pick<FactionDef, "id" | "name" | "leader" | "enforc
 export function chapterArchetypes(): Archetype[] {
   const covered = new Set(ARCHETYPES.flatMap((a) => [a.id, a.factionId ?? a.id]));
   const extra = FACTIONS.filter((f) => f && f.enabled !== false && f.id && !covered.has(f.id)).map(factionArchetype);
-  return extra.length > 0 ? [...ARCHETYPES, ...extra] : ARCHETYPES;
+  // 6.14.154 : un archétype retiré sort du tirage (sa faction ne reçoit pas d'archétype de repli : elle en a un).
+  const drawn = ARCHETYPES.some((a) => a.retired) ? ARCHETYPES.filter((a) => !a.retired) : ARCHETYPES;
+  return extra.length > 0 ? [...drawn, ...extra] : drawn;
 }
 
 function voiceLine(v: Voice, text: string): StoryLine {
@@ -742,7 +789,10 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const recentArch = recent.map((m) => m.auto?.archetype ?? archetypes.find((a) => a.fallbackImage === m.boss.fallbackImage)?.id);
   const gen = chronicleGenRules();
   // Tirage d'abord (la suite du tirage ne dépend pas du thème), puis 6.8.2 : la faction du thème du passe, sauf si elle revient deux mois de suite.
-  const drawn = pick(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
+  // 6.14.154 (R6) : avec peu d'archétypes tirés (les autres retirés dans l'admin), tous ont pu servir les deux derniers mois :
+  // on retombe sur la liste entière (à contenu par défaut, 7 archétypes : jamais le cas, même tirage).
+  const notRecent = archetypes.filter((a) => !recentArch.includes(a.id));
+  const drawn = pick(rng, notRecent.length > 0 ? notRecent : archetypes);
   const catalog = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId) : null;
   const themeId = catalog ? catalog.theme : null;
   // 6.14.137 (AP-L10, Q-AP7) : faction par thème et par année du catalogue (année 1 : table d'avant).

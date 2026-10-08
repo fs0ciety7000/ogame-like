@@ -6,6 +6,7 @@ import { ALLIANCE_PROFILE_RULES, ALLIANCE_PROFILE_RULES_META } from "@/game/alli
 import { ALLIANCE_SAGA_RULES, ALLIANCE_SAGA_RULES_META } from "@/game/allianceSaga";
 import { ASCENSION_RULES, ASCENSION_RULES_META } from "@/game/ascension";
 import { BALANCE_HEALTH_RULES, BALANCE_HEALTH_RULES_META } from "@/game/balance/healthRules";
+import { BALANCE_EXCLUSION_RULES, BALANCE_EXCLUSION_RULES_META } from "@/game/staff";
 import { BOUNTY_RULES, BOUNTY_RULES_META, BOUNTY_SHOP_RULES, BOUNTY_SHOP_RULES_META, ELITE_RULES, ELITE_RULES_META } from "@/game/bounties";
 import { BUILD_PLAN_RULES, BUILD_PLAN_RULES_META } from "@/game/buildPlan";
 import { BUILDING_TIER_RULES, BUILDING_TIER_RULES_META } from "@/game/buildingTiers";
@@ -100,6 +101,7 @@ export const REGISTERED_RULES = {
   ascension: { label: "Ascension", target: () => ASCENSION_RULES, meta: () => ASCENSION_RULES_META },
   // 6.14.107 (AU27, AE-L4) : seuils d'alerte de la santé de l'équilibre (aucun effet en jeu).
   balanceHealth: { label: "Équilibrage : seuils d'alerte de la santé", target: () => BALANCE_HEALTH_RULES, meta: () => BALANCE_HEALTH_RULES_META },
+  balanceExclusion: { label: "Équilibrage : comptes écartés des statistiques (équipe, test, pseudos)", target: () => BALANCE_EXCLUSION_RULES, meta: () => BALANCE_EXCLUSION_RULES_META },
   bossPhases: { label: "Boss : phases (riposte, bouclier, faiblesse)", target: () => BOSS_PHASE_RULES, meta: () => BOSS_PHASE_RULES_META },
   bossReminders: { label: "Boss : rappels (veille, fin)", target: () => BOSS_REMINDERS, meta: () => BOSS_REMINDERS_META },
   bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES, meta: () => BOUNTY_RULES_META },

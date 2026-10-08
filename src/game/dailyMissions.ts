@@ -3,6 +3,7 @@ import { GameActionError } from "@/game/errors";
 import { parisDay } from "@/game/retention";
 import { objectiveLabel, passState, type PassState } from "@/game/seasonPass";
 import type { ChronicleObjective } from "@/game/chronicles";
+import { isStaticObjective } from "@/game/trackedActions";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -23,14 +24,49 @@ export const DAILY_RULES_META = {
   allBonusTokens: { label: "Jetons en plus quand toutes sont faites", unit: "jetons", min: 0, max: 20 },
 };
 
-/** Tâches possibles (faisables par tout le monde) et quantité demandée. */
-const POOL: { key: ChronicleObjective; count: number }[] = [
-  { key: "mission", count: 2 },
-  { key: "spy", count: 2 },
-  { key: "victory", count: 1 },
-  { key: "contract", count: 1 },
-  { key: "market", count: 1 },
+/** 6.14.154 (AU27, R6, reste d'AA-23) : tâche de la réserve des missions du jour, fiche de la section de contenu
+ *  `dailyMissionPool` (Admin → Listes du jeu). `id` est l'action suivie (une par tâche), `count` la quantité demandée. */
+export interface DailyPoolEntry {
+  id: ChronicleObjective;
+  count: number;
+}
+
+/** Tâches possibles (faisables par tout le monde) et quantité demandée (réserve livrée). */
+export const DEFAULT_DAILY_POOL: DailyPoolEntry[] = [
+  { id: "mission", count: 2 },
+  { id: "spy", count: 2 },
+  { id: "victory", count: 1 },
+  { id: "contract", count: 1 },
+  { id: "market", count: 1 },
 ];
+
+/** Réserve en vigueur (section `dailyMissionPool`, posée par `applyGameContent`). */
+export const DAILY_POOL: DailyPoolEntry[] = structuredClone(DEFAULT_DAILY_POOL);
+
+export function setDailyPool(list: DailyPoolEntry[]): void {
+  DAILY_POOL.splice(0, DAILY_POOL.length, ...list);
+}
+
+/** Bornes d'une quantité demandée. */
+export const DAILY_POOL_COUNT = { min: 1, max: 50 };
+
+/** Erreurs de la section `dailyMissionPool` : actions suivies connues (sans les actions par contenu), sans doublon,
+ *  quantités entières dans les bornes, au moins une tâche. */
+export function validateDailyPool(list: unknown): string[] {
+  if (!Array.isArray(list)) return ["Missions du jour : la réserve doit être une liste."];
+  const errors: string[] = [];
+  const ids = new Set<string>();
+  for (const e of list as Partial<DailyPoolEntry>[]) {
+    const label = `Mission du jour « ${String(e?.id ?? "?")} »`;
+    if (!e || !isStaticObjective(e.id)) errors.push(`${label} : action inconnue.`);
+    else if (ids.has(e.id)) errors.push(`Missions du jour : « ${e.id} » en double.`);
+    else ids.add(e.id);
+    if (!e) continue;
+    if (!(Number.isInteger(e.count) && (e.count as number) >= DAILY_POOL_COUNT.min && (e.count as number) <= DAILY_POOL_COUNT.max)) errors.push(`${label} : quantité entière entre ${DAILY_POOL_COUNT.min} et ${DAILY_POOL_COUNT.max}.`);
+  }
+  if (list.length === 0) errors.push("Missions du jour : au moins une tâche dans la réserve.");
+  return errors;
+}
 
 /** Tirage déterministe du jour (même jour, mêmes tâches pour tous). */
 function hash(text: string): number {
@@ -40,7 +76,7 @@ function hash(text: string): number {
 }
 
 export function dailyTasksFor(day: string, tasks: number = DAILY_RULES.tasks): { key: ChronicleObjective; count: number }[] {
-  const pool = [...POOL];
+  const pool = DAILY_POOL.map((e) => ({ key: e.id, count: e.count }));
   const out: { key: ChronicleObjective; count: number }[] = [];
   let seed = hash(day);
   while (out.length < tasks && pool.length > 0) {

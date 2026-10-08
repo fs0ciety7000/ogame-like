@@ -54,6 +54,10 @@ const SECTION_LABELS: Record<string, string> = {
   // 6.14.128 (AA9) : catalogue du passe.
   passThemes: "Thèmes du passe",
   seasonCatalog: "Catalogue des saisons",
+  // 6.14.154 (R6) : listes du jeu.
+  allianceChallenges: "Défis d'alliance",
+  dailyMissionPool: "Missions du jour (réserve)",
+  chronicleArchetypes: "Archétypes des Chroniques",
   // 6.14.126 (AA8) : réglages serveur suivis.
   ...Object.fromEntries(Object.entries(SETTINGS_HISTORY).map(([k, d]) => [k, d.label])),
 };

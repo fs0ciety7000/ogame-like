@@ -4780,6 +4780,60 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   }, 30_000);
 
+  it("6.14.154 (R6) : défis d'alliance, archétypes, missions du jour, origine des seigneurs et exclusions d'équilibre gardés par le serveur et lus par ses routes", async () => {
+    await ensureAB();
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keys = ["allianceChallenges", "chronicleArchetypes", "dailyMissionPool", "warlords", "rules", "chronicles"];
+    // Lectures l'une après l'autre (des requêtes identiques en parallèle s'annulent : auto-cancellation du SDK).
+    const keep: Record<string, Awaited<ReturnType<typeof cfg>>> = {};
+    for (const k of keys) keep[k] = await cfg(k);
+    const write = async (key: string, data: unknown) => {
+      const cur = await cfg(key);
+      if (cur) return admin.collection("game_config").update(cur.id, { data });
+      return admin.collection("game_config").create({ key, data });
+    };
+    try {
+      const d = defaultGameContent();
+      // Défis d'alliance : un défi ajouté s'enregistre ; supprimé, il est refusé (le retirer) ; mesure inconnue refusée.
+      const traders = { id: "marchands", name: "Les marchands", emoji: "🪙", metric: "contracts", hint: "Contrats des membres." };
+      await write("allianceChallenges", [...d.allianceChallenges, traders]);
+      await expect(write("allianceChallenges", d.allianceChallenges)).rejects.toMatchObject({ status: 400 });
+      await expect(write("allianceChallenges", [...d.allianceChallenges, { ...traders, metric: "nope" }])).rejects.toMatchObject({ status: 400 });
+      await write("allianceChallenges", [...d.allianceChallenges, { ...traders, retired: true }]);
+      // Missions du jour : réserve vide refusée.
+      await expect(write("dailyMissionPool", [])).rejects.toMatchObject({ status: 400 });
+      // Archétypes : seul « ordre » tiré, la route du générateur l'écrit dans le chapitre.
+      const ordre = { ...d.chronicleArchetypes[0], id: "ordre", faction: "l'Ordre du Néant", bossNames: ["Le Néant-Roi"] } as Record<string, unknown>;
+      delete ordre.factionId;
+      await expect(write("chronicleArchetypes", [{ ...ordre, accent: "rouge" }])).rejects.toMatchObject({ status: 400 });
+      await write("chronicleArchetypes", [...d.chronicleArchetypes.map((a) => ({ ...a, retired: true })), ordre]);
+      await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2027-12", variant: 0 } });
+      const months = ((await cfg("chronicles"))!.data as { months: { id: string; auto?: { archetype?: string } }[] }).months;
+      expect(months.find((m) => m.id === "2027-12")?.auto?.archetype).toBe("ordre");
+      // Seigneurs : origine inconnue refusée ; origine ajoutée lue par la fiche publique.
+      const w = structuredClone(d.warlords);
+      w.defs[0] = { ...w.defs[0], origin: "inconnue" };
+      await expect(write("warlords", w)).rejects.toMatchObject({ status: 400 });
+      w.origins = [{ id: "nebula", label: "Pirates de la Nébuleuse", art: "/assets/story/nebula.webp", emblem: "/assets/story/nebula-sceau.webp", color: "#7fd1ff" }];
+      w.defs[0] = { ...w.defs[0], origin: "nebula" };
+      await write("warlords", w);
+      await loginPlayer(B.email, B.pw);
+      const view = await ws.fetchWarlords();
+      expect(view.warlords.find((x) => x.id === w.defs[0].id)).toMatchObject({ origin: "nebula", originLabel: "Pirates de la Nébuleuse", color: "#7fd1ff" });
+      // Exclusions d'équilibre : pseudo en double refusé, réglage valide accepté.
+      const base = (keep.rules?.data as Record<string, unknown>) ?? {};
+      await expect(write("rules", { ...base, balanceExclusion: { pseudos: ["A", "A"] } })).rejects.toMatchObject({ status: 400 });
+      await write("rules", { ...base, balanceExclusion: { pseudos: ["Essai"], excludeStaff: false } });
+    } finally {
+      for (const [key, rec] of Object.entries(keep)) {
+        const cur = await cfg(key);
+        if (rec && cur) await admin.collection("game_config").update(cur.id, { data: rec.data }).catch(() => undefined);
+        else if (rec) await admin.collection("game_config").create({ key, data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
+    }
+  }, 30_000);
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

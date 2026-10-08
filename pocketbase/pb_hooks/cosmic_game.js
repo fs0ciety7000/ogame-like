@@ -73,7 +73,6 @@ __export(hooksEntry_exports, {
   AUCTION_RULES: () => AUCTION_RULES,
   AUTO_ERROR_RULES: () => AUTO_ERROR_RULES,
   AUTO_REPORTER_ID: () => AUTO_REPORTER_ID,
-  BALANCE_EXCLUDED_PSEUDOS: () => BALANCE_EXCLUDED_PSEUDOS,
   BALANCE_HISTORY_KEY: () => BALANCE_HISTORY_KEY,
   BLOG_CSS: () => BLOG_CSS,
   BLOG_JS: () => BLOG_JS,
@@ -327,6 +326,7 @@ __export(hooksEntry_exports, {
   contestPrizes: () => contestPrizes,
   contestPurse: () => contestPurse,
   contractDeposit: () => contractDeposit,
+  countsForBalance: () => countsForBalance,
   createOffer: () => createOffer,
   createTradeContract: () => createTradeContract,
   creditBid: () => creditBid,
@@ -4280,7 +4280,7 @@ var RESEARCH_RULES = {
   maxConcurrent: 4,
   /** Coût d'un niveau = coût de base × costGrowth^(niveau − 1) (une techno peut avoir sa propre croissance). */
   costGrowth: 2.7,
-  /** Durée d'un niveau = durée de base × timeGrowth^(niveau − 1). */
+  /** Durée d'un niveau = durée de base × timeGrowth^(niveau − 1) (6.14.154 : une techno peut avoir sa propre croissance). */
   timeGrowth: 1.67,
   /** Recherche tardive : à partir de ce niveau, la durée est multipliée par `lateTimeFactor` (0 = jamais). */
   lateFromLevel: 0,
@@ -4292,7 +4292,7 @@ var RESEARCH_RULES = {
 var RESEARCH_RULES_META = {
   maxConcurrent: { label: "Recherches en parall\xE8le", min: 1, max: 10 },
   costGrowth: { label: "Croissance du co\xFBt par niveau", unit: "\xD7", min: 1, max: 5, hint: "Co\xFBt = co\xFBt de base \xD7 croissance^(niveau \u2212 1) ; une techno peut avoir la sienne." },
-  timeGrowth: { label: "Croissance de la dur\xE9e par niveau", unit: "\xD7", min: 1, max: 5 },
+  timeGrowth: { label: "Croissance de la dur\xE9e par niveau", unit: "\xD7", min: 1, max: 5, hint: "Dur\xE9e = dur\xE9e de base \xD7 croissance^(niveau \u2212 1) ; une techno peut avoir la sienne (6.14.154)." },
   lateFromLevel: { label: "Recherche tardive : d\xE8s le niveau", unit: "niveau", min: 0, max: 50, hint: "0 = jamais. Passe \xE0 7 \xE0 la bascule du rythme." },
   lateTimeFactor: { label: "Recherche tardive : dur\xE9e multipli\xE9e par", unit: "\xD7", min: 1, max: 100, hint: "1 = sans effet. Passe \xE0 25 \xE0 la bascule du rythme." },
   maxLevelSeconds: { label: "Dur\xE9e maximale d'un niveau", unit: "s", min: 0, max: 31536e3, hint: "Avant r\xE9ductions ; 0 = sans plafond. 604 800 (7 j) \xE0 la bascule du rythme." }
@@ -4318,8 +4318,16 @@ function getTechAmberCost(tech) {
   const n = Number(tech.amberCost);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
+var TECH_GROWTH_BOUNDS = { get min() {
+  return RESEARCH_RULES_META.timeGrowth.min;
+}, get max() {
+  return RESEARCH_RULES_META.timeGrowth.max;
+} };
+function techTimeGrowth(tech) {
+  return researchRule(tech.timeGrowth, researchRule(RESEARCH_RULES.timeGrowth, 1.67));
+}
 function getTechTime(tech, level2) {
-  let seconds = tech.baseTime * Math.pow(researchRule(RESEARCH_RULES.timeGrowth, 1.67), level2 - 1);
+  let seconds = tech.baseTime * Math.pow(techTimeGrowth(tech), level2 - 1);
   const lateFrom = Math.floor(Number(RESEARCH_RULES.lateFromLevel) || 0);
   if (lateFrom > 0 && level2 >= lateFrom) seconds *= researchRule(RESEARCH_RULES.lateTimeFactor, 1);
   const cap = Number(RESEARCH_RULES.maxLevelSeconds) || 0;
@@ -16518,20 +16526,41 @@ var DAILY_RULES_META = {
   tokensPerTask: { label: "Jetons par t\xE2che", unit: "jetons", min: 0, max: 20 },
   allBonusTokens: { label: "Jetons en plus quand toutes sont faites", unit: "jetons", min: 0, max: 20 }
 };
-var POOL = [
-  { key: "mission", count: 2 },
-  { key: "spy", count: 2 },
-  { key: "victory", count: 1 },
-  { key: "contract", count: 1 },
-  { key: "market", count: 1 }
+var DEFAULT_DAILY_POOL = [
+  { id: "mission", count: 2 },
+  { id: "spy", count: 2 },
+  { id: "victory", count: 1 },
+  { id: "contract", count: 1 },
+  { id: "market", count: 1 }
 ];
+var DAILY_POOL = structuredClone(DEFAULT_DAILY_POOL);
+function setDailyPool(list) {
+  DAILY_POOL.splice(0, DAILY_POOL.length, ...list);
+}
+var DAILY_POOL_COUNT = { min: 1, max: 50 };
+function validateDailyPool(list) {
+  var _a;
+  if (!Array.isArray(list)) return ["Missions du jour : la r\xE9serve doit \xEAtre une liste."];
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const e3 of list) {
+    const label3 = `Mission du jour \xAB ${String((_a = e3 == null ? void 0 : e3.id) != null ? _a : "?")} \xBB`;
+    if (!e3 || !isStaticObjective(e3.id)) errors.push(`${label3} : action inconnue.`);
+    else if (ids.has(e3.id)) errors.push(`Missions du jour : \xAB ${e3.id} \xBB en double.`);
+    else ids.add(e3.id);
+    if (!e3) continue;
+    if (!(Number.isInteger(e3.count) && e3.count >= DAILY_POOL_COUNT.min && e3.count <= DAILY_POOL_COUNT.max)) errors.push(`${label3} : quantit\xE9 enti\xE8re entre ${DAILY_POOL_COUNT.min} et ${DAILY_POOL_COUNT.max}.`);
+  }
+  if (list.length === 0) errors.push("Missions du jour : au moins une t\xE2che dans la r\xE9serve.");
+  return errors;
+}
 function hash(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
   return h;
 }
 function dailyTasksFor(day, tasks = DAILY_RULES.tasks) {
-  const pool = [...POOL];
+  const pool = DAILY_POOL.map((e3) => ({ key: e3.id, count: e3.count }));
   const out = [];
   let seed = hash(day);
   while (out.length < tasks && pool.length > 0) {
@@ -19857,16 +19886,30 @@ var WARLORD_RULES_META = {
   messageEveryHours: { label: "Un message au plus toutes les", unit: "h", min: 0, max: 720, hint: "Par seigneur et par joueur." },
   vendetta: { label: "Vendetta", hint: "costHours, durationHours, goalFactor, powerLoss, awayDays, passPoints, minShare." }
 };
-var ORIGIN_ART = {
-  kesh: { label: "Kesh'Vaar ren\xE9gats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
-  choeur: { label: "D\xE9serteurs du Ch\u0153ur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
-  confrerie: { label: "Anciens de la Confr\xE9rie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan-emblem.webp", color: "#ff7a45" },
-  gravhorn: { label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn-emblem.webp", color: "#f2c94c" },
-  leviathan: { label: "Culte du L\xE9viathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" }
-};
+var DEFAULT_WARLORD_ORIGINS = [
+  { id: "kesh", label: "Kesh'Vaar ren\xE9gats", art: "/assets/bounties/hunters.webp", emblem: "/assets/bounties/emblem.webp", color: "#ffb347" },
+  { id: "choeur", label: "D\xE9serteurs du Ch\u0153ur", art: "/assets/story/choeur.webp", emblem: "/assets/story/choeur-emblem.webp", color: "#b18cff" },
+  { id: "confrerie", label: "Anciens de la Confr\xE9rie", art: "/assets/story/varan.webp", emblem: "/assets/story/varan-emblem.webp", color: "#ff7a45" },
+  { id: "gravhorn", label: "Mercenaires Gravhorn", art: "/assets/story/gravhorn.webp", emblem: "/assets/story/gravhorn-emblem.webp", color: "#f2c94c" },
+  { id: "leviathan", label: "Culte du L\xE9viathan", art: "/assets/leviathan/leviathan-portrait.webp", emblem: "/assets/leviathan/leviathan-emblem.webp", color: "#3fd9c8" }
+];
+function withDefaultOrigins(list) {
+  const saved = Array.isArray(list) ? list.filter((o) => o && typeof o.id === "string") : [];
+  const byId = new Map(saved.map((o) => [o.id, o]));
+  const delivered = DEFAULT_WARLORD_ORIGINS.map((d) => {
+    var _a;
+    return __spreadProps(__spreadValues(__spreadValues({}, d), (_a = byId.get(d.id)) != null ? _a : {}), { id: d.id });
+  });
+  return [...delivered, ...saved.filter((o) => !DEFAULT_WARLORD_ORIGINS.some((d) => d.id === o.id))];
+}
+function warlordOrigins() {
+  var _a;
+  return (_a = config2.origins) != null ? _a : DEFAULT_WARLORD_ORIGINS;
+}
 function warlordOrigin(origin) {
   var _a;
-  return (_a = ORIGIN_ART[origin]) != null ? _a : ORIGIN_ART.kesh;
+  const list = warlordOrigins();
+  return (_a = list.find((o) => o.id === origin)) != null ? _a : list[0];
 }
 var PERSONALITY_LABELS = {
   aggressive: "Agressif",
@@ -19974,7 +20017,7 @@ var DEFAULT_WARLORDS = [
   })
 ];
 var DEFAULT_WARLORD_SETTINGS = { enabled: true, attackFrequency: 1, powerFactor: 1 };
-var config2 = { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS) };
+var config2 = { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS), origins: structuredClone(DEFAULT_WARLORD_ORIGINS) };
 function setWarlords(next) {
   var _a, _b;
   const overrides = new Map(((_a = next == null ? void 0 : next.defs) != null ? _a : []).map((d) => [d.id, d]));
@@ -19985,7 +20028,9 @@ function setWarlords(next) {
       var _a2;
       const o = overrides.get(d.id);
       return o ? __spreadProps(__spreadValues(__spreadValues({}, d), o), { id: d.id, lines: __spreadValues(__spreadValues({}, d.lines), (_a2 = o.lines) != null ? _a2 : {}) }) : structuredClone(d);
-    })
+    }),
+    // 6.14.154 (R6) : origines livrées réglables, origines ajoutées.
+    origins: structuredClone(withDefaultOrigins(next == null ? void 0 : next.origins))
   };
 }
 function warlordsConfig() {
@@ -19995,7 +20040,7 @@ function warlordRankRules(settings = config2.settings) {
   return normalizeRankRules(settings.ranks);
 }
 function defaultWarlordsConfig() {
-  return { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS) };
+  return { settings: __spreadValues({}, DEFAULT_WARLORD_SETTINGS), defs: structuredClone(DEFAULT_WARLORDS), origins: structuredClone(DEFAULT_WARLORD_ORIGINS) };
 }
 function findWarlord(id) {
   return config2.defs.find((d) => d.id === id);
@@ -20007,7 +20052,7 @@ function isWarlordUid(uid) {
   return !!uid && uid.startsWith("npc") && !!warlordByUid(uid);
 }
 function validateWarlords(cfg) {
-  var _a;
+  var _a, _b;
   const errors = [];
   const s = cfg == null ? void 0 : cfg.settings;
   if (s) {
@@ -20015,8 +20060,21 @@ function validateWarlords(cfg) {
     if (!(s.powerFactor > 0 && s.powerFactor <= 5)) errors.push("Seigneurs : facteur de puissance entre 0 et 5.");
     errors.push(...validateRankRules(s.ranks));
   }
-  for (const d of (_a = cfg == null ? void 0 : cfg.defs) != null ? _a : []) {
+  const originIds = /* @__PURE__ */ new Set();
+  for (const o of Array.isArray(cfg == null ? void 0 : cfg.origins) ? cfg.origins : []) {
+    const label3 = `Origine ${(_a = o == null ? void 0 : o.id) != null ? _a : "?"}`;
+    if (!o || typeof o.id !== "string" || !/^[A-Za-z0-9_]+$/.test(o.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (originIds.has(o.id)) errors.push(`Seigneurs : origine \xAB ${o.id} \xBB en double.`);
+    else originIds.add(o.id);
+    if (!o) continue;
+    if (typeof o.label !== "string" || !o.label.trim()) errors.push(`${label3} : libell\xE9 manquant.`);
+    for (const k of ["art", "emblem"]) if (typeof o[k] !== "string" || !o[k].startsWith("/")) errors.push(`${label3} : image \xAB ${k} \xBB : un chemin qui commence par \xAB / \xBB.`);
+    if (typeof o.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(o.color)) errors.push(`${label3} : couleur \xAB ${String(o.color)} \xBB invalide (#rrggbb).`);
+  }
+  const knownOrigins = new Set(withDefaultOrigins(cfg == null ? void 0 : cfg.origins).map((o) => o.id));
+  for (const d of (_b = cfg == null ? void 0 : cfg.defs) != null ? _b : []) {
     if (!DEFAULT_WARLORDS.some((w) => w.id === d.id)) errors.push(`Seigneurs : \xAB ${d.id} \xBB inconnu.`);
+    if (d.origin !== void 0 && !knownOrigins.has(d.origin)) errors.push(`Seigneur ${d.id} : origine \xAB ${String(d.origin)} \xBB inconnue.`);
     if (d.name !== void 0 && !String(d.name).trim()) errors.push(`Seigneur ${d.id} : nom vide.`);
     if (d.personality && !(d.personality in PERSONALITY_LABELS)) errors.push(`Seigneur ${d.id} : personnalit\xE9 inconnue.`);
     if (d.tier && !(d.tier in TIER_LABELS2)) errors.push(`Seigneur ${d.id} : palier inconnu.`);
@@ -22232,7 +22290,7 @@ function autoBossImage(arch, bossName, reserve = []) {
   return AUTO_ART_2.includes(arch.id) && rank2 >= 0 && rank2 % 2 === 1 ? `/assets/chronicles/auto/${arch.id}-boss-2.webp` : `/assets/chronicles/auto/${arch.id}-boss.webp`;
 }
 var AUTO_SEALS = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
-var ARCHETYPES = [
+var DEFAULT_ARCHETYPES = [
   {
     id: "confrerie",
     factionId: "varan",
@@ -22345,6 +22403,42 @@ var ARCHETYPES = [
     lore: ["Le vaisseau-tani\xE8re d'Ysgrim, h\xE9riss\xE9 de crocs d'abordage. Il ne frappe que les proies isol\xE9es.", "La Meute chasse en cercle ; quand on l'entend hurler, elle est d\xE9j\xE0 l\xE0."]
   }
 ];
+var ARCHETYPES = structuredClone(DEFAULT_ARCHETYPES);
+function setArchetypes(list) {
+  ARCHETYPES.splice(0, ARCHETYPES.length, ...list);
+}
+var HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+var isTextList = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
+var isPath = (v) => typeof v === "string" && v.startsWith("/");
+function validateArchetypes(list) {
+  var _a;
+  if (!Array.isArray(list)) return ["Arch\xE9types des Chroniques : la section doit \xEAtre une liste."];
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const a of list) {
+    const label3 = `Arch\xE9type ${(_a = a == null ? void 0 : a.id) != null ? _a : "?"}`;
+    if (!a || typeof a.id !== "string" || !/^[A-Za-z0-9_]+$/.test(a.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (ids.has(a.id)) errors.push(`Arch\xE9types des Chroniques : identifiant \xAB ${a.id} \xBB en double.`);
+    else ids.add(a.id);
+    if (!a) continue;
+    if (typeof a.faction !== "string" || !a.faction.trim()) errors.push(`${label3} : nom de la faction manquant.`);
+    if (a.factionId !== void 0 && typeof a.factionId !== "string") errors.push(`${label3} : faction li\xE9e invalide.`);
+    const v = a.villain;
+    if (!v || typeof v !== "object") errors.push(`${label3} : m\xE9chant manquant.`);
+    else if ("speaker" in v) {
+      if (!(String(v.speaker) in STORY_SPEAKERS)) errors.push(`${label3} : m\xE9chant \xAB ${String(v.speaker)} \xBB inconnu.`);
+    } else if (!v.as || typeof v.as !== "object" || typeof v.as.name !== "string" || !v.as.name.trim() || typeof v.as.role !== "string" || !isPath(v.as.image) || typeof v.as.color !== "string" || !HEX_COLOR.test(v.as.color)) {
+      errors.push(`${label3} : m\xE9chant propre incomplet (nom, r\xF4le, portrait \xAB /\u2026 \xBB, couleur #rrggbb).`);
+    }
+    if (!(String(a.ally) in STORY_SPEAKERS)) errors.push(`${label3} : alli\xE9 \xAB ${String(a.ally)} \xBB inconnu.`);
+    if (typeof a.accent !== "string" || !HEX_COLOR.test(a.accent)) errors.push(`${label3} : couleur \xAB ${String(a.accent)} \xBB invalide (#rrggbb).`);
+    for (const k of ["image", "emblem", "fallbackImage"]) if (!isPath(a[k])) errors.push(`${label3} : image \xAB ${k} \xBB : un chemin qui commence par \xAB / \xBB.`);
+    for (const k of ["themeLabels", "bossNames", "titles", "completionTitles", "lore"]) if (!isTextList(a[k])) errors.push(`${label3} : \xAB ${k} \xBB : au moins une ligne.`);
+    if (a.retired !== void 0 && typeof a.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
+  }
+  if (!list.some((a) => a && !a.retired)) errors.push("Arch\xE9types des Chroniques : au moins un arch\xE9type tir\xE9.");
+  return errors;
+}
 var FACTION_ACCENTS = { ember: "#ff7a45", gold: "#ffd166", cyan: "#7fd1ff", mint: "#7dff9a", danger: "#ff4d6d" };
 function factionArchetype(f) {
   var _a, _b, _c, _d, _e;
@@ -22374,7 +22468,8 @@ function chapterArchetypes() {
     return [a.id, (_a = a.factionId) != null ? _a : a.id];
   }));
   const extra = FACTIONS.filter((f) => f && f.enabled !== false && f.id && !covered.has(f.id)).map(factionArchetype);
-  return extra.length > 0 ? [...ARCHETYPES, ...extra] : ARCHETYPES;
+  const drawn = ARCHETYPES.some((a) => a.retired) ? ARCHETYPES.filter((a) => !a.retired) : ARCHETYPES;
+  return extra.length > 0 ? [...drawn, ...extra] : drawn;
 }
 function voiceLine(v, text) {
   return "speaker" in v ? { speaker: v.speaker, text: ucfirst(text) } : { speaker: "vashka", as: v.as, text: ucfirst(text) };
@@ -22565,7 +22660,8 @@ function generateChapter(o) {
     return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = archetypes.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
   });
   const gen = chronicleGenRules();
-  const drawn = pick2(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
+  const notRecent = archetypes.filter((a) => !recentArch.includes(a.id));
+  const drawn = pick2(rng, notRecent.length > 0 ? notRecent : archetypes);
   const catalog = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId) : null;
   const themeId = catalog ? catalog.theme : null;
   const themedId = gen.followPassTheme && themeId ? yearArchetypeFor(themeId, (_b = catalog == null ? void 0 : catalog.year) != null ? _b : 1, gen.themeArchetypes) : void 0;
@@ -22612,8 +22708,8 @@ function generateChapter(o) {
     lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, banks.fresh((_a2 = banks.hooks[i]) != null ? _a2 : HOOKS[i])), vars)) });
     lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, banks.fresh(banks.orders(type))), __spreadProps(__spreadValues({}, vars), { count: count2, s: count2 > 1 ? "s" : "" }))) });
     const acts = (_b2 = banks.actTitles[i]) != null ? _b2 : ACT_TITLES[i];
-    const notRecent = acts.filter((t) => !banks.recent.includes(t));
-    const actPool = notRecent.length > 0 ? notRecent : acts;
+    const notRecent2 = acts.filter((t) => !banks.recent.includes(t));
+    const actPool = notRecent2.length > 0 ? notRecent2 : acts;
     const actList = actPool.some((t) => !usedActs.has(t)) ? actPool : acts;
     let epTitle = pick2(rng, actList);
     while (usedActs.has(epTitle)) epTitle = pick2(rng, actList);
@@ -25263,6 +25359,183 @@ function validateTerritoryWarRules(r) {
   return errors;
 }
 
+// src/game/allianceChallenge.ts
+var ALLIANCE_CHALLENGE_KEY = "alliance_challenge";
+var DEFAULT_ALLIANCE_CHALLENGES = [
+  { id: "pillards", name: "Les pillards", emoji: "\u{1F4B0}", metric: "loot", hint: "Ressources pill\xE9es par les membres." },
+  { id: "explorateurs", name: "Les explorateurs", emoji: "\u{1F9ED}", metric: "missions", hint: "Missions termin\xE9es par les membres." },
+  { id: "arsenal", name: "L'arsenal", emoji: "\u{1F6E0}\uFE0F", metric: "unitsBuilt", hint: "Unit\xE9s construites par les membres." },
+  { id: "ferrailleurs", name: "Les ferrailleurs", emoji: "\u267B\uFE0F", metric: "recycled", hint: "D\xE9bris recycl\xE9s par les membres." },
+  { id: "conquerants", name: "Les conqu\xE9rants", emoji: "\u2694\uFE0F", metric: "victories", hint: "Victoires des membres." },
+  { id: "negociants", name: "Les n\xE9gociants", emoji: "\u{1F4DC}", metric: "contracts", hint: "Contrats remplis par les membres." },
+  // 6.14.69 (É30-1d, Q40) : défense mutuelle. Garnisons envoyées (tout le monde) et balayages de phalange (joueurs à lune).
+  { id: "vigies", name: "Les vigies", emoji: "\u{1F6F0}\uFE0F", metric: "vigil", hint: "Garnisons envoy\xE9es et balayages de phalange des membres." }
+];
+var ALLIANCE_CHALLENGES = structuredClone(DEFAULT_ALLIANCE_CHALLENGES);
+function setAllianceChallenges(list) {
+  ALLIANCE_CHALLENGES.splice(0, ALLIANCE_CHALLENGES.length, ...list);
+}
+function withDefaultAllianceChallenges(list) {
+  if (!Array.isArray(list)) return DEFAULT_ALLIANCE_CHALLENGES;
+  const ids = new Set(list.map((c) => c == null ? void 0 : c.id));
+  const missing = DEFAULT_ALLIANCE_CHALLENGES.filter((c) => !ids.has(c.id)).map((c) => __spreadProps(__spreadValues({}, c), { retired: true }));
+  return missing.length > 0 ? [...list, ...missing] : list;
+}
+function allianceChallengeRotation() {
+  const active = ALLIANCE_CHALLENGES.filter((c) => !c.retired);
+  return active.length > 0 ? active : ALLIANCE_CHALLENGES.slice(0, 1);
+}
+function validateAllianceChallenges(list) {
+  if (!Array.isArray(list)) return ["D\xE9fis d'alliance : la section doit \xEAtre une liste."];
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const c of list) {
+    const label3 = `D\xE9fi d'alliance ${(c == null ? void 0 : c.name) || (c == null ? void 0 : c.id) || "?"}`;
+    if (!c || typeof c.id !== "string" || !/^[A-Za-z0-9_]+$/.test(c.id)) errors.push(`${label3} : identifiant invalide (lettres, chiffres, _).`);
+    else if (ids.has(c.id)) errors.push(`D\xE9fis d'alliance : identifiant \xAB ${c.id} \xBB en double.`);
+    else ids.add(c.id);
+    if (!c) continue;
+    if (typeof c.name !== "string" || !c.name.trim()) errors.push(`${label3} : nom manquant.`);
+    if (typeof c.emoji !== "string") errors.push(`${label3} : emoji manquant.`);
+    if (typeof c.hint !== "string") errors.push(`${label3} : texte manquant.`);
+    if (typeof c.metric !== "string" || !(c.metric in METRICS)) errors.push(`${label3} : mesure \xAB ${String(c.metric)} \xBB inconnue.`);
+    if (c.retired !== void 0 && typeof c.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
+  }
+  if (!list.some((c) => c && !c.retired)) errors.push("D\xE9fis d'alliance : au moins un d\xE9fi en rotation.");
+  return errors;
+}
+var ALLIANCE_CHALLENGE_RULES = { rewardHours: [6, 4, 2] };
+var ALLIANCE_CHALLENGE_RULES_META = {
+  rewardHours: { label: "Podium : heures de production (1re, 2e, 3e alliance)", unit: "h", hint: "Une valeur par place du d\xE9fi de la semaine des alliances." }
+};
+function challengeOfWeek(weekId2) {
+  const index2 = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
+  const rotation = allianceChallengeRotation();
+  return rotation[(index2 % rotation.length + rotation.length) % rotation.length];
+}
+function findAllianceChallenge(id) {
+  var _a;
+  return (_a = ALLIANCE_CHALLENGES.find((c) => c.id === id)) != null ? _a : allianceChallengeRotation()[0];
+}
+function normalizeAllianceChallenge(raw, now) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const weekId2 = typeof r.weekId === "string" ? r.weekId : allianceWeekId(now);
+  return {
+    weekId: weekId2,
+    challengeId: typeof r.challengeId === "string" ? r.challengeId : challengeOfWeek(weekId2).id,
+    baselines: r.baselines && typeof r.baselines === "object" ? r.baselines : {},
+    standings: Array.isArray(r.standings) ? r.standings : [],
+    updatedAtMs: Number(r.updatedAtMs) || 0,
+    previous: r.previous && typeof r.previous === "object" ? r.previous : null,
+    next: r.next && typeof r.next === "object" && typeof r.next.weekId === "string" && r.next.baselines && typeof r.next.baselines === "object" ? r.next : null
+  };
+}
+function nextAllianceWeekId(weekId2) {
+  return allianceWeekId(Date.parse(`${weekId2}T12:00:00Z`) + 7 * 24 * 36e5);
+}
+function value(metric, p2) {
+  var _a;
+  return Math.max(0, Number((_a = METRICS[metric]) == null ? void 0 : _a.value(p2)) || 0);
+}
+function refreshAllianceChallenge(state, players, alliances, now) {
+  var _a, _b;
+  const metric = findAllianceChallenge(state.challengeId).metric;
+  const baselines = __spreadValues({}, state.baselines);
+  for (const p2 of players) if (baselines[p2.uid] === void 0) baselines[p2.uid] = value(metric, p2);
+  const byAlliance = /* @__PURE__ */ new Map();
+  for (const p2 of players) {
+    if (!p2.allianceId) continue;
+    const gain = Math.max(0, value(metric, p2) - baselines[p2.uid]);
+    const cur = (_a = byAlliance.get(p2.allianceId)) != null ? _a : { score: 0, contributors: 0 };
+    byAlliance.set(p2.allianceId, { score: cur.score + gain, contributors: cur.contributors + (gain > 0 ? 1 : 0) });
+  }
+  const standings = alliances.map((a) => {
+    var _a2;
+    return __spreadValues({ allianceId: a.id, tag: a.tag, name: a.name }, (_a2 = byAlliance.get(a.id)) != null ? _a2 : { score: 0, contributors: 0 });
+  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 20);
+  let next = (_b = state.next) != null ? _b : null;
+  if (allianceWeekId(now) === state.weekId) {
+    const weekId2 = nextAllianceWeekId(state.weekId);
+    const nextMetric = challengeOfWeek(weekId2).metric;
+    next = { weekId: weekId2, baselines: Object.fromEntries(players.map((p2) => [p2.uid, value(nextMetric, p2)])) };
+  }
+  return __spreadProps(__spreadValues({}, state), { baselines, standings, updatedAtMs: now, next });
+}
+function allianceChallengeReward(rank2, members) {
+  var _a, _b;
+  const hours2 = (_a = ALLIANCE_CHALLENGE_RULES.rewardHours[rank2 - 1]) != null ? _a : 0;
+  const out = {};
+  if (!hours2) return out;
+  for (const m of members) for (const [k, v] of Object.entries(productionHours(m, hours2))) out[k] = ((_b = out[k]) != null ? _b : 0) + v;
+  return out;
+}
+function startAllianceChallengeWeek(players, now, previous, next) {
+  var _a;
+  const weekId2 = allianceWeekId(now);
+  const challenge = challengeOfWeek(weekId2);
+  const before = next && next.weekId === weekId2 ? next.baselines : null;
+  const baselines = {};
+  for (const p2 of players) baselines[p2.uid] = Math.min(value(challenge.metric, p2), (_a = before == null ? void 0 : before[p2.uid]) != null ? _a : Infinity);
+  return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
+}
+
+// src/game/staff.ts
+var STAFF_KEY = "staff";
+var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
+var STAFF_TITLE_SEASON = "staff";
+var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
+var BALANCE_EXCLUSION_RULES = {
+  /** Pseudos écartés (casse exacte), en plus de l'équipe et des comptes de test. */
+  pseudos: ["Tartiflex", "Nicotine", "Tomdindon"],
+  /** Membres de l'équipe (rôle Développeur ou Administrateur) et comptes de la collection `admins` écartés. */
+  excludeStaff: true,
+  /** Comptes en mode test écartés. */
+  excludeTestMode: true
+};
+var BALANCE_EXCLUSION_RULES_META = {
+  pseudos: { label: "Pseudos \xE9cart\xE9s des statistiques d'\xE9quilibre", hint: "Comptes d'essai de l'\xE9quipe, sans r\xF4le affich\xE9 (casse exacte)." },
+  excludeStaff: { label: "\xC9carter l'\xE9quipe et les administrateurs", hint: "Leurs empires sont souvent gonfl\xE9s pour les essais." },
+  excludeTestMode: { label: "\xC9carter les comptes en mode test" }
+};
+function countsForBalance(p2, staffUids) {
+  var _a;
+  const r = BALANCE_EXCLUSION_RULES;
+  if (r.excludeStaff !== false && staffUids[p2.uid]) return false;
+  if (r.excludeTestMode !== false && p2.testMode) return false;
+  return !(Array.isArray(r.pseudos) ? r.pseudos : []).includes(String((_a = p2.pseudo) != null ? _a : ""));
+}
+function validateBalanceExclusion(r) {
+  if (!r) return [];
+  const e3 = [];
+  if (r.pseudos !== void 0) {
+    if (!Array.isArray(r.pseudos) || r.pseudos.some((x) => typeof x !== "string" || !x.trim())) e3.push("\xC9quilibrage : pseudos \xE9cart\xE9s, une liste de pseudos non vides.");
+    else if (new Set(r.pseudos).size !== r.pseudos.length) e3.push("\xC9quilibrage : pseudo \xE9cart\xE9 en double.");
+  }
+  return e3;
+}
+function isStaffRole(v) {
+  return v === "developer" || v === "admin";
+}
+function normalizeStaff(raw) {
+  const roles = {};
+  const src = raw && typeof raw === "object" ? raw.roles : null;
+  if (src && typeof src === "object") {
+    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
+  }
+  return { roles };
+}
+function applyStaffTitle(player, role, display = false) {
+  var _a, _b, _c, _d;
+  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
+  const staffLabels = Object.values(STAFF_LABELS);
+  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
+  const label3 = role ? STAFF_LABELS[role] : null;
+  player.titles = label3 ? [{ label: label3, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
+  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label3) player.activeTitle = "";
+  if (label3 && display) player.activeTitle = label3;
+  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
+}
+
 // src/game/auctions.ts
 var AUCTION_RULES = {
   /** Surenchère minimale (5 % au-dessus de la meilleure). */
@@ -25816,92 +26089,6 @@ var TEMPLATE_RULES_META = {
   maxSteps: { label: "\xC9tapes par mod\xE8le", min: 1, max: 100, hint: "Un mod\xE8le plus long est tronqu\xE9 au chargement." },
   maxUnitQty: { label: "Quantit\xE9 d'unit\xE9s par \xE9tape, au plus", min: 1, max: 1e7 }
 };
-
-// src/game/allianceChallenge.ts
-var ALLIANCE_CHALLENGE_KEY = "alliance_challenge";
-var ALLIANCE_CHALLENGES = [
-  { id: "pillards", name: "Les pillards", emoji: "\u{1F4B0}", metric: "loot", hint: "Ressources pill\xE9es par les membres." },
-  { id: "explorateurs", name: "Les explorateurs", emoji: "\u{1F9ED}", metric: "missions", hint: "Missions termin\xE9es par les membres." },
-  { id: "arsenal", name: "L'arsenal", emoji: "\u{1F6E0}\uFE0F", metric: "unitsBuilt", hint: "Unit\xE9s construites par les membres." },
-  { id: "ferrailleurs", name: "Les ferrailleurs", emoji: "\u267B\uFE0F", metric: "recycled", hint: "D\xE9bris recycl\xE9s par les membres." },
-  { id: "conquerants", name: "Les conqu\xE9rants", emoji: "\u2694\uFE0F", metric: "victories", hint: "Victoires des membres." },
-  { id: "negociants", name: "Les n\xE9gociants", emoji: "\u{1F4DC}", metric: "contracts", hint: "Contrats remplis par les membres." },
-  // 6.14.69 (É30-1d, Q40) : défense mutuelle. Garnisons envoyées (tout le monde) et balayages de phalange (joueurs à lune).
-  { id: "vigies", name: "Les vigies", emoji: "\u{1F6F0}\uFE0F", metric: "vigil", hint: "Garnisons envoy\xE9es et balayages de phalange des membres." }
-];
-var ALLIANCE_CHALLENGE_RULES = { rewardHours: [6, 4, 2] };
-var ALLIANCE_CHALLENGE_RULES_META = {
-  rewardHours: { label: "Podium : heures de production (1re, 2e, 3e alliance)", unit: "h", hint: "Une valeur par place du d\xE9fi de la semaine des alliances." }
-};
-function challengeOfWeek(weekId2) {
-  const index2 = Math.floor(Date.parse(`${weekId2}T00:00:00Z`) / (7 * 24 * 36e5));
-  return ALLIANCE_CHALLENGES[(index2 % ALLIANCE_CHALLENGES.length + ALLIANCE_CHALLENGES.length) % ALLIANCE_CHALLENGES.length];
-}
-function findAllianceChallenge(id) {
-  var _a;
-  return (_a = ALLIANCE_CHALLENGES.find((c) => c.id === id)) != null ? _a : ALLIANCE_CHALLENGES[0];
-}
-function normalizeAllianceChallenge(raw, now) {
-  const r = raw && typeof raw === "object" ? raw : {};
-  const weekId2 = typeof r.weekId === "string" ? r.weekId : allianceWeekId(now);
-  return {
-    weekId: weekId2,
-    challengeId: typeof r.challengeId === "string" ? r.challengeId : challengeOfWeek(weekId2).id,
-    baselines: r.baselines && typeof r.baselines === "object" ? r.baselines : {},
-    standings: Array.isArray(r.standings) ? r.standings : [],
-    updatedAtMs: Number(r.updatedAtMs) || 0,
-    previous: r.previous && typeof r.previous === "object" ? r.previous : null,
-    next: r.next && typeof r.next === "object" && typeof r.next.weekId === "string" && r.next.baselines && typeof r.next.baselines === "object" ? r.next : null
-  };
-}
-function nextAllianceWeekId(weekId2) {
-  return allianceWeekId(Date.parse(`${weekId2}T12:00:00Z`) + 7 * 24 * 36e5);
-}
-function value(metric, p2) {
-  var _a;
-  return Math.max(0, Number((_a = METRICS[metric]) == null ? void 0 : _a.value(p2)) || 0);
-}
-function refreshAllianceChallenge(state, players, alliances, now) {
-  var _a, _b;
-  const metric = findAllianceChallenge(state.challengeId).metric;
-  const baselines = __spreadValues({}, state.baselines);
-  for (const p2 of players) if (baselines[p2.uid] === void 0) baselines[p2.uid] = value(metric, p2);
-  const byAlliance = /* @__PURE__ */ new Map();
-  for (const p2 of players) {
-    if (!p2.allianceId) continue;
-    const gain = Math.max(0, value(metric, p2) - baselines[p2.uid]);
-    const cur = (_a = byAlliance.get(p2.allianceId)) != null ? _a : { score: 0, contributors: 0 };
-    byAlliance.set(p2.allianceId, { score: cur.score + gain, contributors: cur.contributors + (gain > 0 ? 1 : 0) });
-  }
-  const standings = alliances.map((a) => {
-    var _a2;
-    return __spreadValues({ allianceId: a.id, tag: a.tag, name: a.name }, (_a2 = byAlliance.get(a.id)) != null ? _a2 : { score: 0, contributors: 0 });
-  }).filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, 20);
-  let next = (_b = state.next) != null ? _b : null;
-  if (allianceWeekId(now) === state.weekId) {
-    const weekId2 = nextAllianceWeekId(state.weekId);
-    const nextMetric = challengeOfWeek(weekId2).metric;
-    next = { weekId: weekId2, baselines: Object.fromEntries(players.map((p2) => [p2.uid, value(nextMetric, p2)])) };
-  }
-  return __spreadProps(__spreadValues({}, state), { baselines, standings, updatedAtMs: now, next });
-}
-function allianceChallengeReward(rank2, members) {
-  var _a, _b;
-  const hours2 = (_a = ALLIANCE_CHALLENGE_RULES.rewardHours[rank2 - 1]) != null ? _a : 0;
-  const out = {};
-  if (!hours2) return out;
-  for (const m of members) for (const [k, v] of Object.entries(productionHours(m, hours2))) out[k] = ((_b = out[k]) != null ? _b : 0) + v;
-  return out;
-}
-function startAllianceChallengeWeek(players, now, previous, next) {
-  var _a;
-  const weekId2 = allianceWeekId(now);
-  const challenge = challengeOfWeek(weekId2);
-  const before = next && next.weekId === weekId2 ? next.baselines : null;
-  const baselines = {};
-  for (const p2 of players) baselines[p2.uid] = Math.min(value(challenge.metric, p2), (_a = before == null ? void 0 : before[p2.uid]) != null ? _a : Infinity);
-  return { weekId: weekId2, challengeId: challenge.id, baselines, standings: [], updatedAtMs: now, previous: previous != null ? previous : null };
-}
 
 // src/game/allianceDaily.ts
 var ALLIANCE_DAILY_RULES = {
@@ -27598,6 +27785,7 @@ var REGISTERED_RULES = {
   ascension: { label: "Ascension", target: () => ASCENSION_RULES, meta: () => ASCENSION_RULES_META },
   // 6.14.107 (AU27, AE-L4) : seuils d'alerte de la santé de l'équilibre (aucun effet en jeu).
   balanceHealth: { label: "\xC9quilibrage : seuils d'alerte de la sant\xE9", target: () => BALANCE_HEALTH_RULES, meta: () => BALANCE_HEALTH_RULES_META },
+  balanceExclusion: { label: "\xC9quilibrage : comptes \xE9cart\xE9s des statistiques (\xE9quipe, test, pseudos)", target: () => BALANCE_EXCLUSION_RULES, meta: () => BALANCE_EXCLUSION_RULES_META },
   bossPhases: { label: "Boss : phases (riposte, bouclier, faiblesse)", target: () => BOSS_PHASE_RULES, meta: () => BOSS_PHASE_RULES_META },
   bossReminders: { label: "Boss : rappels (veille, fin)", target: () => BOSS_REMINDERS, meta: () => BOSS_REMINDERS_META },
   bounties: { label: "Primes Kesh'Vaar", target: () => BOUNTY_RULES, meta: () => BOUNTY_RULES_META },
@@ -27812,8 +28000,8 @@ function listShapeErrors(section, itemLabel, value2, defaults) {
 }
 
 // src/game/content.ts
-var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog"];
-var NO_REMOVAL_SECTIONS = ["talents", "moduleFamilies", "moduleTemplates"];
+var CONTENT_SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers", "talents", "moduleFamilies", "moduleTemplates", "passThemes", "seasonCatalog", "allianceChallenges", "dailyMissionPool", "chronicleArchetypes"];
+var NO_REMOVAL_SECTIONS = ["talents", "moduleFamilies", "moduleTemplates", "allianceChallenges"];
 function withFixedUnits(units) {
   const out = units.some((u) => u.id === KESH_HUNTER_UNIT.id) ? [...units] : [...units, KESH_HUNTER_UNIT];
   for (const e3 of ELITE_UNITS) {
@@ -27869,7 +28057,16 @@ function defaultGameContent() {
   return __spreadValues(__spreadValues({}, baseDefaultContent()), structuredClone(textListDefaults()));
 }
 function textListDefaults() {
-  return { talents: DEFAULT_TALENTS, moduleFamilies: DEFAULT_MODULE_FAMILIES, moduleTemplates: DEFAULT_MODULE_TEMPLATES, passThemes: DEFAULT_PASS_THEMES, seasonCatalog: DEFAULT_SEASON_CATALOG };
+  return {
+    talents: DEFAULT_TALENTS,
+    moduleFamilies: DEFAULT_MODULE_FAMILIES,
+    moduleTemplates: DEFAULT_MODULE_TEMPLATES,
+    passThemes: DEFAULT_PASS_THEMES,
+    seasonCatalog: DEFAULT_SEASON_CATALOG,
+    allianceChallenges: DEFAULT_ALLIANCE_CHALLENGES,
+    dailyMissionPool: DEFAULT_DAILY_POOL,
+    chronicleArchetypes: DEFAULT_ARCHETYPES
+  };
 }
 function baseDefaultContent() {
   return structuredClone({
@@ -27929,6 +28126,10 @@ function resolveGameContent(overrides, nowMs) {
     // 6.14.128 (AA9) : liste enregistrée telle quelle (un thème ou une saison se retire ; les passes écrits gardent leur copie).
     passThemes: Array.isArray(overrides.passThemes) ? overrides.passThemes : defaults.passThemes,
     seasonCatalog: Array.isArray(overrides.seasonCatalog) ? overrides.seasonCatalog : defaults.seasonCatalog,
+    // 6.14.154 (R6) : un défi livré absent revient retiré (I43) ; réserve et archétypes enregistrés tels quels.
+    allianceChallenges: withDefaultAllianceChallenges(overrides.allianceChallenges),
+    dailyMissionPool: Array.isArray(overrides.dailyMissionPool) ? overrides.dailyMissionPool : defaults.dailyMissionPool,
+    chronicleArchetypes: Array.isArray(overrides.chronicleArchetypes) ? overrides.chronicleArchetypes : defaults.chronicleArchetypes,
     relicSettings: __spreadProps(__spreadValues(__spreadValues({}, defaults.relicSettings), (_p = overrides.relicSettings) != null ? _p : {}), {
       rarities: Object.fromEntries(
         Object.entries(defaults.relicSettings.rarities).map(([id, v]) => {
@@ -28057,6 +28258,9 @@ function applyGameContent(overrides, nowMs) {
   setModuleContent(content.moduleFamilies, content.moduleTemplates);
   setPassThemes(content.passThemes);
   setSeasonCatalog(content.passThemes, content.seasonCatalog);
+  setAllianceChallenges(content.allianceChallenges);
+  setDailyPool(content.dailyMissionPool);
+  setArchetypes(content.chronicleArchetypes);
   setOfficers(content.officers);
   setWorldBosses(content.worldBosses);
   setAchievementList(content.achievements);
@@ -28213,6 +28417,7 @@ function validateRules(rules) {
   errors.push(...validateTrackedActionRules(merged.trackedActions));
   errors.push(...validateNoveltyRules(merged.novelty));
   errors.push(...validateSeasonGenRules(merged.seasonGen));
+  errors.push(...validateBalanceExclusion(merged.balanceExclusion));
   errors.push(...validateBuildingTierRules(merged.buildingTiers));
   errors.push(...validateNarrativeRules(merged.narrative, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   const au = merged.auctions;
@@ -28357,7 +28562,7 @@ function mergeRulesForCheck(rules) {
 }
 var ID_PATTERN = /^[A-Za-z0-9_]+$/;
 function validateGameContent(content) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E;
   const errors = [];
   const LIST_SECTIONS = [["buildings", "B\xE2timents"], ["units", "Unit\xE9s"], ["technologies", "Technologies"], ["missions", "Missions"], ["relics", "Reliques"]];
   for (const [key, label3] of LIST_SECTIONS) if (content[key] !== void 0 && !Array.isArray(content[key])) errors.push(`${label3} : la section doit \xEAtre une liste.`);
@@ -28437,6 +28642,7 @@ function validateGameContent(content) {
     } else if (t.effect !== void 0 && !(t.effect in TECH_EFFECT_LABELS)) errors.push(`${label3} : effet \xAB ${t.effect} \xBB inconnu.`);
     checkResources(`${label3} (co\xFBt)`, t.baseCost);
     if (t.amberCost !== void 0 && (!Number.isFinite(t.amberCost) || t.amberCost < 0)) errors.push(`${label3} : ambre par niveau invalide.`);
+    if (t.timeGrowth !== void 0 && !(Number.isFinite(t.timeGrowth) && t.timeGrowth >= TECH_GROWTH_BOUNDS.min && t.timeGrowth <= TECH_GROWTH_BOUNDS.max)) errors.push(`${label3} : croissance de la dur\xE9e entre ${TECH_GROWTH_BOUNDS.min} et ${TECH_GROWTH_BOUNDS.max}.`);
     for (const req of Object.keys((_k = t.prereq) != null ? _k : {})) {
       if (!techIds.has(req)) errors.push(`${label3} : pr\xE9requis \xAB ${req} \xBB inexistant.`);
       if (req === t.id) errors.push(`${label3} : ne peut pas \xEAtre son propre pr\xE9requis.`);
@@ -28487,6 +28693,9 @@ function validateGameContent(content) {
   errors.push(...validateModuleContent((_w = content.moduleFamilies) != null ? _w : DEFAULT_MODULE_FAMILIES, (_x = content.moduleTemplates) != null ? _x : DEFAULT_MODULE_TEMPLATES));
   errors.push(...validateSignatureRules((_y = content.rules) == null ? void 0 : _y.signatureModules, ((_z = content.moduleFamilies) != null ? _z : DEFAULT_MODULE_FAMILIES).map((f) => f.id)));
   errors.push(...validatePassCatalog((_A = content.passThemes) != null ? _A : DEFAULT_PASS_THEMES, (_B = content.seasonCatalog) != null ? _B : DEFAULT_SEASON_CATALOG));
+  errors.push(...validateAllianceChallenges((_C = content.allianceChallenges) != null ? _C : DEFAULT_ALLIANCE_CHALLENGES));
+  errors.push(...validateDailyPool((_D = content.dailyMissionPool) != null ? _D : DEFAULT_DAILY_POOL));
+  errors.push(...validateArchetypes((_E = content.chronicleArchetypes) != null ? _E : DEFAULT_ARCHETYPES));
   return [...new Set(errors)];
 }
 var CONTENT_SECTION_LABELS = {
@@ -28511,7 +28720,10 @@ var CONTENT_SECTION_LABELS = {
   moduleFamilies: "Familles de modules",
   moduleTemplates: "Mod\xE8les de modules",
   passThemes: "Th\xE8mes du passe",
-  seasonCatalog: "Catalogue des saisons"
+  seasonCatalog: "Catalogue des saisons",
+  allianceChallenges: "D\xE9fis d'alliance",
+  dailyMissionPool: "Missions du jour (r\xE9serve)",
+  chronicleArchetypes: "Arch\xE9types des Chroniques"
 };
 function contentSectionErrors(section, data, stored) {
   var _a;
@@ -28542,35 +28754,6 @@ function removedIdErrors(section, data, stored) {
   const kept = new Set(data.map((x) => x == null ? void 0 : x.id));
   const label3 = (_a = CONTENT_SECTION_LABELS[section]) != null ? _a : section;
   return before.map((x) => x == null ? void 0 : x.id).filter((id) => typeof id === "string" && !kept.has(id)).map((id) => `${label3} : \xAB ${id} \xBB est enregistr\xE9 et peut \xEAtre d\xE9tenu par des joueurs : retire-le du jeu (case \xAB Retir\xE9 \xBB) au lieu de le supprimer.`);
-}
-
-// src/game/staff.ts
-var STAFF_KEY = "staff";
-var STAFF_LABELS = { developer: "D\xE9veloppeur", admin: "Administrateur" };
-var STAFF_TITLE_SEASON = "staff";
-var DEFAULT_STAFF_BY_PSEUDO = { Nicotine: "developer", Tartiflex: "admin" };
-var BALANCE_EXCLUDED_PSEUDOS = ["Tartiflex", "Nicotine", "Tomdindon"];
-function isStaffRole(v) {
-  return v === "developer" || v === "admin";
-}
-function normalizeStaff(raw) {
-  const roles = {};
-  const src = raw && typeof raw === "object" ? raw.roles : null;
-  if (src && typeof src === "object") {
-    for (const [uid, role] of Object.entries(src)) if (isStaffRole(role)) roles[uid] = role;
-  }
-  return { roles };
-}
-function applyStaffTitle(player, role, display = false) {
-  var _a, _b, _c, _d;
-  const before = JSON.stringify([(_a = player.titles) != null ? _a : [], (_b = player.activeTitle) != null ? _b : ""]);
-  const staffLabels = Object.values(STAFF_LABELS);
-  const kept = ((_c = player.titles) != null ? _c : []).filter((t) => t.seasonId !== STAFF_TITLE_SEASON);
-  const label3 = role ? STAFF_LABELS[role] : null;
-  player.titles = label3 ? [{ label: label3, rank: 0, seasonId: STAFF_TITLE_SEASON }, ...kept] : kept;
-  if (player.activeTitle && staffLabels.includes(player.activeTitle) && player.activeTitle !== label3) player.activeTitle = "";
-  if (label3 && display) player.activeTitle = label3;
-  return JSON.stringify([player.titles, (_d = player.activeTitle) != null ? _d : ""]) !== before;
 }
 
 // src/game/errorReports.ts

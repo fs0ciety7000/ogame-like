@@ -2898,9 +2898,10 @@ function balanceExcludedUids(txApp, game) {
   return out;
 }
 
-/** Ce joueur sert-il de référence d'équilibrage ? */
+/** Ce joueur sert-il de référence d'équilibrage ? 6.14.154 (AA-31) : règle du moteur, réglable dans l'admin
+ *  (groupe « balanceExclusion » : pseudos, équipe, comptes de test). */
 function countsForBalance(p, excluded, game) {
-  return !excluded[p.uid] && !p.testMode && (game.BALANCE_EXCLUDED_PSEUDOS || []).indexOf(p.pseudo) < 0;
+  return game.countsForBalance(p, excluded);
 }
 
 function readStaffRecord(txApp, game) {
@@ -5976,6 +5977,27 @@ const CONTENT_MIGRATIONS = [
     key: "seasonCatalog",
     patches: [],
     appendFromDefaults: ["vide_1", "vide_2", "vide_3", "hiver_1", "hiver_2", "hiver_3", "forge_1", "forge_2", "forge_3", "bazar_1", "bazar_2", "bazar_3", "maree_1", "maree_2", "maree_3", "colonies_1", "colonies_2", "colonies_3", "primes_1", "primes_2", "primes_3", "comete_1", "comete_2", "comete_3", "moisson_1", "moisson_2", "moisson_3", "archives_1", "archives_2", "archives_3", "chantiers_1", "chantiers_2", "chantiers_3", "rempart_1", "rempart_2", "rempart_3"],
+  },
+  // 6.14.154 (AU27, R6, reste d'AA-23) : défis d'alliance, réserve des missions du jour et archétypes des Chroniques en
+  // sections. Sections neuves (absentes = listes livrées, mêmes valeurs) : ces entrées recopient un élément livré dans une
+  // liste enregistrée qui ne l'aurait pas (I27) ; rien ne change pour les joueurs.
+  {
+    id: "alliance-challenges-6.14.154",
+    key: "allianceChallenges",
+    patches: [],
+    appendFromDefaults: ["pillards", "explorateurs", "arsenal", "ferrailleurs", "conquerants", "negociants", "vigies"],
+  },
+  {
+    id: "daily-mission-pool-6.14.154",
+    key: "dailyMissionPool",
+    patches: [],
+    appendFromDefaults: ["mission", "spy", "victory", "contract", "market"],
+  },
+  {
+    id: "chronicle-archetypes-6.14.154",
+    key: "chronicleArchetypes",
+    patches: [],
+    appendFromDefaults: ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"],
   },
 ];
 

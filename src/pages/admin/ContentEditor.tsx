@@ -9,8 +9,38 @@ import { cn } from "@/lib/utils";
 import { currentGameContent, defaultGameContent, validateGameContent, type GameContent } from "@/game/content";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { askConfirm } from "@/components/ui/confirm-dialog";
+import { HudCallout } from "@/components/ui/hud";
+import { formatRatio, previewChanges, type RuleChange } from "@/game/adminPreview";
 
-type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles" | "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog";
+/** 6.14.154 (AU27, R6, AA-28) : avant / après des champs modifiés (fiche ou règles), écarts de plus de ×2 signalés. */
+export function ChangesPreview({ changes, title = "Avant / après (non enregistré)" }: { changes: RuleChange[]; title?: string }) {
+  const alerts = changes.filter((c) => c.alert).length;
+  return (
+    <HudCallout tone={alerts > 0 ? "ember" : "neutral"} className="text-xs">
+      <details open={changes.length <= 6}>
+        <summary className="cursor-pointer">
+          {title} : <span className="font-mono tabular-nums">{changes.length}</span> champ{changes.length > 1 ? "s" : ""}
+          {alerts > 0 ? (
+            <>
+              , dont <span className="font-mono tabular-nums">{alerts}</span> à plus de ×2
+            </>
+          ) : null}
+        </summary>
+        <ul className="mt-1 flex flex-col gap-0.5 text-slate-300">
+          {changes.map((c) => (
+            <li key={c.path} className="break-words">
+              <span className="text-slate-400">{c.label}</span> : <span className="font-mono text-slate-500 line-through">{c.before}</span> →{" "}
+              <span className="font-mono text-gold-glow">{c.after}</span>
+              {c.ratio !== null && c.ratio !== 1 && <span className={cn("ml-1 font-mono tabular-nums", c.alert ? "text-ember-glow" : "text-slate-500")}>({formatRatio(c.ratio)})</span>}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </HudCallout>
+  );
+}
+
+type ListSection = "buildings" | "units" | "technologies" | "missions" | "factions" | "ranks" | "achievements" | "relics" | "titles" | "talents" | "moduleFamilies" | "moduleTemplates" | "passThemes" | "seasonCatalog" | "allianceChallenges" | "dailyMissionPool" | "chronicleArchetypes";
 type Item<S extends ListSection> = GameContent[S][number];
 
 /** 6.14.56 (AU27, AP-1) : succès du code retirés exprès (GameRules.achievementList). Sans cette note, le complément des
@@ -43,7 +73,8 @@ export function ContentEditor<S extends ListSection>({
   getLabel: (item: Item<S>) => string;
   setId: (item: Item<S>, id: string) => Item<S>;
   createItem: () => Item<S>;
-  renderForm: (item: Item<S>, onChange: (next: Item<S>) => void, isNew: boolean) => ReactNode;
+  /** 6.14.154 (AA-28) : `saved` = la même fiche enregistrée (en vigueur), pour l'aperçu avant / après. */
+  renderForm: (item: Item<S>, onChange: (next: Item<S>) => void, isNew: boolean, saved?: Item<S>) => ReactNode;
   /** 6.14.127 (AA9, I43) : un élément enregistré ne se supprime pas (le serveur le refuse) ; ce texte remplace « Supprimer ». */
   lockSaved?: string;
 }) {
@@ -58,6 +89,9 @@ export function ContentEditor<S extends ListSection>({
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved), [draft, saved]);
   const errors = useMemo(() => validateGameContent({ ...currentGameContent(), [section]: draft }), [draft, section]);
   const current = draft[selected];
+  // 6.14.154 (AU27, R6, AA-28) : fiche enregistrée et changements de la fiche ouverte (avant / après, avant d'enregistrer).
+  const savedCurrent = current ? saved.find((x) => getId(x) === getId(current)) : undefined;
+  const changes = useMemo(() => (current && savedCurrent ? previewChanges(savedCurrent, current, 40) : []), [current, savedCurrent]);
 
   const visible = draft
     .map((item, index) => ({ item, index }))
@@ -232,7 +266,8 @@ export function ContentEditor<S extends ListSection>({
         <Card className="flex min-w-0 flex-col gap-3 p-4">
           {current ? (
             <>
-              {renderForm(current, update, newIds.has(getId(current)))}
+              {renderForm(current, update, newIds.has(getId(current)), savedCurrent)}
+              {changes.length > 0 && <ChangesPreview changes={changes} />}
               <div className="flex justify-end border-t border-white/5 pt-3">
                 {locked(current) ? (
                   <p className="min-w-0 text-[11px] text-slate-500">{lockSaved}</p>

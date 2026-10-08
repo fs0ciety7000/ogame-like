@@ -9,12 +9,15 @@ import {
   type BuildingEffect,
 } from "@/game/buildings";
 import { getUnitBuildTime, resolveUnitRoles, UNIT_LEVEL_BONUS_DEFAULT, UNIT_ROLE_IDS, UNIT_ROLE_INFO, unitLevelBonus, type UnitDef } from "@/game/units";
-import { getTechCost, getTechTime, type TechDef } from "@/game/technologies";
+import { getTechCost, getTechTime, RESEARCH_RULES, TECH_GROWTH_BOUNDS, type TechDef } from "@/game/technologies";
 import { TechEffectsEditor } from "@/pages/admin/TechEffectsEditor";
 import { MISSION_XP_RULES, type MissionDef } from "@/game/missions";
 import { currentGameContent } from "@/game/content";
 import { formatCost } from "@/game/resources";
-import { formatNumber } from "@/lib/utils";
+import { formatDecimal, formatNumber } from "@/lib/utils";
+import type { ReactNode } from "react";
+import { HudCallout } from "@/components/ui/hud";
+import { costTotal, formatRatio, valueDelta, type ValueDelta } from "@/game/adminPreview";
 import type { Resources } from "@/types/game";
 import {
   CheckboxField,
@@ -43,7 +46,32 @@ function unitOptions() {
   return currentGameContent().units.map((u) => ({ value: u.id, label: u.name }));
 }
 
-function PreviewTable({ headers, rows }: { headers: string[]; rows: (string | number)[][] }) {
+/** 6.14.154 (AA-28) : valeur d'une case d'aperçu ; enregistrée et nouvelle différentes : « avant → après ». */
+function BeforeAfter({ before, after }: { before?: string; after: string }) {
+  if (before === undefined || before === after) return <>{after}</>;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-1">
+      <span className="text-slate-500 line-through">{before}</span>
+      <span aria-hidden>→</span>
+      <span className="text-gold-glow">{after}</span>
+    </span>
+  );
+}
+
+/** 6.14.154 (AA-28) : écart au dernier niveau entre la fiche enregistrée et le brouillon (coût total, durée). */
+function DeltaSummary({ cost, time, level }: { cost: ValueDelta; time: ValueDelta; level: number }) {
+  if (cost.ratio === 1 && time.ratio === 1) return null;
+  const alert = cost.alert || time.alert;
+  return (
+    <HudCallout tone={alert ? "ember" : "neutral"} className="mt-2 text-xs">
+      Par rapport à la version enregistrée, au niveau <span className="font-mono tabular-nums">{level}</span> : coût{" "}
+      <span className="font-mono tabular-nums">{formatRatio(cost.ratio)}</span>, durée <span className="font-mono tabular-nums">{formatRatio(time.ratio)}</span>.
+      {alert ? " Écart de plus de ×2 : vérifie avant d'enregistrer." : ""}
+    </HudCallout>
+  );
+}
+
+function PreviewTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
   return (
     <div className="overflow-x-auto border border-white/5">
       <table className="w-full text-left text-xs">
@@ -109,7 +137,7 @@ export function newBuilding(): BuildingDef {
   };
 }
 
-export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef; onChange: (b: BuildingDef) => void; isNew: boolean }) {
+export function BuildingForm({ value: b, onChange, isNew, saved }: { value: BuildingDef; onChange: (b: BuildingDef) => void; isNew: boolean; saved?: BuildingDef }) {
   const set = (patch: Partial<BuildingDef>) => onChange({ ...b, ...patch });
   const effectType = b.effect?.type ?? "";
   return (
@@ -382,12 +410,19 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
           headers={["Niveau", "Coût", "Durée", ...(b.production ? ["Production/s"] : []), ...(b.effect?.type === "storage" ? ["Capacité"] : [])]}
           rows={Array.from({ length: b.maxLevel }, (_, i) => i + 1).map((lvl) => [
             lvl,
-            lvl === 1 ? "—" : formatCost(getBuildingUpgradeCost(b, lvl) as Partial<Resources>) || "gratuit",
-            lvl === 1 ? "—" : formatSeconds(getBuildingUpgradeTime(b, lvl)),
+            lvl === 1 ? "—" : <BeforeAfter before={saved && lvl <= saved.maxLevel ? formatCost(getBuildingUpgradeCost(saved, lvl) as Partial<Resources>) || "gratuit" : undefined} after={formatCost(getBuildingUpgradeCost(b, lvl) as Partial<Resources>) || "gratuit"} />,
+            lvl === 1 ? "—" : <BeforeAfter before={saved && lvl <= saved.maxLevel ? formatSeconds(getBuildingUpgradeTime(saved, lvl)) : undefined} after={formatSeconds(getBuildingUpgradeTime(b, lvl))} />,
             ...(b.production ? [b.production.perSecond[lvl - 1] ?? "?"] : []),
             ...(b.effect?.type === "storage" ? [formatNumber(storageCapacityAt(b.effect, lvl))] : []),
           ])}
         />
+        {saved && saved.maxLevel >= 2 && b.maxLevel >= 2 && (
+          <DeltaSummary
+            level={Math.min(saved.maxLevel, b.maxLevel)}
+            cost={valueDelta(costTotal(getBuildingUpgradeCost(saved, Math.min(saved.maxLevel, b.maxLevel))), costTotal(getBuildingUpgradeCost(b, Math.min(saved.maxLevel, b.maxLevel))))}
+            time={valueDelta(getBuildingUpgradeTime(saved, Math.min(saved.maxLevel, b.maxLevel)), getBuildingUpgradeTime(b, Math.min(saved.maxLevel, b.maxLevel)))}
+          />
+        )}
       </div>
     </div>
   );
@@ -411,7 +446,7 @@ export function newUnit(): UnitDef {
   };
 }
 
-export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChange: (u: UnitDef) => void; isNew: boolean }) {
+export function UnitForm({ value: u, onChange, isNew, saved }: { value: UnitDef; onChange: (u: UnitDef) => void; isNew: boolean; saved?: UnitDef }) {
   const set = (patch: Partial<UnitDef>) => onChange({ ...u, ...patch });
   const setStat = (key: keyof UnitDef["stats"], v: number | undefined) => set({ stats: { ...u.stats, [key]: v ?? 0 } });
   // Puissance au niveau max (gain par niveau compris), pour comparer les unités.
@@ -493,6 +528,14 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
           hint={`Vide = (ferraille + énergie) / 100 → ${formatSeconds(getUnitBuildTime({ ...u, buildTime: undefined }))}`}
           onChange={(buildTime) => set({ buildTime })}
         />
+        {/* 6.14.154 (AA-28) : coût et temps enregistrés → nouveaux, avant d'enregistrer. */}
+        {saved && (
+          <p className="text-xs text-slate-400 sm:col-span-2">
+            Coût : <BeforeAfter before={formatCost(saved.cost as Partial<Resources>)} after={formatCost(u.cost as Partial<Resources>)} /> · temps :{" "}
+            <BeforeAfter before={formatSeconds(getUnitBuildTime(saved))} after={formatSeconds(getUnitBuildTime(u))} />
+          </p>
+        )}
+        {saved && <DeltaSummary level={1} cost={valueDelta(costTotal(saved.cost), costTotal(u.cost))} time={valueDelta(getUnitBuildTime(saved), getUnitBuildTime(u))} />}
       </Section>
 
       <div className="grid grid-cols-1 gap-2 border border-white/5 bg-black/10 p-3 text-xs text-slate-300 sm:grid-cols-3">
@@ -526,7 +569,7 @@ export function newTech(): TechDef {
   };
 }
 
-export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChange: (t: TechDef) => void; isNew: boolean }) {
+export function TechForm({ value: t, onChange, isNew, saved }: { value: TechDef; onChange: (t: TechDef) => void; isNew: boolean; saved?: TechDef }) {
   const set = (patch: Partial<TechDef>) => onChange({ ...t, ...patch });
   const prereqOptions = techOptions().filter((o) => o.value !== t.id);
   return (
@@ -572,8 +615,23 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
           value={t.costGrowth}
           optional
           step={0.05}
-          hint="Multiplicateur par niveau (vide = 2,7). Durée : ×1,67 par niveau."
+          hint={`Multiplicateur par niveau (vide = réglage commun, ${formatDecimal(RESEARCH_RULES.costGrowth)}).`}
           onChange={(costGrowth) => set({ costGrowth })}
+        />
+        {/* 6.14.154 (AU27, R6, AA-12) : croissance propre de la durée (vide = réglage commun du Labo). */}
+        <NumberField
+          label="Croissance de la durée par niveau"
+          value={t.timeGrowth}
+          optional
+          min={TECH_GROWTH_BOUNDS.min}
+          step={0.05}
+          hint={`Multiplicateur par niveau, entre ${TECH_GROWTH_BOUNDS.min} et ${TECH_GROWTH_BOUNDS.max} (vide = réglage commun, ${formatDecimal(RESEARCH_RULES.timeGrowth)}, Règles → Labo).`}
+          onChange={(v) => {
+            // JSON pur : un champ vidé est retiré, jamais laissé à undefined.
+            const next: TechDef = { ...t, timeGrowth: v };
+            if (v === undefined) delete next.timeGrowth;
+            onChange(next);
+          }}
         />
       </Section>
 
@@ -614,10 +672,17 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
           headers={["Niveau", "Coût", "Durée"]}
           rows={Array.from({ length: Math.min(t.maxLevel, 20) }, (_, i) => i + 1).map((lvl) => [
             lvl,
-            formatCost(getTechCost(t, lvl) as Partial<Resources>),
-            formatSeconds(getTechTime(t, lvl)),
+            <BeforeAfter before={saved && lvl <= saved.maxLevel ? formatCost(getTechCost(saved, lvl) as Partial<Resources>) : undefined} after={formatCost(getTechCost(t, lvl) as Partial<Resources>)} />,
+            <BeforeAfter before={saved && lvl <= saved.maxLevel ? formatSeconds(getTechTime(saved, lvl)) : undefined} after={formatSeconds(getTechTime(t, lvl))} />,
           ])}
         />
+        {saved && (
+          <DeltaSummary
+            level={Math.min(saved.maxLevel, t.maxLevel)}
+            cost={valueDelta(costTotal(getTechCost(saved, Math.min(saved.maxLevel, t.maxLevel))), costTotal(getTechCost(t, Math.min(saved.maxLevel, t.maxLevel))))}
+            time={valueDelta(getTechTime(saved, Math.min(saved.maxLevel, t.maxLevel)), getTechTime(t, Math.min(saved.maxLevel, t.maxLevel)))}
+          />
+        )}
       </div>
     </div>
   );

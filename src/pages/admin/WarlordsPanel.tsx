@@ -1,13 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { assetUrl } from "@/lib/assets";
 import { toast } from "sonner";
-import { ChevronDown, Handshake, Play, RotateCcw, Save, Sword, Trash2 } from "lucide-react";
+import { ChevronDown, Handshake, Play, Plus, RotateCcw, Save, Sword, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { pb } from "@/lib/pocketbase";
 import { currentGameContent } from "@/game/content";
-import { PERSONALITY_LABELS, TIER_LABELS, warlordAlertRatio, type WarlordHistoryPoint, type WarlordPublic, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
+import { DEFAULT_WARLORD_ORIGINS, PERSONALITY_LABELS, TIER_LABELS, warlordAlertRatio, validateWarlords, withDefaultOrigins, type WarlordOriginDef, type WarlordHistoryPoint, type WarlordPublic, type WarlordDef, type WarlordLineKey, type WarlordPersonality, type WarlordsConfig, type WarlordTier } from "@/game/warlords";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { fetchWarlords, type WarlordsView } from "@/services/warlordService";
 import { HudCallout, HudChip } from "@/components/ui/hud";
@@ -75,6 +75,58 @@ function RankRulesSection({ value, onChange }: { value: WarlordRankRules; onChan
   );
 }
 
+/** 6.14.154 (AU27, R6, reste d'AA-20) : origines des seigneurs (étiquette, image de repli, sceau, couleur de la fiche).
+ *  Les cinq livrées se règlent ; une origine ajoutée se retire tant qu'aucun seigneur ne la porte. */
+function OriginsSection({ cfg, setCfg }: { cfg: WarlordsConfig; setCfg: (fn: (c: WarlordsConfig) => WarlordsConfig) => void }) {
+  const origins = withDefaultOrigins(cfg.origins);
+  const setOrigin = (id: string, patch: Partial<WarlordOriginDef>) => setCfg((c) => ({ ...c, origins: withDefaultOrigins(c.origins).map((o) => (o.id === id ? { ...o, ...patch } : o)) }));
+  const add = () =>
+    setCfg((c) => {
+      const list = withDefaultOrigins(c.origins);
+      let id = "nouvelle_origine";
+      for (let n = 2; list.some((o) => o.id === id); n++) id = `nouvelle_origine_${n}`;
+      return { ...c, origins: [...list, { ...DEFAULT_WARLORD_ORIGINS[0], id, label: "Nouvelle origine" }] };
+    });
+  const remove = (id: string) => setCfg((c) => ({ ...c, origins: withDefaultOrigins(c.origins).filter((o) => o.id !== id) }));
+  return (
+    <Card className="flex flex-col gap-3 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="font-display text-sm text-slate-100">Origines</h3>
+        <Button variant="outline" size="sm" className="ml-auto" onClick={add}>
+          <Plus className="mr-1 h-3.5 w-3.5" /> Ajouter une origine
+        </Button>
+      </div>
+      <p className="text-xs text-slate-500">Étiquette, image de repli et couleur de la fiche publique d'un seigneur. Une origine ajoutée se choisit dans la fiche du seigneur.</p>
+      {origins.map((o) => {
+        const delivered = DEFAULT_WARLORD_ORIGINS.some((d) => d.id === o.id);
+        const used = cfg.defs.filter((d) => d.origin === o.id).map((d) => d.name);
+        return (
+          <div key={o.id} className="grid min-w-0 grid-cols-1 gap-2 border-t border-cyan-glow/20 pt-3 sm:grid-cols-2">
+            <TextField
+              label="Identifiant"
+              value={o.id}
+              disabled={delivered || used.length > 0}
+              hint={delivered ? "Origine livrée." : used.length > 0 ? `Portée par ${used.join(", ")}.` : "Lettres, chiffres, _."}
+              onChange={(id) => setCfg((c) => ({ ...c, origins: withDefaultOrigins(c.origins).map((x) => (x.id === o.id ? { ...x, id } : x)) }))}
+            />
+            <TextField label="Étiquette" value={o.label} onChange={(label) => setOrigin(o.id, { label })} />
+            <TextField label="Image de repli (portrait)" value={o.art} onChange={(art) => setOrigin(o.id, { art })} />
+            <TextField label="Sceau" value={o.emblem} onChange={(emblem) => setOrigin(o.id, { emblem })} />
+            <TextField label="Couleur (#rrggbb)" value={o.color} onChange={(color) => setOrigin(o.id, { color })} />
+            {!delivered && (
+              <div className="flex items-end">
+                <Button variant="ghost" size="sm" className="text-danger-glow" disabled={used.length > 0} title={used.length > 0 ? "Un seigneur la porte encore." : undefined} onClick={() => remove(o.id)}>
+                  <Trash2 className="mr-1 h-3.5 w-3.5" /> Retirer
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </Card>
+  );
+}
+
 export function WarlordsPanel() {
   const customized = useContentStore((s) => s.customized.includes("warlords"));
   const [cfg, setCfg] = useState<WarlordsConfig>(() => structuredClone(currentGameContent().warlords));
@@ -94,9 +146,15 @@ export function WarlordsPanel() {
     void refreshLive();
   }, []);
 
+  // 6.14.154 (R6) : origines et fiches vérifiées avant d'enregistrer (le serveur fait la même garde).
+  const errors = useMemo(() => validateWarlords(cfg), [cfg]);
   const setDef = (id: string, patch: Partial<WarlordDef>) => setCfg((c) => ({ ...c, defs: c.defs.map((d) => (d.id === id ? { ...d, ...patch } : d)) }));
 
   const save = async () => {
+    if (errors.length > 0) {
+      toast.error(`Enregistrement refusé : ${errors[0]}`);
+      return;
+    }
     setBusy(true);
     try {
       await saveContentSection("warlords", cfg);
@@ -148,7 +206,7 @@ export function WarlordsPanel() {
           >
             <RotateCcw className="mr-1 h-3.5 w-3.5" /> Valeurs par défaut
           </Button>
-          <Button size="sm" disabled={busy} onClick={() => void save()}>
+          <Button size="sm" disabled={busy || errors.length > 0} onClick={() => void save()}>
             <Save className="mr-1 h-3.5 w-3.5" /> Enregistrer
           </Button>
         </div>
@@ -179,6 +237,17 @@ export function WarlordsPanel() {
         </Section>
         <RankRulesSection value={normalizeRankRules(cfg.settings.ranks)} onChange={(r) => setCfg((c) => ({ ...c, settings: { ...c.settings, ranks: r } }))} />
       </Card>
+      <OriginsSection cfg={cfg} setCfg={setCfg} />
+      {errors.length > 0 && (
+        <HudCallout tone="danger" className="text-xs">
+          <p className="font-semibold">À corriger avant d'enregistrer :</p>
+          <ul className="mt-1 list-inside list-disc">
+            {errors.slice(0, 6).map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        </HudCallout>
+      )}
 
       {cfg.defs.map((d) => {
         const live = power[d.id];
@@ -210,6 +279,12 @@ export function WarlordsPanel() {
                   value={d.personality}
                   options={Object.entries(PERSONALITY_LABELS).map(([value, label]) => ({ value: value as WarlordPersonality, label }))}
                   onChange={(v) => setDef(d.id, { personality: v })}
+                />
+                <SelectField<string>
+                  label="Origine"
+                  value={d.origin}
+                  options={withDefaultOrigins(cfg.origins).map((o) => ({ value: o.id, label: o.label }))}
+                  onChange={(v) => setDef(d.id, { origin: v })}
                 />
                 <SelectField<WarlordTier>
                   label="Palier"

@@ -107,12 +107,15 @@ export function SelectField<T extends string>({
   options,
   onChange,
   hint,
+  disabled,
 }: {
   label: string;
   value: T;
   options: { value: T; label: string; icon?: ReactNode }[];
   onChange: (v: T) => void;
   hint?: string;
+  /** 6.14.154 : choix verrouillé (identifiant d'une fiche enregistrée). */
+  disabled?: boolean;
 }) {
   // Options illustrées (ressources…) : liste déroulante avec icônes.
   if (options.some((o) => o.icon)) {
@@ -126,8 +129,9 @@ export function SelectField<T extends string>({
     <Field label={label} hint={hint}>
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value as T)}
-        className="h-10 border border-cyan-glow/15 bg-space-900/80 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/50"
+        className="h-10 border border-cyan-glow/15 bg-space-900/80 px-3 text-sm text-slate-100 outline-none focus:border-cyan-glow/50 disabled:opacity-60"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>

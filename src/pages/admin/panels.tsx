@@ -13,6 +13,8 @@ import { HudCallout } from "@/components/ui/hud";
 import { EXCHANGE_RULES, RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
+import { previewChanges } from "@/game/adminPreview";
+import { ChangesPreview } from "@/pages/admin/ContentEditor";
 import {
   adminDeploy,
   type DeployReport,
@@ -62,6 +64,9 @@ const colonyBaseRules = (r: GameRules) => ({ ...COLONY_BASE_RULES, ...(r.colonyB
 export function RulesPanel() {
   const customized = useContentStore((s) => s.customized.includes("rules"));
   const [rules, setRules] = useState<GameRules>(() => currentGameContent().rules);
+  // 6.14.154 (AU27, R6, AA-28) : règles enregistrées, pour l'aperçu avant / après avant d'enregistrer.
+  const [savedRules, setSavedRules] = useState<GameRules>(() => currentGameContent().rules);
+  const ruleChanges = useMemo(() => previewChanges(savedRules, rules), [savedRules, rules]);
   const [busy, setBusy] = useState(false);
   const pvp = rules.pvp;
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
@@ -80,6 +85,7 @@ export function RulesPanel() {
     setBusy(true);
     try {
       await saveContentSection("rules", rules);
+      setSavedRules(rules);
       toast.success("Règles enregistrées (appliquées aussi par le serveur).");
     } catch (err) {
       toast.error(`Enregistrement impossible : ${(err as Error).message}`);
@@ -101,6 +107,7 @@ export function RulesPanel() {
             onClick={async () => {
               await resetContentSection("rules");
               setRules(currentGameContent().rules);
+              setSavedRules(currentGameContent().rules);
               toast.success("Règles par défaut restaurées.");
             }}
           >
@@ -121,6 +128,7 @@ export function RulesPanel() {
           </ul>
         </div>
       )}
+      {ruleChanges.length > 0 && <ChangesPreview changes={ruleChanges} title="Changements à enregistrer (avant / après)" />}
       {ruleWarnings.length > 0 && (
         <HudCallout tone="gold" className="text-xs">
           <details>
