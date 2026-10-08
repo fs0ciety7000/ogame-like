@@ -173,6 +173,7 @@ Puis elle reprend le premier lot « à faire ». Rien d'utile ne doit rester seu
 - Pas de `localeCompare`, `Intl`, `toLocaleString` (un test de garde échoue) : goja ne les a pas tous.
 - Pas de `matchAll` ni de `\p{L}` dans le code empaqueté pour goja : boucle `exec` et classe explicite (`[0-9A-Za-z_À-ɏ-]`).
 - Toute nouvelle fonction appelée par `cosmic_db.js` doit être **exportée dans `hooksEntry.ts`**.
+- Un export que rien ne lit hors de son module n'est pas exporté : `scripts/dead-exports.mjs` les liste, `deadExports.test.ts` échoue sinon (6.14.153, Q380).
 - Un invariant de `docs/GAME_DESIGN.md` qui change = un test qui change dans le même commit.
 - Places et capacité des hangars : uniquement `hangarLoad` / `playerUnitCapacity` (`src/game/hangar.ts`). Un test interdit `getUnitCapacity(` ailleurs.
 - Une récompense quotidienne ou à réclamer s'ajoute à `pendingClaims` (`claimAll.ts`) : elle est alors couverte par « Tout réclamer »

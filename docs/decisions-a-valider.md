@@ -29,8 +29,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
-| Q380 | Règle proposée pour CLAUDE.md : « un export que rien ne lit hors de son module n'est pas exporté ; `scripts/dead-exports.mjs` les liste, `deadExports.test.ts` échoue sinon » (`docs/changes/6.14.153-menage-exports.md`) | valider |
-| Q381 | Recenser aussi les exports de `hooksEntry.ts` jamais appelés par `pocketbase/pb_hooks` (bundle plus léger) (`docs/changes/6.14.153-menage-exports.md`) | valider |
 | Q382 | Un défi d'alliance enregistré se retire au lieu de se supprimer (historique des semaines gardé) (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
 | Q383 | Ajouter ou retirer un défi d'alliance décale la rotation des semaines suivantes (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
 | Q384 | Réserve des missions du jour gardée en section éditable alors que `daily.tasks` vaut 0 (sans effet en jeu) (`docs/changes/6.14.154-admin-evolutif-suite.md`) | valider |
