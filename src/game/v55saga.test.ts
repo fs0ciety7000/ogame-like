@@ -55,7 +55,7 @@ describe("v5.5 saga d'alliance", () => {
   });
 });
 
-describe("6.14.147 (AU28, AP-L6) : saga alignée sur le chapitre du mois", () => {
+describe("6.14.148 (AU28, AP-L6) : saga alignée sur le chapitre du mois", () => {
   const chapter = (archetype: string) => ({ auto: { archetype } as never, boss: { name: "Le Grand Brasier", title: "", image: "/assets/chronicles/auto/confrerie-boss-2.webp", emblem: "", fallbackImage: "", lore: "" } });
 
   it("faction, boss et image du chapitre ; tirage d'avant sans chapitre ou réglage décoché", () => {

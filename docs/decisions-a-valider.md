@@ -18,8 +18,8 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
-| Q361 | **Rouge « danger » éclairci** dans 7 thèmes (4,12 → 4,55:1 sur les panneaux), même teinte (`docs/changes/6.14.147-revue-au28.md`) | alertes plus lisibles | valider |
-| Q362 | **Saga d'alliance sur le chapitre du mois** : même faction, boss et image ; titre non répété sur 3 mois ; réglable dans l'admin (`docs/changes/6.14.147-revue-au28.md`) | saga cohérente avec les Chroniques | valider |
+| Q361 | **Rouge « danger » éclairci** dans 7 thèmes (4,12 → 4,55:1 sur les panneaux), même teinte (`docs/changes/6.14.148-revue-au28.md`) | alertes plus lisibles | valider |
+| Q362 | **Saga d'alliance sur le chapitre du mois** : même faction, boss et image ; titre non répété sur 3 mois ; réglable dans l'admin (`docs/changes/6.14.148-revue-au28.md`) | saga cohérente avec les Chroniques | valider |
 
 ## 3. Récit
 
@@ -30,5 +30,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision | Recommandation |
 |:--|:--|:--|
-| Q363 | Trois opacités laissées volontairement (message masqué, simulateur en raid, filtre des technos) (`docs/changes/6.14.147-revue-au28.md`) | valider |
+| Q363 | Trois opacités laissées volontairement (message masqué, simulateur en raid, filtre des technos) (`docs/changes/6.14.148-revue-au28.md`) | valider |
 | Q364 | Feuille d'hiver 2031 : les 14 lots repris (R1 à R14) passent avant H31-1 (`docs/proposals/feuille-de-route-2031-hiver.md`) | valider |

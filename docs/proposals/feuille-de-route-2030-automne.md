@@ -1,6 +1,6 @@
 # Proposition : feuille de route d'automne 2030
 
-Statut : livrée (2026-10-08, revue de fin AU28 : `docs/changes/6.14.147-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`).
+Statut : livrée (2026-10-08, revue de fin AU28 : `docs/changes/6.14.148-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`).
 Construite le 2026-10-07 à partir des sept audits AU27 (`docs/audit/2026-10-07-au27-*.md`, clôture d'AU27 : `docs/changes/6.14.51-revue-au27.md`).
 Ordre suivi : sûreté des données, puis ce que les joueurs voient, puis l'évolutivité (règle n° 2), puis la profondeur. Choix de
 conception : Q64 à Q103. Bilan : 84 lignes livrées sur 90 (revue AU28 comprise, plus AP-L6 livré dans la revue), 2 livrées en partie
@@ -99,6 +99,6 @@ conception : Q64 à Q103. Bilan : 84 lignes livrées sur 90 (revue AU28 comprise
 | 65e | TH-L5 | Palette Netrunner : or/accent et violet/danger séparés (Q233) | M | livré (6.14.100) |
 | 65f | TH-L6 | Ember lisible dans les thèmes orange : icône d'alerte obligatoire (Q234) | M | livré (6.14.101) |
 | 65g | TH-L7 | `scripts/theme-audit.mjs` à chaque revue de fin de feuille de route (Q237) | S | livré (6.14.99) |
-| 65 | AU28 | Revue, même grille, audit des 13 thèmes (`theme-audit.mjs`, WORKFLOW §5) | M | livré (6.14.147, `docs/changes/6.14.147-revue-au28.md`) |
-| — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | AP-L6 livré dans la revue (6.14.147) ; les autres reportés : feuille d'hiver 2031, lots R1, R5, R9, R12, R13 |
+| 65 | AU28 | Revue, même grille, audit des 13 thèmes (`theme-audit.mjs`, WORKFLOW §5) | M | livré (6.14.148, `docs/changes/6.14.148-revue-au28.md`) |
+| — | AC-I, AE-L7, AP-L6, AP-L13, AJ27-11, UX-12 | Après mesures (Z6, 8 semaines en production) ou ménage | — | AP-L6 livré dans la revue (6.14.148) ; les autres reportés : feuille d'hiver 2031, lots R1, R5, R9, R12, R13 |
 | — | Z0 | Mise en production | — | écartée pour l'instant (Q12) |

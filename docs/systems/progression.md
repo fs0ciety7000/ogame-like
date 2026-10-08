@@ -241,7 +241,7 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   avant-ap] [--rules fichier.json]` : Chroniques (factions, titres, images, répliques, épisodes peu pratiqués), passe (noms,
   commandants, paires de rôles, jours de fin simulés), saga, mutateurs. À lancer avant et après chaque lot qui touche un générateur.
   Fiche : `docs/changes/6.14.140-procedural-sim.md`.
-- **Saga d'alliance alignée** (6.14.147, revue AU28, AP-L6) : la saga du mois prend la faction, le boss et l'image du chapitre des
+- **Saga d'alliance alignée** (6.14.148, revue AU28, AP-L6) : la saga du mois prend la faction, le boss et l'image du chapitre des
   Chroniques du même mois (un chapitre écrit à la main est reconnu à son image de repli), et son titre ne revient pas avant 3 mois.
   Réglages : `allianceSaga.followChapter`, `allianceSaga.noRepeatMonths` (Tous les réglages → « Alliance : saga »). Simulation :
-  même faction 48/48 mois, 0 titre répété. Fiche : `docs/changes/6.14.147-revue-au28.md`.
+  même faction 48/48 mois, 0 titre répété. Fiche : `docs/changes/6.14.148-revue-au28.md`.

@@ -87,7 +87,7 @@ function MonthGrid({ now, items }: { now: number; items: AgendaItem[] }) {
               style={{ "--d": i } as React.CSSProperties}
               className={cn(
                 "cal-cell flex h-12 flex-col justify-between border px-1 py-0.5",
-                // 6.14.147 (AU28) : jour passé en texte atténué et fond vide, sans opacité sur le texte (DESIGN.md, 6.14.97).
+                // 6.14.148 (AU28) : jour passé en texte atténué et fond vide, sans opacité sur le texte (DESIGN.md, 6.14.97).
                 day === today ? "border-cyan-glow/70 bg-cyan-glow/[0.08]" : past ? "border-transparent" : "border-white/5 bg-white/[0.02]",
               )}
             >

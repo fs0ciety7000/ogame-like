@@ -206,7 +206,7 @@
   --th-accent: #f3e600;
   --th-accent2: #c86bff; /* 6.14.100 (TH-L5, Q233) : violet néon, distinct du danger */
   --th-ok: #55ead4;
-  --th-danger: #ff2d5e; /* 6.14.147 (revue AU28, TH-danger) : #ff003c → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
+  --th-danger: #ff2d5e; /* 6.14.148 (revue AU28, TH-danger) : #ff003c → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
   --th-gold: #ffb340; /* 6.14.100 : ambre, distinct de l'accent */
   --th-ember: #ff6b2c;
   --th-space-950: #050407;
@@ -240,7 +240,7 @@
   --th-accent: #ff5e8a;
   --th-accent2: #ffa64d;
   --th-ok: #5cf2c0;
-  --th-danger: #ff5848; /* 6.14.90 (TH-3) : rouge franc, distinct de l'accent rose (écart 10 → 19,5) ; 6.14.147 (TH-danger) : #ff4433 → ≥ 4,55:1 sur space-600 */
+  --th-danger: #ff5848; /* 6.14.90 (TH-3) : rouge franc, distinct de l'accent rose (écart 10 → 19,5) ; 6.14.148 (TH-danger) : #ff4433 → ≥ 4,55:1 sur space-600 */
   --th-gold: #ffd36b;
   --th-ember: #ffa64d;
   --th-space-950: #0c0617;
@@ -274,7 +274,7 @@
   --th-accent: #c6ff2e;
   --th-accent2: #ff2e88;
   --th-ok: #2ee6ff;
-  --th-danger: #ff4141; /* 6.14.147 (revue AU28, TH-danger) : #ff3b3b → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
+  --th-danger: #ff4141; /* 6.14.148 (revue AU28, TH-danger) : #ff3b3b → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
   --th-gold: #ffd23f;
   --th-ember: #ff8a2e;
   --th-space-950: #08090b;
@@ -308,7 +308,7 @@
   --th-accent: #e6dfcc;
   --th-accent2: #a77fdc;
   --th-ok: #6fd3a8;
-  --th-danger: #e96853; /* 6.14.90 (TH-6) : 4,9:1 sur space-700 (4,5 avant) ; 6.14.147 (TH-danger) : #e85e48 → ≥ 4,55:1 sur space-600 */
+  --th-danger: #e96853; /* 6.14.90 (TH-6) : 4,9:1 sur space-700 (4,5 avant) ; 6.14.148 (TH-danger) : #e85e48 → ≥ 4,55:1 sur space-600 */
   --th-gold: #ceae33;
   --th-ember: #e88a3a;
   --th-space-950: #07090c;
@@ -376,7 +376,7 @@
   --th-accent: #7df3ff;
   --th-accent2: #a8d13a;
   --th-ok: #9be564;
-  --th-danger: #ff6060; /* 6.14.147 (revue AU28, TH-danger) : #ff4d4d → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
+  --th-danger: #ff6060; /* 6.14.148 (revue AU28, TH-danger) : #ff4d4d → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
   --th-gold: #f5c542;
   --th-ember: #ff9b42;
   --th-space-950: #020a0e;
@@ -410,7 +410,7 @@
   --th-accent: #d6c49a; /* 6.14.55 : sable, distinct du texte os (AD-1) */
   --th-accent2: #5b8fd6; /* 6.14.55 : violet = bleu acier (Q-AD-3 a), plus l'ember */
   --th-ok: #7fc4a6;
-  --th-danger: #e7604a; /* 6.14.90 (TH-5) : 4,8:1 sur space-700 (4,05 avant) ; la bande garde #d9452f ; 6.14.147 (TH-danger) : #e5553d → ≥ 4,55:1 sur space-600 */
+  --th-danger: #e7604a; /* 6.14.90 (TH-5) : 4,8:1 sur space-700 (4,05 avant) ; la bande garde #d9452f ; 6.14.148 (TH-danger) : #e5553d → ≥ 4,55:1 sur space-600 */
   --th-gold: #f2b33d;
   --th-ember: #e0802c; /* 6.14.55 : orange de la bande, loin du danger et de l'or */
   --th-space-950: #08090a;
@@ -482,7 +482,7 @@
   --th-accent: #ff4fd8;
   --th-accent2: #29f0d0;
   --th-ok: #9dff5c;
-  --th-danger: #ff536d; /* 6.14.147 (revue AU28, TH-danger) : #ff3d5a → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
+  --th-danger: #ff536d; /* 6.14.148 (revue AU28, TH-danger) : #ff3d5a → ≥ 4,55:1 sur space-600 (4,1 à 4,45 avant) */
   --th-gold: #ffd23f;
   --th-ember: #ff8a3d;
   --th-space-950: #0a0418;

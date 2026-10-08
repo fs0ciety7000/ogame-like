@@ -106,7 +106,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
 
   afterAll(async () => {
     if (savedRules) await admin.collection("game_config").update(savedRules.id, { data: savedRules.data });
-    // 6.14.147 (revue AU28) : l'enregistrement créé au départ peut avoir été supprimé en route (404 signalé à chaque passage).
+    // 6.14.148 (revue AU28) : l'enregistrement créé au départ peut avoir été supprimé en route (404 signalé à chaque passage).
     if (createdRulesId) await admin.collection("game_config").delete(createdRulesId).catch(() => undefined);
     if (savedFactions) await admin.collection("game_config").update(savedFactions.id, { data: savedFactions.data });
     if (createdFactionsId) await admin.collection("game_config").delete(createdFactionsId).catch(() => undefined);
@@ -404,7 +404,7 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       attackerUid: aId, attackerPseudo: A.pseudo, defenderUid: bId, defenderPseudo: B.pseudo, timestamp: Date.now() - 5000,
       outcome: "defender_win", defenderLosses: {}, loot: null, defenderProcessed: false, defenderXpDelta: 3,
     });
-    // 6.14.147 (revue AU28, constat IT-délais) : `report/seen` rattrape d'abord la fiche (flushState : missions rentrées, succès
+    // 6.14.148 (revue AU28, constat IT-délais) : `report/seen` rattrape d'abord la fiche (flushState : missions rentrées, succès
     // dus, chantiers finis). Selon que la tâche « à la minute » avait déjà rattrapé B ou non, ces gains tombaient dans l'écart mesuré
     // (+25 XP d'un succès d'argent, échec intermittent). On rattrape B avant la mesure : seul le rapport reste dans l'écart.
     await ps.syncPlayer("");

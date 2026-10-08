@@ -134,7 +134,7 @@ describe("6.14.55 : jetons de couleur des thèmes", () => {
   });
 
   it("--th-danger se lit comme texte : ≥ 4,5:1 sur le fond des panneaux (6.14.90, TH-5)", () => {
-    // 6.14.147 (revue AU28, TH-danger) : mesuré sur space-600 comme le texte secondaire (7 thèmes à 4,1-4,45:1 relevés).
+    // 6.14.148 (revue AU28, TH-danger) : mesuré sur space-600 comme le texte secondaire (7 thèmes à 4,1-4,45:1 relevés).
     const low = Object.entries(THEMES)
       .map(([n, t]) => [n, contrast(t.danger, t["space-600"])] as const)
       .filter(([, c]) => c < TEXT_500_MIN)

@@ -189,7 +189,7 @@ describe("6.14.93 : migrations des illustrations (factions, boss d'alliance, pas
     const data = {
       seasons: [
         { id: "2026-11", theme: { id: "vide", image: PASS_THEME_OLD_IMAGES.vide }, commander: { portrait: "" } },
-        { id: "2027-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } },
+        { id: "2031-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } },
       ],
     };
     try {
@@ -198,7 +198,7 @@ describe("6.14.93 : migrations des illustrations (factions, boss d'alliance, pas
       delete (globalThis as Record<string, unknown>).loadGame;
     }
     expect(data.seasons[0]).toEqual({ id: "2026-11", theme: { id: "vide", image: "/assets/pass/theme-vide.webp" }, commander: { portrait: "/assets/commanders/s-2026-11.webp" } });
-    expect(data.seasons[1]).toEqual({ id: "2027-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } });
+    expect(data.seasons[1]).toEqual({ id: "2031-02", theme: { id: "colonies", image: "/mien.webp" }, commander: { portrait: "" } });
     for (const t of PASS_THEMES) {
       expect(t.image).toBe(`/assets/pass/theme-${t.id}.webp`);
       expect(existsSync(`public${t.image}`), t.id).toBe(true);

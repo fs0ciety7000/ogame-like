@@ -214,7 +214,7 @@ function simulate(p) {
     topEarly: paces.filter((x) => x.topDay !== null && x.topDay < pg.targetTopDay).length,
   };
 
-  // 6.14.147 (AP-L6) : la saga lit le chapitre du mois et les titres des sagas précédentes, comme le serveur.
+  // 6.14.148 (AP-L6) : la saga lit le chapitre du mois et les titres des sagas précédentes, comme le serveur.
   const sagas = [];
   monthList.forEach((m, i) => sagas.push(E.generateAllianceSaga(m, digest(p, shift(m, -1)), 1, NOW, { chapter: chapters[i], recentTitles: sagas.map((s) => s.title) })));
   const sagaTitles = sagas.map((s) => s.title);

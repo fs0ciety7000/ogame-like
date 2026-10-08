@@ -1,7 +1,7 @@
 # Proposition : feuille de route d'hiver 2031 (nouveautés, références Clash of Clans, OGame et jeux mobiles)
 
 Statut : **en cours** (2026-10-08, ouverte par la revue AU28 qui clôt la feuille d'automne 2030 :
-`docs/changes/6.14.147-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`). Les 18 lots H31-* ont été validés sur
+`docs/changes/6.14.148-revue-au28.md`, rapport `docs/audit/2026-10-08-au28-revue.md`). Les 18 lots H31-* ont été validés sur
 `/decisions` le 2026-10-07 (Q241 à Q258) ; les lots L reçoivent d'abord leur proposition détaillée (`docs/proposals/<système>.md`,
 plan de `docs/WORKFLOW.md` §2) avant tout code. En tête (§0) : les lots nouveaux de la revue AU28 et les lots reportés de l'automne,
 dont ceux qui attendent des mesures (après la bascule du rythme du 1er novembre 2026 ou après la mise en production). Chaque lot se
@@ -22,7 +22,7 @@ avant les nouveautés (lots R1 à R9). Les lots qui attendent une mesure (R10 à
 | R6 | AA-L10 | Reste de l'évolutivité AU27 : surcharge du temps de recherche par techno (AA-12), défis d'alliance, réserve des missions du jour et archétypes des Chroniques en sections (reste d'AA-23), origine d'un seigneur (reste d'AA-20), exclusion des statistiques d'équilibre réglable (AA-31), aperçu avant / après d'un coût ou d'une durée (AA-28) | M | à faire |
 | R7 | UX-13 | Restes de l'hygiène du design (UX-10) : arrondis, emoji et dates de l'admin ; exceptions de l'accueil public, du cockpit et des Succès retirées de `designSystem.test.ts` | S | à faire |
 | R8 | AE-L8 | Gains versés au-delà de l'entrepôt dits au joueur (AE-14) : coffre, missions et série au-dessus de la capacité, ligne « au-delà de l'entrepôt » dans la notification et la carte « Ce que tu risques » | S | à faire |
-| R9 | UX-12 | Chargement de Commerce et d'Alliance (AD-30) : mesuré par la revue AU28 (LCP mobile 8,1 et 9,7 s, même cause que la Galaxie) ; correction avec R4, puis nouvelle mesure | S | mesuré (6.14.147), à corriger avec R4 |
+| R9 | UX-12 | Chargement de Commerce et d'Alliance (AD-30) : mesuré par la revue AU28 (LCP mobile 8,1 et 9,7 s, même cause que la Galaxie) ; correction avec R4, puis nouvelle mesure | S | mesuré (6.14.148), à corriger avec R4 |
 | R10 | RL-4 | Mesures après la bascule du rythme : sessions bloquées, production perdue, jour des Ascensions (`progression-sim.mjs` comparé à la santé de l'équilibre) | S | après le 1er novembre 2026 |
 | R11 | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 (le réglage d'avant bascule est fait, 6.14.89) | S | après RL-4 et 8 semaines |
 | R12 | AE-L7 | Boss (`hpFactor`), Ambre des primes, seuils des succès, d'après 8 semaines de santé de l'équilibre en production (AE-10, AE-11, AE-12) | S | après la mise en production (Z0) |

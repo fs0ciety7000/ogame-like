@@ -47,7 +47,7 @@ function OrderRow({ order }: { order: DailyOrder }) {
         {order.state === "done" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-slate-500" /> : <CircleDashed className="h-4 w-4 shrink-0" style={{ color: HUD_TONE[s.tone] }} />}
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            {/* 6.14.147 (AU28) : ordre fait en texte atténué, sans opacité sur la ligne (DESIGN.md, 6.14.97). */}
+            {/* 6.14.148 (AU28) : ordre fait en texte atténué, sans opacité sur la ligne (DESIGN.md, 6.14.97). */}
             <span className={cn("text-sm", order.state === "done" ? "text-slate-400" : "text-slate-100")}>{order.label}</span>
             <span className="font-mono text-[11px] uppercase tracking-wider text-slate-500">{order.period}</span>
           </span>

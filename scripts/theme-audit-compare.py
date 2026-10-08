@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 6.14.147 (revue AU28) : compare deux relevés de `scripts/theme-audit.mjs` (WORKFLOW §5 : « toute hausse devient un constat »).
+# 6.14.148 (revue AU28) : compare deux relevés de `scripts/theme-audit.mjs` (WORKFLOW §5 : « toute hausse devient un constat »).
 #
 #   python3 scripts/theme-audit-compare.py <avant> <après>          # dossiers <thème>/measures.json, ou résumés .json
 #   python3 scripts/theme-audit-compare.py --resume <dossier> <sortie.json>   # résumé compact à garder dans docs/audit/

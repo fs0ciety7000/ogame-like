@@ -138,6 +138,7 @@ async function callApi(body, id) {
     let status;
     let retryAfter;
     let message;
+    let code;
     try {
       const res = await fetch(API_URL, {
         method: "POST",
@@ -149,12 +150,18 @@ async function callApi(body, id) {
       const json = await res.json().catch(() => ({}));
       if (res.ok) return json;
       message = json?.error?.message ?? res.statusText;
+      code = json?.error?.code ?? json?.error?.type;
     } catch (e) {
       message = e?.cause?.code ?? e?.message ?? String(e);
     }
     if (status === 401 || status === 403) {
       stopAll = true;
       throw new Error(`accès refusé (${status}) : clé invalide ou sans droit sur ${body.model}. Arrêt du lot.`);
+    }
+    // 6.14.147 : crédits épuisés (429 « insufficient_quota ») : inutile de réessayer, arrêt du lot.
+    if (status === 429 && (code === "insufficient_quota" || /no credits|quota/i.test(message ?? ""))) {
+      stopAll = true;
+      throw new Error(`crédits épuisés (429) : ${message} Arrêt du lot.`);
     }
     if (!isRetryable(status) || attempt + 1 >= MAX_ATTEMPTS) throw new Error(`${status ?? "réseau"} : ${message}`);
     const wait = backoffMs(attempt, retryAfter) + Math.floor(Math.random() * 500);

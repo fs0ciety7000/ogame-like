@@ -21,13 +21,13 @@ Texte secondaire : `text-slate-500` (`--th-text-500`) atteint **4,5:1** sur `--t
 un texte, un `placeholder`, une heure ou un rang en gris passe en `text-slate-500` (garde, 6.14.83).
 **Plancher de 11 px** : aucun texte sous 11 px hors admin (`text-[11px]` au plus petit, pastilles `hud-chip` comprises) ; seuls les
 libellés d'un dessin SVG (`<text>`, en unités du dessin) y échappent (6.14.83).
-`--th-danger` se lit aussi comme texte (« Zone dangereuse ») : ≥ 4,5:1 sur `--th-space-600` dans chaque thème (6.14.147 ; `space-700` avant) ; un bouton survolé
+`--th-danger` se lit aussi comme texte (« Zone dangereuse ») : ≥ 4,5:1 sur `--th-space-600` dans chaque thème (6.14.148 ; `space-700` avant) ; un bouton survolé
 garde une encre lisible (`--th-btn-ink` sur un fond clair ou saturé, jamais `--th-text-100` sur l'orange ou le magenta) (6.14.90).
 Audit des 13 thèmes : `scripts/theme-audit.mjs` (captures et mesures, revue AU28).
 Garde : `src/lib/themeTokens.test.ts` (contraste, hiérarchie 400 > 500 > 600, danger lisible, écart entre couleurs de sens).
 Un état (verrouillé, réclamé, en attente, manque) se marque par l'icône, la bordure (pointillés pour « pas encore », menthe pour
 « fait » ou « possédé ») et la couleur du texte, **jamais par l'opacité d'un bloc qui porte du texte** (6.14.97, TH-L1 : 3,9:1 à 75 %).
-Garde : `verrousSansOpacite.test.ts` (10 fichiers depuis la revue AU28, 6.14.147). Une image, un portrait ou un décor peut rester
+Garde : `verrousSansOpacite.test.ts` (10 fichiers depuis la revue AU28, 6.14.148). Une image, un portrait ou un décor peut rester
 atténué (`opacity-… grayscale`) : il ne porte pas de texte.
 
 ## Couleurs = sens

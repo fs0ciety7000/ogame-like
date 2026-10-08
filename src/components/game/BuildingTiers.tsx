@@ -66,7 +66,7 @@ export function BuildingTiers({ view, player, now }: { view: BuildingTierView; p
             <li key={t.index} className="flex flex-col gap-1">
               <div className="flex min-w-0 items-start gap-2" title={t.text}>
                 {t.image && <img src={assetUrl(t.image)} alt="" loading="lazy" className={cn("h-6 w-6 shrink-0 object-contain", !t.reached && "opacity-50 grayscale")} />}
-                {/* 6.14.147 (AU28) : palier lointain en ton neutre et pointillés, sans opacité sur le texte (DESIGN.md, 6.14.97). */}
+                {/* 6.14.148 (AU28) : palier lointain en ton neutre et pointillés, sans opacité sur le texte (DESIGN.md, 6.14.97). */}
                 <HudChip size="sm" tone={tone} className={cn("shrink-0", !t.reached && !t.next && "border-dashed")}>
                   <span className="tabular-nums">niv. {t.level}</span>
                 </HudChip>

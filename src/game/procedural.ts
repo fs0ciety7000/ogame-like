@@ -367,7 +367,7 @@ export const AUTO_ART: string[] = ["confrerie", "cartel", "choeur", "gravhorn", 
 /** 6.14.138 (AU27, lot AP-L11, constat AP-7) : archétypes dont le second boss est illustré
  *  (public/assets/chronicles/auto/<id>-boss-2.webp) : il sert les boss de rang impair (2e et 4e nom, puis la réserve un sur deux).
  *  Un archétype absent garde son image unique (image provisoire). */
-export const AUTO_ART_2: string[] = [];
+export const AUTO_ART_2: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 
 /** 6.14.138 : image du boss d'un chapitre généré : première ou seconde illustration de l'archétype selon le rang du nom. */
 export function autoBossImage(arch: Pick<Archetype, "id" | "bossNames" | "image">, bossName: string, reserve: string[] = []): string {

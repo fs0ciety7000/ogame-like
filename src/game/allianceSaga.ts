@@ -27,9 +27,9 @@ export const ALLIANCE_SAGA_RULES = {
   /** Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × ce facteur. */
   weeks: 4,
   share: 0.6,
-  /** 6.14.147 (AU28, AP-L6, constat AP-6) : la saga suit la faction et le boss du chapitre des Chroniques du même mois. */
+  /** 6.14.148 (AU28, AP-L6, constat AP-6) : la saga suit la faction et le boss du chapitre des Chroniques du même mois. */
   followChapter: true,
-  /** 6.14.147 (AP-L6) : un titre de saga ne revient pas avant ce nombre de mois (0 : tirage libre, comme avant). */
+  /** 6.14.148 (AP-L6) : un titre de saga ne revient pas avant ce nombre de mois (0 : tirage libre, comme avant). */
   noRepeatMonths: 3,
 };
 
@@ -41,7 +41,7 @@ export const ALLIANCE_SAGA_RULES_META = {
   rewardHours: { label: "Podium : heures de production versées au trésor (1re, 2e, 3e)", unit: "h" },
   weeks: { label: "Durée de référence de l'objectif", unit: "semaines", min: 1, max: 12, hint: "Objectif = médiane hebdomadaire × semaines × taille médiane des alliances × part." },
   share: { label: "Part de l'effort médian visée", unit: "×", min: 0.05, max: 5 },
-  followChapter: { label: "Saga sur la faction du chapitre du mois", hint: "Décoché : faction tirée à part (avant la 6.14.147), au risque de trois histoires différentes le même mois." },
+  followChapter: { label: "Saga sur la faction du chapitre du mois", hint: "Décoché : faction tirée à part (avant la 6.14.148), au risque de trois histoires différentes le même mois." },
   noRepeatMonths: { label: "Titre de saga non repris avant", unit: "mois", min: 0, max: 5, hint: "0 : tirage libre. Au plus 5 (6 titres)." },
 };
 
@@ -97,14 +97,14 @@ export function generateAllianceSaga(
   digest: WorldDigest & { allianceSizeMedian?: number },
   difficulty: number,
   now: number,
-  /** 6.14.147 (AP-L6) : chapitre du mois (absent : lu dans la configuration des Chroniques) et titres des sagas précédentes. */
+  /** 6.14.148 (AP-L6) : chapitre du mois (absent : lu dans la configuration des Chroniques) et titres des sagas précédentes. */
   opts: { chapter?: Pick<ChronicleMonth, "auto" | "boss"> | null; recentTitles?: string[] } = {},
 ): AllianceSagaDef {
   const rng = seededRandom(`saga:${monthId}`);
   // 6.14.125 (AA7) : archétypes du jeu, plus celui de repli d'une faction ajoutée dans l'admin.
   const archetypes = chapterArchetypes();
   const drawn = archetypes[Math.floor(rng() * archetypes.length) % archetypes.length];
-  // 6.14.147 (AP-L6, AP-6) : faction, boss et image du chapitre du mois ; un chapitre écrit à la main se reconnaît à son image de repli.
+  // 6.14.148 (AP-L6, AP-6) : faction, boss et image du chapitre du mois ; un chapitre écrit à la main se reconnaît à son image de repli.
   const chapter = ALLIANCE_SAGA_RULES.followChapter ? (opts.chapter !== undefined ? opts.chapter : (chroniclesConfig().months.find((m) => m.id === monthId) ?? null)) : null;
   const chapterArch = chapter ? archetypes.find((a) => a.id === chapter.auto?.archetype) ?? archetypes.find((a) => a.fallbackImage === chapter.boss?.fallbackImage) : undefined;
   const arch = chapterArch ?? drawn;
@@ -120,7 +120,7 @@ export function generateAllianceSaga(
   });
   const drawnBoss = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
   const bossName = chapterArch && chapter?.boss?.name ? chapter.boss.name : drawnBoss;
-  // 6.14.147 (AP-L6) : titres des derniers mois écartés (même tirage qu'avant quand rien n'est écarté).
+  // 6.14.148 (AP-L6) : titres des derniers mois écartés (même tirage qu'avant quand rien n'est écarté).
   const gap = Math.min(Math.max(0, Math.floor(ALLIANCE_SAGA_RULES.noRepeatMonths)), SAGA_TITLES.length - 1);
   const recent = new Set(gap > 0 ? (opts.recentTitles ?? []).slice(-gap) : []);
   const titles = SAGA_TITLES.filter((t) => !recent.has(t));
