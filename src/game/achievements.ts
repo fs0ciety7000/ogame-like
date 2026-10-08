@@ -15,6 +15,8 @@ import { MOON_RULES, moonLevel, playerMoon } from "@/game/moon";
 import { prestigeState } from "@/game/prestige";
 import { COLONY_RULES } from "@/game/colonies";
 import { formatInt } from "@/game/format";
+import { TALENT_BRANCHES, TALENT_RULES, TALENTS, talentState } from "@/game/talents";
+import { empireClasses } from "@/game/empireClass";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -262,6 +264,33 @@ export const METRICS = {
     },
   },
   buildingLevel: { label: "Niveau d'un bâtiment (bâtiment visé)", value: (p: PlayerState, target?: string) => (target ? (p.buildings?.[target]?.level ?? 0) : 0) },
+  // 6.14.132 (AU27, AJ27-9, AJ-4) : talents, modules et classes d'empire (contenus lus à l'usage : ils sont réglables).
+  talentBranchesComplete: {
+    label: "Branches de talents complètes (chaque talent au rang maximal)",
+    value: (p: PlayerState) => {
+      const ranks = talentState(p).ranks;
+      return TALENT_BRANCHES.filter((b) => {
+        const list = TALENTS.filter((t) => t.branch === b.id && !t.retired);
+        return list.length > 0 && list.every((t) => (ranks[t.id] ?? 0) >= TALENT_RULES.maxRank);
+      }).length;
+    },
+  },
+  legendaryModulesMounted: {
+    label: "Modules légendaires montés",
+    value: (p: PlayerState) => {
+      const m = (p.modules ?? {}) as { items?: { id?: string; rarity?: string; built?: boolean }[]; slots?: Record<string, (string | null)[]> };
+      const mounted = new Set(Object.values(m.slots ?? {}).flatMap((list) => (Array.isArray(list) ? list.filter((x): x is string => !!x) : [])));
+      return (Array.isArray(m.items) ? m.items : []).filter((it) => it && it.built && it.rarity === "legendary" && mounted.has(String(it.id))).length;
+    },
+  },
+  empireClassesTried: {
+    label: "Classes d'empire choisies (au moins une fois)",
+    value: (p: PlayerState) => {
+      const ids = new Set<string>([...(playerStats(p).empireClassesUsed ?? []), ...(p.empireClass?.id ? [p.empireClass.id] : [])]);
+      const known = new Set(empireClasses().map((c) => c.id));
+      return [...ids].filter((id) => known.has(id)).length;
+    },
+  },
   /** Défi d'alliance « Les vigies » : garnisons envoyées et balayages (avec ou sans lune, Q40). */
   vigil: { label: "Garnisons envoyées et balayages de phalange", value: (p: PlayerState) => (playerStats(p).garrisons ?? 0) + (playerStats(p).phalanxScans ?? 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
@@ -394,6 +423,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [];
 export function derivedAchievements(): AchievementDef[] {
   const rare = RARE_ROLES.length;
   const bosses = WORLD_BOSSES.length;
+  // 6.14.132 : nombre de classes d'empire en vigueur (règles : `applyAchievementPace` passe après elles).
+  const classes = Math.max(1, empireClasses().length);
   return [
     def("officier_rare_1", "prestige", "or", "rareOfficers", 1, "Recrue d'exception", "Accueillir un officier rare dans l'état-major.", "🎖️", { auto: true }),
     def("officier_rare_all", "prestige", "legendaire", "rareOfficers", rare, "État-major complet", `Réunir les ${rare} officiers rares.`, "🏅", { auto: true, secret: true }),
@@ -479,6 +510,11 @@ export function derivedAchievements(): AchievementDef[] {
     def("ascension_5", "prestige", "legendaire", "ascensionsDone", 5, "Cinq renaissances", "Accomplir 5 Ascensions.", "🌠", { auto: true }),
     def("ascension_10", "prestige", "legendaire", "ascensionsDone", 10, "Dixième ciel", "Accomplir 10 Ascensions.", "💫", { auto: true }),
     def("rang_legende", "prestige", "legendaire", "xp", 250_000, "Légende vivante", "Cumuler 250 000 XP.", "🌟", { auto: true }),
+    // 6.14.132 (AU27, AJ27-9, AJ-4) : talents (branche complète), modules (un légendaire monté), classes d'empire (entrée, toutes).
+    def("doctrine_specialiste", "prestige", "or", "talentBranchesComplete", 1, "Spécialiste", "Porter chaque talent d'une branche au rang maximal.", "🎓", { auto: true }),
+    def("arsenal_legendaire", "flotte", "or", "legendaryModulesMounted", 1, "Arsenal légendaire", "Monter un module légendaire sur ta flotte.", "💎", { auto: true }),
+    def("classe_1", "prestige", "bronze", "empireClassesTried", 1, "Une identité", "Choisir une classe d'empire.", "🎭", { auto: true }),
+    def("classe_all", "prestige", "or", "empireClassesTried", classes, "Toutes les doctrines", `Choisir au moins une fois chacune des ${classes} classes d'empire.`, "🧭", { auto: true }),
     def("main_or", "prestige", "mythique", "casinoJackpots", 1, "Main d'or", "Aligner trois 7 au Casino orbital et rafler le pot commun.", "🎰", { auto: true, secret: true, title: "Main d'or", titleId: "main_or" }),
   ];
 }

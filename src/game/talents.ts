@@ -175,6 +175,9 @@ export function learnTalent(player: PlayerState, talentId: unknown): TalentState
   if (talentPoints(player).free <= 0) throw new GameActionError(`Aucun point de talent disponible : chaque Ascension en donne ${TALENT_RULES.pointsPerAscension}.`);
   st.ranks[def.id] = (st.ranks[def.id] ?? 0) + 1;
   player.talents = st;
+  // 6.14.132 (AJ27-9) : fiche « Doctrines » du Codex, gardée après une redistribution.
+  const learned = Array.isArray(player.stats?.talentsLearned) ? player.stats!.talentsLearned : [];
+  if (!learned.includes(def.id)) player.stats = { ...(player.stats ?? {}), talentsLearned: [...learned, def.id] } as PlayerState["stats"];
   return st;
 }
 

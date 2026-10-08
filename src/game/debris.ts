@@ -1,6 +1,7 @@
 import { CLASS_UNIT_RULES, HARVESTER_ID } from "@/game/classUnits";
 import { findUnit, OFFENSIVE_UNITS, unitsWithRole } from "@/game/units";
 import { playerCargoCapacity } from "@/game/modifiers";
+import { setActionAvailability } from "@/game/trackedActions";
 
 /* =====================================================
    Champs de débris (v1.7) : une partie du coût des vaisseaux détruits
@@ -132,3 +133,6 @@ export function collectDebris(field: DebrisAmount, capacity: number): { taken: D
     remaining: { scrap: (field.scrap ?? 0) - scrap, energy: (field.energy ?? 0) - energy },
   };
 }
+
+// 6.14.131 (AU27, AJ27-7) : l'objectif du jour « recyclage » n'est proposé qu'au joueur qui possède un recycleur.
+setActionAvailability("recycle", (p) => Object.entries(p.units ?? {}).some(([id, u]) => (u?.count ?? 0) > 0 && isRecyclerUnit(id)));

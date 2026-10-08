@@ -9,6 +9,11 @@ import type { PlayerState } from "@/types/game";
 export interface PlayerStats {
   /** 5.15.11 : catégories du Codex dont la récompense a été reçue. */
   codexClaimed?: string[];
+  /** 6.14.132 (AJ27-9) : Codex « Doctrines » et « Arsenal » : talents déjà appris, classes d'empire déjà choisies, modèles de
+   *  modules déjà trouvés (gardés après une redistribution, un changement de classe ou un recyclage). */
+  talentsLearned?: string[];
+  empireClassesUsed?: string[];
+  moduleTemplatesSeen?: string[];
   missions?: number;
   /** Plus grand nombre de missions terminées en une journée. */
   bestMissionDay?: number;

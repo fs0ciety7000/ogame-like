@@ -7,6 +7,7 @@
 // scénarios (donner des ressources, vieillir un compte) : les joueurs ne
 // peuvent plus modifier eux-mêmes ces champs.
 import { findUnit } from "@/game/units";
+import { unitClasses } from "@/game/unitClasses";
 import { debrisKey } from "@/game/debris";
 import { sectorLabel, sectorOf } from "@/game/territories";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -3884,6 +3885,41 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       await admin.collection("players").update(bId, { resources: before.resources, moon: before.moon ?? null, seasonPass: before.seasonPass ?? null, stats: before.stats ?? {} });
     }
   });
+
+  it("6.14.131 à 6.14.133 (AJ27-7, AJ27-9, AJ27-10) : réglages acceptés par le serveur, talent retenu pour le Codex, plan signature monté", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const before = await snap(bId);
+    await admin.collection("admins").create({ id: bId, note: "test 6.14.133" });
+    try {
+      // AJ27-7 et AJ27-10 : poids par thème, plans signature et sources des reliques passent la validation du serveur.
+      const d = defaultGameContent();
+      await saveContentSection("rules", {
+        ...d.rules,
+        trackedActions: { ...(d.rules as unknown as { trackedActions: Record<string, unknown> }).trackedActions, themeWeights: { chantiers: { unit: 1, expedition: 1 } } },
+        signatureModules: { ...(d.rules as unknown as { signatureModules: Record<string, unknown> }).signatureModules, chance: 0.5 },
+        relicSources: { enabled: true, sourceBoost: 2 },
+      } as never);
+      await expect(saveContentSection("rules", { ...d.rules, signatureModules: { minRarity: "mythique" } } as never)).rejects.toBeTruthy();
+      // AJ27-9 : un talent appris par le serveur reste dans les statistiques (fiche « Doctrines » gardée après redistribution).
+      await admin.collection("players").update(bId, { ascensions: 1, talents: {}, vacation: null, resources: { ...RICH, scrap: 5_000_000, energy: 5_000_000, nano: 5_000_000, data: 5_000_000 } });
+      await ps.learnTalent("rendement");
+      expect((await snap(bId)).stats?.talentsLearned).toContain("rendement");
+      // AJ27-10 : un plan signature (Frégate) se fabrique et se monte sur la classe de la Frégate, par le serveur.
+      const plan = { id: "msig1", template: "sig_fregate", rarity: "rare", built: false, foundAtMs: Date.now(), source: "test" };
+      await admin.collection("players").update(bId, { modules: { items: [plan], slots: { light: [null, null], medium: [null, null], heavy: [null, null], support: [null, null] } } });
+      await ps.buildShipModule("msig1");
+      const cls = unitClasses()["fregate"];
+      await ps.mountShipModule("msig1", cls, 0);
+      const after = await snap(bId);
+      expect(after.modules?.slots?.[cls]?.[0]).toBe("msig1");
+      expect(after.stats?.moduleTemplatesSeen ?? []).toEqual(expect.any(Array));
+    } finally {
+      await resetContentSection("rules");
+      await admin.collection("admins").delete(bId);
+      await admin.collection("players").update(bId, { ascensions: before.ascensions ?? 0, talents: before.talents ?? null, modules: before.modules ?? null, resources: before.resources, stats: before.stats ?? {} });
+    }
+  }, 30_000);
 
   it("6.14.123 (AA5) : le serveur lit les rôles d'unités (sonde ajoutée dans l'admin, sonde livrée sans rôle)", async () => {
     await ensureAB();

@@ -8,7 +8,11 @@ import { grantTokens } from "@/game/casino";
 import { parisDay } from "@/game/retention";
 import { NAV_UNLOCK_RULES, navPageOpen } from "@/game/navUnlock";
 import { onSpend } from "@/game/spending";
-import { actionAvailable, actionOfContract, onTrackedAction, TRACKED_ACTIONS, trackedActionsEnabled, type StaticObjective } from "@/game/trackedActions";
+import { actionAvailable, actionOfContract, contentName, contentObjective, onTrackedAction, parseContentObjective, TRACKED_ACTIONS, trackedActionsEnabled, type ContentFamily, type StaticObjective } from "@/game/trackedActions";
+import { hasContentAccess } from "@/game/novelty";
+import { UNITS } from "@/game/units";
+import { BUILDINGS } from "@/game/buildings";
+import { TECHNOLOGIES } from "@/game/technologies";
 
 /* =====================================================
    Contrats quotidiens : 3 objectifs par jour (minuit UTC), tirés au sort
@@ -32,7 +36,14 @@ export type ContractType =
   // 6.14.121 (AP-L7) : actions du registre des actions suivies (porte de saut, convoi de colonie), proposées seulement au
   // joueur qui peut les faire (porte ouverte, route de colonie).
   | "gate_jump"
-  | "colony_convoy";
+  | "colony_convoy"
+  // 6.14.131 (AU27, AJ27-7) : expédition, recyclage, et objectifs paramétrés par contenu (« Construire 20 × Frégate »,
+  // « Rechercher Armement », « Améliorer l'Entrepôt ») : poids 0 par défaut, proposés seulement pour un contenu ouvert au joueur.
+  | "expedition"
+  | "recycle"
+  | "unit_content"
+  | "research_content"
+  | "building_content";
 
 export interface Contract {
   id: string;
@@ -40,6 +51,8 @@ export interface Contract {
   target: number;
   progress: number;
   claimed: boolean;
+  /** 6.14.131 (AJ27-7) : contenu visé par un objectif paramétré (`unit_content`… : identifiant d'unité, techno ou bâtiment). */
+  content?: string;
 }
 
 export interface ContractsState {
@@ -81,6 +94,12 @@ export const CONTRACT_RULES = {
     // 6.14.121 (AP-L7) : tirés seulement pour un joueur qui peut les faire ; un compte sans lune ni route tire comme avant.
     gate_jump: 0.5,
     colony_convoy: 0.5,
+    // 6.14.131 (AJ27-7) : poids 0 par défaut (aucun tirage ne change), activables dans l'admin.
+    expedition: 0,
+    recycle: 0,
+    unit_content: 0,
+    research_content: 0,
+    building_content: 0,
   } as Record<ContractType, number>,
   /** 6.14.109 (AP-L5) : quantité demandée par type (avant : `targetFor` en dur) ; « Dépenser » suit `spendHours` et `spendMin`. */
   targets: {
@@ -95,6 +114,11 @@ export const CONTRACT_RULES = {
     market: 1,
     gate_jump: 1,
     colony_convoy: 2,
+    expedition: 1,
+    recycle: 1,
+    unit_content: 20,
+    research_content: 1,
+    building_content: 1,
   } as Partial<Record<ContractType, number>>,
   /** « Dépenser » : heures de production commune du joueur, au moins `spendMin` (arrondi au millier). */
   spendHours: 1,
@@ -169,10 +193,50 @@ export const CONTRACT_LABELS: Record<ContractType, (target: number) => string> =
   market: (n) => `Acheter ${n} offre${n > 1 ? "s" : ""} au marché`,
   gate_jump: (n) => `Ramener ${n} flotte${n > 1 ? "s" : ""} par la porte de saut`,
   colony_convoy: (n) => `Faire arriver ${n} convoi${n > 1 ? "s" : ""} de colonie`,
+  expedition: (n) => `Terminer ${n} expédition${n > 1 ? "s" : ""}`,
+  recycle: (n) => `Recycler ${n} champ${n > 1 ? "s" : ""} de débris`,
+  unit_content: (n) => `Construire ${n} unités désignées`,
+  research_content: (n) => `Lancer ${n} niveau${n > 1 ? "x" : ""} d'une recherche désignée`,
+  building_content: (n) => `Lancer ${n} amélioration${n > 1 ? "s" : ""} d'un bâtiment désigné`,
 };
 
+/* ---------- 6.14.131 (AU27, AJ27-7) : objectifs paramétrés par contenu ---------- */
+
+/** Famille du registre des actions suivies d'un type paramétré (null : type ordinaire). */
+export const CONTENT_CONTRACT_FAMILY: Partial<Record<ContractType, ContentFamily>> = { unit_content: "unit", research_content: "research", building_content: "building" };
+
+/** Textes des types paramétrés : `{n}` (quantité), `{name}` (contenu visé). */
+const CONTENT_CONTRACT_TEXT: Record<ContentFamily, (n: number, name: string) => string> = {
+  unit: (n, name) => `Construire ${n} × ${name}`,
+  research: (n, name) => `Lancer ${n} niveau${n > 1 ? "x" : ""} de recherche : ${name}`,
+  building: (n, name) => `Lancer ${n} amélioration${n > 1 ? "s" : ""} : ${name}`,
+};
+
+/** Libellé d'un objectif du jour (avec son contenu visé pour un type paramétré). */
+export function contractLabel(c: Pick<Contract, "type" | "target" | "content">): string {
+  const family = CONTENT_CONTRACT_FAMILY[c.type];
+  if (family && c.content) return CONTENT_CONTRACT_TEXT[family](c.target, contentName(family, c.content));
+  return (CONTRACT_LABELS[c.type] ?? ((n: number) => `Objectif × ${n}`))(c.target);
+}
+
+/**
+ * Contenus qu'un joueur peut viser aujourd'hui (jamais un contenu verrouillé, I31) : unité débloquée (hors élite), recherche
+ * ouverte sous son niveau maximal, bâtiment ouvert sous son niveau maximal. Ordre du registre en vigueur (tirage stable).
+ */
+export function contractContentCandidates(player: PlayerState, family: ContentFamily): string[] {
+  const p = { units: player.units ?? {}, techLevels: player.techLevels ?? {}, buildings: player.buildings ?? ({} as PlayerState["buildings"]) };
+  if (family === "unit") return UNITS.filter((u) => !u.elite && hasContentAccess(p, contentObjective("unit", u.id))).map((u) => u.id);
+  if (family === "research") return TECHNOLOGIES.filter((t) => (Number(p.techLevels[t.id]) || 0) < t.maxLevel && hasContentAccess(p, contentObjective("research", t.id))).map((t) => t.id);
+  return BUILDINGS.filter((b) => (Number(p.buildings[b.id as keyof PlayerState["buildings"]]?.level) || 0) < b.maxLevel && hasContentAccess(p, contentObjective("building", b.id))).map((b) => b.id);
+}
+
+/** Type conditionnel (proposé seulement à certains joueurs) : il ne compte pas dans le minimum de types de l'admin. */
+export function conditionalContractType(type: string): boolean {
+  return actionOfContract(type) !== null || type in CONTENT_CONTRACT_FAMILY;
+}
+
 /** 6.14.121 : les types du registre des actions suivies viennent après ceux d'avant (ordre de tirage d'origine inchangé). */
-const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy"];
+const ALL_TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy", "expedition", "recycle", "unit_content", "research_content", "building_content"];
 /* 6.14.79 (DP-L4, invariant I31, Q158) : un objectif d'un **nouveau** jour n'est tiré que parmi les systèmes ouverts du joueur
    (menu progressif, `navUnlock`). Page(s) où l'objectif se fait ; un type absent se fait sur une page toujours visible
    (Bâtiments, Labo, Unités, Ressources). Le tirage du jour en cours n'est jamais refait. */
@@ -186,6 +250,9 @@ export const CONTRACT_PAGES: Partial<Record<ContractType, string[]>> = {
   // 6.14.121 (AP-L7) : page déclarée par le registre des actions suivies.
   gate_jump: [TRACKED_ACTIONS.gateJump.page],
   colony_convoy: [TRACKED_ACTIONS.colonyConvoy.page],
+  // 6.14.131 (AJ27-7) : expédition, recyclage (pages déclarées par le registre).
+  expedition: [TRACKED_ACTIONS.expedition.page],
+  recycle: [TRACKED_ACTIONS.recycle.page],
 };
 
 /** Types d'objectifs que le joueur peut tirer (tous si `navUnlock.filterContracts` est à faux ou hors du menu progressif). */
@@ -193,6 +260,9 @@ export function openContractTypes(player: PlayerState, now: number): ContractTyp
   // 6.14.121 (AP-L7) : un type du registre n'est proposé que si le joueur peut faire l'action (porte ouverte, route de colonie),
   // et que les actions 6.14.121 sont actives (`trackedActions.enabled`).
   const doable = ALL_TYPES.filter((t) => {
+    // 6.14.131 (AJ27-7) : un type paramétré n'est proposé que si le joueur a un contenu ouvert à viser.
+    const family = CONTENT_CONTRACT_FAMILY[t];
+    if (family) return trackedActionsEnabled() && contractContentCandidates(player, family).length > 0;
     const action = actionOfContract(t);
     return !action || (trackedActionsEnabled() && actionAvailable(action as StaticObjective, player));
   });
@@ -237,8 +307,16 @@ function targetFor(type: ContractType, player: PlayerState): number {
   return Number.isFinite(t) && t >= 1 ? Math.floor(t) : 1;
 }
 
-function makeContract(type: ContractType, player: PlayerState, day: string, index: number): Contract {
-  return { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+function makeContract(type: ContractType, player: PlayerState, day: string, index: number, rand?: () => number): Contract {
+  const c: Contract = { id: `${day}-${index}-${type}`, type, target: targetFor(type, player), progress: 0, claimed: false };
+  // 6.14.131 (AJ27-7) : contenu visé, tiré parmi ceux ouverts au joueur (un appel de plus au tirage, seulement pour ce type :
+  // à poids 0 par défaut, jamais tiré, la suite du tirage d'avant ne change pas).
+  const family = CONTENT_CONTRACT_FAMILY[type];
+  if (family && rand) {
+    const list = contractContentCandidates(player, family);
+    if (list.length > 0) c.content = list[Math.floor(rand() * list.length) % list.length];
+  }
+  return c;
 }
 
 /** Contrats du jour (générés au premier passage de la journée). */
@@ -253,7 +331,7 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
       const pool = drawableTypes(player, now).filter((t) => !used.has(t));
       while (current.items.length < CONTRACT_RULES.perDay && pool.length > 0) {
         const type = pool.splice(drawIndex(pool, rand), 1)[0];
-        current.items.push(makeContract(type, player, day, current.items.length));
+        current.items.push(makeContract(type, player, day, current.items.length, rand));
       }
     }
     return current;
@@ -266,7 +344,7 @@ export function ensureContracts(player: PlayerState, now: number): ContractsStat
   const items: Contract[] = [];
   for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) {
     const type = pool.splice(drawIndex(pool, rand), 1)[0];
-    items.push(makeContract(type, player, day, i));
+    items.push(makeContract(type, player, day, i, rand));
   }
   // Série interrompue si la veille n'a pas été complétée.
   const keepsStreak = current?.lastCompletedDay === previousDay(day);
@@ -373,7 +451,7 @@ export function rerollContract(player: PlayerState, contractId: string, now: num
   if (pool.length === 0) throw new GameActionError("Aucun autre objectif n'est encore ouvert : ta relance reste disponible.");
   const rand = seededRandom(`${player.uid}:${state.day}:reroll`);
   const type = pool[drawIndex(pool, rand)];
-  const next = makeContract(type, player, state.day, index);
+  const next = makeContract(type, player, state.day, index, rand);
   next.id = `${state.day}-${index}-${type}-r`;
   state.items[index] = next;
   state.rerolled = true;
@@ -386,4 +464,11 @@ onSpend((player, total, now) => recordContract(player, "spend", total, now));
 onTrackedAction("contracts", (player, key, now, times) => {
   const type = typeof key === "string" && key in TRACKED_ACTIONS ? TRACKED_ACTIONS[key as StaticObjective].contract : undefined;
   if (type) recordContract(player, type as ContractType, times, now);
+  // 6.14.131 (AJ27-7) : objectif paramétré qui vise ce contenu (unité lancée, niveau de recherche, amélioration).
+  const c = parseContentObjective(key);
+  if (c && player.contracts?.day === contractDay(now)) {
+    for (const item of player.contracts.items) {
+      if (!item.claimed && item.content === c.id && CONTENT_CONTRACT_FAMILY[item.type] === c.family) item.progress = Math.min(item.target, item.progress + times);
+    }
+  }
 });

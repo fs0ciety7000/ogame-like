@@ -39,7 +39,8 @@ import { MARKET_HISTORY_RULES, MARKET_HISTORY_RULES_META } from "@/game/marketHi
 import { MESSAGE_RULES, MESSAGE_RULES_META } from "@/game/messages";
 import { MISSION_XP_RULES, MISSION_XP_RULES_META } from "@/game/missions";
 import { PASS_REWARD_RULES, PASS_REWARD_RULES_META } from "@/game/passSeasons";
-import { MODULE_BUILD_COST, MODULE_BUILD_COST_META, MODULE_RULES, MODULE_RULES_META } from "@/game/modules";
+import { MODULE_BUILD_COST, MODULE_BUILD_COST_META, MODULE_RULES, MODULE_RULES_META, SIGNATURE_MODULE_RULES, SIGNATURE_MODULE_RULES_META } from "@/game/modules";
+import { RELIC_SOURCE_RULES, RELIC_SOURCE_RULES_META } from "@/game/relics";
 import { TREATY_RULES, TREATY_RULES_META } from "@/game/pirates";
 import { POLL_RULES, POLL_RULES_META } from "@/game/polls";
 import { ACHIEVEMENT_GEN_RULES, ACHIEVEMENT_GEN_RULES_META, BASE_COUNTS, BASE_COUNTS_META } from "@/game/procedural";
@@ -145,6 +146,9 @@ export const REGISTERED_RULES = {
   messages: { label: "Messagerie privée", target: () => MESSAGE_RULES, meta: () => MESSAGE_RULES_META },
   moduleCost: { label: "Modules : coût de fabrication", target: () => MODULE_BUILD_COST, meta: () => MODULE_BUILD_COST_META },
   modules: { label: "Modules de vaisseaux", target: () => MODULE_RULES, meta: () => MODULE_RULES_META },
+  // 6.14.133 (AU27, AJ27-10) : plans « signature » (un par unité) et sources favorites des reliques.
+  signatureModules: { label: "Modules : plans signature (un par unité)", target: () => SIGNATURE_MODULE_RULES, meta: () => SIGNATURE_MODULE_RULES_META },
+  relicSources: { label: "Reliques : sources favorites", target: () => RELIC_SOURCE_RULES, meta: () => RELIC_SOURCE_RULES_META },
   // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » des Chroniques générées (fréquence, durée, quantités, bibliothèque de textes).
   novelty: { label: "Chroniques : épisode « nouveauté » (contenu récent)", target: () => NOVELTY_RULES, meta: () => NOVELTY_RULES_META },
   officerTuning: { label: "Officiers : second rôle des commandants de saison, Phéromone", target: () => OFFICER_TUNING_RULES, meta: () => OFFICER_TUNING_RULES_META },

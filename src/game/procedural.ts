@@ -278,6 +278,9 @@ export const BASE_COUNTS: Record<StaticObjective, number> = {
   colonyConvoy: 10,
   colonyBase: 1,
   colonySpec: 1,
+  // 6.14.131 (AJ27-7) : expéditions terminées, champs de débris recyclés.
+  expedition: 3,
+  recycle: 2,
 };
 
 /** 6.14.121 : quantité de base d'une action (registre, ou famille par contenu : `trackedActions.familyBase`). */
@@ -305,6 +308,8 @@ export const BASE_COUNTS_META = {
   colonyConvoy: { label: "Convois de colonie arrivés (6.14.121)", min: 0, max: 100 },
   colonyBase: { label: "Bases avancées tenues (6.14.121)", min: 0, max: 100 },
   colonySpec: { label: "Colonies spécialisées (6.14.121)", min: 0, max: 100 },
+  expedition: { label: "Expéditions terminées (6.14.131)", min: 0, max: 100 },
+  recycle: { label: "Champs de débris recyclés (6.14.131)", min: 0, max: 100 },
 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
@@ -580,17 +585,19 @@ function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string
 
 /* ---------- objectifs ---------- */
 
-function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[]): ChronicleObjective[] {
+function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[], theme: string | null = null): ChronicleObjective[] {
   // 6.14.58 (AU27, AP-4) : seuil des actions passives unifié avec le passe (raids, seigneurs : médiane ≥ passiveMinWeekly).
   const passive = passGenRules().passiveKeys;
   // 6.14.121 (AP-L7) : actions du registre ajoutées en fin de liste, seulement si le serveur les pratique (médiane ≥
   // `trackedActions.measuredMinWeekly`) : sans mesure, la liste et le tirage d'avant ne changent pas.
-  const extra = extraObjectives().filter((k) => measuredPlayable(k, d.weeklyMedian) && actionPlayable(k, d.weeklyMedian) && objectiveWeight(k) > 0);
+  // 6.14.131 (AJ27-7) : objectifs paramétrés (expédition, recyclage, construire telle unité…) activés par le thème du mois.
+  const ow = (k: ChronicleObjective) => objectiveWeight(k, undefined, theme);
+  const extra = extraObjectives(theme).filter((k) => measuredPlayable(k, d.weeklyMedian) && actionPlayable(k, d.weeklyMedian) && ow(k) > 0);
   const playable = [...ACTIVITY_KEYS.filter((k) => !passive.includes(k) || actionPlayable(k, d.weeklyMedian)), ...extra];
   // 6.8.2 : actions autorisées et pondérées (chronicleGen.objectiveWeights) ; il en faut 4 (sinon toutes celles jouables).
-  const allowed = playable.filter((k) => objectiveWeight(k) > 0);
+  const allowed = playable.filter((k) => ow(k) > 0);
   const pool = allowed.length >= 4 ? allowed : playable;
-  const weight = (k: ChronicleObjective) => (1 + Math.min(3, d.weeklyMedian[k] ?? 0)) * (previous.includes(k) ? 0.4 : 1) * (objectiveWeight(k) || 1);
+  const weight = (k: ChronicleObjective) => (1 + Math.min(3, d.weeklyMedian[k] ?? 0)) * (previous.includes(k) ? 0.4 : 1) * (ow(k) || 1);
   const chosen: ChronicleObjective[] = [];
   // Une action peu pratiquée pour varier le jeu (la moins faite des actions courantes).
   // 6.14.58 (Q-AP4) : peu pratiquée mais faisable : médiane du serveur ≥ chronicleGen.stretchMinWeekly (sans mesure : comme avant).
@@ -707,7 +714,7 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const completionTitle = fresh(arch.completionTitles);
   const { value: difficulty, reasons } = chapterDifficulty(d);
   const previousTypes = (recent.at(-1)?.episodes ?? []).map((e) => e.objective.type);
-  const types = chooseObjectives(rng, d, previousTypes);
+  const types = chooseObjectives(rng, d, previousTypes, themeId);
   // 6.8.2 : récompenses des épisodes tirées sous budget, avec leur propre graine (l'ancien tirage reste fait : le reste du chapitre ne change pas).
   const template = episodeRewards(rng, difficulty);
   const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom(`chapter-rewards:${o.monthId}:${o.variant ?? 0}`), difficulty, gen) : template;

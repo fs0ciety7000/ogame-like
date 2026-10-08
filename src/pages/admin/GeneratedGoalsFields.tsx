@@ -22,7 +22,7 @@ type R = GameRules;
 type SetRules = Dispatch<SetStateAction<R>>;
 type Obj = Record<string, unknown>;
 
-const TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy"];
+const TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy", "expedition", "recycle", "unit_content", "research_content", "building_content"];
 const groupOf = (r: R, group: string): Obj => ((r as unknown as Obj)[group] ?? {}) as Obj;
 /** Libellé court d'un type (admin). */
 const TYPE_LABELS: Record<ContractType, string> = {
@@ -39,6 +39,12 @@ const TYPE_LABELS: Record<ContractType, string> = {
   // 6.14.121 (AP-L7) : proposés seulement au joueur qui peut les faire (porte ouverte, route de colonie).
   gate_jump: "Porte de saut (joueur à porte ouverte)",
   colony_convoy: "Convoi de colonie (joueur avec une route)",
+  // 6.14.131 (AJ27-7) : poids 0 par défaut ; un type paramétré vise un contenu ouvert au joueur (jamais un contenu verrouillé).
+  expedition: "Terminer une expédition (joueur avec assez de vaisseaux)",
+  recycle: "Recycler un champ de débris (joueur avec un recycleur)",
+  unit_content: "Construire telle unité (unité débloquée du joueur)",
+  research_content: "Rechercher telle techno (techno ouverte du joueur)",
+  building_content: "Améliorer tel bâtiment (bâtiment ouvert du joueur)",
 };
 const typeLabel = (t: ContractType) => TYPE_LABELS[t];
 

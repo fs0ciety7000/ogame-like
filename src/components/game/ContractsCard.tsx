@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { ParticleBurst } from "@/components/ui/particle-burst";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { CONTRACT_LABELS, CONTRACT_RULES, contractDay, contractReward, streakBonus, type Contract } from "@/game/contracts";
+import { CONTRACT_RULES, contractDay, contractLabel, contractReward, streakBonus, type Contract } from "@/game/contracts";
 import { getRewardText } from "@/game/missions";
 import { formatClock, formatNumber } from "@/lib/utils";
 import { claimContract, GameActionError, rerollContract } from "@/services/playerService";
@@ -104,7 +104,7 @@ export function ContractsCard({ compact = false }: { compact?: boolean }) {
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  <p className={`flex-1 text-xs ${c.claimed ? "text-slate-500 line-through" : "text-slate-200"}`}>{CONTRACT_LABELS[c.type](c.target)}</p>
+                  <p className={`flex-1 text-xs ${c.claimed ? "text-slate-500 line-through" : "text-slate-200"}`}>{contractLabel(c)}</p>
                   {c.claimed && <CheckCircle2 className="h-4 w-4 shrink-0 text-mint-glow" />}
                 </div>
                 <Progress value={(c.progress / c.target) * 100} />

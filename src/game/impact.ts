@@ -5,7 +5,7 @@ import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, OFFICER_TUNING_RULES } from 
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
 import { TALENT_RULES, TALENTS } from "@/game/talents";
 import { empireClasses } from "@/game/empireClass";
-import { MODULE_FAMILIES, MODULE_RULES } from "@/game/modules";
+import { MODULE_FAMILIES, MODULE_RULES, moduleValue, SIGNATURE_PREFIX, signatureTemplate, signatureUnits } from "@/game/modules";
 import { TERRITORY_RULES } from "@/game/territories";
 import { effectValuePerLevel, TECH_EFFECT_STAT, techEffects, TECHNOLOGIES } from "@/game/technologies";
 
@@ -81,6 +81,13 @@ export function effectImpactReport(): ImpactRow[] {
       const target = EFFECT_STATS[fam.stat]?.unitTarget ? `class:${cls}` : undefined;
       add(fam.stat, target, "empire", { kind: "module", label: fam.label, max: fam.values.legendary * MODULE_RULES.slotsPerClass, note: `${MODULE_RULES.slotsPerClass} légendaires` });
     }
+  }
+  // 6.14.133 (AJ27-10) : plans signature, deux légendaires montés sur la classe de leur unité (un par unité, cible `unit:<id>`).
+  for (const id of signatureUnits()) {
+    const t = signatureTemplate(id);
+    const fam = MODULE_FAMILIES[t.family];
+    if (!fam || !EFFECT_STATS[fam.stat]?.unitTarget) continue;
+    add(fam.stat, `unit:${id}`, "empire", { kind: "module", label: t.name, max: moduleValue({ template: `${SIGNATURE_PREFIX}${id}`, rarity: "legendary" }) * MODULE_RULES.slotsPerClass, note: `${MODULE_RULES.slotsPerClass} légendaires` });
   }
   // 6.0 : classes d'empire (une seule à la fois : chaque ligne montre la classe qui la donne).
   for (const c of empireClasses()) {

@@ -11,7 +11,7 @@
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 ; tirage pondéré (6.14.109 : « Repousser une attaque » 0,5, raids de faction comptés) |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons ; chaque ressource commune : **6 à 18 h de production** du joueur depuis la 6.14.106, tirées à part, dans la place libre de l'entrepôt, au moins 2 M ; 2 M à 12 M en 6.14.72, 45 M à 280 M avant ; `streak.chest.commonHours`, [0, 0] = bornes fixes, Q99) |
-| Succès | continu | 212 succès par défaut (76 écrits, 75 dérivés des catalogues et 61 par unité et par bâtiment, 6.14.129 ; 6.14.115 : 4 succès de colonies, « Terres neuves », « Empire des mondes », « Convoyeur », « Avant-poste tenu » ; 178 sur la copie de la prod en Z1 ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
+| Succès | continu | 216 succès par défaut (76 écrits, 79 dérivés des catalogues et 61 par unité et par bâtiment, 6.14.129 ; 6.14.132 : « Spécialiste », « Arsenal légendaire », « Une identité », « Toutes les doctrines » ; 6.14.115 : 4 succès de colonies, « Terres neuves », « Empire des mondes », « Convoyeur », « Avant-poste tenu » ; 178 sur la copie de la prod en Z1 ; 6.14.3 : « Clair de lune », secret, à la naissance de sa lune, et « Lune pleine » au niveau maximal) ; 6.14.14 : « Frappe d'alliance » et « Trophées d'alliance » (secret), boss d'alliance abattus avec une part suffisante, indices payants pour les secrets |
 | Ascension | ≥ 7 jours, puis **≥ 30 jours** dès la bascule du rythme (1er novembre 2026, 6.14.88) | 5 au plus, puis **10** ; +10 % de production, −5 % de temps de construction chacune ; 3 points de talent ; succès Ascension I, II, V et X. 1re Ascension (simulateur) : avant la bascule J10 (actif), J19 (moyen), J46 (occasionnel), J33 (quotidien) ; après **J87, J91, J126, J115** (cibles de `proposals/rythme-long-terme.md` §4.1 : J80–110, J95–125, J130–180, J110–150) |
 | Projets de prestige (6.14.85) | un à la fois, 8 h | ouverts quand les 4 extracteurs sont au niveau **10** ; coût **8 h** de production commune du moment (extracteurs × technos), durée **8 h** ; **8 points** par projet, monument de la fiche publique (Stèle à 1 projet … Merveille du secteur à 1 000), classement « Prestige », succès 1 / 10 / 100 (titre « Bâtisseur d'éternité ») / 1 000 (secret) ; **aucun bonus** (Q168, I32) ; Admin → Règles → Projets de prestige |
 | Codex, titres, bannières | collection | 11 catégories (6.14.12 : Bâtiments et Technologies, une fiche par contenu en vigueur, débloquée une fois construit / recherché ; 6.14.115 : Colonies, 4 biomes ouverts à la première colonie et 4 spécialisations ouvertes au premier choix) ; récompense par catégorie complète (Unités, Bâtiments, Technologies, Colonies : 5 jetons + 25 Ambre), réglable dans Admin → Chroniques ; titres et bannières procéduraux |
@@ -197,3 +197,22 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - **Formules et Ctrl+K** (6.14.130, AJ-8, AJ-9) : bloc « Bonus » des Formules généré (`formulasRegistry.ts` : officiers, sources
   d'effets, plafonds par couche, classes d'empire) ; Ctrl+K trouve reliques, boss, colonies, talents, modules, classes et officiers
   (`paletteContent.ts`). Fiche : `docs/changes/6.14.130-formules-ctrlk.md`.
+
+## 6.14.131 à 6.14.133 (revue AU27, lots AJ27-7, AJ27-9, AJ27-10)
+- **Objectifs paramétrés** (6.14.131, AJ-2, Q66) : le registre des actions suivies gagne **expédition** (fin d'expédition) et
+  **recyclage** (champ de débris recyclé), mesurées, poids 0. `trackedActions.themeWeights` (vide par défaut) donne, pour un mois d'un
+  thème du passe, un poids à une action ou à une famille par contenu (`unit` : construire telle unité, `research`, `building`) dans les
+  Chroniques et les défis du passe ; une action par contenu reste soumise à la médiane du serveur (I31, I38). Objectifs du jour :
+  types `expedition`, `recycle`, `unit_content`, `research_content`, `building_content` (« Construire 20 × Frégate »), poids 0,
+  proposés seulement pour un contenu ouvert au joueur (unité débloquée hors élite, techno ouverte sous son maximum, bâtiment ouvert sous
+  son maximum). À règles par défaut, aucun tirage ne change. Admin → Règles → « Actions suivies » (poids par thème) et « Objectifs du
+  jour ». Fiche : `docs/changes/6.14.131-objectifs-parametres.md`.
+- **Doctrines, Arsenal, officiers de saison** (6.14.132, AJ-4, AJ-16) : Codex « Doctrines » (un talent par fiche, ouvert une fois
+  appris ; une classe d'empire par fiche, ouverte une fois choisie) et « Arsenal » (un modèle de module par fiche, ouvert au premier
+  plan trouvé), gardés après une redistribution, un changement de classe ou un recyclage (`stats.talentsLearned`,
+  `empireClassesUsed`, `moduleTemplatesSeen`) ; récompense de catégorie réglable (5 jetons, 25 Ambre). Commandants de saison publiés :
+  fiches « en plus » des Officiers, hors du pourcentage (un mois passé ne se rattrape pas). Succès « Spécialiste » (une branche de
+  talents au rang maximal), « Arsenal légendaire » (un module légendaire monté), « Une identité » (une classe), « Toutes les
+  doctrines » (chaque classe en vigueur). Fiche : `docs/changes/6.14.132-codex-doctrines-arsenal.md`.
+- **Porteurs signature et reliques par source** (6.14.133, AJ-1, AJ-11, Q65, Q67) : voir `docs/systems/bonus-effets.md`. Fiche :
+  `docs/changes/6.14.133-porteurs-signature.md`.

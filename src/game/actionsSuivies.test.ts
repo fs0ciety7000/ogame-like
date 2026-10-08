@@ -76,8 +76,9 @@ describe("6.14.121 : le registre", () => {
   });
 
   it("lune, phalange, porte de saut et colonies (convoi, base avancée, spécialisation) y sont ; chaque nouvelle action est « mesurée »", () => {
-    expect(NEW_OBJECTIVES).toEqual(["moonUpgrade", "phalanxScan", "gateJump", "colonyConvoy", "colonyBase", "colonySpec"]);
-    expect(new Set(NEW_OBJECTIVES.map((k) => TRACKED_ACTIONS[k].system))).toEqual(new Set(["lune", "colonies"]));
+    // 6.14.131 (AJ27-7) : puis expéditions et recyclage, toujours en fin de liste.
+    expect(NEW_OBJECTIVES).toEqual(["moonUpgrade", "phalanxScan", "gateJump", "colonyConvoy", "colonyBase", "colonySpec", "expedition", "recycle"]);
+    expect(new Set(NEW_OBJECTIVES.map((k) => TRACKED_ACTIONS[k].system))).toEqual(new Set(["lune", "colonies", "expeditions", "recyclage"]));
     for (const k of NEW_OBJECTIVES) expect(TRACKED_ACTIONS[k].measured, k).toBe(true);
     // Les 9 d'avant gardent leur ordre et ne sont pas « mesurées » (tirages d'avant).
     expect(BASE_OBJECTIVES).toEqual(["contract", "bounty", "raidRepelled", "victory", "bossAssault", "mission", "spy", "market", "warlordWin"]);

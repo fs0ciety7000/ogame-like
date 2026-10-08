@@ -4,7 +4,7 @@ import { applyAchievementPace, CONTENT_ACHIEVEMENT_RULES, DEFAULT_ACHIEVEMENTS, 
 import { CHAIN_KIND_LABELS, CHAIN_LINK_LABELS, chainRowScore, contentChainGaps, contentChainReport, PALETTE_KINDS, type ChainKind } from "@/game/contentChain";
 import { COLONY_SPECS, RARE_DEPOSITS } from "@/game/colonies";
 import { empireClasses } from "@/game/empireClass";
-import { MODULE_TEMPLATES } from "@/game/modules";
+import { MODULE_TEMPLATES, SIGNATURE_MODULE_RULES } from "@/game/modules";
 import { RELICS } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
 import { UNITS } from "@/game/units";
@@ -16,25 +16,13 @@ import { UNITS } from "@/game/units";
  * Un manque comblé doit sortir de la liste (corriger plutôt qu'empiler).
  * `*` remplace l'identifiant quand tout un type de contenu manque le maillon (un rattrapage le règle d'un coup).
  */
-const each = (kind: ChainKind, ids: string[], link: string, why: string): Record<string, string> => Object.fromEntries(ids.map((id) => [`${kind}:${id}:${link}`, why]));
+// 6.14.133 : plus aucun manque connu. Pour en noter un : `"<type>:<id>:<maillon>": "<lot> : raison"` (ou `*` pour tout un type).
 
 const KNOWN_GAPS: Record<string, string> = {
   // AJ-1 : succès propre par unité et par bâtiment : comblé par les succès dérivés (6.14.129, AJ27-6).
-  // AJ-1 : porteur propre par unité (QJ2 : plan de module « signature »). Seule la Sentinelle a le sien (Sceau des Sentinelles).
-  ...each(
-    "unit",
-    ["drone_recuperateur", "sonde_espionnage", "fregate", "cargo", "chasseur", "etoile_noire", "croiseur_nova", "lance_gravitationnelle", "roquette", "canon_impulsion", "canon_plasma", "batterie_aa", "intercepteur", "bastion", "batterie_essaim", "vaisseau_atelier", "traqueur_kesh", "chasse_fantome", "brise_rempart", "lame_ecarlate", "recolteur", "croiseur_raid", "eclaireur_lointain"],
-    "carrierOwn",
-    "AJ27-10 : porteurs « signature » par unité (plans de module ou reliques)",
-  ),
+  // AJ-1 : porteur propre par unité : plans de module « signature » (6.14.133, AJ27-10), Sceau des Sentinelles.
   // AJ-9 : Ctrl+K étendu à tous les types (6.14.130, AJ27-8).
-  // AJ-4 : talents, modules et classes d'empire sans fiche de Codex ni succès propre.
-  "talent:*:codex": "AJ27-9 : Codex « Doctrines »",
-  "talent:*:achievementMastery": "AJ27-9 : succès « Spécialiste » (une branche complète)",
-  "module:*:codex": "AJ27-9 : Codex « Arsenal »",
-  "class:*:codex": "AJ27-9 : Codex « Doctrines »",
-  "class:*:achievementEntry": "AJ27-9 : succès de classe d'empire (entrée)",
-  "class:*:achievementMastery": "AJ27-9 : succès de classe d'empire (maîtrise)",
+  // AJ-4 : Codex « Doctrines » et « Arsenal », succès « Spécialiste », « Arsenal légendaire » et de classe (6.14.132, AJ27-9).
 };
 
 const known = (gap: string) => {
@@ -88,16 +76,21 @@ describe("6.14.11 : chaîne de contenu", () => {
     }
   });
 
-  it("une unité ajoutée sans porteur propre fait échouer la garde (préréglage et succès générés, 6.14.123 et 6.14.129)", () => {
+  it("une unité ajoutée reçoit tout : préréglage, succès et porteur propre générés (6.14.123, 6.14.129, 6.14.133)", () => {
     UNITS.push({ ...UNITS[0], id: "corvette_essai", name: "Corvette d'essai" });
     try {
       // 6.14.123 (AA5, AA-18) : préréglages d'effets générés pour une unité ajoutée (attaque et PV) : le maillon est rempli.
-      // Avant l'application du contenu, ses succès dérivés n'existent pas encore : le succès propre manque.
-      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:achievementOwn", "unit:corvette_essai:carrierOwn"]);
+      // 6.14.133 (AJ27-10) : son plan signature existe d'office (porteur propre). Avant l'application du contenu, ses succès
+      // dérivés n'existent pas encore : le succès propre manque.
+      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:achievementOwn"]);
       // 6.14.129 (AJ27-6) : à l'application du contenu (comme `applyGameContent`), elle reçoit « Escadre » et « Maître ».
       applyAchievementPace();
-      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:carrierOwn"]);
+      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual([]);
+      // Plans signature coupés : le porteur propre manque (garde toujours active).
+      SIGNATURE_MODULE_RULES.enabled = false;
+      expect(contentChainGaps().filter((g) => !known(g))).toContain("unit:corvette_essai:carrierOwn");
     } finally {
+      SIGNATURE_MODULE_RULES.enabled = true;
       UNITS.pop();
       applyAchievementPace();
     }
@@ -129,7 +122,16 @@ describe("6.14.114 (AJ27-4) : maillons renforcés et panneau d'admin", () => {
     const unit = (id: string) => rows.find((r) => r.kind === "unit" && r.id === id)!;
     expect(unit("sentinelle").links.carrierOwn).toBe(true);
     expect(unit("chasseur").links.effectCarrier).toBe(true);
-    expect(unit("chasseur").links.carrierOwn).toBe(false);
+    // 6.14.133 (AJ27-10) : le plan signature est le porteur propre de chaque unité ; sans lui, une classe ne suffit pas.
+    expect(unit("chasseur").links.carrierOwn).toBe(true);
+    SIGNATURE_MODULE_RULES.enabled = false;
+    try {
+      const off = contentChainReport().find((r) => r.kind === "unit" && r.id === "chasseur")!;
+      expect(off.links.effectCarrier).toBe(true);
+      expect(off.links.carrierOwn).toBe(false);
+    } finally {
+      SIGNATURE_MODULE_RULES.enabled = true;
+    }
   });
 
   it("succès propre seulement pour les unités et les bâtiments (QJ1)", () => {
@@ -143,12 +145,15 @@ describe("6.14.114 (AJ27-4) : maillons renforcés et panneau d'admin", () => {
   it("une relique ajoutée dans l'admin entre dans le bilan, et un porteur propre comble le maillon de son unité", () => {
     const base = RELICS.find((r) => r.id === "sceau_sentinelle")!;
     RELICS.push({ ...base, id: "moteur_corvette_essai", name: "Moteur d'essai", custom: { ...base.custom!, target: "unit:chasseur" } });
+    // Sans les plans signature, seule la relique comble le maillon.
+    SIGNATURE_MODULE_RULES.enabled = false;
     try {
       const rows = contentChainReport();
       expect(rows.some((r) => r.kind === "relic" && r.id === "moteur_corvette_essai")).toBe(true);
       expect(rows.find((r) => r.kind === "unit" && r.id === "chasseur")!.links.carrierOwn).toBe(true);
     } finally {
       RELICS.pop();
+      SIGNATURE_MODULE_RULES.enabled = true;
     }
   });
 

@@ -19,6 +19,7 @@ import {
   MODULE_FAMILIES,
   MODULE_RARITIES,
   MODULE_RULES,
+  moduleMountClasses,
   moduleRarity,
   modulesState,
   mountedOn,
@@ -204,7 +205,9 @@ export function ModulesTab({ player }: { player: PlayerState }) {
             const where = mountedOn(st, item.id);
             const cost = MODULE_BUILD_COST[item.rarity];
             const affordable = canAffordAll(player.resources, cost as Partial<Resources>);
-            const fits = fam.classes.includes(sel.cls);
+            // 6.14.133 (AJ27-10) : un plan signature se monte sur la classe de son unité.
+            const mountOn = moduleMountClasses(t);
+            const fits = mountOn.includes(sel.cls);
             return (
               <div key={item.id} className="flex flex-wrap items-center gap-3 border border-white/5 bg-white/[0.02] p-2">
                 <ModuleIcon item={item} className="h-10 w-10" />
@@ -219,9 +222,14 @@ export function ModulesTab({ player }: { player: PlayerState }) {
                         Plan
                       </HudChip>
                     )}
+                    {t.unit && (
+                      <HudChip size="sm" tone="gold">
+                        Signature
+                      </HudChip>
+                    )}
                   </p>
                   <p className="text-xs text-slate-300">
-                    {fam.label} · {describeModule(item)}
+                    {t.unit ? `Classe ${mountOn.map((c) => UNIT_CLASS_LABELS[c]).join(", ") || "—"}` : fam.label} · {describeModule(item)}
                   </p>
                   {!item.built ? (
                     <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -248,10 +256,10 @@ export function ModulesTab({ player }: { player: PlayerState }) {
                       size="sm"
                       variant="secondary"
                       disabled={busy || !fits}
-                      title={fits ? undefined : `${fam.label} : pas sur la classe ${UNIT_CLASS_LABELS[sel.cls]}`}
+                      title={fits ? undefined : `${t.unit ? t.name : fam.label} : pas sur la classe ${UNIT_CLASS_LABELS[sel.cls]}`}
                       onClick={() => void act(() => mountShipModule(item.id, sel.cls, sel.slot), () => `${t.name} monté sur ${UNIT_CLASS_LABELS[sel.cls]}.`)}
                     >
-                      {fits ? `Monter (${UNIT_CLASS_LABELS[sel.cls]} ${sel.slot + 1})` : fam.classes.length === 1 && fam.classes[0] === "support" ? "Soutien seulement" : sel.cls === "support" ? "Pas sur le Soutien" : "Pas sur cette classe"}
+                      {fits ? `Monter (${UNIT_CLASS_LABELS[sel.cls]} ${sel.slot + 1})` : mountOn.length === 1 && t.unit ? `${UNIT_CLASS_LABELS[mountOn[0]]} seulement` : mountOn.length === 1 && mountOn[0] === "support" ? "Soutien seulement" : sel.cls === "support" ? "Pas sur le Soutien" : "Pas sur cette classe"}
                     </Button>
                   )}
                   {!item.built && (

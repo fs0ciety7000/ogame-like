@@ -9,8 +9,8 @@ calculs propres, couche « empire » pour le reste, 6.14.124). Plafonds par stat
 | Source | Chiffres |
 |:--|:--|
 | Officiers (commandants) | 12 rôles, 2 postes (+1 à Platine), niveau 20 ; recrutement 150 Ambre ; officiers rares (boss) |
-| Reliques | 26 modèles, 3 emplacements (+1 à la 1re Ascension), 30 au plus, fusion par 3 ; mythiques ; les 8 composées (5.23) rejoignent une liste personnalisée par la migration `relics-5.23` (6.14.60, I27) |
-| Modules | 2 emplacements par classe, 7 modèles (inventaire de 30 modules), fusion par 3, 5 préréglages |
+| Reliques | 26 modèles, 3 emplacements (+1 à la 1re Ascension), 30 au plus, fusion par 3 ; mythiques ; les 8 composées (5.23) rejoignent une liste personnalisée par la migration `relics-5.23` (6.14.60, I27) ; 6.14.133 : sources favorites (× 3) et poids de tirage par relique |
+| Modules | 2 emplacements par classe, 7 modèles (inventaire de 30 modules), fusion par 3, 5 préréglages ; 6.14.133 : un plan « signature » par unité (23), 15 % des plans rares ou mieux |
 | Capsules (Labo de synthèse) | 5 %/niv., 3 en stock, 12 h actives |
 | Talents | 3 points par Ascension, rang 3 max |
 | Mutateurs | un par mois (ou aucun) ; 6.14.125 : liste éditable (`mutators.defs` : nom, émoji, accroche, effets composés chiffrés), description construite depuis les effets ; l'ancien `mutators.values` (6.14.105) est repris par la migration `mutators-defs-6.14.125` |
@@ -58,3 +58,20 @@ des préréglages d'effets (aide à l'édition) : groupe `effectPresets.budgets`
 - Anciens réglages (`talents.perRank`, `modules.familyValues`) : lus en repli, puis repris dans les sections par les migrations
   `talents-section-6.14.127` et `module-families-6.14.127`. Valeurs identiques à contenu par défaut. Fiche :
   `docs/changes/6.14.127-talents-modules.md`.
+
+## 6.14.133 (revue AU27, lot AJ27-10)
+- **Plans de module « signature »** (AJ-1, Q65) : un modèle généré par unité (`sig_<unité>`, `signatureTemplate`), hors unités
+  exclues et hors celles qu'une relique active vise déjà (le Sceau des Sentinelles) : 23 à contenu par défaut, une unité ajoutée dans
+  l'admin a le sien. Il vise l'unité seule (`unit:<id>`), vaut sa famille × 1,25 (armement pour une unité qui tire, blindage sinon :
+  +20 % d'attaque ou +22,5 % de points de vie en légendaire) et se monte sur la classe de l'unité (`moduleMountClasses`). 15 % des
+  plans rares ou mieux sortent signature (unité tirée au hasard), jamais un commun. Rapport d'impact : deux légendaires montés, 40 %
+  et 45 %, sous le plafond de 50 %. Un plan trouvé ne disparaît jamais (unité retirée : il reste, sans effet, I43). Règles
+  `signatureModules` (Admin → Règles → « Porteurs signature et sources des reliques »).
+- **Reliques par source** (AJ-11, Q67) : `sources` et `weight` par relique (Admin → Reliques, fiche) ; un tirage depuis l'une de ses
+  sources (`relicSourceOf` : `loot:<source>`, `expedition`, `leviathan`, `boss:<mois>`, `vendetta:`, `coalition:`, `elite`, `weekly`,
+  `pass`) multiplie son poids par `relicSources.sourceBoost` (3). Sources livrées : Trophée de seigneur (seigneurs), Écaille de
+  Léviathan (boss mondiaux), Lame du duelliste (JcJ), Balise de traque (primes, menaces), Engrenage de Varan, Œil de Vesper et Sceau des
+  Sentinelles (menaces), Soute pliée et Cristal mémoriel (expéditions), Couronne de l'Essaim et Égide de la Reine (primes). Une liste
+  enregistrée avant 6.14.133 reprend les sources livrées (champ absent) ; sans source favorite, le tirage est celui d'avant (même graine).
+  Fiche : `docs/changes/6.14.133-porteurs-signature.md`.
+

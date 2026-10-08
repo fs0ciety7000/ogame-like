@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { assetUrl } from "@/lib/assets";
 import { currentGameContent } from "@/game/content";
-import { describeRelic, RARITIES, RELIC_EFFECT_LABELS, validateRelics, type RelicEffect, type RelicRarity, type RelicSettings, type RelicTemplate } from "@/game/relics";
+import { describeRelic, RARITIES, RELIC_EFFECT_LABELS, RELIC_SOURCE_LABELS, RELIC_SOURCE_RULES, RELIC_SOURCES, validateRelics, type RelicEffect, type RelicRarity, type RelicSettings, type RelicSource, type RelicTemplate } from "@/game/relics";
 import { DEFAULT_LOOT_TOKEN_CAP, defaultLootTables, LOOT_SOURCE_LABELS, LOOT_SOURCES, validateLootTables, type LootSource, type LootTable, type LootTables } from "@/game/loot";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
@@ -74,6 +74,30 @@ export function RelicForm({ value: t, onChange, isNew }: { value: RelicTemplate;
         </div>
         <div className="sm:col-span-2">
           <ImageField label="Image" value={t.image ?? `/assets/relics/${t.id}.webp`} onChange={(image) => set({ image })} />
+        </div>
+        {/* 6.14.133 (AU27, AJ27-10, AJ-11) : d'où la relique tombe plus souvent, et son poids de tirage. */}
+        <NumberField
+          label="Poids de tirage"
+          value={t.weight ?? 1}
+          min={0}
+          step={0.5}
+          onChange={(v) => set({ weight: v === undefined || v === 1 ? undefined : Math.max(0, Math.min(100, v)) })}
+          hint="1 : chance égale aux autres reliques. 0 : jamais tirée au hasard (remise par l'admin, le passe ou une mythique)."
+        />
+        <div className="flex flex-col gap-1 sm:col-span-2">
+          <p className="text-xs text-slate-400">
+            Sources favorites : la relique a {RELIC_SOURCE_RULES.sourceBoost} fois plus de chances quand elle tombe de l'une d'elles (Tous les réglages, « Reliques : sources favorites »).
+          </p>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {RELIC_SOURCES.map((src: RelicSource) => (
+              <CheckboxField
+                key={src}
+                label={RELIC_SOURCE_LABELS[src]}
+                checked={(t.sources ?? []).includes(src)}
+                onChange={(on) => set({ sources: on ? RELIC_SOURCES.filter((x) => x === src || (t.sources ?? []).includes(x)) : (t.sources ?? []).filter((x) => x !== src) })}
+              />
+            ))}
+          </div>
         </div>
         <CheckboxField
           label="Inactive"

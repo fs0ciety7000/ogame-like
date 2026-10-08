@@ -75,11 +75,11 @@ export function monthlyBudget(key: ChronicleObjective, d: Pick<WorldDigest, "wee
  *  fois) et jamais deux fois les mêmes : l'action change d'un palier au suivant, une action
  *  qui revient ne demande jamais moins, et deux paliers n'ont jamais le même défi. Le mois
  *  d'activité de chaque action est réparti sur ses paliers, plus lourdement en fin de passe. */
-export function generateTierChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
+export function generateTierChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number, themeId: string | null = null): Record<string, PassRequirement[]> {
   // v5.14.2 : les seigneurs de guerre seulement si des joueurs en battent vraiment (sinon un
   // débutant, ou un serveur sans seigneurs, resterait bloqué : un défi bloque les suivants).
   // 6.14.58 : même seuil que les défis cumulés (actionPlayable, médiane du serveur).
-  const allowed = new Set(challengePool(d.weeklyMedian).map((x) => x.key));
+  const allowed = new Set(challengePool(d.weeklyMedian, undefined, themeId).map((x) => x.key));
   const kept = CHALLENGE_KEYS.filter((k) => allowed.has(k));
   const playable = kept.length > 0 ? kept : CHALLENGE_KEYS.filter((k) => k !== "warlordWin");
   const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
@@ -154,9 +154,10 @@ export function tierTargetDays(tiers: number): number[] {
  *  joueur médian a fait au jour cible du palier ; une action trop rare n'apparaît que
  *  lorsqu'elle est atteignable. Toujours une ou plusieurs actions par palier, jamais
  *  celles du palier précédent, jamais deux fois le même défi. */
-export function generateCumulativeChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number): Record<string, PassRequirement[]> {
+export function generateCumulativeChallenges(rng: () => number, focus: ChronicleObjective[], d: Pick<WorldDigest, "weeklyMedian">, tiers: number, themeId: string | null = null): Record<string, PassRequirement[]> {
   // 6.8.1 : actions et poids réglables (passGen.challengeWeights) ; une action passive n'entre que si le serveur la pratique.
-  const weights = new Map(challengePool(d.weeklyMedian).map((x) => [x.key, x.weight]));
+  // 6.14.131 (AJ27-7) : le thème du passe active ses objectifs paramétrés (`trackedActions.themeWeights`).
+  const weights = new Map(challengePool(d.weeklyMedian, undefined, themeId).map((x) => [x.key, x.weight]));
   const playable = [...weights.keys()];
   const pool = [...focus.filter((k) => playable.includes(k)), ...playable.filter((k) => !focus.includes(k))];
   const day = tierTargetDays(tiers);
@@ -266,7 +267,7 @@ function redrawChallenges(season: Pick<PassSeason, "id" | "theme" | "tiers" | "c
   const theme = PASS_THEMES.find((t) => t.id === season.theme.id) ?? PASS_THEMES.find((t) => t.id === catalogEntryFor(season.id).theme) ?? PASS_THEMES[0];
   const rng = seededRandom(`challenges:${season.id}:${variant}:redraw${k}`);
   const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
-  return gen(rng, shuffle(rng, theme.focus), d, season.tiers.length);
+  return gen(rng, shuffle(rng, theme.focus), d, season.tiers.length, theme.id);
 }
 
 /** 6.14.58 : garde avant la publication d'office (un passe infaisable n'est jamais publié tel quel). Récompenses, points par
@@ -660,7 +661,7 @@ export function regenerateChallenges(season: PassSeason, digest: Pick<WorldDiges
   const rng = seededRandom(`challenges:${season.id}:${variant}`);
   const focus = shuffle(rng, theme.focus);
   const gen = season.challengeMode === "cumulative" ? generateCumulativeChallenges : generateTierChallenges;
-  return { ...season, requirements: gen(rng, focus, digest, season.tiers.length) };
+  return { ...season, requirements: gen(rng, focus, digest, season.tiers.length, theme.id) };
 }
 
 export interface GeneratePassSeasonOptions {
@@ -718,14 +719,14 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   reasons.push(...(computed?.reasons ?? [...g.reasons, "Pas encore de points par jour mesurés : ajustement sur la part de joueurs qui ont fini."]));
   const focus = shuffle(rng, theme.focus);
   reasons.push(`Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`);
-  let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length);
+  let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length, theme.id);
   // 6.14.58 (AU27, AP-2) : défis faisables pour le joueur médian avant tout le reste (nouveaux tirages, puis seuils réduits).
   const fit = fitChallenges({ pointsPerTier, tiers, requirements, challengeMode: "cumulative" }, o.digest, (k) =>
     redrawChallenges({ id: o.monthId, theme: { id: theme.id } as PassSeason["theme"], tiers, challengeMode: "cumulative" }, o.digest, variant, k),
   );
   requirements = fit.requirements;
   pointsPerTier = fit.pointsPerTier;
-  const excluded = Object.keys(rules.challengeWeights).filter((k) => Number(rules.challengeWeights[k]) > 0 && !challengePool(o.digest.weeklyMedian, rules).some((x) => x.key === k));
+  const excluded = Object.keys(rules.challengeWeights).filter((k) => Number(rules.challengeWeights[k]) > 0 && !challengePool(o.digest.weeklyMedian, rules, theme.id).some((x) => x.key === k));
   if (excluded.length > 0)
     reasons.push(`Hors des défis (médiane du serveur trop faible, seuil ${rules.challengeMinWeekly} par semaine, ${rules.passiveMinWeekly} pour une action passive) : ${excluded.map((k) => objectiveLabel(k).toLowerCase()).join(", ")}.`);
   const totals: Record<string, number> = {};

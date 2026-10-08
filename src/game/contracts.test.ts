@@ -127,6 +127,8 @@ describe("6.14.79 (DP-L4) objectifs du jour parmi les systèmes ouverts (I31)", 
   const FROM = NAV_UNLOCK_RULES.newAccountsFrom;
   const recruit = (patch: Partial<PlayerState> = {}) => player({ createdAtMs: FROM + 1000, resourcesUpdatedAtMs: FROM + 2000, ...patch });
   const always = ["upgrade_building", "research", "build_units", "spend"];
+  /** 6.14.131 (AJ27-7) : types ajoutés (expédition, recyclage, objectifs paramétrés), hors du compte des 10 types d'avant. */
+  const before131 = (types: string[]) => types.filter((t) => !["expedition", "recycle", "unit_content", "research_content", "building_content"].includes(t));
 
   it("compte neuf : les 4 objectifs d'un nouveau jour sont tirés parmi les pages ouvertes, sur 30 joueurs", () => {
     for (let i = 0; i < 30; i++) {
@@ -150,15 +152,15 @@ describe("6.14.79 (DP-L4) objectifs du jour parmi les systèmes ouverts (I31)", 
     // Le joueur atteint Or III dans la journée : rien ne change aujourd'hui.
     p.xp = RANKS.find((r) => r.id === "or3")!.xp;
     expect(ensureContracts(p, FROM + 3000).items.map((c) => c.id)).toEqual(today);
-    expect(openContractTypes(p, FROM + 3000)).toHaveLength(10);
+    expect(before131(openContractTypes(p, FROM + 3000))).toHaveLength(10);
   });
 
   it("page visitée, « Tout afficher » et réglage `filterContracts` à faux ouvrent les objectifs", () => {
     expect(openContractTypes(recruit({ announcementsSeen: [navMarkId("/game/missions")] }), FROM + 2000)).toContain("missions");
-    expect(openContractTypes(recruit({ announcementsSeen: [NAV_SHOW_ALL_ON] }), FROM + 2000)).toHaveLength(10);
+    expect(before131(openContractTypes(recruit({ announcementsSeen: [NAV_SHOW_ALL_ON] }), FROM + 2000))).toHaveLength(10);
     try {
       applyGameContent({ rules: { navUnlock: { filterContracts: false } } } as never);
-      expect(openContractTypes(recruit(), FROM + 2000)).toHaveLength(10);
+      expect(before131(openContractTypes(recruit(), FROM + 2000))).toHaveLength(10);
     } finally {
       applyGameContent({});
     }
@@ -184,7 +186,8 @@ describe("6.14.109 : objectifs du jour pondérés (AP-L5)", () => {
   /** Tirage d'avant la 6.14.109 (uniforme), recopié pour comparaison. */
   function oldDraw(p: PlayerState, now: number): string[] {
     const rand = seededRandom(`${p.uid}:${contractDay(now)}`);
-    const pool = openContractTypes(p, now);
+    // 6.14.131 (AJ27-7) : les types d'après (poids 0 par défaut) ne sont jamais tirés ; le tirage d'avant ne les connaissait pas.
+    const pool = openContractTypes(p, now).filter((t) => (ALL as readonly string[]).includes(t));
     const out: string[] = [];
     for (let i = 0; i < CONTRACT_RULES.perDay && pool.length > 0; i++) out.push(pool.splice(Math.floor(rand() * pool.length), 1)[0]);
     return out;

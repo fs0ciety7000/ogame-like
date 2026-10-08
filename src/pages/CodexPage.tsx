@@ -124,7 +124,9 @@ export function CodexPage() {
         </div>
         <div className="flex flex-col gap-0.5 p-2.5">
           <span className={cn("truncate font-display text-sm", e.unlocked ? "text-slate-100" : "text-slate-500")}>{e.unlocked ? e.name : "???"}</span>
-          <span className="truncate text-[11px] text-slate-500">{e.unlocked ? e.subtitle : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint}</span>
+          <span className="truncate text-[11px] text-slate-500">{e.unlocked ? e.subtitle : e.bonus ? "Commandant de saison : dernier palier de son passe." : CODEX_CATEGORIES.find((c) => c.id === e.category)?.hint}</span>
+          {/* 6.14.132 (AJ-16) : fiche en plus, hors du pourcentage. */}
+          {e.bonus && <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-violet-glow">Fiche en plus</span>}
         </div>
       </motion.button>
     ))}

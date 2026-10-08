@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.130 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.133 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 195 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 198 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -231,6 +231,9 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.128 : Catalogue du passe en sections de contenu : thèmes et saisons éditables (AA9, 2/2) (`docs/changes/6.14.128-catalogue-passe.md`)
 - 6.14.129 : Succès par unité et par bâtiment : « Escadre », « Maître », niveau 20 (AJ27-6) (`docs/changes/6.14.129-succes-par-contenu.md`)
 - 6.14.130 : Formules générées depuis les registres et Ctrl+K étendu (AJ27-8) (`docs/changes/6.14.130-formules-ctrlk.md`)
+- 6.14.131 : Objectifs paramétrés par contenu : construire telle unité, expédition, recyclage, activés par thème (AJ27-7) (`docs/changes/6.14.131-objectifs-parametres.md`)
+- 6.14.132 : Codex « Doctrines » et « Arsenal », officiers de saison, succès de talents, modules et classes (AJ27-9) (`docs/changes/6.14.132-codex-doctrines-arsenal.md`)
+- 6.14.133 : Plans de module « signature » par unité et reliques par source (AJ27-10) (`docs/changes/6.14.133-porteurs-signature.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

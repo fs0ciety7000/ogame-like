@@ -14,6 +14,7 @@ import { formationEffects } from "@/game/formations";
 import { activeTreaty, FACTIONS, hasTreaty, pirateState, productionHours, setFactionState, TREATY_RULES } from "@/game/pirates";
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
+import { setActionAvailability, trackAction } from "@/game/trackedActions";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
 import { isProbeUnit } from "@/game/espionage";
 import type { NewNotification } from "@/game/flush";
@@ -356,6 +357,8 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
   const xp = Math.round(fleet.expedition.hours * EXPEDITION_RULES.xpPerHour * (1 + 0.5 * expeditionDepth(fleet)));
   const gained = applyXpDelta(player, xp, now, "expedition");
   bumpStat(player, "expeditions");
+  // 6.14.131 (AU27, AJ27-7) : action suivie (Chroniques, passe, objectif du jour « expédition »).
+  trackAction(player, "expedition", now);
   if (expeditionDepth(fleet) > 0) bumpStat(player, "deepExpeditions");
   // v4.0 : une relique, parfois (5 % à 2 h, jusqu'à 15 % à 8 h).
   let relic = "";
@@ -376,3 +379,6 @@ export function finishExpedition(player: PlayerState, fleet: ExpeditionFleet, no
   };
 }
 
+// 6.14.131 (AU27, AJ27-7) : l'objectif du jour « expédition » n'est proposé qu'au joueur qui peut en lancer une (assez de
+// vaisseaux de combat ou de transport, hors sondes ; page des missions ouverte : contrôlée par `CONTRACT_PAGES`).
+setActionAvailability("expedition", (p) => Object.entries(p.units ?? {}).reduce((a, [id, u]) => a + (OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id) ? Math.max(0, u?.count ?? 0) : 0), 0) >= Math.max(1, EXPEDITION_RULES.minShips));

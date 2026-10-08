@@ -1,6 +1,8 @@
 import { GameActionError } from "@/game/errors";
 import { describeEffect, EFFECT_STATS, type EffectGrant, type EffectStat } from "@/game/effects";
-import type { UnitClass } from "@/game/unitClasses";
+import { unitClasses, UNIT_CLASS_LABELS, type UnitClass } from "@/game/unitClasses";
+import { UNITS } from "@/game/units";
+import { RELICS } from "@/game/relics";
 import type { PlayerState, ResourceId } from "@/types/game";
 
 /* =====================================================
@@ -28,6 +30,9 @@ export interface ModuleTemplate {
   description: string;
   /** Retiré du tirage : plus aucun plan de ce modèle ne tombe ; ceux qu'ont les joueurs restent valables. */
   retired?: boolean;
+  /** 6.14.133 (AJ27-10) : plan « signature » : l'unité visée (effet `unit:<id>`, monté sur la classe de l'unité). Modèle
+   *  généré (`sig_<unité>`), jamais enregistré dans la section. */
+  unit?: string;
 }
 
 /** 6.14.127 (AA9) : famille de modules, fiche de la section `moduleFamilies` : effet composé (grandeur ; une grandeur qui vise des
@@ -209,6 +214,17 @@ export function moduleClassesText(classes: UnitClass[]): string {
   return `les classes ${names.slice(0, -1).join(", ")} ou ${names[names.length - 1]}`;
 }
 
+/** 6.14.133 (AJ27-10) : erreurs des réglages des plans signature (familles connues, rareté connue). */
+export function validateSignatureRules(r: Partial<typeof SIGNATURE_MODULE_RULES> | undefined, familyIds: string[]): string[] {
+  if (!r) return [];
+  const e: string[] = [];
+  const L = "Plans signature";
+  if (r.minRarity !== undefined && !MODULE_RARITIES.some((x) => x.id === r.minRarity)) e.push(`${L} : rareté minimale « ${String(r.minRarity)} » inconnue (common, rare, epic, legendary).`);
+  for (const k of ["attackFamily", "supportFamily"] as const) if (r[k] !== undefined && !familyIds.includes(String(r[k]))) e.push(`${L} : famille « ${String(r[k])} » inconnue.`);
+  if (r.excluded !== undefined && !(Array.isArray(r.excluded) && r.excluded.every((x) => typeof x === "string"))) e.push(`${L} : unités exclues, une liste d'identifiants.`);
+  return e;
+}
+
 /** Erreurs des sections `moduleFamilies` et `moduleTemplates`. */
 export function validateModuleContent(families: unknown, templates: unknown): string[] {
   const errors: string[] = [];
@@ -247,6 +263,8 @@ export function validateModuleContent(families: unknown, templates: unknown): st
     if (typeof t.description !== "string") errors.push(`${label} : texte manquant.`);
     if (!famIds.has(String(t.family))) errors.push(`${label} : famille « ${String(t.family)} » inconnue.`);
     if (t.retired !== undefined && typeof t.retired !== "boolean") errors.push(`${label} : « retiré » doit être oui ou non.`);
+    // 6.14.133 (AJ27-10) : `sig_…` est réservé aux plans signature (générés depuis les unités).
+    if (typeof t.id === "string" && t.id.startsWith(SIGNATURE_PREFIX)) errors.push(`${label} : identifiant réservé aux plans signature (« ${SIGNATURE_PREFIX}… »).`);
   }
   if (!(templates as Partial<ModuleTemplate>[]).some((t) => t && !t.retired)) errors.push("Modèles de modules : au moins un modèle non retiré (le tirage des plans en a besoin).");
   return errors;
@@ -267,8 +285,97 @@ export const MODULE_BUILD_COST_META = {
   legendary: { label: "Module légendaire", hint: "Ressources par fabrication." },
 };
 
+/* ---------- 6.14.133 (AU27, AJ27-10, AJ-1, Q65) : plans de module « signature », un par unité ---------- */
+
+/**
+ * Un plan rare ou mieux sort parfois « signature » : il vise une seule unité (`unit:<id>`) au lieu d'une classe, avec la valeur
+ * de sa famille × `factor` (armement pour une unité qui tire, blindage sinon), et se monte sur la classe de cette unité. Un
+ * modèle par unité du contenu en vigueur (une unité ajoutée dans l'admin a le sien, `sig_<unité>`), sans entrée dans la section
+ * des modèles. Valeurs littérales (CLAUDE.md, initialisation des modules) ; les textes acceptent `{name}`, `{class}`, `{pct}`.
+ */
+export const SIGNATURE_MODULE_RULES = {
+  enabled: true,
+  /** Part des plans de la rareté minimale ou mieux qui sortent « signature ». */
+  chance: 0.15,
+  minRarity: "rare" as ModuleRarity,
+  /** Valeur = valeur de la famille × ce facteur (une unité au lieu d'une classe entière). 1,25 : +20 % d'attaque en légendaire. */
+  factor: 1.25,
+  attackFamily: "armement",
+  supportFamily: "blindage",
+  /** Unités sans plan signature, en plus de celles qui ont déjà une relique propre (le Sceau des Sentinelles). */
+  excluded: [] as string[],
+  name: "Signature : {name}",
+  description: "Plan forgé pour une seule coque : {name}. Il se monte sur sa classe ({class}).",
+  attackPhrase: "+{pct} d'attaque pour {name}",
+  hpPhrase: "+{pct} de points de vie pour {name}",
+};
+
+export const SIGNATURE_MODULE_RULES_META = {
+  enabled: { label: "Plans signature (un par unité)", hint: "Décoché : plus aucun plan signature ne tombe ; ceux déjà trouvés gardent leur effet." },
+  chance: { label: "Part des plans qui sortent « signature »", unit: "part", min: 0, max: 1, hint: "Parmi les plans de la rareté minimale ou mieux (0,15 = 15 %)." },
+  minRarity: { label: "Rareté minimale d'un plan signature", hint: "common, rare, epic ou legendary." },
+  factor: { label: "Valeur d'un plan signature (× sa famille)", unit: "×", min: 0, max: 5, hint: "Reste sous les plafonds du circuit d'effets (rapport d'impact)." },
+  attackFamily: { label: "Famille d'une unité qui tire", hint: "Identifiant d'une famille de modules (armement)." },
+  supportFamily: { label: "Famille d'une unité sans attaque", hint: "Identifiant d'une famille de modules (blindage)." },
+  excluded: { label: "Unités sans plan signature", hint: "Identifiants d'unités. Une unité visée par une relique propre (Sceau des Sentinelles) n'en a pas non plus : les deux se cumuleraient au-delà du plafond." },
+  name: { label: "Nom d'un plan signature", hint: "{name} : nom de l'unité." },
+  description: { label: "Texte d'un plan signature", hint: "{name} : unité ; {class} : sa classe." },
+  attackPhrase: { label: "Effet d'attaque d'un plan signature", hint: "{pct} : valeur ; {name} : unité." },
+  hpPhrase: { label: "Effet de points de vie d'un plan signature", hint: "{pct} : valeur ; {name} : unité." },
+};
+
+export const SIGNATURE_PREFIX = "sig_";
+
+const fillText = (text: string, vars: Record<string, string>) => Object.entries(vars).reduce((t, [k, v]) => t.split(`{${k}}`).join(v), String(text ?? ""));
+
+/** Unités qui ont un plan signature : contenu en vigueur, hors exclues et hors celles qu'une relique active vise déjà (porteur
+ *  propre : les deux se cumuleraient au-delà du plafond) ; vide si désactivé. */
+export function signatureUnits(): string[] {
+  if (SIGNATURE_MODULE_RULES.enabled === false || !Array.isArray(UNITS)) return [];
+  const excluded = new Set(Array.isArray(SIGNATURE_MODULE_RULES.excluded) ? SIGNATURE_MODULE_RULES.excluded : []);
+  for (const r of Array.isArray(RELICS) ? RELICS : []) {
+    const target = r.disabled || r.effect !== "custom" ? "" : String(r.custom?.target ?? "");
+    if (target.startsWith("unit:")) excluded.add(target.slice(5));
+  }
+  return UNITS.filter((u) => !excluded.has(u.id)).map((u) => u.id);
+}
+
+/** Unité visée par un modèle signature (`sig_<unité>`), null sinon. */
+export function signatureUnitOf(templateId: string): string | null {
+  return typeof templateId === "string" && templateId.startsWith(SIGNATURE_PREFIX) && templateId.length > SIGNATURE_PREFIX.length ? templateId.slice(SIGNATURE_PREFIX.length) : null;
+}
+
+/** Modèle signature d'une unité (toujours résolu, même pour une unité retirée : un plan trouvé ne disparaît pas, I43). */
+export function signatureTemplate(unitId: string): ModuleTemplate {
+  const u = UNITS.find((x) => x.id === unitId);
+  const family = u && !(u.stats.attaque > 0) ? SIGNATURE_MODULE_RULES.supportFamily : SIGNATURE_MODULE_RULES.attackFamily;
+  const cls = u ? unitClasses()[u.id] : undefined;
+  const vars = { name: u?.name ?? unitId, class: cls ? UNIT_CLASS_LABELS[cls] : "—" };
+  return { id: `${SIGNATURE_PREFIX}${unitId}`, name: fillText(SIGNATURE_MODULE_RULES.name, vars), family, description: fillText(SIGNATURE_MODULE_RULES.description, vars), unit: unitId };
+}
+
+/** Classes où un module se monte : celles de sa famille, ou la classe de son unité pour un plan signature. */
+export function moduleMountClasses(t: Pick<ModuleTemplate, "family" | "unit"> | undefined): UnitClass[] {
+  if (!t) return [];
+  if (t.unit) {
+    const cls = UNITS.some((u) => u.id === t.unit) ? unitClasses()[t.unit] : undefined;
+    return cls ? [cls] : [];
+  }
+  return MODULE_FAMILIES[t.family]?.classes ?? [];
+}
+
+/** 6.14.132 (AJ27-9) : image d'un modèle (livré : la sienne ; ajouté dans l'admin ou signature : l'image des plans signature,
+ *  provisoire jusqu'au rendu, `scripts/illustrations.json`). */
+export function moduleImage(id: string): string {
+  return DEFAULT_MODULE_TEMPLATES.some((t) => t.id === id) ? `/assets/modules/${id}.webp` : "/assets/modules/signature.webp";
+}
+
 export function findModuleTemplate(id: string): ModuleTemplate | undefined {
-  return MODULE_TEMPLATES.find((t) => t.id === id);
+  const found = MODULE_TEMPLATES.find((t) => t.id === id);
+  if (found) return found;
+  // 6.14.133 (AJ27-10) : plan signature, généré depuis son unité.
+  const unit = signatureUnitOf(id);
+  return unit ? signatureTemplate(unit) : undefined;
 }
 
 export function moduleRarity(id: ModuleRarity) {
@@ -277,7 +384,10 @@ export function moduleRarity(id: ModuleRarity) {
 
 export function moduleValue(item: Pick<ModuleItem, "template" | "rarity">): number {
   const t = findModuleTemplate(item.template);
-  return t ? (MODULE_FAMILIES[t.family]?.values[item.rarity] ?? 0) : 0;
+  const v = t ? (MODULE_FAMILIES[t.family]?.values[item.rarity] ?? 0) : 0;
+  // 6.14.133 (AJ27-10) : un plan signature vaut sa famille × le facteur (arrondi au dix-millième).
+  if (t?.unit) return Math.round(v * Math.max(0, Number(SIGNATURE_MODULE_RULES.factor) || 0) * 10_000) / 10_000;
+  return v;
 }
 
 export function moduleLabel(item: Pick<ModuleItem, "template" | "rarity">): string {
@@ -290,6 +400,13 @@ export function describeModule(item: Pick<ModuleItem, "template" | "rarity">): s
   const fam = t ? MODULE_FAMILIES[t.family] : undefined;
   if (!t || !fam) return "";
   const v = moduleValue(item);
+  if (t.unit) {
+    // 6.14.133 (AJ27-10) : plan signature : effet sur son unité.
+    const name = UNITS.find((u) => u.id === t.unit)?.name ?? t.unit;
+    const phrase = fam.stat === "unitAttack" ? SIGNATURE_MODULE_RULES.attackPhrase : fam.stat === "unitHp" ? SIGNATURE_MODULE_RULES.hpPhrase : "";
+    if (phrase) return fillText(phrase, { pct: `${Math.round(v * 100)} %`, name });
+    return describeEffect(fam.stat, v, `unit:${t.unit}`).replace(" · ", " ");
+  }
   if (!fam.phrase) return describeEffect(fam.stat, v).replace(" · ", " ");
   return fam.phrase
     .split("{pct}")
@@ -342,7 +459,13 @@ export function moduleEffects(player: Pick<PlayerState, "modules">): EffectGrant
       const t = item ? findModuleTemplate(item.template) : undefined;
       if (!item || !t) continue;
       const fam = MODULE_FAMILIES[t.family];
-      if (!fam || !fam.classes.includes(cls)) continue;
+      if (!fam) continue;
+      // 6.14.133 (AJ27-10) : plan signature : vise son unité (monté sur sa classe ; une unité retirée n'a plus d'effet à recevoir).
+      if (t.unit) {
+        if (EFFECT_STATS[fam.stat]?.unitTarget) out.push({ stat: fam.stat, target: `unit:${t.unit}`, value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } });
+        continue;
+      }
+      if (!fam.classes.includes(cls)) continue;
       // 6.14.127 (AA9) : une grandeur qui vise des unités vise la classe où le module est monté.
       out.push({ stat: fam.stat, ...(EFFECT_STATS[fam.stat]?.unitTarget ? { target: `class:${cls}` } : {}), value: moduleValue(item), layer: "empire", source: { kind: "module", id: item.id, label: moduleLabel(item) } });
     }
@@ -370,8 +493,30 @@ export function rollModulePlan(source: string, now: number, random: () => number
   // 6.14.127 (AA9) : un modèle retiré ne sort plus (repli sur toute la liste si tous le sont : la garde de contenu l'interdit).
   const active = MODULE_TEMPLATES.filter((t) => !t.retired);
   const drawable = active.length > 0 ? active : MODULE_TEMPLATES;
-  const template = drawable[Math.floor(random() * drawable.length) % drawable.length].id;
+  let template = drawable[Math.floor(random() * drawable.length) % drawable.length].id;
+  // 6.14.133 (AU27, AJ27-10, Q65) : un plan de la rareté minimale ou mieux sort parfois « signature » (une unité tirée au hasard).
+  // Tirages en plus seulement dans ce cas (chance nulle ou rareté trop basse : la suite du tirage d'avant ne change pas).
+  const sigMin = MODULE_RARITIES.findIndex((r) => r.id === SIGNATURE_MODULE_RULES.minRarity);
+  const chance = Math.max(0, Math.min(1, Number(SIGNATURE_MODULE_RULES.chance) || 0));
+  if (chance > 0 && MODULE_RARITIES.findIndex((r) => r.id === rarity) >= Math.max(0, sigMin)) {
+    const units = signatureUnits();
+    if (units.length > 0 && random() < chance) template = `${SIGNATURE_PREFIX}${units[Math.floor(random() * units.length) % units.length]}`;
+  }
   return { id: newId(now, random), template, rarity, built: false, foundAtMs: now, source };
+}
+
+/** 6.14.132 (AJ27-9) : modèle de module déjà trouvé (Codex « Arsenal »), gardé après un recyclage ou une vente. */
+export function markModuleSeen(player: Pick<PlayerState, "stats">, template: string): void {
+  const seen = Array.isArray(player.stats?.moduleTemplatesSeen) ? player.stats!.moduleTemplatesSeen : [];
+  if (!seen.includes(template)) player.stats = { ...(player.stats ?? {}), moduleTemplatesSeen: [...seen, template] } as PlayerState["stats"];
+}
+
+/** Modèles de modules trouvés par le joueur : ceux qu'il a vus, et ceux de son inventaire (joueurs d'avant la 6.14.132). */
+export function modulesSeen(player: Pick<PlayerState, "stats" | "modules">): Set<string> {
+  const out = new Set<string>(Array.isArray(player.stats?.moduleTemplatesSeen) ? player.stats!.moduleTemplatesSeen : []);
+  const raw = (player.modules ?? {}) as Partial<ModulesState>;
+  for (const m of Array.isArray(raw.items) ? raw.items : []) if (m && typeof m.template === "string") out.add(m.template);
+  return out;
 }
 
 /** Ajoute un plan ou un module (false si l'inventaire est plein). */
@@ -380,6 +525,7 @@ export function addModuleItem(player: PlayerState, item: ModuleItem): boolean {
   if (st.items.length >= MODULE_RULES.maxItems) return false;
   st.items.push(item);
   player.modules = st;
+  markModuleSeen(player, item.template);
   return true;
 }
 
@@ -406,9 +552,12 @@ export function mountModule(player: PlayerState, id: unknown, cls: unknown, slot
   if (!item.built) throw new GameActionError("Fabrique d'abord ce plan.");
   const c = String(cls) as UnitClass;
   if (!MODULE_CLASSES.includes(c)) throw new GameActionError("Classe inconnue.");
-  const fam = MODULE_FAMILIES[findModuleTemplate(item.template)!.family];
+  const tpl = findModuleTemplate(item.template)!;
+  const fam = MODULE_FAMILIES[tpl.family];
   if (!fam) throw new GameActionError("Famille de module inconnue.");
-  if (!fam.classes.includes(c)) throw new GameActionError(`${fam.label} : se monte sur ${moduleClassesText(fam.classes)}.`);
+  const allowed = moduleMountClasses(tpl);
+  if (tpl.unit && allowed.length === 0) throw new GameActionError(`${tpl.name} : cette unité n'existe plus, le plan ne se monte plus.`);
+  if (!allowed.includes(c)) throw new GameActionError(`${tpl.unit ? tpl.name : fam.label} : se monte sur ${moduleClassesText(allowed)}.`);
   const i = Math.floor(Number(slot));
   if (!(i >= 0 && i < MODULE_RULES.slotsPerClass)) throw new GameActionError("Emplacement invalide.");
   // Déjà monté ailleurs : il change de place.
@@ -512,8 +661,9 @@ export function applyModulePreset(player: PlayerState, index: unknown): { missin
     slots[cls] = preset.slots[cls].map((id) => {
       if (!id) return null;
       const item = st.items.find((m) => m.id === id);
-      const fam = item ? MODULE_FAMILIES[findModuleTemplate(item.template)!.family] : null;
-      if (!item || !fam || !built.has(id) || used.has(id) || !fam.classes.includes(cls)) {
+      const tpl = item ? findModuleTemplate(item.template) : undefined;
+      const fam = tpl ? MODULE_FAMILIES[tpl.family] : null;
+      if (!item || !fam || !built.has(id) || used.has(id) || !moduleMountClasses(tpl).includes(cls)) {
         missing += 1;
         return null;
       }

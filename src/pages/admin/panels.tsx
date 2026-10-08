@@ -37,6 +37,7 @@ import { RhythmRulesFields } from "@/pages/admin/RhythmRulesFields";
 import { FixedListRulesFields } from "@/pages/admin/FixedListRulesFields";
 import { GeneratedGoalsFields } from "@/pages/admin/GeneratedGoalsFields";
 import { TrackedActionsFields } from "@/pages/admin/TrackedActionsFields";
+import { SignatureRulesFields } from "@/pages/admin/SignatureRulesFields";
 import { NoveltyFields } from "@/pages/admin/NoveltyFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
@@ -1008,6 +1009,8 @@ export function RulesPanel() {
         <GeneratedGoalsFields rules={rules} setRules={setRules} />
         {/* 6.14.121 (AP-L7) : registre des actions suivies (poids, quantités de base, familles par contenu). */}
         <TrackedActionsFields rules={rules} setRules={setRules} />
+        {/* 6.14.133 (AJ27-10) : plans de module signature (un par unité) et sources favorites des reliques. */}
+        <SignatureRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.122 (AP-L8) : épisode « nouveauté » (contenu récent). */}
         <NoveltyFields rules={rules} setRules={setRules} />
         <CommerceRulesFields rules={rules} setRules={setRules} />

@@ -61,10 +61,10 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | livré (6.14.125) |
 | 45 | AA8 | Historique champ par champ et retour arrière par groupe dans l'admin | M | livré (6.14.126 ; carte « Chaîne de contenu » déjà livrée en 6.14.114) |
 | 46 | AJ27-6 | Succès dérivés par unité et par bâtiment | M | livré (6.14.129, `docs/changes/6.14.129-succes-par-contenu.md`) |
-| 47 | AJ27-7 | Objectifs paramétrés par contenu (construire telle unité, rechercher telle techno) | L | à faire |
+| 47 | AJ27-7 | Objectifs paramétrés par contenu (construire telle unité, rechercher telle techno) | L | livré (6.14.131, `docs/changes/6.14.131-objectifs-parametres.md`) |
 | 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | livré (6.14.130, `docs/changes/6.14.130-formules-ctrlk.md`) |
-| 49 | AJ27-9 | Codex : officiers, Doctrines, Arsenal | M | à faire |
-| 50 | AJ27-10 | Reliques par source, porteurs « signature » par unité | M | à faire |
+| 49 | AJ27-9 | Codex : officiers, Doctrines, Arsenal | M | livré (6.14.132, `docs/changes/6.14.132-codex-doctrines-arsenal.md`) |
+| 50 | AJ27-10 | Reliques par source, porteurs « signature » par unité | M | livré (6.14.133, `docs/changes/6.14.133-porteurs-signature.md`) |
 | 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | livré (6.14.74, `docs/changes/6.14.74-deblocage-moteur.md`) |
 | 51b | DP-L2 | Déblocage progressif : interface (menu, mobile, Ctrl+K, « Prochaine ouverture », « Tout afficher ») | M | livré (6.14.75, `docs/changes/6.14.75-deblocage-interface.md`) |
 | 51c | DP-L3 | Déblocage progressif : Prise en main, Carnet, panneau Lune, passe | S | livré (6.14.76, `docs/changes/6.14.76-deblocage-prise-en-main.md`) |

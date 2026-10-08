@@ -3,6 +3,7 @@ import type { GameRules } from "@/game/content";
 import { BASE_COUNTS, BASE_COUNTS_META } from "@/game/procedural";
 import { CONTENT_FAMILIES, CONTENT_FAMILY_TEXTS, STATIC_OBJECTIVES, TRACKED_ACTION_RULES, TRACKED_ACTION_RULES_META, TRACKED_ACTIONS, type ContentFamily, type StaticObjective } from "@/game/trackedActions";
 import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { PASS_THEMES } from "@/game/passSeasons";
 
 /* =====================================================
    6.14.121 (AU27, lot AP-L7) : registre des actions suivies.
@@ -19,6 +20,15 @@ type SetRules = Dispatch<SetStateAction<R>>;
 type Obj = Record<string, unknown>;
 
 const groupOf = (r: R, group: string): Obj => ((r as unknown as Obj)[group] ?? {}) as Obj;
+/** 6.14.131 (AJ27-7) : objectifs paramétrés réglables par thème (famille par contenu, ou action du registre). */
+const THEME_KEYS: { key: string; label: string }[] = [
+  { key: "unit", label: "Construire telle unité" },
+  { key: "research", label: "Rechercher telle techno" },
+  { key: "building", label: "Améliorer tel bâtiment" },
+  { key: "expedition", label: "Expéditions" },
+  { key: "recycle", label: "Recyclage" },
+  { key: "colonyConvoy", label: "Convois de colonie" },
+];
 const FAMILY_LABELS: Record<ContentFamily, string> = { unit: "Unités (construire telle unité)", research: "Technologies (rechercher telle techno)", building: "Bâtiments (améliorer tel bâtiment)" };
 
 function actionHint(k: StaticObjective): string {
@@ -39,6 +49,18 @@ export function TrackedActionsFields({ rules, setRules }: { rules: R; setRules: 
     setRules((r) => {
       const cur = groupOf(r, "trackedActions");
       return { ...r, trackedActions: { ...cur, [key]: { ...((cur[key] ?? {}) as Obj), [k]: v } } } as R;
+    });
+  const themeWeights = { ...((g.themeWeights ?? {}) as Obj) } as Record<string, Record<string, number>>;
+  const setTheme = (theme: string, k: string, v: number | undefined) =>
+    setRules((r) => {
+      const cur = groupOf(r, "trackedActions");
+      const all = { ...((cur.themeWeights ?? {}) as Record<string, Record<string, number>>) };
+      const row = { ...(all[theme] ?? {}) };
+      if (v === undefined) delete row[k];
+      else row[k] = Math.max(0, Math.min(100, v));
+      if (Object.keys(row).length > 0) all[theme] = row;
+      else delete all[theme];
+      return { ...r, trackedActions: { ...cur, themeWeights: all } } as R;
     });
   const setBase = (k: string, v: number) => setRules((r) => ({ ...r, chapterBaseCounts: { ...groupOf(r, "chapterBaseCounts"), [k]: v } }) as R);
 
@@ -84,6 +106,22 @@ export function TrackedActionsFields({ rules, setRules }: { rules: R; setRules: 
       {CONTENT_FAMILIES.map((f) => (
         <NumberField key={`fb-${f}`} label={`Quantité de base : ${FAMILY_LABELS[f]}`} value={familyBase[f] ?? 1} min={1} step={1} onChange={(v) => setMap("familyBase", f, Math.max(1, Math.min(10_000, Math.round(v ?? 1))))} />
       ))}
+      <p className="text-sm text-slate-400 sm:col-span-2">
+        {TRACKED_ACTION_RULES_META.themeWeights.label} (6.14.131) : {TRACKED_ACTION_RULES_META.themeWeights.hint} Champ vide : le poids ci-dessus.
+      </p>
+      {PASS_THEMES.map((t) =>
+        THEME_KEYS.map(({ key, label }) => (
+          <NumberField
+            key={`th-${t.id}-${key}`}
+            label={`Thème « ${t.id} » : ${label}`}
+            value={themeWeights[t.id]?.[key]}
+            optional
+            min={0}
+            step={0.25}
+            onChange={(v) => setTheme(t.id, key, v)}
+          />
+        )),
+      )}
     </Section>
   );
 }

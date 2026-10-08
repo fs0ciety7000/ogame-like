@@ -53,7 +53,7 @@ import { DEFAULT_FACTIONS, FACTIONS, PIRATE_RULES, setFactions, validateFactions
 import { RESOURCE_LIST } from "@/game/resources";
 import { driftWarnings, listShapeErrors, shapeErrors } from "@/game/contentShape";
 import { DEFAULT_TALENTS, setTalents, validateTalents, withDefaultTalents, type TalentDef } from "@/game/talents";
-import { DEFAULT_MODULE_FAMILIES, DEFAULT_MODULE_TEMPLATES, setModuleContent, validateModuleContent, withDefaultModuleFamilies, withDefaultModuleTemplates, type ModuleFamilyDef, type ModuleTemplate } from "@/game/modules";
+import { DEFAULT_MODULE_FAMILIES, DEFAULT_MODULE_TEMPLATES, setModuleContent, validateModuleContent, validateSignatureRules, withDefaultModuleFamilies, withDefaultModuleTemplates, type ModuleFamilyDef, type ModuleTemplate } from "@/game/modules";
 import { isUnitSelector } from "@/game/effects";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
 import { applyAchievementPace, DEFAULT_ACHIEVEMENTS, METRICS, setAchievementList, TIER_LABELS, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
@@ -718,7 +718,8 @@ function validateFixedListNumbers(merged: GameRules): string[] {
   const cw = entries(dc.weights);
   for (const [id, v] of cw) if (!(num(v) >= 0 && num(v) <= 100)) errors.push(`Objectifs du jour : poids de « ${id} » entre 0 et 100.`);
   // 6.14.121 (AP-L7) : les types du registre (porte de saut, convoi) ne comptent pas : ils ne sont proposés qu'à certains joueurs.
-  const drawable = cw.filter(([id, v]) => num(v) > 0 && actionOfContract(id) === null).length;
+  // 6.14.131 (AJ27-7) : ni les types paramétrés (contenu visé), proposés seulement pour un contenu ouvert.
+  const drawable = cw.filter(([id, v]) => num(v) > 0 && actionOfContract(id) === null && !/_content$/.test(id)).length;
   if (cw.length > 0 && drawable < (num(dc.perDay) || 1)) errors.push(`Objectifs du jour : au moins ${num(dc.perDay) || 1} types de poids non nul (un par objectif du jour), ${drawable} aujourd'hui.`);
   for (const [id, v] of entries(dc.targets)) if (!(Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 10_000)) errors.push(`Objectifs du jour : quantité de « ${id} » entière, entre 1 et 10 000.`);
   // 6.14.117 (É30-6) : rythme des succès, un facteur par mesure connue, entre 1 et 1 000.
@@ -920,6 +921,8 @@ export function validateGameContent(content: GameContent): string[] {
   // 6.14.127 (AA9) : talents et modules (sections absentes d'un contenu partiel : défauts).
   errors.push(...validateTalents(content.talents ?? DEFAULT_TALENTS, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
   errors.push(...validateModuleContent(content.moduleFamilies ?? DEFAULT_MODULE_FAMILIES, content.moduleTemplates ?? DEFAULT_MODULE_TEMPLATES));
+  // 6.14.133 (AJ27-10) : plans signature (familles et rareté connues).
+  errors.push(...validateSignatureRules((content.rules as { signatureModules?: Parameters<typeof validateSignatureRules>[0] } | undefined)?.signatureModules, (content.moduleFamilies ?? DEFAULT_MODULE_FAMILIES).map((f) => f.id)));
   // 6.14.128 (AA9) : thèmes et catalogue du passe.
   errors.push(...validatePassCatalog(content.passThemes ?? DEFAULT_PASS_THEMES, content.seasonCatalog ?? DEFAULT_SEASON_CATALOG));
 

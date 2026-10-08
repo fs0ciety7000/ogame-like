@@ -16,7 +16,11 @@ import { BUILDINGS, effectiveBuildingLevel, findBuilding } from "@/game/building
 import { describeTechEffect, TECHNOLOGIES, techEffects, techImage } from "@/game/technologies";
 import { RESOURCE_LIST } from "@/game/resources";
 import { RELIC_EFFECT_LABELS, RELICS, relicImage, relicsState } from "@/game/relics";
-import { COMMANDERS, commandersState } from "@/game/commanders";
+import { COMMANDERS, commandersState, SEASON_COMMANDERS } from "@/game/commanders";
+import { TALENT_BRANCHES, TALENT_RULES, TALENTS, talentState } from "@/game/talents";
+import { defaultEmpireClasses, empireClasses, empireClassEffectLines, empireClassPerkLines } from "@/game/empireClass";
+import { describeModule, findModuleTemplate, MODULE_FAMILIES, MODULE_RARITIES, MODULE_TEMPLATES, moduleClassesText, moduleImage, modulesSeen, SIGNATURE_MODULE_RULES, SIGNATURE_PREFIX } from "@/game/modules";
+import { describeEffect } from "@/game/effects";
 import { BIOMES, biomeImage, colonyBiome, COLONY_SPEC_LORE, COLONY_SPECS, colonySpecImage, DEPOSIT_RULES, RARE_DEPOSITS } from "@/game/colonies";
 import { warlordUid, warlordsConfig } from "@/game/warlords";
 import type { PlayerState } from "@/types/game";
@@ -35,7 +39,7 @@ import type { PlayerState } from "@/types/game";
 
 export const CODEX_TITLE = "Archiviste";
 
-export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "buildings" | "technologies" | "colonies" | "relics" | "officers" | "chronicles" | "legends";
+export type CodexCategory = "factions" | "warlords" | "bosses" | "units" | "buildings" | "technologies" | "colonies" | "relics" | "officers" | "doctrines" | "arsenal" | "chronicles" | "legends";
 
 export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string }[] = [
   { id: "factions", label: "Factions", hint: "Débloquée au premier ultimatum reçu." },
@@ -49,7 +53,10 @@ export const CODEX_CATEGORIES: { id: CodexCategory; label: string; hint: string 
   { id: "colonies", label: "Colonies", hint: "Biomes : à ta première colonie. Spécialisation : choisie une fois." },
   // 5.15.12 : reliques possédées et officiers recrutés.
   { id: "relics", label: "Reliques", hint: "Débloquée en possédant cette relique." },
-  { id: "officers", label: "Officiers", hint: "Débloqué en recrutant cet officier." },
+  { id: "officers", label: "Officiers", hint: "Débloqué en recrutant cet officier. Commandants de saison : fiches en plus, hors du pourcentage." },
+  // 6.14.132 (AU27, AJ27-9, AJ-4) : talents d'Ascension et classes d'empire ; modèles de modules de vaisseaux.
+  { id: "doctrines", label: "Doctrines", hint: "Talent : appris une fois. Classe d'empire : choisie une fois." },
+  { id: "arsenal", label: "Arsenal", hint: "Débloqué au premier plan de ce modèle trouvé." },
   { id: "chronicles", label: "Chroniques", hint: "Débloqué à sa parution." },
   // v5.14.2 : exploits rarissimes.
   { id: "legends", label: "Légendes", hint: "Débloquée par un exploit rarissime." },
@@ -73,6 +80,8 @@ export interface CodexEntry {
   color?: string;
   /** 5.15.11 : fiche technique générée depuis les données. */
   facts?: CodexFact[];
+  /** 6.14.132 (AJ-16) : fiche en plus (commandant de saison) : hors du pourcentage, des catégories complètes et du titre. */
+  bonus?: boolean;
 }
 
 /** 5.15.11 : ce que le joueur a affronté hors rapports de combat (Hall of fame des boss). */
@@ -91,7 +100,17 @@ export function bossesFoughtBy(history: BossHistoryEntry[], uid: string): Set<st
 const unitName = (id: string) => UNITS.find((u) => u.id === id)?.name ?? id;
 const resourceName = (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name ?? id;
 
-type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige" | "colonies">>;
+type CodexPlayer = Pick<PlayerState, "stats" | "units" | "chronicle"> & Partial<Pick<PlayerState, "casino" | "relics" | "commanders" | "moon" | "buildings" | "techLevels" | "prestige" | "colonies" | "talents" | "modules" | "empireClass">>;
+
+/** 6.14.132 (AJ27-9) : image d'une branche de talents (provisoire jusqu'au rendu, `scripts/illustrations.json`). */
+export function talentBranchImage(branch: string): string {
+  return `/assets/talents/${branch}.webp`;
+}
+
+/** 6.14.132 : image d'une classe d'empire (classe livrée : son image ; ajoutée dans l'admin : l'insigne d'Ascension). */
+export function empireClassImage(id: string): string {
+  return defaultEmpireClasses().some((c) => c.id === id) ? `/assets/classes/${id}.webp` : "/assets/ascension/insigne.webp";
+}
 
 /** Toutes les fiches, avec leur état. `fought` : identifiants des seigneurs déjà affrontés. */
 export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, now: number, extra: CodexExtra = {}): CodexEntry[] {
@@ -273,6 +292,97 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
       ],
     });
   }
+  // 6.14.132 (AU27, AJ27-9, AJ-16) : commandants de saison publiés, fiches en plus (hors du pourcentage : un mois passé ne se
+  // rattrape pas), débloquées à l'obtention.
+  for (const c of SEASON_COMMANDERS) {
+    out.push({
+      id: `officer:${c.id}`,
+      category: "officers",
+      name: c.name,
+      subtitle: `${c.title} · commandant de saison${c.season ? ` (${c.season.label})` : ""}`,
+      image: c.portrait,
+      text: c.lore || `${c.name}, ${c.title.toLowerCase()}.`,
+      unlocked: !!roster[c.id],
+      bonus: true,
+      facts: [
+        { label: "Au niveau 1", value: c.bonus(1) },
+        { label: "Obtenu", value: "dernier palier du passe de sa saison" },
+      ],
+    });
+  }
+  // 6.14.132 (AU27, AJ27-9, AJ-4) : Doctrines. Talents (appris une fois ; un talent retiré reste pour qui l'a appris) et classes
+  // d'empire (choisies une fois).
+  const learned = new Set<string>([...((player.stats as { talentsLearned?: string[] } | undefined)?.talentsLearned ?? []), ...Object.keys(talentState({ talents: player.talents }).ranks)]);
+  for (const t of TALENTS) {
+    if (t.retired && !learned.has(t.id)) continue;
+    const branch = TALENT_BRANCHES.find((b) => b.id === t.branch);
+    const perRank = (t.effects ?? []).map((e) => describeEffect(e.stat, Number(e.value) || 0, e.target, e.scope)).join(" ; ");
+    out.push({
+      id: `talent:${t.id}`,
+      category: "doctrines",
+      name: t.name,
+      subtitle: `Talent d'Ascension · ${branch?.name ?? t.branch}`,
+      image: talentBranchImage(t.branch),
+      text: t.description.split("{value}").join(String(Number(t.effects?.[0]?.value) || 0).replace(".", ",")),
+      unlocked: learned.has(t.id),
+      facts: [
+        ...(perRank ? [{ label: "Par rang", value: perRank }] : []),
+        { label: "Rang maximal", value: String(TALENT_RULES.maxRank) },
+      ],
+    });
+  }
+  const classesUsed = new Set<string>([...((player.stats as { empireClassesUsed?: string[] } | undefined)?.empireClassesUsed ?? []), ...(player.empireClass?.id ? [player.empireClass.id] : [])]);
+  for (const c of empireClasses()) {
+    const lines = [...empireClassEffectLines(c), ...empireClassPerkLines(c)];
+    out.push({
+      id: `class:${c.id}`,
+      category: "doctrines",
+      name: c.name,
+      subtitle: "Classe d'empire",
+      image: empireClassImage(c.id),
+      text: c.tagline,
+      unlocked: classesUsed.has(c.id),
+      facts: lines.slice(0, 4).map((value) => ({ label: "Effet", value })),
+    });
+  }
+  // 6.14.132 (AU27, AJ27-9, AJ-4) : Arsenal, un modèle de module par fiche (un modèle retiré reste pour qui l'a trouvé).
+  const seen = modulesSeen({ stats: player.stats, modules: player.modules });
+  for (const m of MODULE_TEMPLATES) {
+    if (m.retired && !seen.has(m.id)) continue;
+    const fam = MODULE_FAMILIES[m.family];
+    out.push({
+      id: `module:${m.id}`,
+      category: "arsenal",
+      name: m.name,
+      subtitle: `Module · ${fam?.label ?? m.family}`,
+      image: moduleImage(m.id),
+      text: m.description,
+      unlocked: seen.has(m.id),
+      facts: [
+        ...(fam ? [{ label: "Se monte sur", value: moduleClassesText(fam.classes) }] : []),
+        ...(fam ? [{ label: "Commun → légendaire", value: `${describeModule({ template: m.id, rarity: "common" })} → ${describeModule({ template: m.id, rarity: "legendary" })}` }] : []),
+      ],
+    });
+  }
+  // 6.14.133 (AJ27-10) : plans signature (un par unité), une fiche en plus, ouverte au premier plan signature trouvé.
+  const signatures = [...seen].filter((id) => id.startsWith(SIGNATURE_PREFIX));
+  if (SIGNATURE_MODULE_RULES.enabled !== false || signatures.length > 0) {
+    out.push({
+      id: "module:signature",
+      category: "arsenal",
+      name: "Plans signature",
+      subtitle: "Module forgé pour une seule unité",
+      image: moduleImage(`${SIGNATURE_PREFIX}x`),
+      text: "Certains plans ne servent qu'une coque. Un ingénieur les a dessinés pour un seul modèle de vaisseau, avec ses défauts et ses manies. Monté sur sa classe, il ne profite qu'à cette unité, mais il lui donne plus qu'un module ordinaire.",
+      unlocked: signatures.length > 0,
+      bonus: true,
+      facts: [
+        { label: "Tombe", value: `parfois, sur un plan ${MODULE_RARITIES.find((r) => r.id === SIGNATURE_MODULE_RULES.minRarity)?.label.toLowerCase() ?? "rare"} ou mieux` },
+        { label: "Valeur", value: `× ${String(SIGNATURE_MODULE_RULES.factor).replace(".", ",")} celle de sa famille, pour son unité seulement` },
+        ...(signatures.length > 0 ? [{ label: "Les tiens", value: signatures.map((id) => findModuleTemplate(id)?.name ?? id).join(", ") }] : []),
+      ],
+    });
+  }
   for (const u of UNITS) {
     out.push({
       id: `unit:${u.id}`,
@@ -355,8 +465,10 @@ export function codexEntries(player: CodexPlayer, fought: ReadonlySet<string>, n
 }
 
 export function codexProgress(entries: CodexEntry[]): { unlocked: number; total: number; pct: number } {
-  const unlocked = entries.filter((e) => e.unlocked).length;
-  const total = entries.length;
+  // 6.14.132 : une fiche en plus (commandant de saison) ne compte pas.
+  const counted = entries.filter((e) => !e.bonus);
+  const unlocked = counted.filter((e) => e.unlocked).length;
+  const total = counted.length;
   return { unlocked, total, pct: total > 0 ? Math.floor((unlocked / total) * 100) : 0 };
 }
 
@@ -389,7 +501,7 @@ export function codexClaimedCategories(player: Pick<PlayerState, "stats">): stri
 
 /** Avancement d'une catégorie et état de sa récompense. */
 export function codexCategoryState(player: Pick<PlayerState, "stats">, entries: CodexEntry[], category: CodexCategory): { unlocked: number; total: number; complete: boolean; claimed: boolean; reward: { tokens: number; amber: number } } {
-  const list = entries.filter((e) => e.category === category);
+  const list = entries.filter((e) => e.category === category && !e.bonus);
   const unlocked = list.filter((e) => e.unlocked).length;
   return { unlocked, total: list.length, complete: list.length > 0 && unlocked === list.length, claimed: codexClaimedCategories(player).includes(category), reward: codexCategoryReward(category) };
 }

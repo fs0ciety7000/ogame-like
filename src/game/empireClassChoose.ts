@@ -20,5 +20,9 @@ export function chooseEmpireClass(player: PlayerState, idIn: unknown, now: numbe
   }
   const next: EmpireClassState = { id: def.id, chosenAtMs: now, changes: cur ? (cur.changes ?? 0) + 1 : 0 };
   player.empireClass = next;
+  // 6.14.132 (AJ27-9) : classes déjà choisies (Codex « Doctrines », succès de classe), gardées après un changement.
+  const used = Array.isArray(player.stats?.empireClassesUsed) ? player.stats!.empireClassesUsed : [];
+  const add = [cur?.id, def.id].filter((id): id is string => !!id && !used.includes(id));
+  if (add.length > 0) player.stats = { ...(player.stats ?? {}), empireClassesUsed: [...used, ...new Set(add)] } as PlayerState["stats"];
   return next;
 }

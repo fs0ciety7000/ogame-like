@@ -23,8 +23,8 @@ import type { PlayerState } from "@/types/game";
 
 /** Les 9 actions d'avant 6.14.121 (ordre des tirages d'origine). */
 export type BaseObjective = "contract" | "bounty" | "raidRepelled" | "victory" | "bossAssault" | "mission" | "spy" | "market" | "warlordWin";
-/** 6.14.121 : lune, phalange, porte de saut, colonies. */
-export type NewObjective = "moonUpgrade" | "phalanxScan" | "gateJump" | "colonyConvoy" | "colonyBase" | "colonySpec";
+/** 6.14.121 : lune, phalange, porte de saut, colonies. 6.14.131 (AJ27-7) : expéditions et recyclage (poids 0 par défaut). */
+export type NewObjective = "moonUpgrade" | "phalanxScan" | "gateJump" | "colonyConvoy" | "colonyBase" | "colonySpec" | "expedition" | "recycle";
 export type StaticObjective = BaseObjective | NewObjective;
 /** Familles par contenu : une action par unité, techno ou bâtiment. */
 export type ContentFamily = "unit" | "research" | "building";
@@ -86,12 +86,15 @@ export const TRACKED_ACTIONS: Record<StaticObjective, TrackedActionDef> = {
   colonyConvoy: def("colonyConvoy", "colonies", "Convois de colonie arrivés", "fait arriver {n} convois de colonie", ["Nos colonies doivent nourrir l'effort. Fais arriver {count} convoi{s}.", "Chaque convoi compte : {count} arrivée{s} sur tes routes de colonie."], "/game/colonies", { measured: true, since: "6.14.121", contract: "colony_convoy" }),
   colonyBase: def("colonyBase", "colonies", "Bases avancées tenues", "tenu {n} bases avancées", ["Tiens un avant-poste : {count} base{s} avancée{s} jusqu'au bout de leur séjour.", "Une base avancée qui tient vaut une flotte. Tiens-en {count}."], "/game/colonies", { measured: true, since: "6.14.121" }),
   colonySpec: def("colonySpec", "colonies", "Colonies spécialisées", "spécialisé {n} colonies", ["Donne une vocation à tes mondes : spécialise {count} colonie{s}.", "Chaque colonie doit choisir sa voie : {count} spécialisation{s}."], "/game/colonies", { measured: true, since: "6.14.121" }),
+  // 6.14.131 (AU27, AJ27-7, AJ-2) : expéditions terminées et champs de débris recyclés (poids 0 par défaut, activables par thème).
+  expedition: def("expedition", "expeditions", "Expéditions terminées", "terminé {n} expéditions", ["Les confins nous cachent quelque chose. Termine {count} expédition{s}.", "Envoie tes équipages au large : {count} expédition{s}, et rapporte-moi ce qu'ils trouvent."], "/game/missions", { measured: true, since: "6.14.131", contract: "expedition" }),
+  recycle: def("recycle", "recyclage", "Champs de débris recyclés", "recyclé {n} champs de débris", ["Rien ne se perd dans ce secteur : recycle {count} champ{s} de débris.", "Les épaves valent de l'or. {count} recyclage{s}, et nos chantiers tourneront."], "/game/galaxie", { measured: true, since: "6.14.131", contract: "recycle" }),
 };
 
 /** Ordre d'origine des 9 actions (tirages d'avant 6.14.121). */
 export const BASE_OBJECTIVES: BaseObjective[] = ["contract", "bounty", "raidRepelled", "victory", "bossAssault", "mission", "spy", "market", "warlordWin"];
-/** Actions entrées en 6.14.121, dans l'ordre où les générateurs les ajoutent (toujours après celles d'avant). */
-export const NEW_OBJECTIVES: NewObjective[] = ["moonUpgrade", "phalanxScan", "gateJump", "colonyConvoy", "colonyBase", "colonySpec"];
+/** Actions entrées en 6.14.121 (puis 6.14.131), dans l'ordre où les générateurs les ajoutent (toujours après celles d'avant). */
+export const NEW_OBJECTIVES: NewObjective[] = ["moonUpgrade", "phalanxScan", "gateJump", "colonyConvoy", "colonyBase", "colonySpec", "expedition", "recycle"];
 export const STATIC_OBJECTIVES: StaticObjective[] = [...BASE_OBJECTIVES, ...NEW_OBJECTIVES];
 export const CONTENT_FAMILIES: ContentFamily[] = ["unit", "research", "building"];
 
@@ -124,6 +127,9 @@ export const TRACKED_ACTION_RULES = {
     colonyConvoy: 1,
     colonyBase: 1,
     colonySpec: 0,
+    // 6.14.131 (AJ27-7) : poids 0 par défaut (aucun tirage ne change) ; activables ici ou par thème (`themeWeights`).
+    expedition: 0,
+    recycle: 0,
   } as Record<string, number>,
   /** Poids des familles par contenu dans les tirages communs (0 : servies seulement par l'épisode « nouveauté »). */
   familyWeights: { unit: 0, research: 0, building: 0 } as Record<string, number>,
@@ -131,6 +137,12 @@ export const TRACKED_ACTION_RULES = {
   familyBase: { unit: 10, research: 1, building: 1 } as Record<string, number>,
   /** Une action « mesurée » n'entre dans un tirage commun que si la médiane du serveur atteint ce nombre par semaine. */
   measuredMinWeekly: 0.5,
+  /**
+   * 6.14.131 (AU27, AJ27-7, Q66) : poids par thème du passe du mois (`vide`, `chantiers`, `colonies`…). Pour un mois de ce thème,
+   * le poids d'une action (clé du registre) ou d'une famille par contenu (`unit`, `research`, `building`) remplace son poids
+   * ci-dessus, dans les Chroniques et les défis du passe. Vide par défaut : aucun tirage ne change.
+   */
+  themeWeights: {} as Record<string, Record<string, number>>,
 };
 
 /** Libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
@@ -140,6 +152,10 @@ export const TRACKED_ACTION_RULES_META = {
   familyWeights: { label: "Poids des familles par contenu (unité, techno, bâtiment)", hint: "0 = jamais dans les tirages communs : ces actions servent l'épisode « nouveauté ». Objectifs paramétrés : lot AJ27-7." },
   familyBase: { label: "Quantité de base d'une famille par contenu (une semaine)", hint: "unit : unités lancées ; research : niveaux de recherche lancés ; building : améliorations lancées." },
   measuredMinWeekly: { label: "Médiane minimale d'une action « mesurée »", unit: "par semaine", min: 0, max: 50, hint: "Une action nouvelle ou tardive (lune, colonies) n'entre dans un tirage commun que si le joueur médian du serveur la fait au moins autant : sa page lui est donc ouverte (I31)." },
+  themeWeights: {
+    label: "Poids par thème du passe (objectifs paramétrés)",
+    hint: "Pour un mois de ce thème, remplace le poids d'une action (expedition, recycle, colonyConvoy…) ou d'une famille (unit, research, building) dans les Chroniques et les défis du passe. Une action « mesurée » reste soumise à la médiane du serveur. Vide : aucun changement.",
+  },
 };
 
 export function validateTrackedActionRules(r: Partial<typeof TRACKED_ACTION_RULES> | undefined): string[] {
@@ -153,6 +169,17 @@ export function validateTrackedActionRules(r: Partial<typeof TRACKED_ACTION_RULE
   for (const [k, v] of Object.entries(r.familyWeights ?? {})) {
     if (!(CONTENT_FAMILIES as string[]).includes(k)) e.push(`${L} : famille « ${k} » inconnue.`);
     else if (!(Number(v) >= 0 && Number(v) <= 100)) e.push(`${L} : poids de la famille ${k} entre 0 et 100.`);
+  }
+  for (const [theme, table] of Object.entries(r.themeWeights ?? {})) {
+    if (!/^[0-9A-Za-z_-]{1,40}$/.test(theme)) e.push(`${L} : thème « ${theme} » invalide.`);
+    if (!table || typeof table !== "object" || Array.isArray(table)) {
+      e.push(`${L} : poids du thème ${theme} : une table action → poids.`);
+      continue;
+    }
+    for (const [k, v] of Object.entries(table)) {
+      if (!isStaticObjective(k) && !(CONTENT_FAMILIES as string[]).includes(k)) e.push(`${L} : thème ${theme}, action « ${k} » inconnue.`);
+      else if (!(Number(v) >= 0 && Number(v) <= 100)) e.push(`${L} : thème ${theme}, poids de ${k} entre 0 et 100.`);
+    }
   }
   for (const [k, v] of Object.entries(r.familyBase ?? {})) {
     if (!(CONTENT_FAMILIES as string[]).includes(k)) e.push(`${L} : famille « ${k} » inconnue.`);
@@ -257,8 +284,25 @@ export function staticObjectiveLabels(): Record<StaticObjective, string> {
   return Object.fromEntries(STATIC_OBJECTIVES.map((k) => [k, TRACKED_ACTIONS[k].label])) as Record<StaticObjective, string>;
 }
 
-/** Poids global d'une action (réglage absent ou illisible : 1 pour une action du registre, celui de sa famille sinon). */
-export function trackedWeight(k: TrackedKey): number {
+/**
+ * 6.14.131 (AJ27-7) : poids d'un thème du passe pour une action (clé du registre, puis sa famille) ; `undefined` : le thème ne
+ * la règle pas (ou pas de thème).
+ */
+export function themeWeight(k: TrackedKey, theme?: string | null): number | undefined {
+  if (!theme) return undefined;
+  const table = TRACKED_ACTION_RULES.themeWeights?.[theme];
+  if (!table || typeof table !== "object") return undefined;
+  const c = parseContentObjective(k);
+  const raw = Object.prototype.hasOwnProperty.call(table, k) ? table[k] : c && Object.prototype.hasOwnProperty.call(table, c.family) ? table[c.family] : undefined;
+  const w = Number(raw);
+  return raw === undefined || !Number.isFinite(w) ? undefined : Math.max(0, w);
+}
+
+/** Poids global d'une action (réglage absent ou illisible : 1 pour une action du registre, celui de sa famille sinon).
+ *  6.14.131 (AJ27-7) : `theme` (thème du passe du mois) : son poids remplace celui-ci s'il règle l'action. */
+export function trackedWeight(k: TrackedKey, theme?: string | null): number {
+  const t = themeWeight(k, theme);
+  if (t !== undefined) return t;
   const r = TRACKED_ACTION_RULES;
   const c = parseContentObjective(k);
   const raw = c ? r.familyWeights?.[c.family] : r.weights?.[k];
@@ -282,10 +326,11 @@ export function trackedActionsEnabled(): boolean {
  * Actions ajoutées aux tirages communs après celles d'avant (toujours en fin de liste : l'ordre et le tirage d'origine ne changent
  * pas tant qu'elles ne sont pas jouables). Nouvelles actions du registre de poids > 0, puis familles par contenu de poids > 0.
  */
-export function extraObjectives(): TrackedKey[] {
+export function extraObjectives(theme?: string | null): TrackedKey[] {
   if (!trackedActionsEnabled()) return [];
-  const out: TrackedKey[] = NEW_OBJECTIVES.filter((k) => trackedWeight(k) > 0);
-  for (const f of CONTENT_FAMILIES) if (trackedWeight(contentObjective(f, "x")) > 0) for (const id of contentIds(f)) out.push(contentObjective(f, id));
+  const out: TrackedKey[] = NEW_OBJECTIVES.filter((k) => trackedWeight(k, theme) > 0);
+  // 6.14.131 (AJ27-7) : chaque contenu de la famille, à son propre poids (un thème peut régler la famille ou un contenu précis).
+  for (const f of CONTENT_FAMILIES) for (const id of contentIds(f)) if (trackedWeight(contentObjective(f, id), theme) > 0) out.push(contentObjective(f, id));
   return out;
 }
 

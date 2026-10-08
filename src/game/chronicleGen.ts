@@ -115,10 +115,11 @@ export function budgetEpisodeRewards(rng: () => number, difficulty: number, r: C
 }
 
 /** Actions autorisées dans les objectifs et leur poids. */
-export function objectiveWeight(k: ChronicleObjective, r: ChronicleGenRules = chronicleGenRules()): number {
+export function objectiveWeight(k: ChronicleObjective, r: ChronicleGenRules = chronicleGenRules(), theme?: string | null): number {
   // 6.14.121 (AP-L7) : × poids global du registre des actions suivies (1 par défaut : rien ne change pour les 9 d'avant). Une
   // action du registre absente de la table des Chroniques y vaut 1 ; une action d'avant absente, 0 (comme avant).
   const own = r.objectiveWeights[k];
   const g = own === undefined ? (isBaseObjective(k) ? 0 : 1) : Number(own);
-  return Math.max(0, Number.isFinite(g) ? g : 0) * trackedWeight(k);
+  // 6.14.131 (AJ27-7) : `theme` (thème du passe du mois) : son poids du registre remplace le poids global s'il règle l'action.
+  return Math.max(0, Number.isFinite(g) ? g : 0) * trackedWeight(k, theme);
 }

@@ -177,3 +177,6 @@ pas), **recherche Ctrl+K** (`PALETTE_KINDS`, tenu avec `CommandPalette.tsx`). `c
 `KNOWN_GAPS` et sur un manque connu déjà comblé ; chaque manque connu cite son lot. Le même bilan s'affiche dans Admin → Équilibrage →
 « Chaîne de contenu », contenu ajouté dans l'admin compris, avec un lien vers l'onglet où régler chaque manque. Les autres maillons
 (image, défi, changelog, pré-prod…) restent cochés dans la fiche du lot.
+Depuis 6.14.133, `KNOWN_GAPS` est vide. Une unité ajoutée (code ou admin) reçoit d'office son préréglage (6.14.123), ses succès
+« Escadre » et « Maître » (6.14.129), son plan de module « signature » (6.14.133) et son action « construire telle unité », activable par
+thème dans les objectifs générés (6.14.131) : il reste son Codex, son image et ses textes.

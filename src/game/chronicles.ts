@@ -115,6 +115,9 @@ export const DEFAULT_CODEX_REWARDS: CodexRewardTable = {
   colonies: { tokens: 5, amber: 25 },
   relics: { tokens: 8, amber: 40 },
   officers: { tokens: 5, amber: 25 },
+  // 6.14.132 (AJ27-9) : barème des Unités.
+  doctrines: { tokens: 5, amber: 25 },
+  arsenal: { tokens: 5, amber: 25 },
   chronicles: { tokens: 0, amber: 0 },
   legends: { tokens: 10, amber: 60 },
 };

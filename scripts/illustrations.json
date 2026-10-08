@@ -1764,6 +1764,54 @@
    "quality": 85,
    "prompt": "a colossal prestige monument under construction in high orbit above an industrial planet, a slender spire of salvaged hull plates and golden alloy rising from a scaffold ring, tiny construction drones and cranes, warm amber work lights against cold blue starlight, calm dark starfield, cinematic sci-fi concept art, wide composition, muted palette with gold accents, high detail, no text --ar 16:10 --v 7 --style raw --s 200",
    "done": "2026-10-07"
+  },
+  {
+   "id": "talent-economie",
+   "group": "Doctrines",
+   "name": "Talents d'Ascension : branche Économie (Codex « Doctrines »)",
+   "target": "public/assets/talents/economie.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "an ascended empire's economic doctrine as a glowing emerald sigil above a terraced foundry world, golden supply streams spiralling into orbit, mint green and gold light, sci-fi strategy game doctrine card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "talent-guerre",
+   "group": "Doctrines",
+   "name": "Talents d'Ascension : branche Guerre (Codex « Doctrines »)",
+   "target": "public/assets/talents/guerre.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "an ascended empire's war doctrine as a crimson sigil of crossed lances hovering above a battle fleet in formation, ember sparks and red engine glow, sci-fi strategy game doctrine card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "talent-logistique",
+   "group": "Doctrines",
+   "name": "Talents d'Ascension : branche Logistique (Codex « Doctrines »)",
+   "target": "public/assets/talents/logistique.webp",
+   "width": 512,
+   "height": 512,
+   "cutout": false,
+   "quality": 85,
+   "prompt": "an ascended empire's logistics doctrine as a cyan sigil of interlocking orbits above a web of glowing cargo lanes between planets, convoys tracing light trails, sci-fi strategy game doctrine card, centered, square composition, dark space background, cinematic concept art, muted palette, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
+  },
+  {
+   "id": "module-signature",
+   "group": "Modules",
+   "name": "Plan de module « signature » (propre à une unité, Codex « Arsenal », Modules)",
+   "target": "public/assets/modules/signature.webp",
+   "width": 256,
+   "height": 256,
+   "cutout": true,
+   "quality": 85,
+   "prompt": "a bespoke starship module blueprint engraved with a single ship silhouette, gold filigree frame around a glowing cyan core, maker's seal stamped in the corner, sci-fi game starship module icon, salvaged-tech hardware, centered on a dark neutral background, soft rim light, painterly concept art, high detail, no text --ar 1:1 --v 7 --style raw --s 250",
+   "done": null
   }
  ]
 }

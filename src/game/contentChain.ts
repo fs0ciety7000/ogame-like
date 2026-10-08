@@ -17,7 +17,7 @@ import { allEffectPresets } from "@/game/effectCatalog";
 import { parseUnitSelector, selectorMatches } from "@/game/effectTargets";
 import { empireClasses } from "@/game/empireClass";
 import { probeUnitIds } from "@/game/espionage";
-import { MODULE_FAMILIES, MODULE_TEMPLATES } from "@/game/modules";
+import { MODULE_FAMILIES, MODULE_TEMPLATES, signatureUnits } from "@/game/modules";
 import { paletteContentEntries } from "@/game/paletteContent";
 import { RELICS } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
@@ -96,10 +96,11 @@ export const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMe
   seasonBoss: { entry: ["bossSeals"], mastery: null },
   // 6.14.115 (AJ27-5) : colonies (fondation ; toutes les colonies, convois, base avancée tenue).
   colony: { entry: ["coloniesFounded"], mastery: ["coloniesMaxed", "colonyConvoys", "colonyBaseTours"] },
-  // 6.14.114 (AJ27-4) : les talents ne se gagnent que par l'Ascension ; pas encore de succès « branche complète » (AJ27-9).
-  talent: { entry: ["ascensionsDone"], mastery: [] },
-  module: { entry: ["modulesBuilt"], mastery: ["modulesMounted"] },
-  class: { entry: [], mastery: [] },
+  // 6.14.114 (AJ27-4) : les talents ne se gagnent que par l'Ascension. 6.14.132 (AJ27-9) : « Spécialiste » (branche complète),
+  // « Arsenal légendaire » (module légendaire monté), « Une identité » et « Toutes les doctrines » (classes d'empire).
+  talent: { entry: ["ascensionsDone"], mastery: ["talentBranchesComplete"] },
+  module: { entry: ["modulesBuilt"], mastery: ["modulesMounted", "legendaryModulesMounted"] },
+  class: { entry: ["empireClassesTried"], mastery: ["empireClassesTried"] },
 };
 
 /**
@@ -179,12 +180,14 @@ function ownAchievementTargets(): Set<string> {
   return out;
 }
 
-/** Cibles d'unités des porteurs d'effets en vigueur : reliques composées, modules (par classe), technos à effet composé,
+/** Cibles d'unités des porteurs d'effets en vigueur : reliques composées, modules (par classe, et signature par unité), technos à effet composé,
  *  classes d'empire et talents à effet ciblé. */
 export function unitCarrierSelectors(): string[] {
   const out: string[] = [];
   for (const r of RELICS) if (!r.disabled && r.effect === "custom" && r.custom?.target) out.push(r.custom.target);
   for (const fam of Object.values(MODULE_FAMILIES)) for (const cls of fam.classes) out.push(`class:${cls}`);
+  // 6.14.133 (AJ27-10, QJ2) : un plan de module « signature » par unité (une unité ajoutée dans l'admin a le sien).
+  for (const id of signatureUnits()) out.push(`unit:${id}`);
   for (const t of TECHNOLOGIES) for (const e of techEffects(t)) if (e.type === "stat" && e.target) out.push(e.target);
   for (const c of empireClasses()) for (const e of c.effects) if (e.target) out.push(e.target);
   // 6.14.127 (AA9) : un talent à effet composé ciblé (ajouté dans l'admin) porte aussi un effet d'unité.
@@ -255,8 +258,9 @@ export function contentChainReport(): ChainRow[] {
   // 6.14.114 (AJ27-4) : colonies (biomes et spécialisations), talents, modules, classes d'empire.
   for (const b of RARE_DEPOSITS) rows.push(row("colony", b, BIOMES[b].name, { codex: codex.has(`colony:biome:${b}`) }));
   for (const s of COLONY_SPECS) rows.push(row("colony", s.id, s.name, { codex: codex.has(`colony:spec:${s.id}`) }));
-  for (const t of TALENTS) rows.push(row("talent", t.id, t.name, { codex: codex.has(`talent:${t.id}`) }));
-  for (const m of MODULE_TEMPLATES) rows.push(row("module", m.id, m.name, { codex: codex.has(`module:${m.id}`) }));
+  // 6.14.132 (AJ27-9) : un talent ou un modèle retiré n'a de fiche que pour qui l'a eu (sans objet ici).
+  for (const t of TALENTS) rows.push(row("talent", t.id, t.name, { codex: t.retired ? null : codex.has(`talent:${t.id}`) }));
+  for (const m of MODULE_TEMPLATES) rows.push(row("module", m.id, m.name, { codex: m.retired ? null : codex.has(`module:${m.id}`) }));
   for (const c of empireClasses()) rows.push(row("class", c.id, c.name, { codex: codex.has(`class:${c.id}`) }));
   return rows;
 }

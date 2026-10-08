@@ -55,35 +55,101 @@ export interface RelicTemplate {
   disabled?: boolean;
   /** 5.23 : effet composé (effect = "custom") ; valeur = bonus de rareté × scale. */
   custom?: ComposedEffect & { scale?: number };
+  /** 6.14.133 (AU27, AJ27-10, AJ-11) : sources d'où elle tombe plus souvent (poids × `relicSources.sourceBoost` depuis l'une
+   *  d'elles). Absent : la valeur livrée ; liste vide : aucune source favorite. */
+  sources?: RelicSource[];
+  /** 6.14.133 : poids de tirage parmi les reliques (1 par défaut ; 0 = jamais tirée au hasard). */
+  weight?: number;
+}
+
+/* ---------- 6.14.133 (AU27, AJ27-10, AJ-11) : sources du butin ---------- */
+
+/** Sources d'une relique tirée au hasard (`rollRelic(source, …)`). */
+export type RelicSource = "expedition" | "worldBoss" | "seasonBoss" | "allianceBoss" | "warlord" | "threat" | "pvp" | "bounty" | "shop" | "pass";
+
+export const RELIC_SOURCES: RelicSource[] = ["expedition", "worldBoss", "seasonBoss", "allianceBoss", "warlord", "threat", "pvp", "bounty", "shop", "pass"];
+
+export const RELIC_SOURCE_LABELS: Record<RelicSource, string> = {
+  expedition: "Expéditions",
+  worldBoss: "Boss mondiaux",
+  seasonBoss: "Boss de saison",
+  allianceBoss: "Boss d'alliance",
+  warlord: "Seigneurs de guerre (vendetta, coalition)",
+  threat: "Menaces (repaire, raid repoussé)",
+  pvp: "Attaques contre des joueurs",
+  bounty: "Primes de la Ruche (proie d'élite)",
+  shop: "Offre de la semaine",
+  pass: "Passe de saison",
+};
+
+/** Réglages des sources (registre des règles, Admin → Reliques et Tous les réglages). Valeurs littérales. */
+export const RELIC_SOURCE_RULES = {
+  /** Décoché : tirage uniforme, comme avant la 6.14.133 (le poids propre de chaque relique compte toujours). */
+  enabled: true,
+  /** Poids × ce facteur pour une relique tirée depuis l'une de ses sources (Q67 : × 3). */
+  sourceBoost: 3,
+};
+
+export const RELIC_SOURCE_RULES_META = {
+  enabled: { label: "Reliques : sources favorites actives", hint: "Décoché : chaque relique a la même chance quelle que soit la source (avant la 6.14.133)." },
+  sourceBoost: { label: "Reliques : chance depuis une source favorite", unit: "×", min: 1, max: 20, hint: "3 = trois fois plus de chances de tomber depuis l'une de ses sources (expédition, boss, primes…)." },
+};
+
+/** Source d'un tirage d'après son libellé (`loot:worldBoss`, `boss:2026-11`, `vendetta:x`…) ; null : inconnue (tirage commun). */
+export function relicSourceOf(source: string): RelicSource | null {
+  const s = String(source ?? "");
+  if (s.startsWith("loot:")) {
+    const k = s.slice(5);
+    return (RELIC_SOURCES as string[]).includes(k) ? (k as RelicSource) : null;
+  }
+  if (s === "expedition") return "expedition";
+  if (s === "leviathan") return "worldBoss";
+  if (s.startsWith("boss:")) return "seasonBoss";
+  if (s === "allianceBoss") return "allianceBoss";
+  if (s.startsWith("vendetta:") || s.startsWith("coalition:") || s === "ascendant") return "warlord";
+  if (s === "elite" || s === "bounty") return "bounty";
+  if (s === "weekly") return "shop";
+  if (s === "pass") return "pass";
+  return null;
+}
+
+/** Poids d'un modèle pour un tirage depuis `source` (1 par défaut ; × le facteur depuis l'une de ses sources). */
+export function relicDrawWeight(t: Pick<RelicTemplate, "sources" | "weight">, source: RelicSource | null): number {
+  const w = t.weight === undefined ? 1 : Number(t.weight);
+  const base = Number.isFinite(w) ? Math.max(0, w) : 1;
+  const boost = Number(RELIC_SOURCE_RULES.sourceBoost);
+  const favored = RELIC_SOURCE_RULES.enabled !== false && source !== null && Array.isArray(t.sources) && t.sources.includes(source);
+  return base * (favored && Number.isFinite(boost) && boost > 0 ? boost : 1);
 }
 
 export const DEFAULT_RELICS: RelicTemplate[] = [
-  { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", lore: "Arraché au poste de tir d'un croiseur de la Confrérie." },
-  { id: "ecaille_leviathan", name: "Écaille de Léviathan", effect: "defense", lore: "Une plaque de carapace qui encaisse encore les tirs." },
+  { id: "engrenage_varan", name: "Engrenage de Varan", effect: "attack", sources: ["threat"], lore: "Arraché au poste de tir d'un croiseur de la Confrérie." },
+  { id: "ecaille_leviathan", name: "Écaille de Léviathan", effect: "defense", sources: ["worldBoss"], lore: "Une plaque de carapace qui encaisse encore les tirs." },
   { id: "noyau_forge", name: "Noyau de forge", effect: "build_time", lore: "Il chauffe sans jamais s'éteindre." },
   { id: "codex_aube", name: "Codex de l'Aube", effect: "research_time", lore: "Des équations interdites, recopiées à la main." },
   { id: "matrice_reparation", name: "Matrice de réparation", effect: "repair", lore: "Des nanites qui referment les coques déchirées." },
   // 5.21 : cadence de l'Atelier (bonus de rareté × 3 : +9 % en commune, +45 % en légendaire).
   { id: "cle_soudure", name: "Clé de soudure", effect: "repair_speed", lore: "L'outil fétiche d'un chef d'atelier disparu. Elle chante quand elle travaille." },
-  { id: "soute_pliee", name: "Soute pliée", effect: "cargo", lore: "Plus grande dedans que dehors." },
-  { id: "oeil_vesper", name: "Œil de Vesper", effect: "spy", lore: "Une lentille du Chœur qui voit à travers les blindages." },
+  { id: "soute_pliee", name: "Soute pliée", effect: "cargo", sources: ["expedition"], lore: "Plus grande dedans que dehors." },
+  { id: "oeil_vesper", name: "Œil de Vesper", effect: "spy", sources: ["threat"], lore: "Une lentille du Chœur qui voit à travers les blindages." },
   { id: "racine_ferraille", name: "Racine de ferraille", effect: "production_scrap", lore: "Un organisme qui digère le métal et en recrache le double." },
   { id: "cellule_stellaire", name: "Cellule stellaire", effect: "production_energy", lore: "Un fragment d'étoile en bouteille." },
   { id: "essaim_nanites", name: "Essaim de nanites", effect: "production_nano", lore: "Des milliards d'ouvrières qui ne dorment jamais." },
-  { id: "cristal_memoriel", name: "Cristal mémoriel", effect: "production_data", lore: "Il se souvient de civilisations disparues." },
-  { id: "couronne_essaim", name: "Couronne de l'Essaim", effect: "production_all", lore: "Portée jadis par la Reine des Kesh'Vaar.", legendaryOnly: true },
-  { id: "egide_reine", name: "Égide de la Reine", effect: "aegis", lore: "Chaque semaine, la première défaite n'est pas pillée.", legendaryOnly: true },
+  { id: "cristal_memoriel", name: "Cristal mémoriel", effect: "production_data", sources: ["expedition"], lore: "Il se souvient de civilisations disparues." },
+  { id: "couronne_essaim", name: "Couronne de l'Essaim", effect: "production_all", sources: ["bounty"], lore: "Portée jadis par la Reine des Kesh'Vaar.", legendaryOnly: true },
+  { id: "egide_reine", name: "Égide de la Reine", effect: "aegis", sources: ["bounty"], lore: "Chaque semaine, la première défaite n'est pas pillée.", legendaryOnly: true },
   // v5.1 : reliques mythiques, une par saison (le modèle tourne d'une saison à l'autre).
   { id: "coeur_leviathan", name: "Cœur du Léviathan", effect: "boss_damage", lore: "Il bat encore, et sa colère guide tes salves contre les colosses.", mythicOnly: true },
   { id: "couronne_ambre", name: "Couronne d'ambre", effect: "production_all", lore: "Taillée dans l'ambre de la première Reine, elle fait fructifier l'empire.", mythicOnly: true },
   { id: "oeil_neant", name: "Œil du Néant", effect: "attack", lore: "Ce qu'il regarde cesse d'exister.", mythicOnly: true },
   { id: "egide_stellaire", name: "Égide stellaire", effect: "defense", lore: "Un bouclier forgé au cœur d'une étoile mourante.", mythicOnly: true },
   // 5.23 : effets composés (grandeur × cible × portée), bonus de rareté × scale. Image propre à chaque relique depuis 6.14.92.
-  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, lore: "Gravé sur la première Sentinelle à n'avoir jamais cédé." },
+  // 6.14.133 (AJ27-10, Q67) : `sources` : d'où elles tombent plus souvent (lore : trophée des seigneurs, écaille du Léviathan…).
+  { id: "sceau_sentinelle", name: "Sceau des Sentinelles", effect: "custom", custom: { stat: "unitAttack", target: "unit:sentinelle", scale: 2.5 }, sources: ["threat"], lore: "Gravé sur la première Sentinelle à n'avoir jamais cédé." },
   { id: "plaque_bastion", name: "Plaque de rempart", effect: "custom", custom: { stat: "unitHp", target: "cat:defense", scale: 1 }, lore: "Un pan de muraille qui refuse de tomber." },
-  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, lore: "Elle ne sert qu'entre égaux." },
-  { id: "trophee_seigneur", name: "Trophée de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, lore: "Arraché à la cuirasse d'un seigneur tombé." },
-  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, lore: "Les chasseurs Kesh la portent pour flairer leurs proies." },
+  { id: "lame_duelliste", name: "Lame du duelliste", effect: "custom", custom: { stat: "unitAttack", scope: "pvp", scale: 1 }, sources: ["pvp"], lore: "Elle ne sert qu'entre égaux." },
+  { id: "trophee_seigneur", name: "Trophée de seigneur", effect: "custom", custom: { stat: "unitAttack", scope: "warlord", scale: 1.5 }, sources: ["warlord"], lore: "Arraché à la cuirasse d'un seigneur tombé." },
+  { id: "balise_traque", name: "Balise de traque", effect: "custom", custom: { stat: "unitAttack", scope: "pve", scale: 1 }, sources: ["bounty", "threat"], lore: "Les chasseurs Kesh la portent pour flairer leurs proies." },
   { id: "compas_tacticien", name: "Compas du tacticien", effect: "custom", custom: { stat: "classEdge", scale: 0.5 }, lore: "Il pointe toujours vers la faille de l'ennemi." },
   { id: "enclume_colosses", name: "Enclume des colosses", effect: "custom", custom: { stat: "unitCost", target: "class:heavy", scale: 1 }, lore: "On y a martelé les quilles des premiers cuirassés." },
   { id: "navette_mere", name: "Navette-mère", effect: "custom", custom: { stat: "unitBuildTime", target: "class:light", scale: 1.5 }, lore: "Elle crache des chasseurs comme une ruche." },
@@ -135,7 +201,11 @@ export function defaultRelicSettings(): RelicSettings {
 export function setRelics(defs: RelicTemplate[], settings: RelicSettings): void {
   // Les modèles du code restent connus (objets déjà trouvés) même s'ils ont été retirés de la liste.
   const byId = new Map<string, RelicTemplate>(DEFAULT_RELICS.map((t) => [t.id, { ...t, disabled: true }]));
-  for (const t of defs) byId.set(t.id, { ...t });
+  for (const t of defs) {
+    // 6.14.133 (AJ27-10) : une relique livrée enregistrée avant ses sources les reprend (un champ absent reprend sa valeur livrée).
+    const d = DEFAULT_RELICS.find((x) => x.id === t.id);
+    byId.set(t.id, { ...t, ...(t.sources === undefined && d?.sources ? { sources: [...d.sources] } : {}) });
+  }
   RELICS.splice(0, RELICS.length, ...byId.values());
   const { rarities, loot: _loot, ...rules } = settings;
   void _loot;
@@ -206,6 +276,9 @@ export function validateRelics(defs: RelicTemplate[], settings: RelicSettings): 
       if (!(Number.isFinite(k) && k > 0 && k <= 20)) errors.push(`${label} : multiplicateur entre 0 et 20.`);
     }
     if (t.legendaryOnly && t.mythicOnly) errors.push(`${label} : réservée aux légendaires OU aux mythiques, pas les deux.`);
+    // 6.14.133 (AJ27-10) : sources connues, poids entre 0 et 100.
+    if (t.sources !== undefined && (!Array.isArray(t.sources) || t.sources.some((x) => !(RELIC_SOURCES as string[]).includes(x)))) errors.push(`${label} : source inconnue (${RELIC_SOURCES.join(", ")}).`);
+    if (t.weight !== undefined && !(typeof t.weight === "number" && Number.isFinite(t.weight) && t.weight >= 0 && t.weight <= 100)) errors.push(`${label} : poids de tirage entre 0 et 100.`);
   }
   if (!defs.some((t) => !t.disabled && !t.legendaryOnly && !t.mythicOnly)) errors.push("Reliques : il faut au moins une relique active ordinaire (tirable à toutes les raretés).");
   const int = (v: number, min: number) => Number.isInteger(v) && v >= min;
@@ -402,7 +475,24 @@ export function rollRelic(source: string, now: number, random: () => number = Ma
     }
   }
   const templates = RELICS.filter((t) => !t.disabled && !t.mythicOnly && (!t.legendaryOnly || rarity === "legendary"));
-  const template = templates[Math.floor(random() * templates.length) % templates.length];
+  // 6.14.133 (AU27, AJ27-10, AJ-11) : poids propre et source favorite. Poids tous égaux (aucune source favorite ici) : le tirage
+  // d'avant (un appel au hasard, même graine, même relique) ; sinon tirage pondéré (un appel aussi).
+  const from = relicSourceOf(source);
+  const weights = templates.map((t) => relicDrawWeight(t, from));
+  const sum = weights.reduce((a, w) => a + w, 0);
+  const u = random();
+  let template = templates[Math.floor(u * templates.length) % templates.length];
+  if (!weights.every((w) => w === weights[0]) && sum > 0) {
+    let r = u * sum;
+    template = templates[weights.map((w, i) => (w > 0 ? i : -1)).filter((i) => i >= 0).pop() ?? templates.length - 1];
+    for (let i = 0; i < templates.length; i++) {
+      r -= weights[i];
+      if (r < 0 && weights[i] > 0) {
+        template = templates[i];
+        break;
+      }
+    }
+  }
   return { id: newId(now, random), template: template.id, rarity, foundAtMs: now, source };
 }
 

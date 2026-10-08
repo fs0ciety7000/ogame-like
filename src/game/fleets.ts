@@ -386,8 +386,11 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
     // 6.14.121 (AP-L7) : action suivie.
     trackAction(owner, "colonyBase", now);
   }
-  if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
-  else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
+  if (fleet.mission === "recycle") {
+    bumpStat(owner, "recycled", lootTotal);
+    // 6.14.131 (AU27, AJ27-7) : un champ de débris recyclé (soute non vide) est une action suivie.
+    if (lootTotal > 0) trackAction(owner, "recycle", now);
+  } else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
   return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false, ...(lootTotal > 0 ? { data: { resources: fleet.loot ?? undefined } } : {}) }] };
 }
 
