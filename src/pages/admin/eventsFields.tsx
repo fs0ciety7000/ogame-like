@@ -12,6 +12,7 @@ import { askConfirm } from "@/components/ui/confirm-dialog";
 import { CatchupSection, MutatorSection, SeasonPayoutPreview, StreakSection } from "@/pages/admin/RewardsPreview";
 import { TerritoryWarSection } from "@/pages/admin/TerritoryWarSection";
 import { XpTiersSection } from "@/pages/admin/XpTiersSection";
+import { AllianceEffectsEditor } from "@/pages/admin/AllianceEffectsEditor";
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
@@ -166,7 +167,8 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <p className="text-xs text-slate-500 sm:col-span-2">Les factions elles-mêmes (déclencheur, tribut, raids, repaire, textes) se règlent dans l'onglet « Factions ».</p>
       </Section>
       <Section title="Alliances">
-        <NumberField label="Membres de base par alliance (+4 par niveau de Quartiers fédérés)" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
+        <NumberField label="Membres de base par alliance" value={rules.alliances.maxMembers} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxMembers: v ?? 0 } }))} />
+        <NumberField label="Places de membres par niveau (effet « places de membres »)" value={rules.alliances.membersPerQuarter} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, membersPerQuarter: Math.max(0, Math.round(v ?? 0)) } }))} />
         <NumberField label="Versement : part max du stock (0,2 = 20 %)" value={rules.alliances.distributionMaxPct} min={0} step={0.05} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionMaxPct: v ?? 0 } }))} />
         <NumberField label="Diplomates par alliance, au plus" value={rules.alliances.maxDiplomats} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, maxDiplomats: Math.max(0, Math.round(v ?? 2)) } }))} />
         <NumberField label="Versements par jour" value={rules.alliances.distributionsPerDay} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, distributionsPerDay: v ?? 0 } }))} />
@@ -187,6 +189,8 @@ export function EventsAndSeasonsSections({ rules, setRules }: { rules: GameRules
         <NumberField label="Saison : heures de production (alliance gagnante)" value={rules.alliances.seasonRewardHours} min={0} step={1} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonRewardHours: v ?? 0 } }))} />
         <TextField label="Saison : titre de l'alliance gagnante" value={rules.alliances.seasonTitle} onChange={(v) => setRules((r) => ({ ...r, alliances: { ...r.alliances, seasonTitle: v } }))} />
       </Section>
+      {/* 6.14.124 (AA6) : recherches et projets d'alliance, chacun avec ses effets composés. */}
+      <AllianceEffectsEditor rules={rules} setRules={setRules} savedRules={saved} />
       <Section title="Récompenses de fin de saison">
         {(
           [

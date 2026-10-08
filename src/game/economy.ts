@@ -294,10 +294,10 @@ export function productionBonuses(input: EconomyInput, now: number, res: Resourc
   for (const g of empireEffects(input, now)) {
     if (g.stat !== "productionAll" && !(g.stat === "production" && g.target === res)) continue;
     if (g.scope && g.scope !== "all" && g.scope !== input.effectScope) continue;
-    const label = g.source.kind === "officer" ? "Officiers" : g.source.kind === "territory" ? "Secteurs d'alliance" : "Reliques et talents";
+    const label = g.source.kind === "officer" ? "Officiers" : g.source.kind === "territory" ? "Secteurs d'alliance" : g.source.kind === "alliance" ? "Recherches d'alliance (empire)" : "Reliques et talents";
     bySource[label] = (bySource[label] ?? 0) + g.value;
   }
-  for (const label of ["Officiers", "Secteurs d'alliance", "Reliques et talents"]) if ((bySource[label] ?? 0) > 0.0001) out.push({ label, pct: bySource[label] });
+  for (const label of ["Officiers", "Secteurs d'alliance", "Recherches d'alliance (empire)", "Reliques et talents"]) if ((bySource[label] ?? 0) > 0.0001) out.push({ label, pct: bySource[label] });
   if (now < boostUntil(input)) out.push({ label: "Gelée de la Reine", pct: ECONOMY_RULES.keshBoostPct });
   const catchup = catchupFactorAt(input, now);
   if (catchup > 1) out.push({ label: "Rattrapage", pct: catchup - 1 });
@@ -349,7 +349,7 @@ export function productionBreakdown(input: EconomyInput, res: ResourceId, now: n
   const mods = playerModifiers(input, now, input.effectScope);
   const raw = [
     { label: "Technologies", factor: 1 + getProductionBonus(input.techLevels) + techBonus(input.techLevels, "resource_production", res) },
-    { label: "Industrie coopérative (alliance)", factor: allianceProductionFactor(input.allianceResearch) },
+    { label: "Recherches d'alliance", factor: allianceProductionFactor(input.allianceResearch) },
     { label: "Ascension", factor: ascensionProductionFactor(input) },
     { label: "Coup de pouce Kesh et rattrapage", factor: boostAt(input, now) },
     { label: "Colonie", factor: input.productionFactor ?? 1 },

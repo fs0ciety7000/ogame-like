@@ -2,7 +2,8 @@
 
 ## Rôle
 Un seul vocabulaire (`EffectStat`) et un seul résolveur pour tous les bonus : technologies (couche « tech »), officiers, reliques, talents,
-territoires, modules, capsules, mutateurs de saison (couche « empire »). Plafonds par stat et par couche.
+territoires, modules, capsules, mutateurs de saison (couche « empire »), recherches et projets d'alliance (couche « alliance » pour leurs
+calculs propres, couche « empire » pour le reste, 6.14.124). Plafonds par stat et par couche.
 
 ## Sources
 | Source | Chiffres |
@@ -13,6 +14,7 @@ territoires, modules, capsules, mutateurs de saison (couche « empire »). Plafo
 | Capsules (Labo de synthèse) | 5 %/niv., 3 en stock, 12 h actives |
 | Talents | 3 points par Ascension, rang 3 max |
 | Mutateurs | un par mois (ou aucun) ; force réglable par mutateur, une valeur par effet (`mutators.values`, 6.14.105), description construite depuis ces valeurs |
+| Alliance (6.14.124) | 5 recherches, 3 projets, effets composés ; couche « alliance » (temps de vol, production, contre-espionnage, bouclier, durées, abri, attaque contre les PNJ ; plafonds 0,5, bouclier 0,15, abri 0,25) ou couche empire |
 | Classe d'empire (6.0) | une au choix : Industriel, Seigneur de guerre, Explorateur ; 3 effets + 1 avantage propre (chantier, emplacements de flotte, expédition) ; changement 100 Ambre / 7 jours |
 
 ## Code et admin
@@ -30,3 +32,10 @@ Plafonds par grandeur et couche réglables (`effectCaps`, 6.9.5), lus par `effec
 Modules : poids du tirage (60 / 28 / 10 / 2), Ambre de recyclage (1 / 3 / 8 / 20) et valeurs par famille et rareté (+3 % à +18 % ;
 voile 1 à 4) dans `modules.rarityWeights`, `recycleAmber`, `familyValues`. Barèmes des préréglages d'effets (aide à l'édition) :
 groupe `effectPresets.budgets`. Les plafonds d'effets restent en vigueur.
+
+## 6.14.123 et 6.14.124 (revue AU27, lots AA5 et AA6)
+- Préréglages d'effets : une unité ajoutée dans l'admin a ses préréglages générés (`generatedUnitPresets` : « Armement » si elle
+  tire, « Blindage »), barème « unit » (« elite » pour une élite) ; le catalogue complet est `allEffectPresets()`.
+- Couche « alliance » (`EffectLayer`) et source « Alliance » (`EffectSourceKind`) : la fiche d'effets du joueur et le rapport d'impact
+  montrent les recherches et projets d'alliance ; leurs plafonds sont dans `effectCaps` (clé `alliance`). Les effets d'alliance de
+  couche empire entrent par `empireEffects` (I9, I40).

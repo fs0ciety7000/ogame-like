@@ -51,6 +51,8 @@ l'essentiel, du plus important au plus discret. Le détail de chaque version res
   Fer III, Colonies à Or III au plus tard), avec une notification « Nouveau : … » à chaque ouverture et des objectifs du jour tirés
   parmi les pages ouvertes. Les comptes existants arrivés à **Fer II** voient tout, comme avant.
 - **Portefeuille** : chaque chiffre expliqué, d'où il vient.
+- **Recherches d'alliance** : chaque effet écrit en clair (« −5 % · Temps de vol par niveau ») et visible sur ta fiche d'effets.
+  Les valeurs ne changent pas (6.14.124).
 - Confirmations avant les départs et les demi-tours irréversibles.
 - **Journal complet** : ce qui se termine pendant le rattrapage de la nuit, un changement de pseudo ou un contrat de commerce arrive au
   Journal. Et l'envoi des e-mails ne peut plus effacer ce que tu joues au même moment.

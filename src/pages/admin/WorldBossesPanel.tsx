@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, RotateCcw, Save, Skull } from "lucide-react";
@@ -136,7 +137,7 @@ export function WorldBossesPanel() {
 
       <Field label="Faiblesses possibles en phase 3 (une est tirée par combat)">
         <div className="flex flex-wrap gap-1.5">
-          {OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage").map((id) => {
+          {OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id)).map((id) => {
             const on = boss.weakness.includes(id);
             return (
               <HudChip key={id} asChild size="sm" tone={on ? "violet" : "neutral"}>

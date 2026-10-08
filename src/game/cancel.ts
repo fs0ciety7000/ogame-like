@@ -4,7 +4,7 @@ import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildin
 import { colonyBuildingName, colonyDefenseSeconds, colonyOf, colonyUpgradeCost, colonyUpgradeSeconds, startNextColonyDefense } from "@/game/colonies";
 import { GameActionError } from "@/game/errors";
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
-import { findUnit, getUnitBuildTime } from "@/game/units";
+import { findUnit, getUnitBuildTime, scaleUnitCost } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
 import type { PlayerState, QueuesState, ResourceId, UnitQueueEntry } from "@/types/game";
 
@@ -161,7 +161,7 @@ export function quoteCancel(player: PlayerState, queues: QueuesState, target: Ca
       const job = colony?.defenseJob;
       const unit = job ? findUnit(job.unitId) : undefined;
       if (!colony || !job || !unit) throw new GameActionError("Aucune défense en construction sur cette colonie.");
-      const paid = job.paid ?? { scrap: unit.cost.scrap * job.qty, energy: unit.cost.energy * job.qty };
+      const paid = job.paid ?? scaleUnitCost(unit.cost, job.qty);
       const start = job.startedAtMs ?? job.endTime - colonyDefenseSeconds(player, job.unitId, job.qty, colony) * 1000;
       const fraction = refundFraction(start, job.endTime, now);
       return { refund: scaleCost(paid, fraction), fraction, label: `${colony.name} : ${job.qty} × ${unit.name}` };

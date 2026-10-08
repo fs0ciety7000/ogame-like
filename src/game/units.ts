@@ -3,6 +3,7 @@ import { unitEffect } from "@/game/effectTargets";
 import type { UnitCategory } from "@/types/game";
 import type { EmpireClassId } from "@/game/empireClass";
 import { BLUEPRINT_UNITS, techEffectGrants, techReductionFactor } from "@/game/technologies";
+import type { ResourceId } from "@/types/game";
 
 export interface UnitStats {
   attaque: number;
@@ -12,6 +13,30 @@ export interface UnitStats {
   detection?: number;
 }
 
+/** 6.14.123 (AU27, lot AA5, constat AA-16) : rôles d'une unité, lus à la place des identifiants en dur.
+ *  - probe : sonde d'espionnage (seule à espionner ; jamais en combat, en expédition ni en transport) ;
+ *  - recycler : recycle les champs de débris (sa soute = capacité de ramassage) ;
+ *  - transport : vaisseau de transport pur (jamais dans les flottes des seigneurs, hors des comparaisons d'équilibrage) ;
+ *  - support : soutien, hors des comparaisons d'équilibrage par coût (outil Équilibrage) ;
+ *  - bossWeakness : peut être la faiblesse de phase 3 d'un boss qui n'en déclare pas ;
+ *  - counterSpy : chaque unité à quai renforce le contre-espionnage (comme les Sentinelles). */
+export type UnitRole = "probe" | "recycler" | "transport" | "support" | "bossWeakness" | "counterSpy";
+
+/** Libellés et aide des rôles (admin, Contenu → Unités). */
+export const UNIT_ROLE_INFO: Record<UnitRole, { label: string; hint: string }> = {
+  probe: { label: "Sonde d'espionnage", hint: "Seule à pouvoir espionner ; jamais en combat, en expédition ni en transport." },
+  recycler: { label: "Recycleur", hint: "Peut recycler les champs de débris : sa soute fixe la capacité de ramassage." },
+  transport: { label: "Transport", hint: "Vaisseau de transport : jamais dans les flottes des seigneurs, hors des comparaisons d'équilibrage." },
+  support: { label: "Soutien", hint: "Hors des comparaisons d'équilibrage par coût (sonde, drone, atelier…)." },
+  bossWeakness: { label: "Faiblesse de boss", hint: "Peut être la faiblesse de phase 3 d'un boss qui n'en déclare pas (vaisseaux seulement)." },
+  counterSpy: { label: "Contre-espionnage", hint: "Chaque unité à quai renforce le contre-espionnage (réglages Espionnage)." },
+};
+export const UNIT_ROLE_IDS = Object.keys(UNIT_ROLE_INFO) as UnitRole[];
+
+/** 6.14.123 (AA5, constat AA-17) : coût d'une unité. Ferraille et énergie toujours présentes (temps de construction,
+ *  débris, équilibrage) ; toute autre ressource peut s'ajouter depuis l'admin (unité de fin de partie). */
+export type UnitCost = { scrap: number; energy: number } & Partial<Record<ResourceId, number>>;
+
 export interface UnitDef {
   id: string;
   /** 6.14.122 (AP-L8) : date d'ajout (AAAA-MM-JJ) : un contenu récent prend l'épisode « nouveauté » du chapitre suivant. */
@@ -20,8 +45,10 @@ export interface UnitDef {
   image: string;
   maxLevel: number;
   description: string;
-  cost: { scrap: number; energy: number };
+  cost: UnitCost;
   stats: UnitStats;
+  /** 6.14.123 (AA5) : rôles (voir UnitRole). Absent : rôles par défaut de l'unité du même identifiant. */
+  roles?: UnitRole[];
   category: UnitCategory;
   hangarSpace: number;
   /** Technologie du Labo qui débloque puis améliore l'unité. */
@@ -65,6 +92,7 @@ export const KESH_HUNTER_UNIT: UnitDef = {
   unlockTech: "",
   hangarSpace: 3,
   blueprint: true,
+  roles: ["support"],
 };
 
 /** 5.22 : unités d'élite, contre les seigneurs de guerre seulement. Toujours présentes (comme le Traqueur),
@@ -131,6 +159,7 @@ export const CLASS_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "",
     hangarSpace: 2,
+    roles: ["support"],
     empireClass: "industriel",
     classTech: "tech9",
   },
@@ -190,6 +219,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech9",
     hangarSpace: 1,
+    roles: ["recycler", "support"],
   },
   {
     id: "sonde_espionnage",
@@ -202,6 +232,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech20",
     hangarSpace: 1,
+    roles: ["probe", "support"],
   },
   {
     id: "fregate",
@@ -214,6 +245,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech10",
     hangarSpace: 1,
+    roles: ["bossWeakness"],
   },
   {
     id: "cargo",
@@ -226,6 +258,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech11",
     hangarSpace: 1,
+    roles: ["transport"],
   },
   {
     id: "sentinelle",
@@ -238,6 +271,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech12",
     hangarSpace: 1,
+    roles: ["counterSpy"],
   },
   {
     id: "chasseur",
@@ -251,6 +285,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech13",
     // v5.4 : 20 places (29 ATK/place, dix fois moins que les autres) → 2.
     hangarSpace: 2,
+    roles: ["bossWeakness"],
   },
   {
     id: "etoile_noire",
@@ -266,6 +301,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech19",
     // v5.4 : 200 → 80 places.
     hangarSpace: 80,
+    roles: ["bossWeakness"],
     levelBonus: 900,
   },
   // v3.6 : unités de fin de partie.
@@ -280,6 +316,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech24",
     hangarSpace: 20,
+    roles: ["bossWeakness"],
     levelBonus: 250,
   },
   {
@@ -294,6 +331,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech25",
     // v5.4 : 8 → 12 places (1 189 ATK+DEF/place, 2,4 fois la Batterie AA) : aligné sur l'Étoile Noire.
     hangarSpace: 12,
+    roles: ["bossWeakness"],
     levelBonus: 150,
   },
   {
@@ -361,6 +399,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     unlockTech: "tech18",
     // v5.4 : 20 places → 2 (aligné sur la Batterie AA par place).
     hangarSpace: 2,
+    roles: ["bossWeakness"],
   },
   // 5.21 : trois rôles qui manquaient au combat en tours.
   {
@@ -402,6 +441,7 @@ export const DEFAULT_UNITS: UnitDef[] = [
     category: "attack",
     unlockTech: "tech30",
     hangarSpace: 4,
+    roles: ["support"],
     workshopHpPerSec: 15,
   },
   KESH_HUNTER_UNIT,
@@ -419,8 +459,30 @@ export const UNIT_TO_TECH: Record<string, string> = {};
 export const OFFENSIVE_UNITS: string[] = [];
 export const DEFENSIVE_UNITS: string[] = [];
 
+/** 6.14.123 (AA5) : rôles par défaut de chaque unité livrée (repli d'une fiche enregistrée avant les rôles). */
+const DEFAULT_UNIT_ROLES: Record<string, UnitRole[]> = {};
+for (const u of DEFAULT_UNITS) if (u.roles) DEFAULT_UNIT_ROLES[u.id] = [...u.roles];
+
+/** Rôles par défaut d'une unité (vide pour une unité ajoutée dans l'admin). */
+export function defaultUnitRoles(id: string): UnitRole[] {
+  return [...(DEFAULT_UNIT_ROLES[id] ?? [])];
+}
+
+/** Rôles en vigueur d'une fiche : ceux de la fiche, sinon ceux de l'unité par défaut du même identifiant. Rôles inconnus écartés. */
+export function resolveUnitRoles(u: Pick<UnitDef, "id" | "roles">): UnitRole[] {
+  const list = Array.isArray(u.roles) ? u.roles : DEFAULT_UNIT_ROLES[u.id] ?? [];
+  return list.filter((r, i) => UNIT_ROLE_IDS.includes(r) && list.indexOf(r) === i);
+}
+
+/** Rôles de chaque unité du registre courant. */
+const ROLES_BY_UNIT: Record<string, UnitRole[]> = {};
+
 export function setUnits(defs: UnitDef[]) {
+  // 6.14.123 (AA5) : une fiche sans « roles » (liste enregistrée avant les rôles) prend ceux de l'unité par défaut.
+  defs = defs.map((u) => (Array.isArray(u.roles) ? u : { ...u, roles: resolveUnitRoles(u) }));
   UNITS.splice(0, UNITS.length, ...defs);
+  for (const key of Object.keys(ROLES_BY_UNIT)) delete ROLES_BY_UNIT[key];
+  for (const u of defs) ROLES_BY_UNIT[u.id] = resolveUnitRoles(u);
   for (const key of Object.keys(UNIT_BASE_STATS)) delete UNIT_BASE_STATS[key];
   for (const key of Object.keys(UNIT_TO_TECH)) delete UNIT_TO_TECH[key];
   BLUEPRINT_UNITS.clear();
@@ -442,8 +504,36 @@ export function findUnit(id: string): UnitDef | undefined {
   return UNITS.find((u) => u.id === id);
 }
 
+/** 6.14.123 (AA5) : l'unité a-t-elle ce rôle (registre courant) ? */
+export function hasUnitRole(id: string, role: UnitRole): boolean {
+  return ROLES_BY_UNIT[id]?.includes(role) ?? false;
+}
+
+/** Unités du registre qui ont ce rôle, dans l'ordre du registre. */
+export function unitsWithRole(role: UnitRole): string[] {
+  return UNITS.filter((u) => ROLES_BY_UNIT[u.id]?.includes(role)).map((u) => u.id);
+}
+
+/** 6.14.123 (AA5, AA-17) : coût × facteur, chaque ressource du coût comprise (ferraille et énergie toujours présentes,
+ *  les autres seulement si elles coûtent quelque chose). `round` : arrondi de chaque montant (défaut : aucun). */
+export function scaleUnitCost(cost: Partial<Record<string, number>>, factor: number, round: (n: number) => number = (n) => n): UnitCost {
+  const out: UnitCost = { scrap: round((Number(cost.scrap) || 0) * factor), energy: round((Number(cost.energy) || 0) * factor) };
+  for (const [res, v] of Object.entries(cost)) {
+    if (res === "scrap" || res === "energy") continue;
+    const n = Number(v) || 0;
+    if (n > 0) out[res as ResourceId] = round(n * factor);
+  }
+  return out;
+}
+
+/** Ferraille + énergie d'une unité (temps de construction par défaut, classement par coût). */
+export function unitBaseCostTotal(unit: Pick<UnitDef, "cost">): number {
+  return (unit.cost.scrap || 0) + (unit.cost.energy || 0);
+}
+
 export function getUnitBuildTime(unit: UnitDef, techLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
-  const total = (unit.cost.scrap || 0) + (unit.cost.energy || 0);
+  // 6.14.123 (AA5) : la durée par défaut reste (ferraille + énergie) / 100, même pour une unité qui coûte aussi une ressource rare.
+  const total = unitBaseCostTotal(unit);
   const base = unit.buildTime && unit.buildTime > 0 ? unit.buildTime : Math.max(3, Math.ceil(total / 100));
   // v2.6 : réduction des technos « temps de construction des unités » ;
   // v5.14 : puis le Mécanicien en poste (couche empire du circuit d'effets).

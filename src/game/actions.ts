@@ -34,7 +34,7 @@ import { flushState, grantNewAchievements, type NewNotification } from "@/game/f
 import { challengeTokens, claimDailyTokens, grantTokens, playerCasino, tokensLabel } from "@/game/casino";
 import { EXCHANGE_RULES, exchangeRareLeft, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
-import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
+import { findUnit, getUnitBuildTime, ownedBlueprints, scaleUnitCost } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
@@ -288,7 +288,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
 
       // 5.23 : réductions de coût ciblées (reliques, technos, officiers).
       const each = playerUnitCost(unit, player, now);
-      pay(player, { scrap: each.scrap * qty, energy: each.energy * qty }, now);
+      pay(player, scaleUnitCost(each, qty), now);
       recordContract(player, "build_units", qty, now);
       trackAction(player, contentObjective("unit", unit.id), now, qty);
       const queue = queues.unitQueues[category];
@@ -307,8 +307,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       player.units[unit.id].count -= qty;
       // 5.23 : revente à la moitié du prix payé aujourd'hui (réductions comprises).
       const each = playerUnitCost(unit, player, now);
-      player.resources.scrap += Math.floor(each.scrap * 0.5) * qty;
-      player.resources.energy += Math.floor(each.energy * 0.5) * qty;
+      // 6.14.123 (AA5) : chaque ressource du coût (ferraille, énergie et, pour une unité de fin de partie, ressource rare).
+      for (const [res, v] of Object.entries(scaleUnitCost(each, 0.5, Math.floor))) player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + (v ?? 0) * qty;
       bumpStat(player, "unitsSold", qty);
       return undefined;
     }

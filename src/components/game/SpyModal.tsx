@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
-import { espionageLevel, SPY_RULES, SPY_TIER_LABELS, spyTravelSeconds } from "@/game/espionage";
+import { espionageLevel, primaryProbeUnitId, SPY_RULES, SPY_TIER_LABELS, spyTravelSeconds } from "@/game/espionage";
 import { distanceBetween, FLEET_MISSION_LABELS, fleetSpeed, type FleetMission } from "@/game/fleets";
 import { findUnit } from "@/game/units";
 import { findBuilding } from "@/game/buildings";
@@ -166,7 +166,7 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
   const [report, setReport] = useState<SpyReport | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
 
-  const probeId = SPY_RULES.probeUnitId;
+  const probeId = primaryProbeUnitId();
   const probe = findUnit(probeId);
   const owned = player?.units[probeId]?.count ?? 0;
   const inFlight = fleets.filter((f) => f.mission === "spy" && f.ownerUid === uid && f.targetUid === target?.uid && f.status === "outbound");

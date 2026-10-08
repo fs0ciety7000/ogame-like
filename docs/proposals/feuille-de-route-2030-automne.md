@@ -56,8 +56,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 39 | É30-7 | Reliques à image propre et prompts des biomes et classes | S | livré (6.14.118) |
 | 40 | AP-L7 | Nouveau générateur : registre des actions suivies (lune, colonies, nouvelles unités dans les objectifs) | L | livré (6.14.121) |
 | 41 | AP-L8 | Nouveau générateur : épisode « nouveauté » pour le contenu récemment ajouté | M | livré (6.14.122) |
-| 42 | AA5 | Rôles d'unités (sonde, recycleur, faiblesse de boss) au lieu d'identifiants en dur | M | à faire |
-| 43 | AA6 | Recherches d'alliance par effets composés (une recherche ajoutée dans l'admin a un effet) | M | à faire |
+| 42 | AA5 | Rôles d'unités (sonde, recycleur, faiblesse de boss) au lieu d'identifiants en dur | M | livré (6.14.123) |
+| 43 | AA6 | Recherches d'alliance par effets composés (une recherche ajoutée dans l'admin a un effet) | M | livré (6.14.124) |
 | 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | à faire |
 | 45 | AA8 | Historique champ par champ et retour arrière par groupe dans l'admin | M | à faire |
 | 46 | AJ27-6 | Succès dérivés par unité et par bâtiment | M | à faire |

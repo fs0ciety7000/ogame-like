@@ -1,6 +1,6 @@
 import { effectTotal, isUnitSelector, setUnitTargetLabeler, type EffectGrant, type EffectLayer, type EffectScope, type EffectStat } from "@/game/effects";
 import { allEffects } from "@/game/modifiers";
-import { findUnit, UNITS, type UnitDef } from "@/game/units";
+import { findUnit, scaleUnitCost, UNITS, type UnitCost, type UnitDef } from "@/game/units";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
 
 /* =====================================================
@@ -95,9 +95,10 @@ export function combatEffects(grants: readonly EffectGrant[], scope: EffectScope
 }
 
 /** Coût d'une unité, réductions ciblées comprises (au plus −20 % par couche). */
-export function unitCostFor(unit: UnitDef, grants: readonly EffectGrant[]): { scrap: number; energy: number } {
+export function unitCostFor(unit: UnitDef, grants: readonly EffectGrant[]): UnitCost {
   const k = Math.max(0, 1 - unitEffect(grants, "unitCost", unit.id));
-  return { scrap: Math.ceil((unit.cost.scrap || 0) * k), energy: Math.ceil((unit.cost.energy || 0) * k) };
+  // 6.14.123 (AA5, AA-17) : chaque ressource du coût (une unité de fin de partie peut coûter une ressource rare).
+  return scaleUnitCost(unit.cost, k, Math.ceil);
 }
 
 type CombatPlayer = Parameters<typeof allEffects>[0];
@@ -115,6 +116,6 @@ export function edgeParam(fx: CombatEffects | undefined, extra?: { bonus?: numbe
 }
 
 /** Coût d'une unité pour un joueur (technologies et couche empire). */
-export function playerUnitCost(unit: UnitDef, player: CombatPlayer, now: number = Date.now()): { scrap: number; energy: number } {
+export function playerUnitCost(unit: UnitDef, player: CombatPlayer, now: number = Date.now()): UnitCost {
   return unitCostFor(unit, allEffects(player, now));
 }

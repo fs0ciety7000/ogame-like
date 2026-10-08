@@ -7,6 +7,7 @@ import { talentEffects } from "@/game/talents";
 import { empireClassEffects } from "@/game/empireClass";
 import { moonEffects } from "@/game/moon";
 import { synthesisEffects } from "@/game/synthesis";
+import { allianceEffectGrants, allianceEmpireEffects } from "@/game/alliances";
 import { techEffectGrants } from "@/game/technologies";
 import { effectSheet, effectTotal, rawEffectTotal, type EffectGrant, type EffectScope, type EffectSheetLine } from "@/game/effects";
 import { COMBAT_RULES, fleetCargoCapacity } from "@/game/combat";
@@ -54,7 +55,7 @@ export interface Modifiers {
   jumpGateCooldown: number;
 }
 
-type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass" | "moon">>;
+type ModPlayer = Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions" | "territory" | "talents" | "modules" | "empireClass" | "moon" | "allianceResearch">>;
 type SheetPlayer = ModPlayer & Partial<Pick<PlayerState, "techLevels" | "synthesis">>;
 
 export function emptyModifiers(): Modifiers {
@@ -78,13 +79,16 @@ export function empireEffects(player: ModPlayer | null | undefined, now: number 
     ...territoryEffects(player.territory, now),
     // 5.16 : mutateur de saison (règle du mois, pour tout le serveur).
     ...mutatorEffects(now),
+    // 6.14.124 (AA6, AA-15) : recherches et projets d'alliance dont l'effet n'a pas de calcul d'alliance propre (soute, butin…).
+    ...allianceEmpireEffects(player.allianceResearch),
   ];
 }
 
 /** v5.14 : tous les effets du joueur, technologies et capsules comprises. */
 export function allEffects(player: SheetPlayer | null | undefined, now: number = Date.now()): EffectGrant[] {
   if (!player) return [];
-  return [...techEffectGrants(player.techLevels), ...empireEffects(player, now), ...synthesisEffects(player as Pick<PlayerState, "synthesis">, now)];
+  // 6.14.124 (AA6) : plus la couche « alliance » (lue par ses propres calculs), pour la fiche d'effets.
+  return [...techEffectGrants(player.techLevels), ...empireEffects(player, now), ...synthesisEffects(player as Pick<PlayerState, "synthesis">, now), ...allianceEffectGrants(player.allianceResearch).filter((g) => g.layer === "alliance")];
 }
 
 /** v5.14 : fiche d'effets (chaque grandeur, son total et ses sources). */

@@ -6,6 +6,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import type { NewNotification } from "@/game/flush";
 import type { Alliance, AllianceLog, PlayerState, ResourceId } from "@/types/game";
 import { techReductionFactor } from "@/game/technologies";
+import { describeEffect, EFFECT_STATS, effectTotal, isUnitSelector, validateComposedEffect, type ComposedEffect, type EffectGrant, type EffectLayer, type EffectScope, type EffectStat } from "@/game/effects";
 
 /* =====================================================
    Alliances (v1.9) : adhésion limitée, trésor commun, recherches qui
@@ -15,6 +16,18 @@ import { techReductionFactor } from "@/game/technologies";
    concernés, applique l'action puis écrit le résultat dans une transaction.
 ===================================================== */
 
+/** 6.14.124 (AU27, lot AA6, constat AA-15) : grandeur d'un effet d'alliance. Celles du circuit d'effets, plus
+ *  « allianceMembers » (places de membres, effet sur l'alliance elle-même, pas sur ses membres). */
+export type AllianceEffectStat = EffectStat | "allianceMembers";
+
+/** Effet composé d'une recherche ou d'un projet (même format que reliques, technos et officiers : grandeur × cible ×
+ *  portée). La valeur vaut `perLevel` × niveau ; « allianceMembers » vaut `membersPerQuarter` × niveau. */
+export interface AllianceEffect {
+  stat: AllianceEffectStat;
+  target?: string;
+  scope?: EffectScope;
+}
+
 export interface AllianceResearchDef {
   id: string;
   name: string;
@@ -23,6 +36,8 @@ export interface AllianceResearchDef {
   /** Valeur de l'effet par niveau. */
   perLevel: number;
   maxLevel: number;
+  /** 6.14.124 (AA6) : effets donnés aux membres (absent : ceux de la recherche par défaut du même identifiant). */
+  effects?: AllianceEffect[];
 }
 
 export interface AllianceProjectDef {
@@ -32,6 +47,8 @@ export interface AllianceProjectDef {
   description: string;
   perLevel: number;
   maxLevel: number;
+  /** 6.14.124 (AA6) : effets donnés aux membres (absent : ceux du projet par défaut du même identifiant). */
+  effects?: AllianceEffect[];
 }
 
 export const ALLIANCE_RULES = {
@@ -62,12 +79,12 @@ export const ALLIANCE_RULES = {
   seasonRewardHours: 8,
   seasonTitle: "Allié champion",
   researches: [
-    { id: "logistique", name: "Logistique fédérée", emoji: "🛰️", description: "Réduit le temps de vol de toutes les flottes des membres.", perLevel: 0.05, maxLevel: 5 },
-    { id: "industrie", name: "Industrie coopérative", emoji: "🏭", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5 },
-    { id: "brouillage", name: "Réseau de brouillage", emoji: "📡", description: "Ajoute des points de contre-espionnage à chaque membre.", perLevel: 1, maxLevel: 5 },
-    { id: "bouclier", name: "Bouclier fédéral", emoji: "🛡️", description: "Renforce le bouclier des bases des membres, au-delà du plafond habituel.", perLevel: 0.01, maxLevel: 5 },
+    { id: "logistique", name: "Logistique fédérée", emoji: "🛰️", description: "Réduit le temps de vol de toutes les flottes des membres.", perLevel: 0.05, maxLevel: 5, effects: [{ stat: "fleetSpeed" }] },
+    { id: "industrie", name: "Industrie coopérative", emoji: "🏭", description: "Augmente la production de toutes les ressources des membres.", perLevel: 0.03, maxLevel: 5, effects: [{ stat: "productionAll" }] },
+    { id: "brouillage", name: "Réseau de brouillage", emoji: "📡", description: "Ajoute des points de contre-espionnage à chaque membre.", perLevel: 1, maxLevel: 5, effects: [{ stat: "counterSpy" }] },
+    { id: "bouclier", name: "Bouclier fédéral", emoji: "🛡️", description: "Renforce le bouclier des bases des membres, au-delà du plafond habituel.", perLevel: 0.01, maxLevel: 5, effects: [{ stat: "shield" }] },
     // 5.33 : agrandit l'alliance (8 → 12 → 16 → 20 membres).
-    { id: "quartiers", name: "Quartiers fédérés", emoji: "🏘️", description: "Agrandit l'alliance : des places de membres en plus.", perLevel: 4, maxLevel: 3 },
+    { id: "quartiers", name: "Quartiers fédérés", emoji: "🏘️", description: "Agrandit l'alliance : des places de membres en plus.", perLevel: 4, maxLevel: 3, effects: [{ stat: "allianceMembers" }] },
   ] as AllianceResearchDef[],
   /** v3.3 : projets (méga-structures). Coût du palier n : base × croissance^(n−1). */
   projectCommonCost: 500_000_000,
@@ -76,9 +93,9 @@ export const ALLIANCE_RULES = {
   /** Construction du palier n : n × ce nombre d'heures, une fois financé. */
   projectHoursPerLevel: 24,
   projects: [
-    { id: "forge", name: "Anneau-forge", emoji: "🔨", description: "Réduit la durée des constructions et des recherches des membres.", perLevel: 0.02, maxLevel: 5 },
-    { id: "siege", name: "Batterie de siège", emoji: "🎯", description: "Augmente l'attaque des membres contre le Léviathan et les repaires pirates.", perLevel: 0.04, maxLevel: 5 },
-    { id: "bastion", name: "Bastion fédéral", emoji: "🏰", description: "Met à l'abri du pillage une part supplémentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5 },
+    { id: "forge", name: "Anneau-forge", emoji: "🔨", description: "Réduit la durée des constructions et des recherches des membres.", perLevel: 0.02, maxLevel: 5, effects: [{ stat: "buildTime" }, { stat: "researchTime" }] },
+    { id: "siege", name: "Batterie de siège", emoji: "🎯", description: "Augmente l'attaque des membres contre le Léviathan et les repaires pirates.", perLevel: 0.04, maxLevel: 5, effects: [{ stat: "unitAttack", scope: "pve" }] },
+    { id: "bastion", name: "Bastion fédéral", emoji: "🏰", description: "Met à l'abri du pillage une part supplémentaire des stocks des membres.", perLevel: 0.02, maxLevel: 5, effects: [{ stat: "protectedStorage" }] },
   ] as AllianceProjectDef[],
 };
 
@@ -110,33 +127,144 @@ export function allianceRole(alliance: Pick<Alliance, "createdBy" | "members" | 
   return r === "officer" ? "officer" : r === "diplomat" ? "diplomat" : "member";
 }
 
-function level(levels: AllianceLevels | undefined | null, id: string): number {
-  const def = findAllianceResearch(id);
-  return Math.max(0, Math.min(def?.maxLevel ?? 0, Math.floor(Number(levels?.[id]) || 0)));
+/* ---------- 6.14.124 (AU27, lot AA6, AA-15) : effets composés des recherches et des projets ---------- */
+
+/** Effets des recherches et projets livrés, par identifiant : repli d'une liste enregistrée avant les effets (I9). */
+const DEFAULT_RESEARCH_EFFECTS: Record<string, AllianceEffect[]> = Object.fromEntries(ALLIANCE_RULES.researches.map((r) => [r.id, structuredClone(r.effects ?? [])]));
+const DEFAULT_PROJECT_EFFECTS: Record<string, AllianceEffect[]> = Object.fromEntries(ALLIANCE_RULES.projects.map((p) => [p.id, structuredClone(p.effects ?? [])]));
+
+/** Effets en vigueur d'une recherche ou d'un projet : les siens, sinon ceux de l'entrée par défaut du même identifiant. */
+export function allianceDefEffects(def: Pick<AllianceResearchDef, "id" | "effects">, kind: "research" | "project"): AllianceEffect[] {
+  if (Array.isArray(def.effects)) return def.effects;
+  return (kind === "research" ? DEFAULT_RESEARCH_EFFECTS : DEFAULT_PROJECT_EFFECTS)[def.id] ?? [];
 }
 
-/* ---------- bonus des recherches (appliqués aux membres) ---------- */
+/** Effets par défaut d'une recherche ou d'un projet (migration des listes enregistrées, admin). */
+export function defaultAllianceEffects(kind: "research" | "project", id: string): AllianceEffect[] {
+  return structuredClone((kind === "research" ? DEFAULT_RESEARCH_EFFECTS : DEFAULT_PROJECT_EFFECTS)[id] ?? []);
+}
+
+/**
+ * Grandeurs lues par les calculs propres aux alliances (couche « alliance », hors des plafonds de la couche empire) :
+ * temps de vol, production, contre-espionnage, bouclier, durées, abri du pillage et, pour l'attaque de toutes les unités
+ * contre les PNJ, la Batterie de siège (boss, primes, repaires). Toute autre grandeur (soute, butin, attaque d'une classe…)
+ * entre dans la couche empire, avec les officiers et les reliques : une recherche ajoutée dans l'admin a toujours un effet.
+ */
+export const ALLIANCE_LAYER_READERS: { stat: EffectStat; scope: EffectScope; label?: string }[] = [
+  { stat: "fleetSpeed", scope: "all" },
+  { stat: "productionAll", scope: "all" },
+  { stat: "counterSpy", scope: "all" },
+  { stat: "shield", scope: "all" },
+  { stat: "buildTime", scope: "all" },
+  { stat: "researchTime", scope: "all" },
+  { stat: "protectedStorage", scope: "all" },
+  { stat: "unitAttack", scope: "pve", label: "Attaque contre les boss, les primes et les repaires" },
+];
+
+/** Couche d'un effet d'alliance (null : effet sur l'alliance elle-même, « allianceMembers »). */
+export function allianceEffectLayer(e: AllianceEffect): EffectLayer | null {
+  if (e.stat === "allianceMembers") return null;
+  const scope = e.scope ?? "all";
+  return !e.target && ALLIANCE_LAYER_READERS.some((r) => r.stat === e.stat && r.scope === scope) ? "alliance" : "empire";
+}
+
+/** Niveau d'une recherche (`kind` research) ou d'un projet d'après les niveaux recopiés chez un membre. */
+function defLevel(levels: AllianceLevels | undefined | null, def: AllianceResearchDef | AllianceProjectDef, kind: "research" | "project"): number {
+  const raw = Number(levels?.[kind === "research" ? def.id : projectKey(def.id)]);
+  return Math.max(0, Math.min(def.maxLevel ?? 0, Math.floor(raw) || 0));
+}
+
+/** Effets d'alliance d'un membre, toutes couches (affichage, fiche d'effets). */
+export function allianceEffectGrants(levels: AllianceLevels | undefined | null): EffectGrant[] {
+  if (!levels) return [];
+  const out: EffectGrant[] = [];
+  const add = (def: AllianceResearchDef | AllianceProjectDef, kind: "research" | "project") => {
+    const lvl = defLevel(levels, def, kind);
+    if (lvl <= 0) return;
+    for (const e of allianceDefEffects(def, kind)) {
+      const layer = allianceEffectLayer(e);
+      if (!layer || !(e.stat in EFFECT_STATS)) continue;
+      const value = (Number(def.perLevel) || 0) * lvl;
+      if (!value) continue;
+      out.push({ stat: e.stat as EffectStat, value, layer, ...(e.target ? { target: e.target } : {}), ...(e.scope && e.scope !== "all" ? { scope: e.scope } : {}), source: { kind: "alliance", id: kind === "research" ? def.id : projectKey(def.id), label: def.name } });
+    }
+  };
+  for (const r of ALLIANCE_RULES.researches) add(r, "research");
+  for (const p of ALLIANCE_RULES.projects) add(p, "project");
+  return out;
+}
+
+/** Couche empire des effets d'alliance (lue par `empireEffects` avec les officiers, les reliques… : I9). */
+export function allianceEmpireEffects(levels: AllianceLevels | undefined | null): EffectGrant[] {
+  return allianceEffectGrants(levels).filter((g) => g.layer === "empire");
+}
+
+/** Total d'une grandeur de la couche alliance, plafond compris. */
+function allianceTotal(levels: AllianceLevels | undefined | null, stat: EffectStat, scope?: EffectScope): number {
+  return effectTotal(allianceEffectGrants(levels), "alliance", stat, scope ? { scope } : {});
+}
+
+/** Texte des effets d'une recherche ou d'un projet pour `lvl` niveaux (« −5 % · Temps de vol »). */
+export function allianceEffectLines(def: AllianceResearchDef | AllianceProjectDef, kind: "research" | "project", lvl = 1): string[] {
+  // Espace insécable avant « % » : le chiffre ne se sépare pas de son unité en fin de ligne (téléphone).
+  return allianceDefEffects(def, kind).map((e) => allianceEffectLine(def, e, lvl).replace(/ %/g, "\u00a0%"));
+}
+
+
+function allianceEffectLine(def: AllianceResearchDef | AllianceProjectDef, e: AllianceEffect, lvl: number): string {
+  if (e.stat === "allianceMembers") {
+    const n = Math.max(0, ALLIANCE_RULES.membersPerQuarter) * lvl;
+    return `+${n} place${n > 1 ? "s" : ""} de membre`;
+  }
+  if (!(e.stat in EFFECT_STATS)) return e.stat;
+  const value = (Number(def.perLevel) || 0) * lvl;
+  const reader = !e.target ? ALLIANCE_LAYER_READERS.find((r) => r.stat === e.stat && r.scope === (e.scope ?? "all")) : undefined;
+  if (reader?.label) return `${describeEffect(e.stat as EffectStat, value).split(" · ")[0]} · ${reader.label}`;
+  return describeEffect(e.stat as EffectStat, value, e.target, e.scope);
+}
+
+/** Erreurs des effets d'une liste de recherches ou de projets (validation des règles). */
+export function validateAllianceEffects(label: string, defs: unknown, unitIds: Set<string>): string[] {
+  if (!Array.isArray(defs)) return [];
+  const errors: string[] = [];
+  for (const d of defs as (AllianceResearchDef | AllianceProjectDef)[]) {
+    if (!d || typeof d !== "object") continue;
+    const name = `${label} « ${d.name || d.id} »`;
+    if (d.effects === undefined) continue;
+    if (!Array.isArray(d.effects)) {
+      errors.push(`${name} : effets invalides (liste attendue).`);
+      continue;
+    }
+    for (const e of d.effects as Partial<ComposedEffect | AllianceEffect>[]) {
+      if (e?.stat === "allianceMembers") continue;
+      for (const m of validateComposedEffect(e as Partial<ComposedEffect>, (sel) => isUnitSelector(sel, (id) => unitIds.has(id)))) errors.push(`${name} : ${m}.`);
+    }
+  }
+  return errors;
+}
+
+/* ---------- bonus lus par les calculs d'alliance (valeurs identiques à avant la 6.14.124) ---------- */
 
 /** Multiplicateur du temps de vol (0,75 = −25 %). */
 export function allianceFlightFactor(levels: AllianceLevels | undefined | null, techLevels?: Record<string, number>, player?: Parameters<typeof playerModifiers>[0]): number {
   // v2.6 : la techno « vitesse des flottes » se cumule à la logistique d'alliance.
   // v5.14 : et la Logisticienne en poste (couche empire du circuit d'effets).
   const empire = player ? playerModifiers(player).fleetSpeed : 0;
-  return Math.max(0.1, (1 - level(levels, "logistique") * (findAllianceResearch("logistique")?.perLevel ?? 0)) * techReductionFactor(techLevels, "fleet_speed") * (1 - empire));
+  return Math.max(0.1, (1 - allianceTotal(levels, "fleetSpeed")) * techReductionFactor(techLevels, "fleet_speed") * (1 - empire));
 }
 
 /** Multiplicateur de production (1,15 = +15 %). */
 export function allianceProductionFactor(levels: AllianceLevels | undefined | null): number {
-  return 1 + level(levels, "industrie") * (findAllianceResearch("industrie")?.perLevel ?? 0);
+  return 1 + allianceTotal(levels, "productionAll");
 }
 
 export function allianceCounterSpy(levels: AllianceLevels | undefined | null): number {
-  return level(levels, "brouillage") * (findAllianceResearch("brouillage")?.perLevel ?? 0);
+  return allianceTotal(levels, "counterSpy");
 }
 
 /** Bouclier supplémentaire (0,05 = +5 points), qui repousse aussi le plafond. */
 export function allianceShieldBonus(levels: AllianceLevels | undefined | null): number {
-  return level(levels, "bouclier") * (findAllianceResearch("bouclier")?.perLevel ?? 0);
+  return allianceTotal(levels, "shield");
 }
 
 /* ---------- bonus des projets (v3.3, appliqués aux membres) ---------- */
@@ -154,23 +282,24 @@ export function memberProjectLevel(levels: AllianceLevels | undefined | null, id
   return Math.max(0, Math.min(def?.maxLevel ?? 0, Math.floor(Number(levels?.[projectKey(id)]) || 0)));
 }
 
-function projectEffect(levels: AllianceLevels | undefined | null, id: string): number {
-  return memberProjectLevel(levels, id) * (findAllianceProject(id)?.perLevel ?? 0);
+/** Multiplicateur des durées de construction (0,9 = −10 %). 6.14.124 : durées des constructions et des recherches lues à part. */
+export function allianceBuildTimeFactor(levels: AllianceLevels | undefined | null): number {
+  return Math.max(0.5, 1 - allianceTotal(levels, "buildTime"));
 }
 
-/** Multiplicateur des durées de construction et de recherche (0,9 = −10 %). */
-export function allianceForgeFactor(levels: AllianceLevels | undefined | null): number {
-  return Math.max(0.5, 1 - projectEffect(levels, "forge"));
+/** Multiplicateur des durées de recherche (0,9 = −10 %). */
+export function allianceResearchTimeFactor(levels: AllianceLevels | undefined | null): number {
+  return Math.max(0.5, 1 - allianceTotal(levels, "researchTime"));
 }
 
-/** Multiplicateur d'attaque contre le Léviathan et les repaires (1,2 = +20 %). */
+/** Multiplicateur d'attaque contre le Léviathan, les boss, les primes et les repaires (1,2 = +20 %). */
 export function allianceSiegeFactor(levels: AllianceLevels | undefined | null): number {
-  return 1 + projectEffect(levels, "siege");
+  return 1 + allianceTotal(levels, "unitAttack", "pve");
 }
 
 /** Part supplémentaire des stocks à l'abri du pillage (0,1 = +10 points). */
 export function allianceBastionBonus(levels: AllianceLevels | undefined | null): number {
-  return projectEffect(levels, "bastion");
+  return allianceTotal(levels, "protectedStorage");
 }
 
 /* ---------- création et membres ---------- */
@@ -197,15 +326,27 @@ export function newAlliance(founder: { uid: string; pseudo: string }, nameIn: st
 
 /** 5.33 : places de l'alliance = base + Quartiers fédérés. */
 export function allianceMaxMembers(alliance: Pick<Alliance, "research"> | null | undefined): number {
-  const def = findAllianceResearch("quartiers");
-  const lvl = Math.min(def?.maxLevel ?? 0, Math.max(0, Math.floor(alliance?.research?.quartiers ?? 0)));
-  return Math.max(1, Math.floor(ALLIANCE_RULES.maxMembers)) + lvl * Math.max(0, ALLIANCE_RULES.membersPerQuarter);
+  // 6.14.124 (AA6) : chaque recherche à l'effet « places de membres » (Quartiers fédérés par défaut), membersPerQuarter par niveau.
+  let levels = 0;
+  for (const def of ALLIANCE_RULES.researches) {
+    if (!allianceDefEffects(def, "research").some((e) => e.stat === "allianceMembers")) continue;
+    levels += Math.min(def.maxLevel ?? 0, Math.max(0, Math.floor(Number(alliance?.research?.[def.id]) || 0)));
+  }
+  return Math.max(1, Math.floor(ALLIANCE_RULES.maxMembers)) + levels * Math.max(0, ALLIANCE_RULES.membersPerQuarter);
+}
+
+/** Recherche qui agrandit l'alliance (texte d'aide), s'il y en a une. */
+export function allianceMembersResearch(): AllianceResearchDef | undefined {
+  return ALLIANCE_RULES.researches.find((def) => allianceDefEffects(def, "research").some((e) => e.stat === "allianceMembers"));
 }
 
 export function addMember(alliance: Alliance, player: { uid: string; pseudo: string }): Alliance {
   if (alliance.members.includes(player.uid)) throw new GameActionError("Tu es déjà membre de cette alliance.");
   const cap = allianceMaxMembers(alliance);
-  if (alliance.members.length >= cap) throw new GameActionError(`Cette alliance est complète (${cap} membres). La recherche « Quartiers fédérés » ouvre 4 places de plus.`);
+  if (alliance.members.length >= cap) {
+    const more = allianceMembersResearch();
+    throw new GameActionError(`Cette alliance est complète (${cap} membres).${more && ALLIANCE_RULES.membersPerQuarter > 0 ? ` La recherche « ${more.name} » ouvre ${ALLIANCE_RULES.membersPerQuarter} places de plus.` : ""}`);
+  }
   return { ...alliance, members: [...alliance.members, player.uid], memberPseudos: { ...alliance.memberPseudos, [player.uid]: player.pseudo } };
 }
 
@@ -326,7 +467,7 @@ export function startAllianceResearch(alliance: Alliance, actorUid: string, rese
   const def = findAllianceResearch(researchId);
   if (!def) throw new GameActionError("Recherche inconnue.");
   if (alliance.activeResearch) throw new GameActionError("Une recherche d'alliance est déjà en cours.");
-  const next = level(alliance.research, def.id) + 1;
+  const next = defLevel(alliance.research, def, "research") + 1;
   if (next > def.maxLevel) throw new GameActionError("Niveau maximum atteint.");
   const cost = allianceResearchCost(next);
   const treasury = { ...(alliance.treasury ?? {}) };

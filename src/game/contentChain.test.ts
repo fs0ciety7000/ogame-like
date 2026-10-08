@@ -109,10 +109,11 @@ describe("6.14.11 : chaîne de contenu", () => {
     }
   });
 
-  it("une unité ajoutée sans préréglage, succès ni porteur propres fait échouer la garde", () => {
+  it("une unité ajoutée sans succès ni porteur propres fait échouer la garde (son préréglage est généré, 6.14.123)", () => {
     UNITS.push({ ...UNITS[0], id: "corvette_essai", name: "Corvette d'essai" });
     try {
-      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:achievementOwn", "unit:corvette_essai:carrierOwn", "unit:corvette_essai:effectPreset"]);
+      // 6.14.123 (AA5, AA-18) : préréglages d'effets générés pour une unité ajoutée (attaque et PV) : le maillon est rempli.
+      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:achievementOwn", "unit:corvette_essai:carrierOwn"]);
     } finally {
       UNITS.pop();
     }

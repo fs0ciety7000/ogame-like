@@ -15,7 +15,7 @@ import { BalanceHealthSection } from "@/pages/admin/BalanceHealthSection";
 import { achievementsPace } from "@/game/balance/history";
 import { allProposals, placeValue, type LiveBalance, type Proposal, type Severity } from "@/game/balance/diagnostics";
 import { commonPerHour, empireProfile, extractorCurve, missionTable, techProfile, unitMetrics, unitTable, type UnitMetrics } from "@/game/balance/analysis";
-import { findUnit, UNITS } from "@/game/units";
+import { findUnit, hasUnitRole, UNITS } from "@/game/units";
 import { UNIT_AUDIT_RULES, UNIT_CLASS_LABELS, unitBalanceAudit } from "@/game/unitClasses";
 import { cn, formatCompact, timeAgo } from "@/lib/utils";
 
@@ -155,7 +155,7 @@ function UnitSandbox({ unit, table, live }: { unit: UnitMetrics; table: UnitMetr
     setDfs(def.stats.defense);
   }, [def]);
   const tried = unitMetrics({ ...def, hangarSpace: Math.max(1, places), cost: { scrap, energy }, stats: { ...def.stats, attaque: atk, defense: dfs } }, def.maxLevel, techProfile(1));
-  const peers = table.filter((u) => u.category === unit.category && u.id !== "cargo");
+  const peers = table.filter((u) => u.category === unit.category && !hasUnitRole(u.id, "transport"));
   const sorted = peers.map(placeValue).sort((a, b) => a - b);
   const med = sorted[Math.floor(sorted.length / 2)] ?? 0;
   const ratio = med > 0 ? placeValue(tried) / med : 0;

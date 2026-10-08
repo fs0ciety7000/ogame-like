@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Anchor, Undo2, Rocket } from "lucide-react";
@@ -101,7 +102,7 @@ export function ColonyBasePanel({ colony, player }: { colony: Colony; player: Pl
 function BaseDialog({ colony, player, onClose }: { colony: Colony; player: PlayerState; onClose: () => void }) {
   const [ships, setShips] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
   const has = Object.keys(selected).length > 0;
   const trip = has ? travelSeconds(distanceBetween(player.uid, colony.id), fleetSpeed(player.units, selected), allianceFlightFactor(player.allianceResearch, player.techLevels, player)) : null;

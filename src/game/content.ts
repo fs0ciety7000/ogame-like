@@ -11,7 +11,7 @@ import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type Season
 import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
-import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
+import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_ROLE_IDS, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, findTech, setTechnologies, TECH_EFFECT_LABELS, techEffects, TECHNOLOGIES, validateTechEffect, type TechDef } from "@/game/technologies";
 import { actionOfContract, setTrackedContentResolver, validateTrackedActionRules } from "@/game/trackedActions";
 import { addedOnError, validateNoveltyRules } from "@/game/novelty";
@@ -43,7 +43,7 @@ import { PATRON_RULES } from "@/game/patrons";
 import { applyRhythmSwitch } from "@/game/rhythm";
 import { applyRegisteredRules, mergeRuleGroup, REGISTERED_RULES, registeredRuleSnapshot, ruleFieldMeta, type RegisteredRuleGroups } from "@/game/ruleRegistry";
 import { ruleBoundError } from "@/game/ruleMeta";
-import { ALLIANCE_RULES } from "@/game/alliances";
+import { ALLIANCE_RULES, validateAllianceEffects } from "@/game/alliances";
 import { MARKET_RULES } from "@/game/market";
 import { EXPEDITION_RULES } from "@/game/expeditions";
 import { LEVIATHAN_RULES, SEASON_BOSS_TUNING } from "@/game/leviathan";
@@ -575,6 +575,10 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   if (!(merged.patrons.top >= 1)) errors.push("Mécènes : au moins 1 place.");
   errors.push(...validateFixedListNumbers(merged));
   errors.push(...crossBoundErrors(merged));
+  // 6.14.124 (AA6, AA-15) : effets composés des recherches et projets d'alliance (grandeur, cible, portée connues).
+  const allianceUnitIds = new Set(UNITS.map((u) => u.id));
+  errors.push(...validateAllianceEffects("Alliances : recherche", merged.alliances.researches, allianceUnitIds));
+  errors.push(...validateAllianceEffects("Alliances : projet", merged.alliances.projects, allianceUnitIds));
   // 6.9.1 : la grille des territoires est figée (l'état des secteurs en dépend).
   const terr = merged.territories as { cols?: number; rows?: number };
   const terrDef = defaultGameContent().rules.territories as { cols?: number; rows?: number };
@@ -795,6 +799,11 @@ export function validateGameContent(content: GameContent): string[] {
     if (!(u.hangarSpace >= 1)) errors.push(`${label} : places de hangar doit être ≥ 1.`);
     if (u.levelBonus !== undefined && !(u.levelBonus >= 0)) errors.push(`${label} : gain par niveau invalide.`);
     checkResources(`${label} (coût)`, u.cost as Record<string, number>);
+    // 6.14.123 (AA5) : rôles connus seulement (une liste vide est permise : aucun rôle).
+    if (u.roles !== undefined) {
+      if (!Array.isArray(u.roles)) errors.push(`${label} : rôles invalides (liste attendue).`);
+      else for (const r of u.roles) if (!UNIT_ROLE_IDS.includes(r)) errors.push(`${label} : rôle « ${r} » inconnu.`);
+    }
   }
 
   checkIds("Technologies", content.technologies.map((t) => t.id));

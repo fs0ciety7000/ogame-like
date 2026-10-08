@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { EmptyState, HudChip } from "@/components/ui/hud";
-import { SPY_RULES, SPY_TIER_LABELS } from "@/game/espionage";
+import { primaryProbeUnitId, SPY_TIER_LABELS } from "@/game/espionage";
 import { computeFullPower } from "@/game/combat";
 import { fetchLatestSpyReport } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
@@ -35,7 +35,7 @@ function reportRow(r: SpyReport | null) {
 
 export function MassSpyDialog({ open, onClose, candidates }: { open: boolean; onClose: () => void; candidates: Candidate[] }) {
   const uid = useAuthStore((s) => s.user?.uid);
-  const owned = usePlayerStore((s) => s.player?.units[SPY_RULES.probeUnitId]?.count ?? 0);
+  const owned = usePlayerStore((s) => s.player?.units[primaryProbeUnitId()]?.count ?? 0);
   const [picked, setPicked] = useState<string[]>([]);
   const [probes, setProbes] = useState(quickProbeCount);
   const [busy, setBusy] = useState(false);

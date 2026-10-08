@@ -9,7 +9,7 @@ import { useContentStore } from "@/services/contentService";
 
 /* v5.14 : rapport d'impact du circuit d'effets — qui peut donner quoi, et jusqu'où. */
 
-const TONE: Record<EffectSourceKind, HudTone> = { tech: "accent", officer: "gold", relic: "violet", talent: "mint", territory: "ember", capsule: "danger", season: "neutral", module: "mint", class: "gold", moon: "violet" };
+const TONE: Record<EffectSourceKind, HudTone> = { tech: "accent", officer: "gold", relic: "violet", talent: "mint", territory: "ember", capsule: "danger", season: "neutral", module: "mint", class: "gold", moon: "violet", alliance: "ember" };
 
 export function ImpactReportPanel() {
   // Abonné au contenu : recalculé quand il change (technos, reliques…). Calcul léger.
@@ -40,7 +40,7 @@ export function ImpactReportPanel() {
           <div key={`${r.layer}-${r.stat}-${r.target ?? ""}`} className="hud-cut-sm flex flex-col gap-1.5 border border-white/10 p-3">
             <div className="flex flex-wrap items-baseline gap-2">
               <p className="text-sm text-slate-100">{effectStatLabel(r.stat, r.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}</p>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{r.layer === "tech" ? "technologies" : "empire"} · {EFFECT_STATS[r.stat].group}</span>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{r.layer === "tech" ? "technologies" : r.layer === "alliance" ? "alliance" : "empire"} · {EFFECT_STATS[r.stat].group}</span>
               <span className="ml-auto font-mono text-sm tabular-nums text-slate-100">{formatEffectValue(r.stat, r.total)}</span>
             </div>
             {r.capped && <p className="text-[11px] text-ember-glow">Plafonné : {formatEffectValue(r.stat, r.raw)} cumulables, plafond {formatEffectValue(r.stat, r.total)}.</p>}

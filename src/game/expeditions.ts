@@ -15,6 +15,7 @@ import { activeTreaty, FACTIONS, hasTreaty, pirateState, productionHours, setFac
 import { applyXpDelta } from "@/game/seasons";
 import { bumpStat } from "@/game/stats";
 import { OFFENSIVE_UNITS, findUnit } from "@/game/units";
+import { isProbeUnit } from "@/game/espionage";
 import type { NewNotification } from "@/game/flush";
 import type { Fleet } from "@/game/fleets";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -154,7 +155,7 @@ export function expeditionsPerDay(owner?: Partial<Pick<PlayerState, "empireClass
 
 /** Liste lisible : « 1 200 ferraille, 300 énergie ». */
 export function fleetShips(units: Record<string, number>): number {
-  return Object.entries(units).reduce((a, [id, n]) => a + (id === "sonde_espionnage" ? 0 : n), 0);
+  return Object.entries(units).reduce((a, [id, n]) => a + (isProbeUnit(id) ? 0 : n), 0);
 }
 
 /** Lancement : vérifie les limites et retire les vaisseaux de la base. */
@@ -168,7 +169,7 @@ export function launchExpedition(owner: PlayerState, raw: Record<string, unknown
   for (const [id, v] of Object.entries(raw ?? {})) {
     const qty = Math.floor(Number(v));
     if (!(qty > 0)) continue;
-    if (!OFFENSIVE_UNITS.includes(id) || id === "sonde_espionnage") throw new GameActionError("Seuls les vaisseaux de combat et de transport partent en expédition.");
+    if (!OFFENSIVE_UNITS.includes(id) || isProbeUnit(id)) throw new GameActionError("Seuls les vaisseaux de combat et de transport partent en expédition.");
     if ((owner.units[id]?.count ?? 0) < qty) throw new GameActionError("Tu ne possèdes plus assez d'unités pour cette flotte.");
     units[id] = qty;
   }

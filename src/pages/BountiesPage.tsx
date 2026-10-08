@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { HullWarning } from "@/components/game/HullWarning";
@@ -117,7 +118,7 @@ function HuntDialog({ target, onClose }: { target: HuntTarget | null; onClose: (
   const [formation, setFormation] = useState<FormationId>("balanced");
   const [busy, setBusy] = useState(false);
   if (!player || !target) return null;
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const power = huntPower(player, selected, formation);
 

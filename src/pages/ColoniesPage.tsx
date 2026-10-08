@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
@@ -52,7 +53,7 @@ import { homeLevels,
 import { RESOURCE_LIST } from "@/game/resources";
 import { iconUrl, type GameIconName } from "@/lib/icons";
 import { assetUrl } from "@/lib/assets";
-import { findUnit, getUnitBuildTime, OFFENSIVE_UNITS, UNITS } from "@/game/units";
+import { findUnit, getUnitBuildTime, OFFENSIVE_UNITS, scaleUnitCost, UNITS } from "@/game/units";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import {
   buildColonyDefense,
@@ -106,7 +107,7 @@ function TransportDialog({ colony, direction, onClose }: { colony: Colony; direc
   const [cargo, setCargo] = useState<Amounts>({});
   const [busy, setBusy] = useState(false);
   if (!player || !direction) return null;
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
   const capacity = playerCargoCapacity(player, selected);
   const loaded = Object.values(cargo).reduce((a: number, b) => a + (b ?? 0), 0);
@@ -545,12 +546,12 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
         0,
         Math.min(
           Math.floor(free / Math.max(1, picked.hangarSpace)),
-          pickedCost.scrap > 0 ? Math.floor((colony.resources.scrap ?? 0) / pickedCost.scrap) : Infinity,
-          pickedCost.energy > 0 ? Math.floor((colony.resources.energy ?? 0) / pickedCost.energy) : Infinity,
+          // 6.14.123 (AA5) : chaque ressource du coût.
+          ...Object.entries(pickedCost).map(([r, n]) => ((n ?? 0) > 0 ? Math.floor((colony.resources[r as ResourceId] ?? 0) / (n ?? 1)) : Infinity)),
         ),
       )
     : 0;
-  const batchCost = picked ? { scrap: pickedCost.scrap * defense.qty, energy: pickedCost.energy * defense.qty } : {};
+  const batchCost: Partial<Record<string, number>> = picked ? scaleUnitCost(pickedCost, defense.qty) : {};
   const batchSpace = picked ? picked.hangarSpace * defense.qty : 0;
   const batchAffordable = Object.entries(batchCost).every(([r, n]) => (colony.resources[r as ResourceId] ?? 0) >= (n ?? 0));
   const ids = [DEPOSIT_ID, ...colonyBuildingIds()];
@@ -773,7 +774,7 @@ function ColonyCard({ colony, player }: { colony: Colony; player: PlayerState })
                         <img src={assetUrl(u.image)} alt="" className="h-9 w-9 object-contain" />
                         <span className="flex min-w-0 flex-col gap-0.5">
                           <span className="truncate font-semibold">{u.name}</span>
-                          <AmountsInline amounts={{ scrap: u.cost.scrap, energy: u.cost.energy }} className="text-[11px] text-slate-500" />
+                          <AmountsInline amounts={u.cost} className="text-[11px] text-slate-500" />
                           <span className="font-mono text-[11px] text-slate-500">
                             {formatDuration(getUnitBuildTime(u, player.techLevels, player))} · {u.hangarSpace} place{u.hangarSpace > 1 ? "s" : ""}
                           </span>

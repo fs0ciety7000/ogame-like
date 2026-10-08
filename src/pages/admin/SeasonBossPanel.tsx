@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Crown, Save } from "lucide-react";
@@ -152,7 +153,7 @@ export function SeasonBossPanel() {
         <NumberField label="Pertes à chaque assaut ×" optional value={sb.lossMult} step={0.05} min={0.1} hint={`1 = ${Math.round(LEVIATHAN_RULES.lossPct * 100)} % de chaque type de vaisseau, comme le boss mondial. Vide : 1.`} onChange={(v) => setSb({ lossMult: v })} />
         <Field label="Faiblesses possibles en phase 3 (une est tirée par combat ; aucune : liste commune)" className="sm:col-span-2">
           <div className="flex flex-wrap gap-1.5">
-            {OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage").map((id) => {
+            {OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id)).map((id) => {
               const on = weakness.includes(id);
               return (
                 <HudChip key={id} asChild size="sm" tone={on ? "violet" : "neutral"}>

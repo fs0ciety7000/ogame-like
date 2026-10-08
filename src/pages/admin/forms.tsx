@@ -8,7 +8,7 @@ import {
   type BuildingDef,
   type BuildingEffect,
 } from "@/game/buildings";
-import { getUnitBuildTime, UNIT_LEVEL_BONUS_DEFAULT, unitLevelBonus, type UnitDef } from "@/game/units";
+import { getUnitBuildTime, resolveUnitRoles, UNIT_LEVEL_BONUS_DEFAULT, UNIT_ROLE_IDS, UNIT_ROLE_INFO, unitLevelBonus, type UnitDef } from "@/game/units";
 import { getTechCost, getTechTime, type TechDef } from "@/game/technologies";
 import { TechEffectsEditor } from "@/pages/admin/TechEffectsEditor";
 import { MISSION_XP_RULES, type MissionDef } from "@/game/missions";
@@ -442,6 +442,20 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
         <SelectField label="Technologie de déblocage" value={u.unlockTech} options={techOptions()} onChange={(unlockTech) => set({ unlockTech })} hint="Le niveau de la techno = niveau de l'unité." />
         <NumberField label="Niveau max" value={u.maxLevel} min={1} step={1} onChange={(v) => set({ maxLevel: Math.max(1, Math.round(v ?? 1)) })} />
         <NumberField label="Places de hangar" value={u.hangarSpace} min={1} step={1} onChange={(v) => set({ hangarSpace: Math.max(1, Math.round(v ?? 1)) })} />
+        {/* 6.14.123 (AA5) : rôles lus par le jeu à la place des identifiants (sonde, recycleur, soutien, faiblesse de boss…). */}
+        <p className="text-xs text-slate-500 sm:col-span-2">Rôles : ce que l'unité fait en plus de combattre. Une unité ajoutée n'en a aucun ; une unité livrée garde les siens tant que tu n'y touches pas.</p>
+        {UNIT_ROLE_IDS.map((role) => {
+          const roles = resolveUnitRoles(u);
+          return (
+            <CheckboxField
+              key={role}
+              label={UNIT_ROLE_INFO[role].label}
+              hint={UNIT_ROLE_INFO[role].hint}
+              checked={roles.includes(role)}
+              onChange={(on) => set({ roles: on ? [...roles, role] : roles.filter((r) => r !== role) })}
+            />
+          );
+        })}
       </Section>
 
       <Section title="Statistiques (niveau 1)">
@@ -463,6 +477,14 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
       <Section title="Coût">
         <NumberField label="Ferraille" value={u.cost.scrap} min={0} onChange={(v) => set({ cost: { ...u.cost, scrap: v ?? 0 } })} />
         <NumberField label="Énergie" value={u.cost.energy} min={0} onChange={(v) => set({ cost: { ...u.cost, energy: v ?? 0 } })} />
+        {/* 6.14.123 (AA5, AA-17) : une unité de fin de partie peut coûter une ressource rare. */}
+        <KeyNumberMapField
+          label="Autres ressources"
+          value={Object.fromEntries(Object.entries(u.cost).filter(([r]) => r !== "scrap" && r !== "energy")) as Record<string, number>}
+          options={RESOURCE_OPTIONS.filter((o) => o.value !== "scrap" && o.value !== "energy")}
+          hint="Payées à la construction, rendues à moitié à la revente. Le temps de construction par défaut et les débris ne comptent que la ferraille et l'énergie."
+          onChange={(extra) => set({ cost: { scrap: u.cost.scrap, energy: u.cost.energy, ...extra } })}
+        />
         <NumberField
           label="Temps de construction (s)"
           value={u.buildTime}

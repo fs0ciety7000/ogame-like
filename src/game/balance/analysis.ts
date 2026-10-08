@@ -5,7 +5,7 @@ import { MISSIONS } from "@/game/missions";
 import { getProductionBonus } from "@/game/production";
 import { RESOURCE_LIST } from "@/game/resources";
 import { TECHNOLOGIES } from "@/game/technologies";
-import { findUnit, OFFENSIVE_UNITS, UNITS, type UnitDef } from "@/game/units";
+import { findUnit, hasUnitRole, OFFENSIVE_UNITS, UNITS, type UnitDef } from "@/game/units";
 import { UNIT_AUDIT_RULES } from "@/game/unitClasses";
 import type { Buildings, TechLevels, Units } from "@/types/game";
 
@@ -86,11 +86,10 @@ export function unitMetrics(unit: UnitDef, level: number, techLevels: TechLevels
   };
 }
 
-/** Unités de combat comparables (hors sonde, drone utilitaire et unité de faction). */
-export const SUPPORT_UNITS = ["sonde_espionnage", "drone_recuperateur", "traqueur_kesh", "vaisseau_atelier", "recolteur"];
-
+/** Unités de combat comparables : hors rôle « soutien » (sonde, drone utilitaire, unité de faction, atelier…).
+ *  6.14.123 (AA5, AA-16) : lu dans les rôles d'unités, plus dans une liste d'identifiants. */
 export function combatUnits(): UnitDef[] {
-  return UNITS.filter((u) => !SUPPORT_UNITS.includes(u.id));
+  return UNITS.filter((u) => !hasUnitRole(u.id, "support"));
 }
 
 export function unitTable(level: number | "max", techLevels: TechLevels): UnitMetrics[] {

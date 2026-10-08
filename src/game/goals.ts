@@ -1,6 +1,6 @@
 import { applyBuildingDiscount, BUILDINGS, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { findTech, getTechCost, getTechTime } from "@/game/technologies";
-import { findUnit, getUnitBuildTime, ownedBlueprints, UNIT_TO_TECH } from "@/game/units";
+import { findUnit, getUnitBuildTime, ownedBlueprints, scaleUnitCost, UNIT_TO_TECH } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
 import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
 import { economySnapshot } from "@/game/economy";
@@ -156,7 +156,7 @@ export function planGoal(player: PlayerState, queues: QueuesState, goal: Goal, n
       const missingQty = Math.max(0, goal.value - owned - queued);
       if (missingQty > 0) {
         const each = playerUnitCost(unit, player, now);
-        steps.push({ kind: "units", id: goal.target, label: `${missingQty} × ${unit.name}`, level: missingQty, cost: { scrap: each.scrap * missingQty, energy: each.energy * missingQty }, seconds: getUnitBuildTime(unit, player.techLevels, player) * missingQty });
+        steps.push({ kind: "units", id: goal.target, label: `${missingQty} × ${unit.name}`, level: missingQty, cost: scaleUnitCost(each, missingQty), seconds: getUnitBuildTime(unit, player.techLevels, player) * missingQty });
       }
     }
   }

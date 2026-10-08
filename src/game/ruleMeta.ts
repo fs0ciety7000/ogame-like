@@ -97,21 +97,23 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   },
   spy: {
     sentinelCounterCap: { label: "Contre-espionnage : sentinelles comptées au plus", min: 0 },
-    sentinelUnitId: { label: "Unité de contre-espionnage (id)" },
+    sentinelUnitId: { label: "Unité de contre-espionnage (id), repli", hint: "6.14.123 : sert seulement si aucune unité n'a le rôle « Contre-espionnage » (Contenu → Unités)." },
+    probeUnitId: { label: "Sonde d'espionnage (id), repli", hint: "6.14.123 : sert seulement si aucune unité n'a le rôle « Sonde d'espionnage » (Contenu → Unités)." },
   },
   debris: {
     capacityPerLevel: { label: "Capacité par niveau", min: 0 },
+    recyclerUnitId: { label: "Recycleur (id), repli", hint: "6.14.123 : sert seulement si aucune unité n'a le rôle « Recycleur » (Contenu → Unités)." },
   },
   seasons: {
     firstSeasonId: { label: "Première saison (AAAA-MM)" },
   },
   alliances: {
-    membersPerQuarter: { label: "Membres en plus par niveau de Quartiers fédérés", min: 0 },
+    membersPerQuarter: { label: "Places de membres par niveau (effet « places de membres », Quartiers fédérés par défaut)", min: 0 },
     sharedReportsMax: { label: "Rapports partagés gardés", min: 0 },
     // 6.14.104 (AA3, AA-29).
     maxDiplomats: { label: "Diplomates par alliance, au plus", min: 0, max: 20 },
-    researches: { label: "Recherches d'alliance", hint: "Liste (id, nom, effet) : une recherche ajoutée par défaut reste disponible même si la liste est modifiée." },
-    projects: { label: "Projets d'alliance", hint: "Liste des projets et de leurs paliers." },
+    researches: { label: "Recherches d'alliance", hint: "Liste (id, nom, valeur par niveau, effets composés) : une recherche ajoutée par défaut reste disponible même si la liste est modifiée. 6.14.124 : éditeur dédié (Règles → Événements et saisons)." },
+    projects: { label: "Projets d'alliance", hint: "Liste des projets, de leurs paliers et de leurs effets composés (éditeur dédié, Règles → Événements et saisons)." },
   },
   auctions: {
     maxStart: { label: "Mise à prix maximale", min: 1, max: 1e15, hint: "Une enchère ne peut pas dépasser 10 fois cette valeur." },

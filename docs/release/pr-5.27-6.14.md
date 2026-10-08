@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.122 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.124 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 187 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 189 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -223,6 +223,8 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.119 : Style des illustrations plus spatial, 2 reliques et 4 biomes (`docs/changes/6.14.119-illustrations-style-spatial.md`)
 - 6.14.121 : Registre des actions suivies : lune, colonies et contenus dans les objectifs générés (AP-L7) (`docs/changes/6.14.121-actions-suivies.md`)
 - 6.14.122 : Épisode « nouveauté » des Chroniques pour un contenu récent (AP-L8) (`docs/changes/6.14.122-episode-nouveaute.md`)
+- 6.14.123 : Rôles d'unités au lieu des identifiants en dur, coût en toutes ressources, préréglages générés (AA5) (`docs/changes/6.14.123-roles-unites.md`)
+- 6.14.124 : Recherches et projets d'alliance par effets composés (AA6) (`docs/changes/6.14.124-alliance-effets.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

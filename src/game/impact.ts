@@ -1,4 +1,5 @@
 import { MOON_RULES } from "@/game/moon";
+import { ALLIANCE_RULES, allianceDefEffects, allianceEffectLayer, type AllianceProjectDef, type AllianceResearchDef } from "@/game/alliances";
 import { clampEffect, EFFECT_STATS, type EffectLayer, type EffectSourceKind, type EffectStat } from "@/game/effects";
 import { COMMANDER_RULES, COMMANDERS, ROLE_EFFECTS, OFFICER_TUNING_RULES } from "@/game/commanders";
 import { RARITIES, RELIC_EFFECT_STAT, RELICS } from "@/game/relics";
@@ -88,6 +89,17 @@ export function effectImpactReport(): ImpactRow[] {
   add("protectedStorage", undefined, "empire", { kind: "moon", label: "Lune", max: MOON_RULES.protectedStorageBonus, note: "une lune" });
   // Territoire d'alliance.
   add("productionAll", undefined, "empire", { kind: "territory", label: "Territoire d'alliance", max: TERRITORY_RULES.maxBonus });
+  // 6.14.124 (AA6) : recherches et projets d'alliance au niveau maximal (couche alliance, ou couche empire pour les autres effets).
+  const allianceDefs: [AllianceResearchDef | AllianceProjectDef, "research" | "project"][] = [...ALLIANCE_RULES.researches.map((d) => [d, "research"] as [AllianceResearchDef, "research"]), ...ALLIANCE_RULES.projects.map((d) => [d, "project"] as [AllianceProjectDef, "project"])];
+  for (const [def, kind] of allianceDefs) {
+    for (const e of allianceDefEffects(def, kind)) {
+      const layer = allianceEffectLayer(e);
+      if (!layer || !(e.stat in EFFECT_STATS)) continue;
+      // Comme les reliques : un effet de couche empire qui vise un mode de combat ne se cumule pas dans un même combat.
+      if (layer === "empire" && e.scope && e.scope !== "all") continue;
+      add(e.stat as EffectStat, e.target, layer, { kind: "alliance", label: def.name, max: (Number(def.perLevel) || 0) * (def.maxLevel ?? 0), note: `${kind === "research" ? "niveau" : "palier"} ${def.maxLevel}` });
+    }
+  }
 
   const order = Object.keys(EFFECT_STATS);
   return [...rows.values()]

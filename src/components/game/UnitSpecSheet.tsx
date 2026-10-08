@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { HudChip, StatBar } from "@/components/ui/hud";
 import { findTech } from "@/game/technologies";
 import { getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus, type UnitDef } from "@/game/units";
+import { RESOURCE_LIST } from "@/game/resources";
 import { SPEC_STATS, specLevels, unitDesignation, unitEfficiency, unitRanks, unitSpecAt, type SpecStat } from "@/game/unitSpec";
 import { assetUrl } from "@/lib/assets";
 import { CLASS_BEATS, COMBAT_RULES } from "@/game/combat";
@@ -98,6 +99,10 @@ export function UnitSpecSheet({ unit, player }: { unit: UnitDef; player: PlayerS
             <dt className="text-slate-500">Coût</dt>
             <dd className="text-right text-slate-200">
               {formatNumber(unit.cost.scrap)} ferr. · {formatNumber(unit.cost.energy)} én.
+              {Object.entries(unit.cost)
+                .filter(([r, n]) => r !== "scrap" && r !== "energy" && (n ?? 0) > 0)
+                .map(([r, n]) => ` · ${formatNumber(n ?? 0)} ${RESOURCE_LIST.find((x) => x.id === r)?.name.toLowerCase() ?? r}`)
+                .join("")}
             </dd>
             <dt className="text-slate-500">Construction</dt>
             <dd className="text-right text-slate-200">{formatDuration(getUnitBuildTime(unit, player.techLevels, player))}</dd>

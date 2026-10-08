@@ -4,7 +4,8 @@ import {
   addMember,
   ALLIANCE_RULES,
   allianceBastionBonus,
-  allianceForgeFactor,
+  allianceBuildTimeFactor,
+  allianceResearchTimeFactor,
   allianceNextDueMs,
   allianceProjectCost,
   allianceProjectProgress,
@@ -207,7 +208,8 @@ describe("alliance projects (v3.3)", () => {
     expect(out.alliance!.projects!.forge).toEqual({ level: 2, funded: {}, buildEndMs: 0 });
     const levels = out.memberships.m1.allianceResearch;
     expect(levels).toMatchObject({ projet_forge: 2, projet_siege: 2, projet_bastion: 5 });
-    expect(allianceForgeFactor(levels)).toBeCloseTo(0.96);
+    expect(allianceBuildTimeFactor(levels)).toBeCloseTo(0.96);
+    expect(allianceResearchTimeFactor(levels)).toBeCloseTo(0.96);
     expect(allianceSiegeFactor(levels)).toBeCloseTo(1.08);
     expect(allianceBastionBonus(levels)).toBeCloseTo(0.1);
     expect(out.logs[0].kind).toBe("project-done");

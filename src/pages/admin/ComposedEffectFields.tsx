@@ -3,7 +3,7 @@ import { unitSelectorOptions } from "@/game/effectTargets";
 import { currentGameContent } from "@/game/content";
 import { RESOURCE_LIST } from "@/game/resources";
 import { SelectField } from "@/pages/admin/fields";
-import { EFFECT_PRESET_FAMILIES, EFFECT_PRESETS, findEffectPreset, type EffectPreset } from "@/game/effectCatalog";
+import { allEffectPresets, EFFECT_PRESET_FAMILIES, findEffectPreset, type EffectPreset } from "@/game/effectCatalog";
 
 /* 5.23 : éditeur d'effet composé, commun aux reliques, technologies et
    officiers : grandeur × cible × portée. La valeur se règle à côté
@@ -31,12 +31,16 @@ export function scopeOptions(stat: EffectStat): { value: EffectScope; label: str
   return (EFFECT_STATS[stat].scopes ?? (["all", "home", "colonies"] as EffectScope[])).map((s) => ({ value: s, label: EFFECT_SCOPE_LABELS[s] }));
 }
 
-const PRESET_OPTIONS = [
-  { value: "", label: "— partir d'un effet du catalogue —" },
-  ...(Object.keys(EFFECT_PRESET_FAMILIES) as (keyof typeof EFFECT_PRESET_FAMILIES)[]).flatMap((f) =>
-    EFFECT_PRESETS.filter((x) => x.family === f).map((x) => ({ value: x.id, label: `${EFFECT_PRESET_FAMILIES[f]} · ${x.name}` })),
-  ),
-];
+/** 6.14.123 (AA5) : lu à l'usage, pour inclure les préréglages générés des unités ajoutées. */
+function presetOptions() {
+  const all = allEffectPresets();
+  return [
+    { value: "", label: "— partir d'un effet du catalogue —" },
+    ...(Object.keys(EFFECT_PRESET_FAMILIES) as (keyof typeof EFFECT_PRESET_FAMILIES)[]).flatMap((f) =>
+      all.filter((x) => x.family === f).map((x) => ({ value: x.id, label: `${EFFECT_PRESET_FAMILIES[f]} · ${x.name}` })),
+    ),
+  ];
+}
 
 export function ComposedEffectFields({ value, onChange, onPreset }: { value: Partial<ComposedEffect>; onChange: (next: ComposedEffect) => void; onPreset?: (preset: EffectPreset) => void }) {
   const stat = (value.stat && value.stat in EFFECT_STATS ? value.stat : "unitAttack") as EffectStat;
@@ -48,7 +52,7 @@ export function ComposedEffectFields({ value, onChange, onPreset }: { value: Par
         <SelectField<string>
           label="Catalogue"
           value=""
-          options={PRESET_OPTIONS}
+          options={presetOptions()}
           onChange={(id) => {
             const preset = findEffectPreset(id);
             if (preset) onPreset(preset);

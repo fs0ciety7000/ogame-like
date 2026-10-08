@@ -25,7 +25,7 @@ import { advanceColonies, collectFromColony, colonyOf, colonyView, deliverToColo
 import { getFleetUpkeep } from "@/game/economy";
 import { ALLIANCE_RULES, allianceFlightFactor } from "@/game/alliances";
 import { checkLairLaunch, factionOfLair, findFaction, lairPower, lairUid } from "@/game/pirates";
-import { SPY_RULES, spyTravelSeconds } from "@/game/espionage";
+import { isProbeUnit, spyTravelSeconds } from "@/game/espionage";
 import { onVacation } from "@/game/vacation";
 import { bountyTarget, dropShield, ELITE_RULES, shieldUntil, startBounty } from "@/game/bounties";
 import { debrisLocation, debrisTotal, isRecyclerUnit, type DebrisField } from "@/game/debris";
@@ -534,7 +534,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     const e = launchExpedition(owner, req.fleet, req.expeditionHours, req.expeditionsActive ?? 0, req.expeditionsToday ?? 0, now, req.formation);
     out = { attacker: e.attacker, fleet: e.fleet, defenderNotifications: [] };
   } else if (mission === "leviathan") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer un boss mondial.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent attaquer un boss mondial.");
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     out = {
       attacker: owner,
@@ -543,7 +543,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     };
   }
   else if (mission === "seasonboss") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le boss de saison.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent attaquer le boss de saison.");
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     out = {
       attacker: owner,
@@ -553,7 +553,7 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
   }
   else if (mission === "allianceboss") {
     // v4.6 : boss d'alliance, cible « allianceboss:<id de l'alliance> ».
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== "sonde_espionnage", "Seuls les vaisseaux de combat peuvent attaquer le boss d'alliance.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent attaquer le boss d'alliance.");
     if (Object.keys(units).length === 0) throw new GameActionError("Sélectionne au moins une unité à envoyer.");
     if (!owner.allianceId) throw new GameActionError("Il faut une alliance pour combattre son boss.");
     out = {
@@ -569,14 +569,14 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     out = launchDelivery(owner, target, req.fleet, req.delivery, now);
   }
   else if (mission === "elite") {
-    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent traquer la proie d'élite.");
+    const units = takeUnits(owner, req.fleet, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent traquer la proie d'élite.");
     out = { attacker: owner, fleet: newFleet(owner, { uid: ELITE_TARGET, pseudo: req.eliteName ?? "Proie d'élite" }, "elite", units, now, now + ELITE_RULES.flightMinutes * 60_000), defenderNotifications: [] };
   }
   else throw new GameActionError("Mission inconnue.");
   // v4.0 : stimulant d'assaut et brouilleur d'approche (joueur contre joueur seulement).
   let capsules: LaunchCapsules | null = null;
   if (mission === "attack" && req.capsules) {
-    capsules = takeLaunchCapsules(out.attacker, req.capsules, out.fleet.units, OFFENSIVE_UNITS.filter((id) => id !== SPY_RULES.probeUnitId), req.random);
+    capsules = takeLaunchCapsules(out.attacker, req.capsules, out.fleet.units, OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id)), req.random);
     if (capsules.fakeUnits) {
       const fakeTotal = Object.values(capsules.fakeUnits).reduce((a, b) => a + b, 0);
       out.defenderNotifications = out.defenderNotifications.map((n) => ({ ...n, message: n.message.replace(/t'envoie [\d\s\u202f\u00a0.,]+ vaisseaux/, `t'envoie ${formatInt(fakeTotal)} vaisseaux`) }));
@@ -609,7 +609,7 @@ export function launchTransport(owner: PlayerState, raw: Record<string, unknown>
   const colony = colonyOf(owner, String(req.colonyId ?? ""));
   if (!colony) throw new GameActionError("Colonie introuvable.");
   const direction: TransportDirection = req.direction === "collect" ? "collect" : "deliver";
-  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent transporter.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux (hors sondes) peuvent transporter.");
   const capacity = playerCargoCapacity(owner, units);
   if (capacity <= 0) throw new GameActionError("Ces vaisseaux n'ont pas de soute.");
   const cargo = parseCargo(req.cargo, direction === "deliver" ? capacity : Infinity);
@@ -640,7 +640,7 @@ export function launchDelivery(
   now: number,
 ): LaunchOutput {
   if (contract.fleetId) throw new GameActionError("Une livraison est déjà en route pour ce contrat.");
-  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux (hors sondes) peuvent livrer.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux (hors sondes) peuvent livrer.");
   const capacity = playerCargoCapacity(owner, units);
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, client.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
@@ -720,7 +720,7 @@ function newFleet(owner: PlayerState, target: { uid: string; pseudo: string }, m
 
 /** Espionnage : sondes uniquement, trajet rapide, la cible ne voit rien venir. */
 export function launchSpy(owner: PlayerState, target: PlayerState, raw: Record<string, unknown>, now: number): LaunchOutput {
-  const units = takeUnits(owner, raw, (id) => id === SPY_RULES.probeUnitId, "Seules les sondes d'espionnage peuvent espionner.");
+  const units = takeUnits(owner, raw, isProbeUnit, "Seules les sondes d'espionnage peuvent espionner.");
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + spyTravelSeconds(distanceBetween(owner.uid, target.uid), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   return { attacker: owner, fleet: newFleet(owner, target, "spy", units, now, arriveAtMs), defenderNotifications: [] };
@@ -821,7 +821,7 @@ export function launchColonyBase(owner: PlayerState, raw: Record<string, unknown
   const colony = colonyOf(owner, colonyId);
   if (!colony) throw new GameActionError("Colonie introuvable.");
   if (basesAtColony >= Math.max(1, Math.floor(r.perColony))) throw new GameActionError(`${colony.name} accueille déjà une base avancée.`);
-  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent former une base.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent former une base.");
   const speed = fleetSpeed(owner.units, units);
   const arriveAtMs = now + travelSeconds(distanceBetween(owner.uid, colony.id), speed, allianceFlightFactor(owner.allianceResearch, owner.techLevels, owner)) * 1000;
   grantCommanderXp(owner, "logistician", COMMANDER_XP.fleetDispatched);
@@ -877,7 +877,7 @@ export function launchLair(owner: PlayerState, target: string, raw: Record<strin
  *  sur toute la flotte à quai (vaisseaux envoyés compris). */
 export function launchBounty(owner: PlayerState, contractId: string, raw: Record<string, unknown>, now: number): LaunchOutput {
   const { contract, power, fugitive } = startBounty(owner, contractId, now);
-  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && id !== SPY_RULES.probeUnitId, "Seuls les vaisseaux de combat peuvent chasser.");
+  const units = takeUnits(owner, raw, (id) => OFFENSIVE_UNITS.includes(id) && !isProbeUnit(id), "Seuls les vaisseaux de combat peuvent chasser.");
   return {
     attacker: owner,
     fleet: { ...newFleet(owner, { uid: bountyTarget(contract), pseudo: fugitive.name }, "bounty", units, now, now + contract.minutes * 60_000), power, factionId: fugitive.factionId },

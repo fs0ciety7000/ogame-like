@@ -5,8 +5,8 @@
 |:--|:--|
 | Taille | **8 membres** de base, +4 par niveau de Quartiers fédérés (12, 16, 20 au plus, 5.33) ; rangs personnalisés (6), candidatures |
 | Trésor | versements ≤ 20 % du stock d'une ressource, 10 par jour |
-| Recherches | 5 : logistique, industrie, brouillage, bouclier (5 niveaux) et Quartiers fédérés (3 niveaux, +4 membres) ; 50 M communes × 2^(n−1), 12 h × n |
-| Projets | 3 méga-structures, 5 paliers, 500 M × 2^(n−1) |
+| Recherches | 5 : logistique, industrie, brouillage, bouclier (5 niveaux) et Quartiers fédérés (3 niveaux, +4 membres) ; 50 M communes × 2^(n−1), 12 h × n ; effets composés (6.14.124) |
+| Projets | 3 méga-structures, 5 paliers, 500 M × 2^(n−1) ; effets composés (6.14.124) |
 | Garnisons | 50 % de la puissance, 1 à 24 h, 3 par hôte |
 | Guerres | 3 membres min., 5 M + 5 M, préparation 12 h, 72 h |
 | Territoires | 24 secteurs, +2 % par secteur (max 6 %) ; guerre de territoire un week-end sur deux |
@@ -38,3 +38,24 @@ Rapport `docs/audit/2026-10-07-au6-communications.md` : blocage et suppression c
 
 ## 6.14.104 (revue AU27, lot AA3)
 `alliances.maxDiplomats` a son champ (Admin → Règles → Alliances) ; salons : `nameMin` ≤ `nameMax` contrôlé, comme `rename.minLength` ≤ `maxLength`.
+
+## 6.14.124 (revue AU27, lot AA6 : recherches d'alliance par effets)
+Constat AA-15 (`docs/audit/2026-10-07-au27-admin-evolutif.md`). Fiche du lot : `docs/changes/6.14.124-alliance-effets.md` ; GDD §7.14, I40.
+
+| Entrée | Effets composés (`effects`) | Valeur par niveau |
+|:--|:--|:--|
+| Logistique fédérée | temps de vol | −5 % |
+| Industrie coopérative | production de toutes les ressources | +3 % |
+| Réseau de brouillage | contre-espionnage | +1 point |
+| Bouclier fédéral | bouclier planétaire | +1 point |
+| Quartiers fédérés | places de membres | +`membersPerQuarter` (4) |
+| Anneau-forge (projet) | temps de construction, temps de recherche | −2 % chacun |
+| Batterie de siège (projet) | attaque de toutes les unités, contre les PNJ (boss, primes, repaires) | +4 % |
+| Bastion fédéral (projet) | entrepôt à l'abri du pillage | +2 points |
+
+- Ces grandeurs passent par les calculs d'alliance (couche « alliance », multipliées à part, comme avant) ; toute autre grandeur
+  (soute, butin, attaque d'une classe…) s'ajoute aux officiers et reliques (couche empire, `empireEffects`). Une recherche ou un
+  projet ajouté dans l'admin a donc toujours un effet.
+- Admin → Règles → Événements et saisons : éditeurs « Recherches d'alliance » et « Projets d'alliance » (nom, émoji, description,
+  valeur par niveau, niveau maximal, effets) et « Places de membres par niveau ». Règles enregistrées avant : effets ajoutés par la
+  migration `alliance-effects-6.14.124` (mêmes valeurs) et même repli à la lecture.

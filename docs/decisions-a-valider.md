@@ -18,6 +18,14 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q307 | Rôles d'unités : Rôles cochés dans la fiche d'unité (sonde, recycleur, transport, soutien, faiblesse de boss, contre-espionnage), identifiants des règles gardés en repli (`docs/changes/6.14.123-roles-unites.md`) | aucun (contenu par défaut identique) | valider |
+| Q308 | Récolteur : Garde seulement le rôle soutien (recycle par sa règle de classe) ; lui donner « recycleur » le sortirait des flottes des seigneurs (`docs/changes/6.14.123-roles-unites.md`) | aucun | valider |
+| Q309 | Faiblesse de boss par défaut : Unités rangées du moins cher au plus cher (ordre de l'ancienne liste) (`docs/changes/6.14.123-roles-unites.md`) | aucun | valider |
+| Q310 | Ressources rares dans le coût d'une unité : Payées et rendues, mais hors du temps de construction et des débris (`docs/changes/6.14.123-roles-unites.md`) | aucun (aucune unité par défaut n'en a) | valider |
+| Q311 | Préréglages générés pour une unité ajoutée : « Armement » et « Blindage » au barème des préréglages (`docs/changes/6.14.123-roles-unites.md`) | aucun | valider |
+| Q312 | Format des effets d'alliance : Liste `effects` (l'Anneau-forge agit sur deux grandeurs) au lieu d'un `effect` unique (`docs/changes/6.14.124-alliance-effets.md`) | aucun | valider |
+| Q313 | Couche d'effets « alliance » : Séparée de la couche empire (seule façon de garder les valeurs identiques) ; plafonds 0,5 (bouclier 0,15, abri 0,25), contre-espionnage sans plafond (`docs/changes/6.14.124-alliance-effets.md`) | valeurs identiques ; une ligne « alliance » dans la fiche d'effets | valider |
+| Q314 | Places de membres et Batterie de siège : Places lues dans `membersPerQuarter` ; Batterie de siège sur les mêmes cibles qu'avant (ni expéditions ni seigneurs) (`docs/changes/6.14.124-alliance-effets.md`) | aucun | valider |
 
 ## 3. Récit
 

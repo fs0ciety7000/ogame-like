@@ -142,10 +142,10 @@ sans objet, ou reporté au lot X.
 
 | # | Maillon | Ce qu'on ajoute | Où |
 |:--|:--|:--|:--|
-| 1 | **Contenu** | la fiche (stats, coûts, prérequis, image) | `units.ts`, `buildings.ts`, `technologies.ts`, `relics.ts`, `modules.ts`… ; `CONTENT_MIGRATIONS` (`appendFromDefaults`, `cosmic_db.js`) |
+| 1 | **Contenu** | la fiche (stats, coûts, prérequis, image) ; une unité coche ses **rôles** (sonde, recycleur, transport, soutien, faiblesse de boss, contre-espionnage, 6.14.123) : une règle de jeu lit le rôle, jamais l'identifiant (`unitRoles.test.ts`) ; une recherche ou un projet d'alliance porte ses **effets composés** (6.14.124) | `units.ts`, `buildings.ts`, `technologies.ts`, `relics.ts`, `modules.ts`, `alliances.ts`… ; `CONTENT_MIGRATIONS` (`appendFromDefaults`, `cosmic_db.js`) |
 | 2 | **Réglages et admin** | chaque chiffre réglable (règle n° 2), éditeur de la fiche, rapport d'impact | `GameRules` / `ruleRegistry.ts`, onglet du domaine, `ContentEditor`, `panels.tsx`, `impact.ts` |
 | 3 | **Effets donnés** | ce que le contenu apporte passe par le circuit d'effets, sous les plafonds | `effects.ts` (`EFFECT_STATS`), `empireEffects` (`modifiers.ts`), `derived.test.ts`, `effectsRead.test.ts` |
-| 4 | **Effets reçus** | les effets qui peuvent le viser (+ % d'attaque sur cette unité ou sa classe, + % aux stats de la lune…) : cible ajoutée et préréglages | `effectTargets.ts` (sélecteur unité / classe / catégorie), `effectCatalog.ts` (`EFFECT_PRESETS`), nouvelle stat dans `EFFECT_STATS` si besoin |
+| 4 | **Effets reçus** | les effets qui peuvent le viser (+ % d'attaque sur cette unité ou sa classe, + % aux stats de la lune…) : cible ajoutée et préréglages (une unité ajoutée dans l'admin a ses préréglages générés, 6.14.123) | `effectTargets.ts` (sélecteur unité / classe / catégorie), `effectCatalog.ts` (`EFFECT_PRESETS`, `generatedUnitPresets`), nouvelle stat dans `EFFECT_STATS` si besoin |
 | 5 | **Porteurs d'effets** | au moins une relique, un plan ou module, un talent, un officier ou une techno qui utilise ces effets | `relics.ts` (`DEFAULT_RELICS`, `RELIC_EFFECT_STAT`), `modules.ts`, `techEffects.ts`, `commanders.ts`, `talents.ts` ; formulaires `RelicForm`, `TechEffectsEditor`, `ComposedEffectFields` |
 | 6 | **Succès** | un palier d'entrée et un palier de maîtrise ; un secret si le contenu s'y prête | `achievements.ts` (`METRICS`, `derivedAchievements`, mesure lue à l'usage) |
 | 7 | **Codex** | une entrée, débloquée par le joueur lui-même | `codex.ts` |
@@ -159,7 +159,8 @@ sans objet, ou reporté au lot X.
 | 15 | **Pré-prod** | déploiement et essai sur `test.fs0ciety.org` avant la PR | `docs/preprod.md` |
 
 Exemple : un nouveau vaisseau « Corvette ».
-- Fiche dans `units.ts` et migration de contenu.
+- Fiche dans `units.ts` et migration de contenu ; ses rôles cochés (une corvette de transport : « Transport »), jamais son identifiant
+  dans une règle.
 - Coûts et stats réglables dans Admin → Unités.
 - Bonus éventuel de la corvette dans la couche empire.
 - Sélecteur `unit:corvette` déjà couvert ; préréglage « +10 % d'attaque des corvettes » dans `effectCatalog.ts`.

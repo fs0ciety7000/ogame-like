@@ -5806,6 +5806,58 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 6.14.123 (AU27, lot AA5, AA-16) : rôles d'unités. Une unité livrée d'une liste personnalisée qui n'a pas encore de rôles
+  // reçoit ceux de l'unité par défaut (sonde, recycleur, transport, soutien, faiblesse de boss, contre-espionnage). Une liste
+  // de rôles déjà écrite (même vide) est gardée ; une unité ajoutée dans l'admin n'en reçoit aucun. Le moteur fait le même
+  // repli à la lecture (`setUnits`) : la migration rend seulement les rôles visibles et modifiables dans l'admin.
+  {
+    id: "unit-roles-6.14.123",
+    key: "units",
+    patches: [],
+    run(items, changes) {
+      if (!Array.isArray(items)) return false;
+      const game = loadGame();
+      let touched = false;
+      items.forEach((u) => {
+        if (!u || typeof u !== "object" || Array.isArray(u.roles)) return;
+        const roles = game.defaultUnitRoles(u.id);
+        if (!roles.length) return;
+        u.roles = roles;
+        touched = true;
+        changes.push(`unit-roles-6.14.123 : ${u.id}.roles`);
+      });
+      return touched;
+    },
+  },
+  // 6.14.124 (AU27, lot AA6, AA-15) : recherches et projets d'alliance par effets composés. Une recherche ou un projet livré,
+  // dans des règles enregistrées avant la 6.14.124, reçoit l'effet équivalent (mêmes valeurs : le moteur fait le même repli à la
+  // lecture). Des effets déjà écrits (même vides) et une entrée ajoutée dans l'admin sont gardés tels quels.
+  {
+    id: "alliance-effects-6.14.124",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      const al = data && data.alliances;
+      if (!al || typeof al !== "object") return false;
+      const game = loadGame();
+      let touched = false;
+      [
+        ["researches", "research"],
+        ["projects", "project"],
+      ].forEach(([field, kind]) => {
+        if (!Array.isArray(al[field])) return;
+        al[field].forEach((d) => {
+          if (!d || typeof d !== "object" || Array.isArray(d.effects)) return;
+          const effects = game.defaultAllianceEffects(kind, d.id);
+          if (!effects.length) return;
+          d.effects = effects;
+          touched = true;
+          changes.push(`alliance-effects-6.14.124 : ${field}.${d.id}.effects`);
+        });
+      });
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {

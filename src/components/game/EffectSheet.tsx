@@ -22,6 +22,7 @@ const SOURCE_TONE: Record<EffectSourceKind, HudTone> = {
   module: "mint",
   class: "gold",
   moon: "violet",
+  alliance: "ember",
 };
 
 const GROUPS: { id: EffectStatInfo["group"]; label: string }[] = [
@@ -39,7 +40,7 @@ function Line({ line }: { line: EffectSheetLine }) {
       <div className="min-w-0">
         <p className="text-sm text-slate-100">
           {effectStatLabel(line.stat, line.target, { resource: (id) => RESOURCE_LABELS[id] ?? id })}
-          <span className="ml-2 font-mono text-[11px] uppercase tracking-wider text-slate-500">{line.layer === "tech" ? "technologies" : "empire"}</span>
+          <span className="ml-2 font-mono text-[11px] uppercase tracking-wider text-slate-500">{line.layer === "tech" ? "technologies" : line.layer === "alliance" ? "alliance" : "empire"}</span>
         </p>
         <div className="mt-1 flex flex-wrap gap-1">
           {line.sources.map((s) => (
@@ -85,7 +86,7 @@ export function EffectSheet({ player, now }: { player: PlayerState; now: number 
         );
       })}
       <p className="text-xs text-slate-500 lg:col-span-2">
-        Les technologies agissent sur chaque unité et chaque formule de base ; les bonus de l'empire (officiers, reliques, talents, territoire) multiplient ensuite le résultat. Les durées de l'empire sont plafonnées à −50 %, celles des technologies à −75 %.
+        Les technologies agissent sur chaque unité et chaque formule de base ; les bonus de l'empire (officiers, reliques, talents, territoire) multiplient ensuite le résultat. Les recherches et projets de ton alliance s'appliquent à part (« alliance »). Les durées de l'empire et de l'alliance sont plafonnées à −50 %, celles des technologies à −75 %.
       </p>
     </div>
   );

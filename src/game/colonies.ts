@@ -11,7 +11,7 @@ import { advanceResources, COMMON_RESOURCES, storageCapacityOf } from "@/game/ec
 import { GameActionError } from "@/game/errors";
 import { formatInt } from "@/game/format";
 import { RESOURCE_LIST } from "@/game/resources";
-import { findUnit, getUnitBuildTime } from "@/game/units";
+import { findUnit, getUnitBuildTime, scaleUnitCost } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
 import type { NewNotification } from "@/game/flush";
 import type { Buildings, PlayerState, ResourceId, Resources } from "@/types/game";
@@ -724,7 +724,7 @@ export function buildColonyDefense(player: PlayerState, colonyIdIn: string, unit
   const { used, capacity } = colonyDefenseHangar(colony, player, now);
   if (used + colonyDefensePendingSpace(colony) + qty * unit.hangarSpace > capacity) throw new GameActionError("Capacité du hangar de défense de la colonie insuffisante.");
   const each = playerUnitCost(unit, player, now);
-  const paid = { scrap: each.scrap * qty, energy: each.energy * qty };
+  const paid = scaleUnitCost(each, qty);
   payFrom(colony.resources, paid, "ces défenses");
   if (colony.defenseJob) {
     const waiting: ColonyDefenseJob = { unitId, qty, endTime: 0, paid };

@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
@@ -58,7 +59,7 @@ function DeliveryDialog({ contract, player, onClose }: { contract: TradeContract
   const [ships, setShips] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   if (!contract) return null;
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0 && (findUnit(id)?.stats.cargo ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(ships).filter(([, n]) => n > 0));
   const capacity = playerCargoCapacity(player, selected);
   const speed = Object.keys(selected).length ? fleetSpeed(player.units, selected) : 0;

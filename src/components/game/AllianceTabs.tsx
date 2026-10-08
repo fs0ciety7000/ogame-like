@@ -11,7 +11,7 @@ import { askConfirm } from "@/components/ui/confirm-dialog";
 import { Progress } from "@/components/ui/progress";
 import { SpyReportView } from "@/components/game/SpyModal";
 import { RESOURCE_LIST } from "@/game/resources";
-import { ALLIANCE_RULES, allianceProjectCost, allianceProjectProgress, allianceProjectSeconds, allianceResearchCost, allianceResearchSeconds, projectState } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceEffectLines, allianceProjectCost, allianceProjectProgress, allianceProjectSeconds, allianceResearchCost, allianceResearchSeconds, projectState } from "@/game/alliances";
 import { SPY_TIER_LABELS } from "@/game/espionage";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -259,7 +259,6 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
         const cost = allianceResearchCost(next);
         const affordable = Object.entries(cost).every(([res, v]) => (treasury[res as ResourceId] ?? 0) >= (v ?? 0));
         const running = active?.id === r.id;
-        const pct = r.perLevel < 1 ? `${Math.round(r.perLevel * 100)} %` : `${r.perLevel}`;
         return (
           <Card key={r.id} className={cn("flex flex-col gap-2 p-4", running && "border-cyan-glow/50")}>
             <div className="flex items-center gap-2">
@@ -270,8 +269,8 @@ export function ResearchTab({ alliance, canStart }: { alliance: Alliance; canSta
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              {r.description} ({r.id === "logistique" ? "−" : "+"}
-              {pct} par niveau)
+              {/* 6.14.124 (AA6) : effets lus dans la recherche (grandeur, valeur), plus dans son identifiant. */}
+              {r.description} ({allianceEffectLines(r, "research").join(", ")} par niveau)
             </p>
             {running && active ? (
               <div>
@@ -342,7 +341,6 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
           const missing = Object.fromEntries((Object.entries(cost) as [ResourceId, number][]).map(([r, n]) => [r, Math.max(0, n - (st.funded[r] ?? 0))])) as Amounts;
           const progress = allianceProjectProgress(cost, st.funded);
           const fromTreasury = Object.fromEntries((Object.entries(missing) as [ResourceId, number][]).map(([r, n]) => [r, Math.min(n, Math.floor(treasury[r] ?? 0))])) as Amounts;
-          const pct = Math.round(p.perLevel * 100);
           return (
             <Card key={p.id} className={cn("flex flex-col gap-3 p-4", st.buildEndMs > 0 && "border-cyan-glow/50")}>
               <div className="flex items-center gap-2">
@@ -350,9 +348,8 @@ export function ProjectsTab({ alliance, canUseTreasury }: { alliance: Alliance; 
                 <div className="flex-1">
                   <h3 className="font-display text-sm text-slate-100">{p.name}</h3>
                   <p className="text-xs text-slate-400">
-                    {p.description} ({p.id === "forge" ? "−" : "+"}
-                    {pct} % par palier, {p.id === "forge" ? "−" : "+"}
-                    {pct * st.level} % aujourd'hui)
+                    {p.description} ({allianceEffectLines(p, "project").join(", ")} par palier
+                    {st.level > 0 ? ` ; aujourd'hui ${allianceEffectLines(p, "project", st.level).map((l) => l.split(" · ")[0]).join(", ")}` : ""})
                   </p>
                 </div>
                 <span className="tabular-mono text-xs text-slate-400">

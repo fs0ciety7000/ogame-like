@@ -12,7 +12,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { RadarScan } from "@/components/game/RadarScan";
 import { distanceBetween, fleetSpeed, PATROL_RULES, patrolEnergyCost, travelSeconds } from "@/game/fleets";
 import { playerModifiers } from "@/game/modifiers";
-import { DEBRIS_RULES, debrisLocation, recyclerCapacity, type DebrisField } from "@/game/debris";
+import { debrisLocation, recyclerCapacity, recyclerUnitIds, type DebrisField } from "@/game/debris";
 import { findUnit, OFFENSIVE_UNITS } from "@/game/units";
 import { formatDuration, formatNumber, formatDateTime } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
@@ -132,9 +132,11 @@ export function RecycleDialog({ field, onClose }: { field: DebrisField | null; o
   const uid = useAuthStore((s) => s.user?.uid);
   const [picked, setPicked] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
-  const droneId = DEBRIS_RULES.recyclerUnitId;
-  // Les Récolteurs n'apparaissent que si le joueur en possède.
-  const ids = [droneId, ...((player?.units[HARVESTER_ID]?.count ?? 0) > 0 ? [HARVESTER_ID] : [])];
+  // 6.14.123 (AA5) : unités au rôle « recycleur » (le Drone récupérateur par défaut).
+  const recyclers = recyclerUnitIds().filter((id) => id !== HARVESTER_ID);
+  const droneId = recyclers[0];
+  // Les autres recycleurs et les Récolteurs n'apparaissent que si le joueur en possède.
+  const ids = [...recyclers.filter((id, i) => i === 0 || (player?.units[id]?.count ?? 0) > 0), ...((player?.units[HARVESTER_ID]?.count ?? 0) > 0 ? [HARVESTER_ID] : [])];
   const ownedOf = (id: string) => player?.units[id]?.count ?? 0;
   const total = field ? field.scrap + field.energy : 0;
   // 5.16 : la capacité d'un drone est sa cargaison (CAP), comme sur sa fiche.

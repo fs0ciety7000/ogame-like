@@ -13,7 +13,7 @@ import { FACTIONS } from "@/game/pirates";
 import { RARITIES } from "@/game/relics";
 import { allianceShieldBonus } from "@/game/alliances";
 import { playerModifiers } from "@/game/modifiers";
-import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, hasUnitRole, OFFENSIVE_UNITS } from "@/game/units";
 import type { BattleReport, PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -55,7 +55,7 @@ export function staticFindings(): Proposal[] {
   const table = unitTable("max", techProfile(1));
 
   for (const cat of ["attack", "defense"] as const) {
-    const units = table.filter((u) => u.category === cat && u.id !== "cargo");
+    const units = table.filter((u) => u.category === cat && !hasUnitRole(u.id, "transport"));
     const med = median(units.map(placeValue));
     for (const u of units) {
       const v = placeValue(u);
@@ -91,7 +91,7 @@ export function staticFindings(): Proposal[] {
   }
 
   const basic = table.filter((u) => u.places <= 2);
-  for (const u of table.filter((x) => x.places > 2 && x.id !== "cargo")) {
+  for (const u of table.filter((x) => x.places > 2 && !hasUnitRole(x.id, "transport"))) {
     const best = Math.max(...basic.filter((b) => b.category === u.category).map(placeValue));
     const v = placeValue(u);
     if (v > 1.8 * best) {

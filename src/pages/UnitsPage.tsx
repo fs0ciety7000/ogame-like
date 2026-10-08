@@ -27,7 +27,7 @@ import { useNowTicker } from "@/hooks/useNowTicker";
 import { hangarLoad, type HangarLoad } from "@/game/hangar";
 import { unitsAwayOf } from "@/game/fleets";
 import { useFleetStore } from "@/store/fleetStore";
-import { findUnit, getUnitBuildTime, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
+import { findUnit, getUnitBuildTime, scaleUnitCost, UNITS, UNIT_TO_TECH, unitLevelBonus } from "@/game/units";
 import { findTech, techBonus } from "@/game/technologies";
 import { CLASS_BEATS, COMBAT_RULES, unitStat } from "@/game/combat";
 import { UNIT_CLASS_LABELS, unitClasses, type UnitClass } from "@/game/unitClasses";
@@ -474,7 +474,7 @@ export function UnitsPage() {
                         );
                       })()}
 
-                      <CostPills cost={{ scrap: playerUnitCost(unit, player).scrap * qty(unit.id), energy: playerUnitCost(unit, player).energy * qty(unit.id) }} stock={player.resources} seconds={buildTime} perUnit />
+                      <CostPills cost={scaleUnitCost(playerUnitCost(unit, player), qty(unit.id))} stock={player.resources} seconds={buildTime} perUnit />
 
                       {queueInfo ? (
                         <p className="flex flex-wrap items-center gap-x-2 font-mono text-xs text-mint-glow">
@@ -506,7 +506,7 @@ export function UnitsPage() {
                       <QtyStepper value={qty(unit.id)} onChange={(v) => setQty(unit.id, v)} max={Math.max(1, Math.floor(freeSpace / unit.hangarSpace))} />
                       {(() => {
                         const each = playerUnitCost(unit, player);
-                        const batch = { scrap: each.scrap * qty(unit.id), energy: each.energy * qty(unit.id) };
+                        const batch = scaleUnitCost(each, qty(unit.id));
                         const wait = secondsToAfford(batch, player.resources, rates);
                         const noRoom = neededSpace > freeSpace;
                         // 6.5 : un vaisseau de classe ne se construit plus après un changement de classe (il reste et vole).

@@ -7,7 +7,8 @@ import { distanceBetween } from "@/game/fleets";
 import { productionHours } from "@/game/pirates";
 import { checkAttackAllowed } from "@/game/pvp";
 import { onVacation } from "@/game/vacation";
-import { DEFENSIVE_UNITS, findUnit, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { DEFENSIVE_UNITS, findUnit, hasUnitRole, OFFENSIVE_UNITS, UNIT_BASE_STATS } from "@/game/units";
+import { isProbeUnit } from "@/game/espionage";
 import { UNIT_AUDIT_RULES, unitClasses } from "@/game/unitClasses";
 import { getTradeRate } from "@/game/resources";
 import type { PlayerState, ResourceId } from "@/types/game";
@@ -465,7 +466,7 @@ function pickUnits(pool: string[], tier: WarlordTier): string[] {
 export function desiredArmy(d: Pick<WarlordDef, "tier" | "personality">, targetPower: number, counter?: WarlordRuntime["counter"] | null, now = 0): Record<string, number> {
   const share = WARLORD_RULES.offenseShare[d.personality] ?? 0.5;
   const out: Record<string, number> = {};
-  const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && id !== "drone_recuperateur" && id !== "cargo"), d.tier);
+  const ships = pickUnits(OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && !hasUnitRole(id, "recycler") && !hasUnitRole(id, "transport")), d.tier);
   const defenses = pickUnits(DEFENSIVE_UNITS, d.tier);
   // Puissance d'une unité telle que la compte empirePower (vaisseaux : attaque + part à quai).
   const unitPower = (id: string) => computeFullPower({ [id]: { level: 1, count: 1 } }, {}, OFFENSIVE_UNITS, ["attack"]) + homeDefensePower({ [id]: { level: 1, count: 1 } }, {});
@@ -673,7 +674,7 @@ export function warlordCanTarget(d: WarlordDef, npc: PlayerState, t: TargetInfo,
 export function composeWarlordFleet(npc: PlayerState, target: PlayerState, random: () => number = Math.random): Record<string, number> | null {
   const defense = homeDefensePower(target.units ?? {}, target.techLevels ?? {});
   const goal = Math.max(1, defense) * (WARLORD_RULES.attackPowerMin + (WARLORD_RULES.attackPowerMax - WARLORD_RULES.attackPowerMin) * random());
-  const ships = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (npc.units[id]?.count ?? 0) > 0)
+  const ships = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (npc.units[id]?.count ?? 0) > 0)
     .map((id) => ({ id, per: computeFleetPower(npc.units, npc.techLevels ?? {}, { [id]: 1 }, ["attack"]) }))
     .filter((s) => s.per > 0)
     .sort((a, b) => b.per - a.per);

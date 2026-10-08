@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { SPY_RULES } from "@/game/espionage";
+import { primaryProbeUnitId } from "@/game/espionage";
 import { GameActionError, sendFleet } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { triggerWarpEffect } from "@/store/warpEffectStore";
@@ -29,14 +29,14 @@ export function setQuickProbeCount(n: number): void {
 
 /** Envoie les sondes ; renvoie l'heure d'arrivée, ou null si l'envoi échoue (message déjà affiché). */
 export async function quickSpy(target: { uid: string; pseudo: string }, count = quickProbeCount(), silent = false): Promise<number | null> {
-  const owned = usePlayerStore.getState().player?.units[SPY_RULES.probeUnitId]?.count ?? 0;
+  const owned = usePlayerStore.getState().player?.units[primaryProbeUnitId()]?.count ?? 0;
   const n = Math.min(owned, count);
   if (n <= 0) {
     if (!silent) toast.error("Plus de sondes à quai : construis des Sondes d'espionnage.");
     return null;
   }
   try {
-    const sent = await sendFleet(target.uid, { [SPY_RULES.probeUnitId]: n }, "spy");
+    const sent = await sendFleet(target.uid, { [primaryProbeUnitId()]: n }, "spy");
     if (!silent) {
       triggerWarpEffect();
       toast.success(`${n} sonde${n > 1 ? "s" : ""} en route vers ${target.pseudo}`, { description: `Rapport dans ${formatDuration((sent.arriveAtMs - Date.now()) / 1000)}.` });

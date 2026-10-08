@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { defaultGameContent } from "@/game/content";
-import { CLASS_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
+import { defaultAllianceEffects } from "@/game/alliances";
+import { CLASS_UNITS, defaultUnitRoles, ELITE_UNITS, KESH_HUNTER_UNIT } from "@/game/units";
 import { SYNTH_BUILDING_ID } from "@/game/buildings";
 import { PASS_THEME_OLD_IMAGES, PASS_THEMES, SEASON_PORTRAITS } from "@/game/passSeasons";
 
@@ -200,5 +201,48 @@ describe("6.14.93 : migrations des illustrations (factions, boss d'alliance, pas
       expect(PASS_THEME_OLD_IMAGES[t.id], t.id).toBeTruthy();
     }
     for (const m of SEASON_PORTRAITS) expect(existsSync(`public/assets/commanders/s-${m}.webp`), m).toBe(true);
+  });
+});
+
+/* 6.14.123 (AU27, lot AA5, AA-16) : rôles d'unités dans une liste personnalisée enregistrée avant eux. */
+describe("AA5 : migration unit-roles-6.14.123", () => {
+  it("une unité livrée sans rôles reçoit ceux du code ; des rôles écrits (même vides) et une unité ajoutée sont gardés", () => {
+    (globalThis as Record<string, unknown>).loadGame = () => ({ defaultUnitRoles });
+    const items: { id: string; roles?: string[] }[] = [{ id: "sonde_espionnage" }, { id: "cargo", roles: [] }, { id: "corvette" }, { id: "fregate" }];
+    const changes: string[] = [];
+    try {
+      expect(rulesMigration("unit-roles-6.14.123").run(items, changes)).toBe(true);
+      expect(rulesMigration("unit-roles-6.14.123").run(items, [])).toBe(false);
+      expect(rulesMigration("unit-roles-6.14.123").run(null, [])).toBe(false);
+    } finally {
+      delete (globalThis as Record<string, unknown>).loadGame;
+    }
+    expect(items).toEqual([{ id: "sonde_espionnage", roles: ["probe", "support"] }, { id: "cargo", roles: [] }, { id: "corvette" }, { id: "fregate", roles: ["bossWeakness"] }]);
+    expect(changes).toHaveLength(2);
+  });
+});
+
+/* 6.14.124 (AU27, lot AA6, AA-15) : effets composés des recherches et projets d'alliance enregistrés avant eux. */
+describe("AA6 : migration alliance-effects-6.14.124", () => {
+  it("une recherche ou un projet livré reçoit son effet ; des effets écrits et une entrée ajoutée sont gardés", () => {
+    (globalThis as Record<string, unknown>).loadGame = () => ({ defaultAllianceEffects });
+    const data = {
+      alliances: {
+        maxMembers: 8,
+        researches: [{ id: "logistique", perLevel: 0.05 }, { id: "industrie", effects: [] }, { id: "maison", perLevel: 1 }],
+        projects: [{ id: "forge", perLevel: 0.02 }],
+      },
+    };
+    const changes: string[] = [];
+    try {
+      expect(rulesMigration("alliance-effects-6.14.124").run(data, changes)).toBe(true);
+      expect(rulesMigration("alliance-effects-6.14.124").run(data, [])).toBe(false);
+      expect(rulesMigration("alliance-effects-6.14.124").run({}, [])).toBe(false);
+    } finally {
+      delete (globalThis as Record<string, unknown>).loadGame;
+    }
+    expect(data.alliances.researches).toEqual([{ id: "logistique", perLevel: 0.05, effects: [{ stat: "fleetSpeed" }] }, { id: "industrie", effects: [] }, { id: "maison", perLevel: 1 }]);
+    expect(data.alliances.projects).toEqual([{ id: "forge", perLevel: 0.02, effects: [{ stat: "buildTime" }, { stat: "researchTime" }] }]);
+    expect(changes).toHaveLength(2);
   });
 });

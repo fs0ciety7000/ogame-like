@@ -1,4 +1,4 @@
-import { allianceForgeFactor } from "@/game/alliances";
+import { allianceBuildTimeFactor, allianceResearchTimeFactor } from "@/game/alliances";
 import { ascensionBuildTimeFactor } from "@/game/ascension";
 import { buildTimeFactor, researchTimeFactor } from "@/game/events";
 import { techReductionFactor } from "@/game/technologies";
@@ -16,7 +16,7 @@ type TimePlayer = Pick<PlayerState, "techLevels" | "allianceResearch"> & Partial
 export function playerBuildTimeFactor(player: TimePlayer, now: number): number {
   // v5.5 : compte test, chantier instantané.
   if (player.testMode) return 0;
-  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceForgeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
+  return buildTimeFactor(now) * techReductionFactor(player.techLevels, "building_time") * allianceBuildTimeFactor(player.allianceResearch) * ascensionBuildTimeFactor(player) * (1 - playerModifiers(player).buildTime);
 }
 
 /** 5.28.1 : réduction du coût des bâtiments, technologies (Ingénierie de construction) puis couche empire
@@ -29,7 +29,7 @@ export function playerBuildingDiscount(player: Partial<Pick<PlayerState, "bonuse
 
 export function playerResearchTimeFactor(player: TimePlayer, now: number): number {
   if (player.testMode) return 0;
-  return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceForgeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
+  return researchTimeFactor(now) * techReductionFactor(player.techLevels, "research_time") * allianceResearchTimeFactor(player.allianceResearch) * (1 - playerModifiers(player).researchTime);
 }
 
 /* 5.31 (lot D, « d'où vient ce chiffre ») : chaque multiplicateur de durée, avec son origine. Le produit des
@@ -50,7 +50,7 @@ export function buildTimeBreakdown(player: TimePlayer, now: number): FactorLine[
   return keep([
     { label: "Événement en cours", factor: buildTimeFactor(now) },
     { label: "Technologies", factor: techReductionFactor(player.techLevels, "building_time") },
-    { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
+    { label: "Recherches et projets d'alliance", factor: allianceBuildTimeFactor(player.allianceResearch) },
     { label: "Ascension", factor: ascensionBuildTimeFactor(player) },
     { label: "Officiers, reliques, talents, classe", factor: 1 - playerModifiers(player).buildTime },
   ]);
@@ -61,7 +61,7 @@ export function researchTimeBreakdown(player: TimePlayer, now: number): FactorLi
   return keep([
     { label: "Événement en cours", factor: researchTimeFactor(now) },
     { label: "Technologies", factor: techReductionFactor(player.techLevels, "research_time") },
-    { label: "Anneau-forge de l'alliance", factor: allianceForgeFactor(player.allianceResearch) },
+    { label: "Recherches et projets d'alliance", factor: allianceResearchTimeFactor(player.allianceResearch) },
     { label: "Officiers, reliques, talents, classe", factor: 1 - playerModifiers(player).researchTime },
   ]);
 }

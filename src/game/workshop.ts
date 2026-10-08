@@ -2,14 +2,14 @@ import { bumpStat } from "@/game/stats";
 import { spendAmber } from "@/game/spending";
 import { COMBAT_RULES, unitBaseHp } from "@/game/combat";
 import { BUILDINGS, DOCK_TIERS, dockBaseCapacity, dockLevel, effectiveBuildingLevel } from "@/game/buildings";
-import { findUnit } from "@/game/units";
+import { findUnit, scaleUnitCost, type UnitCost } from "@/game/units";
 import { unitClasses, type UnitClass } from "@/game/unitClasses";
 import { playerUnitCost } from "@/game/effectTargets";
 import { effectTotal } from "@/game/effects";
 import { allEffects } from "@/game/modifiers";
 import type { NewNotification } from "@/game/flush";
 import { GameActionError } from "@/game/errors";
-import type { PlayerState, Units } from "@/types/game";
+import type { PlayerState, ResourceId, Units } from "@/types/game";
 
 /* =====================================================
    5.20 : Atelier de réparation et points de vie conservés.
@@ -194,23 +194,22 @@ function orderJobs(st: PlayerWorkshop, player: Pick<PlayerState, "buildings">) {
 }
 
 /** Remboursement d'un démantèlement en cale (part du prix payé aujourd'hui). */
-export function dockScrapValue(player: PlayerState, unitId: string, count: number, now: number): { scrap: number; energy: number } {
+export function dockScrapValue(player: PlayerState, unitId: string, count: number, now: number): UnitCost {
   const unit = findUnit(unitId);
   if (!unit || count <= 0) return { scrap: 0, energy: 0 };
   const each = playerUnitCost(unit, player, now);
   const k = Math.max(0, Math.min(1, COMBAT_RULES.dockScrapRefund));
-  return { scrap: Math.floor(each.scrap * k) * count, energy: Math.floor(each.energy * k) * count };
+  // 6.14.123 (AA5) : chaque ressource du coût.
+  return scaleUnitCost(scaleUnitCost(each, k, Math.floor), count);
 }
 
-function creditScrap(player: PlayerState, units: Record<string, number>, now: number): { scrap: number; energy: number } {
-  const total = { scrap: 0, energy: 0 };
+function creditScrap(player: PlayerState, units: Record<string, number>, now: number): UnitCost {
+  const total: UnitCost = { scrap: 0, energy: 0 };
   for (const [id, n] of Object.entries(units)) {
     const v = dockScrapValue(player, id, n, now);
-    total.scrap += v.scrap;
-    total.energy += v.energy;
+    for (const [res, amount] of Object.entries(v)) total[res as ResourceId] = (total[res as ResourceId] ?? 0) + (amount ?? 0);
   }
-  player.resources.scrap = (player.resources.scrap ?? 0) + total.scrap;
-  player.resources.energy = (player.resources.energy ?? 0) + total.energy;
+  for (const [res, amount] of Object.entries(total)) player.resources[res as ResourceId] = (player.resources[res as ResourceId] ?? 0) + (amount ?? 0);
   bumpStat(player, "unitsDismantled", Object.values(units).reduce((a, b) => a + b, 0));
   return total;
 }

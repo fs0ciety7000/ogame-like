@@ -12,11 +12,11 @@ import { BUILDINGS, DOCK_BUILDING_ID } from "@/game/buildings";
 import { chroniclesConfig } from "@/game/chronicles";
 import { codexEntries } from "@/game/codex";
 import { COLONY_SPECS, RARE_DEPOSITS, BIOMES } from "@/game/colonies";
-import { DEBRIS_RULES } from "@/game/debris";
-import { EFFECT_PRESETS } from "@/game/effectCatalog";
+import { recyclerUnitIds } from "@/game/debris";
+import { allEffectPresets } from "@/game/effectCatalog";
 import { parseUnitSelector, selectorMatches } from "@/game/effectTargets";
 import { EMPIRE_CLASSES } from "@/game/empireClass";
-import { SPY_RULES } from "@/game/espionage";
+import { probeUnitIds } from "@/game/espionage";
 import { MODULE_FAMILIES, MODULE_TEMPLATES } from "@/game/modules";
 import { RELICS } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
@@ -126,9 +126,12 @@ export const CHAIN_TRACKED_ACTIONS: Record<ChainKind, string[] | null> = {
  * Une mesure ajoutée ici pour un contenu (ou les succès dérivés par contenu, AJ27-6) comble son maillon « succès propre ».
  */
 export function chainOwnMetrics(): Record<string, AchievementMetric[]> {
+  // 6.14.123 (AA5) : chaque unité au rôle « sonde » ou « recycleur » (repli : identifiants des règles).
+  const out: Record<string, AchievementMetric[]> = {};
+  for (const id of probeUnitIds()) out[`unit:${id}`] = ["spies"];
+  for (const id of recyclerUnitIds()) out[`unit:${id}`] = [...(out[`unit:${id}`] ?? []), "recycled"];
   return {
-    [`unit:${SPY_RULES.probeUnitId}`]: ["spies"],
-    [`unit:${DEBRIS_RULES.recyclerUnitId}`]: ["recycled"],
+    ...out,
     "building:atelier_reparation": ["unitsRepaired"],
     [`building:${DOCK_BUILDING_ID}`]: ["dockFull", "unitsDismantled"],
   };
@@ -179,7 +182,7 @@ export function contentChainReport(): ChainRow[] {
   const own = chainOwnMetrics();
   const classes = unitClasses();
   const carriers = unitCarrierSelectors();
-  const presets = EFFECT_PRESETS.map((p) => p.effect.target).filter((t): t is string => !!t);
+  const presets = allEffectPresets().map((p) => p.effect.target).filter((t): t is string => !!t);
   const ach = (kind: ChainKind, id: string) => {
     const m = CHAIN_ACHIEVEMENT_METRICS[kind];
     return {

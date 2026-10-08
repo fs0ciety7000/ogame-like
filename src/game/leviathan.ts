@@ -11,7 +11,8 @@ import { formationEffects } from "@/game/formations";
 import { productionHours } from "@/game/pirates";
 import { bumpStat } from "@/game/stats";
 import { bountyState } from "@/game/bounties";
-import { OFFENSIVE_UNITS } from "@/game/units";
+import { findUnit, OFFENSIVE_UNITS, unitBaseCostTotal, unitsWithRole } from "@/game/units";
+import { isProbeUnit } from "@/game/espionage";
 import type { PlayerState, ResourceId } from "@/types/game";
 import { noteAmber } from "@/game/healthTrace";
 
@@ -318,8 +319,17 @@ export const BOSS_PHASE_RULES_META = {
   weaknessFactor: { label: "Dégâts des vaisseaux de la faiblesse en phase 3", unit: "×", min: 1, max: 5 },
 };
 
-/** Vaisseaux qui peuvent être la faiblesse d'un boss (s'ils existent dans le contenu). */
-const WEAKNESS_POOL = ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"];
+/** 6.14.123 (AU27, lot AA5, constat AA-16) : vaisseaux qui peuvent être la faiblesse d'un boss sans faiblesse propre : rôle
+ *  « bossWeakness » (vaisseaux seulement), du moins cher au plus cher (ferraille + énergie ; ordre de l'ancienne liste fixe). */
+export function bossWeaknessPool(): string[] {
+  const ids = unitsWithRole("bossWeakness").filter((id) => OFFENSIVE_UNITS.includes(id));
+  const order = new Map(ids.map((id, i) => [id, i]));
+  const cost = (id: string) => {
+    const u = findUnit(id);
+    return u ? unitBaseCostTotal(u) : 0;
+  };
+  return ids.sort((a, b) => cost(a) - cost(b) || order.get(a)! - order.get(b)!);
+}
 
 export type BossFightPhase = 1 | 2 | 3;
 
@@ -332,8 +342,8 @@ export function bossFightPhase(state: Pick<LeviathanState, "hp" | "maxHp">): Bos
  *  v5.14 : parmi les faiblesses propres au boss mondial du combat. */
 export function bossWeakness(state: Pick<LeviathanState, "id"> & { bossId?: string }): string {
   const own = bossTuning(state).weakness.filter((id) => OFFENSIVE_UNITS.includes(id));
-  const pool = own.length ? own : WEAKNESS_POOL.filter((id) => OFFENSIVE_UNITS.includes(id));
-  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage");
+  const pool = own.length ? own : bossWeaknessPool();
+  const list = pool.length ? pool : OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id));
   let h = 0;
   for (const ch of state.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return list.length ? list[h % list.length] : "";

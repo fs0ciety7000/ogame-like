@@ -1,4 +1,5 @@
 import type { ComposedEffect } from "@/game/effects";
+import { UNITS } from "@/game/units";
 
 /* =====================================================
    5.23 : catalogue d'effets composés, prêts à poser sur une relique, une
@@ -156,6 +157,27 @@ export const EFFECT_PRESETS: EffectPreset[] = [
   p("porte_recharge", "Seuil apprivoisé", "renseignement", { stat: "jumpGateCooldown" }, { relic: 1.5, tech: 0.03, officer: 0.0075 }, "−15 % de recharge de la porte de saut."),
 ];
 
+/** 6.14.123 (AU27, lot AA5, constat AA-18) : préréglages générés pour une unité du registre qui n'en a aucun écrit à la main
+ *  (unité ajoutée dans l'admin) : attaque (si elle tire) et points de vie, barème « unit » (« elite » pour une unité d'élite).
+ *  À contenu par défaut, chaque unité a déjà les siens : la liste est vide. */
+export function generatedUnitPresets(): EffectPreset[] {
+  const written = new Set(EFFECT_PRESETS.map((x) => x.effect.target).filter((t): t is string => !!t));
+  const out: EffectPreset[] = [];
+  for (const u of UNITS) {
+    const target = `unit:${u.id}`;
+    if (written.has(target)) continue;
+    const budget: EffectBudgetId = u.elite ? "elite" : "unit";
+    if ((u.stats?.attaque ?? 0) > 0) out.push(p(`auto_${u.id}_attaque`, `Armement : ${u.name}`, "unites", { stat: "unitAttack", target }, budget, `Préréglage généré : ${u.name} frappe plus fort.`));
+    out.push(p(`auto_${u.id}_pv`, `Blindage : ${u.name}`, "unites", { stat: "unitHp", target }, budget, `Préréglage généré : ${u.name} tient plus longtemps.`));
+  }
+  return out;
+}
+
+/** Catalogue complet : préréglages écrits, puis ceux générés pour les unités ajoutées. */
+export function allEffectPresets(): EffectPreset[] {
+  return [...EFFECT_PRESETS, ...generatedUnitPresets()];
+}
+
 export function findEffectPreset(id: string): EffectPreset | undefined {
-  return EFFECT_PRESETS.find((x) => x.id === id);
+  return allEffectPresets().find((x) => x.id === id);
 }

@@ -53,8 +53,10 @@ export type EffectStat =
 
 /** Couche de calcul. Les technologies s'appliquent unité par unité ou dans
  *  les formules de base ; la couche « empire » (officiers, reliques, talents,
- *  territoires) multiplie le résultat. Deux couches, un seul vocabulaire. */
-export type EffectLayer = "tech" | "empire";
+ *  territoires) multiplie le résultat. Deux couches, un seul vocabulaire.
+ *  6.14.124 (AA6) : la couche « alliance » porte les recherches et projets d'alliance lus par leurs propres calculs
+ *  (temps de vol, production, durées, bouclier…), multipliés à part comme avant ; leurs autres effets vont en couche empire. */
+export type EffectLayer = "tech" | "empire" | "alliance";
 
 /** Où l'effet s'applique. « all » partout ; « home » planète mère ; « colonies » ;
  *  « pvp » seulement entre joueurs (capsules). 5.23 : « pve » contre tous les PNJ
@@ -70,7 +72,7 @@ export const EFFECT_SCOPE_LABELS: Record<EffectScope, string> = {
   warlord: "Contre les seigneurs",
 };
 
-export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class" | "moon";
+export type EffectSourceKind = "tech" | "officer" | "relic" | "talent" | "territory" | "capsule" | "season" | "module" | "class" | "moon" | "alliance";
 
 export interface EffectSourceRef {
   kind: EffectSourceKind;
@@ -133,23 +135,23 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
   repair: { label: "Vaisseaux réparés", unit: "pct", group: "combat" },
   repairSpeed: { label: "Cadence de l'Atelier", unit: "pct", group: "combat" },
   loot: { label: "Butin pillé", unit: "pct", group: "combat" },
-  unitAttack: { label: "Attaque des unités ciblées", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
+  unitAttack: { label: "Attaque des unités ciblées", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5, alliance: 0.5 } },
   unitHp: { label: "Points de vie des unités ciblées", unit: "pct", group: "combat", unitTarget: true, scopes: COMBAT_SCOPES, cap: { tech: 0.5, empire: 0.5 } },
   classEdge: { label: "Avantage de classe", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
-  shield: { label: "Bouclier planétaire", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.15, empire: 0.15 }, floor: 0 },
-  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie" },
+  shield: { label: "Bouclier planétaire", unit: "pct", group: "combat", scopes: COMBAT_SCOPES, cap: { tech: 0.15, empire: 0.15, alliance: 0.15 }, floor: 0 },
+  productionAll: { label: "Production de toutes les ressources", unit: "pct", group: "economie", cap: { alliance: 0.5 } },
   production: { label: "Production d'une ressource", unit: "pct", group: "economie" },
   storage: { label: "Capacité des entrepôts", unit: "pct", group: "economie" },
-  protectedStorage: { label: "Entrepôt à l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25 }, floor: 0 },
+  protectedStorage: { label: "Entrepôt à l'abri du pillage", unit: "pct", group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: 0.25, alliance: 0.25 }, floor: 0 },
   buildingDiscount: { label: "Coût des bâtiments", unit: "pct", reduction: true, group: "economie", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_COST_CAP }, floor: 0 },
   tradeTax: { label: "Taxe du marché et des cadeaux", unit: "pct", reduction: true, group: "economie", cap: { empire: 0.5 }, floor: 0 },
-  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
-  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  buildTime: { label: "Temps de construction", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP, alliance: 0.5 }, floor: 0 },
+  researchTime: { label: "Temps de recherche", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP, alliance: 0.5 }, floor: 0 },
   unitTime: { label: "Temps de production des unités", unit: "pct", reduction: true, group: "durees", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
   unitBuildTime: { label: "Temps de production des unités ciblées", unit: "pct", reduction: true, group: "durees", unitTarget: true, cap: { tech: 0.5, empire: 0.5 }, floor: 0 },
   unitCost: { label: "Coût des unités ciblées", unit: "pct", reduction: true, group: "economie", unitTarget: true, cap: { tech: 0.2, empire: 0.2 }, floor: 0 },
   cargo: { label: "Soute des flottes", unit: "pct", group: "flottes" },
-  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP }, floor: 0 },
+  fleetSpeed: { label: "Temps de vol", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_TIME_CAP, alliance: 0.5 }, floor: 0 },
   fleetUpkeep: { label: "Entretien de la flotte", unit: "pct", reduction: true, group: "flottes", cap: { tech: TECH_REDUCTION_CAP, empire: EMPIRE_COST_CAP }, floor: 0 },
   hangarCapacity: { label: "Capacité des hangars", unit: "pct", group: "flottes" },
   dockCapacity: { label: "Postes de la Cale sèche", unit: "pct", group: "flottes" },
@@ -163,12 +165,13 @@ export const EFFECT_STATS: Record<EffectStat, EffectStatInfo> = {
 
 /** 6.9.5 (AU8) : plafonds de chaque grandeur par couche, réglables (registre « effectCaps »). Attaque et défense des
  *  technos restent pilotées par `combat.techCombatCap` (6.7.1). Remplis depuis EFFECT_STATS (même module). */
-export const EFFECT_CAP_RULES: Record<string, { tech?: number; empire?: number }> = {};
+export const EFFECT_CAP_RULES: Record<string, { tech?: number; empire?: number; alliance?: number }> = {};
 for (const [k, info] of Object.entries(EFFECT_STATS)) if (info.cap && k !== "attack" && k !== "defense") EFFECT_CAP_RULES[k] = { ...info.cap };
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const EFFECT_CAP_RULES_META = {
-  unitAttack: { label: "Attaque des unités ciblées", hint: "Plafond du bonus par couche : tech (technos), empire (reliques, officiers, talents…). 0,5 = +50 %." },
+  unitAttack: { label: "Attaque des unités ciblées", hint: "Plafond du bonus par couche : tech (technos), empire (reliques, officiers, talents…), alliance (recherches et projets d'alliance lus par leurs calculs, 6.14.124). 0,5 = +50 %." },
+  productionAll: { label: "Production de toutes les ressources", hint: "6.14.124 : plafond de la couche alliance seulement (Industrie coopérative…). 0,5 = +50 %." },
   unitHp: { label: "Points de vie des unités ciblées", hint: "Plafond par couche (0,5 = +50 %)." },
   classEdge: { label: "Avantage de classe", hint: "Plafond par couche (0,2 = +20 %)." },
   shield: { label: "Bouclier planétaire", hint: "Plafond par couche (0,15 = +15 %)." },
@@ -205,6 +208,7 @@ export const EFFECT_SOURCE_LABELS: Record<EffectSourceKind, string> = {
   module: "Module de vaisseau",
   class: "Classe d'empire",
   moon: "Lune",
+  alliance: "Alliance",
 };
 
 export interface SumOptions {

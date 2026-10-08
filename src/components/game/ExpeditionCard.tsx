@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { useState } from "react";
 import { HullWarning } from "@/components/game/HullWarning";
 import { EmptyAction } from "@/components/ui/panel";
@@ -40,7 +41,7 @@ function LaunchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   const [formation, setFormation] = useState<FormationId>("balanced");
   const [busy, setBusy] = useState(false);
   if (!player) return null;
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   const ships = fleetShips(selected);
 

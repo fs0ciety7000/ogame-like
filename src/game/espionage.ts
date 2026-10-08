@@ -3,7 +3,7 @@ import { flushState, type NewNotification } from "@/game/flush";
 import { withMissingBuildings } from "@/game/buildings";
 import type { Fleet } from "@/game/fleets";
 import { galaxyCoords } from "@/game/galaxy";
-import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_TO_TECH } from "@/game/units";
+import { DEFENSIVE_UNITS, OFFENSIVE_UNITS, UNIT_TO_TECH, unitsWithRole } from "@/game/units";
 import { formatInt } from "@/game/format";
 import { allianceCounterSpy } from "@/game/alliances";
 import type { PlayerState, QueuesState, ResourceId, SpyReport, SpyReportData } from "@/types/game";
@@ -25,7 +25,7 @@ import { anomalyChance } from "@/game/commanders";
 ===================================================== */
 
 export const SPY_RULES = {
-  /** Unité envoyée en mission d'espionnage. */
+  /** Unité envoyée en mission d'espionnage. 6.14.123 (AA5) : repli si aucune unité n'a le rôle « sonde ». */
   probeUnitId: "sonde_espionnage",
   /** Durée fixe du trajet, en minutes. */
   baseMinutes: 1,
@@ -36,6 +36,7 @@ export const SPY_RULES = {
    *  tout espionnage impossible (2^20 sondes) en fin de partie. */
   sentinelsPerCounterLevel: 100,
   sentinelCounterCap: 4,
+  /** 6.14.123 (AA5) : repli si aucune unité n'a le rôle « contre-espionnage ». */
   sentinelUnitId: "sentinelle",
   /** Chance de détection : base + parPoint × (contre-espionnage − Espionnage). */
   detectionBase: 0.1,
@@ -49,18 +50,40 @@ export const SPY_RULES = {
   tierActivity: 6,
 };
 
+/** 6.14.123 (AU27, lot AA5) : sondes = unités au rôle « probe » ; aucune : l'unité des règles (`probeUnitId`). */
+export function probeUnitIds(): string[] {
+  const ids = unitsWithRole("probe");
+  return ids.length ? ids : [SPY_RULES.probeUnitId];
+}
+
+/** Sonde principale (envoi depuis la Galaxie, techno d'Espionnage) : la première au rôle « probe ». */
+export function primaryProbeUnitId(): string {
+  return probeUnitIds()[0];
+}
+
+/** Une sonde ne combat pas, ne part pas en expédition et ne transporte pas. */
+export function isProbeUnit(id: string): boolean {
+  return probeUnitIds().includes(id);
+}
+
+/** Unités de contre-espionnage (rôle « counterSpy ») ; aucune : l'unité des règles (`sentinelUnitId`). */
+export function counterSpyUnitIds(): string[] {
+  const ids = unitsWithRole("counterSpy");
+  return ids.length ? ids : [SPY_RULES.sentinelUnitId];
+}
+
 /** Paliers du rapport, du plus superficiel au plus complet. */
 export const SPY_TIER_LABELS = ["Brouillé", "Ressources", "Flotte et défenses", "Bâtiments et technologies", "Files et flottes en vol"];
 
 /** Niveau d'Espionnage d'un joueur (la techno qui améliore les sondes). */
 export function espionageLevel(player: Pick<PlayerState, "techLevels"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
-  const tech = UNIT_TO_TECH[SPY_RULES.probeUnitId] ?? "tech20";
+  const tech = UNIT_TO_TECH[primaryProbeUnitId()] ?? "tech20";
   // v4.0 : Espionne en poste et Œil de Vesper.
   return Math.max(0, Number(player.techLevels?.[tech]) || 0) + playerModifiers(player).spyLevel;
 }
 
 export function counterEspionage(target: Pick<PlayerState, "techLevels" | "units" | "allianceResearch"> & Partial<Pick<PlayerState, "commanders" | "relics" | "ascensions">>): number {
-  const sentinels = target.units?.[SPY_RULES.sentinelUnitId]?.count ?? 0;
+  const sentinels = counterSpyUnitIds().reduce((a, id) => a + (target.units?.[id]?.count ?? 0), 0);
   const per = Math.max(1, SPY_RULES.sentinelsPerCounterLevel);
   const sentinelPoints = Math.min(SPY_RULES.sentinelCounterCap, Math.floor(Math.log2(1 + sentinels / per)));
   return espionageLevel(target) + sentinelPoints + allianceCounterSpy(target.allianceResearch) + Math.floor(techBonus(target.techLevels, "counter_spy") + playerModifiers(target).counterSpy);

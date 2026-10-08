@@ -3885,6 +3885,71 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.123 (AA5) : le serveur lit les rôles d'unités (sonde ajoutée dans l'admin, sonde livrée sans rôle)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = await cfg("units");
+    const put = async (key: string, data: unknown) => {
+      const rec = await cfg(key);
+      if (rec) await admin.collection("game_config").update(rec.id, { data });
+      else await admin.collection("game_config").create({ key, data });
+    };
+    const before = await snap(bId);
+    const sent: string[] = [];
+    try {
+      const d = defaultGameContent();
+      const probe = d.units.find((u) => u.id === "sonde_espionnage")!;
+      await put("units", [...d.units.map((u) => (u.id === "sonde_espionnage" ? { ...u, roles: [] } : u)), { ...probe, id: "sonde_furtive", name: "Sonde furtive", roles: ["probe"] }]);
+      await admin.collection("players").update(bId, { units: { sonde_espionnage: { level: 1, count: 2 }, sonde_furtive: { level: 1, count: 2 } }, vacation: null });
+      // La sonde livrée a perdu son rôle : elle n'espionne plus ; la sonde ajoutée, cochée « Sonde », espionne.
+      await expect(ps.sendFleet(aId, { sonde_espionnage: 1 }, "spy")).rejects.toThrow(/sondes/);
+      const fleet = await ps.sendFleet(aId, { sonde_furtive: 2 }, "spy");
+      sent.push(fleet.id);
+      expect(fleet.mission).toBe("spy");
+    } finally {
+      for (const id of sent) await admin.collection("fleets").delete(id).catch(() => {});
+      const cur = await cfg("units");
+      if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
+      else if (cur) await admin.collection("game_config").delete(cur.id);
+      await admin.collection("players").update(bId, { units: before.units ?? {} });
+    }
+  });
+
+  it("6.14.124 (AA6) : une recherche d'alliance ajoutée dans l'admin agit côté serveur (soute des recycleurs)", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = await cfg("rules");
+    const before = await snap(bId);
+    let fleetId = "";
+    try {
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}"` })) await admin.collection("fleets").delete(f.id);
+      const alliances = defaultGameContent().rules.alliances;
+      const rules = { ...((keep?.data as object) ?? {}), alliances: { ...alliances, researches: [...alliances.researches, { id: "soutes", name: "Soutes fédérées", emoji: "", description: "Soute des flottes des membres.", perLevel: 0.25, maxLevel: 4, effects: [{ stat: "cargo" }] }] } };
+      if (keep) await admin.collection("game_config").update(keep.id, { data: rules });
+      else await admin.collection("game_config").create({ key: "rules", data: rules });
+      // Niveaux recopiés chez le membre (B sans alliance : aucune action d'alliance ne les réécrit pendant le test).
+      await admin.collection("players").update(bId, { allianceResearch: { soutes: 2 }, units: { drone_recuperateur: { level: 1, count: 2 } }, vacation: null });
+      const field = await admin.collection("debris_fields").getOne(aId).catch(() => null);
+      if (field) await admin.collection("debris_fields").update(aId, { scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000 });
+      else await admin.collection("debris_fields").create({ id: aId, locationPseudo: A.pseudo, scrap: 1000, energy: 500, expiresAtMs: Date.now() + 3600_000, updatedAtMs: Date.now() });
+      const sent = await ps.sendFleet(aId, { drone_recuperateur: 2 }, "recycle");
+      fleetId = sent.id;
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      // Soute de 2 drones : 20, +50 % (2 niveaux × 25 %) = 30 → 20 de ferraille et 10 d'énergie (13 et 7 sans la recherche).
+      expect((await pb.collection("fleets").getOne(sent.id)).loot).toEqual({ scrap: 20, energy: 10 });
+    } finally {
+      if (fleetId) await admin.collection("fleets").delete(fleetId).catch(() => {});
+      await admin.collection("debris_fields").delete(aId).catch(() => {});
+      const cur = await cfg("rules");
+      if (keep) await admin.collection("game_config").update(keep.id, { data: keep.data });
+      else if (cur) await admin.collection("game_config").delete(cur.id);
+      await admin.collection("players").update(bId, { allianceResearch: before.allianceResearch ?? {}, units: before.units ?? {} });
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

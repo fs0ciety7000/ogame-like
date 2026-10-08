@@ -1,3 +1,4 @@
+import { isProbeUnit } from "@/game/espionage";
 import { PlayerName } from "@/components/ui/player-name";
 import { PagedList } from "@/components/ui/panel";
 import { assetUrl } from "@/lib/assets";
@@ -36,7 +37,7 @@ export function AssaultDialog({ open, onClose, title = "Assaut sur le Léviathan
   const [formation, setFormation] = useState<FormationId>("balanced");
   const [busy, setBusy] = useState(false);
   if (!player) return null;
-  const ids = OFFENSIVE_UNITS.filter((id) => id !== "sonde_espionnage" && (player.units[id]?.count ?? 0) > 0);
+  const ids = OFFENSIVE_UNITS.filter((id) => !isProbeUnit(id) && (player.units[id]?.count ?? 0) > 0);
   const selected = Object.fromEntries(Object.entries(fleet).filter(([, n]) => n > 0));
   // v5.10.5 : estimation selon la phase du boss (riposte, bouclier, faiblesse), pour chaque formation.
   const target = state ?? { id: "estimate", hp: 1, maxHp: 1 };

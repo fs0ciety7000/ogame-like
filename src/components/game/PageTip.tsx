@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Lightbulb, X } from "lucide-react";
 import { onboardingEligible } from "@/game/onboarding";
 import { usePlayerStore } from "@/store/playerStore";
-import { ALLIANCE_RULES, findAllianceResearch } from "@/game/alliances";
+import { ALLIANCE_RULES, allianceMembersResearch } from "@/game/alliances";
 import { PVP_RULES } from "@/game/pvp";
 import { COLONY_RULES } from "@/game/colonies";
 import { NAV_UNLOCK_RULES, navStatus } from "@/game/navUnlock";
@@ -39,7 +39,9 @@ export const PAGE_TIPS: Record<string, string> = {
   get "/game/alliance"() {
     const base = Math.max(1, Math.floor(ALLIANCE_RULES.maxMembers));
     const extra = Math.max(0, ALLIANCE_RULES.membersPerQuarter);
-    return `Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. ${base} commandants au départ${extra ? `, +${extra} par niveau de ${findAllianceResearch("quartiers")?.name ?? "Quartiers fédérés"}` : ""}.`;
+    // 6.14.124 (AA6) : la recherche qui agrandit l'alliance est lue dans ses effets, plus dans son identifiant.
+    const more = allianceMembersResearch();
+    return `Une alliance partage un trésor, des recherches et des garnisons qui défendent les membres. ${base} commandants au départ${extra && more ? `, +${extra} par niveau de ${more.name}` : ""}.`;
   },
   // 6.14.81 (DP-L6) : une astuce pour chaque page qui s'ouvre au fil de la progression (menu progressif, I30).
   "/game/succes": "Chaque succès rapporte de l'XP et parfois un titre. Les succès secrets se révèlent en jouant : la liste « À découvrir » te dit où chercher.",
