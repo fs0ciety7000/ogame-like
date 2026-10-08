@@ -150,7 +150,7 @@ sans objet, ou reporté au lot X.
 | 6 | **Succès** | un palier d'entrée et un palier de maîtrise ; un secret si le contenu s'y prête | `achievements.ts` (`METRICS`, `derivedAchievements`, mesure lue à l'usage) |
 | 7 | **Codex** | une entrée, débloquée par le joueur lui-même | `codex.ts` |
 | 8 | **Titre, bannière** | si le contenu a une maîtrise ou un exploit à afficher | `titles.ts`, `banners.ts` |
-| 9 | **Défis et missions** | un défi de passe, un objectif des Chroniques, un défi hebdo, une mission ou une prime qui fait jouer le contenu | `passGen.ts`, `chronicleGen.ts`, `challenges.ts`, `dailyMissions.ts`, `missions.ts`, `bounties.ts` |
+| 9 | **Défis et missions** | un défi de passe, un objectif des Chroniques, un défi hebdo, une mission ou une prime qui fait jouer le contenu. **Objectif** (6.14.119) : un système nouveau déclare ses actions dans le registre des actions suivies (libellé, verbe, deux ordres, page, base, poids ; « mesurée » si la page s'ouvre tard) et les compte par `trackAction` ; une unité, une techno ou un bâtiment y est d'office (`unit:<id>`, `research:<id>`, `building:<id>`). **Nouveauté** (6.14.120) : la fiche porte sa date d'ajout (`addedOn`), le chapitre suivant lui donne un épisode | `trackedActions.ts` (`CHAIN_TRACKED_ACTIONS` de `contentChain.ts`), `novelty.ts`, `passGen.ts`, `chronicleGen.ts`, `challenges.ts`, `dailyMissions.ts`, `missions.ts`, `bounties.ts` |
 | 10 | **Butin et récompenses** | où on l'obtient : tables de butin, coffres, Comptoir, enchères | `loot.ts`, `bounties.ts` (Comptoir), `auctions.ts`, `addReady` (vaisseaux, I3) |
 | 11 | **Équilibre** | simulateur, « et si », analyse d'équilibrage, mesure dans la santé de l'équilibre si utile | `simulator.ts`, `whatIf.ts`, `balance/` |
 | 12 | **Interface** | page ou carte, recherche Ctrl+K, page Formules, Journal, notification, tutoriel avancé si c'est une étape | `src/pages/`, `CommandPalette`, `FormulasPage`, `timeline.ts`, `advancedGuide.ts` |
@@ -164,7 +164,8 @@ Exemple : un nouveau vaisseau « Corvette ».
 - Bonus éventuel de la corvette dans la couche empire.
 - Sélecteur `unit:corvette` déjà couvert ; préréglage « +10 % d'attaque des corvettes » dans `effectCatalog.ts`.
 - Relique « Moteur de corvette » ; succès « 100 corvettes » et « corvette niveau 10 » ; entrée de Codex (automatique pour les unités).
-- Défi de passe « construire 20 corvettes » et prime Kesh'Vaar ; présence dans les tables de butin.
+- Défi de passe « construire 20 corvettes » et prime Kesh'Vaar ; présence dans les tables de butin. Date d'ajout `addedOn` dans la fiche :
+  le chapitre suivant des Chroniques lui donne l'épisode « nouveauté » (« Construis-en 5 ») ; l'action `unit:corvette` est comptée d'office.
 - Simulateur ; changelog, prompts et image.
 
 Garde (6.14.11, renforcée en 6.14.114, `docs/proposals/chaine-contenu.md`) : `contentChainReport()` (`src/game/contentChain.ts`) donne,

@@ -8,6 +8,7 @@ import { OFFENSIVE_UNITS } from "@/game/units";
 import { leviathanRanking, seasonBossCooldownHours, type LeviathanState } from "@/game/leviathan";
 import type { StoryLine } from "@/game/story";
 import type { PlayerState } from "@/types/game";
+import { isStaticObjective, isTrackedObjective, onTrackedAction, type TrackedKey } from "@/game/trackedActions";
 
 /* =====================================================
    Chroniques (v4.3) : chaque mois, un arc de quatre épisodes racontés par
@@ -18,10 +19,14 @@ import type { PlayerState } from "@/types/game";
    teinte du mois. Contenu modifiable depuis l'administration.
 ===================================================== */
 
-export type ChronicleObjective = "contract" | "bounty" | "raidRepelled" | "victory" | "bossAssault" | "mission" | "spy" | "market" | "warlordWin";
+/** 6.14.119 (AP-L7) : toute action du registre des actions suivies (`trackedActions.ts`) : les 9 d'avant, lune, phalange,
+ *  porte de saut, colonies, et une action par contenu (`unit:<id>`, `research:<id>`, `building:<id>`). */
+export type ChronicleObjective = TrackedKey;
 
 /** v5.13 : libellés rangés dans seasonPass.ts (prérequis des paliers), ré-exportés ici. */
 export { OBJECTIVE_LABELS };
+/** 6.14.119 (AP-L7) : libellé de toute action suivie (registre et contenus). */
+export { objectiveLabel } from "@/game/trackedActions";
 
 export interface ChronicleEpisode {
   title: string;
@@ -55,6 +60,8 @@ export interface ChapterAuto {
   variant?: number;
   /** 6.14.57 : retouché à la main dans l'admin : jamais régénéré d'office. */
   editedAtMs?: number;
+  /** 6.14.120 (AP-L8) : contenu mis en avant par l'épisode « nouveauté » (action, date d'ajout, épisode 1 à 4). */
+  novelty?: { key: string; addedOn: string; episode: number };
 }
 
 export interface SeasonBossDef {
@@ -483,7 +490,7 @@ export function validateChronicles(cfg: Partial<ChroniclesConfig> | undefined): 
     seen.add(m.id);
     if (!Array.isArray(m.episodes) || m.episodes.length !== 4) errors.push(`Chroniques ${m.id} : il faut 4 épisodes.`);
     (m.episodes ?? []).forEach((e, i) => {
-      if (!(e.objective?.type in OBJECTIVE_LABELS)) errors.push(`Chroniques ${m.id}, épisode ${i + 1} : objectif inconnu.`);
+      if (!isTrackedObjective(e.objective?.type)) errors.push(`Chroniques ${m.id}, épisode ${i + 1} : objectif inconnu.`);
       if (!(e.objective?.count >= 1)) errors.push(`Chroniques ${m.id}, épisode ${i + 1} : nombre ≥ 1.`);
     });
     if (!m.boss?.name) errors.push(`Chroniques ${m.id} : nom du boss manquant.`);
@@ -611,8 +618,10 @@ export function claimChronicle(player: PlayerState, episode: unknown, now: numbe
 
 // Les sources du passe qui sont aussi des objectifs d'épisode.
 onPassPoints((player, source, now, times) => {
-  if (source in OBJECTIVE_LABELS) recordChronicle(player, source as ChronicleObjective, now, times);
+  if (isStaticObjective(source)) recordChronicle(player, source, now, times);
 });
+// 6.14.119 (AP-L7) : une action du registre comptée ailleurs (lune, colonies, contenus) avance les épisodes et l'activité du mois.
+onTrackedAction("chronicles", (player, key, now, times) => recordChronicle(player, key, now, times));
 
 /* ---------- boss de saison ---------- */
 

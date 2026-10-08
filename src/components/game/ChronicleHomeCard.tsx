@@ -4,7 +4,7 @@ import { BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudMeter } from "@/components/ui/hud";
 import { HudPanel } from "@/components/ui/panel";
-import { chronicleOf, chronicleState, episodeUnlockMs, OBJECTIVE_LABELS, unlockedEpisodes } from "@/game/chronicles";
+import { chronicleOf, chronicleState, episodeUnlockMs, objectiveLabel, unlockedEpisodes } from "@/game/chronicles";
 import { usePlayerStore } from "@/store/playerStore";
 
 /* 5.15.12 : l'épisode des Chroniques en cours, sur l'accueil (objectif, avancement, lien). */
@@ -41,7 +41,7 @@ export function ChronicleHomeCard({ now }: { now: number }) {
             Épisode {current + 1} : {e.title}
           </p>
           <div className="flex justify-between font-mono text-[11px] tabular-nums text-slate-400">
-            <span>{OBJECTIVE_LABELS[e.objective.type]}</span>
+            <span>{objectiveLabel(e.objective.type)}</span>
             <span>
               {Math.min(progress, e.objective.count)} / {e.objective.count}
             </span>

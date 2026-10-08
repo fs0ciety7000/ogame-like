@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { BookOpen, ChevronRight } from "lucide-react";
-import { chronicleOf, chronicleState, OBJECTIVE_LABELS, unlockedEpisodes } from "@/game/chronicles";
+import { chronicleOf, chronicleState, objectiveLabel, unlockedEpisodes } from "@/game/chronicles";
 import { usePlayerStore } from "@/store/playerStore";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export function ChronicleLine() {
         <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-slate-400">Chroniques</span>{" "}
         {e ? (
           <span className="text-slate-200">
-            épisode {current + 1}, {OBJECTIVE_LABELS[e.objective.type].toLowerCase()} <span className="font-mono tabular-nums">{progress}/{e.objective.count}</span>
+            épisode {current + 1}, {objectiveLabel(e.objective.type).toLowerCase()} <span className="font-mono tabular-nums">{progress}/{e.objective.count}</span>
             {ready && <span className="text-cyan-glow"> : à terminer</span>}
           </span>
         ) : (

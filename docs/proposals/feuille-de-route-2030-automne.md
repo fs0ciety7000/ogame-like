@@ -54,8 +54,8 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 37 | É30-5 | Performance : stabilité mobile, LCP de la Galaxie, images du Codex à la demande | M | livré (6.14.116 ; mesure sur la pré-prod au push) |
 | 38 | É30-6 | Rythme des succès (avec AP-L4) | M | livré (6.14.117 ; `docs/proposals/rythme-des-succes.md`) |
 | 39 | É30-7 | Reliques à image propre et prompts des biomes et classes | S | livré (6.14.118) |
-| 40 | AP-L7 | Nouveau générateur : registre des actions suivies (lune, colonies, nouvelles unités dans les objectifs) | L | à faire |
-| 41 | AP-L8 | Nouveau générateur : épisode « nouveauté » pour le contenu récemment ajouté | M | à faire |
+| 40 | AP-L7 | Nouveau générateur : registre des actions suivies (lune, colonies, nouvelles unités dans les objectifs) | L | livré (6.14.119) |
+| 41 | AP-L8 | Nouveau générateur : épisode « nouveauté » pour le contenu récemment ajouté | M | livré (6.14.120) |
 | 42 | AA5 | Rôles d'unités (sonde, recycleur, faiblesse de boss) au lieu d'identifiants en dur | M | à faire |
 | 43 | AA6 | Recherches d'alliance par effets composés (une recherche ajoutée dans l'admin a un effet) | M | à faire |
 | 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | à faire |

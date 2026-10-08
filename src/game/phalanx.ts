@@ -19,6 +19,7 @@ import { formatInt } from "@/game/format";
 import { playerModifiers } from "@/game/modifiers";
 import { moonLevel, playerMoon } from "@/game/moon";
 import { bumpStat } from "@/game/stats";
+import { trackAction } from "@/game/trackedActions";
 import { OFFENSIVE_UNITS } from "@/game/units";
 import type { PlayerState } from "@/types/game";
 
@@ -292,6 +293,8 @@ export function markScan(player: PlayerState, now: number): { cost: number; read
   const readyAtMs = now + phalanxFeatures(phalanxLevel(player)).scanCooldownMs;
   player.moon = { ...m, scanReadyAtMs: readyAtMs };
   bumpStat(player, "phalanxScans");
+  // 6.14.119 (AP-L7) : action suivie (épisodes, défis du passe, saga).
+  trackAction(player, "phalanxScan", now);
   return { cost, readyAtMs };
 }
 

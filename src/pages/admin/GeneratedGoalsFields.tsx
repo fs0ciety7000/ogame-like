@@ -20,7 +20,7 @@ type R = GameRules;
 type SetRules = Dispatch<SetStateAction<R>>;
 type Obj = Record<string, unknown>;
 
-const TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market"];
+const TYPES: ContractType[] = ["upgrade_building", "research", "build_units", "win_attack", "win_defense", "missions", "gift", "spend", "spy", "market", "gate_jump", "colony_convoy"];
 const groupOf = (r: R, group: string): Obj => ((r as unknown as Obj)[group] ?? {}) as Obj;
 /** Libellé court d'un type (admin). */
 const TYPE_LABELS: Record<ContractType, string> = {
@@ -34,6 +34,9 @@ const TYPE_LABELS: Record<ContractType, string> = {
   spend: "Dépenser des ressources",
   spy: "Lancer des sondes",
   market: "Acheter au marché",
+  // 6.14.119 (AP-L7) : proposés seulement au joueur qui peut les faire (porte ouverte, route de colonie).
+  gate_jump: "Porte de saut (joueur à porte ouverte)",
+  colony_convoy: "Convoi de colonie (joueur avec une route)",
 };
 const typeLabel = (t: ContractType) => TYPE_LABELS[t];
 

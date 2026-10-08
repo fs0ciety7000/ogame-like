@@ -6,9 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudTag } from "@/components/ui/hud";
 import { adminProcedural, adminProceduralAchievements, adminProceduralGenerate, adminProceduralSettings, type ProceduralOverview, type ProceduralResult } from "@/services/adminService";
-import { OBJECTIVE_LABELS, type ChronicleMonth } from "@/game/chronicles";
+import { objectiveLabel, type ChronicleMonth } from "@/game/chronicles";
 import { describePassReward } from "@/game/seasonPass";
 import { achievementGenText, ACTIVITY_KEYS, type ProceduralSettings } from "@/game/procedural";
+import { measuredPlayable, NEW_OBJECTIVES, TRACKED_ACTIONS, trackedActionsEnabled, trackedWeight, type StaticObjective } from "@/game/trackedActions";
 import { STORY_SPEAKERS } from "@/game/story";
 import { seasonLabel } from "@/game/seasons";
 import { timeAgo } from "@/lib/utils";
@@ -31,6 +32,14 @@ function Section({ title, aside, children }: { title: string; aside?: ReactNode;
 }
 
 const pct = (x: number) => `${Math.round(x * 100)} %`;
+
+/** 6.14.119 (AP-L7) : une action du registre peut-elle entrer dans un tirage commun ce mois-ci ? */
+function drawStatus(k: StaticObjective, weekly: Partial<Record<string, number>>): string {
+  if (trackedWeight(k) <= 0) return "non (poids 0)";
+  if (!TRACKED_ACTIONS[k].measured) return "oui";
+  if (!trackedActionsEnabled()) return "non (registre désactivé)";
+  return measuredPlayable(k, weekly) ? "oui (pratiquée)" : "non (médiane trop basse)";
+}
 
 function Toggle({ label, hint, checked, onChange }: { label: string; hint: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -66,7 +75,7 @@ function ChapterPreview({ m }: { m: ChronicleMonth }) {
               <span className="mr-1 font-mono text-[10px] text-slate-500">Ép. {i + 1}</span> {e.title}
             </p>
             <p className="text-xs text-slate-400">
-              {OBJECTIVE_LABELS[e.objective.type]} : <span className="font-mono text-slate-200">{e.objective.count}</span>
+              {objectiveLabel(e.objective.type)} : <span className="font-mono text-slate-200">{e.objective.count}</span>
               {e.reward && e.reward.length > 0 && <> · récompense : {e.reward.map((r) => describePassReward(r)).join(", ")}</>}
             </p>
             {e.lines.map((l, k) => (
@@ -212,15 +221,17 @@ export function ProceduralPanel() {
                 <th className="py-1 font-normal">Médiane / semaine</th>
                 <th className="py-1 font-normal">Total du mois</th>
                 <th className="py-1 font-normal">Le plus actif</th>
+                <th className="py-1 font-normal">Dans les tirages</th>
               </tr>
             </thead>
             <tbody className="font-mono text-slate-200">
-              {ACTIVITY_KEYS.map((k) => (
+              {([...ACTIVITY_KEYS, ...NEW_OBJECTIVES] as StaticObjective[]).map((k) => (
                 <tr key={k} className="border-t border-white/5">
-                  <td className="py-1 font-sans">{OBJECTIVE_LABELS[k]}</td>
+                  <td className="py-1 font-sans">{objectiveLabel(k)}</td>
                   <td>{digest.weeklyMedian[k] ?? 0}</td>
                   <td>{digest.totals[k] ?? 0}</td>
                   <td className="font-sans">{digest.heroes[k] ? `${digest.heroes[k]!.pseudo} (${digest.heroes[k]!.count})` : "—"}</td>
+                  <td className="font-sans">{drawStatus(k, digest.weeklyMedian)}</td>
                 </tr>
               ))}
             </tbody>
@@ -228,7 +239,7 @@ export function ProceduralPanel() {
         </div>
         {digest.episodes.length > 0 && (
           <p className="text-xs text-slate-400">
-            Épisodes du mois : {digest.episodes.map((e, i) => `${i + 1}. ${OBJECTIVE_LABELS[e.type].toLowerCase()} × ${e.count} → ${e.open ? pct(e.completion) : "pas encore ouvert"}`).join(" · ")}
+            Épisodes du mois : {digest.episodes.map((e, i) => `${i + 1}. ${objectiveLabel(e.type).toLowerCase()} × ${e.count} → ${e.open ? pct(e.completion) : "pas encore ouvert"}`).join(" · ")}
           </p>
         )}
         <ul className="list-disc pl-4 text-xs text-slate-400">

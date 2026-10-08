@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HudChip, HudMeter } from "@/components/ui/hud";
 import { publishedPassSeason } from "@/game/passSeasons";
-import { activeChallengeTier, activePass, isCumulativePass, OBJECTIVE_LABELS, passState, passTier, tierRequirements } from "@/game/seasonPass";
+import { activeChallengeTier, activePass, isCumulativePass, objectiveLabel, passState, passTier, tierRequirements } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { formatNumber } from "@/lib/utils";
 import { usePlayerStore } from "@/store/playerStore";
@@ -65,7 +65,7 @@ export function PassProgressCard({ now }: { now: number }) {
           <div className="flex flex-wrap gap-1.5">
             {challenge.reqs.map((r) => (
               <HudChip key={r.key} size="sm" tone={r.met ? "mint" : "accent"} className="normal-case tracking-normal">
-                {r.met ? <Check /> : null} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}
+                {r.met ? <Check /> : null} {objectiveLabel(r.key)} {r.done}/{r.count}
               </HudChip>
             ))}
           </div>

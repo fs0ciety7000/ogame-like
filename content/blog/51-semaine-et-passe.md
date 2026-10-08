@@ -37,5 +37,9 @@ Le Casino orbital reste **ouvert en permanence** ; seul le tournoi a ses horaire
 - Les récompenses des épisodes grossissent d'un épisode à l'autre, jusqu'à **×1,4** quand le serveur réussit bien.
 - Le **3e épisode** (le rebondissement) demande une action peu courante mais **à ta portée** : au moins une fois tous les deux semaines
   pour le joueur médian (6.14.58).
+- Les objectifs connaissent aussi ta **lune** et tes **colonies** : amélioration, phalange, porte de saut, convois, base avancée.
+  Ils n'entrent dans un chapitre, un défi du passe ou la saga que si **la plupart des joueurs** les pratiquent déjà (6.14.119).
+- Un vaisseau, une techno ou un bâtiment **nouveau** prend l'**épisode 2** du chapitre suivant, marqué « Nouveauté », si la moitié des
+  joueurs y a déjà accès (6.14.120).
 - Les succès **Lecteur des Chroniques**, **Gardien des Chroniques**, **Porte-sceau** et **Jusqu'au bout** sont bien dans ta liste (6.14.56).
 - Les titres à paliers s'affichent à **ton plus haut palier** ; les autres restent visibles d'un clic.

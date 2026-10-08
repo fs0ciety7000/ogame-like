@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { CalendarRange } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { AnimatedNumber } from "@/components/ui/animated-number";
-import { OBJECTIVE_LABELS, activePass, passState, passTier } from "@/game/seasonPass";
+import { objectiveLabel, activePass, passState, passTier } from "@/game/seasonPass";
 import { currentSeasonId, seasonEndMs, seasonLabel } from "@/game/seasons";
 import { streakStatus } from "@/game/streak";
 import { formatCompact, formatDuration, formatNumber } from "@/lib/utils";
@@ -54,7 +54,7 @@ export function MonthRecapCard({ now }: { now: number }) {
         <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-white/5 pt-2 font-mono text-[11px] tabular-nums text-slate-400">
           {actions.map((a) => (
             <span key={a.k}>
-              {OBJECTIVE_LABELS[a.k]} <span className="text-slate-200">{formatNumber(a.n)}</span>
+              {objectiveLabel(a.k)} <span className="text-slate-200">{formatNumber(a.n)}</span>
             </span>
           ))}
         </p>

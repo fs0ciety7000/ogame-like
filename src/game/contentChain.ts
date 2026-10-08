@@ -102,6 +102,25 @@ export const CHAIN_ACHIEVEMENT_METRICS: Record<ChainKind, { entry: AchievementMe
 };
 
 /**
+ * 6.14.119 (AU27, AP-L7) : maillon « objectif » (WORKFLOW §7, n° 9). Actions du registre des actions suivies (`trackedActions.ts`)
+ * qui font jouer chaque type de contenu dans les objectifs générés (Chroniques, passe, saga, objectifs du jour). Une famille par
+ * contenu (`unit`, `building`, `research`) couvre d'office tout contenu ajouté. `null` : sans objet.
+ */
+export const CHAIN_TRACKED_ACTIONS: Record<ChainKind, string[] | null> = {
+  unit: ["unit:*"],
+  building: ["building:*"],
+  tech: ["research:*"],
+  relic: null,
+  worldBoss: ["bossAssault"],
+  allianceBoss: null,
+  seasonBoss: ["bossAssault"],
+  colony: ["colonyConvoy", "colonyBase", "colonySpec"],
+  talent: null,
+  module: null,
+  class: null,
+};
+
+/**
  * 6.14.114 (AJ27-4, AJ-1) : types où chaque contenu doit avoir **son** succès (QJ1 : unités et bâtiments), et mesures qui ne
  * comptent qu'un contenu précis. Lues à l'usage (identifiants réglables : sonde, drone de recyclage).
  * Une mesure ajoutée ici pour un contenu (ou les succès dérivés par contenu, AJ27-6) comble son maillon « succès propre ».

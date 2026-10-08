@@ -10,9 +10,11 @@ import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type R
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { defaultPassSeasonsConfig, setPassSeasons, validatePassSeasons, type PassSeasonsConfig } from "@/game/passSeasons";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
-import { DEFAULT_BUILDINGS, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
-import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, type UnitDef } from "@/game/units";
-import { DEFAULT_TECHNOLOGIES, setTechnologies, TECH_EFFECT_LABELS, techEffects, validateTechEffect, type TechDef } from "@/game/technologies";
+import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
+import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
+import { DEFAULT_TECHNOLOGIES, findTech, setTechnologies, TECH_EFFECT_LABELS, techEffects, TECHNOLOGIES, validateTechEffect, type TechDef } from "@/game/technologies";
+import { actionOfContract, setTrackedContentResolver, validateTrackedActionRules } from "@/game/trackedActions";
+import { addedOnError, validateNoveltyRules } from "@/game/novelty";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
@@ -366,6 +368,13 @@ export function resolveGameContent(overrides: Partial<GameContent>, nowMs?: numb
   return nowMs === undefined ? content : applyRhythmSwitch(content, defaults.buildings, nowMs);
 }
 
+/** 6.14.119 (AU27, AP-L7) : noms et listes des contenus en vigueur pour le registre des actions suivies (actions par contenu :
+ *  `unit:<id>`, `research:<id>`, `building:<id>`). Lus à l'usage dans les catalogues posés par `applyGameContent`. */
+setTrackedContentResolver({
+  name: (family, id) => (family === "unit" ? findUnit(id)?.name : family === "research" ? findTech(id)?.nom : findBuilding(id)?.name) ?? null,
+  ids: (family) => (family === "unit" ? UNITS : family === "research" ? TECHNOLOGIES : BUILDINGS).map((x) => x.id),
+});
+
 /** Applique un contenu (sections absentes = valeurs par défaut du code). 6.14.88 : `nowMs` (serveur et client) applique la
  *  bascule datée du rythme (`rhythm.ts`) ; sans heure, les valeurs enregistrées telles quelles. */
 export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number): GameContent {
@@ -548,6 +557,10 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateXpTierRules(merged.xpTiers));
   errors.push(...validatePassGenRules(merged.passGen));
   errors.push(...validateChronicleGenRules(merged.chronicleGen, ARCHETYPES.map((a) => a.id)));
+  // 6.14.119 (AP-L7) : registre des actions suivies (actions et familles connues, poids et quantités bornés).
+  errors.push(...validateTrackedActionRules((merged as unknown as { trackedActions?: Parameters<typeof validateTrackedActionRules>[0] }).trackedActions));
+  // 6.14.120 (AP-L8) : épisode « nouveauté » (quantités, bibliothèque de textes).
+  errors.push(...validateNoveltyRules((merged as unknown as { novelty?: Parameters<typeof validateNoveltyRules>[0] }).novelty));
   // 6.9.0 (AU4) : commerce.
   const au = merged.auctions;
   if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Enchères : surenchère entre 0 et 1, taxe entre 0 et 0,99.");
@@ -650,7 +663,8 @@ function validateFixedListNumbers(merged: GameRules): string[] {
   const dc = merged.dailyContracts as { weights?: unknown; targets?: unknown; perDay?: unknown };
   const cw = entries(dc.weights);
   for (const [id, v] of cw) if (!(num(v) >= 0 && num(v) <= 100)) errors.push(`Objectifs du jour : poids de « ${id} » entre 0 et 100.`);
-  const drawable = cw.filter(([, v]) => num(v) > 0).length;
+  // 6.14.119 (AP-L7) : les types du registre (porte de saut, convoi) ne comptent pas : ils ne sont proposés qu'à certains joueurs.
+  const drawable = cw.filter(([id, v]) => num(v) > 0 && actionOfContract(id) === null).length;
   if (cw.length > 0 && drawable < (num(dc.perDay) || 1)) errors.push(`Objectifs du jour : au moins ${num(dc.perDay) || 1} types de poids non nul (un par objectif du jour), ${drawable} aujourd'hui.`);
   for (const [id, v] of entries(dc.targets)) if (!(Number.isInteger(num(v)) && num(v) >= 1 && num(v) <= 10_000)) errors.push(`Objectifs du jour : quantité de « ${id} » entière, entre 1 et 10 000.`);
   // 6.14.117 (É30-6) : rythme des succès, un facteur par mesure connue, entre 1 et 1 000.
@@ -723,6 +737,12 @@ export function validateGameContent(content: GameContent): string[] {
   errors.push(...listShapeErrors("Unités", "Unité", content.units, defaults.units));
   errors.push(...listShapeErrors("Technologies", "Techno", content.technologies, defaults.technologies));
   if (content.relics !== undefined) errors.push(...listShapeErrors("Reliques", "Relique", content.relics, defaults.relics));
+  // 6.14.120 (AP-L8) : date d'ajout d'une unité, techno ou bâtiment (épisode « nouveauté »).
+  for (const [label, list] of [["Unité", content.units], ["Techno", content.technologies], ["Bâtiment", content.buildings]] as const)
+    for (const d of (list ?? []) as { id?: string; addedOn?: unknown }[]) {
+      const e = addedOnError(d?.addedOn);
+      if (e) errors.push(`${label} ${d?.id ?? "?"} : ${e}.`);
+    }
   // v5.10.5 : règles (types, bornes, occurrence des boss).
   errors.push(...validateRules(content.rules));
   const resources = new Set(RESOURCE_LIST.map((r) => r.id as string));

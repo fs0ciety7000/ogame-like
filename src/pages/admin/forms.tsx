@@ -74,6 +74,28 @@ function PreviewTable({ headers, rows }: { headers: string[]; rows: (string | nu
 
 /* ---------------- Bâtiments ---------------- */
 
+/** 6.14.120 (AP-L8) : date du jour (AAAA-MM-JJ) : un contenu créé dans l'admin est « nouveau » (épisode « nouveauté »). */
+const today = () => new Date().toISOString().slice(0, 10);
+const ADDED_ON_HINT = "AAAA-MM-JJ. Un contenu ajouté depuis peu prend l'épisode « nouveauté » du chapitre suivant des Chroniques (Règles → Épisode « nouveauté »). Vide : jamais mis en avant.";
+
+/** Champ « Ajouté le » : vide = champ retiré (JSON pur, jamais undefined). */
+function AddedOnField<T extends { addedOn?: string }>({ value, onChange }: { value: T; onChange: (v: T) => void }) {
+  return (
+    <TextField
+      label="Ajouté le (épisode « nouveauté »)"
+      value={value.addedOn ?? ""}
+      hint={ADDED_ON_HINT}
+      onChange={(v) => {
+        const next: T = { ...value };
+        const at = v.trim();
+        if (at) next.addedOn = at;
+        else delete next.addedOn;
+        onChange(next);
+      }}
+    />
+  );
+}
+
 export function newBuilding(): BuildingDef {
   return {
     id: "nouveau_batiment",
@@ -83,6 +105,7 @@ export function newBuilding(): BuildingDef {
     maxLevel: 10,
     unlockCost: { scrap: 500 },
     upgrade: { baseCost: { scrap: 100, energy: 50 }, maxCost: { scrap: 1_000_000, energy: 500_000 }, costFromLevel: 1, secondsPerLevel: 600 },
+    addedOn: today(),
   };
 }
 
@@ -96,6 +119,7 @@ export function BuildingForm({ value: b, onChange, isNew }: { value: BuildingDef
         <TextField label="Nom" value={b.name} onChange={(name) => set({ name })} />
         <TextAreaField label="Description" value={b.description} onChange={(description) => set({ description })} />
         <ImageField label="Image" value={b.image} onChange={(image) => set({ image })} />
+        <AddedOnField value={b} onChange={onChange} />
       </Section>
 
       <Section title="Déblocage">
@@ -383,6 +407,7 @@ export function newUnit(): UnitDef {
     category: "attack",
     hangarSpace: 1,
     unlockTech: currentGameContent().technologies[0]?.id ?? "",
+    addedOn: today(),
   };
 }
 
@@ -401,6 +426,7 @@ export function UnitForm({ value: u, onChange, isNew }: { value: UnitDef; onChan
         <TextField label="Nom" value={u.name} onChange={(name) => set({ name })} />
         <TextAreaField label="Description" value={u.description} onChange={(description) => set({ description })} />
         <ImageField label="Image" value={u.image} onChange={(image) => set({ image })} />
+        <AddedOnField value={u} onChange={onChange} />
       </Section>
 
       <Section title="Rôle">
@@ -474,6 +500,7 @@ export function newTech(): TechDef {
     baseTime: 60,
     effects: [{ type: "unit_attack" }],
     prereq: {},
+    addedOn: today(),
   };
 }
 
@@ -494,6 +521,7 @@ export function TechForm({ value: t, onChange, isNew }: { value: TechDef; onChan
             onChange(next);
           }}
         />
+        <AddedOnField value={t} onChange={onChange} />
       </Section>
 
       <Section title="Niveaux">

@@ -1,6 +1,7 @@
-import { chronicleMonthId, OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
+import { chronicleMonthId, type ChronicleObjective } from "@/game/chronicles";
+import { extraObjectives, measuredPlayable, objectiveLabel, objectivePassive, trackedWeight } from "@/game/trackedActions";
 import { passState } from "@/game/seasonPass";
-import { ACTIVITY_KEYS, ARCHETYPES, BASE_COUNTS, seededRandom, type WorldDigest } from "@/game/procedural";
+import { ACTIVITY_KEYS, ARCHETYPES, baseCount, seededRandom, type WorldDigest } from "@/game/procedural";
 import { seasonLabel } from "@/game/seasons";
 import type { PlayerState } from "@/types/game";
 
@@ -88,12 +89,14 @@ const SAGA_WINNERS = ["Héros de la saga", "Porte-bannière", "Champion d'allian
 export function generateAllianceSaga(monthId: string, digest: WorldDigest & { allianceSizeMedian?: number }, difficulty: number, now: number): AllianceSagaDef {
   const rng = seededRandom(`saga:${monthId}`);
   const arch = ARCHETYPES[Math.floor(rng() * ARCHETYPES.length) % ARCHETYPES.length];
-  const pool = [...ACTIVITY_KEYS].filter((k) => k !== "warlordWin" || (digest.weeklyMedian.warlordWin ?? 0) > 0);
+  // 6.14.119 (AP-L7) : actions du registre (lune, colonies) en fin de liste, seulement si le serveur les pratique ; poids 0 : retirée.
+  const extra = extraObjectives().filter((k) => measuredPlayable(k, digest.weeklyMedian) && (!objectivePassive(k) || (digest.weeklyMedian[k] ?? 0) > 0));
+  const pool = [...ACTIVITY_KEYS.filter((k) => k !== "warlordWin" || (digest.weeklyMedian.warlordWin ?? 0) > 0), ...extra].filter((k) => trackedWeight(k) > 0);
   const chosen: ChronicleObjective[] = [];
   while (chosen.length < ALLIANCE_SAGA_RULES.objectives && pool.length > 0) chosen.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
   const size = Math.max(2, Math.round(digest.allianceSizeMedian ?? 3));
   const objectives = chosen.map((type) => {
-    const weekly = Math.max(digest.weeklyMedian[type] ?? 0, BASE_COUNTS[type] / 2);
+    const weekly = Math.max(digest.weeklyMedian[type] ?? 0, baseCount(type) / 2);
     return { type, count: Math.max(size, Math.round(weekly * ALLIANCE_SAGA_RULES.weeks * size * ALLIANCE_SAGA_RULES.share * difficulty)) };
   });
   const bossName = arch.bossNames[Math.floor(rng() * arch.bossNames.length)];
@@ -130,7 +133,7 @@ export function sagaStandings(def: AllianceSagaDef, alliances: { id: string; nam
 }
 
 export function sagaObjectiveLabel(type: ChronicleObjective): string {
-  return OBJECTIVE_LABELS[type];
+  return objectiveLabel(type);
 }
 
 /** Mois de la saga en cours (même calendrier que les Chroniques). */

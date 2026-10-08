@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { currentGameContent } from "@/game/content";
-import { chronicleMonthId, applyLibraryChapter, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
+import { chronicleMonthId, applyLibraryChapter, normalizeChronicleBonus, normalizeCodexRewards, OBJECTIVE_LABELS, objectiveLabel, type ChronicleBonus, type CodexRewardTable, type ChronicleMonth, type ChronicleObjective, type ChroniclesConfig } from "@/game/chronicles";
 import { ChronicleTimeline } from "@/components/game/ChronicleTimeline";
 import { CODEX_CATEGORIES } from "@/game/codex";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
@@ -178,7 +178,11 @@ export function ChroniclesPanel() {
                 <SelectField<ChronicleObjective>
                   label="Objectif"
                   value={e.objective.type}
-                  options={Object.entries(OBJECTIVE_LABELS).map(([value, label]) => ({ value: value as ChronicleObjective, label }))}
+                  options={[
+                    ...Object.entries(OBJECTIVE_LABELS).map(([value, label]) => ({ value: value as ChronicleObjective, label })),
+                    // 6.14.119 (AP-L7) : action par contenu (épisode « nouveauté ») : gardée dans la liste.
+                    ...(e.objective.type in OBJECTIVE_LABELS ? [] : [{ value: e.objective.type, label: objectiveLabel(e.objective.type) }]),
+                  ]}
                   onChange={(v) => setMonth({ episodes: month.episodes.map((x, j) => (j === i ? { ...x, objective: { ...x.objective, type: v } } : x)) })}
                 />
                 <NumberField label="Nombre" value={e.objective.count} min={1} onChange={(v) => setMonth({ episodes: month.episodes.map((x, j) => (j === i ? { ...x, objective: { ...x.objective, count: Math.max(1, v ?? 1) } } : x)) })} />

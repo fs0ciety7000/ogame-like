@@ -35,6 +35,8 @@ import { CommerceRulesFields } from "@/pages/admin/CommerceRulesFields";
 import { RhythmRulesFields } from "@/pages/admin/RhythmRulesFields";
 import { FixedListRulesFields } from "@/pages/admin/FixedListRulesFields";
 import { GeneratedGoalsFields } from "@/pages/admin/GeneratedGoalsFields";
+import { TrackedActionsFields } from "@/pages/admin/TrackedActionsFields";
+import { NoveltyFields } from "@/pages/admin/NoveltyFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -1001,6 +1003,10 @@ export function RulesPanel() {
         <ChronicleGenFields rules={rules} setRules={setRules} />
         {/* 6.14.108 et 6.14.109 (AP-L4, AP-L5) : paliers de succès générés, objectifs du jour pondérés. */}
         <GeneratedGoalsFields rules={rules} setRules={setRules} />
+        {/* 6.14.119 (AP-L7) : registre des actions suivies (poids, quantités de base, familles par contenu). */}
+        <TrackedActionsFields rules={rules} setRules={setRules} />
+        {/* 6.14.120 (AP-L8) : épisode « nouveauté » (contenu récent). */}
+        <NoveltyFields rules={rules} setRules={setRules} />
         <CommerceRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.84 et 6.14.85 (RL-1, RL-2) : Labo (coûts et durées des recherches) et projets de prestige. */}
         <RhythmRulesFields rules={rules} setRules={setRules} />

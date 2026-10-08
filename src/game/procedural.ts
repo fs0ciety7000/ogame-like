@@ -4,7 +4,6 @@ import {
   chronicleOf,
   chronicleState,
   episodeUnlockMs,
-  OBJECTIVE_LABELS,
   unlockedEpisodes,
   type ChapterAuto,
   type ChronicleCodexEntry,
@@ -20,6 +19,18 @@ import { budgetEpisodeRewards, chronicleGenRules, objectiveWeight } from "@/game
 import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
+import { chooseNovelty, contentToMeasure, hasContentAccess, NOVELTY_RULES, noveltyTexts } from "@/game/novelty";
+import {
+  extraObjectives,
+  familyBase,
+  measuredPlayable,
+  NEW_OBJECTIVES,
+  objectiveDeed,
+  objectiveLabel,
+  objectiveOrders,
+  parseContentObjective,
+  type StaticObjective,
+} from "@/game/trackedActions";
 import type { CapsuleType } from "@/game/synthesis";
 import type { PlayerState } from "@/types/game";
 
@@ -121,17 +132,23 @@ function median(xs: number[]): number {
 
 export const ACTIVITY_KEYS: ChronicleObjective[] = ["contract", "bounty", "raidRepelled", "victory", "mission", "spy", "market", "warlordWin"];
 
-const ACTIVITY_DEEDS: Record<ChronicleObjective, string> = {
-  contract: "rempli {n} contrats",
-  bounty: "rempli {n} primes Kesh'Vaar",
-  raidRepelled: "repoussé {n} raids de faction",
-  victory: "gagné {n} combats",
-  bossAssault: "mené {n} assauts",
-  mission: "terminé {n} missions",
-  spy: "lancé {n} sondes",
-  market: "conclu {n} achats au marché",
-  warlordWin: "pillé {n} seigneurs de guerre",
-};
+/** 6.14.119 (AP-L7) : actions des archives et des héros du mois : celles d'avant, puis lune et colonies (registre). */
+function storyKeys(): ChronicleObjective[] {
+  return [...ACTIVITY_KEYS, ...NEW_OBJECTIVES];
+}
+
+/** 6.14.119 : actions mesurées dans la photographie du monde : celles d'avant, les assauts de boss, le registre et les contenus pratiqués. */
+function digestKeys(passes: { activity?: Record<string, number> }[]): ChronicleObjective[] {
+  const keys: ChronicleObjective[] = [...ACTIVITY_KEYS, "bossAssault", ...NEW_OBJECTIVES];
+  const seen = new Set<string>(keys);
+  for (const s of passes)
+    for (const k of Object.keys(s.activity ?? {}))
+      if (!seen.has(k) && parseContentObjective(k)) {
+        seen.add(k);
+        keys.push(k as ChronicleObjective);
+      }
+  return keys;
+}
 
 export interface WorldDigest {
   /** Mois observé (Paris). */
@@ -153,9 +170,11 @@ export interface WorldDigest {
   allianceSizeMedian?: number;
   /** 6.8.1 : points de passe par jour (joueur médian, plus actif), jusqu'au dernier palier pour ceux qui l'ont atteint. */
   passPace?: PassPace;
+  /** 6.14.120 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu récent (épisode « nouveauté »). */
+  access?: Record<string, number>;
 }
 
-type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId">>;
+type DigestPlayer = Pick<PlayerState, "pseudo" | "seasonPass" | "chronicle"> & Partial<Pick<PlayerState, "npc" | "lastActiveMs" | "resourcesUpdatedAtMs" | "allianceId" | "units" | "techLevels" | "buildings">>;
 
 /** Jour du mois à Paris (1 à 31). */
 export function parisDayOfMonth(now: number): number {
@@ -175,7 +194,8 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
   const totals: WorldDigest["totals"] = {};
   const heroes: WorldDigest["heroes"] = {};
   // 6.8.1 : les assauts de boss aussi (défis des paliers), sans entrer dans les objectifs des chapitres.
-  for (const k of [...ACTIVITY_KEYS, "bossAssault" as const]) {
+  // 6.14.119 (AP-L7) : et les actions du registre (lune, colonies, contenus pratiqués), mesurées avant d'entrer dans un tirage.
+  for (const k of digestKeys(passes)) {
     const counts = passes.map((s) => s.activity?.[k] ?? 0);
     totals[k] = counts.reduce((a, b) => a + b, 0);
     weeklyMedian[k] = round2((median(counts) / observedDays) * 7);
@@ -209,8 +229,19 @@ export function worldDigest(players: DigestPlayer[], now: number): WorldDigest {
     passFinishedShare: share(tiers.filter((t) => t >= passTiers).length),
     chapterShare: month ? share(states.filter((s) => month.episodes.every((_, i) => s.claimed.includes(i))).length) : 0,
     passPace: passPace(passes, monthId, observedDays, now),
+    // 6.14.120 (AP-L8) : accès des joueurs actifs aux contenus datés récents (unité débloquée, techno ouverte, bâtiment ouvert).
+    access: contentAccess(active, now),
     allianceSizeMedian: median(Object.values(active.reduce<Record<string, number>>((acc, p) => (p.allianceId ? { ...acc, [p.allianceId]: (acc[p.allianceId] ?? 0) + 1 } : acc), {}))),
   };
+}
+
+/** 6.14.120 (AP-L8) : part des joueurs actifs qui ont accès à chaque contenu daté récent (absent : aucun contenu daté). */
+function contentAccess(active: DigestPlayer[], now: number): Record<string, number> | undefined {
+  const keys = contentToMeasure(now);
+  if (keys.length === 0 || active.length === 0) return undefined;
+  const out: Record<string, number> = {};
+  for (const k of keys) out[k] = round2(active.filter((p) => hasContentAccess({ units: p.units ?? {}, techLevels: p.techLevels ?? {}, buildings: p.buildings ?? ({} as PlayerState["buildings"]) }, k)).length / active.length);
+  return out;
 }
 
 /** 6.8.1 : points de passe par jour sur le mois observé. Un joueur au dernier palier compte jusqu'au jour où il l'a atteint
@@ -229,7 +260,32 @@ function passPace(passes: ReturnType<typeof passState>[], monthId: string, obser
 /* ---------- difficulté ---------- */
 
 /** Nombre de base par épisode (une semaine de jeu normale). */
-export const BASE_COUNTS: Record<ChronicleObjective, number> = { contract: 4, bounty: 2, raidRepelled: 2, victory: 3, bossAssault: 2, mission: 6, spy: 3, market: 3, warlordWin: 1 };
+export const BASE_COUNTS: Record<StaticObjective, number> = {
+  contract: 4,
+  bounty: 2,
+  raidRepelled: 2,
+  victory: 3,
+  bossAssault: 2,
+  mission: 6,
+  spy: 3,
+  market: 3,
+  warlordWin: 1,
+  // 6.14.119 (AP-L7) : actions du registre (une semaine de jeu d'un joueur qui les pratique).
+  moonUpgrade: 1,
+  phalanxScan: 1,
+  gateJump: 2,
+  colonyConvoy: 10,
+  colonyBase: 1,
+  colonySpec: 1,
+};
+
+/** 6.14.119 : quantité de base d'une action (registre, ou famille par contenu : `trackedActions.familyBase`). */
+export function baseCount(k: ChronicleObjective): number {
+  const c = parseContentObjective(k);
+  if (c) return familyBase(c.family);
+  const n = Number(BASE_COUNTS[k as StaticObjective]);
+  return Number.isFinite(n) ? n : 3;
+}
 
 /** 6.14.95 (AA2) : libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
 export const BASE_COUNTS_META = {
@@ -242,6 +298,12 @@ export const BASE_COUNTS_META = {
   spy: { label: "Espionnages", min: 0, max: 100 },
   market: { label: "Échanges au marché", min: 0, max: 100 },
   warlordWin: { label: "Victoires contre un seigneur", min: 0, max: 100 },
+  moonUpgrade: { label: "Améliorations de lune (6.14.119)", min: 0, max: 100 },
+  phalanxScan: { label: "Balayages de phalange (6.14.119)", min: 0, max: 100 },
+  gateJump: { label: "Sauts par la porte (6.14.119)", min: 0, max: 100 },
+  colonyConvoy: { label: "Convois de colonie arrivés (6.14.119)", min: 0, max: 100 },
+  colonyBase: { label: "Bases avancées tenues (6.14.119)", min: 0, max: 100 },
+  colonySpec: { label: "Colonies spécialisées (6.14.119)", min: 0, max: 100 },
 };
 
 /** Multiplicateur de difficulté : 1 si la moitié des joueurs termine les épisodes ouverts. */
@@ -264,7 +326,7 @@ export function chapterDifficulty(d: WorldDigest): { value: number; reasons: str
 /** Nombre demandé pour un objectif : activité médiane d'une semaine × difficulté. */
 export function objectiveCount(type: ChronicleObjective, d: WorldDigest, difficulty: number): number {
   const r = chronicleGenRules();
-  const base = BASE_COUNTS[type];
+  const base = baseCount(type);
   const m = d.weeklyMedian[type] ?? 0;
   // 6.14.58 (AU27, AP-4) : le plancher ne dépasse jamais la médiane du serveur (même règle que les défis du passe).
   const raw = m > 0 ? clamp(m * difficulty, Math.min(base * r.objectiveMinFactor, m), base * r.objectiveMaxFactor) : base * difficulty;
@@ -451,17 +513,6 @@ const VILLAIN_TAUNTS = [
   "Continue de t'agiter, petit commandant. {boss} adore les proies qui bougent.",
 ];
 
-const ORDERS: Record<ChronicleObjective, string[]> = {
-  contract: ["Tiens tes objectifs du jour : {count} rempli{s}, et nos routes tiendront.", "Il nous faut des réserves. Remplis {count} objectif{s} du jour avant qu'ils ne coupent les routes."],
-  bounty: ["L'Essaim a des cibles pour toi : remplis {count} prime{s} Kesh'Vaar.", "Chaque fugitif ramené les prive d'un pilote. {count} prime{s}, commandant."],
-  raidRepelled: ["Ils vont tester nos défenses. Repousse {count} raid{s} et ils comprendront.", "Tiens la ligne : {count} raid{s} repoussé{s}, pas un de moins."],
-  victory: ["Montre au secteur qu'on peut les battre : gagne {count} combat{s}.", "La peur doit changer de camp : {count} victoire{s}, et le secteur relèvera la tête."],
-  bossAssault: ["Frappe le boss {count} fois.", "{count} assauts sur le boss."],
-  mission: ["Fouille les confins : {count} mission{s}, et chaque piste nous rapproche.", "Envoie tes équipes en mission, {count} fois. Les indices sont là-bas."],
-  spy: ["Sonde le secteur : {count} sonde{s}, et nous saurons qui leur parle.", "Je veux des yeux partout. Lance {count} sonde{s} d'espionnage."],
-  market: ["Les marchands parlent quand on leur achète. {count} achat{s} au marché.", "Suis l'argent : achète {count} offre{s} au marché et regarde qui vend."],
-  warlordWin: ["Les seigneurs de guerre leur servent de rabatteurs. Pille-en {count}.", "Frappe {count} seigneur{s} de guerre : qu'ils sachent ce que coûte la trahison."],
-};
 
 const HERO_LINES = [
   "Le mois dernier, {hero} a {deed}. Le secteur s'en souvient ; {villain} aussi.",
@@ -470,11 +521,11 @@ const HERO_LINES = [
 ];
 
 function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string | number>): string | null {
-  const keys = ACTIVITY_KEYS.filter((k) => d.heroes[k]);
+  const keys = storyKeys().filter((k) => d.heroes[k]);
   if (keys.length === 0) return null;
   const k = pick(rng, keys);
   const h = d.heroes[k]!;
-  return fill(pick(rng, HERO_LINES), { ...vars, hero: h.pseudo, deed: fill(ACTIVITY_DEEDS[k], { n: h.count }) });
+  return fill(pick(rng, HERO_LINES), { ...vars, hero: h.pseudo, deed: fill(objectiveDeed(k), { n: h.count }) });
 }
 
 /* ---------- objectifs ---------- */
@@ -482,7 +533,10 @@ function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string
 function chooseObjectives(rng: () => number, d: WorldDigest, previous: ChronicleObjective[]): ChronicleObjective[] {
   // 6.14.58 (AU27, AP-4) : seuil des actions passives unifié avec le passe (raids, seigneurs : médiane ≥ passiveMinWeekly).
   const passive = passGenRules().passiveKeys;
-  const playable = ACTIVITY_KEYS.filter((k) => !passive.includes(k) || actionPlayable(k, d.weeklyMedian));
+  // 6.14.119 (AP-L7) : actions du registre ajoutées en fin de liste, seulement si le serveur les pratique (médiane ≥
+  // `trackedActions.measuredMinWeekly`) : sans mesure, la liste et le tirage d'avant ne changent pas.
+  const extra = extraObjectives().filter((k) => measuredPlayable(k, d.weeklyMedian) && actionPlayable(k, d.weeklyMedian) && objectiveWeight(k) > 0);
+  const playable = [...ACTIVITY_KEYS.filter((k) => !passive.includes(k) || actionPlayable(k, d.weeklyMedian)), ...extra];
   // 6.8.2 : actions autorisées et pondérées (chronicleGen.objectiveWeights) ; il en faut 4 (sinon toutes celles jouables).
   const allowed = playable.filter((k) => objectiveWeight(k) > 0);
   const pool = allowed.length >= 4 ? allowed : playable;
@@ -563,9 +617,9 @@ export function generatePass(rng: () => number, d: WorldDigest, base: number): {
 
 function archivesText(d: WorldDigest, label: string): string {
   const parts = [`Archives du secteur, ${label} : ${d.activePlayers} commandants actifs.`];
-  const deeds = ACTIVITY_KEYS.filter((k) => (d.totals[k] ?? 0) > 0).map((k) => fill(ACTIVITY_DEEDS[k], { n: d.totals[k]! }));
+  const deeds = storyKeys().filter((k) => (d.totals[k] ?? 0) > 0).map((k) => fill(objectiveDeed(k), { n: d.totals[k]! }));
   if (deeds.length > 0) parts.push(`Ensemble, ils ont ${deeds.join(", ")}.`);
-  const heroes = ACTIVITY_KEYS.filter((k) => d.heroes[k]).map((k) => `${d.heroes[k]!.pseudo} (${OBJECTIVE_LABELS[k].toLowerCase()} : ${d.heroes[k]!.count})`);
+  const heroes = storyKeys().filter((k) => d.heroes[k]).map((k) => `${d.heroes[k]!.pseudo} (${objectiveLabel(k).toLowerCase()} : ${d.heroes[k]!.count})`);
   if (heroes.length > 0) parts.push(`Noms retenus : ${heroes.join(", ")}.`);
   parts.push(`${Math.round(d.chapterShare * 100)} % ont terminé le chapitre, ${Math.round(d.passFinishedShare * 100)} % le passe de saison.`);
   return parts.join(" ");
@@ -620,13 +674,35 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     }
     if (i === 2) lines.push(voiceLine(arch.villain, fill(pick(rng, VILLAIN_TAUNTS.filter((t) => !lines.some((l) => l.text === fill(t, vars)))), vars)));
     lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, HOOKS[i]), vars)) });
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, ORDERS[type]), { ...vars, count, s: count > 1 ? "s" : "" })) });
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, objectiveOrders(type)), { ...vars, count, s: count > 1 ? "s" : "" })) });
     let epTitle = pick(rng, ACT_TITLES[i]);
     while (usedActs.has(epTitle)) epTitle = pick(rng, ACT_TITLES[i]);
     usedActs.add(epTitle);
     return { title: epTitle, lines, objective: { type, count }, reward: rewards[i] };
   });
-  reasons.push(...types.map((t, i) => `Épisode ${i + 1} : ${OBJECTIVE_LABELS[t].toLowerCase()} × ${episodes[i].objective.count} (médiane ${d.weeklyMedian[t] ?? 0} par semaine, base ${BASE_COUNTS[t]}).`));
+  reasons.push(...types.map((t, i) => `Épisode ${i + 1} : ${objectiveLabel(t).toLowerCase()} × ${episodes[i].objective.count} (médiane ${d.weeklyMedian[t] ?? 0} par semaine, base ${baseCount(t)}).`));
+  // 6.14.120 (AU27, AP-L8) : épisode « nouveauté » : un contenu ajouté récemment prend un épisode (sa propre graine : le reste du
+  // chapitre ne change pas ; aucun contenu daté récent : rien ne change).
+  const nov = chooseNovelty(o.monthId, o.existing, d.access, d.activePlayers);
+  if (nov.reason) reasons.push(nov.reason);
+  let novelty: ChapterAuto["novelty"];
+  if (nov.pick) {
+    const p = nov.pick;
+    const i = p.episode - 1;
+    const nrng = seededRandom(`novelty:${o.monthId}:${o.variant ?? 0}`);
+    const texts = noveltyTexts(parseContentObjective(p.key)!.family, NOVELTY_RULES);
+    const ep = episodes[i];
+    const titles = texts.titles.filter((t) => !episodes.some((e, j) => j !== i && e.title === t));
+    const nvars = { ...vars, name: p.name, count: p.count, s: p.count > 1 ? "s" : "" };
+    episodes[i] = {
+      ...ep,
+      title: pick(nrng, titles.length > 0 ? titles : texts.titles),
+      lines: [...ep.lines.slice(0, Math.max(0, ep.lines.length - 2)), { speaker: arch.ally, text: ucfirst(fill(pick(nrng, texts.hooks), nvars)) }, { speaker: arch.ally, text: ucfirst(fill(pick(nrng, texts.orders), nvars)) }],
+      objective: { type: p.key, count: p.count },
+    };
+    novelty = { key: p.key, addedOn: p.addedOn, episode: p.episode };
+    reasons.push(p.reason);
+  }
   const art = AUTO_ART.includes(arch.id);
   const seal = AUTO_SEALS.includes(arch.id);
   const label = seasonLabel(d.monthId);
@@ -634,7 +710,17 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} · ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
     { id: "archives", name: `Archives : ${label}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem },
   ];
-  const auto: ChapterAuto = { generatedAtMs: o.now, sourceMonth: d.monthId, archetype: arch.id, difficulty, activePlayers: d.activePlayers, reasons, generator: GENERATOR_VERSION.chapter, variant: Math.max(0, Math.floor(o.variant ?? 0)) };
+  const auto: ChapterAuto = {
+    generatedAtMs: o.now,
+    sourceMonth: d.monthId,
+    archetype: arch.id,
+    difficulty,
+    activePlayers: d.activePlayers,
+    reasons,
+    generator: GENERATOR_VERSION.chapter,
+    variant: Math.max(0, Math.floor(o.variant ?? 0)),
+    ...(novelty ? { novelty } : {}),
+  };
   const month: ChronicleMonth = {
     id: o.monthId,
     title,

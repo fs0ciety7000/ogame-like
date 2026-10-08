@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
-import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
+import { objectiveLabel, type ChronicleObjective } from "@/game/chronicles";
 import { CHRONICLE_GEN_RULES, type ChronicleGenRules } from "@/game/chronicleGen";
 import { ARCHETYPES } from "@/game/procedural";
 import { THEME_ROTATION } from "@/game/seasonCatalog";
@@ -49,7 +49,7 @@ export function ChronicleGenFields({ rules, setRules }: { rules: GameRules; setR
         {Object.keys(g.objectiveWeights).map((k) => (
           <NumberField
             key={k}
-            label={`Poids dans les objectifs : ${OBJECTIVE_LABELS[k as ChronicleObjective] ?? k}`}
+            label={`Poids dans les objectifs : ${objectiveLabel(k as ChronicleObjective) ?? k}`}
             value={g.objectiveWeights[k]}
             min={0}
             step={0.25}

@@ -158,3 +158,21 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
 - Un succès gagné reste gagné. Réglages : Admin → Règles → « Succès : rythme des succès de volume ». Rétro-simulation :
   `node scripts/achievement-pace-sim.mjs` (pré-prod en lecture seule). Proposition : `docs/proposals/rythme-des-succes.md` ; fiche :
   `docs/changes/6.14.117-rythme-des-succes.md`.
+
+## 6.14.119 et 6.14.120 (revue AU27, lots AP-L7 et AP-L8) : registre des actions suivies, épisode « nouveauté »
+- **Registre des actions suivies** (6.14.119, AP-10, invariant I38) : `trackedActions.ts` décrit chaque action qu'un générateur
+  d'objectifs peut tirer (libellé, verbe des archives, deux ordres, page, système, passive, « mesurée », poids). Y entrent la **lune**
+  (amélioration, balayage de phalange, saut par la porte), les **colonies** (convoi arrivé, base avancée tenue, spécialisation) et une
+  action par **contenu** (`unit:<id>` lancée au chantier, `research:<id>`, `building:<id>`), toutes comptées par `trackAction`
+  (activité du mois, épisodes ouverts, objectif du jour lié). Chroniques, défis du passe et saga les ajoutent **en fin de liste**,
+  seulement si la médiane du serveur atteint 0,5 par semaine (`trackedActions.measuredMinWeekly`) : le joueur médian la pratique, sa
+  page lui est ouverte. Poids global par action (× poids du générateur), familles par contenu à 0 (objectifs paramétrés : AJ27-7).
+  Objectifs du jour : « Ramener 1 flotte par la porte de saut » et « Faire arriver 2 convois de colonie » (poids 0,5), proposés à qui
+  a la porte ouverte ou une route (I31). Admin → Règles → « Actions suivies » ; Admin → Générateur : colonne « Dans les tirages ».
+  Mois écrits inchangés (`GENERATOR_VERSION` 3) ; à l'activité d'aujourd'hui, 215 tirages identiques avant et après.
+  Fiche : `docs/changes/6.14.119-actions-suivies.md`.
+- **Épisode « nouveauté »** (6.14.120, I19) : un contenu daté (`addedOn` dans sa fiche, posé d'office à la création dans l'admin)
+  depuis 45 jours au plus au 1er du mois prend l'**épisode 2** du chapitre suivant (5 unités, 1 niveau de recherche, 1 amélioration),
+  s'il est accessible à 50 % des joueurs actifs ; un contenu une seule fois ; graine propre (le reste du chapitre ne change pas) ;
+  bibliothèque de textes réglable ; mention « Nouveauté » sur l'épisode. Admin → Règles → « Épisode nouveauté » (`novelty`).
+  Garde : 67 contenus d'avant sans date, ce nombre ne monte plus. Fiche : `docs/changes/6.14.120-episode-nouveaute.md`.

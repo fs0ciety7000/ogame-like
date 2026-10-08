@@ -3,6 +3,7 @@ import { assertEliteMission } from "@/game/eliteUnits";
 import { ALLIANCE_BOSS_RULES } from "@/game/allianceBoss";
 import { recordChronicle } from "@/game/chronicles";
 import { bumpStat } from "@/game/stats";
+import { trackAction } from "@/game/trackedActions";
 import { takeLaunchCapsules, type LaunchCapsules } from "@/game/synthesis";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
 import { launchExpedition } from "@/game/expeditions";
@@ -380,7 +381,11 @@ export function completeFleetReturn(owner: PlayerState, fleet: Fleet, now: numbe
   }
   const lootTotal = Object.values(fleet.loot ?? {}).reduce((a: number, b) => a + (b ?? 0), 0);
   // 6.14.115 (AJ27-5) : base avancée restée jusqu'au bout de son séjour (ni levée, ni rapatriée par la porte de saut).
-  if (fleet.mission === "colonybase" && (fleet.durationMs ?? 0) > 0 && (fleet.stationedUntilMs ?? 0) >= fleet.arriveAtMs + (fleet.durationMs ?? 0) && now >= (fleet.stationedUntilMs ?? 0)) bumpStat(owner, "colonyBaseTours");
+  if (fleet.mission === "colonybase" && (fleet.durationMs ?? 0) > 0 && (fleet.stationedUntilMs ?? 0) >= fleet.arriveAtMs + (fleet.durationMs ?? 0) && now >= (fleet.stationedUntilMs ?? 0)) {
+    bumpStat(owner, "colonyBaseTours");
+    // 6.14.119 (AP-L7) : action suivie.
+    trackAction(owner, "colonyBase", now);
+  }
   if (fleet.mission === "recycle") bumpStat(owner, "recycled", lootTotal);
   else if ((fleet.mission ?? "attack") === "attack") bumpStat(owner, "loot", lootTotal);
   return { owner, notifications: [{ kind: "fleet", ...returnMessage(fleet, lootTotal), createdAtMs: now, read: false, ...(lootTotal > 0 ? { data: { resources: fleet.loot ?? undefined } } : {}) }] };

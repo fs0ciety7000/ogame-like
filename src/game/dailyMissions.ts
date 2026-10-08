@@ -1,7 +1,7 @@
 import { grantTokens } from "@/game/casino";
 import { GameActionError } from "@/game/errors";
 import { parisDay } from "@/game/retention";
-import { OBJECTIVE_LABELS, passState, type PassState } from "@/game/seasonPass";
+import { objectiveLabel, passState, type PassState } from "@/game/seasonPass";
 import type { ChronicleObjective } from "@/game/chronicles";
 import type { PlayerState } from "@/types/game";
 
@@ -69,7 +69,7 @@ export function dailyMissions(player: Pick<PlayerState, "seasonPass">, now: numb
   const daily = todayState(passState(player as PlayerState, now), day);
   const tasks = dailyTasksFor(day).map((t, i) => {
     const progress = Math.min(t.count, daily.counts[t.key] ?? 0);
-    return { key: t.key, label: OBJECTIVE_LABELS[t.key], count: t.count, progress, done: progress >= t.count, claimed: daily.claimed.includes(i) };
+    return { key: t.key, label: objectiveLabel(t.key), count: t.count, progress, done: progress >= t.count, claimed: daily.claimed.includes(i) };
   });
   return { day, tasks, allClaimed: tasks.every((t) => t.claimed) };
 }

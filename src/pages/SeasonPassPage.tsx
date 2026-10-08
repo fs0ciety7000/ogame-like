@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/hud";
 import { ObjectiveGoLink } from "@/components/game/ObjectiveGoLink";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { activePass, describePassReward, isCumulativePass, OBJECTIVE_LABELS, PASS_POINTS, passBonusProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
+import { activePass, describePassReward, isCumulativePass, objectiveLabel, PASS_POINTS, passBonusProgress, passState, passTier, passTitle, tierRequirements, activeChallengeTier, type PassReward } from "@/game/seasonPass";
 import { publishedPassSeason, type PassSeason } from "@/game/passSeasons";
 import { findCommander, type CommanderDef } from "@/game/commanders";
 import { STORY_SPEAKERS } from "@/game/story";
@@ -154,7 +154,7 @@ export function SeasonPassPage() {
           <div className="flex flex-wrap gap-1.5">
             {challenge.reqs.map((r) => (
               <HudChip key={r.key} size="md" tone={r.met ? "mint" : "accent"} className="max-w-full whitespace-normal normal-case tracking-normal">
-                {r.met ? <Check /> : null} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}
+                {r.met ? <Check /> : null} {objectiveLabel(r.key)} {r.done}/{r.count}
               </HudChip>
             ))}
           </div>
@@ -203,7 +203,7 @@ export function SeasonPassPage() {
                 <div className="flex flex-col gap-1" title={isCumulativePass(st.seasonId) ? "Défi du palier : totaux du mois" : "Défi du palier : un palier à la fois"}>
                   {req.reqs.map((r) => (
                     <HudChip key={r.key} size="sm" tone={r.met ? "mint" : current ? "accent" : "neutral"} className="max-w-full whitespace-normal normal-case tracking-normal">
-                      {r.met ? <Check /> : <Lock />} {OBJECTIVE_LABELS[r.key]} {r.done}/{r.count}
+                      {r.met ? <Check /> : <Lock />} {objectiveLabel(r.key)} {r.done}/{r.count}
                     </HudChip>
                   ))}
                 </div>

@@ -3,6 +3,7 @@ import { canSpendResources, spendResources } from "@/game/spending";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { applyBuildingDiscount, findBuilding, getBuildingUpgradeCost, getBuildingUpgradeTime } from "@/game/buildings";
 import { recordContract } from "@/game/contracts";
+import { contentObjective, trackAction } from "@/game/trackedActions";
 import { GameActionError } from "@/game/errors";
 import { ECONOMY_RULES } from "@/game/economy";
 import type { NewNotification } from "@/game/flush";
@@ -148,6 +149,8 @@ export function advanceBuildPlan(player: PlayerState, queues: QueuesState, now: 
         paid: cost,
       };
       recordContract(player, "upgrade_building", 1, now);
+      // 6.14.119 (AP-L7) : action par contenu, comme une amélioration lancée à la main.
+      trackAction(player, contentObjective("building", def.id), now);
       notes.push({ kind: "building", title: "File planifiée", message: `${def.name} niveau ${entry.level} : amélioration lancée.`, createdAtMs: now, read: false });
       continue;
     }

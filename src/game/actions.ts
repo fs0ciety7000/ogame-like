@@ -39,6 +39,7 @@ import { playerUnitCost } from "@/game/effectTargets";
 import { hasPrerequisites, MISSIONS } from "@/game/missions";
 import { GameActionError } from "@/game/errors";
 import { claimContract, recordContract, rerollContract } from "@/game/contracts";
+import { contentObjective, trackAction } from "@/game/trackedActions";
 import { defaultPlayerState, defaultQueues } from "@/game/defaults";
 import { applyXpDelta } from "@/game/seasons";
 import { assignCommanders, COMMANDER_RULES, COMMANDER_XP, grantCommanderXp, recruitCommander, trainCommander } from "@/game/commanders";
@@ -258,6 +259,8 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       pay(player, paid, now);
       queues.buildingUpgrades[def.id] = { endTime: now + Math.round(getBuildingUpgradeTime(def, nextLevel) * playerBuildTimeFactor(player, now)) * 1000, startedAtMs: now, paid };
       recordContract(player, "upgrade_building", 1, now);
+      // 6.14.119 (AP-L7) : action par contenu (épisode « nouveauté », objectifs paramétrés).
+      trackAction(player, contentObjective("building", def.id), now);
       return undefined;
     }
 
@@ -287,6 +290,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       const each = playerUnitCost(unit, player, now);
       pay(player, { scrap: each.scrap * qty, energy: each.energy * qty }, now);
       recordContract(player, "build_units", qty, now);
+      trackAction(player, contentObjective("unit", unit.id), now, qty);
       const queue = queues.unitQueues[category];
       const wasEmpty = queue.length === 0;
       for (let i = 0; i < qty; i++) queue.push({ unitId: unit.id, endTime: null });
@@ -332,6 +336,7 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       queues.activeResearches.push({ id: tech.id, endTime: now + Math.round(getTechTime(tech, nextLevel) * playerResearchTimeFactor(player, now)) * 1000, startedAtMs: now, paid, ...(amber > 0 ? { paidAmber: amber } : {}) });
       bumpStat(player, "researchStarted");
       recordContract(player, "research", 1, now);
+      trackAction(player, contentObjective("research", tech.id), now);
       const hour = parisHour(now);
       if (hour >= 3 && hour < 5) setStat(player, "nightResearch", 1);
       return undefined;

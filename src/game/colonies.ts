@@ -1,6 +1,7 @@
 import { allianceProductionFactor } from "@/game/alliances";
 import { spendResources } from "@/game/spending";
 import { bumpStat, playerStats } from "@/game/stats";
+import { setActionAvailability, trackAction } from "@/game/trackedActions";
 import { ascensionProductionFactor } from "@/game/ascension";
 import { playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { COMMANDER_XP, grantCommanderXp } from "@/game/commanders";
@@ -218,7 +219,11 @@ export function runColonyRoute(colony: Colony, player: PlayerState, now: number)
   for (const [res, n] of Object.entries(taken) as [ResourceId, number][]) from[res] = (from[res] ?? 0) - n;
   for (const [res, n] of Object.entries(delivered) as [ResourceId, number][]) to[res] = (to[res] ?? 0) + n;
   // 6.14.115 (AJ27-5) : un convoi arrivé (non vide) compte pour le succès « Convoyeur ».
-  if (Object.values(delivered).some((n) => (n ?? 0) > 0)) bumpStat(player, "colonyConvoys");
+  if (Object.values(delivered).some((n) => (n ?? 0) > 0)) {
+    bumpStat(player, "colonyConvoys");
+    // 6.14.119 (AP-L7) : action suivie (épisodes, défis du passe, saga, objectif du jour « convoi »).
+    trackAction(player, "colonyConvoy", now);
+  }
   const every = Math.max(1, route.everyHours) * 3_600_000;
   // Prochain convoi aligné sur la cadence, jamais dans le passé.
   const missed = Math.floor((now - route.nextAtMs) / every);
@@ -363,6 +368,8 @@ export function setColonySpec(player: PlayerState, colonyIdIn: string, specIn: s
   // 6.14.115 (AJ27-5) : la fiche du Codex de la spécialisation reste ouverte après un changement.
   const used = playerStats(player).colonySpecsUsed ?? [];
   if (!used.includes(spec.id)) player.stats = { ...(player.stats ?? {}), colonySpecsUsed: [...used, spec.id] };
+  // 6.14.119 (AP-L7) : action suivie.
+  trackAction(player, "colonySpec", now);
   return colony;
 }
 
@@ -787,3 +794,6 @@ export function collectFromColony(colony: Colony, requested: Partial<Record<Reso
 export function deliverToColony(colony: Colony, cargo: Partial<Record<ResourceId, number>>): void {
   for (const [r, n] of Object.entries(cargo) as [ResourceId, number][]) colony.resources[r] = (colony.resources[r] ?? 0) + (n ?? 0);
 }
+
+// 6.14.119 (AP-L7) : l'objectif du jour « convoi de colonie » n'est proposé qu'à un joueur dont une colonie a une route logistique.
+setActionAvailability("colonyConvoy", (p) => (p.colonies ?? []).some((c) => !!c?.route));

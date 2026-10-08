@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
-import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
+import { objectiveLabel, type ChronicleObjective } from "@/game/chronicles";
 import { PASS_GEN_RULES, tierBudgets, type PassGenRules } from "@/game/passGen";
 import { PASS_REWARD_RULES } from "@/game/passSeasons";
 import { PASS_BONUS_RULES } from "@/game/seasonPass";
@@ -119,7 +119,7 @@ export function PassGenFields({ rules, setRules }: { rules: GameRules; setRules:
         {Object.keys(g.challengeWeights).map((k) => (
           <NumberField
             key={k}
-            label={`Poids dans les défis : ${OBJECTIVE_LABELS[k as ChronicleObjective] ?? k}`}
+            label={`Poids dans les défis : ${objectiveLabel(k as ChronicleObjective) ?? k}`}
             value={g.challengeWeights[k]}
             min={0}
             step={0.25}

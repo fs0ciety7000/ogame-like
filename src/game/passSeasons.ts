@@ -1,6 +1,7 @@
 import { COMMANDER_ROLES, setSeasonCommanders, type SeasonCommanderDef } from "@/game/commanders";
-import { OBJECTIVE_LABELS, type ChronicleObjective } from "@/game/chronicles";
-import { BASE_COUNTS, generatePass, GENERATOR_VERSION, seededRandom, type WorldDigest } from "@/game/procedural";
+import type { ChronicleObjective } from "@/game/chronicles";
+import { isTrackedObjective, objectiveLabel } from "@/game/trackedActions";
+import { baseCount, generatePass, GENERATOR_VERSION, seededRandom, type WorldDigest } from "@/game/procedural";
 import { normalizeTierReqs, PASS_RULES, setPassSeasonOverrides, type MonthPass, type PassRequirement, type PassReward } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
@@ -130,7 +131,7 @@ export function passTargetDay(): number {
  *  6.14.58 (AU27, AP-2) : bornes réglables (`passGen.challengeMinFactor`, `challengeMaxFactor`) et plancher jamais au-dessus
  *  de la médiane (avant : 1,5 victoire par semaine demandée quand le joueur médian en fait 1). */
 export function weeklyRate(key: ChronicleObjective, d: Pick<WorldDigest, "weeklyMedian">, rules: PassGenRules = passGenRules()): number {
-  const base = BASE_COUNTS[key] ?? 3;
+  const base = baseCount(key);
   const weekly = d.weeklyMedian[key] ?? 0;
   if (!(weekly > 0)) return base;
   const floor = Math.min(base * rules.challengeMinFactor, weekly);
@@ -648,16 +649,16 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   pointsPerTier = fit.pointsPerTier;
   const excluded = Object.keys(rules.challengeWeights).filter((k) => Number(rules.challengeWeights[k]) > 0 && !challengePool(o.digest.weeklyMedian, rules).some((x) => x.key === k));
   if (excluded.length > 0)
-    reasons.push(`Hors des défis (médiane du serveur trop faible, seuil ${rules.challengeMinWeekly} par semaine, ${rules.passiveMinWeekly} pour une action passive) : ${excluded.map((k) => OBJECTIVE_LABELS[k as ChronicleObjective]?.toLowerCase() ?? k).join(", ")}.`);
+    reasons.push(`Hors des défis (médiane du serveur trop faible, seuil ${rules.challengeMinWeekly} par semaine, ${rules.passiveMinWeekly} pour une action passive) : ${excluded.map((k) => objectiveLabel(k).toLowerCase()).join(", ")}.`);
   const totals: Record<string, number> = {};
   Object.values(requirements).forEach((list) => list.forEach((r) => (totals[r.key] = (totals[r.key] ?? 0) + r.count)));
   reasons.push(
     `Défis cumulés (totaux du mois, paliers dans l'ordre) : le joueur médian relève le dernier vers le jour ${passTargetDay()}. Sommes des seuils : ${Object.entries(totals)
-      .map(([k, n]) => `${OBJECTIVE_LABELS[k as ChronicleObjective].toLowerCase()} ${n} (médiane ${o.digest.weeklyMedian[k as ChronicleObjective] ?? 0} par semaine)`)
+      .map(([k, n]) => `${objectiveLabel(k).toLowerCase()} ${n} (médiane ${o.digest.weeklyMedian[k as ChronicleObjective] ?? 0} par semaine)`)
       .join(", ")}.`,
   );
   for (const t of [1, 10, 20, 30].filter((x) => x <= tiers.length))
-    reasons.push(`Défi du palier ${t} : ${requirements[String(t)].map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} × ${r.count}`).join(", ")}.`);
+    reasons.push(`Défi du palier ${t} : ${requirements[String(t)].map((r) => `${objectiveLabel(r.key).toLowerCase()} × ${r.count}`).join(", ")}.`);
   reasons.push(...fit.reasons);
 
   // 6.8.1 : contrôle par simulation avant publication (joueur médian et plus actif du serveur).
@@ -737,7 +738,7 @@ export function validatePassSeasons(cfg: PassSeasonsConfig | undefined): string[
       if (list.length > 4) errors.push(`${at}, palier ${tier} : quatre prérequis au plus.`);
       const keys = new Set<string>();
       for (const r of list) {
-        if (!(String(r?.key) in OBJECTIVE_LABELS)) errors.push(`${at}, palier ${tier} : action de prérequis inconnue.`);
+        if (!isTrackedObjective(r?.key)) errors.push(`${at}, palier ${tier} : action de prérequis inconnue.`);
         if (!(Number(r?.count) >= 1)) errors.push(`${at}, palier ${tier} : nombre ≥ 1.`);
         if (keys.has(String(r?.key))) errors.push(`${at}, palier ${tier} : la même action deux fois.`);
         keys.add(String(r?.key));

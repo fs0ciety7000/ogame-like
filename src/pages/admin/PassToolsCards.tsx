@@ -6,7 +6,7 @@ import { chronicleMonthId } from "@/game/chronicles";
 import { checkMonth, monthBounds, monthCheckSummary, type CheckStatus } from "@/game/monthCheck";
 import { nextMonthId, type PassSeason } from "@/game/passSeasons";
 import { defaultSimProfiles, passDurationVerdict, simulatePass, type PassSimResult } from "@/game/passSimulator";
-import { OBJECTIVE_LABELS } from "@/game/seasonPass";
+import { objectiveLabel } from "@/game/seasonPass";
 import { seasonLabel } from "@/game/seasons";
 import { useContentStore } from "@/services/contentService";
 import { cn, formatDecimal } from "@/lib/utils";
@@ -117,7 +117,7 @@ export function PassDurationCard({ season }: { season: PassSeason | null }) {
               <span className="font-mono tabular-nums text-slate-500">{formatDecimal(r.pointsPerDay, 1)} pts/jour</span>
               <span className="text-slate-500">
                 frein : {r.bottleneck === "points" ? "les points" : r.bottleneck === "challenges" ? "les défis" : "aucun"}
-                {r.slowestChallenge && ` · défi le plus long : palier ${r.slowestChallenge.tier} (${r.slowestChallenge.reqs.map((q) => `${OBJECTIVE_LABELS[q.key].toLowerCase()} ${q.count}`).join(", ")}), ${r.slowestChallenge.days} j`}
+                {r.slowestChallenge && ` · défi le plus long : palier ${r.slowestChallenge.tier} (${r.slowestChallenge.reqs.map((q) => `${objectiveLabel(q.key).toLowerCase()} ${q.count}`).join(", ")}), ${r.slowestChallenge.days} j`}
               </span>
             </div>
             <DayBar result={r} days={results.days} />

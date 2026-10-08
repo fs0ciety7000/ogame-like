@@ -1,6 +1,7 @@
 import { GameActionError } from "@/game/errors";
 import { spendResources } from "@/game/spending";
 import { MOON_RULES, moonLevel, moonUpgradeCost, playerMoon, type MoonState } from "@/game/moon";
+import { trackAction } from "@/game/trackedActions";
 import type { PlayerState } from "@/types/game";
 
 /* 6.14.0 (proposals/lunes.md §8) : améliorer sa lune, achat immédiat en ressources de la planète mère. */
@@ -15,5 +16,7 @@ export function upgradeMoon(player: PlayerState, now: number = Date.now()): Moon
   spendResources(player, cost, now, { message: "Ressources insuffisantes pour améliorer ta lune." });
   const next: MoonState = { ...m, level: level + 1 };
   player.moon = next;
+  // 6.14.119 (AP-L7) : action suivie.
+  trackAction(player, "moonUpgrade", now);
   return next;
 }

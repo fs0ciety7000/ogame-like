@@ -4,6 +4,7 @@ import { recordContract } from "@/game/contracts";
 import { GameActionError } from "@/game/errors";
 import { addDossiers, findCommander, unlockSeasonCommander } from "@/game/commanders";
 import type { ChronicleObjective } from "@/game/chronicles";
+import { objectiveLabel, staticObjectiveLabels, type StaticObjective } from "@/game/trackedActions";
 import { bountyState } from "@/game/bounties";
 import { productionHours } from "@/game/pirates";
 import { addRelic, rollRelic, relicLabel, type RelicRarity } from "@/game/relics";
@@ -60,17 +61,10 @@ export type PassReward =
   | { kind: "cosmetic" };
 
 /** Actions suivies dans le mois (objectifs des Chroniques, prérequis des passes). */
-export const OBJECTIVE_LABELS: Record<ChronicleObjective, string> = {
-  contract: "Objectifs du jour récupérés",
-  bounty: "Primes Kesh'Vaar remplies",
-  raidRepelled: "Raids de faction repoussés",
-  victory: "Combats gagnés",
-  bossAssault: "Assauts sur un boss",
-  mission: "Missions terminées",
-  spy: "Sondes d'espionnage lancées",
-  market: "Offres achetées au marché",
-  warlordWin: "Seigneurs de guerre pillés",
-};
+/** 6.14.119 (AP-L7) : libellés lus dans le registre des actions suivies (`trackedActions.ts`), les 9 d'avant et ceux de la
+ *  lune et des colonies. Une action par contenu (`unit:<id>`…) : `objectiveLabel`. */
+export const OBJECTIVE_LABELS: Record<StaticObjective, string> = staticObjectiveLabels();
+export { objectiveLabel };
 
 /** v5.13 : action à accomplir pour réclamer un palier (défi du palier). */
 export interface PassRequirement {
@@ -595,7 +589,7 @@ export function claimPassTier(player: PlayerState, tierIn: unknown, now: number,
         ? "Palier verrouillé : relève d'abord le défi des paliers précédents."
         : `Palier verrouillé : ${ch.reqs
             .filter((r) => !r.met)
-            .map((r) => `${OBJECTIVE_LABELS[r.key].toLowerCase()} ${r.done} / ${r.count}`)
+            .map((r) => `${objectiveLabel(r.key).toLowerCase()} ${r.done} / ${r.count}`)
             .join(", ")}.`,
     );
   const gained = pass.tiers[tier - 1].map((r) => grantPassReward(player, r, st.seasonId, now, random));

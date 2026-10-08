@@ -14,6 +14,8 @@ export interface UnitStats {
 
 export interface UnitDef {
   id: string;
+  /** 6.14.120 (AP-L8) : date d'ajout (AAAA-MM-JJ) : un contenu récent prend l'épisode « nouveauté » du chapitre suivant. */
+  addedOn?: string;
   name: string;
   image: string;
   maxLevel: number;

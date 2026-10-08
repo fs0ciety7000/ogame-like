@@ -1,4 +1,5 @@
 import type { ChronicleObjective } from "@/game/chronicles";
+import { extraObjectives, isBaseObjective, measuredPlayable, objectiveMeasured, objectivePassive, trackedWeight } from "@/game/trackedActions";
 import type { PassReward } from "@/game/seasonPass";
 import type { CapsuleType } from "@/game/synthesis";
 
@@ -286,8 +287,16 @@ export function percentile(xs: number[], p: number): number {
 
 /** Actions des défis et leur poids : poids > 0, et les actions passives seulement si le serveur les pratique. */
 export function challengePool(weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): { key: ChronicleObjective; weight: number }[] {
-  const weighted = Object.entries(rules.challengeWeights).filter(([, w]) => Number(w) > 0);
-  const pool = weighted.filter(([k]) => actionPlayable(k as ChronicleObjective, weeklyMedian, rules));
+  // 6.14.119 (AP-L7) : poids × poids global du registre (1 par défaut) ; actions du registre absentes de la table ajoutées en fin
+  // de liste (poids du registre), jouables seulement si le serveur les pratique : sans mesure, la liste d'avant.
+  const weighted = Object.entries(rules.challengeWeights)
+    .map(([k, w]) => [k, Number(w) * trackedWeight(k as ChronicleObjective)] as [string, number])
+    .filter(([, w]) => w > 0);
+  const extra = extraObjectives()
+    .filter((k) => !(k in rules.challengeWeights))
+    .map((k) => [k, trackedWeight(k)] as [string, number])
+    .filter(([, w]) => w > 0);
+  const pool = [...weighted, ...extra].filter(([k]) => actionPlayable(k as ChronicleObjective, weeklyMedian, rules));
   // Serveur où presque rien n'est mesuré : les actions que le joueur déclenche à volonté restent (un palier sans défi n'existe pas).
   const out = pool.length > 0 ? pool : weighted.filter(([k]) => !rules.passiveKeys.includes(k));
   return out.map(([k, w]) => ({ key: k as ChronicleObjective, weight: Number(w) }));
@@ -303,7 +312,9 @@ export function hasActivityData(weeklyMedian: Partial<Record<ChronicleObjective,
  *  demande une médiane non nulle et d'au moins `challengeMinWeekly`. Sans mesure (serveur neuf) : actions actives seulement. */
 export function actionPlayable(key: ChronicleObjective, weeklyMedian: Partial<Record<ChronicleObjective, number>>, rules: PassGenRules = passGenRules()): boolean {
   const m = weeklyMedian[key] ?? 0;
-  if (rules.passiveKeys.includes(key)) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
+  // 6.14.119 (AP-L7) : action du registre « mesurée » (lune, colonies, contenus) : médiane d'au moins `trackedActions.measuredMinWeekly`.
+  if (objectiveMeasured(key) && !measuredPlayable(key, weeklyMedian)) return false;
+  if (rules.passiveKeys.includes(key) || (!isBaseObjective(key) && objectivePassive(key))) return m > 0 && m >= rules.passiveMinWeekly && m >= rules.challengeMinWeekly;
   if (!hasActivityData(weeklyMedian)) return true;
   return m > 0 && m >= rules.challengeMinWeekly;
 }

@@ -3845,6 +3845,46 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.119 (AP-L7) et 6.14.120 (AP-L8) : action suivie comptée par le serveur ; épisode « nouveauté » écrit sans écraser la configuration", async () => {
+    await ensureAB();
+    await loginPlayer(B.email, B.pw);
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { chronicles: await cfg("chronicles"), units: await cfg("units"), rules: await cfg("rules") };
+    const put = async (key: string, data: unknown) => {
+      const rec = await cfg(key);
+      if (rec) await admin.collection("game_config").update(rec.id, { data });
+      else await admin.collection("game_config").create({ key, data });
+    };
+    const before = await snap(bId);
+    const now = Date.now();
+    try {
+      // AP-L7 : l'amélioration de la lune, faite par le serveur, entre dans l'activité du mois (défis du passe, saga, médianes).
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 2_000_000, energy: 2_000_000 }, moon: { name: "Lune d'essai", level: 1, bornAtMs: now - 60_000, fromDebris: 1 }, vacation: null });
+      const was = Number(before.seasonPass?.activity?.moonUpgrade ?? 0);
+      await ps.upgradeMoon();
+      const after = await snap(bId);
+      expect(Number(after.seasonPass?.activity?.moonUpgrade ?? 0)).toBe(was + 1);
+      // AP-L8 : une unité datée du mois d'avant prend l'épisode 2 du chapitre écrit ; bonus et bibliothèque gardés.
+      const d = defaultGameContent();
+      await put("units", d.units.map((u) => (u.id === "recolteur" ? { ...u, addedOn: "2031-03-20" } : u)));
+      await put("rules", { ...(keep.rules?.data ?? {}), novelty: { minAccessShare: 0 } });
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2031-04", variant: 0 } });
+      expect(out.chapters[0].id).toBe("2031-04");
+      const data = (await cfg("chronicles"))!.data as { months: { id: string; episodes: { objective: { type: string; count: number } }[]; auto?: { novelty?: { key: string } } }[]; bonus?: unknown };
+      const month = data.months.find((m) => m.id === "2031-04")!;
+      expect(month.episodes[1].objective).toEqual({ type: "unit:recolteur", count: 5 });
+      expect(month.auto?.novelty?.key).toBe("unit:recolteur");
+      if (keep.chronicles?.data?.bonus) expect(data.bonus).toEqual(keep.chronicles.data.bonus);
+    } finally {
+      for (const [key, rec] of [["chronicles", keep.chronicles], ["units", keep.units], ["rules", keep.rules]] as const) {
+        const cur = await cfg(key);
+        if (rec) await admin.collection("game_config").update(rec.id, { data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
+      await admin.collection("players").update(bId, { resources: before.resources, moon: before.moon ?? null, seasonPass: before.seasonPass ?? null, stats: before.stats ?? {} });
+    }
+  });
+
   it("changes password and keeps the session", async () => {
     await changePassword(B.pw, "nouveaumdp9");
     expect(pb.authStore.isValid).toBe(true);

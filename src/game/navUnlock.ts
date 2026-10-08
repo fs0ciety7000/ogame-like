@@ -10,6 +10,7 @@ import { PVP_RULES } from "@/game/pvp";
 import { RANKS } from "@/game/ranks";
 import { relicsState } from "@/game/relics";
 import type { ChronicleObjective } from "@/game/chronicles";
+import { objectivePage, STATIC_OBJECTIVES, TRACKED_ACTIONS, type StaticObjective } from "@/game/trackedActions";
 import type { NewNotification } from "@/game/flush";
 import type { PlayerState } from "@/types/game";
 
@@ -427,17 +428,12 @@ export function moonPanelVisible(p: PlayerState | null | undefined): boolean {
 }
 
 /** Page où l'on agit pour un objectif du passe ou des Chroniques (« J'y vais », ouverture par l'intention). */
-export const OBJECTIVE_PAGES: Record<ChronicleObjective, string> = {
-  contract: "/game/ordres",
-  bounty: "/game/primes",
-  raidRepelled: "/game/menaces",
-  victory: "/game/galaxie",
-  bossAssault: "/game/boss",
-  mission: "/game/missions",
-  spy: "/game/galaxie",
-  market: "/game/commerce",
-  warlordWin: "/game/seigneurs",
-};
+export const OBJECTIVE_PAGES: Record<StaticObjective, string> = Object.fromEntries(STATIC_OBJECTIVES.map((k) => [k, TRACKED_ACTIONS[k].page])) as Record<StaticObjective, string>;
+
+/** 6.14.119 (AP-L7) : page d'une action suivie, celles par contenu comprises (`unit:<id>` → Unités…), lue dans le registre. */
+export function objectiveGoPage(k: ChronicleObjective): string | undefined {
+  return objectivePage(k);
+}
 
 /** 6.14.81 (DP-L6, proposition §5.8) : page du système de chaque mesure de succès (identifiants de `METRICS`, `achievements.ts`).
  *  Un succès dont la page est fermée s'affiche « À découvrir » avec la condition d'ouverture, sans son chiffre de progression.

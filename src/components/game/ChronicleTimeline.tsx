@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Lock, Play } from "lucide-react";
+import { Check, Lock, Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HudChip } from "@/components/ui/hud";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { AmberAmount } from "@/components/ui/amber";
-import { episodeUnlockMs, OBJECTIVE_LABELS, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective } from "@/game/chronicles";
+import { episodeUnlockMs, objectiveLabel, type ChronicleBonus, type ChronicleMonth, type ChronicleObjective } from "@/game/chronicles";
 import { describePassReward, PASS_POINTS } from "@/game/seasonPass";
 import { cn, formatDateTime } from "@/lib/utils";
 
@@ -104,8 +104,16 @@ export function ChronicleTimeline({
                 )}
               </div>
               <p className="font-display text-sm text-slate-100">{e.title}</p>
+              {/* 6.14.120 (AP-L8) : épisode « nouveauté » (contenu ajouté récemment). */}
+              {month.auto?.novelty?.episode === i + 1 && (
+                <div className="flex">
+                  <HudChip size="sm" tone="violet" className="normal-case tracking-normal" title={`Ajouté le ${month.auto.novelty.addedOn}`}>
+                    <Sparkles aria-hidden /> Nouveauté
+                  </HudChip>
+                </div>
+              )}
               <p className="text-xs text-slate-400">
-                {OBJECTIVE_LABELS[e.objective.type]} :{" "}
+                {objectiveLabel(e.objective.type)} :{" "}
                 <span className="font-mono tabular-nums text-slate-200">
                   {view ? `${Math.min(progress, e.objective.count)} / ` : ""}
                   {e.objective.count}
