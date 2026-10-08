@@ -1,5 +1,5 @@
 import { alpha } from "@/lib/utils";
-import { METRICS, type AchievementMetric } from "@/game/achievements";
+import { isTargetedMetric, METRICS, type AchievementMetric } from "@/game/achievements";
 import { TITLE_RARITIES, titleRarity, type TitleDef, type TitleRarity } from "@/game/titles";
 import { CheckboxField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 
@@ -43,7 +43,7 @@ export function TitleForm({ value: t, onChange, isNew }: { value: TitleDef; onCh
             <SelectField<AchievementMetric>
               label="Mesure suivie"
               value={t.unlock.metric}
-              options={(Object.keys(METRICS) as AchievementMetric[]).map((m) => ({ value: m, label: METRICS[m].label }))}
+              options={(Object.keys(METRICS) as AchievementMetric[]).filter((m) => !isTargetedMetric(m)).map((m) => ({ value: m, label: METRICS[m].label }))}
               onChange={(metric) => set({ unlock: { ...t.unlock!, metric } })}
             />
             <NumberField label="Seuil à atteindre" value={t.unlock.threshold} min={1} step={1} onChange={(v) => set({ unlock: { ...t.unlock!, threshold: Math.max(1, v ?? 1) } })} />

@@ -17,6 +17,9 @@ fi
 ps -eo pid,args | awk '$2 ~ /pocketbase$/ && /127.0.0.1:8090/ {print $1}' | xargs -r kill
 sleep 1
 rm -rf .pb/pb_data
+# 6.14.130 : migrations écrites seules par PocketBase quand on modifie le schéma dans son interface (base jetable) ; elles
+# empêchaient le démarrage (les collections viennent de pb_schema.json et de la synchronisation au démarrage).
+rm -rf .pb/pb_migrations
 .pb/pocketbase superuser upsert "$EMAIL" "$PASS" --dir .pb/pb_data >/dev/null
 COSMIC_HOOKS_AUTOUPDATE=0 nohup .pb/pocketbase serve --http 127.0.0.1:8090 --dir .pb/pb_data --hooksDir pocketbase/pb_hooks > .pb/pb.log 2>&1 &
 for i in $(seq 1 30); do curl -sf 127.0.0.1:8090/api/health >/dev/null && break; sleep 1; done

@@ -6,7 +6,7 @@
    par le panneau Admin → Équilibrage → « Chaîne de contenu » (contenu ajouté dans l'admin compris).
    Proposition : docs/proposals/chaine-contenu.md ; revue : docs/audit/2026-10-07-au27-jeu-chaine.md (AJ-1, AJ-10).
 ===================================================== */
-import { ACHIEVEMENTS, type AchievementMetric } from "@/game/achievements";
+import { ACHIEVEMENTS, isTargetedMetric, type AchievementMetric } from "@/game/achievements";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
 import { BUILDINGS, DOCK_BUILDING_ID } from "@/game/buildings";
 import { chroniclesConfig } from "@/game/chronicles";
@@ -18,6 +18,7 @@ import { parseUnitSelector, selectorMatches } from "@/game/effectTargets";
 import { empireClasses } from "@/game/empireClass";
 import { probeUnitIds } from "@/game/espionage";
 import { MODULE_FAMILIES, MODULE_TEMPLATES } from "@/game/modules";
+import { paletteContentEntries } from "@/game/paletteContent";
 import { RELICS } from "@/game/relics";
 import { TALENTS } from "@/game/talents";
 import { TECHNOLOGIES, techEffects } from "@/game/technologies";
@@ -123,7 +124,8 @@ export const CHAIN_TRACKED_ACTIONS: Record<ChainKind, string[] | null> = {
 /**
  * 6.14.114 (AJ27-4, AJ-1) : types où chaque contenu doit avoir **son** succès (QJ1 : unités et bâtiments), et mesures qui ne
  * comptent qu'un contenu précis. Lues à l'usage (identifiants réglables : sonde, drone de recyclage).
- * Une mesure ajoutée ici pour un contenu (ou les succès dérivés par contenu, AJ27-6) comble son maillon « succès propre ».
+ * Une mesure ajoutée ici pour un contenu, ou un succès à mesure ciblée qui le vise (succès dérivés par unité et par bâtiment,
+ * 6.14.129), comble son maillon « succès propre ».
  */
 export function chainOwnMetrics(): Record<string, AchievementMetric[]> {
   // 6.14.123 (AA5) : chaque unité au rôle « sonde » ou « recycleur » (repli : identifiants des règles).
@@ -141,8 +143,12 @@ const OWN_ACHIEVEMENT_KINDS: readonly ChainKind[] = ["unit", "building"];
 /**
  * 6.14.114 (AJ27-4, AJ-9) : types que la recherche Ctrl+K (`CommandPalette.tsx`) sait trouver. Tenu avec la palette :
  * `contentChain.test.ts` vérifie que la palette lit bien le registre de chaque type listé ici.
+ * 6.14.130 (AJ27-8) : tous les types ; hors unités, bâtiments et technos, la palette lit `paletteContentEntries` et le
+ * maillon se vérifie contenu par contenu (un contenu absent de la liste manque son maillon).
  */
-export const PALETTE_KINDS: readonly ChainKind[] = ["unit", "building", "tech"];
+export const PALETTE_KINDS: readonly ChainKind[] = ["unit", "building", "tech", "relic", "worldBoss", "allianceBoss", "seasonBoss", "colony", "talent", "module", "class"];
+/** Types que la palette cherche directement dans leur registre (`UNITS.filter(`…), avec leurs actions. */
+const PALETTE_DIRECT_KINDS: readonly ChainKind[] = ["unit", "building", "tech"];
 
 export interface ChainRow {
   kind: ChainKind;
@@ -161,6 +167,16 @@ function codexIds(): Set<string> {
 
 function activeMetrics(): Set<string> {
   return new Set(ACHIEVEMENTS.filter((a) => a.enabled).map((a) => a.metric));
+}
+
+/** 6.14.129 (AJ27-6) : contenus visés par un succès actif à mesure ciblée (`unit:<id>`, `building:<id>`). */
+function ownAchievementTargets(): Set<string> {
+  const out = new Set<string>();
+  for (const a of ACHIEVEMENTS) {
+    if (!a.enabled || !a.target || !isTargetedMetric(a.metric)) continue;
+    out.add(`${a.metric === "buildingLevel" ? "building" : "unit"}:${a.target}`);
+  }
+  return out;
 }
 
 /** Cibles d'unités des porteurs d'effets en vigueur : reliques composées, modules (par classe), technos à effet composé,
@@ -182,22 +198,34 @@ export function contentChainReport(): ChainRow[] {
   const codex = codexIds();
   const metrics = activeMetrics();
   const own = chainOwnMetrics();
+  const ownTargets = ownAchievementTargets();
   const classes = unitClasses();
   const carriers = unitCarrierSelectors();
+  // 6.14.130 : contenus de la palette, chapitres à venir compris (le maillon ne dépend pas de la date).
+  const palette = new Set(paletteContentEntries(FAR_FUTURE).map((e) => `${e.kind}:${e.id}`));
   const presets = allEffectPresets().map((p) => p.effect.target).filter((t): t is string => !!t);
   const ach = (kind: ChainKind, id: string) => {
     const m = CHAIN_ACHIEVEMENT_METRICS[kind];
     return {
       achievementEntry: m.entry.some((x) => metrics.has(x)),
       achievementMastery: m.mastery === null ? null : m.mastery.some((x) => metrics.has(x)),
-      achievementOwn: OWN_ACHIEVEMENT_KINDS.includes(kind) ? (own[`${kind}:${id}`] ?? []).some((x) => metrics.has(x)) : null,
+      // 6.14.129 (AJ27-6) : une mesure propre (sonde, Atelier…) ou un succès dérivé qui vise le contenu.
+      achievementOwn: OWN_ACHIEVEMENT_KINDS.includes(kind) ? (own[`${kind}:${id}`] ?? []).some((x) => metrics.has(x)) || ownTargets.has(`${kind}:${id}`) : null,
     };
   };
   const row = (kind: ChainKind, id: string, name: string, links: Partial<Record<ChainLink, boolean | null>>): ChainRow => ({
     kind,
     id,
     name,
-    links: { codex: null, effectPreset: null, effectCarrier: null, carrierOwn: null, palette: PALETTE_KINDS.includes(kind), ...ach(kind, id), ...links },
+    links: {
+      codex: null,
+      effectPreset: null,
+      effectCarrier: null,
+      carrierOwn: null,
+      palette: PALETTE_KINDS.includes(kind) && (PALETTE_DIRECT_KINDS.includes(kind) || palette.has(`${kind}:${id}`)),
+      ...ach(kind, id),
+      ...links,
+    },
   });
 
   const rows: ChainRow[] = [];

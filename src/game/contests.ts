@@ -1,4 +1,4 @@
-import { METRICS, type AchievementMetric } from "@/game/achievements";
+import { isTargetedMetric, METRICS, type AchievementMetric } from "@/game/achievements";
 import type { ServerPot } from "@/game/serverPot";
 import type { PlayerState, ResourceId } from "@/types/game";
 
@@ -86,6 +86,8 @@ export function validateContest(c: Pick<Contest, "title" | "metric" | "startMs" 
   const errors: string[] = [];
   if (!c.title?.trim()) errors.push("Donne un titre au concours.");
   if (!((c.metric as string) in METRICS)) errors.push("Critère inconnu.");
+  // 6.14.129 : une mesure ciblée (par unité, par bâtiment) n'a pas de contenu visé dans un concours.
+  else if (isTargetedMetric(c.metric)) errors.push("Critère réservé aux succès par contenu.");
   if (!(c.endMs > c.startMs)) errors.push("La fin doit suivre le début.");
   if (!(c.endMs > now)) errors.push("La fin doit être dans le futur.");
   if (c.endMs - c.startMs > 60 * 24 * 3600_000) errors.push("Un concours dure 60 jours au plus.");

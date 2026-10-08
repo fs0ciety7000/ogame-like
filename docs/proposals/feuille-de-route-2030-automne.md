@@ -60,9 +60,9 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 43 | AA6 | Recherches d'alliance par effets composés (une recherche ajoutée dans l'admin a un effet) | M | livré (6.14.124) |
 | 44 | AA7 | Classes, mutateurs, fugitifs : listes éditables | M | livré (6.14.125) |
 | 45 | AA8 | Historique champ par champ et retour arrière par groupe dans l'admin | M | livré (6.14.126 ; carte « Chaîne de contenu » déjà livrée en 6.14.114) |
-| 46 | AJ27-6 | Succès dérivés par unité et par bâtiment | M | à faire |
+| 46 | AJ27-6 | Succès dérivés par unité et par bâtiment | M | livré (6.14.129, `docs/changes/6.14.129-succes-par-contenu.md`) |
 | 47 | AJ27-7 | Objectifs paramétrés par contenu (construire telle unité, rechercher telle techno) | L | à faire |
-| 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | à faire |
+| 48 | AJ27-8 | Formules générées depuis les registres, Ctrl+K étendu | M | livré (6.14.130, `docs/changes/6.14.130-formules-ctrlk.md`) |
 | 49 | AJ27-9 | Codex : officiers, Doctrines, Arsenal | M | à faire |
 | 50 | AJ27-10 | Reliques par source, porteurs « signature » par unité | M | à faire |
 | 51 | DP-L1 | Déblocage progressif du menu : moteur (`navUnlock`, déclencheurs signal / étape / rang), invariants (remplace AE-L5 ; `docs/proposals/deblocage-progressif.md`, Q152 à Q158) | M | livré (6.14.74, `docs/changes/6.14.74-deblocage-moteur.md`) |

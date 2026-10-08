@@ -374,7 +374,7 @@ Lots AJ27-4 et AJ27-5 de la revue AU27 (`docs/audit/2026-10-07-au27-jeu-chaine.m
 |:--|:--|:--|
 | Maillons vérifiés | Codex, succès d'entrée, de maîtrise et **propre** (unités et bâtiments, QJ1), préréglage d'effet (unités), porteur d'effet et **porteur propre** (unités : cible `unit:<id>`), **recherche Ctrl+K** | `contentChainReport`, `contentChain.test.ts` |
 | Types couverts | unités, bâtiments, technos, reliques, boss (mondiaux, d'alliance, de chronique), **colonies** (4 biomes, 4 spécialisations), **talents**, **modules**, **classes d'empire** | idem |
-| Manques connus | chacun cite son lot (AJ27-6 succès dérivés, AJ27-8 Ctrl+K, AJ27-9 Codex Doctrines et Arsenal, AJ27-10 porteurs « signature ») ; un manque comblé sort de la liste | `KNOWN_GAPS` |
+| Manques connus | chacun cite son lot (AJ27-9 Codex Doctrines et Arsenal, AJ27-10 porteurs « signature ») ; un manque comblé sort de la liste (6.14.129 : succès propres comblés, §7.17 ; 6.14.130 : Ctrl+K de tous les types, §7.18) | `KNOWN_GAPS` |
 | Bilan dans l'admin | Admin → Équilibrage → « Chaîne de contenu » : par type, contenus incomplets, maillons présents (vert) et manquants (rouge), lien vers l'onglet où le régler ; contenu ajouté dans l'admin compris | `ContentChainSection.tsx` |
 | Succès des colonies | « Terres neuves » (1re colonie, argent), « Empire des mondes » (toutes les colonies permises, or, nombre lu à l'usage), « Convoyeur » (100 convois arrivés, argent), « Avant-poste tenu » (base avancée restée jusqu'au bout, or) ; réglables dans Admin → Succès ; rien n'est retiré si la règle change | `derivedAchievements`, mesures `coloniesFounded`, `coloniesMaxed`, `colonyConvoys`, `colonyBaseTours` |
 | Codex « Colonies » | 4 biomes, ouverts tous au relevé de la 1re colonie ; 4 spécialisations, ouvertes au 1er choix et gardées après un changement ; récompense de catégorie 5 jetons + 25 Ambre (Admin → Chroniques, comme Unités) | `codexEntries`, `DEFAULT_CODEX_REWARDS.colonies` |
@@ -474,6 +474,41 @@ domaine : `docs/systems/bonus-effets.md`, `docs/systems/progression.md`.
 contenu, 28 textes et valeurs de modules, 300 tirages de plans, montages sur chaque classe, 30 états de modules ; 70 mois du
 catalogue et 62 passes générés, bannières, succès : 0 différence (captures avant / après des fiches). Gardes :
 `sectionsTalentsModules.test.ts`, `catalogueSections.test.ts` (I43), `chiffresReglables.test.ts`, `contentMigrations.test.ts`.
+
+### 7.17 Succès par unité et par bâtiment (6.14.129, `achievements.ts`)
+
+Lot AJ27-6 de la revue AU27 (`docs/audit/2026-10-07-au27-jeu-chaine.md`, AJ-1). Fiche du domaine : `docs/systems/progression.md`.
+
+| Règle | Valeur par défaut | Réglage (admin) |
+|:--|:--|:--|
+| Génération | depuis le contenu en vigueur, après les règles (`applyAchievementPace`) : une unité ou un bâtiment ajouté dans l'admin reçoit les siens ; un succès de même identifiant dans la liste de l'onglet Succès l'emporte | `contentAchievements.enabled` (Règles → « Succès par unité et par bâtiment ») |
+| « Escadre » (« Rempart » pour une défense) | posséder N exemplaires, N = 20 millions ÷ coût de base de l'unité (toutes ressources), 2 chiffres significatifs, au moins 10, au plus 25 % du hangar plein (bâtiments au maximum, sans techno : `rawUnitCapacity`) ; argent, +25 XP | `unitFleetBudget`, `unitFleetMin`, `unitFleetMaxHangarShare`, `unitFleetTier`, `unitFleetXp`, `unitFleetHours` |
+| « Maître » | l'unité au niveau maximal **et** 2 × N exemplaires (au plus 50 % du hangar plein) ; or, +60 XP, 1 h | `unitMasterFactor`, `unitMasterTier`, `unitMasterXp`, `unitMasterHours` |
+| Bâtiment | niveau 20, ou son niveau maximal s'il est plus bas ; or, +60 XP, 1 h | `buildingLevel`, `buildingTier`, `buildingXp`, `buildingHours` |
+| Textes | lus dans la règle (`{name}`, `{n}`, `{level}`) | `unitFleetName`, `defenseFleetName`, `unitFleetText`, `unitMasterName`, `unitMasterText`, `buildingName`, `buildingText` |
+| Seuils imposés, succès coupés | par identifiant (`unite_<id>_escadre`, `unite_<id>_maitre`, `batiment_<id>_niveau`) | `thresholds`, `disabled` (Tous les réglages) |
+| Succès gagné | **jamais repris** (I25) : un seuil relevé ou un succès coupé ne touche pas `unlockedAchievements` | — |
+| Mesures ciblées | `unitOwned`, `unitMastery`, `buildingLevel` (le succès porte `target`) ; brouillard et palier précédent rangés par mesure **et** contenu ; hors concours, titres et paliers générés | `TARGETED_METRICS` |
+
+Rythme (É30-6) : succès de maîtrise, pas de prise en main. Rétro-simulation (`scripts/achievement-pace-sim.mjs`, 10 joueurs de la
+pré-prod à J7,6) : médiane 56 succès sur 200 (28 %) → 64 sur 261 (24,5 %), dans la cible AE-12 (15 à 25 %) ; le joueur médian tient
+1 escadre, 0 maître et 9 bâtiments (niveaux d'avant la bascule du rythme). Gardes : `succesParContenu6129.test.ts`,
+`contentChain.test.ts` (succès propre de chaque unité et bâtiment).
+
+### 7.18 Formules générées et recherche Ctrl+K étendue (6.14.130, `formulasRegistry.ts`, `paletteContent.ts`)
+
+Lot AJ27-8 de la revue AU27 (AJ-8, AJ-9). Fiches du domaine : `docs/systems/bonus-effets.md`, `docs/systems/progression.md`.
+
+| Règle | Valeur | Où |
+|:--|:--|:--|
+| Formules → Bonus : officiers | un rang par officier ordinaire ou rare, effet par niveau et au niveau maximal (`roleBonusText`, réglé dans Admin → Officiers) | `formulaOfficerRows` |
+| Formules → Bonus : sources | chaque source du circuit d'effets (`EFFECT_SOURCE_LABELS`) : couches, contenus, grandeurs (rapport d'impact, mutateurs, capsules) | `formulaSourceRows` |
+| Formules → Bonus : plafonds | chaque grandeur plafonnée, par couche (`effectCaps` ; technos de combat : `combat.techCombatCap`) | `formulaCapRows` |
+| Formules → Bonus : classes d'empire | effets chiffrés en vigueur (`classes.defs`) | `formulaClassRows` |
+| Ctrl+K | en plus des unités, bâtiments et technos : reliques, boss mondiaux, d'alliance et de chronique (mois commencé), biomes et spécialisations de colonie, talents, modules, classes d'empire, officiers ; 2 lettres au moins, accents ignorés, 3 par type ; un clic mène à la page du contenu | `paletteContentEntries`, `matchPaletteContent`, `CommandPalette.tsx` |
+| Chaîne de contenu | maillon « Recherche Ctrl+K » vérifié contenu par contenu pour les 11 types | `contentChain.ts` (`PALETTE_KINDS`) |
+
+Gardes : `formulesPalette6130.test.ts`, `contentChain.test.ts`.
 
 ## 8. Journal des audits
 
@@ -619,3 +654,5 @@ catalogue et 62 passes générés, bannières, succès : 0 différence (captures
 | 2026-10-08 | 6.14.123 et 6.14.124 | Lots AA5 et AA6 (AU27, AA-15 à AA-18) : rôles d'unités au lieu des identifiants en dur, coût d'unité en toutes ressources, préréglages générés ; recherches et projets d'alliance par effets composés (couche alliance, couche empire) ; invariants I39 et I40, I9 et I27 complétés | `docs/changes/6.14.123-roles-unites.md`, `docs/changes/6.14.124-alliance-effets.md` |
 | 2026-10-08 | 6.14.125 et 6.14.126 | Lots AA7 et AA8 (AU27, AA-3, AA-6, AA-20, AA-27) : classes d'empire et mutateurs en listes éditables à effets composés chiffrés, fugitifs dans la fiche de faction, archétype de repli pour une faction ajoutée (valeurs identiques à contenu par défaut, migrations `faction-fugitives-6.14.125` et `mutators-defs-6.14.125`) ; journal de contenu : différence champ par champ, retour d'un seul groupe de règles sous la garde de contenu, réglages du serveur suivis ; invariants I41 et I42, I26 complété | `docs/changes/6.14.125-listes-systeme.md`, `docs/changes/6.14.126-historique-admin.md` |
 | 2026-10-08 | 6.14.127 et 6.14.128 | Lot AA9 (AU27, AA-2, AA-5, AA-23) : talents, familles et modèles de modules en sections de contenu (effets composés, ajout qui agit, retrait au lieu de suppression, garde du serveur, migrations des anciens chiffres) ; thèmes du passe et catalogue des saisons en sections (rotation = ordre des thèmes, cycle thèmes × années, bannière d'un passe terminé tirée du passe publié) ; valeurs identiques à contenu par défaut ; invariant I43 | `docs/changes/6.14.127-talents-modules.md`, `docs/changes/6.14.128-catalogue-passe.md` |
+| 2026-10-08 | 6.14.129 | Lot AJ27-6 (AU27, AJ-1) : succès dérivés par unité (« Escadre » N exemplaires selon le coût, « Maître » niveau maximal et 2 × N) et par bâtiment (niveau 20), générés depuis le contenu en vigueur, réglables (`contentAchievements`), rien de repris ; 61 succès de plus (212 par défaut) ; rétro-simulation 28 % → 24,5 % à J7,6 ; 33 manques « succès propre » sortis de `KNOWN_GAPS` | `docs/changes/6.14.129-succes-par-contenu.md`, `succesParContenu6129.test.ts` |
+| 2026-10-08 | 6.14.130 | Lot AJ27-8 (AU27, AJ-8, AJ-9) : Formules → Bonus généré depuis les registres (officiers, sources d'effets, plafonds par couche, classes d'empire) ; Ctrl+K étendu aux reliques, boss, colonies, talents, modules, classes et officiers ; 8 manques « Ctrl+K » sortis de `KNOWN_GAPS` | `docs/changes/6.14.130-formules-ctrlk.md`, `formulesPalette6130.test.ts` |

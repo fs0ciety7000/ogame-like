@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACHIEVEMENTS, achievementValue, derivedAchievements, setAchievements, DEFAULT_ACHIEVEMENTS } from "@/game/achievements";
+import { ACHIEVEMENTS, achievementValue, contentAchievements, derivedAchievements, setAchievements, DEFAULT_ACHIEVEMENTS } from "@/game/achievements";
 import { derivedTitles, findTitle, setTitles, DEFAULT_TITLES } from "@/game/titles";
 import { bannerOptions } from "@/game/profile";
 import { effectImpactReport } from "@/game/impact";
@@ -15,7 +15,8 @@ const player = () => ({ ...defaultPlayerState("u", "u") }) as PlayerState;
 describe("v5.14 éléments dérivés des catalogues", () => {
   it("succès dérivés : ajoutés même à un catalogue personnalisé, paliers à la taille des catalogues", () => {
     setAchievements([DEFAULT_ACHIEVEMENTS[0]]);
-    expect(ACHIEVEMENTS.map((a) => a.id)).toEqual([DEFAULT_ACHIEVEMENTS[0].id, ...derivedAchievements().map((a) => a.id)]);
+    // 6.14.129 (AJ27-6) : puis les succès par unité et par bâtiment, dérivés du contenu.
+    expect(ACHIEVEMENTS.map((a) => a.id)).toEqual([DEFAULT_ACHIEVEMENTS[0].id, ...derivedAchievements().map((a) => a.id), ...contentAchievements().map((a) => a.id)]);
     expect(derivedAchievements().find((a) => a.id === "officier_rare_all")?.threshold).toBe(RARE_ROLES.length);
     expect(derivedAchievements().find((a) => a.id === "boss_mondiaux_all")?.threshold).toBe(WORLD_BOSSES.length);
     const p = player();

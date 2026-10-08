@@ -2,9 +2,9 @@ import { commandersState, findCommander, isSeasonOfficer, RARE_ROLES } from "@/g
 import { DEFAULT_SEASON_CATALOG } from "@/game/seasonCatalog";
 import { WORLD_BOSSES } from "@/game/worldBosses";
 import { ALLIANCE_BOSSES } from "@/game/allianceBoss";
-import { BUILDINGS, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
+import { BUILDINGS, fullHangarCapacity, LOCKABLE_BUILDINGS, requiredForAscension } from "@/game/buildings";
 import { TECHNOLOGIES } from "@/game/technologies";
-import { UNITS } from "@/game/units";
+import { UNITS, type UnitDef } from "@/game/units";
 import { COMMON_RESOURCES } from "@/game/economy";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { factionStates, findFaction } from "@/game/pirates";
@@ -50,6 +50,8 @@ export interface AchievementDef {
   auto?: boolean;
   /** 6.14.108 (AP-L4) : instant de création d'un palier généré (délai entre deux paliers d'une mesure). */
   createdAtMs?: number;
+  /** 6.14.129 (AJ27-6) : contenu visé par une mesure ciblée (`TARGETED_METRICS` : identifiant d'unité ou de bâtiment). */
+  target?: string;
 }
 
 export const TIER_LABELS: Record<AchievementTier, string> = { bronze: "Bronze", argent: "Argent", or: "Or", legendaire: "Légendaire", mythique: "Mythique" };
@@ -249,11 +251,35 @@ export const METRICS = {
   },
   colonyConvoys: { label: "Convois de route logistique arrivés", value: (p: PlayerState) => playerStats(p).colonyConvoys ?? 0 },
   colonyBaseTours: { label: "Bases avancées tenues jusqu'au bout de leur séjour", value: (p: PlayerState) => playerStats(p).colonyBaseTours ?? 0 },
+  // 6.14.129 (AJ27-6, AJ-1) : mesures ciblées, lues avec le contenu visé par le succès (`target`). Sans cible : 0.
+  unitOwned: { label: "Exemplaires d'une unité possédés (unité visée)", value: (p: PlayerState, target?: string) => (target ? (p.units?.[target]?.count ?? 0) : 0) },
+  unitMastery: {
+    label: "Exemplaires d'une unité au niveau maximal (unité visée ; 0 sous ce niveau)",
+    value: (p: PlayerState, target?: string) => {
+      const u = target ? UNITS.find((x) => x.id === target) : undefined;
+      const s = u ? p.units?.[u.id] : undefined;
+      return u && s && (s.level ?? 0) >= u.maxLevel ? (s.count ?? 0) : 0;
+    },
+  },
+  buildingLevel: { label: "Niveau d'un bâtiment (bâtiment visé)", value: (p: PlayerState, target?: string) => (target ? (p.buildings?.[target]?.level ?? 0) : 0) },
   /** Défi d'alliance « Les vigies » : garnisons envoyées et balayages (avec ou sans lune, Q40). */
   vigil: { label: "Garnisons envoyées et balayages de phalange", value: (p: PlayerState) => (playerStats(p).garrisons ?? 0) + (playerStats(p).phalanxScans ?? 0) },
 } satisfies Record<string, { label: string; value: (p: PlayerState) => number }>;
 
 export type AchievementMetric = keyof typeof METRICS;
+
+/**
+ * 6.14.129 (AJ27-6) : mesures qui comptent un contenu précis (le succès porte `target`). Hors des concours, titres, défis
+ * d'alliance et paliers générés (une mesure sans cible vaut 0) ; le brouillard des paliers les range par mesure **et** cible.
+ */
+export const TARGETED_METRICS: readonly AchievementMetric[] = ["unitOwned", "unitMastery", "buildingLevel"];
+export function isTargetedMetric(m: string): boolean {
+  return (TARGETED_METRICS as readonly string[]).includes(m);
+}
+/** Famille d'un succès : sa mesure, et son contenu visé pour une mesure ciblée (brouillard, palier précédent). */
+export function achievementFamily(a: Pick<AchievementDef, "metric" | "target">): string {
+  return a.target && isTargetedMetric(a.metric) ? `${a.metric}:${a.target}` : a.metric;
+}
 
 /* ---------- les succès par défaut ---------- */
 
@@ -457,6 +483,218 @@ export function derivedAchievements(): AchievementDef[] {
   ];
 }
 
+/* ---------- 6.14.129 (AJ27-6, AJ-1) : succès dérivés par unité et par bâtiment ---------- */
+
+/**
+ * Succès propres à chaque unité et à chaque bâtiment du contenu en vigueur (une unité ajoutée dans l'admin reçoit les siens) :
+ * - « Escadre » (ou « Rempart » pour une défense) : posséder N exemplaires, N = budget ÷ coût de l'unité, borné par une part
+ *   du hangar plein (bâtiments au niveau maximal) pour rester atteignable ;
+ * - « Maître » : l'unité au niveau maximal et N × facteur exemplaires ;
+ * - bâtiment : le niveau réglé (20), ou son niveau maximal s'il est plus bas.
+ * Seuils, palier, récompense, textes et activation se règlent ici (Admin → Règles → « Succès par unité et par bâtiment »).
+ * Rythme (É30-6) : ce sont des succès de maîtrise, pas de prise en main ; voir `docs/changes/6.14.129-succes-par-contenu.md`.
+ * Identifiants stables (`unite_<id>_escadre`, `unite_<id>_maitre`, `batiment_<id>_niveau`) : un réglage changé ne retire
+ * aucun succès gagné (I25). Valeurs littérales (CLAUDE.md, initialisation des modules).
+ */
+export const CONTENT_ACHIEVEMENT_RULES = {
+  enabled: true,
+  unitFleetEnabled: true,
+  unitFleetTier: "argent",
+  /** Valeur (coût de base cumulé, toutes ressources) des exemplaires à posséder. */
+  unitFleetBudget: 20_000_000,
+  unitFleetMin: 10,
+  /** Part du hangar plein (bâtiments au niveau maximal, sans techno) que le « Maître » ne dépasse pas (l'escadre : ÷ facteur). */
+  unitFleetMaxHangarShare: 0.5,
+  unitFleetXp: 25,
+  unitFleetHours: 0,
+  unitFleetName: "Escadre : {name}",
+  defenseFleetName: "Rempart : {name}",
+  unitFleetText: "Possède {n} × {name}.",
+  unitMasterEnabled: true,
+  unitMasterTier: "or",
+  /** Exemplaires du succès « Maître » = seuil de l'escadre × ce facteur (borné par le hangar plein). */
+  unitMasterFactor: 2,
+  unitMasterXp: 60,
+  unitMasterHours: 1,
+  unitMasterName: "Maître : {name}",
+  unitMasterText: "{name} au niveau {level} et {n} exemplaires possédés.",
+  buildingEnabled: true,
+  buildingTier: "or",
+  buildingLevel: 20,
+  buildingXp: 60,
+  buildingHours: 1,
+  buildingName: "{name} niveau {level}",
+  buildingText: "{name} au niveau {level}.",
+  /** Seuil imposé par succès (identifiant → seuil écrit), à la place du calcul. */
+  thresholds: {} as Record<string, number>,
+  /** Succès dérivés coupés (identifiants) ; ceux déjà gagnés restent acquis. */
+  disabled: [] as string[],
+};
+
+/** 6.14.129 : libellé, unité, bornes et aide (admin, Tous les réglages et Admin → Règles). */
+export const CONTENT_ACHIEVEMENT_RULES_META = {
+  enabled: { label: "Succès par unité et par bâtiment", hint: "Décoché : aucun succès dérivé du contenu (ceux déjà gagnés restent acquis)." },
+  unitFleetEnabled: { label: "Succès « Escadre » (N exemplaires d'une unité)" },
+  unitFleetTier: { label: "Palier du succès « Escadre »", hint: "bronze, argent, or, legendaire ou mythique (jetons du casino selon le palier)." },
+  unitFleetBudget: { label: "Valeur d'une escadre", unit: "ressources", min: 1000, max: 1e12, hint: "Seuil = cette valeur ÷ coût de base de l'unité (toutes ressources), arrondi." },
+  unitFleetMin: { label: "Seuil minimal d'une escadre", unit: "unités", min: 1, max: 1e6 },
+  unitFleetMaxHangarShare: {
+    label: "Seuil maximal : part du hangar plein",
+    unit: "part",
+    min: 0.01,
+    max: 1,
+    hint: "Borne du « Maître » (l'escadre : cette part ÷ le facteur du « Maître »). Hangar de la catégorie, bâtiments au niveau maximal, sans techno ni effet : le seuil reste atteignable.",
+  },
+  unitFleetXp: { label: "XP du succès « Escadre »", unit: "XP", min: 0, max: 10_000 },
+  unitFleetHours: { label: "Production du succès « Escadre »", unit: "h", min: 0, max: 48 },
+  unitFleetName: { label: "Nom d'un succès « Escadre » (vaisseau)", hint: "{name} : nom de l'unité." },
+  defenseFleetName: { label: "Nom d'un succès « Escadre » (défense)", hint: "{name} : nom de l'unité." },
+  unitFleetText: { label: "Texte d'un succès « Escadre »", hint: "{n} : seuil ; {name} : nom de l'unité." },
+  unitMasterEnabled: { label: "Succès « Maître » (niveau maximal et exemplaires)" },
+  unitMasterTier: { label: "Palier du succès « Maître »", hint: "bronze, argent, or, legendaire ou mythique." },
+  unitMasterFactor: { label: "Exemplaires du « Maître » (× escadre)", unit: "×", min: 0.1, max: 100, hint: "Borné par le hangar plein, comme l'escadre." },
+  unitMasterXp: { label: "XP du succès « Maître »", unit: "XP", min: 0, max: 10_000 },
+  unitMasterHours: { label: "Production du succès « Maître »", unit: "h", min: 0, max: 48 },
+  unitMasterName: { label: "Nom d'un succès « Maître »", hint: "{name} : nom de l'unité." },
+  unitMasterText: { label: "Texte d'un succès « Maître »", hint: "{name}, {level} : niveau maximal de l'unité, {n} : exemplaires. Une unité sans niveau (maximum 1) prend le texte de l'escadre." },
+  buildingEnabled: { label: "Succès de niveau par bâtiment" },
+  buildingTier: { label: "Palier du succès de bâtiment", hint: "bronze, argent, or, legendaire ou mythique." },
+  buildingLevel: { label: "Niveau visé par bâtiment", unit: "niveau", min: 1, max: 1000, hint: "Le niveau maximal du bâtiment s'il est plus bas." },
+  buildingXp: { label: "XP du succès de bâtiment", unit: "XP", min: 0, max: 10_000 },
+  buildingHours: { label: "Production du succès de bâtiment", unit: "h", min: 0, max: 48 },
+  buildingName: { label: "Nom d'un succès de bâtiment", hint: "{name} : nom du bâtiment ; {level} : niveau visé." },
+  buildingText: { label: "Texte d'un succès de bâtiment", hint: "{name}, {level}." },
+  thresholds: { label: "Seuils imposés par succès", hint: "Identifiant du succès (unite_<id>_escadre, unite_<id>_maitre, batiment_<id>_niveau) → seuil, à la place du calcul." },
+  disabled: { label: "Succès dérivés coupés (ids)", hint: "Ni affichés ni attribués ; ceux déjà gagnés restent acquis." },
+};
+
+/** Palier réglé, ou celui par défaut s'il est inconnu (une règle mal saisie ne casse pas la liste). */
+function contentTier(v: unknown, fallback: AchievementTier): AchievementTier {
+  return typeof v === "string" && v in TIER_LABELS ? (v as AchievementTier) : fallback;
+}
+function fillText(tpl: unknown, fallback: string, vars: Record<string, string>): string {
+  let out = typeof tpl === "string" && tpl.trim() ? tpl : fallback;
+  for (const [k, v] of Object.entries(vars)) out = out.split(`{${k}}`).join(v);
+  return out;
+}
+/** Arrondi lisible (2 chiffres significatifs, vers le bas : le seuil reste sous la borne du hangar). */
+function contentRound(n: number): number {
+  if (!(n >= 1)) return 1;
+  const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(n)) - 1));
+  return Math.max(1, Math.floor(n / p) * p);
+}
+/** Id de succès sûr à partir d'un identifiant de contenu (minuscules, chiffres, _). */
+function contentKey(id: string): string {
+  return id.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+}
+
+/** Hangar plein d'une catégorie (bâtiments au niveau maximal, sans techno ni effet) : borne des seuils d'exemplaires.
+ *  Gardé le temps d'un calcul de `contentAchievements` (le serveur applique le contenu à chaque requête). */
+let hangarMemo: Partial<Record<"attack" | "defense", number>> | null = null;
+function fullHangar(category: "attack" | "defense"): number {
+  if (hangarMemo) return (hangarMemo[category] ??= fullHangarCapacity(category));
+  return fullHangarCapacity(category);
+}
+
+/** Seuils d'exemplaires d'une unité (escadre, maître) selon les règles en vigueur. */
+export function unitAchievementThresholds(u: Pick<UnitDef, "id" | "cost" | "category" | "hangarSpace">): { fleet: number; master: number } {
+  const r = CONTENT_ACHIEVEMENT_RULES;
+  const cost = Math.max(1, Object.values(u.cost ?? {}).reduce((a: number, b) => a + (Number(b) || 0), 0));
+  const share = Math.min(1, Math.max(0.01, Number(r.unitFleetMaxHangarShare) || 0.5));
+  const factor = Math.max(0.1, Number(r.unitMasterFactor) || 1);
+  const cap = Math.floor((fullHangar(u.category === "defense" ? "defense" : "attack") * share) / Math.max(1, Number(u.hangarSpace) || 1));
+  const bound = (n: number, max: number) => contentRound(Math.max(1, Math.min(max > 0 ? max : n, Math.max(Number(r.unitFleetMin) || 1, n))));
+  // L'escadre reste sous le « Maître » : sa borne est celle du « Maître » ÷ le facteur.
+  const fleet = bound((Number(r.unitFleetBudget) || 0) / cost, Math.floor(cap / Math.max(1, factor)));
+  const master = bound(fleet * factor, cap);
+  const own = r.thresholds ?? {};
+  const pick = (id: string, v: number) => (Number(own[id]) > 0 ? Math.floor(Number(own[id])) : v);
+  const key = contentKey(u.id);
+  return { fleet: pick(`unite_${key}_escadre`, fleet), master: pick(`unite_${key}_maitre`, master) };
+}
+
+/** 6.14.129 (AJ27-6) : succès dérivés du contenu en vigueur (unités, bâtiments), lus après les règles (`applyAchievementPace`). */
+export function contentAchievements(): AchievementDef[] {
+  const r = CONTENT_ACHIEVEMENT_RULES;
+  if (!r.enabled) return [];
+  // Registres lus à l'usage : au premier chargement (import circulaire possible, CLAUDE.md), rien ; `applyGameContent` les ajoute.
+  let units: UnitDef[];
+  let buildings: typeof BUILDINGS;
+  try {
+    units = UNITS;
+    buildings = BUILDINGS;
+  } catch {
+    return [];
+  }
+  // Bundle des hooks (goja) : un registre pas encore initialisé vaut `undefined` au lieu de lever une erreur.
+  if (!Array.isArray(units) || !Array.isArray(buildings)) return [];
+  // Le serveur applique le contenu à chaque requête : même contenu et mêmes règles → même liste (copies), sans la recalculer.
+  const sig = [
+    JSON.stringify(r),
+    units.map((u) => `${u.id}:${u.name}:${u.maxLevel}:${u.category}:${u.hangarSpace}:${JSON.stringify(u.cost)}`).join(","),
+    buildings.map((b) => `${b.id}:${b.name}:${b.maxLevel}:${b.effect?.type === "hangar" ? `${b.effect.category}${b.effect.perLevel}` : ""}`).join(","),
+  ].join("|");
+  if (contentMemo?.sig !== sig) {
+    hangarMemo = {};
+    try {
+      contentMemo = { sig, list: buildContentAchievements(r, units, buildings) };
+    } finally {
+      hangarMemo = null;
+    }
+  }
+  return contentMemo.list.map((a) => ({ ...a }));
+}
+let contentMemo: { sig: string; list: AchievementDef[] } | null = null;
+
+function buildContentAchievements(r: typeof CONTENT_ACHIEVEMENT_RULES, units: UnitDef[], buildings: typeof BUILDINGS): AchievementDef[] {
+  const off = new Set(Array.isArray(r.disabled) ? r.disabled : []);
+  const out: AchievementDef[] = [];
+  const reward = (xp: unknown, hours: unknown) => ({ rewardXp: Math.max(0, Math.floor(Number(xp) || 0)), rewardHours: Math.max(0, Number(hours) || 0) });
+  for (const u of units) {
+    const key = contentKey(u.id);
+    const t = unitAchievementThresholds(u);
+    const defense = u.category === "defense";
+    if (r.unitFleetEnabled) {
+      const tier = contentTier(r.unitFleetTier, "argent");
+      const name = fillText(defense ? r.defenseFleetName : r.unitFleetName, "Escadre : {name}", { name: u.name });
+      out.push({
+        ...def(`unite_${key}_escadre`, "flotte", tier, "unitOwned", t.fleet, name, fillText(r.unitFleetText, "Possède {n} × {name}.", { n: formatInt(t.fleet), name: u.name }), defense ? "🛡️" : "🚀"),
+        ...reward(r.unitFleetXp, r.unitFleetHours),
+        auto: true,
+        target: u.id,
+      });
+    }
+    if (r.unitMasterEnabled) {
+      const tier = contentTier(r.unitMasterTier, "or");
+      const vars = { name: u.name, level: formatInt(u.maxLevel), n: formatInt(t.master) };
+      // Une unité sans niveau (maximum 1) : le texte de l'escadre, avec le seuil du « Maître ».
+      const text = u.maxLevel > 1 ? fillText(r.unitMasterText, "{name} au niveau {level} et {n} exemplaires possédés.", vars) : fillText(r.unitFleetText, "Possède {n} × {name}.", vars);
+      out.push({
+        ...def(`unite_${key}_maitre`, "flotte", tier, "unitMastery", t.master, fillText(r.unitMasterName, "Maître : {name}", vars), text, "🎖️"),
+        ...reward(r.unitMasterXp, r.unitMasterHours),
+        auto: true,
+        target: u.id,
+      });
+    }
+  }
+  if (r.buildingEnabled) {
+    const tier = contentTier(r.buildingTier, "or");
+    for (const b of buildings) {
+      const id = `batiment_${contentKey(b.id)}_niveau`;
+      const own = Number((r.thresholds ?? {})[id]);
+      const level = own > 0 ? Math.floor(own) : Math.max(1, Math.min(Math.floor(Number(r.buildingLevel) || 20), b.maxLevel));
+      const vars = { name: b.name, level: formatInt(level) };
+      out.push({
+        ...def(id, "construction", tier, "buildingLevel", level, fillText(r.buildingName, "{name} niveau {level}", vars), fillText(r.buildingText, "{name} au niveau {level}.", vars), "🏗️"),
+        ...reward(r.buildingXp, r.buildingHours),
+        auto: true,
+        target: b.id,
+      });
+    }
+  }
+  return out.filter((a) => !off.has(a.id));
+}
+
 /** 6.14.56 (AU27, AP-1) : succès du code retirés exprès par l'admin. Les autres succès par défaut absents de la liste
  *  enregistrée (succès ajoutés au code après la première écriture de la liste) sont complétés à l'application du contenu. */
 export const ACHIEVEMENT_LIST_RULES = { removedDefaults: [] as string[] };
@@ -582,11 +820,34 @@ export function paceDescription(text: string, written: number, shown: number): s
   return text.slice(0, m.index) + m[1] + formatInt(shown) + text.slice(m.index + m[0].length);
 }
 
+/**
+ * 6.14.130 : premier chargement du module. Les succès dérivés lisent d'autres registres (officiers, boss, unités, bâtiments) ; selon
+ * l'ordre des imports (import circulaire, CLAUDE.md « Initialisation des modules »), ils peuvent ne pas être prêts : la liste
+ * initiale s'en passe, `applyGameContent` les ajoute. Après le chargement, une erreur remonte normalement.
+ */
+let moduleLoaded = false;
+function whenLoaded(fn: () => AchievementDef[]): AchievementDef[] {
+  if (moduleLoaded) return fn();
+  try {
+    return fn();
+  } catch {
+    return [];
+  }
+}
+
+/** Liste donnée par le contenu (admin, code) : les succès dérivés s'y ajoutent à chaque application des règles. */
+let givenAchievements: AchievementDef[] = [];
 /** Liste écrite (avant le rythme) : relue quand les règles changent (`applyAchievementPace`). */
 let writtenAchievements: AchievementDef[] = [];
 
 /** 6.14.117 : registre recalculé depuis la liste écrite et les règles en vigueur (appelé après les règles, `applyGameContent`). */
 export function applyAchievementPace(): void {
+  // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
+  // 6.14.129 (AJ27-6) : recalculés ici, après les règles (CLAUDE.md : `setAchievements` passe avant les règles) ;
+  // un succès de même identifiant dans la liste donnée (admin) l'emporte.
+  const have = new Set(givenAchievements.map((d) => d.id));
+  writtenAchievements = [...givenAchievements, ...whenLoaded(derivedAchievements).filter((d) => !have.has(d.id))];
+  for (const d of whenLoaded(contentAchievements)) if (!have.has(d.id)) writtenAchievements.push(d);
   ACHIEVEMENTS.splice(
     0,
     ACHIEVEMENTS.length,
@@ -598,12 +859,17 @@ export function applyAchievementPace(): void {
 }
 
 export function setAchievements(defs: AchievementDef[]) {
-  // v5.14 : les succès dérivés des catalogues s'ajoutent s'ils manquent (catalogue personnalisé).
-  const have = new Set(defs.map((d) => d.id));
-  writtenAchievements = [...defs, ...derivedAchievements().filter((d) => !have.has(d.id))];
+  givenAchievements = defs;
   applyAchievementPace();
 }
+
+/** 6.14.130 : liste donnée sans recalcul du registre ; `applyGameContent` appelle `applyAchievementPace` après les règles
+ *  (un seul calcul des succès dérivés par application du contenu : le serveur applique le contenu à chaque requête). */
+export function setAchievementList(defs: AchievementDef[]) {
+  givenAchievements = defs;
+}
 setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS));
+moduleLoaded = true;
 
 /* ---------- 5.26.2 : indices des succès secrets ---------- */
 
@@ -655,7 +921,8 @@ export type AchievementVisibility = "shown" | "fog" | "secret";
 export function achievementVisibility(defs: AchievementDef[], unlocked: ReadonlySet<string>): Map<string, AchievementVisibility> {
   const out = new Map<string, AchievementVisibility>();
   const byMetric = new Map<string, AchievementDef[]>();
-  for (const a of defs) byMetric.set(a.metric, [...(byMetric.get(a.metric) ?? []), a]);
+  // 6.14.129 : une mesure ciblée se range par contenu (l'escadre de frégates ne cache pas celle des chasseurs).
+  for (const a of defs) byMetric.set(achievementFamily(a), [...(byMetric.get(achievementFamily(a)) ?? []), a]);
   for (const list of byMetric.values()) {
     let nextShown = false;
     for (const a of [...list].sort((x, y) => x.threshold - y.threshold)) {
@@ -671,12 +938,13 @@ export function achievementVisibility(defs: AchievementDef[], unlocked: Readonly
 
 /** Palier précédent dans la même mesure (pour dire quoi obtenir avant de révéler un palier caché). */
 export function previousTier(defs: AchievementDef[], a: AchievementDef): AchievementDef | null {
-  return defs.filter((d) => d.metric === a.metric && d.threshold < a.threshold).sort((x, y) => y.threshold - x.threshold)[0] ?? null;
+  return defs.filter((d) => achievementFamily(d) === achievementFamily(a) && d.threshold < a.threshold).sort((x, y) => y.threshold - x.threshold)[0] ?? null;
 }
 
-export function achievementValue(a: Pick<AchievementDef, "metric">, player: PlayerState): number {
+export function achievementValue(a: Pick<AchievementDef, "metric" | "target">, player: PlayerState): number {
   const m = METRICS[a.metric];
-  return m ? m.value(player) : 0;
+  // 6.14.129 : une mesure ciblée lit le contenu visé (`target`) ; les autres ignorent le second argument.
+  return m ? (m.value as (p: PlayerState, target?: string) => number)(player, a.target) : 0;
 }
 
 export function achievementProgress(a: AchievementDef, player: PlayerState): { value: number; target: number; done: boolean } {
@@ -710,6 +978,7 @@ export function validateAchievements(defs: AchievementDef[]): string[] {
     if (seen.has(a.id)) errors.push(`${label} : identifiant en double.`);
     seen.add(a.id);
     if (!(a.metric in METRICS)) errors.push(`${label} : mesure inconnue.`);
+    else if (isTargetedMetric(a.metric) && !/^[A-Za-z0-9_-]+$/.test(a.target ?? "")) errors.push(`${label} : contenu visé manquant (unité ou bâtiment).`);
     if (!(a.threshold > 0)) errors.push(`${label} : seuil invalide.`);
     if (!(a.tier in TIER_LABELS)) errors.push(`${label} : palier inconnu.`);
     if (!(a.category in CATEGORY_LABELS)) errors.push(`${label} : catégorie inconnue.`);

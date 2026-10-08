@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_ACHIEVEMENTS, setAchievements } from "@/game/achievements";
+import { applyAchievementPace, CONTENT_ACHIEVEMENT_RULES, DEFAULT_ACHIEVEMENTS, setAchievements } from "@/game/achievements";
 import { CHAIN_KIND_LABELS, CHAIN_LINK_LABELS, chainRowScore, contentChainGaps, contentChainReport, PALETTE_KINDS, type ChainKind } from "@/game/contentChain";
 import { COLONY_SPECS, RARE_DEPOSITS } from "@/game/colonies";
 import { empireClasses } from "@/game/empireClass";
@@ -19,13 +19,7 @@ import { UNITS } from "@/game/units";
 const each = (kind: ChainKind, ids: string[], link: string, why: string): Record<string, string> => Object.fromEntries(ids.map((id) => [`${kind}:${id}:${link}`, why]));
 
 const KNOWN_GAPS: Record<string, string> = {
-  // AJ-1 : succès propre par unité (QJ1). La sonde (espionnages) et le drone de recyclage (débris recyclés) l'ont déjà.
-  ...each(
-    "unit",
-    ["fregate", "cargo", "sentinelle", "chasseur", "etoile_noire", "croiseur_nova", "lance_gravitationnelle", "roquette", "canon_impulsion", "canon_plasma", "batterie_aa", "intercepteur", "bastion", "batterie_essaim", "vaisseau_atelier", "traqueur_kesh", "chasse_fantome", "brise_rempart", "lame_ecarlate", "recolteur", "croiseur_raid", "eclaireur_lointain"],
-    "achievementOwn",
-    "AJ27-6 : succès dérivés par unité (« 100 × », « niveau max »)",
-  ),
+  // AJ-1 : succès propre par unité et par bâtiment : comblé par les succès dérivés (6.14.129, AJ27-6).
   // AJ-1 : porteur propre par unité (QJ2 : plan de module « signature »). Seule la Sentinelle a le sien (Sceau des Sentinelles).
   ...each(
     "unit",
@@ -33,22 +27,7 @@ const KNOWN_GAPS: Record<string, string> = {
     "carrierOwn",
     "AJ27-10 : porteurs « signature » par unité (plans de module ou reliques)",
   ),
-  // AJ-1 : succès propre par bâtiment (« niveau 20 »). L'Atelier (unités réparées) et la Cale sèche l'ont déjà.
-  ...each(
-    "building",
-    ["extracteur_ferraille", "reacteur_instable", "extracteur_nanocomposants", "archives_fracturees", "hangar_attaque", "hangar_defense", "entrepot", "fonderie_quantique", "synthetiseur_neuronal", "generateur_bouclier", "labo_synthese"],
-    "achievementOwn",
-    "AJ27-6 : succès dérivés par bâtiment (« niveau 20 »)",
-  ),
-  // AJ-9 : Ctrl+K ne cherche que les unités, bâtiments et technos.
-  "relic:*:palette": "AJ27-8 : Ctrl+K étendu (reliques → Inventaire)",
-  "worldBoss:*:palette": "AJ27-8 : Ctrl+K étendu (boss → Boss)",
-  "allianceBoss:*:palette": "AJ27-8 : Ctrl+K étendu (boss → Boss)",
-  "seasonBoss:*:palette": "AJ27-8 : Ctrl+K étendu (boss → Boss)",
-  "colony:*:palette": "AJ27-8 : Ctrl+K étendu (fiches du Codex)",
-  "talent:*:palette": "AJ27-8 : Ctrl+K étendu (fiches du Codex)",
-  "module:*:palette": "AJ27-8 : Ctrl+K étendu (fiches du Codex)",
-  "class:*:palette": "AJ27-8 : Ctrl+K étendu (fiches du Codex)",
+  // AJ-9 : Ctrl+K étendu à tous les types (6.14.130, AJ27-8).
   // AJ-4 : talents, modules et classes d'empire sans fiche de Codex ni succès propre.
   "talent:*:codex": "AJ27-9 : Codex « Doctrines »",
   "talent:*:achievementMastery": "AJ27-9 : succès « Spécialiste » (une branche complète)",
@@ -109,21 +88,36 @@ describe("6.14.11 : chaîne de contenu", () => {
     }
   });
 
-  it("une unité ajoutée sans succès ni porteur propres fait échouer la garde (son préréglage est généré, 6.14.123)", () => {
+  it("une unité ajoutée sans porteur propre fait échouer la garde (préréglage et succès générés, 6.14.123 et 6.14.129)", () => {
     UNITS.push({ ...UNITS[0], id: "corvette_essai", name: "Corvette d'essai" });
     try {
       // 6.14.123 (AA5, AA-18) : préréglages d'effets générés pour une unité ajoutée (attaque et PV) : le maillon est rempli.
+      // Avant l'application du contenu, ses succès dérivés n'existent pas encore : le succès propre manque.
       expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:achievementOwn", "unit:corvette_essai:carrierOwn"]);
+      // 6.14.129 (AJ27-6) : à l'application du contenu (comme `applyGameContent`), elle reçoit « Escadre » et « Maître ».
+      applyAchievementPace();
+      expect(contentChainGaps().filter((g) => !known(g)).sort()).toEqual(["unit:corvette_essai:carrierOwn"]);
     } finally {
       UNITS.pop();
+      applyAchievementPace();
     }
   });
 
   it("les succès coupés comptent comme un maillon manquant", () => {
     setAchievements([]);
     expect(contentChainGaps()).toContain("unit:chasseur:achievementEntry");
-    // 6.14.114 : succès propre de la sonde (« espionnages », succès écrits ; les succès dérivés restent, setAchievements les ajoute).
-    expect(contentChainGaps()).toContain("unit:sonde_espionnage:achievementOwn");
+    // 6.14.129 : les succès dérivés par contenu restent (setAchievements les ajoute) : le succès propre est là…
+    expect(contentChainGaps()).not.toContain("unit:sonde_espionnage:achievementOwn");
+    // … sauf s'ils sont coupés dans les règles : la sonde perd alors son succès propre (« espionnages » est un succès écrit).
+    CONTENT_ACHIEVEMENT_RULES.enabled = false;
+    try {
+      applyAchievementPace();
+      expect(contentChainGaps()).toContain("unit:sonde_espionnage:achievementOwn");
+      expect(contentChainGaps()).toContain("building:entrepot:achievementOwn");
+    } finally {
+      CONTENT_ACHIEVEMENT_RULES.enabled = true;
+      applyAchievementPace();
+    }
   });
 });
 
@@ -160,11 +154,23 @@ describe("6.14.114 (AJ27-4) : maillons renforcés et panneau d'admin", () => {
 
   it("Ctrl+K : chaque type déclaré trouvable est bien lu par la palette", () => {
     const src = readFileSync("src/components/layout/CommandPalette.tsx", "utf8");
-    const registry: Partial<Record<ChainKind, string>> = { unit: "UNITS.filter(", building: "BUILDINGS.filter(", tech: "TECHNOLOGIES.filter(" };
-    for (const k of PALETTE_KINDS) {
-      expect(registry[k], `registre de ${k} à déclarer ici`).toBeTruthy();
-      expect(src, k).toContain(registry[k]!);
-    }
+    // 6.14.130 (AJ27-8) : les autres types passent par `matchPaletteContent` (paletteContent.ts), vérifié contenu par contenu.
+    const content = "matchPaletteContent(";
+    const registry: Record<ChainKind, string> = {
+      unit: "UNITS.filter(",
+      building: "BUILDINGS.filter(",
+      tech: "TECHNOLOGIES.filter(",
+      relic: content,
+      worldBoss: content,
+      allianceBoss: content,
+      seasonBoss: content,
+      colony: content,
+      talent: content,
+      module: content,
+      class: content,
+    };
+    for (const k of PALETTE_KINDS) expect(src, k).toContain(registry[k]);
+    expect([...PALETTE_KINDS].sort()).toEqual(Object.keys(CHAIN_KIND_LABELS).sort());
   });
 
   it("libellés de chaque type et maillon ; bilan par ligne", () => {

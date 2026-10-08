@@ -1,9 +1,9 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { GameRules } from "@/game/content";
 import { ACHIEVEMENT_GEN_RULES, ACHIEVEMENT_GEN_RULES_META } from "@/game/procedural";
-import { ACHIEVEMENT_PACE_RULES, ACHIEVEMENT_PACE_RULES_META, METRICS, type AchievementMetric } from "@/game/achievements";
+import { ACHIEVEMENT_PACE_RULES, ACHIEVEMENT_PACE_RULES_META, CONTENT_ACHIEVEMENT_RULES, CONTENT_ACHIEVEMENT_RULES_META, METRICS, TIER_LABELS, type AchievementMetric, type AchievementTier } from "@/game/achievements";
 import { CONTRACT_RULES, CONTRACT_RULES_META, type ContractType } from "@/game/contracts";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section, SelectField, TextField } from "@/pages/admin/fields";
 
 /* =====================================================
    6.14.108 et 6.14.109 (AU27, lots AP-L4 et AP-L5) : réglages des
@@ -12,7 +12,9 @@ import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
    - Objectifs du jour : poids de tirage, quantités, « Dépenser »,
      raids de faction (`dailyContracts`) ;
    - 6.14.117 (É30-6) : rythme des succès (`achievementPace`), facteur du
-     seuil en jeu par mesure de volume.
+     seuil en jeu par mesure de volume ;
+   - 6.14.129 (AJ27-6) : succès par unité et par bâtiment
+     (`contentAchievements`) : activation, palier, seuils, récompense, textes.
    Les mêmes champs restent dans « Tous les réglages (avancé) ».
 ===================================================== */
 
@@ -69,8 +71,58 @@ export function GeneratedGoalsFields({ rules, setRules }: { rules: R; setRules: 
       return { ...r, achievementPace: { ...g, scales: { ...((g.scales ?? {}) as Obj), [m]: v } } } as R;
     });
 
+  const ca = { ...CONTENT_ACHIEVEMENT_RULES, ...groupOf(rules, "contentAchievements") } as typeof CONTENT_ACHIEVEMENT_RULES;
+  type CaKey = keyof typeof CONTENT_ACHIEVEMENT_RULES_META;
+  const setCa = (k: CaKey, v: unknown) => setRules((r) => ({ ...r, contentAchievements: { ...groupOf(r, "contentAchievements"), [k]: v } }) as R);
+  const caMeta = (k: CaKey) => CONTENT_ACHIEVEMENT_RULES_META[k] as { label: string; min?: number; max?: number; hint?: string };
+  const caCheck = (k: CaKey) => <CheckboxField key={k} label={caMeta(k).label} checked={ca[k] as boolean} hint={caMeta(k).hint} onChange={(v) => setCa(k, v)} />;
+  const caNum = (k: CaKey, step: number, round = true) => (
+    <NumberField key={k} label={caMeta(k).label} value={ca[k] as number} min={caMeta(k).min} step={step} hint={caMeta(k).hint} onChange={(v) => setCa(k, round ? Math.round(v ?? 0) : (v ?? 0))} />
+  );
+  const caText = (k: CaKey) => <TextField key={k} label={caMeta(k).label} value={ca[k] as string} hint={caMeta(k).hint} onChange={(v) => setCa(k, v)} />;
+  const caTier = (k: CaKey) => (
+    <SelectField
+      key={k}
+      label={caMeta(k).label.replace(/^Palier/, "Palier (rareté)")}
+      value={ca[k] as AchievementTier}
+      options={(Object.keys(TIER_LABELS) as AchievementTier[]).map((t) => ({ value: t, label: TIER_LABELS[t] }))}
+      onChange={(v) => setCa(k, v)}
+    />
+  );
+
   return (
     <>
+      <Section title="Succès par unité et par bâtiment (6.14.129)">
+        <p className="text-sm text-slate-400 sm:col-span-2">
+          Générés pour chaque unité et chaque bâtiment du contenu en vigueur (une unité ajoutée reçoit les siens). Un succès déjà gagné reste gagné. Seuils imposés et succès coupés : Tous
+          les réglages, groupe « Succès : par unité et par bâtiment ».
+        </p>
+        {caCheck("enabled")}
+        {caCheck("unitFleetEnabled")}
+        {caTier("unitFleetTier")}
+        {caNum("unitFleetBudget", 1_000_000)}
+        {caNum("unitFleetMin", 1)}
+        {caNum("unitFleetMaxHangarShare", 0.05, false)}
+        {caNum("unitFleetXp", 5)}
+        {caNum("unitFleetHours", 1, false)}
+        {caText("unitFleetName")}
+        {caText("defenseFleetName")}
+        {caText("unitFleetText")}
+        {caCheck("unitMasterEnabled")}
+        {caTier("unitMasterTier")}
+        {caNum("unitMasterFactor", 0.5, false)}
+        {caNum("unitMasterXp", 5)}
+        {caNum("unitMasterHours", 1, false)}
+        {caText("unitMasterName")}
+        {caText("unitMasterText")}
+        {caCheck("buildingEnabled")}
+        {caTier("buildingTier")}
+        {caNum("buildingLevel", 1)}
+        {caNum("buildingXp", 5)}
+        {caNum("buildingHours", 1, false)}
+        {caText("buildingName")}
+        {caText("buildingText")}
+      </Section>
       <Section title="Succès : rythme des succès de volume (6.14.117)">
         <p className="text-sm text-slate-400 sm:col-span-2">
           Seuil en jeu = seuil écrit × facteur de la mesure. Un succès déjà gagné reste gagné ; le texte du succès suit le seuil en jeu. 1 = seuil écrit.

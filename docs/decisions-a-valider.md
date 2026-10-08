@@ -18,6 +18,11 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q328 | Seuil de l'« Escadre » par unité : N = 20 millions ÷ coût de l'unité (au moins 10, au plus 25 % du hangar plein) ; médiane simulée 24,5 % des succès à J7,6 (`docs/changes/6.14.129-succes-par-contenu.md`) | un succès d'argent par unité, atteint en semaines | valider |
+| Q329 | Succès « Maître » par unité : Niveau maximal **et** 2 × N exemplaires (le niveau maximal seul en donnerait 15 d'office à J7) (`docs/changes/6.14.129-succes-par-contenu.md`) | succès d'or plus long à obtenir | valider |
+| Q330 | Unités d'élite et de classe : Gardent leurs succès d'escadre et de maître (`docs/changes/6.14.129-succes-par-contenu.md`) | plus de succès pour les joueurs qui les débloquent | valider |
+| Q331 | Récompense du palier or : 1 h de production (et +60 XP) (`docs/changes/6.14.129-succes-par-contenu.md`) | aucun | valider |
+| Q332 | Ctrl+K vers le contenu : Mène à la page du système (le Codex n'a pas de lien direct par fiche) ; 3 résultats par type ; boss de chronique à venir cachés (`docs/changes/6.14.130-formules-ctrlk.md`) | recherche plus large, pas de divulgation des boss | valider |
 | Q323 | Retirer au lieu de supprimer : Un talent ou un modèle de module enregistré ne se supprime plus : case « Retiré » (une suppression effaçait les plans détenus) (`docs/changes/6.14.127-talents-modules.md`) | aucun plan ni module perdu | valider |
 | Q324 | Talent retiré : Ne s'apprend plus, mais les rangs déjà pris gardent leur effet (pas de points rendus) (`docs/changes/6.14.127-talents-modules.md`) | aucun pour un joueur qui l'avait | valider |
 | Q325 | Bornes et branches des talents : Valeur par rang ≤ 0,25 pour une part, ≤ 2 niveaux, ≤ 5 points ; branches de talents fixes (`docs/changes/6.14.127-talents-modules.md`) | aucun | valider |

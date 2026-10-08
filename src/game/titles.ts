@@ -1,5 +1,5 @@
 import { WORLD_BOSSES } from "@/game/worldBosses";
-import { METRICS, type AchievementMetric } from "@/game/achievements";
+import { isTargetedMetric, METRICS, type AchievementMetric } from "@/game/achievements";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -150,6 +150,7 @@ export function validateTitles(defs: TitleDef[]): string[] {
     if (!TITLE_RARITIES.some((r) => r.id === t.rarity)) errors.push(`Titre ${t.id} : rareté inconnue.`);
     if (t.unlock) {
       if (!(t.unlock.metric in METRICS)) errors.push(`Titre ${t.id} : mesure de déblocage inconnue.`);
+      else if (isTargetedMetric(t.unlock.metric)) errors.push(`Titre ${t.id} : mesure réservée aux succès par contenu.`);
       if (!(Number(t.unlock.threshold) > 0)) errors.push(`Titre ${t.id} : seuil de déblocage invalide.`);
     }
   }

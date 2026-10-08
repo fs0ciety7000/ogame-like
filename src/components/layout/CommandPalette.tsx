@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowUpCircle, Building2, CornerDownRight, FlaskConical, Flag, Gift, Hammer, Rocket, Search, User, Zap } from "lucide-react";
+import { ArrowUpCircle, Building2, Compass, CornerDownRight, FlaskConical, Flag, Gem, Gift, Globe2, Hammer, Medal, Puzzle, Rocket, Search, Skull, Sparkles, User, Zap } from "lucide-react";
 import { matchPaletteTabs } from "@/lib/paletteTabs";
 import { subscribeAlliances } from "@/services/allianceService";
 import { BUILDINGS } from "@/game/buildings";
@@ -13,6 +13,7 @@ import { assetUrl } from "@/lib/assets";
 import type { Alliance } from "@/types/game";
 import { ALL_NAV_ITEMS, useHardHiddenRoutes, useNavUnlock } from "@/components/layout/NavBar";
 import { navCondition } from "@/game/navUnlock";
+import { matchPaletteContent, type PaletteContentKind } from "@/game/paletteContent";
 import { closeCommandPalette, useCommandPaletteStore } from "@/store/commandPaletteStore";
 import { subscribeLeaderboard, type LeaderboardEntry } from "@/services/playerService";
 import { getRankLabel } from "@/game/ranks";
@@ -22,6 +23,19 @@ import { claimAllRewards, claimStreak, enqueueUnitBuild, GameActionError, startB
 import { applyBuildingDiscount, getBuildingUpgradeCost } from "@/game/buildings";
 import type { BuildingId } from "@/types/game";
 import { canAffordAll } from "@/game/resources";
+
+/** 6.14.130 (AJ27-8) : icône de repli de chaque type de contenu (sans image). */
+const CONTENT_ICONS: Record<PaletteContentKind, typeof Gem> = {
+  relic: Gem,
+  worldBoss: Skull,
+  allianceBoss: Skull,
+  seasonBoss: Skull,
+  colony: Globe2,
+  talent: Sparkles,
+  module: Puzzle,
+  class: Compass,
+  officer: Medal,
+};
 
 interface PaletteItem {
   key: string;
@@ -119,6 +133,11 @@ export function CommandPalette() {
     const techItems: PaletteItem[] = TECHNOLOGIES.filter((t) => match(t.nom))
       .slice(0, 4)
       .map((t) => ({ key: `tech-${t.id}`, label: t.nom, sublabel: "Technologie", icon: <FlaskConical className="h-4 w-4 text-cyan-glow" />, run: () => navigate("/game/labo") }));
+    // 6.14.130 (AJ27-8, AJ-9) : reliques, boss, colonies, talents, modules, classes et officiers (registres en vigueur).
+    const contentItems: PaletteItem[] = matchPaletteContent(q, Date.now()).map((e) => {
+      const Icon = CONTENT_ICONS[e.kind];
+      return { key: `content-${e.kind}-${e.id}`, label: e.label, sublabel: e.sublabel, icon: thumb(e.image) ?? <Icon className="h-4 w-4 text-cyan-glow" />, run: () => navigate(e.to) };
+    });
 
     // 5.16 : actions directes (améliorer, rechercher, construire, réclamer) ; le serveur valide tout.
     const run = (label: string, action: () => Promise<unknown>) => () => {
@@ -187,7 +206,7 @@ export function CommandPalette() {
     // 6.14.86 (AD-25) : les actions faisables d'abord, les impossibles en fin de liste (après les fiches qu'elles concernent).
     const doable = actionItems.filter((a) => !a.blocked);
     const blocked = actionItems.filter((a) => a.blocked);
-    return [...doable, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems, ...blocked];
+    return [...doable, ...navItems, ...tabItems, ...playerItems, ...allianceItems, ...unitItems, ...buildingItems, ...techItems, ...contentItems, ...blocked];
   }, [query, players, alliances, navigate, hidden, closed, player]);
 
   useEffect(() => {

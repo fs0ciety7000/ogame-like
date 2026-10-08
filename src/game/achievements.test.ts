@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   ACHIEVEMENTS,
+  contentAchievements,
   derivedAchievements,
   ACHIEVEMENT_HINT_RULES,
   achievementHint,
@@ -30,8 +31,8 @@ describe("succès (v2.3)", () => {
   beforeEach(() => setAchievements(structuredClone(DEFAULT_ACHIEVEMENTS)));
 
   it("has 76 valid achievements, keeping the 8 historical ids", () => {
-    // 76 succès de base + les succès dérivés des catalogues (v5.14).
-    expect(ACHIEVEMENTS).toHaveLength(76 + derivedAchievements().length);
+    // 76 succès de base + les succès dérivés des catalogues (v5.14) + ceux par unité et par bâtiment (6.14.129).
+    expect(ACHIEVEMENTS).toHaveLength(76 + derivedAchievements().length + contentAchievements().length);
     expect(validateAchievements(DEFAULT_ACHIEVEMENTS)).toEqual([]);
     for (const id of ["first_blood", "veteran", "architect", "expansion", "researcher", "commander", "fleet", "tireless"]) {
       expect(ACHIEVEMENTS.some((a) => a.id === id)).toBe(true);

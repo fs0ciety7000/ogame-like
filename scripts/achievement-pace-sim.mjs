@@ -2,6 +2,8 @@
 //
 //   node scripts/achievement-pace-sim.mjs [--scales '{"traded":200}'] [--days 5-30] [--details]
 //   node scripts/achievement-pace-sim.mjs --players joueurs.json --config config.json   # extraits gardés hors du dépôt
+//   node scripts/achievement-pace-sim.mjs --content '{"unitFleetBudget":2e7}'   # 6.14.129 : succès par contenu réglés autrement
+//   node scripts/achievement-pace-sim.mjs --content-off                           # 6.14.129 : sans les succès par contenu (avant)
 //
 // Sans fichiers : lit la pré-prod en lecture seule (PREPROD_PB_URL, PREPROD_PB_ADMIN_EMAIL, PREPROD_PB_ADMIN_PASSWORD ; adresse de
 // test exigée). Chaque joueur humain dont l'âge du compte (dernière activité − création) tombe dans `--days` est vu « comme un
@@ -22,6 +24,8 @@ const opt = (k) => {
 };
 const [minDays, maxDays] = (opt("--days") ?? "5-30").split("-").map(Number);
 const scalesArg = opt("--scales") ? JSON.parse(opt("--scales")) : null;
+// 6.14.129 (AJ27-6) : réglages des succès par unité et par bâtiment (`contentAchievements`), ou coupés.
+const contentArg = argv.includes("--content-off") ? { enabled: false } : opt("--content") ? JSON.parse(opt("--content")) : null;
 
 const SECTIONS = ["buildings", "units", "technologies", "missions", "factions", "ranks", "achievements", "rules", "warlords", "seasonPass", "chronicles", "passSeasons", "relics", "relicSettings", "titles", "worldBosses", "officers"];
 let players;
@@ -77,8 +81,9 @@ for (const k of SECTIONS) if (config[k] != null) overrides[k] = config[k];
 const withPace = (pace) => {
   const rules = structuredClone(overrides.rules ?? {});
   rules.achievementPace = pace;
+  if (contentArg) rules.contentAchievements = { ...(rules.contentAchievements ?? {}), ...contentArg };
   E.applyGameContent({ ...overrides, rules }, Date.now());
-  return E.ACHIEVEMENTS.filter((a) => a.enabled).map((a) => ({ id: a.id, metric: a.metric, tier: a.tier, threshold: a.threshold }));
+  return E.ACHIEVEMENTS.filter((a) => a.enabled).map((a) => ({ id: a.id, metric: a.metric, tier: a.tier, threshold: a.threshold, target: a.target }));
 };
 const off = withPace({ enabled: false });
 const on = withPace(scalesArg ? { enabled: true, scales: scalesArg } : (overrides.rules?.achievementPace ?? {}));
@@ -115,5 +120,16 @@ if (argv.includes("--details")) {
     const lo = off.filter((a) => a.metric === m);
     const hi = on.filter((a) => a.metric === m);
     console.log(`| ${m} | ${pace.scales?.[m] ?? 1} | ${lo.length} | ${q(sample.map((p) => met(lo, p).length), 0.5)} | ${q(sample.map((p) => met(hi, p).length), 0.5)} |`);
+  }
+  // 6.14.129 (AJ27-6) : succès par unité et par bâtiment (mesures ciblées), tenus par le joueur médian.
+  const targeted = ["unitOwned", "unitMastery", "buildingLevel"];
+  if (on.some((a) => targeted.includes(a.metric))) {
+    console.log("\n| Succès par contenu | nombre | tenus (Q1) | médiane | Q3 |");
+    console.log("|:--|--:|--:|--:|--:|");
+    for (const m of targeted) {
+      const list = on.filter((a) => a.metric === m);
+      const held = sample.map((p) => met(list, p).length);
+      console.log(`| ${m} | ${list.length} | ${q(held, 0.25)} | ${q(held, 0.5)} | ${q(held, 0.75)} |`);
+    }
   }
 }

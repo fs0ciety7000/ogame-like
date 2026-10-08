@@ -1,4 +1,4 @@
-import { achievementPaceScale, CATEGORY_LABELS, METRICS, paceThreshold, TIER_LABELS, TIER_REWARDS, type AchievementCategory, type AchievementDef, type AchievementMetric, type AchievementTier } from "@/game/achievements";
+import { achievementPaceScale, CATEGORY_LABELS, isTargetedMetric, METRICS, paceThreshold, TIER_LABELS, TIER_REWARDS, type AchievementCategory, type AchievementDef, type AchievementMetric, type AchievementTier } from "@/game/achievements";
 import { currentGameContent } from "@/game/content";
 import { formatInt } from "@/game/format";
 import { titleRarity } from "@/game/titles";
@@ -49,8 +49,20 @@ export function AchievementForm({ value: a, onChange, isNew }: { value: Achievem
           label="Mesure suivie"
           value={a.metric}
           options={(Object.keys(METRICS) as AchievementMetric[]).map((m) => ({ value: m, label: METRICS[m].label }))}
-          onChange={(v) => set({ metric: v })}
+          onChange={(v) => set({ metric: v, target: isTargetedMetric(v) ? a.target : undefined })}
         />
+        {/* 6.14.129 (AJ27-6) : mesure ciblée : le contenu visé (unité ou bâtiment du contenu en vigueur). */}
+        {isTargetedMetric(a.metric) && (
+          <SelectField
+            label="Contenu visé"
+            value={a.target ?? ""}
+            options={[
+              { value: "", label: "— à choisir —" },
+              ...(a.metric === "buildingLevel" ? currentGameContent().buildings : currentGameContent().units).map((x) => ({ value: x.id, label: x.name })),
+            ]}
+            onChange={(v) => set({ target: v || undefined })}
+          />
+        )}
         {/* 6.14.117 (É30-6) : seuil écrit ; le rythme des succès (Règles → Succès : rythme) peut le multiplier en jeu. */}
         <NumberField
           label="Seuil à atteindre (écrit)"

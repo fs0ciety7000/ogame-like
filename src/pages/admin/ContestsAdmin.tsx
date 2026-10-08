@@ -4,7 +4,7 @@ import { Ban, Plus, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { METRICS, type AchievementMetric } from "@/game/achievements";
+import { isTargetedMetric, METRICS, type AchievementMetric } from "@/game/achievements";
 import { CONTEST_RULES, contestPhase, validateContest, type ContestsState } from "@/game/contests";
 import { adminCancelContest, adminCreateContest, useContests } from "@/services/contestService";
 import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
@@ -43,7 +43,7 @@ export function ContestsAdmin() {
   const [busy, setBusy] = useState(false);
   const draft = { title, description, metric, startMs: new Date(start).getTime(), endMs: new Date(end).getTime(), potShare: share / 100, amberShare: amberShare / 100, places: PLACES.find((p) => p.id === places)!.places };
   const errors = useMemo(() => validateContest(draft, now), [title, metric, start, end, share, amberShare, places]); // eslint-disable-line react-hooks/exhaustive-deps
-  const metricOptions = (Object.keys(METRICS) as AchievementMetric[]).map((k) => ({ value: k, label: METRICS[k].label })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
+  const metricOptions = (Object.keys(METRICS) as AchievementMetric[]).filter((k) => !isTargetedMetric(k)).map((k) => ({ value: k, label: METRICS[k].label })).sort((a, b) => a.label.localeCompare(b.label, "fr"));
 
   const create = async () => {
     setBusy(true);

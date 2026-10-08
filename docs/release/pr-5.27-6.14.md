@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.128 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.130 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 193 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 195 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -229,6 +229,8 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.126 : Historique dans l'admin : ce qui a changé, retour d'un groupe de règles, réglages du serveur suivis (AA8) (`docs/changes/6.14.126-historique-admin.md`)
 - 6.14.127 : Talents et modules en sections de contenu : ajout qui agit, retrait au lieu de suppression (AA9, 1/2) (`docs/changes/6.14.127-talents-modules.md`)
 - 6.14.128 : Catalogue du passe en sections de contenu : thèmes et saisons éditables (AA9, 2/2) (`docs/changes/6.14.128-catalogue-passe.md`)
+- 6.14.129 : Succès par unité et par bâtiment : « Escadre », « Maître », niveau 20 (AJ27-6) (`docs/changes/6.14.129-succes-par-contenu.md`)
+- 6.14.130 : Formules générées depuis les registres et Ctrl+K étendu (AJ27-8) (`docs/changes/6.14.130-formules-ctrlk.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

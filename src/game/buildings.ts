@@ -463,6 +463,14 @@ export function getUnitCapacity(buildings: Buildings, category: "attack" | "defe
   return bonus > 0 ? Math.floor(capacity * (1 + bonus)) : capacity;
 }
 
+/** 6.14.129 (AJ27-6) : capacité brute d'un hangar quand tous les bâtiments sont au niveau maximal (sans techno ni effet) ;
+ *  borne des succès « Escadre » et « Maître » (achievements.ts). Calcul de capacité gardé ici (invariant I5). */
+export function fullHangarCapacity(category: "attack" | "defense"): number {
+  const all: Buildings = {};
+  for (const b of BUILDINGS) (all as Record<string, { level: number }>)[b.id] = { level: b.maxLevel };
+  return getUnitCapacity(all, category);
+}
+
 /** 5.28 : niveau effectif de la Cale sèche (0 sans elle), quel que soit l'identifiant donné en administration. */
 export function dockLevel(buildings: Buildings): number {
   const def = BUILDINGS.find((b) => b.effect?.type === "dock");

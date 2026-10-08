@@ -24,7 +24,8 @@ import { gateCooldownMs, JUMP_GATE_RULES } from "@/game/jumpGate";
 import { MOON_RULES, moonPity } from "@/game/moon";
 import { RESEARCH_RULES } from "@/game/technologies";
 import { TALENT_RULES } from "@/game/talents";
-import { ROLE_EFFECTS } from "@/game/commanders";
+import { COMMANDER_RULES } from "@/game/commanders";
+import { FORMULA_LAYER_LABELS, formulaCapRows, formulaClassRows, formulaOfficerRows, formulaSourceRows } from "@/game/formulasRegistry";
 import { EFFECT_CAP_RULES } from "@/game/effects";
 import { CHRONICLE_GEN_RULES } from "@/game/chronicleGen";
 import { RHYTHM_RULES, rhythmPhase } from "@/game/rhythm";
@@ -42,8 +43,6 @@ import { cn, formatCompact, formatDateTime, formatDecimal } from "@/lib/utils";
 ===================================================== */
 
 const pct = (x: number, digits = 0) => `${formatDecimal(x * 100, digits)} %`;
-/** 6.14.105 (AA4) : valeur par niveau d'un effet d'officier (ROLE_EFFECTS, réglable dans l'admin), lue à l'usage. */
-const perLevel = (role: keyof typeof ROLE_EFFECTS, i: number) => ROLE_EFFECTS[role]?.[i]?.perLevel ?? 0;
 /** « ½ », « 3 » : facteur d'une formule. */
 const factor = (x: number) => (x === 0.5 ? "½" : formatDecimal(x, 2));
 const n = (x: number) => (Number.isFinite(x) ? formatCompact(Math.round(x)) : "∞");
@@ -166,6 +165,27 @@ function Table({ head, rows }: { head: string[]; rows: ReactNode[][] }) {
   );
 }
 
+/** 6.14.130 : liste à une colonne (lisible à 375 px) : titre, étiquette en `font-mono`, lignes de texte. */
+function Lines({ items }: { items: { key: string; title: string; tag?: string; lines: string[] }[] }) {
+  return (
+    <ul className="flex flex-col">
+      {items.map((it) => (
+        <li key={it.key} className="border-t border-white/5 py-1.5 text-xs">
+          <p className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <span className="text-slate-100">{it.title}</span>
+            {it.tag && <span className="font-mono text-[11px] tabular-nums text-slate-500">{it.tag}</span>}
+          </p>
+          {it.lines.map((l) => (
+            <p key={l} className="text-slate-400">
+              {l}
+            </p>
+          ))}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Calculette de combat : deux puissances, un bouclier → issue, pertes, XP. */
 function CombatCalculator({ attack, defense, shield }: { attack: number; defense: number; shield: number }) {
   const [a, setA] = useState(Math.round(attack) || 10_000);
@@ -229,6 +249,11 @@ export function FormulasGuide({ player }: { player: PlayerState | null }) {
   const defense = p ? homeDefensePower(units, tech) : 0;
   const shield = p ? getShieldPercent(p.buildings, allianceShieldBonus(p.allianceResearch)) : 0;
   const pass = activePass(currentSeasonId(now));
+  // 6.14.130 (AJ27-8) : tableaux du bloc « Bonus » lus dans les registres (officiers, sources, plafonds, classes).
+  const officers = formulaOfficerRows();
+  const sources = formulaSourceRows();
+  const caps = formulaCapRows();
+  const classes = formulaClassRows();
   const buildingLevels = p ? BUILDINGS.reduce((a, b) => a + effectiveBuildingLevel(p.buildings, b.id), 0) : 0;
   // 6.14.88 (RL-3) : bâtiments exigés par l'Ascension et leur second palier (règles en vigueur).
   const ascensionBuildings = BUILDINGS.filter((b) => requiredForAscension(b));
@@ -546,20 +571,34 @@ ressources rares = récompense × max(1 + niveaux de bâtiments ÷ ${ECONOMY_RUL
         )}
       </Block>
 
-      <Block id="bonus" title="Bonus" icon={Sparkles} intro={`Officiers, reliques, talents d'Ascension et secteurs d'alliance s'additionnent par effet. Les réductions de durée sont plafonnées à ${pct(EFFECT_CAP_RULES.buildTime?.empire ?? 0.5)}.`}>
-        <Table
-          head={["Source", "Effet"]}
-          rows={[
-            ["Amiral", `+${pct(perLevel("admiral", 0))} d'attaque par niveau`],
-            ["Stratège", `+${pct(perLevel("strategist", 0))} de défense par niveau`],
-            ["Ingénieur", `−${pct(perLevel("engineer", 0))} de durée (construction, recherche) par niveau`],
-            ["Intendant", `+${pct(perLevel("steward", 0))} de production et +${pct(perLevel("steward", 1))} d'entrepôt par niveau`],
-            ["Espion", `+${formatDecimal(perLevel("spy", 0), 2)} niveau d'espionnage et +${pct(perLevel("spy", 1))} de détection par niveau`],
-            ["Reliques", "leur effet (attaque, défense, production, durées, cale, réparation…) selon la rareté"],
-            ["Talents d'Ascension", "production, attaque, défense, durées selon l'arbre"],
-            ["Secteurs d'alliance", "production de tous les membres tant que le secteur est tenu"],
-          ]}
+      {/* 6.14.130 (AJ27-8, AJ-8) : officiers, plafonds, sources et classes générés depuis les registres (formulasRegistry.ts). */}
+      <Block
+        id="bonus"
+        title="Bonus"
+        icon={Sparkles}
+        intro={`Chaque source s'additionne par effet dans sa couche (technologies, empire, alliance), puis chaque couche est plafonnée. Les réductions de durée de l'empire sont plafonnées à ${pct(EFFECT_CAP_RULES.buildTime?.empire ?? 0.5)}.`}
+      >
+        <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Officiers (par niveau, et au niveau {COMMANDER_RULES.maxLevel})</p>
+        <Lines items={officers.map((o) => ({ key: o.id, title: o.name, tag: o.rare ? "rare" : undefined, lines: [`par niveau : ${o.perLevel}`, `niveau ${COMMANDER_RULES.maxLevel} : ${o.atMax}`] }))} />
+        <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Sources d'effets</p>
+        <Lines
+          items={sources.map((s) => ({
+            key: s.kind,
+            title: s.label,
+            tag: `${s.layers.map((l) => FORMULA_LAYER_LABELS[l]).join(", ") || "—"} · ${formatDecimal(s.carriers.length, 0)}`,
+            lines: [s.stats.join(", ") || "—"],
+          }))}
         />
+        <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Plafonds par couche</p>
+        <Lines
+          items={caps.map((c) => ({
+            key: c.stat,
+            title: c.label,
+            lines: [(["tech", "empire", "alliance"] as const).map((l) => `${FORMULA_LAYER_LABELS[l]} ${c.caps[l] === undefined ? "—" : `${c.reduction ? "−" : "+"}${pct(c.caps[l] as number)}`}`).join(" · ")],
+          }))}
+        />
+        <p className="font-mono text-[11px] uppercase tracking-wider text-slate-500">Classes d'empire</p>
+        <Lines items={classes.map((c) => ({ key: c.id, title: `${c.emoji} ${c.name}`, lines: c.effects.length > 0 ? c.effects : ["—"] }))} />
         {p && (
           <Mine title="Tes bonus actifs">
             <Row label="Attaque" value={`+${pct(mods.attack, 1)}`} />

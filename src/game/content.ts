@@ -56,7 +56,7 @@ import { DEFAULT_TALENTS, setTalents, validateTalents, withDefaultTalents, type 
 import { DEFAULT_MODULE_FAMILIES, DEFAULT_MODULE_TEMPLATES, setModuleContent, validateModuleContent, withDefaultModuleFamilies, withDefaultModuleTemplates, type ModuleFamilyDef, type ModuleTemplate } from "@/game/modules";
 import { isUnitSelector } from "@/game/effects";
 import { DEFAULT_RANKS, setRanks, validateRanks, type RankDef } from "@/game/ranks";
-import { applyAchievementPace, DEFAULT_ACHIEVEMENTS, METRICS, setAchievements, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
+import { applyAchievementPace, DEFAULT_ACHIEVEMENTS, METRICS, setAchievementList, TIER_LABELS, validateAchievements, withDefaultAchievements, type AchievementDef } from "@/game/achievements";
 
 /* =====================================================
    Contenu du jeu piloté par les données.
@@ -443,7 +443,8 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   // v5.14 : officiers et boss mondiaux d'abord (succès et titres dérivés en dépendent).
   setOfficers(content.officers);
   setWorldBosses(content.worldBosses);
-  setAchievements(content.achievements);
+  // 6.14.130 : registre recalculé une seule fois, après les règles (`applyAchievementPace`, plus bas).
+  setAchievementList(content.achievements);
   setWarlords(content.warlords);
   setSeasonPass(content.seasonPass);
   setChronicles(content.chronicles);
@@ -725,6 +726,10 @@ function validateFixedListNumbers(merged: GameRules): string[] {
     if (!(id in METRICS)) errors.push(`Rythme des succès : mesure inconnue « ${id} ».`);
     else if (!(num(v) >= 1 && num(v) <= 1000)) errors.push(`Rythme des succès : facteur de « ${id} » entre 1 et 1 000.`);
   }
+  // 6.14.129 (AJ27-6) : succès par unité et par bâtiment, paliers connus et seuils imposés positifs.
+  const ca = merged.contentAchievements as Record<string, unknown>;
+  for (const k of ["unitFleetTier", "unitMasterTier", "buildingTier"]) if (!(typeof ca[k] === "string" && (ca[k] as string) in TIER_LABELS)) errors.push(`Succès par contenu : palier « ${String(ca[k])} » inconnu (bronze, argent, or, legendaire, mythique).`);
+  for (const [id, v] of entries(ca.thresholds)) if (!(Number.isFinite(num(v)) && num(v) >= 1)) errors.push(`Succès par contenu : seuil imposé de « ${id} » au moins 1.`);
   return errors;
 }
 
