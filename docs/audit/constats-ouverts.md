@@ -54,13 +54,12 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | Contenu | Lot | Image en place | Prompt |
 |:--|:--|:--|:--|
 | Classes d'empire (3), modules (7), spécialisations de colonie (4) | 6.14.93 | fichiers intégrés, pas encore affichés (emoji ou icône) : aucun champ d'image (Q240) | `scripts/illustrations.json` (fait) |
-| Reliques `cle_soudure` et `essaim_nanites` (non détourées) | 6.14.118 | image d'avant 6.14.92 gardée (fond gris, bande sombre) | `scripts/illustrations.json` (fait, attendues sur `/img`) |
-| Illustrations de saison (24 thèmes d'année, 33 portraits, 7 seconds boss) | 6.14.138 | image du thème, portrait du rôle, image unique du boss en attendant | `scripts/illustrations.json` (fait, attendues sur `/img`) ; branchement `docs/illustrations.md` (`SEASON_THEME_ART`, `SEASON_PORTRAITS`, `AUTO_ART_2`) |
 
 ## Fermés depuis le dernier inventaire
 
 | Id | Comment |
 |:--|:--|
+| Images provisoires (saisons, paliers, doctrines) | 6.14.119 : Clé de soudure et Essaim de nanites détourées ; 6.14.147 : 24 thèmes d'année du passe, 33 portraits de saison, 7 seconds boss des Chroniques, 21 icônes de paliers, 3 doctrines, module signature (images générées par API) |
 | AC-18, AC-22 en grande partie (AU27) ; AD-coût ; IT-seul | 6.14.135 (AC-H) : comptage sur la pré-prod (0 don ancien non réclamé, 4 rapports anciens non vus), `gift/claim`, `applyLegacyGift`, abonnement et alias `attack` retirés ; « Lancer maintenant » des 17 étapes de cadence (verrou, journal) ; tour des actions (66 actions, moteur ; 21 jamais jouées, serveur) ; ligne de coût des cartes d'alliance coupée entre deux ressources ; test AP-L7/AP-L8 autonome (B rendu actif) |
 | AC-5, AC-6, AC-12, AC-20, AC-21 (AU27) | 6.14.110 (AC-D) : un seul chemin de dépense (`spendResources`, `spendAmber`, garde de balayage), réclamations au Journal (Q76), rappel tracé et hôte prévenu, succès après l'action, `unitsSold` (I34) |
 | AC-7, AC-10 (AU27) ; AC-8 en grande partie | 6.14.111 (AC-E) : verrou par cadence, e-mails en file et par lots, tâches allégées (factions, flottes, rattrapage, rappels), échéances suspendues puis décalées après une maintenance (Q77, I35) ; mesure d'AC-8 sur la pré-prod au push |

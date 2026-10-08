@@ -365,12 +365,16 @@ export interface PassTheme {
 
 /** 6.14.93 : mois dont le commandant de saison a son portrait (public/assets/commanders/s-<mois>.webp). Un autre mois prend le
  *  portrait du rôle principal ; un portrait se règle aussi par saison dans l'admin (Passe de saison). */
-export const SEASON_PORTRAITS: readonly string[] = ["2026-11", "2026-12", "2027-01"];
+export const SEASON_PORTRAITS: readonly string[] = [
+  "2026-11", "2026-12", "2027-01", "2027-02", "2027-03", "2027-04", "2027-05", "2027-06", "2027-07", "2027-08", "2027-09", "2027-10", "2027-11", "2027-12", "2028-01", "2028-02", "2028-03", "2028-04", "2028-05", "2028-06", "2028-07", "2028-08", "2028-09", "2028-10", "2028-11", "2028-12", "2029-01", "2029-02", "2029-03", "2029-04", "2029-05", "2029-06", "2029-07", "2029-08", "2029-09", "2029-10",
+];
 
 /** 6.14.138 (AU27, lot AP-L11) : saisons du catalogue (`<thème>_<année>`) dont l'illustration propre existe
  *  (public/assets/pass/theme-<thème>-<année>.webp). Les autres prennent l'image du thème (image provisoire) ; l'année 1 garde
  *  l'image du thème (theme-<thème>.webp). Une saison générée (6.14.139) prend l'image de la saison écrite qu'elle prolonge. */
-export const SEASON_THEME_ART: readonly string[] = [];
+export const SEASON_THEME_ART: readonly string[] = [
+  "vide_2", "hiver_2", "forge_2", "bazar_2", "maree_2", "colonies_2", "primes_2", "comete_2", "moisson_2", "archives_2", "chantiers_2", "rempart_2", "vide_3", "hiver_3", "forge_3", "bazar_3", "maree_3", "colonies_3", "primes_3", "comete_3", "moisson_3", "archives_3", "chantiers_3", "rempart_3",
+];
 
 /** 6.14.138 : image de l'en-tête du passe d'une saison : image réglée sur la saison (admin), sinon son illustration d'année,
  *  sinon l'image du thème. */

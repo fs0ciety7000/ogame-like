@@ -148,7 +148,7 @@ export interface BuildingTierDef {
 /** 6.14.146 (PB-L5) : icônes de palier livrées (`public/assets/tiers/<clé>.webp`, `scripts/illustrations.json`, lignes
  *  « palier-<clé> »). Une clé ajoutée ici quand son rendu est intégré (`docs/illustrations.md`) ; les autres gardent l'image
  *  du bâtiment. */
-export const TIER_ART: string[] = [];
+export const TIER_ART: string[] = ["storage-choice", "storage-comfort", "storage-spec", "storage-signature", "repair-choice", "repair-comfort", "repair-spec", "repair-signature", "hangarAttack-choice", "hangarAttack-comfort", "hangarAttack-spec", "hangarAttack-signature", "hangarDefense-choice", "hangarDefense-comfort", "hangarDefense-spec", "hangarDefense-signature", "dock-choice", "dock-comfort", "dock-spec", "dock-signature", "foundry-slot"];
 
 /** Clé de l'icône d'un palier : `<famille>-<rôle>` (la Fonderie : une icône pour tous ses chantiers). */
 export function tierIconKey(family: TierFamily, index: number): string {
