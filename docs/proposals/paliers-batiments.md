@@ -1,8 +1,8 @@
 # Proposition : paliers des bâtiments (entrepôt, Atelier, hangars) et règle n° 4 réécrite
 
-Statut : **proposée, en attente de validation** (6.14.134, fiche [`docs/changes/6.14.134-proposition-paliers-batiments.md`](../changes/6.14.134-proposition-paliers-batiments.md)).
+Statut : **validée** (2026-10-08, option D et PB-Q1 à PB-Q8 validées sur `/decisions`, Q336 à Q343) ; lots PB-L0 à PB-L5 dans la feuille d'automne 2030 (6.14.134, fiche [`docs/changes/6.14.134-proposition-paliers-batiments.md`](../changes/6.14.134-proposition-paliers-batiments.md)).
 Lot AJ27-12 de la feuille de route `feuille-de-route-2030-automne.md` (lot 63), constat AJ-12 de la revue AU27
-(`docs/audit/2026-10-07-au27-jeu-chaine.md`). Aucun code de jeu n'est écrit tant que les questions PB-Q1 à PB-Q8 (§8) ne sont pas tranchées.
+(`docs/audit/2026-10-07-au27-jeu-chaine.md`). Les questions PB-Q1 à PB-Q8 (§8) sont tranchées : options recommandées retenues.
 
 ## 1. Constat
 
