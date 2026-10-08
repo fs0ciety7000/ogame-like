@@ -73,6 +73,9 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       spy: { baseMinutes: 0.03, minutesPerDistance: 0.001 },
       // Pas d'événement du week-end pendant les tests (résultats stables).
       events: { rotationEnabled: false, scheduled: [] },
+      // 6.14.106 (AE-L3) : A perd de nombreux combats pendant la suite ; la limite de défaites sur 24 h n'est active que
+      // dans son propre test.
+      pvp: { ...(((existing?.data as { pvp?: object } | undefined)?.pvp) ?? {}), maxDefeatsPer24h: 0 },
     };
     if (existing) {
       savedRules = { id: existing.id, data: existing.data };
@@ -1745,6 +1748,81 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
       for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}" && timestamp >= ${since}` })) await admin.collection("battle_reports").delete(r.id).catch(() => undefined);
       for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
       await admin.collection("players").update(aId, { moon: null, units: aBefore?.units, resources: aBefore?.resources, lastDefeatAtMs: aBefore?.lastDefeatAtMs ?? 0, xp: aBefore?.xp });
+      await admin.collection("players").update(bId, { allianceId: bBefore?.allianceId ?? "", units: bBefore?.units });
+      await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
+    }
+  }, 60_000);
+
+  it("6.14.106 (AE-L3) comptoir : plafond hebdomadaire des rares compté par le serveur, refus au-delà", async () => {
+    await ensureAB();
+    const rules = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const rulesBefore = rules.data;
+    const bBefore = await snap(bId);
+    try {
+      await admin.collection("game_config").update(rules.id, { data: { ...(rulesBefore as object), exchange: { commonToRare: 0.01, rareToCommon: 50, taxPct: 0, weeklyRareCap: 1000 } } });
+      await admin.collection("players").update(bId, { resources: { ...RICH, scrap: 1_000_000, energy: 1_000_000 }, exchangeWeek: null, vacation: null, resourcesUpdatedAtMs: Date.now() });
+      await loginPlayer(B.email, B.pw);
+      expect(await ps.tradeResources(bId, "scrap", "reinforcedSteel", 60_000)).toEqual({ gained: 600, tax: 0, taxRes: "reinforcedSteel" });
+      expect((await snap(bId)).exchangeWeek).toMatchObject({ rares: 600 });
+      await expect(ps.tradeResources(bId, "scrap", "cyberModule", 50_000)).rejects.toThrow(/t'en reste 400 cette semaine/);
+      // Rien n'a été retiré par l'échange refusé ; rares → communes reste libre.
+      expect((await snap(bId)).exchangeWeek).toMatchObject({ rares: 600 });
+      await ps.tradeResources(bId, "reinforcedSteel", "scrap", 10);
+      expect(await ps.tradeResources(bId, "energy", "cyberModule", 40_000)).toMatchObject({ gained: 400 });
+      await expect(ps.tradeResources(bId, "scrap", "aiFragment", 100)).rejects.toThrow(/Reviens lundi/);
+    } finally {
+      await admin.collection("game_config").update(rules.id, { data: rulesBefore });
+      await admin.collection("players").update(bId, { resources: bBefore?.resources, exchangeWeek: null });
+      await loginPlayer(B.email, B.pw);
+    }
+  }, 60_000);
+
+  it("6.14.106 (AE-L3) défaites par 24 h : attaque refusée après 4, flotte en vol renvoyée à l'arrivée", async () => {
+    await ensureAB();
+    const rules = await admin.collection("game_config").getFirstListItem('key="rules"');
+    const rulesBefore = rules.data as { pvp?: object };
+    const aBefore = await snap(aId);
+    const bBefore = await snap(bId);
+    const H = 3_600_000;
+    const now = Date.now();
+    const reports: string[] = [];
+    const fleets: string[] = [];
+    try {
+      await admin.collection("game_config").update(rules.id, { data: { ...rulesBefore, pvp: { ...(rulesBefore.pvp ?? {}), maxDefeatsPer24h: 4 } } });
+      await admin.collection("players").update(aId, { createdAtMs: MONTH_AGO(), lastDefeatAtMs: 0, lastAttackAtMs: now - H, ascendedAtMs: 0, vacation: null, xp: bBefore.xp, colonies: [] });
+      await admin.collection("players").update(bId, { allianceId: "", units: { fregate: { level: 1, count: 20 } }, createdAtMs: MONTH_AGO(), ascendedAtMs: 0, vacation: null });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && status != "done"` })) await admin.collection("fleets").delete(f.id);
+      // Défaites anciennes de A effacées de la fenêtre (rapports des tests précédents), puis 3 défaites récentes.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `defenderUid="${aId}" && outcome="attacker_win" && timestamp > ${now - 25 * H}` })) {
+        await admin.collection("battle_reports").update(r.id, { timestamp: now - 25 * H });
+      }
+      // Délai entre deux attaques de B sur A : anciennes attaques des tests précédents reculées de 3 h.
+      for (const r of await admin.collection("battle_reports").getFullList({ filter: `attackerUid="${bId}" && defenderUid="${aId}" && timestamp > ${now - 3 * H}` })) await admin.collection("battle_reports").update(r.id, { timestamp: now - 3 * H });
+      for (const f of await admin.collection("fleets").getFullList({ filter: `ownerUid="${bId}" && targetUid="${aId}" && mission="attack" && departAtMs > ${now - 3 * H}` })) await admin.collection("fleets").update(f.id, { departAtMs: now - 3 * H });
+      for (const h of [20, 12, 6]) reports.push((await admin.collection("battle_reports").create({ attackerUid: "pnj_test", defenderUid: aId, outcome: "attacker_win", timestamp: now - h * H })).id);
+      await loginPlayer(B.email, B.pw);
+      // 3 défaites : le décollage passe.
+      const sent = await ps.sendFleet(aId, { fregate: 5 }, "attack");
+      fleets.push(sent.id);
+      // 4e défaite (par un autre) pendant le vol : à l'arrivée, la flotte rentre sans combattre.
+      reports.push((await admin.collection("battle_reports").create({ attackerUid: "pnj_test", defenderUid: aId, outcome: "attacker_win", timestamp: Date.now() - 1000 })).id);
+      await forceArrival(sent.id);
+      await ps.syncPlayer("");
+      const landed = await admin.collection("fleets").getOne(sent.id);
+      expect(landed.status).toBe("returning");
+      expect(landed.outcome).toBe("none");
+      expect(landed.reportId || "").toBe("");
+      const notes = await admin.collection("notifications").getFullList({ filter: `player_id="${bId}" && title="Cible protégée"` });
+      expect(notes.length).toBeGreaterThanOrEqual(1);
+      expect(notes[0].message).toMatch(/perdu 4 combats en défense ces dernières 24 h/);
+      // Nouveau décollage : refusé, avec le délai jusqu'à la sortie de la plus ancienne (20 h → encore ≈ 4 h).
+      await expect(ps.sendFleet(aId, { fregate: 5 }, "attack")).rejects.toThrow(/perdu 4 combats en défense ces dernières 24 h : il est protégé encore [34] h/);
+      for (const n of notes) await admin.collection("notifications").delete(n.id).catch(() => undefined);
+    } finally {
+      for (const id of reports) await admin.collection("battle_reports").delete(id).catch(() => undefined);
+      for (const id of fleets) await admin.collection("fleets").delete(id).catch(() => undefined);
+      await admin.collection("game_config").update(rules.id, { data: rulesBefore });
+      await admin.collection("players").update(aId, { lastDefeatAtMs: aBefore?.lastDefeatAtMs ?? 0, lastAttackAtMs: aBefore?.lastAttackAtMs ?? 0, xp: aBefore?.xp, createdAtMs: aBefore?.createdAtMs });
       await admin.collection("players").update(bId, { allianceId: bBefore?.allianceId ?? "", units: bBefore?.units });
       await loginPlayer(B.email, B.pw); // les tests suivants agissent en B
     }

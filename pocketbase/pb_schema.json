@@ -410,6 +410,13 @@
         "required": false,
         "maxSize": 4000,
         "presentable": false
+      },
+      {
+        "name": "exchangeWeek",
+        "type": "json",
+        "required": false,
+        "maxSize": 1000,
+        "presentable": false
       }
     ],
     "indexes": [

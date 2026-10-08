@@ -52,6 +52,8 @@ export const GAME_FIELDS = [
   "workshop",
   // 6.14.85 (RL-2) : projets de prestige.
   "prestige",
+  // 6.14.106 (AE-L3) : compteur hebdomadaire du comptoir.
+  "exchangeWeek",
 ] as const;
 
 export const QUEUE_FIELDS = ["buildingUpgrades", "unitQueues", "activeResearches", "activeMissions", "buildPlan"] as const;

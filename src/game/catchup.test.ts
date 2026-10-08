@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { CATCHUP_RULES, catchupBonus, catchupFactorAt, computeCatchup, developmentScore, median } from "@/game/catchup";
+import { CATCHUP_RULES, catchupBonus, catchupFactorAt, computeCatchup, developmentScore, median, validateCatchupRules } from "@/game/catchup";
 import { advanceResources } from "@/game/economy";
 import { defaultPlayerState } from "@/game/defaults";
 import type { PlayerState } from "@/types/game";
@@ -11,9 +11,10 @@ afterEach(() => Object.assign(CATCHUP_RULES, saved));
 
 describe("rattrapage de production (5.16)", () => {
   it("bonus plein, dégressif, puis nul selon la part de la médiane", () => {
-    expect(catchupBonus(5, 100)).toBeCloseTo(0.25);
-    expect(catchupBonus(10, 100)).toBeCloseTo(0.25);
-    expect(catchupBonus(30, 100)).toBeCloseTo(0.125);
+    // 6.14.106 (AE-15) : +50 % sous 20 % de la médiane, dégressif jusqu'à 50 %.
+    expect(catchupBonus(5, 100)).toBeCloseTo(0.5);
+    expect(catchupBonus(20, 100)).toBeCloseTo(0.5);
+    expect(catchupBonus(35, 100)).toBeCloseTo(0.25);
     expect(catchupBonus(50, 100)).toBe(0);
     expect(catchupBonus(80, 100)).toBe(0);
     expect(catchupBonus(5, 0)).toBe(0);
@@ -28,7 +29,7 @@ describe("rattrapage de production (5.16)", () => {
     const players = [active("a", 100), active("b", 100), active("c", 100), active("d", 100), active("small", 5), { uid: "gone", score: 1, lastActiveMs: now - 30 * 86400_000 }];
     const res = computeCatchup(players, now);
     expect(res.median).toBe(100);
-    expect(res.bonuses.small?.factor).toBe(1.25);
+    expect(res.bonuses.small?.factor).toBe(1.5);
     expect(res.bonuses.a).toBeNull();
     expect(computeCatchup(players.slice(0, 3), now).median).toBe(0);
   });
@@ -43,6 +44,17 @@ describe("rattrapage de production (5.16)", () => {
     expect(gainBoost).toBeGreaterThan(gainBase * 1.15);
     expect(catchupFactorAt({ bonuses: { catchup: { factor: 1.2, untilMs: start, ratio: 0 } } }, start + 1)).toBe(1);
     expect(developmentScore({ buildings: { a: { level: 3 } } as never, techLevels: { t: 2 } as never })).toBe(5);
+  });
+});
+
+describe("6.14.106 (AE-15) : rattrapage relevé, toujours borné", () => {
+  it("défauts 0,5 / 0,2 ; un bonus figé ne dépasse jamais 1 + maxBonus ; validation au plus +100 %", () => {
+    expect(CATCHUP_RULES.maxBonus).toBe(0.5);
+    expect(CATCHUP_RULES.fullBelow).toBe(0.2);
+    expect(catchupFactorAt({ bonuses: { catchup: { factor: 3, untilMs: Date.now() + 3600_000, ratio: 0 } } }, Date.now())).toBeLessThanOrEqual(1.5001);
+    expect(validateCatchupRules({ maxBonus: 1.5 }).join(" ")).toMatch(/entre 0 et 1/);
+    expect(validateCatchupRules({ maxBonus: 0.5, fullBelow: 0.2 })).toEqual([]);
+    expect(validateCatchupRules({ fullBelow: 0.6 }).join(" ")).toMatch(/plein bonus/);
   });
 });
 

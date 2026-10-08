@@ -22,7 +22,7 @@ Z0 (mise en production) est écartée pour l'instant (Q12, 2026-10-07) : on enri
 
 | Id | Origine | Constat | Lot |
 |:--|:--|:--|:--|
-| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32 (fermés par AA3, 6.14.104 : AA-1, AA-4, AA-7 à AA-11, AA-13, AA-29, AA-32 ; chiffres seuls pour AA-2 et AA-5, sections en AA9 ; AA-12 déjà réglable depuis 6.14.84, surcharge par techno à faire ; fermés par AA4, 6.14.105 : AA-21, AA-22 ; AA-6 en partie, forces des mutateurs réglables, liste et effets composés en AA7), AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17 sauf AE-6 et AE-8 (AE-3 et AE-7 : reste le moteur, lot AE-L3), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
+| AU27 | sept audits du 2026-10-07 | AJ-1 à AJ-17, AA-1 à AA-32 (fermés par AA3, 6.14.104 : AA-1, AA-4, AA-7 à AA-11, AA-13, AA-29, AA-32 ; chiffres seuls pour AA-2 et AA-5, sections en AA9 ; AA-12 déjà réglable depuis 6.14.84, surcharge par techno à faire ; fermés par AA4, 6.14.105 : AA-21, AA-22 ; AA-6 en partie, forces des mutateurs réglables, liste et effets composés en AA7), AC-1 à AC-22, AP-1 à AP-16, AD-1 à AD-30, AE-1 à AE-17 sauf AE-2, AE-3, AE-6, AE-7, AE-8 et AE-15 (fermés par AE-L3, 6.14.106 : AE-2 plafond du comptoir, AE-3 coffre indexé, AE-7 défaites par 24 h, AE-15 rattrapage ; à mesurer en AE-L4), AI-1 à AI-17 (`docs/audit/2026-10-07-au27-*.md`) | lots de `feuille-de-route-2030-automne.md` |
 | TH-danger | 6.14.96 | Rouge « danger » sous 4,5:1 sur `space-600` dans 7 thèmes (4,1 à 4,45:1 ; 4,5 et plus sur `space-700`) | revue AU28 (avec `theme-audit.mjs`) |
 | É30-5 | 6.14.39 | Galaxie (LCP 8,4 s mobile), images du Codex (6 à 8 Mo), stabilité mobile | É30-5 |
 
@@ -64,8 +64,9 @@ Suivi : page « Atelier d'illustrations » et `python3 scripts/illustrations.py 
 | Images provisoires (lot 1) | 6.14.92 : Cale sèche, lune, phalange, porte de saut, 4 technos (plus d'image commune), annonce 5.7, 14 reliques (plus d'image empruntée ni cassée), 9 objets du Comptoir, monument de prestige ; images générées par API |
 | AE-6 | 6.14.72 : vaisseaux à quai 75 %, défense à domicile +25 % ; seuil JcJ ×0,75 → ×0,90 (simulation `pvpBudget.ts`) ; l'effet en production se suit avec Z1-c |
 | AE-8 | 6.14.72 : `pvp.hardXpRatio` 12 → 10 (Q100), le premier quartile d'XP hors de portée de la médiane |
-| AE-3 (bornes) | 6.14.72 : coffre du 7e jour 2 M à 12 M (465 h → 20 h de production du joueur quotidien) ; l'indexation reste au lot AE-L3 |
-| AE-7 (bouclier) | 6.14.72 : bouclier de 3 h après une défaite ; le plafond de défaites par 24 h reste au lot AE-L3 |
+| AE-3 | 6.14.72 : coffre du 7e jour 2 M à 12 M (465 h → 20 h de production du joueur quotidien) ; 6.14.106 : indexé, 6 à 18 h de production dans la place libre de l'entrepôt, plancher 2 M |
+| AE-7 | 6.14.72 : bouclier de 3 h après une défaite ; 6.14.106 : 4 défaites en défense par 24 h au plus (décollage et arrivée) |
+| AE-2, AE-15 | 6.14.106 : comptoir plafonné à 30 M de rares par semaine (compteur serveur) ; rattrapage +50 % sous 20 % de la médiane |
 | PRG-1 (octobre) | Z1, 6.14.16 : missions à +2 au lancement du passe (Q3 close) |
 | Z1-b | 6.14.17 : Codex dans « Tout réclamer » (Q27) |
 | Z1-d | Pas de route logistique en prod, car les routes (5.33) ne sont pas sur `main` (5.27.0) : ce n'est pas un signal |

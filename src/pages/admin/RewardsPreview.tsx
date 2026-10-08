@@ -111,8 +111,11 @@ export function StreakSection({ rules, setRules, saved }: { rules: GameRules; se
         <NumberField label="Ambre max" value={st.chest.amber[1]} min={0} step={10} onChange={(v) => setChest("amber", 1, v ?? 0)} />
         <NumberField label="Jetons min" value={st.chest.tokens[0]} min={0} step={1} onChange={(v) => setChest("tokens", 0, v ?? 0)} />
         <NumberField label="Jetons max" value={st.chest.tokens[1]} min={0} step={1} onChange={(v) => setChest("tokens", 1, v ?? 0)} />
-        <NumberField label="Ressource min" value={st.chest.common[0]} min={0} step={5_000_000} onChange={(v) => setChest("common", 0, v ?? 0)} />
-        <NumberField label="Ressource max" value={st.chest.common[1]} min={0} step={5_000_000} onChange={(v) => setChest("common", 1, v ?? 0)} />
+        {/* 6.14.106 (AE-L3, Q99) : coffre indexé sur la production ; le minimum fixe sert de plancher. */}
+        <NumberField label="Ressources : heures de production min" value={st.chest.commonHours[0]} min={0} step={1} onChange={(v) => setChest("commonHours", 0, v ?? 0)} hint="Par ressource commune, tirées à part. 0 et 0 : bornes fixes ci-dessous." />
+        <NumberField label="Ressources : heures de production max" value={st.chest.commonHours[1]} min={0} step={1} onChange={(v) => setChest("commonHours", 1, v ?? 0)} />
+        <NumberField label="Ressource : plancher (et min fixe)" value={st.chest.common[0]} min={0} step={1_000_000} onChange={(v) => setChest("common", 0, v ?? 0)} hint="Au moins ce montant par ressource, même pour un petit empire." />
+        <NumberField label="Ressource : max fixe (sans heures)" value={st.chest.common[1]} min={0} step={1_000_000} onChange={(v) => setChest("common", 1, v ?? 0)} hint="Sert seulement si les heures valent 0." />
       </div>
       <BeforeAfter
         title="Une semaine complète, par joueur"
@@ -120,7 +123,9 @@ export function StreakSection({ rules, setRules, saved }: { rules: GameRules; se
           { label: "Heures de production", before: b.hours, after: a.hours },
           { label: "Jetons du casino (coffre moyen compris)", before: b.tokens, after: a.tokens },
           { label: "Ambre (coffre moyen compris)", before: b.amber, after: a.amber },
-          { label: "Coffre : chaque ressource commune (moyenne)", before: b.chestCommon, after: a.chestCommon, format: (n) => formatCompact(n) },
+          a.chestHours !== null || b.chestHours !== null
+            ? { label: "Coffre : heures de production par ressource (moyenne)", before: b.chestHours ?? 0, after: a.chestHours ?? 0 }
+            : { label: "Coffre : chaque ressource commune (moyenne)", before: b.chestCommon, after: a.chestCommon, format: (n: number) => formatCompact(n) },
         ]}
         note="Le coffre compte pour sa valeur moyenne. Les joueurs voient les nouveaux chiffres dès l'enregistrement."
       />
@@ -136,7 +141,7 @@ export function CatchupSection({ rules, setRules }: { rules: GameRules; setRules
   return (
     <Section title="Rattrapage des petits empires">
       <CheckboxField label="Activer le rattrapage" checked={c.enabled} onChange={(v) => set({ enabled: v })} />
-      <NumberField label="Bonus maximal (0,25 = +25 %)" value={c.maxBonus} min={0} step={0.05} onChange={(v) => set({ maxBonus: v ?? 0 })} />
+      <NumberField label="Bonus maximal (0,5 = +50 %)" value={c.maxBonus} min={0} step={0.05} onChange={(v) => set({ maxBonus: v ?? 0 })} />
       <NumberField label="Bonus plein sous (part de la médiane)" value={c.fullBelow} min={0} step={0.05} onChange={(v) => set({ fullBelow: v ?? 0 })} />
       <NumberField label="Plus de bonus à partir de (part de la médiane)" value={c.endsAt} min={0.05} step={0.05} onChange={(v) => set({ endsAt: v ?? 0.5 })} />
       <NumberField label="Joueurs actifs minimum pour la médiane" value={c.minPlayers} min={2} step={1} onChange={(v) => set({ minPlayers: Math.round(v ?? 5) })} />

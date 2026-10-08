@@ -9,7 +9,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Badge } from "@/components/ui/badge";
 import { currentGameContent, ruleDriftWarnings, validateGameContent, validateRules, type GameContent, type GameRules } from "@/game/content";
 import { HudCallout } from "@/components/ui/hud";
-import { RESOURCE_LIST } from "@/game/resources";
+import { EXCHANGE_RULES, RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import {
@@ -57,6 +57,9 @@ export function RulesPanel() {
   const [busy, setBusy] = useState(false);
   const pvp = rules.pvp;
   const setPvp = (patch: Partial<GameRules["pvp"]>) => setRules((r) => ({ ...r, pvp: { ...r.pvp, ...patch } }));
+  // 6.14.106 (AE-L3) : comptoir d'échange (groupe du registre, typé par son objet de règles).
+  const exchange = { ...EXCHANGE_RULES, ...(rules.exchange as Partial<typeof EXCHANGE_RULES>) };
+  const setExchange = (patch: Partial<typeof EXCHANGE_RULES>) => setRules((r) => ({ ...r, exchange: { ...r.exchange, ...patch } }));
 
   const ruleErrors = useMemo(() => validateRules(rules), [rules]);
   // 6.14.59 (AA1, Q75) : écarts de plus de ×2 au défaut, signalés sans bloquer.
@@ -135,6 +138,15 @@ export function RulesPanel() {
           <NumberField label="Part minimale gardée (butin, XP)" value={pvp.weakTargetFloor} min={0} step={0.05} onChange={(v) => setPvp({ weakTargetFloor: v ?? 0 })} hint="0,25 = 25 %." />
           <NumberField label="Écart d'XP maximal (×)" value={pvp.hardXpRatio} min={1} step={1} onChange={(v) => setPvp({ hardXpRatio: v ?? 1 })} hint="Cible interdite si son XP × cette valeur < ton XP." />
           <NumberField label="…à partir de (XP de l'attaquant)" value={pvp.xpGapFloor} min={0} step={50} onChange={(v) => setPvp({ xpGapFloor: v ?? 0 })} />
+          {/* 6.14.106 (AE-L3, AE-7) : défaites en défense sur 24 h glissantes. */}
+          <NumberField
+            label="Défaites en défense sur 24 h avant protection"
+            value={pvp.maxDefeatsPer24h}
+            min={0}
+            step={1}
+            onChange={(v) => setPvp({ maxDefeatsPer24h: Math.max(0, Math.round(v ?? 0)) })}
+            hint="Toutes planètes et attaquants réunis ; plus aucune attaque jusqu'à ce que la plus ancienne ait 24 h. 0 = sans limite."
+          />
         </Section>
         <Section title="XP et butin">
           <NumberField label="Perte d'XP max en défense / 24 h" value={pvp.defenseXpLossCapPer24h} min={0} step={5} onChange={(v) => setPvp({ defenseXpLossCapPer24h: v ?? 0 })} />
@@ -443,6 +455,39 @@ export function RulesPanel() {
             value={rules.market.priceBand}
             step={0.5}
             onChange={(v) => setRules((r) => ({ ...r, market: { ...r.market, priceBand: v ?? 0 } }))}
+          />
+        </Section>
+        {/* 6.14.106 (AE-L3, Q98) : comptoir d'échange (registre « exchange »), plafond hebdomadaire des rares. */}
+        <Section title="Comptoir d'échange">
+          <NumberField
+            label="Rares par ressource commune"
+            value={exchange.commonToRare}
+            min={0.0001}
+            step={0.001}
+            hint="0,004 = 1 rare pour 250 communes (valeur de la bascule du rythme)."
+            onChange={(v) => setExchange({ commonToRare: v ?? 0.01 })}
+          />
+          <NumberField
+            label="Communes par ressource rare"
+            value={exchange.rareToCommon}
+            min={1}
+            step={5}
+            onChange={(v) => setExchange({ rareToCommon: v ?? 50 })}
+          />
+          <NumberField
+            label="Taxe (0,05 = 5 %)"
+            value={exchange.taxPct}
+            min={0}
+            step={0.01}
+            onChange={(v) => setExchange({ taxPct: v ?? 0 })}
+          />
+          <NumberField
+            label="Rares reçues par semaine, au plus"
+            value={exchange.weeklyRareCap}
+            min={0}
+            step={100_000}
+            hint="Toutes rares réunies, après taxe, contre des communes ; remise à zéro le lundi 00 h UTC. 0 = sans plafond."
+            onChange={(v) => setExchange({ weeklyRareCap: Math.max(0, Math.round(v ?? 0)) })}
           />
         </Section>
         <Section title="Expéditions">

@@ -39,7 +39,7 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 24d | RL-3 | Bascule du rythme (comprend AE-L2 : second palier ×4 en durée, recherche tardive ×30, Ascension tous les 30 jours au plus, 10 au maximum) au début d'un mois avec annonce ; garde I29 étendue à 365 jours | M | livré (6.14.88 ; bascule datée au 1er novembre 2026, annonce en attente de son image `annonce-rythme`) |
 | 24e | RL-4 | Mesures après la bascule (sessions bloquées, production perdue, jour des Ascensions) | S | à faire |
 | 24f | RL-5 | Réglage fin après 8 semaines ; échelle des rangs au-delà de J90 | S | livré en partie (6.14.89, réglage avant bascule ; mesures après la bascule restent) |
-| 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | à faire |
+| 25 | AE-L3 | Coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h (moteur et admin) | M | livré (6.14.106) |
 | 26 | AE-L4 | Santé de l'équilibre : Ambre par source, temps avant la mort des boss, 1re Ascension, production perdue | S | à faire |
 | 27 | AP-L4 | Succès procéduraux bridés (détenteurs minimum, un palier par mois) | S | à faire |
 | 28 | AP-L5 | Objectifs du jour pondérés et réglables | S | à faire |

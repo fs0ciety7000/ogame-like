@@ -114,6 +114,24 @@ describe("AE-L1 : migration rules-6.14.72", () => {
   });
 });
 
+/* 6.14.106 (AU27, lot AE-L3, AE-15) : rattrapage relevé, même règle (seul un champ resté à l'ancien défaut change). */
+describe("AE-L3 : migration rules-6.14.106", () => {
+  it("rattrapage 0,25 / 0,1 → 0,5 / 0,2 ; un réglage de l'admin est gardé", () => {
+    const data = { catchup: { enabled: true, maxBonus: 0.25, fullBelow: 0.1, endsAt: 0.5 } };
+    const changes: string[] = [];
+    expect(rulesMigration("rules-6.14.106").run(data, changes)).toBe(true);
+    expect(data.catchup).toEqual({ enabled: true, maxBonus: 0.5, fullBelow: 0.2, endsAt: 0.5 });
+    expect(changes).toHaveLength(2);
+    const d = defaultGameContent().rules;
+    expect([d.catchup.maxBonus, d.catchup.fullBelow]).toEqual([0.5, 0.2]);
+    const custom = { catchup: { maxBonus: 0.3, fullBelow: 0.1 } };
+    expect(rulesMigration("rules-6.14.106").run(custom, [])).toBe(true);
+    expect(custom.catchup).toEqual({ maxBonus: 0.3, fullBelow: 0.2 });
+    expect(rulesMigration("rules-6.14.106").run({ catchup: { maxBonus: 0.4 } }, [])).toBe(false);
+    expect(rulesMigration("rules-6.14.106").run(null, [])).toBe(false);
+  });
+});
+
 /* 6.14.92 : les reliques qui empruntaient l'image d'une autre ont la leur. La migration remplace l'ancienne image provisoire
    d'une liste personnalisée par celle que prend la relique par défaut (`relicImage` : /assets/relics/<id>.webp). */
 describe("6.14.92 : migration relics-art-6.14.92", () => {

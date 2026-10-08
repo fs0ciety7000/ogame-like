@@ -8,7 +8,7 @@ import { ResourceIcon } from "@/components/ui/game-icon";
 import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { TokenIcon } from "@/components/casino/TokenIcon";
 import { describeGain } from "@/game/format";
-import { cycleDay, STREAK_RULES, streakReward, streakState, streakStatus, type StreakChest } from "@/game/streak";
+import { chestCommonLabel, cycleDay, STREAK_RULES, streakReward, streakState, streakStatus, type StreakChest } from "@/game/streak";
 import { claimStreak, GameActionError } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
@@ -143,7 +143,7 @@ export function StreakBadge() {
                 rows: [
                   { label: "Ambre", value: `${c.amber[0]} à ${c.amber[1]}` },
                   { label: "Jetons", value: `${c.tokens[0]} à ${c.tokens[1]}` },
-                  { label: "Chaque commune", value: `${formatCompact(c.common[0])} à ${formatCompact(c.common[1])}` },
+                  { label: "Chaque commune", value: chestCommonLabel(c, formatCompact) },
                 ],
               },
             ]}

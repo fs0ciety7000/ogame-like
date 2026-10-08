@@ -22,7 +22,7 @@ import { eventDebrisPercent, lootFactor } from "@/game/events";
 import { ALLIANCE_RULES, allianceShieldBonus } from "@/game/alliances";
 import { formationEffects, postureEffects } from "@/game/formations";
 import { applyXpDelta } from "@/game/seasons";
-import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp, weakTargetFactor } from "@/game/pvp";
+import { capDefenderXpLoss, checkAttackAllowed, computeCombatXp, defeatLimitUntil, formatPvpWait, PVP_RULES, weakTargetFactor } from "@/game/pvp";
 import { playerModifiers, withRepairBonus } from "@/game/modifiers";
 import { edgeParam, playerCombatEffects } from "@/game/effectTargets";
 import { consumeArmor } from "@/game/synthesis";
@@ -72,6 +72,9 @@ export interface AttackInput {
   lootCap?: number;
   /** 5.22 : rang du seigneur de guerre engagé (attaquant ou défenseur). */
   warlordRank?: number;
+  /** 6.14.106 (AE-7) : défaites en défense du défenseur sur 24 h (horodatages lus par le serveur ; absent = pas de contrôle).
+   *  Vérifié aussi à l'arrivée : une flotte partie avant la dernière défaite rentre sans combattre. */
+  defenderDefeatsMs?: number[];
 }
 
 export type AttackOutput =
@@ -98,6 +101,11 @@ export type AttackOutput =
 export function performAttack(input: AttackInput): AttackOutput {
   const { now, attackerUid, defenderUid, defender } = input;
 
+  // 6.14.106 (AE-7) : à l'arrivée, seule la limite de défaites sur 24 h est revérifiée (le reste l'a été au décollage).
+  const limitUntil = input.inFlight && !defender.npc ? defeatLimitUntil(input.defenderDefeatsMs, now) : null;
+  if (limitUntil !== null && now < limitUntil) {
+    return { ok: false, message: `${defender.pseudo} a perdu ${PVP_RULES.maxDefeatsPer24h} combats en défense ces dernières 24 h : il est protégé, ta flotte rentre sans combattre.` };
+  }
   const check = input.inFlight
     ? { allowed: true as const, message: undefined }
     : checkAttackAllowed({
@@ -114,6 +122,7 @@ export function performAttack(input: AttackInput): AttackOutput {
     defenderVacationUntilMs: onVacation(defender, now) ? defender.vacation?.untilMs : undefined,
     defenderIsWarlord: !!defender.npc,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
+    defenderDefeatsMs: input.defenderDefeatsMs,
   });
   if (!check.allowed) return { ok: false, message: check.message ?? "Attaque impossible." };
   // 6.14.77 (É30-1f) : niveau de lune du défenseur avant le combat (0 : sans lune), pour la santé de l'équilibre.
@@ -326,12 +335,16 @@ export function performAttack(input: AttackInput): AttackOutput {
     defender_win: "Attaque repoussée !",
     draw: "Match nul.",
   };
+  // 6.14.106 (AE-7) : la défaite qui atteint la limite des 24 h le dit au défenseur (texte lu dans la règle).
+  const defeatsAfter = combat.outcome === "attacker_win" && !owner.npc && input.defenderDefeatsMs ? [...input.defenderDefeatsMs, now] : null;
+  const shieldEnd = defeatsAfter ? defeatLimitUntil(defeatsAfter, now) : null;
+  const defeatShieldNote = shieldEnd !== null ? ` ${PVP_RULES.maxDefeatsPer24h}e défaite en 24 h : plus personne ne peut t'attaquer pendant ${formatPvpWait(shieldEnd - now)}.` : "";
   const defenderNotifications: NewNotification[] = [
     ...flushedDefender.notifications,
     {
       kind: "combat-defender",
       title: defenderTitle[combat.outcome] ?? "Rapport de combat",
-      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pillé : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}`,
+      message: `Attaque de ${input.attacker.pseudo}${colony ? ` sur ${colony.name}` : ""}${defenderXpDelta ? ` (${defenderXpDelta > 0 ? "+" : ""}${defenderXpDelta} XP)` : ""}.${combat.loot && describeGain(combat.loot) !== "rien" ? ` Pillé : ${describeGain(combat.loot)}.` : ""}${aegis ? " L'Égide de la Reine a protégé tes réserves du pillage." : ""}${armor > 0 ? ` Carapace réactive consommée (+${Math.round(armor * 100)} % de défense).` : ""}${defeatShieldNote}`,
       createdAtMs: now,
       read: false,
       data: { resources: combat.loot ?? undefined, xp: defenderXpDelta > 0 ? defenderXpDelta : undefined, fromUid: input.attacker.uid, fromPseudo: input.attacker.pseudo },

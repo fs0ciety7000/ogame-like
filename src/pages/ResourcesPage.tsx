@@ -17,7 +17,8 @@ import { factorRows } from "@/components/ui/afford";
 import { Factory } from "lucide-react";
 import type { PlayerState } from "@/types/game";
 import { HudCallout, HudMeter } from "@/components/ui/hud";
-import { EXCHANGE_RULES, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { EXCHANGE_RULES, exchangeCapLabel, exchangeRareLeft, exchangeRareUsed, isCommonToRare, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { formatDecimal } from "@/game/format";
 import { GameActionError, tradeResources } from "@/services/playerService";
 import { useAuthStore } from "@/store/authStore";
 import { formatCompact, formatNumber } from "@/lib/utils";
@@ -40,6 +41,13 @@ export function ResourcesPage() {
 
   const quote = tradeQuote(sellId, buyId, amount);
   const buyRes = RESOURCE_LIST.find((r) => r.id === buyId)!;
+  // 6.14.106 (AE-L3, Q98) : plafond hebdomadaire des rares reçues contre des communes (lu dans la règle).
+  const capLabel = exchangeCapLabel(formatCompact);
+  const now = Date.now();
+  const rareTrade = isCommonToRare(sellId, buyId);
+  const rareLeft = exchangeRareLeft(player, now);
+  const overCap = rareTrade && quote.net > rareLeft;
+  const perRare = EXCHANGE_RULES.commonToRare > 0 ? Math.round(1 / EXCHANGE_RULES.commonToRare) : 0;
 
   const handleTrade = async () => {
     if (!uid) return;
@@ -115,9 +123,17 @@ export function ResourcesPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-xs text-slate-500">
-            Ressources communes → rares : taux 0,01. Rares → communes : taux 50. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
+            Ressources communes → rares : <span className="font-mono tabular-nums">1</span> rare pour <span className="font-mono tabular-nums">{formatNumber(perRare)}</span> communes. Rares → communes :{" "}
+            <span className="font-mono tabular-nums">{formatDecimal(EXCHANGE_RULES.rareToCommon, 2)}</span> communes par rare. Aucun échange rare ↔ rare ou commune ↔ commune. Taxe de{" "}
             <span className="font-mono tabular-nums">{Math.round(EXCHANGE_RULES.taxPct * 100)} %</span> sur ce que tu reçois, versée au pot commun du serveur.
           </p>
+          {capLabel && (
+            <p className="text-xs text-slate-400">
+              Plafond : {capLabel}. Cette semaine :{" "}
+              <span className="font-mono tabular-nums text-slate-200">{formatCompact(exchangeRareUsed(player, now))}</span> reçues, reste{" "}
+              <span className={rareLeft > 0 ? "font-mono tabular-nums text-mint-glow" : "font-mono tabular-nums text-ember-glow"}>{formatCompact(rareLeft)}</span>.
+            </p>
+          )}
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
@@ -150,7 +166,12 @@ export function ResourcesPage() {
             </span>
           </HudCallout>
 
-          <Button onClick={() => void handleTrade()} disabled={submitting || sellId === buyId || quote.net <= 0}>
+          {overCap && (
+            <HudCallout tone="ember" className="text-xs">
+              {rareLeft > 0 ? `Au-delà du plafond de la semaine : il te reste ${formatCompact(rareLeft)} rares à recevoir. Échange moins de communes.` : "Plafond de la semaine atteint : reviens lundi."}
+            </HudCallout>
+          )}
+          <Button onClick={() => void handleTrade()} disabled={submitting || sellId === buyId || quote.net <= 0 || overCap}>
             {submitting ? "Échange…" : "Échanger"}
           </Button>
         </CardContent>

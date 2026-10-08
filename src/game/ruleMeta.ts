@@ -62,6 +62,20 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   pvp: {
     npcWinMinXp: { label: "XP minimale d'une victoire contre un PNJ", unit: "XP", min: 0 },
     defenseXpLossWindowMs: { label: "Fenêtre de la perte d'XP en défense", unit: "ms", min: 0, hint: "86 400 000 = 24 h." },
+    // 6.14.106 (AU27, AE-L3, AE-7).
+    maxDefeatsPer24h: {
+      label: "Défaites en défense sur 24 h avant protection",
+      min: 0,
+      max: 50,
+      hint: "Toutes planètes et attaquants réunis : à ce nombre, plus aucune attaque de joueur ou de seigneur jusqu'à ce que la plus ancienne ait 24 h. 0 = sans limite.",
+    },
+  },
+  streak: {
+    // 6.14.106 (AU27, AE-L3, Q99).
+    chest: {
+      label: "Coffre du 7e jour",
+      hint: "Ambre, jetons et ressources communes tirés au hasard. commonHours [min, max] : heures de production du joueur par ressource commune (common[0] = plancher) ; [0, 0] = bornes fixes common.",
+    },
   },
   economy: {
     protectedHoursFromMs: { label: "Abri en heures de production : actif à partir de", unit: "date", min: 0 },
@@ -160,4 +174,5 @@ export const NESTED_FIELD_LABELS: Record<string, string> = {
   awayDays: "Absence (j)",
   passPoints: "Points de passe",
   minShare: "Part minimale de l'objectif",
+  commonHours: "Ressources communes : heures de production (min, max)",
 };

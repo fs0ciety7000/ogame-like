@@ -12,7 +12,7 @@ Tout ce que le joueur construit se paie en ressources. La production tourne hors
 | Rares | bâtiments de fin de partie (1 à 10/s), gisements de colonie (0,1 à 3/s), missions, expéditions, pirates, primes, contrats |
 | Entrepôt | capacité = 2 M × 1,6^niveau par ressource commune. À l'abri du pillage : 10 % de la capacité (+ technologies, Bastion, au plus 75 %) et, **à partir du 13 octobre 2026 (5.32)**, au plus 8 h de production de la ressource, avec un plancher de 500 k (réglages : Règles → Économie) |
 | Entretien de flotte | énergie : 0,015/s par place d'attaque, 0,0075/s par place de défense ; panne d'énergie = autres productions × 0,5 |
-| Rattrapage | jusqu'à +25 % de production sous 10 % de la médiane des actifs, nul à partir de 50 % |
+| Rattrapage | jusqu'à **+50 %** de production sous **20 %** de la médiane des actifs (6.14.106, AE-15 ; +25 % sous 10 % avant), dégressif, nul à partir de 50 % ; hors couche empire (I14 intact), validé à +100 % au plus ; migration `rules-6.14.106` des règles restées aux anciens défauts |
 | Échange (comptoir) | taxe 5 % au pot commun ; 1 rare pour 100 communes, **1 pour 250** dès la bascule du rythme (1er novembre 2026, `rhythm.exchangeCommonToRare`, 6.14.88) |
 | Missions (gains indexés) | 1,5 × durée × production (référence des rares 150 000), **0,75** et **400 000** dès la bascule du rythme |
 | Second palier des bâtiments (niveaux 11 à 20) | coûts ×4 dès la bascule du rythme (AE-L2, `rhythm.tier2CostFactor`) ; durées 36 h + 27 h par niveau pour les 8 bâtiments de l'Ascension (6.14.89) |

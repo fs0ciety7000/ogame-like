@@ -636,6 +636,8 @@ export interface TargetInfo {
   lastWarlordHitMs: number;
   /** Riposte de vendetta : passe outre la limite de 72 h. */
   reprisal?: boolean;
+  /** 6.14.106 (AE-7) : défaites en défense de la cible sur 24 h (lues par le serveur). */
+  defeatsMs?: number[];
 }
 
 /** La cible peut-elle être attaquée par ce seigneur maintenant ? */
@@ -655,6 +657,7 @@ export function warlordCanTarget(d: WarlordDef, npc: PlayerState, t: TargetInfo,
     defenderAscendedAtMs: p.ascendedAtMs,
     defenderShieldUntilMs: shieldUntil(p),
     lastDefenderDefeatMs: p.lastDefeatAtMs ?? null,
+    defenderDefeatsMs: t.defeatsMs,
   });
   if (!check.allowed) return false;
   if (d.personality === "opportunist" && !t.reprisal) {

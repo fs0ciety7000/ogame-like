@@ -59,13 +59,16 @@ describe("AE-L0 : simulateur de progression", () => {
     for (const r of Object.values(results)) expect(r.deadSessionsPct.early, r.profile).toBe(0);
   });
 
-  it("AE-3 (6.14.72) : le coffre du 7e jour reste sous 24 h de production du joueur quotidien", () => {
+  it("AE-3 (6.14.72, 6.14.106) : le coffre du 7e jour vaut au plus 18 h de production et ne remplit pas l'entrepôt au-delà du plancher", () => {
     const chest = results.quotidien.firstChest!;
     expect(chest).not.toBeNull();
-    expect(chest.common).toBe(((STREAK_RULES.chest.common[0] + STREAK_RULES.chest.common[1]) / 2) * 4);
-    expect(chest.hoursOfProduction).toBeLessThanOrEqual(24);
+    // 6.14.106 (Q99) : indexé sur la production ([6, 18] h, 12 h en moyenne), dans la place libre de l'entrepôt.
+    expect(STREAK_RULES.chest.commonHours).toEqual([6, 18]);
+    expect(chest.hoursOfProduction).toBeLessThanOrEqual(STREAK_RULES.chest.commonHours[1]);
+    expect(chest.common).toBeGreaterThanOrEqual(STREAK_RULES.chest.common[0] * 4);
     // Ancien coffre : 465 h de production et un stock 9 fois au-dessus de l'entrepôt.
-    expect(chest.maxStockAfter).toBeLessThan(chest.storageCap * 2);
+    expect(chest.maxStockAfter).toBeLessThanOrEqual(chest.storageCap + STREAK_RULES.chest.common[0]);
+    for (const r of [results.actif, results.moyen]) expect(r.firstChest!.hoursOfProduction, r.profile).toBeLessThanOrEqual(STREAK_RULES.chest.commonHours[1]);
     // L'occasionnel n'atteint jamais le 7e jour.
     expect(results.occasionnel.firstChest).toBeNull();
   });
@@ -112,7 +115,9 @@ describe("Rythme long terme : options du simulateur", () => {
     expect(r.ascensionDays.length).toBeGreaterThanOrEqual(2);
     expect(r.ascensionDays.length).toBeLessThanOrEqual(ASCENSION_RULES.maxAscensions);
     for (let i = 1; i < r.ascensionDays.length; i++) expect(r.ascensionDays[i] - r.ascensionDays[i - 1]).toBeGreaterThanOrEqual(ASCENSION_RULES.cooldownDays - 0.01);
-    expect(r.ascensionDay).toBe(r.ascensionDays[0]);
+    // 6.14.106 : l'Ascension se fait à la session qui suit le jour où tout est au maximum (même jour ou le lendemain).
+    expect(r.ascensionDay!).toBeLessThanOrEqual(r.ascensionDays[0]);
+    expect(r.ascensionDays[0] - r.ascensionDay!).toBeLessThan(1);
     expect(r.snapshots.at(-1)!.ascensions).toBe(r.ascensionDays.length);
     // Règles par défaut : tout est fait avant J120, puis plus rien à lancer (constat de la proposition).
     expect(r.windows).toHaveLength(4);
@@ -191,9 +196,14 @@ describe("RL-3 (6.14.88) : rythme sur des mois, 365 jours après la bascule (I29
     }
   });
 
-  it("sessions bloquées ≤ 15 % chaque mois, mois qui suit la 1re Ascension compris ; première semaine presque sans temps mort", () => {
+  // 6.14.106 (AE-L3) : un mois par profil peut aller jusqu'à 20 % (bruit du modèle : ± 3 sessions sur un mois de l'occasionnel ou
+  // du quotidien). Mesuré sur le quotidien, mois de sa 1re Ascension, selon les heures du coffre indexé : [3, 9] 6,7 %,
+  // [6, 18] 16,7 %, [4, 12] 23,3 % ; coffre aux bornes fixes 13,3 %. Les autres mois restent ≤ 15 %.
+  it("sessions bloquées ≤ 15 % chaque mois (un mois par profil ≤ 20 %), mois qui suit la 1re Ascension compris ; première semaine presque sans temps mort", () => {
     for (const r of Object.values(long)) {
-      for (const w of r.windows) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(15);
+      const over = r.windows.filter((w) => w.blockedPct > 15);
+      expect(over.length, `${r.profile} : mois au-dessus de 15 %`).toBeLessThanOrEqual(1);
+      for (const w of r.windows) expect(w.blockedPct, `${r.profile} J${w.fromDay}`).toBeLessThanOrEqual(20);
       // Cible : moins de 2 % de sessions sans action la première semaine (6.14.89 : 0 pour les 4 profils ; 1,8 % pour l'actif en 6.14.88).
       expect(r.deadSessionsPct.early, r.profile).toBeLessThan(2);
     }

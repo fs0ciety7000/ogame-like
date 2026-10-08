@@ -244,6 +244,8 @@ export interface LaunchInput {
   atWar?: boolean;
   /** 6.10.0 : point de départ (colonie d'une base avancée) ; absent = planète mère. */
   originId?: string;
+  /** 6.14.106 (AE-7) : défaites en défense de la cible sur 24 h (lues par le serveur ; absent = pas de contrôle). */
+  defenderDefeatsMs?: number[];
 }
 
 export interface LaunchOutput {
@@ -272,6 +274,7 @@ export function launchFleet(input: LaunchInput): LaunchOutput {
     defenderIsWarlord: !!defender.npc,
     lastDefenderDefeatMs: defender.lastDefeatAtMs ?? null,
     attackCooldownMs: input.atWar ? WAR_RULES.attackCooldownHours * 3600_000 : undefined,
+    defenderDefeatsMs: input.defenderDefeatsMs,
   });
   if (!check.allowed) throw new GameActionError(check.message ?? "Attaque impossible.");
 
@@ -457,6 +460,8 @@ export interface LaunchRequest {
   basesAtColony?: number;
   /** 6.10.0 : attaque depuis cette base avancée (lue par le serveur). */
   fromBase?: Fleet | null;
+  /** 6.14.106 (AE-7) : défaites en défense de la cible sur 24 h (lues par le serveur). */
+  targetDefeatsMs?: number[];
 }
 
 export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: LaunchCapsules | null; attackerQueues: QueuesState; attackerNotifications: NewNotification[]; baseUnitsLeft?: Record<string, number> | null } {
@@ -487,11 +492,11 @@ export function performLaunch(req: LaunchRequest): LaunchOutput & { capsules: La
     const base = req.fromBase;
     const taken = takeFromBase(owner, base, req.fleet, now);
     for (const [id, qty] of Object.entries(taken)) owner.units[id] = { ...(owner.units[id] ?? { level: 1, count: 0 }), count: (owner.units[id]?.count ?? 0) + qty };
-    out = launchFleet({ now, attacker: owner, defender: planet!, fleet: taken, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar, originId: base.base!.colonyId });
+    out = launchFleet({ now, attacker: owner, defender: planet!, fleet: taken, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar, originId: base.base!.colonyId, defenderDefeatsMs: req.targetDefeatsMs });
     out.fleet.base = { colonyId: base.base!.colonyId, fromBaseId: base.id };
     baseUnitsLeft = {};
     for (const [id, n] of Object.entries(base.units ?? {})) if (n - (taken[id] ?? 0) > 0) baseUnitsLeft[id] = n - (taken[id] ?? 0);
-  } else if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar });
+  } else if (mission === "attack") out = launchFleet({ now, attacker: owner, defender: planet!, fleet: req.fleet, lastAttackOnTargetMs: req.lastAttackOnTargetMs ?? null, atWar: req.atWar, defenderDefeatsMs: req.targetDefeatsMs });
   else if (mission === "colonybase") out = launchColonyBase(owner, req.fleet, req.baseColonyId ?? "", req.basesAtColony ?? 0, now);
   else if (mission === "spy") out = launchSpy(owner, planet!, req.fleet, now);
   else if (mission === "recycle") out = launchRecycle(owner, req.debris ?? null, req.fleet, now);

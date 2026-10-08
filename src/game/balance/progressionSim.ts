@@ -12,7 +12,8 @@ import { PRESTIGE_RULES } from "@/game/prestige";
 import { getRank } from "@/game/ranks";
 import { getProductionRatesPerSecond } from "@/game/production";
 import { EXCHANGE_RULES } from "@/game/resources";
-import { STREAK_RULES } from "@/game/streak";
+import { chestCommonAmount, chestIndexed, STREAK_RULES } from "@/game/streak";
+import { CATCHUP_RULES, catchupBonus } from "@/game/catchup";
 import { getTechCost, getTechTime, RESEARCH_RULES, techBonus, techReductionFactor, TECHNOLOGIES } from "@/game/technologies";
 import { UNITS } from "@/game/units";
 import { rareValue } from "@/game/balance/analysis";
@@ -116,6 +117,9 @@ export interface ProgressionOptions {
   fleetSink?: { reserveShare: number };
   /** Option C (modèle, AE-L6) : projets de prestige, un à la fois ; le n-ième coûte hours × growth^n heures de la production commune du moment. */
   prestigeProjects?: { hours: number; growth: number; durationHours: number; reserveShare: number; /** Ouverts quand les 4 extracteurs atteignent ce niveau (0 : dès J0). */ minExtractorLevel?: number };
+  /** 6.14.106 (AE-L3, AE-15) : médiane du développement (niveaux de bâtiments + technos) de la population, jour par jour ;
+   *  le rattrapage (`CATCHUP_RULES`) est alors appliqué à la production, figé pour la journée. Absent : pas de rattrapage. */
+  catchupMedianByDay?: number[];
 }
 
 export interface AscensionGateContext {
@@ -159,6 +163,8 @@ export interface ProgressionSnapshot {
   techCount: number;
   /** Production commune totale par heure. */
   commonPerHour: number;
+  /** 6.14.106 : production rare totale par heure (extracteurs et technos, Ascensions comprises). */
+  rarePerHour: number;
   storageCap: number;
   commonStock: number;
   rareStock: number;
@@ -208,6 +214,13 @@ export interface ProgressionResult {
   firstChest: ProgressionChest | null;
   /** Communes converties au comptoir. */
   exchangedCommon: number;
+  /** 6.14.106 : rares obtenues au comptoir (total, et semaine la plus forte) ; plafond `exchange.weeklyRareCap` appliqué. */
+  exchangedRare: number;
+  exchangedRarePeakWeek: number;
+  /** 6.14.106 : développement (niveaux de bâtiments + technos, comme `developmentScore`) au début de chaque jour. */
+  devScoreByDay: number[];
+  /** 6.14.106 : bonus de rattrapage moyen sur les jours 1 à 30 (0,12 = +12 %), option `catchupMedianByDay`. */
+  catchupAvgJ1to30: number;
   snapshots: ProgressionSnapshot[];
   /** Jours des Ascensions faites (option `ascend`). */
   ascensionDays: number[];
@@ -261,6 +274,12 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
   let overflow = 0;
   let produced = 0;
   let exchanged = 0;
+  let exchangedRare = 0;
+  const rareByWeek: number[] = [];
+  const devScoreByDay: number[] = [];
+  let catchupF = 1;
+  let catchupSum = 0;
+  let catchupDays = 0;
   let firstWall: number | null = null;
   let ascensionDay: number | null = null;
   let techCompleteDay: number | null = null;
@@ -332,7 +351,12 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       if (!isRare(k) && (res[k] ?? 0) < (n ?? 0)) return false;
       if (isRare(k) && (res[k] ?? 0) < (n ?? 0)) need[k] = (n ?? 0) - (res[k] ?? 0);
     }
-    let commonsNeeded = Object.values(need).reduce((a, b) => a + b, 0) / (EXCHANGE_RULES.commonToRare * (1 - EXCHANGE_RULES.taxPct));
+    const rareNeeded = Object.values(need).reduce((a, b) => a + b, 0);
+    // 6.14.106 (AE-L3, Q98) : plafond hebdomadaire des rares reçues au comptoir (semaines de 7 jours depuis J0).
+    const week = Math.floor(exchangeT / (7 * DAY));
+    const cap = Number(EXCHANGE_RULES.weeklyRareCap) || 0;
+    if (cap > 0 && (rareByWeek[week] ?? 0) + rareNeeded > cap) return false;
+    let commonsNeeded = rareNeeded / (EXCHANGE_RULES.commonToRare * (1 - EXCHANGE_RULES.taxPct));
     const spare = (k: string) => Math.max(0, res[k] - (c[k] ?? 0));
     if (COMMONS.reduce((a, k) => a + spare(k), 0) < commonsNeeded) return false;
     for (const k of COMMONS) {
@@ -342,10 +366,25 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       exchanged += take;
     }
     for (const [k, n] of Object.entries(need)) res[k] += n;
+    rareByWeek[week] = (rareByWeek[week] ?? 0) + rareNeeded;
+    exchangedRare += rareNeeded;
     return true;
   };
+  let exchangeT = 0;
 
   for (let t = 0; t < days * DAY; t += step) {
+    exchangeT = t;
+    // 6.14.106 : développement du jour et rattrapage figé pour la journée (option catchupMedianByDay).
+    if (t % DAY === 0) {
+      const score = Object.values(buildings).reduce((a, b) => a + Math.max(0, Number(b?.level) || 0), 0) + Object.values(tech).reduce((a, n) => a + Math.max(0, Number(n) || 0), 0);
+      devScoreByDay.push(score);
+      const med = options.catchupMedianByDay?.[Math.floor(t / DAY)];
+      catchupF = med !== undefined ? 1 + catchupBonus(score, med, CATCHUP_RULES) : 1;
+      if (t / DAY >= 1 && t / DAY <= 30) {
+        catchupSum += catchupF - 1;
+        catchupDays++;
+      }
+    }
     // Fin des files.
     for (const [id, end] of Object.entries(bQueue)) {
       if (end > t) continue;
@@ -366,8 +405,8 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
       delete mQueue[key];
     }
 
-    // Production (communes plafonnées par l'entrepôt, rares sans plafond).
-    const rates = ratesNow();
+    // Production (communes plafonnées par l'entrepôt, rares sans plafond), rattrapage compris (option).
+    const rates = catchupF === 1 ? ratesNow() : (Object.fromEntries(Object.entries(ratesNow()).map(([k, v]) => [k, (v ?? 0) * catchupF])) as ReturnType<typeof ratesNow>);
     const cap = getStorageCapacity(buildings, tech);
     const w = win(Math.floor(t / DAY));
     for (const [k, rate] of Object.entries(rates)) {
@@ -401,12 +440,18 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         const hours = STREAK_RULES.hours[cycleDay - 1] ?? 0;
         for (const k of COMMONS) add({ [k]: Math.max(STREAK_RULES.floor, (r[k] ?? 0) * hours * HOUR) }, "série", t);
         if (cycleDay === 7) {
-          const each = (STREAK_RULES.chest.common[0] + STREAK_RULES.chest.common[1]) / 2;
+          // 6.14.106 (AE-L3, Q99) : coffre indexé, valeur moyenne (milieu de `commonHours`) de la production des extracteurs et
+          // technos, dans la place libre de l'entrepôt, au moins le plancher `common[0]` ; sinon milieu des bornes fixes.
+          const ch = STREAK_RULES.chest;
+          const base = getProductionRatesPerSecond(buildings, tech);
+          const midHours = (ch.commonHours[0] + ch.commonHours[1]) / 2;
+          const chestRes = Object.fromEntries(COMMONS.map((k) => [k, chestIndexed(ch) ? chestCommonAmount((base[k] ?? 0) * HOUR, midHours, ch.common[0], getStorageCapacity(buildings, tech) - (res[k] ?? 0)) : (ch.common[0] + ch.common[1]) / 2]));
+          const total = Object.values(chestRes).reduce((a, b) => a + b, 0);
           const perHour = commonPerHour();
-          for (const k of COMMONS) add({ [k]: each }, "coffre du 7e jour", t);
+          for (const k of COMMONS) add({ [k]: chestRes[k] }, "coffre du 7e jour", t);
           if (!firstChest) {
             const stock = Math.max(...COMMONS.map((k) => res[k]));
-            firstChest = { day: round1(t / DAY), common: each * COMMONS.length, hoursOfProduction: perHour > 0 ? round1((each * COMMONS.length) / perHour) : 0, storageCap: getStorageCapacity(buildings, tech), maxStockAfter: Math.round(stock) };
+            firstChest = { day: round1(t / DAY), common: total, hoursOfProduction: perHour > 0 ? round1(total / perHour) : 0, storageCap: getStorageCapacity(buildings, tech), maxStockAfter: Math.round(stock) };
           }
         }
         const scale = rareRewardScale(player());
@@ -575,6 +620,7 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
         techLevels: Object.values(tech).reduce((a, b) => a + b, 0),
         techCount: Object.keys(tech).length,
         commonPerHour: Math.round(commonPerHour()),
+        rarePerHour: Math.round(RARES.reduce((a, k) => a + ((ratesNow() as Record<string, number>)[k] ?? 0), 0) * HOUR),
         storageCap: getStorageCapacity(buildings, tech),
         commonStock: Math.round(COMMONS.reduce((a, k) => a + res[k], 0)),
         rareStock: Math.round(RARES.reduce((a, k) => a + res[k], 0)),
@@ -604,6 +650,10 @@ export function simulateProgression(profile: ProgressionProfile, options: Progre
     incomeShareFromJ14: Object.fromEntries(Object.entries(income).map(([k, v]) => [k, pct(v, totalIncome)])),
     firstChest,
     exchangedCommon: Math.round(exchanged),
+    exchangedRare: Math.round(exchangedRare),
+    exchangedRarePeakWeek: Math.round(Math.max(0, ...Array.from(rareByWeek, (n) => n ?? 0))),
+    devScoreByDay,
+    catchupAvgJ1to30: catchupDays > 0 ? Math.round((catchupSum / catchupDays) * 1000) / 1000 : 0,
     snapshots,
     ascensionDays,
     windows: wins.map((x, i) => ({
@@ -635,6 +685,21 @@ export function prestigeProjectsFromRules(reserveShare = 0.1): NonNullable<Progr
 /** Les quatre profils du rapport, dans l'ordre. */
 export function simulateAllProfiles(options: ProgressionOptions = {}): ProgressionResult[] {
   return (Object.keys(PROGRESSION_PROFILES) as ProgressionProfileId[]).map((id) => simulateProgression(PROGRESSION_PROFILES[id], options));
+}
+
+/** 6.14.106 (AE-L3, AE-15) : les quatre profils avec le rattrapage. Premier passage sans rattrapage : la médiane du
+ *  développement des quatre profils, jour par jour, tient lieu de population ; second passage avec le rattrapage des règles.
+ *  Écarts du modèle : quatre profils au lieu des joueurs actifs du serveur (`minPlayers` ignoré), médiane figée au premier
+ *  passage (elle ne bouge pas avec les bonus). */
+export function simulateAllProfilesWithCatchup(options: ProgressionOptions = {}): { medianByDay: number[]; results: ProgressionResult[] } {
+  const first = simulateAllProfiles({ ...options, catchupMedianByDay: undefined });
+  const days = Math.max(0, ...first.map((r) => r.devScoreByDay.length));
+  const medianByDay = Array.from({ length: days }, (_, d) => {
+    const v = first.map((r) => r.devScoreByDay[d] ?? r.devScoreByDay[r.devScoreByDay.length - 1] ?? 0).sort((a, b) => a - b);
+    const mid = Math.floor(v.length / 2);
+    return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+  });
+  return { medianByDay, results: simulateAllProfiles({ ...options, catchupMedianByDay: medianByDay }) };
 }
 
 /** Variante d'étude (lot AE-L2) : coûts du second palier des bâtiments multipliés en mémoire. Rend la fonction qui restaure. */

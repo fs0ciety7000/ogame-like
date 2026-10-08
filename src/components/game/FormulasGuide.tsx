@@ -383,6 +383,8 @@ XP : vainqueur +40 × rapport de force (×0,1 à ×2) · attaquant battu −20 �
             ["Écart d'XP maximal avec la cible", `×${PVP_RULES.hardXpRatio}`],
             ["Match nul", `${Math.round(COMBAT_RULES.drawLootShare * 100)} % du butin d'une victoire`],
             ["XP perdue en défense, au plus", `${PVP_RULES.defenseXpLossCapPer24h} par 24 h`],
+            // 6.14.106 (AE-L3, AE-7) : texte lu dans la règle.
+            ["Défaites en défense sur 24 h", PVP_RULES.maxDefeatsPer24h > 0 ? `${PVP_RULES.maxDefeatsPer24h} au plus : ensuite plus aucune attaque jusqu'à ce que la plus ancienne ait 24 h` : "sans limite"],
           ]}
         />
       </Block>

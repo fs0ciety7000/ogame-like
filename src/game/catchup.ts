@@ -15,10 +15,11 @@ import type { PlayerState } from "@/types/game";
 
 export const CATCHUP_RULES = {
   enabled: true,
-  /** Bonus maximal (0,25 = +25 % de production). */
-  maxBonus: 0.25,
-  /** En dessous de ce ratio de la médiane : bonus maximal. */
-  fullBelow: 0.1,
+  /** Bonus maximal (0,5 = +50 % de production). 6.14.106 (AU27, AE-15) : 0,25 → 0,5. Hors de la couche empire (I14) :
+   *  multiplicateur à part, borné par `catchupFactorAt` et par la validation (≤ +100 %). */
+  maxBonus: 0.5,
+  /** En dessous de ce ratio de la médiane : bonus maximal. 6.14.106 (AE-15) : 0,1 → 0,2. */
+  fullBelow: 0.2,
   /** À partir de ce ratio de la médiane : plus de bonus. */
   endsAt: 0.5,
   /** Nombre minimal de joueurs actifs pour calculer une médiane fiable. */

@@ -2,7 +2,7 @@
 
 Statut : **en cours**. Lots AE-L0 (6.14.71, `docs/changes/6.14.71-proposition-equilibrage.md`) et AE-L1 (6.14.72,
 `docs/changes/6.14.72-reglages-surs.md`) livrés ; AE-L2 livré dans la bascule du rythme (6.14.88, `docs/changes/6.14.88-bascule-rythme.md`) ;
-AE-L3 à AE-L7 dans la feuille de route d'automne 2030.
+AE-L3 livré (6.14.106, `docs/changes/6.14.106-plafonds-equilibre.md`) ; AE-L4 à AE-L7 dans la feuille de route d'automne 2030.
 Source : audit `docs/audit/2026-10-07-au27-equilibrage.md` (constats AE-1 à AE-17). Décisions : Q97 à Q103 de `docs/QUESTIONS.md`
 (questions AE-Q1 à AE-Q7), **validées** par l'utilisateur le 2026-10-07 : les options recommandées s'appliquent.
 Méthode : `docs/WORKFLOW.md` §2. Outil : `node scripts/progression-sim.mjs` (simulateur versé dans le dépôt par AE-L0).
@@ -122,6 +122,10 @@ change ses bornes d'Ascension dans le même lot (I29).
 - **AE-L3** : `streak.chest.commonHours` [6, 18] (coffre indexé sur la production, Q99), `exchange.weeklyRareCap` (Q98),
   `pvp.maxDefeatsPer24h` = 4 (AE-7), et `catchup.maxBonus` 0,5 / `catchup.fullBelow` 0,2 (AE-15, déplacé d'AE-L1 : il faut d'abord
   vérifier le plafond des bonus, `derived.test.ts`, I14). Chaque champ a son éditeur dans l'admin (règle n° 2).
+  **Livré en 6.14.106** : coffre [6, 18] h dans la place libre de l'entrepôt, plancher 2 M (le plafond fixe de 12 M aurait annulé
+  l'indexation dès 0,7 M/h par ressource) ; plafond du comptoir à **30 M** de rares par semaine (sous 25 M, le simulateur bloque plus de
+  15 % des sessions du moyen après la bascule : le comptoir y reste la source de rares principale ; à resserrer après AE-L4) ;
+  4 défaites par 24 h, vérifiées au décollage et à l'arrivée ; rattrapage 0,5 / 0,2 (hors couche empire : I14 intact). Invariant I33.
 - **AE-L4** : santé de l'équilibre : Ambre gagnée par source et par semaine, temps avant la mort des boss, jour de la 1re Ascension,
   production perdue, écart de production entre quartiles.
 - **AE-L5** : ouverture progressive du menu (`navUnlock`), comptes existants au-delà de Fer II tout ouverts (Q103).
@@ -142,7 +146,7 @@ change ses bornes d'Ascension dans le même lot (I29).
 | AE-L0 | Cette proposition ; simulateur de progression et combats à budget égal dans le dépôt ; script `scripts/progression-sim.mjs` ; garde I29 | 6.14.71 | livré |
 | AE-L1 | Réglages sûrs (§5.1), défauts du code et migration `rules-6.14.72` des règles enregistrées ; changelog | 6.14.72 | livré (essai sur la pré-prod au prochain push) |
 | AE-L2 | Progression (§5.2) : livrée dans la bascule du rythme (RL-3), datée au 1er novembre 2026 ; au lieu d'une migration, les valeurs restées au défaut basculent à la date (`rhythm.ts`), billet 54 et annonce une semaine avant | 6.14.88 | livré |
-| AE-L3 | Moteur : coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h, rattrapage | — | à faire |
+| AE-L3 | Moteur : coffre indexé, plafond de rareté hebdomadaire, défaites par 24 h, rattrapage | 6.14.106 | livré (`docs/changes/6.14.106-plafonds-equilibre.md`) |
 | AE-L4 | Santé de l'équilibre | — | à faire |
 | AE-L5 | Menu progressif | — | à faire |
 | AE-L6 | Puits de dépense | — | à faire |

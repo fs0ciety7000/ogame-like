@@ -18,6 +18,10 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 
 | Q | Décision appliquée | Effet pour les joueurs | Recommandation |
 |:--|:--|:--|:--|
+| Q267 | Coffre de 6 à 18 h de production par ressource, coupé à la place libre de l'entrepôt, plancher 2 M ; à entrepôt plein, seulement 2 M (`docs/changes/6.14.106-plafonds-equilibre.md`) | actif 28 M → 709 M, moyen → 270 M ; quotidien à entrepôt presque plein 28 M → 8 M | valider (le quotidien perd au coffre, à surveiller en AE-L4) |
+| Q268 | `exchange.weeklyRareCap` = 30 M de rares par semaine (lundi 00 h UTC), à resserrer après les mesures d'AE-L4 (`docs/changes/6.14.106-plafonds-equilibre.md`) | semaine la plus forte de l'actif 58 M → 30 M | valider |
+| Q269 | S'applique aussi contre les seigneurs de guerre (pas contre les raids de faction) (`docs/changes/6.14.106-plafonds-equilibre.md`) | un joueur battu 4 fois souffle, même face aux seigneurs | valider |
+| Q270 | Un mois par profil peut aller jusqu'à 20 % de sessions bloquées (au lieu de 15 %) : le quotidien passe à 16,7 % au pire mois (13,3 avant), le modèle variant de 6,7 à 23,3 % selon le tirage du coffre (`docs/changes/6.14.106-plafonds-equilibre.md`) | quotidien un peu plus bloqué un mois dans l'année | à trancher : je recommande de garder la tolérance, mais c'est un écart à une règle validée |
 | Q264 | « N contrats toutes les 8 h » lit `bounties.dailyLimit` (primes par jour), comme le demandait l'audit, alors que le tableau propose 3 ou 4 contrats (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | le texte peut paraître ambigu | valider, ou changer pour la formulation à deux chiffres |
 | Q265 | 0 à 2 ; 0 à 0,9 pour une réduction de durée ou de taxe (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | aucun | valider |
 | Q266 | Carnet : « 3 points de talent » par Ascension (au lieu de « un ») ; Ordres du jour : l'Explorateur voit 4 expéditions par jour (au lieu de 3) (`docs/changes/6.14.105-textes-de-regle-vivants.md`) | les textes disent enfin la règle réelle | valider |

@@ -33,7 +33,27 @@ export const PVP_RULES = {
   /** Perte d'XP maximale en défense sur 24 h glissantes. */
   defenseXpLossCapPer24h: 60,
   defenseXpLossWindowMs: 24 * 60 * 60 * 1000,
+  /** 6.14.106 (AU27, AE-7) : défaites en défense sur 24 h glissantes au-delà desquelles plus personne ne peut attaquer ce
+   *  joueur, jusqu'à ce que la plus ancienne sorte de la fenêtre (0 = sans limite). Toutes planètes et attaquants réunis. */
+  maxDefeatsPer24h: 4,
 };
+
+/** Fenêtre du compte des défaites (24 h glissantes). */
+const DEFEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** 6.14.106 : fin de la protection « trop de défaites » (null : pas de protection). `defeatsMs` : horodatages des défaites
+ *  en défense (toutes planètes) ; seules celles des dernières 24 h comptent. Protégé tant qu'il y en a `maxDefeatsPer24h`
+ *  ou plus ; la protection tombe quand la plus ancienne des `max` dernières sort de la fenêtre. */
+export function defeatLimitUntil(defeatsMs: readonly number[] | null | undefined, now: number, max: number = PVP_RULES.maxDefeatsPer24h): number | null {
+  const cap = Math.floor(Number(max) || 0);
+  if (!(cap > 0) || !defeatsMs || defeatsMs.length < cap) return null;
+  const recent = defeatsMs
+    .map(Number)
+    .filter((t) => Number.isFinite(t) && t <= now && now - t < DEFEAT_WINDOW_MS)
+    .sort((a, b) => a - b);
+  if (recent.length < cap) return null;
+  return recent[recent.length - cap] + DEFEAT_WINDOW_MS;
+}
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
@@ -113,6 +133,8 @@ export interface AttackContext {
   /** v4.2 : un seigneur de guerre n'a pas de bouclier après une défaite. */
   /** Cible PNJ (seigneur de guerre…) : aucune protection de joueur, seulement le délai entre deux attaques. */
   defenderIsWarlord?: boolean;
+  /** 6.14.106 (AE-7) : défaites en défense du joueur visé sur 24 h (horodatages, lus par le serveur ; absent = pas de contrôle). */
+  defenderDefeatsMs?: number[];
 }
 
 export type AttackBlockReason = "self" | "cooldown" | "shield" | "newbie" | "too_weak";
@@ -131,6 +153,11 @@ function formatWait(ms: number): string {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
+/** « 2 h 15 min » : attente lisible (messages des protections). */
+export function formatPvpWait(ms: number): string {
+  return formatWait(ms);
 }
 
 /** Vérifie qu'une attaque est autorisée ; renvoie la raison sinon. */
@@ -171,6 +198,17 @@ export function checkAttackAllowed(ctx: AttackContext): AttackCheck {
         message: `Ce joueur vient d'être battu : bouclier actif encore ${formatWait(until - now)}.`,
       };
     }
+  }
+
+  // 6.14.106 (AE-7) : trop de défaites sur 24 h.
+  const limitUntil = npc ? null : defeatLimitUntil(ctx.defenderDefeatsMs, now);
+  if (limitUntil !== null && now < limitUntil) {
+    return {
+      allowed: false,
+      reason: "shield",
+      until: limitUntil,
+      message: `Ce joueur a perdu ${PVP_RULES.maxDefeatsPer24h} combats en défense ces dernières 24 h : il est protégé encore ${formatWait(limitUntil - now)}.`,
+    };
   }
 
   if (!npc && ctx.defenderShieldUntilMs && now < ctx.defenderShieldUntilMs) {

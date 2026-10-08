@@ -3,7 +3,8 @@ import { playerCasino } from "@/game/casino";
 import { factionStates, findFaction } from "@/game/pirates";
 import { passState } from "@/game/seasonPass";
 import { talentPoints } from "@/game/talents";
-import { RESOURCE_LIST } from "@/game/resources";
+import { EXCHANGE_RULES, RESOURCE_LIST } from "@/game/resources";
+import { formatInt } from "@/game/format";
 import type { PlayerState } from "@/types/game";
 
 /* =====================================================
@@ -54,7 +55,8 @@ export function walletEntries(player: PlayerState, now: number): WalletEntry[] {
       name: "Ressources rares",
       value: sum(rares),
       sub: rares.map((r) => r.name).join(", "),
-      earn: "Fonderie et Synthétiseur, gisements des colonies, expéditions, combats contre les PNJ.",
+      // 6.14.106 (AE-L3, Q98) : plafond du comptoir lu dans la règle.
+      earn: `Fonderie et Synthétiseur, gisements des colonies, expéditions, combats contre les PNJ ; comptoir${EXCHANGE_RULES.weeklyRareCap > 0 ? ` (${formatInt(EXCHANGE_RULES.weeklyRareCap)} par semaine au plus)` : ""}.`,
       spend: "Bâtiments et technologies de fin de partie, Cale sèche, modules.",
       link: "/game/ressources",
       group: "ressources",

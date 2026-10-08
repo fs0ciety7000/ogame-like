@@ -599,6 +599,10 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
       const r = st.chest?.[key];
       if (!Array.isArray(r) || r.length !== 2 || !(r[0] >= 0) || !(r[1] >= r[0])) errors.push(`Série de connexion : coffre, ${label} : minimum ≤ maximum, positifs.`);
     }
+    // 6.14.106 (AE-L3, Q99) : coffre indexé sur la production ([0, 0] : bornes fixes).
+    const ch = st.chest?.commonHours;
+    if (ch !== undefined && (!Array.isArray(ch) || ch.length !== 2 || !(ch[0] >= 0) || !(ch[1] >= ch[0]) || !(ch[1] <= 72)))
+      errors.push("Série de connexion : coffre, heures de production : 0 ≤ minimum ≤ maximum ≤ 72 ([0, 0] : bornes fixes).");
   }
   return errors;
 }

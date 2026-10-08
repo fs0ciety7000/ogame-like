@@ -15,7 +15,7 @@
 ## Échanges
 | Système | Règles |
 |:--|:--|
-| Comptoir d'échange | taux fixe, taxe 5 % |
+| Comptoir d'échange | taux fixe, taxe 5 % ; communes → rares : **30 M de rares par semaine** au plus, toutes réunies, après taxe (lundi 00 h UTC ; 6.14.106, Q98) |
 | Marché | 5 offres, 20 achats/jour, 48 h, taxe 5 % (2 % en alliance), prix ±×3 du comptoir ; ordres d'achat ; PNJ marchand |
 | Enchères | reliques et plans ; surenchère 5 %, anti-dernière-seconde 5 min, taxe 5 % |
 | Contrats | 4 à 72 h, caution 10 %, 3 actifs |
@@ -37,7 +37,9 @@ ouverture), compté seulement si le casino est ouvert.
 Rapport `docs/audit/2026-10-06-au4-commerce.md`. Depuis la 6.9.0, tous les chiffres sont dans `GameRules` et dans Admin → Règles : enchères
 (`auctions`), contrats (`tradeContracts`), cadeaux (`gifts`), concours (`contests`), points du tournoi (`tournamentPoints`), offre de la
 semaine (`weeklyStock`, prix et exemplaires), mécènes (`patrons`) ; marché et PNJ marchand (`market`) ; casino dans Admin → Pot commun.
-Comptoir d'échange (6.9.7) : taux et taxe réglables (`exchange`).
+Comptoir d'échange (6.9.7) : taux et taxe réglables (`exchange`). 6.14.106 (AE-L3) : plafond hebdomadaire `exchange.weeklyRareCap`
+(30 M, 0 = sans plafond), compté par le serveur dans le profil (`exchangeWeek` : semaine et rares reçues), section Admin → Règles →
+Comptoir d'échange ; la page Ressources et le Portefeuille affichent le plafond et le reste de la semaine (invariant I33).
 
 ## 6.14.104 (revue AU27, lot AA3)
 Chiffres des listes fixes réglables, valeurs inchangées (fiche `docs/changes/6.14.104-chiffres-reglables.md`) :

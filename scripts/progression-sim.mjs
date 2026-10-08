@@ -15,6 +15,11 @@
 //                                                        # (projets de prestige des deux côtés avec --prestige)
 //   node scripts/progression-sim.mjs rythme-6.14.88 --bascule --prestige --ascend --days 365   # 6.14.89 (RL-5) : après = valeurs
 //                                                        # visées de 6.14.88 (avant le réglage fin) ; sans préréglage : celles du code
+//   node scripts/progression-sim.mjs --base avant-ae-l3 --catchup   # 6.14.106 (AE-L3) : avant = règles d'avant le lot
+//                                                        # (coffre fixe, comptoir et défaites sans plafond, rattrapage 0,25 / 0,1) ;
+//                                                        # --catchup : rattrapage simulé (médiane des 4 profils), écart de production
+//                                                        # et rares obtenues au comptoir affichés ; --apres-bascule : les deux côtés
+//                                                        # sur les règles d'après la bascule du rythme
 //
 // Le moteur pur (src/game/balance/progressionSim.ts, pvpBudget.ts) est empaqueté à la volée par esbuild : rien n'est écrit dans le dépôt.
 import { build } from "esbuild";
@@ -33,6 +38,15 @@ const PRESETS = {
       streak: { chest: { common: [45_000_000, 280_000_000] } },
       combat: { homeFleetDefenseFactor: 0.5, homeDefenseBonus: 0.15 },
       pvp: { shieldAfterDefeatMs: 3_600_000, hardXpRatio: 12 },
+    },
+  },
+  // Valeurs d'avant le lot AE-L3 (6.14.106) : coffre aux bornes fixes, comptoir et défaites sans plafond, rattrapage 0,25 / 0,1.
+  "avant-ae-l3": {
+    rules: {
+      streak: { chest: { commonHours: [0, 0] } },
+      exchange: { weeklyRareCap: 0 },
+      pvp: { maxDefeatsPer24h: 0 },
+      catchup: { maxBonus: 0.25, fullBelow: 0.1 },
     },
   },
   // Lot AE-L2 (à venir) : second palier ×4, comptoir 1 rare pour 250, missions moins rentables.
@@ -60,7 +74,8 @@ const asJson = args.includes("--json");
 const withPrestige = args.includes("--prestige");
 const withAscend = args.includes("--ascend");
 const withSwitch = args.includes("--bascule");
-const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule"].includes(a))[0];
+const withCatchup = args.includes("--catchup");
+const afterArg = args.filter((a) => !["--json", "--prestige", "--ascend", "--bascule", "--catchup", "--apres-bascule"].includes(a))[0];
 
 function load(arg) {
   if (!arg) return { rules: {} };
@@ -74,9 +89,11 @@ function deepMerge(a, b) {
   return out;
 }
 
-const base = load(baseArg);
+// 6.14.106 : --apres-bascule résout avant et après à la date de la bascule du rythme (comparer un lot sur le jeu d'après).
+const bothSwitched = args.includes("--apres-bascule");
+const base = { ...load(baseArg), afterSwitch: bothSwitched };
 const extra = load(afterArg);
-const after = { rules: deepMerge({}, extra.rules ?? {}), tier2Factor: extra.tier2Factor ?? 1, afterSwitch: withSwitch };
+const after = { rules: deepMerge({}, extra.rules ?? {}), tier2Factor: extra.tier2Factor ?? 1, afterSwitch: withSwitch || bothSwitched };
 
 // Empaquetage du moteur pur.
 const dir = mkdtempSync(path.join(tmpdir(), "progression-sim-"));
@@ -86,13 +103,15 @@ await build({
     // 6.14.85 : le simulateur d'abord (même ordre de chargement que le jeu) : commencer par content.ts lisait COLONY_RULES
     // (advancedGuide.ts) avant son initialisation (import circulaire), et le script échouait dès 6.14.8x.
     contents: `
-      export { simulateAllProfiles, scaleTier2Costs, prestigeProjectsFromRules } from "@/game/balance/progressionSim";
+      export { simulateAllProfiles, simulateAllProfilesWithCatchup, scaleTier2Costs, prestigeProjectsFromRules } from "@/game/balance/progressionSim";
       export { applyGameContent } from "@/game/content";
       export { attackerWinThreshold, budgetDuel } from "@/game/balance/pvpBudget";
       export { COMBAT_RULES } from "@/game/combat";
       export { PVP_RULES } from "@/game/pvp";
       export { STREAK_RULES } from "@/game/streak";
       export { RHYTHM_RULES } from "@/game/rhythm";
+      export { EXCHANGE_RULES } from "@/game/resources";
+      export { CATCHUP_RULES } from "@/game/catchup";
     `,
     resolveDir: root,
     loader: "ts",
@@ -114,7 +133,8 @@ function measure(settings, prestige = false) {
   const restore = settings.tier2Factor && settings.tier2Factor !== 1 ? E.scaleTier2Costs(settings.tier2Factor) : () => {};
   try {
     const projects = prestige ? E.prestigeProjectsFromRules() : null;
-    const profiles = E.simulateAllProfiles({ days, ascend: withAscend, ...(projects ? { prestigeProjects: projects } : {}), milestones: [days] });
+    const simOpts = { days, ascend: withAscend, ...(projects ? { prestigeProjects: projects } : {}), milestones: [...new Set([14, 30, days])].filter((d) => d <= days) };
+    const profiles = withCatchup ? E.simulateAllProfilesWithCatchup(simOpts).results : E.simulateAllProfiles(simOpts);
     const pvp = {
       mixedThreshold: E.attackerWinThreshold("mixed"),
       defensesThreshold: E.attackerWinThreshold("defenses"),
@@ -126,6 +146,11 @@ function measure(settings, prestige = false) {
       homeDefenseBonus: E.COMBAT_RULES.homeDefenseBonus,
       shieldAfterDefeatH: E.PVP_RULES.shieldAfterDefeatMs / 3_600_000,
       hardXpRatio: E.PVP_RULES.hardXpRatio,
+      // 6.14.106 (AE-L3).
+      chestCommonHours: [...(E.STREAK_RULES.chest.commonHours ?? [0, 0])],
+      weeklyRareCap: E.EXCHANGE_RULES.weeklyRareCap,
+      maxDefeatsPer24h: E.PVP_RULES.maxDefeatsPer24h,
+      catchup: [E.CATCHUP_RULES.maxBonus, E.CATCHUP_RULES.fullBelow],
     };
     return { rules, profiles, pvp };
   } finally {
@@ -134,7 +159,7 @@ function measure(settings, prestige = false) {
   }
 }
 
-const before = measure(base, withSwitch && withPrestige);
+const before = measure(base, (withSwitch || bothSwitched) && withPrestige);
 const result = measure(after, withPrestige);
 
 if (asJson) {
@@ -199,6 +224,34 @@ if (withPrestige || withAscend) {
       ]),
     );
   }
+}
+// 6.14.106 (AE-L3) : comptoir (rares obtenues, semaine la plus forte), rattrapage et écart de production actif / occasionnel.
+{
+  console.log(`\nComptoir et rattrapage${withCatchup ? " (rattrapage simulé : médiane des 4 profils)" : ""} :`);
+  console.log(row(["Profil", "Rares au comptoir (total)", "Semaine la plus forte", "Rattrapage moyen J1–30", "Prod. commune J14", "Prod. commune J30"]));
+  console.log(row(["---", "---", "---", "---", "---", "---"]));
+  const prodAt = (r, d) => r.snapshots.find((x) => x.day === d)?.commonPerHour ?? 0;
+  for (let i = 0; i < before.profiles.length; i++) {
+    const a = before.profiles[i];
+    const b = result.profiles[i];
+    console.log(
+      row([
+        a.profile,
+        `${fmtM(a.exchangedRare)} → ${fmtM(b.exchangedRare)}`,
+        `${fmtM(a.exchangedRarePeakWeek)} → ${fmtM(b.exchangedRarePeakWeek)}`,
+        `+${Math.round(a.catchupAvgJ1to30 * 1000) / 10} % → +${Math.round(b.catchupAvgJ1to30 * 1000) / 10} %`,
+        `${fmtM(prodAt(a, 14))}/h → ${fmtM(prodAt(b, 14))}/h`,
+        `${fmtM(prodAt(a, 30))}/h → ${fmtM(prodAt(b, 30))}/h`,
+      ]),
+    );
+  }
+  const gap = (rs, d) => {
+    const act = rs.find((r) => r.profile === "actif");
+    const occ = rs.find((r) => r.profile === "occasionnel");
+    const o = prodAt(occ, d);
+    return o > 0 ? `×${(prodAt(act, d) / o).toFixed(1)}` : "—";
+  };
+  if (days >= 30) console.log(`- écart de production actif / occasionnel : J14 ${gap(before.profiles, 14)} → ${gap(result.profiles, 14)} ; J30 ${gap(before.profiles, 30)} → ${gap(result.profiles, 30)}`);
 }
 const thr = (x) => (x === null ? "> ×3" : `×${x.toFixed(2)}`);
 const duel = (d) => `${d.outcome}, attaquant −${Math.round(d.attackerLoss * 100)} %, défenseur −${Math.round(d.defenderLoss * 100)} %`;

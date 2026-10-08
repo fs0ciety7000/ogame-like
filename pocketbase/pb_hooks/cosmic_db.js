@@ -435,6 +435,23 @@ function lastAttackOnTarget(txApp, a, d) {
   return last;
 }
 
+/** 6.14.106 (AU27, AE-7) : défaites en défense d'un joueur (toutes planètes) sur les dernières 24 h, horodatages. */
+function recentDefeatsMs(txApp, uid, now) {
+  return txApp
+    .findRecordsByFilter("battle_reports", "defenderUid = {:d} && timestamp > {:t} && outcome = 'attacker_win'", "-timestamp", 50, 0, { d: uid, t: now - 86400000 })
+    .map((r) => r.getFloat("timestamp"));
+}
+
+/** 6.14.106 : les mêmes, pour tous les joueurs à la fois (choix des cibles des seigneurs de guerre). */
+function recentDefeatsByUid(txApp, now) {
+  const out = {};
+  txApp.findRecordsByFilter("battle_reports", "timestamp > {:t} && outcome = 'attacker_win'", "-timestamp", 2000, 0, { t: now - 86400000 }).forEach((r) => {
+    const d = r.getString("defenderUid");
+    (out[d] = out[d] || []).push(r.getFloat("timestamp"));
+  });
+  return out;
+}
+
 /** XP déjà perdue en défense sur 24 h (plafond de perte). */
 function defenderXpLostLast24h(txApp, game, uid, now) {
   let lost = 0;
@@ -1545,6 +1562,8 @@ function resolveAttackArrival(txApp, game, rec, now) {
         fleet: fleet.units,
         lastAttackOnTargetMs: null,
         defenderXpLostLast24h: defenderXpLostLast24h(txApp, game, defenderUid, now),
+        // 6.14.106 (AE-7) : limite de défaites sur 24 h revérifiée à l'arrivée.
+        defenderDefeatsMs: recentDefeatsMs(txApp, defenderUid, now),
         colonyId: colonyOwner ? fleet.targetUid : undefined,
         inFlight: true,
         garrisons,
@@ -1557,11 +1576,12 @@ function resolveAttackArrival(txApp, game, rec, now) {
       })
     : { ok: false };
   if (!result.ok) {
-    // Cible disparue : la flotte rentre sans combattre.
+    // Cible disparue (ou protégée : 6.14.106, trop de défaites sur 24 h) : la flotte rentre sans combattre.
     rec.set("status", "returning");
     rec.set("returnAtMs", now + tripMs);
     rec.set("outcome", "none");
     txApp.save(rec);
+    if (defender && result.message) notify(txApp, fleet.ownerUid, [{ kind: "fleet", title: "Cible protégée", message: result.message, createdAtMs: now, read: false }]);
     return;
   }
   game.clearDecoy(result.attacker, rec.id);
@@ -1885,6 +1905,8 @@ function launchFleetRequest(e) {
         lairTarget: mission === "lair" ? targetUid : undefined,
         targetColonyId: colonyOwner ? targetUid : undefined,
         lastAttackOnTargetMs: mission === "attack" ? db.lastAttackOnTarget(txApp, attackerUid, targetUid) : null,
+        // 6.14.106 (AE-7) : défaites de la cible (toutes planètes) sur 24 h.
+        targetDefeatsMs: mission === "attack" && target && !target.npc ? db.recentDefeatsMs(txApp, colonyOwner || targetUid, now) : undefined,
         patrolMinutes: Number(body.minutes) || 0,
         garrisonHours: Number(body.hours) || 0,
         garrisonsAtHost,
@@ -5656,6 +5678,26 @@ const CONTENT_MIGRATIONS = [
       return touched;
     },
   },
+  // 6.14.106 (AU27, lot AE-L3, AE-15) : rattrapage relevé. Même principe : seul un champ resté à l'ancien défaut change.
+  // Les nouveaux champs (coffre indexé, plafond du comptoir, défaites par 24 h) prennent leur défaut à la fusion des règles.
+  {
+    id: "rules-6.14.106",
+    key: "rules",
+    patches: [],
+    run(data, changes) {
+      let touched = false;
+      const set = (group, field, from, to, label) => {
+        const g = data && data[group];
+        if (!g || typeof g !== "object" || g[field] !== from) return;
+        g[field] = to;
+        touched = true;
+        changes.push(label);
+      };
+      set("catchup", "maxBonus", 0.25, 0.5, "rattrapage : bonus maximal +50 %");
+      set("catchup", "fullBelow", 0.1, 0.2, "rattrapage : bonus plein sous 20 % de la médiane");
+      return touched;
+    },
+  },
 ];
 
 function canonJson(v) {
@@ -7853,6 +7895,7 @@ function launchWarlordAttack(txApp, game, d, npc, pick, now) {
     target: target.player,
     fleet: pick.fleet,
     lastAttackOnTargetMs: lastAttackOnTarget(txApp, npc.player.uid, target.player.uid),
+    targetDefeatsMs: recentDefeatsMs(txApp, target.player.uid, now),
     atWar: false,
   });
   out.attacker.xp = npc.player.xp;
@@ -8166,6 +8209,8 @@ function warlordTick(now, opts) {
     }
 
     // Attaques (agressifs, opportunistes, ripostes de vendetta).
+    // 6.14.106 (AE-7) : défaites des joueurs sur 24 h, lues une fois pour tous les seigneurs.
+    const defeatsByUid = active.length > 0 ? recentDefeatsByUid(txApp, now) : {};
     active.forEach((d) => {
       const uid = game.warlordUid(d.id);
       const rt = state.byId[d.id];
@@ -8181,6 +8226,7 @@ function warlordTick(now, opts) {
           lastAttackOnTargetMs: lastAttackOnTarget(txApp, uid, p.uid),
           lastWarlordHitMs: state.hits[p.uid] || 0,
           reprisal: reprisals.some((r) => r.uid === p.uid),
+          defeatsMs: defeatsByUid[p.uid] || [],
         }));
         const pick = game.pickWarlordTarget(d, npc.player, candidates, now, Math.random);
         // Une riposte qui ne trouve pas sa cible abandonne au bout de 48 h.
@@ -10493,4 +10539,4 @@ function auctionsTick(now) {
   return n;
 }
 
-module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, navOpeningNotice, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError, purgePlayer, accountDelete, guardUserDelete };
+module.exports = { cadenceTick, phalanxRequest, phalanxScanRequest, fleetJumpRequest, codexContext, shopRemindersTick, globalReact, globalRoom, auctionRequest, auctionsTick, globalSend, globalReport, adminGlobal, pollRequest, banGuard, banAuthGuard, banMe, adminBan, adminDeletePlayer, timedCron, vitalsRequest, adminMetrics, publicStatus, adminWhatIfData, snapshotContent, contentRollback, ensureSchema, restoreWorkshopUnits, adminActivity, adminPlayerAudit, territoryWarTick, adminTerritoryWar, bossReact, mailScheduleTick, mailTrack, catchupTick, leaguesTick, messageTyping, passSeasonsRun, purgeNpcMarketOffers, casinoRequest, adminCasino, casinoTick, allianceChallengeTick, adminBroadcast, contestsTick, adminContests, guardRulesConfig, guardContentConfig, adminBossRewards, challengeClaim, addServerPot, adminServerPot, accountPseudo, passkeyRegisterOptions, passkeyRegisterVerify, passkeyLoginOptions, passkeyLoginVerify, passkeyRename, blogRequest, blogHostIntercept, ensureBlogAuthors, allianceSagaLive, allianceSagaTick, liveBalance, balanceHistoryTick, adminPlayerAction, proceduralTick, adminProcedural, runContentMigrations, guardProfileUpdate, renameRequest, seasonWarRequest, territoriesTick, tradeContractRequest, tradeContractsTick, adminStuckFleets, adminBackupList, adminBackupDownload, adminBackupToR2, allianceDailyTick, allianceDailyVote, codexClaim, referralSponsorName, referralInfo, gazetteTick, adminGazette, allianceTyping, allianceBossRequest, allianceBossTick, readAllianceBoss, seasonBossTick, adminSeasonBoss, readSeasonBoss, warlordTick, warlordsList, warlordsRequest, adminWarlords, vacationRequest, warlordAfterCombat, warlordAbsence, readWarlordsState, writeWarlordsState, warlordSay, isNpcUid, humanPlain, createPirateRaid, victoryCardPage, referralRequest, referralTick, fleetFromRecord, guardPlayerUpdate, adminMail, unsubscribe, bountyRequest, eliteTick, adminElite, readElite, releaseBountyOnRecall, allianceMessageCreate, requireAdminReason, challengeTick, readChallengeState, diplomacyRequest, bindingPact, reportShare, messageSend, messageRead, scanAnomalies, adminScanAnomalies, warRequest, warTick, expeditionChoose, leviathanTick, adminLeviathan, marketCreate, marketAccept, marketCancel, expireMarketOffers, adminBackupStatus, checkBackups, reportCreateRequest, reportClientError, reportComment, reportSeen, adminReportUpdate, adminReportConfig, adminReportGithub, autoEndMaintenance, adminList, adminManage, readMaintenance, closedDuringMaintenance, navOpeningNotice, maintenanceGuard, adminMaintenance, processPirates, piratesRequest, adminReset, allianceRequest, allianceIntel, processAllianceResearch, closeSeason, purgeDebris, syncProfile, deleteProfile, launchFleetRequest, lastAttackOnTarget, recentDefeatsMs, processDueFleets, isGameAdmin, logAdminAction, body, toPlain, loadGame, applyContent, findOrNull, loadPlayer, savePlayer, notify, asHttpError, purgePlayer, accountDelete, guardUserDelete };

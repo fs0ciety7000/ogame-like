@@ -7,7 +7,7 @@ import { DOCK_POLICY_LABELS, dockReadyCount, dockScrap, dockTier, rushWorkshop, 
 import { autoCommission, commissionDocked, hangarLoad } from "@/game/hangar";
 import { claimDailyMission } from "@/game/dailyMissions";
 import { claimStreak } from "@/game/streak";
-import { describeGain } from "@/game/format";
+import { describeGain, formatInt } from "@/game/format";
 import { claimChronicle } from "@/game/chronicles";
 import { endVacation, onVacation } from "@/game/vacation";
 import { playerBuildingDiscount, playerBuildTimeFactor, playerResearchTimeFactor } from "@/game/bonuses";
@@ -30,7 +30,7 @@ import {
   withMissingBuildings,
 } from "@/game/buildings";
 import { flushState, type NewNotification } from "@/game/flush";
-import { canAffordAll, RESOURCE_LIST, tradeQuote } from "@/game/resources";
+import { canAffordAll, EXCHANGE_RULES, exchangeRareLeft, isCommonToRare, recordRareExchange, RESOURCE_LIST, tradeQuote } from "@/game/resources";
 import { RESEARCH_RULES, checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime } from "@/game/technologies";
 import { findUnit, getUnitBuildTime, ownedBlueprints } from "@/game/units";
 import { playerUnitCost } from "@/game/effectTargets";
@@ -348,8 +348,20 @@ function applyAction(s: ActionState, action: GameAction): unknown {
       // 5.26.1 : taxe sur ce qui est reçu, versée au pot commun par le serveur.
       const quote = tradeQuote(sellId, buyId, amount);
       if (quote.net <= 0) throw new GameActionError("Quantité trop faible pour cet échange.");
+      // 6.14.106 (AE-L3, Q98) : plafond hebdomadaire des rares reçues contre des communes (le serveur fait autorité).
+      const rareTrade = isCommonToRare(sellId, buyId);
+      if (rareTrade) {
+        const left = exchangeRareLeft(player, now);
+        if (quote.net > left)
+          throw new GameActionError(
+            left > 0
+              ? `Plafond du comptoir : ${formatInt(EXCHANGE_RULES.weeklyRareCap)} ressources rares par semaine. Il t'en reste ${formatInt(left)} cette semaine : échange moins de communes.`
+              : `Plafond du comptoir atteint : ${formatInt(EXCHANGE_RULES.weeklyRareCap)} ressources rares par semaine. Reviens lundi.`,
+          );
+      }
       player.resources[sellId] -= amount;
       player.resources[buyId] = (player.resources[buyId] ?? 0) + quote.net;
+      if (rareTrade) recordRareExchange(player, now, quote.net);
       bumpStat(player, "traded", amount);
       grantCommanderXp(player, "steward", COMMANDER_XP.marketTrade);
       return { gained: quote.net, tax: quote.tax, taxRes: buyId };

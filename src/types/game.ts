@@ -148,6 +148,8 @@ export interface PlayerState {
   moonPity?: number;
   /** 6.14.85 (RL-2) : projets de prestige (compteur, points, projet en cours ; proposals/rythme-long-terme.md §5.2). */
   prestige?: import("@/game/prestige").PrestigeState | null;
+  /** 6.14.106 (AE-L3, Q98) : ressources rares reçues au comptoir cette semaine (plafond `exchange.weeklyRareCap`). */
+  exchangeWeek?: import("@/game/resources").ExchangeWeekState | null;
   synthesis?: import("@/game/synthesis").SynthesisState;
   /** v4.0 : bannière, emblème et devise de la fiche publique. */
   profileStyle?: import("@/game/profile").ProfileStyle;
