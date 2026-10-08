@@ -10,6 +10,7 @@ import { adminCancelContest, adminCreateContest, useContests } from "@/services/
 import { Field, SelectField, TextAreaField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { useServerPot } from "@/services/serverPotService";
+import { formatDateTime } from "@/lib/utils";
 
 /* v5.10.5 : création et suivi des concours du pot commun. */
 
@@ -110,7 +111,7 @@ export function ContestsAdmin() {
               <span className="min-w-0 flex-1">
                 <span className="text-slate-100">{c.title}</span>{" "}
                 <span className="text-xs text-slate-500">
-                  · {METRICS[c.metric]?.label} · {Math.round(c.potShare * 100)} % du pot{c.amberShare ? ` + ${Math.round(c.amberShare * 100)} % de l'Ambre` : ""} · {new Date(c.startMs).toLocaleDateString("fr-FR")} → {new Date(c.endMs).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  · {METRICS[c.metric]?.label} · {Math.round(c.potShare * 100)} % du pot{c.amberShare ? ` + ${Math.round(c.amberShare * 100)} % de l'Ambre` : ""} · {formatDateTime(c.startMs, "numeric")} → {formatDateTime(c.endMs, "numericTime")}
                   {c.results ? ` · ${c.results.length} gagnant(s)` : c.standings.length ? ` · ${c.standings.length} classé(s)` : ""}
                 </span>
               </span>

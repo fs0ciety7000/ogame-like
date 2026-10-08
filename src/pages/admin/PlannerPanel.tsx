@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarRange, ChevronLeft, ChevronRight, CopyPlus, GripVertical, Plus, Repeat, Trash2 } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, CopyPlus, GripVertical, Plus, Repeat, Skull, Swords, Trash2 } from "lucide-react";
 import { sameWeekdayNextMonth } from "@/lib/calendarShift";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { EVENT_RULES } from "@/game/events";
 import { SEASON_BOSS_RULES } from "@/game/chronicles";
 import { saveContentSection } from "@/services/contentService";
 import { useAgenda } from "@/components/game/AgendaCard";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* =====================================================
    v5.10.5 : planificateur d'événements. Calendrier du mois avec tous les
@@ -192,7 +192,7 @@ export function PlannerPanel() {
           <Button size="sm" variant="ghost" aria-label="Mois précédent" onClick={() => setOffset((o) => o - 1)}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="w-36 text-center font-display text-sm capitalize text-slate-100">{month.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</span>
+          <span className="w-36 text-center font-display text-sm capitalize text-slate-100">{formatDateTime(month, "monthYear")}</span>
           <Button size="sm" variant="ghost" aria-label="Mois suivant" onClick={() => setOffset((o) => o + 1)}>
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -319,11 +319,11 @@ export function PlannerPanel() {
                         <option value="4x6">toutes les 4 semaines ×6</option>
                       </select>
                     </label>
-                    <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "levDate")}>
-                      🐋 Boss mondial (date précise)
+                    <button type="button" className="flex items-center gap-1.5 px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "levDate")}>
+                      <Skull className="h-3.5 w-3.5 shrink-0 text-violet-glow" aria-hidden /> Boss mondial (date précise)
                     </button>
-                    <button type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "sbDate")}>
-                      ⚔️ Boss de saison (date précise)
+                    <button type="button" className="flex items-center gap-1.5 px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "sbDate")}>
+                      <Swords className="h-3.5 w-3.5 shrink-0 text-violet-glow" aria-hidden /> Boss de saison (date précise)
                     </button>
                     {rules.events.types.map((t) => (
                       <button key={t.id} type="button" className="px-2 py-1 text-left hover:bg-white/5" onClick={() => add(d, "scheduled", t.id)}>

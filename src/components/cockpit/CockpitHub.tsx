@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { EmptyAction } from "@/components/ui/panel";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertTriangle, Building2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Landmark, Moon, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon, Wrench } from "lucide-react";
+import { AlertTriangle, Building2, CheckCircle2, CalendarClock, Compass, FlaskConical, Globe2, Hammer, Landmark, Moon, Orbit, Rocket, Send, Shield, Store, Zap, type LucideIcon, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ignoreShortcut } from "@/lib/shortcuts";
 import { HudChip, EmptyState } from "@/components/ui/hud";
@@ -94,7 +94,7 @@ function Panel({ title, code, children, className }: { title: string; code?: str
     <section className={cn("glass-panel min-w-0", className)}>
       <header className="relative z-[2] flex items-center justify-between gap-2 border-b border-[var(--th-edge)] px-3.5 pb-2 pt-2.5">
         <h2 className="hud-title text-[12.5px] text-slate-100">{title}</h2>
-        {code && <span className="whitespace-nowrap font-mono text-[9.5px] tracking-[0.16em] text-slate-500">{code}</span>}
+        {code && <span className="whitespace-nowrap font-mono text-[11px] tracking-[0.12em] text-slate-500">{code}</span>}
       </header>
       <div className="relative z-[2] p-3.5">{children}</div>
     </section>
@@ -217,7 +217,7 @@ export function CockpitHub() {
             <img src={getRankIcon(player.xp)} alt="" className="h-10 w-10 shrink-0 object-contain" />
             <span className="min-w-0">
               <span className="hud-title block truncate text-sm text-slate-100">{player.pseudo}</span>
-              <span className="block truncate font-mono text-[10px] tracking-[0.12em] text-slate-400">
+              <span className="block truncate font-mono text-[11px] tracking-[0.1em] text-slate-400">
                 {getRankLabel(player.xp).toUpperCase()} // {(player.colonies?.length ?? 0) + 1} PLANÈTE{(player.colonies?.length ?? 0) > 0 ? "S" : ""}
               </span>
             </span>
@@ -265,7 +265,7 @@ export function CockpitHub() {
           </div>
           <div className="glass-panel ck-target-card">
             <div className="relative z-[2]">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Cible verrouillée // planète mère</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">Cible verrouillée // planète mère</p>
               <p className="hud-title text-[17px] text-slate-100">{player.pseudo}</p>
             </div>
             <div className="relative z-[2] grid grid-cols-3 gap-2">
@@ -274,7 +274,7 @@ export function CockpitHub() {
                 ["Colonies", `${player.colonies?.length ?? 0}`],
                 ["Victoires", `${player.victories}`],
               ].map(([k, v]) => (
-                <div key={k} className="font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500">
+                <div key={k} className="font-mono text-[11px] uppercase tracking-[0.1em] text-slate-500">
                   {k}
                   <b className="block text-sm tracking-normal text-slate-100">{v}</b>
                 </div>
@@ -317,7 +317,7 @@ export function CockpitHub() {
           <div className="ck-pane" role="tabpanel" key={tab}>
             {tab === "fleets" &&
               (mine.length === 0 ? (
-                <EmptyState size="sm" icon="🛸" title="Aucune flotte en vol" action={galaxyOpen ? <EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction> : undefined} />
+                <EmptyState size="sm" icon={<Rocket />} title="Aucune flotte en vol" action={galaxyOpen ? <EmptyAction to="/game/galaxie">Ouvrir la galaxie</EmptyAction> : undefined} />
               ) : (
                 mine.slice(0, 6).map((f) => {
                   const back = f.status === "returning";
@@ -383,7 +383,7 @@ export function CockpitHub() {
               ))}
             {tab === "alerts" &&
               (alerts.length === 0 ? (
-                <EmptyState size="sm" icon="✅" title="Rien à signaler, commandant" />
+                <EmptyState size="sm" icon={<CheckCircle2 />} title="Rien à signaler, commandant" />
               ) : (
                 alerts.slice(0, 7).map((a) => (
                   <Link key={a.id} to={a.to} className={cn("ck-item", a.urgent && "ck-item-hostile")}>

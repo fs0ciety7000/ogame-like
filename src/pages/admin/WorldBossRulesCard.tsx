@@ -28,7 +28,7 @@ export function WorldBossRulesCard() {
   // v5.10.4 : les deux boss mensuels le même week-end se chevauchent.
   const bossClash =
     rules.events.bossWeekly === false && rules.events.bossMonthly !== false && rules.seasonBoss.enabled && (rules.events.bossWeekend ?? "first") === rules.seasonBoss.weekend
-      ? "⚠️ Le boss mondial et le boss de saison tombent le même week-end : ils seront là en même temps."
+      ? "Attention : le boss mondial et le boss de saison tombent le même week-end : ils seront là en même temps."
       : undefined;
   const errors = useMemo(() => validateRules(rules).filter((e) => /Léviathan|boss mondia/i.test(e)), [rules]);
   const save = async () => {

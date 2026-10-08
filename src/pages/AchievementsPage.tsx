@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PagedList } from "@/components/ui/panel";
-import { CloudFog, Lightbulb, Lock, Search, Trophy } from "lucide-react";
+import { CloudFog, Lightbulb, Lock, Search, SearchX, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { AmberAmount } from "@/components/ui/amber";
@@ -87,10 +87,10 @@ function AchievementCard({ a, player, rate, visibility, before, closedPage }: { 
         <div className="relative flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-baseline justify-between gap-2">
             <p className="truncate text-sm font-semibold italic text-slate-500">Palier dans le brouillard</p>
-            <span className={cn("shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider opacity-60", style.text)}>{TIER_LABELS[a.tier]}</span>
+            <span className={cn("shrink-0 font-mono text-[11px] font-semibold uppercase tracking-wider opacity-60", style.text)}>{TIER_LABELS[a.tier]}</span>
           </div>
           <p className="text-xs text-slate-500">{before ? `Obtiens « ${before.name} » pour le révéler.` : "Révélé quand les paliers précédents tombent."}</p>
-          <p className="text-[11px] text-slate-600">
+          <p className="text-[11px] text-slate-500">
             {CATEGORY_LABELS[a.category].emoji} {CATEGORY_LABELS[a.category].label}
             {rate !== null && ` · ${rate} % des joueurs`}
           </p>
@@ -104,7 +104,7 @@ function AchievementCard({ a, player, rate, visibility, before, closedPage }: { 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-baseline justify-between gap-2">
           <p className={cn("truncate text-sm font-semibold", unlocked ? "text-slate-100" : "text-slate-300")}>{hidden ? "???" : a.name}</p>
-          <span className={cn("shrink-0 font-mono text-[10px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
+          <span className={cn("shrink-0 font-mono text-[11px] font-semibold uppercase tracking-wider", style.text)}>{TIER_LABELS[a.tier]}</span>
         </div>
         <p className="text-xs text-slate-400">{hidden ? "Succès secret : à toi de le découvrir." : a.description}</p>
         {hidden && a.secret && <SecretHint a={a} player={player} />}
@@ -120,7 +120,7 @@ function AchievementCard({ a, player, rate, visibility, before, closedPage }: { 
         {!unlocked && !hidden && !closedPage && progress.target > 1 && (
           <div className="flex items-center gap-2">
             <Progress value={(progress.value / progress.target) * 100} className="h-1.5 flex-1" />
-            <span className="tabular-mono text-[10px] text-slate-500">
+            <span className="tabular-mono text-[11px] text-slate-500">
               {formatCompact(progress.value)} / {formatCompact(progress.target)}
             </span>
           </div>
@@ -302,7 +302,7 @@ export function AchievementsPage() {
         </span>
       </div>
       {shown.length === 0 && (
-        <EmptyState icon="🔎" title="Aucun succès ne correspond" action={<Button size="sm" variant="ghost" onClick={() => (setQuery(""), setStatus("all"), setTier("all"), setTab("all"))}>Effacer les filtres</Button>}>
+        <EmptyState icon={<SearchX />} title="Aucun succès ne correspond" action={<Button size="sm" variant="ghost" onClick={() => (setQuery(""), setStatus("all"), setTier("all"), setTab("all"))}>Effacer les filtres</Button>}>
           Change la recherche ou les filtres.
         </EmptyState>
       )}

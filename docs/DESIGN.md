@@ -212,5 +212,8 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
   `shadow-lg/xl/2xl`, pilules `rounded-full` + `px-*`, capitales hors mono, `toLocaleString` sur un nombre, boîtes natives du
   navigateur ; (6.14.82-83) emoji dans un `.tsx`, texte sous 11 px hors admin, `text-slate-600` sur un texte, `toLocale*String`
   hors `formatDateTime`, `setInterval(() => setNow(…))`, `useEffect` sans accolades (aussi la règle eslint `no-restricted-syntax`,
-  en erreur partout depuis 6.14.86). Les fichiers pas encore repris sont des exceptions comptées (cliquet : le compte ne peut que
-  baisser) ; 6.14.86 a retiré le menu, l'en-tête, les Réglages, la Galaxie et les `useEffect` de l'admin.
+  en erreur partout depuis 6.14.86) ; (6.14.156) plancher de 11 px aussi dans `index.css` (décor du thème Signal excepté). Un fichier
+  pas encore repris peut devenir une exception comptée (cliquet : le compte ne peut que baisser) ; depuis 6.14.156 (admin, vue cockpit,
+  accueil, Succès repris), il n'y en a plus. Restent des exceptions par fichier, raison écrite dans le test : scènes dessinées en SVG
+  ou canvas, rapport imprimé, logo Google, aperçu d'e-mail. Un emoji qui est une donnée de l'admin (palette, valeur par défaut) se
+  range dans un `.ts` (`src/pages/admin/emojiData.ts`).

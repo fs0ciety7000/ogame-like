@@ -1,3 +1,4 @@
+import { DEFAULT_TROPHY_EMOJI } from "@/pages/admin/emojiData";
 import { achievementPaceScale, CATEGORY_LABELS, isTargetedMetric, METRICS, paceThreshold, TIER_LABELS, TIER_REWARDS, type AchievementCategory, type AchievementDef, type AchievementMetric, type AchievementTier } from "@/game/achievements";
 import { currentGameContent } from "@/game/content";
 import { formatInt } from "@/game/format";
@@ -13,7 +14,7 @@ export function newAchievement(): AchievementDef {
     enabled: false,
     name: "Nouveau succès",
     description: "",
-    emoji: "🏆",
+    emoji: DEFAULT_TROPHY_EMOJI,
     category: "combat",
     tier: "bronze",
     metric: "victories",

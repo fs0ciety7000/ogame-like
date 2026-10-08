@@ -98,6 +98,18 @@ const DATE_STYLES = {
   weekdayTime: { weekday: "long", ...HM },
   /** mercredi 7 octobre 2026 à 14:05 */
   full: { dateStyle: "full", timeStyle: "short" },
+  /** 14 h (axe horaire d'un graphique) */
+  hour: { hour: "2-digit" },
+  /** mer. 7 (axe d'un graphique) */
+  weekdayShortNum: { weekday: "short", day: "numeric" },
+  /** octobre 2026 (calendrier) */
+  monthYear: { month: "long", year: "numeric" },
+  /** 07/10 14:05 */
+  numericShortTime: { day: "2-digit", month: "2-digit", ...HM },
+  /** 07/10/2026 14:05 */
+  numericTime: { day: "2-digit", month: "2-digit", year: "numeric", ...HM },
+  /** 07/10/2026 14:05:09 (journaux de l'admin) */
+  numericSec: { day: "2-digit", month: "2-digit", year: "numeric", ...HM, second: "2-digit" },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 export type DateTimeStyle = keyof typeof DATE_STYLES;

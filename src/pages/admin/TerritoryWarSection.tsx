@@ -8,14 +8,14 @@ import type { GameRules } from "@/game/content";
 import { isTerritoryWarActive, nextTerritoryWar, territoryWarStandings } from "@/game/territoryWar";
 import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
 import { adminTerritoryWar, useTerritoryWar } from "@/services/territoryWarService";
-import { formatDuration } from "@/lib/utils";
+import { formatDateTime, formatDuration } from "@/lib/utils";
 
 /* 5.17 : guerre de territoire (calendrier, points par secteur, récompenses)
    et ouverture / clôture à la main. */
 
 type SetRules = (fn: (r: GameRules) => GameRules) => void;
 
-const parisDate = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+const parisDate = (ms: number) => formatDateTime(ms, "short", "server");
 
 export function TerritoryWarSection({ rules, setRules }: { rules: GameRules; setRules: SetRules }) {
   const t = rules.territoryWar;

@@ -1356,15 +1356,15 @@ main {
 .ck-stage::before {
   content: "COSMIC EMPIRES // POSTE DE COMMANDE";
   position: absolute;
-  top: -8px;
+  top: -9px;
   left: 24px;
   z-index: 5;
   padding: 0 8px;
   background: var(--th-space-950);
   color: var(--th-text-500);
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.24em;
+  font-size: 11px;
+  letter-spacing: 0.18em;
 }
 .ck {
   display: grid;
@@ -1397,8 +1397,8 @@ main {
   position: absolute;
   z-index: 3;
   font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
+  font-size: 11px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--th-text-200);
 }
@@ -1470,7 +1470,7 @@ main {
   background: linear-gradient(0deg, color-mix(in srgb, var(--th-accent) 12%, transparent), transparent);
   text-shadow: 0 0 12px color-mix(in srgb, var(--th-accent) 60%, transparent);
 }
-.ck-badge { margin-left: 5px; padding: 0 4px; font-family: var(--font-mono); font-size: 9px; background: color-mix(in srgb, var(--th-accent) 25%, transparent); color: var(--th-text-100); }
+.ck-badge { margin-left: 5px; padding: 0 4px; font-family: var(--font-mono); font-size: 11px; line-height: 1.3; background: color-mix(in srgb, var(--th-accent) 25%, transparent); color: var(--th-text-100); }
 .ck-badge-hot { background: var(--th-danger); color: #fff; }
 .ck-pane { position: relative; z-index: 2; display: grid; align-content: start; gap: 8px; padding: 12px; animation: ck-pane-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes ck-pane-in {
@@ -1492,14 +1492,14 @@ main {
 .ck-item-hostile { border-color: color-mix(in srgb, var(--th-danger) 55%, transparent); background: color-mix(in srgb, var(--th-danger) 8%, transparent); }
 .ck-item-hostile .ck-eta { color: var(--th-danger); }
 .ck-item-t { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-display); font-size: 12.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--th-text-100); }
-.ck-item-s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 10px; color: var(--th-text-400); }
+.ck-item-s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--th-text-400); }
 .ck-eta { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--th-accent); white-space: nowrap; }
 .ck-bar { position: relative; display: block; height: 6px; overflow: hidden; background: rgba(255, 255, 255, 0.07); }
 .ck-bar > span { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--th-accent), var(--th-ok)); transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .ck-bar-hot > span { background: var(--th-ember); }
 .ck-bar-striped > span::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, transparent 0 8px, rgba(255, 255, 255, 0.18) 8px 14px); background-size: 28px 100%; animation: ck-slide 1.2s linear infinite; }
 @keyframes ck-slide { to { background-position: 28px 0; } }
-.ck-statrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--th-text-400); }
+.ck-statrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--th-text-400); }
 .ck-statrow b { font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--th-text-100); white-space: nowrap; }
 .ck-seg { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
 .ck-seg > i { height: 6px; background: rgba(255, 255, 255, 0.07); }
@@ -1521,7 +1521,7 @@ main {
   transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 .ck-qbtn:hover { border-color: var(--th-accent); color: var(--th-text-100); box-shadow: 0 0 18px color-mix(in srgb, var(--th-accent) 25%, transparent); }
-.ck-qbtn small { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--th-text-500); }
+.ck-qbtn small { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--th-text-500); }
 .ck-radar {
   position: relative;
   flex: none;

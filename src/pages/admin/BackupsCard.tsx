@@ -4,6 +4,7 @@ import { CloudUpload, Download, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { adminBackupToR2, adminDownloadBackup, adminListBackups, type BackupFile } from "@/services/adminService";
+import { formatDateTime } from "@/lib/utils";
 
 /* v4.9 : sauvegardes du serveur — liste, téléchargement, copie vers Cloudflare R2. */
 
@@ -66,7 +67,7 @@ export function BackupsCard() {
         {shown.map((b) => (
           <li key={b.key} className="flex items-center gap-3 py-1.5">
             <span className="min-w-0 flex-1 truncate font-mono text-slate-300">{b.key}</span>
-            <span className="text-slate-500">{new Date(b.modifiedAtMs).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+            <span className="text-slate-500">{formatDateTime(b.modifiedAtMs, "dayShortTime")}</span>
             <span className="w-16 text-right text-slate-500">{size(b.size)}</span>
             <Button variant="ghost" size="sm" className="h-7 px-2" disabled={busy !== null} onClick={() => void download(b.key)} title="Télécharger">
               <Download className="h-3.5 w-3.5" /> {busy === b.key ? "…" : ""}

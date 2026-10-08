@@ -17,6 +17,7 @@ import { offerApplyDuration } from "@/pages/admin/applyBossDuration";
 import { adminSeasonBoss, useSeasonBoss, useSeasonBossStore } from "@/services/seasonBossService";
 import { bossWindows } from "@/game/events";
 import { CheckboxField, Field, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
+import { formatDateTime } from "@/lib/utils";
 
 /* 5.15 : tout le boss de saison au même endroit, comme les boss mondiaux :
    le boss de chaque mois (identité), le calendrier, le combat (structure,
@@ -24,7 +25,7 @@ import { CheckboxField, Field, ImageField, NumberField, Section, SelectField, Te
    (reliques du podium, table de butin). Trois sections de contenu sont
    enregistrées : règles (seasonBoss), Chroniques (boss du mois), reliques (butin). */
 
-const formatDateTime = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+const formatLong = (ms: number) => formatDateTime(ms, "long");
 
 export function SeasonBossPanel() {
   useContentStore((s) => s.version);
@@ -135,7 +136,7 @@ export function SeasonBossPanel() {
         <BossScheduleFields label="Boss de saison" weekday value={sb.alternate !== false ? { ...sb, weekly: { minGapDays: 0, between: leviathanSchedule() } } : sb} onChange={(p) => setSb(p)} />
         {live && isActive(live, now) && (
           <HudCallout tone="accent" className="text-xs sm:col-span-2">
-            Combat en cours : fin le <span className="font-mono text-slate-100">{formatDateTime(live.endMs)}</span> ({Math.round((live.endMs - live.startMs) / 3600_000)} h, fixées à son apparition). Une nouvelle durée vaut pour les prochains combats ; à l'enregistrement, tu pourras aussi l'appliquer à celui-ci.
+            Combat en cours : fin le <span className="font-mono text-slate-100">{formatLong(live.endMs)}</span> ({Math.round((live.endMs - live.startMs) / 3600_000)} h, fixées à son apparition). Une nouvelle durée vaut pour les prochains combats ; à l'enregistrement, tu pourras aussi l'appliquer à celui-ci.
           </HudCallout>
         )}
         {sb.alternate !== false && gapHours !== null && sb.durationHours > gapHours && (

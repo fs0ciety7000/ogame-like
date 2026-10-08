@@ -47,8 +47,10 @@ describe("design system", () => {
   });
 
   it("aucune couleur hex écrite dans un composant (jetons du thème)", () => {
-    // Scènes dessinées (planète, boss, nébuleuse, étoiles, vue cockpit), rapport imprimé,
-    // logo Google et aperçu d'e-mail : couleurs d'illustration ou de marque, hors thème.
+    // Exceptions gardées (6.14.156, R7) : scènes dessinées en SVG ou canvas (planète, boss, étoiles, verrière du cockpit :
+    // le canvas lit les jetons du thème et ne garde un hex qu'en repli ou pour la lumière d'une étoile), rapport imprimé
+    // (HTML autonome, sans feuille de style du thème), logo Google (couleurs de marque) et aperçu d'e-mail (fond du client
+    // de messagerie, hors thème du jeu).
     const allowed = /(HomePlanet|BossStage|ParallaxStars|CockpitViewport|StatsPrintReport|AltSignIn|MailPanel)\.tsx$/;
     const offenders: string[] = [];
     for (const file of files("src")) {
@@ -122,12 +124,13 @@ describe("design system", () => {
   });
 
   it("5.16.2 : aucune couleur rgba() écrite dans un composant : color-mix(var(--color-…))", () => {
-    // Scènes dessinées (neige, vue cockpit) et rapport imprimé : couleurs d'illustration.
+    // Exceptions gardées (6.14.156, R7) : canvas de la neige et de la verrière du cockpit (un dégradé de canvas ne lit pas
+    // color-mix) et rapport imprimé (HTML autonome) : couleurs d'illustration.
     expect(scan((l) => /rgba\(\s*\d/.test(l), /(StatsPrintReport|Snowfall|CockpitViewport)\.tsx$/)).toEqual([]);
   });
 
-  /* 6.14.83 (UX-10) : fichiers modifiés par une autre tâche pendant le lot (admin, menu, en-tête, accueil, vue
-     cockpit, astuces, succès, réglages, prochaines actions) : écarts comptés, à reprendre quand ils seront libres. */
+  /* 6.14.83 (UX-10) : fichiers modifiés par une autre tâche pendant le lot : écarts comptés (cliquet), à reprendre quand
+     ils seront libres. 6.14.86 puis 6.14.156 (R7, UX-13) les ont tous repris : listes vides. */
 
   it("6.14.83 : arrondis md/lg/xl interdits (coins coupés : hud-cut, hud-cut-sm)", () => {
     const offenders = scan((l) => /\brounded-(?:md|lg|xl)\b/.test(l));
@@ -145,6 +148,20 @@ describe("design system", () => {
     const small = /\btext-\[(?:[0-9]|10)(?:\.\d+)?px\]/;
     const offenders = scan((l) => small.test(l) && !/<text\b|fill-slate/.test(l), /src\/pages\/admin\/|src\/pages\/AdminPage\.tsx$/);
     expectRatchet(offenders, PENDING_SMALL_TEXT);
+  });
+
+  it("6.14.156 : plancher de 11 px aussi dans index.css (vue cockpit comprise), hors décor du thème Signal", () => {
+    // Bloc CSS (sélecteur + déclarations) dont la taille de police est sous 11 px ; seuls .signal-tag et .signal-barcode,
+    // décor du thème Signal (code-barres, étiquette), y échappent (6.14.83).
+    const css = readFileSync("src/index.css", "utf8");
+    const offenders: string[] = [];
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(css))) {
+      const size = /font-size:\s*(\d+(?:\.\d+)?)px/.exec(m[2]);
+      if (size && Number(size[1]) < 11 && !/\.signal-(?:tag|barcode)\b/.test(m[1])) offenders.push(m[1].trim());
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("6.14.83 : text-slate-600 réservé au décor (icône, filet, séparateur), jamais un texte qui porte une information", () => {
@@ -193,46 +210,10 @@ describe("design system", () => {
   });
 });
 
-const PENDING_ROUNDED: Record<string, number> = {
-  "src/pages/admin/ContentEditor.tsx": 1,
-  "src/pages/admin/LogsPanel.tsx": 2,
-  "src/pages/admin/fields.tsx": 1,
-};
-const PENDING_EMOJI: Record<string, number> = {
-  "src/components/cockpit/CockpitHub.tsx": 2,
-  "src/pages/AchievementsPage.tsx": 1,
-  "src/pages/admin/AchievementForm.tsx": 1,
-  "src/pages/admin/BannersPanel.tsx": 2,
-  "src/pages/admin/ContentHistoryPanel.tsx": 1,
-  "src/pages/admin/PlannerPanel.tsx": 2,
-  "src/pages/admin/ReportsPanel.tsx": 2,
-  "src/pages/admin/TitleForm.tsx": 1,
-  "src/pages/admin/WorldBossRulesCard.tsx": 1,
-};
-const PENDING_SMALL_TEXT: Record<string, number> = {
-  "src/components/cockpit/CockpitHub.tsx": 4,
-  "src/pages/AchievementsPage.tsx": 3,
-  "src/pages/DashboardPage.tsx": 2,
-};
-const PENDING_SLATE_600: Record<string, number> = {
-  "src/pages/AchievementsPage.tsx": 1,
-};
-const PENDING_DATES: Record<string, number> = {
-  "src/pages/admin/ActivityPanel.tsx": 4,
-  "src/pages/admin/BackupsCard.tsx": 1,
-  "src/pages/admin/CasinoAdmin.tsx": 1,
-  "src/pages/admin/ChroniclesPanel.tsx": 1,
-  "src/pages/admin/ContestsAdmin.tsx": 1,
-  "src/pages/admin/LogsPanel.tsx": 1,
-  "src/pages/admin/MailPanel.tsx": 3,
-  "src/pages/admin/MaintenancePanel.tsx": 4,
-  "src/pages/admin/PlannerPanel.tsx": 1,
-  "src/pages/admin/ProceduralPanel.tsx": 1,
-  "src/pages/admin/SeasonBossPanel.tsx": 1,
-  "src/pages/admin/StatsPanel.tsx": 2,
-  "src/pages/admin/StatsPrintReport.tsx": 1,
-  "src/pages/admin/TerritoryWarSection.tsx": 1,
-  "src/pages/admin/WarlordsPanel.tsx": 1,
-  "src/pages/admin/applyBossDuration.ts": 1,
-  "src/pages/admin/bossFields.tsx": 1,
-};
+/* 6.14.156 (R7, UX-13) : l'admin, la vue cockpit, l'accueil et les Succès sont repris ; plus aucune exception comptée.
+   Le cliquet reste prêt pour un prochain lot qui ne pourrait pas tout reprendre d'un coup. */
+const PENDING_ROUNDED: Record<string, number> = {};
+const PENDING_EMOJI: Record<string, number> = {};
+const PENDING_SMALL_TEXT: Record<string, number> = {};
+const PENDING_SLATE_600: Record<string, number> = {};
+const PENDING_DATES: Record<string, number> = {};

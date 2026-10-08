@@ -37,3 +37,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q387 | Ligne « au-delà de l'entrepôt » au Journal seulement, sans toast (Q76) (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |
 | Q388 | Seuil de la ligne : 1 000 par ressource (`storageOverflow.minAmount`) (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |
 | Q390 | Butin et livraisons non concernés par la ligne « au-delà de l'entrepôt » (`docs/changes/6.14.155-au-dela-entrepot.md`) | valider |
+| Q391 | Dates de l'admin (maintenance, boss) à l'heure de l'appareil, comme les champs `datetime-local` qui les saisissent, plutôt qu'à l'heure de Paris (règle DESIGN.md des rendez-vous serveur) (`docs/changes/6.14.156-hygiene-design.md`) | valider |
+| Q392 | Couleurs hex de `BossStage` gardées dans l'exception « scène dessinée » (`docs/changes/6.14.156-hygiene-design.md`) | valider |
+| Q393 | Plancher de 11 px appliqué aussi aux étiquettes décoratives du cockpit (`index.css`) (`docs/changes/6.14.156-hygiene-design.md`) | valider |

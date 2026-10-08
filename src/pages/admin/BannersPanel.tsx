@@ -9,10 +9,9 @@ import { BannerStrip } from "@/components/layout/AnnouncementBanners";
 import { saveBanners, useBannerStore } from "@/services/bannerService";
 import { BANNER_KINDS, BANNER_MAX_LENGTH, BANNER_MAX_SHOWN, newBanner, safeHref, visibleBanners, type Banner, type BannerKind } from "@/game/banners";
 import { cn } from "@/lib/utils";
+import { BANNER_EMOJIS, BANNER_TEXT_EXAMPLE } from "./emojiData";
 
 /* Administration des bandeaux d'annonce (v3.7). */
-
-const EMOJIS = ["📢", "🚀", "⚔️", "🛡️", "🔥", "⚠️", "🚨", "🎉", "🏆", "⏰", "🔧", "✨", "💎", "🌌", "👾", "💀", "🐙", "🎁", "🪐", "⚡"];
 
 const KIND_COLOR: Record<BannerKind, string> = {
   info: "var(--color-cyan-glow)",
@@ -102,7 +101,7 @@ function BannerEditor({ banner, onChange, onDelete }: { banner: Banner; onChange
           value={banner.text}
           onChange={(e) => set({ text: e.target.value.slice(0, BANNER_MAX_LENGTH) })}
           rows={3}
-          placeholder="🚀 La Matriarche arrive mardi 18 h : [préparez vos flottes](/game/uber) !"
+          placeholder={BANNER_TEXT_EXAMPLE}
           className="resize-y border border-cyan-glow/20 bg-space-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-cyan-glow/60 focus:outline-none"
         />
       </Field>
@@ -111,7 +110,7 @@ function BannerEditor({ banner, onChange, onDelete }: { banner: Banner; onChange
         <Button variant="outline" size="sm" onClick={() => insert("**", "**", "texte")} title="Gras">
           <Bold className="h-3.5 w-3.5" />
         </Button>
-        {EMOJIS.map((e) => (
+        {BANNER_EMOJIS.map((e) => (
           <button key={e} type="button" onClick={() => insert(e)} className="h-8 w-8 text-base transition-transform hover:scale-125" aria-label={`Insérer ${e}`}>
             {e}
           </button>

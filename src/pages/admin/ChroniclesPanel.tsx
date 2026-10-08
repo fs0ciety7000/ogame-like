@@ -12,6 +12,7 @@ import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { resetContentSection, saveContentSection, useContentStore } from "@/services/contentService";
 import { ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
+import { formatDateTime } from "@/lib/utils";
 
 /* v4.3 : arcs mensuels des Chroniques (épisodes, objectifs, boss, teinte). */
 
@@ -147,7 +148,7 @@ export function ChroniclesPanel() {
             {month.auto && (
               <div className="border border-cyan-glow/20 bg-cyan-glow/5 p-3 text-xs text-slate-300 sm:col-span-2">
                 <p className="mb-1 font-medium text-cyan-glow">
-                  Chapitre généré le {new Date(month.auto.generatedAtMs).toLocaleString("fr-FR")} à partir de {month.auto.sourceMonth} ({month.auto.activePlayers} joueurs actifs, difficulté ×{month.auto.difficulty})
+                  Chapitre généré le {formatDateTime(month.auto.generatedAtMs, "numericTime")} à partir de {month.auto.sourceMonth} ({month.auto.activePlayers} joueurs actifs, difficulté ×{month.auto.difficulty})
                 </p>
                 <ul className="list-disc space-y-0.5 pl-4">
                   {month.auto.reasons.map((r, i) => (

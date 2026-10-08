@@ -12,7 +12,7 @@ import { achievementGenText, ACTIVITY_KEYS, type ProceduralSettings } from "@/ga
 import { measuredPlayable, NEW_OBJECTIVES, TRACKED_ACTIONS, trackedActionsEnabled, trackedWeight, type StaticObjective } from "@/game/trackedActions";
 import { STORY_SPEAKERS } from "@/game/story";
 import { seasonLabel } from "@/game/seasons";
-import { timeAgo } from "@/lib/utils";
+import { formatDateTime, timeAgo } from "@/lib/utils";
 import { AllianceSagaAdmin } from "@/pages/admin/AllianceSagaAdmin";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
@@ -314,7 +314,7 @@ export function ProceduralPanel() {
         <Section title="Journal du générateur">
           {[...settings.log].reverse().map((l, i) => (
             <p key={i} className="text-xs text-slate-400">
-              <span className="font-mono text-slate-500">{new Date(l.atMs).toLocaleString("fr-FR")}</span> · {l.text}
+              <span className="font-mono text-slate-500">{formatDateTime(l.atMs, "numericSec")}</span> · {l.text}
             </p>
           ))}
         </Section>

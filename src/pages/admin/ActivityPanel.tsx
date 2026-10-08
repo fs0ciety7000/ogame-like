@@ -8,7 +8,7 @@ import { HudPanel } from "@/components/ui/panel";
 import { SkeletonCards } from "@/components/ui/skeleton";
 import { AUDIT_WINDOWS, XP_SOURCE_LABELS, type AuditFlag, type AuditWindow, type XpSource, type XpTotals } from "@/game/xpAudit";
 import { fetchActivity, fetchPlayerAudit, type ActivityOverview, type ActivityRow, type PlayerAudit } from "@/services/adminActivityService";
-import { cn, formatDecimal, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
+import { cn, formatDateTime, formatDecimal, formatDuration, formatNumber, timeAgo } from "@/lib/utils";
 
 /* 5.17.1 : activité des joueurs en temps réel et audit d'un joueur (XP par
    source, rythme, combats, échanges, actions de l'équipe, signaux d'alerte). */
@@ -28,7 +28,7 @@ const SOURCE_TONE: Record<XpSource, string> = {
 };
 const REFRESH_MS = 30_000;
 
-const parisTime = (ms: number) => new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+const parisTime = (ms: number) => formatDateTime(ms, "dayShortTime", "server");
 const signed = (n: number) => `${n > 0 ? "+" : ""}${formatNumber(n)}`;
 
 /** Barre empilée de l'XP par source. */
@@ -347,8 +347,8 @@ function PlayerAuditView({ q, onBack }: { q: string; onBack: () => void }) {
   const days = Math.max(1, (a.now - p.createdAtMs) / 86_400_000);
   const startHour = Math.floor(a.now / 3600_000) - 23;
   const startHour7 = Math.floor(a.now / 3600_000) - 7 * 24 + 1;
-  const hourLabel = (h: number) => new Date(h * 3600_000).toLocaleString("fr-FR", { hour: "2-digit", timeZone: "Europe/Paris" });
-  const dayLabel = (h: number) => new Date(h * 3600_000).toLocaleString("fr-FR", { weekday: "short", day: "numeric", timeZone: "Europe/Paris" });
+  const hourLabel = (h: number) => formatDateTime(h * 3600_000, "hour", "server");
+  const dayLabel = (h: number) => formatDateTime(h * 3600_000, "weekdayShortNum", "server");
 
   return (
     <div className="flex flex-col gap-4">
@@ -695,7 +695,7 @@ function PlayerCompareView({ pair, onBack, onOpen }: { pair: [string, string]; o
   const [x, y] = audits;
   const mutual = x.battles.filter((b) => (b.attackerUid === y.player.uid || b.defenderUid === y.player.uid)).length;
   const startHour = Math.floor(x.now / 3600_000) - 23;
-  const hourLabel = (h: number) => new Date(h * 3600_000).toLocaleString("fr-FR", { hour: "2-digit", timeZone: "Europe/Paris" });
+  const hourLabel = (h: number) => formatDateTime(h * 3600_000, "hour", "server");
 
   return (
     <div className="flex flex-col gap-4">

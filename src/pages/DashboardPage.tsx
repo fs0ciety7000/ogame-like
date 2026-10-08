@@ -157,7 +157,7 @@ export function DashboardPage() {
         <div className="flex flex-col items-center gap-3 text-center">
           <HomePlanet buildings={player.buildings} life={planetLife} size={planetSize} look={profileStyle(player).planet} />
           <div>
-            <p className="hud-eyebrow text-[10px] text-slate-500">Développement de l'empire</p>
+            <p className="hud-eyebrow text-[11px] text-slate-500">Développement de l'empire</p>
             <p className="font-display text-3xl text-slate-100">
               <span className="font-mono">{developmentPercent}</span> %
             </p>
@@ -292,7 +292,7 @@ export function DashboardPage() {
 
       {editing && layout.hidden.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-          <span className="hud-eyebrow text-[10px] text-slate-500">Cartes masquées</span>
+          <span className="hud-eyebrow text-[11px] text-slate-500">Cartes masquées</span>
           {layout.hidden.map((id) => (
             <Button key={id} variant="outline" size="sm" onClick={() => setDashboardLayout(toggleSection(layout, id))}>
               <Eye className="mr-1.5 h-3.5 w-3.5" /> {sectionLabel(id)}

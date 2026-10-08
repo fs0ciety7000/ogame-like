@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import type { GameStats } from "@/game/analytics";
 import { assetUrl } from "@/lib/assets";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDateTime, formatNumber } from "@/lib/utils";
 
 /* =====================================================
    v4.8 : rapport de statistiques imprimable (export PDF par l'impression
@@ -94,7 +94,7 @@ export function StatsPrintReport({ stats }: { stats: GameStats }) {
             <div style={{ fontSize: 9, letterSpacing: "0.3em", color: C.cyan }}>COSMIC EMPIRES · ADMINISTRATION</div>
             <div style={{ fontSize: 26, fontWeight: 700, letterSpacing: "0.04em", marginTop: 2 }}>Rapport d'activité du secteur</div>
             <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
-              Calculé le {date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} à {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+              Calculé le {formatDateTime(date, "full")}
             </div>
           </div>
         </div>

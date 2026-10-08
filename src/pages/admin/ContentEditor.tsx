@@ -243,7 +243,7 @@ export function ContentEditor<S extends ListSection>({
             {visible.map(({ item, index }) => (
               <div
                 key={`${getId(item)}-${index}`}
-                className={cn("group flex w-full items-center gap-1 rounded-lg pr-1 text-sm transition", index === selected ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5")}
+                className={cn("group flex w-full items-center gap-1 hud-cut-sm pr-1 text-sm transition", index === selected ? "bg-cyan-glow/10 text-cyan-glow" : "text-slate-300 hover:bg-white/5")}
               >
                 <button type="button" onClick={() => setSelected(index)} className="flex min-w-0 flex-1 items-center justify-between gap-2 px-2 py-1.5 text-left">
                   <span className="truncate">{getLabel(item) || "(sans nom)"}</span>

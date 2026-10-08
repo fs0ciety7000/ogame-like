@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, History, RotateCcw } from "lucide-react";
+import { ChevronDown, FolderOpen, History, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -209,7 +209,7 @@ export function ContentHistoryPanel() {
         ))}
       </div>
       {error && <p className="text-xs text-ember-glow">{error}</p>}
-      {!error && items.length === 0 && <EmptyState size="sm" icon="🗂️" title="Aucune version">Les prochains enregistrements de contenu apparaîtront ici.</EmptyState>}
+      {!error && items.length === 0 && <EmptyState size="sm" icon={<FolderOpen />} title="Aucune version">Les prochains enregistrements de contenu apparaîtront ici.</EmptyState>}
       <ul className="flex flex-col divide-y divide-white/5">
         {items.map((v) => (
           <li key={v.id} className="flex flex-wrap items-center gap-2 py-2 text-xs">

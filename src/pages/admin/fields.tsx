@@ -281,7 +281,7 @@ export function ImageField({ label, value, onChange }: { label: string; value: s
   return (
     <Field label={label} hint="Chemin (/assets/…) ou image envoyée (webp conseillé, carré)." className="sm:col-span-2">
       <div className="flex items-center gap-2">
-        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-space-800">
+        <div className="h-14 w-14 shrink-0 overflow-hidden hud-cut-sm bg-space-800">
           {value && <img src={value} alt="" className="h-full w-full object-cover" />}
         </div>
         <Input value={value} onChange={(e) => onChange(e.target.value)} className="flex-1" />

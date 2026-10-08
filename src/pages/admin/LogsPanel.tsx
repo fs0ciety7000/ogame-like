@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { adminListLogs, type AdminLogEntry } from "@/services/adminService";
 import { pb } from "@/lib/pocketbase";
+import { formatDateTime } from "@/lib/utils";
 
 const ACTION_LABEL: Record<AdminLogEntry["action"], { label: string; variant: "success" | "warning" | "alert" }> = {
   create: { label: "Création", variant: "success" },
@@ -42,7 +43,7 @@ function LogRow({ log }: { log: AdminLogEntry }) {
     <div className="border-b border-white/5 py-2 last:border-0">
       <button type="button" className="flex w-full flex-wrap items-center gap-2 text-left text-xs" onClick={() => setOpen((o) => !o)}>
         {open ? <ChevronDown className="h-3.5 w-3.5 text-slate-500" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-500" />}
-        <span className="tabular-mono w-36 shrink-0 text-slate-500">{new Date(log.createdAtMs).toLocaleString("fr-FR")}</span>
+        <span className="tabular-mono w-36 shrink-0 text-slate-500">{formatDateTime(log.createdAtMs, "numericSec")}</span>
         <span className="font-medium text-slate-200">{log.actorName}</span>
         <Badge variant={action.variant}>{action.label}</Badge>
         <span className="text-slate-400">
@@ -57,7 +58,7 @@ function LogRow({ log }: { log: AdminLogEntry }) {
             ? fields.map((f) => {
                 const change = log.changes[f] as { avant?: unknown; après?: unknown };
                 return (
-                  <div key={f} className="grid grid-cols-1 gap-1 rounded-md bg-black/20 p-2 text-xs md:grid-cols-[8rem_1fr_1fr]">
+                  <div key={f} className="grid grid-cols-1 gap-1 hud-cut-sm bg-black/20 p-2 text-xs md:grid-cols-[8rem_1fr_1fr]">
                     <span className="font-semibold text-slate-300">{f}</span>
                     <span className="text-danger-glow/90">
                       − <Value value={change?.avant} />
@@ -69,7 +70,7 @@ function LogRow({ log }: { log: AdminLogEntry }) {
                 );
               })
             : (
-              <div className="rounded-md bg-black/20 p-2 text-xs text-slate-300">
+              <div className="hud-cut-sm bg-black/20 p-2 text-xs text-slate-300">
                 <Value value={log.changes?.enregistrement} />
               </div>
             )}

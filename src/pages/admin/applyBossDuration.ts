@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { isActive, type LeviathanState } from "@/game/leviathan";
+import { formatDateTime } from "@/lib/utils";
 
 const HOUR = 3600_000;
 
@@ -18,7 +19,7 @@ export async function offerApplyDuration(opts: {
   const now = Date.now();
   if (oldHours === newHours || !state || !isActive(state, now)) return;
   const endMs = state.startMs + newHours * HOUR;
-  const endLabel = new Date(endMs).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const endLabel = formatDateTime(endMs, "long");
   if (endMs <= now + 5 * 60_000) {
     toast.warning(`${name} : avec ${newHours} h, le combat en cours serait déjà fini. La nouvelle durée vaudra pour le prochain combat ; pour écourter celui-ci, passe par le suivi en direct.`);
     return;

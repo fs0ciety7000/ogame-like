@@ -1,3 +1,4 @@
+import { DEFAULT_TROPHY_EMOJI } from "@/pages/admin/emojiData";
 import { alpha } from "@/lib/utils";
 import { isTargetedMetric, METRICS, type AchievementMetric } from "@/game/achievements";
 import { TITLE_RARITIES, titleRarity, type TitleDef, type TitleRarity } from "@/game/titles";
@@ -9,7 +10,7 @@ const ID_HINT_NEW = "Minuscules, chiffres, _ — non modifiable une fois enregis
 const ID_HINT_LOCKED = "Identifiant utilisé par les succès : non modifiable.";
 
 export function newTitle(): TitleDef {
-  return { id: "nouveau_titre", label: "Nouveau titre", description: "", icon: "🏆", rarity: "rare", enabled: false };
+  return { id: "nouveau_titre", label: "Nouveau titre", description: "", icon: DEFAULT_TROPHY_EMOJI, rarity: "rare", enabled: false };
 }
 
 export function titleListLabel(t: TitleDef): string {

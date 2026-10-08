@@ -13,7 +13,7 @@ import { fetchWarlords, type WarlordsView } from "@/services/warlordService";
 import { HudCallout, HudChip } from "@/components/ui/hud";
 import { UNIT_CLASS_LABELS } from "@/game/unitClasses";
 import { CheckboxField, ImageField, NumberField, Section, SelectField, TextAreaField, TextField } from "@/pages/admin/fields";
-import { formatNumber } from "@/lib/utils";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 import { normalizeRankRules, RANK_NAMES, RANK_NUMERALS, type WarlordRankRules } from "@/game/warlordRanks";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 
@@ -339,7 +339,7 @@ function WarlordHistory({ history, counter }: { history: WarlordHistoryPoint[]; 
   const h = 48;
   const pts = history.map((p, i) => `${history.length > 1 ? (i / (history.length - 1)) * w : w / 2},${h - (p.power / max) * (h - 4) - 2}`).join(" ");
   const changes = history.filter((p, i) => i === 0 || p.rank !== history[i - 1].rank).slice(-6).reverse();
-  const day = (ms: number) => new Date(ms).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const day = (ms: number) => formatDateTime(ms, "numericShortTime");
   return (
     <div className="flex flex-col gap-2 sm:col-span-2">
       <div className="flex flex-wrap items-center gap-2">

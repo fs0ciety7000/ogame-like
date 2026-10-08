@@ -11,7 +11,7 @@ import { Field } from "@/pages/admin/fields";
 import { MaintenancePage } from "@/pages/MaintenancePage";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
-import { formatDuration, cn } from "@/lib/utils";
+import { cn, formatDateTime, formatDuration } from "@/lib/utils";
 import { setMaintenance, useMaintenance } from "@/services/maintenanceService";
 import { DEFAULT_MAINTENANCE_MESSAGE, maintenanceProgress, maintenanceRemainingMs, type MaintenanceState } from "@/game/maintenance";
 import { CURRENT_VERSION } from "@/lib/changelog";
@@ -120,7 +120,7 @@ export function MaintenancePanel() {
             <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
               <Stat label="Depuis" value={formatDuration((now - m.startedAtMs) / 1000)} />
               <Stat label="Reste" value={remaining === null ? "—" : remaining > 0 ? formatDuration(remaining / 1000) : "dépassé"} warn={remaining === 0} />
-              <Stat label={m.autoEnd && m.endsAtMs ? "Réouverture auto" : "Fin prévue"} value={m.endsAtMs ? new Date(m.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : "indéterminée"} />
+              <Stat label={m.autoEnd && m.endsAtMs ? "Réouverture auto" : "Fin prévue"} value={m.endsAtMs ? formatDateTime(m.endsAtMs, "time") : "indéterminée"} />
             </div>
             {progress !== null && <HudMeter percent={progress * 100} tone="var(--color-gold-glow)" />}
             <div className="flex flex-wrap gap-2">
@@ -197,7 +197,7 @@ export function MaintenancePanel() {
           <Input type="datetime-local" value={customEnd} min={toLocalInput(now)} onChange={(e) => setCustomEnd(e.target.value)} />
         </Field>
         <p className="text-xs text-slate-500">
-          {plannedEnd ? `Réouverture affichée vers ${new Date(plannedEnd).toLocaleString("fr-FR", { weekday: "long", hour: "2-digit", minute: "2-digit" })}.` : "Sans heure de fin : les joueurs voient le temps écoulé."}
+          {plannedEnd ? `Réouverture affichée vers ${formatDateTime(plannedEnd, "weekdayTime")}.` : "Sans heure de fin : les joueurs voient le temps écoulé."}
         </p>
         <label className={cn("flex items-start gap-2 text-sm text-slate-200", !plannedEnd && "opacity-50")}>
           <input type="checkbox" checked={autoEnd} disabled={!plannedEnd} onChange={(e) => setAutoEnd(e.target.checked)} className="mt-1 accent-cyan-glow" />
@@ -233,11 +233,11 @@ export function MaintenancePanel() {
         {m.scheduled ? (
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <span>
-              Début <b className="font-mono text-slate-100">{new Date(m.scheduled.startAtMs).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</b>
+              Début <b className="font-mono text-slate-100">{formatDateTime(m.scheduled.startAtMs, "short")}</b>
               {m.scheduled.endsAtMs && (
                 <>
                   {" "}
-                  · fin <b className="font-mono text-slate-100">{new Date(m.scheduled.endsAtMs).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</b>
+                  · fin <b className="font-mono text-slate-100">{formatDateTime(m.scheduled.endsAtMs, "time")}</b>
                 </>
               )}{" "}
               · dans <span className="font-mono">{formatDuration(Math.max(0, m.scheduled.startAtMs - now) / 1000)}</span>

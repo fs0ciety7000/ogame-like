@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { IconSelect } from "@/components/ui/icon-select";
 import { usePlayerStore } from "@/store/playerStore";
 import { EMAIL_MARKDOWN_TEMPLATE, markdownToEmail } from "@/lib/emailMarkdown";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { HudPanel } from "@/components/ui/panel";
 import { SERVER_TASK_RULES } from "@/game/serverTasks";
 import {
@@ -169,7 +169,7 @@ export function MailPanel() {
     try {
       const out = await mailSchedule(body, new Date(sendAt).getTime());
       toast.success(
-        `Campagne programmée pour le ${new Date(out.sendAtMs).toLocaleString("fr-FR")}.`,
+        `Campagne programmée pour le ${formatDateTime(out.sendAtMs, "numericTime")}.`,
       );
       setSendAt("");
       refreshHistory();
@@ -565,12 +565,7 @@ function MailHistory({
                 {c.subject}
               </span>
               <span className="shrink-0 font-mono text-[11px] text-slate-400">
-                {new Date(c.sendAtMs).toLocaleString("fr-FR", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
+                {formatDateTime(c.sendAtMs, "dayShortTime")}
               </span>
               <Button size="sm" variant="ghost" onClick={() => onCancel(c.id)}>
                 Annuler
@@ -604,7 +599,7 @@ function MailHistory({
                   {c.subject}
                 </span>
                 <span className="font-mono text-[10px] text-slate-500">
-                  {new Date(c.sentAtMs).toLocaleDateString("fr-FR")} ·{" "}
+                  {formatDateTime(c.sentAtMs, "numeric")} ·{" "}
                   {segmentLabel(c.segment)}
                 </span>
               </span>

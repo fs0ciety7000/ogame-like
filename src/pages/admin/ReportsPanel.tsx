@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ExternalLink, Github, Mail, Radar, Save, Send, Trash2 } from "lucide-react";
+import { ExternalLink, Github, Mail, Radar, Save, Search, Send, Trash2, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +108,7 @@ export function ReportsPanel() {
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
         <Card className="flex max-h-[70vh] flex-col overflow-y-auto">
           {reports === null && <p className="p-4 text-sm text-slate-500">Chargement…</p>}
-          {reports !== null && shown.length === 0 && <EmptyState icon="🔧" title="Rien ici">Aucun signalement dans cette catégorie.</EmptyState>}
+          {reports !== null && shown.length === 0 && <EmptyState icon={<Wrench />} title="Rien ici">Aucun signalement dans cette catégorie.</EmptyState>}
           {shown.map((r) => (
             <button
               key={r.id}
@@ -135,7 +135,7 @@ export function ReportsPanel() {
         </Card>
         {selected ? <ReportDetail key={selected.id} report={selected} github={!!config?.github} onDeleted={() => select(null)} /> : (
           <Card>
-            <EmptyState icon="🔍" title="Aucun signalement sélectionné">Choisis un signalement dans la liste.</EmptyState>
+            <EmptyState icon={<Search />} title="Aucun signalement sélectionné">Choisis un signalement dans la liste.</EmptyState>
           </Card>
         )}
       </div>

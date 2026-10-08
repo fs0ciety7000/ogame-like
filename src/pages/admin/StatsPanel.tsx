@@ -8,7 +8,7 @@ import { RadarScan } from "@/components/game/RadarScan";
 import { adminFetchStats } from "@/services/adminService";
 import { RESOURCE_LIST } from "@/game/resources";
 import { ResourceIcon } from "@/components/ui/game-icon";
-import { formatCompact, formatNumber } from "@/lib/utils";
+import { formatCompact, formatDateTime, formatNumber } from "@/lib/utils";
 import type { GameStats } from "@/game/analytics";
 
 function Tile({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
@@ -86,7 +86,7 @@ export function StatsPanel() {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="font-display text-base text-slate-100">Statistiques</h2>
-        <span className="text-[11px] text-slate-500">calculées le {new Date(stats.generatedAt).toLocaleString("fr-FR")}</span>
+        <span className="text-[11px] text-slate-500">calculées le {formatDateTime(stats.generatedAt, "numericTime")}</span>
         <Button variant="outline" size="sm" className="ml-auto" disabled={loading} onClick={() => void load()}>
           <RefreshCw className="mr-1 h-3.5 w-3.5" /> Actualiser
         </Button>
@@ -414,7 +414,7 @@ function EndgamePanel({ endgame }: { endgame: GameStats["endgame"] }) {
 function RetentionPanels({ retention }: { retention: NonNullable<GameStats["retention"]> }) {
   const { daily, active, cohorts, funnel, dropoff, trackingSince, recentPlayers } = retention;
   const maxActive = Math.max(1, ...daily.map((d) => d.active));
-  const dayLabel = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  const dayLabel = (d: string) => formatDateTime(new Date(`${d}T12:00:00Z`), "dayShort");
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
       <Panel title="Rétention · joueurs actifs par jour (30 j)" className="lg:col-span-2">

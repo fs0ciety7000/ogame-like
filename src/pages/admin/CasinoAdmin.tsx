@@ -11,6 +11,7 @@ import { adminCasinoSettings, adminGrantTokens, refreshCasino, useCasino } from 
 import { Field, NumberField, SelectField } from "@/pages/admin/fields";
 import { askConfirm } from "@/components/ui/confirm-dialog";
 import { WEEKDAY_OPTIONS } from "@/game/events";
+import { formatDateTime } from "@/lib/utils";
 
 /* v5.12 : administration du Casino orbital — ouverture, gains, jetons offerts. */
 
@@ -18,7 +19,7 @@ function toLocalInput(ms: number): string {
   return new Date(ms - new Date(ms).getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-const parisLabel = (ms: number) => new Date(ms).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" });
+const parisLabel = (ms: number) => formatDateTime(ms, "short", "server");
 
 export function CasinoAdmin() {
   const [casino] = useCasino();

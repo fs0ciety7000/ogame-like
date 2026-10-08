@@ -3,15 +3,14 @@ import { CalendarPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BOSS_WEEKENDS, bossWindows, describeBossSchedule, MAX_BOSS_DATES, WEEKDAY_OPTIONS, type BossDate, type BossSchedule, type BossWeekend } from "@/game/events";
 import { CheckboxField, Field, NumberField, SelectField } from "@/pages/admin/fields";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 /* v5.10.4 : occurrence d'un boss (boss mondiaux, boss de saison) dans
    les règles : actif, week-end du mois, heure de départ, durée — avec un
    aperçu des prochaines apparitions calculé sur les valeurs en cours.
    v5.10.5 : apparitions à date précise, en plus du rendez-vous mensuel. */
 
-const PARIS: Intl.DateTimeFormatOptions = { timeZone: "Europe/Paris" };
-const short = (ms: number) => new Date(ms).toLocaleString("fr-FR", { ...PARIS, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const short = (ms: number) => formatDateTime(ms, "short", "server");
 
 /** « 2026-10-30T18:00 » (heure du navigateur) pour un champ datetime-local. */
 function toLocalInput(ms: number): string {
