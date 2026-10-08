@@ -2,14 +2,14 @@
 
 Lot P30-2 (6.14.31). À utiliser le jour où l'utilisateur donne le feu vert (Q12). Claude peut ouvrir la PR lui-même sur demande.
 
-**Titre :** `5.27.1 → 6.14.135 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
+**Titre :** `5.27.1 → 6.14.140 : la grande mise à jour (45 versions joueurs, pré-prod validée)`
 
 ---
 
 ## Résumé
 
 Fusion de la branche de travail dans `main`. La production est en 5.27.0 depuis le 2026-10-06. Cette PR porte 45 versions visibles par
-les joueurs et les lots d'outillage, soit 200 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
+les joueurs et les lots d'outillage, soit 205 fiches. Tout a tourné sur la pré-prod `test.fs0ciety.org`, sur une copie de la
 production : migrations appliquées, services ok, joueurs intacts.
 
 - **Dossier de mise en production** : `docs/release/5.27-a-6.14.md` (données, risques, déroulé, vérifications, retour arrière).
@@ -236,6 +236,11 @@ production : migrations appliquées, services ok, joueurs intacts.
 - 6.14.133 : Plans de module « signature » par unité et reliques par source (AJ27-10) (`docs/changes/6.14.133-porteurs-signature.md`)
 - 6.14.134 : Proposition « paliers des bâtiments » (entrepôt, Atelier, hangars) et règle n° 4 réécrite (AJ27-12) (`docs/changes/6.14.134-proposition-paliers-batiments.md`)
 - 6.14.135 : Ménage de la chaîne d'actions, « Lancer maintenant » et tour des actions (AC-H) (`docs/changes/6.14.135-menage-tour-actions.md`)
+- 6.14.136 : Mutateurs sans répétition et horloge de Paris (AP-L9) (`docs/changes/6.14.136-mutateurs-sans-repetition.md`)
+- 6.14.137 : Variété narrative : banques de textes des Chroniques et du passe (AP-L10) (`docs/changes/6.14.137-variete-narrative.md`)
+- 6.14.138 : Illustrations de saison : thèmes d'année, portraits, seconds boss (AP-L11) (`docs/changes/6.14.138-illustrations-saison.md`)
+- 6.14.139 : Catalogue des saisons au-delà de 36 mois : saisons générées (AP-L12) (`docs/changes/6.14.139-catalogue-prolonge.md`)
+- 6.14.140 : Outil `procedural-sim.mjs` : simulation des générateurs (AP-L14) (`docs/changes/6.14.140-procedural-sim.md`)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 

@@ -4113,6 +4113,39 @@ describe.skipIf(!PB_TEST_URL || !PB_TEST_ADMIN)("PocketBase integration", () => 
     }
   });
 
+  it("6.14.136 à 6.14.139 (AP-L9 à AP-L12) : réglages des mutateurs, des banques de textes et des saisons générées gardés par le serveur et lus par le générateur", async () => {
+    const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
+    const keep = { rules: await cfg("rules"), chronicles: await cfg("chronicles"), passSeasons: await cfg("passSeasons") };
+    const base = (keep.rules?.data as Record<string, unknown>) ?? {};
+    const write = async (data: object) => {
+      const cur = await cfg("rules");
+      if (cur) return admin.collection("game_config").update(cur.id, { data });
+      return admin.collection("game_config").create({ key: "rules", data });
+    };
+    try {
+      // Garde : banques vides, mois mal écrit, faction inconnue refusés.
+      await expect(write({ ...base, narrative: { villainTaunts: [] } })).rejects.toMatchObject({ status: 400 });
+      await expect(write({ ...base, mutators: { ...((base.mutators as object) ?? {}), noRepeatFrom: "2027" } })).rejects.toMatchObject({ status: 400 });
+      await expect(write({ ...base, narrative: { yearArchetypes: { "2": { vide: "inconnue" } } } })).rejects.toMatchObject({ status: 400 });
+      // Réglages partiels acceptés et lus par la route du générateur : saison générée de novembre 2029, faction de l'année 2.
+      await write({ ...base, seasonGen: { subtitles: ["la Seule"] }, narrative: { yearArchetypes: { "2": { vide: "inquisition" } } } });
+      const pass = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "passSeason", monthId: "2029-11" } });
+      expect(pass.season.theme).toMatchObject({ id: "vide", name: "L'Appel du Vide : la Seule" });
+      expect(pass.season.auto.reasons.join(" ")).toMatch(/saison générée au-delà du cycle/);
+      const out = await admin.send("/api/cosmic/admin/procedural", { method: "POST", body: { action: "generate", monthId: "2027-11", variant: 0 } });
+      expect(out.chapters[0].id).toBe("2027-11");
+      const months = ((await cfg("chronicles"))!.data as { months: { id: string; auto?: { archetype?: string } }[] }).months;
+      expect(months.find((m) => m.id === "2027-11")?.auto?.archetype).toBe("inquisition");
+    } finally {
+      for (const [key, rec] of Object.entries(keep)) {
+        const cur = await cfg(key);
+        if (rec && cur) await admin.collection("game_config").update(cur.id, { data: rec.data });
+        else if (rec) await admin.collection("game_config").create({ key, data: rec.data });
+        else if (cur) await admin.collection("game_config").delete(cur.id);
+      }
+    }
+  });
+
   it("6.14.126 (AA8) : retour arrière d'un seul groupe de règles, gardé par la validation du contenu", async () => {
     const cfg = async (key: string) => (await admin.collection("game_config").getFullList({ filter: `key = "${key}"` }))[0] ?? null;
     const keep = await cfg("rules");

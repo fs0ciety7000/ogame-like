@@ -39,6 +39,8 @@ import { GeneratedGoalsFields } from "@/pages/admin/GeneratedGoalsFields";
 import { TrackedActionsFields } from "@/pages/admin/TrackedActionsFields";
 import { SignatureRulesFields } from "@/pages/admin/SignatureRulesFields";
 import { NoveltyFields } from "@/pages/admin/NoveltyFields";
+import { NarrativeFields } from "@/pages/admin/NarrativeFields";
+import { SeasonGenFields } from "@/pages/admin/SeasonGenFields";
 import { HardResetCard } from "@/pages/admin/HardResetCard";
 import { BackupsCard } from "@/pages/admin/BackupsCard";
 import { StuckFleetsCard } from "@/pages/admin/StuckFleetsCard";
@@ -1013,6 +1015,10 @@ export function RulesPanel() {
         <SignatureRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.122 (AP-L8) : épisode « nouveauté » (contenu récent). */}
         <NoveltyFields rules={rules} setRules={setRules} />
+        {/* 6.14.137 (AP-L10) : banques de textes des Chroniques et du passe. */}
+        <NarrativeFields rules={rules} setRules={setRules} />
+        {/* 6.14.139 (AP-L12) : saisons du passe générées au-delà du cycle écrit. */}
+        <SeasonGenFields rules={rules} setRules={setRules} />
         <CommerceRulesFields rules={rules} setRules={setRules} />
         {/* 6.14.84 et 6.14.85 (RL-1, RL-2) : Labo (coûts et durées des recherches) et projets de prestige. */}
         <RhythmRulesFields rules={rules} setRules={setRules} />

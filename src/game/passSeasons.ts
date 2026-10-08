@@ -7,6 +7,7 @@ import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { challengePool, computePointsPerTier, generateBudgetTiers, passGenRules, tiersValue, type PassGenRules } from "@/game/passGen";
 import { defaultSimProfiles, profileFromMedian, simulatePass } from "@/game/passSimulator";
+import { NARRATIVE_RULES } from "@/game/narrative";
 import { CATALOG_START, catalogCycle, catalogEntryFor, catalogIndex, DEFAULT_THEME_PRIMARY, DEFAULT_THEME_ROTATION, illustrationPrompt, portraitPrompt, THEME_PRIMARY, type SeasonCatalogEntry } from "@/game/seasonCatalog";
 import type { CommanderId } from "@/game/commanders";
 
@@ -366,6 +367,21 @@ export interface PassTheme {
  *  portrait du rôle principal ; un portrait se règle aussi par saison dans l'admin (Passe de saison). */
 export const SEASON_PORTRAITS: readonly string[] = ["2026-11", "2026-12", "2027-01"];
 
+/** 6.14.138 (AU27, lot AP-L11) : saisons du catalogue (`<thème>_<année>`) dont l'illustration propre existe
+ *  (public/assets/pass/theme-<thème>-<année>.webp). Les autres prennent l'image du thème (image provisoire) ; l'année 1 garde
+ *  l'image du thème (theme-<thème>.webp). Une saison générée (6.14.139) prend l'image de la saison écrite qu'elle prolonge. */
+export const SEASON_THEME_ART: readonly string[] = [];
+
+/** 6.14.138 : image de l'en-tête du passe d'une saison : image réglée sur la saison (admin), sinon son illustration d'année,
+ *  sinon l'image du thème. */
+export function seasonThemeImage(entry: Pick<SeasonCatalogEntry, "id" | "theme" | "year" | "image" | "generatedFrom">, themeImage: string): string {
+  if (entry.image) return entry.image;
+  const id = entry.generatedFrom ?? entry.id;
+  const m = /^(.+)_(\d+)$/.exec(id);
+  if (m && SEASON_THEME_ART.includes(id)) return `/assets/pass/theme-${m[1]}-${m[2]}.webp`;
+  return themeImage;
+}
+
 /** 6.14.93 : images des thèmes avant leur illustration propre (migration `pass-art-6.14.93` des saisons déjà écrites). */
 export const PASS_THEME_OLD_IMAGES: Record<string, string> = {
   maree: "/assets/blog/articles/5-9/poste-commandement.webp",
@@ -391,12 +407,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "varan",
     focus: ["victory", "raidRepelled", "bounty"],
     beats: [
-      ["Les sondes ont repéré leurs escadres, commandant. Prépare ta flotte : on ne les laissera pas passer."],
-      ["Première ligne tenue. Ils reculent, mais ils reviendront plus nombreux."],
-      ["Leur vaisseau amiral s'est montré. Un officier hors pair a rejoint nos rangs pour la dernière bataille."],
-      ["La houle est retombée. {commander} a choisi ta bannière : sers-toi bien de cet officier."],
+      ["Les sondes ont repéré leurs escadres, commandant. Prépare ta flotte : on ne les laissera pas passer.", "Leur flotte revient, plus lourde que l'an dernier. On tiendra la ligne, commandant.", "Ils se terrent loin du front. Il faudra frapper loin, et frapper vite."],
+      ["Première ligne tenue. Ils reculent, mais ils reviendront plus nombreux.", "La première vague s'est brisée. Garde ta formation : la suivante sera plus forte.", "Premier raid lointain réussi. Ils ne s'y attendaient pas."],
+      ["Leur vaisseau amiral s'est montré. Un officier hors pair a rejoint nos rangs pour la dernière bataille.", "{commander} a tenu le ressac de Drakmor seul contre trois escadres. Il a choisi notre camp.", "{commander} connaît chaque courant de la Grande Houle. Avec elle, nos flottes iront plus loin."],
+      ["La houle est retombée. {commander} a choisi ta bannière : sers-toi bien de cet officier.", "La mer d'étoiles est calme. {commander} garde la ligne à tes côtés.", "La houle nous porte. {commander} commande désormais nos frappes lointaines."],
     ],
-    rivalLines: [["Vos flottes sont des coquilles vides. La marée vous emportera."], ["Une vaguelette. Rien de plus."], ["Assez joué. Toute ma flotte converge sur vous."], ["Cette fois... vous avez gagné."]],
+    rivalLines: [
+      ["Vos flottes sont des coquilles vides. La marée vous emportera.", "Vous avez survécu à une marée. Survivrez-vous au ressac ?", "Venez me chercher, si vos moteurs tiennent la distance."],
+      ["Une vaguelette. Rien de plus.", "Vous reculez d'un pas, je gagne une lieue.", "Une piqûre. Je ne l'ai presque pas sentie."],
+      ["Assez joué. Toute ma flotte converge sur vous.", "Mes réserves arrivent. Votre ligne ne tiendra pas la nuit.", "J'ai coupé vos lignes de retour. Bon voyage."],
+      ["Cette fois... vous avez gagné.", "Votre ligne a tenu. Je m'en souviendrai.", "Vous frappez de loin. Je saurai frapper de plus loin encore."],
+    ],
   },
   {
     id: "forge",
@@ -406,12 +427,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "kragmor",
     focus: ["contract", "victory", "bounty"],
     beats: [
-      ["Les forges tournent pour l'ennemi. Il nous faut des contrats et des bras : on commence ce mois-ci."],
-      ["Première forge reprise ! Les ouvriers reviennent."],
-      ["Un architecte de légende accepte de nous rejoindre si nous tenons jusqu'au bout."],
-      ["Les forges sont à nous. {commander} prend la tête de tes chantiers."],
+      ["Les forges tournent pour l'ennemi. Il nous faut des contrats et des bras : on commence ce mois-ci.", "Les forges sont à nous, mais il manque des bras. Lance le chantier, commandant.", "Au cœur de l'Enclume dort une arme de légende. On va la forger avant eux."],
+      ["Première forge reprise ! Les ouvriers reviennent.", "Les premières sections sont soudées. Le secteur vient voir la carcasse.", "Le premier alliage a tenu. L'Enclume chauffe enfin."],
+      ["Un architecte de légende accepte de nous rejoindre si nous tenons jusqu'au bout.", "{commander} a dessiné la moitié des stations du secteur. Il veut voir la nôtre achevée.", "{commander} conçoit des vaisseaux de ligne et les mène au feu. Elle veut finir l'arme avec nous."],
+      ["Les forges sont à nous. {commander} prend la tête de tes chantiers.", "Le Grand Chantier est fini. {commander} signe désormais tes plans.", "L'arme est forgée. {commander} la mènera à ton signal."],
     ],
-    rivalLines: [["Mes forges, mes règles. Payez ou partez."], ["Une forge ? J'en ai cent."], ["Vous m'agacez. Mes foreuses vont raser vos chantiers."], ["Gardez vos forges. Pour l'instant."]],
+    rivalLines: [
+      ["Mes forges, mes règles. Payez ou partez.", "Un chantier de cette taille ? Il s'effondrera avant d'être fini.", "L'Enclume ne forge que pour ceux qui paient. Payez."],
+      ["Une forge ? J'en ai cent.", "Joli squelette. Mes saboteurs adorent les squelettes.", "Une étincelle. J'ai vu des incendies."],
+      ["Vous m'agacez. Mes foreuses vont raser vos chantiers.", "Mes équipes sont dans vos échafaudages. Comptez vos boulons.", "Je viens prendre votre arme avant qu'elle ne refroidisse."],
+      ["Gardez vos forges. Pour l'instant.", "Elle tient debout. Je n'aurais pas parié dessus.", "Gardez votre jouet. Il faudra savoir s'en servir."],
+    ],
   },
   {
     id: "archives",
@@ -421,12 +447,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "vesper",
     focus: ["spy", "victory", "raidRepelled"],
     beats: [
-      ["Nos sondes doivent percer leurs secrets avant qu'ils ne disparaissent. Espionne, commandant."],
-      ["Un premier fichier déchiffré. Il cite un nom que je croyais mort."],
-      ["Une agente double propose ses services. Elle demande une seule chose : que tu ailles jusqu'au bout."],
-      ["Les archives sont à l'abri. {commander} rejoint ton état-major, avec tous ses secrets."],
+      ["Nos sondes doivent percer leurs secrets avant qu'ils ne disparaissent. Espionne, commandant.", "Des fichiers noirs circulent dans les ports. Il faut les trouver avant qu'ils ne servent.", "Plus rien ne passe sur les ondes. Dans ce silence, ce sont nos sondes qui parlent."],
+      ["Un premier fichier déchiffré. Il cite un nom que je croyais mort.", "Un premier fichier récupéré. Il porte la liste de nos propres informateurs.", "Une première trace dans le noir. Ils ne se savaient pas observés."],
+      ["Une agente double propose ses services. Elle demande une seule chose : que tu ailles jusqu'au bout.", "{commander} sait exactement ce que vaut un secret. Il propose de garder les nôtres.", "{commander} voit tout et ne se montre jamais. Ce talent est désormais à nous."],
+      ["Les archives sont à l'abri. {commander} rejoint ton état-major, avec tous ses secrets.", "Les fichiers sont sous clé. {commander} veille sur chacun d'eux.", "Le silence est à nous. {commander} écoute pour toi."],
     ],
-    rivalLines: [["Ce que vous cherchez n'existe pas."], ["Curieux. Trop curieux."], ["J'efface tout. Vous aussi, s'il le faut."], ["Gardez vos archives. Je garde mes ombres."]],
+    rivalLines: [
+      ["Ce que vous cherchez n'existe pas.", "Un secret n'a de valeur que s'il est vendu.", "Chut. Vous entendez ? Moi non plus."],
+      ["Curieux. Trop curieux.", "Vous lisez lentement. Moi, je publie vite.", "Une sonde de perdue. Vous en avez combien ?"],
+      ["J'efface tout. Vous aussi, s'il le faut.", "J'ai votre dossier. Il est épais.", "Je coupe tout. Même vos pensées."],
+      ["Gardez vos archives. Je garde mes ombres.", "Vous gardez vos fichiers. Pour combien de temps ?", "Vous avez appris à vous taire. C'est un début."],
+    ],
   },
   {
     id: "hiver",
@@ -436,12 +467,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "vesper",
     focus: ["raidRepelled", "contract", "victory"],
     beats: [
-      ["Le froid arrive. Remplis tes entrepôts, renforce tes défenses : la nuit sera longue."],
-      ["Les premiers raids sont repoussés. Le givre recule d'un cran."],
-      ["Une gardienne des glaces a survécu à trois hivers comme celui-ci. Elle veut nous aider."],
-      ["Le dégel commence. {commander} veille désormais sur tes réserves."],
+      ["Le froid arrive. Remplis tes entrepôts, renforce tes défenses : la nuit sera longue.", "La nuit sera plus longue cette année. Rationne, protège, et compte chaque caisse.", "Un givre étrange ronge nos coques. Réparons, renforçons, tenons."],
+      ["Les premiers raids sont repoussés. Le givre recule d'un cran.", "Les premières réserves tiennent. Les pillards rôdent autour des entrepôts.", "Les premières coques sont réparées. Le givre recule d'un pas."],
+      ["Une gardienne des glaces a survécu à trois hivers comme celui-ci. Elle veut nous aider.", "{commander} tient les comptes de l'hiver au gramme près. Il veut tenir les nôtres.", "{commander} a réparé une station entière par moins quatre-vingts. Il est des nôtres."],
+      ["Le dégel commence. {commander} veille désormais sur tes réserves.", "La Longue Nuit s'achève. {commander} garde tes réserves jusqu'au prochain hiver.", "Le dégel est là. {commander} garde tes cales à l'abri du givre."],
     ],
-    rivalLines: [["L'hiver est mon allié. Vous gèlerez."], ["Un feu de camp contre une tempête."], ["Mes raids frapperont au plus froid de la nuit."], ["Le printemps... déjà ?"]],
+    rivalLines: [
+      ["L'hiver est mon allié. Vous gèlerez.", "La nuit est longue. Mes raids aussi.", "Le givre fait mon travail. Je n'ai qu'à attendre."],
+      ["Un feu de camp contre une tempête.", "Une réserve de plus ? J'ai faim pour deux.", "Vous réparez vite. Le froid ronge plus vite."],
+      ["Mes raids frapperont au plus froid de la nuit.", "Je frapperai quand vos lampes s'éteindront.", "Toute la glace du secteur marche sur vos chantiers."],
+      ["Le printemps... déjà ?", "Le jour revient. Je reviendrai avec la nuit.", "Vos coques tiennent. Le givre, lui, a toute l'éternité."],
+    ],
   },
   {
     id: "comete",
@@ -451,12 +487,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "kor",
     focus: ["bossAssault", "victory", "bounty"],
     beats: [
-      ["Elle arrive, commandant ! Tout ce qui s'en détache est à prendre. Fais chauffer les moteurs."],
-      ["Premiers fragments récupérés. Le Cartel commence à s'énerver."],
-      ["Une pilote a suivi la comète depuis trois systèmes. Elle connaît son cœur."],
-      ["La comète s'éloigne, ses trésors dans nos soutes. {commander} reste avec nous."],
+      ["Elle arrive, commandant ! Tout ce qui s'en détache est à prendre. Fais chauffer les moteurs.", "Une pluie de fragments arrive, et quelque chose bouge dedans. Prépare tes chasseurs.", "Le sillage rouge est encore chaud. On le suit, et on partage la prise."],
+      ["Premiers fragments récupérés. Le Cartel commence à s'énerver.", "Premiers fragments récupérés. Le premier monstre aussi.", "Première prise ramenée. Le sillage mène plus loin."],
+      ["Une pilote a suivi la comète depuis trois systèmes. Elle connaît son cœur.", "{commander} chasse les monstres des fragments depuis dix ans. Il veut celui-ci.", "{commander} suit les comètes depuis trois systèmes. Il connaît leur cœur."],
+      ["La comète s'éloigne, ses trésors dans nos soutes. {commander} reste avec nous.", "La pluie est passée. {commander} reste pour la prochaine.", "La prise est partagée. {commander} chassera désormais avec toi."],
     ],
-    rivalLines: [["Cette comète m'appartient. Comme tout le reste."], ["Des miettes. Laissez-les-moi."], ["Mes chasseurs vont vous balayer de son sillage."], ["Vous me devez une comète."]],
+    rivalLines: [
+      ["Cette comète m'appartient. Comme tout le reste.", "Chaque fragment est à moi. Les monstres aussi.", "Ce sillage mène à mes entrepôts. Vous êtes en retard."],
+      ["Des miettes. Laissez-les-moi.", "Un caillou ? Gardez-le, il me reste la montagne.", "Partager ? Quel drôle de mot."],
+      ["Mes chasseurs vont vous balayer de son sillage.", "Mes chasseurs vont nettoyer la pluie. Vous compris.", "Je brûle le sillage derrière moi. Suivez-moi donc."],
+      ["Vous me devez une comète.", "Vous avez eu de la chance. La pluie, elle, reviendra.", "Une prise partagée, c'est une prise perdue. Pour moi."],
+    ],
   },
   {
     id: "primes",
@@ -466,12 +507,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "maru",
     focus: ["bounty", "victory", "warlordWin"],
     beats: [
-      ["La traque est ouverte. Remplis les primes, et que l'Essaim retienne ton nom."],
-      ["Ton tableau de chasse s'allonge. Les autres chasseurs commencent à te craindre."],
-      ["Une traqueuse légendaire te suit à la trace. Elle veut voir qui chasse aussi bien qu'elle."],
-      ["La traque est finie, et tu es en tête. {commander} chassera désormais pour toi."],
+      ["La traque est ouverte. Remplis les primes, et que l'Essaim retienne ton nom.", "Le tableau de chasse est plein. Ce qu'on ne voit pas, on ne le rate pas.", "Le plus gros gibier du secteur est en vue. Toute la meute est à toi."],
+      ["Ton tableau de chasse s'allonge. Les autres chasseurs commencent à te craindre.", "Tes premières cibles sont tombées. L'Essaim t'a remarqué.", "Les premières traces sont fraîches. La bête n'est pas loin."],
+      ["Une traqueuse légendaire te suit à la trace. Elle veut voir qui chasse aussi bien qu'elle.", "{commander} ne rate jamais une cible. Elle veut chasser à tes côtés.", "{commander} a traqué la bête pendant des années. Il veut voir la fin."],
+      ["La traque est finie, et tu es en tête. {commander} chassera désormais pour toi.", "Le tableau est vide, et ton nom en haut. {commander} chasse pour toi.", "La traque est finie. {commander} garde ton tableau de chasse."],
     ],
-    rivalLines: [["Ma tête vaut une fortune. Venez la prendre."], ["Pas mal, pour un débutant."], ["Je vais vous traquer à mon tour."], ["Bien chassé. Je reviendrai."]],
+    rivalLines: [
+      ["Ma tête vaut une fortune. Venez la prendre.", "Mon nom est en haut du tableau. Il y restera.", "La bête est à moi. Vous n'êtes que des rabatteurs."],
+      ["Pas mal, pour un débutant.", "Une prime de moins. J'en mets trois de plus.", "Vous suivez ma piste ? Elle mène à un piège."],
+      ["Je vais vous traquer à mon tour.", "Je paie mieux que l'Essaim. Vos chasseurs le savent.", "J'ai lâché la bête sur vos routes. Bonne chasse."],
+      ["Bien chassé. Je reviendrai.", "Bien joué. Je mets votre tête au tableau.", "Vous l'avez eue. Je trouverai plus gros."],
+    ],
   },
   {
     id: "bazar",
@@ -481,12 +527,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "kragmor",
     focus: ["contract", "bounty", "raidRepelled"],
     beats: [
-      ["Les routes rouvrent, commandant. Honore tes contrats : la réputation vaut plus que l'or."],
-      ["Les convois passent. Tes contrats font parler d'eux jusqu'aux franges."],
-      ["Une négociatrice redoutable propose de gérer tes affaires. Prouve-lui que tu en vaux la peine."],
-      ["Le bazar ferme ses portes, tes coffres pleins. {commander} tient désormais tes comptes."],
+      ["Les routes rouvrent, commandant. Honore tes contrats : la réputation vaut plus que l'or.", "Les routes de la soie rouvrent. Un convoi bien protégé vaut une flotte.", "La Foire des mondes ouvre ses portes. On y échange des marchandises, et des secrets."],
+      ["Les convois passent. Tes contrats font parler d'eux jusqu'aux franges.", "Les premiers convois sont arrivés. Les marchands lèvent leurs prix.", "Tes premiers échanges font parler. Les bons et les mauvais."],
+      ["Une négociatrice redoutable propose de gérer tes affaires. Prouve-lui que tu en vaux la peine.", "{commander} a mené plus de convois qu'elle ne compte d'étoiles. Elle veut mener les tiens.", "{commander} connaît tous les secrets de la Foire, et choisit de les garder pour toi."],
+      ["Le bazar ferme ses portes, tes coffres pleins. {commander} tient désormais tes comptes.", "La route est sûre. {commander} veille sur tes caravanes.", "La Foire ferme, et tu en repars plus riche. {commander} tient tes affaires."],
     ],
-    rivalLines: [["Chaque route passe par mes péages."], ["Un convoi de plus, un péage de plus."], ["Je ferme les routes. Toutes."], ["Bon. Vous pouvez passer. Cette fois."]],
+    rivalLines: [
+      ["Chaque route passe par mes péages.", "Chaque caravane me paie sa part. Même la vôtre.", "Tout se vend à la Foire. Vous aussi."],
+      ["Un convoi de plus, un péage de plus.", "Un convoi passé. Mes péages ont de la mémoire.", "Un bon prix. Pour moi."],
+      ["Je ferme les routes. Toutes.", "Je coupe la route au milieu. Bonne chance pour revenir.", "J'achète vos fournisseurs. Tous."],
+      ["Bon. Vous pouvez passer. Cette fois.", "Votre route tient. Mes péages attendront.", "Vous savez marchander. C'est presque vexant."],
+    ],
   },
   {
     id: "vide",
@@ -496,12 +547,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "varan",
     focus: ["victory", "raidRepelled", "contract"],
     beats: [
-      ["Le Vide appelle, commandant. Ceux qui répondront en reviendront changés."],
-      ["Le signal se précise. Il parle de nous."],
-      ["Une éclaireuse revenue des franges veut guider celui qui ira jusqu'au bout."],
-      ["Le signal s'est tu. {commander} a choisi de rester à tes côtés."],
+      ["Le Vide appelle, commandant. Ceux qui répondront en reviendront changés.", "Les routes ouvertes l'an dernier mènent à des mondes neufs. On y installe nos colons.", "Aux confins dérivent des formes immenses. On les piste, sans les réveiller."],
+      ["Le signal se précise. Il parle de nous.", "Le premier convoi est arrivé. Les franges deviennent une frontière.", "Une première trace. Plus grande que tout ce qu'on connaît."],
+      ["Une éclaireuse revenue des franges veut guider celui qui ira jusqu'au bout.", "{commander} a mené un convoi entier au-delà du Voile. Il veut mener le suivant.", "{commander} a suivi un colosse pendant deux ans. Elle connaît sa route."],
+      ["Le signal s'est tu. {commander} a choisi de rester à tes côtés.", "Les franges sont peuplées. {commander} garde tes routes ouvertes.", "Le colosse s'éloigne. {commander} reste pour guetter son retour."],
     ],
-    rivalLines: [["Le Vide n'aime pas les curieux."], ["Vous entendez des voix ? Moi, j'entends des ressources."], ["Le premier arrivé prend tout."], ["Gardez votre prophétie."]],
+    rivalLines: [
+      ["Le Vide n'aime pas les curieux.", "Vos colons ? Mes proies.", "Les colosses du Vide sont à moi. Leurs carcasses aussi."],
+      ["Vous entendez des voix ? Moi, j'entends des ressources.", "Une route ouverte. Une route à couper.", "Vous pistez une ombre. Moi, je la chasse."],
+      ["Le premier arrivé prend tout.", "Je ferme le Voile derrière vous.", "J'ai réveillé le colosse. À vous de le calmer."],
+      ["Gardez votre prophétie.", "Vos colons tiennent. Pour cette fois.", "Gardez vos colosses. Le Vide en a d'autres."],
+    ],
   },
   // v5.14 : quatre thèmes de plus (douze, un par rôle d'officier).
   {
@@ -512,12 +568,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "varan",
     focus: ["raidRepelled", "victory", "contract"],
     beats: [
-      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup."],
-      ["Les premières vagues se sont brisées sur nos défenses. Ils cherchent la faille."],
-      ["Un stratège de siège légendaire a vu ta résistance. Il veut se battre à tes côtés."],
-      ["Le siège est levé. {commander} rejoint ton état-major : aucun mur ne tombera plus."],
+      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup.", "Les murs de Vashka ont souffert. On répare, on renforce, et on tient.", "La ligne de fer doit tenir jusqu'à ce que le colosse se montre. Ensuite, on l'abat."],
+      ["Les premières vagues se sont brisées sur nos défenses. Ils cherchent la faille.", "Les premières brèches sont colmatées. Ils cherchent ailleurs.", "La ligne tient. Le colosse s'impatiente."],
+      ["Un stratège de siège légendaire a vu ta résistance. Il veut se battre à tes côtés.", "{commander} répare un mur plus vite qu'on ne l'abat. Elle veut défendre les nôtres.", "{commander} a tenu une ligne de fer pendant cent jours. Il veut tenir la nôtre."],
+      ["Le siège est levé. {commander} rejoint ton état-major : aucun mur ne tombera plus.", "Les murs tiennent. {commander} veille sur chaque pierre.", "Le colosse est tombé, la ligne tient. {commander} garde le front."],
     ],
-    rivalLines: [["Vos murs sont en papier. Mes béliers ont faim."], ["Une vague de plus, et vous céderez."], ["Toutes mes escadres sur le même point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]],
+    rivalLines: [
+      ["Vos murs sont en papier. Mes béliers ont faim.", "Un mur réparé n'est qu'un mur qui attend.", "Votre ligne de fer ? De la tôle."],
+      ["Une vague de plus, et vous céderez.", "Vous colmatez. Je creuse.", "Un pas en arrière, et tout cède."],
+      ["Toutes mes escadres sur le même point. Tenez donc, si vous pouvez.", "Tous mes béliers contre le même pan. Réparez donc ça.", "Le colosse est lâché. Tenez donc, maintenant."],
+      ["Je reviendrai. Les murs finissent toujours par tomber.", "Vos murs tiennent. Les miens aussi, à présent.", "Votre ligne a tenu. Je déteste ça."],
+    ],
   },
   {
     id: "colonies",
@@ -527,12 +588,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "kragmor",
     focus: ["contract", "raidRepelled", "victory"],
     beats: [
-      ["Les sondes ont trouvé des mondes habitables. À toi de les faire fleurir avant que d'autres ne s'en emparent."],
-      ["Tes premières colonies prospèrent. Les colons affluent."],
-      ["Une gouverneure de légende cherche un empire digne de ses talents. Le tien l'intéresse."],
-      ["Les franges sont à nous. {commander} gouvernera tes colonies."],
+      ["Les sondes ont trouvé des mondes habitables. À toi de les faire fleurir avant que d'autres ne s'en emparent.", "Les franges appellent : plus loin, plus vite, plus nombreux.", "Nos colonies doivent tenir, même sous le feu. Des terres d'aube, pas des proies."],
+      ["Tes premières colonies prospèrent. Les colons affluent.", "Les colonies poussent comme des graines. Les foreuses aussi.", "Les premières colonies ont tenu un raid. Les colons reprennent confiance."],
+      ["Une gouverneure de légende cherche un empire digne de ses talents. Le tien l'intéresse.", "{commander} a fondé trois colonies en un an. Il veut fonder les tiennes.", "{commander} n'a jamais perdu une colonie. Elle veut garder les tiennes."],
+      ["Les franges sont à nous. {commander} gouvernera tes colonies.", "La ruée est finie, tes mondes tiennent. {commander} les gouverne.", "L'aube se lève sur des mondes qui ne tombent pas. {commander} les garde."],
     ],
-    rivalLines: [["Ces mondes sont à moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus à raser."], ["J'envoie mes équipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]],
+    rivalLines: [
+      ["Ces mondes sont à moi. Mes foreuses arrivent.", "Chaque monde que vous fondez, je le fore.", "Vos colonies tombent toujours. Il suffit de frapper au bon endroit."],
+      ["Une colonie ? Un caillou de plus à raser.", "Une colonie de plus. Une cible de plus.", "Une colonie qui tient ? Une exception."],
+      ["J'envoie mes équipes de forage sur toutes vos colonies.", "Mes foreuses descendent sur vos nouveaux mondes.", "Toutes mes équipes sur vos mondes les plus fragiles."],
+      ["Gardez vos cailloux. J'en trouverai d'autres.", "Vous êtes partout. C'est agaçant.", "Vos colonies tiennent. Je reviendrai à la nuit."],
+    ],
   },
   {
     id: "chantiers",
@@ -542,12 +608,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "kor",
     focus: ["victory", "contract", "warlordWin"],
     beats: [
-      ["Les chantiers sont rouillés, mais les plans sont bons. Remets-les en marche, commandant."],
-      ["Les premières coques sortent des cales. L'équipage applaudit."],
-      ["Une mécanicienne de génie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent."],
-      ["L'arsenal tourne à plein. {commander} veille sur tes cales sèches."],
+      ["Les chantiers sont rouillés, mais les plans sont bons. Remets-les en marche, commandant.", "Ce qui revient du front doit repartir réparé. Les cales sèches t'attendent.", "Des pièces partout, à temps : c'est comme ça qu'on gagne une guerre."],
+      ["Les premières coques sortent des cales. L'équipage applaudit.", "Les premières coques réparées repartent. L'équipage n'en revient pas.", "Les premières pièces sont livrées. Les canons suivent."],
+      ["Une mécanicienne de génie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent.", "{commander} répare une frégate en une nuit. Il veut voir tes cales.", "{commander} sait où trouver chaque rivet du secteur. Il veut fournir tes chantiers."],
+      ["L'arsenal tourne à plein. {commander} veille sur tes cales sèches.", "Les cales tournent. {commander} remet ta flotte sur pied après chaque bataille.", "Rien ne manque plus. {commander} garde tes chantiers approvisionnés."],
     ],
-    rivalLines: [["Mes chantiers produisent dix coques pour une des vôtres."], ["Jolies coques. Elles brûleront bien."], ["Ma nouvelle flotte est prête. Et la vôtre ?"], ["Hum. Vos chantiers sont meilleurs que prévu."]],
+    rivalLines: [
+      ["Mes chantiers produisent dix coques pour une des vôtres.", "Vos épaves me rapportent plus que vos vaisseaux.", "Je tiens vos fournisseurs. Vos canons attendront."],
+      ["Jolies coques. Elles brûleront bien.", "Une coque réparée ? Je la recasse.", "Un rivet. Il vous en faut un million."],
+      ["Ma nouvelle flotte est prête. Et la vôtre ?", "Je frappe vos cales pendant qu'elles sont pleines.", "J'ai coupé vos livraisons. Construisez avec du vide."],
+      ["Hum. Vos chantiers sont meilleurs que prévu.", "Vos cales sont bien tenues. Dommage.", "Vos chantiers tournent. Je n'aime pas ça."],
+    ],
   },
   {
     id: "moisson",
@@ -557,12 +628,17 @@ const RAW_PASS_THEMES: Omit<PassTheme, "primary">[] = [
     rival: "maru",
     focus: ["contract", "bounty", "raidRepelled"],
     beats: [
-      ["Les gisements n'ont jamais été aussi riches. Récolte, stocke, et protège tes réserves."],
-      ["Les greniers se remplissent. Les pillards rôdent déjà."],
-      ["Un intendant légendaire propose ses services à l'empire le mieux tenu du secteur."],
-      ["Les greniers débordent. {commander} tiendra tes comptes."],
+      ["Les gisements n'ont jamais été aussi riches. Récolte, stocke, et protège tes réserves.", "Des réserves pleines attirent les rapaces. Récolte, et garde bien.", "Partager la récolte, c'est gagner des alliés. Remplis les greniers d'or."],
+      ["Les greniers se remplissent. Les pillards rôdent déjà.", "Les greniers débordent déjà. Les rapaces tournent au-dessus.", "Les premiers dons partent. Les alliés répondent."],
+      ["Un intendant légendaire propose ses services à l'empire le mieux tenu du secteur.", "{commander} a sauvé trois récoltes des pillards. Elle veut sauver la tienne.", "{commander} a nourri tout un secteur un hiver entier. Il veut nourrir le tien."],
+      ["Les greniers débordent. {commander} tiendra tes comptes.", "L'abondance est à l'abri. {commander} tient tes greniers.", "Les greniers d'or sont pleins, les alliés nombreux. {commander} tient tes comptes."],
     ],
-    rivalLines: [["Tant de réserves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos réserves la nourriront."], ["Vos greniers sont bien gardés. Pour cette saison."]],
+    rivalLines: [
+      ["Tant de réserves... et si peu de gardes.", "Tant d'abondance. Il serait dommage de la gâcher.", "Partager ? Je préfère prendre."],
+      ["Vos greniers sentent bon. J'arrive.", "Vos greniers sentent l'été. J'ai faim d'été.", "Vos alliés mangent dans votre main. Je mangerai la main."],
+      ["Toute la Ruche a faim. Vos réserves la nourriront.", "Toute la Ruche descend sur vos greniers.", "Je rachète vos alliés avec vos propres réserves."],
+      ["Vos greniers sont bien gardés. Pour cette saison.", "Vos rapaces sont mieux dressés que les miens.", "Vos greniers et vos alliés tiennent. Pour cette saison."],
+    ],
   },
 ];
 
@@ -625,6 +701,8 @@ export function validatePassCatalog(themes: unknown, entries: unknown): string[]
       slots.add(slot);
     }
     for (const k of ["name", "tagline", "synopsis", "scene"] as const) if (typeof e[k] !== "string" || (k === "name" && !e[k]!.trim())) errors.push(`${label} : « ${k} » manquant.`);
+    // 6.14.138 (AP-L11) : image propre facultative (chemin d'image).
+    if (e.image !== undefined && !(typeof e.image === "string" && (e.image === "" || e.image.startsWith("/")))) errors.push(`${label} : image : un chemin qui commence par « / ».`);
     const c = e.commander as Partial<SeasonCatalogEntry["commander"]> | undefined;
     if (!c || typeof c !== "object") errors.push(`${label} : commandant manquant.`);
     else {
@@ -718,7 +796,11 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
   let pointsPerTier = computed?.ppt ?? g.pass.pointsPerTier;
   reasons.push(...(computed?.reasons ?? [...g.reasons, "Pas encore de points par jour mesurés : ajustement sur la part de joueurs qui ont fini."]));
   const focus = shuffle(rng, theme.focus);
-  reasons.push(`Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`);
+  reasons.push(
+    entry.generatedFrom
+      ? `Thème : ${name} (${theme.id}, année ${entry.year}, saison générée au-delà du cycle de ${catalogCycle()} mois, sur la saison écrite ${entry.generatedFrom} ; à relire avant publication).`
+      : `Thème : ${name} (${theme.id}, année ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`,
+  );
   let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers.length, theme.id);
   // 6.14.58 (AU27, AP-2) : défis faisables pour le joueur médian avant tout le reste (nouveaux tirages, puis seuils réduits).
   const fit = fitChallenges({ pointsPerTier, tiers, requirements, challengeMode: "cumulative" }, o.digest, (k) =>
@@ -759,16 +841,27 @@ export function generatePassSeason(o: GeneratePassSeasonOptions): PassSeason {
 
   const line = (speaker: Speaker, text: string): StoryLine => ({ speaker, text: fill(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxième acte", "Dénouement"];
+  // 6.14.137 (AU27, lot AP-L10) : la n-ième réplique d'un temps sert l'année n du catalogue (un tirage consommé comme avant :
+  // l'année 1 garde ses répliques ; l'année 2 ne répète plus l'année 1 mot pour mot).
+  // Banques désactivées : la première réplique (celle d'avant) ; `passLinesByYear` faux : tirage au hasard.
+  const legacy = NARRATIVE_RULES.enabled === false;
+  const byYear = !legacy && NARRATIVE_RULES.passLinesByYear !== false;
+  const pickLine = (xs: string[]): string => {
+    const drawn = pick(rng, xs);
+    const list = (xs ?? []).filter((x) => typeof x === "string" && x.trim() !== "");
+    if (list.length <= 1) return drawn;
+    return legacy ? list[0] : byYear ? list[(Math.max(1, Math.floor(entry.year) || 1) - 1) % list.length] : drawn;
+  };
   const milestones: PassMilestone[] = [0, 10, 20, 30].map((tier, i) => ({
     tier: Math.min(tier, tiers.length),
     title: titles[i],
-    lines: [line(theme.mentor, pick(rng, theme.beats[i])), line(theme.rival, pick(rng, theme.rivalLines[i]))],
+    lines: [line(theme.mentor, pickLine(theme.beats[i])), line(theme.rival, pickLine(theme.rivalLines[i]))],
   }));
 
   return {
     id: o.monthId,
     status: "draft",
-    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: theme.image, prompt: illustrationPrompt(entry, theme.accent) },
+    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: seasonThemeImage(entry, theme.image), prompt: illustrationPrompt(entry, theme.accent) },
     scenario: { synopsis: fill(entry.synopsis, vars), milestones },
     pointsPerTier,
     tiers,

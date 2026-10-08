@@ -71,11 +71,11 @@ lot se valide, se modifie ou s'ajoute dans l'onglet « Feuille de route » de `/
 | 51d | DP-L4 | Déblocage progressif : serveur (objectifs du jour filtrés, danger qui ouvre sa page) | S | livré (6.14.79, `docs/changes/6.14.79-deblocage-serveur.md`) |
 | 51e | DP-L5 | Déblocage progressif : éditeur dans l'admin | S | livré (6.14.80, `docs/changes/6.14.80-deblocage-admin.md`) |
 | 51f | DP-L6 | Déblocage progressif : chaîne de contenu et livraison | S | livré (6.14.81, `docs/changes/6.14.81-deblocage-chaine.md`) ; essai pré-prod d'un compte neuf au prochain push |
-| 52 | AP-L9 | Mutateurs en contenu, anti-répétition | M | à faire |
-| 53 | AP-L10 | Variété narrative (banques de textes réglables) | M | à faire |
-| 54 | AP-L11 | Illustrations de saison (thèmes, portraits, second boss par archétype) | M | à faire |
-| 55 | AP-L12 | Catalogue des saisons au-delà de 36 mois | M | à faire |
-| 56 | AP-L14 | Outil `procedural-sim.mjs` dans le dépôt | S | à faire |
+| 52 | AP-L9 | Mutateurs en contenu, anti-répétition | M | livré (6.14.136, `docs/changes/6.14.136-mutateurs-sans-repetition.md`) |
+| 53 | AP-L10 | Variété narrative (banques de textes réglables) | M | livré (6.14.137, `docs/changes/6.14.137-variete-narrative.md`) |
+| 54 | AP-L11 | Illustrations de saison (thèmes, portraits, second boss par archétype) | M | livré (6.14.138, `docs/changes/6.14.138-illustrations-saison.md` ; rendus à envoyer sur /img) |
+| 55 | AP-L12 | Catalogue des saisons au-delà de 36 mois | M | livré (6.14.139, `docs/changes/6.14.139-catalogue-prolonge.md`) |
+| 56 | AP-L14 | Outil `procedural-sim.mjs` dans le dépôt | S | livré (6.14.140, `docs/changes/6.14.140-procedural-sim.md`) |
 | 57 | UX-9 | Cohérence visuelle (couleurs de décor, titres, icônes à la place des emoji) | M | livré (6.14.82, `docs/changes/6.14.82-coherence-visuelle.md`) ; Réglages mobile (AD-22) et pastilles du menu repris en 6.14.86 |
 | 58 | UX-10 | Hygiène et gardes du design system | M | livré (6.14.83, `docs/changes/6.14.83-hygiene-design.md`) ; exceptions du menu, de l'en-tête, des Réglages et des `useEffect` de l'admin retirées en 6.14.86 ; restent admin (arrondis, emoji, dates), accueil, cockpit, Succès |
 | 59 | UX-11 | Ctrl+K et animation des flottes de la Galaxie | S | livré (6.14.86, `docs/changes/6.14.86-finitions-interface.md`) |

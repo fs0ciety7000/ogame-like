@@ -920,6 +920,529 @@ function setTechCombatLimits(cap, perTechMax) {
   EFFECT_STATS.defense.cap = __spreadProps(__spreadValues({}, EFFECT_STATS.defense.cap), { tech: cap });
 }
 
+// src/game/worldBosses.ts
+var DEFAULT_WORLD_BOSSES = [
+  {
+    id: "leviathan",
+    accent: "#4be8ff",
+    name: "Le L\xE9viathan",
+    epithet: "le d\xE9voreur des abysses",
+    story: "N\xE9 dans les profondeurs d'une g\xE9ante gazeuse morte, le L\xE9viathan remonte \xE0 la surface du secteur quand la faim le prend. Sa carapace a aval\xE9 des flottes enti\xE8res ; ses \xE9cailles en gardent les \xE9paves.",
+    image: "/assets/leviathan/leviathan.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal armored space leviathan rising from the clouds of a dead gas giant, wrecked warships embedded in its scales, tiny battle fleets swarming around it, cyan #4be8ff and gold #ffd86b light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1,
+    lossMult: 1,
+    weakness: ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
+    phases: [
+      { name: "Assaut", flavor: "Le colosse encaisse sans broncher." },
+      { name: "Riposte", flavor: "Bless\xE9, il fouette l'espace de sa queue blind\xE9e." },
+      { name: "Carapace fissur\xE9e", flavor: "Il se replie dans sa carapace, mais une faille s'ouvre." }
+    ],
+    title: "Fl\xE9au du L\xE9viathan",
+    rewardMult: 1
+  },
+  {
+    id: "matriarche",
+    accent: "#ffd86b",
+    name: "La Matriarche",
+    epithet: "m\xE8re de l'Essaim",
+    story: "Quand la Reine des Kesh'Vaar a disparu, sa s\u0153ur a pris le tr\xF4ne de chitine. La Matriarche ne combat pas seule : chaque blessure lib\xE8re une nu\xE9e de rejetons qui harc\xE8lent les flottes.",
+    image: "/assets/bosses/matriarche.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic insectoid hive queen floating in space, translucent amber carapace, swarms of smaller bio-ships pouring from her abdomen, hive structures glowing gold #ffd86b, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 0.9,
+    lossMult: 1.15,
+    weakness: ["chasseur", "intercepteur", "fregate"],
+    phases: [
+      { name: "Nu\xE9e", flavor: "Ses rejetons couvrent son approche." },
+      { name: "Fr\xE9n\xE9sie", flavor: "Bless\xE9e, elle l\xE2che toute sa couv\xE9e sur les assaillants." },
+      { name: "Couv\xE9e expos\xE9e", flavor: "Sa poche de ponte est \xE0 nu : frappez-la." }
+    ],
+    title: "Fl\xE9au de la Matriarche",
+    rewardMult: 1
+  },
+  {
+    id: "titan",
+    accent: "#ff8a3d",
+    name: "Le Titan de rouille",
+    epithet: "la forge qui marche",
+    story: "Une station-forge de l'ancien empire, devenue folle apr\xE8s trois si\xE8cles seule. Elle d\xE9vore les \xE9paves pour grandir, et refait ses blindages \xE0 mesure qu'on les arrache.",
+    image: "/assets/bosses/titan.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal rusted war machine made from fused station modules and wrecked hulls, glowing ember #ff8a3d forge furnaces in its chest, mechanical arms tearing a cruiser apart, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.25,
+    lossMult: 0.85,
+    weakness: ["croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
+    phases: [
+      { name: "Blindage", flavor: "Ses plaques de rouille absorbent les salves." },
+      { name: "Refonte", flavor: "Il fond les \xE9paves pour se reconstruire, et frappe en retour." },
+      { name: "Fournaise \xE0 nu", flavor: "Son c\u0153ur de forge est expos\xE9." }
+    ],
+    title: "Briseur du Titan",
+    rewardMult: 1.1
+  },
+  {
+    id: "spectre",
+    accent: "#a78bfa",
+    name: "Le Spectre du Ch\u0153ur",
+    epithet: "la voix dans le silence",
+    story: "Le Ch\u0153ur Silencieux a laiss\xE9 derri\xE8re lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'\xE0 ce que les \xE9quipages perdent la raison.",
+    image: "/assets/bosses/spectre.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, an enormous ghostly entity made of violet #a78bfa light and static, a faceless choir of luminous figures forming its body, warships with flickering shields drifting in confusion, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 0.85,
+    lossMult: 1.1,
+    weakness: ["intercepteur", "fregate", "croiseur_nova"],
+    phases: [
+      { name: "Brouillage", flavor: "Les capteurs ne voient qu'un mirage." },
+      { name: "Chant", flavor: "Son chant retourne les syst\xE8mes des vaisseaux." },
+      { name: "Silence", flavor: "Il se tait, et devient enfin visible." }
+    ],
+    title: "Exorciste du Ch\u0153ur",
+    rewardMult: 1
+  },
+  {
+    id: "cometophage",
+    accent: "#ff5c7a",
+    name: "Le Com\xE9tophage",
+    epithet: "le mangeur d'\xE9toiles filantes",
+    story: "Il suit les com\xE8tes depuis des mill\xE9naires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de tra\xEEn\xE9es de feu : chacune est un fragment qu'il a recrach\xE9.",
+    image: "/assets/bosses/cometophage.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic serpentine space creature wrapped around a blazing scarlet comet, its body shedding burning ice fragments like a meteor shower, hunter fleets diving between the fragments, red #ff5c7a and cyan light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.05,
+    lossMult: 1.05,
+    weakness: ["lance_gravitationnelle", "croiseur_nova", "chasseur"],
+    phases: [
+      { name: "Pluie de feu", flavor: "Il s'entoure d'une pluie de fragments br\xFBlants." },
+      { name: "Constriction", flavor: "Il s'enroule autour de sa com\xE8te et \xE9crase ce qui approche." },
+      { name: "Gorge ouverte", flavor: "Il avale la com\xE8te : sa gueule est \xE0 d\xE9couvert." }
+    ],
+    title: "Chasseur du Com\xE9tophage",
+    rewardMult: 1
+  },
+  {
+    id: "abyssal",
+    accent: "#ff5fd2",
+    name: "L'Abyssal",
+    epithet: "ce qui dort sous le Vide",
+    story: "Personne ne l'a jamais vu en entier. Les \xE9claireurs parlent d'un \u0153il grand comme une lune et d'une ombre qui \xE9teint les \xE9toiles. Quand l'Abyssal se r\xE9veille, m\xEAme les seigneurs de guerre rentrent au port.",
+    image: "/assets/bosses/abyssal.webp",
+    prompt: "/imagine prompt: sci-fi strategy game key art, an unfathomably huge shadowy creature emerging from a black void, a single glowing magenta #ff5fd2 eye the size of a moon, stars going dark around its silhouette, a tiny fleet in the foreground for scale, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
+    hpMult: 1.4,
+    lossMult: 1.2,
+    weakness: ["etoile_noire", "lance_gravitationnelle"],
+    phases: [
+      { name: "\xC9veil", flavor: "L'ombre s'\xE9tire, lentement." },
+      { name: "Mar\xE9e noire", flavor: "Elle engloutit des escadres enti\xE8res." },
+      { name: "L'\u0152il", flavor: "L'\u0153il s'ouvre : visez-le." }
+    ],
+    title: "Veilleur de l'Ab\xEEme",
+    rewardMult: 1.25
+  }
+];
+var WORLD_BOSS_RULES = {
+  /** Écart minimal entre deux apparitions (jours, de début à début). */
+  minGapDays: 4,
+  /** Semaine de référence : lundi 5 janvier 2026 (heure de Paris). */
+  anchorMondayUtc: Date.UTC(2026, 0, 5)
+};
+var WORLD_BOSS_RULES_META = {
+  minGapDays: { label: "\xC9cart minimal entre deux apparitions", unit: "j", min: 1, max: 6, hint: "De d\xE9but \xE0 d\xE9but ; 6 au plus (une par semaine)." },
+  anchorMondayUtc: { label: "Semaine de r\xE9f\xE9rence (un lundi)", unit: "date", min: 0, hint: "Changer cette date d\xE9cale tout le calendrier des boss." }
+};
+var DAY = 864e5;
+var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
+function setWorldBosses(defs) {
+  var _a;
+  const byId = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, __spreadValues({}, b)]));
+  for (const d of defs != null ? defs : []) {
+    if (!(d == null ? void 0 : d.id)) continue;
+    const base = (_a = byId.get(d.id)) != null ? _a : DEFAULT_WORLD_BOSSES[0];
+    byId.set(d.id, __spreadProps(__spreadValues(__spreadValues({}, base), d), { id: d.id }));
+  }
+  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
+}
+function activeWorldBosses() {
+  var _a;
+  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
+  return on.length ? on : [(_a = WORLD_BOSSES[0]) != null ? _a : DEFAULT_WORLD_BOSSES[0]];
+}
+function validateWorldBosses(defs) {
+  const errors = [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const b of defs != null ? defs : []) {
+    const at = `Boss mondial ${(b == null ? void 0 : b.name) || (b == null ? void 0 : b.id) || "?"}`;
+    if (!(b == null ? void 0 : b.id) || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
+    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
+    if (b == null ? void 0 : b.id) ids.add(b.id);
+    if (b.name !== void 0 && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
+    if (b.title !== void 0 && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
+    for (const k of ["hpMult", "lossMult", "rewardMult"]) {
+      const v = b[k];
+      if (v !== void 0 && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "r\xE9compenses"} entre 0,1 et 5.`);
+    }
+    if (b.phases !== void 0 && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p2) => {
+      var _a;
+      return !((_a = p2 == null ? void 0 : p2.name) == null ? void 0 : _a.trim());
+    }))) errors.push(`${at} : trois phases nomm\xE9es.`);
+  }
+  const merged = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
+  for (const b of defs != null ? defs : []) if (b == null ? void 0 : b.id) merged.set(b.id, b.enabled !== false);
+  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
+  return errors;
+}
+function findWorldBoss(id) {
+  var _a, _b;
+  return (_b = (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0]) != null ? _b : DEFAULT_WORLD_BOSSES[0];
+}
+function hash01(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  h = Math.imul(h ^ h >>> 15, 2246822507) >>> 0;
+  h = Math.imul(h ^ h >>> 13, 3266489909) >>> 0;
+  return ((h ^ h >>> 16) >>> 0) / 4294967296;
+}
+function allowedDays(prev, minGap) {
+  const gap = Math.max(1, Math.min(6, Math.floor(minGap)));
+  return [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== prev && 7 + d - prev >= gap);
+}
+var dayCache = /* @__PURE__ */ new Map();
+function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
+  if (week < 0) return Math.floor(hash01(`wb-day:${week}`) * 7);
+  let days = dayCache.get(minGap);
+  if (!days) {
+    days = [Math.floor(hash01("wb-day:0") * 7)];
+    dayCache.set(minGap, days);
+  }
+  while (days.length <= week) {
+    const n = days.length;
+    const allowed = allowedDays(days[n - 1], minGap);
+    days.push(allowed[Math.floor(hash01(`wb-day:${n}`) * allowed.length) % allowed.length]);
+  }
+  return days[week];
+}
+function worldBossOfWeek(week) {
+  const list = activeWorldBosses();
+  return list[(week % list.length + list.length) % list.length];
+}
+function weekOfLocal(localMs) {
+  return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY));
+}
+
+// src/game/events.ts
+function scheduledOccurrences(s) {
+  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
+  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
+  const out = [];
+  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY2, endMs: s.endMs + i * weeks * 7 * DAY2 });
+  return out;
+}
+var EVENT_RULES = {
+  rotationEnabled: true,
+  bossMonthly: true,
+  bossWeekend: "first",
+  bossDates: [],
+  bossSkips: [],
+  rotationSkips: [],
+  bossWeekly: true,
+  startHour: 18,
+  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
+  types: [
+    {
+      id: "tempete_ferraille",
+      name: "Temp\xEAte de ferraille",
+      emoji: "\u{1F32A}\uFE0F",
+      description: "+50 % de production de ferraille et de nanocomposants.",
+      effects: { production: { scrap: 1.5, nano: 1.5 } }
+    },
+    {
+      id: "chantiers_acceleres",
+      name: "Chantiers acc\xE9l\xE9r\xE9s",
+      emoji: "\u{1F3D7}\uFE0F",
+      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
+      effects: { buildTime: 0.75 }
+    },
+    {
+      id: "recherche_eclair",
+      name: "Recherche \xE9clair",
+      emoji: "\u{1F52C}",
+      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { researchTime: 0.75 }
+    },
+    {
+      id: "chasse_tresor",
+      name: "Chasse au tr\xE9sor",
+      emoji: "\u{1F48E}",
+      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
+      effects: { missionRewards: 1.5 }
+    },
+    {
+      id: "guerre_ouverte",
+      name: "Guerre ouverte",
+      emoji: "\u2694\uFE0F",
+      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
+      effects: { loot: 1.5, debrisPercent: 0.5 }
+    }
+  ],
+  scheduled: []
+};
+var HOUR = 36e5;
+var DAY2 = 24 * HOUR;
+var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
+function lastSundayAt1Utc(year, month2) {
+  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+function parisOffsetMs(utcMs) {
+  const year = new Date(utcMs).getUTCFullYear();
+  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
+  return (summer ? 2 : 1) * HOUR;
+}
+function parisLocalToUtc(localMs) {
+  return localMs - parisOffsetMs(localMs - 2 * HOUR);
+}
+function findEventType(id) {
+  return EVENT_RULES.types.find((t) => t.id === id);
+}
+function weekendWindow(now, weeksAhead = 0) {
+  const local = now + parisOffsetMs(now);
+  const localMidnight = Math.floor(local / DAY2) * DAY2;
+  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
+  const friday = localMidnight - daysSinceFriday * DAY2 + weeksAhead * 7 * DAY2;
+  return {
+    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR),
+    endMs: parisLocalToUtc(friday + 3 * DAY2),
+    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY2)),
+    firstOfMonth: new Date(friday).getUTCDate() <= 7,
+    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
+    lastOfMonth: new Date(friday + 7 * DAY2).getUTCMonth() !== new Date(friday).getUTCMonth(),
+    fridayMs: parisLocalToUtc(friday)
+  };
+}
+var BOSS_WEEKENDS = [
+  { id: "first", label: "Premier week-end du mois" },
+  { id: "second", label: "Deuxi\xE8me week-end du mois" },
+  { id: "third", label: "Troisi\xE8me week-end du mois" },
+  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
+  { id: "last", label: "Dernier week-end du mois" }
+];
+var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
+var MAX_BOSS_DATES = 24;
+function onWeekend(w, which) {
+  if (which === "last") return w.lastOfMonth;
+  return w.nth === NTH[which != null ? which : "first"];
+}
+function bossWindows(now, s, count2 = 1) {
+  var _a, _b, _c, _d;
+  const out = [];
+  const skipped = new Set((_a = s.skips) != null ? _a : []);
+  const alternating = !!(((_c = (_b = s.weekly) == null ? void 0 : _b.between) == null ? void 0 : _c.enabled) && s.weekly.between.weekly);
+  if (s.enabled && alternating) {
+    for (const win of alternateWindows(now, s, s.weekly.between, count2 + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
+  } else if (s.enabled && s.weekly && !s.weekly.between) {
+    const w0 = weekOfLocal(now + parisOffsetMs(now));
+    for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
+      const d = worldBossDay(w, s.weekly.minGapDays);
+      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR);
+      const endMs = startMs + s.durationHours * HOUR;
+      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
+    }
+  }
+  const monthly = !s.weekly || !!s.weekly.between && !alternating;
+  if (s.enabled && monthly && typeof s.weekday === "number") {
+    for (const win of monthlyWeekdayWindows(now, s, count2 + skipped.size)) if (!skipped.has(win.startMs) && out.length < count2) out.push(win);
+  }
+  for (let i = -1; s.enabled && monthly && typeof s.weekday !== "number" && i < 60 && out.length < count2; i++) {
+    const w = weekendWindow(now, i);
+    if (!onWeekend(w, s.weekend)) continue;
+    const startMs = w.fridayMs + s.startHour * HOUR;
+    const endMs = startMs + s.durationHours * HOUR;
+    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
+  }
+  for (const d of (_d = s.dates) != null ? _d : []) {
+    const endMs = d.startMs + d.durationHours * HOUR;
+    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
+}
+function monthlyWeekdayWindows(now, s, count2) {
+  var _a;
+  const out = [];
+  const local = new Date(now + parisOffsetMs(now));
+  const dur = s.durationHours * HOUR;
+  for (let k = -1; k < 24 && out.length < count2; k++) {
+    const y = local.getUTCFullYear();
+    const m = local.getUTCMonth() + k;
+    const first = Date.UTC(y, m, 1);
+    const firstDow = new Date(first).getUTCDay();
+    const firstMatch = first + (s.weekday - firstDow + 7) % 7 * DAY2;
+    let day = s.weekend === "last" ? firstMatch + 4 * 7 * DAY2 : firstMatch + (((_a = NTH[s.weekend]) != null ? _a : 1) - 1) * 7 * DAY2;
+    if (s.weekend === "last") while (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) day -= 7 * DAY2;
+    if (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) continue;
+    const startMs = parisLocalToUtc(day + s.startHour * HOUR);
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
+}
+function nextWeekdayAt(fromMs, weekday, startHour) {
+  const local = fromMs + parisOffsetMs(fromMs);
+  const midnight = Math.floor(local / DAY2) * DAY2;
+  const ahead = (weekday - new Date(local).getUTCDay() + 7) % 7;
+  let t = parisLocalToUtc(midnight + ahead * DAY2 + startHour * HOUR);
+  if (t < fromMs) t = parisLocalToUtc(midnight + (ahead + 7) * DAY2 + startHour * HOUR);
+  return t;
+}
+function weeklyWindow(w, s) {
+  var _a;
+  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
+  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR);
+  return { startMs, endMs: startMs + s.durationHours * HOUR };
+}
+function alternateWindows(now, s, other, count2) {
+  const out = [];
+  const w0 = weekOfLocal(now + parisOffsetMs(now));
+  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
+    const a = weeklyWindow(w, other);
+    const b = weeklyWindow(w + 1, other);
+    const dur = s.durationHours * HOUR;
+    const fixedDay = typeof s.weekday === "number" ? nextWeekdayAt(a.endMs, s.weekday, s.startHour) : null;
+    const startMs = fixedDay !== null && fixedDay + dur <= b.startMs ? fixedDay : a.endMs + DAY2 + dur <= b.startMs ? a.endMs + DAY2 : a.endMs + dur <= b.startMs ? a.endMs : null;
+    if (startMs === null) continue;
+    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
+  }
+  return out;
+}
+var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+var WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label: DAY_NAMES[d][0].toUpperCase() + DAY_NAMES[d].slice(1) }));
+function hourLabel(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
+}
+function bossEndLabel(s) {
+  const end = s.startHour + s.durationHours;
+  return `${DAY_NAMES[((typeof s.weekday === "number" ? s.weekday : 5) + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
+}
+var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
+function parisWhenLabel(ms) {
+  const local = new Date(ms + parisOffsetMs(ms));
+  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
+}
+function parisRelativeLabel(ms, now) {
+  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY2);
+  const local = new Date(ms + parisOffsetMs(ms));
+  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
+  const diff = day(ms) - day(now);
+  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
+  if (diff === 1) return `demain \xE0 ${at}`;
+  return parisWhenLabel(ms);
+}
+var BOSS_REMINDERS = {
+  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
+  eveHours: 24,
+  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
+  endingHours: 6
+};
+var BOSS_REMINDERS_META = {
+  eveHours: { label: "Annonce d'un boss : au plus t\xF4t avant l'apparition", unit: "h", min: 1, max: 168, hint: "Envoy\xE9e au plus tard 1 h avant." },
+  endingHours: { label: "Rappel avant la fin d'un boss", unit: "h", min: 0, max: 72, hint: "Seulement si le boss n'est pas tomb\xE9." }
+};
+function eveReminderDue(next, lastAnnounced, now) {
+  if (!next) return false;
+  const left = next.startMs - now;
+  return left > HOUR && left <= BOSS_REMINDERS.eveHours * HOUR && lastAnnounced !== next.startMs;
+}
+function validateBossSchedule(label3, s) {
+  var _a;
+  const errors = [];
+  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
+  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
+  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
+  if (typeof s.weekday === "number" && !(Number.isInteger(s.weekday) && s.weekday >= 0 && s.weekday <= 6)) errors.push(`${label3} : jour de d\xE9part inconnu.`);
+  const dates = (_a = s.dates) != null ? _a : [];
+  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
+  dates.forEach((d, i) => {
+    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
+    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
+  });
+  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
+  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
+  return errors;
+}
+function rotationEvent(window) {
+  var _a, _b;
+  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
+  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
+  if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
+  if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
+  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR > window.startMs)) return null;
+  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
+  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
+}
+function scheduledEvents() {
+  var _a;
+  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
+    const type = findEventType(s.type);
+    if (!type || !(s.endMs > s.startMs)) return [];
+    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
+  });
+}
+function eventAt(now) {
+  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
+  if (scheduled) return scheduled;
+  const rotation = rotationEvent(weekendWindow(now));
+  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
+}
+function weekendEventsBetween(from, to) {
+  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
+  for (let w = -1; w < 60; w++) {
+    const win = weekendWindow(from, w);
+    if (win.startMs >= to) break;
+    const r = rotationEvent(win);
+    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
+}
+function eventBoundaries(from, to) {
+  const points = /* @__PURE__ */ new Set();
+  for (const e3 of scheduledEvents()) {
+    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
+    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
+  }
+  if (EVENT_RULES.rotationEnabled) {
+    for (let w = 0; ; w++) {
+      const win = weekendWindow(from, w);
+      if (win.startMs >= to) break;
+      if (win.startMs > from) points.add(win.startMs);
+      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
+      if (w > 60) break;
+    }
+  }
+  return [...points].sort((a, b) => a - b);
+}
+function productionMultipliers(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
+}
+function buildTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
+}
+function researchTimeFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
+}
+function missionRewardFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
+}
+function lootFactor(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
+}
+function eventDebrisPercent(now) {
+  var _a, _b;
+  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
+}
+
 // src/game/format.ts
 function formatInt(value2) {
   const n = Math.round(Number(value2) || 0);
@@ -1013,7 +1536,14 @@ var MUTATOR_RULES = {
   overrides: {},
   /** 6.14.125 (AA7) : liste des mutateurs (tirage, effets, textes). Ajouter ou retirer un mutateur change le tirage des mois
    *  qui ne sont pas imposés (`overrides`). */
-  defs: structuredClone(DEFAULT_MUTATOR_DEFS)
+  defs: structuredClone(DEFAULT_MUTATOR_DEFS),
+  /** 6.14.136 (AU27, lot AP-L9) : un mutateur ne revient pas avant N mois (0 : ancien tirage, seulement jamais deux mois de suite). */
+  noRepeatMonths: 6,
+  /** 6.14.136 : fenêtre de fraîcheur : un mutateur absent des N derniers mois (mois tiré compris) passe d'abord (0 : sans préférence). */
+  freshMonths: 12,
+  /** 6.14.136 : premier mois tiré sans répétition (AAAA-MM). Les mois d'avant gardent l'ancien tirage : un mois passé, en cours
+   *  ou déjà annoncé ne change pas. */
+  noRepeatFrom: "2027-01"
 };
 function mutatorList() {
   const defs = Array.isArray(MUTATOR_RULES.defs) && MUTATOR_RULES.defs.length > 0 ? MUTATOR_RULES.defs : DEFAULT_MUTATOR_DEFS;
@@ -1024,7 +1554,7 @@ function mutatorDefsOf(r) {
   return defaultMutatorDefs(r == null ? void 0 : r.values);
 }
 function mutatorMonthId(now) {
-  const d = new Date(now + 2 * 36e5);
+  const d = new Date(now + parisOffsetMs(now));
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function hashIndex(seed, n) {
@@ -1036,19 +1566,63 @@ function prevMonth(monthId) {
   const [y, m] = monthId.split("-").map(Number);
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
 }
-function drawn(monthId) {
-  const list = mutatorList();
-  const i = hashIndex(`mut:${monthId}`, list.length);
-  const prev = hashIndex(`mut:${prevMonth(monthId)}`, list.length);
-  return list[i === prev ? (i + 1) % list.length : i];
+function legacyIndex(monthId, n) {
+  const i = hashIndex(`mut:${monthId}`, n);
+  const prev = hashIndex(`mut:${prevMonth(monthId)}`, n);
+  return i === prev ? (i + 1) % n : i;
+}
+var drawCache = { key: "", map: /* @__PURE__ */ new Map() };
+function drawIds(ids, r) {
+  var _a;
+  const n = ids.length;
+  const N = Math.max(0, Math.min(n - 1, Math.floor(Number(r.noRepeatMonths) || 0)));
+  const F = Math.max(0, Math.floor(Number(r.freshMonths) || 0));
+  const from = typeof r.noRepeatFrom === "string" && /^\d{4}-\d{2}$/.test(r.noRepeatFrom) ? r.noRepeatFrom : "9999-12";
+  const key = `${ids.join(",")}|${JSON.stringify((_a = r.overrides) != null ? _a : {})}|${N}|${F}|${from}`;
+  if (drawCache.key !== key) drawCache = { key, map: /* @__PURE__ */ new Map() };
+  const memo = drawCache.map;
+  const auto = (monthId) => {
+    const legacy = ids[legacyIndex(monthId, n)];
+    if (N === 0 || monthId < from) return legacy;
+    const k = `a:${monthId}`;
+    if (memo.has(k)) return memo.get(k);
+    const back = [];
+    let m = monthId;
+    for (let i = 0; i < Math.max(N, F - 1); i++) {
+      m = prevMonth(m);
+      back.push(effective(m));
+    }
+    const recent = new Set(back.slice(0, N).filter((x) => !!x));
+    const candidates = ids.filter((id) => !recent.has(id));
+    const seen = new Set(back.slice(0, Math.max(0, F - 1)).filter((x) => !!x));
+    const fresh = F > 0 ? candidates.filter((id) => !seen.has(id)) : [];
+    const pool = fresh.length > 0 ? fresh : candidates.length > 0 ? candidates : ids;
+    const out = pool.includes(legacy) ? legacy : pool[hashIndex(`mut-norepeat:${monthId}`, pool.length)];
+    memo.set(k, out);
+    return out;
+  };
+  const effective = (monthId) => {
+    var _a2;
+    const forced = (_a2 = r.overrides) == null ? void 0 : _a2[monthId];
+    if (forced === "none") return null;
+    if (forced && ids.includes(forced)) return forced;
+    return auto(monthId);
+  };
+  return (monthId, includeOverride) => includeOverride ? effective(monthId) : auto(monthId);
 }
 function mutatorFor(monthId) {
-  var _a;
+  var _a, _b;
   if (!MUTATOR_RULES.enabled) return null;
+  const list = mutatorList();
   const forced = MUTATOR_RULES.overrides[monthId];
   if (forced === "none") return null;
-  if (forced) return (_a = mutatorList().find((m) => m.id === forced)) != null ? _a : drawn(monthId);
-  return drawn(monthId);
+  const found = forced ? list.find((m) => m.id === forced) : void 0;
+  if (found) return found;
+  const id = drawIds(
+    list.map((m) => m.id),
+    MUTATOR_RULES
+  )(monthId, false);
+  return (_b = (_a = list.find((m) => m.id === id)) != null ? _a : list[0]) != null ? _b : null;
 }
 function activeMutator(now) {
   return mutatorFor(mutatorMonthId(now));
@@ -1078,6 +1652,9 @@ function validateMutatorRules(r, unitIds = /* @__PURE__ */ new Set()) {
     errors.push(...validateValuedEffects(label3, m.effects, (sel) => isUnitSelector(sel, (id) => unitIds.has(id))));
   }
   if (Array.isArray(r.defs) && r.defs.length === 0) errors.push("Mutateurs : au moins un mutateur (ou d\xE9cocher \xAB Une r\xE8gle sp\xE9ciale chaque mois \xBB).");
+  if (r.noRepeatMonths !== void 0 && !(Number.isInteger(Number(r.noRepeatMonths)) && Number(r.noRepeatMonths) >= 0 && Number(r.noRepeatMonths) <= 24)) errors.push("Mutateurs : \xAB ne revient pas avant \xBB entier entre 0 et 24 mois.");
+  if (r.freshMonths !== void 0 && !(Number.isInteger(Number(r.freshMonths)) && Number(r.freshMonths) >= 0 && Number(r.freshMonths) <= 36)) errors.push("Mutateurs : fen\xEAtre de fra\xEEcheur enti\xE8re entre 0 et 36 mois.");
+  if (r.noRepeatFrom !== void 0 && !(typeof r.noRepeatFrom === "string" && /^\d{4}-\d{2}$/.test(r.noRepeatFrom))) errors.push("Mutateurs : premier mois sans r\xE9p\xE9tition au format AAAA-MM.");
   for (const [month2, id] of Object.entries((_b = r.overrides) != null ? _b : {})) {
     if (!/^\d{4}-\d{2}$/.test(month2)) errors.push(`Mutateur : mois \xAB ${month2} \xBB invalide (AAAA-MM).`);
     if (id !== "none" && !defs.some((m) => (m == null ? void 0 : m.id) === id)) errors.push(`Mutateur : \xAB ${id} \xBB inconnu (${month2}).`);
@@ -2803,9 +3380,9 @@ var XP_SOURCE_LABELS = {
   contract: "Contrats",
   other: "Autre"
 };
-var HOUR = 36e5;
+var HOUR2 = 36e5;
 var LEDGER_HOURS = 8 * 24;
-var hourIndex = (ms) => Math.floor(ms / HOUR);
+var hourIndex = (ms) => Math.floor(ms / HOUR2);
 function recordXp(player, source, delta2, now) {
   var _a, _b, _c, _d, _e;
   if (!delta2 || !Number.isFinite(delta2)) return;
@@ -2818,19 +3395,19 @@ function recordXp(player, source, delta2, now) {
   player.stats = __spreadProps(__spreadValues({}, (_e = player.stats) != null ? _e : {}), { xpHours: ledger });
 }
 var AUDIT_WINDOWS = [
-  { id: "1h", label: "Derni\xE8re heure", ms: HOUR },
-  { id: "24h", label: "24 heures", ms: 24 * HOUR },
-  { id: "7d", label: "7 jours", ms: 7 * 24 * HOUR }
+  { id: "1h", label: "Derni\xE8re heure", ms: HOUR2 },
+  { id: "24h", label: "24 heures", ms: 24 * HOUR2 },
+  { id: "7d", label: "7 jours", ms: 7 * 24 * HOUR2 }
 ];
 var windowMs = (w) => {
   var _a, _b;
-  return (_b = (_a = AUDIT_WINDOWS.find((x) => x.id === w)) == null ? void 0 : _a.ms) != null ? _b : 24 * HOUR;
+  return (_b = (_a = AUDIT_WINDOWS.find((x) => x.id === w)) == null ? void 0 : _a.ms) != null ? _b : 24 * HOUR2;
 };
 function ledgerTotals(stats, now, ms) {
   var _a, _b;
   const out = { total: 0, bySource: {} };
   const h = hourIndex(now);
-  const span = Math.max(1, Math.round(ms / HOUR));
+  const span = Math.max(1, Math.round(ms / HOUR2));
   for (const [k, slot] of Object.entries((_a = stats == null ? void 0 : stats.xpHours) != null ? _a : {})) {
     if (h - Number(k) >= span) continue;
     for (const [src, v] of Object.entries(slot != null ? slot : {})) {
@@ -2843,12 +3420,12 @@ function ledgerTotals(stats, now, ms) {
 function ledgerSince(stats) {
   var _a;
   const keys = Object.keys((_a = stats == null ? void 0 : stats.xpHours) != null ? _a : {}).map(Number);
-  return keys.length ? Math.min(...keys) * HOUR : null;
+  return keys.length ? Math.min(...keys) * HOUR2 : null;
 }
 function ledgerCovers(sinceMs, now, ms) {
   if (sinceMs === null) return false;
-  const span = Math.max(1, Math.round(ms / HOUR));
-  return sinceMs <= (hourIndex(now) - span + 1) * HOUR;
+  const span = Math.max(1, Math.round(ms / HOUR2));
+  return sinceMs <= (hourIndex(now) - span + 1) * HOUR2;
 }
 function bestTotals(ledger, rebuilt, sinceMs, now, ms) {
   return ledgerCovers(sinceMs, now, ms) ? { totals: ledger, source: "ledger" } : { totals: rebuilt, source: "notifications" };
@@ -2859,7 +3436,7 @@ function missionXpCeiling(ms, eventFactor = 1) {
     const xp = Number(m.reward.xp) || 0;
     if (xp > 0 && m.duration > 0) perHour += xp / (m.duration / 3600);
   }
-  return Math.round(perHour * (ms / HOUR) * eventFactor);
+  return Math.round(perHour * (ms / HOUR2) * eventFactor);
 }
 var RECAP_KINDS = ["system", "season"];
 function notifXp(n) {
@@ -2887,7 +3464,7 @@ function notifSource(n) {
   return "other";
 }
 function activityProfile(timestamps, now, ms) {
-  const span = Math.max(1, Math.round(ms / HOUR));
+  const span = Math.max(1, Math.round(ms / HOUR2));
   const h0 = hourIndex(now) - span + 1;
   const byHour = new Array(span).fill(0);
   for (const t of timestamps) {
@@ -2930,7 +3507,7 @@ function auditFlags(i) {
       detail: "Toutes les files (missions comprises) se terminent aussit\xF4t : depuis la 5.17.1, les missions d'un compte test ne rapportent plus d'XP, mais l'XP gagn\xE9e avant reste acquise."
     });
   }
-  const cap24 = missionXpCeiling(24 * HOUR, Math.max(1, (_a = i.eventFactor) != null ? _a : 1));
+  const cap24 = missionXpCeiling(24 * HOUR2, Math.max(1, (_a = i.eventFactor) != null ? _a : 1));
   if (i.missionXp24h > cap24 * 1.05) {
     out.push({ id: "mission-cap", severity: "high", title: "XP de missions impossible en jeu normal", detail: `${fmt2(i.missionXp24h)} XP de missions en 24 h, pour un maximum th\xE9orique de ${fmt2(cap24)} (toutes les missions relanc\xE9es sans interruption).` });
   } else if (i.missionXp24h > cap24 * 0.7) {
@@ -2951,7 +3528,7 @@ function auditFlags(i) {
   if (((_f = i.adminActions) != null ? _f : 0) > 0) {
     out.push({ id: "admin", severity: "info", title: "Actions de l'\xE9quipe sur ce compte", detail: `${i.adminActions} action(s) d'administration enregistr\xE9e(s) (ressources, mode test, \xAB tout terminer \xBB\u2026). Voir le d\xE9tail plus bas.` });
   }
-  const days = Math.max(1, (i.now - i.createdAtMs) / (24 * HOUR));
+  const days = Math.max(1, (i.now - i.createdAtMs) / (24 * HOUR2));
   const perDay = i.xp / days;
   if (perDay > cap24 * 1.05 && !i.testMode) {
     out.push({ id: "lifetime", severity: "high", title: "XP moyenne par jour hors de port\xE9e", detail: `${fmt2(perDay)} XP par jour en moyenne depuis l'inscription, au-del\xE0 du maximum des missions (${fmt2(cap24)} par jour) : il faut une autre source pour l'expliquer.` });
@@ -2964,7 +3541,7 @@ function percentiles(values) {
   if (!v.length) return { median: 0, p90: 0 };
   return { median: v[Math.floor((v.length - 1) / 2)], p90: v[Math.min(v.length - 1, Math.floor(v.length * 0.9))] };
 }
-var ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR, minXp: 2e3, minShare: 0.6 };
+var ACHIEVEMENT_XP_ALERT = { windowMs: 24 * HOUR2, minXp: 2e3, minShare: 0.6 };
 var ACHIEVEMENT_XP_ALERT_META = {
   windowMs: { label: "Fen\xEAtre d'observation", unit: "ms", min: 36e5, max: 6048e5, hint: "P\xE9riode glissante o\xF9 l'XP des succ\xE8s est compar\xE9e \xE0 l'XP totale (86 400 000 = 24 h)." },
   minXp: { label: "XP de succ\xE8s minimale pour alerter", unit: "XP", min: 0, max: 1e6 },
@@ -2977,529 +3554,6 @@ function achievementXpAlert(stats, now) {
   if (xp < ACHIEVEMENT_XP_ALERT.minXp || t.total <= 0) return null;
   const share = xp / t.total;
   return share >= ACHIEVEMENT_XP_ALERT.minShare ? { xp, total: t.total, share } : null;
-}
-
-// src/game/worldBosses.ts
-var DEFAULT_WORLD_BOSSES = [
-  {
-    id: "leviathan",
-    accent: "#4be8ff",
-    name: "Le L\xE9viathan",
-    epithet: "le d\xE9voreur des abysses",
-    story: "N\xE9 dans les profondeurs d'une g\xE9ante gazeuse morte, le L\xE9viathan remonte \xE0 la surface du secteur quand la faim le prend. Sa carapace a aval\xE9 des flottes enti\xE8res ; ses \xE9cailles en gardent les \xE9paves.",
-    image: "/assets/leviathan/leviathan.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal armored space leviathan rising from the clouds of a dead gas giant, wrecked warships embedded in its scales, tiny battle fleets swarming around it, cyan #4be8ff and gold #ffd86b light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1,
-    lossMult: 1,
-    weakness: ["fregate", "chasseur", "intercepteur", "croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
-    phases: [
-      { name: "Assaut", flavor: "Le colosse encaisse sans broncher." },
-      { name: "Riposte", flavor: "Bless\xE9, il fouette l'espace de sa queue blind\xE9e." },
-      { name: "Carapace fissur\xE9e", flavor: "Il se replie dans sa carapace, mais une faille s'ouvre." }
-    ],
-    title: "Fl\xE9au du L\xE9viathan",
-    rewardMult: 1
-  },
-  {
-    id: "matriarche",
-    accent: "#ffd86b",
-    name: "La Matriarche",
-    epithet: "m\xE8re de l'Essaim",
-    story: "Quand la Reine des Kesh'Vaar a disparu, sa s\u0153ur a pris le tr\xF4ne de chitine. La Matriarche ne combat pas seule : chaque blessure lib\xE8re une nu\xE9e de rejetons qui harc\xE8lent les flottes.",
-    image: "/assets/bosses/matriarche.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic insectoid hive queen floating in space, translucent amber carapace, swarms of smaller bio-ships pouring from her abdomen, hive structures glowing gold #ffd86b, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 0.9,
-    lossMult: 1.15,
-    weakness: ["chasseur", "intercepteur", "fregate"],
-    phases: [
-      { name: "Nu\xE9e", flavor: "Ses rejetons couvrent son approche." },
-      { name: "Fr\xE9n\xE9sie", flavor: "Bless\xE9e, elle l\xE2che toute sa couv\xE9e sur les assaillants." },
-      { name: "Couv\xE9e expos\xE9e", flavor: "Sa poche de ponte est \xE0 nu : frappez-la." }
-    ],
-    title: "Fl\xE9au de la Matriarche",
-    rewardMult: 1
-  },
-  {
-    id: "titan",
-    accent: "#ff8a3d",
-    name: "Le Titan de rouille",
-    epithet: "la forge qui marche",
-    story: "Une station-forge de l'ancien empire, devenue folle apr\xE8s trois si\xE8cles seule. Elle d\xE9vore les \xE9paves pour grandir, et refait ses blindages \xE0 mesure qu'on les arrache.",
-    image: "/assets/bosses/titan.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a colossal rusted war machine made from fused station modules and wrecked hulls, glowing ember #ff8a3d forge furnaces in its chest, mechanical arms tearing a cruiser apart, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.25,
-    lossMult: 0.85,
-    weakness: ["croiseur_nova", "lance_gravitationnelle", "etoile_noire"],
-    phases: [
-      { name: "Blindage", flavor: "Ses plaques de rouille absorbent les salves." },
-      { name: "Refonte", flavor: "Il fond les \xE9paves pour se reconstruire, et frappe en retour." },
-      { name: "Fournaise \xE0 nu", flavor: "Son c\u0153ur de forge est expos\xE9." }
-    ],
-    title: "Briseur du Titan",
-    rewardMult: 1.1
-  },
-  {
-    id: "spectre",
-    accent: "#a78bfa",
-    name: "Le Spectre du Ch\u0153ur",
-    epithet: "la voix dans le silence",
-    story: "Le Ch\u0153ur Silencieux a laiss\xE9 derri\xE8re lui une conscience sans corps. Le Spectre brouille les capteurs, retourne les sondes et chante dans les canaux de communication jusqu'\xE0 ce que les \xE9quipages perdent la raison.",
-    image: "/assets/bosses/spectre.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, an enormous ghostly entity made of violet #a78bfa light and static, a faceless choir of luminous figures forming its body, warships with flickering shields drifting in confusion, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 0.85,
-    lossMult: 1.1,
-    weakness: ["intercepteur", "fregate", "croiseur_nova"],
-    phases: [
-      { name: "Brouillage", flavor: "Les capteurs ne voient qu'un mirage." },
-      { name: "Chant", flavor: "Son chant retourne les syst\xE8mes des vaisseaux." },
-      { name: "Silence", flavor: "Il se tait, et devient enfin visible." }
-    ],
-    title: "Exorciste du Ch\u0153ur",
-    rewardMult: 1
-  },
-  {
-    id: "cometophage",
-    accent: "#ff5c7a",
-    name: "Le Com\xE9tophage",
-    epithet: "le mangeur d'\xE9toiles filantes",
-    story: "Il suit les com\xE8tes depuis des mill\xE9naires et se nourrit de leur glace. Quand il approche, le ciel s'emplit de tra\xEEn\xE9es de feu : chacune est un fragment qu'il a recrach\xE9.",
-    image: "/assets/bosses/cometophage.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, a gigantic serpentine space creature wrapped around a blazing scarlet comet, its body shedding burning ice fragments like a meteor shower, hunter fleets diving between the fragments, red #ff5c7a and cyan light, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.05,
-    lossMult: 1.05,
-    weakness: ["lance_gravitationnelle", "croiseur_nova", "chasseur"],
-    phases: [
-      { name: "Pluie de feu", flavor: "Il s'entoure d'une pluie de fragments br\xFBlants." },
-      { name: "Constriction", flavor: "Il s'enroule autour de sa com\xE8te et \xE9crase ce qui approche." },
-      { name: "Gorge ouverte", flavor: "Il avale la com\xE8te : sa gueule est \xE0 d\xE9couvert." }
-    ],
-    title: "Chasseur du Com\xE9tophage",
-    rewardMult: 1
-  },
-  {
-    id: "abyssal",
-    accent: "#ff5fd2",
-    name: "L'Abyssal",
-    epithet: "ce qui dort sous le Vide",
-    story: "Personne ne l'a jamais vu en entier. Les \xE9claireurs parlent d'un \u0153il grand comme une lune et d'une ombre qui \xE9teint les \xE9toiles. Quand l'Abyssal se r\xE9veille, m\xEAme les seigneurs de guerre rentrent au port.",
-    image: "/assets/bosses/abyssal.webp",
-    prompt: "/imagine prompt: sci-fi strategy game key art, an unfathomably huge shadowy creature emerging from a black void, a single glowing magenta #ff5fd2 eye the size of a moon, stars going dark around its silhouette, a tiny fleet in the foreground for scale, cinematic wide shot, painterly concept art, high detail, no text --ar 16:9 --v 7 --style raw --s 250",
-    hpMult: 1.4,
-    lossMult: 1.2,
-    weakness: ["etoile_noire", "lance_gravitationnelle"],
-    phases: [
-      { name: "\xC9veil", flavor: "L'ombre s'\xE9tire, lentement." },
-      { name: "Mar\xE9e noire", flavor: "Elle engloutit des escadres enti\xE8res." },
-      { name: "L'\u0152il", flavor: "L'\u0153il s'ouvre : visez-le." }
-    ],
-    title: "Veilleur de l'Ab\xEEme",
-    rewardMult: 1.25
-  }
-];
-var WORLD_BOSS_RULES = {
-  /** Écart minimal entre deux apparitions (jours, de début à début). */
-  minGapDays: 4,
-  /** Semaine de référence : lundi 5 janvier 2026 (heure de Paris). */
-  anchorMondayUtc: Date.UTC(2026, 0, 5)
-};
-var WORLD_BOSS_RULES_META = {
-  minGapDays: { label: "\xC9cart minimal entre deux apparitions", unit: "j", min: 1, max: 6, hint: "De d\xE9but \xE0 d\xE9but ; 6 au plus (une par semaine)." },
-  anchorMondayUtc: { label: "Semaine de r\xE9f\xE9rence (un lundi)", unit: "date", min: 0, hint: "Changer cette date d\xE9cale tout le calendrier des boss." }
-};
-var DAY = 864e5;
-var WORLD_BOSSES = DEFAULT_WORLD_BOSSES.map((b) => __spreadProps(__spreadValues({}, b), { phases: [...b.phases], weakness: [...b.weakness] }));
-function setWorldBosses(defs) {
-  var _a;
-  const byId = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, __spreadValues({}, b)]));
-  for (const d of defs != null ? defs : []) {
-    if (!(d == null ? void 0 : d.id)) continue;
-    const base = (_a = byId.get(d.id)) != null ? _a : DEFAULT_WORLD_BOSSES[0];
-    byId.set(d.id, __spreadProps(__spreadValues(__spreadValues({}, base), d), { id: d.id }));
-  }
-  WORLD_BOSSES.splice(0, WORLD_BOSSES.length, ...byId.values());
-}
-function activeWorldBosses() {
-  var _a;
-  const on = WORLD_BOSSES.filter((b) => b.enabled !== false);
-  return on.length ? on : [(_a = WORLD_BOSSES[0]) != null ? _a : DEFAULT_WORLD_BOSSES[0]];
-}
-function validateWorldBosses(defs) {
-  const errors = [];
-  const ids = /* @__PURE__ */ new Set();
-  for (const b of defs != null ? defs : []) {
-    const at = `Boss mondial ${(b == null ? void 0 : b.name) || (b == null ? void 0 : b.id) || "?"}`;
-    if (!(b == null ? void 0 : b.id) || !/^[a-z0-9_]+$/.test(b.id)) errors.push(`${at} : identifiant invalide (minuscules, chiffres, _).`);
-    else if (ids.has(b.id)) errors.push(`${at} : identifiant en double.`);
-    if (b == null ? void 0 : b.id) ids.add(b.id);
-    if (b.name !== void 0 && !String(b.name).trim()) errors.push(`${at} : nom manquant.`);
-    if (b.title !== void 0 && !String(b.title).trim()) errors.push(`${at} : titre manquant.`);
-    for (const k of ["hpMult", "lossMult", "rewardMult"]) {
-      const v = b[k];
-      if (v !== void 0 && !(typeof v === "number" && v >= 0.1 && v <= 5)) errors.push(`${at} : ${k === "hpMult" ? "structure" : k === "lossMult" ? "pertes" : "r\xE9compenses"} entre 0,1 et 5.`);
-    }
-    if (b.phases !== void 0 && (!Array.isArray(b.phases) || b.phases.length !== 3 || b.phases.some((p2) => {
-      var _a;
-      return !((_a = p2 == null ? void 0 : p2.name) == null ? void 0 : _a.trim());
-    }))) errors.push(`${at} : trois phases nomm\xE9es.`);
-  }
-  const merged = new Map(DEFAULT_WORLD_BOSSES.map((b) => [b.id, true]));
-  for (const b of defs != null ? defs : []) if (b == null ? void 0 : b.id) merged.set(b.id, b.enabled !== false);
-  if (![...merged.values()].some(Boolean)) errors.push("Boss mondiaux : il faut au moins un boss dans la rotation.");
-  return errors;
-}
-function findWorldBoss(id) {
-  var _a, _b;
-  return (_b = (_a = WORLD_BOSSES.find((b) => b.id === id)) != null ? _a : WORLD_BOSSES[0]) != null ? _b : DEFAULT_WORLD_BOSSES[0];
-}
-function hash01(seed) {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
-  h = Math.imul(h ^ h >>> 15, 2246822507) >>> 0;
-  h = Math.imul(h ^ h >>> 13, 3266489909) >>> 0;
-  return ((h ^ h >>> 16) >>> 0) / 4294967296;
-}
-function allowedDays(prev, minGap) {
-  const gap = Math.max(1, Math.min(6, Math.floor(minGap)));
-  return [0, 1, 2, 3, 4, 5, 6].filter((d) => d !== prev && 7 + d - prev >= gap);
-}
-var dayCache = /* @__PURE__ */ new Map();
-function worldBossDay(week, minGap = WORLD_BOSS_RULES.minGapDays) {
-  if (week < 0) return Math.floor(hash01(`wb-day:${week}`) * 7);
-  let days = dayCache.get(minGap);
-  if (!days) {
-    days = [Math.floor(hash01("wb-day:0") * 7)];
-    dayCache.set(minGap, days);
-  }
-  while (days.length <= week) {
-    const n = days.length;
-    const allowed = allowedDays(days[n - 1], minGap);
-    days.push(allowed[Math.floor(hash01(`wb-day:${n}`) * allowed.length) % allowed.length]);
-  }
-  return days[week];
-}
-function worldBossOfWeek(week) {
-  const list = activeWorldBosses();
-  return list[(week % list.length + list.length) % list.length];
-}
-function weekOfLocal(localMs) {
-  return Math.floor((localMs - WORLD_BOSS_RULES.anchorMondayUtc) / (7 * DAY));
-}
-
-// src/game/events.ts
-function scheduledOccurrences(s) {
-  const weeks = Math.floor(Number(s.repeatWeeks) || 0);
-  const count2 = weeks >= 1 ? Math.max(1, Math.min(26, Math.floor(Number(s.repeatCount) || 1))) : 1;
-  const out = [];
-  for (let i = 0; i < count2; i++) out.push({ startMs: s.startMs + i * weeks * 7 * DAY2, endMs: s.endMs + i * weeks * 7 * DAY2 });
-  return out;
-}
-var EVENT_RULES = {
-  rotationEnabled: true,
-  bossMonthly: true,
-  bossWeekend: "first",
-  bossDates: [],
-  bossSkips: [],
-  rotationSkips: [],
-  bossWeekly: true,
-  startHour: 18,
-  rotation: ["tempete_ferraille", "chantiers_acceleres", "recherche_eclair", "chasse_tresor", "guerre_ouverte"],
-  types: [
-    {
-      id: "tempete_ferraille",
-      name: "Temp\xEAte de ferraille",
-      emoji: "\u{1F32A}\uFE0F",
-      description: "+50 % de production de ferraille et de nanocomposants.",
-      effects: { production: { scrap: 1.5, nano: 1.5 } }
-    },
-    {
-      id: "chantiers_acceleres",
-      name: "Chantiers acc\xE9l\xE9r\xE9s",
-      emoji: "\u{1F3D7}\uFE0F",
-      description: "\u221225 % de temps de construction des b\xE2timents lanc\xE9s pendant l'\xE9v\xE9nement.",
-      effects: { buildTime: 0.75 }
-    },
-    {
-      id: "recherche_eclair",
-      name: "Recherche \xE9clair",
-      emoji: "\u{1F52C}",
-      description: "\u221225 % de temps de recherche pour les recherches lanc\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { researchTime: 0.75 }
-    },
-    {
-      id: "chasse_tresor",
-      name: "Chasse au tr\xE9sor",
-      emoji: "\u{1F48E}",
-      description: "+50 % de r\xE9compenses pour les missions termin\xE9es pendant l'\xE9v\xE9nement.",
-      effects: { missionRewards: 1.5 }
-    },
-    {
-      id: "guerre_ouverte",
-      name: "Guerre ouverte",
-      emoji: "\u2694\uFE0F",
-      description: "Butin +50 % et 50 % du co\xFBt des vaisseaux d\xE9truits laiss\xE9s en d\xE9bris.",
-      effects: { loot: 1.5, debrisPercent: 0.5 }
-    }
-  ],
-  scheduled: []
-};
-var HOUR2 = 36e5;
-var DAY2 = 24 * HOUR2;
-var REFERENCE_FRIDAY = Date.UTC(2026, 0, 2);
-function lastSundayAt1Utc(year, month2) {
-  const d = new Date(Date.UTC(year, month2 + 1, 0, 1));
-  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
-  return d.getTime();
-}
-function parisOffsetMs(utcMs) {
-  const year = new Date(utcMs).getUTCFullYear();
-  const summer = utcMs >= lastSundayAt1Utc(year, 2) && utcMs < lastSundayAt1Utc(year, 9);
-  return (summer ? 2 : 1) * HOUR2;
-}
-function parisLocalToUtc(localMs) {
-  return localMs - parisOffsetMs(localMs - 2 * HOUR2);
-}
-function findEventType(id) {
-  return EVENT_RULES.types.find((t) => t.id === id);
-}
-function weekendWindow(now, weeksAhead = 0) {
-  const local = now + parisOffsetMs(now);
-  const localMidnight = Math.floor(local / DAY2) * DAY2;
-  const daysSinceFriday = (new Date(local).getUTCDay() - 5 + 7) % 7;
-  const friday = localMidnight - daysSinceFriday * DAY2 + weeksAhead * 7 * DAY2;
-  return {
-    startMs: parisLocalToUtc(friday + EVENT_RULES.startHour * HOUR2),
-    endMs: parisLocalToUtc(friday + 3 * DAY2),
-    week: Math.round((friday - REFERENCE_FRIDAY) / (7 * DAY2)),
-    firstOfMonth: new Date(friday).getUTCDate() <= 7,
-    nth: Math.ceil(new Date(friday).getUTCDate() / 7),
-    lastOfMonth: new Date(friday + 7 * DAY2).getUTCMonth() !== new Date(friday).getUTCMonth(),
-    fridayMs: parisLocalToUtc(friday)
-  };
-}
-var BOSS_WEEKENDS = [
-  { id: "first", label: "Premier week-end du mois" },
-  { id: "second", label: "Deuxi\xE8me week-end du mois" },
-  { id: "third", label: "Troisi\xE8me week-end du mois" },
-  { id: "fourth", label: "Quatri\xE8me week-end du mois" },
-  { id: "last", label: "Dernier week-end du mois" }
-];
-var NTH = { first: 1, second: 2, third: 3, fourth: 4 };
-var MAX_BOSS_DATES = 24;
-function onWeekend(w, which) {
-  if (which === "last") return w.lastOfMonth;
-  return w.nth === NTH[which != null ? which : "first"];
-}
-function bossWindows(now, s, count2 = 1) {
-  var _a, _b, _c, _d;
-  const out = [];
-  const skipped = new Set((_a = s.skips) != null ? _a : []);
-  const alternating = !!(((_c = (_b = s.weekly) == null ? void 0 : _b.between) == null ? void 0 : _c.enabled) && s.weekly.between.weekly);
-  if (s.enabled && alternating) {
-    for (const win of alternateWindows(now, s, s.weekly.between, count2 + skipped.size)) if (!skipped.has(win.startMs)) out.push(win);
-  } else if (s.enabled && s.weekly && !s.weekly.between) {
-    const w0 = weekOfLocal(now + parisOffsetMs(now));
-    for (let w = w0 - 1; w <= w0 + count2 + skipped.size + 1; w++) {
-      const d = worldBossDay(w, s.weekly.minGapDays);
-      const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR2);
-      const endMs = startMs + s.durationHours * HOUR2;
-      if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
-    }
-  }
-  const monthly = !s.weekly || !!s.weekly.between && !alternating;
-  if (s.enabled && monthly && typeof s.weekday === "number") {
-    for (const win of monthlyWeekdayWindows(now, s, count2 + skipped.size)) if (!skipped.has(win.startMs) && out.length < count2) out.push(win);
-  }
-  for (let i = -1; s.enabled && monthly && typeof s.weekday !== "number" && i < 60 && out.length < count2; i++) {
-    const w = weekendWindow(now, i);
-    if (!onWeekend(w, s.weekend)) continue;
-    const startMs = w.fridayMs + s.startHour * HOUR2;
-    const endMs = startMs + s.durationHours * HOUR2;
-    if (endMs > now && !skipped.has(startMs)) out.push({ startMs, endMs });
-  }
-  for (const d of (_d = s.dates) != null ? _d : []) {
-    const endMs = d.startMs + d.durationHours * HOUR2;
-    if (Number.isFinite(endMs) && endMs > now) out.push({ startMs: d.startMs, endMs, fixed: true });
-  }
-  return out.sort((a, b) => a.startMs - b.startMs).slice(0, count2);
-}
-function monthlyWeekdayWindows(now, s, count2) {
-  var _a;
-  const out = [];
-  const local = new Date(now + parisOffsetMs(now));
-  const dur = s.durationHours * HOUR2;
-  for (let k = -1; k < 24 && out.length < count2; k++) {
-    const y = local.getUTCFullYear();
-    const m = local.getUTCMonth() + k;
-    const first = Date.UTC(y, m, 1);
-    const firstDow = new Date(first).getUTCDay();
-    const firstMatch = first + (s.weekday - firstDow + 7) % 7 * DAY2;
-    let day = s.weekend === "last" ? firstMatch + 4 * 7 * DAY2 : firstMatch + (((_a = NTH[s.weekend]) != null ? _a : 1) - 1) * 7 * DAY2;
-    if (s.weekend === "last") while (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) day -= 7 * DAY2;
-    if (new Date(day).getUTCMonth() !== new Date(first).getUTCMonth()) continue;
-    const startMs = parisLocalToUtc(day + s.startHour * HOUR2);
-    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
-  }
-  return out;
-}
-function nextWeekdayAt(fromMs, weekday, startHour) {
-  const local = fromMs + parisOffsetMs(fromMs);
-  const midnight = Math.floor(local / DAY2) * DAY2;
-  const ahead = (weekday - new Date(local).getUTCDay() + 7) % 7;
-  let t = parisLocalToUtc(midnight + ahead * DAY2 + startHour * HOUR2);
-  if (t < fromMs) t = parisLocalToUtc(midnight + (ahead + 7) * DAY2 + startHour * HOUR2);
-  return t;
-}
-function weeklyWindow(w, s) {
-  var _a;
-  const d = worldBossDay(w, (_a = s.weekly) == null ? void 0 : _a.minGapDays);
-  const startMs = parisLocalToUtc(WORLD_BOSS_RULES.anchorMondayUtc + w * 7 * DAY2 + d * DAY2 + s.startHour * HOUR2);
-  return { startMs, endMs: startMs + s.durationHours * HOUR2 };
-}
-function alternateWindows(now, s, other, count2) {
-  const out = [];
-  const w0 = weekOfLocal(now + parisOffsetMs(now));
-  for (let w = w0 - 2; w <= w0 + count2 + 2; w++) {
-    const a = weeklyWindow(w, other);
-    const b = weeklyWindow(w + 1, other);
-    const dur = s.durationHours * HOUR2;
-    const fixedDay = typeof s.weekday === "number" ? nextWeekdayAt(a.endMs, s.weekday, s.startHour) : null;
-    const startMs = fixedDay !== null && fixedDay + dur <= b.startMs ? fixedDay : a.endMs + DAY2 + dur <= b.startMs ? a.endMs + DAY2 : a.endMs + dur <= b.startMs ? a.endMs : null;
-    if (startMs === null) continue;
-    if (startMs + dur > now) out.push({ startMs, endMs: startMs + dur });
-  }
-  return out;
-}
-var DAY_NAMES = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-var WEEKDAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label: DAY_NAMES[d][0].toUpperCase() + DAY_NAMES[d].slice(1) }));
-function hourLabel(h) {
-  const hh = Math.floor(h);
-  const mm = Math.round((h - hh) * 60);
-  return mm ? `${hh} h ${String(mm).padStart(2, "0")}` : `${hh} h`;
-}
-function bossEndLabel(s) {
-  const end = s.startHour + s.durationHours;
-  return `${DAY_NAMES[((typeof s.weekday === "number" ? s.weekday : 5) + Math.floor(end / 24)) % 7]} ${hourLabel(end % 24)}`;
-}
-var MONTH_NAMES = ["janvier", "f\xE9vrier", "mars", "avril", "mai", "juin", "juillet", "ao\xFBt", "septembre", "octobre", "novembre", "d\xE9cembre"];
-function parisWhenLabel(ms) {
-  const local = new Date(ms + parisOffsetMs(ms));
-  return `${DAY_NAMES[local.getUTCDay()]} ${local.getUTCDate()} ${MONTH_NAMES[local.getUTCMonth()]} \xE0 ${hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60)}`;
-}
-function parisRelativeLabel(ms, now) {
-  const day = (t) => Math.floor((t + parisOffsetMs(t)) / DAY2);
-  const local = new Date(ms + parisOffsetMs(ms));
-  const at = hourLabel(local.getUTCHours() + local.getUTCMinutes() / 60);
-  const diff = day(ms) - day(now);
-  if (diff === 0) return `aujourd'hui \xE0 ${at}`;
-  if (diff === 1) return `demain \xE0 ${at}`;
-  return parisWhenLabel(ms);
-}
-var BOSS_REMINDERS = {
-  /** Annonce envoyée au plus tôt N heures avant l'apparition (et au plus tard 1 h avant). */
-  eveHours: 24,
-  /** Rappel N heures avant la fin, si le boss n'est pas tombé. */
-  endingHours: 6
-};
-var BOSS_REMINDERS_META = {
-  eveHours: { label: "Annonce d'un boss : au plus t\xF4t avant l'apparition", unit: "h", min: 1, max: 168, hint: "Envoy\xE9e au plus tard 1 h avant." },
-  endingHours: { label: "Rappel avant la fin d'un boss", unit: "h", min: 0, max: 72, hint: "Seulement si le boss n'est pas tomb\xE9." }
-};
-function eveReminderDue(next, lastAnnounced, now) {
-  if (!next) return false;
-  const left = next.startMs - now;
-  return left > HOUR2 && left <= BOSS_REMINDERS.eveHours * HOUR2 && lastAnnounced !== next.startMs;
-}
-function validateBossSchedule(label3, s) {
-  var _a;
-  const errors = [];
-  if (!BOSS_WEEKENDS.some((w) => w.id === s.weekend)) errors.push(`${label3} : week-end inconnu.`);
-  if (!(Number(s.startHour) >= 0 && Number(s.startHour) < 24)) errors.push(`${label3} : heure de d\xE9part entre 0 et 23.`);
-  if (!(Number(s.durationHours) >= 1 && Number(s.durationHours) <= 160)) errors.push(`${label3} : dur\xE9e entre 1 et 160 h.`);
-  if (typeof s.weekday === "number" && !(Number.isInteger(s.weekday) && s.weekday >= 0 && s.weekday <= 6)) errors.push(`${label3} : jour de d\xE9part inconnu.`);
-  const dates = (_a = s.dates) != null ? _a : [];
-  if (dates.length > MAX_BOSS_DATES) errors.push(`${label3} : ${MAX_BOSS_DATES} dates pr\xE9cises au plus.`);
-  dates.forEach((d, i) => {
-    if (!(Number(d.startMs) > 0)) errors.push(`${label3} : date n\xB0 ${i + 1} invalide.`);
-    if (!(Number(d.durationHours) >= 1 && Number(d.durationHours) <= 160)) errors.push(`${label3} : date n\xB0 ${i + 1}, dur\xE9e entre 1 et 160 h.`);
-  });
-  const sorted = [...dates].sort((a, b) => a.startMs - b.startMs);
-  for (let i = 1; i < sorted.length; i++) if (sorted[i].startMs < sorted[i - 1].startMs + sorted[i - 1].durationHours * HOUR2) errors.push(`${label3} : deux dates pr\xE9cises se chevauchent.`);
-  return errors;
-}
-function rotationEvent(window) {
-  var _a, _b;
-  const list = EVENT_RULES.rotation.filter((id) => findEventType(id));
-  if (!EVENT_RULES.rotationEnabled || list.length === 0) return null;
-  if (((_a = EVENT_RULES.rotationSkips) != null ? _a : []).includes(window.startMs)) return null;
-  if (EVENT_RULES.bossMonthly && !EVENT_RULES.bossWeekly && onWeekend(window, EVENT_RULES.bossWeekend)) return null;
-  if (((_b = EVENT_RULES.bossDates) != null ? _b : []).some((d) => d.startMs < window.endMs && d.startMs + d.durationHours * HOUR2 > window.startMs)) return null;
-  const type = findEventType(list[(window.week % list.length + list.length) % list.length]);
-  return { key: `${type.id}:${window.startMs}`, type, startMs: window.startMs, endMs: window.endMs, scheduled: false };
-}
-function scheduledEvents() {
-  var _a;
-  return ((_a = EVENT_RULES.scheduled) != null ? _a : []).flatMap((s) => {
-    const type = findEventType(s.type);
-    if (!type || !(s.endMs > s.startMs)) return [];
-    return scheduledOccurrences(s).map((o) => ({ key: `${s.id}:${o.startMs}`, type, startMs: o.startMs, endMs: o.endMs, scheduled: true }));
-  });
-}
-function eventAt(now) {
-  const scheduled = scheduledEvents().find((e3) => e3.startMs <= now && now < e3.endMs);
-  if (scheduled) return scheduled;
-  const rotation = rotationEvent(weekendWindow(now));
-  return rotation && rotation.startMs <= now && now < rotation.endMs ? rotation : null;
-}
-function weekendEventsBetween(from, to) {
-  const out = scheduledEvents().filter((e3) => e3.endMs > from && e3.startMs < to);
-  for (let w = -1; w < 60; w++) {
-    const win = weekendWindow(from, w);
-    if (win.startMs >= to) break;
-    const r = rotationEvent(win);
-    if (r && r.endMs > from && !out.some((e3) => e3.startMs < r.endMs && e3.endMs > r.startMs)) out.push(r);
-  }
-  return out.sort((a, b) => a.startMs - b.startMs);
-}
-function eventBoundaries(from, to) {
-  const points = /* @__PURE__ */ new Set();
-  for (const e3 of scheduledEvents()) {
-    if (e3.startMs > from && e3.startMs < to) points.add(e3.startMs);
-    if (e3.endMs > from && e3.endMs < to) points.add(e3.endMs);
-  }
-  if (EVENT_RULES.rotationEnabled) {
-    for (let w = 0; ; w++) {
-      const win = weekendWindow(from, w);
-      if (win.startMs >= to) break;
-      if (win.startMs > from) points.add(win.startMs);
-      if (win.endMs > from && win.endMs < to) points.add(win.endMs);
-      if (w > 60) break;
-    }
-  }
-  return [...points].sort((a, b) => a - b);
-}
-function productionMultipliers(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.production) != null ? _b : {};
-}
-function buildTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.buildTime) != null ? _b : 1;
-}
-function researchTimeFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.researchTime) != null ? _b : 1;
-}
-function missionRewardFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.missionRewards) != null ? _b : 1;
-}
-function lootFactor(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.loot) != null ? _b : 1;
-}
-function eventDebrisPercent(now) {
-  var _a, _b;
-  return (_b = (_a = eventAt(now)) == null ? void 0 : _a.type.effects.debrisPercent) != null ? _b : null;
 }
 
 // src/game/story.ts
@@ -8383,15 +8437,159 @@ function catalogIndex(monthId) {
   const n = monthIndex(monthId) - monthIndex(CATALOG_START);
   return (n % cycle + cycle) % cycle;
 }
-function catalogEntryFor(monthId) {
+function writtenEntryAt(i) {
   var _a, _b;
-  const i = catalogIndex(monthId);
   const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
   const theme = rotation[i % rotation.length];
   const year = Math.floor(i / rotation.length) + 1;
   const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
   const same = list.filter((e3) => e3.theme === theme);
   return (_b = (_a = same.find((e3) => e3.year === year)) != null ? _a : same.sort((a, b) => Math.abs(a.year - year) - Math.abs(b.year - year))[0]) != null ? _b : list[0];
+}
+function catalogEntryFor(monthId) {
+  const cycle = catalogCycle();
+  const n = monthIndex(monthId) - monthIndex(CATALOG_START);
+  const i = (n % cycle + cycle) % cycle;
+  const written = writtenEntryAt(i);
+  if (n < cycle || SEASON_GEN_RULES.enabled === false) return written;
+  return generatedSeasonEntry(Math.floor(n / cycle), i, written);
+}
+var SEASON_GEN_RULES = {
+  /** Faux : après le cycle écrit, le catalogue reboucle (noms et commandants répétés). */
+  enabled: true,
+  /** Sous-titres ajoutés au nom de la saison écrite qu'une saison générée prolonge (« L'Appel du Vide : la Relève »). */
+  subtitles: ["la Rel\xE8ve", "les H\xE9ritiers", "le Second Souffle", "l'\xC9cho", "la Revanche", "les Braises", "le Retour", "la Nouvelle Vague", "l'Autre Rive", "les Cendres chaudes"],
+  /** Phrase d'ouverture du scénario d'une saison générée. */
+  eraLines: ["Des ann\xE9es ont pass\xE9.", "Le secteur a chang\xE9, pas ses ennemis.", "Une nouvelle g\xE9n\xE9ration prend la rel\xE8ve.", "Les anciens fronts se rallument.", "On croyait cette histoire finie."],
+  /** Prénoms des commandants générés (« f », « m ») : un sur deux de chaque. */
+  firstNames: {
+    f: ["Alma", "Yseult", "Tamsin", "Liora", "Mirelle", "Sigrun", "Z\xE9lie", "Ondine", "Rhea", "Ysolde"],
+    m: ["Aur\xE8le", "Tobias", "Evander", "Malo", "Corwin", "Idris", "Lazare", "Soren", "Ewald", "Tristan"]
+  },
+  /** Noms de famille (21 : premier avec 10, chaque couple prénom-nom sert une fois sur 210 saisons par genre). */
+  lastNames: ["Arden", "Volkov", "Nakamura", "Belcourt", "Oyelaran", "Strand", "Quill", "Marchetti", "Halloran", "Desrosiers", "Kaskari", "Thorne", "Vidal", "Okafor", "Lindgren", "Ravel", "Sarkis", "Wren", "Castellane", "Moreau-Kin", "Ashgrove"],
+  /** Titre d'un commandant généré selon son rôle principal : [masculin, féminin]. */
+  roleTitles: {
+    logistician: ["Guide des franges", "Guide des franges"],
+    warden: ["Gardien des r\xE9serves", "Gardienne des r\xE9serves"],
+    engineer: ["Ing\xE9nieur de la Forge", "Ing\xE9nieure de la Forge"],
+    diplomat: ["Envoy\xE9 des comptoirs", "Envoy\xE9e des comptoirs"],
+    admiral: ["Amiral de la Houle", "Amirale de la Houle"],
+    governor: ["Gouverneur des franges", "Gouverneure des franges"],
+    corsair: ["Corsaire du tableau", "Corsaire du tableau"],
+    hunter: ["Veneur des com\xE8tes", "Veneuse des com\xE8tes"],
+    steward: ["Intendant des greniers", "Intendante des greniers"],
+    spy: ["Ombre des archives", "Ombre des archives"],
+    mechanic: ["Ma\xEEtre des cales", "Ma\xEEtresse des cales"],
+    strategist: ["Strat\xE8ge du rempart", "Strat\xE8ge du rempart"]
+  },
+  /** Histoire d'un commandant généré selon son second rôle ({commander}). */
+  roleLore: {
+    logistician: "{commander} n'a jamais perdu un convoi, m\xEAme au plus noir des routes rouges.",
+    warden: "{commander} a gard\xE9 un entrep\xF4t assi\xE9g\xE9 trois semaines, sans rationner personne.",
+    engineer: "{commander} rafistole un moteur en vol et le rend plus rapide qu'\xE0 sa sortie d'usine.",
+    diplomat: "{commander} a sign\xE9 plus de trait\xE9s qu'il n'y a de ports dans le secteur.",
+    admiral: "{commander} a men\xE9 une flotte enti\xE8re \xE0 travers un champ de mines, sans une perte.",
+    governor: "{commander} a fait d'un caillou d\xE9sert une colonie de cent mille \xE2mes.",
+    corsair: "{commander} a pill\xE9 trois seigneurs de guerre, et rendu le butin \xE0 leurs victimes.",
+    hunter: "{commander} a pist\xE9 un colosse d'un bout \xE0 l'autre du Vide.",
+    steward: "{commander} tient les comptes d'un empire au gramme pr\xE8s, et n'a jamais laiss\xE9 un grenier vide.",
+    spy: "{commander} a lu les ordres de l'ennemi avant ses propres officiers.",
+    mechanic: "{commander} remet une fr\xE9gate en ligne en une nuit, avec trois pi\xE8ces et beaucoup de patience.",
+    strategist: "{commander} a tenu une ligne de d\xE9fense cent jours contre une armada."
+  },
+  /** Apparence pour le prompt du portrait, selon le rôle principal ({person} : woman ou man). */
+  roleLooks: {
+    logistician: "a weathered convoy master {person} with route holograms around the hands, travel coat, magenta nebula behind",
+    warden: "a stern vault warden {person} in frost-rimmed armor, sealed depot door glowing pale blue behind",
+    engineer: "a starship engineer {person} with welding goggles, forge sparks and cyan scaffolding lights behind",
+    diplomat: "an elegant trade envoy {person} in emerald and gold robes, orbital bazaar lanterns behind",
+    admiral: "a fleet admiral {person} in a dark naval uniform, battle fleet in formation behind",
+    governor: "a colony governor {person} in a mint-trimmed coat, terraformed world at dawn behind",
+    corsair: "a corsair {person} with a scarred grin and gold trinkets, hive station and wanted posters behind",
+    hunter: "a comet hunter {person} with a long-range targeting monocle, scarlet comet tail behind",
+    steward: "a granary steward {person} with a glowing ledger hologram, golden harvest stations behind",
+    spy: "a shadow agent {person} with a dark visor reflecting violet data, archive shelves behind",
+    mechanic: "a dockyard mechanic {person} with a mechanical arm, warship hull in a dry dock behind",
+    strategist: "a siege strategist {person} in heavy blue armor, shield walls under fire behind"
+  },
+  /** Variation de la scène d'illustration (anglais, prompt Midjourney). */
+  sceneVariations: ["years later, under a new star", "at dusk, with a second fleet arriving", "seen from a distant moon", "after a long war, scars visible", "with a new generation of ships", "in a storm of solar wind"]
+};
+var SEASON_GEN_RULES_META = {
+  enabled: { label: "Saisons g\xE9n\xE9r\xE9es au-del\xE0 du cycle \xE9crit", hint: "Faux : apr\xE8s le cycle (36 mois livr\xE9s), le catalogue reboucle. Un passe d\xE9j\xE0 \xE9crit ne change jamais." },
+  subtitles: { label: "Sous-titres des saisons g\xE9n\xE9r\xE9es", hint: "Ajout\xE9s au nom de la saison \xE9crite prolong\xE9e : \xAB L'Appel du Vide : la Rel\xE8ve \xBB." },
+  eraLines: { label: "Phrases d'ouverture du sc\xE9nario" },
+  firstNames: { label: "Pr\xE9noms des commandants", hint: "f, m : un commandant sur deux de chaque." },
+  lastNames: { label: "Noms de famille des commandants", hint: "Un nombre premier avec celui des pr\xE9noms (21 pour 10) : chaque couple sert une fois." },
+  roleTitles: { label: "Titres par r\xF4le principal", hint: "R\xF4le \u2192 [masculin, f\xE9minin]." },
+  roleLore: { label: "Histoire par second r\xF4le", hint: "{commander} : son nom." },
+  roleLooks: { label: "Apparence par r\xF4le principal (prompt du portrait, anglais)", hint: "{person} : woman ou man." },
+  sceneVariations: { label: "Variations de la sc\xE8ne (prompt de l'illustration, anglais)" }
+};
+var ALL_ROLES = () => Object.values(DEFAULT_THEME_PRIMARY);
+var listOf = (xs, fallback) => {
+  const out = Array.isArray(xs) ? xs.filter((x) => typeof x === "string" && x.trim() !== "") : [];
+  return out.length > 0 ? out : [...fallback];
+};
+function generatedSeasonEntry(lap, i, base) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l;
+  const r = SEASON_GEN_RULES;
+  const D = DEFAULT_SEASON_GEN;
+  const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
+  const R = Math.max(1, rotation.length);
+  const years = catalogYears();
+  const cycle = catalogCycle();
+  const themeIdx = i % R;
+  const baseYear = Math.floor(i / R) + 1;
+  const year = lap * years + baseYear;
+  const k = (lap - 1) * cycle + i;
+  const subs = listOf(r.subtitles, D.subtitles);
+  const subtitle = subs[(lap - 1 + themeIdx + (baseYear - 1)) % subs.length];
+  const eras = listOf(r.eraLines, D.eraLines);
+  const gender = k % 2 === 0 ? "f" : "m";
+  const q = Math.floor(k / 2);
+  const firsts = listOf((_a = r.firstNames) == null ? void 0 : _a[gender], D.firstNames[gender]);
+  const lasts = listOf(r.lastNames, D.lastNames);
+  const name = `${firsts[q % firsts.length]} ${lasts[(q + (gender === "m" ? 7 : 0)) % lasts.length]}`;
+  const primary = (_c = (_b = THEME_PRIMARY[base.theme]) != null ? _b : DEFAULT_THEME_PRIMARY[base.theme]) != null ? _c : "admiral";
+  const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
+  const taken = new Set(list.filter((e3) => e3.theme === base.theme).map((e3) => {
+    var _a2;
+    return (_a2 = e3.commander) == null ? void 0 : _a2.secondary;
+  }));
+  const free2 = ALL_ROLES().filter((x) => x !== primary && !taken.has(x));
+  const pool = free2.length > 0 ? free2 : ALL_ROLES().filter((x) => x !== primary);
+  const g = (lap - 1) * years + (baseYear - 1);
+  const secondary = pool[g % pool.length];
+  const titles = (_f = (_e = (_d = r.roleTitles) == null ? void 0 : _d[primary]) != null ? _e : D.roleTitles[primary]) != null ? _f : ["Commandant", "Commandante"];
+  const title = (gender === "f" ? titles[1] : titles[0]) || titles[0] || "Commandant";
+  const lore = String((_i = (_h = (_g = r.roleLore) == null ? void 0 : _g[secondary]) != null ? _h : D.roleLore[secondary]) != null ? _i : "{commander} a fait ses preuves sur tous les fronts.");
+  const look = String((_l = (_k = (_j = r.roleLooks) == null ? void 0 : _j[primary]) != null ? _k : D.roleLooks[primary]) != null ? _l : "a seasoned starship officer {person}, dark space behind").replace(/\{person\}/g, gender === "f" ? "woman" : "man");
+  const variations = listOf(r.sceneVariations, D.sceneVariations);
+  return {
+    id: `${base.theme}_${year}`,
+    theme: base.theme,
+    year,
+    name: `${base.name} : ${subtitle}`,
+    tagline: base.tagline,
+    synopsis: `${eras[k % eras.length]} ${base.synopsis}`,
+    commander: { name, title, secondary, lore, look },
+    scene: `${base.scene}, ${variations[(lap - 1 + themeIdx) % variations.length]}`,
+    generatedFrom: base.id
+  };
+}
+var DEFAULT_SEASON_GEN = structuredClone(SEASON_GEN_RULES);
+function validateSeasonGenRules(r) {
+  var _a, _b, _c;
+  if (!r) return [];
+  const e3 = [];
+  const L2 = "Saisons g\xE9n\xE9r\xE9es";
+  const nonEmpty = (xs) => Array.isArray(xs) && xs.some((x) => typeof x === "string" && x.trim() !== "");
+  for (const k of ["subtitles", "eraLines", "lastNames", "sceneVariations"]) if (r[k] !== void 0 && !nonEmpty(r[k])) e3.push(`${L2} : \xAB ${k} \xBB : au moins un texte.`);
+  if (r.firstNames !== void 0 && !(nonEmpty((_a = r.firstNames) == null ? void 0 : _a.f) && nonEmpty((_b = r.firstNames) == null ? void 0 : _b.m))) e3.push(`${L2} : pr\xE9noms \xAB f \xBB et \xAB m \xBB : au moins un chacun.`);
+  for (const [role, t] of Object.entries((_c = r.roleTitles) != null ? _c : {})) if (!Array.isArray(t) || t.length !== 2 || !t.every((x) => typeof x === "string" && x.trim())) e3.push(`${L2} : titre du r\xF4le ${role} : [masculin, f\xE9minin].`);
+  return e3;
 }
 function illustrationPrompt(e3, accent) {
   return `/imagine prompt: sci-fi strategy game key art, ${e3.scene}, cinematic wide shot, dark deep-space palette with ${accent} accent light, painterly concept art, high detail, no text, no letters --ar 16:9 --v 7 --style raw --s 250`;
@@ -20809,6 +21007,232 @@ function objectiveWeight(k, r = chronicleGenRules(), theme) {
   return Math.max(0, Number.isFinite(g) ? g : 0) * trackedWeight(k, theme);
 }
 
+// src/game/narrative.ts
+var NARRATIVE_RULES = {
+  /** Faux : textes et tirages d'avant la 6.14.137. */
+  enabled: true,
+  /** Un texte lu dans les N derniers mois écrits n'est pas repris tant qu'il en reste un autre (0 : sans anti-répétition). */
+  noRepeatMonths: 12,
+  /** Titres des épisodes, par acte (1 à 4). Les 5 premiers de chaque acte sont ceux d'avant. */
+  actTitles: [
+    ["Les premiers signes", "L'appel", "Le signal", "Les rumeurs", "La br\xE8che", "Le calme trompeur", "Une ombre au radar", "Le r\xE9veil", "Les feux lointains", "Premier contact", "Le message chiffr\xE9", "L'alerte"],
+    ["La traque", "Les routes rouges", "Sur la piste", "Le filet", "Les \xE9claireurs", "Coups de sonde", "La contre-offensive", "Le harc\xE8lement", "Les avant-postes", "La course", "Les lignes ennemies", "La poursuite"],
+    ["Le prix du silence", "La trahison", "Les masques tombent", "Le pacte bris\xE9", "Le double jeu", "Le revers", "L'impr\xE9vu", "La fausse piste", "Le pi\xE8ge", "Le doute", "Le tra\xEEtre", "La donne change"],
+    ["L'assaut", "La derni\xE8re nuit", "Le jugement", "La chute", "Tous ensemble", "Le front uni", "L'heure d\xE9cisive", "Le dernier rempart", "La perc\xE9e", "Le point de rupture", "La riposte", "Le grand soir"]
+  ],
+  /** Accroches de l'allié, par acte ({villain}, {boss}, {faction}, {ofFaction}, {pseudo}). Les 3 premières sont celles d'avant. */
+  hooks: [
+    [
+      "{villain} refait surface, {pseudo}. Et pas les mains vides : {boss} quitte son chantier.",
+      "Mes \xE9claireurs ont rep\xE9r\xE9 la signature {ofFaction} aux confins du secteur. Ils pr\xE9parent quelque chose de grand.",
+      "On parle de {boss} dans tous les ports. Personne ne l'a vu, mais tout le monde l'a entendu.",
+      "Trois convois ont disparu cette semaine. M\xEAme route, m\xEAme silence. {faction} est de retour.",
+      "Une balise s'est rallum\xE9e dans un secteur mort. Quelqu'un veut qu'on la trouve, {pseudo}.",
+      "Les assureurs du port ont doubl\xE9 leurs tarifs. Ils savent quelque chose sur {boss}.",
+      "J'ai re\xE7u un message sans signature. Juste un nom : {boss}.",
+      "{villain} a envoy\xE9 ses \xE9claireurs. Ce n'est jamais bon signe.",
+      "Les sondes de veille captent un bruit de fond inhabituel. \xC7a ressemble \xE0 une flotte qui se rassemble.",
+      "Le secteur est trop calme. La derni\xE8re fois, {faction} pr\xE9parait une offensive.",
+      "Un pilote rescap\xE9 ne parle que de {boss}. Il tremble encore.",
+      "On a retrouv\xE9 une \xE9pave marqu\xE9e du sceau {ofFaction}. Elle n'est pas arriv\xE9e l\xE0 toute seule."
+    ],
+    [
+      "Ils se croient \xE0 l'abri derri\xE8re leurs routes. Remontons-les une \xE0 une.",
+      "Chaque coup port\xE9 maintenant leur co\xFBtera une semaine de pr\xE9paratifs.",
+      "{faction} a besoin de temps. Ne lui en laissons aucun.",
+      "Leurs ravitailleurs passent par les zones grises. On y sera avant eux.",
+      "Chaque avant-poste qu'on prend, c'est un mouchard de moins pour {villain}.",
+      "On a leur piste. Elle est chaude. On ne la l\xE2che plus.",
+      "Ils recrutent dans les ports. Montrons-leur que le secteur a d\xE9j\xE0 choisi son camp.",
+      "{boss} n'est pas pr\xEAt. Chaque jour de retard nous donne une chance.",
+      "Frappe vite, frappe partout : {faction} ne sait pas encore d'o\xF9 viendra le coup.",
+      "Leurs patrouilles sont nerveuses. C'est le moment de les pousser \xE0 la faute.",
+      "Nos informateurs s'activent. Il faut leur donner de quoi travailler.",
+      "Le secteur nous regarde. Donnons-lui une raison d'y croire."
+    ],
+    [
+      "Un de nos informateurs a chang\xE9 de camp. {villain} sait d\xE9j\xE0 o\xF9 nous frapperons.",
+      "Les seigneurs de guerre ont \xE9t\xE9 pay\xE9s pour regarder ailleurs. Certains, pour regarder vers nous.",
+      "Le plan a chang\xE9 : {boss} n'est pas une arme, c'est un app\xE2t. Et l'app\xE2t, c'est le secteur entier.",
+      "Nos codes ont fuit\xE9. On repart de z\xE9ro, et vite.",
+      "{villain} a frapp\xE9 l\xE0 o\xF9 on ne l'attendait pas. Il faut changer de m\xE9thode.",
+      "Ce qu'on prenait pour une retraite \xE9tait une man\u0153uvre. {faction} nous a contourn\xE9s.",
+      "Un alli\xE9 d'hier vient de signer avec {faction}. On fera sans lui.",
+      "Nos routes de ravitaillement sont coup\xE9es. Il va falloir improviser.",
+      "Ils savaient pour notre derni\xE8re op\xE9ration. Quelqu'un parle trop.",
+      "{boss} a chang\xE9 de cap. Personne ne sait o\xF9 il va, et c'est bien le probl\xE8me.",
+      "Le secteur doute. Une victoire inattendue le remettrait d'aplomb.",
+      "On a sous-estim\xE9 {faction}. On ne refera pas l'erreur."
+    ],
+    [
+      "Le dernier week-end du mois, {boss} sortira de l'ombre. Tout le secteur devra frapper ensemble.",
+      "C'est maintenant ou jamais. Rassemble ta flotte : {boss} arrive.",
+      "{villain} a mis toutes ses forces dans {boss}. S'il tombe, {faction} tombe avec lui.",
+      "Toutes les flottes du secteur sont en route. Il ne manque que la tienne, {pseudo}.",
+      "{boss} est \xE0 port\xE9e. On ne laissera pas passer une autre chance.",
+      "Ce soir, on \xE9crit la fin de ce chapitre. \xC0 nous de choisir laquelle.",
+      "On a pay\xE9 cher chaque information. Maintenant, on encaisse.",
+      "Les alliances ont r\xE9pondu \xE0 l'appel. {faction} va comprendre ce que veut dire \xAB secteur uni \xBB.",
+      "Je ne te demande pas d'\xEAtre prudent. Je te demande d'\xEAtre l\xE0.",
+      "Tout le mois m\xE8ne \xE0 cette nuit. {boss} ne doit pas la voir finir.",
+      "{villain} croit que nous sommes \xE9puis\xE9s. Montrons-lui le contraire.",
+      "Dernier briefing, {pseudo}. Apr\xE8s, on parle avec les canons."
+    ]
+  ],
+  /** Répliques du méchant ({pseudo}, {boss}, {faction}). Les 4 premières sont celles d'avant. */
+  villainTaunts: [
+    "{pseudo}\u2026 Ton nom revient souvent. Trop souvent.",
+    "Vous pensiez avoir gagn\xE9 le mois dernier ? Je ne faisais que compter vos forces.",
+    "Chaque empire a un prix. Je viens chercher le tien.",
+    "Continue de t'agiter, petit commandant. {boss} adore les proies qui bougent.",
+    "Le secteur m'appartenait avant toi. Il m'appartiendra apr\xE8s.",
+    "Tes alli\xE9s te trouvent courageux. Moi, je te trouve pr\xE9visible.",
+    "J'ai lu tes rapports de combat, {pseudo}. J'ai beaucoup ri.",
+    "Garde tes flottes au port. Ce sera plus rapide pour tout le monde.",
+    "Tu entends ce silence ? C'est le bruit de tes routes qui se ferment.",
+    "On m'a dit que tu \xE9tais le meilleur du secteur. On m'a menti, j'esp\xE8re.",
+    "Je n'ai pas besoin de gagner chaque bataille. Seulement la derni\xE8re.",
+    "{boss} n'est que le d\xE9but. Profite bien du reste du mois.",
+    "Tes d\xE9fenses sont jolies. Elles br\xFBleront bien.",
+    "Rends-toi maintenant, et je te laisserai une lune. Petite.",
+    "Chaque victoire que tu remportes me dit o\xF9 frapper ensuite.",
+    "Tu crois chasser {faction}. C'est toi qu'on piste depuis le d\xE9but.",
+    "Tes amis te quitteront avant la fin du mois. Les miens ne partent jamais.",
+    "Chaque vaisseau que tu perds, je le repeins \xE0 mes couleurs.",
+    "J'ai achet\xE9 ta derni\xE8re victoire. Elle \xE9tait bon march\xE9.",
+    "Le secteur a la m\xE9moire courte. Moi, je n'oublie rien.",
+    "Tu joues bien. Dommage que la partie soit truqu\xE9e.",
+    "{boss} a faim, {pseudo}. Et tu sens bon.",
+    "Je t'ai laiss\xE9 gagner une bataille. C'\xE9tait un cadeau.",
+    "Tes sondes me regardent. Je leur fais signe.",
+    "On se reverra au dernier week-end. Pr\xE9pare tes excuses.",
+    "Tu comptes tes vaisseaux. Moi, je compte tes erreurs."
+  ],
+  /** Lignes de héros ({hero}, {deed}, {villain}). Les 3 premières sont celles d'avant. */
+  heroLines: [
+    "Le mois dernier, {hero} a {deed}. Le secteur s'en souvient ; {villain} aussi.",
+    "On raconte que {hero} a {deed} en un mois. Voil\xE0 l'exemple \xE0 suivre.",
+    "{hero} a {deed} ; {villain} a mis sa t\xEAte \xE0 prix. \xC7a ne passe pas inaper\xE7u.",
+    "Dans les ports, on ne parle que de {hero} : {deed}, rien que \xE7a.",
+    "{hero} a {deed}. Si chacun en faisait la moiti\xE9, {villain} serait d\xE9j\xE0 loin.",
+    "Le dernier rapport est formel : {hero} a {deed}. Le secteur rel\xE8ve la t\xEAte.",
+    "{villain} a une liste. Depuis que {hero} a {deed}, son nom est en haut.",
+    "Souviens-toi de {hero} : {deed} en un mois. Ce mois-ci, \xE0 ton tour.",
+    "Personne n'y croyait, et pourtant {hero} a {deed}. {villain} a pris note.",
+    "Les recrues ont un mod\xE8le : {hero}, qui a {deed}.",
+    "{hero} a {deed}. Je bois \xE0 sa sant\xE9 ; {villain}, lui, grince des dents.",
+    "Un nom circule dans les mess : {hero}. Il para\xEEt qu'il a {deed}.",
+    "Quand on m'a dit que {hero} avait {deed}, j'ai demand\xE9 \xE0 voir les rapports. C'est vrai.",
+    "{hero} a {deed}, et le secteur a dormi un peu mieux."
+  ],
+  /** Ordres en plus de ceux du registre des actions suivies (clé d'action → gabarits ; {count}, {s}). */
+  orders: {
+    contract: ["Nos r\xE9serves fondent. {count} objectif{s} du jour rempli{s}, et on tiendra.", "Les petites victoires gagnent les guerres : {count} objectif{s} du jour.", "Chaque objectif du jour tenu nous rapproche du but : {count} \xE0 remplir.", "Le quotidien gagne les guerres longues. {count} objectif{s} du jour, sans faute.", "Je compte sur ta r\xE9gularit\xE9 : {count} objectif{s} du jour.", "{faction} parie sur notre lassitude. {count} objectif{s} du jour pour le d\xE9cevoir."],
+    bounty: ["Le tableau des primes d\xE9borde. Remplis-en {count}, et l'Essaim nous ouvrira ses ports.", "{count} prime{s} Kesh'Vaar : chaque fugitif rendu est un pilote de moins pour eux.", "L'Essaim paie bien ceux qui tiennent parole. {count} prime{s}.", "Les fugitifs filent vers {faction}. Rattrapes-en {count}.", "Le tableau des primes attend un nom. Le tien, {count} fois.", "Chaque prime remplie nous ouvre une porte de plus : {count} prime{s}."],
+    raidRepelled: ["Leurs raids vont redoubler. Repousses-en {count}, et ils h\xE9siteront.", "Tes d\xE9fenses sont notre bouclier : {count} raid{s} repouss\xE9{s}.", "Qu'ils viennent : {count} raid{s} repouss\xE9{s}, et ils comprendront.", "Nos murs doivent parler pour nous. {count} raid{s} repouss\xE9{s}.", "Chaque raid bris\xE9 co\xFBte une semaine \xE0 {faction}. {count} \xE0 briser.", "Ne c\xE8de pas un m\xE8tre : {count} raid{s} repouss\xE9{s}."],
+    victory: ["Le secteur veut des preuves. Gagne {count} combat{s}.", "Chaque victoire fait douter leurs recrues : {count} combat{s} gagn\xE9{s}.", "Il nous faut des victoires, pas des promesses. {count} combat{s} gagn\xE9{s}.", "Va chercher le combat : {count} victoire{s}, commandant.", "Les ports comptent les victoires. Donne-leur-en {count}.", "{count} combat{s} gagn\xE9{s}, et {faction} devra revoir ses plans."],
+    mission: ["Il reste des pistes \xE0 remonter : {count} mission{s}.", "Nos \xE9quipes connaissent le terrain. Envoie-les {count} fois en mission.", "Les confins parlent \xE0 qui les \xE9coute. {count} mission{s}.", "Nos meilleures pistes sont en mission. Lance-en {count}.", "Chaque mission rapporte un indice : {count} mission{s}.", "On ne gagne pas sans renseignement. {count} mission{s} termin\xE9e{s}."],
+    spy: ["Ce qu'on ne voit pas nous tuera. {count} sonde{s}, commandant.", "Mets des yeux sur leurs routes : {count} sonde{s} d'espionnage.", "Sonde leurs positions : {count} sonde{s}, pas une de moins.", "Un \u0153il de plus, une surprise de moins : {count} sonde{s}.", "Je veux leurs plans avant le week-end. {count} sonde{s} d'espionnage.", "Lance {count} sonde{s} : je veux savoir qui ment."],
+    market: ["Le march\xE9 parle \xE0 qui l'\xE9coute : {count} achat{s}.", "Les comptoirs savent qui finance {faction}. {count} achat{s} au march\xE9 pour d\xE9lier les langues.", "Les comptoirs gardent la trace de chaque cr\xE9dit. {count} achat{s}, et on remontera la piste.", "Fais tourner le commerce : {count} achat{s} au march\xE9.", "Le march\xE9 est un champ de bataille comme un autre. {count} achat{s}.", "Ach\xE8te ce dont tu as besoin, {count} fois : chaque achat nous renseigne."],
+    warlordWin: ["Les seigneurs de guerre ont choisi leur camp. Pille-en {count}.", "{count} seigneur{s} de guerre pill\xE9{s} : leurs coffres financent l'ennemi.", "Les seigneurs de guerre comptent sur notre prudence. Pille-en {count}.", "Leurs coffres sont pleins. Vide {count} seigneur{s} de guerre.", "{count} seigneur{s} de guerre pill\xE9{s}, et {faction} perdra ses rabatteurs.", "Un seigneur pill\xE9 est un seigneur qui h\xE9site. {count} \xE0 convaincre."]
+  },
+  /** Titres, boss et titres de fin de réserve par archétype : pris seulement quand ceux de l'archétype ont tous servi. */
+  archetypeExtras: {
+    confrerie: { titles: ["Le Grand Recouvrement", "Les Int\xE9r\xEAts du Vide", "La Liste rouverte", "Le Dernier Cr\xE9ancier"], bossNames: ["Le Collecteur Noir", "La Barge des Saisies", "L'Usurier de Fer", "Le Registre Vivant"], completionTitles: ["Libre de dettes", "Br\xFBle-registres", "Rayeur de listes", "Quitte du Vide"] },
+    cartel: { titles: ["La Partie truqu\xE9e", "Le Tapis vert", "Quitte ou double", "La Maison gagne"], bossNames: ["Le Croupier d'Acier", "La Table des Damn\xE9s", "Le Coffre-Monde", "La Dame de Pique"], completionTitles: ["Main heureuse", "Brise-casino", "As du secteur", "Flambeur"] },
+    choeur: { titles: ["Le Requiem gel\xE9", "La Dissonance", "L'Hymne bris\xE9", "Le Dernier Accord"], bossNames: ["La Harpe des Glaces", "Le Diapason Noir", "La Nef du Silence", "Le Bourdon Abyssal"], completionTitles: ["Briseur de ch\u0153urs", "Voix retrouv\xE9e", "Fausse note", "Ma\xEEtre du silence"] },
+    gravhorn: { titles: ["Le Filon profond", "La Gr\xE8ve de fer", "Le Puits sans fond", "La Derni\xE8re Veine"], bossNames: ["La M\xE2choire de Roc", "Le Tunnelier-Roi", "La Raffinerie Hurlante", "Le Marteau d'Ambre"], completionTitles: ["Casseur de roc", "Briseur de gr\xE8ve", "Veine d'acier", "Mineur libre"] },
+    culte: { titles: ["La Moisson sombre", "Le Jardin des cendres", "La Racine-M\xE8re", "Les Fleurs de la fin"], bossNames: ["La Liane-Monde", "Le Semeur Aveugle", "La Serre Abyssale", "Le Proph\xE8te Vert"], completionTitles: ["Coupe-racines", "Br\xFBle-jardins", "Moissonneur", "Sans dieu ni graine"] },
+    inquisition: { titles: ["Le Second Proc\xE8s", "La Gr\xE2ce refus\xE9e", "L'Appel des juges", "Le Verdict final"], bossNames: ["La Chaire Orbitale", "Le Grand Greffier", "La Balance d'Or", "Le Confesseur de Fer"], completionTitles: ["Graci\xE9", "Avocat du secteur", "Cassation", "Sans proc\xE8s"] },
+    meute: { titles: ["La Lune des loups", "Les Traces fra\xEEches", "La Battue", "Le Dernier Hurlement"], bossNames: ["Le Loup d'Orbite", "La Tani\xE8re Volante", "Le Crocs-M\xE8re", "La Meute d'Acier"], completionTitles: ["Chasseur de meute", "Briseur de crocs", "Loup solitaire", "Ma\xEEtre-chien"] }
+  },
+  /** Faction (archétype) du chapitre selon le thème du passe, pour les années 2 et 3 du catalogue (l'année 1 :
+   *  `chronicleGen.themeArchetypes`). Au-delà de l'année 3, les tables reprennent (année 4 = année 1…). */
+  yearArchetypes: {
+    "2": { vide: "meute", hiver: "inquisition", forge: "confrerie", bazar: "gravhorn", maree: "culte", colonies: "choeur", primes: "cartel", comete: "meute", moisson: "gravhorn", archives: "inquisition", chantiers: "confrerie", rempart: "choeur" },
+    "3": { vide: "culte", hiver: "gravhorn", forge: "inquisition", bazar: "confrerie", maree: "meute", colonies: "cartel", primes: "choeur", comete: "culte", moisson: "confrerie", archives: "cartel", chantiers: "meute", rempart: "gravhorn" }
+  },
+  /** Répliques des jalons du passe : la n-ième réplique d'un temps sert l'année n du catalogue (vrai) ; faux : tirage au hasard. */
+  passLinesByYear: true
+};
+var NARRATIVE_RULES_META = {
+  enabled: { label: "Banques de textes \xE9tendues et anti-r\xE9p\xE9tition", hint: "Faux : textes et tirages d'avant la 6.14.137. Un mois d\xE9j\xE0 \xE9crit ne change jamais." },
+  noRepeatMonths: { label: "Un texte n'est pas repris avant", unit: "mois", min: 0, max: 36, hint: "Titres d'acte, accroches, r\xE9pliques, lignes de h\xE9ros et ordres lus dans les derniers mois \xE9crits. 0 : sans anti-r\xE9p\xE9tition." },
+  actTitles: { label: "Titres des \xE9pisodes, par acte", hint: "Quatre listes (actes 1 \xE0 4)." },
+  hooks: { label: "Accroches de l'alli\xE9, par acte", hint: "Quatre listes ; {villain}, {boss}, {faction}, {ofFaction}, {pseudo}." },
+  villainTaunts: { label: "R\xE9pliques du m\xE9chant", hint: "{pseudo}, {boss}, {faction} ; deux par chapitre (\xE9pisodes 1 et 3)." },
+  heroLines: { label: "Lignes de h\xE9ros", hint: "{hero}, {deed}, {villain} ; un joueur cit\xE9 pour son action du mois." },
+  orders: { label: "Ordres en plus du registre des actions", hint: "Cl\xE9 d'action (contract, bounty\u2026) \u2192 gabarits ; {count}, {s}." },
+  archetypeExtras: { label: "Titres et boss de r\xE9serve par faction", hint: "Pris seulement quand les titres de la faction ont tous servi (les chapitres d'avant ne changent pas)." },
+  yearArchetypes: { label: "Faction du chapitre par th\xE8me, ann\xE9es 2 et 3", hint: "\xAB 2 \xBB et \xAB 3 \xBB : th\xE8me \u2192 faction. Ann\xE9e 1 : Chroniques g\xE9n\xE9r\xE9es, faction de chaque th\xE8me." },
+  passLinesByYear: { label: "R\xE9pliques des jalons du passe selon l'ann\xE9e du catalogue", hint: "La 2e r\xE9plique de chaque temps sert l'ann\xE9e 2, la 3e l'ann\xE9e 3 (Catalogue du passe \u2192 th\xE8mes)." }
+};
+var NONEMPTY = (xs) => Array.isArray(xs) && xs.some((x) => typeof x === "string" && x.trim() !== "");
+function validateNarrativeRules(r, archetypeIds = []) {
+  var _a, _b, _c;
+  if (!r) return [];
+  const e3 = [];
+  const L2 = "Banques de textes";
+  for (const k of ["actTitles", "hooks"]) {
+    const v = r[k];
+    if (v === void 0) continue;
+    if (!Array.isArray(v) || v.length !== 4 || !v.every(NONEMPTY)) e3.push(`${L2} : ${k === "actTitles" ? "titres d'acte" : "accroches"} : quatre actes, au moins un texte chacun.`);
+  }
+  if (r.villainTaunts !== void 0 && !NONEMPTY(r.villainTaunts)) e3.push(`${L2} : au moins une r\xE9plique du m\xE9chant.`);
+  if (r.heroLines !== void 0 && !(NONEMPTY(r.heroLines) && r.heroLines.every((x) => typeof x !== "string" || x.trim() === "" || x.includes("{hero}")))) e3.push(`${L2} : lignes de h\xE9ros non vides, chacune avec {hero}.`);
+  for (const [k, v] of Object.entries((_a = r.orders) != null ? _a : {})) if (!Array.isArray(v) || v.some((x) => typeof x !== "string")) e3.push(`${L2} : ordres \xAB ${k} \xBB : une liste de textes.`);
+  for (const [k, v] of Object.entries((_b = r.archetypeExtras) != null ? _b : {})) {
+    if (!v || typeof v !== "object" || !["titles", "bossNames", "completionTitles"].every((f) => Array.isArray(v[f]))) e3.push(`${L2} : r\xE9serve de \xAB ${k} \xBB : titles, bossNames, completionTitles (listes).`);
+  }
+  for (const [year, table] of Object.entries((_c = r.yearArchetypes) != null ? _c : {})) {
+    if (!/^[2-9]$/.test(year)) e3.push(`${L2} : ann\xE9e \xAB ${year} \xBB (2 \xE0 9).`);
+    if (archetypeIds.length && table && typeof table === "object") {
+      for (const [theme, a] of Object.entries(table)) if (!archetypeIds.includes(a)) e3.push(`${L2} : ann\xE9e ${year}, th\xE8me ${theme}, faction \xAB ${a} \xBB inconnue.`);
+    }
+  }
+  if (r.noRepeatMonths !== void 0 && !(Number.isInteger(Number(r.noRepeatMonths)) && Number(r.noRepeatMonths) >= 0 && Number(r.noRepeatMonths) <= 36)) e3.push(`${L2} : \xAB pas repris avant \xBB entier entre 0 et 36 mois.`);
+  return e3;
+}
+function textList(xs, fallback = []) {
+  const out = Array.isArray(xs) ? xs.filter((x) => typeof x === "string" && x.trim() !== "") : [];
+  return out.length > 0 ? out : [...fallback];
+}
+var TEMPLATE_CACHE = /* @__PURE__ */ new Map();
+function templateRegex(t) {
+  let re = TEMPLATE_CACHE.get(t);
+  if (!re) {
+    const parts = t.trim().split(/\{\w+\}/);
+    const body = parts.map((p2) => p2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\S]*?");
+    re = new RegExp(`^${body}$`, "i");
+    if (TEMPLATE_CACHE.size > 2e3) TEMPLATE_CACHE.clear();
+    TEMPLATE_CACHE.set(t, re);
+  }
+  return re;
+}
+function templateUsed(template, texts) {
+  if (texts.length === 0) return false;
+  const re = templateRegex(template);
+  for (const x of texts) if (re.test(x)) return true;
+  return false;
+}
+function freshTemplates(list, texts) {
+  const left = list.filter((t) => !templateUsed(t, texts));
+  return left.length > 0 ? left : [...list];
+}
+function shiftMonth(monthId, delta2) {
+  const [y, m] = monthId.split("-").map(Number);
+  const k = y * 12 + (m - 1) + delta2;
+  return `${Math.floor(k / 12)}-${String(k % 12 + 1).padStart(2, "0")}`;
+}
+function yearArchetypeFor(theme, year, base, r = NARRATIVE_RULES) {
+  var _a, _b, _c;
+  if (r.enabled === false) return base[theme];
+  const tables = Object.keys((_a = r.yearArchetypes) != null ? _a : {}).filter((y2) => /^[2-9]$/.test(y2)).map(Number);
+  const span = Math.max(1, ...tables);
+  const y = (Math.max(1, Math.floor(year)) - 1) % span + 1;
+  return y === 1 ? base[theme] : ((_c = (_b = r.yearArchetypes) == null ? void 0 : _b[String(y)]) == null ? void 0 : _c[theme]) || base[theme];
+}
+
 // src/game/procedural.ts
 var PROCEDURAL_KEY = "procedural";
 var GENERATOR_VERSION = { chapter: 3, pass: 3 };
@@ -21024,6 +21448,13 @@ function objectiveCount(type, d, difficulty) {
   return Math.max(1, Math.round(raw));
 }
 var AUTO_ART = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
+var AUTO_ART_2 = [];
+function autoBossImage(arch, bossName, reserve = []) {
+  if (!AUTO_ART.includes(arch.id)) return arch.image;
+  const names = [...arch.bossNames, ...reserve];
+  const rank2 = names.indexOf(bossName);
+  return AUTO_ART_2.includes(arch.id) && rank2 >= 0 && rank2 % 2 === 1 ? `/assets/chronicles/auto/${arch.id}-boss-2.webp` : `/assets/chronicles/auto/${arch.id}-boss.webp`;
+}
 var AUTO_SEALS = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 var ARCHETYPES = [
   {
@@ -21214,12 +21645,45 @@ var HERO_LINES = [
   "On raconte que {hero} a {deed} en un mois. Voil\xE0 l'exemple \xE0 suivre.",
   "{hero} a {deed} ; {villain} a mis sa t\xEAte \xE0 prix. \xC7a ne passe pas inaper\xE7u."
 ];
-function heroLine(rng, d, vars) {
+function heroLine(rng, d, vars, bank = HERO_LINES) {
   const keys = storyKeys().filter((k2) => d.heroes[k2]);
   if (keys.length === 0) return null;
   const k = pick2(rng, keys);
   const h = d.heroes[k];
-  return fill(pick2(rng, HERO_LINES), __spreadProps(__spreadValues({}, vars), { hero: h.pseudo, deed: fill(objectiveDeed(k), { n: h.count }) }));
+  return fill(pick2(rng, bank), __spreadProps(__spreadValues({}, vars), { hero: h.pseudo, deed: fill(objectiveDeed(k), { n: h.count }) }));
+}
+function textBanks(monthId, existing) {
+  const r = NARRATIVE_RULES;
+  if (r.enabled === false) return { actTitles: ACT_TITLES, hooks: HOOKS, taunts: VILLAIN_TAUNTS, heroes: HERO_LINES, orders: objectiveOrders, recent: [], fresh: (l) => l };
+  const n = Math.max(0, Math.floor(Number(r.noRepeatMonths) || 0));
+  const from = shiftMonth(monthId, -n);
+  const recent = n > 0 ? existing.filter((m) => m && m.id >= from && m.id < monthId).flatMap((m) => {
+    var _a;
+    return ((_a = m.episodes) != null ? _a : []).flatMap((e3) => {
+      var _a2;
+      return [e3.title, ...((_a2 = e3.lines) != null ? _a2 : []).map((l) => l.text)];
+    });
+  }) : [];
+  const acts = ACT_TITLES.map((legacy, i) => {
+    var _a;
+    return textList((_a = r.actTitles) == null ? void 0 : _a[i], legacy);
+  });
+  const hooks = HOOKS.map((legacy, i) => {
+    var _a;
+    return textList((_a = r.hooks) == null ? void 0 : _a[i], legacy);
+  });
+  return {
+    actTitles: acts,
+    hooks,
+    taunts: textList(r.villainTaunts, VILLAIN_TAUNTS),
+    heroes: textList(r.heroLines, HERO_LINES),
+    orders: (k) => {
+      var _a;
+      return [...objectiveOrders(k), ...textList((_a = r.orders) == null ? void 0 : _a[k])];
+    },
+    recent,
+    fresh: (list) => freshTemplates(list, recent)
+  };
 }
 function chooseObjectives(rng, d, previous, theme = null) {
   var _a;
@@ -21315,7 +21779,7 @@ function archivesText(d, label3) {
   return parts.join(" ");
 }
 function generateChapter(o) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
   const rng = seededRandom2(`${o.monthId}:${(_a = o.variant) != null ? _a : 0}`);
   const d = o.digest;
   const recent = [...o.existing].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0).slice(-2);
@@ -21325,42 +21789,61 @@ function generateChapter(o) {
     return (_c2 = (_a2 = m.auto) == null ? void 0 : _a2.archetype) != null ? _c2 : (_b2 = archetypes.find((a) => a.fallbackImage === m.boss.fallbackImage)) == null ? void 0 : _b2.id;
   });
   const gen = chronicleGenRules();
-  const drawn2 = pick2(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
-  const themeId = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId).theme : null;
-  const themed = gen.followPassTheme && themeId ? archetypes.find((a) => a.id === gen.themeArchetypes[themeId]) : void 0;
-  const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn2;
+  const drawn = pick2(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
+  const catalog = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId) : null;
+  const themeId = catalog ? catalog.theme : null;
+  const themedId = gen.followPassTheme && themeId ? yearArchetypeFor(themeId, (_b = catalog == null ? void 0 : catalog.year) != null ? _b : 1, gen.themeArchetypes) : void 0;
+  const themed = themedId ? archetypes.find((a) => a.id === themedId) : void 0;
+  const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
   const usedTitles = new Set(o.existing.flatMap((m) => {
     var _a2, _b2;
     return [m.title, (_b2 = (_a2 = m.completion) == null ? void 0 : _a2.title) != null ? _b2 : "", m.boss.name];
   }));
-  const fresh = (xs) => pick2(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);
-  const title = fresh(arch.titles);
-  const bossName = fresh(arch.bossNames);
-  const completionTitle = fresh(arch.completionTitles);
+  const extras = NARRATIVE_RULES.enabled !== false ? (_c = NARRATIVE_RULES.archetypeExtras) == null ? void 0 : _c[arch.id] : void 0;
+  const fresh = (xs, reserve) => {
+    const left = xs.filter((x) => !usedTitles.has(x));
+    const spare = left.length > 0 ? [] : textList(reserve).filter((x) => !usedTitles.has(x));
+    return pick2(rng, left.length ? left : spare.length ? spare : xs);
+  };
+  const title = fresh(arch.titles, extras == null ? void 0 : extras.titles);
+  const bossName = fresh(arch.bossNames, extras == null ? void 0 : extras.bossNames);
+  const completionTitle = fresh(arch.completionTitles, extras == null ? void 0 : extras.completionTitles);
+  const banks = textBanks(o.monthId, o.existing);
   const { value: difficulty, reasons } = chapterDifficulty(d);
-  const previousTypes = ((_c = (_b = recent.at(-1)) == null ? void 0 : _b.episodes) != null ? _c : []).map((e3) => e3.objective.type);
+  const previousTypes = ((_e = (_d = recent.at(-1)) == null ? void 0 : _d.episodes) != null ? _e : []).map((e3) => e3.objective.type);
   const types = chooseObjectives(rng, d, previousTypes, themeId);
   const template = episodeRewards(rng, difficulty);
-  const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom2(`chapter-rewards:${o.monthId}:${(_d = o.variant) != null ? _d : 0}`), difficulty, gen) : template;
-  if (themed) reasons.push(arch === themed ? `Faction du th\xE8me du passe (${themeId}) : ${arch.faction}.` : `Le th\xE8me du passe (${themeId}) appelait ${themed.faction}, d\xE9j\xE0 l\xE0 le mois dernier : faction tir\xE9e au sort.`);
+  const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom2(`chapter-rewards:${o.monthId}:${(_f = o.variant) != null ? _f : 0}`), difficulty, gen) : template;
+  if (themed) reasons.push(arch === themed ? `Faction du th\xE8me du passe (${themeId}, ann\xE9e ${(_g = catalog == null ? void 0 : catalog.year) != null ? _g : 1}) : ${arch.faction}.` : `Le th\xE8me du passe (${themeId}) appelait ${themed.faction}, d\xE9j\xE0 l\xE0 le mois dernier : faction tir\xE9e au sort.`);
   if (gen.enabled) reasons.push(`R\xE9compenses des \xE9pisodes tir\xE9es sous budget : ${round2(gen.episodeBudgetHours * difficulty)} h de production \xE9quivalentes (\xD7${difficulty}).`);
   const vars = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = /* @__PURE__ */ new Set();
+  const built = [];
   const episodes = types.map((type, i) => {
+    var _a2, _b2;
     const count2 = objectiveCount(type, d, difficulty);
     const lines = [];
     if (i === 0) {
-      lines.push(voiceLine(arch.villain, fill(pick2(rng, VILLAIN_TAUNTS), vars)));
-      const hero = heroLine(rng, d, vars);
+      lines.push(voiceLine(arch.villain, fill(pick2(rng, banks.fresh(banks.taunts)), vars)));
+      const hero = heroLine(rng, d, vars, banks.fresh(banks.heroes));
       if (hero) lines.push({ speaker: arch.ally, text: ucfirst(hero) });
     }
-    if (i === 2) lines.push(voiceLine(arch.villain, fill(pick2(rng, VILLAIN_TAUNTS.filter((t) => !lines.some((l) => l.text === fill(t, vars)))), vars)));
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, HOOKS[i]), vars)) });
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, objectiveOrders(type)), __spreadProps(__spreadValues({}, vars), { count: count2, s: count2 > 1 ? "s" : "" }))) });
-    let epTitle = pick2(rng, ACT_TITLES[i]);
-    while (usedActs.has(epTitle)) epTitle = pick2(rng, ACT_TITLES[i]);
+    if (i === 2) {
+      const unused = NARRATIVE_RULES.enabled === false ? banks.taunts.filter((t) => !lines.some((l) => l.text === fill(t, vars))) : banks.taunts.filter((t) => !built.some((e3) => e3.lines.some((l) => l.text === ucfirst(fill(t, vars)))));
+      lines.push(voiceLine(arch.villain, fill(pick2(rng, banks.fresh(unused.length > 0 ? unused : banks.taunts)), vars)));
+    }
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, banks.fresh((_a2 = banks.hooks[i]) != null ? _a2 : HOOKS[i])), vars)) });
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick2(rng, banks.fresh(banks.orders(type))), __spreadProps(__spreadValues({}, vars), { count: count2, s: count2 > 1 ? "s" : "" }))) });
+    const acts = (_b2 = banks.actTitles[i]) != null ? _b2 : ACT_TITLES[i];
+    const notRecent = acts.filter((t) => !banks.recent.includes(t));
+    const actPool = notRecent.length > 0 ? notRecent : acts;
+    const actList = actPool.some((t) => !usedActs.has(t)) ? actPool : acts;
+    let epTitle = pick2(rng, actList);
+    while (usedActs.has(epTitle)) epTitle = pick2(rng, actList);
     usedActs.add(epTitle);
-    return { title: epTitle, lines, objective: { type, count: count2 }, reward: rewards[i] };
+    const ep = { title: epTitle, lines, objective: { type, count: count2 }, reward: rewards[i] };
+    built.push(ep);
+    return ep;
   });
   reasons.push(...types.map((t, i) => {
     var _a2;
@@ -21372,7 +21855,7 @@ function generateChapter(o) {
   if (nov.pick) {
     const p2 = nov.pick;
     const i = p2.episode - 1;
-    const nrng = seededRandom2(`novelty:${o.monthId}:${(_e = o.variant) != null ? _e : 0}`);
+    const nrng = seededRandom2(`novelty:${o.monthId}:${(_h = o.variant) != null ? _h : 0}`);
     const texts = noveltyTexts(parseContentObjective(p2.key).family, NOVELTY_RULES);
     const ep = episodes[i];
     const titles = texts.titles.filter((t) => !episodes.some((e3, j) => j !== i && e3.title === t));
@@ -21386,10 +21869,11 @@ function generateChapter(o) {
     reasons.push(p2.reason);
   }
   const art = AUTO_ART.includes(arch.id);
+  const bossImage = art ? autoBossImage(arch, bossName, textList(extras == null ? void 0 : extras.bossNames)) : arch.image;
   const seal = AUTO_SEALS.includes(arch.id);
   const label3 = seasonLabel(d.monthId);
   const codex = [
-    { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} \xB7 ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
+    { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} \xB7 ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: bossImage },
     { id: "archives", name: `Archives : ${label3}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label3), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem }
   ];
   const auto = __spreadValues({
@@ -21400,7 +21884,7 @@ function generateChapter(o) {
     activePlayers: d.activePlayers,
     reasons,
     generator: GENERATOR_VERSION.chapter,
-    variant: Math.max(0, Math.floor((_f = o.variant) != null ? _f : 0))
+    variant: Math.max(0, Math.floor((_i = o.variant) != null ? _i : 0))
   }, novelty ? { novelty } : {});
   const month2 = {
     id: o.monthId,
@@ -21409,18 +21893,18 @@ function generateChapter(o) {
     boss: {
       name: bossName,
       title: `Pourfendeur ${ofName(bossName)}`,
-      image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image,
+      image: bossImage,
       emblem: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
       fallbackImage: arch.fallbackImage,
       lore: pick2(rng, arch.lore)
     },
     episodes,
-    synopsis: fill(`${pick2(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_g = heroLine(rng, d, vars)) != null ? _g : "")}`.trim(), vars),
+    synopsis: fill(`${pick2(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst((_j = heroLine(rng, d, vars, banks.fresh(banks.heroes))) != null ? _j : "")}`.trim(), vars),
     completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] },
     codex,
     auto
   };
-  if (((_h = o.settings) == null ? void 0 : _h.pass) !== false) {
+  if (((_k = o.settings) == null ? void 0 : _k.pass) !== false) {
     const prev = activePass(d.monthId).pointsPerTier || PASS_RULES.pointsPerTier;
     const g = generatePass(rng, d, prev);
     month2.pass = g.pass;
@@ -21878,6 +22362,15 @@ function defaultPassSeasonsConfig() {
   return { seasons: [] };
 }
 var SEASON_PORTRAITS = ["2026-11", "2026-12", "2027-01"];
+var SEASON_THEME_ART = [];
+function seasonThemeImage(entry, themeImage) {
+  var _a;
+  if (entry.image) return entry.image;
+  const id = (_a = entry.generatedFrom) != null ? _a : entry.id;
+  const m = /^(.+)_(\d+)$/.exec(id);
+  if (m && SEASON_THEME_ART.includes(id)) return `/assets/pass/theme-${m[1]}-${m[2]}.webp`;
+  return themeImage;
+}
 var PASS_THEME_OLD_IMAGES = {
   maree: "/assets/blog/articles/5-9/poste-commandement.webp",
   forge: "/assets/blog/articles/5-10/pot-commun.webp",
@@ -21901,12 +22394,17 @@ var RAW_PASS_THEMES = [
     rival: "varan",
     focus: ["victory", "raidRepelled", "bounty"],
     beats: [
-      ["Les sondes ont rep\xE9r\xE9 leurs escadres, commandant. Pr\xE9pare ta flotte : on ne les laissera pas passer."],
-      ["Premi\xE8re ligne tenue. Ils reculent, mais ils reviendront plus nombreux."],
-      ["Leur vaisseau amiral s'est montr\xE9. Un officier hors pair a rejoint nos rangs pour la derni\xE8re bataille."],
-      ["La houle est retomb\xE9e. {commander} a choisi ta banni\xE8re : sers-toi bien de cet officier."]
+      ["Les sondes ont rep\xE9r\xE9 leurs escadres, commandant. Pr\xE9pare ta flotte : on ne les laissera pas passer.", "Leur flotte revient, plus lourde que l'an dernier. On tiendra la ligne, commandant.", "Ils se terrent loin du front. Il faudra frapper loin, et frapper vite."],
+      ["Premi\xE8re ligne tenue. Ils reculent, mais ils reviendront plus nombreux.", "La premi\xE8re vague s'est bris\xE9e. Garde ta formation : la suivante sera plus forte.", "Premier raid lointain r\xE9ussi. Ils ne s'y attendaient pas."],
+      ["Leur vaisseau amiral s'est montr\xE9. Un officier hors pair a rejoint nos rangs pour la derni\xE8re bataille.", "{commander} a tenu le ressac de Drakmor seul contre trois escadres. Il a choisi notre camp.", "{commander} conna\xEEt chaque courant de la Grande Houle. Avec elle, nos flottes iront plus loin."],
+      ["La houle est retomb\xE9e. {commander} a choisi ta banni\xE8re : sers-toi bien de cet officier.", "La mer d'\xE9toiles est calme. {commander} garde la ligne \xE0 tes c\xF4t\xE9s.", "La houle nous porte. {commander} commande d\xE9sormais nos frappes lointaines."]
     ],
-    rivalLines: [["Vos flottes sont des coquilles vides. La mar\xE9e vous emportera."], ["Une vaguelette. Rien de plus."], ["Assez jou\xE9. Toute ma flotte converge sur vous."], ["Cette fois... vous avez gagn\xE9."]]
+    rivalLines: [
+      ["Vos flottes sont des coquilles vides. La mar\xE9e vous emportera.", "Vous avez surv\xE9cu \xE0 une mar\xE9e. Survivrez-vous au ressac ?", "Venez me chercher, si vos moteurs tiennent la distance."],
+      ["Une vaguelette. Rien de plus.", "Vous reculez d'un pas, je gagne une lieue.", "Une piq\xFBre. Je ne l'ai presque pas sentie."],
+      ["Assez jou\xE9. Toute ma flotte converge sur vous.", "Mes r\xE9serves arrivent. Votre ligne ne tiendra pas la nuit.", "J'ai coup\xE9 vos lignes de retour. Bon voyage."],
+      ["Cette fois... vous avez gagn\xE9.", "Votre ligne a tenu. Je m'en souviendrai.", "Vous frappez de loin. Je saurai frapper de plus loin encore."]
+    ]
   },
   {
     id: "forge",
@@ -21916,12 +22414,17 @@ var RAW_PASS_THEMES = [
     rival: "kragmor",
     focus: ["contract", "victory", "bounty"],
     beats: [
-      ["Les forges tournent pour l'ennemi. Il nous faut des contrats et des bras : on commence ce mois-ci."],
-      ["Premi\xE8re forge reprise ! Les ouvriers reviennent."],
-      ["Un architecte de l\xE9gende accepte de nous rejoindre si nous tenons jusqu'au bout."],
-      ["Les forges sont \xE0 nous. {commander} prend la t\xEAte de tes chantiers."]
+      ["Les forges tournent pour l'ennemi. Il nous faut des contrats et des bras : on commence ce mois-ci.", "Les forges sont \xE0 nous, mais il manque des bras. Lance le chantier, commandant.", "Au c\u0153ur de l'Enclume dort une arme de l\xE9gende. On va la forger avant eux."],
+      ["Premi\xE8re forge reprise ! Les ouvriers reviennent.", "Les premi\xE8res sections sont soud\xE9es. Le secteur vient voir la carcasse.", "Le premier alliage a tenu. L'Enclume chauffe enfin."],
+      ["Un architecte de l\xE9gende accepte de nous rejoindre si nous tenons jusqu'au bout.", "{commander} a dessin\xE9 la moiti\xE9 des stations du secteur. Il veut voir la n\xF4tre achev\xE9e.", "{commander} con\xE7oit des vaisseaux de ligne et les m\xE8ne au feu. Elle veut finir l'arme avec nous."],
+      ["Les forges sont \xE0 nous. {commander} prend la t\xEAte de tes chantiers.", "Le Grand Chantier est fini. {commander} signe d\xE9sormais tes plans.", "L'arme est forg\xE9e. {commander} la m\xE8nera \xE0 ton signal."]
     ],
-    rivalLines: [["Mes forges, mes r\xE8gles. Payez ou partez."], ["Une forge ? J'en ai cent."], ["Vous m'agacez. Mes foreuses vont raser vos chantiers."], ["Gardez vos forges. Pour l'instant."]]
+    rivalLines: [
+      ["Mes forges, mes r\xE8gles. Payez ou partez.", "Un chantier de cette taille ? Il s'effondrera avant d'\xEAtre fini.", "L'Enclume ne forge que pour ceux qui paient. Payez."],
+      ["Une forge ? J'en ai cent.", "Joli squelette. Mes saboteurs adorent les squelettes.", "Une \xE9tincelle. J'ai vu des incendies."],
+      ["Vous m'agacez. Mes foreuses vont raser vos chantiers.", "Mes \xE9quipes sont dans vos \xE9chafaudages. Comptez vos boulons.", "Je viens prendre votre arme avant qu'elle ne refroidisse."],
+      ["Gardez vos forges. Pour l'instant.", "Elle tient debout. Je n'aurais pas pari\xE9 dessus.", "Gardez votre jouet. Il faudra savoir s'en servir."]
+    ]
   },
   {
     id: "archives",
@@ -21931,12 +22434,17 @@ var RAW_PASS_THEMES = [
     rival: "vesper",
     focus: ["spy", "victory", "raidRepelled"],
     beats: [
-      ["Nos sondes doivent percer leurs secrets avant qu'ils ne disparaissent. Espionne, commandant."],
-      ["Un premier fichier d\xE9chiffr\xE9. Il cite un nom que je croyais mort."],
-      ["Une agente double propose ses services. Elle demande une seule chose : que tu ailles jusqu'au bout."],
-      ["Les archives sont \xE0 l'abri. {commander} rejoint ton \xE9tat-major, avec tous ses secrets."]
+      ["Nos sondes doivent percer leurs secrets avant qu'ils ne disparaissent. Espionne, commandant.", "Des fichiers noirs circulent dans les ports. Il faut les trouver avant qu'ils ne servent.", "Plus rien ne passe sur les ondes. Dans ce silence, ce sont nos sondes qui parlent."],
+      ["Un premier fichier d\xE9chiffr\xE9. Il cite un nom que je croyais mort.", "Un premier fichier r\xE9cup\xE9r\xE9. Il porte la liste de nos propres informateurs.", "Une premi\xE8re trace dans le noir. Ils ne se savaient pas observ\xE9s."],
+      ["Une agente double propose ses services. Elle demande une seule chose : que tu ailles jusqu'au bout.", "{commander} sait exactement ce que vaut un secret. Il propose de garder les n\xF4tres.", "{commander} voit tout et ne se montre jamais. Ce talent est d\xE9sormais \xE0 nous."],
+      ["Les archives sont \xE0 l'abri. {commander} rejoint ton \xE9tat-major, avec tous ses secrets.", "Les fichiers sont sous cl\xE9. {commander} veille sur chacun d'eux.", "Le silence est \xE0 nous. {commander} \xE9coute pour toi."]
     ],
-    rivalLines: [["Ce que vous cherchez n'existe pas."], ["Curieux. Trop curieux."], ["J'efface tout. Vous aussi, s'il le faut."], ["Gardez vos archives. Je garde mes ombres."]]
+    rivalLines: [
+      ["Ce que vous cherchez n'existe pas.", "Un secret n'a de valeur que s'il est vendu.", "Chut. Vous entendez ? Moi non plus."],
+      ["Curieux. Trop curieux.", "Vous lisez lentement. Moi, je publie vite.", "Une sonde de perdue. Vous en avez combien ?"],
+      ["J'efface tout. Vous aussi, s'il le faut.", "J'ai votre dossier. Il est \xE9pais.", "Je coupe tout. M\xEAme vos pens\xE9es."],
+      ["Gardez vos archives. Je garde mes ombres.", "Vous gardez vos fichiers. Pour combien de temps ?", "Vous avez appris \xE0 vous taire. C'est un d\xE9but."]
+    ]
   },
   {
     id: "hiver",
@@ -21946,12 +22454,17 @@ var RAW_PASS_THEMES = [
     rival: "vesper",
     focus: ["raidRepelled", "contract", "victory"],
     beats: [
-      ["Le froid arrive. Remplis tes entrep\xF4ts, renforce tes d\xE9fenses : la nuit sera longue."],
-      ["Les premiers raids sont repouss\xE9s. Le givre recule d'un cran."],
-      ["Une gardienne des glaces a surv\xE9cu \xE0 trois hivers comme celui-ci. Elle veut nous aider."],
-      ["Le d\xE9gel commence. {commander} veille d\xE9sormais sur tes r\xE9serves."]
+      ["Le froid arrive. Remplis tes entrep\xF4ts, renforce tes d\xE9fenses : la nuit sera longue.", "La nuit sera plus longue cette ann\xE9e. Rationne, prot\xE8ge, et compte chaque caisse.", "Un givre \xE9trange ronge nos coques. R\xE9parons, renfor\xE7ons, tenons."],
+      ["Les premiers raids sont repouss\xE9s. Le givre recule d'un cran.", "Les premi\xE8res r\xE9serves tiennent. Les pillards r\xF4dent autour des entrep\xF4ts.", "Les premi\xE8res coques sont r\xE9par\xE9es. Le givre recule d'un pas."],
+      ["Une gardienne des glaces a surv\xE9cu \xE0 trois hivers comme celui-ci. Elle veut nous aider.", "{commander} tient les comptes de l'hiver au gramme pr\xE8s. Il veut tenir les n\xF4tres.", "{commander} a r\xE9par\xE9 une station enti\xE8re par moins quatre-vingts. Il est des n\xF4tres."],
+      ["Le d\xE9gel commence. {commander} veille d\xE9sormais sur tes r\xE9serves.", "La Longue Nuit s'ach\xE8ve. {commander} garde tes r\xE9serves jusqu'au prochain hiver.", "Le d\xE9gel est l\xE0. {commander} garde tes cales \xE0 l'abri du givre."]
     ],
-    rivalLines: [["L'hiver est mon alli\xE9. Vous g\xE8lerez."], ["Un feu de camp contre une temp\xEAte."], ["Mes raids frapperont au plus froid de la nuit."], ["Le printemps... d\xE9j\xE0 ?"]]
+    rivalLines: [
+      ["L'hiver est mon alli\xE9. Vous g\xE8lerez.", "La nuit est longue. Mes raids aussi.", "Le givre fait mon travail. Je n'ai qu'\xE0 attendre."],
+      ["Un feu de camp contre une temp\xEAte.", "Une r\xE9serve de plus ? J'ai faim pour deux.", "Vous r\xE9parez vite. Le froid ronge plus vite."],
+      ["Mes raids frapperont au plus froid de la nuit.", "Je frapperai quand vos lampes s'\xE9teindront.", "Toute la glace du secteur marche sur vos chantiers."],
+      ["Le printemps... d\xE9j\xE0 ?", "Le jour revient. Je reviendrai avec la nuit.", "Vos coques tiennent. Le givre, lui, a toute l'\xE9ternit\xE9."]
+    ]
   },
   {
     id: "comete",
@@ -21961,12 +22474,17 @@ var RAW_PASS_THEMES = [
     rival: "kor",
     focus: ["bossAssault", "victory", "bounty"],
     beats: [
-      ["Elle arrive, commandant ! Tout ce qui s'en d\xE9tache est \xE0 prendre. Fais chauffer les moteurs."],
-      ["Premiers fragments r\xE9cup\xE9r\xE9s. Le Cartel commence \xE0 s'\xE9nerver."],
-      ["Une pilote a suivi la com\xE8te depuis trois syst\xE8mes. Elle conna\xEEt son c\u0153ur."],
-      ["La com\xE8te s'\xE9loigne, ses tr\xE9sors dans nos soutes. {commander} reste avec nous."]
+      ["Elle arrive, commandant ! Tout ce qui s'en d\xE9tache est \xE0 prendre. Fais chauffer les moteurs.", "Une pluie de fragments arrive, et quelque chose bouge dedans. Pr\xE9pare tes chasseurs.", "Le sillage rouge est encore chaud. On le suit, et on partage la prise."],
+      ["Premiers fragments r\xE9cup\xE9r\xE9s. Le Cartel commence \xE0 s'\xE9nerver.", "Premiers fragments r\xE9cup\xE9r\xE9s. Le premier monstre aussi.", "Premi\xE8re prise ramen\xE9e. Le sillage m\xE8ne plus loin."],
+      ["Une pilote a suivi la com\xE8te depuis trois syst\xE8mes. Elle conna\xEEt son c\u0153ur.", "{commander} chasse les monstres des fragments depuis dix ans. Il veut celui-ci.", "{commander} suit les com\xE8tes depuis trois syst\xE8mes. Il conna\xEEt leur c\u0153ur."],
+      ["La com\xE8te s'\xE9loigne, ses tr\xE9sors dans nos soutes. {commander} reste avec nous.", "La pluie est pass\xE9e. {commander} reste pour la prochaine.", "La prise est partag\xE9e. {commander} chassera d\xE9sormais avec toi."]
     ],
-    rivalLines: [["Cette com\xE8te m'appartient. Comme tout le reste."], ["Des miettes. Laissez-les-moi."], ["Mes chasseurs vont vous balayer de son sillage."], ["Vous me devez une com\xE8te."]]
+    rivalLines: [
+      ["Cette com\xE8te m'appartient. Comme tout le reste.", "Chaque fragment est \xE0 moi. Les monstres aussi.", "Ce sillage m\xE8ne \xE0 mes entrep\xF4ts. Vous \xEAtes en retard."],
+      ["Des miettes. Laissez-les-moi.", "Un caillou ? Gardez-le, il me reste la montagne.", "Partager ? Quel dr\xF4le de mot."],
+      ["Mes chasseurs vont vous balayer de son sillage.", "Mes chasseurs vont nettoyer la pluie. Vous compris.", "Je br\xFBle le sillage derri\xE8re moi. Suivez-moi donc."],
+      ["Vous me devez une com\xE8te.", "Vous avez eu de la chance. La pluie, elle, reviendra.", "Une prise partag\xE9e, c'est une prise perdue. Pour moi."]
+    ]
   },
   {
     id: "primes",
@@ -21976,12 +22494,17 @@ var RAW_PASS_THEMES = [
     rival: "maru",
     focus: ["bounty", "victory", "warlordWin"],
     beats: [
-      ["La traque est ouverte. Remplis les primes, et que l'Essaim retienne ton nom."],
-      ["Ton tableau de chasse s'allonge. Les autres chasseurs commencent \xE0 te craindre."],
-      ["Une traqueuse l\xE9gendaire te suit \xE0 la trace. Elle veut voir qui chasse aussi bien qu'elle."],
-      ["La traque est finie, et tu es en t\xEAte. {commander} chassera d\xE9sormais pour toi."]
+      ["La traque est ouverte. Remplis les primes, et que l'Essaim retienne ton nom.", "Le tableau de chasse est plein. Ce qu'on ne voit pas, on ne le rate pas.", "Le plus gros gibier du secteur est en vue. Toute la meute est \xE0 toi."],
+      ["Ton tableau de chasse s'allonge. Les autres chasseurs commencent \xE0 te craindre.", "Tes premi\xE8res cibles sont tomb\xE9es. L'Essaim t'a remarqu\xE9.", "Les premi\xE8res traces sont fra\xEEches. La b\xEAte n'est pas loin."],
+      ["Une traqueuse l\xE9gendaire te suit \xE0 la trace. Elle veut voir qui chasse aussi bien qu'elle.", "{commander} ne rate jamais une cible. Elle veut chasser \xE0 tes c\xF4t\xE9s.", "{commander} a traqu\xE9 la b\xEAte pendant des ann\xE9es. Il veut voir la fin."],
+      ["La traque est finie, et tu es en t\xEAte. {commander} chassera d\xE9sormais pour toi.", "Le tableau est vide, et ton nom en haut. {commander} chasse pour toi.", "La traque est finie. {commander} garde ton tableau de chasse."]
     ],
-    rivalLines: [["Ma t\xEAte vaut une fortune. Venez la prendre."], ["Pas mal, pour un d\xE9butant."], ["Je vais vous traquer \xE0 mon tour."], ["Bien chass\xE9. Je reviendrai."]]
+    rivalLines: [
+      ["Ma t\xEAte vaut une fortune. Venez la prendre.", "Mon nom est en haut du tableau. Il y restera.", "La b\xEAte est \xE0 moi. Vous n'\xEAtes que des rabatteurs."],
+      ["Pas mal, pour un d\xE9butant.", "Une prime de moins. J'en mets trois de plus.", "Vous suivez ma piste ? Elle m\xE8ne \xE0 un pi\xE8ge."],
+      ["Je vais vous traquer \xE0 mon tour.", "Je paie mieux que l'Essaim. Vos chasseurs le savent.", "J'ai l\xE2ch\xE9 la b\xEAte sur vos routes. Bonne chasse."],
+      ["Bien chass\xE9. Je reviendrai.", "Bien jou\xE9. Je mets votre t\xEAte au tableau.", "Vous l'avez eue. Je trouverai plus gros."]
+    ]
   },
   {
     id: "bazar",
@@ -21991,12 +22514,17 @@ var RAW_PASS_THEMES = [
     rival: "kragmor",
     focus: ["contract", "bounty", "raidRepelled"],
     beats: [
-      ["Les routes rouvrent, commandant. Honore tes contrats : la r\xE9putation vaut plus que l'or."],
-      ["Les convois passent. Tes contrats font parler d'eux jusqu'aux franges."],
-      ["Une n\xE9gociatrice redoutable propose de g\xE9rer tes affaires. Prouve-lui que tu en vaux la peine."],
-      ["Le bazar ferme ses portes, tes coffres pleins. {commander} tient d\xE9sormais tes comptes."]
+      ["Les routes rouvrent, commandant. Honore tes contrats : la r\xE9putation vaut plus que l'or.", "Les routes de la soie rouvrent. Un convoi bien prot\xE9g\xE9 vaut une flotte.", "La Foire des mondes ouvre ses portes. On y \xE9change des marchandises, et des secrets."],
+      ["Les convois passent. Tes contrats font parler d'eux jusqu'aux franges.", "Les premiers convois sont arriv\xE9s. Les marchands l\xE8vent leurs prix.", "Tes premiers \xE9changes font parler. Les bons et les mauvais."],
+      ["Une n\xE9gociatrice redoutable propose de g\xE9rer tes affaires. Prouve-lui que tu en vaux la peine.", "{commander} a men\xE9 plus de convois qu'elle ne compte d'\xE9toiles. Elle veut mener les tiens.", "{commander} conna\xEEt tous les secrets de la Foire, et choisit de les garder pour toi."],
+      ["Le bazar ferme ses portes, tes coffres pleins. {commander} tient d\xE9sormais tes comptes.", "La route est s\xFBre. {commander} veille sur tes caravanes.", "La Foire ferme, et tu en repars plus riche. {commander} tient tes affaires."]
     ],
-    rivalLines: [["Chaque route passe par mes p\xE9ages."], ["Un convoi de plus, un p\xE9age de plus."], ["Je ferme les routes. Toutes."], ["Bon. Vous pouvez passer. Cette fois."]]
+    rivalLines: [
+      ["Chaque route passe par mes p\xE9ages.", "Chaque caravane me paie sa part. M\xEAme la v\xF4tre.", "Tout se vend \xE0 la Foire. Vous aussi."],
+      ["Un convoi de plus, un p\xE9age de plus.", "Un convoi pass\xE9. Mes p\xE9ages ont de la m\xE9moire.", "Un bon prix. Pour moi."],
+      ["Je ferme les routes. Toutes.", "Je coupe la route au milieu. Bonne chance pour revenir.", "J'ach\xE8te vos fournisseurs. Tous."],
+      ["Bon. Vous pouvez passer. Cette fois.", "Votre route tient. Mes p\xE9ages attendront.", "Vous savez marchander. C'est presque vexant."]
+    ]
   },
   {
     id: "vide",
@@ -22006,12 +22534,17 @@ var RAW_PASS_THEMES = [
     rival: "varan",
     focus: ["victory", "raidRepelled", "contract"],
     beats: [
-      ["Le Vide appelle, commandant. Ceux qui r\xE9pondront en reviendront chang\xE9s."],
-      ["Le signal se pr\xE9cise. Il parle de nous."],
-      ["Une \xE9claireuse revenue des franges veut guider celui qui ira jusqu'au bout."],
-      ["Le signal s'est tu. {commander} a choisi de rester \xE0 tes c\xF4t\xE9s."]
+      ["Le Vide appelle, commandant. Ceux qui r\xE9pondront en reviendront chang\xE9s.", "Les routes ouvertes l'an dernier m\xE8nent \xE0 des mondes neufs. On y installe nos colons.", "Aux confins d\xE9rivent des formes immenses. On les piste, sans les r\xE9veiller."],
+      ["Le signal se pr\xE9cise. Il parle de nous.", "Le premier convoi est arriv\xE9. Les franges deviennent une fronti\xE8re.", "Une premi\xE8re trace. Plus grande que tout ce qu'on conna\xEEt."],
+      ["Une \xE9claireuse revenue des franges veut guider celui qui ira jusqu'au bout.", "{commander} a men\xE9 un convoi entier au-del\xE0 du Voile. Il veut mener le suivant.", "{commander} a suivi un colosse pendant deux ans. Elle conna\xEEt sa route."],
+      ["Le signal s'est tu. {commander} a choisi de rester \xE0 tes c\xF4t\xE9s.", "Les franges sont peupl\xE9es. {commander} garde tes routes ouvertes.", "Le colosse s'\xE9loigne. {commander} reste pour guetter son retour."]
     ],
-    rivalLines: [["Le Vide n'aime pas les curieux."], ["Vous entendez des voix ? Moi, j'entends des ressources."], ["Le premier arriv\xE9 prend tout."], ["Gardez votre proph\xE9tie."]]
+    rivalLines: [
+      ["Le Vide n'aime pas les curieux.", "Vos colons ? Mes proies.", "Les colosses du Vide sont \xE0 moi. Leurs carcasses aussi."],
+      ["Vous entendez des voix ? Moi, j'entends des ressources.", "Une route ouverte. Une route \xE0 couper.", "Vous pistez une ombre. Moi, je la chasse."],
+      ["Le premier arriv\xE9 prend tout.", "Je ferme le Voile derri\xE8re vous.", "J'ai r\xE9veill\xE9 le colosse. \xC0 vous de le calmer."],
+      ["Gardez votre proph\xE9tie.", "Vos colons tiennent. Pour cette fois.", "Gardez vos colosses. Le Vide en a d'autres."]
+    ]
   },
   // v5.14 : quatre thèmes de plus (douze, un par rôle d'officier).
   {
@@ -22022,12 +22555,17 @@ var RAW_PASS_THEMES = [
     rival: "varan",
     focus: ["raidRepelled", "victory", "contract"],
     beats: [
-      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup."],
-      ["Les premi\xE8res vagues se sont bris\xE9es sur nos d\xE9fenses. Ils cherchent la faille."],
-      ["Un strat\xE8ge de si\xE8ge l\xE9gendaire a vu ta r\xE9sistance. Il veut se battre \xE0 tes c\xF4t\xE9s."],
-      ["Le si\xE8ge est lev\xE9. {commander} rejoint ton \xE9tat-major : aucun mur ne tombera plus."]
+      ["Leurs raids se multiplient, commandant. On fortifie, on tient, et on rend coup pour coup.", "Les murs de Vashka ont souffert. On r\xE9pare, on renforce, et on tient.", "La ligne de fer doit tenir jusqu'\xE0 ce que le colosse se montre. Ensuite, on l'abat."],
+      ["Les premi\xE8res vagues se sont bris\xE9es sur nos d\xE9fenses. Ils cherchent la faille.", "Les premi\xE8res br\xE8ches sont colmat\xE9es. Ils cherchent ailleurs.", "La ligne tient. Le colosse s'impatiente."],
+      ["Un strat\xE8ge de si\xE8ge l\xE9gendaire a vu ta r\xE9sistance. Il veut se battre \xE0 tes c\xF4t\xE9s.", "{commander} r\xE9pare un mur plus vite qu'on ne l'abat. Elle veut d\xE9fendre les n\xF4tres.", "{commander} a tenu une ligne de fer pendant cent jours. Il veut tenir la n\xF4tre."],
+      ["Le si\xE8ge est lev\xE9. {commander} rejoint ton \xE9tat-major : aucun mur ne tombera plus.", "Les murs tiennent. {commander} veille sur chaque pierre.", "Le colosse est tomb\xE9, la ligne tient. {commander} garde le front."]
     ],
-    rivalLines: [["Vos murs sont en papier. Mes b\xE9liers ont faim."], ["Une vague de plus, et vous c\xE9derez."], ["Toutes mes escadres sur le m\xEAme point. Tenez donc, si vous pouvez."], ["Je reviendrai. Les murs finissent toujours par tomber."]]
+    rivalLines: [
+      ["Vos murs sont en papier. Mes b\xE9liers ont faim.", "Un mur r\xE9par\xE9 n'est qu'un mur qui attend.", "Votre ligne de fer ? De la t\xF4le."],
+      ["Une vague de plus, et vous c\xE9derez.", "Vous colmatez. Je creuse.", "Un pas en arri\xE8re, et tout c\xE8de."],
+      ["Toutes mes escadres sur le m\xEAme point. Tenez donc, si vous pouvez.", "Tous mes b\xE9liers contre le m\xEAme pan. R\xE9parez donc \xE7a.", "Le colosse est l\xE2ch\xE9. Tenez donc, maintenant."],
+      ["Je reviendrai. Les murs finissent toujours par tomber.", "Vos murs tiennent. Les miens aussi, \xE0 pr\xE9sent.", "Votre ligne a tenu. Je d\xE9teste \xE7a."]
+    ]
   },
   {
     id: "colonies",
@@ -22037,12 +22575,17 @@ var RAW_PASS_THEMES = [
     rival: "kragmor",
     focus: ["contract", "raidRepelled", "victory"],
     beats: [
-      ["Les sondes ont trouv\xE9 des mondes habitables. \xC0 toi de les faire fleurir avant que d'autres ne s'en emparent."],
-      ["Tes premi\xE8res colonies prosp\xE8rent. Les colons affluent."],
-      ["Une gouverneure de l\xE9gende cherche un empire digne de ses talents. Le tien l'int\xE9resse."],
-      ["Les franges sont \xE0 nous. {commander} gouvernera tes colonies."]
+      ["Les sondes ont trouv\xE9 des mondes habitables. \xC0 toi de les faire fleurir avant que d'autres ne s'en emparent.", "Les franges appellent : plus loin, plus vite, plus nombreux.", "Nos colonies doivent tenir, m\xEAme sous le feu. Des terres d'aube, pas des proies."],
+      ["Tes premi\xE8res colonies prosp\xE8rent. Les colons affluent.", "Les colonies poussent comme des graines. Les foreuses aussi.", "Les premi\xE8res colonies ont tenu un raid. Les colons reprennent confiance."],
+      ["Une gouverneure de l\xE9gende cherche un empire digne de ses talents. Le tien l'int\xE9resse.", "{commander} a fond\xE9 trois colonies en un an. Il veut fonder les tiennes.", "{commander} n'a jamais perdu une colonie. Elle veut garder les tiennes."],
+      ["Les franges sont \xE0 nous. {commander} gouvernera tes colonies.", "La ru\xE9e est finie, tes mondes tiennent. {commander} les gouverne.", "L'aube se l\xE8ve sur des mondes qui ne tombent pas. {commander} les garde."]
     ],
-    rivalLines: [["Ces mondes sont \xE0 moi. Mes foreuses arrivent."], ["Une colonie ? Un caillou de plus \xE0 raser."], ["J'envoie mes \xE9quipes de forage sur toutes vos colonies."], ["Gardez vos cailloux. J'en trouverai d'autres."]]
+    rivalLines: [
+      ["Ces mondes sont \xE0 moi. Mes foreuses arrivent.", "Chaque monde que vous fondez, je le fore.", "Vos colonies tombent toujours. Il suffit de frapper au bon endroit."],
+      ["Une colonie ? Un caillou de plus \xE0 raser.", "Une colonie de plus. Une cible de plus.", "Une colonie qui tient ? Une exception."],
+      ["J'envoie mes \xE9quipes de forage sur toutes vos colonies.", "Mes foreuses descendent sur vos nouveaux mondes.", "Toutes mes \xE9quipes sur vos mondes les plus fragiles."],
+      ["Gardez vos cailloux. J'en trouverai d'autres.", "Vous \xEAtes partout. C'est aga\xE7ant.", "Vos colonies tiennent. Je reviendrai \xE0 la nuit."]
+    ]
   },
   {
     id: "chantiers",
@@ -22052,12 +22595,17 @@ var RAW_PASS_THEMES = [
     rival: "kor",
     focus: ["victory", "contract", "warlordWin"],
     beats: [
-      ["Les chantiers sont rouill\xE9s, mais les plans sont bons. Remets-les en marche, commandant."],
-      ["Les premi\xE8res coques sortent des cales. L'\xE9quipage applaudit."],
-      ["Une m\xE9canicienne de g\xE9nie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent."],
-      ["L'arsenal tourne \xE0 plein. {commander} veille sur tes cales s\xE8ches."]
+      ["Les chantiers sont rouill\xE9s, mais les plans sont bons. Remets-les en marche, commandant.", "Ce qui revient du front doit repartir r\xE9par\xE9. Les cales s\xE8ches t'attendent.", "Des pi\xE8ces partout, \xE0 temps : c'est comme \xE7a qu'on gagne une guerre."],
+      ["Les premi\xE8res coques sortent des cales. L'\xE9quipage applaudit.", "Les premi\xE8res coques r\xE9par\xE9es repartent. L'\xE9quipage n'en revient pas.", "Les premi\xE8res pi\xE8ces sont livr\xE9es. Les canons suivent."],
+      ["Une m\xE9canicienne de g\xE9nie a entendu parler de tes chantiers. Elle veut voir ce qu'ils valent.", "{commander} r\xE9pare une fr\xE9gate en une nuit. Il veut voir tes cales.", "{commander} sait o\xF9 trouver chaque rivet du secteur. Il veut fournir tes chantiers."],
+      ["L'arsenal tourne \xE0 plein. {commander} veille sur tes cales s\xE8ches.", "Les cales tournent. {commander} remet ta flotte sur pied apr\xE8s chaque bataille.", "Rien ne manque plus. {commander} garde tes chantiers approvisionn\xE9s."]
     ],
-    rivalLines: [["Mes chantiers produisent dix coques pour une des v\xF4tres."], ["Jolies coques. Elles br\xFBleront bien."], ["Ma nouvelle flotte est pr\xEAte. Et la v\xF4tre ?"], ["Hum. Vos chantiers sont meilleurs que pr\xE9vu."]]
+    rivalLines: [
+      ["Mes chantiers produisent dix coques pour une des v\xF4tres.", "Vos \xE9paves me rapportent plus que vos vaisseaux.", "Je tiens vos fournisseurs. Vos canons attendront."],
+      ["Jolies coques. Elles br\xFBleront bien.", "Une coque r\xE9par\xE9e ? Je la recasse.", "Un rivet. Il vous en faut un million."],
+      ["Ma nouvelle flotte est pr\xEAte. Et la v\xF4tre ?", "Je frappe vos cales pendant qu'elles sont pleines.", "J'ai coup\xE9 vos livraisons. Construisez avec du vide."],
+      ["Hum. Vos chantiers sont meilleurs que pr\xE9vu.", "Vos cales sont bien tenues. Dommage.", "Vos chantiers tournent. Je n'aime pas \xE7a."]
+    ]
   },
   {
     id: "moisson",
@@ -22067,12 +22615,17 @@ var RAW_PASS_THEMES = [
     rival: "maru",
     focus: ["contract", "bounty", "raidRepelled"],
     beats: [
-      ["Les gisements n'ont jamais \xE9t\xE9 aussi riches. R\xE9colte, stocke, et prot\xE8ge tes r\xE9serves."],
-      ["Les greniers se remplissent. Les pillards r\xF4dent d\xE9j\xE0."],
-      ["Un intendant l\xE9gendaire propose ses services \xE0 l'empire le mieux tenu du secteur."],
-      ["Les greniers d\xE9bordent. {commander} tiendra tes comptes."]
+      ["Les gisements n'ont jamais \xE9t\xE9 aussi riches. R\xE9colte, stocke, et prot\xE8ge tes r\xE9serves.", "Des r\xE9serves pleines attirent les rapaces. R\xE9colte, et garde bien.", "Partager la r\xE9colte, c'est gagner des alli\xE9s. Remplis les greniers d'or."],
+      ["Les greniers se remplissent. Les pillards r\xF4dent d\xE9j\xE0.", "Les greniers d\xE9bordent d\xE9j\xE0. Les rapaces tournent au-dessus.", "Les premiers dons partent. Les alli\xE9s r\xE9pondent."],
+      ["Un intendant l\xE9gendaire propose ses services \xE0 l'empire le mieux tenu du secteur.", "{commander} a sauv\xE9 trois r\xE9coltes des pillards. Elle veut sauver la tienne.", "{commander} a nourri tout un secteur un hiver entier. Il veut nourrir le tien."],
+      ["Les greniers d\xE9bordent. {commander} tiendra tes comptes.", "L'abondance est \xE0 l'abri. {commander} tient tes greniers.", "Les greniers d'or sont pleins, les alli\xE9s nombreux. {commander} tient tes comptes."]
     ],
-    rivalLines: [["Tant de r\xE9serves... et si peu de gardes."], ["Vos greniers sentent bon. J'arrive."], ["Toute la Ruche a faim. Vos r\xE9serves la nourriront."], ["Vos greniers sont bien gard\xE9s. Pour cette saison."]]
+    rivalLines: [
+      ["Tant de r\xE9serves... et si peu de gardes.", "Tant d'abondance. Il serait dommage de la g\xE2cher.", "Partager ? Je pr\xE9f\xE8re prendre."],
+      ["Vos greniers sentent bon. J'arrive.", "Vos greniers sentent l'\xE9t\xE9. J'ai faim d'\xE9t\xE9.", "Vos alli\xE9s mangent dans votre main. Je mangerai la main."],
+      ["Toute la Ruche a faim. Vos r\xE9serves la nourriront.", "Toute la Ruche descend sur vos greniers.", "Je rach\xE8te vos alli\xE9s avec vos propres r\xE9serves."],
+      ["Vos greniers sont bien gard\xE9s. Pour cette saison.", "Vos rapaces sont mieux dress\xE9s que les miens.", "Vos greniers et vos alli\xE9s tiennent. Pour cette saison."]
+    ]
   }
 ];
 var DEFAULT_PASS_THEMES = DEFAULT_THEME_ROTATION.map((id) => RAW_PASS_THEMES.find((t) => t.id === id)).concat(RAW_PASS_THEMES.filter((t) => !DEFAULT_THEME_ROTATION.includes(t.id))).map((t) => __spreadProps(__spreadValues({}, t), { primary: DEFAULT_THEME_PRIMARY[t.id] }));
@@ -22081,7 +22634,7 @@ function setPassThemes(list) {
   PASS_THEMES.splice(0, PASS_THEMES.length, ...list);
 }
 var HEX = /^#[0-9a-fA-F]{6}$/;
-var textList = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
+var textList2 = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === "string" && x.trim() !== "");
 function validatePassCatalog(themes, entries) {
   var _a;
   if (!Array.isArray(themes)) return ["Th\xE8mes du passe : la section doit \xEAtre une liste."];
@@ -22101,7 +22654,7 @@ function validatePassCatalog(themes, entries) {
     if (!Array.isArray(t.focus) || t.focus.length === 0 || t.focus.some((k) => !isTrackedObjective(k))) errors.push(`${label3} : actions mises en avant inconnues ou absentes.`);
     for (const k of ["beats", "rivalLines"]) {
       const v = t[k];
-      if (!Array.isArray(v) || v.length !== 4 || !v.every(textList)) errors.push(`${label3} : ${k === "beats" ? "r\xE9pliques du mentor" : "r\xE9pliques du rival"} : quatre temps, au moins une r\xE9plique chacun.`);
+      if (!Array.isArray(v) || v.length !== 4 || !v.every(textList2)) errors.push(`${label3} : ${k === "beats" ? "r\xE9pliques du mentor" : "r\xE9pliques du rival"} : quatre temps, au moins une r\xE9plique chacun.`);
     }
     if (t.retired !== void 0 && typeof t.retired !== "boolean") errors.push(`${label3} : \xAB retir\xE9 \xBB doit \xEAtre oui ou non.`);
   }
@@ -22125,6 +22678,7 @@ function validatePassCatalog(themes, entries) {
       slots.add(slot);
     }
     for (const k of ["name", "tagline", "synopsis", "scene"]) if (typeof e3[k] !== "string" || k === "name" && !e3[k].trim()) errors.push(`${label3} : \xAB ${k} \xBB manquant.`);
+    if (e3.image !== void 0 && !(typeof e3.image === "string" && (e3.image === "" || e3.image.startsWith("/")))) errors.push(`${label3} : image : un chemin qui commence par \xAB / \xBB.`);
     const c = e3.commander;
     if (!c || typeof c !== "object") errors.push(`${label3} : commandant manquant.`);
     else {
@@ -22200,7 +22754,9 @@ function generatePassSeason(o) {
   let pointsPerTier = (_d = computed == null ? void 0 : computed.ppt) != null ? _d : g.pass.pointsPerTier;
   reasons.push(...(_e = computed == null ? void 0 : computed.reasons) != null ? _e : [...g.reasons, "Pas encore de points par jour mesur\xE9s : ajustement sur la part de joueurs qui ont fini."]);
   const focus = shuffle(rng, theme.focus);
-  reasons.push(`Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`);
+  reasons.push(
+    entry.generatedFrom ? `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year}, saison g\xE9n\xE9r\xE9e au-del\xE0 du cycle de ${catalogCycle()} mois, sur la saison \xE9crite ${entry.generatedFrom} ; \xE0 relire avant publication).` : `Th\xE8me : ${name} (${theme.id}, ann\xE9e ${entry.year} du catalogue, saison ${catalogIndex(o.monthId) + 1} sur ${catalogCycle()}).`
+  );
   let requirements = generateCumulativeChallenges(rng, focus, o.digest, tiers2.length, theme.id);
   const fit = fitChallenges(
     { pointsPerTier, tiers: tiers2, requirements, challengeMode: "cumulative" },
@@ -22242,15 +22798,23 @@ function generatePassSeason(o) {
   );
   const line = (speaker, text) => ({ speaker, text: fill2(text, vars) });
   const titles = ["Prologue", "Premier acte", "Deuxi\xE8me acte", "D\xE9nouement"];
+  const legacy = NARRATIVE_RULES.enabled === false;
+  const byYear = !legacy && NARRATIVE_RULES.passLinesByYear !== false;
+  const pickLine = (xs) => {
+    const drawn = pick3(rng, xs);
+    const list = (xs != null ? xs : []).filter((x) => typeof x === "string" && x.trim() !== "");
+    if (list.length <= 1) return drawn;
+    return legacy ? list[0] : byYear ? list[(Math.max(1, Math.floor(entry.year) || 1) - 1) % list.length] : drawn;
+  };
   const milestones = [0, 10, 20, 30].map((tier, i) => ({
     tier: Math.min(tier, tiers2.length),
     title: titles[i],
-    lines: [line(theme.mentor, pick3(rng, theme.beats[i])), line(theme.rival, pick3(rng, theme.rivalLines[i]))]
+    lines: [line(theme.mentor, pickLine(theme.beats[i])), line(theme.rival, pickLine(theme.rivalLines[i]))]
   }));
   return {
     id: o.monthId,
     status: "draft",
-    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: theme.image, prompt: illustrationPrompt(entry, theme.accent) },
+    theme: { id: theme.id, name, tagline: entry.tagline, accent: theme.accent, image: seasonThemeImage(entry, theme.image), prompt: illustrationPrompt(entry, theme.accent) },
     scenario: { synopsis: fill2(entry.synopsis, vars), milestones },
     pointsPerTier,
     tiers: tiers2,
@@ -26065,7 +26629,11 @@ var HISTORICAL_RULES_META = {
     defs: { label: "Classes d'empire", hint: "Liste (id, nom, \xE9moji, accroche, effets compos\xE9s chiffr\xE9s, avantages) : une classe livr\xE9e retir\xE9e revient. \xC9diteur d\xE9di\xE9 : R\xE8gles \u2192 Classes d'empire." }
   },
   mutators: {
-    defs: { label: "Mutateurs de saison", hint: "Liste (id, nom, \xE9moji, phrase d'accroche, effets compos\xE9s chiffr\xE9s) ; la description est construite depuis les effets. \xC9diteur d\xE9di\xE9 : R\xE8gles \u2192 \xC9v\xE9nements et saisons." }
+    defs: { label: "Mutateurs de saison", hint: "Liste (id, nom, \xE9moji, phrase d'accroche, effets compos\xE9s chiffr\xE9s) ; la description est construite depuis les effets. \xC9diteur d\xE9di\xE9 : R\xE8gles \u2192 \xC9v\xE9nements et saisons." },
+    // 6.14.136 (AU27, lot AP-L9) : tirage sans répétition.
+    noRepeatMonths: { label: "Un mutateur ne revient pas avant", unit: "mois", min: 0, max: 24, hint: "0 : ancien tirage (seulement jamais deux mois de suite). Plafonn\xE9 au nombre de mutateurs moins un." },
+    freshMonths: { label: "Fen\xEAtre de fra\xEEcheur", unit: "mois", min: 0, max: 36, hint: "Un mutateur absent de cette fen\xEAtre (mois tir\xE9 compris) passe avant les autres. 0 : sans pr\xE9f\xE9rence." },
+    noRepeatFrom: { label: "Tirage sans r\xE9p\xE9tition \xE0 partir de (AAAA-MM)", hint: "Les mois d'avant gardent l'ancien tirage : un mois pass\xE9, en cours ou annonc\xE9 ne change pas." }
   },
   alliances: {
     membersPerQuarter: { label: "Places de membres par niveau (effet \xAB places de membres \xBB, Quartiers f\xE9d\xE9r\xE9s par d\xE9faut)", min: 0 },
@@ -26171,6 +26739,10 @@ var REGISTERED_RULES = {
   relicSources: { label: "Reliques : sources favorites", target: () => RELIC_SOURCE_RULES, meta: () => RELIC_SOURCE_RULES_META },
   // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » des Chroniques générées (fréquence, durée, quantités, bibliothèque de textes).
   novelty: { label: "Chroniques : \xE9pisode \xAB nouveaut\xE9 \xBB (contenu r\xE9cent)", target: () => NOVELTY_RULES, meta: () => NOVELTY_RULES_META },
+  // 6.14.137 (AU27, AP-L10) : banques de textes des Chroniques et du passe, anti-répétition, faction par thème et par année.
+  narrative: { label: "Chroniques et passe : banques de textes", target: () => NARRATIVE_RULES, meta: () => NARRATIVE_RULES_META },
+  // 6.14.139 (AU27, AP-L12) : saisons du passe générées au-delà du cycle écrit (36 mois livrés).
+  seasonGen: { label: "Catalogue du passe : saisons g\xE9n\xE9r\xE9es au-del\xE0 du cycle", target: () => SEASON_GEN_RULES, meta: () => SEASON_GEN_RULES_META },
   officerTuning: { label: "Officiers : second r\xF4le des commandants de saison, Ph\xE9romone", target: () => OFFICER_TUNING_RULES, meta: () => OFFICER_TUNING_RULES_META },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW, meta: () => PASS_OVERFLOW_META },
   polls: { label: "Sondages", target: () => POLL_RULES, meta: () => POLL_RULES_META },
@@ -26611,6 +27183,9 @@ function applyGameContent(overrides, nowMs) {
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = __spreadValues({}, content.rules.mutators.overrides);
   MUTATOR_RULES.defs = structuredClone(content.rules.mutators.defs);
+  MUTATOR_RULES.noRepeatMonths = content.rules.mutators.noRepeatMonths;
+  MUTATOR_RULES.freshMonths = content.rules.mutators.freshMonths;
+  MUTATOR_RULES.noRepeatFrom = content.rules.mutators.noRepeatFrom;
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
@@ -26720,6 +27295,8 @@ function validateRules(rules) {
   errors.push(...validateChronicleGenRules(merged.chronicleGen, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   errors.push(...validateTrackedActionRules(merged.trackedActions));
   errors.push(...validateNoveltyRules(merged.novelty));
+  errors.push(...validateSeasonGenRules(merged.seasonGen));
+  errors.push(...validateNarrativeRules(merged.narrative, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   const au = merged.auctions;
   if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Ench\xE8res : surench\xE8re entre 0 et 1, taxe entre 0 et 0,99.");
   if (!(Number.isInteger(au.maxOpenPerSeller) && au.maxOpenPerSeller >= 1 && au.watchMax >= 0 && au.historyPerLot >= 1 && au.historyMaxLots >= 1)) errors.push("Ench\xE8res : ventes ouvertes, alertes et historique \u2265 1 (entiers).");
@@ -32265,7 +32842,7 @@ function validateBroadcast(b) {
 }
 
 // src/game/logicVersion.ts
-var LOGIC_VERSION = true ? "6.14.135" : "dev";
+var LOGIC_VERSION = true ? "6.14.137" : "dev";
 var PB_SCHEMA = true ? '[{"id":"pbc_ce_admins","name":"admins","type":"base","listRule":"id = @request.auth.id","viewRule":"id = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"note","type":"text","required":false,"max":200,"presentable":false}],"indexes":[]},{"id":"pbc_ce_players","name":"players","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(id = @request.auth.id && @request.body.resources:isset = false && @request.body.buildings:isset = false && @request.body.units:isset = false && @request.body.techLevels:isset = false && @request.body.bonuses:isset = false && @request.body.xp:isset = false && @request.body.seasonId:isset = false && @request.body.seasonXp:isset = false && @request.body.victories:isset = false && @request.body.defeats:isset = false && @request.body.playtimeSeconds:isset = false && @request.body.resourcesUpdatedAtMs:isset = false && @request.body.resourceHistory:isset = false && @request.body.unlockedAchievements:isset = false && @request.body.contracts:isset = false && @request.body.lastDefeatAtMs:isset = false && @request.body.lastAttackAtMs:isset = false && @request.body.createdAtMs:isset = false && @request.body.lastSeasonId:isset = false && @request.body.lastSeasonXp:isset = false && @request.body.titles:isset = false && @request.body.activeTitle:isset = false && @request.body.allianceId:isset = false && @request.body.allianceResearch:isset = false && @request.body.pirates:isset = false && @request.body.stats:isset = false)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"buildings","type":"json","required":false,"maxSize":2000000},{"name":"units","type":"json","required":false,"maxSize":2000000},{"name":"techLevels","type":"json","required":false,"maxSize":2000000},{"name":"bonuses","type":"json","required":false,"maxSize":2000000},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":20,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"victories","type":"number","required":false,"onlyInt":false},{"name":"defeats","type":"number","required":false,"onlyInt":false},{"name":"playtimeSeconds","type":"number","required":false,"onlyInt":false},{"name":"resourcesUpdatedAtMs","type":"number","required":false,"onlyInt":false},{"name":"resourceHistory","type":"json","required":false,"maxSize":2000000},{"name":"unlockedAchievements","type":"json","required":false,"maxSize":2000000},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceLastReadMs","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"contracts","type":"json","required":false,"maxSize":2000000},{"name":"lastSeasonId","type":"text","required":false,"max":200,"presentable":false},{"name":"lastSeasonXp","type":"number","required":false,"onlyInt":false},{"name":"titles","type":"json","required":false,"maxSize":200000},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"allianceResearch","type":"json","required":false,"maxSize":200000},{"name":"pirates","type":"json","required":false,"maxSize":200000},{"name":"stats","type":"json","required":false,"maxSize":50000},{"name":"onboarding","type":"json","required":false,"maxSize":5000},{"name":"posture","type":"json","required":false,"maxSize":2000},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"colonies","type":"json","required":false,"maxSize":2000000},{"name":"colonizing","type":"json","required":false,"maxSize":20000},{"name":"bounties","type":"json","required":false,"maxSize":50000},{"name":"emailOptOut","type":"bool","required":false},{"name":"notifPrefs","type":"json","required":false,"maxSize":500},{"name":"mailToken","type":"text","required":false,"max":64,"presentable":false},{"name":"commanders","type":"json","required":false,"maxSize":50000},{"name":"relics","type":"json","required":false,"maxSize":50000},{"name":"modules","type":"json","required":false,"maxSize":50000},{"name":"empireClass","type":"json","required":false,"maxSize":2000},{"name":"moon","type":"json","required":false,"maxSize":2000},{"name":"moonPity","type":"number","required":false,"onlyInt":false},{"name":"synthesis","type":"json","required":false,"maxSize":50000},{"name":"profileStyle","type":"json","required":false,"maxSize":2000},{"name":"seasonPass","type":"json","required":false,"maxSize":5000},{"name":"referral","type":"json","required":false,"maxSize":2000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text8982221121"},{"name":"vacation","type":"json","required":false,"maxSize":2000,"id":"json1012305937"},{"name":"chronicle","type":"json","required":false,"maxSize":5000,"id":"json9201033483"},{"name":"announcementsSeen","type":"json","required":false,"maxSize":6000,"id":"json4710000001"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"territory","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"talents","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"renamed","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"streak","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"testMode","type":"bool","required":false},{"name":"casino","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"workshop","type":"json","required":false,"maxSize":50000,"presentable":false},{"name":"prestige","type":"json","required":false,"maxSize":4000,"presentable":false},{"name":"exchangeWeek","type":"json","required":false,"maxSize":1000,"presentable":false}],"indexes":["CREATE INDEX idx_players_xp ON players (xp)"]},{"id":"pbc_ce_queues","name":"queues","type":"base","listRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"buildingUpgrades","type":"json","required":false,"maxSize":2000000},{"name":"unitQueues","type":"json","required":false,"maxSize":2000000},{"name":"activeResearches","type":"json","required":false,"maxSize":2000000},{"name":"activeMissions","type":"json","required":false,"maxSize":2000000},{"name":"buildPlan","type":"json","required":false,"maxSize":4000,"id":"json4900000001"}],"indexes":[]},{"id":"pbc_ce_notifications","name":"notifications","type":"base","listRule":"player_id = @request.auth.id","viewRule":"player_id = @request.auth.id","createRule":null,"updateRule":"player_id = @request.auth.id && @request.body.player_id:isset = false","deleteRule":"player_id = @request.auth.id","fields":[{"name":"player_id","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":200,"presentable":false},{"name":"message","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"read","type":"bool","required":false},{"name":"link","type":"text","required":false,"max":300,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000,"id":"json_notif_data"}],"indexes":["CREATE INDEX idx_notifications_player ON notifications (player_id, createdAtMs)"]},{"id":"pbc_ce_battle_reports","name":"battle_reports","type":"base","listRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","viewRule":"attackerUid = @request.auth.id || defenderUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"defenderUid","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderPseudo","type":"text","required":false,"max":120,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"attackerPower","type":"number","required":false,"onlyInt":false},{"name":"defenderPower","type":"number","required":false,"onlyInt":false},{"name":"attackerLossPercent","type":"number","required":false,"onlyInt":false},{"name":"defenderLossPercent","type":"number","required":false,"onlyInt":false},{"name":"attackerLosses","type":"json","required":false,"maxSize":2000000},{"name":"attackerRecovered","type":"json","required":false,"maxSize":2000000},{"name":"defenderLosses","type":"json","required":false,"maxSize":2000000},{"name":"defenderRecovered","type":"json","required":false,"maxSize":2000000},{"name":"loot","type":"json","required":false,"maxSize":2000000},{"name":"defenderProcessed","type":"bool","required":false},{"name":"attackerXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderXpDelta","type":"number","required":false,"onlyInt":false},{"name":"defenderApplied","type":"bool","required":false},{"name":"garrisons","type":"json","required":false,"maxSize":200000},{"name":"attackerFleet","type":"json","required":false,"maxSize":20000},{"name":"planetId","type":"text","required":false,"max":40},{"name":"combatLog","type":"json","required":false,"maxSize":40000},{"name":"defenderMoonLevel","type":"json","required":false,"maxSize":100}],"indexes":["CREATE INDEX idx_battle_defender ON battle_reports (defenderUid, defenderProcessed)","CREATE INDEX idx_battle_attacker ON battle_reports (attackerUid)"]},{"id":"pbc_ce_spy_reports","name":"spy_reports","type":"base","listRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","viewRule":"spyUid = @request.auth.id || (targetUid = @request.auth.id && detected = true)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"spyUid","type":"text","required":false,"max":40,"presentable":false},{"name":"spyPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"targetProcessed","type":"bool","required":false},{"name":"targetPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"probes","type":"number","required":false,"onlyInt":false},{"name":"score","type":"number","required":false,"onlyInt":false},{"name":"tier","type":"number","required":false,"onlyInt":false},{"name":"detected","type":"bool","required":false},{"name":"data","type":"json","required":false,"maxSize":2000000},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_spy_target ON spy_reports (targetUid, targetProcessed)"]},{"id":"pbc_ce_resource_gifts","name":"resource_gifts","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":2000000},{"name":"timestamp","type":"number","required":false,"onlyInt":false},{"name":"claimed","type":"bool","required":false}],"indexes":["CREATE INDEX idx_gifts_to ON resource_gifts (toUid, claimed)"]},{"id":"pbc_ce_alliances","name":"alliances","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":false,"max":40,"presentable":false},{"name":"tag","type":"text","required":false,"max":5,"presentable":false},{"name":"createdBy","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"members","type":"json","required":false,"maxSize":2000000},{"name":"memberPseudos","type":"json","required":false,"maxSize":2000000},{"name":"roles","type":"json","required":false,"maxSize":2000000},{"name":"treasury","type":"json","required":false,"maxSize":200000},{"name":"research","type":"json","required":false,"maxSize":200000},{"name":"activeResearch","type":"json","required":false,"maxSize":200000},{"name":"researchEndMs","type":"number","required":false,"onlyInt":false},{"name":"distributions","type":"json","required":false,"maxSize":200000},{"name":"projects","type":"json","required":false,"maxSize":200000},{"name":"projectContributors","type":"json","required":false,"maxSize":200000},{"name":"boss","type":"json","required":false,"maxSize":200000},{"name":"daily","type":"json","required":false,"maxSize":20000,"id":"json4900000002"},{"name":"warChest","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"profile","type":"json","required":false,"maxSize":60000,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_alliances_tag ON alliances (tag)"]},{"id":"pbc_ce_alliance_messages","name":"alliance_messages","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":"@request.body.authorUid = @request.auth.id && @collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= @request.body.allianceId","updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_messages_alliance ON alliance_messages (allianceId, createdAtMs)"]},{"id":"pbc_ce_game_config","name":"game_config","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000}],"indexes":["CREATE UNIQUE INDEX idx_game_config_key ON game_config (`key`)"]},{"id":"pbc_ce_game_assets","name":"game_assets","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"name","type":"text","required":false,"max":200,"presentable":false},{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif","image/svg+xml"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_admin_logs","name":"admin_logs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"actorId","type":"text","required":false,"max":40,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"action","type":"text","required":false,"max":20,"presentable":false},{"name":"targetCollection","type":"text","required":false,"max":60,"presentable":false},{"name":"recordId","type":"text","required":false,"max":60,"presentable":false},{"name":"recordLabel","type":"text","required":false,"max":200,"presentable":false},{"name":"changes","type":"json","required":false,"maxSize":2000000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true},{"name":"reason","type":"text","required":false,"max":300}],"indexes":["CREATE INDEX idx_admin_logs_created ON admin_logs (createdAtMs)"]},{"id":"pbc_ce_fleets","name":"fleets","type":"base","listRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","viewRule":"ownerUid = @request.auth.id || (targetUid = @request.auth.id && status = \\"outbound\\" && (mission = \\"attack\\" || mission = \\"pirate\\")) || (targetUid = @request.auth.id && mission = \\"garrison\\" && status != \\"done\\") || (targetOwnerUid = @request.auth.id && status = \\"outbound\\" && mission = \\"attack\\")","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"mission","type":"text","required":false,"max":20,"presentable":false},{"name":"units","type":"json","required":false,"maxSize":200000},{"name":"departAtMs","type":"number","required":false,"onlyInt":false},{"name":"arriveAtMs","type":"number","required":false,"onlyInt":false},{"name":"returnAtMs","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"loot","type":"json","required":false,"maxSize":200000},{"name":"reportId","type":"text","required":false,"max":40,"presentable":false},{"name":"outcome","type":"text","required":false,"max":20,"presentable":false},{"name":"recalled","type":"bool","required":false},{"name":"durationMs","type":"number","required":false,"onlyInt":false},{"name":"stationedUntilMs","type":"number","required":false,"onlyInt":false},{"name":"power","type":"number","required":false,"onlyInt":false},{"name":"factionId","type":"text","required":false,"max":40,"presentable":false},{"name":"formation","type":"text","required":false,"max":20,"presentable":false},{"name":"targetPriority","type":"text","required":false,"max":10,"presentable":false},{"name":"expedition","type":"json","required":false,"maxSize":50000},{"name":"transport","type":"json","required":false,"maxSize":200000},{"name":"base","type":"json","required":false,"maxSize":2000},{"name":"targetOwnerUid","type":"text","required":false,"max":40},{"name":"boosts","type":"json","required":false,"maxSize":2000,"hidden":true},{"name":"trueUnits","type":"json","required":false,"maxSize":20000,"hidden":true},{"name":"anomaly","type":"bool","required":false}],"indexes":["CREATE INDEX idx_fleets_status ON fleets (status, arriveAtMs, returnAtMs)","CREATE INDEX idx_fleets_owner ON fleets (ownerUid)","CREATE INDEX idx_fleets_target ON fleets (targetUid)"]},{"id":"pbc_ce_profiles","name":"profiles","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":"id = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":null,"fields":[{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"xp","type":"number","required":false,"onlyInt":false},{"name":"seasonId","type":"text","required":false,"max":40,"presentable":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastDefeatAtMs","type":"number","required":false,"onlyInt":false},{"name":"lastAttackAtMs","type":"number","required":false,"onlyInt":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"activeTitle","type":"text","required":false,"max":200,"presentable":false},{"name":"empireClass","type":"text","required":false,"max":40,"presentable":false},{"name":"moonName","type":"text","required":false,"max":40,"presentable":false},{"name":"moonLevel","type":"number","required":false,"onlyInt":true},{"name":"prestigePoints","type":"number","required":false,"onlyInt":true},{"name":"prestigeProjects","type":"number","required":false,"onlyInt":true},{"name":"ascensions","type":"number","required":false,"onlyInt":false},{"name":"ascendedAtMs","type":"number","required":false,"onlyInt":false},{"name":"planets","type":"json","required":false,"maxSize":20000},{"name":"feats","type":"json","required":false,"maxSize":20000},{"name":"npc","type":"text","required":false,"max":200,"presentable":false,"id":"text7131512386"},{"name":"vacationUntilMs","type":"number","required":false,"onlyInt":false,"id":"number9906079824"},{"name":"lastActiveMs","type":"number","required":false,"onlyInt":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":400000,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_profiles_xp ON profiles (xp)"]},{"id":"pbc_ce_debris_fields","name":"debris_fields","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"locationPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"locationId","type":"text","required":false,"max":40,"presentable":false},{"name":"scrap","type":"number","required":false,"onlyInt":false},{"name":"energy","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"updatedAtMs","type":"number","required":false,"onlyInt":false}],"indexes":[]},{"id":"pbc_ce_season_results","name":"season_results","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"uid","type":"text","required":false,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"rank","type":"number","required":false,"onlyInt":false},{"name":"seasonXp","type":"number","required":false,"onlyInt":false},{"name":"reward","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"kind","type":"text","required":false,"max":200,"presentable":false}],"indexes":["CREATE UNIQUE INDEX `idx_season_results_season_uid` ON `season_results` (`seasonId`, `uid`)"]},{"id":"pbc_ce_alliance_logs","name":"alliance_logs","type":"base","listRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","viewRule":"@collection.players:me.id ?= @request.auth.id && @collection.players:me.allianceId ?= allianceId","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":30,"presentable":false},{"name":"actorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"actorPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"targetPseudo","type":"text","required":false,"max":100,"presentable":false},{"name":"resources","type":"json","required":false,"maxSize":200000},{"name":"text","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX `idx_alliance_logs_alliance` ON `alliance_logs` (`allianceId`, `createdAtMs`)"]},{"id":"pbc_ce_reports","name":"reports","type":"base","listRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"reporterId = @request.auth.id || (@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"@request.auth.id != \\"\\" && @request.body.reporterId = @request.auth.id","updateRule":null,"deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"reporterId","type":"text","required":true,"max":40,"presentable":false},{"name":"reporterPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"category","type":"text","required":false,"max":20,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":4000,"presentable":false},{"name":"context","type":"json","required":false,"maxSize":5000},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"resolution","type":"text","required":false,"max":2000,"presentable":false},{"name":"githubUrl","type":"text","required":false,"max":300,"presentable":false},{"name":"history","type":"json","required":false,"maxSize":2000000},{"name":"screenshot","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"createdAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"reporterSeenAtMs","type":"number","required":false},{"name":"autoKey","type":"text","required":false,"max":40,"presentable":false},{"name":"occurrences","type":"number","required":false},{"name":"affected","type":"json","required":false,"maxSize":20000}],"indexes":["CREATE INDEX idx_reports_reporter ON reports (reporterId)","CREATE INDEX idx_reports_status ON reports (status)","CREATE INDEX idx_reports_autokey ON reports (autoKey)"]},{"id":"pbc_ce_market","name":"market_offers","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"sellerAllianceId","type":"text","required":false,"max":40,"presentable":false},{"name":"giveRes","type":"text","required":false,"max":30,"presentable":false},{"name":"giveAmount","type":"number","required":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"expiresAtMs","type":"number","required":false},{"name":"buyerId","type":"text","required":false,"max":40,"presentable":false},{"name":"buyerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"filledAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"filled","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_market_status ON market_offers (status, expiresAtMs)","CREATE INDEX idx_market_seller ON market_offers (sellerId, status)","CREATE INDEX idx_market_buyer ON market_offers (buyerId, filledAtMs)"]},{"id":"pbc_ce_wars","name":"alliance_wars","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"attackerId","type":"text","required":false,"max":40,"presentable":false},{"name":"attackerName","type":"text","required":false,"max":60,"presentable":false},{"name":"attackerTag","type":"text","required":false,"max":10,"presentable":false},{"name":"defenderId","type":"text","required":false,"max":40,"presentable":false},{"name":"defenderName","type":"text","required":false,"max":60,"presentable":false},{"name":"defenderTag","type":"text","required":false,"max":10,"presentable":false},{"name":"declaredById","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"declaredAtMs","type":"number","required":false},{"name":"startMs","type":"number","required":false},{"name":"endMs","type":"number","required":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"scoreAttacker","type":"number","required":false},{"name":"scoreDefender","type":"number","required":false},{"name":"log","type":"json","required":false,"maxSize":200000},{"name":"winnerId","type":"text","required":false,"max":40,"presentable":false},{"name":"surrenderedBy","type":"text","required":false,"max":40,"presentable":false},{"name":"endedAtMs","type":"number","required":false},{"name":"rewarded","type":"bool","required":false},{"name":"seasonId","type":"text","required":false,"max":10,"presentable":false},{"name":"titleUntilMs","type":"number","required":false}],"indexes":["CREATE INDEX idx_wars_status ON alliance_wars (status)","CREATE INDEX idx_wars_attacker ON alliance_wars (attackerId)","CREATE INDEX idx_wars_defender ON alliance_wars (defenderId)"]},{"id":"pbc_ce_private_messages","name":"private_messages","type":"base","listRule":"fromUid = @request.auth.id || toUid = @request.auth.id","viewRule":"fromUid = @request.auth.id || toUid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"fromUid","type":"text","required":false,"max":40,"presentable":false},{"name":"fromPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"toUid","type":"text","required":false,"max":40,"presentable":false},{"name":"toPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"text","type":"text","required":false,"max":1000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"readAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pm_to ON private_messages (toUid, createdAtMs)","CREATE INDEX idx_pm_from ON private_messages (fromUid, createdAtMs)"]},{"id":"pbc_ce_message_blocks","name":"message_blocks","type":"base","listRule":"ownerUid = @request.auth.id","viewRule":"ownerUid = @request.auth.id","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedUid","type":"text","required":false,"max":40,"presentable":false},{"name":"blockedPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_blocks_pair ON message_blocks (ownerUid, blockedUid)"]},{"id":"pbc_ce_shared_reports","name":"shared_reports","type":"base","listRule":null,"viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"ownerUid","type":"text","required":false,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":false,"max":10,"presentable":false},{"name":"sourceId","type":"text","required":false,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":200000},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE UNIQUE INDEX idx_shared_source ON shared_reports (ownerUid, sourceId)"]},{"id":"pbc_ce_alliance_pacts","name":"alliance_pacts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"tagA","type":"text","required":false,"max":10,"presentable":false},{"name":"tagB","type":"text","required":false,"max":10,"presentable":false},{"name":"nameA","type":"text","required":false,"max":60,"presentable":false},{"name":"nameB","type":"text","required":false,"max":60,"presentable":false},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"proposedByUid","type":"text","required":false,"max":40,"presentable":false},{"name":"proposedByPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"endsAtMs","type":"number","required":false,"onlyInt":false},{"name":"brokenByTag","type":"text","required":false,"max":10,"presentable":false}],"indexes":["CREATE INDEX idx_pacts_a ON alliance_pacts (allianceA)","CREATE INDEX idx_pacts_b ON alliance_pacts (allianceB)"]},{"id":"pbc_ce_pact_messages","name":"pact_messages","type":"base","listRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","viewRule":"@request.auth.id != \\"\\" && @collection.players:me.id ?= @request.auth.id && (@collection.players:me.allianceId ?= allianceA || @collection.players:me.allianceId ?= allianceB)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pactId","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceA","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceB","type":"text","required":false,"max":40,"presentable":false},{"name":"authorUid","type":"text","required":false,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"authorTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":false,"max":500,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false}],"indexes":["CREATE INDEX idx_pact_msgs ON pact_messages (pactId, createdAtMs)"]},{"id":"pbc_ce_victory_cards","name":"victory_cards","type":"base","listRule":null,"viewRule":"","createRule":"@request.auth.id != \\"\\" && @request.body.ownerUid = @request.auth.id","updateRule":null,"deleteRule":"ownerUid = @request.auth.id","fields":[{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"title","type":"text","required":false,"max":120,"presentable":false},{"name":"description","type":"text","required":false,"max":300,"presentable":false},{"name":"target","type":"text","required":false,"max":200,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"image","type":"file","required":true,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/jpeg","image/webp","image/png"],"thumbs":[],"protected":false}],"indexes":["CREATE INDEX idx_victory_owner ON victory_cards (ownerUid, createdAtMs)"]},{"id":"pbc_ce_tradecontracts","name":"trade_contracts","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"clientUid","type":"text","required":false,"max":40,"presentable":false},{"name":"clientPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"targetUid","type":"text","required":false,"max":40,"presentable":false},{"name":"wantRes","type":"text","required":false,"max":30,"presentable":false},{"name":"wantAmount","type":"number","required":false,"onlyInt":false},{"name":"payRes","type":"text","required":false,"max":30,"presentable":false},{"name":"payAmount","type":"number","required":false,"onlyInt":false},{"name":"hours","type":"number","required":false,"onlyInt":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":false},{"name":"expiresAtMs","type":"number","required":false,"onlyInt":false},{"name":"supplierUid","type":"text","required":false,"max":40,"presentable":false},{"name":"supplierPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"deposit","type":"number","required":false,"onlyInt":false},{"name":"acceptedAtMs","type":"number","required":false,"onlyInt":false},{"name":"deadlineMs","type":"number","required":false,"onlyInt":false},{"name":"fleetId","type":"text","required":false,"max":40,"presentable":false},{"name":"closedAtMs","type":"number","required":false,"onlyInt":false},{"name":"priorityUntilMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_tc_status ON trade_contracts (status, expiresAtMs)","CREATE INDEX idx_tc_client ON trade_contracts (clientUid, status)","CREATE INDEX idx_tc_supplier ON trade_contracts (supplierUid, status)"]},{"id":"pbc_ce_blog_authors","name":"blog_authors","type":"base","listRule":"","viewRule":"","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id) || id = @request.auth.id","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"pseudo","type":"text","required":false,"max":60,"presentable":true},{"name":"role","type":"text","required":false,"max":60,"presentable":false},{"name":"bio","type":"text","required":false,"max":300,"presentable":false},{"name":"avatar","type":"file","required":false,"maxSelect":1,"maxSize":1048576,"mimeTypes":["image/webp","image/png","image/jpeg"],"thumbs":[],"protected":false}],"indexes":[]},{"id":"pbc_ce_blog_posts","name":"blog_posts","type":"base","listRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","viewRule":"status = \\"published\\" || (@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","createRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id)) && @request.body.authorUid = @request.auth.id","updateRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","deleteRule":"(@request.auth.id != \\"\\" && (@collection.blog_authors.id ?= @request.auth.id || @collection.admins.id ?= @request.auth.id))","fields":[{"name":"slug","type":"text","required":true,"max":80,"pattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","presentable":true},{"name":"title","type":"text","required":true,"max":140,"presentable":false},{"name":"excerpt","type":"text","required":false,"max":300,"presentable":false},{"name":"body","type":"text","required":false,"max":100000,"presentable":false},{"name":"category","type":"text","required":true,"max":40,"presentable":false},{"name":"tags","type":"json","required":false,"maxSize":2000},{"name":"status","type":"text","required":true,"max":20,"pattern":"^(draft|published)$","presentable":false},{"name":"publishedAtMs","type":"number","required":false},{"name":"updatedAtMs","type":"number","required":false},{"name":"pinned","type":"bool","required":false},{"name":"version","type":"text","required":false,"max":20,"presentable":false},{"name":"authorUid","type":"text","required":true,"max":40,"presentable":false},{"name":"authorPseudo","type":"text","required":false,"max":60,"presentable":false},{"name":"cover","type":"file","required":false,"maxSelect":1,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false},{"name":"images","type":"file","required":false,"maxSelect":99,"maxSize":5242880,"mimeTypes":["image/webp","image/png","image/jpeg","image/gif"],"thumbs":[],"protected":false}],"indexes":["CREATE UNIQUE INDEX idx_blog_slug ON blog_posts (slug)","CREATE INDEX idx_blog_pub ON blog_posts (status, publishedAtMs)"]},{"id":"pbc_ce_passkeys","name":"passkeys","type":"base","listRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","viewRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","createRule":null,"updateRule":null,"deleteRule":"user = @request.auth.id && @request.auth.collectionName = \\"users\\"","fields":[{"name":"user","type":"text","required":true,"max":40,"presentable":false},{"name":"credentialId","type":"text","required":true,"max":400,"presentable":false},{"name":"publicKey","type":"text","required":true,"max":2000,"presentable":false},{"name":"alg","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"signCount","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"name","type":"text","required":false,"max":40,"presentable":true},{"name":"transports","type":"json","required":false,"maxSize":2000,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true,"presentable":false},{"name":"lastUsedAtMs","type":"number","required":false,"onlyInt":true,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_passkeys_credential ON passkeys (credentialId)","CREATE INDEX idx_passkeys_user ON passkeys (user)"]},{"id":"pbc_ce_content_versions","name":"content_versions","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"section","type":"text","required":false,"max":60,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":5000000},{"name":"existed","type":"bool","required":false},{"name":"action","type":"text","required":false,"max":30,"presentable":false},{"name":"actorName","type":"text","required":false,"max":100,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"onlyInt":true}],"indexes":["CREATE INDEX idx_content_versions_section ON content_versions (section, createdAtMs)"]},{"id":"pbc_ce_server_metrics","name":"server_metrics","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_server_metrics_key ON server_metrics (`key`)"]},{"id":"pbc_ce_moderation","name":"moderation","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"key","type":"text","required":true,"max":40,"presentable":false},{"name":"data","type":"json","required":false,"maxSize":2000000}],"indexes":["CREATE UNIQUE INDEX idx_moderation_key ON moderation (`key`)"]},{"id":"pbc_ce_poll_votes","name":"poll_votes","type":"base","listRule":null,"viewRule":null,"createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"pollId","type":"text","required":true,"max":60,"presentable":false},{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"choice","type":"number","required":false,"onlyInt":true},{"name":"createdAtMs","type":"number","required":false}],"indexes":["CREATE UNIQUE INDEX idx_poll_votes_unique ON poll_votes (`pollId`, `uid`)","CREATE INDEX idx_poll_votes_poll ON poll_votes (`pollId`)"]},{"id":"pbc_ce_auctions","name":"auctions","type":"base","listRule":"@request.auth.id != \\"\\"","viewRule":"@request.auth.id != \\"\\"","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"sellerId","type":"text","required":true,"max":40,"presentable":false},{"name":"sellerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"item","type":"json","required":false,"maxSize":5000},{"name":"label","type":"text","required":false,"max":120,"presentable":false},{"name":"rarity","type":"text","required":false,"max":20,"presentable":false},{"name":"res","type":"text","required":false,"max":30,"presentable":false},{"name":"startPrice","type":"number","required":false},{"name":"bid","type":"number","required":false},{"name":"bidderId","type":"text","required":false,"max":40,"presentable":false},{"name":"bidderPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"bids","type":"number","required":false,"onlyInt":true},{"name":"status","type":"text","required":false,"max":12,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"endsAtMs","type":"number","required":false},{"name":"closedAtMs","type":"number","required":false},{"name":"tax","type":"number","required":false},{"name":"sellerIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"sellerDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderIp","type":"text","required":false,"max":64,"presentable":false,"hidden":true},{"name":"bidderDevice","type":"text","required":false,"max":64,"presentable":false,"hidden":true}],"indexes":["CREATE INDEX idx_auctions_status ON auctions (`status`, `endsAtMs`)","CREATE INDEX idx_auctions_seller ON auctions (`sellerId`)"]},{"id":"pbc_ce_auction_watches","name":"auction_watches","type":"base","listRule":"uid = @request.auth.id","viewRule":"uid = @request.auth.id","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"kind","type":"text","required":true,"max":10,"presentable":false},{"name":"minRarity","type":"text","required":true,"max":12,"presentable":false},{"name":"template","type":"text","required":false,"max":60,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false}],"indexes":["CREATE INDEX idx_auction_watches_uid ON auction_watches (`uid`)"]},{"id":"pbc_ce_global_messages","name":"global_messages","type":"base","listRule":"@request.auth.id != \\"\\" && hidden = false","viewRule":"@request.auth.id != \\"\\" && hidden = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"uid","type":"text","required":true,"max":40,"presentable":false},{"name":"pseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"allianceTag","type":"text","required":false,"max":10,"presentable":false},{"name":"text","type":"text","required":true,"max":400,"presentable":false},{"name":"createdAtMs","type":"number","required":false},{"name":"hidden","type":"bool","required":false},{"name":"reporters","type":"json","required":false,"maxSize":20000},{"name":"masked","type":"bool","required":false},{"name":"room","type":"text","required":false,"max":40,"presentable":false},{"name":"reactions","type":"json","required":false,"maxSize":20000,"presentable":false},{"name":"nameTone","type":"text","max":40,"presentable":false,"id":"text_gm_nametone","required":false}],"indexes":["CREATE INDEX idx_global_messages_created ON global_messages (`createdAtMs`)","CREATE INDEX idx_global_messages_uid ON global_messages (`uid`, `createdAtMs`)","CREATE INDEX idx_global_messages_room ON global_messages (`room`, `createdAtMs`)"]},{"id":"pbc_ce_chat_rooms","name":"chat_rooms","type":"base","listRule":"@request.auth.id != \\"\\" && closed = false","viewRule":"@request.auth.id != \\"\\" && closed = false","createRule":null,"updateRule":null,"deleteRule":null,"fields":[{"name":"name","type":"text","required":true,"max":24,"presentable":false},{"name":"topic","type":"text","required":false,"max":120,"presentable":false},{"name":"ownerUid","type":"text","required":true,"max":40,"presentable":false},{"name":"ownerPseudo","type":"text","required":false,"max":40,"presentable":false},{"name":"createdAtMs","type":"number","required":false,"presentable":false},{"name":"lastMessageAtMs","type":"number","required":false,"presentable":false},{"name":"closed","type":"bool","required":false,"presentable":false},{"name":"icon","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_icon"},{"name":"pinnedId","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedid"},{"name":"pinnedText","type":"text","required":false,"max":400,"presentable":false,"id":"text_cr_pinnedtext"},{"name":"pinnedPseudo","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_pinnedpseudo"},{"name":"eventLabel","type":"text","required":false,"max":120,"presentable":false,"id":"text_cr_eventlabel"},{"name":"eventAtMs","type":"number","required":false,"presentable":false,"id":"number_cr_eventatms"}],"indexes":["CREATE INDEX idx_chat_rooms_open ON chat_rooms (`closed`, `lastMessageAtMs`)"]},{"id":"pbc_ce_illu_uploads","name":"illustration_uploads","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"file","type":"file","required":true,"maxSelect":1,"maxSize":20971520,"mimeTypes":["image/png","image/jpeg","image/webp"],"thumbs":["240x240"],"protected":false},{"name":"fileName","type":"text","required":false,"max":300,"presentable":false},{"name":"uploadedAtMs","type":"number","required":false,"presentable":false},{"name":"uploaderUid","type":"text","required":false,"max":30,"presentable":false},{"name":"slotId","type":"text","required":false,"max":80,"presentable":false},{"name":"status","type":"text","required":false,"max":20,"presentable":false},{"name":"note","type":"text","required":false,"max":300,"presentable":false}]},{"id":"pbc_ce_decision_ans","name":"decision_answers","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"qid","type":"text","required":true,"max":10,"presentable":false},{"name":"choice","type":"text","required":false,"max":20,"presentable":false},{"name":"note","type":"text","required":false,"max":2000,"presentable":false},{"name":"answeredAtMs","type":"number","required":false,"presentable":false},{"name":"answeredBy","type":"text","required":false,"max":30,"presentable":false}]},{"id":"pbc_ce_live_docs","name":"live_docs","type":"base","listRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","viewRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","createRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","updateRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","deleteRule":"(@request.auth.id != \\"\\" && @collection.admins.id ?= @request.auth.id)","fields":[{"name":"path","type":"text","required":true,"max":200,"presentable":false},{"name":"content","type":"text","required":false,"max":1000000,"presentable":false},{"name":"updatedAtMs","type":"number","required":false,"presentable":false},{"name":"source","type":"text","required":false,"max":80,"presentable":false}],"indexes":["CREATE UNIQUE INDEX idx_live_docs_path ON live_docs (path)"]}]' : "[]";
 
 // src/game/serverMetrics.ts

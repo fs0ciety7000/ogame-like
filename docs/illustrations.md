@@ -104,6 +104,13 @@ de suite (6.14.42), sans attendre le déploiement ; le commit suit avec le lot.
    - **Boss d'alliance** (6.14.93) : `image` de `DEFAULT_ALLIANCE_BOSSES` ; règles enregistrées : migration `run` sur `rules`.
    - **Passe** (6.14.93) : thème → `image` de `PASS_THEMES` (ancienne image dans `PASS_THEME_OLD_IMAGES`) ; portrait de saison →
      mois ajouté à `SEASON_PORTRAITS` (`passSeasons.ts`) ; saisons déjà écrites : migration `run` sur `passSeasons`.
+     6.14.138 : illustration d'année `passe-theme-<thème>-<année>` → identifiant de la saison (`<thème>_<année>`) ajouté à
+     `SEASON_THEME_ART` (`passSeasons.ts`) : le générateur la prend pour les passes suivants (et pour les saisons générées qui
+     prolongent cette saison) ; un brouillon déjà écrit garde l'image du thème (migration `run` sur `passSeasons`, nouvel identifiant,
+     si on veut le changer). Portraits `officier-s-<mois>` : comme ci-dessus (`SEASON_PORTRAITS`).
+   - **Chroniques générées** (6.14.138) : second boss `chroniques-boss2-<faction>` → identifiant de l'archétype ajouté à `AUTO_ART_2`
+     (`procedural.ts`) : les boss de rang impair (2e et 4e nom, puis la réserve un sur deux) le prennent dans les chapitres générés
+     ensuite ; un chapitre écrit garde son image.
    - **En-têtes** (6.14.93) : `backdrop="/assets/headers/<page>.webp"` du `PageHeader` de la page.
    - **Devblog** : `cover:` du billet dans `content/blog/` ; un billet déjà publié se règle dans Admin → Devblog.
    - **Classes, modules** : pas encore de champ d'image (Q240), le fichier attend son lot d'affichage. **Spécialisations de colonie** :

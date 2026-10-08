@@ -113,6 +113,10 @@ export const HISTORICAL_RULES_META: Record<string, Record<string, RuleFieldMeta>
   },
   mutators: {
     defs: { label: "Mutateurs de saison", hint: "Liste (id, nom, émoji, phrase d'accroche, effets composés chiffrés) ; la description est construite depuis les effets. Éditeur dédié : Règles → Événements et saisons." },
+    // 6.14.136 (AU27, lot AP-L9) : tirage sans répétition.
+    noRepeatMonths: { label: "Un mutateur ne revient pas avant", unit: "mois", min: 0, max: 24, hint: "0 : ancien tirage (seulement jamais deux mois de suite). Plafonné au nombre de mutateurs moins un." },
+    freshMonths: { label: "Fenêtre de fraîcheur", unit: "mois", min: 0, max: 36, hint: "Un mutateur absent de cette fenêtre (mois tiré compris) passe avant les autres. 0 : sans préférence." },
+    noRepeatFrom: { label: "Tirage sans répétition à partir de (AAAA-MM)", hint: "Les mois d'avant gardent l'ancien tirage : un mois passé, en cours ou annoncé ne change pas." },
   },
   alliances: {
     membersPerQuarter: { label: "Places de membres par niveau (effet « places de membres », Quartiers fédérés par défaut)", min: 0 },

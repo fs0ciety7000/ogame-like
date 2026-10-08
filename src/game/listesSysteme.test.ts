@@ -58,7 +58,11 @@ describe("AA7 : à contenu par défaut, rien ne change", () => {
     MUTATOR_RULES.enabled = true;
     // Tirages d'octobre 2026 à septembre 2027, relevés avant le lot.
     const months = Array.from({ length: 12 }, (_, i) => (i < 3 ? `2026-${10 + i}` : `2027-${String(i - 2).padStart(2, "0")}`));
+    // 6.14.136 (AP-L9) : ancien tirage relu avec `noRepeatMonths` 0 ; le tirage sans répétition (dès 2027-01) garde octobre à janvier.
+    MUTATOR_RULES.noRepeatMonths = 0;
     expect(months.map((m) => mutatorFor(m)?.id)).toEqual(["vents", "guerre", "chantiers", "soutes", "rempart", "marchands", "vents", "savoir", "rempart", "guerre", "rempart", "marchands"]);
+    MUTATOR_RULES.noRepeatMonths = 6;
+    expect(months.slice(0, 4).map((m) => mutatorFor(m)?.id)).toEqual(["vents", "guerre", "chantiers", "soutes"]);
     expect(mutatorList().map((m) => m.id)).toEqual(["ruee", "chantiers", "savoir", "vents", "guerre", "rempart", "marchands", "chantiers_navals", "soutes", "chasse"]);
     expect(bountyFugitives().map((f) => f.name)).toEqual(OLD_FUGITIVES);
     expect(generateBoard("u1", 100, 5).map((c) => fugitiveAt(c.fugitive).name).every((n) => OLD_FUGITIVES.includes(n))).toBe(true);

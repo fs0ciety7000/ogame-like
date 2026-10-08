@@ -20,6 +20,7 @@ import { CATALOG_START, catalogEntryFor } from "@/game/seasonCatalog";
 import { seasonLabel } from "@/game/seasons";
 import { STORY_SPEAKERS, type Speaker, type StoryLine } from "@/game/story";
 import { chooseNovelty, contentToMeasure, hasContentAccess, NOVELTY_RULES, noveltyTexts } from "@/game/novelty";
+import { freshTemplates, NARRATIVE_RULES, shiftMonth, textList, yearArchetypeFor } from "@/game/narrative";
 import {
   extraObjectives,
   familyBase,
@@ -363,6 +364,19 @@ export interface Archetype {
 
 /** Archétypes dont l'illustration du boss existe (public/assets/chronicles/auto/<id>-boss.webp). */
 export const AUTO_ART: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
+/** 6.14.138 (AU27, lot AP-L11, constat AP-7) : archétypes dont le second boss est illustré
+ *  (public/assets/chronicles/auto/<id>-boss-2.webp) : il sert les boss de rang impair (2e et 4e nom, puis la réserve un sur deux).
+ *  Un archétype absent garde son image unique (image provisoire). */
+export const AUTO_ART_2: string[] = [];
+
+/** 6.14.138 : image du boss d'un chapitre généré : première ou seconde illustration de l'archétype selon le rang du nom. */
+export function autoBossImage(arch: Pick<Archetype, "id" | "bossNames" | "image">, bossName: string, reserve: string[] = []): string {
+  if (!AUTO_ART.includes(arch.id)) return arch.image;
+  const names = [...arch.bossNames, ...reserve];
+  const rank = names.indexOf(bossName);
+  return AUTO_ART_2.includes(arch.id) && rank >= 0 && rank % 2 === 1 ? `/assets/chronicles/auto/${arch.id}-boss-2.webp` : `/assets/chronicles/auto/${arch.id}-boss.webp`;
+}
+
 /** 5.16 : archétypes dont le sceau existe (public/assets/chronicles/auto/<id>-sceau.webp), indépendamment du boss. */
 export const AUTO_SEALS: string[] = ["confrerie", "cartel", "choeur", "gravhorn", "culte", "inquisition", "meute"];
 
@@ -575,12 +589,47 @@ const HERO_LINES = [
   "{hero} a {deed} ; {villain} a mis sa tête à prix. Ça ne passe pas inaperçu.",
 ];
 
-function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string | number>): string | null {
+function heroLine(rng: () => number, d: WorldDigest, vars: Record<string, string | number>, bank: string[] = HERO_LINES): string | null {
   const keys = storyKeys().filter((k) => d.heroes[k]);
   if (keys.length === 0) return null;
   const k = pick(rng, keys);
   const h = d.heroes[k]!;
-  return fill(pick(rng, HERO_LINES), { ...vars, hero: h.pseudo, deed: fill(objectiveDeed(k), { n: h.count }) });
+  return fill(pick(rng, bank), { ...vars, hero: h.pseudo, deed: fill(objectiveDeed(k), { n: h.count }) });
+}
+
+/* ---------- 6.14.137 (AU27, lot AP-L10) : banques de textes et anti-répétition ---------- */
+
+interface TextBanks {
+  actTitles: string[][];
+  hooks: string[][];
+  taunts: string[];
+  heroes: string[];
+  /** Ordres d'une action : registre, plus ceux des banques. */
+  orders: (k: ChronicleObjective) => string[];
+  /** Textes lus dans les derniers mois écrits (titres d'épisode et répliques). */
+  recent: string[];
+  /** Gabarits pas encore lus (tous s'ils ont tous servi). */
+  fresh: (list: string[]) => string[];
+}
+
+/** Banques en vigueur pour un mois : règles `narrative` ; désactivées : listes d'avant, sans anti-répétition. */
+function textBanks(monthId: string, existing: ChronicleMonth[]): TextBanks {
+  const r = NARRATIVE_RULES;
+  if (r.enabled === false) return { actTitles: ACT_TITLES, hooks: HOOKS, taunts: VILLAIN_TAUNTS, heroes: HERO_LINES, orders: objectiveOrders, recent: [], fresh: (l) => l };
+  const n = Math.max(0, Math.floor(Number(r.noRepeatMonths) || 0));
+  const from = shiftMonth(monthId, -n);
+  const recent = n > 0 ? existing.filter((m) => m && m.id >= from && m.id < monthId).flatMap((m) => (m.episodes ?? []).flatMap((e) => [e.title, ...(e.lines ?? []).map((l) => l.text)])) : [];
+  const acts = ACT_TITLES.map((legacy, i) => textList(r.actTitles?.[i], legacy));
+  const hooks = HOOKS.map((legacy, i) => textList(r.hooks?.[i], legacy));
+  return {
+    actTitles: acts,
+    hooks,
+    taunts: textList(r.villainTaunts, VILLAIN_TAUNTS),
+    heroes: textList(r.heroLines, HERO_LINES),
+    orders: (k) => [...objectiveOrders(k), ...textList(r.orders?.[k])],
+    recent,
+    fresh: (list) => freshTemplates(list, recent),
+  };
 }
 
 /* ---------- objectifs ---------- */
@@ -704,39 +753,61 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
   const gen = chronicleGenRules();
   // Tirage d'abord (la suite du tirage ne dépend pas du thème), puis 6.8.2 : la faction du thème du passe, sauf si elle revient deux mois de suite.
   const drawn = pick(rng, archetypes.filter((a) => !recentArch.includes(a.id)));
-  const themeId = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId).theme : null;
-  const themed = gen.followPassTheme && themeId ? archetypes.find((a) => a.id === gen.themeArchetypes[themeId]) : undefined;
+  const catalog = o.monthId >= CATALOG_START ? catalogEntryFor(o.monthId) : null;
+  const themeId = catalog ? catalog.theme : null;
+  // 6.14.137 (AP-L10, Q-AP7) : faction par thème et par année du catalogue (année 1 : table d'avant).
+  const themedId = gen.followPassTheme && themeId ? yearArchetypeFor(themeId, catalog?.year ?? 1, gen.themeArchetypes) : undefined;
+  const themed = themedId ? archetypes.find((a) => a.id === themedId) : undefined;
   const arch = themed && themed.id !== recentArch.at(-1) ? themed : drawn;
   const usedTitles = new Set(o.existing.flatMap((m) => [m.title, m.completion?.title ?? "", m.boss.name]));
-  const fresh = (xs: string[]) => pick(rng, xs.filter((x) => !usedTitles.has(x)).length ? xs.filter((x) => !usedTitles.has(x)) : xs);
-  const title = fresh(arch.titles);
-  const bossName = fresh(arch.bossNames);
-  const completionTitle = fresh(arch.completionTitles);
+  // 6.14.137 (AP-L10) : réserve de l'archétype prise seulement quand ses textes ont tous servi (un seul tirage, comme avant).
+  const extras = NARRATIVE_RULES.enabled !== false ? NARRATIVE_RULES.archetypeExtras?.[arch.id] : undefined;
+  const fresh = (xs: string[], reserve?: string[]) => {
+    const left = xs.filter((x) => !usedTitles.has(x));
+    const spare = left.length > 0 ? [] : textList(reserve).filter((x) => !usedTitles.has(x));
+    return pick(rng, left.length ? left : spare.length ? spare : xs);
+  };
+  const title = fresh(arch.titles, extras?.titles);
+  const bossName = fresh(arch.bossNames, extras?.bossNames);
+  const completionTitle = fresh(arch.completionTitles, extras?.completionTitles);
+  const banks = textBanks(o.monthId, o.existing);
   const { value: difficulty, reasons } = chapterDifficulty(d);
   const previousTypes = (recent.at(-1)?.episodes ?? []).map((e) => e.objective.type);
   const types = chooseObjectives(rng, d, previousTypes, themeId);
   // 6.8.2 : récompenses des épisodes tirées sous budget, avec leur propre graine (l'ancien tirage reste fait : le reste du chapitre ne change pas).
   const template = episodeRewards(rng, difficulty);
   const rewards = gen.enabled ? budgetEpisodeRewards(seededRandom(`chapter-rewards:${o.monthId}:${o.variant ?? 0}`), difficulty, gen) : template;
-  if (themed) reasons.push(arch === themed ? `Faction du thème du passe (${themeId}) : ${arch.faction}.` : `Le thème du passe (${themeId}) appelait ${themed.faction}, déjà là le mois dernier : faction tirée au sort.`);
+  if (themed) reasons.push(arch === themed ? `Faction du thème du passe (${themeId}, année ${catalog?.year ?? 1}) : ${arch.faction}.` : `Le thème du passe (${themeId}) appelait ${themed.faction}, déjà là le mois dernier : faction tirée au sort.`);
   if (gen.enabled) reasons.push(`Récompenses des épisodes tirées sous budget : ${round2(gen.episodeBudgetHours * difficulty)} h de production équivalentes (×${difficulty}).`);
   const vars: Record<string, string | number> = { villain: villainName(arch.villain), boss: lcArticle(bossName), faction: arch.faction, ofFaction: ofFaction(arch.faction) };
   const usedActs = new Set<string>();
+  const built: ChronicleEpisode[] = [];
   const episodes: ChronicleEpisode[] = types.map((type, i) => {
     const count = objectiveCount(type, d, difficulty);
     const lines: StoryLine[] = [];
+    // 6.14.137 (AP-L10) : banques réglables ; un texte lu dans les derniers mois écrits n'est pas repris tant qu'il en reste.
     if (i === 0) {
-      lines.push(voiceLine(arch.villain, fill(pick(rng, VILLAIN_TAUNTS), vars)));
-      const hero = heroLine(rng, d, vars);
+      lines.push(voiceLine(arch.villain, fill(pick(rng, banks.fresh(banks.taunts)), vars)));
+      const hero = heroLine(rng, d, vars, banks.fresh(banks.heroes));
       if (hero) lines.push({ speaker: arch.ally, text: ucfirst(hero) });
     }
-    if (i === 2) lines.push(voiceLine(arch.villain, fill(pick(rng, VILLAIN_TAUNTS.filter((t) => !lines.some((l) => l.text === fill(t, vars)))), vars)));
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, HOOKS[i]), vars)) });
-    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, objectiveOrders(type)), { ...vars, count, s: count > 1 ? "s" : "" })) });
-    let epTitle = pick(rng, ACT_TITLES[i]);
-    while (usedActs.has(epTitle)) epTitle = pick(rng, ACT_TITLES[i]);
+    if (i === 2) {
+      // Avant : filtre sur les répliques de l'épisode lui-même (sans effet) ; désormais, pas la réplique de l'épisode 1.
+      const unused = NARRATIVE_RULES.enabled === false ? banks.taunts.filter((t) => !lines.some((l) => l.text === fill(t, vars))) : banks.taunts.filter((t) => !built.some((e) => e.lines.some((l) => l.text === ucfirst(fill(t, vars)))));
+      lines.push(voiceLine(arch.villain, fill(pick(rng, banks.fresh(unused.length > 0 ? unused : banks.taunts)), vars)));
+    }
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, banks.fresh(banks.hooks[i] ?? HOOKS[i])), vars)) });
+    lines.push({ speaker: arch.ally, text: ucfirst(fill(pick(rng, banks.fresh(banks.orders(type))), { ...vars, count, s: count > 1 ? "s" : "" })) });
+    const acts = banks.actTitles[i] ?? ACT_TITLES[i];
+    const notRecent = acts.filter((t) => !banks.recent.includes(t));
+    const actPool = notRecent.length > 0 ? notRecent : acts;
+    const actList = actPool.some((t) => !usedActs.has(t)) ? actPool : acts;
+    let epTitle = pick(rng, actList);
+    while (usedActs.has(epTitle)) epTitle = pick(rng, actList);
     usedActs.add(epTitle);
-    return { title: epTitle, lines, objective: { type, count }, reward: rewards[i] };
+    const ep: ChronicleEpisode = { title: epTitle, lines, objective: { type, count }, reward: rewards[i] };
+    built.push(ep);
+    return ep;
   });
   reasons.push(...types.map((t, i) => `Épisode ${i + 1} : ${objectiveLabel(t).toLowerCase()} × ${episodes[i].objective.count} (médiane ${d.weeklyMedian[t] ?? 0} par semaine, base ${baseCount(t)}).`));
   // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » : un contenu ajouté récemment prend un épisode (sa propre graine : le reste du
@@ -762,10 +833,12 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     reasons.push(p.reason);
   }
   const art = AUTO_ART.includes(arch.id);
+  // 6.14.138 (AP-L11) : second boss illustré par archétype (rang impair du nom) ; sans lui, l'image unique d'avant.
+  const bossImage = art ? autoBossImage(arch, bossName, textList(extras?.bossNames)) : arch.image;
   const seal = AUTO_SEALS.includes(arch.id);
   const label = seasonLabel(d.monthId);
   const codex: ChronicleCodexEntry[] = [
-    { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} · ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image },
+    { id: "dossier", name: `Dossier : ${bossName}`, subtitle: `${ucfirst(arch.faction)} · ${title}`, text: `${arch.lore.join(" ")} Commandement : ${vars.villain}.`, image: bossImage },
     { id: "archives", name: `Archives : ${label}`, subtitle: "Ce que le secteur a accompli", text: archivesText(d, label), image: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem },
   ];
   const auto: ChapterAuto = {
@@ -786,13 +859,13 @@ export function generateChapter(o: GenerateOptions): ChronicleMonth {
     boss: {
       name: bossName,
       title: `Pourfendeur ${ofName(bossName)}`,
-      image: art ? `/assets/chronicles/auto/${arch.id}-boss.webp` : arch.image,
+      image: bossImage,
       emblem: seal ? `/assets/chronicles/auto/${arch.id}-sceau.webp` : arch.emblem,
       fallbackImage: arch.fallbackImage,
       lore: pick(rng, arch.lore),
     },
     episodes,
-    synopsis: fill(`${pick(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst(heroLine(rng, d, vars) ?? "")}`.trim(), vars),
+    synopsis: fill(`${pick(rng, arch.lore)} Ce mois-ci, {villain} lance {boss} contre le secteur. ${ucfirst(heroLine(rng, d, vars, banks.fresh(banks.heroes)) ?? "")}`.trim(), vars),
     completion: { title: completionTitle, banner: bannerGradient(arch.accent), rewards: [{ kind: "relic", rarity: difficulty >= gen.completionEpicFrom ? "epic" : "rare" }, { kind: "amber", amount: gen.completionAmber }] },
     codex,
     auto,

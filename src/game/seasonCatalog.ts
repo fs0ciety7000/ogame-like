@@ -57,6 +57,10 @@ export interface SeasonCatalogEntry {
   commander: CatalogCommander;
   /** Scène de l'illustration du thème (prompt Midjourney complet construit autour). */
   scene: string;
+  /** 6.14.138 (AU27, lot AP-L11) : illustration propre de la saison (sinon : celle de l'année si elle existe, puis celle du thème). */
+  image?: string;
+  /** 6.14.139 (AU27, lot AP-L12) : saison générée au-delà du cycle écrit : identifiant de la saison écrite qu'elle prolonge. */
+  generatedFrom?: string;
 }
 
 const E = (theme: RotationThemeId, year: number, name: string, tagline: string, synopsis: string, commander: CatalogCommander, scene: string): SeasonCatalogEntry => ({ id: `${theme}_${year}`, theme, year, name, tagline, synopsis, commander, scene });
@@ -167,16 +171,178 @@ export function catalogIndex(monthId: string): number {
   return ((n % cycle) + cycle) % cycle;
 }
 
-/** Entrée du catalogue pour un mois (AAAA-MM). 6.14.128 : repli sur l'année la plus proche du même thème, puis sur la
- *  première saison (la garde de contenu exige une saison par thème et par année). */
-export function catalogEntryFor(monthId: string): SeasonCatalogEntry {
-  const i = catalogIndex(monthId);
+/** Saison écrite d'un rang du cycle. 6.14.128 : repli sur l'année la plus proche du même thème, puis sur la première saison. */
+function writtenEntryAt(i: number): SeasonCatalogEntry {
   const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
   const theme = rotation[i % rotation.length];
   const year = Math.floor(i / rotation.length) + 1;
   const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
   const same = list.filter((e) => e.theme === theme);
   return same.find((e) => e.year === year) ?? same.sort((a, b) => Math.abs(a.year - year) - Math.abs(b.year - year))[0] ?? list[0];
+}
+
+/** Entrée du catalogue pour un mois (AAAA-MM). 6.14.128 : repli sur l'année la plus proche du même thème, puis sur la
+ *  première saison (la garde de contenu exige une saison par thème et par année).
+ *  6.14.139 (AU27, lot AP-L12) : au-delà du cycle écrit (novembre 2029 pour le catalogue livré), une saison générée qui prolonge
+ *  la saison écrite du même rang (nom, commandant et paire de rôles inédits) ; `seasonGen.enabled` faux : le cycle reboucle. */
+export function catalogEntryFor(monthId: string): SeasonCatalogEntry {
+  const cycle = catalogCycle();
+  const n = monthIndex(monthId) - monthIndex(CATALOG_START);
+  const i = ((n % cycle) + cycle) % cycle;
+  const written = writtenEntryAt(i);
+  if (n < cycle || SEASON_GEN_RULES.enabled === false) return written;
+  return generatedSeasonEntry(Math.floor(n / cycle), i, written);
+}
+
+/* ---------- 6.14.139 (AU27, lot AP-L12, constat AP-8, Q-AP5) : saisons générées au-delà du cycle ---------- */
+
+/** Réglages du générateur de saisons (GameRules.seasonGen). Valeurs littérales (initialisation des modules). */
+export const SEASON_GEN_RULES = {
+  /** Faux : après le cycle écrit, le catalogue reboucle (noms et commandants répétés). */
+  enabled: true,
+  /** Sous-titres ajoutés au nom de la saison écrite qu'une saison générée prolonge (« L'Appel du Vide : la Relève »). */
+  subtitles: ["la Relève", "les Héritiers", "le Second Souffle", "l'Écho", "la Revanche", "les Braises", "le Retour", "la Nouvelle Vague", "l'Autre Rive", "les Cendres chaudes"],
+  /** Phrase d'ouverture du scénario d'une saison générée. */
+  eraLines: ["Des années ont passé.", "Le secteur a changé, pas ses ennemis.", "Une nouvelle génération prend la relève.", "Les anciens fronts se rallument.", "On croyait cette histoire finie."],
+  /** Prénoms des commandants générés (« f », « m ») : un sur deux de chaque. */
+  firstNames: {
+    f: ["Alma", "Yseult", "Tamsin", "Liora", "Mirelle", "Sigrun", "Zélie", "Ondine", "Rhea", "Ysolde"],
+    m: ["Aurèle", "Tobias", "Evander", "Malo", "Corwin", "Idris", "Lazare", "Soren", "Ewald", "Tristan"],
+  } as Record<string, string[]>,
+  /** Noms de famille (21 : premier avec 10, chaque couple prénom-nom sert une fois sur 210 saisons par genre). */
+  lastNames: ["Arden", "Volkov", "Nakamura", "Belcourt", "Oyelaran", "Strand", "Quill", "Marchetti", "Halloran", "Desrosiers", "Kaskari", "Thorne", "Vidal", "Okafor", "Lindgren", "Ravel", "Sarkis", "Wren", "Castellane", "Moreau-Kin", "Ashgrove"],
+  /** Titre d'un commandant généré selon son rôle principal : [masculin, féminin]. */
+  roleTitles: {
+    logistician: ["Guide des franges", "Guide des franges"],
+    warden: ["Gardien des réserves", "Gardienne des réserves"],
+    engineer: ["Ingénieur de la Forge", "Ingénieure de la Forge"],
+    diplomat: ["Envoyé des comptoirs", "Envoyée des comptoirs"],
+    admiral: ["Amiral de la Houle", "Amirale de la Houle"],
+    governor: ["Gouverneur des franges", "Gouverneure des franges"],
+    corsair: ["Corsaire du tableau", "Corsaire du tableau"],
+    hunter: ["Veneur des comètes", "Veneuse des comètes"],
+    steward: ["Intendant des greniers", "Intendante des greniers"],
+    spy: ["Ombre des archives", "Ombre des archives"],
+    mechanic: ["Maître des cales", "Maîtresse des cales"],
+    strategist: ["Stratège du rempart", "Stratège du rempart"],
+  } as Record<string, string[]>,
+  /** Histoire d'un commandant généré selon son second rôle ({commander}). */
+  roleLore: {
+    logistician: "{commander} n'a jamais perdu un convoi, même au plus noir des routes rouges.",
+    warden: "{commander} a gardé un entrepôt assiégé trois semaines, sans rationner personne.",
+    engineer: "{commander} rafistole un moteur en vol et le rend plus rapide qu'à sa sortie d'usine.",
+    diplomat: "{commander} a signé plus de traités qu'il n'y a de ports dans le secteur.",
+    admiral: "{commander} a mené une flotte entière à travers un champ de mines, sans une perte.",
+    governor: "{commander} a fait d'un caillou désert une colonie de cent mille âmes.",
+    corsair: "{commander} a pillé trois seigneurs de guerre, et rendu le butin à leurs victimes.",
+    hunter: "{commander} a pisté un colosse d'un bout à l'autre du Vide.",
+    steward: "{commander} tient les comptes d'un empire au gramme près, et n'a jamais laissé un grenier vide.",
+    spy: "{commander} a lu les ordres de l'ennemi avant ses propres officiers.",
+    mechanic: "{commander} remet une frégate en ligne en une nuit, avec trois pièces et beaucoup de patience.",
+    strategist: "{commander} a tenu une ligne de défense cent jours contre une armada.",
+  } as Record<string, string>,
+  /** Apparence pour le prompt du portrait, selon le rôle principal ({person} : woman ou man). */
+  roleLooks: {
+    logistician: "a weathered convoy master {person} with route holograms around the hands, travel coat, magenta nebula behind",
+    warden: "a stern vault warden {person} in frost-rimmed armor, sealed depot door glowing pale blue behind",
+    engineer: "a starship engineer {person} with welding goggles, forge sparks and cyan scaffolding lights behind",
+    diplomat: "an elegant trade envoy {person} in emerald and gold robes, orbital bazaar lanterns behind",
+    admiral: "a fleet admiral {person} in a dark naval uniform, battle fleet in formation behind",
+    governor: "a colony governor {person} in a mint-trimmed coat, terraformed world at dawn behind",
+    corsair: "a corsair {person} with a scarred grin and gold trinkets, hive station and wanted posters behind",
+    hunter: "a comet hunter {person} with a long-range targeting monocle, scarlet comet tail behind",
+    steward: "a granary steward {person} with a glowing ledger hologram, golden harvest stations behind",
+    spy: "a shadow agent {person} with a dark visor reflecting violet data, archive shelves behind",
+    mechanic: "a dockyard mechanic {person} with a mechanical arm, warship hull in a dry dock behind",
+    strategist: "a siege strategist {person} in heavy blue armor, shield walls under fire behind",
+  } as Record<string, string>,
+  /** Variation de la scène d'illustration (anglais, prompt Midjourney). */
+  sceneVariations: ["years later, under a new star", "at dusk, with a second fleet arriving", "seen from a distant moon", "after a long war, scars visible", "with a new generation of ships", "in a storm of solar wind"],
+};
+
+/** Libellé, unité, bornes et aide de chaque réglage (admin, Tous les réglages ; bornes vérifiées par validateRules). */
+export const SEASON_GEN_RULES_META = {
+  enabled: { label: "Saisons générées au-delà du cycle écrit", hint: "Faux : après le cycle (36 mois livrés), le catalogue reboucle. Un passe déjà écrit ne change jamais." },
+  subtitles: { label: "Sous-titres des saisons générées", hint: "Ajoutés au nom de la saison écrite prolongée : « L'Appel du Vide : la Relève »." },
+  eraLines: { label: "Phrases d'ouverture du scénario" },
+  firstNames: { label: "Prénoms des commandants", hint: "f, m : un commandant sur deux de chaque." },
+  lastNames: { label: "Noms de famille des commandants", hint: "Un nombre premier avec celui des prénoms (21 pour 10) : chaque couple sert une fois." },
+  roleTitles: { label: "Titres par rôle principal", hint: "Rôle → [masculin, féminin]." },
+  roleLore: { label: "Histoire par second rôle", hint: "{commander} : son nom." },
+  roleLooks: { label: "Apparence par rôle principal (prompt du portrait, anglais)", hint: "{person} : woman ou man." },
+  sceneVariations: { label: "Variations de la scène (prompt de l'illustration, anglais)" },
+};
+
+/** Rôles des commandants (les douze, une fois chacun). */
+const ALL_ROLES = (): CommanderId[] => Object.values(DEFAULT_THEME_PRIMARY);
+
+const listOf = (xs: unknown, fallback: readonly string[]): string[] => {
+  const out = Array.isArray(xs) ? xs.filter((x): x is string => typeof x === "string" && x.trim() !== "") : [];
+  return out.length > 0 ? out : [...fallback];
+};
+
+/**
+ * Saison générée : tour `lap` (1 = premier tour après le cycle écrit), rang `i` du cycle, saison écrite `base` du même rang.
+ * Nom : nom écrit + sous-titre ; commandant : prénom et nom tirés sans répétition, second rôle jamais pris par ce thème ;
+ * scénario : phrase d'ouverture + scénario écrit ; scène : scène écrite + variation. Déterministe (même mois, même saison).
+ */
+export function generatedSeasonEntry(lap: number, i: number, base: SeasonCatalogEntry): SeasonCatalogEntry {
+  const r = SEASON_GEN_RULES;
+  const D = DEFAULT_SEASON_GEN;
+  const rotation = THEME_ROTATION.length > 0 ? THEME_ROTATION : [...DEFAULT_THEME_ROTATION];
+  const R = Math.max(1, rotation.length);
+  const years = catalogYears();
+  const cycle = catalogCycle();
+  const themeIdx = i % R;
+  const baseYear = Math.floor(i / R) + 1;
+  const year = lap * years + baseYear;
+  const k = (lap - 1) * cycle + i;
+  // Nom : sous-titre décalé par thème et par année (unique pour un thème sur `subtitles.length` tours).
+  const subs = listOf(r.subtitles, D.subtitles);
+  const subtitle = subs[(lap - 1 + themeIdx + (baseYear - 1)) % subs.length];
+  const eras = listOf(r.eraLines, D.eraLines);
+  // Commandant : genre alterné ; couple prénom-nom par le reste chinois (premiers entre eux : jamais deux fois le même couple).
+  const gender = k % 2 === 0 ? "f" : "m";
+  const q = Math.floor(k / 2);
+  const firsts = listOf(r.firstNames?.[gender], D.firstNames[gender]);
+  const lasts = listOf(r.lastNames, D.lastNames);
+  const name = `${firsts[q % firsts.length]} ${lasts[(q + (gender === "m" ? 7 : 0)) % lasts.length]}`;
+  const primary = THEME_PRIMARY[base.theme] ?? DEFAULT_THEME_PRIMARY[base.theme] ?? "admiral";
+  const list = SEASON_CATALOG.length > 0 ? SEASON_CATALOG : DEFAULT_SEASON_CATALOG;
+  const taken = new Set(list.filter((e) => e.theme === base.theme).map((e) => e.commander?.secondary));
+  const free = ALL_ROLES().filter((x) => x !== primary && !taken.has(x));
+  const pool = free.length > 0 ? free : ALL_ROLES().filter((x) => x !== primary);
+  const g = (lap - 1) * years + (baseYear - 1);
+  const secondary = pool[g % pool.length];
+  const titles = (r.roleTitles?.[primary] ?? D.roleTitles[primary] ?? ["Commandant", "Commandante"]) as string[];
+  const title = (gender === "f" ? titles[1] : titles[0]) || titles[0] || "Commandant";
+  const lore = String(r.roleLore?.[secondary] ?? D.roleLore[secondary] ?? "{commander} a fait ses preuves sur tous les fronts.");
+  const look = String(r.roleLooks?.[primary] ?? D.roleLooks[primary] ?? "a seasoned starship officer {person}, dark space behind").replace(/\{person\}/g, gender === "f" ? "woman" : "man");
+  const variations = listOf(r.sceneVariations, D.sceneVariations);
+  return {
+    id: `${base.theme}_${year}`,
+    theme: base.theme,
+    year,
+    name: `${base.name} : ${subtitle}`,
+    tagline: base.tagline,
+    synopsis: `${eras[k % eras.length]} ${base.synopsis}`,
+    commander: { name, title, secondary, lore, look },
+    scene: `${base.scene}, ${variations[(lap - 1 + themeIdx) % variations.length]}`,
+    generatedFrom: base.id,
+  };
+}
+
+const DEFAULT_SEASON_GEN = structuredClone(SEASON_GEN_RULES);
+
+export function validateSeasonGenRules(r: Partial<typeof SEASON_GEN_RULES> | undefined): string[] {
+  if (!r) return [];
+  const e: string[] = [];
+  const L = "Saisons générées";
+  const nonEmpty = (xs: unknown) => Array.isArray(xs) && xs.some((x) => typeof x === "string" && x.trim() !== "");
+  for (const k of ["subtitles", "eraLines", "lastNames", "sceneVariations"] as const) if (r[k] !== undefined && !nonEmpty(r[k])) e.push(`${L} : « ${k} » : au moins un texte.`);
+  if (r.firstNames !== undefined && !(nonEmpty(r.firstNames?.f) && nonEmpty(r.firstNames?.m))) e.push(`${L} : prénoms « f » et « m » : au moins un chacun.`);
+  for (const [role, t] of Object.entries(r.roleTitles ?? {})) if (!Array.isArray(t) || t.length !== 2 || !t.every((x) => typeof x === "string" && x.trim())) e.push(`${L} : titre du rôle ${role} : [masculin, féminin].`);
+  return e;
 }
 
 /** Prompt Midjourney de l'illustration du thème (en-tête de la page du passe). */

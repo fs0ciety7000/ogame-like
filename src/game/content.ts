@@ -9,13 +9,14 @@ import { setLootTables, validateLootTables } from "@/game/loot";
 import { DEFAULT_RELICS, defaultRelicSettings, setRelics, validateRelics, type RelicSettings, type RelicTemplate } from "@/game/relics";
 import { defaultSeasonPassConfig, setSeasonPass, validateSeasonPass, type SeasonPassConfig } from "@/game/seasonPass";
 import { DEFAULT_PASS_THEMES, defaultPassSeasonsConfig, setPassSeasons, setPassThemes, validatePassCatalog, validatePassSeasons, type PassSeasonsConfig, type PassTheme } from "@/game/passSeasons";
-import { DEFAULT_SEASON_CATALOG, setSeasonCatalog, type SeasonCatalogEntry } from "@/game/seasonCatalog";
+import { DEFAULT_SEASON_CATALOG, setSeasonCatalog, validateSeasonGenRules, type SeasonCatalogEntry } from "@/game/seasonCatalog";
 import { defaultWarlordsConfig, setWarlords, validateWarlords, type WarlordsConfig } from "@/game/warlords";
 import { BUILDINGS, DEFAULT_BUILDINGS, findBuilding, setBuildings, withFixedBuildings, type BuildingDef } from "@/game/buildings";
 import { CLASS_UNITS, DEFAULT_UNITS, ELITE_UNITS, findUnit, KESH_HUNTER_UNIT, setUnits, UNIT_ROLE_IDS, UNIT_TO_TECH, UNITS, type UnitDef } from "@/game/units";
 import { DEFAULT_TECHNOLOGIES, findTech, setTechnologies, TECH_EFFECT_LABELS, techEffects, TECHNOLOGIES, validateTechEffect, type TechDef } from "@/game/technologies";
 import { actionOfContract, setTrackedContentResolver, validateTrackedActionRules } from "@/game/trackedActions";
 import { addedOnError, validateNoveltyRules } from "@/game/novelty";
+import { validateNarrativeRules } from "@/game/narrative";
 import { DEFAULT_MISSIONS, setMissions, type MissionDef } from "@/game/missions";
 import { PVP_RULES } from "@/game/pvp";
 import { COMBAT_RULES } from "@/game/combat";
@@ -489,6 +490,10 @@ export function applyGameContent(overrides: Partial<GameContent>, nowMs?: number
   MUTATOR_RULES.enabled = content.rules.mutators.enabled !== false;
   MUTATOR_RULES.overrides = { ...content.rules.mutators.overrides };
   MUTATOR_RULES.defs = structuredClone(content.rules.mutators.defs);
+  // 6.14.136 (AP-L9) : tirage sans répétition (un champ absent reprend le défaut à la fusion).
+  MUTATOR_RULES.noRepeatMonths = content.rules.mutators.noRepeatMonths;
+  MUTATOR_RULES.freshMonths = content.rules.mutators.freshMonths;
+  MUTATOR_RULES.noRepeatFrom = content.rules.mutators.noRepeatFrom;
   Object.assign(TERRITORY_WAR_RULES, structuredClone(content.rules.territoryWar));
   Object.assign(XP_TIER_RULES, structuredClone(content.rules.xpTiers));
   Object.assign(PASS_GEN_RULES, structuredClone(content.rules.passGen));
@@ -617,6 +622,10 @@ export function validateRules(rules: Partial<GameRules> | null | undefined): str
   errors.push(...validateTrackedActionRules((merged as unknown as { trackedActions?: Parameters<typeof validateTrackedActionRules>[0] }).trackedActions));
   // 6.14.122 (AP-L8) : épisode « nouveauté » (quantités, bibliothèque de textes).
   errors.push(...validateNoveltyRules((merged as unknown as { novelty?: Parameters<typeof validateNoveltyRules>[0] }).novelty));
+  // 6.14.139 (AP-L12) : saisons générées au-delà du cycle (listes non vides, titres par rôle).
+  errors.push(...validateSeasonGenRules((merged as unknown as { seasonGen?: Parameters<typeof validateSeasonGenRules>[0] }).seasonGen));
+  // 6.14.137 (AP-L10) : banques de textes (quatre actes, listes non vides, factions connues).
+  errors.push(...validateNarrativeRules((merged as unknown as { narrative?: Parameters<typeof validateNarrativeRules>[0] }).narrative, [...ARCHETYPES.map((a) => a.id), ...FACTIONS.map((f) => f.id)]));
   // 6.9.0 (AU4) : commerce.
   const au = merged.auctions;
   if (!(au.minIncrement > 0 && au.minIncrement <= 1 && au.taxRate >= 0 && au.taxRate < 1)) errors.push("Enchères : surenchère entre 0 et 1, taxe entre 0 et 0,99.");

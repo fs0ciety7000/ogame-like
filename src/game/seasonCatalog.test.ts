@@ -27,7 +27,7 @@ describe("v5.14 catalogue des saisons", () => {
     for (const r of RARE_ROLES) expect(SEASON_CATALOG.filter((e) => THEME_PRIMARY[e.theme] === r)).toHaveLength(3);
   });
 
-  it("rotation mensuelle : un thème différent chaque mois, boucle tous les trois ans", () => {
+  it("rotation mensuelle : un thème différent chaque mois ; thèmes en boucle tous les trois ans, saisons prolongées (6.14.139)", () => {
     expect(catalogIndex(CATALOG_START)).toBe(0);
     let m = CATALOG_START;
     const seen: string[] = [];
@@ -37,7 +37,10 @@ describe("v5.14 catalogue des saisons", () => {
       seen.push(e.theme);
       m = nextMonthId(m);
     }
-    expect(catalogEntryFor("2029-11")).toBe(catalogEntryFor(CATALOG_START));
+    // 6.14.139 (AP-L12) : après 36 mois, même thème, mais une saison générée qui prolonge la saison écrite (nom et commandant neufs).
+    expect(catalogEntryFor("2029-11").theme).toBe(catalogEntryFor(CATALOG_START).theme);
+    expect(catalogEntryFor("2029-11").generatedFrom).toBe(catalogEntryFor(CATALOG_START).id);
+    expect(catalogEntryFor("2029-11").name).not.toBe(catalogEntryFor(CATALOG_START).name);
     expect(catalogEntryFor("2027-11").year).toBe(2);
     expect(catalogEntryFor("2026-12").theme).toBe("hiver");
   });

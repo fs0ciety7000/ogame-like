@@ -70,6 +70,10 @@ Références habituelles :
 - **Effet** : linéaire par niveau, avec **paliers** qualitatifs aux niveaux 5, 10, 15, 20 (format `bonusFromLevel` / `tier2`).
 - **Temps** : `secondsPerLevel × niveau`, réduit par les bonus ; viser 5 min (niv. 1), environ 2 h (niv. 10), environ 1 j (niv. 20).
 - Vérifier chaque courbe dans le simulateur admin (« et si ») et l'historique d'équilibrage avant de fixer les chiffres.
+- Un lot qui touche un générateur (Chroniques, passe, catalogue des saisons, saga d'alliance, mutateurs) lance
+  `node scripts/procedural-sim.mjs --months 48` avant et après (ou `--base <préréglage | fichier>` pour les deux d'un coup) et reporte
+  dans sa fiche les mesures qui bougent : répétitions (titres, répliques, noms, commandants, mutateurs), variété (factions, images),
+  faisabilité (jour de fin simulé du médian et du plus actif, épisodes sur une action peu pratiquée) (6.14.140).
 
 ### 4.2 Paliers (modèle)
 

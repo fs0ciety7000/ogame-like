@@ -6,8 +6,8 @@
 | XP et rangs | continu | 28 rangs, de Fer III (100) à Élite (420 000) ; paliers d'XP par source (plein tarif, demi, quart) ; jeu actif ×1,25 à ×1,5 |
 | Saisons | mensuel | champion 200 Ambre + 50 jetons ; podium ; participation 35 Ambre |
 | Divisions (ligues) | hebdo | 6 divisions Bronze → Mythique, 20 % montent, 20 % descendent |
-| Passe | mensuel | 30 paliers ; points par palier calculés (médian fini vers le jour 24, plus actif pas avant le 15, 25 à 200) ; récompenses sous budget de 140 h (jalons 5, 10, 15, 20, 25 ; relique rare au 20 ; plafonds 350 Ambre, 6 jetons, 4 dossiers, 10 capsules) ; catalogue de 36 saisons ; un seul passe par mois dès novembre 2026 ; points tracés par source |
-| Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque ; récompenses d'épisode sous budget de 10 h × difficulté (0,7 à 1,4) ; faction du thème du passe |
+| Passe | mensuel | 30 paliers ; points par palier calculés (médian fini vers le jour 24, plus actif pas avant le 15, 25 à 200) ; récompenses sous budget de 140 h (jalons 5, 10, 15, 20, 25 ; relique rare au 20 ; plafonds 350 Ambre, 6 jetons, 4 dossiers, 10 capsules) ; catalogue de 36 saisons, prolongé par des saisons générées au-delà (6.14.139) ; répliques des jalons par année du catalogue (6.14.137) ; un seul passe par mois dès novembre 2026 ; points tracés par source |
+| Chroniques | mensuel | 4 épisodes, boss de saison ; générées dès novembre 2026 (le 20 du mois d'avant), chapitres écrits en bibliothèque ; récompenses d'épisode sous budget de 10 h × difficulté (0,7 à 1,4) ; faction du thème du passe, par année du catalogue (6.14.137) ; banques de textes réglables, sans reprise sur 12 mois |
 | Défis hebdo | hebdo | objectif serveur ; récompenses à 100 % et 150 % |
 | Objectifs du jour | quotidien, minuit Paris | 4 (contrats et missions fusionnés en 6.2.1) ; 90 rares × échelle, 15 XP, 1 jeton chacun, +1 jeton si les 4 ; série +10 %/jour (max +50 %) ; coffre tous les 7 ; tirage pondéré (6.14.109 : « Repousser une attaque » 0,5, raids de faction comptés) |
 | Série de connexion | quotidien | 1 à 5 h de production, 2 jetons/jour, 35 Ambre au 6e jour, coffre au 7e (50 à 300 Ambre, 1 à 25 jetons ; chaque ressource commune : **6 à 18 h de production** du joueur depuis la 6.14.106, tirées à part, dans la place libre de l'entrepôt, au moins 2 M ; 2 M à 12 M en 6.14.72, 45 M à 280 M avant ; `streak.chest.commonHours`, [0, 0] = bornes fixes, Q99) |
@@ -216,3 +216,28 @@ défis de la semaine (`weeklyChallenge.perActive`), Ambre rendue à la place d'u
   doctrines » (chaque classe en vigueur). Fiche : `docs/changes/6.14.132-codex-doctrines-arsenal.md`.
 - **Porteurs signature et reliques par source** (6.14.133, AJ-1, AJ-11, Q65, Q67) : voir `docs/systems/bonus-effets.md`. Fiche :
   `docs/changes/6.14.133-porteurs-signature.md`.
+
+## 6.14.136 à 6.14.140 (revue AU27, lots AP-L9 à AP-L12 et AP-L14) : contenu procédural frais
+- **Mutateurs sans répétition** (6.14.136, I44) : mois de Paris (minuit, été et hiver) ; dès 2027-01 (`mutators.noRepeatFrom`),
+  un mutateur ne revient pas avant 6 mois (`noRepeatMonths`), ceux absents des 12 derniers mois d'abord (`freshMonths`), l'ancien
+  tirage gardé s'il est permis : octobre 2026 à janvier 2027 inchangés, 10 mutateurs distincts au moins sur 12 mois (7 avant).
+  Admin → Règles → Événements et saisons → « Mutateur de saison ». Défi hebdomadaire laissé hors du registre des actions suivies.
+  Fiche : `docs/changes/6.14.136-mutateurs-sans-repetition.md`.
+- **Variété narrative** (6.14.137, I45) : groupe `narrative` (Admin → Règles → « Chroniques et passe : banques de textes ») :
+  titres d'acte et accroches (12 par acte), 26 répliques du méchant, 14 lignes de héros, ordres de plus par action, réserve de
+  titres et de boss par faction ; un texte lu dans les 12 derniers mois écrits ne revient pas tant qu'il en reste ; faction par
+  thème et par année (années 2 et 3) ; répliques des jalons du passe par année du catalogue (trois jeux par thème). Même aléa
+  consommé : titre, boss, objectifs et récompenses inchangés ; aucun mois écrit régénéré. Répliques distinctes sur 12 mois :
+  56 % → 100 % (profil typique). Fiche : `docs/changes/6.14.137-variete-narrative.md`.
+- **Illustrations de saison** (6.14.138) : 24 illustrations d'année (thèmes, années 2 et 3), 33 portraits de commandants, 7 seconds
+  boss en lignes `/img` ; le générateur prend l'image de l'année (`SEASON_THEME_ART`), le second boss (`AUTO_ART_2`, 2e et 4e nom)
+  et le portrait (`SEASON_PORTRAITS`) une fois branchés, sinon l'image du thème, l'image unique du boss, le portrait du rôle.
+  Image propre d'une saison : Catalogue du passe → Saisons. Fiche : `docs/changes/6.14.138-illustrations-saison.md`.
+- **Saisons au-delà de 36 mois** (6.14.139, I45) : dès novembre 2029, chaque mois prolonge la saison écrite du même rang (nom +
+  sous-titre, commandant au prénom et au nom inédits, second rôle jamais pris par le thème, scénario et scène prolongés) ; brouillon
+  du passe relu comme les autres ; une année écrite dans l'admin repousse la génération. Groupe `seasonGen` (Admin → Règles →
+  « Catalogue du passe : saisons générées », aperçu). Fiche : `docs/changes/6.14.139-catalogue-prolonge.md`.
+- **Simulation** (6.14.140) : `node scripts/procedural-sim.mjs [--months 48] [--profile reel|typique|vide|bruite|all] [--base
+  avant-ap] [--rules fichier.json]` : Chroniques (factions, titres, images, répliques, épisodes peu pratiqués), passe (noms,
+  commandants, paires de rôles, jours de fin simulés), saga, mutateurs. À lancer avant et après chaque lot qui touche un générateur.
+  Fiche : `docs/changes/6.14.140-procedural-sim.md`.

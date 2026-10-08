@@ -2,9 +2,9 @@ import { useState } from "react";
 import type { GameRules } from "@/game/content";
 import { seasonPayoutSummary } from "@/game/seasons";
 import { streakWeekSummary } from "@/game/streak";
-import { CheckboxField, NumberField, Section } from "@/pages/admin/fields";
+import { CheckboxField, NumberField, Section, TextField } from "@/pages/admin/fields";
 import { catchupBonus } from "@/game/catchup";
-import { MUTATOR_RULES, mutatorFor, mutatorList } from "@/game/mutators";
+import { autoMutatorFor, mutatorList } from "@/game/mutators";
 import { MutatorsEditor } from "@/pages/admin/SystemListsEditors";
 import { cn, formatCompact, formatDecimal } from "@/lib/utils";
 
@@ -185,7 +185,7 @@ export function MutatorSection({ rules, setRules, saved }: { rules: GameRules; s
       <CheckboxField label="Une règle spéciale chaque mois" checked={m.enabled} onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, enabled: v } }))} hint="Effet pour tout le serveur, annoncé sur l'accueil et dans les Chroniques." />
       <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
         {months.map((month) => {
-          const auto = autoMutator(month, m.defs);
+          const auto = autoMutator(month, m);
           return (
             <label key={month} className="flex flex-col gap-1 text-xs text-slate-400">
               <span className="font-mono">{month}</span>
@@ -202,6 +202,29 @@ export function MutatorSection({ rules, setRules, saved }: { rules: GameRules; s
           );
         })}
       </div>
+      {/* 6.14.136 (AU27, lot AP-L9) : tirage sans répétition. */}
+      <NumberField
+        label="Un mutateur ne revient pas avant (mois)"
+        value={m.noRepeatMonths}
+        min={0}
+        step={1}
+        hint="0 : ancien tirage (jamais deux mois de suite). Plafonné au nombre de mutateurs moins un."
+        onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, noRepeatMonths: v ?? 0 } }))}
+      />
+      <NumberField
+        label="Fenêtre de fraîcheur (mois)"
+        value={m.freshMonths}
+        min={0}
+        step={1}
+        hint="Un mutateur absent de cette fenêtre passe avant les autres. 0 : sans préférence."
+        onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, freshMonths: v ?? 0 } }))}
+      />
+      <TextField
+        label="Sans répétition à partir de (AAAA-MM)"
+        value={m.noRepeatFrom}
+        hint="Les mois d'avant gardent l'ancien tirage. Changer ces réglages peut changer le mois en cours : impose-le pour le garder."
+        onChange={(v) => setRules((r) => ({ ...r, mutators: { ...r.mutators, noRepeatFrom: v } }))}
+      />
       {/* 6.14.125 (AA7, AA-6) : liste des mutateurs, effets composés chiffrés et textes (la description suit les effets). */}
       <MutatorsEditor rules={rules} setRules={setRules} savedRules={saved} />
       <p className="text-[11px] text-slate-500 sm:col-span-2">Ajouter ou retirer un mutateur change le tirage des mois qui ne sont pas imposés : impose le mois en cours pour le garder.</p>
@@ -209,19 +232,8 @@ export function MutatorSection({ rules, setRules, saved }: { rules: GameRules; s
   );
 }
 
-/** Tirage automatique d'un mois, sans tenir compte des choix imposés (sur la liste en cours d'édition). */
-function autoMutator(month: string, defs: GameRules["mutators"]["defs"]) {
-  const saved = { ...MUTATOR_RULES.overrides };
-  const enabled = MUTATOR_RULES.enabled;
-  const savedDefs = MUTATOR_RULES.defs;
-  MUTATOR_RULES.overrides = {};
-  MUTATOR_RULES.enabled = true;
-  if (Array.isArray(defs) && defs.length > 0) MUTATOR_RULES.defs = defs;
-  try {
-    return mutatorFor(month) ?? mutatorList()[0];
-  } finally {
-    MUTATOR_RULES.overrides = saved;
-    MUTATOR_RULES.enabled = enabled;
-    MUTATOR_RULES.defs = savedDefs;
-  }
+/** Tirage automatique d'un mois, sur la liste et les réglages en cours d'édition (6.14.136 : les mois imposés d'avant comptent pour la
+ *  répétition, pas celui du mois). */
+function autoMutator(month: string, m: GameRules["mutators"]) {
+  return autoMutatorFor(month, m) ?? mutatorList()[0];
 }

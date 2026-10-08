@@ -41,5 +41,10 @@ Le Casino orbital reste **ouvert en permanence** ; seul le tournoi a ses horaire
   Ils n'entrent dans un chapitre, un défi du passe ou la saga que si **la plupart des joueurs** les pratiquent déjà (6.14.121).
 - Un vaisseau, une techno ou un bâtiment **nouveau** prend l'**épisode 2** du chapitre suivant, marqué « Nouveauté », si la moitié des
   joueurs y a déjà accès (6.14.122).
+- Les chapitres puisent dans des **banques de textes 4 fois plus grandes** : une réplique lue dans les 12 derniers mois ne revient pas
+  tant qu'il en reste une autre. Dès novembre 2027, la faction de chaque thème **change d'une année à l'autre** (6.14.137).
+- Les répliques des jalons du passe changent **chaque année** du catalogue, et après trois ans le catalogue continue avec des saisons
+  inédites : nouveau nom, nouveau commandant (6.14.137, 6.14.139).
+- Le **mutateur** du mois ne revient plus avant 6 mois à partir de janvier 2027, et change à minuit, heure de Paris (6.14.136).
 - Les succès **Lecteur des Chroniques**, **Gardien des Chroniques**, **Porte-sceau** et **Jusqu'au bout** sont bien dans ta liste (6.14.56).
 - Les titres à paliers s'affichent à **ton plus haut palier** ; les autres restent visibles d'un clic.

@@ -60,6 +60,8 @@ import { WARLORD_RULES, WARLORD_RULES_META } from "@/game/warlords";
 import { WORLD_BOSS_RULES, WORLD_BOSS_RULES_META } from "@/game/worldBosses";
 import { TRACKED_ACTION_RULES, TRACKED_ACTION_RULES_META } from "@/game/trackedActions";
 import { NOVELTY_RULES, NOVELTY_RULES_META } from "@/game/novelty";
+import { NARRATIVE_RULES, NARRATIVE_RULES_META } from "@/game/narrative";
+import { SEASON_GEN_RULES, SEASON_GEN_RULES_META } from "@/game/seasonCatalog";
 import { ACHIEVEMENT_XP_ALERT, ACHIEVEMENT_XP_ALERT_META } from "@/game/xpAudit";
 import { HISTORICAL_RULES_META, type RuleFieldMeta } from "@/game/ruleMeta";
 
@@ -151,6 +153,10 @@ export const REGISTERED_RULES = {
   relicSources: { label: "Reliques : sources favorites", target: () => RELIC_SOURCE_RULES, meta: () => RELIC_SOURCE_RULES_META },
   // 6.14.122 (AU27, AP-L8) : épisode « nouveauté » des Chroniques générées (fréquence, durée, quantités, bibliothèque de textes).
   novelty: { label: "Chroniques : épisode « nouveauté » (contenu récent)", target: () => NOVELTY_RULES, meta: () => NOVELTY_RULES_META },
+  // 6.14.137 (AU27, AP-L10) : banques de textes des Chroniques et du passe, anti-répétition, faction par thème et par année.
+  narrative: { label: "Chroniques et passe : banques de textes", target: () => NARRATIVE_RULES, meta: () => NARRATIVE_RULES_META },
+  // 6.14.139 (AU27, AP-L12) : saisons du passe générées au-delà du cycle écrit (36 mois livrés).
+  seasonGen: { label: "Catalogue du passe : saisons générées au-delà du cycle", target: () => SEASON_GEN_RULES, meta: () => SEASON_GEN_RULES_META },
   officerTuning: { label: "Officiers : second rôle des commandants de saison, Phéromone", target: () => OFFICER_TUNING_RULES, meta: () => OFFICER_TUNING_RULES_META },
   passOverflow: { label: "Passe : points en trop convertis en Ambre", target: () => PASS_OVERFLOW, meta: () => PASS_OVERFLOW_META },
   polls: { label: "Sondages", target: () => POLL_RULES, meta: () => POLL_RULES_META },

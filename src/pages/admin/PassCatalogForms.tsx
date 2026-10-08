@@ -92,6 +92,8 @@ export function CatalogEntryForm({ value: e, onChange, isNew }: { value: SeasonC
           <TextAreaField label="Scène de l'illustration (anglais, prompt Midjourney)" value={e.scene} rows={2} onChange={(scene) => set({ scene })} />
           <p className="mt-1 min-w-0 break-words font-mono text-[10px] text-slate-500">{illustrationPrompt(e, accent)}</p>
         </div>
+        {/* 6.14.138 (AP-L11) : illustration propre de la saison (vide : celle de l'année si elle existe, sinon celle du thème). */}
+        <TextField label="Image de l'en-tête (facultatif)" value={e.image ?? ""} hint="Vide : l'illustration de l'année si elle existe, sinon celle du thème." onChange={(image) => set({ image: image || undefined })} />
       </Section>
       <Section title="Commandant de saison">
         <TextField label="Nom" value={e.commander?.name ?? ""} onChange={(name) => setCmd({ name })} />
