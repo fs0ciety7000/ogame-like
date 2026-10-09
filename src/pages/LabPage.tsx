@@ -181,7 +181,8 @@ export function LabPage() {
                   <>
                     <Progress value={percent} />
                     <p className="mt-2 text-center text-xs text-slate-400">
-                      Temps restant : {formatDuration(remaining)}
+                      {/* 6.14.164 (S4, NJ-15) : à 0 s, le serveur termine la recherche au prochain passage (quelques secondes). */}
+                      {remaining > 0 ? <>Temps restant : <span className="font-mono tabular-nums">{formatDuration(remaining)}</span></> : "Finalisation…"}
                     </p>
                     <div className="mt-2 flex justify-center">
                       <CancelJobButton target={{ kind: "research", id: selected.id }} />

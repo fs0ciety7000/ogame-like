@@ -2,6 +2,7 @@ import PocketBase, { type RecordSubscription } from "pocketbase";
 import { createSharedSubscriber } from "@/lib/sharedSubscriptions";
 import { markBanned } from "@/store/banStore";
 import { gameErrorText, isGameMessage } from "@/lib/gameErrors";
+import { isServerUnreachable, markServerDown, markServerUp } from "@/store/serverHealthStore";
 
 /** URL du serveur PocketBase (voir .env.example). */
 const pbUrl = import.meta.env.VITE_POCKETBASE_URL || "http://127.0.0.1:8090";
@@ -14,8 +15,25 @@ export const pb = new PocketBase(pbUrl);
 // heartbeat) : l'annulation automatique du SDK les ferait échouer.
 pb.autoCancellation(false);
 
+// 6.14.164 (S4, NJ-11) : une requête qui n'aboutit pas du tout (statut 0, serveur coupé) ne passe pas par `afterSend` :
+// on la repère ici. Une requête annulée (page quittée) ou un navigateur hors ligne (bandeau « Hors ligne » à part) ne compte pas.
+const rawSend = pb.send.bind(pb);
+pb.send = (async (...args: Parameters<typeof rawSend>) => {
+  try {
+    return await rawSend(...args);
+  } catch (err) {
+    const e = err as { status?: number; isAbort?: boolean };
+    if (!e?.isAbort && Number(e?.status) === 0 && (typeof navigator === "undefined" || navigator.onLine)) markServerDown();
+    throw err;
+  }
+}) as typeof pb.send;
+
 // 5.26 : un compte banni reçoit 403 « banned » sur toutes ses requêtes : l'écran de suspension prend le relais.
 pb.afterSend = (response, data) => {
+  // 6.14.164 (S4, NJ-11) : serveur en mise à jour (502, 504, 503 sans message du jeu) ou de retour : bandeau `ServerDownBanner`.
+  const message = data && typeof data === "object" ? (data as { message?: unknown }).message : undefined;
+  if (isServerUnreachable(response.status, isGameMessage(message))) markServerDown();
+  else markServerUp();
   if (response.status === 403 && data && typeof data === "object" && (data as { data?: { banned?: unknown } }).data?.banned) markBanned(String((data as { message?: string }).message ?? "Compte suspendu."));
   // 6.14.112 (AC-16) : une erreur d'une route du jeu garde le message du serveur (français) ; un message générique de
   // PocketBase (anglais) ou absent devient un texte clair selon le statut. Les écrans qui affichent `err.message` en profitent.

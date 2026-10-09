@@ -499,6 +499,10 @@ export function PlayersPage() {
       <AttackModal
         target={attackTarget}
         onClose={() => setAttackTarget(null)}
+        onSpy={(t) => {
+          setAttackTarget(null);
+          setSpyTarget(t);
+        }}
       />
       <TradeModal target={tradeTarget} onClose={() => setTradeTarget(null)} />
     </div>

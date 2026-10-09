@@ -119,7 +119,7 @@ describe("textes de règle vivants (6.14.105, AA4)", () => {
     expect(step("dailyGoal")).toContain("5 objectifs");
     expect(step("colonyRoute")).toContain("15 % se perdent");
     expect(step("moonWatch")).toContain("au niveau 4,");
-    expect(PAGE_TIPS["/game/joueurs"]).toContain("protégés 96 h");
+    expect(PAGE_TIPS["/game/joueurs"]).toContain("protégé 96 h");
     expect(expeditionRelicChanceText()).toBe("jusqu'à 20 % à 11 h");
     expect(CAPSULES.armor.description(5)).toContain("(8 h)");
     expect(COMMANDER_SOURCES.admiral[0].xp).toBe(25);

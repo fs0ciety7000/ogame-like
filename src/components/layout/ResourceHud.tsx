@@ -1,8 +1,8 @@
 import { RESOURCE_LIST } from "@/game/resources";
 import { useLiveResources, useProductionRates } from "@/hooks/useLiveResources";
 import { usePlayerStore } from "@/store/playerStore";
-import { formatCompact, formatDecimal, formatDuration, formatNumber } from "@/lib/utils";
-import { Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatCompact, formatDecimal, formatDuration, formatHud, formatNumber } from "@/lib/utils";
+import { TapTooltip, TapTooltipTrigger, Tooltip, TooltipCard, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 import { Sparkline } from "@/components/ui/sparkline";
 import { motion } from "framer-motion";
@@ -65,8 +65,9 @@ export function ResourceHud() {
         const nearFull = !full && fill >= 85;
         const secondsToFull = !full && rate > 0 && Number.isFinite(economy.capacity) ? Math.max(0, (economy.capacity - resources[res.id]) / rate) : null;
         return (
-          <Tooltip key={res.id}>
-            <TooltipTrigger asChild>
+          // 6.14.164 (S4, NJ-7) : l'infobulle (nom, stock, plein dans…) s'ouvre aussi au toucher.
+          <TapTooltip key={res.id}>
+            <TapTooltipTrigger asChild>
               <motion.div
                 key={pulse[res.id] ?? 0}
                 data-hud-res={res.id}
@@ -75,15 +76,16 @@ export function ResourceHud() {
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 380, damping: 14 }}
                 className={cn(
-                  "hud-cut-sm relative flex min-w-0 items-center gap-1 overflow-hidden border bg-space-900/70 px-1.5 pb-1.5 pt-1 sm:min-w-[9.5rem] sm:gap-2 sm:px-2.5 sm:pb-2 sm:pt-1.5 xl:flex-1",
+                  "hud-cut-sm relative flex min-w-0 items-center gap-1 overflow-hidden border bg-space-900/70 px-1 pb-1.5 pt-1 sm:min-w-[9.5rem] sm:gap-2 sm:px-2.5 sm:pb-2 sm:pt-1.5 xl:flex-1",
                   // 5.21.2 : cadre à la couleur du thème ; seule la mention « plein » garde la couleur d'alerte.
                   full ? "border-cyan-glow/45" : nearFull ? "border-cyan-glow/30" : "border-cyan-glow/15",
                 )}
               >
-                <ResourceIcon id={res.id} className="h-6 w-6 shrink-0 sm:h-8 sm:w-8" />
+                <ResourceIcon id={res.id} className="h-5 w-5 shrink-0 sm:h-8 sm:w-8" />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
-                    <AnimatedNumber value={resources[res.id]} format={formatCompact} className="truncate tabular-mono text-[13px] font-semibold leading-tight text-slate-100 sm:text-[15px]" />
+                    {/* 6.14.164 (S4, NJ-7) : 3 chiffres au plus (« 150 k ») ; avant, « 150,2 k » finissait en « 150,… » à 375 px. */}
+                    <AnimatedNumber value={resources[res.id]} format={formatHud} className="truncate tabular-mono text-[12px] font-semibold leading-tight text-slate-100 sm:text-[15px]" />
                     {full ? (
                       <span className="font-mono text-[11px] font-bold uppercase leading-tight tracking-[0.08em] text-ember-glow">plein</span>
                     ) : nearFull && secondsToFull !== null ? (
@@ -121,7 +123,7 @@ export function ResourceHud() {
                   />
                 </span>
               </motion.div>
-            </TooltipTrigger>
+            </TapTooltipTrigger>
             <TooltipContent>
               <TooltipCard
                 title={res.name}
@@ -140,7 +142,7 @@ export function ResourceHud() {
                 note={full ? "Production à l'arrêt : agrandis l'Entrepôt ou dépense." : undefined}
               />
             </TooltipContent>
-          </Tooltip>
+          </TapTooltip>
         );
       })}
       </div>
@@ -189,11 +191,13 @@ export function ResourceHud() {
 
 
       {rare.map((res) => (
-        <Tooltip key={res.id}>
-          <TooltipTrigger asChild>
+        // 6.14.164 (S4, NJ-7) : icône et nombre seulement : le nom s'affiche au toucher (avant : au survol seulement).
+        <TapTooltip key={res.id}>
+          <TapTooltipTrigger asChild>
             <motion.div
               key={pulse[res.id] ?? 0}
               data-hud-res={res.id}
+              aria-label={`${res.name} : ${formatNumber(resources[res.id])}`}
               initial={pulse[res.id] ? { scale: 1.15 } : false}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 380, damping: 14 }}
@@ -202,7 +206,7 @@ export function ResourceHud() {
               <ResourceIcon id={res.id} className="h-5 w-5" />
               <AnimatedNumber value={resources[res.id]} format={formatCompact} className="tabular-mono text-slate-200" />
             </motion.div>
-          </TooltipTrigger>
+          </TapTooltipTrigger>
           <TooltipContent>
             <TooltipCard
               title={res.name}
@@ -214,7 +218,7 @@ export function ResourceHud() {
               sections={(rates[res.id] ?? 0) > 0 ? [bonusSection(productionBonuses({ ...player, resources }, Date.now(), res.id))] : []}
             />
           </TooltipContent>
-        </Tooltip>
+        </TapTooltip>
       ))}
       </div>
     </div>

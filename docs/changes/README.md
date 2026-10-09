@@ -262,6 +262,7 @@ Ce qui reste, les idées notées, les risques à surveiller.
 | 6.14.161 | [Parcours d'un débutant sans blocage (S1)](6.14.161-parcours-debutant.md) | correctif + ajustement (prise en main) + réglages admin | lot S1 du [plan](../plan.md) ; [audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md) (NJ-1, NJ-2, NJ-6, NJ-8, NJ-10, NJ-18) |
 | 6.14.162 | [Labo en liste sur téléphone (S2)](6.14.162-labo-mobile.md) | ajout (interface) | lot S2 du [plan](../plan.md) ; [audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md) (NJ-3) |
 | 6.14.163 | [Récompenses du départ à la mesure de la production (S3)](6.14.163-recompenses-du-depart.md) | ajustement (équilibre du départ) + réglages admin | [recompenses-du-depart](../proposals/recompenses-du-depart.md) ; lot S3 du [plan](../plan.md) ; [audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md) (NJ-4, NJ-5) |
+| 6.14.164 | [Confort des premières heures (S4)](6.14.164-confort-debutant.md) | correctif + réglage admin | lot S4 du [plan](../plan.md) ; [audit du parcours](../audit/2026-10-09-parcours-nouveau-joueur.md) (NJ-7, NJ-9, NJ-11 à NJ-17, NJ-19 à NJ-24, restes de NJ-10) |
 | 6.9.7 | [Comptoir d'échange et file du Labo réglables](6.9.7-economie.md) | correctif | aucune (AU11) |
 | 6.9.6 | [Unités et flottes, texte d'annulation](6.9.6-unites-flottes.md) | correctif | aucune (AU9, AU10) |
 | 6.9.5 | [Plafonds des bonus réglables, sources uniques](6.9.5-plafonds-bonus.md) | correctif | aucune (AU8) |

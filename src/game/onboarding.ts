@@ -76,12 +76,14 @@ export const ONBOARDING_REWARDS_META = {
   rank: { label: "Objectif 10 : rang Fer II", hint: REWARD_HINT },
 };
 
+/* 6.14.164 (S4, NJ-13) : « J'y vais » d'un bâtiment ou d'une unité vise sa carte (`?focus=<id>`) : la page défile jusqu'à
+   elle et la met en évidence (avant : haut de la page, au-dessus de la file planifiée). */
 export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "scrap3",
     label: "Extracteur de ferraille au niveau 3",
     hint: "La ferraille paie presque tout : améliore son extracteur en premier.",
-    to: "/game/batiments",
+    to: "/game/batiments?focus=extracteur_ferraille",
     get reward() {
       return ONBOARDING_REWARDS.scrap3;
     },
@@ -91,7 +93,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "reactor3",
     label: "Réacteur au niveau 3",
     hint: "L'énergie instable accompagne la ferraille dans la plupart des coûts.",
-    to: "/game/batiments",
+    to: "/game/batiments?focus=reacteur_instable",
     get reward() {
       return ONBOARDING_REWARDS.reactor3;
     },
@@ -111,7 +113,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "drones5",
     label: "Posséder 5 drones récupérateurs",
     hint: "Les drones ouvrent les premières missions. Leur recherche au Labo demande de l'Acier renforcé : l'objectif 3 t'en donne, sinon passe par le comptoir (page Ressources).",
-    to: "/game/unites",
+    to: "/game/unites?focus=drone_recuperateur",
     get reward() {
       return ONBOARDING_REWARDS.drones5;
     },
@@ -131,7 +133,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "storage2",
     label: "Entrepôt au niveau 2",
     hint: "L'entrepôt augmente ta capacité et met une partie du stock à l'abri des pillards.",
-    to: "/game/batiments",
+    to: "/game/batiments?focus=entrepot",
     get reward() {
       return ONBOARDING_REWARDS.storage2;
     },
@@ -141,7 +143,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "rockets10",
     label: "Installer 10 roquettes",
     hint: "Une première défense décourage les attaques opportunistes.",
-    to: "/game/unites",
+    to: "/game/unites?focus=roquette",
     get reward() {
       return ONBOARDING_REWARDS.rockets10;
     },

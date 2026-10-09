@@ -17,6 +17,8 @@ export const GAME_ERROR_TEXTS = {
   conflict: "L'état a changé entre-temps : recharge la page et réessaie.",
   tooMany: "Trop de demandes d'un coup : attends quelques secondes et réessaie.",
   maintenance: "Le jeu est en maintenance : réessaie à la réouverture.",
+  // 6.14.164 (S4, NJ-11) : 502, 504, ou 503 sans message du jeu : le relais ne trouve pas le serveur (mise à jour en cours).
+  restarting: "Serveur en cours de mise à jour : rien n'a été fait, réessaie dans quelques secondes.",
   server: "Erreur du serveur : réessaie dans un instant. L'équipe est prévenue.",
 } as const;
 
@@ -32,7 +34,8 @@ export function isGameMessage(message: unknown): message is string {
 export function gameErrorText(status: number, serverMessage?: unknown): string {
   const own = isGameMessage(serverMessage) ? serverMessage.trim() : null;
   if (!status) return GAME_ERROR_TEXTS.network;
-  if (status === 503) return own ?? GAME_ERROR_TEXTS.maintenance;
+  if (status === 503) return own ?? GAME_ERROR_TEXTS.restarting;
+  if (status === 502 || status === 504) return GAME_ERROR_TEXTS.restarting;
   if (status >= 500) return GAME_ERROR_TEXTS.server;
   if (status === 429) return own ?? GAME_ERROR_TEXTS.tooMany;
   if (status === 409) return own ?? GAME_ERROR_TEXTS.conflict;
@@ -43,5 +46,6 @@ export function gameErrorText(status: number, serverMessage?: unknown): string {
 
 /** Faut-il prévenir l'équipe ? (erreur du serveur, pas une règle du jeu) */
 export function isServerFault(status: number): boolean {
-  return status >= 500 && status !== 503;
+  // 6.14.164 (S4, NJ-11) : 502 et 504 viennent du relais pendant un redéploiement, pas d'une erreur du jeu.
+  return status >= 500 && status !== 502 && status !== 503 && status !== 504;
 }

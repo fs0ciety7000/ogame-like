@@ -14,6 +14,7 @@ import { findWarlord } from "@/game/warlords";
 import { loadWarlords, useWarlordsStore } from "@/services/warlordService";
 import { markAnnouncementsSeen } from "@/services/playerService";
 import { useExclusiveModal } from "@/store/modalSlotStore";
+import { isNewcomer, NEWCOMER_NEWS_RULES } from "@/game/announcements";
 
 /* v4.1 : dialogues du tutoriel scénarisé (Vashka, Varan), une fois chacun. */
 
@@ -48,11 +49,23 @@ function pendingScene(player: PlayerState, seen: string[]): { id: string; title:
   return null;
 }
 
+/* 6.14.164 (S4, reste de NJ-10) : en fin de prise en main, l'épilogue et deux épisodes des Chroniques s'ouvraient à la suite.
+   Désormais : aucun épisode des Chroniques pour un compte de moins de `newcomerNews.quietHours` (24 h), et, après une fenêtre
+   d'histoire fermée, un épisode ou une scène de coalition attend `newcomerNews.storyGapMinutes` (10 min). Les chapitres de la
+   prise en main (et le raid) ne sont pas retenus : ils suivent ce que le joueur vient de faire. Mémoire de l'onglet. */
+let lastSceneClosedAt = 0;
+
+function storyGapLeftMs(now: number): number {
+  const gap = Math.max(0, NEWCOMER_NEWS_RULES.storyGapMinutes || 0) * 60_000;
+  return lastSceneClosedAt > 0 ? Math.max(0, lastSceneClosedAt + gap - now) : 0;
+}
+
 /** v4.3 : épisode des Chroniques ouvert et pas encore vu (après le tutoriel). */
 function chronicleScene(player: PlayerState, seen: string[]): { id: string; title: string; lines: StoryLine[] } | null {
   const now = Date.now();
   const month = chronicleOf(now);
   if (!month || (onboardingEligible(player) && !onboardingState(player).hidden)) return null;
+  if (isNewcomer(player.createdAtMs, now) || storyGapLeftMs(now) > 0) return null;
   const open = unlockedEpisodes(now);
   for (let i = 0; i < open; i++) {
     const id = `chron-${month.id}-${i}`;
@@ -67,6 +80,7 @@ function coalitionArcScene(player: PlayerState, co: Coalition | null, seen: stri
   const d = findWarlord(co.warlordId);
   if (!d) return null;
   const now = Date.now();
+  if (storyGapLeftMs(now) > 0) return null;
   if (co.status !== "active" && now - (co.finishedAtMs ?? co.endsAtMs) > 3 * 24 * 3600_000) return null;
   const phase = coalitionPhase(co);
   const id = `${co.id}-${phase}`;
@@ -90,20 +104,31 @@ export function StoryDialog({ player }: { player: PlayerState }) {
     const t = setTimeout(() => setReady(true), 1600);
     return () => clearTimeout(t);
   }, []);
+  // 6.14.164 : fin de l'écart entre deux histoires : on relit la scène à jouer.
+  const [gapTick, setGapTick] = useState(0);
   const scene = useMemo(
     () => (state.off ? null : pendingScene(player, state.seen)) ?? chronicleScene(player, state.seen) ?? coalitionArcScene(player, coalition, state.seen),
-    [player, state, coalition],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `gapTick` relance le choix à la fin de l'écart entre deux histoires
+    [player, state, coalition, gapTick],
   );
+  useEffect(() => {
+    const left = storyGapLeftMs(Date.now());
+    if (scene || left <= 0) return;
+    const t = setTimeout(() => setGapTick((n) => n + 1), left + 500);
+    return () => clearTimeout(t);
+  }, [scene, state]);
   // 6.14.161 (NJ-2) : l'histoire et l'alerte de raid ne s'ouvrent jamais ensemble (la première arrivée passe d'abord).
   const visible = useExclusiveModal("story", !!scene && ready && !announcing);
   if (!scene || !visible) return null;
   const close = () => {
+    lastSceneClosedAt = Date.now();
     const next = { ...local, seen: [...local.seen, scene.id] };
     writeSeen(player.uid, next);
     setState(next);
     void markAnnouncementsSeen([scene.id]).catch(() => undefined);
   };
   const skipAll = () => {
+    lastSceneClosedAt = Date.now();
     const next = { seen: [...local.seen, scene.id], off: true };
     writeSeen(player.uid, next);
     setState(next);

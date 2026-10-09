@@ -141,12 +141,13 @@ function CreateOrBrowse({ uid, pseudo }: { uid: string; pseudo: string }) {
             <div className="min-w-0">
               <p className="hud-title truncate text-[15px] normal-case tracking-[0.03em] text-slate-100">{a.name}</p>
               <div className="mt-1 flex items-center gap-2">
-                <div className="flex gap-0.5">
+                {/* 6.14.164 (S4, NJ-22) : les segments se partagent la place (avant : 12 px chacun, la jauge passait sous « Rejoindre »). */}
+                <div className="flex min-w-0 max-w-[9rem] flex-1 gap-0.5">
                   {Array.from({ length: allianceMaxMembers(a) }, (_, i) => (
-                    <i key={i} className={i < a.members.length ? "h-1.5 w-3 bg-cyan-glow" : "h-1.5 w-3 bg-white/[0.08]"} />
+                    <i key={i} className={i < a.members.length ? "h-1.5 min-w-0 flex-1 bg-cyan-glow" : "h-1.5 min-w-0 flex-1 bg-white/[0.08]"} />
                   ))}
                 </div>
-                <span className="font-mono text-[11px] text-slate-500">
+                <span className="shrink-0 font-mono text-[11px] tabular-nums text-slate-500">
                   {a.members.length}/{allianceMaxMembers(a)}
                 </span>
               </div>

@@ -302,7 +302,7 @@ function TechRow({
             <div className="mt-2">
               <Progress value={((total - remaining) / total) * 100} />
               <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-xs tabular-nums text-slate-400">Reste {formatDuration(remaining)}</span>
+                <span className="font-mono text-xs tabular-nums text-slate-400">{remaining > 0 ? `Reste ${formatDuration(remaining)}` : "Finalisation…"}</span>
                 <CancelJobButton target={{ kind: "research", id: tech.id }} />
               </div>
             </div>

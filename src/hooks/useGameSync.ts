@@ -16,7 +16,7 @@ import {
   type AwaySummary,
 } from "@/services/playerService";
 import { pb } from "@/lib/pocketbase";
-import { resetPlayerStore, setPlayerData, setQueuesData } from "@/store/playerStore";
+import { resetPlayerStore, setPlayerData, setQueuesData, usePlayerStore } from "@/store/playerStore";
 import { setBellOpen, setNotifications } from "@/store/notificationStore";
 import { notificationLink, summarizeKinds, URGENT_KINDS } from "@/lib/notificationCategories";
 import { useNavigate } from "react-router-dom";
@@ -234,4 +234,22 @@ export function useGameSync(uid: string | null) {
       seenNotificationIds.current = null;
     };
   }, [uid]);
+
+  // 6.14.164 (S4, NJ-15) : une recherche ou un bâtiment arrive à 0 s : on demande la suite au serveur une seconde après,
+  // au lieu d'attendre le prochain battement (20 s ; « Temps restant : 0s » restait affiché 10 à 40 s).
+  const nextEnd = usePlayerStore((s) => {
+    const q = s.queues;
+    if (!q) return null;
+    const ends = [...(q.activeResearches ?? []).map((r) => r.endTime), ...Object.values(q.buildingUpgrades ?? {}).map((b) => b?.endTime ?? Infinity)];
+    const min = Math.min(Infinity, ...ends);
+    return Number.isFinite(min) ? min : null;
+  });
+  useEffect(() => {
+    if (!uid || nextEnd === null) return;
+    const wait = nextEnd - Date.now() + 1_000;
+    // Déjà passé depuis longtemps : le battement s'en charge (pas de relance en boucle si le serveur tarde).
+    if (wait < -30_000) return;
+    const timer = setTimeout(() => void safeSyncPlayer(uid), Math.max(500, wait));
+    return () => clearTimeout(timer);
+  }, [uid, nextEnd]);
 }

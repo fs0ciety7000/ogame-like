@@ -27,11 +27,15 @@ export function BossReturnCard() {
   const hidden = useHiddenRoutes();
   const world = useBossNavInfo("/game/uber");
   const season = useBossNavInfo("/game/boss");
+  const showWorld = !hidden.has("/game/uber") && !!world;
+  const showSeason = !hidden.has("/game/boss") && !!season;
+  // 6.14.164 (S4, NJ-21) : rien à montrer (pages pas encore ouvertes, aucun boss prévu) : pas de cadre « Boss » vide.
+  if (!showWorld && !showSeason) return null;
   return (
     <HudPanel icon={<Skull />} title="Boss">
       <div className="flex flex-col gap-1.5">
-        {!hidden.has("/game/uber") && <Row to="/game/uber" label="Boss mondial" info={world} />}
-        {!hidden.has("/game/boss") && <Row to="/game/boss" label="Boss de saison" info={season} />}
+        {showWorld && <Row to="/game/uber" label="Boss mondial" info={world} />}
+        {showSeason && <Row to="/game/boss" label="Boss de saison" info={season} />}
       </div>
     </HudPanel>
   );

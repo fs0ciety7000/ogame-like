@@ -10,6 +10,14 @@
   l'histoire d'abord, puis l'alerte. Un compte de moins de `newcomerNews.quietHours` heures (24) n'ouvre aucune annonce (marquée
   vue) et n'a pas de pastille Nouveautés ; ensuite, seules les notes publiées après le jour d'inscription comptent ; une note
   `audience: equipe` n'est pas montrée aux joueurs.
+  6.14.164 (S4) : le rapport de combat entre aussi dans la place unique ; aucun épisode des Chroniques pendant
+  `newcomerNews.quietHours`, et `newcomerNews.storyGapMinutes` (10) entre une histoire fermée et un épisode ou une scène de coalition
+  (chapitres de la prise en main et raid exclus) ; « J'y vais » d'un bâtiment ou d'une unité mène à `?focus=<id>` (la carte défile et
+  s'éclaire, `useFocusCard`).
+- Serveur en mise à jour (6.14.164, S4) : une réponse 502, 504, 503 sans message du jeu, ou une requête sans réponse (navigateur en
+  ligne) affiche le bandeau « Serveur en cours de mise à jour, nouvelle tentative… » (`ServerDownBanner`, essai toutes les 5 s) ;
+  l'action qui échoue dit « rien n'a été fait » ; la première réponse normale l'efface. 502 et 504 ne partent pas au rapport d'erreurs.
+  Une recherche ou un bâtiment fini déclenche une synchro 1 s après (« Finalisation… » à 0 s).
 - Accueil « que faire maintenant », frise des chantiers, carte Atelier, défis.
 - Objectifs personnels (6), modèles d'actions (12 × 20 étapes), file d'actions globale, file planifiée des bâtiments.
 - « Tout réclamer », notifications groupées et par catégorie, rappels personnels. 6.14.110 (AC-D, Q76) : chaque réclamation laisse

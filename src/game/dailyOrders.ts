@@ -55,7 +55,7 @@ export function dailyOrders(player: PlayerState, now: number, ctx: OrdersContext
     period: "jour",
     state: streak.claimed ? "done" : "ready",
     value: `J${streak.claimed ? streak.current : streak.next}`,
-    detail: streak.claimed ? `Récupérée. Meilleure série : ${streakState(player).best} jours.` : `La récompense du jour ${streak.next} t'attend.`,
+    detail: streak.claimed ? `Récupérée. Meilleure série : ${streakState(player).best} jour${streakState(player).best > 1 ? "s" : ""}.` : `La récompense du jour ${streak.next} t'attend.`,
     link: "/game/ordres",
     ready: streak.claimed ? 0 : 1,
   });

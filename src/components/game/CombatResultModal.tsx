@@ -22,6 +22,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { formatNumber } from "@/lib/utils";
 import type { CombatLog, CombatOutcome } from "@/types/game";
 import { ResourceIcon } from "@/components/ui/game-icon";
+import { useExclusiveModal } from "@/store/modalSlotStore";
 
 /** Réplique animée du choc des deux flottes : deux barres de puissance
  *  grandissent l'une vers l'autre depuis les bords, se rencontrent au
@@ -78,10 +79,13 @@ function opponentEmblem(pseudo: string): string {
 export function CombatResultModal() {
   const current = useCombatModalStore((s) => s.current);
   const player = usePlayerStore((s) => s.player);
+  // 6.14.164 (S4) : le rapport prend la place unique des grandes fenêtres (histoire, alerte de raid, annonce) : il attend
+  // qu'elles se ferment, et elles l'attendent. Avant, « Attaque repoussée ! » s'ouvrait par-dessus une annonce.
+  const visible = useExclusiveModal("combat", current !== null);
   const [intro, setIntro] = useState(false);
   useEffect(() => {
-    setIntro(!!current);
-  }, [current]);
+    setIntro(!!current && visible);
+  }, [current, visible]);
   const endIntro = useCallback(() => setIntro(false), []);
   const style = player ? profileStyle(player) : null;
   const myEmblem = !player || !style || style.emblem === "rank" ? getRankIcon(player?.xp ?? 0) : emblemOptions(player).find((e) => e.id === style.emblem)?.image ?? getRankIcon(player.xp);
@@ -94,8 +98,8 @@ export function CombatResultModal() {
 
   return (
     <>
-    <Dialog open={current !== null} onOpenChange={(open) => !open && closeCombatResult()}>
-      {current && (
+    <Dialog open={current !== null && visible} onOpenChange={(open) => !open && closeCombatResult()}>
+      {current && visible && (
         <DialogContent className="relative sm:max-w-3xl">
           <CombatIntro
             show={intro}

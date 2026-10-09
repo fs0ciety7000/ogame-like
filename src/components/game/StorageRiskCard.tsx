@@ -8,6 +8,7 @@ import { RESOURCE_LIST } from "@/game/resources";
 import { STORAGE_OVERFLOW_RULES, storageOverflowView } from "@/game/storageOverflow";
 import { formatCompact, formatDateTime } from "@/lib/utils";
 import type { PlayerState } from "@/types/game";
+import { PVP_RULES } from "@/game/pvp";
 
 /* 5.32 (proposals/entrepot-pillage.md, option C) : « ce que tu risques ». Stock à l'abri et stock pillable,
    par ressource commune, en heures de production. Avant l'activation, la future part à l'abri est annoncée.
@@ -21,8 +22,17 @@ export function StorageRiskCard({ player, now }: { player: PlayerState; now: num
   const date = formatDateTime(view.activeFromMs, "weekday", "server");
   // 6.14.155 (R8, AE-14) : stock au-delà de l'entrepôt (gardé, production arrêtée), ressource par ressource.
   const overflow = storageOverflowView(player);
+  // 6.14.164 (S4, NJ-24) : la protection de débutant, dite au même endroit que le risque (avant : « 3 h » sur la page Joueurs et
+  // « chiffres après le mardi 13 » ici, deux dates sans lien apparent).
+  const protectedUntil = player.createdAtMs && !(player.lastAttackAtMs ?? 0) ? player.createdAtMs + PVP_RULES.newbieProtectionMs : 0;
   return (
     <HudPanel icon={<ShieldAlert />} title="Ce que tu risques" tone="ember">
+      {protectedUntil > now && (
+        <HudCallout tone="mint" className="mb-3 text-sm text-slate-300">
+          <strong className="text-slate-100">Protégé jusqu'au {formatDateTime(protectedUntil, "long")}</strong> : aucun joueur ne peut
+          t'attaquer d'ici là. Attaquer un joueur met fin à cette protection.
+        </HudCallout>
+      )}
       {soonChanges && (
         <HudCallout tone="ember" className="mb-3 text-sm text-slate-300">
           <strong className="text-slate-100">À partir du {date}</strong> : <span className="font-mono tabular-nums">{ECONOMY_RULES.protectedHours} h</span> de production
@@ -67,7 +77,7 @@ export function StorageRiskCard({ player, now }: { player: PlayerState; now: num
         })}
       </ul>
       <p className="mt-2 text-[11px] text-slate-500">
-        {view.active ? "Chiffres actuels." : `Chiffres après le ${date}.`} La soute de l'attaquant limite aussi ce qu'il emporte.
+        {view.active ? "Chiffres actuels." : `Chiffres de la règle de l'entrepôt en vigueur à partir du ${date}.`} La soute de l'attaquant limite aussi ce qu'il emporte.
       </p>
     </HudPanel>
   );

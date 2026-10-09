@@ -47,11 +47,14 @@ export function AttackModal({
   target,
   onClose,
   initialFleet,
+  onSpy,
 }: {
   target: { uid: string; pseudo: string; xp?: number } | null;
   onClose: () => void;
   /** 5.23 : flotte proposée à l'ouverture (réattaquer depuis un rapport), dans la limite du stock. */
   initialFleet?: Record<string, number>;
+  /** 6.14.164 (S4, NJ-9) : « Espionner d'abord » (sans rapport assez détaillé) : ferme l'attaque et ouvre l'espionnage. */
+  onSpy?: (target: { uid: string; pseudo: string }) => void;
 }) {
   const player = usePlayerStore((s) => s.player);
   const uid = useAuthStore((s) => s.user?.uid);
@@ -226,10 +229,12 @@ export function AttackModal({
               </div>
 
               <div className="mt-3 space-y-2">
+                {/* 6.14.164 (S4, NJ-9) : seuls les vaisseaux possédés (avant : 14 lignes, dont 11 à « Possédés : 0 »). */}
+                {OFFENSIVE_UNITS.every((id) => stockOf(id) === 0) && <p className="text-sm text-slate-500">{base ? "Aucun vaisseau d'attaque à cette base." : "Aucun vaisseau d'attaque à quai : construis-en dans Unités."}</p>}
                 {OFFENSIVE_UNITS.map((unitId) => {
                   const unit = findUnit(unitId);
                   const owned = stockOf(unitId);
-                  if (!unit) return null;
+                  if (!unit || (owned === 0 && !(fleet[unitId] ?? 0))) return null;
                   return (
                     <div key={unitId} className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-sm">
                       <span className="flex-1 text-slate-200">{unit.name}</span>
@@ -434,6 +439,14 @@ export function AttackModal({
                   <p className="text-slate-500">
                     {spy ? `Dernier rapport trop sommaire (${SPY_TIER_LABELS[spy.tier ?? 0]}) : ` : "Aucun rapport d'espionnage : "}
                     espionne la cible pour estimer l'issue du combat.
+                    {onSpy && target && (
+                      <>
+                        {" "}
+                        <button type="button" className="hud-hit font-semibold text-cyan-glow hover:underline" onClick={() => onSpy({ uid: target.uid, pseudo: target.pseudo })}>
+                          Espionner d'abord →
+                        </button>
+                      </>
+                    )}
                   </p>
                 ) : !estimate ? (
                   <p className="text-slate-500">Choisis tes vaisseaux pour estimer le combat (rapport {timeAgo(spy.timestamp)}).</p>

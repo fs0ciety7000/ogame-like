@@ -17,7 +17,7 @@ import { BLOG_URL } from "@/services/blogService";
 import { CURRENT_VERSION, useUnreadChangelogCount } from "@/lib/changelog";
 import { DEFAULT_TABS, moreBadgeCount } from "@/lib/mobileTabs";
 import { fullscreenSupported, isFullscreen, toggleFullscreen } from "@/lib/fullscreen";
-import { cn, formatCompact } from "@/lib/utils";
+import { cn, formatCompact, softHyphens } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SignalIndicator } from "@/components/layout/SignalIndicator";
 import { LiveClock } from "@/components/layout/LiveClock";
@@ -877,11 +877,12 @@ function TabLink({ item }: { item: NavItem }) {
  *  lieu de déborder sur la voisine. */
 function TileLabel({ children }: { children: ReactNode }) {
   return (
-    <span lang="fr" className="max-w-full text-center [hyphens:auto] [overflow-wrap:break-word]">
-      {children}
+    <span lang="fr" className="max-w-full text-center [hyphens:manual] [overflow-wrap:break-word]">
+      {typeof children === "string" ? softHyphens(children) : children}
     </span>
   );
 }
+
 
 function MobileMenu({ open, onClose, tabs, onTabsChange }: { open: boolean; onClose: () => void; tabs: string[]; onTabsChange: (tabs: string[]) => void }) {
   const navGroups = useNavGroups();

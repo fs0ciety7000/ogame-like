@@ -29,7 +29,7 @@ export const PAGE_TIPS: Record<string, string> = {
   "/game/galaxie": "La carte montre les autres commandants. Espionne avant d'attaquer : le rapport révèle ressources, flotte et défenses selon ton niveau d'Espionnage.",
   get "/game/joueurs"() {
     const hours = Math.round(PVP_RULES.newbieProtectionMs / 3_600_000);
-    return `Tous les commandants du serveur. Les débutants sont protégés ${hours} h ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.`;
+    return `Tous les commandants du serveur. Un débutant est protégé ${hours} h après son inscription, tant qu'il n'attaque pas (ta date : page Ressources, « Ce que tu risques ») ; contre un joueur bien moins expérimenté, butin et XP sont réduits. L'icône radar envoie des sondes en un clic.`;
   },
   "/game/combats": "Le journal de tes combats et espionnages. Depuis un rapport d'espionnage, « Simuler une attaque » estime l'issue avant d'envoyer ta flotte.",
   "/game/simulateur": "Teste un combat sans risque : la formule est exactement celle des vrais combats. Le résultat indique la puissance qu'il te faudrait pour gagner.",

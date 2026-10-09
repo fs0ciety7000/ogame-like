@@ -195,7 +195,7 @@ export const REGISTERED_RULES = {
   territories: { label: "Territoires d'alliance", target: () => TERRITORY_RULES, meta: () => TERRITORY_RULES_META },
   treaties: { label: "Traités avec les factions", target: () => TREATY_RULES, meta: () => TREATY_RULES_META },
   // 6.14.161 (S1, NJ-10 et NJ-18) : un compte neuf ne voit ni annonce de mise à jour ni pastille des Nouveautés.
-  newcomerNews: { label: "Nouveau compte : annonces et Nouveautés", target: () => NEWCOMER_NEWS_RULES, meta: () => NEWCOMER_NEWS_RULES_META },
+  newcomerNews: { label: "Nouveau compte : annonces, Nouveautés et histoires", target: () => NEWCOMER_NEWS_RULES, meta: () => NEWCOMER_NEWS_RULES_META },
   // 6.14.161 (S1, NJ-1) : récompenses des 10 objectifs de la prise en main (Acier renforcé de la recherche du Drone).
   onboardingRewards: { label: "Prise en main : récompenses des objectifs", target: () => ONBOARDING_REWARDS, meta: () => ONBOARDING_REWARDS_META },
   tutorialRaid: { label: "Tutoriel : raid de Varan", target: () => TUTORIAL_RAID, meta: () => TUTORIAL_RAID_META },

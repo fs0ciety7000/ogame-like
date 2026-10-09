@@ -16,7 +16,7 @@ describe("gameErrorText", () => {
     expect(gameErrorText(403, "You are not allowed to perform this request.")).toBe(GAME_ERROR_TEXTS.forbidden);
     expect(gameErrorText(429, "Too Many Requests.")).toBe(GAME_ERROR_TEXTS.tooMany);
     expect(gameErrorText(409, undefined)).toBe(GAME_ERROR_TEXTS.conflict);
-    expect(gameErrorText(503, "")).toBe(GAME_ERROR_TEXTS.maintenance);
+    expect(gameErrorText(503, "")).toBe(GAME_ERROR_TEXTS.restarting);
     expect(gameErrorText(0, "Something went wrong while processing your request.")).toBe(GAME_ERROR_TEXTS.network);
     expect(gameErrorText(400, "Something went wrong while processing your request.")).toBe(GAME_ERROR_TEXTS.badRequest);
     expect(isGameMessage("Failed to load the collection.")).toBe(false);
@@ -24,7 +24,7 @@ describe("gameErrorText", () => {
 
   it("seules les vraies erreurs du serveur partent à l'équipe", () => {
     expect(isServerFault(500)).toBe(true);
-    expect(isServerFault(502)).toBe(true);
+    expect(isServerFault(502)).toBe(false);
     expect(isServerFault(503)).toBe(false);
     expect(isServerFault(403)).toBe(false);
   });

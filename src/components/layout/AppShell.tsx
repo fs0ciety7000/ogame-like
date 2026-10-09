@@ -7,6 +7,7 @@ import { MaintenanceBanner } from "@/components/layout/MaintenanceBanner";
 import { VacationBanner } from "@/components/layout/VacationBanner";
 import { PreprodBanner, PreprodTag } from "@/components/layout/PreprodBanner";
 import { StripStack } from "@/components/layout/StripStack";
+import { ServerDownBanner } from "@/components/layout/ServerDownBanner";
 import { usePageHeaderStore } from "@/store/pageHeaderStore";
 import { AnnouncementBanners } from "@/components/layout/AnnouncementBanners";
 import { useReportBadgeSync } from "@/hooks/useReportBadges";
@@ -354,6 +355,7 @@ export function AppShell() {
       )}
       <FxLayer />
       <FleetReturnFx />
+      <ServerDownBanner />
     </div>
   );
 }

@@ -12,7 +12,7 @@ export const ANNOUNCEMENTS_KEY = "announcements";
    phalange…) ni la pastille des Nouveautés : rien de ce qui précède son arrivée n'est « nouveau » pour lui. Les annonces
    en ligne pendant ses premières heures sont marquées vues sans s'ouvrir ; les Nouveautés ne comptent que les notes
    publiées après le jour de l'inscription. */
-export const NEWCOMER_NEWS_RULES = { quietHours: 24 };
+export const NEWCOMER_NEWS_RULES = { quietHours: 24, storyGapMinutes: 10 };
 
 export const NEWCOMER_NEWS_RULES_META = {
   quietHours: {
@@ -20,7 +20,14 @@ export const NEWCOMER_NEWS_RULES_META = {
     unit: "h",
     min: 0,
     max: 720,
-    hint: "Pendant ces heures après l'inscription, les annonces en ligne sont marquées vues sans s'ouvrir. 0 : un compte neuf voit l'annonce en cours.",
+    hint: "Pendant ces heures après l'inscription, les annonces en ligne sont marquées vues sans s'ouvrir et les épisodes des Chroniques attendent. 0 : un compte neuf voit l'annonce en cours.",
+  },
+  storyGapMinutes: {
+    label: "Écart entre deux fenêtres d'histoire (Chroniques, coalition)",
+    unit: "min",
+    min: 0,
+    max: 1440,
+    hint: "Après une fenêtre d'histoire fermée, un épisode des Chroniques ou une scène de coalition attend ce délai (les chapitres de la prise en main passent tout de suite). 0 : à la suite, comme avant.",
   },
 };
 

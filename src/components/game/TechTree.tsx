@@ -181,6 +181,14 @@ function techStatus(tech: TechDef, levels: Record<string, number>, activeIds: Se
   return checkPrereqs(tech, levels, ownedPlans).valid ? "available" : "locked";
 }
 
+const TREE_LABELS = {
+  "controls.ariaLabel": "Commandes de la vue",
+  "controls.zoomIn.ariaLabel": "Zoomer",
+  "controls.zoomOut.ariaLabel": "Dézoomer",
+  "controls.fitView.ariaLabel": "Tout afficher",
+  "controls.interactive.ariaLabel": "Verrouiller la vue",
+};
+
 export function TechTree({
   levels,
   ownedPlans = [],
@@ -324,6 +332,8 @@ export function TechTree({
           fitViewOptions={fitNodes ? { padding: 0.2, nodes: fitNodes, maxZoom: 1 } : { padding: 0.06 }}
           minZoom={0.3}
           maxZoom={1.6}
+          // 6.14.164 (S4, NJ-19) : boutons de la vue en français (avant : « Zoom In », « Zoom Out », « Fit View »).
+          ariaLabelConfig={TREE_LABELS}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}

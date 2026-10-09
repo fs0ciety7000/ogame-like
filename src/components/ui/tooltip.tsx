@@ -6,6 +6,39 @@ export const TooltipProvider = TooltipPrimitive.Provider;
 export const Tooltip = TooltipPrimitive.Root;
 export const TooltipTrigger = TooltipPrimitive.Trigger;
 
+/* 6.14.164 (S4, NJ-7) : infobulle qui s'ouvre aussi au toucher. Une infobulle Radix ne s'ouvre qu'au survol ou au focus :
+   sur téléphone, les ressources rares de l'en-tête (icône et nombre, sans nom) ne disaient jamais leur nom. Ici, toucher
+   le déclencheur ouvre l'infobulle ; toucher ailleurs la ferme. Au bureau, le survol marche comme avant. */
+const TapContext = React.createContext<((open: boolean) => void) | null>(null);
+
+export function TapTooltip({ children, ...props }: Omit<React.ComponentProps<typeof TooltipPrimitive.Root>, "open" | "onOpenChange">) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <TapContext.Provider value={setOpen}>
+      <TooltipPrimitive.Root open={open} onOpenChange={setOpen} {...props}>
+        {children}
+      </TooltipPrimitive.Root>
+    </TapContext.Provider>
+  );
+}
+
+/** Déclencheur d'une `TapTooltip` : un toucher (ou un clic) ouvre l'infobulle au lieu de la fermer. */
+export function TapTooltipTrigger({ onClick, ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  const setOpen = React.useContext(TapContext);
+  return (
+    <TooltipPrimitive.Trigger
+      {...props}
+      onClick={(e) => {
+        onClick?.(e);
+        if (!setOpen || e.defaultPrevented) return;
+        // Radix ferme l'infobulle au clic du déclencheur, sauf si l'évènement est marqué : on l'ouvre à la place.
+        e.preventDefault();
+        setOpen(true);
+      }}
+    />
+  );
+}
+
 export function TooltipContent({ className, sideOffset = 6, ...props }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>

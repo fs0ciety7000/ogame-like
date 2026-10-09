@@ -40,7 +40,7 @@ describe("6.14.54 : astuces de page construites depuis les règles", () => {
 
   it("l'astuce des Joueurs suit la protection des débutants", () => {
     PVP_RULES.newbieProtectionMs = 48 * 3_600_000;
-    expect(PAGE_TIPS["/game/joueurs"]).toContain("protégés 48 h");
+    expect(PAGE_TIPS["/game/joueurs"]).toContain("protégé 48 h");
   });
 
   it("aucune astuce ne demande seulement de survoler (le survol n'existe pas au toucher)", () => {

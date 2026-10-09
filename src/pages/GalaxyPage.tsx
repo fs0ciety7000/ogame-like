@@ -641,8 +641,9 @@ export function GalaxyPage() {
                       <Sword className="mr-1 h-4 w-4" /> Attaquer la colonie
                     </Button>
                   )}
-                  <Button variant="outline" size="icon" title="Espionner la colonie" aria-label="Espionner la colonie" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
-                    <Eye className="h-4 w-4" />
+                  {/* 6.14.164 (S4, NJ-9) : « Espionner » en toutes lettres (une icône seule ne disait rien au débutant). */}
+                  <Button variant="outline" size="sm" aria-label="Espionner la colonie" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: `${selectedColony.colonyName} (${selected.pseudo})` })}>
+                    <Eye className="mr-1 h-4 w-4" /> Espionner
                   </Button>
                 </div>
               )}
@@ -660,8 +661,8 @@ export function GalaxyPage() {
                   <Button variant="outline" size="icon" title={`Sondes en 1 clic (${quickProbeCount()})`} aria-label={`Envoyer des sondes à ${selected.pseudo}`} onClick={() => void quickSpy({ uid: selected.uid, pseudo: selected.pseudo })}>
                     <Radar className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon" title="Espionner" aria-label="Espionner" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
-                    <Eye className="h-4 w-4" />
+                  <Button variant="outline" size="sm" onClick={() => setSpyTarget({ uid: selected.uid, pseudo: selected.pseudo })}>
+                    <Eye className="mr-1 h-4 w-4" /> Espionner
                   </Button>
                   {!("npc" in selected && selected.npc) && (
                     <Button variant="outline" size="icon" title="Envoyer des ressources" aria-label="Envoyer des ressources" onClick={() => setTradeTarget({ uid: selected.uid, pseudo: selected.pseudo, allianceId: "allianceId" in selected ? (selected.allianceId ?? null) : undefined, createdAtMs: "createdAtMs" in selected ? selected.createdAtMs : undefined })}>
@@ -702,7 +703,14 @@ export function GalaxyPage() {
       </div>
 
       <SpyModal target={spyTarget} onClose={() => setSpyTarget(null)} />
-      <AttackModal target={attackTarget} onClose={() => setAttackTarget(null)} />
+      <AttackModal
+        target={attackTarget}
+        onClose={() => setAttackTarget(null)}
+        onSpy={(t) => {
+          setAttackTarget(null);
+          setSpyTarget(t);
+        }}
+      />
       <TradeModal target={tradeTarget} onClose={() => setTradeTarget(null)} />
       <RecycleDialog field={recycleField} onClose={() => setRecycleField(null)} />
       <GarrisonDialog target={garrisonTarget} onClose={() => setGarrisonTarget(null)} />

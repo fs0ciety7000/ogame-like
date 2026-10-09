@@ -80,6 +80,12 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
 - **`TooltipCard`** (`src/components/ui/tooltip.tsx`), dans un `TooltipContent` : infobulle structurée. Titre en capitales mono
   (+ icône), lignes `{ label, value, tone? }` alignées (valeurs en mono tabulaire), `sections` séparées par un filet, `note`.
   Une infobulle qui contient des chiffres passe par elle plutôt que par une phrase.
+  **`TapTooltip` / `TapTooltipTrigger`** (6.14.164) : même infobulle, ouverte aussi au toucher (une infobulle Radix ne s'ouvre qu'au
+  survol ou au focus). Obligatoire quand l'élément n'a pas de libellé visible sur téléphone (icône et nombre de l'en-tête).
+- **Bandeau du serveur** (`ServerDownBanner`, 6.14.164) : pastille fixe en bas (au-dessus de la barre d'onglets sur téléphone ; les toasts occupent le haut), liseré `ember` (attention : rien n'est perdu), texte
+  court et icône qui tourne ; montée une fois dans `AppShell`. Une panne de serveur ne se dit jamais en `danger`.
+- **Carte visée** (`useFocusCard`, 6.14.164) : un lien qui mène à une carte précise passe `?focus=<id>` ; la carte porte
+  `data-focus-id`, défile au centre et prend un contour `outline-cyan-glow` 2,5 s.
 - **`HudSwitch`** : interrupteur on/off (réglages, vue cockpit). Les cases à cocher restent pour les sélections multiples.
 - **Champ de réglage de l'admin** (`AllRulesEditor`, 6.14.95) : libellé clair, nom technique en petit (mono 10 px, admin), défaut et
   bornes en `tabular-nums`, unité en suffixe du champ ; `HudChip size="sm" tone="accent"` « modifié » et bouton `ghost` « Défaut »
@@ -177,7 +183,8 @@ Animer pour **répondre** au joueur ou **signaler un état**, jamais pour décor
 ## À faire / à éviter
 
 - Faire : nombres en `font-mono` tabulaire (gros chiffres compris : `StatTile`, niveaux, compteurs, gains, rangs, décomptes ;
-  `font-mono font-bold tabular-nums`, jamais `hud-title` qui impose la police de titre), formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`), jamais
+  `font-mono font-bold tabular-nums`, jamais `hud-title` qui impose la police de titre), formatés par `formatNumber` / `formatDecimal` / `formatCompact` (`@/lib/utils`),
+  ou `formatHud` (3 chiffres au plus, 6 caractères : cases étroites de l'en-tête, 6.14.164), jamais
   `toLocaleString` sur un nombre ; trois niveaux de texte maximum par panneau ; coins coupés ou droits. Ces fonctions séparent les
   milliers par une espace insécable U+00A0 : l'espace fine U+202F de fr-FR manque à toutes les polices de titre (6.14.54).
 - Faire : un texte qui cite un chiffre de règle (astuce, toast, aide) le lit dans la règle en vigueur (`ALLIANCE_RULES.maxMembers`,

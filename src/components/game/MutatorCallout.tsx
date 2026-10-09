@@ -1,7 +1,7 @@
 import { HudCallout } from "@/components/ui/hud";
 import { activeMutator, mutatorFor, mutatorMonthId } from "@/game/mutators";
 import { useContentStore } from "@/services/contentService";
-import { cn } from "@/lib/utils";
+import { cn, frDe } from "@/lib/utils";
 
 /* 5.16 : mutateur de saison du mois (règle spéciale pour tout le serveur),
    et aperçu du suivant. Sur l'accueil et la page Chroniques. */
@@ -22,7 +22,7 @@ export function MutatorCallout({ className, compact }: { className?: string; com
         {m.emoji}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-violet-glow">Mutateur de {MONTHS[mo - 1]}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-violet-glow">Mutateur {frDe(MONTHS[mo - 1])}</p>
         <p className="hud-title text-sm normal-case text-slate-100">{m.name}</p>
         <p className="text-xs text-slate-300">{m.description}</p>
         {!compact && next && (

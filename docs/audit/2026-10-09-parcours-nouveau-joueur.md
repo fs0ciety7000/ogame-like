@@ -139,6 +139,10 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-7. La barre de ressources est tronquée sur mobile.**
 
+> **Corrigé en 6.14.164** (S4) : stocks en 3 chiffres au plus (« 150 k », « 1,23 M », `formatHud`), icône de 20 px sur téléphone ; chaque ressource,
+> rare comprise, ouvre son infobulle (nom, stock, débit) au toucher (`TapTooltip`). **Reporté** : en-tête collant (il prendrait encore
+> plus de hauteur, voir NJ-14 : à traiter avec la refonte de l'en-tête). Fiche : `docs/changes/6.14.164-confort-debutant.md`.
+
 - **Ce que voit le joueur** : dès qu'un stock dépasse 100 k, il lit « 150,… », « 240,… », « 42,1… ». La dernière ressource rare est coupée au
   bord droit. Les 4 ressources rares n'ont qu'une icône, sans nom ni info-bulle au toucher. La barre défile hors de l'écran avec la page
   (pas d'en-tête collant).
@@ -158,6 +162,9 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-9. « Espionner » est une icône sans texte.**
 
+> **Corrigé en 6.14.164** (S4) : bouton « Espionner » en toutes lettres (joueur et colonie) ; « Espionner d'abord → » dans la fenêtre
+> d'attaque sans rapport assez détaillé (Galaxie, Joueurs, Seigneurs) ; seuls les vaisseaux possédés y sont listés. Fiche : `docs/changes/6.14.164-confort-debutant.md`.
+
 - **Ce que voit le joueur** : l'objectif dit « Envoie une sonde depuis la Galaxie ». Sur la fiche d'un joueur, il ne voit qu'un gros
   « ATTAQUER » et trois icônes (radar, œil, cadeau), sans libellé et sans info-bulle au toucher.
   - Le formulaire « Attaquer » dit « Aucun rapport d'espionnage : espionne la cible » mais ne propose pas de le faire.
@@ -169,7 +176,11 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-10. Le premier écran est une annonce hors sujet, et trop de fenêtres s'enchaînent.**
 
-> **Corrigé en 6.14.161** (S1) : annonce marquée vue pour un compte de moins de 24 h, image bornée sur mobile ; reste : fenêtres d'histoire en fin de prise en main (S4). Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
+> **Corrigé en 6.14.161** (S1) : annonce marquée vue pour un compte de moins de 24 h, image bornée sur mobile. Fiche : `docs/changes/6.14.161-parcours-debutant.md`.
+> **Reste corrigé en 6.14.164** (S4) : aucun épisode des Chroniques pour un compte de moins de 24 h (`newcomerNews.quietHours`), et 10 min
+> au moins entre une histoire fermée et un épisode ou une scène de coalition (`newcomerNews.storyGapMinutes`) ; le rapport de combat
+> prend aussi la place unique des grandes fenêtres. L'histoire du chapitre 3 « 7 min après » : pas reproduite (elle attend la fin d'une
+> autre fenêtre, comme voulu). Fiche : `docs/changes/6.14.164-confort-debutant.md`.
 
 - **Ce que voit le joueur** :
   - Le premier écran après l'inscription est l'annonce de la 6.14 (lune, phalange, porte de saut, garnisons d'alliance) : du jargon de
@@ -184,6 +195,11 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 **NJ-11. La pré-prod redémarre en pleine partie.**
 
+> **Corrigé en 6.14.164** (S4) : bandeau « Serveur en cours de mise à jour, nouvelle tentative… » dès qu'une réponse est 502, 504, 503
+> sans message du jeu ou sans réponse ; nouvel essai toutes les 5 s, « Serveur de retour » ensuite ; une action qui échoue le dit
+> (« rien n'a été fait, réessaie dans quelques secondes ») et ne part plus à l'équipe comme une erreur. **Reporté** : désactiver tous
+> les boutons pendant la coupure (chaque bouton gère son état ; le message suffit à ne plus cliquer dans le vide). Fiche : `docs/changes/6.14.164-confort-debutant.md`.
+
 - **Ce que voit le joueur** : pendant le test, le serveur a renvoyé « 502 Bad Gateway » pendant 1 à 2 min, au moins 2 fois (déploiements
   pendant les pushs). Côté jeu, « Tout réclamer » ne fait rien et aucun message n'apparaît.
 - **Contexte** : sur la pré-prod, c'est normal. En production, la même absence de message laisserait le joueur cliquer dans le vide.
@@ -193,30 +209,30 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 
 ### 🟡 Confort
 
-- **NJ-12. « Tout réclamer » ne voit pas toujours l'objectif prêt.**
+- **NJ-12. « Tout réclamer » ne voit pas toujours l'objectif prêt.** **Expliqué en 6.14.164** (S4), sans changement : « Tout réclamer » n'apparaît qu'à partir de **2** récompenses prêtes (5.11) ; un seul objectif prêt se réclame sur sa carte. Même calcul des deux côtés (`pendingClaims`).
   - **Ce que voit le joueur** : la carte de prise en main affiche « RÉCLAMER », mais la pastille « Tout réclamer » est absente ou ne le compte
     pas (3 fois, aux minutes 16, 28 et 55).
   - **Capture** : `67-obj-reclamer.png`.
   - **Piste** : rafraîchir `pendingClaims` dès qu'un objectif de prise en main est rempli.
-- **NJ-13. « J'y vais » arrive en haut de la page.**
+- **NJ-13. « J'y vais » arrive en haut de la page.** **Corrigé en 6.14.164** (S4) : `?focus=<id>` ; la carte visée défile au centre et s'éclaire 2,5 s (Bâtiments, Unités, onglet Défenses pour les roquettes).
   - **Ce que voit le joueur** : il atterrit en haut de la page Bâtiments, au-dessus de la « File planifiée », et non sur la carte de
     l'extracteur visé.
   - **Capture** : `11-jyvais.png`.
   - **Piste** : faire défiler jusqu'à la carte ciblée et la mettre en évidence.
-- **NJ-14. Le contenu commence bas sur l'écran.**
+- **NJ-14. Le contenu commence bas sur l'écran.** **Reporté** (S4) : réduire l'en-tête au défilement et l'astuce de page touchent toute la mise en page (refonte de l'en-tête, avec l'en-tête collant de NJ-7) ; l'astuce se ferme déjà d'un toucher (« Tout masquer »).
   - **Ce que voit le joueur** :
     - Sur mobile, le contenu de chaque page commence vers 370 px sur 812. Avant lui viennent : le bandeau défilant (doublé), « +1 bandeau »,
       l'en-tête sur 2 rangées, le titre, le sous-titre et l'astuce.
     - Sur bureau, les cartes des Bâtiments commencent à 770 px sur 900.
   - **Captures** : `tour-passe.png`, `d03-batiments.png`.
   - **Piste** : réduire l'en-tête une fois la page défilée. Ne montrer l'astuce qu'à la première visite.
-- **NJ-15. La recherche terminée reste affichée « Temps restant : 0s ».**
+- **NJ-15. La recherche terminée reste affichée « Temps restant : 0s ».** **Corrigé en 6.14.164** (S4) : « Finalisation… » à 0 s (fiche et liste du Labo) et synchro demandée 1 s après la fin d'une recherche ou d'un bâtiment (avant : battement de 20 s).
   - **Ce que voit le joueur** : le panneau reste à « 0s » 10 à 40 s avant de passer au niveau suivant.
   - **Piste** : afficher « Finalisation… » à 0 s.
-- **NJ-16. On ne peut pas mettre en file une recherche dont un prérequis est déjà en cours.**
+- **NJ-16. On ne peut pas mettre en file une recherche dont un prérequis est déjà en cours.** **Reporté** (S4) : accepter une recherche dont le prérequis est dans la file change la règle du serveur (validation des prérequis, file, annulation en chaîne) : pas une petite correction.
   - **Ce que voit le joueur** : la file a 4 places, mais une recherche reste grisée tant que son prérequis n'est pas fini.
   - **Piste** : accepter une recherche si son prérequis est déjà dans la file.
-- **NJ-17. Le Labo disparaît de la barre du bas quand la Galaxie s'ouvre.**
+- **NJ-17. Le Labo disparaît de la barre du bas quand la Galaxie s'ouvre.** **Reporté** (S4) : les onglets par défaut viennent d'une décision (Q90, 6.14.64) ; le joueur peut déjà épingler le Labo (« Épingler » du menu Plus). Question proposée dans la fiche.
   - **Ce que voit le joueur** : le Labo, utilisé toutes les 2 minutes, passe dans « Plus ».
   - **Piste** : garder le Labo et mettre la Galaxie dans « Plus », ou laisser le joueur épingler ses onglets.
 - **NJ-18. Les Nouveautés sont des notes de développeur.** **Corrigé en 6.14.161** (S1) : pas de pastille le premier jour, notes d'avant l'inscription jamais « nouvelles », notes `audience: equipe` cachées, lignes coupées réparées.
@@ -225,7 +241,7 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
   - Les paragraphes sont cassés par les retours à la ligne du Markdown (« une mission se / termine »).
   - **Capture** : `60-nouveautes.png`.
   - **Piste** : marquer comme lues les notes antérieures à l'inscription. Réparer le rendu des lignes coupées.
-- **NJ-19. Il reste des fautes dans les textes.**
+- **NJ-19. Il reste des fautes dans les textes.** **Corrigé en 6.14.164** (S4) : « 1 jour », « Mutateur d'octobre », « Passe d'octobre 2026 », « Forces du Silencieux » (`frDe`), « Cette page est maintenant dans ton menu », « COMMUNI-CATIONS » (césure à la syllabe), boutons de l'arbre en français.
   - **Ce que voit le joueur** :
     - « Meilleure série : 1 jours » (Ordres du jour) ;
     - « Mutateur de Octobre », « Passe de Octobre 2026 » ;
@@ -234,21 +250,21 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
     - le bouton « Communications » coupé en « COMMUNICATIO / NS » dans le menu Plus ;
     - les libellés anglais « Zoom In / Zoom Out / Fit View » sur l'arbre du Labo.
   - **Captures** : `28-plus.png`, `29-ordres.png`.
-- **NJ-20. Le comptoir accepte un échange qui ne donne rien.**
+- **NJ-20. Le comptoir accepte un échange qui ne donne rien.** **Corrigé en 6.14.164** (S4) : la quantité monte au minimum qui rapporte 1 à chaque paire choisie, avec « Mettre ce minimum » ; le bouton était déjà grisé à 0.
   - **Ce que voit le joueur** : avec la quantité par défaut (100), « Tu recevras 0 » s'affiche (« brut 1 · taxe 1 »), mais le bouton
     « Échanger » reste actif.
   - **Piste** : mettre par défaut la quantité qui donne au moins 1, et désactiver le bouton à 0.
-- **NJ-21. Le panneau « Boss » de l'accueil est vide.**
+- **NJ-21. Le panneau « Boss » de l'accueil est vide.** **Corrigé en 6.14.164** (S4) : le cadre « Boss » n'est plus affiché sans boss à montrer.
   - **Ce que voit le joueur** : un cadre titré « Boss » sans aucun contenu en bas de l'accueil.
   - **Capture** : `75-accueil-part2.png`.
-- **NJ-22. Les cartes d'alliance se chevauchent sur mobile.**
+- **NJ-22. Les cartes d'alliance se chevauchent sur mobile.** **Corrigé en 6.14.164** (S4) : la jauge des membres se partage la place (au plus 9 rem), le compteur ne passe plus sous le bouton.
   - **Ce que voit le joueur** : le bouton « Rejoindre » chevauche le compteur de membres (« 4/10 » à moitié caché).
   - **Capture** : `70-fonder.png`.
-- **NJ-23. Le texte d'espionnage est trop mathématique.**
+- **NJ-23. Le texte d'espionnage est trop mathématique.** **Corrigé en 6.14.164** (S4) : règle en mots (« 1 sonde pour ses ressources, 4 pour sa flotte… à niveau égal ; chaque niveau d'avance divise par 2 »), formule dans « Le calcul ».
   - **Ce que voit le joueur** : « Score = ton Espionnage − son contre-espionnage + log₂(sondes) », sans traduction pour un débutant.
   - **Capture** : `66-espionner-dialog.png`.
   - **Piste** : écrire « Plus tu envoies de sondes, plus le rapport est complet : 4 sondes pour voir sa flotte ».
-- **NJ-24. Deux protections de débutant semblent se contredire.**
+- **NJ-24. Deux protections de débutant semblent se contredire.** **Corrigé en 6.14.164** (S4) : « Protégé jusqu'au … » (date de fin, tant que tu n'attaques pas) dans « Ce que tu risques » ; la date du bas y est celle de la règle de l'entrepôt, dite comme telle ; l'astuce des Joueurs renvoie à cette carte.
   - **Ce que voit le joueur** : « Les débutants sont protégés 3 h » (Classement), alors que la page Ressources parle de « chiffres après le
     mardi 13 octobre ».
   - **Piste** : une seule phrase, au même endroit : « Protégé jusqu'au … ».

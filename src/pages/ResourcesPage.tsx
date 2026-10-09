@@ -45,6 +45,14 @@ export function ResourcesPage() {
     if (focus === "comptoir" && ready) document.getElementById("comptoir")?.scrollIntoView({ block: "start" });
   }, [focus, ready]);
 
+  // 6.14.164 (S4, NJ-20) : la quantité par défaut (100) donnait « Tu recevras 0 » (100 ferraille → 1 acier, moins 1 de taxe) :
+  // à chaque paire choisie, la quantité monte au minimum qui rapporte au moins 1.
+  const taxCut = player ? exchangeTaxCut(player) : 0;
+  useEffect(() => {
+    if (sellId === buyId) return;
+    setAmount((a) => (tradeQuote(sellId, buyId, a, taxCut).net >= 1 ? a : minTradeAmount(sellId, buyId, taxCut)));
+  }, [sellId, buyId, taxCut]);
+
   if (!resources || !player) return null;
   const economy = economySnapshot({ ...player, resources }, Date.now());
 
@@ -183,6 +191,14 @@ export function ResourcesPage() {
             </span>
           </HudCallout>
 
+          {quote.net <= 0 && sellId !== buyId && (
+            <p className="text-xs text-slate-400">
+              Il faut au moins <span className="font-mono tabular-nums text-slate-200">{formatNumber(minTradeAmount(sellId, buyId, taxCut))}</span> pour recevoir 1 {buyRes.name}.{" "}
+              <button type="button" className="hud-hit font-semibold text-cyan-glow hover:underline" onClick={() => setAmount(minTradeAmount(sellId, buyId, taxCut))}>
+                Mettre ce minimum
+              </button>
+            </p>
+          )}
           {overCap && (
             <HudCallout tone="ember" className="text-xs">
               {rareLeft > 0 ? `Au-delà du plafond de la semaine : il te reste ${formatCompact(rareLeft)} rares à recevoir. Échange moins de communes.` : "Plafond de la semaine atteint : reviens lundi."}
@@ -195,6 +211,22 @@ export function ResourcesPage() {
       </Card>
     </div>
   );
+}
+
+/** 6.14.164 (S4, NJ-20) : plus petite quantité vendue qui rapporte au moins 1 (taxe comprise), même calcul que le serveur. */
+function minTradeAmount(sellId: ResourceId, buyId: ResourceId, taxCut: number): number {
+  let hi = 1;
+  while (tradeQuote(sellId, buyId, hi, taxCut).net < 1) {
+    hi *= 2;
+    if (hi > 1e12) return 1;
+  }
+  let lo = Math.floor(hi / 2) + 1;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (tradeQuote(sellId, buyId, mid, taxCut).net >= 1) hi = mid;
+    else lo = mid + 1;
+  }
+  return hi;
 }
 
 /** 6.14.143 (PB-L2) : jauge du tampon de l'entrepôt, « Tampon : 1 h 40 en attente ». */

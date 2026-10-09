@@ -343,7 +343,14 @@ export function WarlordsPage() {
       </Dialog>
 
       <SpyModal target={spy} onClose={() => setSpy(null)} />
-      <AttackModal target={attack} onClose={() => setAttack(null)} />
+      <AttackModal
+        target={attack}
+        onClose={() => setAttack(null)}
+        onSpy={(t) => {
+          setAttack(null);
+          setSpy(t);
+        }}
+      />
     </div>
   );
 }

@@ -155,6 +155,11 @@ export function SpyReportView({ report }: { report: SpyReport }) {
   );
 }
 
+/** 6.14.164 (S4, NJ-23) : sondes qu'il faut, à niveaux égaux, pour atteindre un palier (score = log₂(sondes)). */
+function probesForTier(threshold: number): number {
+  return Math.max(1, Math.ceil(2 ** threshold));
+}
+
 /** Espionnage (v1.7) : envoi de sondes et dernier rapport obtenu. */
 export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: string } | null; onClose: () => void }) {
   const player = usePlayerStore((s) => s.player);
@@ -262,11 +267,23 @@ export function SpyModal({ target, onClose }: { target: { uid: string; pseudo: s
                     <span>Choisis le nombre de sondes.</span>
                   )}
                 </p>
+                {/* 6.14.164 (S4, NJ-23) : la règle en mots d'abord ; la formule reste dépliable pour les curieux. */}
                 <p>
-                  Score = ton Espionnage − son contre-espionnage + log₂(sondes). Chaque doublement du nombre de sondes vaut +1. Paliers :
-                  ressources (≥ {SPY_RULES.tierResources}), flotte et défenses (≥ {SPY_RULES.tierForces}), bâtiments et technos (≥{" "}
-                  {SPY_RULES.tierInfrastructure}), files et flottes en vol (≥ {SPY_RULES.tierActivity}).
+                  Plus tu envoies de sondes, plus le rapport est complet. À niveau d'Espionnage égal à celui de la cible :{" "}
+                  <span className="font-mono tabular-nums text-slate-200">{probesForTier(SPY_RULES.tierResources)}</span> sonde{probesForTier(SPY_RULES.tierResources) > 1 ? "s" : ""} pour ses ressources,{" "}
+                  <span className="font-mono tabular-nums text-slate-200">{probesForTier(SPY_RULES.tierForces)}</span> pour sa flotte et ses défenses,{" "}
+                  <span className="font-mono tabular-nums text-slate-200">{probesForTier(SPY_RULES.tierInfrastructure)}</span> pour ses bâtiments et technos,{" "}
+                  <span className="font-mono tabular-nums text-slate-200">{probesForTier(SPY_RULES.tierActivity)}</span> pour ses files et flottes en vol. Chaque niveau
+                  d'Espionnage d'avance divise ces nombres par 2.
                 </p>
+                <details className="text-slate-500">
+                  <summary className="cursor-pointer hover:text-slate-300">Le calcul</summary>
+                  <p className="mt-1">
+                    Score = ton Espionnage − son contre-espionnage + log₂(sondes). Paliers : ressources (≥ {SPY_RULES.tierResources}), flotte et
+                    défenses (≥ {SPY_RULES.tierForces}), bâtiments et technos (≥ {SPY_RULES.tierInfrastructure}), files et flottes en vol (≥{" "}
+                    {SPY_RULES.tierActivity}).
+                  </p>
+                </details>
                 <p className="text-slate-500">Si elles sont repérées, les sondes sont abattues et la cible sait qui l'espionne. Le rapport te parvient quand même.</p>
               </div>
               <Button className="w-full" disabled={count <= 0} onClick={() => void send()}>

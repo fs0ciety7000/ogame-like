@@ -1,7 +1,8 @@
 import { buildTimeBreakdown, playerBuildingDiscount, playerBuildTimeFactor } from "@/game/bonuses";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useFocusCard } from "@/hooks/useFocusCard";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -81,6 +82,11 @@ export function BuildingsPage() {
   // 6.12.0 (Q16) : vue « liste » sur téléphone (une ligne par bâtiment, la carte s'ouvre au toucher).
   const [viewPref, setViewPref] = useState<"cards" | "list" | null>(readBuildingsView);
   const [openIds, setOpenIds] = useState<string[]>([]);
+  // 6.14.164 (S4, NJ-13) : « J'y vais » (?focus=<bâtiment>) : la carte visée s'ouvre (vue liste), défile et s'éclaire.
+  const focus = useFocusCard(!!player && !!queues);
+  useEffect(() => {
+    if (focus) setOpenIds((o) => (o.includes(focus) ? o : [...o, focus]));
+  }, [focus]);
 
   if (!player || !queues) return null;
   const unlockedCount = BUILDINGS.filter((b) => player.buildings[b.id]?.unlocked).length;
@@ -216,6 +222,7 @@ export function BuildingsPage() {
             return (
               <button
                 key={building.id}
+                data-focus-id={building.id}
                 type="button"
                 aria-expanded={false}
                 onClick={() => setOpenIds((o) => [...o, building.id])}
@@ -241,6 +248,7 @@ export function BuildingsPage() {
           return (
             <motion.div
               key={building.id}
+              data-focus-id={building.id}
               layout
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

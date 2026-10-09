@@ -8,7 +8,7 @@ import { RANK_NAMES, RANK_NUMERALS } from "@/game/warlordRanks";
 import { UNIT_CLASS_LABELS } from "@/game/unitClasses";
 import { COMBAT_RULES } from "@/game/combat";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatCompact, formatNumber } from "@/lib/utils";
+import { cn, formatCompact, formatNumber, frDe } from "@/lib/utils";
 import type { CombatLog, CombatLogUnit } from "@/types/game";
 
 /* =====================================================
@@ -275,7 +275,7 @@ export function CombatReportDetail({ log, perspective, opponentName }: { log?: C
       {units.length > 0 && (
         <section className="grid gap-4 sm:grid-cols-2">
           <SideColumn units={units.filter((u) => u.side === mine)} round={round} tone="accent" title="Tes forces" enemyName={opponentName} />
-          <SideColumn units={units.filter((u) => u.side === theirs)} round={round} tone="danger" title={`Forces de ${opponentName}`} enemyName={`Forces de ${opponentName}`} />
+          <SideColumn units={units.filter((u) => u.side === theirs)} round={round} tone="danger" title={`Forces ${frDe(opponentName)}`} enemyName={`Forces ${frDe(opponentName)}`} />
         </section>
       )}
 

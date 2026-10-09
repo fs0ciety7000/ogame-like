@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { assetUrl } from "@/lib/assets";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
 import { useMemo, useState } from "react";
+import { useFocusCard } from "@/hooks/useFocusCard";
 import { SortableGrid, SortableGridToggle } from "@/components/ui/sortable-grid";
 import { motion } from "framer-motion";
 import { Boxes } from "lucide-react";
@@ -53,7 +54,12 @@ export function UnitsPage() {
   const rates = useProductionRates(player);
   // 5.18 : onglets Vaisseaux / Défenses (6.4 : libellés, constat C4) et filtre par classe (calculée d'après les stats).
   // 5.26 : ?onglet=defense ouvre directement les défenses (liens « Renforcer les défenses »).
-  const [tab, setTab] = useState<"attack" | "defense">(() => (new URLSearchParams(window.location.search).get("onglet") === "defense" ? "defense" : "attack"));
+  // 6.14.164 (S4, NJ-13) : ?focus=<unité> (« J'y vais ») ouvre l'onglet de l'unité, puis sa carte défile et s'éclaire.
+  const [tab, setTab] = useState<"attack" | "defense">(() => {
+    const q = new URLSearchParams(window.location.search);
+    return q.get("onglet") === "defense" || findUnit(q.get("focus") ?? "")?.category === "defense" ? "defense" : "attack";
+  });
+  useFocusCard(!!player && !!queues);
   const [classFilter, setClassFilter] = useState<UnitClass | "all">("all");
   const [editingCards, setEditingCards] = useState(false);
   const classes = useMemo(() => unitClasses(UNITS), []);
@@ -294,6 +300,7 @@ export function UnitsPage() {
           return (
             <motion.div
               key={unit.id}
+              data-focus-id={unit.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.03 }}

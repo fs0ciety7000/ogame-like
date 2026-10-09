@@ -567,7 +567,8 @@ export function navOpeningNotice(p: PlayerState, ctx: NavContext): NewNotificati
 function navOpeningMessage(p: PlayerState, fresh: { page: string; reason: "signal" | "step" | "rank" }[], signals: Set<NavSignal>): string {
   const pages = fresh.map((f) => f.page);
   const many = pages.length > 1;
-  const where = many ? "Elles sont maintenant dans ton menu." : "Elle est maintenant dans ton menu.";
+  // 6.14.164 (S4, NJ-19) : « Nouveau : Simulateur… Elle est… » : le pronom suivait « page », absente de la phrase.
+  const where = many ? "Ces pages sont maintenant dans ton menu." : "Cette page est maintenant dans ton menu.";
   const bySignal = (s: NavSignal) => fresh.some((f) => f.reason === "signal" && (NAV_UNLOCK_RULES.pages[f.page]?.signals ?? []).includes(s) && signals.has(s));
   if (bySignal("danger")) return `Une menace vise ton empire : ${many ? "ces pages t'aident" : "cette page t'aide"} à te défendre. ${where}`;
   if (bySignal("protectionOver")) return `Ta protection de débutant est finie : les raids peuvent viser ta base. ${where}`;

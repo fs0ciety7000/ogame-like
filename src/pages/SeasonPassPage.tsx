@@ -19,7 +19,7 @@ import { GameActionError, claimPassTier } from "@/services/playerService";
 import { usePlayerStore } from "@/store/playerStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
 import { assetUrl } from "@/lib/assets";
-import { cn, formatClock } from "@/lib/utils";
+import { cn, formatClock, frDe } from "@/lib/utils";
 
 /* Passe (v4.1) : 30 paliers gratuits par mois. */
 
@@ -124,8 +124,8 @@ export function SeasonPassPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={season ? `Passe de ${seasonLabel(st.seasonId)}` : "Saison"}
-        title={season ? season.theme.name : `Passe de ${seasonLabel(st.seasonId)}`}
+        eyebrow={season ? `Passe ${frDe(seasonLabel(st.seasonId).toLowerCase())}` : "Saison"}
+        title={season ? season.theme.name : `Passe ${frDe(seasonLabel(st.seasonId).toLowerCase())}`}
         backdrop={season?.theme.image || "/assets/pass/pass-header.webp"}
         description={season ? `${season.theme.tagline} Gratuit pour tous : ${tiers} paliers, remise à zéro au début du mois.` : `Gratuit pour tous : ton activité de chaque jour remplit ${tiers} paliers de récompenses. Remise à zéro au début de chaque mois.`}
         right={

@@ -35,6 +35,54 @@ export function formatCompact(value: number): string {
   );
 }
 
+/** 6.14.164 (S4, NJ-7) : stock de l'en-tête, 3 chiffres significatifs au plus (« 150 k », « 42,1 k », « 1,23 M ») : tient dans
+ *  une case de 375 px sans ellipse (« 150,2 k » était coupé en « 150,… »). */
+export function formatHud(value: number): string {
+  const v = Math.floor(value);
+  if (Math.abs(v) < 1000) return String(v);
+  // « Md » a une lettre de plus que « k » ou « M » : 2 chiffres de 1 à 99 milliards (« 4,3 Md »).
+  const sig = Math.abs(v) >= 1e9 && Math.abs(v) < 1e11 ? 2 : 3;
+  return withNbsp(new Intl.NumberFormat("fr-FR", { notation: "compact", maximumSignificantDigits: sig }).format(v));
+}
+
+/** 6.14.164 (S4, NJ-19) : « de » devant un nom propre ou un mois, avec élision et contraction : « d'octobre »,
+ *  « du Silencieux », « des Ombres », « de la Ruche », « de Varan ». */
+export function frDe(name: string): string {
+  const n = name.trim();
+  const art = /^(les|le|la)\s+(\S.*)$/i.exec(n);
+  if (art) {
+    const a = art[1].toLowerCase();
+    return a === "le" ? `du ${art[2]}` : a === "les" ? `des ${art[2]}` : `de la ${art[2]}`;
+  }
+  if (/^l['’]/i.test(n)) return `de l'${n.slice(2)}`;
+  // Pas d'élision devant « h » (aspiré ou non, on ne sait pas le dire) : « de Hurlevent ».
+  return /^[aeiouyàâéèêëîïôûü]/i.test(n) ? `d'${n}` : `de ${n}`;
+}
+
+const VOWEL = /[aeiouyàâéèêëîïôûü]/i;
+
+/** 6.14.164 (S4, NJ-19) : Chrome n'a pas toujours de dictionnaire français pour `hyphens: auto` : « COMMUNICATIONS » se coupait
+ *  en « COMMUNICATIO / NS ». Un mot de plus de 12 lettres reçoit une césure possible (U+00AD) en son milieu, sur une
+ *  consonne suivie d'une voyelle (« COMMUNI-CATIONS ») ; le trait d'union ne s'affiche que si le mot est coupé. */
+export function softHyphens(label: string): string {
+  return label
+    .split(" ")
+    .map((w) => {
+      if (w.length <= 12) return w;
+      const mid = Math.floor(w.length / 2);
+      for (let d = 0; d < mid - 3; d++) {
+        for (const i of [mid + d, mid - d]) {
+          if (!VOWEL.test(w[i] ?? "") || VOWEL.test(w[i - 1] ?? "")) continue;
+          // « tr », « bl »… restent ensemble : « Adminis-tration ».
+          const cut = /[lr]/i.test(w[i - 1]) && !VOWEL.test(w[i - 2] ?? "a") && !/[lr]/i.test(w[i - 2]) ? i - 2 : i - 1;
+          return `${w.slice(0, cut)}\u00ad${w.slice(cut)}`;
+        }
+      }
+      return `${w.slice(0, mid)}\u00ad${w.slice(mid)}`;
+    })
+    .join(" ");
+}
+
 /** Débit horaire affiché par seconde, comme l'en-tête de la planète mère. */
 export function formatPerSecond(hourly: number): string {
   const v = hourly / 3600;

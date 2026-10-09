@@ -46,3 +46,6 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q407 | Vue liste du Labo : « Verrouillées, à portée » ouvert, « Plus loin » replié par défaut (`docs/changes/6.14.162-labo-mobile.md`) | valider |
 | Q410 | Surplus de nanocomposants et de données (production égale, coûts surtout en ferraille) : reporté au lot RR-2, à mesurer au parcours S5 (`docs/proposals/recompenses-du-depart.md`) | valider |
 | Q411 | Autres récompenses en heures (succès d'or, Chroniques, passe) non plafonnées pour un compte de moins de 24 h : aucune n'est atteignable la première heure (`docs/proposals/recompenses-du-depart.md`) | valider |
+| Q412 | Labo dans la barre d'onglets du bas sur téléphone ? Rien n'est changé pour l'instant (barre issue de Q90) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
+| Q413 | Histoires des Chroniques pour un compte neuf : aucune pendant 24 h, puis 10 min au moins entre deux (`newcomerNews.storyGapMinutes`) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
+| Q414 | Coupures 502 et 504 vues par les joueurs : plus envoyées au rapport d'erreurs (bandeau seulement) (`docs/changes/6.14.164-confort-debutant.md`) | valider |
