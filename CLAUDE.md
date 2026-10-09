@@ -145,7 +145,8 @@ vérifie la chaîne pour chaque contenu livré, et l'audit suivant reprend une i
 La mémoire du projet est dans le dépôt, pas dans la conversation. Une nouvelle session sur la branche de travail relit, dans l'ordre :
 1. ce fichier ;
 2. `docs/QUESTIONS.md` (décisions en attente) ;
-3. la feuille de route en cours (`docs/proposals/feuille-de-route-*.md`, statut « en cours ») ;
+3. **`docs/plan.md`** (le plan en cours : étapes et ordre, décision du 2026-10-09), puis la feuille de route qu'il désigne
+   (`docs/proposals/feuille-de-route-*.md`, historique détaillé) ;
 4. les dernières fiches de `docs/changes/README.md` ;
 5. `docs/audit/constats-ouverts.md` (ce qui reste, et pourquoi).
 
