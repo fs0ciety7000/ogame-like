@@ -309,3 +309,123 @@ de fenêtres pour quelqu'un qui débute.
 4. **NJ-4** : plafonner la prime du raid d'initiation et vérifier les récompenses du Carnet (300 k, 2 M) pour un compte de moins d'une heure.
    Passer par une proposition chiffrée. *Fait en 6.14.163 (S3).*
 5. **NJ-10, NJ-18 et NJ-6** : ne montrer ni l'annonce 6.14 ni les Nouveautés antérieures à un compte neuf, et corriger le conseil sur l'XP.
+
+## Second passage (6.14.164)
+
+- **Serveur** : `test.fs0ciety.org`, version 6.14.164 en ligne à 10:53 UTC (6.14.163 au départ du test, 2 min d'attente).
+- **Compte** : `Testeur_Claude2` (`testeur-claude2@test.invalid`), créé par « Créer mon empire » à 10:53:10 UTC. Mobile 375 × 812, thème
+  Constellation. Aucun autre compte touché : espionnage d'un Seigneur PNJ (Zhar'Kesh), alliance `[TSC2]` fondée seul.
+- **Durée** : 45 min de jeu (10:53 → 11:38), joué par un script Playwright qui repasse toutes les 30 à 60 s : il réclame, lance tout ce
+  qui est payable (bâtiments, Labo, missions), lit les fenêtres. Il joue donc **plus vite qu'un humain** : les minutes ci-dessous sont un
+  plancher. Captures dans le scratchpad de la session, sous `…/scratchpad/pt2/`.
+- **Coupure** : aucune pendant le test ; le bandeau « Serveur en cours de mise à jour » (NJ-11) n'a pas pu être vu.
+
+### Chronologie
+
+| Min. | Ce qui se passe |
+|:--|:--|
+| 0 | Pas d'annonce : le premier écran est la bulle d'histoire de Vashka (1/3). « Tout réclamer · 2 ». |
+| 1 | « J'y vais » ouvre Bâtiments **centré sur l'extracteur de ferraille**, carte éclairée. |
+| 2 | Labo en **liste** par défaut, « Rechercher » sur chaque ligne, aucun défilement horizontal. |
+| 3 | Objectif 3 réclamé : **+20 Acier renforcé**. Recherche Drone lancée aussitôt. |
+| 10 | 5 drones. Chapitre 2 (histoire de 3 bulles). Première Patrouille courte. |
+| 15 | **Raid scripté** : l'histoire d'Orsk Varan d'abord, puis l'alerte « Attaque imminente » (1:58), qui se ferme normalement. Passe : palier 1 atteint. |
+| 17 | Raid repoussé (1 874 contre 397). Prime : **76 200** (52 200 / 14 400 / 4 800 / 4 800) à 29/s de ferraille. |
+| 18–24 | L'**énergie** bloque l'objectif « Entrepôt niveau 2 » (10 000 d'énergie ; stock de 495 à la minute 20). |
+| 24 | Espionnage du PNJ par le bouton « Espionner ». « Tout réclamer » paie le **palier 1 du passe** : 921 600 de ressources (voir NJ-25). |
+| 27 | Alliance fondée. |
+| 29 | Rang Fer II, fin de la prise en main (au premier passage : minute 55). Le Carnet prend la suite, sans pluie de fenêtres. |
+| 32 | Classe Industriel. Objectif suivant du Carnet : « Cumuler 120 niveaux de bâtiments » (38 / 220 à la minute 45). |
+| **33–45** | **Plus rien à lancer** : Labo plein (4/4, 4 à 6 min par recherche), chantiers sur des minuteries de 6 à 20 min, extracteur de ferraille niveau 8 à 191 900 de ferraille. Il ne reste que la Patrouille courte en boucle. |
+
+**« Plus rien à faire »** : vers la **33e minute** (premier passage : 46e). Le départ est plus rapide (Acier donné, Fer II à 29 min) et le
+script dépense tout dès que c'est payable : un joueur humain y arrivera sans doute vers 40 min. Le creux dure ensuite jusqu'à la fin du test.
+
+### Vérification des corrections
+
+| Constat | Correction | Verdict | Ce que j'ai vu |
+|:--|:--|:--|:--|
+| NJ-1 | S1 | **Tient** | +20 Acier renforcé à l'objectif 3 (minute 3), recherche Drone lancée sans détour, 5 drones à la minute 10. Le conseil cite l'objectif 3 et le comptoir. |
+| NJ-2 | S1 | **Tient** | Histoire du chapitre 2 d'abord, puis l'alerte, jamais les deux ensemble. L'alerte se ferme. |
+| NJ-3 | S2 | **Tient** | Liste par défaut à 375 px (disponibles, verrouillées avec « Il manque : … (tu as 0) »), bouton par ligne, `scrollWidth` 375. |
+| NJ-4 | S3 | **Tient pour le raid et le Carnet** | Raid : 30 / 15 / 5 / 5 min de production (76 200 à 29/s, conforme à la formule). Carnet : « 208,8 k » affiché, soit 60 min à 58/s. **Mais le passe verse 2 h de production à la minute 24 : NJ-25.** |
+| NJ-5 | S3 (en partie) | **Ne tient pas** (attendu : RR-2) | Nanocomposants et données s'accumulent toujours sans usage : voir NJ-26 et les stocks. |
+| NJ-6 | S1 | **Tient** | « L'XP vient des missions, des combats, des primes… Bâtiments et recherches n'en donnent pas. » |
+| NJ-7 | S4 | **Tient en partie** | Chiffres compacts (« 7,35 k », « 309 k ») et infobulle au toucher (nom, stock, débit, plein dans, bonus) sur chaque ressource, rares comprises. **Mais** la rangée des rares déborde : NJ-28. |
+| NJ-9 | S4 | **Tient** | « Espionner » en toutes lettres (Seigneurs), « Espionner d'abord → » dans la fenêtre d'attaque, seuls les vaisseaux possédés listés. |
+| NJ-10 | S1 + S4 | **Tient** | Aucune annonce au premier écran ; à la fin de la prise en main, pas d'enchaînement de fenêtres. |
+| NJ-13 | S4 | **Tient** | `?focus=extracteur_ferraille` : carte au centre, cadre éclairé. |
+| NJ-17 | reporté | Inchangé | Galaxie remplace le Labo dans la barre du bas dès la minute 8. |
+| NJ-19 | S4 | **Tient en partie** | « Forces du Silencieux » corrigé, mais le titre du rapport dit encore « Attaque de Le Silencieux » : NJ-29. |
+| NJ-20 | S4 | **Tient** | Le comptoir propose d'emblée la quantité qui rapporte 1. |
+| NJ-23 | S4 | **Tient** | Règle en mots (1 / 4 / 16 / 64 sondes), formule repliée dans « Le calcul ». |
+| NJ-8, NJ-11, NJ-12, NJ-15, NJ-18, NJ-21, NJ-22, NJ-24 | S1, S4 | Non revus | Pas rencontrés dans le parcours joué, ou pas observables sans coupure du serveur. |
+
+### Nouveaux constats
+
+**🟠 NJ-25. Le palier 1 du passe verse 2 h de production à la 24e minute.**
+
+- **Ce que voit le joueur** : le palier 1 du passe est atteint à la 15e minute. « Tout réclamer » le paie avec un objectif de prise en main :
+  **388 800 ferraille, 208 800 énergie, 208 800 nanocomposants, 115 200 données** (921 600 au total) et 30 modules. Les stocks passent de
+  ~20 k à ~400 k d'un coup.
+- **Conséquence** : c'est le même saut que NJ-4, par une autre porte. La cible de S3 (« une récompense de la première heure vaut 10 à
+  60 minutes de production ») n'est pas tenue : le palier dit « 2 h de production » et la proposition `recompenses-du-depart.md` comptait le
+  passe parmi les récompenses de 60 min au plus.
+- **Où** : `/game/passe`, palier 1 (puis 3 h au palier 4, 4 h au palier 7…).
+- **Piste** : appliquer au passe le plafond `guideCapMinutes` du Carnet pour un compte de moins de 24 h, ou mesurer ses paliers de production
+  sur la production de référence du départ. À chiffrer dans la proposition avant de changer.
+
+**🟠 NJ-26. Le surplus de nanocomposants et de données reste entier (RR-2, Q410).**
+
+- **Ce que voit le joueur** : à 45 min, 309 k de nanocomposants et 205 k de données dorment, alors que la ferraille est à 13 k et que
+  l'extracteur de ferraille niveau 8 demande 191 900 de ferraille et 121 300 d'énergie. Aucun conseil ne parle du surplus ; le comptoir
+  dit « Aucun échange commune ↔ commune ».
+- **Avant le surplus** : de la 18e à la 24e minute, c'est l'**énergie** qui bloque (495 à la minute 20 ; il en faut 10 000 pour
+  l'objectif « Entrepôt niveau 2 », affiché « disponible dans ~10 min »).
+- **Piste** : lot RR-2 tel que prévu (conseil « surplus » ou échange direct). Les chiffres mesurés sont ci-dessous.
+
+**🟡 NJ-27. « Débloquer » paraît actif quand il manque des ressources rares.**
+
+- **Ce que voit le joueur** : Atelier de réparation et Labo de synthèse montrent un bouton « DÉBLOQUER » orange, alors qu'il manque 20 de
+  chacune des 4 ressources rares. Le toucher affiche « RESSOURCES INSUFFISANTES. » sans dire lesquelles. « Améliorer » est, lui, bien grisé.
+- **Capture** : `03-debloquer-atelier.png`.
+- **Piste** : griser « Débloquer » comme « Améliorer », avec « manque N » sous chaque coût.
+
+**🟡 NJ-28. La rangée des ressources rares déborde à droite.**
+
+- **Ce que voit le joueur** : à 375 px, la rangée (série, Ambre, 4 rares) mesure 400 px dans un cadre de 375 px qui défile en douce
+  (`overflow-x: auto`). Le Fragment d'IA est coupé au bord ; dès que l'Ambre apparaît, deux rares sont hors de l'écran. Rien n'indique
+  qu'on peut faire défiler.
+- **Captures** : `06-accueil-haut.png`, `10-galaxie.png`.
+- **Piste** : passer la série sous forme d'icône seule, ou réduire l'écart entre les puces ; à défaut, un fondu au bord droit.
+
+**🟡 NJ-29. Qui attaque au raid d'initiation ? Et deux fautes de plus.**
+
+- L'histoire nomme le Capitaine Orsk Varan, l'alerte dit « Raid : Le Silencieux » et le rapport « Attaque de Le Silencieux (Confrérie du Vide) » :
+  le joueur ne sait pas qui est le Silencieux, et « de Le » reste dans le titre du rapport (`frDe` n'y est pas appliqué).
+- Journal : « Confrérie du Vide **repoussé** ! » (accord : « repoussée »).
+- **Piste** : un seul nom pour l'assaillant du raid scripté (Varan ou ses « éclaireurs »), `frDe` dans le titre du rapport, accord du message.
+
+**🟡 NJ-30. La cloche affiche « 9+ » dès la 8e minute et ne redescend plus.**
+
+- **Ce que voit le joueur** : chaque fin de chantier, de recherche ou de mission est une notification : 53 non lues à la 35e minute. La
+  pastille ne signale plus rien d'important.
+- **Piste** : ne pas compter les fins de chantier et de patrouille dans la pastille (elles restent au Journal), ou les marquer lues quand
+  le joueur était sur la page.
+
+### Stocks mesurés (lot RR-2, Q410)
+
+| Minute | Ferraille | Énergie | Nanocomposants | Données | Production (F / É / N / D par s) |
+|:--|--:|--:|--:|--:|:--|
+| 20 | 18 800 | 495 | 17 400 | 20 000 | 29 / 15 / 29 / 16 |
+| 40 | 162 000 | 177 000 | 274 000 | 178 000 | 123 / 68 / 69 / 69 |
+| 45 | 13 300 | 74 000 | 309 000 | 205 000 | 123 / 122 / 123 / 123 |
+
+Les stocks de 40 et 45 min comptent le palier 1 du passe (NJ-25 : +208 800 de nano, +115 200 de données). Sans lui, il resterait environ
+100 k de nano et 90 k de données à 45 min, encore sans usage. La ferraille et l'énergie sont dépensées dès qu'elles rentrent.
+
+### Ressenti
+
+Le début est bien meilleur : rien ne bloque, l'histoire et l'alerte s'enchaînent proprement, le Labo se joue au pouce et Fer II arrive à 29 min.
+Le passe rejoue pourtant la pluie de ressources que S3 a retirée au raid, et, passé la 33e minute, on attend des minuteries avec 300 k de
+nanocomposants inutiles. L'objectif « 120 niveaux » du Carnet (38 à 45 min) n'offre pas de prochain pas à portée.
