@@ -87,6 +87,8 @@ production, un compteur restent neutres ; le rang garde l'or (prestige).
 - **Pages longues sur téléphone (375 px)** : viser moins de 5 000 px pour un joueur neuf comme avancé (`pagelen.mjs`). Ne rien retirer :
   une section à la fois (onglets ou puces `aria-pressed`), sections secondaires repliées (`FoldSection`, `aria-expanded`), « Afficher plus »,
   ou vue « liste » (une ligne par élément, la carte s'ouvre au toucher, bascule mémorisée par appareil : Bâtiments 6.12.0).
+  Un graphe (arbre du Labo) a toujours une vue liste, par défaut sous 768 px (Labo 6.14.162) : lignes rangées par état, ce qu'on peut
+  lancer d'abord, ce qui est loin replié ; un graphe qu'on fait glisser coupe la sélection de texte pendant le geste (`select-none`).
 - **Chrome mobile (6.14.62)** : au-dessous de 768 px, le haut de page tient en environ 200 px. Un bandeau du haut (maintenance,
   vacances, annonce, boss) porte `data-strip` et vit dans `StripStack` (`AppShell`) : seul le premier s'affiche, une ligne « +N bandeaux »
   déplie les autres ; le serveur de test devient une pastille de l'en-tête (`PreprodTag`). Les 4 ressources communes tiennent sur une ligne,

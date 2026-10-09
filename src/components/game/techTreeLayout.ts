@@ -161,3 +161,12 @@ export function techAncestors(id: string): Set<string> {
 export function techDependents(id: string): Set<string> {
   return new Set(TECHNOLOGIES.filter((t) => id in t.prereq).map((t) => t.id));
 }
+
+/** 6.14.162 (NJ-3) : famille d'une technologie (bande de l'arbre où elle se trouve), pour la vue liste du Labo.
+ *  Rend aussi l'ordre de la bande, puis le palier et la ligne, pour trier la liste comme l'arbre se lit. */
+export function techFamily(id: string, cells: Map<string, Cell> = techCells()): { label: string; order: number; col: number; row: number } {
+  const cell = cells.get(id) ?? { col: 0, row: 0 };
+  const lanes = techLanes(cells);
+  const index = lanes.findIndex((l) => cell.col >= l.fromCol && cell.col <= l.toCol && cell.row >= l.fromRow && cell.row <= l.toRow + 0.99);
+  return { label: index >= 0 ? lanes[index].label : "Autres", order: index >= 0 ? index : lanes.length, col: cell.col, row: cell.row };
+}

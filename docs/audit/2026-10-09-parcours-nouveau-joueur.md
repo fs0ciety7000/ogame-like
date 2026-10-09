@@ -89,6 +89,11 @@ courtes d'une minute en boucle. Avant ça, il y a toujours quelque chose à lanc
 - **Piste** : ajouter sur mobile une **vue liste** par catégorie (Fondations, Économie…) avec l'état « disponible / manque X » et un bouton
   « Lancer » par ligne. Garder le graphe en option.
 
+> **Corrigé en 6.14.162** (S2) : vue **liste** du Labo, par défaut sous 768 px, bascule « Liste / Arbre » gardée par appareil ; technos
+> rangées par état (en cours, disponibles, verrouillées avec le prérequis manquant en clair, terminées repliées), bouton « Rechercher »
+> par ligne, fiche dépliable, `?tech=<id>` ouvre la ligne ; dans l'arbre, glisser ne sélectionne plus le texte. Reste : l'arbre lui-même
+> garde ses nœuds de 7 px sur bureau et son plein écran mobile (la liste est l'outil du téléphone). Fiche : `docs/changes/6.14.162-labo-mobile.md`.
+
 ### 🟠 Gênant
 
 **NJ-4. La prime du raid d'initiation casse l'économie.**
@@ -276,7 +281,7 @@ de fenêtres pour quelqu'un qui débute.
    gros effet.
 2. **NJ-1** : débloquer le premier vaisseau sans ressource rare (Acier donné au départ, ou retiré du coût du Drone niveau 1). Faire mener
    « passe par le marché » au comptoir.
-3. **NJ-3** : ajouter une vue liste au Labo sur mobile, avec le bouton « Lancer » par ligne.
+3. **NJ-3** : ajouter une vue liste au Labo sur mobile, avec le bouton « Lancer » par ligne. **Fait en 6.14.162.**
 4. **NJ-4** : plafonner la prime du raid d'initiation et vérifier les récompenses du Carnet (300 k, 2 M) pour un compte de moins d'une heure.
    Passer par une proposition chiffrée.
 5. **NJ-10, NJ-18 et NJ-6** : ne montrer ni l'annonce 6.14 ni les Nouveautés antérieures à un compte neuf, et corriger le conseil sur l'XP.

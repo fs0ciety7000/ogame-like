@@ -40,3 +40,5 @@ production), réservée aux admins du jeu. Elle lit `QUESTIONS.md` et ce fichier
 | Q403 | Courbe du départ appliquée à tout contenu (règle globale), sans migration ; retour à l'ancienne formule par la case « Courbe du départ activée » (`docs/proposals/rythme-du-depart.md`) | valider |
 | Q404 | Calme du nouveau compte : pas d'annonce ni de pastille Nouveautés pendant 24 h (`newcomerNews.quietHours`) (`docs/changes/6.14.161-parcours-debutant.md`) | valider |
 | Q405 | Notes du changelog cachées aux joueurs (`audience: equipe`) : seule la 6.14.157 est marquée (`docs/changes/6.14.161-parcours-debutant.md`) | valider |
+| Q406 | Vue liste du Labo par défaut seulement sur téléphone (< 768 px) ; sur ordinateur, l'arbre reste par défaut (nœuds à 7 px de texte) (`docs/changes/6.14.162-labo-mobile.md`) | valider |
+| Q407 | Vue liste du Labo : « Verrouillées, à portée » ouvert, « Plus loin » replié par défaut (`docs/changes/6.14.162-labo-mobile.md`) | valider |

@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleX, List, Network } from "lucide-react";
 import { playerResearchTimeFactor, researchTimeBreakdown } from "@/game/bonuses";
 import { AmberAmount } from "@/components/ui/amber";
 import { CancelJobButton } from "@/components/game/CancelJobButton";
@@ -12,18 +12,30 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { usePlayerStore } from "@/store/playerStore";
 import { useAuthStore } from "@/store/authStore";
 import { useNowTicker } from "@/hooks/useNowTicker";
-import { buildingsUnlockedByTech, checkPrereqs, describeTechEffect, findTech, getTechAmberCost, getTechCost, getTechTime, RESEARCH_RULES, TECHNOLOGIES, techEffects, type TechDef } from "@/game/technologies";
+import { checkPrereqs, findTech, getTechAmberCost, getTechCost, getTechTime, RESEARCH_RULES, TECHNOLOGIES } from "@/game/technologies";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { bountyState } from "@/game/bounties";
 import { GameActionError, startResearch } from "@/services/playerService";
 import { TechTree } from "@/components/game/TechTree";
+import { TechEffectsSummary, TechList } from "@/components/game/TechList";
 import { AffordReason, BlockedReason, CostPills, secondsToAfford } from "@/components/ui/afford";
-import { CostPill, LevelTicks } from "@/components/ui/hud";
+import { CostPill, HudChip, LevelTicks } from "@/components/ui/hud";
 import { useProductionRates } from "@/hooks/useLiveResources";
 import type { ResourceId } from "@/types/game";
-import { BUILDINGS, findBuilding } from "@/game/buildings";
-import { findUnit, ownedBlueprints } from "@/game/units";
-import { RESOURCE_LIST } from "@/game/resources";
+import { ownedBlueprints } from "@/game/units";
+
+/* 6.14.162 (NJ-3, lot S2) : vue liste par défaut sous 768 px (l'arbre y est illisible), arbre au-delà ; le choix est gardé par appareil. */
+const VIEW_KEY = "cosmic-empires:labo-vue";
+type LabView = "list" | "tree";
+function readLabView(): LabView {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    if (v === "list" || v === "tree") return v;
+  } catch {
+    /* stockage indisponible : vue par défaut */
+  }
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 767px)").matches ? "list" : "tree";
+}
 
 export function LabPage() {
   useNowTicker();
@@ -38,8 +50,18 @@ export function LabPage() {
   useEffect(() => {
     if (focusTech) setSelectedId(focusTech);
   }, [focusTech]);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [view, setView] = useState<LabView>(readLabView);
+  const chooseView = (v: LabView) => {
+    setView(v);
+    setFullscreen(false);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* stockage indisponible : choix gardé pour la session */
+    }
+  };
   const rates = useProductionRates(player);
 
   // Plein écran de l'arbre : Échap pour sortir, et la page derrière ne
@@ -68,16 +90,16 @@ export function LabPage() {
   const activeEntry = queues.activeResearches.find((r) => r.id === selectedId);
   const currentLevel = levels[selectedId] ?? 0;
 
-  const handleLaunch = async () => {
+  const launch = async (id: string) => {
     if (!uid) return;
-    setPending(true);
+    setPending(id);
     try {
-      await startResearch(uid, selectedId);
-      toast.success(`Recherche lancée : ${selected.nom}`);
+      await startResearch(uid, id);
+      toast.success(`Recherche lancée : ${findTech(id)?.nom ?? id}`);
     } catch (err) {
       toast.error(err instanceof GameActionError ? err.message : "Action impossible.");
     } finally {
-      setPending(false);
+      setPending(null);
     }
   };
 
@@ -94,9 +116,34 @@ export function LabPage() {
         }
       />
 
-      {/* L'arbre prend toute la largeur ; sur grand écran, le panneau de
-          détails flotte en haut à droite, sur la zone laissée vide par
-          l'agencement (Économie/Logistique n'occupent que les premiers paliers). */}
+      <div className="flex justify-end gap-1" role="group" aria-label="Affichage du Labo">
+        <HudChip asChild size="sm" tone={view === "list" ? "accent" : "neutral"}>
+          <button type="button" aria-pressed={view === "list"} onClick={() => chooseView("list")}>
+            <List className="h-3.5 w-3.5" aria-hidden /> Liste
+          </button>
+        </HudChip>
+        <HudChip asChild size="sm" tone={view === "tree" ? "accent" : "neutral"}>
+          <button type="button" aria-pressed={view === "tree"} onClick={() => chooseView("tree")}>
+            <Network className="h-3.5 w-3.5" aria-hidden /> Arbre
+          </button>
+        </HudChip>
+      </div>
+
+      {view === "list" ? (
+        <TechList
+          player={player}
+          levels={levels}
+          plans={plans}
+          activeResearches={queues.activeResearches}
+          rates={rates}
+          focusId={focusTech}
+          pendingId={pending}
+          onLaunch={(id) => void launch(id)}
+          onOpen={setSelectedId}
+        />
+      ) : (
+      // L'arbre prend toute la largeur ; sur grand écran, le panneau de détails flotte en haut à droite, sur la zone laissée
+      // vide par l'agencement (Économie/Logistique n'occupent que les premiers paliers).
       <div className={cn("relative flex flex-col gap-4", fullscreen && "fixed inset-0 z-50 bg-space-950/95 p-4 backdrop-blur")}>
         <TechTree
           // Remonté à chaque bascule pour recadrer l'arbre (fitView) sur la nouvelle taille.
@@ -199,7 +246,7 @@ export function LabPage() {
                 const wait = secondsToAfford(getTechCost(selected, currentLevel + 1) as Partial<Record<ResourceId, number>>, player.resources, rates);
                 return (
                   <>
-                    <Button className="mt-4 w-full" disabled={pending || !prereqOk || queueFull || wait > 0 || amberLack > 0} onClick={() => void handleLaunch()}>
+                    <Button className="mt-4 w-full" disabled={pending !== null || !prereqOk || queueFull || wait > 0 || amberLack > 0} onClick={() => void launch(selectedId)}>
                       {queueFull ? "File de recherche pleine" : "Lancer la recherche"}
                     </Button>
                     {!prereqOk ? (
@@ -220,34 +267,7 @@ export function LabPage() {
           )}
         </Card>
       </div>
+      )}
     </div>
-  );
-}
-
-/** Effets de la techno : valeur actuelle et au niveau suivant (v2.6). */
-function TechEffectsSummary({ tech, level }: { tech: TechDef; level: number }) {
-  const effects = techEffects(tech)
-    .filter((e) => e.type !== "unlock_defense_units" && e.type !== "unlock_attack_units")
-    .map((e) => (e.type === "unlock_buildings" || e.type === "unlock_hangars" ? { ...e, targets: buildingsUnlockedByTech(tech.id, BUILDINGS) } : e));
-  if (effects.length === 0) return null;
-  const names = {
-    resource: (id: string) => RESOURCE_LIST.find((r) => r.id === id)?.name.toLowerCase() ?? id,
-    unit: (id: string) => findUnit(id)?.name ?? id,
-    building: (id: string) => findBuilding(id)?.name ?? id,
-  };
-  const next = Math.min(tech.maxLevel, level + 1);
-  return (
-    <ul className="mt-3 space-y-1.5 border-l-2 border-cyan-glow/40 bg-cyan-glow/[0.04] px-3 py-2 text-xs">
-      {effects.map((e, i) => (
-        <li key={i}>
-          {level > 0 && <p className="text-slate-200">{describeTechEffect(e, level, names)}</p>}
-          {level < tech.maxLevel && (
-            <p className="text-mint-glow">
-              <span className="text-slate-500">Niv. {next} :</span> {describeTechEffect(e, next, names)}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
   );
 }

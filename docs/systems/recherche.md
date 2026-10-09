@@ -23,6 +23,9 @@ Débloque unités et bâtiments, donne des bonus permanents (couche « tech » d
 `technologies.ts` (`RESEARCH_RULES`, `getTechCost`, `getTechTime`), `LabPage.tsx` (200 Ko de bundle). Admin : Contenu → Technologies
 (éditeur d'effets composables) ; Règles → « Labo : coûts et durées des recherches » (6.14.84, `RhythmRulesFields.tsx`). Formules :
 section Recherche. Garde : `rechercheReglable.test.ts`.
+Interface (6.14.162) : deux vues, **Liste** (`TechList.tsx`, par défaut sous 768 px : technos par état, prérequis manquant en clair,
+« Rechercher » par ligne, fiche dépliable) et **Arbre** (`TechTree.tsx`, par défaut au-delà) ; choix gardé par appareil
+(`cosmic-empires:labo-vue`). `?tech=<id>` ouvre la techno dans les deux vues. Famille d'une techno : bande de l'arbre (`techFamily`).
 
 ## État (audit 2026-10-06)
 - 4 recherches parallèles dès le début : peu d'arbitrage (OGame : 1 recherche à la fois, Clash of Clans : 1 laboratoire).

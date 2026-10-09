@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -203,6 +203,22 @@ export function TechTree({
   initialFocus?: string | null;
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // 6.14.162 (NJ-3) : pendant qu'on fait glisser l'arbre, plus de sélection de texte (ni dans l'arbre, ni dans la page quand le
+  // doigt ou la souris sort du cadre).
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    if (!dragging) return;
+    const root = document.documentElement;
+    root.classList.add("select-none");
+    const stop = () => setDragging(false);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    return () => {
+      root.classList.remove("select-none");
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+  }, [dragging]);
   const [fitNodes] = useState(() => (initialFocus ? [initialFocus, ...techAncestors(initialFocus)].map((id) => ({ id })) : undefined));
   const focusId = hoveredId ?? selectedId;
   const activeKey = [...activeIds].sort().join(",");
@@ -294,8 +310,10 @@ export function TechTree({
       <div
         className={cn(
           "glass-panel tech-flow hud-cut overflow-hidden",
+          dragging && "select-none",
           fullscreen ? "min-h-0 flex-1" : "h-[min(75vh,760px)] min-h-[520px]",
         )}
+        onPointerDownCapture={() => setDragging(true)}
       >
         <ReactFlow
           nodes={nodes}
@@ -316,6 +334,10 @@ export function TechTree({
           onNodeClick={(_, node) => node.type === "tech" && onSelect(node.id)}
           onNodeMouseEnter={(_, node) => node.type === "tech" && setHoveredId(node.id)}
           onNodeMouseLeave={() => setHoveredId(null)}
+          onMoveStart={(event) => {
+            if (event) setDragging(true);
+          }}
+          onMoveEnd={() => setDragging(false)}
           style={{ background: "transparent" }}
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="color-mix(in srgb,var(--color-cyan-glow) 12%,transparent)" bgColor="transparent" />
